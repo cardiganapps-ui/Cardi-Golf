@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Until M0 scaffolds the app there is no package.json; preflight.sh
+      # passes on its own in that case, so the `check` gate exists from day one.
+      - if: hashFiles('package-lock.json') != ''
+        run: npm ci
+      - run: bash scripts/preflight.sh
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder

@@ -1,0 +1,782 @@
+# Nacho's Bachelor Invitational · En Vivo
+
+## Build brief for Claude Code
+
+> **Para Diego:** el repo, este archivo, el CI y el candado de pre-push ya están listos. Abre una sesión de Claude Code en este repo y escribe: *"Lee CLAUDE.md completo y empieza por la sección 19."* Lo que solo tú puedes hacer está en `docs/handoff.md`.
+
+---
+
+## 0. Operating rules (read before anything else)
+
+These four rules decide how Claude works in this repo. The rest of the file (sections 1–19) is the product brief.
+
+### 0.1 Autonomy: standing permission
+Diego has given standing permission for everything this project needs, **except the two carve-outs below**. Don't stop to ask before any of these:
+- Creating and changing the Supabase project's schema, RLS, functions, and auth settings.
+- Creating the Vercel project, setting its env vars, and deploying previews.
+- Installing dependencies.
+- Creating branches, opening PRs, and merging them once `check` is green.
+- Running the simulator and seeding the **Ensayo** tournament.
+
+The carve-outs, which always need Diego's explicit yes:
+1. **Anything that costs money:** a paid plan, an add-on, a domain.
+2. **Deleting or overwriting real tournament data:** anything in the real tournament, as opposed to Ensayo.
+
+Two more rules:
+- **Report what you did.** Acting without asking is fine; acting silently is not. Every reply ends with what changed, what's live, and what's next.
+- **Permission is not product direction.** When a *rule* or *design* is genuinely ambiguous, ask. Do that only after checking section 5, section 18, and `docs/handoff.md`, and never ask twice about the same thing.
+
+The Supabase `create_project` tool is intentionally not in the `.claude/settings.json` allowlist, because a new project may cost money. It will prompt.
+
+### 0.2 `docs/handoff.md`: the only list Diego needs to read
+Everything the project is waiting on a human for lives in `docs/handoff.md`. That covers clicks only he can make, data only he has, and decisions only he can take. Each item gets its exact steps and how you'll verify it.
+- Read it before reporting anything as blocked.
+- When an item is cleared, strike it through in the same commit.
+- When something new needs Diego, add it there, not just in chat.
+- Never ask Diego for something that isn't on that list.
+
+### 0.3 Preflight: nothing broken reaches GitHub
+- `scripts/preflight.sh` runs typecheck → lint → test → build: whichever of those `package.json` defines, with the exit code preserved.
+- `.claude/settings.json` has a `PreToolUse` hook (`scripts/prepush-guard.sh`) that runs preflight before every `git push` and **blocks the push** if it fails.
+- CI (`.github/workflows/ci.yml`, job `check`) runs the same script.
+- Don't weaken or bypass either one. If the hook blocks you, fix the code.
+- Never judge a check by output piped through `tail` or `grep`, because a pipe swallows the exit code.
+- When M0 adds `package.json`, define exactly those four scripts, plus `"preflight": "bash scripts/preflight.sh"`.
+
+### 0.4 Shipping loop: branch → PR → watch → green → merge
+1. Work on a `claude/<topic>` branch. `main` is what Vercel deploys to production, so never push to it directly.
+2. Open a PR per milestone, or per coherent chunk. Then **subscribe to its activity** (`subscribe_pr_activity`) so CI failures and review comments wake you.
+3. **Drive it to green yourself:**
+   - A red `check` is your work now: find the root cause, fix, and push. "Flake" is not a root cause, and never skip or disable a test.
+   - Address every review comment, or reply saying why not.
+4. Merge once `check` is green, then send Diego (in Spanish):
+   - The Vercel preview/production URL.
+   - What to try.
+   - What comes next.
+5. If you can schedule a check-in (`send_later`), keep one armed about an hour out while a PR is open, and stop once it's merged.
+
+---
+
+## 1. Your role and how to work with Diego
+
+You are the lead engineer and product designer for this app. Diego is the product owner.
+
+- **Who Diego is:** a finance professional and non-technical founder. He built and shipped Cardigan (a production PWA) with Vite + React + Supabase + Vercel by following exact commands, SQL, and click paths. He is comfortable in GitHub, the Supabase dashboard, the Vercel dashboard, and a terminal when steps are explicit.
+- **Do as much as you can yourself.** When Diego must act (create a project, log in, paste an env var, approve something), give numbered steps with one action each: the exact command or click path, and what he should see when it worked. Put those steps in `docs/handoff.md` (0.2).
+- **Plan before code.** Your first reply is the plan described in section 19. Wait for his OK before building.
+- **Work in milestones** (section 16). At the end of each one, deploy a Vercel preview and send Diego the URL, a short list in Spanish of what to try, and what comes next.
+- **Language:** all app copy is Spanish (Mexico). Code, comments, and commits are in English. Diego is bilingual; talk to him in the language he uses.
+- **Money and destruction:** ask before anything that costs money or deletes data. Never commit secrets.
+- **Trust is the product.** Real money moves between friends based on these numbers. Every number in the app must be correct, reproducible, and explainable on tap.
+
+---
+
+## 2. What we're building
+
+Twelve friends are playing a 2-day golf tournament in Los Cabos for Nacho's bachelor trip. There is a $30,000 MXN prize pot, several side games, and a Calcutta auction with its own pot. The app replaces paper cards, spreadsheets, and arguments.
+
+**Users**
+- The 12 players, on their phones on the course: bright sun, patchy signal, one hand free, a few beers in.
+- The Comité (organizers), who set things up and correct mistakes.
+- A TV at the dinner and at the villa, showing the auction and live boards.
+
+**The app must**
+1. Let each group enter strokes and putts hole by hole in seconds, even offline.
+2. Compute every game live, exactly per section 5.
+3. Show live leaderboards for every game, with "si terminara ahora" money next to each name.
+4. Run the Calcutta auction at dinner: an auctioneer console plus a TV board.
+5. Run the Matrimonios draw right after the auction.
+6. Track all money (entries, prizes, Calcutta, buybacks) and produce the final settlement.
+7. Deliver stats, fun awards, and a final ceremony mode.
+8. Look and feel premium. It should dazzle.
+
+**Success criteria**
+- Zero scoring disputes: every number has a "¿Cómo se calculó?" breakdown.
+- Other phones see a new score in under 2 seconds on 4G.
+- Entering one hole for a foursome takes under 10 seconds.
+- Score entry works fully offline and syncs later without losing anything.
+- Installable PWA on iOS Safari and Android Chrome.
+- The scoring engine is fully unit-tested against the cases in section 6.
+
+**Logistics**
+- Dates: [FECHAS], to be confirmed. The Calcutta dinner is the night before Day 1.
+- Course: [CAMPO], Los Cabos, to be confirmed.
+- Timezone: `America/Mazatlan` (Baja California Sur).
+- Currency: MXN, no decimals, formatted like `$2,500` (use `Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })`).
+
+---
+
+## 3. Infrastructure: reuse Cardigan's accounts and patterns, never its data
+
+Cardigan is Diego's clinical practice management app. It stores patient health data, so this project must never touch Cardigan's database, auth, or storage.
+
+| Piece | Decision |
+|---|---|
+| GitHub | Private repo `cardiganapps-ui/Cardi-Golf` (Diego's account; the product is still "Nacho's Bachelor Invitational"). |
+| Vercel | New project in the same team as Cardigan (`cardiganapps-4938's projects`, `team_0rR9OfIKmnJ8xFDrOXUkHcT3`; Pro plan, so every branch gets a preview URL). Use the default `*.vercel.app` domain; ask Diego before adding a custom subdomain. |
+| Supabase | New project in the same organization as Cardigan ("Cardigan", `gmawxcuqdkwculayfbaf`). Never read from or write to Cardigan's project (`axyuqfkmifcaupwhzfuw`) or Angus's (`xbpvqvlomrnuxydyqyqj`). Use Cardigan's region (`us-east-2`). **As of 2026-09-26 the org is on the free plan and both active free slots are taken** (cardigan + angus; cardigan-staging is paused), so a new project is a money decision. See `docs/handoff.md`. |
+| Frontend base | Same as Cardigan: Vite + React 19. Add TypeScript. |
+| Reusable patterns | Angus (`cardiganapps-ui/Angus`) and Cardigan (`cardiganapps-ui/cardigan`) are sibling repos. Read them (read-only, via `add_repo`) and copy what helps: Supabase client setup, PWA manifest and service worker config, MXN formatting helpers, Vercel config, styling approach, and the preflight/CI pattern this repo already copied. Don't import from them and don't modify them. |
+| Storage | Avatars and optional photos go in Supabase Storage in the new project. Use Cloudflare R2 only if Cardigan already has a clean upload helper you can copy. |
+| Email (Resend) | Not needed. |
+| Payments (Stripe) | Not used. Money changes hands in person; the app only tracks it. |
+| Tooling | Supabase, Vercel and GitHub MCP tools are connected to Diego's account; use them. Fall back to the Supabase CLI and the Vercel CLI only if a tool is missing. |
+
+---
+
+## 4. Tech stack and architecture
+
+- **Frontend:** Vite + React 19 + TypeScript, React Router.
+- **Backend:** Supabase Postgres, Auth (anonymous sign-in plus a PIN claim), Realtime (Postgres changes), Storage, and Row Level Security on every table.
+- **Client state:** a small store (Zustand or TanStack Query) fed by Realtime.
+- **Offline:** `vite-plugin-pwa` (Workbox) for the app shell, and an IndexedDB outbox (Dexie) for writes, with optimistic UI.
+- **Animation:** Motion (framer-motion) for layout and reorder animations; `canvas-confetti` for celebrations.
+- **Charts:** Recharts or visx.
+- **Share images:** `html-to-image` plus the Web Share API.
+- **Fonts:** self-host with Fontsource (`@fontsource/fraunces`, `@fontsource/instrument-sans`) so they work offline.
+- **Testing:** Vitest for the engine; Playwright for one end-to-end smoke test (enter a score, see the leaderboard change).
+- **Styling:** CSS variables for the tokens in section 14, plus whatever styling approach Cardigan uses (Tailwind or CSS modules), so the setup looks familiar to Diego.
+
+**Core principle: store raw facts, derive everything.** The database stores only players, handicaps, the course, groups, pairs, strokes/putts/pick-ups per hole, snake tiebreak answers, Calcutta lots/bids/ownership, payment marks, and overrides. Every standing, prize, dollar amount, stat, and feed event is computed by one pure TypeScript module, `src/engine/`, from a single snapshot of that data. Every client runs the same function, and so do the tests. With 12 players × 36 holes the data is tiny, so recompute everything on every change.
+
+---
+
+## 5. Tournament rules: the source of truth
+
+The printed rules sheet the group received says the same thing. If you find a conflict, this section wins and you flag it to Diego.
+
+### 5.1 Field
+- 12 players, $2,500 MXN entry each, for an entry pot of $30,000.
+- Four tiers of three players, assigned by the Comité by handicap: **A** (best), **B**, **C**, **D**.
+- One player is Nacho, the groom. Flag him with `is_groom` and give him a special badge in the UI.
+- Tier D plays the forward tees. The Comité accounts for that in the base handicap. The app still supports a tee per player, because par and stroke index can differ by tee.
+
+### 5.2 Handicaps
+- `baseHcp` is set by the Comité for each player: the average of their last 3–5 real rounds minus the course rating, capped at 54. It's entered in the admin and locked before the Calcutta.
+- Day 1 playing handicap: `PH1 = roundHalfUp(0.80 × min(baseHcp, 54))`. The group chose 80%; don't relitigate it.
+- Strokes received on a hole: `floor(PH / 18) + (SI <= PH % 18 ? 1 : 0)`, where SI is the stroke index of that hole for the player's tee.
+- **Anti-sandbag rule for Day 2.** Let `P1` be the player's Day 1 Stableford points. Then `cut = P1 > 36 ? min(4, floor((P1 − 36) / 2)) : 0`, and the Day 2 playing handicap is `PH2 = max(0, PH1 − cut)`.
+  - The cut applies to every handicap game on Day 2: individual, Matrimonios, and best round.
+  - Nobody ever gets strokes added.
+  - The Comité can override a playing handicap; overrides require a reason and are audit-logged.
+- The allowance (0.80), the cap (54), and the cut parameters (36, 2, 4) live in settings.
+
+### 5.3 Individual Stableford (main event)
+- Points per hole: `pickedUp ? 0 : max(0, par + strokesReceived − gross + 2)`. That gives 0 for net double bogey or worse, 1 for bogey, 2 for par, 3 for birdie, 4 for eagle, 5 for albatross.
+- Picking up ("Levantar") scores 0 points. Players pick up once they can't score.
+- Total over 36 holes.
+- Payouts: 1st **$10,000**, 2nd **$5,000**, 3rd **$3,000**, 4th **$2,000**.
+- **Tiebreak (countback):** Day 2 total, then Day 2 holes 10–18, then 13–18, then 16–18, then hole 18. If still tied, the tied players share the sum of the prizes for the places they occupy, split evenly.
+- The champion also receives the physical trophy, the Putter, courtesy of the travel agency ([AGENCIA DE VIAJES], to be confirmed).
+- Last place overall wins **La Cuchara de Palo**: a wooden-spoon trophy plus a Calcutta slot (5.9).
+
+### 5.4 Mejor ronda del día (best round)
+- **$1,200 each day** to the highest single-day Stableford total.
+- Open to everyone; a player can win this and the main event.
+- Day 2 uses the adjusted handicaps.
+- Tie: countback within that day (holes 10–18, 13–18, 16–18, 18), then split.
+
+### 5.5 Los Matrimonios (pairs game)
+- Six fixed pairs: each A is paired with a D, and each B with a C.
+- **The draw** happens at the end of the Calcutta dinner, and the app runs it (section 13). Nacho doesn't draw: he picks his partner from the tier he's matched with. Everyone else is drawn at random.
+- **Pair score:** the sum of both partners' Stableford points on every hole, over 36 holes. Each partner uses his own handicap strokes.
+- **Prizes:** 1st pair **$2,000** ($1,000 each), 2nd pair **$1,000** ($500 each).
+- **Tie:** better combined Day 2, then split.
+- **Pairs play together both days.** Each foursome is one A+D pair and one B+C pair.
+  - Day 1 groups come from the draw: random A+D vs B+C matchups.
+  - Day 2 groups are set by the pair standings, with the top two pairs in the last group. Default: rank pairs 1–6, then groups are (5,6), (3,4), (1,2) in tee-time order. The Comité can override, and the app warns if a group isn't one A+D pair plus one B+C pair.
+- **Tarjeta cruzada:** each pair keeps the other pair's card (section 9.3).
+
+### 5.6 La Víbora (the snake), per group, per day
+- Putts are strokes taken on the green, and the player enters them.
+- In each group, the snake belongs to whoever most recently took **3 or more putts**. Process holes in the order the group plays them, which depends on its starting hole.
+- If two or more players take 3+ putts on the same hole, the one who **holed out last** takes the snake. When this happens, the app asks "¿Quién embocó al último?" and stores the answer.
+- **At the end of the round** (group finished 18 holes): the three players not holding the snake get **$200 each** from the pot. The holder gets $0 and carries the rubber snake on his bag until the next round.
+- If nobody in the group 3-putted all day, the four split the $600 ($150 each).
+- Total: 3 groups × 2 days × $600 = **$3,600**.
+
+### 5.7 Menos putts (fewest putts)
+- **$1,000** to the lowest total putts over 36 holes. Only strokes on the green count.
+- Tie: split.
+- Picked-up holes follow the setting in section 18.
+
+### 5.8 Prize pool check
+
+| Category | Amount |
+|---|---|
+| Individual Stableford, places 1–4 | $20,000 |
+| Los Matrimonios | $3,000 |
+| Mejor ronda (2 days) | $2,400 |
+| La Víbora | $3,600 |
+| Menos putts | $1,000 |
+| **Total** | **$30,000 = 12 × $2,500** |
+
+The engine asserts this sum when it loads settings, and the admin shows an error if the settings don't balance.
+
+### 5.9 La Calcutta (separate pot)
+- **When:** the dinner the night before Day 1.
+- **Lots:** every player is auctioned once, in an order drawn from a hat.
+- **Bidding:**
+  - Each player opens his own lot at **$250** and is the default high bidder.
+  - Bids go up in **$250** increments.
+  - If nobody tops the opening bid, the player owns himself.
+- **Limits:** maximum **3 players per owner**. Bidders are the 12 players; a setting can allow guests.
+- **Buyback:** right after the hammer, the player may buy back **up to 50%** of himself by paying his owner the same proportion of the price (50% costs half the price). This is paid directly, player to owner.
+- **Pot:** the Calcutta pot is the sum of all hammer prices. It's paid to the banker and 100% of it is paid out:
+
+| Slot | Share of the Calcutta pot |
+|---|---|
+| Stableford champion | 55% |
+| Runner-up | 20% |
+| Best finisher from tier C | 10% |
+| Best finisher from tier D | 10% |
+| Last place (La Cuchara de Palo) | 5% |
+
+- **Payout rules:**
+  - Each player cashes **at most one slot: the highest** he qualifies for. If a C or D player finishes 1st or 2nd, his tier slot passes to the next-best finisher from that tier.
+  - Placings come from the final individual Stableford ranking, including countback.
+  - Ties at a slot boundary: the tied players split the combined slots evenly.
+  - Each slot's money is split among the player's owners by ownership percentage.
+  - Round to whole pesos, and give any rounding remainder to the champion's owners so the payout totals the pot exactly.
+- **Payment deadline:** everything is paid before bed on Calcutta night ("se paga antes de dormir").
+
+### 5.10 Governance
+The Comité ([NOMBRES], to be confirmed) has the final word. Every correction or override is logged with who, when, and why.
+
+---
+
+## 6. Scoring engine (`src/engine/`)
+
+Pure functions, no I/O, no React. The entry point is `computeTournament(snapshot, settings): TournamentState`.
+
+`TournamentState` includes:
+- **Per player, per day, per hole:** strokes received, net score, points, putts, pick-up flag.
+- **Per player:** totals and "thru" (holes completed).
+- **Handicaps:** the Day 2 cut and PH2 per player.
+- **Standings:**
+  - Individual, with countback and position labels like `T3`.
+  - Best round per day.
+  - Matrimonios.
+  - Fewest putts.
+- **La Víbora, per group per day:**
+  - The holder history (hole by hole).
+  - The current holder.
+  - Pending tiebreak questions.
+  - Payouts once the group finishes.
+- **Calcutta:**
+  - The pot.
+  - Who fills each slot.
+  - Payouts per owner, both "si terminara ahora" and final.
+- **Money:**
+  - Prizes per person by category, both live and final.
+  - Net per person.
+  - Settlement transfers (section 11).
+- **Stats and awards** (section 12).
+- **Derived feed events:** birdies, lead changes, snake passes, and Nacho's holes.
+- **Status flags:** incomplete rounds, pending snake tiebreaks, unsigned cards, score discrepancies.
+
+Every computed number carries an explanation object so the UI can render "¿Cómo se calculó?". For example: base 20 → 80% = 16 → 1 stroke on SI 1–16 → 5 on a par 4 = net par = 2 points.
+
+### Required test cases (Vitest; all must pass)
+
+**Playing handicap (80%, round half up, cap 54)**
+```
+base 14      → 11.2 → 11
+base 25      → 20
+base 33      → 26.4 → 26
+base 21.875  → 17.5 → 18   (half up)
+base 50      → 40
+base 54      → 43.2 → 43
+base 60      → capped at 54 → 43
+```
+
+**Strokes received**
+```
+PH 0  → 0 on every hole
+PH 16 → 1 on SI 1–16, 0 on SI 17–18
+PH 18 → 1 on every hole
+PH 43 → 3 on SI 1–7, 2 on SI 8–18
+```
+
+**Stableford points**
+```
+par 4, SI 3, PH 16 (1 stroke): gross 4 → 3 pts · 5 → 2 · 6 → 1 · 7 → 0
+par 4, SI 3, PH 43 (3 strokes): gross 5 → 4 pts · 7 → 2 · 9 → 0
+par 3, SI 18, PH 16 (0 strokes): gross 2 → 3 pts
+any hole picked up → 0 pts
+```
+
+**Day 2 cut**
+```
+P1: 35 → 0 · 36 → 0 · 37 → 0 · 38 → 1 · 39 → 1 · 40 → 2 · 42 → 3 · 44 → 4 · 47 → 4 (max)
+PH1 16, P1 42 → PH2 13
+PH1 2,  P1 44 → PH2 0 (floor at 0)
+```
+
+**Countback**
+```
+A and B both 70 total; Day 2: A 36, B 34 → A ahead
+Equal Day 2; Day 2 holes 10–18: A 18, B 17 → A ahead
+Equal all the way through hole 18 → tied; they split the prizes for the places they occupy
+Two players tied for 1st after countback → each gets ($10,000 + $5,000) / 2 = $7,500
+```
+
+**La Víbora**
+```
+Group [A, B, C, D], starting hole 1:
+  hole 3:  B takes 3 putts           → holder B
+  hole 7:  C and D both take 3 putts, answer "D holed out last" → holder D
+  hole 15: A takes 4 putts           → holder A
+  end → B, C, D get $200 each; A gets $0
+Nobody takes 3 putts all round → A, B, C, D get $150 each
+Starting hole 10: play order is 10–18 then 1–9, so a 3-putt on hole 2 comes after one on hole 18
+Two 3-putts on the same hole with no tiebreak answer → state "pendiente", no payout until answered
+```
+
+**Calcutta**
+```
+Pot $12,000 → slots $6,600 / $2,400 / $1,200 / $1,200 / $600
+Champion is a C player; the 3rd-place player is also C → Best C slot goes to the 3rd-place player
+Runner-up is a D player → Best D slot goes to the next-best D player
+Champion owned 50% by owner X and 50% by himself after buyback → X $3,300, champion $3,300
+Two players tied for 1st after full countback → each gets (55% + 20%) / 2 = 37.5% of the pot
+Rounding remainder goes to the champion's owners; payouts sum exactly to the pot
+```
+
+**Money**
+```
+Prize settings must sum to $30,000
+The settlement nets to zero across all people (banker included)
+```
+
+---
+
+## 7. Data model, auth, and permissions
+
+### Tables (Postgres, snake_case)
+
+**Tournament setup**
+- `tournaments`: `id`, `name`, `status` (`setup` | `calcutta` | `day1` | `day2` | `finished`), `settings` (jsonb, section 18), `banker_player_id`, `created_at`.
+- `courses`: `id`, `name`.
+- `tees`: `id`, `course_id`, `name`, `color`, `rating`, `slope`.
+- `holes`: `tee_id`, `number` (1–18), `par`, `stroke_index`, optional `yards`. Unique on (`tee_id`, `number`).
+
+**People and teams**
+- `players`: `id`, `tournament_id`, `full_name`, `display_name`, `tier` (A–D), `base_hcp` (numeric), `tee_id`, `is_groom`, `is_admin`, `avatar_url`, `pin_hash`, `form_guide` (text: recent rounds for the Calcutta), `sort_order`.
+- `device_sessions`: `auth_user_id` (PK), `player_id`, `created_at`. Maps anonymous auth users to players.
+- `pairs`: `id`, `tournament_id`, `name`, `player1_id`, `player2_id`, `kind` (`AD` | `BC`), `picked_by_groom`, `drawn_at`.
+
+**Rounds and scoring**
+- `rounds`: `id`, `tournament_id`, `day` (1 | 2), `date`, `status` (`scheduled` | `live` | `finished` | `cancelled`).
+- `groups`: `id`, `round_id`, `number`, `tee_time`, `start_hole` (1 | 10), `pair1_id`, `pair2_id`.
+- `scores`: `id`, `round_id`, `player_id`, `hole`, `strokes` (nullable), `putts` (nullable), `picked_up`, `entered_by`, `client_ts`, `updated_at`. Unique on (`round_id`, `player_id`, `hole`).
+- `snake_tiebreaks`: `round_id`, `group_id`, `hole`, `last_holed_player_id`, `decided_by`, `created_at`. Unique on (`round_id`, `group_id`, `hole`).
+- `card_signatures`: `round_id`, `pair_id` (whose card was signed), `signed_by`, `signed_at`.
+- `handicap_overrides`: `round_id`, `player_id`, `playing_hcp`, `reason`, `by`, `at`.
+
+**Calcutta and money**
+- `calcutta_lots`: `id`, `tournament_id`, `player_id`, `lot_number`, `status` (`pending` | `open` | `sold`), `price`, `owner_id`, `sold_at`.
+- `calcutta_bids`: `id`, `lot_id`, `bidder_id`, `amount`, `created_at`.
+- `calcutta_buybacks`: `lot_id`, `pct` (0–50), `amount`, `paid`.
+- `payments`: `id`, `tournament_id`, `from_player_id` (null = banker), `to_player_id` (null = banker), `amount`, `kind` (`entry` | `calcutta` | `buyback` | `payout` | `other`), `paid`, `note`.
+
+**Records**
+- `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
+- `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.
+
+### Auth
+- On first open, the app signs in anonymously (enable anonymous sign-ins in Supabase Auth).
+- The player taps his face and enters his 4-digit PIN. A `claim_player(player_id, pin)` RPC (security definer, pgcrypto `crypt`) links the auth user to the player in `device_sessions`.
+- Rate-limit PIN attempts: after 5 failures for a player, lock for 5 minutes.
+- A helper `current_player_id()` powers the RLS policies.
+- The Comité sets and resets PINs from the admin.
+
+### Permissions (RLS)
+- **Read:** any linked device can read everything in its tournament except `pin_hash`. Hide it with a view or column privileges.
+- **Write scores:** allowed when the writer is in the same group for that round, the round is `live`, and the card isn't signed yet. Admins can always write, but must give a reason once a card is signed.
+- **Admin-only:** tournament setup, players, pairs, groups, overrides, the Calcutta console, and payments.
+- **Spectator link** (optional, section 18): read-only boards without money, through a public view and a share token.
+- The service role key never reaches the client.
+
+---
+
+## 8. Realtime and offline
+
+- **Subscriptions:** `scores`, `snake_tiebreaks`, `card_signatures`, `groups`, `pairs`, `calcutta_lots`, `calcutta_bids`, `calcutta_buybacks`, `payments`, and `tournaments`. On any change, update the local snapshot and recompute.
+- **Writes go through an IndexedDB outbox:**
+  - Apply locally first, then push, then retry with backoff.
+  - Show a sync chip: "Sincronizado" or "3 pendientes".
+- **Conflicts:** per (round, player, hole), the last write wins by server time. Keep both values in the audit log and show a "discrepancia" badge on that hole until the card is signed.
+- **Offline shell:** the app shell, fonts, logo, and the last snapshot are cached. The app opens and shows the last known boards with no signal.
+- **Target:** under 2 seconds from save on one phone to update on the others.
+
+---
+
+## 9. Screens and UX (copy in Spanish)
+
+Mobile-first and usable one-handed: 48px+ tap targets, high contrast for bright sun, big numerals, no light-gray text.
+
+Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**.
+
+### 9.1 Entrar
+- A grid of the 12 faces. Tap yours, enter your PIN, done. The session stays on the device.
+- First run shows a short "Agrégala a tu pantalla de inicio" guide with steps for iOS and for Android.
+
+### 9.2 En vivo (home)
+- **Top strip:** "Día 1 · En juego", plus where the lead group is ("Hoyo 12").
+- **Groom spotlight card:** Nacho's position, today's points, and his last hole.
+- **Individual leaderboard:**
+  - Each row shows: position (with `T` for ties), a movement arrow, avatar, name, tier badge, "thru", today's points, total points, a "si terminara ahora" money chip, and the initials of his Calcutta owners.
+  - Rows re-sort with smooth animation.
+  - Tap a row to open the player sheet.
+- **Live feed ticker** with light Mexican-Spanish commentary. For example: "Mauricio: birdie en el 7, +3 pts", "La víbora pasa a René en el 14", "¡Cambio de líder! Justo toma la punta".
+
+### 9.3 Tarjeta (score entry)
+- Opens on my group's current hole.
+- **Hole header:** number, par, stroke index, and optional yardage.
+- **For each of the 4 players:**
+  - Avatar and name, with dots for strokes received (•, ••, •••).
+  - A big stepper for strokes (defaults to par) and a stepper for putts (defaults to 2).
+  - A "Levantó" toggle.
+  - A live points badge, e.g. "3 pts · birdie neto".
+- **Saving:** "Guardar hoyo" saves and moves to the next hole. Swipe between holes.
+- **Grid view:** all 18 holes × 4 players with points and totals; missing holes are highlighted.
+- **Validation:** strokes 1–15; putts 0–strokes; picking up clears strokes and keeps putts optional. Confirm unusual values (strokes of 10 or more, putts of 5 or more).
+- **Snake tiebreak:** when 2+ players take 3+ putts on the same hole, show "¿Quién embocó al último?" before saving that hole.
+- **Moments:** confetti on a net birdie or better (on the scorer's phone), and a snake animation that slides to the new holder.
+- **Tarjeta cruzada:** the default view is "Llevas la tarjeta de: [pareja rival]", but anyone in the group can enter any of the four players. After hole 18, each pair signs the other pair's card with "Firmar tarjeta", which locks it.
+
+### 9.4 Juegos
+Tabs: Individual · Matrimonios · Mejor ronda · Víbora · Putts · Calcutta.
+- **Individual:** full table with countback visible on tap.
+- **Matrimonios:** pair standings, and each group's head-to-head.
+- **Mejor ronda:** today's table.
+- **Víbora:** each group's current holder (animated snake icon on his avatar), pass history hole by hole, and "en juego: $600".
+- **Putts:** totals, with average putts per hole.
+- **Calcutta:** owners and shares, the pot, and live "valor si terminara ahora" per owner.
+
+### 9.5 Jugador (player sheet)
+- Scorecard for both days with strokes received, gross, net, points, and putts.
+- Playing handicap and its "¿Cómo se calculó?".
+- His pair, his owners (and whom he owns), and his money so far.
+- His stats.
+
+### 9.6 Dinero
+- **Live mode ("si terminara ahora"):** per person, prizes by category plus Calcutta shares, what they paid, and their net.
+- **Final mode:** the settlement (section 11), with "Pagado" toggles.
+- **Share:** send the settlement as an image or text via WhatsApp.
+
+### 9.7 Stats y premios
+- Stats and awards from section 12.
+- A cumulative points "race" chart that replays hole by hole across 36 holes.
+- A pairs race chart.
+
+### 9.8 Reglamento
+All of section 5, rewritten as friendly Spanish copy. This mirrors the printed rules sheet.
+
+### 9.9 Modo TV (`/tv`)
+- Full-screen, dark deep-teal theme, huge type, logo, and the wave motif.
+- Auto-rotates every ~12 seconds: Individual → Matrimonios → Víbora holders → Calcutta values → Feed.
+- On Calcutta night it shows the auction board instead (section 10).
+
+### 9.10 Ceremonia (`/ceremonia`)
+The admin taps through reveals, one at a time, each with drama:
+1. La Cuchara de Palo
+2. Menos putts
+3. Víbora totals
+4. Mejor ronda (both days)
+5. Matrimonios
+6. 4th, 3rd, and 2nd place
+7. The champion, with confetti and the Putter
+8. Calcutta payouts
+9. Final money summary
+
+### 9.11 Share cards
+One tap generates a branded image of a leaderboard, a player's round, or the settlement, sized for WhatsApp, via the Web Share API.
+
+---
+
+## 10. Calcutta night: auctioneer console and TV board
+
+### Auctioneer console (admin phone)
+- **"Sacar del sombrero":** draw the lot order with a shuffle animation, or set it manually.
+- **Open lot:** the current bid is $250 by the player himself.
+- **Bid buttons:** +$250, +$500, +$1,000, or custom. Pick the bidder by avatar; bidders already at their 3-player limit are disabled. There's an undo for the last bid.
+- **"¡Vendido!":** confirm the hammer, then a buyback dialog offers 0%, 25%, 50%, or a custom amount up to 50%, and shows what the player pays his owner.
+- **Next lot.**
+
+### TV board
+- **Lot card:** photo, tier, playing handicap, form guide, and his pair (if already drawn).
+- **Current bid and bidder** with a pulse animation on each new bid.
+- **Running pot counter.**
+- **Sold list:** each player with owner and price.
+- **"Lo que está en juego":** the pot split into the five slots.
+
+### Matrimonios draw (after the last lot)
+1. Nacho picks his partner from the eligible tier.
+2. The remaining A↔D and B↔C pairs are drawn with a rings animation.
+3. Pairs name themselves (editable).
+4. The app generates Day 1 groups (random A+D vs B+C) and the Comité sets tee times.
+
+### Payment check
+Before everyone goes to bed, the app shows who still owes what for entry and Calcutta, with "Pagado" toggles.
+
+---
+
+## 11. Money and settlement
+
+**Flows**
+- **Entries:** $2,500 × 12 to the banker (the banker is a player set in settings).
+- **Calcutta:** hammer prices to the banker.
+- **Buybacks:** paid player → owner directly; tracked, with "Pagado" toggles.
+- **Payouts:** the banker pays each person his prizes plus his Calcutta shares.
+
+**Per person, show**
+- Pagó: entry + Calcutta purchases + buybacks paid.
+- Recibe: prizes + Calcutta shares + buybacks received.
+- Neto: the difference.
+
+**Checks**
+- Everything the banker received equals everything the banker pays out. The app asserts this and shows any mismatch in red.
+
+**Settlement modes**
+- **Default, "vía banco":** the banker pays each winner, since money was collected up front.
+- **Optional, "sin banco":** a minimized list of peer-to-peer transfers (greedy: the largest debtor pays the largest creditor), for when not everyone paid ahead.
+
+---
+
+## 12. Stats and awards (display only, no money)
+
+**Per player**
+- Points per day, and points by par-3 / par-4 / par-5.
+- Gross birdies, net birdies, pars, bogeys, double bogeys or worse, and pick-ups.
+- Total putts, putts per hole, one-putts, and three-putts.
+- Holes spent holding the snake.
+- Best and worst hole, and his longest streak of scoring holes.
+
+**Course**
+- Average points per hole, and the hardest and easiest holes.
+
+**Automatic awards (fun names)**
+- **Rey del Birdie:** most gross birdies.
+- **Francotirador:** most one-putts.
+- **Mano de Piedra:** most three-putts.
+- **El Resucitado:** biggest points gain from Day 1 to Day 2.
+- **El Constante:** smallest variance in points per hole.
+- **Víbora de Oro:** most holes spent holding the snake.
+- **El Inversionista:** best Calcutta return on investment.
+- **El Filántropo:** worst Calcutta return on investment.
+- **Hoyo Maldito:** the course's lowest-scoring hole.
+- **Momento del torneo:** the best single hole of the event (most points; ties go to the harder stroke index).
+
+---
+
+## 13. Comité (admin) console
+
+- **Tournament:** settings (section 18) with the prize-sum validation, status transitions, and who the banker is.
+- **Course:** tees, and par / stroke index / yardage for each hole on each tee. Allow bulk paste from a scorecard.
+- **Players:** names, avatars, tier, base handicap, tee, groom flag, admin flag, PIN reset, and form guide. Show a live preview of 80% and strokes received.
+- **Calcutta:** the console from section 10.
+- **Matrimonios and groups:** the draw, manual edits, tee times, starting holes, and the Day 2 group generator (default from section 5.5, with an override).
+- **Rounds:** start ("En juego"), finish, and cancel.
+- **Day 2 handicaps:** after Day 1, review each player's cut and PH2, with overrides.
+- **Scores:** edit any score. Signed cards require a reason. Resolve discrepancies and pending snake tiebreaks.
+- **Payments:** mark payments as paid.
+- **Data:** export all data as JSON and CSV, and restore from JSON.
+- **Rehearsal mode:** a separate "Ensayo" tournament with simulated data (section 17). It must never mix with the real one.
+
+---
+
+## 14. Brand and design system
+
+The look comes from the tournament's printed rules sheet: beachy, editorial, premium. It sits close to Cardigan's warm cream/teal and Fraunces aesthetic, but it's its own brand.
+
+**Logo:** `assets/nacho-logo.png`, an embroidered patch cut out on a transparent background. Use it on Entrar, the headers, TV mode, and share cards.
+
+**Color tokens**
+```css
+--paper:   #F7F1E3;  /* background (sand) */
+--panel:   #EFE5CF;  /* cards / callouts */
+--cell:    #FBF7EE;  /* inputs, table cells */
+--ink:     #12343B;  /* primary text */
+--muted:   #4F6166;  /* secondary text (never lighter) */
+--teal:    #0F6E77;  /* primary accent */
+--deep:    #0B4F57;  /* feature blocks, TV background */
+--coral:   #B04327;  /* secondary accent, alerts, Cuchara */
+--sun:     #F2B63F;  /* highlights on dark backgrounds */
+--hair:    #CDBF9F;  /* hairlines */
+--seafoam: #A9DCD8;
+--midteal: #3AA6AE;
+```
+
+**Type**
+- **Fraunces 600:** display, headings, and all big numbers.
+- **Instrument Sans 400/700:** UI and body.
+- Scores and money use tabular numerals.
+- Labels are small caps with letter-spacing.
+
+**Motifs**
+- A thin teal wave line as a divider.
+- Numbered sections (01, 02…).
+- Rings for Matrimonios, a snake for La Víbora, a putter for the champion, a wooden spoon for last place.
+
+**Tone**
+- Fun, Mexican Spanish, light roasting (e.g., "Sí, cómo no"). Never mean.
+- Money copy is always crystal clear.
+
+**Motion**
+- Smooth leaderboard re-sorting, number count-ups, and confetti on birdies and the champion.
+- A snake that slides between avatars, a gavel hit and pot counter for the auction, and a rings animation for the draw.
+- Keep it fast; respect `prefers-reduced-motion`.
+
+**Accessibility:** contrast of at least 4.5:1, visible focus states, and screen-reader labels on steppers.
+
+---
+
+## 15. Seed data and what's still unknown
+
+**Players** (11 known; one to be confirmed):
+1. Andrés Gutierrez
+2. Diego Arámburu
+3. Diego Ortiz Tirado
+4. Emiliano Garzón
+5. Justo Fernández Del Valle
+6. Martín Álvarez
+7. Mateo Castro
+8. Mauricio Lozano
+9. Nicolás Castro
+10. René Nosti
+11. Rodrigo Vega
+12. [JUGADOR 12], to be confirmed
+
+**To be confirmed** (the admin UI must let Diego enter all of these without code changes):
+- Which player is Nacho (the groom), since he may be the 12th player.
+- Tiers and base handicaps.
+- Course, tees, par and stroke index per hole.
+- Dates and tee times.
+- The banker and the Comité members.
+- The travel agency's name for the Putter trophy.
+
+---
+
+## 16. Milestones and acceptance criteria
+
+**M0: Setup**
+- New repo, Supabase project, and Vercel project; environment variables; CI running tests on push.
+- PWA shell, fonts, tokens, and logo.
+- Done when: a deployed preview URL is installable on Diego's phone.
+
+**M1: Engine**
+- `src/engine/` implementing all of section 5, plus every test in section 6.
+- Done when: all tests pass and Diego gets a short plain-Spanish summary of the rules as coded.
+
+**M2: Data and auth**
+- Schema, RLS, triggers, audit log, seed data, PIN login, and the admin basics (players, course, tees, settings).
+- Done when: Diego logs in as admin and sets a PIN for a test player, who then logs in on another phone.
+
+**M3: Score entry and live board**
+- The Tarjeta screen, Realtime, the offline outbox, the individual leaderboard, the player sheet, and "¿Cómo se calculó?".
+- Done when:
+  - 4 phones enter scores at the same time and the others update in under 2 seconds.
+  - Airplane-mode entry syncs correctly on reconnect.
+
+**M4: All the games**
+- Matrimonios, best round, La Víbora (with the tiebreak prompt), fewest putts.
+- The Day 2 cut and group generator, card signing, and discrepancy handling.
+- Done when: a full simulated 2-day tournament produces the correct standings and prizes, cross-checked against a hand calculation for at least one group.
+
+**M5: Calcutta night and money**
+- The auction console, the TV board, buybacks, the Matrimonios draw, Calcutta payouts, and Dinero with the settlement.
+- Done when: a rehearsal auction with 12 lots runs end to end and the money balances to the peso.
+
+**M6: Dazzle**
+- The feed, all animations, stats and awards, race charts, share cards, TV mode, Ceremonia, and Reglamento.
+- Done when: Diego says "wow" on his phone and on a TV.
+
+**M7: Rehearsal and hardening**
+- The simulator, a full rehearsal tournament, the runbook, backup export, and printable fallback scorecards (PDF, with stroke dots per player).
+- Done when: the rehearsal passes and the runbook is written.
+
+---
+
+## 17. Testing, rehearsal, and tournament-day runbook
+
+**Simulator.** A script that generates realistic rounds from each player's handicap:
+- Gross over par per hole scales with handicap and stroke index, plus noise.
+- The chance of a 3-putt rises with handicap.
+- Pick-ups happen occasionally.
+- It can play in real time (one hole every N seconds per group) so everyone can watch the live boards move during a rehearsal.
+
+**Rehearsal.** A separate "Ensayo" tournament where Diego and 2–3 friends test on real phones before the trip.
+
+**Runbook.** A one-page `RUNBOOK.md` in Spanish, covering:
+- The pre-trip checklist: handicaps locked, course loaded, PINs sent, app installed on all 12 phones.
+- Calcutta night, step by step.
+- Starting a round.
+- Fixing a wrong score.
+- What to do with no signal (keep entering; it syncs later).
+- What to do if the app goes down: use the paper fallback cards, then have the admin bulk-enter.
+- Closing a round: signatures, lock, Day 2 handicaps, Day 2 groups.
+- The ceremony and final settlement.
+- Exporting a backup.
+
+---
+
+## 18. Open questions: build each as a setting with this default
+
+1. **Picked-up holes for Menos putts:** count 3 putts. A pick-up does not pass the snake unless the player actually entered 3 or more putts. *(Comité to confirm.)*
+2. **Ties after countback** in best round, Matrimonios, and fewest putts: split.
+3. **Does a self-owned lot count toward the 3-player limit?** Yes.
+4. **Can guests bid in the Calcutta?** No.
+5. **Day 2 groups that aren't one A+D pair plus one B+C pair:** keep the standings order and show a warning.
+6. **Rounding of the 80%:** half up to a whole number.
+7. **A player who doesn't finish:** unplayed holes score 0 points and the Comité can void. His snake group settles when the others finish.
+8. **A cancelled round (weather):** the admin marks it cancelled, and the app previews prizes on the rounds played. The Comité decides.
+9. **Spectator link** (read-only, no money): nice-to-have. Ask Diego.
+10. **Custom domain:** ask Diego.
+
+Settings object shape (defaults):
+```json
+{
+  "entryFee": 2500,
+  "handicap": { "allowance": 0.8, "cap": 54, "rounding": "halfUp" },
+  "day2Cut": { "threshold": 36, "pointsPerStroke": 2, "maxStrokes": 4 },
+  "prizes": {
+    "stableford": [10000, 5000, 3000, 2000],
+    "matrimonios": [2000, 1000],
+    "bestRoundPerDay": 1200,
+    "snakePerSurvivor": 200,
+    "fewestPutts": 1000
+  },
+  "calcutta": {
+    "openingBid": 250, "increment": 250, "maxPlayersPerOwner": 3,
+    "selfOwnedCountsTowardMax": true, "guestsCanBid": false, "buybackMaxPct": 50,
+    "payout": { "champion": 0.55, "runnerUp": 0.20, "bestC": 0.10, "bestD": 0.10, "last": 0.05 }
+  },
+  "pickupPuttsForFewestPutts": 3,
+  "tieFallback": "split",
+  "timezone": "America/Mazatlan",
+  "currency": "MXN"
+}
+```
+
+---
+
+## 19. Start here
+
+Your first reply to Diego must contain:
+
+1. **Your understanding** of the product in about 10 bullets, in Spanish.
+2. **The architecture** as a short text diagram: client, engine, Supabase, Realtime, outbox, Vercel.
+3. **The milestone plan** (M0–M7), with what you'll need from Diego at each step.
+4. **Everything you need from Diego right now**, as a checklist. Build it from `docs/handoff.md`, which already holds most of it, and add anything missing there too:
+   - A decision on the Supabase project (the org's free slots are full; see handoff).
+   - The logo file.
+   - The course scorecard (par and stroke index per tee).
+   - Tiers and base handicaps.
+   - Dates, the 12th player, which player is Nacho, the banker, and the Comité.
+   - Answers to section 18, or permission to keep the defaults.
+
+The GitHub repo, the Vercel team, and access to the Cardigan/Angus repos (via `add_repo`) are already available, so don't ask for them.
+
+Then wait for Diego's OK and start M0.
