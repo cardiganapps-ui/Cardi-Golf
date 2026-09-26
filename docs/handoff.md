@@ -34,6 +34,19 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 **Verificación:** Claude crea el proyecto, ve `ACTIVE_HEALTHY` y lo anota en CLAUDE.md §3.
 
+### 2. Conectar el repo a Vercel (gratis, 1 minuto)
+**Por qué:** el conector de Vercel que usa Claude puede leer el equipo pero no crear proyectos (403), y este entorno no tiene un token de Vercel.
+
+Elige una:
+- **A (recomendada): importarlo tú.**
+  1. vercel.com → equipo **cardiganapps-4938's projects** → **Add New…** → **Project**.
+  2. En "Import Git Repository" busca **Cardi-Golf** → **Import**.
+  3. Framework Preset: **Vite**. No cambies nada más. **Deploy** (el primer deploy puede fallar; no importa, aún no hay app).
+  4. Dile a Claude "Vercel listo".
+- **B: darle un token a Claude.** vercel.com → Settings → Tokens → Create, scope **cardiganapps-4938's projects**. Guárdalo como `VERCEL_TOKEN` en los secretos del entorno de Claude Code (Settings → Environments). Claude crea el proyecto por la API.
+
+**Verificación:** Claude ve el proyecto `cardi-golf` en el equipo, con el repo conectado, y anota su `prj_…` en CLAUDE.md §3.
+
 ---
 
 ## Pendiente: datos del torneo (bloquean M2+, no M0/M1)
