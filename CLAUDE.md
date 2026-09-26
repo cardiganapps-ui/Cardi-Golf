@@ -30,7 +30,7 @@ Two more rules:
 - **Report what you did.** Acting without asking is fine; acting silently is not. Every reply ends with what changed, what's live, and what's next.
 - **Permission is not product direction.** When a *rule* or *design* is genuinely ambiguous, ask. Do that only after checking section 5, section 18, and `docs/handoff.md`, and never ask twice about the same thing.
 
-The Supabase `create_project` tool is intentionally not in the `.claude/settings.json` allowlist, because a new project may cost money. It will prompt.
+`.claude/settings.json` allows every tool by default (Bash, file edits, the Supabase / Vercel / GitHub connectors) so Diego is not asked for routine work. The `ask` list there names the exceptions that always prompt — creating or pausing a Supabase project and every Vercel purchase — because they cost money or take something down. Don't move an item out of `ask`; force-push is denied outright.
 
 ### 0.2 `docs/handoff.md`: the only list Diego needs to read
 Everything the project is waiting on a human for lives in `docs/handoff.md`. That covers clicks only he can make, data only he has, and decisions only he can take. Each item gets its exact steps and how you'll verify it.
