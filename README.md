@@ -1,6 +1,6 @@
-# Nacho's Bachelor Invitational · En Vivo
+# Cardi-Golf
 
-PWA de marcador en vivo, juegos, Calcutta y liquidación para el torneo de despedida de Nacho.
+Plataforma para torneos de golf entre amigos: marcador en vivo, juegos, subasta Calcutta, dinero y liquidación. Cada torneo se crea y configura desde la app; el primero es el Nacho's Bachelor Invitational.
 
 - Brief completo y reglas de trabajo: [`CLAUDE.md`](CLAUDE.md)
 - Lo que falta de parte de Diego: [`docs/handoff.md`](docs/handoff.md)

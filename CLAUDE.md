@@ -1,8 +1,12 @@
-# Nacho's Bachelor Invitational · En Vivo
+# Cardi-Golf
 
 ## Build brief for Claude Code
 
 > **Para Diego:** el repo, este archivo, el CI y el candado de pre-push ya están listos. Abre una sesión de Claude Code en este repo y escribe: *"Lee CLAUDE.md completo y empieza por la sección 19."* Lo que solo tú puedes hacer está en `docs/handoff.md`.
+
+**Cardi-Golf is a platform for running amateur golf tournaments among friends**: live scoring, side games, a Calcutta auction, money tracking and settlement. Any organizer can create a tournament, configure its rules, and run it from phones and a TV.
+
+**Nacho's Bachelor Invitational (Los Cabos, 12 players) is the first tournament it will run.** It is the launch customer and the acceptance test, not the product. Sections 2 and 5–18 describe that tournament in full detail, because a concrete first customer is how you know the platform is complete; section 0.5 says how to read them so the result stays generic.
 
 ---
 
@@ -55,6 +59,22 @@ Everything the project is waiting on a human for lives in `docs/handoff.md`. Tha
    - What comes next.
 5. If you can schedule a check-in (`send_later`), keep one armed about an hour out while a PR is open, and stop once it's merged.
 
+### 0.5 Platform, not a one-off: how to read the rest of this brief
+Everything from section 2 on is written for the first tournament. Build it so the *second* tournament needs zero code changes. Concretely:
+
+- **A tournament is a row, not a deploy.** `tournaments` is the root of everything; every other table hangs off it (directly or through `rounds`/`players`). An organizer creates a tournament in the app, and one deployment hosts many. The "Ensayo" rehearsal (§13, §17) is simply another tournament.
+- **Rules are settings, games are modules.** Every number in section 5 (entry fee, allowance, cap, cut parameters, prize amounts, Calcutta shares, snake payout, tiers) is a value in `tournaments.settings` (§18 shows the first tournament's values; they are that tournament's defaults, not constants). Each side game (individual Stableford, best round, pairs "Matrimonios", snake "La Víbora", fewest putts, Calcutta) is an **engine module** that a tournament turns on or off and parameterizes. A tournament with only individual Stableford and no Calcutta must work. Add game *formats* (e.g. gross stroke play, match play) only when a tournament needs them, but leave the module seam so they slot in.
+- **Field size, days, tiers and tees are data.** Don't hard-code 12 players, 2 days, 4 tiers of 3, or 18 holes per round. Tiers are a list the organizer defines (names + which pair with which); a tournament may have none. Rounds are 1..N. Groups are 2–4 players. The pairs game defines its own pairing rule (A↔D, B↔C is the first tournament's).
+- **Names are copy, not code.** "Matrimonios", "La Víbora", "La Cuchara de Palo", "Rey del Birdie" are the first tournament's labels for generic concepts (pairs game, snake, last place, most-birdies award). Each module has a default label the organizer can rename per tournament. Code identifiers stay generic (`pairsGame`, `snake`, `lastPlace`, `mostBirdies`).
+- **Brand per tournament.** Logo, name, tagline, and an accent color are tournament fields, shown on Entrar, headers, TV mode and share cards. The design tokens in §14 are the *platform's* look; `assets/nacho-logo.png` is the first tournament's logo (seeded into it, not baked into the shell). The groom flag (§5.1) becomes a generic "honoree" spotlight the organizer may or may not set.
+- **Organizers have accounts; players don't need one.** Organizers sign in with email (Supabase Auth, magic link or password) and can create tournaments. Players keep the frictionless flow: tap your face, enter your PIN, no account. A player is a row inside a tournament; the same human in two tournaments is two rows (fine for v1). Players join a tournament by link or 6-character code.
+- **Money model is generic.** Entries, prizes, auction purchases, buybacks and payouts are all `payments` rows with a `kind`; the settlement (§11) works for any set of enabled modules and any banker.
+- **One engine, many configurations.** `computeTournament(snapshot, settings)` reads the enabled modules from `settings` and returns state only for those. The section-6 tests run against the first tournament's settings; add at least one test per module that proves it can be *disabled* (state absent, money unaffected) and a "minimal tournament" test (8 players, 1 round, individual Stableford only, no tiers).
+- **Copy stays Spanish (Mexico) in v1.** The platform is built for Diego's circle first; keep strings in one place (`src/i18n/es-MX.ts`) so a second language is a file, not a refactor. Don't build the second language.
+- **Scope discipline.** Generic ≠ bigger. Build exactly the modules and screens the first tournament needs, but built on tournament-scoped data, settings-driven rules and renamable labels. No marketplace, no billing, no public discovery, no multi-org roles beyond organizer / player.
+
+When a later section says "the 12 players", "Nacho", "A/B/C/D", "$2,500", read it as "this tournament's players / honoree / tiers / entry fee".
+
 ---
 
 ## 1. Your role and how to work with Diego
@@ -71,11 +91,12 @@ You are the lead engineer and product designer for this app. Diego is the produc
 
 ---
 
-## 2. What we're building
+## 2. The first tournament: what it must do
 
-Twelve friends are playing a 2-day golf tournament in Los Cabos for Nacho's bachelor trip. There is a $30,000 MXN prize pot, several side games, and a Calcutta auction with its own pot. The app replaces paper cards, spreadsheets, and arguments.
+Twelve friends are playing a 2-day golf tournament in Los Cabos for Nacho's bachelor trip. There is a $30,000 MXN prize pot, several side games, and a Calcutta auction with its own pot. The app replaces paper cards, spreadsheets, and arguments. (Read with §0.5: everything here is one tournament's configuration of the platform.)
 
 **Users**
+- The organizer, who creates the tournament and configures it from a phone or laptop.
 - The 12 players, on their phones on the course: bright sun, patchy signal, one hand free, a few beers in.
 - The Comité (organizers), who set things up and correct mistakes.
 - A TV at the dinner and at the villa, showing the auction and live boards.
@@ -112,7 +133,7 @@ Cardigan is Diego's clinical practice management app. It stores patient health d
 
 | Piece | Decision |
 |---|---|
-| GitHub | Private repo `cardiganapps-ui/Cardi-Golf` (Diego's account; the product is still "Nacho's Bachelor Invitational"). |
+| GitHub | Private repo `cardiganapps-ui/Cardi-Golf` (Diego's account). |
 | Vercel | New project in the same team as Cardigan (`cardiganapps-4938's projects`, `team_0rR9OfIKmnJ8xFDrOXUkHcT3`; Pro plan, so every branch gets a preview URL). Use the default `*.vercel.app` domain; ask Diego before adding a custom subdomain. |
 | Supabase | New project in the same organization as Cardigan ("Cardigan", `gmawxcuqdkwculayfbaf`). Never read from or write to Cardigan's project (`axyuqfkmifcaupwhzfuw`) or Angus's (`xbpvqvlomrnuxydyqyqj`). Use Cardigan's region (`us-east-2`). **As of 2026-09-26 the org is on the free plan and both active free slots are taken** (cardigan + angus; cardigan-staging is paused), so a new project is a money decision. See `docs/handoff.md`. |
 | Frontend base | Same as Cardigan: Vite + React 19. Add TypeScript. |
@@ -137,13 +158,15 @@ Cardigan is Diego's clinical practice management app. It stores patient health d
 - **Testing:** Vitest for the engine; Playwright for one end-to-end smoke test (enter a score, see the leaderboard change).
 - **Styling:** CSS variables for the tokens in section 14, plus whatever styling approach Cardigan uses (Tailwind or CSS modules), so the setup looks familiar to Diego.
 
-**Core principle: store raw facts, derive everything.** The database stores only players, handicaps, the course, groups, pairs, strokes/putts/pick-ups per hole, snake tiebreak answers, Calcutta lots/bids/ownership, payment marks, and overrides. Every standing, prize, dollar amount, stat, and feed event is computed by one pure TypeScript module, `src/engine/`, from a single snapshot of that data. Every client runs the same function, and so do the tests. With 12 players × 36 holes the data is tiny, so recompute everything on every change.
+**Core principle: store raw facts, derive everything.** The database stores only tournaments and their settings, players, handicaps, courses, groups, pairs, strokes/putts/pick-ups per hole, snake tiebreak answers, auction lots/bids/ownership, payment marks, and overrides. Every standing, prize, dollar amount, stat, and feed event is computed by one pure TypeScript module, `src/engine/`, from a single snapshot of *one tournament's* data plus its settings. Every client runs the same function, and so do the tests. Per tournament the data is tiny (dozens of players × a few rounds), so recompute everything on every change.
+
+**Engine layout:** `src/engine/core/` (handicaps, strokes received, per-hole scoring, countback, money/settlement) and `src/engine/modules/<module>/` (one folder per side game, each exporting `compute`, its settings schema with defaults, its default labels, and its tests). `computeTournament` runs the enabled modules and merges their state.
 
 ---
 
-## 5. Tournament rules: the source of truth
+## 5. The first tournament's rules: the source of truth for its configuration
 
-The printed rules sheet the group received says the same thing. If you find a conflict, this section wins and you flag it to Diego.
+The printed rules sheet the group received says the same thing. If you find a conflict, this section wins and you flag it to Diego. Every parameter here maps to a setting or a module option (§0.5, §18); every rule is implemented in the engine generically and *configured* to these values for this tournament.
 
 ### 5.1 Field
 - 12 players, $2,500 MXN entry each, for an entry pot of $30,000.
@@ -355,20 +378,23 @@ The settlement nets to zero across all people (banker included)
 
 ### Tables (Postgres, snake_case)
 
-**Tournament setup**
-- `tournaments`: `id`, `name`, `status` (`setup` | `calcutta` | `day1` | `day2` | `finished`), `settings` (jsonb, section 18), `banker_player_id`, `created_at`.
-- `courses`: `id`, `name`.
+**Organizers and tournaments**
+- `organizers`: `auth_user_id` (PK), `display_name`, `created_at`. Anyone with an email account.
+- `tournaments`: `id`, `slug`, `name`, `tagline`, `logo_url`, `accent_color`, `join_code` (6 chars, unique), `status` (`setup` | `auction` | `live` | `finished`), `current_round_id`, `settings` (jsonb, section 18: enabled modules, their parameters, labels, entry fee, handicap rules, tiers), `banker_player_id`, `timezone`, `currency`, `created_by`, `created_at`.
+- `tournament_organizers`: `tournament_id`, `auth_user_id`, `role` (`owner` | `admin`).
+- `courses`: `id`, `name`, `created_by`. Reusable across tournaments.
 - `tees`: `id`, `course_id`, `name`, `color`, `rating`, `slope`.
 - `holes`: `tee_id`, `number` (1–18), `par`, `stroke_index`, optional `yards`. Unique on (`tee_id`, `number`).
 
 **People and teams**
-- `players`: `id`, `tournament_id`, `full_name`, `display_name`, `tier` (A–D), `base_hcp` (numeric), `tee_id`, `is_groom`, `is_admin`, `avatar_url`, `pin_hash`, `form_guide` (text: recent rounds for the Calcutta), `sort_order`.
+- `players`: `id`, `tournament_id`, `full_name`, `display_name`, `tier` (text, one of the tournament's configured tiers, nullable), `base_hcp` (numeric), `tee_id`, `is_honoree` (the first tournament's "groom"), `is_admin` (a player who may also run the Comité console), `avatar_url`, `pin_hash`, `form_guide` (text: recent rounds for the auction), `sort_order`.
 - `device_sessions`: `auth_user_id` (PK), `player_id`, `created_at`. Maps anonymous auth users to players.
-- `pairs`: `id`, `tournament_id`, `name`, `player1_id`, `player2_id`, `kind` (`AD` | `BC`), `picked_by_groom`, `drawn_at`.
+- `pairs`: `id`, `tournament_id`, `name`, `player1_id`, `player2_id`, `kind` (text: the pairing rule's label, e.g. `AD` | `BC`), `picked_by_honoree`, `drawn_at`.
 
 **Rounds and scoring**
-- `rounds`: `id`, `tournament_id`, `day` (1 | 2), `date`, `status` (`scheduled` | `live` | `finished` | `cancelled`).
-- `groups`: `id`, `round_id`, `number`, `tee_time`, `start_hole` (1 | 10), `pair1_id`, `pair2_id`.
+- `rounds`: `id`, `tournament_id`, `number` (1..N), `date`, `course_id`, `holes` (9 | 18), `status` (`scheduled` | `live` | `finished` | `cancelled`).
+- `groups`: `id`, `round_id`, `number`, `tee_time`, `start_hole` (1 | 10).
+- `group_members`: `group_id`, `player_id`. (When the pairs module is on, a group is normally two pairs; the engine validates that, the schema doesn't require it.)
 - `scores`: `id`, `round_id`, `player_id`, `hole`, `strokes` (nullable), `putts` (nullable), `picked_up`, `entered_by`, `client_ts`, `updated_at`. Unique on (`round_id`, `player_id`, `hole`).
 - `snake_tiebreaks`: `round_id`, `group_id`, `hole`, `last_holed_player_id`, `decided_by`, `created_at`. Unique on (`round_id`, `group_id`, `hole`).
 - `card_signatures`: `round_id`, `pair_id` (whose card was signed), `signed_by`, `signed_at`.
@@ -385,16 +411,18 @@ The settlement nets to zero across all people (banker included)
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.
 
 ### Auth
-- On first open, the app signs in anonymously (enable anonymous sign-ins in Supabase Auth).
+- **Organizers** sign in with email (magic link or password) and land on "Mis torneos", where they create tournaments.
+- **Players:** on first open of a tournament link (`/t/<slug>`) or after entering a join code, the app signs in anonymously (enable anonymous sign-ins in Supabase Auth).
 - The player taps his face and enters his 4-digit PIN. A `claim_player(player_id, pin)` RPC (security definer, pgcrypto `crypt`) links the auth user to the player in `device_sessions`.
 - Rate-limit PIN attempts: after 5 failures for a player, lock for 5 minutes.
 - A helper `current_player_id()` powers the RLS policies.
 - The Comité sets and resets PINs from the admin.
 
 ### Permissions (RLS)
+- **Tenant boundary is the tournament.** Every policy starts from `tournament_id`: a device linked to one tournament reads nothing from another. `current_player_id()` and `is_tournament_organizer(tournament_id)` are the two helpers.
 - **Read:** any linked device can read everything in its tournament except `pin_hash`. Hide it with a view or column privileges.
 - **Write scores:** allowed when the writer is in the same group for that round, the round is `live`, and the card isn't signed yet. Admins can always write, but must give a reason once a card is signed.
-- **Admin-only:** tournament setup, players, pairs, groups, overrides, the Calcutta console, and payments.
+- **Organizer/admin-only:** tournament setup, players, pairs, groups, overrides, the auction console, and payments. Organizers (`tournament_organizers`) and players with `is_admin` both count.
 - **Spectator link** (optional, section 18): read-only boards without money, through a public view and a share token.
 - The service role key never reaches the client.
 
@@ -416,10 +444,13 @@ The settlement nets to zero across all people (banker included)
 
 Mobile-first and usable one-handed: 48px+ tap targets, high contrast for bright sun, big numerals, no light-gray text.
 
-Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**.
+Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**. Tabs and the Juegos sub-tabs show only the modules the tournament has enabled; labels come from the tournament's settings.
+
+**Organizer screens (outside a tournament):** `/` → Mis torneos (list + "Nuevo torneo"), a create wizard (name, logo, dates, course, modules to enable, entry fee, prizes with the balance check), and the join link / code to share.
 
 ### 9.1 Entrar
-- A grid of the 12 faces. Tap yours, enter your PIN, done. The session stays on the device.
+- Reached via `/t/<slug>` or a join code. Shows the tournament's logo and name.
+- A grid of the players' faces. Tap yours, enter your PIN, done. The session stays on the device.
 - First run shows a short "Agrégala a tu pantalla de inicio" guide with steps for iOS and for Android.
 
 ### 9.2 En vivo (home)
@@ -573,7 +604,7 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 
 ## 13. Comité (admin) console
 
-- **Tournament:** settings (section 18) with the prize-sum validation, status transitions, and who the banker is.
+- **Tournament:** name, brand, dates, settings (section 18) — which modules are on, their parameters and labels — with the prize-sum validation, status transitions, and who the banker is.
 - **Course:** tees, and par / stroke index / yardage for each hole on each tee. Allow bulk paste from a scorecard.
 - **Players:** names, avatars, tier, base handicap, tee, groom flag, admin flag, PIN reset, and form guide. Show a live preview of 80% and strokes received.
 - **Calcutta:** the console from section 10.
@@ -583,7 +614,7 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 - **Scores:** edit any score. Signed cards require a reason. Resolve discrepancies and pending snake tiebreaks.
 - **Payments:** mark payments as paid.
 - **Data:** export all data as JSON and CSV, and restore from JSON.
-- **Rehearsal mode:** a separate "Ensayo" tournament with simulated data (section 17). It must never mix with the real one.
+- **Rehearsal mode:** just another tournament ("Ensayo") with simulated data (section 17). Tournament scoping guarantees it never mixes with the real one; a "Duplicar torneo" action copies settings, course and players (no scores) so a rehearsal is one tap.
 
 ---
 
@@ -591,7 +622,7 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 
 The look comes from the tournament's printed rules sheet: beachy, editorial, premium. It sits close to Cardigan's warm cream/teal and Fraunces aesthetic, but it's its own brand.
 
-**Logo:** `assets/nacho-logo.png`, an embroidered patch cut out on a transparent background. Use it on Entrar, the headers, TV mode, and share cards.
+**Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is a simple text wordmark "Cardi-Golf". `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.
 
 **Color tokens**
 ```css
@@ -663,16 +694,17 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 
 **M0: Setup**
 - New repo, Supabase project, and Vercel project; environment variables; CI running tests on push.
+- Engine module seam and settings schema (with Zod or similar) so every later milestone plugs into it.
 - PWA shell, fonts, tokens, and logo.
 - Done when: a deployed preview URL is installable on Diego's phone.
 
 **M1: Engine**
-- `src/engine/` implementing all of section 5, plus every test in section 6.
+- `src/engine/` implementing all of section 5 as core + modules, plus every test in section 6, the per-module "disabled" tests and the minimal-tournament test (§0.5).
 - Done when: all tests pass and Diego gets a short plain-Spanish summary of the rules as coded.
 
 **M2: Data and auth**
-- Schema, RLS, triggers, audit log, seed data, PIN login, and the admin basics (players, course, tees, settings).
-- Done when: Diego logs in as admin and sets a PIN for a test player, who then logs in on another phone.
+- Schema, RLS, triggers, audit log, organizer sign-in, Mis torneos + create wizard, join link/code, PIN login, and the admin basics (players, course, tees, settings, modules).
+- Done when: Diego signs in as an organizer, creates a tournament from the wizard, sets a PIN for a test player, who then joins by code on another phone — and a second tournament created the same way cannot see the first one's data (an RLS test proves it).
 
 **M3: Score entry and live board**
 - The Tarjeta screen, Realtime, the offline outbox, the individual leaderboard, the player sheet, and "¿Cómo se calculó?".
@@ -735,9 +767,20 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 9. **Spectator link** (read-only, no money): nice-to-have. Ask Diego.
 10. **Custom domain:** ask Diego.
 
-Settings object shape (defaults):
+Settings object shape. These are the **first tournament's** values; the platform ships the same shape with `modules` all off except `individual`, and the create wizard fills the rest. Every module carries `enabled` and `label`:
 ```json
 {
+  "modules": {
+    "individual": { "enabled": true, "label": "Individual", "format": "stableford" },
+    "bestRound": { "enabled": true, "label": "Mejor ronda" },
+    "pairs": { "enabled": true, "label": "Los Matrimonios", "pairing": [["A","D"],["B","C"]], "honoreePicks": true },
+    "snake": { "enabled": true, "label": "La Víbora", "puttsThreshold": 3 },
+    "fewestPutts": { "enabled": true, "label": "Menos putts" },
+    "auction": { "enabled": true, "label": "La Calcutta" }
+  },
+  "tiers": ["A", "B", "C", "D"],
+  "rounds": 2,
+  "labels": { "lastPlace": "La Cuchara de Palo", "honoree": "El novio" },
   "entryFee": 2500,
   "handicap": { "allowance": 0.8, "cap": 54, "rounding": "halfUp" },
   "day2Cut": { "threshold": 36, "pointsPerStroke": 2, "maxStrokes": 4 },
@@ -748,10 +791,16 @@ Settings object shape (defaults):
     "snakePerSurvivor": 200,
     "fewestPutts": 1000
   },
-  "calcutta": {
+  "auction": {
     "openingBid": 250, "increment": 250, "maxPlayersPerOwner": 3,
     "selfOwnedCountsTowardMax": true, "guestsCanBid": false, "buybackMaxPct": 50,
-    "payout": { "champion": 0.55, "runnerUp": 0.20, "bestC": 0.10, "bestD": 0.10, "last": 0.05 }
+    "payout": [
+      { "slot": "place", "place": 1, "share": 0.55 },
+      { "slot": "place", "place": 2, "share": 0.20 },
+      { "slot": "bestOfTier", "tier": "C", "share": 0.10 },
+      { "slot": "bestOfTier", "tier": "D", "share": 0.10 },
+      { "slot": "lastPlace", "share": 0.05 }
+    ]
   },
   "pickupPuttsForFewestPutts": 3,
   "tieFallback": "split",
@@ -760,14 +809,16 @@ Settings object shape (defaults):
 }
 ```
 
+The prize-sum check (§5.8) validates against the enabled modules only: `entryFee × players` must equal the sum of the enabled modules' prizes.
+
 ---
 
 ## 19. Start here
 
 Your first reply to Diego must contain:
 
-1. **Your understanding** of the product in about 10 bullets, in Spanish.
-2. **The architecture** as a short text diagram: client, engine, Supabase, Realtime, outbox, Vercel.
+1. **Your understanding** of the product in about 10 bullets, in Spanish: the platform first (§0.5), then the first tournament as its configuration.
+2. **The architecture** as a short text diagram: client, engine core + modules, Supabase (tournament-scoped), Realtime, outbox, Vercel.
 3. **The milestone plan** (M0–M7), with what you'll need from Diego at each step.
 4. **Everything you need from Diego right now**, as a checklist. Build it from `docs/handoff.md`, which already holds most of it, and add anything missing there too:
    - A decision on the Supabase project (the org's free slots are full; see handoff).

@@ -59,7 +59,7 @@ Mándalos en el chat como texto, foto o captura, como te quede más fácil. Clau
 - [ ] **Fechas** del torneo y de la cena de la Calcutta, y los horarios de salida.
 - [ ] **Banquero** y **miembros del Comité**.
 - [ ] **Nombre de la agencia de viajes** (el trofeo Putter).
-- [ ] **Sección 18:** o "quedan los defaults", o tus respuestas punto por punto. En particular: ¿link de espectador (9)? ¿dominio propio (10)? El dominio cuesta dinero.
+- [ ] **Sección 18:** o "quedan los defaults", o tus respuestas punto por punto. (Todo esto se captura en el wizard del torneo; no hay que tocar código para el siguiente torneo.) En particular: ¿link de espectador (9)? ¿dominio propio (10)? El dominio cuesta dinero.
 
 ---
 
