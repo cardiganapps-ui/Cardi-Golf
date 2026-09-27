@@ -28,4 +28,4 @@ npm run preflight            # typecheck → lint → test → build (lo mismo q
 | `scripts/` | `preflight.sh` (candado local y CI), `prepush-guard.sh` (hook), `db.mjs` (SQL/migraciones), `rls-test.mjs` (aislamiento entre torneos, contra el proyecto real), `seed-ensayo.mjs` (torneo de ensayo), `make-icons.mjs`. |
 | `.github/workflows/` | `ci.yml` (job `check`) y `keepalive.yml` (ping diario a Supabase free). |
 
-Producción: `main` → Vercel (`cardi-golf.vercel.app`). Cada rama `claude/*` obtiene un preview.
+Producción: `main` → Vercel, en **https://golf.cardigan.mx** (también `cardi-golf.vercel.app`). Cada rama `claude/*` obtiene un preview.
