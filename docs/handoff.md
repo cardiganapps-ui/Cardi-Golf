@@ -15,7 +15,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
 - ~~**Llave de GolfCourseAPI.**~~ En Vercel (`GOLFCOURSE_API_KEY`). Probada: Quivira aparece con 5 tees completos; Solmar no está en la base (se carga por foto o a mano). (2026-09-27)
-- ~~**Llave de Anthropic en Vercel.**~~ `ANTHROPIC_API_KEY`, modelo Haiku. Falta el ID del workspace (abajo). (2026-09-27)
+- ~~**Llave de Anthropic en Vercel.**~~ `ANTHROPIC_API_KEY` con workspace, modelo Haiku. Probada: leyó una tarjeta de prueba 18/18 por ~$0.0025. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git) y funcionan. (2026-09-27)
 
@@ -27,7 +27,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ## Recomendado, no bloquea: rotar las llaves y guardarlas en el entorno
 
-**Por qué:** las tres llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
+**Por qué:** las llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel, GolfCourseAPI y las dos de Anthropic — la primera sin workspace ya no se usa: revócala) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
 
 1. Supabase dashboard → proyecto **Cardi-Golf** → **Settings → API Keys → Secret keys** → en la llave `claude` toca **⋯ → Revoke**, luego **Create new secret key** (nombre `claude`). Copia el valor.
 2. Supabase → tu avatar → **Account → Access Tokens** → revoca el token actual → **Generate new token** (nombre `claude-code`). Copia el valor.
@@ -39,19 +39,6 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 4. Dile a Claude "llaves listas".
 
 **Verificación:** desde una sesión nueva, Claude corre `curl -H "Authorization: Bearer $SUPABASE_PAT" https://api.supabase.com/v1/projects` y ve `gmohwledjejlhcwqjnhd`; y las llaves viejas responden 401.
-
----
-
-## Pendiente: una cosa para leer fotos de tarjetas (no bloquea nada más)
-
-### El ID del workspace de Anthropic
-**Por qué:** la llave de Anthropic que diste no está atada a un workspace, así que la API exige además el ID del workspace en cada llamada y hoy contesta error. La búsqueda de campos y la captura manual funcionan sin esto.
-
-Elige una (desde Safari):
-- **A (más fácil):** platform.claude.com → **Settings → Workspaces** → abre **Default** (o crea "Cardi-Golf") → copia su ID (empieza con `wrkspc_`) → pégalo en el chat de Claude.
-- **B:** dentro de ese workspace → **API keys → Create key** → pega la llave nueva en el chat (reemplaza a la anterior; revoca la vieja).
-
-**Verificación:** Claude lee una tarjeta de prueba con Haiku y los 18 pares y SI coinciden.
 
 ---
 
