@@ -26,8 +26,8 @@ Two directions, both grounded in golf's own material culture rather than app aes
 | Ink | graphite | `#1B211D` | 15.7:1 on background |
 | Secondary ink | soft graphite | `#4F5751` | 7.2:1 on background (AAA at any size) |
 | Accent | fairway | `#1E6B3B` | 6.3:1 on background; white on it 6.5:1 |
-| Under par | red | `#A51D25` | figures only; 7.2:1 (AAA) |
-| Over par | blue | `#245583` | figures only; 7.5:1 (AAA) |
+| Under par | red | `#9D1C23` | figures only; 7.7:1 on background, 7.1:1 on the ruled surface (AAA) |
+| Over par | blue | `#235380` | figures only; 7.7:1 on background, 7.1:1 on the ruled surface (AAA) |
 | Hairline | rule | `#D8D5CB` | 1 px rules; the heavy rule is ink at 2 px |
 
 Board surface (TV, Ceremonia): `#0F2E22` background, `#F6F3EA` figures (13.2:1), `#A9BBAF` secondary, `#F2C230` for the leader plate and the live mark only.

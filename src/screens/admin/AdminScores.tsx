@@ -177,7 +177,7 @@ export function AdminScores() {
               >
                 <span className="label">{h.hole}</span>
                 <span className="num">{h.played ? (h.pickedUp ? 'L' : h.gross) : '·'}</span>
-                <span className="help">{h.played ? `${h.points} pts · ${h.putts ?? '–'}p` : `par ${h.par}`}</span>
+                <span className="help">{h.played ? `${h.points} pts, ${h.putts ?? '–'} putts` : `${t.player.par} ${h.par}`}</span>
               </button>
             ))}
           </div>

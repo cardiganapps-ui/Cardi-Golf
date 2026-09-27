@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14.1" fill="#0F6E77"/>
-  <!-- sand horizon -->
-  <path d="M0.00 46.08 C 11.52 40.96, 20.48 51.20, 32.00 46.08 S 52.48 40.96, 64.00 46.08 L 64.00 64.00 L 0.00 64.00 Z" fill="#0B4F57"/>
-  <!-- wave line -->
-  <path d="M5.12 53.76 C 12.80 49.92, 19.20 57.60, 26.88 53.76 S 40.96 49.92, 48.64 53.76 S 56.32 57.60, 60.16 55.04" stroke="#F2B63F" stroke-width="2.05" fill="none" stroke-linecap="round"/>
-  <!-- pin -->
-  <rect x="30.40" y="11.52" width="3.20" height="35.84" rx="1.60" fill="#F7F1E3"/>
-  <path d="M33.60 11.52 L 52.48 19.20 L 33.60 26.88 Z" fill="#F2B63F"/>
-  <!-- ball -->
-  <circle cx="23.04" cy="47.36" r="3.52" fill="#F7F1E3"/>
+  <rect width="64" height="64" rx="14.1" fill="#fbfaf7"/>
+  <path d="M43.77 21.51 A16.64 16.64 0 1 0 45.11 43.52 L48.64 33.28 L34.56 33.28" fill="none" stroke="#1b211d" stroke-width="8.32" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <ellipse cx="32.64" cy="32.64" rx="26.24" ry="24.32" transform="rotate(-8 32.64 32.64)" fill="none" stroke="#a51d25" stroke-width="2.05"/>
 </svg>

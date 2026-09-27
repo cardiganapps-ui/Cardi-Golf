@@ -13,6 +13,39 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Dark mode.** Not global. TV and Ceremonia use a dedicated board surface with its own tokens; phone screens are light-only because they are used in sunlight.
 - **Fonts.** Phase 1 adds `@fontsource-variable/archivo` (one variable file with a width axis serves narrow numeric columns and normal text; ~90 KB woff2 for the Latin width+weight file, self-hosted so it works offline). Fraunces stays for one role (the event name). Instrument Sans is removed in phase 2.
 
+## Decisions (2026-09-27, evening)
+
+- **Direction A approved** ("La tarjeta"). PR #11 (phases 0–1) squash-merged. Phase 2 lands on `main` as soon as its PR is green, and so does each phase-3 PR: production shows the transitional look in between (only the Ensayo tournament lives there; the real one is in April 2027). No integration branch.
+- **Phase 2 mechanics.** Tokens moved to `:root` with a `LEGACY` alias block (old names → new) so the 30 screen stylesheets keep resolving; the block shrinks in phase 3 and disappears with the last consumer. Global class names were kept and restyled, so every screen picked up the system without edits. `src/design/primitives.tsx` and `icons.tsx` moved to `src/components/`; `ui.tsx` keeps the behavioural pieces and re-exports `Field` and `Segmented`. `Avatar` stays in `ui.tsx`; the honoree crown is a ring in the event accent. The old `Wordmark` component wraps the new typographic one.
+- **App icon.** A constructed geometric "G" with the pencil ring, drawn as SVG paths by `scripts/make-icons.mjs` from the token file (a text glyph would depend on system fonts at build time). The in-app wordmark sets the same idea in Archivo.
+- **Chart and confetti colors** come from tokens at runtime (`src/lib/tokens.ts`): `--chart-1..12` for series, `--event-accent` / `--board-accent` / `--under` / `--surface-2` for celebrations.
+- **Event accents.** Six curated values in `src/design/accents.ts`; the admin shows them as swatches and maps any legacy free-form color to the nearest one for display. The column and its stored values are unchanged.
+
+## Terms (decided once; `src/i18n/es-MX.ts` follows them)
+
+| Concept | Term | Not |
+|---|---|---|
+| Strokes received | golpes de ventaja; column "Ventaja" | puntos de ventaja, Vent. |
+| Handicap | hándicap, hándicap de juego, hándicap base, hándicap de campo | Hcp, PH |
+| Stroke index | índice de golpe (SI); table header "SI" | índice de dificultad |
+| WHS index | índice | |
+| Gross / net | gross, neto | bruto |
+| Under / over par names | birdie, águila, albatros; "neto" when net; par, bogey, doble o peor | eagle, ceros |
+| Pick-up | Levantó; grid abbreviation "L", explained in the legend | ↑ |
+| Holes played | "Hoyo" as a column header, "por el n" in prose; "F" when finished | Thru |
+| Starting hole | hoyo de salida, "Salida por el n" | Sale por el n |
+| Entry pot / Calcutta pot | bolsa / pozo (two pots, two words) | mixed |
+| Scorecard | tarjeta | score, scores |
+| Statistics | estadísticas | stats |
+| Link | enlace | link |
+| Countback | desempate por los últimos hoyos | countback |
+| Day-2 cut | recorte del día 2 | anti-sandbag |
+| Kept as vernacular | Stableford, putts, tee, rating, slope, par, Calcutta, martillazo, "¡Vendido!" | |
+
+Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido!"; no middle dots as separators (sentences, commas or a second line instead); no arrows or symbols in copy; no jokes outside `feed`; buttons under 24 characters, chips under 18.
+
+Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto"). The engine is out of scope for the redesign; logged for a separate PR. `HowCalculated` renders them as-is.
+
 ## Throwaway organizer account
 
 `scripts/design-organizer.mjs` creates `design-shots@cardi-golf.invalid` (password in `.env.local`, never committed) and makes it an admin of the Ensayo tournament so "Mis torneos" and the wizard can be screenshotted signed in. Remove it with `node scripts/design-organizer.mjs --remove`. It has no access to any other tournament.

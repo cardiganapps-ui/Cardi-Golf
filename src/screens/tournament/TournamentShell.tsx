@@ -37,7 +37,7 @@ export function TournamentShell() {
       <div className={styles.body}>
         <Outlet />
       </div>
-      <nav className={styles.tabbar} aria-label="Secciones">
+      <nav className={styles.tabbar} aria-label={t.common.sections}>
         {TABS.map((tab) => (
           <NavLink key={tab.to} to={`/t/${slug}${tab.to ? `/${tab.to}` : ''}`} end={tab.to === ''} className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}>
             <span className={styles.tabIcon} aria-hidden="true">

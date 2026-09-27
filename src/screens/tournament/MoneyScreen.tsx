@@ -94,7 +94,7 @@ export function MoneyScreen() {
         onChange={setMode}
       />
 
-      <div className={`card ${money.banker.balanced ? 'card--cell' : ''}`} style={money.banker.balanced ? undefined : { background: 'var(--coral)', color: '#fff' }}>
+      <div className={`card ${money.banker.balanced ? 'card--cell' : 'card--alert'}`}>
         <div className="row row--between">
           <span>
             <span className="label" style={{ color: 'inherit', opacity: 0.8 }}>

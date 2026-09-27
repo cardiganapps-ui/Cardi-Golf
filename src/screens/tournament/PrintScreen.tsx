@@ -69,7 +69,7 @@ export function PrintScreen() {
                     {order.map((h) => (
                       <th key={h}>{h}</th>
                     ))}
-                    <th>Σ</th>
+                    <th>{t.common.total}</th>
                   </tr>
                   <tr className={styles.meta}>
                     <th className={styles.left}>{P.par}</th>

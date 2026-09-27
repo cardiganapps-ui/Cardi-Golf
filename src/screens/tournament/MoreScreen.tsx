@@ -56,7 +56,7 @@ export function MoreScreen() {
         </p>
         <div className="row row--wrap" style={{ marginTop: 8 }}>
           <CopyButton text={link} label={t.organizer.link} />
-          <ShareButton text={`${lookup.name}: entra con el código ${joinCode}`} url={link} title={lookup.name} />
+          <ShareButton text={t.common.joinWithCode(lookup.name, joinCode)} url={link} title={lookup.name} />
         </div>
       </div>
 

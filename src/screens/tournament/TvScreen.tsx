@@ -221,7 +221,7 @@ function AuctionBoard() {
           <span className={styles.small}>{t.auction.atStake}</span>
           {settings.auction.payout.map((s, i) => (
             <span key={i} className={styles.stakeRow}>
-              <span>{s.slot === 'place' ? (s.place === 1 ? 'Campeón' : s.place === 2 ? 'Subcampeón' : `${s.place}º`) : s.slot === 'bestOfTier' ? `Mejor ${s.tier}` : settings.labels.lastPlace}</span>
+              <span>{t.rules.slotName(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, settings.labels.lastPlace)}</span>
               <span className="num">{formatMoney(Math.floor(auction.pot * s.share))}</span>
             </span>
           ))}

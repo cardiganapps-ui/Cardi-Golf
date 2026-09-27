@@ -83,7 +83,7 @@ function Card({ what }: { what: ShareKind }) {
     const rows = state.modules.individual?.rows ?? []
     return (
       <>
-        {header(`${settings.modules.individual.label} · ${state.tournamentFinal ? 'Final' : t.money.ifEndedNow}`)}
+        {header(`${settings.modules.individual.label}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
         <Rows>
           {rows.map((r) => {
             const cash = state.prizes.filter((p) => p.playerId === r.playerId).reduce((a, p) => a + p.amount, 0)
@@ -136,7 +136,7 @@ function Card({ what }: { what: ShareKind }) {
   const people = snapshot.players.map((pl) => state.money.people[pl.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
   return (
     <>
-      {header(`${t.moneyScreen.final} · ${state.tournamentFinal ? 'Final' : t.money.ifEndedNow}`)}
+      {header(`${t.moneyScreen.final}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
       <Rows>
         {people.map((m) => (
           <div key={m.playerId} className={styles.row}>

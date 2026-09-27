@@ -43,7 +43,7 @@ export function GamesScreen() {
                   D{i + 1}
                 </th>
               ))}
-              <th className="num">Σ</th>
+              <th className="num">{t.common.total}</th>
               <th className="num">$</th>
             </tr>
           </thead>

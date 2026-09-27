@@ -42,7 +42,7 @@ export function AdminLayout() {
           {t.nav.live}
         </Link>
       </div>
-      <nav className={styles.nav} aria-label="Secciones del Comité">
+      <nav className={styles.nav} aria-label={t.admin.sectionsLabel}>
         {SECTIONS.map((s) => (
           <NavLink key={s.to} to={`/t/${slug}/admin/${s.to}`} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}>
             {s.label}

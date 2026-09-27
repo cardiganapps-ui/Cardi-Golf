@@ -16,6 +16,7 @@ import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './CeremonyScreen.module.css'
 import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, IconSpoon, IconTarget, IconTrophy } from '../../components/icons'
+import { celebrationColors } from '../../lib/tokens'
 
 const C = t.ceremony
 
@@ -157,7 +158,7 @@ export function CeremonyScreen() {
   const step = idx >= 0 ? steps[idx] : undefined
   useEffect(() => {
     if (revealed && step?.champion && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const colors = ['#0F6E77', '#F2B63F', '#B04327', '#A9DCD8', '#F7F1E3']
+      const colors = celebrationColors()
       confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 }, colors })
       const timer = setTimeout(() => confetti({ particleCount: 120, angle: 60, spread: 70, origin: { x: 0, y: 0.7 }, colors }), 400)
       const timer2 = setTimeout(() => confetti({ particleCount: 120, angle: 120, spread: 70, origin: { x: 1, y: 0.7 }, colors }), 700)

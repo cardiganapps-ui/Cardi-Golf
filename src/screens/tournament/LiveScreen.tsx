@@ -71,7 +71,7 @@ export function LiveScreen() {
   return (
     <div className="screen">
       {settingsError && (
-        <div className="card" style={{ background: 'var(--coral)', color: '#fff' }}>
+        <div className="card card--alert">
           <strong>{t.admin.tournament.invalid}</strong>
           <p className="small">{settingsError}</p>
         </div>

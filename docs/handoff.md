@@ -24,9 +24,10 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
-## Rediseño: revisar la dirección (bloquea la fase 2)
+## Rediseño
 
-- [ ] **Aprobar la dirección de diseño.** En el preview del PR de rediseño abre `/design` en tu teléfono (y en la laptop): tokens, tipografía y las piezas base en la dirección recomendada, «La tarjeta». Lee `DESIGN_DIRECTION.md` (dos direcciones, crítica y recomendación) y `DESIGN_AUDIT.md` (qué está mal hoy, con capturas en `design/shots/before`). Abre también `/t/_/large60` y `/t/_/longnames` para ver la app actual con 60 jugadores y nombres largos. Responde: dirección A, B, o cambios. Con tu OK arranca la fase 2 (sistema y pantalla por pantalla).
+- [x] ~~**Aprobar la dirección de diseño.**~~ Decidido 2026-09-27: dirección A, «La tarjeta»; PR #11 fusionado; la fase 2 (sistema) va a `main` conforme quede verde y la fase 3 (pantalla por pantalla) sigue en PRs separados.
+- [ ] **Probar la fase 2 en tu teléfono.** Cuando se fusione el PR de la fase 2, en https://golf.cardigan.mx borra la app de la pantalla de inicio y vuélvela a instalar: el ícono, el color de la barra y la pantalla de arranque deben ser los nuevos (una «G» con el círculo del lápiz sobre cartulina). Abre `/design`, `/t/ensayo` y `/t/_/large60`. Las pantallas todavía no están rediseñadas una por una (eso es la fase 3): lo que se revisa aquí es la base (tipografía, color, botones, listas, íconos y textos). En el preview del PR de rediseño abre `/design` en tu teléfono (y en la laptop): tokens, tipografía y las piezas base en la dirección recomendada, «La tarjeta». Lee `DESIGN_DIRECTION.md` (dos direcciones, crítica y recomendación) y `DESIGN_AUDIT.md` (qué está mal hoy, con capturas en `design/shots/before`). Abre también `/t/_/large60` y `/t/_/longnames` para ver la app actual con 60 jugadores y nombres largos. Responde: dirección A, B, o cambios. Con tu OK arranca la fase 2 (sistema y pantalla por pantalla).
 
 ## Para probar M2 a M7 (no bloquea nada)
 

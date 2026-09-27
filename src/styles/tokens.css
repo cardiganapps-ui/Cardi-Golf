@@ -17,9 +17,9 @@
   --accent: #1e6b3b; /* fairway: live, primary action, my row */
   --accent-ink: #ffffff;
   --accent-soft: #e6efe8; /* my-row tint */
-  --under: #a51d25; /* under par, red by convention; 7.2:1 (AAA); also the only error red */
+  --under: #9d1c23; /* under par, red by convention; 7.7:1 on --bg, 7:1 on --surface (AAA); also the only error red */
   --under-soft: #f8e6e6;
-  --over: #245583; /* over par, The Open's blue; 7.5:1 (AAA); figures only */
+  --over: #235380; /* over par, The Open's blue; 7.7:1 on --bg, 7:1 on --surface (AAA); figures only */
   --over-soft: #e5ecf4;
   --caution: #8a5a00; /* pending / unsigned; 6.5:1 on --bg */
   --caution-soft: #f6ecd2;

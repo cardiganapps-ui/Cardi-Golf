@@ -156,6 +156,15 @@ ol {
 .card--cell {
   background: var(--surface-2);
 }
+.card--alert {
+  background: var(--under-soft);
+  border-color: transparent;
+}
+.card--alert strong,
+.card--alert h2,
+.card--alert h3 {
+  color: var(--under);
+}
 .card--deep {
   background: var(--board-bg);
   color: var(--board-ink);

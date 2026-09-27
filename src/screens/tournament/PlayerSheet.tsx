@@ -106,13 +106,13 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
                 <table className={`table ${styles.card}`}>
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Par</th>
-                      <th>SI</th>
+                      <th>{t.player.hole}</th>
+                      <th>{t.player.par}</th>
+                      <th>{t.player.si}</th>
                       <th>{t.player.strokesShort}</th>
                       <th>{t.player.grossShort}</th>
                       <th>{t.player.netShort}</th>
-                      <th>Pts</th>
+                      <th>{t.player.pts}</th>
                       <th>{t.player.puttsShort}</th>
                     </tr>
                   </thead>

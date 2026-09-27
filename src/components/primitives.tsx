@@ -6,6 +6,7 @@
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
 import s from './primitives.module.css'
 
@@ -89,7 +90,7 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
 // ---- Tab bar ----
 export function TabBar({ items }: { items: Array<{ icon: ReactNode; label: string; active?: boolean }> }) {
   return (
-    <nav className={s.tabbar} aria-label="Secciones">
+    <nav className={s.tabbar} aria-label={t.common.sections}>
       {items.map((it) => (
         <button key={it.label} type="button" className={`${s.tab} ${it.active ? s.tabOn : ''}`} aria-current={it.active ? 'page' : undefined}>
           {it.icon}
@@ -123,8 +124,8 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     <div className={`${s.boardHead} ${dense ? s.leaderRowDense : ''}`} aria-hidden="true">
       <span />
       <span />
-      <span>Hoy</span>
-      <span>Thru</span>
+      <span>{t.live.today}</span>
+      <span>{t.live.thru}</span>
       <span>{figureLabel}</span>
     </div>
   )

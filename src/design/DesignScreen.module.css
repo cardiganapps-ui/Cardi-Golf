@@ -197,7 +197,16 @@
   padding: var(--s3);
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--s2);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.accentOn {
+  outline: 2px solid var(--ink);
 }
 .iconRow {
   display: flex;
@@ -214,38 +223,8 @@
   color: var(--ink-2);
 }
 .appIcon {
-  width: 96px;
-  height: 96px;
-  border-radius: 22px;
+  border-radius: 22%;
   border: var(--hairline);
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  font-weight: 700;
-  font-size: 56px;
-  font-variation-settings: 'wdth' 88;
-  color: var(--ink);
-}
-.appIconRing {
-  position: absolute;
-  width: 66px;
-  height: 66px;
-  border: 4px solid var(--under);
-  border-radius: 50%;
-  transform: rotate(-8deg);
-}
-.appIconSm {
-  width: 48px;
-  height: 48px;
-  border-radius: 11px;
-  font-size: 28px;
-}
-.appIconSm .appIconRing {
-  width: 33px;
-  height: 33px;
-  border-width: 2px;
 }
 .motionDemo {
   display: flex;

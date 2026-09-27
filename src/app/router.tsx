@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { Lazy } from '../components/ui'
+import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
@@ -87,7 +88,7 @@ export const router = createBrowserRouter([
       // Design fixtures: the same screens on in-memory tournaments (src/dev). Must precede `t/:slug`.
       { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
-      { path: 'tv', element: <PlaceholderScreen title="Modo TV" /> },
+      { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
       { path: '*', element: <NotFoundScreen /> },
     ],
   },

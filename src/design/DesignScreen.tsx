@@ -10,31 +10,25 @@ import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconG
 import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, toPar, type GridHole } from '../components/primitives'
 import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
 import { contrast as ratio, luminance } from '../lib/contrast'
+import { cssVar } from '../lib/tokens'
+import { ACCENTS } from './accents'
 import s from './DesignScreen.module.css'
 
 
-const COLORS: Array<{ name: string; hex: string; role: string; on?: string }> = [
-  { name: 'bg', hex: '#fbfaf7', role: 'card stock, background' },
-  { name: 'surface', hex: '#f3f1ea', role: 'ruled area, skeletons' },
-  { name: 'ink', hex: '#1b211d', role: 'graphite, text and figures', on: '#fbfaf7' },
-  { name: 'ink-2', hex: '#4f5751', role: 'secondary text', on: '#fbfaf7' },
-  { name: 'accent', hex: '#1e6b3b', role: 'live, primary action, my row', on: '#fbfaf7' },
-  { name: 'under', hex: '#a51d25', role: 'under par (figures only)', on: '#fbfaf7' },
-  { name: 'over', hex: '#245583', role: 'over par (figures only)', on: '#fbfaf7' },
-  { name: 'caution', hex: '#8a5a00', role: 'pending, unsigned', on: '#fbfaf7' },
-  { name: 'rule', hex: '#d8d5cb', role: 'hairlines' },
-  { name: 'board-bg', hex: '#0f2e22', role: 'TV and ceremony surface' },
-  { name: 'board-ink', hex: '#f6f3ea', role: 'figures on the board', on: '#0f2e22' },
-  { name: 'board-accent', hex: '#f2c230', role: 'leader plate, live mark', on: '#0f2e22' },
+const COLOR_ROLES: Array<{ name: string; role: string; on?: string }> = [
+  { name: 'bg', role: 'card stock, background' },
+  { name: 'surface', role: 'ruled area, skeletons' },
+  { name: 'ink', role: 'graphite, text and figures', on: '--bg' },
+  { name: 'ink-2', role: 'secondary text', on: '--bg' },
+  { name: 'accent', role: 'live, primary action, my row', on: '--bg' },
+  { name: 'under', role: 'under par (figures only)', on: '--bg' },
+  { name: 'over', role: 'over par (figures only)', on: '--bg' },
+  { name: 'caution', role: 'pending, unsigned', on: '--bg' },
+  { name: 'rule', role: 'hairlines' },
+  { name: 'board-bg', role: 'TV and ceremony surface' },
+  { name: 'board-ink', role: 'figures on the board', on: '--board-bg' },
+  { name: 'board-accent', role: 'leader plate, live mark', on: '--board-bg' },
 ]
-const ACCENTS = [
-  ['Fairway', '#1e6b3b'],
-  ['Agua', '#2b5b8c'],
-  ['Atardecer', '#b4532a'],
-  ['Vino', '#8a2e3a'],
-  ['Pizarra', '#3f4a54'],
-  ['Arena', '#7a5a2e'],
-] as const
 const SCALE: Array<[string, string, string]> = [
   ['2xs', '11', 'table headers, captions'],
   ['xs', '12', 'meta'],
@@ -60,7 +54,8 @@ export function DesignScreen() {
   const [strokes, setStrokes] = useState(4)
   const [putts, setPutts] = useState(2)
   const [seg, setSeg] = useState<'pts' | 'gross'>('pts')
-  const [accent, setAccent] = useState<(typeof ACCENTS)[number]>(ACCENTS[0])
+  const [accent, setAccent] = useState(ACCENTS[0]!)
+  const COLORS = useMemo(() => COLOR_ROLES.map((c) => ({ ...c, hex: cssVar(`--${c.name}`), on: c.on ? cssVar(c.on) : undefined })), [])
 
   const nameOf = (id: string, d = fx.data) => d.snapshot.players.find((p) => p.id === id)?.displayName ?? id
   const rows = fx.data.state.modules.individual!.rows
@@ -74,7 +69,7 @@ export function DesignScreen() {
   const largeRows = large.state.modules.individual!.rows
 
   return (
-    <div style={{ '--event-accent': accent[1] } as React.CSSProperties}>
+    <div style={{ '--event-accent': accent.hex } as React.CSSProperties}>
       <div className={s.page}>
         <header className={s.stack}>
           <Wordmark size={22} />
@@ -93,7 +88,9 @@ export function DesignScreen() {
                   {c.on ? `${ratio(c.hex, c.on)}:1` : ''}
                 </div>
                 <span className={s.swatchName}>--{c.name}</span>
-                <span className={s.swatchHex}>{c.hex.toUpperCase()} · {c.role}</span>
+                <span className={s.swatchHex}>
+                  {c.hex.toUpperCase()}, {c.role}
+                </span>
               </div>
             ))}
           </div>
@@ -170,7 +167,7 @@ export function DesignScreen() {
             <dt>Radios</dt>
             <dd>4 px controles y marcas · 10 px sheets y objetos reales · redondo solo avatares y el punto en vivo</dd>
             <dt>Bordes</dt>
-            <dd>1 px hairline #D8D5CB · 2 px regla gruesa en tinta para abrir una tabla</dd>
+            <dd>1 px hairline (--rule); 2 px regla gruesa en tinta para abrir una tabla</dd>
             <dt>Elevación</dt>
             <dd>Solo lo que flota: sheet y toast. Nada más tiene sombra.</dd>
             <dt>Movimiento</dt>
@@ -461,14 +458,14 @@ export function DesignScreen() {
           <p className={s.cap}>El organizador elige uno de seis. Se aplica a la regla bajo el nombre, al botón principal y a «mi fila». Nada más cambia.</p>
           <div className={s.accents}>
             {ACCENTS.map((a) => (
-              <button key={a[0]} type="button" className={s.accentCard} style={{ '--event-accent': a[1], background: 'transparent', cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit', outline: accent[0] === a[0] ? '2px solid var(--ink)' : 'none' } as React.CSSProperties} onClick={() => setAccent(a)}>
+              <button key={a.id} type="button" className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`} style={{ '--event-accent': a.hex } as React.CSSProperties} onClick={() => setAccent(a)}>
                 <EventName name="Copa Tres Marías" small />
-                <div style={{ width: 40, height: 3, background: a[1] }} />
+                <span className="wave" aria-hidden="true" />
                 <Button variant="primary" size="sm">
                   Entrar
                 </Button>
                 <span className={s.cap}>
-                  {a[0]} · {a[1].toUpperCase()} · blanco {ratio('#ffffff', a[1])}:1
+                  {a.name}, {a.hex.toUpperCase()}, blanco {ratio(cssVar('--surface-2'), a.hex)}:1
                 </span>
               </button>
             ))}
@@ -499,13 +496,9 @@ export function DesignScreen() {
             <Wordmark size={20} />
           </div>
           <div className={s.row}>
-            <div className={s.appIcon}>
-              <span className={s.appIconRing} aria-hidden="true" />G
-            </div>
-            <div className={`${s.appIcon} ${s.appIconSm}`}>
-              <span className={s.appIconRing} aria-hidden="true" />G
-            </div>
-            <span className={s.cap}>ícono 512 / 192 (concepto; se genera en fase 2)</span>
+            <img src="/icons/icon-192.png" alt="" width={96} height={96} className={s.appIcon} />
+            <img src="/icons/icon-192.png" alt="" width={48} height={48} className={s.appIcon} />
+            <span className={s.cap}>ícono de la app (scripts/make-icons.mjs, colores leídos de tokens.css)</span>
           </div>
         </section>
       </div>
