@@ -119,9 +119,13 @@ Twelve friends are playing a 2-day golf tournament in Los Cabos for Nacho's bach
 - Installable PWA on iOS Safari and Android Chrome.
 - The scoring engine is fully unit-tested against the cases in section 6.
 
-**Logistics**
-- Dates: [FECHAS], to be confirmed. The Calcutta dinner is the night before Day 1.
-- Course: [CAMPO], Los Cabos, to be confirmed.
+**Logistics** (confirmed from the Golfbreaks booking US61296, 2026-09-24)
+- Trip: Thu 8 – Sun 11 April 2027, Pueblo Bonito Pacifica Golf & Spa Resort, Cabo San Lucas (all-inclusive, 12 golfers, check-in Thu 16:00, check-out Sun 12:00).
+- **Calcutta dinner: Thu 8 April 2027** (arrival night).
+- **Day 1: Fri 9 April 2027, Solmar Golf Links, first tee 09:00.**
+- **Day 2: Sat 10 April 2027, Quivira Los Cabos Golf Course, first tee 09:00.**
+- Two different courses, so par / stroke index / tees are **per round**, not per tournament (`rounds.course_id`). Both scorecards are still to be loaded (handoff).
+- Booking is under Nicolás Castro (a player) with Golfbreaks; the Putter trophy comes courtesy of Golfbreaks.
 - Timezone: `America/Mazatlan` (Baja California Sur).
 - Currency: MXN, no decimals, formatted like `$2,500` (use `Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })`).
 
@@ -175,7 +179,7 @@ The printed rules sheet the group received says the same thing. If you find a co
 - Tier D plays the forward tees. The Comité accounts for that in the base handicap. The app still supports a tee per player, because par and stroke index can differ by tee.
 
 ### 5.2 Handicaps
-- `baseHcp` is set by the Comité for each player: the average of their last 3–5 real rounds minus the course rating, capped at 54. It's entered in the admin and locked before the Calcutta.
+- `baseHcp` is set by the Comité for each player: the average of their last 3–5 real rounds minus the course rating, capped at 54. It's entered in the admin and locked before the Calcutta. One base handicap for the whole tournament even though the two days are on different courses (Solmar, Quivira); the Comité chose simplicity over a per-course slope adjustment. Make a per-round course adjustment possible as a setting (`handicap.perRoundSlope`, default off), but don't turn it on.
 - Day 1 playing handicap: `PH1 = roundHalfUp(0.80 × min(baseHcp, 54))`. The group chose 80%; don't relitigate it.
 - Strokes received on a hole: `floor(PH / 18) + (SI <= PH % 18 ? 1 : 0)`, where SI is the stroke index of that hole for the player's tee.
 - **Anti-sandbag rule for Day 2.** Let `P1` be the player's Day 1 Stableford points. Then `cut = P1 > 36 ? min(4, floor((P1 − 36) / 2)) : 0`, and the Day 2 playing handicap is `PH2 = max(0, PH1 − cut)`.
@@ -190,7 +194,7 @@ The printed rules sheet the group received says the same thing. If you find a co
 - Total over 36 holes.
 - Payouts: 1st **$10,000**, 2nd **$5,000**, 3rd **$3,000**, 4th **$2,000**.
 - **Tiebreak (countback):** Day 2 total, then Day 2 holes 10–18, then 13–18, then 16–18, then hole 18. If still tied, the tied players share the sum of the prizes for the places they occupy, split evenly.
-- The champion also receives the physical trophy, the Putter, courtesy of the travel agency ([AGENCIA DE VIAJES], to be confirmed).
+- The champion also receives the physical trophy, the Putter, courtesy of the travel agency (Golfbreaks).
 - Last place overall wins **La Cuchara de Palo**: a wooden-spoon trophy plus a Calcutta slot (5.9).
 
 ### 5.4 Mejor ronda del día (best round)
@@ -264,7 +268,7 @@ The engine asserts this sum when it loads settings, and the admin shows an error
 - **Payment deadline:** everything is paid before bed on Calcutta night ("se paga antes de dormir").
 
 ### 5.10 Governance
-The Comité ([NOMBRES], to be confirmed) has the final word. Every correction or override is logged with who, when, and why.
+The Comité ([NOMBRES], to be confirmed; Nicolás Castro holds the booking and is the likely lead) has the final word. Every correction or override is logged with who, when, and why.
 
 ---
 
@@ -683,10 +687,9 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 **To be confirmed** (the admin UI must let Diego enter all of these without code changes):
 - Which player is Nacho (the groom), since he may be the 12th player.
 - Tiers and base handicaps.
-- Course, tees, par and stroke index per hole.
-- Dates and tee times.
+- Both scorecards: Solmar Golf Links (Day 1) and Quivira (Day 2) — tees, par and stroke index per hole. Everything else about the schedule is confirmed (§2).
+- Tee times per group (first tee 09:00 both days; the three groups follow).
 - The banker and the Comité members.
-- The travel agency's name for the Putter trophy.
 
 ---
 

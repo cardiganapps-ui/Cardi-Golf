@@ -39,12 +39,13 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 Mándalos en el chat como texto, foto o captura, como te quede más fácil. Claude los carga al admin.
 
-- [ ] **Tarjeta del campo:** par e índice de dificultad (SI) de los 18 hoyos para cada salida (tee), y el rating/slope si los tienes. Una foto de la tarjeta sirve.
+- [ ] **Tarjetas de los dos campos:** Solmar Golf Links (día 1) y Quivira (día 2): par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
 - [ ] **Tiers y hándicap base** de los 12 jugadores (§5.1–5.2).
 - [ ] **Jugador 12** y **quién es Nacho**.
-- [ ] **Fechas** del torneo y de la cena de la Calcutta, y los horarios de salida.
+- ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
+- [ ] **Horarios de salida por grupo** (la primera salida es 09:00 ambos días; faltan los de los grupos 2 y 3, normalmente cada 10 min).
 - [ ] **Banquero** y **miembros del Comité**.
-- [ ] **Nombre de la agencia de viajes** (el trofeo Putter).
+- ~~**Agencia de viajes.**~~ Golfbreaks. (2026-09-27)
 - [ ] **Sección 18:** o "quedan los defaults", o tus respuestas punto por punto. (Todo esto se captura en el wizard del torneo; no hay que tocar código para el siguiente torneo.) En particular: ¿link de espectador (9)? ¿dominio propio (10)? El dominio cuesta dinero.
 
 ---
