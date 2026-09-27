@@ -32,6 +32,8 @@ export interface StatusFlags {
   pendingSnakeTiebreaks: SnakeState['pending']
   /** Pair cards complete but not signed (only when the pairs module is on). */
   unsignedCards: Array<{ roundId: Id; pairId: Id }>
+  /** Holes overwritten by a different device with different values (§8). */
+  discrepancies: Array<{ roundId: Id; playerId: Id; hole: number }>
   /** Enabled modules with no implementation (should never happen in production). */
   missingModules: ModuleId[]
   warnings: string[]
@@ -103,6 +105,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     }
   }
 
+  const discrepancies = snapshot.scores.filter((s) => s.disputed).map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
+
   return {
     settings,
     core,
@@ -113,6 +117,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       incompleteRounds,
       pendingSnakeTiebreaks: modules.snake?.pending ?? [],
       unsignedCards,
+      discrepancies,
       missingModules,
       warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? [])],
     },

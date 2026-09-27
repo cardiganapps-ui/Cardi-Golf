@@ -123,6 +123,9 @@ export interface Score {
   pickedUp: boolean
   enteredBy: Id | null
   updatedAt: string | null
+  /** Another device overwrote this hole with different values (§8). */
+  disputed?: boolean
+  previous?: { strokes: number | null; putts: number | null; picked_up: boolean; entered_by: Id | null } | null
 }
 
 export interface SnakeTiebreak {

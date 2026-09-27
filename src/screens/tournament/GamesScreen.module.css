@@ -1,0 +1,22 @@
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.pos {
+  width: 32px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.pairAvatars {
+  display: flex;
+}
+.pairAvatars > :last-child {
+  margin-left: -10px;
+  box-shadow: 0 0 0 2px var(--cell);
+}

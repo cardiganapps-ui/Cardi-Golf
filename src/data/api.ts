@@ -307,3 +307,47 @@ export async function uploadAsset(path: string, file: Blob, contentType?: string
   const { data } = sb.storage.from('tournament-assets').getPublicUrl(path)
   return `${data.publicUrl}?v=${Date.now()}`
 }
+
+// ---------------------------------------------------------------------------
+// Groups, handicap overrides, Comité score edits (M4)
+// ---------------------------------------------------------------------------
+export interface GroupInput {
+  number: number
+  tee_time: string | null
+  start_hole: number
+  player_ids: string[]
+}
+
+/** Replace every group of a round (members included). Scores are keyed by player, so regrouping never loses them. */
+export async function replaceGroups(roundId: string, groups: GroupInput[]) {
+  const sb = supabase()
+  unwrap(await sb.from('groups').delete().eq('round_id', roundId).select('id'))
+  for (const g of groups) {
+    const row = unwrap(await sb.from('groups').insert({ round_id: roundId, number: g.number, tee_time: g.tee_time, start_hole: g.start_hole }).select('id').single()) as { id: string }
+    if (g.player_ids.length) unwrap(await sb.from('group_members').insert(g.player_ids.map((pid) => ({ group_id: row.id, player_id: pid }))).select('player_id'))
+  }
+}
+
+export async function upsertHandicapOverride(roundId: string, playerId: string, playingHcp: number, reason: string, by: string | null) {
+  unwrap(await supabase().from('handicap_overrides').upsert({ round_id: roundId, player_id: playerId, playing_hcp: playingHcp, reason, by }, { onConflict: 'round_id,player_id' }).select('player_id'))
+}
+
+export async function deleteHandicapOverride(roundId: string, playerId: string) {
+  unwrap(await supabase().from('handicap_overrides').delete().eq('round_id', roundId).eq('player_id', playerId).select('player_id'))
+}
+
+export async function adminSaveScore(
+  payload: { round_id: string; player_id: string; hole: number; strokes: number | null; putts: number | null; picked_up: boolean; entered_by: string | null },
+  reason: string | null,
+) {
+  unwrap(await supabase().from('scores').upsert({ ...payload, reason, client_ts: new Date().toISOString() }, { onConflict: 'round_id,player_id,hole' }).select('id'))
+}
+
+/** Keep the current values and clear the discrepancy flag. */
+export async function resolveDispute(roundId: string, playerId: string, hole: number) {
+  unwrap(await supabase().from('scores').update({ disputed: false }).eq('round_id', roundId).eq('player_id', playerId).eq('hole', hole).select('id'))
+}
+
+export async function unsignCard(roundId: string, pairId: string) {
+  unwrap(await supabase().from('card_signatures').delete().eq('round_id', roundId).eq('pair_id', pairId).select('pair_id'))
+}

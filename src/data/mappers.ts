@@ -125,6 +125,8 @@ export const mapScore = (r: Row): Score => ({
   pickedUp: !!r.picked_up,
   enteredBy: r.entered_by ?? null,
   updatedAt: r.updated_at ?? null,
+  disputed: !!r.disputed,
+  previous: r.previous ?? null,
 })
 
 export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({

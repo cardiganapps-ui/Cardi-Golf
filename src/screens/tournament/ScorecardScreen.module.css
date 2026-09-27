@@ -134,3 +134,16 @@
   font-family: var(--font-ui);
   font-weight: 400;
 }
+
+.disputed {
+  background: rgba(242, 182, 63, 0.3);
+  position: relative;
+}
+.disputedMark {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--coral);
+}

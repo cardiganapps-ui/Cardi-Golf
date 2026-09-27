@@ -9,6 +9,9 @@ const SECTIONS = [
   { to: 'jugadores', label: t.admin.sections.players },
   { to: 'campos', label: t.admin.sections.courses },
   { to: 'rondas', label: t.admin.sections.rounds },
+  { to: 'grupos', label: t.admin.sections.groups },
+  { to: 'handicaps', label: t.admin.sections.handicaps },
+  { to: 'scores', label: t.admin.sections.scores },
 ]
 
 export function AdminLayout() {

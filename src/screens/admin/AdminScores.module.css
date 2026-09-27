@@ -1,0 +1,30 @@
+.holes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.hole {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--cell);
+  border: 2px solid var(--hair);
+  border-radius: var(--radius-sm);
+  padding: 6px 2px;
+  min-height: 64px;
+  cursor: pointer;
+}
+.hole .num {
+  font-size: 1.2rem;
+}
+.hole .help {
+  font-size: 0.65rem;
+}
+.empty {
+  opacity: 0.6;
+}
+.disputed {
+  border-color: var(--sun);
+  background: rgba(242, 182, 63, 0.2);
+}

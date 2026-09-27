@@ -265,8 +265,9 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   {players.map((p) => {
                     const hi = roundState[p.id]?.holes[h - 1]
                     return (
-                      <td key={p.id} className={`num ${hi?.played ? '' : styles.missing}`}>
+                      <td key={p.id} className={`num ${hi?.played ? '' : styles.missing} ${hi?.disputed ? styles.disputed : ''}`} title={hi?.disputed ? S.disputed : undefined}>
                         {hi?.played ? (hi.pickedUp ? 'L' : hi.points) : '·'}
+                        {hi?.disputed && <span className={styles.disputedMark} aria-label={S.disputed}>!</span>}
                         {hi?.played && !hi.pickedUp && <span className={styles.grossMini}>{hi.gross}</span>}
                       </td>
                     )
@@ -287,6 +288,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             </tbody>
           </table>
           {players.some((p) => missing(p.id).length) && <p className="help coral">{S.missingHoles}</p>}
+          {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <p className="help" style={{ color: '#8a5a00' }}>{S.disputedHint}</p>}
           {pairsOn && complete && (
             <div className="stack" style={{ marginTop: 12 }}>
               {snapshot.pairs
