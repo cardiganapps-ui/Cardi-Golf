@@ -23,6 +23,7 @@
     "@fontsource/fraunces": "^5.2.0",
     "@fontsource/instrument-sans": "^5.2.0",
     "@supabase/supabase-js": "^2.58.0",
+    "aws4fetch": "^1.0.20",
     "canvas-confetti": "^1.9.3",
     "dexie": "^4.0.11",
     "html-to-image": "^1.11.13",
