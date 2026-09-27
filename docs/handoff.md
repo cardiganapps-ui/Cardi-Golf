@@ -30,8 +30,8 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Ficha de jugador.** Toca cualquier fila del leaderboard: tarjeta por día, hándicap con "¿Cómo se calculó?", dinero si terminara ahora.
 
 - [ ] **Instalar la app en tu teléfono.** Abre https://cardi-golf.vercel.app en Safari (iPhone) o Chrome (Android) → Compartir / menú ⋮ → "Agregar a pantalla de inicio". Debe abrir a pantalla completa con el ícono verde de la bandera.
-- [ ] **Entrar como jugador.** Código **ENSAYO** (o https://cardi-golf.vercel.app/t/ensayo) → toca una cara → PIN **1234** (todos los del Ensayo tienen ese PIN; Nico es admin y ve el Comité).
-- [ ] **Entrar como organizador.** https://cardi-golf.vercel.app/organizer/login → escribe tu correo → "¿Olvidaste tu contraseña?" → abre el correo en el teléfono → pon tu contraseña → verás "Mis torneos" con el Ensayo. Desde ahí, "Comité" para editar todo.
+- [ ] **Entrar como jugador.** Código **ENSAYO** (o https://golf.cardigan.mx/t/ensayo (o https://cardi-golf.vercel.app/t/ensayo mientras el DNS no esté)) → toca una cara → PIN **1234** (todos los del Ensayo tienen ese PIN; Nico es admin y ve el Comité).
+- [ ] **Entrar como organizador.** https://golf.cardigan.mx/organizer/login (o cardi-golf.vercel.app mientras tanto) → escribe tu correo → "¿Olvidaste tu contraseña?" → abre el correo en el teléfono → pon tu contraseña → verás "Mis torneos" con el Ensayo. Desde ahí, "Comité" para editar todo.
 - [ ] **Crear un torneo desde cero** con "Nuevo torneo" y comprobar que el cuadre de la bolsa se pone en rojo si cambias un premio.
 
 ---
@@ -50,6 +50,19 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 4. Dile a Claude "llaves listas".
 
 **Verificación:** desde una sesión nueva, Claude corre `curl -H "Authorization: Bearer $SUPABASE_PAT" https://api.supabase.com/v1/projects` y ve `gmohwledjejlhcwqjnhd`; y las llaves viejas responden 401.
+
+---
+
+## Pendiente: el link bonito (2 minutos, desde el iPhone)
+
+### Apuntar golf.cardigan.mx a la app
+**Por qué:** Vercel ya aceptó `golf.cardigan.mx` para el proyecto, pero el DNS de `cardigan.mx` vive en Cloudflare y Claude no tiene acceso ahí. Es el mismo registro que ya tiene `angus`.
+
+1. Safari → **dash.cloudflare.com** → entra → zona **cardigan.mx** → **DNS** → **Records** → **Add record**.
+2. Type **CNAME** · Name **golf** · Target **cname.vercel-dns.com** · Proxy status: toca la nube para que quede **gris (DNS only)** · TTL Auto → **Save**.
+3. Dile a Claude "DNS listo".
+
+**Verificación:** https://golf.cardigan.mx abre la app con candado (HTTPS). Claude cambia el `site_url` de Supabase para que los correos de acceso lleven ese link.
 
 ---
 
