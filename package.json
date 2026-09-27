@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "preflight": "bash scripts/preflight.sh",
     "icons": "node scripts/make-icons.mjs",
-    "e2e": "node e2e/smoke.mjs"
+    "e2e": "node e2e/smoke.mjs",
+    "simulate": "node scripts/simulate.mjs",
+    "rehearse:auction": "node scripts/rehearse-auction.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

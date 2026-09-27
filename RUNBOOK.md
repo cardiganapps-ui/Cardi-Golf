@@ -1,0 +1,80 @@
+# Cardi-Golf · Runbook del torneo
+
+Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer cuando algo falla. La app vive en **https://golf.cardigan.mx** (o https://cardi-golf.vercel.app); el Comité entra como jugador con su PIN (los admins ven "Consola del Comité" en **Más**) o como organizador en `/organizer/login`.
+
+## 0. Antes del viaje (checklist)
+
+- [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de dificultad por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
+- [ ] **Jugadores completos.** Comité › Jugadores: los 12, con categoría, hándicap base **bloqueado**, tee, foto, quién es el homenajeado y quiénes son admins. Revisa la vista previa del 80 % y los golpes de ventaja.
+- [ ] **PINs enviados.** Comité › Jugadores › PIN: uno por jugador. Mándalos por WhatsApp uno a uno.
+- [ ] **App instalada en los 12 teléfonos.** Cada quien abre el link, "Agregar a pantalla de inicio" (la guía sale la primera vez) y entra con su cara + PIN. Una vez adentro, la sesión se queda en el teléfono.
+- [ ] **Banquero definido.** Comité › Torneo › Banquero (quien cobra inscripciones y martillazos y paga premios).
+- [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde.
+- [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.
+- [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
+- [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
+
+## 1. Noche de Calcutta (la víspera del día 1)
+
+1. Conecta la tele: abre `/t/<slug>/tv` en un navegador (Chromecast / AirPlay / HDMI). Mientras el torneo esté en modo subasta muestra el tablero de la Calcutta.
+2. En el teléfono del subastador: **Más › Consola del Comité › Calcutta**.
+3. **"Sacar del sombrero"** sortea el orden de los lotes (puedes reordenar a mano) → "Abrir lote 1". El torneo pasa a estado *Subasta*.
+4. Por cada lote: la puja abre en $250 con el propio jugador. Toca al postor y luego **+$250 / +$500 / +$1,000** u "Otra". Un postor con 3 jugadores se apaga solo. "Deshacer última puja" si te equivocas.
+5. **"¡Vendido!"** → pregunta la recompra (0 / 25 / 50 % o un monto). Muestra cuánto le paga el jugador a su dueño. → "Siguiente lote".
+6. Si vendiste mal un lote: en la lista de vendidos toca ↶ para reabrirlo.
+7. Al vender el último: **"Sorteo de parejas"**. El homenajeado escoge a su pareja de la categoría que le toca; el resto sale con anillos. Ponles nombre y **guarda**: genera los grupos del día 1 (una pareja A+D con una B+C). Ajusta horas de salida en **Grupos**.
+8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Marca "Pagado" conforme paguen. Todo se paga esa noche.
+
+## 2. Empezar una ronda
+
+1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.)
+2. Cada grupo abre **Tarjeta**: sale su grupo y "Llevas la tarjeta de: [pareja rival]". Cualquiera del grupo puede capturar a los cuatro.
+3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos.
+4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar.
+
+## 3. Corregir un score
+
+- **En el grupo, antes de firmar:** vuelve al hoyo en Tarjeta (flechas o "Ver tarjeta" → toca el hoyo) y corrige.
+- **Desde el Comité:** Comité › **Scores** → elige jugador y hoyo → corrige. Si la tarjeta ya está firmada te pide una razón; todo queda en la bitácora.
+- **"Discrepancia"** (dos teléfonos guardaron valores distintos): en Comité › Scores aparece el hoyo en rojo con los dos valores; elige el bueno.
+
+## 4. Sin señal
+
+Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pendientes"… Cuando vuelve la señal se sincroniza sola. Si al llegar al club sigue en pendiente, abre la app con Wi-Fi: se vacía la cola. No borres la app ni cambies de jugador con pendientes.
+
+## 5. Si la app se cae
+
+1. Usa las **tarjetas de papel** (sección 0). Golpes arriba, putts abajo, marca los 3 putts para la víbora.
+2. Al terminar, el admin captura todo desde Comité › **Scores** (jugador por jugador) o desde Tarjeta eligiendo el grupo.
+3. Si Supabase está pausado: dashboard de Supabase → proyecto Cardi-Golf → "Restore". Tarda 1–2 minutos.
+4. Si Vercel está caído: el último respaldo JSON (sección 8) tiene todo; la liquidación se puede hacer a mano con el CSV de resultados.
+
+## 6. Cerrar una ronda
+
+1. Cada pareja **firma la tarjeta de la otra** al terminar el 18 ("Firmar tarjeta" en Tarjeta). Eso la bloquea.
+2. Comité › **Rondas** › "Terminar ronda". Revisa en **En vivo** que no queden hoyos sin capturar ni víboras pendientes (sale un chip rojo).
+3. Comité › **Hándicaps**: revisa el recorte del día 2 de cada jugador (regla anti-sandbag). Ajusta con razón si el Comité lo decide.
+4. Comité › **Grupos** › "Generar grupos del día 2 por tabla": las dos mejores parejas salen al último. Ajusta horas y salidas.
+5. **Dinero**: los premios del día (mejor ronda, víbora) ya aparecen como definitivos.
+
+## 7. Ceremonia y liquidación final
+
+1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
+2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
+3. **Dinero › Liquidación**: "Vía banco" es la lista de lo que el banquero paga a cada quien. "Sin banco" es la lista mínima de transferencias entre personas si alguien no pagó por adelantado. Marca "Pagado" conforme se pague. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
+4. **Más › Stats y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
+
+## 8. Respaldo
+
+Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "Descargar CSV". Guarda los archivos en el teléfono y en Drive. Restaurar: mismo lugar, "Restaurar desde JSON…" (solo acepta respaldos de ese mismo torneo y reemplaza todo).
+
+## 9. Ensayo y simulador
+
+- **Duplicar torneo** (Comité › Datos) copia configuración, campo y jugadores a un torneo nuevo para ensayar sin tocar el real.
+- Desde la terminal del repo, el simulador llena rondas del torneo "Ensayo" (y solo de ese) con scores realistas:
+
+```
+node scripts/simulate.mjs --round 1 --reset            # día 1 de golpe
+node scripts/simulate.mjs --round 2 --interval 20      # día 2 en tiempo real, un hoyo cada 20 s por grupo
+node scripts/rehearse-auction.mjs                      # una Calcutta completa de 12 lotes
+```

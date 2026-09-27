@@ -24,7 +24,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
-## Para probar M2 a M6 (no bloquea nada)
+## Para probar M2 a M7 (no bloquea nada)
+
+- [ ] **Ensayo completo (M7).** El Ensayo ya tiene el día 1 terminado (simulado) y el día 2 en juego con 9 hoyos. Léete `RUNBOOK.md` (una página, en español) y sigue "6. Cerrar una ronda" y "7. Ceremonia": termina el día 2 desde Comité › Rondas, pon el torneo en Terminado y corre la Ceremonia en una tele. Comité › **Datos**: descarga el respaldo JSON y el CSV, prueba "Restaurar desde JSON…" con ese mismo archivo, y "Ver tarjetas para imprimir" → guarda el PDF. "Duplicar torneo" crea un torneo nuevo para ensayar con tus amigos sin tocar el Ensayo.
 
 - [ ] **Dazzle (M6).** En vivo ahora trae el feed ("birdie en el 7", "cambio de líder", "la víbora pasa a…") y "Compartir tabla" genera una imagen para WhatsApp. Más › **Stats y premios**: premios automáticos (Rey del Birdie, Mano de Piedra…), la carrera de puntos con ▶ para revivirla, el campo y la tabla por jugador. Más › **Reglamento**: las reglas leídas de la configuración. Más › **Modo TV** rota tableros (y el feed). Nico ve además **Ceremonia**: revela uno por uno hasta el campeón con confeti (en la tele se ve mejor).
 
