@@ -88,7 +88,7 @@ try {
   await shot('live')
   const body = await p.innerText('body')
   check(body.includes(firstName.split(' ')[0]), 'leaderboard shows the scorer group')
-  check(/HOY\s*[1-9]/.test(body), 'leaderboard shows points for today')
+  check(/Hoy\s*[1-9]/i.test(body), 'leaderboard shows points for today')
   await p.locator('button').filter({ hasText: firstName }).first().click()
   await p.waitForSelector('text=¿Cómo se calculó?', { timeout: T })
   await shot('player')
@@ -127,7 +127,7 @@ try {
   await p.goto(`${base}/t/${slug}/reglamento`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Reglamento', { timeout: T })
   await shot('rules')
-  check(/anti-sandbag/.test(await p.innerText('body')), 'rules render from settings')
+  check(/Recorte del día 2/.test(await p.innerText('body')), 'rules render from settings')
 
   await p.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Individual', { timeout: T })
@@ -135,10 +135,10 @@ try {
   check((await p.locator('text=Cambio de líder').count()) + (await p.locator('text=birdie').count()) + (await p.locator('text=Todavía no pasa nada').count()) > 0, 'feed ticker renders')
 
   await p.goto(`${base}/t/${slug}/admin/datos`, { waitUntil: 'domcontentloaded' })
-  await p.waitForSelector('text=Descargar respaldo', { timeout: T })
+  await p.waitForSelector('text=Respaldo JSON', { timeout: T })
   await shot('data')
   // Export a backup, then restore the same file: row counts must survive the round trip.
-  const [download] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.locator('text=Descargar respaldo (JSON)').click()])
+  const [download] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.getByRole('button', { name: 'Respaldo JSON', exact: true }).click()])
   const backupPath = `${out}/backup.json`
   await download.saveAs(backupPath)
   const backup = JSON.parse(await readFile(backupPath, 'utf8'))
@@ -149,8 +149,8 @@ try {
   await chooser.setFiles(backupPath)
   await p.waitForSelector('text=Respaldo restaurado', { timeout: T })
   await p.goto(`${base}/t/${slug}/admin/datos`, { waitUntil: 'domcontentloaded' })
-  await p.waitForSelector('text=Descargar respaldo', { timeout: T })
-  const [download2] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.locator('text=Descargar respaldo (JSON)').click()])
+  await p.waitForSelector('text=Respaldo JSON', { timeout: T })
+  const [download2] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.getByRole('button', { name: 'Respaldo JSON', exact: true }).click()])
   await download2.saveAs(`${out}/backup2.json`)
   const backup2 = JSON.parse(await readFile(`${out}/backup2.json`, 'utf8'))
   check(backup2.tables.scores.length === scoresBefore && backup2.tables.calcutta_lots.length === backup.tables.calcutta_lots.length, 'restore round-trips every row')
