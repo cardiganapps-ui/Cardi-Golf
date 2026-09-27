@@ -34,13 +34,25 @@ export interface Player {
   displayName: string
   /** One of `settings.tiers`, or null when the tournament has no tiers. */
   tier: string | null
+  /** The value the engine starts from: a WHS index, an estimate, or a number typed by the Comité. */
   baseHcp: number
-  teeId: Id | null
+  handicapSource: 'index' | 'estimate' | 'manual'
+  handicapIndex: number | null
+  /** Three gross scores (good, normal, bad day) with where they were shot (§13b-E). */
+  estimateInputs: [EstimateInput, EstimateInput, EstimateInput] | null
+  defaultTeeId: Id | null
   isHonoree: boolean
   isAdmin: boolean
   avatarUrl: string | null
   formGuide: string | null
   sortOrder: number
+}
+
+export interface EstimateInput {
+  gross: number
+  rating: number | null
+  slope: number | null
+  par: number | null
 }
 
 export interface Hole {
@@ -82,6 +94,13 @@ export interface Group {
   teeTime: string | null
   startHole: number
   playerIds: Id[]
+}
+
+/** Which tee a player plays in a round (§13b-D). */
+export interface RoundTee {
+  roundId: Id
+  playerId: Id
+  teeId: Id
 }
 
 export interface Pair {
@@ -172,6 +191,7 @@ export interface Snapshot {
   courses: Course[]
   rounds: Round[]
   groups: Group[]
+  roundTees: RoundTee[]
   pairs: Pair[]
   scores: Score[]
   snakeTiebreaks: SnakeTiebreak[]

@@ -82,6 +82,11 @@ export const HandicapSettings = z.object({
    * tournament plays two courses with one base handicap (§5.2).
    */
   perRoundSlope: z.boolean().default(false),
+  /** Weights for the three-score estimate: [good day, normal day, bad day] (§13b-E). */
+  estimateWeights: z
+    .tuple([z.number().min(0), z.number().min(0), z.number().min(0)])
+    .refine((w) => Math.abs(w[0] + w[1] + w[2] - 1) < 1e-9, { message: 'Estimate weights must add up to 1.' })
+    .default([0.45, 0.4, 0.15]),
 })
 
 /** Anti-sandbag rule: strokes cut from the next round's handicap after a big Day 1. */

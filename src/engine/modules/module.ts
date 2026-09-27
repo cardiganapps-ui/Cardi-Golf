@@ -6,7 +6,7 @@
  * money).
  */
 import type { ModuleId, TournamentSettings } from '../settings/schema'
-import type { Snapshot } from '../types'
+import type { Explanation, Id, Snapshot } from '../types'
 import type { CoreState } from '../core/types'
 
 /** What every module receives: the raw facts plus the core (handicaps, per-hole scoring). */
@@ -14,6 +14,10 @@ export interface ModuleContext {
   snapshot: Snapshot
   settings: TournamentSettings
   core: CoreState
+  /** Everything finished: tournament status `finished` or every counted round `finished`. */
+  tournamentFinal: boolean
+  /** roundId → the round is `finished`. */
+  roundFinal: Record<Id, boolean>
 }
 
 /** A single prize a module awards (live "si terminara ahora" or final). */
@@ -21,10 +25,11 @@ export interface PrizeAward {
   moduleId: ModuleId
   /** Copy for the money screens, e.g. "Individual · 1º" or "La Víbora · Día 1 · Grupo 2". */
   label: string
-  playerId: string
+  playerId: Id
   amount: number
   /** True once the underlying round(s) are finished, false while provisional. */
   final: boolean
+  why: Explanation
 }
 
 export interface GameModule<State> {
