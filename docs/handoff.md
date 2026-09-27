@@ -16,6 +16,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
 - ~~**Llave de GolfCourseAPI.**~~ En Vercel (`GOLFCOURSE_API_KEY`). Probada: Quivira aparece con 5 tees completos; Solmar no está en la base (se carga por foto o a mano). (2026-09-27)
 - ~~**Llave de Anthropic en Vercel.**~~ `ANTHROPIC_API_KEY` con workspace, modelo Haiku. Probada: leyó una tarjeta de prueba 18/18 por ~$0.0025. (2026-09-27)
+- ~~**Llave de OpenGolfAPI.**~~ En Vercel (`OPENGOLF_API_KEY`), segunda fuente de campos. Probada: tiene Solmar y Quivira en su lista, pero sin tarjeta; los campos con datos (p. ej. Pebble Beach) traen tees, rating/slope, par y SI. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git) y funcionan. (2026-09-27)
 
@@ -27,7 +28,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ## Recomendado, no bloquea: rotar las llaves y guardarlas en el entorno
 
-**Por qué:** las llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel, GolfCourseAPI y las dos de Anthropic — la primera sin workspace ya no se usa: revócala) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
+**Por qué:** las llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel, GolfCourseAPI, OpenGolfAPI y las dos de Anthropic — la primera sin workspace ya no se usa: revócala) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
 
 1. Supabase dashboard → proyecto **Cardi-Golf** → **Settings → API Keys → Secret keys** → en la llave `claude` toca **⋯ → Revoke**, luego **Create new secret key** (nombre `claude`). Copia el valor.
 2. Supabase → tu avatar → **Account → Access Tokens** → revoca el token actual → **Generate new token** (nombre `claude-code`). Copia el valor.
@@ -46,7 +47,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 Mándalos en el chat como texto, foto o captura, como te quede más fácil. Claude los carga al admin.
 
-- [ ] **Tarjeta de Solmar Golf Links (día 1):** no está en la base de datos de campos; manda una foto de la tarjeta. Quivira (día 2) ya se puede importar desde la búsqueda. Para cada campo: par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
+- [ ] **Tarjeta de Solmar Golf Links (día 1):** no está completo en ninguna de las dos bases de campos (OpenGolfAPI lo tiene sin tarjeta); manda una foto de la tarjeta o súbela en la app cuando M2 esté listo. Quivira (día 2) ya se puede importar desde la búsqueda. Para cada campo: par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
 - [ ] **Tiers y hándicap** de los 12 jugadores: índice WHS si lo tienen; si no, tres scores (buen día / normal / mal día) y la app estima uno (§13b). También qué tee juega cada uno.
 - [ ] **Jugador 12** y **quién es Nacho**.
 - ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
