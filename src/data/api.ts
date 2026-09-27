@@ -174,8 +174,12 @@ export interface CourseDraft {
   id?: string
   name: string
   location?: string | null
-  source?: 'manual' | 'golfcourseapi' | 'scorecard_photo'
+  source?: 'manual' | 'golfcourseapi' | 'opengolfapi' | 'scorecard_photo'
   externalId?: string | null
+  attribution?: string | null
+  website?: string | null
+  latitude?: number | null
+  longitude?: number | null
   tees: CourseDraftTee[]
 }
 
@@ -188,6 +192,10 @@ export async function saveCourse(draft: CourseDraft): Promise<string> {
     source: draft.source ?? 'manual',
     external_id: draft.externalId ?? null,
     imported_at: draft.source && draft.source !== 'manual' ? new Date().toISOString() : null,
+    attribution: draft.attribution ?? null,
+    website: draft.website ?? null,
+    latitude: draft.latitude ?? null,
+    longitude: draft.longitude ?? null,
   }
   let courseId = draft.id
   if (courseId) {
@@ -228,9 +236,9 @@ export async function saveCourse(draft: CourseDraft): Promise<string> {
   return courseId
 }
 
-export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number }>> {
-  const rows = unwrap(await supabase().from('courses').select('id, name, location, source, tees(id)').order('name')) as Row[]
-  return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length }))
+export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null }>> {
+  const rows = unwrap(await supabase().from('courses').select('id, name, location, source, attribution, tees(id)').order('name')) as Row[]
+  return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length, attribution: r.attribution ?? null }))
 }
 
 export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
@@ -244,6 +252,10 @@ export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
     location: course.location,
     source: course.source,
     externalId: course.external_id,
+    attribution: course.attribution ?? null,
+    website: course.website ?? null,
+    latitude: course.latitude == null ? null : Number(course.latitude),
+    longitude: course.longitude == null ? null : Number(course.longitude),
     tees: tees.map((t) => ({
       id: t.id,
       name: t.name,

@@ -22,7 +22,10 @@ const sample = {
 
 describe('GolfCourseAPI adapter', () => {
   it('maps a search hit', () => {
-    expect(mapSearchHit(sample)).toEqual({ externalId: '1234', name: 'Quivira Los Cabos', clubName: 'Quivira Golf Club', location: 'Cabo San Lucas, BCS, Mexico' })
+    expect(mapSearchHit(sample)).toEqual({ provider: 'golfcourseapi', externalId: '1234', name: 'Quivira Los Cabos', clubName: 'Quivira Golf Club', location: 'Cabo San Lucas, BCS, Mexico', latitude: null, longitude: null, hasCard: true })
+    // The live search payload carries tee COUNTS, not arrays.
+    expect(mapSearchHit({ ...sample, tees: { male: 5, female: 0 } }).hasCard).toBe(true)
+    expect(mapSearchHit({ ...sample, tees: { male: 0, female: 0 } }).hasCard).toBe(false)
   })
   it('maps tees, holes and falls back to 1..18 stroke indexes when missing', () => {
     const c = mapCourse(sample)

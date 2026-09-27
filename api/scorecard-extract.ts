@@ -31,6 +31,13 @@ const CardSchema = z.object({
 
 export const config = { maxDuration: 60 }
 
+/**
+ * Diego's call (CLAUDE.md §13b-B): the cheapest model that reads a scorecard
+ * well, ~$0.0025 per card. If a real card comes back wrong twice, raise this
+ * one constant to 'claude-sonnet-5'.
+ */
+const MODEL = 'claude-haiku-4-5'
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') {
@@ -63,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const response = await client.messages.parse({
-      model: 'claude-opus-5',
+      model: MODEL,
       max_tokens: 16000,
       messages: [{ role: 'user', content: [source, { type: 'text', text: instructions }] }],
       output_config: { format: zodOutputFormat(CardSchema) },

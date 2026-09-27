@@ -22,8 +22,9 @@ export async function searchCourses(q: string): Promise<ProviderSearchHit[]> {
   return body.hits
 }
 
-export async function fetchProviderCourse(id: string): Promise<ProviderCourse> {
-  const body = await parse<{ course: ProviderCourse }>(await fetch(`/api/course-search?id=${encodeURIComponent(id)}`))
+/** `ref` is "<provider>:<externalId>" (see hitRef). */
+export async function fetchProviderCourse(ref: string): Promise<ProviderCourse> {
+  const body = await parse<{ course: ProviderCourse }>(await fetch(`/api/course-search?id=${encodeURIComponent(ref)}`))
   return body.course
 }
 

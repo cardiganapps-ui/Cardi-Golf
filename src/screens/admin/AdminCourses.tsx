@@ -9,7 +9,7 @@ import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraf
 import { useTournament } from '../../data/tournamentStore'
 import { blobToBase64, downscaleImage } from '../../lib/images'
 import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from '../../lib/courseApi'
-import type { ProviderCourse, ProviderSearchHit } from '../../lib/courseProviders/types'
+import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/courseProviders/types'
 import { useCourses } from './useCourses'
 import { CourseEditor } from './CourseEditor'
 
@@ -56,7 +56,18 @@ export function AdminCourses() {
   async function chooseHit(h: ProviderSearchHit) {
     setBusy(true)
     try {
-      const c = await fetchProviderCourse(h.externalId)
+      const c = await fetchProviderCourse(hitRef(h))
+      if (c.tees.length === 0) {
+        // Location only: create the course now and go straight to the photo (§13b-A).
+        const id = await saveCourse(provenance(c, []))
+        pendingCourseId.current = id
+        refresh()
+        await reload()
+        setMode('none')
+        toast(C.locationCreated)
+        fileRef.current?.click()
+        return
+      }
       setProvider(c)
       setPick(new Set(c.tees.map((_, i) => i)))
       setMode('import')
@@ -66,18 +77,28 @@ export function AdminCourses() {
       setBusy(false)
     }
   }
+  const pendingCourseId = useRef<string | null>(null)
+
+  const provenance = (c: ProviderCourse, tees: CourseDraft['tees']): CourseDraft => ({
+    name: c.name,
+    location: c.location,
+    source: c.provider,
+    externalId: c.externalId,
+    attribution: c.attribution,
+    website: c.website,
+    latitude: c.latitude,
+    longitude: c.longitude,
+    tees,
+  })
 
   function importPicked() {
     if (!provider) return
-    setDraft({
-      name: provider.name,
-      location: provider.location,
-      source: 'golfcourseapi',
-      externalId: provider.externalId,
-      tees: provider.tees
-        .filter((_, i) => pick.has(i))
-        .map((tee) => ({ name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes })),
-    })
+    setDraft(
+      provenance(
+        provider,
+        provider.tees.filter((_, i) => pick.has(i)).map((tee) => ({ name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes })),
+      ),
+    )
     setNotes([])
     setMode('none')
     setProvider(null)
@@ -95,7 +116,10 @@ export function AdminCourses() {
         issues.push(...tee.issues.map((i) => `${tee.name}: ${i}`), `${tee.name}: ${C.confidence[tee.confidence]}`)
         return { name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes }
       })
-      const d: CourseDraft = { name: r.courseName, source: 'scorecard_photo', tees }
+      // A course created from a location-only hit keeps its name and provenance; the photo fills the tees.
+      const base = pendingCourseId.current ? await loadCourseDraft(pendingCourseId.current) : null
+      pendingCourseId.current = null
+      const d: CourseDraft = base ? { ...base, tees, source: base.source === 'manual' ? 'scorecard_photo' : base.source } : { name: r.courseName, source: 'scorecard_photo', tees }
       setDraft(d)
       setNotes(issues)
       // Keep the photo for later re-checks (saved once the course exists).
@@ -190,6 +214,11 @@ export function AdminCourses() {
               <span className="help" style={{ display: 'block' }}>
                 {c.location ?? ''} {c.location ? '·' : ''} {c.tees} {C.tees.toLowerCase()} · {C.source[c.source as keyof typeof C.source] ?? c.source}
               </span>
+              {c.attribution && (
+                <span className="help" style={{ display: 'block', fontSize: '0.75rem' }}>
+                  {C.attribution}: {c.attribution}
+                </span>
+              )}
             </button>
             <button className="btn btn--ghost btn--sm coral" type="button" onClick={() => void remove(c.id)}>
               {t.common.delete}
@@ -217,12 +246,15 @@ export function AdminCourses() {
           {hits && hits.length > 0 && (
             <div className="list">
               {hits.map((h) => (
-                <button key={h.externalId} type="button" className="listItem" onClick={() => void chooseHit(h)}>
+                <button key={hitRef(h)} type="button" className="listItem" onClick={() => void chooseHit(h)}>
                   <span className="grow">
                     <strong>{h.name}</strong>
                     <span className="help" style={{ display: 'block' }}>
                       {[h.clubName, h.location].filter(Boolean).join(' · ')}
                     </span>
+                  </span>
+                  <span className={`chip ${h.hasCard === true ? 'chip--teal' : h.hasCard === false ? 'chip--coral' : 'chip--outline'}`} style={{ whiteSpace: 'normal', height: 'auto', padding: '4px 10px', maxWidth: 150, textAlign: 'center' }}>
+                    {h.hasCard === true ? C.fullCard : h.hasCard === false ? C.locationOnly : C.cardUnknown}
                   </span>
                 </button>
               ))}
