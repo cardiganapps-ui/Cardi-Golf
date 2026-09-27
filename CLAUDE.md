@@ -134,8 +134,8 @@ Cardigan is Diego's clinical practice management app. It stores patient health d
 | Piece | Decision |
 |---|---|
 | GitHub | Private repo `cardiganapps-ui/Cardi-Golf` (Diego's account). |
-| Vercel | New project in the same team as Cardigan (`cardiganapps-4938's projects`, `team_0rR9OfIKmnJ8xFDrOXUkHcT3`; Pro plan, so every branch gets a preview URL). Use the default `*.vercel.app` domain; ask Diego before adding a custom subdomain. |
-| Supabase | New project in the same organization as Cardigan ("Cardigan", `gmawxcuqdkwculayfbaf`). Never read from or write to Cardigan's project (`axyuqfkmifcaupwhzfuw`) or Angus's (`xbpvqvlomrnuxydyqyqj`). Use Cardigan's region (`us-east-2`). **As of 2026-09-26 the org is on the free plan and both active free slots are taken** (cardigan + angus; cardigan-staging is paused), so a new project is a money decision. See `docs/handoff.md`. |
+| Vercel | **Project `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`)** on team `cardiganapps-4938's projects` (`team_0rR9OfIKmnJ8xFDrOXUkHcT3`), linked to the repo; production branch `main`, previews for every branch. `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` go on Production + Preview (values in `.env.example`; Diego sets them, see handoff). Default domain `cardi-golf.vercel.app`; ask Diego before adding a custom subdomain. The Vercel MCP connector is read-only here (403 on project and env-var creation); a team-scoped `VERCEL_TOKEN` in the Claude Code environment secrets unlocks the REST API. |
+| Supabase | **Project `Cardi-Golf`, ref `gmohwledjejlhcwqjnhd`, region `us-east-1`, URL `https://gmohwledjejlhcwqjnhd.supabase.co`**, in its own free organization "Cardi-Golf" (org id `xqtxffsvifrnqvgzzdxu`), separate from the Cardigan org. Never read from or write to Cardigan's project (`axyuqfkmifcaupwhzfuw`) or Angus's (`xbpvqvlomrnuxydyqyqj`). The Supabase MCP connector in Claude sessions is bound to the *Cardigan* org and does not see this project: manage it with the Management API / Supabase CLI using `SUPABASE_PAT` and `SUPABASE_SECRET_KEY` from the Claude Code environment secrets (never from a file in the repo). Auth config already set (2026-09-27): anonymous sign-ins on, `password_min_length` 8, `site_url` `https://cardi-golf.vercel.app`, allow-list covers `cardi-golf-*.vercel.app` previews and localhost 5173/4173. **Free plan pauses the project after 7 days idle**: M0 adds a GitHub Actions cron that pings it daily, and the runbook says to check it the day before the trip. |
 | Frontend base | Same as Cardigan: Vite + React 19. Add TypeScript. |
 | Reusable patterns | Angus (`cardiganapps-ui/Angus`) and Cardigan (`cardiganapps-ui/cardigan`) are sibling repos. Read them (read-only, via `add_repo`) and copy what helps: Supabase client setup, PWA manifest and service worker config, MXN formatting helpers, Vercel config, styling approach, and the preflight/CI pattern this repo already copied. Don't import from them and don't modify them. |
 | Storage | Avatars and optional photos go in Supabase Storage in the new project. Use Cloudflare R2 only if Cardigan already has a clean upload helper you can copy. |
@@ -693,7 +693,7 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 ## 16. Milestones and acceptance criteria
 
 **M0: Setup**
-- New repo, Supabase project, and Vercel project; environment variables; CI running tests on push.
+- Repo, Supabase project and Vercel project already exist (§3); wire the env vars, the keep-alive cron for the free Supabase project, and CI running tests on push.
 - Engine module seam and settings schema (with Zod or similar) so every later milestone plugs into it.
 - PWA shell, fonts, tokens, and logo.
 - Done when: a deployed preview URL is installable on Diego's phone.
