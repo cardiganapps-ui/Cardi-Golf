@@ -1,0 +1,104 @@
+.awards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .awards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.award {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.awardName {
+  font-family: var(--font-display, 'Fraunces', serif);
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+.awardWinners {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  min-height: 36px;
+}
+.awardValue {
+  margin-left: auto;
+  font-size: 1.2rem;
+  color: var(--teal);
+}
+.chart {
+  background: var(--cell);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  padding: 8px 4px 0;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 0.8rem;
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.swatch {
+  width: 12px;
+  height: 4px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.holeBars {
+  display: grid;
+  grid-template-columns: repeat(18, 1fr);
+  gap: 2px;
+  height: 70px;
+  align-items: end;
+}
+.holeBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 2px;
+}
+.bar {
+  width: 100%;
+  background: var(--teal);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+}
+.holeLabel {
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+.tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tableWrap table {
+  min-width: 900px;
+}
+.tableWrap tr {
+  cursor: pointer;
+}

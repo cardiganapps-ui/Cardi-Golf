@@ -8,6 +8,8 @@ import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
+import { ShareCardButton } from '../../components/ShareCard'
+import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound } from './useMyGroup'
@@ -103,7 +105,10 @@ export function LiveScreen() {
         </button>
       )}
 
-      <h2>{settings.modules.individual.label}</h2>
+      <div className="row row--between">
+        <h2>{settings.modules.individual.label}</h2>
+        <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />
+      </div>
       {rows.length === 0 && <p className="muted">{t.enter.noPlayers}</p>}
       <div className={styles.board}>
         <AnimatePresence initial={false}>
@@ -158,6 +163,9 @@ export function LiveScreen() {
         </AnimatePresence>
       </div>
       <p className="help">{t.money.ifEndedNow}</p>
+
+      <h2>{t.feed.title}</h2>
+      <FeedTicker limit={10} />
 
       <PlayerSheet playerId={open} onClose={() => setOpen(null)} />
     </div>

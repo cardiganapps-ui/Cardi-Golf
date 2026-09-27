@@ -31,6 +31,22 @@ export function MoreScreen() {
           {t.more.admin}
         </Link>
       )}
+      <div className="row row--wrap">
+        <Link className="btn btn--secondary" to={`/t/${slug}/stats`}>
+          📊 {t.more.stats}
+        </Link>
+        <Link className="btn btn--secondary" to={`/t/${slug}/reglamento`}>
+          📜 {t.more.rules}
+        </Link>
+        <Link className="btn btn--secondary" to={`/t/${slug}/tv`}>
+          📺 {t.more.tv}
+        </Link>
+        {me.isAdmin && (
+          <Link className="btn btn--secondary" to={`/t/${slug}/ceremonia`}>
+            🏆 {t.more.ceremony}
+          </Link>
+        )}
+      </div>
 
       <div className="card">
         <span className="label">{t.organizer.joinCode}</span>

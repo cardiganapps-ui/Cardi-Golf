@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
+import { ShareCardButton } from '../../components/ShareCard'
 import { Avatar, Segmented, ShareButton, toast } from '../../components/ui'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -78,7 +79,10 @@ export function MoneyScreen() {
     <div className="screen">
       <div className="row row--between">
         <h1>{t.nav.money}</h1>
-        <ShareButton text={shareText} title={M.shareTitle(snapshot.tournament.name)} />
+        <span className="row">
+          <ShareCardButton what={{ kind: 'settlement' }} className="btn btn--secondary btn--sm" label="" />
+          <ShareButton text={shareText} title={M.shareTitle(snapshot.tournament.name)} />
+        </span>
       </div>
       <Segmented
         value={mode}
