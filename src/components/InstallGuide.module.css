@@ -1,0 +1,21 @@
+.guide {
+  background: var(--deep);
+  color: var(--paper);
+}
+.guide h2 {
+  color: var(--sun);
+}
+.guide .muted,
+.guide p {
+  color: var(--seafoam);
+}
+.steps {
+  margin: 12px 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.guide button {
+  color: var(--sun);
+}
