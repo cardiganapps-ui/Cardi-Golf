@@ -7,9 +7,9 @@
  * route answers 503 with the Spanish copy the UI shows.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import * as gca from '../src/lib/courseProviders/golfcourseapi'
-import * as oga from '../src/lib/courseProviders/opengolfapi'
-import { mergeHits, parseRef, type ProviderSearchHit } from '../src/lib/courseProviders/types'
+import * as gca from '../src/lib/courseProviders/golfcourseapi.js'
+import * as oga from '../src/lib/courseProviders/opengolfapi.js'
+import { mergeHits, parseRef, type ProviderSearchHit } from '../src/lib/courseProviders/types.js'
 
 const GCA = 'https://api.golfcourseapi.com/v1'
 const OGA = 'https://api.opengolfapi.org'

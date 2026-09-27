@@ -5,7 +5,7 @@
  *   detail → { course: { …, tees: { male: [tee], female: [tee] } } }
  *   tee: { tee_name, course_rating, slope_rating, par_total, holes: [{ par, yardage, handicap }] }
  */
-import type { ProviderCourse, ProviderSearchHit, ProviderTee } from './types'
+import type { ProviderCourse, ProviderSearchHit, ProviderTee } from './types.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = Record<string, any>

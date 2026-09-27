@@ -55,7 +55,14 @@ interface StoreState {
 let channel: RealtimeChannel | null = null
 let reloadTimer: ReturnType<typeof setTimeout> | null = null
 
+/** Registered by the outbox: overlays pending writes on every fetched snapshot. */
+const overlays: Array<(s: Snapshot) => void> = []
+export function registerOverlay(fn: (s: Snapshot) => void) {
+  overlays.push(fn)
+}
+
 function compute(snapshot: Snapshot): TournamentData {
+  for (const fn of overlays) fn(snapshot)
   let settings: TournamentSettings
   let settingsError: string | null = null
   try {
