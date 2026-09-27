@@ -1,0 +1,42 @@
+/* Design tokens (CLAUDE.md §14). The platform's look; a tournament adds an
+   accent color on top via --accent. */
+:root {
+  --paper: #f7f1e3; /* background (sand) */
+  --panel: #efe5cf; /* cards / callouts */
+  --cell: #fbf7ee; /* inputs, table cells */
+  --ink: #12343b; /* primary text */
+  --muted: #4f6166; /* secondary text (never lighter) */
+  --teal: #0f6e77; /* primary accent */
+  --deep: #0b4f57; /* feature blocks, TV background */
+  --coral: #b04327; /* secondary accent, alerts, Cuchara */
+  --sun: #f2b63f; /* highlights on dark backgrounds */
+  --hair: #cdbf9f; /* hairlines */
+  --seafoam: #a9dcd8;
+  --midteal: #3aa6ae;
+
+  --accent: var(--teal);
+  --on-accent: #ffffff;
+
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Times New Roman', serif;
+  --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+
+  --shadow-card: 0 1px 0 rgba(18, 52, 59, 0.06), 0 8px 24px -12px rgba(18, 52, 59, 0.25);
+
+  --tap: 48px; /* minimum tap target */
+  --gutter: 16px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0ms;
+  }
+}

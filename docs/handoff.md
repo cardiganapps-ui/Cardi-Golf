@@ -15,6 +15,11 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
+- ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git) y funcionan. (2026-09-27)
+
+## Para probar M0 (no bloquea nada)
+
+- [ ] **Instalar el preview en tu teléfono.** Abre la URL del preview que te mandó Claude en Safari (iPhone) o Chrome (Android) → Compartir / menú ⋮ → "Agregar a pantalla de inicio". Debe abrir a pantalla completa con el ícono verde de la bandera. Dile a Claude si algo se ve mal.
 
 ---
 

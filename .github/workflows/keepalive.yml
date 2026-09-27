@@ -1,0 +1,28 @@
+name: Supabase keep-alive
+
+# The Cardi-Golf Supabase project is on the free plan, which pauses a project
+# after 7 days without API activity. One authenticated REST request a day keeps
+# it awake. The anon (publishable) key is browser-safe by design and already
+# lives in .env.example, so it can appear here.
+on:
+  schedule:
+    - cron: '17 11 * * *' # daily, 11:17 UTC (05:17 America/Mazatlan)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the REST endpoint
+        env:
+          SUPABASE_URL: https://gmohwledjejlhcwqjnhd.supabase.co
+          SUPABASE_ANON_KEY: sb_publishable_AfdMuv4UnxfuskCeC-JCJw_iuEJB6sK
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/")"
+          echo "REST responded $code"
+          # 200 = OK; the project is awake. Anything else means it is paused or broken.
+          [ "$code" = "200" ]

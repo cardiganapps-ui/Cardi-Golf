@@ -1,0 +1,8 @@
+.banner {
+  background: var(--deep);
+  color: var(--sun);
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 8px var(--gutter);
+}
