@@ -54,7 +54,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
             )}
             {m[id].enabled && id === 'pairs' && !compact && (
               <div className="grid2" style={{ marginTop: 8 }}>
-                <Field label="Reglas de pareja (A-D, B-C)">
+                <Field label={A.pairingRules}>
                   <input
                     className="input input--sm"
                     defaultValue={m.pairs.pairing.map((p) => p.join('-')).join(', ')}
@@ -67,11 +67,11 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                     }
                   />
                 </Field>
-                <Toggle label="El homenajeado escoge pareja" checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
+                <Toggle label={A.honoreePicks} checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
               </div>
             )}
             {m[id].enabled && id === 'snake' && !compact && (
-              <Field label="Putts que pasan la víbora">
+              <Field label={A.snakeThreshold}>
                 <input className="input input--sm input--num" type="number" min={2} max={10} value={m.snake.puttsThreshold} onChange={(e) => set((d) => (d.modules.snake.puttsThreshold = Number(e.target.value) || 3))} />
               </Field>
             )}
@@ -137,7 +137,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
             </div>
           </>
         )}
-        {!compact && <Toggle label="Ajustar hándicap por slope de cada ronda" hint="Apagado: un solo hándicap base para todo el torneo." checked={value.handicap.perRoundSlope} onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))} />}
+        {!compact && <Toggle label={A.perRoundSlope} hint={A.perRoundSlopeHint} checked={value.handicap.perRoundSlope} onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))} />}
       </section>
 
       <section className="stack">
@@ -178,7 +178,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
           </Field>
         )}
 
-        <div className={`card ${check?.balanced ? 'card--cell' : ''}`} style={{ background: check?.balanced ? undefined : 'var(--coral)', color: check?.balanced ? undefined : '#fff' }}>
+        <div className={`card ${check?.balanced ? 'card--cell' : 'card--alert'}`}>
           <strong>{A.balance}</strong>
           {!parsed.success && (
             <p className="small">
@@ -213,7 +213,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                   </tr>
                 </tbody>
               </table>
-              <p style={{ marginTop: 8, fontWeight: 700 }}>{check.balanced ? `✓ ${A.balanced}` : A.notBalanced(formatMoney(Math.abs(check.difference)))}</p>
+              <p style={{ marginTop: 8, fontWeight: 700 }}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference)))}</p>
             </>
           )}
         </div>

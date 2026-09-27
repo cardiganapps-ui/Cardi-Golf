@@ -32,7 +32,6 @@ export function InstallGuide() {
 
   return (
     <section className={`card ${styles.guide}`}>
-      <span className="section-num">03</span>
       <h2>{t.install.title}</h2>
       <p className="muted">{t.install.why}</p>
       <ol className={styles.steps}>

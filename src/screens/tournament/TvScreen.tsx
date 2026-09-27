@@ -15,6 +15,7 @@ import { useTournamentCtx } from './TournamentGate'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
+import { IconSnake } from '../../components/icons'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed'
 
@@ -110,7 +111,7 @@ export function TvScreen() {
             )}
             {board === 'snake' && state.modules.snake && (
               <>
-                <h2 className={styles.boardTitle}>{settings.modules.snake.label} 🐍</h2>
+                <h2 className={styles.boardTitle}>{settings.modules.snake.label}</h2>
                 <div className={styles.snakeGrid}>
                   {state.modules.snake.groups
                     .filter((g) => !round || g.roundId === round.id)
@@ -124,7 +125,11 @@ export function TvScreen() {
                             <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
                               <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} size="lg" />
                               <span>{name(pid)}</span>
-                              {g.holderId === pid && <span className={styles.snakeIcon}>🐍</span>}
+                              {g.holderId === pid && (
+                                <span className={styles.snakeIcon}>
+                                  <IconSnake />
+                                </span>
+                              )}
                             </span>
                           ))}
                         </div>
@@ -216,7 +221,7 @@ function AuctionBoard() {
           <span className={styles.small}>{t.auction.atStake}</span>
           {settings.auction.payout.map((s, i) => (
             <span key={i} className={styles.stakeRow}>
-              <span>{s.slot === 'place' ? (s.place === 1 ? 'Campeón' : s.place === 2 ? 'Subcampeón' : `${s.place}º`) : s.slot === 'bestOfTier' ? `Mejor ${s.tier}` : settings.labels.lastPlace}</span>
+              <span>{t.rules.slotName(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, settings.labels.lastPlace)}</span>
               <span className="num">{formatMoney(Math.floor(auction.pot * s.share))}</span>
             </span>
           ))}
@@ -229,7 +234,7 @@ function AuctionBoard() {
             .map((l) => (
               <span key={l.lotId} className={styles.soldRow}>
                 <span>
-                  {name(l.playerId)} → {l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}
+                  {name(l.playerId)} <span className="muted">{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
                 </span>
                 <span className="num">{formatMoney(l.price)}</span>
               </span>

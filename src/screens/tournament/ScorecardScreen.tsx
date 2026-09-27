@@ -14,6 +14,8 @@ import type { Group, Round } from '../../engine/types'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
+import { IconChevronLeft, IconChevronRight } from '../../components/icons'
+import { celebrationColors } from '../../lib/tokens'
 
 const S = t.card
 
@@ -196,7 +198,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       }
       setTiebreak(null)
       if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ['#0F6E77', '#F2B63F', '#B04327', '#A9DCD8'] })
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
       }
       if (idx < order.length - 1) goto(idx + 1)
       else setView('grid')
@@ -276,7 +278,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               ))}
               <tr>
                 <td>
-                  <strong>Σ</strong>
+                  <strong>{t.common.total}</strong>
                 </td>
                 {players.map((p) => (
                   <td key={p.id} className="num">
@@ -319,18 +321,22 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         <>
           <header className={styles.holeHeader}>
             <button className="btn btn--ghost" type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
-              ‹
+              <IconChevronLeft />
             </button>
             <div className={styles.holeTitle}>
               <span className="label">{t.round.hole(hole)}</span>
               <span className={styles.holeMeta}>
-                <span className="num">Par {par}</span>
-                <span>· SI {holeInfo(players[0]!.id)?.strokeIndex ?? '–'}</span>
-                {holeInfo(players[0]!.id)?.yards ? <span>· {holeInfo(players[0]!.id)!.yards} y</span> : null}
+                <span className="num">
+                  {t.player.par} {par}
+                </span>
+                <span>
+                  {t.player.si} {holeInfo(players[0]!.id)?.strokeIndex ?? '–'}
+                </span>
+                {holeInfo(players[0]!.id)?.yards ? <span>{t.player.yards(holeInfo(players[0]!.id)!.yards!)}</span> : null}
               </span>
             </div>
             <button className="btn btn--ghost" type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
-              ›
+              <IconChevronRight />
             </button>
           </header>
 

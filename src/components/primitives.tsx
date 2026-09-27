@@ -1,9 +1,12 @@
 /**
- * Primitives for direction A ("La tarjeta"). Phase 1: rendered on /design
- * only. Phase 2 moves them under src/components and the screens adopt them.
- * Every visual value comes from tokens.next.css through primitives.module.css.
+ * Design primitives for direction A ("La tarjeta"): buttons, fields,
+ * figures, stepper, segmented, tab bar, leaderboard row, pencil notation,
+ * scorecard grid, empty state, live status, event name, wordmark, plate.
+ * Every visual value comes from tokens.css through primitives.module.css.
+ * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
 import s from './primitives.module.css'
 
@@ -23,7 +26,7 @@ export function Button({
 }
 
 // ---- Fields ----
-export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
+export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
   return (
     <label className={s.field}>
       <span className={s.fieldLabel}>{label}</span>
@@ -87,7 +90,7 @@ export function Segmented<T extends string>({ value, options, onChange }: { valu
 // ---- Tab bar ----
 export function TabBar({ items }: { items: Array<{ icon: ReactNode; label: string; active?: boolean }> }) {
   return (
-    <nav className={s.tabbar} aria-label="Secciones">
+    <nav className={s.tabbar} aria-label={t.common.sections}>
       {items.map((it) => (
         <button key={it.label} type="button" className={`${s.tab} ${it.active ? s.tabOn : ''}`} aria-current={it.active ? 'page' : undefined}>
           {it.icon}
@@ -108,6 +111,10 @@ export interface LeaderRowProps {
   figure: string
   tone?: Tone
   mine?: boolean
+  /** Calcutta owners' initials, shown after the sub line. */
+  owners?: string
+  /** The tournament's honoree: a small ring after the name. */
+  honoree?: boolean
   moved?: 'up' | 'down' | null
   dense?: boolean
   onClick?: () => void
@@ -117,20 +124,29 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     <div className={`${s.boardHead} ${dense ? s.leaderRowDense : ''}`} aria-hidden="true">
       <span />
       <span />
-      <span>Hoy</span>
-      <span>Thru</span>
+      <span>{t.live.today}</span>
+      <span>{t.live.thru}</span>
       <span>{figureLabel}</span>
     </div>
   )
 }
-export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', mine, moved, dense, onClick }: LeaderRowProps) {
+export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
+  const subLine = [sub, owners].filter(Boolean)
   return (
     <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick}>
       {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
       <span className={s.name}>
-        <span className={s.nameMain}>{name}</span>
-        {sub && !dense && <span className={s.nameSub}>{sub}</span>}
+        <span className={s.nameMain}>
+          {name}
+          {honoree && <span className={s.honoreeDot} aria-hidden="true" />}
+        </span>
+        {subLine.length > 0 && !dense && (
+          <span className={s.nameSub}>
+            {sub}
+            {owners && <span className={s.owners}>{owners}</span>}
+          </span>
+        )}
       </span>
       <span className={`${s.fig} ${s.today}`}>{today ?? ''}</span>
       <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
@@ -250,31 +266,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints }: { holes: GridH
   )
 }
 
-// ---- Sheet, toast, skeleton, empty, live ----
-export function SheetDemo({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className={s.sheetDemo} role="dialog" aria-label={title}>
-      <div className={s.sheetHandle} />
-      <strong>{title}</strong>
-      <div style={{ marginTop: 'var(--s3)' }}>{children}</div>
-    </div>
-  )
-}
-export function Toast({ text, action }: { text: string; action?: string }) {
-  return (
-    <div className={s.toast} role="status">
-      <span>{text}</span>
-      {action && (
-        <button type="button" className={s.toastAction}>
-          {action}
-        </button>
-      )}
-    </div>
-  )
-}
-export function Skeleton({ w = '100%', h = 16 }: { w?: string | number; h?: number }) {
-  return <span className={s.skeleton} style={{ display: 'block', width: w, height: h }} aria-hidden="true" />
-}
+// ---- Empty, live ----
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div className={s.empty}>

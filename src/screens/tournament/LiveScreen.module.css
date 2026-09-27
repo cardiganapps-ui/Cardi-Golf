@@ -49,14 +49,19 @@
   line-height: 1;
 }
 .move {
-  font-size: 0.6rem;
-  height: 10px;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  vertical-align: middle;
 }
 .up {
-  color: var(--teal);
+  border-bottom: 5px solid var(--accent);
 }
 .down {
-  color: var(--coral);
+  border-top: 5px solid var(--ink-3);
 }
 .name {
   min-width: 0;

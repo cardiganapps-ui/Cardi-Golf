@@ -13,6 +13,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { drawGroupsFromPairs, drawPairs, partnerTier, type DrawnPair } from '../../lib/pairing'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminDraw.module.css'
+import { IconRings } from '../../components/icons'
 
 const D = t.draw
 
@@ -102,7 +103,7 @@ export function AdminDraw() {
               <strong>{p.name ?? `${name(p.player1Id)} & ${name(p.player2Id)}`}</strong>
               <span className="help">
                 {name(p.player1Id)} & {name(p.player2Id)} · {p.kind}
-                {p.pickedByHonoree ? ' · 👑' : ''}
+                {p.pickedByHonoree ? `, ${D.pickedByHonoree}` : ''}
               </span>
             </div>
           ))}
@@ -115,7 +116,7 @@ export function AdminDraw() {
       {honoree ? (
         <section className="stack">
           <h3>
-            👑 {D.honoreePicks(honoree.displayName)} ({eligibleTier ?? '?'})
+            {D.honoreePicks(honoree.displayName)} ({eligibleTier ?? '?'})
           </h3>
           <div className={styles.grid}>
             {eligible.map((p) => (
@@ -131,7 +132,7 @@ export function AdminDraw() {
       )}
 
       <button className="btn btn--primary" type="button" disabled={missingTiers || (!!honoree && eligible.length > 0 && !pick)} onClick={draw}>
-        {D.rings} {drawn ? D.redraw : D.draw}
+        {drawn ? D.redraw : D.draw}
       </button>
 
       {drawn && (
@@ -141,7 +142,7 @@ export function AdminDraw() {
             {drawn.slice(0, revealed).map((p, i) => (
               <motion.div key={`${p.player1Id}${p.player2Id}`} className={`card ${styles.pairCard}`} initial={{ opacity: 0, scale: 0.8, rotate: -6 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
                 <span className={styles.rings} aria-hidden="true">
-                  💍
+                  <IconRings />
                 </span>
                 <Avatar name={name(p.player1Id)} url={byId.get(p.player1Id)?.avatarUrl} />
                 <Avatar name={name(p.player2Id)} url={byId.get(p.player2Id)?.avatarUrl} />
@@ -149,7 +150,7 @@ export function AdminDraw() {
                   <input className="input input--sm" placeholder={D.namePlaceholder(name(p.player1Id), name(p.player2Id))} value={names[i] ?? ''} onChange={(e) => setNames({ ...names, [i]: e.target.value })} />
                   <span className="help">
                     {name(p.player1Id)} & {name(p.player2Id)} · {p.kind}
-                    {p.pickedByHonoree ? ' · 👑' : ''}
+                    {p.pickedByHonoree ? `, ${D.pickedByHonoree}` : ''}
                   </span>
                 </div>
               </motion.div>

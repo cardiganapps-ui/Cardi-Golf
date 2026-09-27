@@ -3,9 +3,10 @@
  * it to the Web Share API (files), falling back to a download.
  */
 import { toBlob } from 'html-to-image'
+import { cssVar } from './tokens'
 
 export async function shareNodeAsImage(node: HTMLElement, filename: string, title: string, text?: string): Promise<'shared' | 'downloaded'> {
-  const blob = await toBlob(node, { pixelRatio: 2, cacheBust: true, backgroundColor: getComputedStyle(node).backgroundColor || '#F7F1E3' })
+  const blob = await toBlob(node, { pixelRatio: 2, cacheBust: true, backgroundColor: getComputedStyle(node).backgroundColor || cssVar('--bg') })
   if (!blob) throw new Error('no image')
   const file = new File([blob], filename, { type: 'image/png' })
   if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {

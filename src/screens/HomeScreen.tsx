@@ -45,7 +45,6 @@ export function HomeScreen() {
       )}
 
       <section className="card">
-        <span className="section-num">01</span>
         <h2>{t.home.joinTitle}</h2>
         <p className="muted">{t.home.joinHint}</p>
         <form className={styles.joinForm} onSubmit={onJoin}>
@@ -70,7 +69,6 @@ export function HomeScreen() {
       </section>
 
       <section className="card card--cell">
-        <span className="section-num">02</span>
         <h2>{t.home.organizerTitle}</h2>
         <p className="muted">{t.home.organizerHint}</p>
         <div style={{ marginTop: 12 }}>

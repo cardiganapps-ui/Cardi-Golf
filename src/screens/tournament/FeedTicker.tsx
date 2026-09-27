@@ -6,6 +6,8 @@ import { t } from '../../i18n/es-MX'
 import type { FeedEvent } from '../../engine/core/feed'
 import { useTournament } from '../../data/tournamentStore'
 import styles from './FeedTicker.module.css'
+import type { ReactNode } from 'react'
+import { IconBird, IconFlag, IconRing, IconSnake } from '../../components/icons'
 
 function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
   switch (e.kind) {
@@ -20,7 +22,7 @@ function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
   }
 }
 
-const ICON: Record<FeedEvent['kind'], string> = { birdie: '🐦', leadChange: '👑', snakePass: '🐍', honoreeHole: '🤵' }
+const ICON: Record<FeedEvent['kind'], ReactNode> = { birdie: <IconBird size={18} />, leadChange: <IconFlag size={18} />, snakePass: <IconSnake size={18} />, honoreeHole: <IconRing size={18} /> }
 
 export function FeedTicker({ limit = 8, big = false }: { limit?: number; big?: boolean }) {
   const data = useTournament((s) => s.data)

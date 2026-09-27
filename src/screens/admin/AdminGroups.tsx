@@ -11,6 +11,7 @@ import { replaceGroups } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { generateGroupsFromStandings } from '../../engine/modules/pairs'
 import type { Group, Round } from '../../engine/types'
+import { IconClose } from '../../components/icons'
 
 const G = t.admin.groups
 
@@ -180,7 +181,7 @@ export function AdminGroups() {
                     <option value={10}>{G.startAt(10)}</option>
                   </select>
                   <button className="btn btn--ghost btn--sm coral" type="button" onClick={() => removeGroup(i)} aria-label={t.common.delete}>
-                    ✕
+                    <IconClose />
                   </button>
                 </div>
               </div>
@@ -188,7 +189,7 @@ export function AdminGroups() {
                 {g.playerIds.map((pid) => (
                   <button key={pid} type="button" className="chip" onClick={() => togglePlayer(i, pid)} title={t.common.delete}>
                     <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} size="sm" />
-                    {name(pid)} {byId.get(pid)?.tier ? `(${byId.get(pid)!.tier})` : ''} ✕
+                    {name(pid)} {byId.get(pid)?.tier ? `(${byId.get(pid)!.tier})` : ''} <IconClose size={14} />
                   </button>
                 ))}
                 <button type="button" className="chip chip--outline" onClick={() => setPicking(i)}>

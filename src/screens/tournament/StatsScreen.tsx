@@ -10,12 +10,14 @@ import { Avatar, Segmented } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { PlayerSheet } from './PlayerSheet'
 import styles from './StatsScreen.module.css'
+import { IconPlay, IconStop } from '../../components/icons'
+import { chartSeries } from '../../lib/tokens'
 
 const S = t.stats
-const PALETTE = ['#0F6E77', '#B04327', '#F2B63F', '#3AA6AE', '#12343B', '#8C6D1F', '#5B8C5A', '#A05C8C', '#4F6166', '#C97B3A', '#2E5E8C', '#7A3E3E']
 
 export function StatsScreen() {
   const data = useTournament((s) => s.data)
+  const PALETTE = useMemo(() => chartSeries(), [])
   const [open, setOpen] = useState<string | null>(null)
   const [race, setRace] = useState<'players' | 'pairs'>('players')
   const [playing, setPlaying] = useState(false)
@@ -112,7 +114,7 @@ export function StatsScreen() {
                 </div>
               )}
               {stats.cursedHole && (
-                <div className={`card ${styles.award}`} style={{ background: 'var(--coral)', color: '#fff' }}>
+                <div className={`card card--alert ${styles.award}`}>
                   <span className={styles.awardName}>{S.cursed}</span>
                   <span>{S.cursedText(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avgPoints)}</span>
                 </div>
@@ -136,7 +138,7 @@ export function StatsScreen() {
                   }
                 }}
               >
-                {playing ? `■ ${S.stop}` : `▶ ${S.play}`}
+                {playing ? <IconStop size={18} /> : <IconPlay size={18} />} {playing ? S.stop : S.play}
               </button>
             </div>
             {state.modules.pairs && (
@@ -185,12 +187,12 @@ export function StatsScreen() {
                 <div className="row row--wrap small">
                   {r.hardest && (
                     <span>
-                      🪦 {S.hardest}: <strong>{r.hardest.hole}</strong> ({r.hardest.avgPoints} {S.avgPoints})
+                      {S.hardest}: <strong>{r.hardest.hole}</strong> ({r.hardest.avgPoints} {S.avgPoints})
                     </span>
                   )}
                   {r.easiest && (
                     <span>
-                      🍰 {S.easiest}: <strong>{r.easiest.hole}</strong> ({r.easiest.avgPoints} {S.avgPoints})
+                      {S.easiest}: <strong>{r.easiest.hole}</strong> ({r.easiest.avgPoints} {S.avgPoints})
                     </span>
                   )}
                 </div>

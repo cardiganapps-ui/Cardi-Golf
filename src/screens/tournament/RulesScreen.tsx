@@ -18,7 +18,7 @@ export function RulesScreen() {
   const m = settings.modules
   const n = snapshot.players.length
   const honoree = snapshot.players.find((p) => p.isHonoree)
-  const pairingRule = m.pairs.pairing.map(([a, b]) => `${a}↔${b}`).join(', ')
+  const pairingRule = m.pairs.pairing.map(([a, b]) => `${a}-${b}`).join(', ')
   const slots = settings.auction.payout.map((s) => R.slot(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, s.share, settings.labels.lastPlace))
 
   const sections: Array<{ id: string; title: string; lines: string[]; on: boolean }> = [

@@ -79,7 +79,7 @@ if (!t) {
       join_code: 'ENSAYO',
       status: 'setup',
       settings,
-      accent_color: '#0F6E77',
+      accent_color: '#1e6b3b', // ACCENTS[0] 'Fairway' in src/design/accents.ts
       created_by: ownerId,
     })
     .select('*')

@@ -1,50 +1,34 @@
 /**
  * /design — living style guide for direction A ("La tarjeta").
  * Renders tokens, the type scale and every primitive with real data from
- * the fixtures. Scoped under .theme-next so it does not touch the app yet.
+ * the fixtures. It imports the same components the app uses.
  */
-import '@fontsource-variable/archivo/wdth.css'
-import './tokens.next.css'
 import { useMemo, useState } from 'react'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { getFixture } from '../dev/fixtures'
-import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from './icons'
-import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, Money, Plate, ScoreMark, ScorecardGrid, Segmented, SheetDemo, Skeleton, Stepper, TabBar, Toast, Wordmark, toPar, type GridHole } from './primitives'
+import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from '../components/icons'
+import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, toPar, type GridHole } from '../components/primitives'
+import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
+import { contrast as ratio, luminance } from '../lib/contrast'
+import { cssVar } from '../lib/tokens'
+import { ACCENTS } from './accents'
 import s from './DesignScreen.module.css'
 
-// ---- Contrast (WCAG 2.x) computed live so the page is honest about itself ----
-function lum(hex: string) {
-  const h = hex.replace('#', '')
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
-}
-function ratio(a: string, b: string) {
-  const [x, y] = [lum(a), lum(b)]
-  return Math.round(((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)) * 10) / 10
-}
 
-const COLORS: Array<{ name: string; hex: string; role: string; on?: string }> = [
-  { name: 'bg', hex: '#fbfaf7', role: 'card stock, background' },
-  { name: 'surface', hex: '#f3f1ea', role: 'ruled area, skeletons' },
-  { name: 'ink', hex: '#1b211d', role: 'graphite, text and figures', on: '#fbfaf7' },
-  { name: 'ink-2', hex: '#4f5751', role: 'secondary text', on: '#fbfaf7' },
-  { name: 'accent', hex: '#1e6b3b', role: 'live, primary action, my row', on: '#fbfaf7' },
-  { name: 'under', hex: '#a51d25', role: 'under par (figures only)', on: '#fbfaf7' },
-  { name: 'over', hex: '#245583', role: 'over par (figures only)', on: '#fbfaf7' },
-  { name: 'caution', hex: '#8a5a00', role: 'pending, unsigned', on: '#fbfaf7' },
-  { name: 'rule', hex: '#d8d5cb', role: 'hairlines' },
-  { name: 'board-bg', hex: '#0f2e22', role: 'TV and ceremony surface' },
-  { name: 'board-ink', hex: '#f6f3ea', role: 'figures on the board', on: '#0f2e22' },
-  { name: 'board-accent', hex: '#f2c230', role: 'leader plate, live mark', on: '#0f2e22' },
+const COLOR_ROLES: Array<{ name: string; role: string; on?: string }> = [
+  { name: 'bg', role: 'card stock, background' },
+  { name: 'surface', role: 'ruled area, skeletons' },
+  { name: 'ink', role: 'graphite, text and figures', on: '--bg' },
+  { name: 'ink-2', role: 'secondary text', on: '--bg' },
+  { name: 'accent', role: 'live, primary action, my row', on: '--bg' },
+  { name: 'under', role: 'under par (figures only)', on: '--bg' },
+  { name: 'over', role: 'over par (figures only)', on: '--bg' },
+  { name: 'caution', role: 'pending, unsigned', on: '--bg' },
+  { name: 'rule', role: 'hairlines' },
+  { name: 'board-bg', role: 'TV and ceremony surface' },
+  { name: 'board-ink', role: 'figures on the board', on: '--board-bg' },
+  { name: 'board-accent', role: 'leader plate, live mark', on: '--board-bg' },
 ]
-const ACCENTS = [
-  ['Fairway', '#1e6b3b'],
-  ['Agua', '#2b5b8c'],
-  ['Atardecer', '#b4532a'],
-  ['Vino', '#8a2e3a'],
-  ['Pizarra', '#3f4a54'],
-  ['Arena', '#7a5a2e'],
-] as const
 const SCALE: Array<[string, string, string]> = [
   ['2xs', '11', 'table headers, captions'],
   ['xs', '12', 'meta'],
@@ -70,7 +54,8 @@ export function DesignScreen() {
   const [strokes, setStrokes] = useState(4)
   const [putts, setPutts] = useState(2)
   const [seg, setSeg] = useState<'pts' | 'gross'>('pts')
-  const [accent, setAccent] = useState<(typeof ACCENTS)[number]>(ACCENTS[0])
+  const [accent, setAccent] = useState(ACCENTS[0]!)
+  const COLORS = useMemo(() => COLOR_ROLES.map((c) => ({ ...c, hex: cssVar(`--${c.name}`), on: c.on ? cssVar(c.on) : undefined })), [])
 
   const nameOf = (id: string, d = fx.data) => d.snapshot.players.find((p) => p.id === id)?.displayName ?? id
   const rows = fx.data.state.modules.individual!.rows
@@ -84,12 +69,12 @@ export function DesignScreen() {
   const largeRows = large.state.modules.individual!.rows
 
   return (
-    <div className="theme-next" style={{ '--event-accent': accent[1] } as React.CSSProperties}>
+    <div style={{ '--event-accent': accent.hex } as React.CSSProperties}>
       <div className={s.page}>
         <header className={s.stack}>
           <Wordmark size={22} />
           <h1 className={s.pageTitle}>Sistema de diseño · dirección A, «La tarjeta»</h1>
-          <p className={s.lede}>Tokens, escala tipográfica y primitivas del rediseño, con datos reales de los fixtures. Nada de esta página toca la app todavía; la fase 2 la adopta pantalla por pantalla.</p>
+          <p className={s.lede}>Tokens, escala tipográfica y primitivas del rediseño, con datos reales de los fixtures. Son los mismos componentes que usa la app; la fase 3 los lleva a cada pantalla.</p>
         </header>
 
         {/* ---- Color ---- */}
@@ -99,11 +84,13 @@ export function DesignScreen() {
           <div className={s.swatches}>
             {COLORS.map((c) => (
               <div key={c.name} className={s.swatch}>
-                <div className={s.swatchColor} style={{ background: c.hex, color: c.on ? c.on : lum(c.hex) > 0.4 ? '#1b211d' : '#f6f3ea' }}>
+                <div className={s.swatchColor} style={{ background: c.hex, color: c.on ? c.on : luminance(c.hex) > 0.4 ? 'var(--ink)' : 'var(--on-dark)' }}>
                   {c.on ? `${ratio(c.hex, c.on)}:1` : ''}
                 </div>
                 <span className={s.swatchName}>--{c.name}</span>
-                <span className={s.swatchHex}>{c.hex.toUpperCase()} · {c.role}</span>
+                <span className={s.swatchHex}>
+                  {c.hex.toUpperCase()}, {c.role}
+                </span>
               </div>
             ))}
           </div>
@@ -180,7 +167,7 @@ export function DesignScreen() {
             <dt>Radios</dt>
             <dd>4 px controles y marcas · 10 px sheets y objetos reales · redondo solo avatares y el punto en vivo</dd>
             <dt>Bordes</dt>
-            <dd>1 px hairline #D8D5CB · 2 px regla gruesa en tinta para abrir una tabla</dd>
+            <dd>1 px hairline (--rule); 2 px regla gruesa en tinta para abrir una tabla</dd>
             <dt>Elevación</dt>
             <dd>Solo lo que flota: sheet y toast. Nada más tiene sombra.</dd>
             <dt>Movimiento</dt>
@@ -318,7 +305,7 @@ export function DesignScreen() {
               <Button variant="primary" block>
                 Guardar hoyo 12
               </Button>
-              <Toast text="Hoyo 12 guardado" action="Deshacer" />
+              <ToastItem text="Hoyo 12 guardado" action="Deshacer" />
             </div>
           </div>
         </section>
@@ -437,7 +424,7 @@ export function DesignScreen() {
         {/* ---- Sheet, toast, skeleton, empty ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Sheet, toast, esqueleto, vacío</h2>
-          <SheetDemo title="¿Quién embocó al último?">
+          <SheetFrame title="¿Quién embocó al último?">
             <div className={s.stack}>
               <span className={s.cap}>Diego A. e Ignacio S. hicieron 3 putts en el 12.</span>
               <div className={s.row}>
@@ -445,10 +432,10 @@ export function DesignScreen() {
                 <Button>Ignacio S.</Button>
               </div>
             </div>
-          </SheetDemo>
+          </SheetFrame>
           <div className={s.row}>
-            <Toast text="Sin señal: se guardará al reconectar" />
-            <Toast text="3 pendientes" />
+            <ToastItem text="Sin señal: se guardará al reconectar" />
+            <ToastItem text="3 pendientes" />
           </div>
           <div className={s.stack}>
             <div className={s.stateLabel}>Esqueleto de la tabla (misma altura que la fila real: sin saltos)</div>
@@ -471,14 +458,14 @@ export function DesignScreen() {
           <p className={s.cap}>El organizador elige uno de seis. Se aplica a la regla bajo el nombre, al botón principal y a «mi fila». Nada más cambia.</p>
           <div className={s.accents}>
             {ACCENTS.map((a) => (
-              <button key={a[0]} type="button" className={s.accentCard} style={{ '--event-accent': a[1], background: 'transparent', cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit', outline: accent[0] === a[0] ? '2px solid var(--ink)' : 'none' } as React.CSSProperties} onClick={() => setAccent(a)}>
+              <button key={a.id} type="button" className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`} style={{ '--event-accent': a.hex } as React.CSSProperties} onClick={() => setAccent(a)}>
                 <EventName name="Copa Tres Marías" small />
-                <div style={{ width: 40, height: 3, background: a[1] }} />
+                <span className="wave" aria-hidden="true" />
                 <Button variant="primary" size="sm">
                   Entrar
                 </Button>
                 <span className={s.cap}>
-                  {a[0]} · {a[1].toUpperCase()} · blanco {ratio('#ffffff', a[1])}:1
+                  {a.name}, {a.hex.toUpperCase()}, blanco {ratio(cssVar('--surface-2'), a.hex)}:1
                 </span>
               </button>
             ))}
@@ -509,13 +496,9 @@ export function DesignScreen() {
             <Wordmark size={20} />
           </div>
           <div className={s.row}>
-            <div className={s.appIcon}>
-              <span className={s.appIconRing} aria-hidden="true" />G
-            </div>
-            <div className={`${s.appIcon} ${s.appIconSm}`}>
-              <span className={s.appIconRing} aria-hidden="true" />G
-            </div>
-            <span className={s.cap}>ícono 512 / 192 (concepto; se genera en fase 2)</span>
+            <img src="/icons/icon-192.png" alt="" width={96} height={96} className={s.appIcon} />
+            <img src="/icons/icon-192.png" alt="" width={48} height={48} className={s.appIcon} />
+            <span className={s.cap}>ícono de la app (scripts/make-icons.mjs, colores leídos de tokens.css)</span>
           </div>
         </section>
       </div>

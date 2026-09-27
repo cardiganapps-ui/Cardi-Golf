@@ -8,6 +8,7 @@ import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import styles from './SnakeBoard.module.css'
+import { IconSnake } from '../../components/icons'
 
 export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
   const data = useTournament((s) => s.data)!
@@ -44,7 +45,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                         <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} />
                         {holder && (
                           <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder} transition={{ type: 'spring', stiffness: 300, damping: 24 }}>
-                            🐍
+                            <IconSnake />
                           </motion.span>
                         )}
                       </span>

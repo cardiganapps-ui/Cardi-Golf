@@ -147,7 +147,7 @@ export function NewTournamentScreen() {
             <div className="row" style={{ marginTop: 12 }}>
               <CopyButton text={link} label={t.organizer.link} />
               <CopyButton text={created.joinCode} label={t.organizer.joinCode} />
-              <ShareButton text={`${name}: entra con el código ${created.joinCode}`} url={link} title={name} />
+              <ShareButton text={t.common.joinWithCode(name, created.joinCode)} url={link} title={name} />
             </div>
           </div>
           <Link className="btn btn--primary btn--block" to={`/t/${created.slug}/admin`}>

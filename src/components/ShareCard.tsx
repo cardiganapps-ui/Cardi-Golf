@@ -46,7 +46,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
   return (
     <>
       <button className={className ?? 'btn btn--secondary btn--sm'} type="button" disabled={busy} onClick={() => setBusy(true)}>
-        {busy ? t.share.generating : `📸 ${text}`}
+        {busy ? t.share.generating : text}
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
@@ -83,7 +83,7 @@ function Card({ what }: { what: ShareKind }) {
     const rows = state.modules.individual?.rows ?? []
     return (
       <>
-        {header(`${settings.modules.individual.label} · ${state.tournamentFinal ? 'Final' : t.money.ifEndedNow}`)}
+        {header(`${settings.modules.individual.label}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
         <Rows>
           {rows.map((r) => {
             const cash = state.prizes.filter((p) => p.playerId === r.playerId).reduce((a, p) => a + p.amount, 0)
@@ -121,7 +121,7 @@ function Card({ what }: { what: ShareKind }) {
                 {pr.holes.map((h) => (
                   <div key={h.hole} className={`${styles.hole} ${h.points >= 3 ? styles.birdie : h.points === 0 && h.played ? styles.zero : ''}`}>
                     <span className={styles.holeNum}>{h.hole}</span>
-                    <span className={styles.holeGross}>{h.pickedUp ? '↑' : (h.gross ?? '·')}</span>
+                    <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
                     <span className={styles.holePts}>{h.played ? h.points : ''}</span>
                   </div>
                 ))}
@@ -136,7 +136,7 @@ function Card({ what }: { what: ShareKind }) {
   const people = snapshot.players.map((pl) => state.money.people[pl.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
   return (
     <>
-      {header(`${t.moneyScreen.final} · ${state.tournamentFinal ? 'Final' : t.money.ifEndedNow}`)}
+      {header(`${t.moneyScreen.final}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
       <Rows>
         {people.map((m) => (
           <div key={m.playerId} className={styles.row}>

@@ -10,6 +10,7 @@ import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { deleteHandicapOverride, upsertHandicapOverride } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
+import { IconClose } from '../../components/icons'
 
 const H = t.admin.handicaps
 
@@ -89,8 +90,8 @@ export function AdminHandicaps() {
                 {t.common.edit}
               </button>
               {pr.overridden && (
-                <button className="btn btn--ghost btn--sm coral" type="button" disabled={busy} onClick={() => void clear(p.id)}>
-                  ✕
+                <button className="btn btn--ghost btn--sm coral" type="button" disabled={busy} onClick={() => void clear(p.id)} aria-label={t.common.delete}>
+                  <IconClose />
                 </button>
               )}
             </div>

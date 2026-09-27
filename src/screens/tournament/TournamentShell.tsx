@@ -3,13 +3,14 @@ import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './TournamentShell.module.css'
+import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 
 const TABS = [
-  { to: '', label: t.nav.live, icon: '⛳️' },
-  { to: 'tarjeta', label: t.nav.card, icon: '✏️' },
-  { to: 'juegos', label: t.nav.games, icon: '🐍' },
-  { to: 'dinero', label: t.nav.money, icon: '💸' },
-  { to: 'mas', label: t.nav.more, icon: '•••' },
+  { to: '', label: t.nav.live, icon: <IconFlag /> },
+  { to: 'tarjeta', label: t.nav.card, icon: <IconPencil /> },
+  { to: 'juegos', label: t.nav.games, icon: <IconGames /> },
+  { to: 'dinero', label: t.nav.money, icon: <IconCoin /> },
+  { to: 'mas', label: t.nav.more, icon: <IconMore /> },
 ]
 
 export function TournamentShell() {
@@ -36,7 +37,7 @@ export function TournamentShell() {
       <div className={styles.body}>
         <Outlet />
       </div>
-      <nav className={styles.tabbar} aria-label="Secciones">
+      <nav className={styles.tabbar} aria-label={t.common.sections}>
         {TABS.map((tab) => (
           <NavLink key={tab.to} to={`/t/${slug}${tab.to ? `/${tab.to}` : ''}`} end={tab.to === ''} className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}>
             <span className={styles.tabIcon} aria-hidden="true">

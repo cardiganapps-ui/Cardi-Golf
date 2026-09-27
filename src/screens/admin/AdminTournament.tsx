@@ -8,6 +8,8 @@ import { safeParseSettings, type TournamentSettings } from '../../engine/setting
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
+import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
+import styles from './AdminTournament.module.css'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
 
@@ -19,7 +21,7 @@ export function AdminTournament() {
   const tr = data!.snapshot.tournament
   const [name, setName] = useState(tr.name)
   const [tagline, setTagline] = useState(tr.tagline ?? '')
-  const [accent, setAccent] = useState(tr.accentColor ?? '#0F6E77')
+  const [accent, setAccent] = useState(tr.accentColor ?? DEFAULT_ACCENT.hex)
   const [settings, setSettings] = useState<TournamentSettings>(data!.settings)
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -143,17 +145,23 @@ export function AdminTournament() {
           />
         </Field>
         <Field label={A.accent}>
-          <div className="row">
-            <input
-              type="color"
-              value={accent}
-              onChange={(e) => {
-                setAccent(e.target.value)
-                setDirty(true)
-              }}
-              style={{ width: 56, height: 48, border: 0, background: 'none' }}
-            />
-            <span className="num">{accent}</span>
+          <div className={styles.swatches} role="group" aria-label={A.accent}>
+            {ACCENTS.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                className={styles.swatch}
+                aria-pressed={nearestAccent(accent).id === a.id}
+                style={{ '--swatch': a.hex } as React.CSSProperties}
+                onClick={() => {
+                  setAccent(a.hex)
+                  setDirty(true)
+                }}
+              >
+                <span className={styles.swatchDot} aria-hidden="true" />
+                {a.name}
+              </button>
+            ))}
           </div>
         </Field>
       </section>
@@ -193,7 +201,7 @@ export function AdminTournament() {
             {link}
           </span>
           <CopyButton text={link} />
-          <ShareButton text={`${tr.name}: entra con el código ${tr.joinCode}`} url={link} title={tr.name} />
+          <ShareButton text={t.common.joinWithCode(tr.name, tr.joinCode)} url={link} title={tr.name} />
         </div>
       </section>
 

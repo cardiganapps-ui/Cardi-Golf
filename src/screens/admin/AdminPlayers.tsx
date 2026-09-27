@@ -155,7 +155,7 @@ export function AdminPlayers() {
                 {p.tier && <span className="tierBadge" style={{ marginRight: 6 }}>{p.tier}</span>}
                 {t.live.hcp} {p.baseHcp}
                 {p.handicapSource === 'estimate' ? ` (${P.estimated})` : ''}
-                {p.isAdmin ? ' · Comité' : ''}
+                {p.isAdmin ? `, ${P.committee}` : ''}
               </span>
             </button>
             <button
@@ -288,7 +288,7 @@ export function AdminPlayers() {
                 </span>
                 <p>
                   <strong>{P.previewPh(preview.ph.value)}</strong>
-                  {preview.courseHcp !== preview.base ? ` · hándicap de campo ${preview.courseHcp}` : ''}
+                  {preview.courseHcp !== preview.base ? `, ${P.courseHcp(preview.courseHcp)}` : ''}
                 </p>
                 <p className="small">{preview.ph.why.steps.join(' · ')}</p>
                 <div className="row row--wrap" style={{ gap: 4, marginTop: 8 }}>

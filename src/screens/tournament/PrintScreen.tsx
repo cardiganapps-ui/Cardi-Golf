@@ -11,6 +11,7 @@ import { playOrder } from '../../engine/core/playOrder'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound } from './useMyGroup'
 import styles from './PrintScreen.module.css'
+import { IconPrint } from '../../components/icons'
 
 const P = t.print
 
@@ -34,11 +35,11 @@ export function PrintScreen() {
     <div className={styles.page}>
       <div className={`${styles.toolbar} noprint`}>
         <Link to={`/t/${slug}/admin/datos`} className="btn btn--ghost btn--sm">
-          ← {t.common.back}
+          {t.common.back}
         </Link>
         {rounds.length > 1 && <Segmented value={current?.id ?? ''} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} />}
         <button className="btn btn--primary btn--sm" type="button" onClick={() => window.print()}>
-          🖨 {P.print}
+          <IconPrint /> {P.print}
         </button>
       </div>
       {!current && <p className="muted">{t.live.noRounds}</p>}
@@ -68,7 +69,7 @@ export function PrintScreen() {
                     {order.map((h) => (
                       <th key={h}>{h}</th>
                     ))}
-                    <th>Σ</th>
+                    <th>{t.common.total}</th>
                   </tr>
                   <tr className={styles.meta}>
                     <th className={styles.left}>{P.par}</th>

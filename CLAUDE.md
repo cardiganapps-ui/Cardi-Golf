@@ -660,6 +660,8 @@ Three ways to load a course, one place to decide how each player is handicapped.
 
 ## 14. Brand and design system
 
+> **Superseded (2026-09-27).** The platform brand was redefined in the redesign: `DESIGN_DIRECTION.md` (direction A, "La tarjeta") is the source of truth for tokens, type, spacing, motion and voice, `src/styles/tokens.css` holds every value, and `DESIGN_NOTES.md` records the decisions and the term table. The tokens, fonts and tone below describe the first tournament's printed sheet and now apply only as that event's personalization (its logo and accent); read the rest of this section as history.
+
 The look comes from the tournament's printed rules sheet: beachy, editorial, premium. It sits close to Cardigan's warm cream/teal and Fraunces aesthetic, but it's its own brand.
 
 **Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is a simple text wordmark "Cardi-Golf". `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.

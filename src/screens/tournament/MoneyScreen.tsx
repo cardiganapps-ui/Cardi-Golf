@@ -14,6 +14,7 @@ import type { Flow } from '../../engine/core/money'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './MoneyScreen.module.css'
+import { IconCheck } from '../../components/icons'
 
 const M = t.moneyScreen
 
@@ -93,7 +94,7 @@ export function MoneyScreen() {
         onChange={setMode}
       />
 
-      <div className={`card ${money.banker.balanced ? 'card--cell' : ''}`} style={money.banker.balanced ? undefined : { background: 'var(--coral)', color: '#fff' }}>
+      <div className={`card ${money.banker.balanced ? 'card--cell' : 'card--alert'}`}>
         <div className="row row--between">
           <span>
             <span className="label" style={{ color: 'inherit', opacity: 0.8 }}>
@@ -103,7 +104,7 @@ export function MoneyScreen() {
               {M.bankIn} <strong className="num">{formatMoney(money.banker.receives)}</strong> · {M.bankOut} <strong className="num">{formatMoney(money.banker.pays)}</strong>
             </span>
           </span>
-          <strong>{money.banker.balanced ? `✓ ${M.bankOk}` : M.bankPending(formatMoney(money.banker.difference))}</strong>
+          <strong>{money.banker.balanced ? M.bankOk : M.bankPending(formatMoney(money.banker.difference))}</strong>
         </div>
         {!banker && <p className="help" style={{ color: 'inherit' }}>{M.noBanker}</p>}
         {!state.tournamentFinal && !money.banker.balanced && <p className="help" style={{ color: 'inherit' }}>{M.provisional}</p>}
@@ -163,7 +164,8 @@ export function MoneyScreen() {
                 {owed.map((f, i) => (
                   <div key={i} className="listItem listItem--static">
                     <span className="grow small">
-                      <strong>{name(f.from)}</strong> → {name(f.to)} · {f.kind === 'entry' ? M.owesEntry : f.kind === 'calcutta' ? M.owesCalcutta : M.owesBuyback}
+                      <strong>{name(f.from)}</strong> {M.paysTo} {name(f.to)}
+                      <span className="help">{f.kind === 'entry' ? M.owesEntry : f.kind === 'calcutta' ? M.owesCalcutta : M.owesBuyback}</span>
                     </span>
                     <span className="num">{formatMoney(f.amount)}</span>
                     {me.isAdmin && (
@@ -193,12 +195,12 @@ export function MoneyScreen() {
                 return (
                   <div key={i} className={`listItem listItem--static ${paidFlag ? styles.paid : ''}`}>
                     <span className="grow small">
-                      <strong>{name(tr.from)}</strong> → <strong>{name(tr.to)}</strong>
+                      <strong>{name(tr.from)}</strong> {M.paysTo} <strong>{name(tr.to)}</strong>
                     </span>
                     <span className="num">{formatMoney(tr.amount)}</span>
                     {me.isAdmin && settle === 'bank' && tr.from === null && tr.to && (
                       <button className={`btn btn--sm ${paidFlag ? 'btn--ghost' : 'btn--secondary'}`} type="button" disabled={busy} onClick={() => void togglePayout(tr.to!, tr.amount, !paidFlag)}>
-                        {paidFlag ? '✓' : M.markPaid}
+                        {paidFlag ? <IconCheck size={18} aria-label={M.markPaid} /> : M.markPaid}
                       </button>
                     )}
                   </div>

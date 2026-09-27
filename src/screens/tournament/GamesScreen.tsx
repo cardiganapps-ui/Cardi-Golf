@@ -43,7 +43,7 @@ export function GamesScreen() {
                   D{i + 1}
                 </th>
               ))}
-              <th className="num">Σ</th>
+              <th className="num">{t.common.total}</th>
               <th className="num">$</th>
             </tr>
           </thead>
@@ -55,7 +55,7 @@ export function GamesScreen() {
                   <button type="button" className={styles.linkBtn} onClick={() => setOpen(r.playerId)}>
                     {name(r.playerId)}
                   </button>
-                  {r.countbackWhy && <HowCalculated why={r.countbackWhy} label="⇄" />}
+                  {r.countbackWhy && <HowCalculated why={r.countbackWhy} label={t.games.tiebreak} />}
                 </td>
                 {r.perRound.map((p, i) => (
                   <td key={i} className="num">

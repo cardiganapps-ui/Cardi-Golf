@@ -1,4 +1,4 @@
-/* Primitives for direction A. Every value is a token from tokens.next.css. */
+/* Design primitives. Every value is a token from src/styles/tokens.css. */
 
 /* ---- Buttons ---- */
 .btn {
@@ -339,6 +339,20 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.owners {
+  margin-left: var(--s2);
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  letter-spacing: 0.02em;
+}
+.honoreeDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: var(--s1);
+  border-radius: var(--r-round);
+  border: 1.5px solid var(--event-accent);
+  vertical-align: middle;
+}
 .today,
 .thru {
   font-size: var(--fs-sm);
@@ -439,64 +453,7 @@
   background: var(--surface);
 }
 
-/* ---- Sheet, toast, skeleton, empty ---- */
-.sheetDemo {
-  border: var(--hairline);
-  border-bottom: 0;
-  border-radius: var(--r-md) var(--r-md) 0 0;
-  background: var(--surface-2);
-  box-shadow: var(--elev-sheet);
-  padding: var(--s3) var(--s4) var(--s5);
-}
-.sheetHandle {
-  width: 36px;
-  height: 4px;
-  border-radius: var(--r-round);
-  background: var(--rule-2);
-  margin: 0 auto var(--s3);
-}
-.toast {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s3);
-  background: var(--ink);
-  color: var(--bg);
-  padding: var(--s2) var(--s4);
-  border-radius: var(--r-sm);
-  box-shadow: var(--elev-toast);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-}
-.toastAction {
-  color: var(--board-accent);
-  background: none;
-  border: 0;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-}
-.skeleton {
-  background: var(--surface);
-  border-radius: var(--r-sm);
-  position: relative;
-  overflow: hidden;
-}
-.skeleton::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  animation: shimmer 1.4s infinite;
-}
-@keyframes shimmer {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
+/* ---- Empty ---- */
 .empty {
   padding: var(--s6) 0;
   border-top: var(--hairline);
