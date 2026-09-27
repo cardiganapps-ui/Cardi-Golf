@@ -1,0 +1,136 @@
+.wrap {
+  padding-bottom: 8px;
+}
+.holeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--deep);
+  color: var(--paper);
+  border-radius: var(--radius);
+  padding: 8px 6px;
+}
+.holeHeader button {
+  color: var(--sun);
+  font-size: 2rem;
+  min-width: 56px;
+}
+.holeTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.holeTitle .label {
+  color: var(--seafoam);
+}
+.holeMeta {
+  display: flex;
+  gap: 6px;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.playerCard {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.locked {
+  opacity: 0.6;
+}
+.dots {
+  color: var(--sun);
+  background: var(--deep);
+  border-radius: 6px;
+  padding: 0 6px;
+  letter-spacing: 2px;
+  font-size: 0.9rem;
+}
+.steppers {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+.stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stepperRow {
+  display: flex;
+  align-items: center;
+  background: var(--cell);
+  border-radius: 999px;
+  border: 2px solid var(--hair);
+  overflow: hidden;
+}
+.stepBtn {
+  width: var(--tap);
+  height: 52px;
+  border: 0;
+  background: transparent;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--teal);
+  cursor: pointer;
+}
+.stepBtn:disabled {
+  opacity: 0.3;
+}
+.stepValue {
+  flex: 1;
+  text-align: center;
+  font-size: 1.7rem;
+}
+.pickup {
+  min-height: 52px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 2px solid var(--hair);
+  background: var(--cell);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  align-self: end;
+}
+.pickupOn {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+}
+.saveBar {
+  position: sticky;
+  bottom: 8px;
+  z-index: 3;
+}
+.gridWrap {
+  overflow-x: auto;
+}
+.grid td,
+.grid th {
+  text-align: center;
+  padding: 6px 4px;
+}
+.holeBtn {
+  background: var(--panel);
+  border: 0;
+  border-radius: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.missing {
+  background: rgba(176, 67, 39, 0.12);
+  color: var(--coral);
+}
+.grossMini {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-weight: 400;
+}

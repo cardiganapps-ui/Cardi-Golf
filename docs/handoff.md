@@ -21,7 +21,10 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
-## Para probar M2 (no bloquea nada)
+## Para probar M2 y M3 (no bloquea nada)
+
+- [ ] **Capturar un hoyo.** Entra como Nico (PIN 1234) → pestaña **Tarjeta** (el día 1 del Ensayo ya está en juego, grupo 3) → mueve golpes/putts → "Guardar hoyo". Con otro teléfono (o pestaña) entrando como Diego O. verás cambiar **En vivo** en menos de 2 s. Prueba en modo avión: la app guarda "1 pendiente" y sincroniza al volver la señal.
+- [ ] **Ficha de jugador.** Toca cualquier fila del leaderboard: tarjeta por día, hándicap con "¿Cómo se calculó?", dinero si terminara ahora.
 
 - [ ] **Instalar la app en tu teléfono.** Abre https://cardi-golf.vercel.app en Safari (iPhone) o Chrome (Android) → Compartir / menú ⋮ → "Agregar a pantalla de inicio". Debe abrir a pantalla completa con el ícono verde de la bandera.
 - [ ] **Entrar como jugador.** Código **ENSAYO** (o https://cardi-golf.vercel.app/t/ensayo) → toca una cara → PIN **1234** (todos los del Ensayo tienen ese PIN; Nico es admin y ve el Comité).

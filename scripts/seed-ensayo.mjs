@@ -180,9 +180,13 @@ for (const [n, date] of [
 }
 
 // Pairs A+D / B+C and Day 1 groups (one A+D pair with one B+C pair).
+const P = (i) => ids[i]
+const must = (r, ctx) => {
+  if (r.error) die(r.error, ctx)
+  return r.data
+}
 const { count: pairCount } = await sb.from('pairs').select('*', { count: 'exact', head: true }).eq('tournament_id', t.id)
 if (!pairCount) {
-  const P = (i) => ids[i]
   const pairs = [
     ['Los Uno', P(0), P(9), 'AD'],
     ['Los Dos', P(1), P(10), 'AD'],
@@ -191,21 +195,25 @@ if (!pairCount) {
     ['Los Cinco', P(4), P(7), 'BC'],
     ['Los Seis', P(5), P(8), 'BC'],
   ]
-  await sb.from('pairs').insert(pairs.map(([name, a, b, kind]) => ({ tournament_id: t.id, name, player1_id: a, player2_id: b, kind, drawn_at: new Date().toISOString() })))
-  for (const rid of rounds) {
-    const { count } = await sb.from('groups').select('*', { count: 'exact', head: true }).eq('round_id', rid)
-    if (count) continue
-    for (const [g, members] of [
-      [1, [P(0), P(9), P(3), P(6)]],
-      [2, [P(1), P(10), P(4), P(7)]],
-      [3, [P(2), P(11), P(5), P(8)]],
-    ]) {
-      const { data: grp, error } = await sb.from('groups').insert({ round_id: rid, number: g, tee_time: `0${9 + Math.floor((g - 1) / 6)}:${String(((g - 1) * 10) % 60).padStart(2, '0')}`, start_hole: 1 }).select('id').single()
-      if (error) die(error, 'insert group')
-      await sb.from('group_members').insert(members.map((pid) => ({ group_id: grp.id, player_id: pid })))
-    }
-  }
-  console.log('pairs and groups created')
+  must(await sb.from('pairs').insert(pairs.map(([name, a, b, kind]) => ({ tournament_id: t.id, name, player1_id: a, player2_id: b, kind, drawn_at: new Date().toISOString() }))), 'insert pairs')
+  console.log('pairs created')
 }
+for (const rid of rounds) {
+  const groups = must(await sb.from('groups').select('id, number').eq('round_id', rid), 'select groups')
+  const plan = [
+    [1, [P(0), P(9), P(3), P(6)]],
+    [2, [P(1), P(10), P(4), P(7)]],
+    [3, [P(2), P(11), P(5), P(8)]],
+  ]
+  for (const [g, members] of plan) {
+    let grp = groups.find((x) => x.number === g)
+    if (!grp) {
+      grp = must(await sb.from('groups').insert({ round_id: rid, number: g, tee_time: `09:${String((g - 1) * 10).padStart(2, '0')}`, start_hole: 1 }).select('id, number').single(), 'insert group')
+    }
+    const { count } = await sb.from('group_members').select('*', { count: 'exact', head: true }).eq('group_id', grp.id)
+    if (!count) must(await sb.from('group_members').insert(members.map((pid) => ({ group_id: grp.id, player_id: pid }))), 'insert group members')
+  }
+}
+console.log('groups ready')
 
 console.log(`\n✓ Ensayo ready → /t/ensayo (code ENSAYO), owner ${owner}`)

@@ -9,6 +9,7 @@ import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
 import { TournamentGate } from '../screens/tournament/TournamentGate'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
+import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
 import { MoreScreen } from '../screens/tournament/MoreScreen'
 import { AdminLayout } from '../screens/admin/AdminLayout'
@@ -37,7 +38,7 @@ export const router = createBrowserRouter([
             element: <TournamentShell />,
             children: [
               { index: true, element: <LiveScreen /> },
-              { path: 'tarjeta', element: <PlaceholderScreen title={t.nav.card} /> },
+              { path: 'tarjeta', element: <ScorecardScreen /> },
               { path: 'juegos', element: <PlaceholderScreen title={t.nav.games} /> },
               { path: 'dinero', element: <PlaceholderScreen title={t.nav.money} /> },
               { path: 'mas', element: <MoreScreen /> },
