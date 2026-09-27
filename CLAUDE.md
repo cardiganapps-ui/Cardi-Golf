@@ -143,6 +143,7 @@ Cardigan is Diego's clinical practice management app. It stores patient health d
 | Frontend base | Same as Cardigan: Vite + React 19. Add TypeScript. |
 | Reusable patterns | Angus (`cardiganapps-ui/Angus`) and Cardigan (`cardiganapps-ui/cardigan`) are sibling repos. Read them (read-only, via `add_repo`) and copy what helps: Supabase client setup, PWA manifest and service worker config, MXN formatting helpers, Vercel config, styling approach, and the preflight/CI pattern this repo already copied. Don't import from them and don't modify them. |
 | Storage | Avatars and optional photos go in Supabase Storage in the new project. Use Cloudflare R2 only if Cardigan already has a clean upload helper you can copy. |
+| Course data | GolfCourseAPI (free key) through `api/course-search.ts`; scorecard photos through `api/scorecard-extract.ts` with the Anthropic API (`ANTHROPIC_API_KEY`, pay-as-you-go, cents per card). Both keys are Vercel env vars only, never `VITE_`. See §13b and the handoff. |
 | Email (Resend) | Not needed. |
 | Payments (Stripe) | Not used. Money changes hands in person; the app only tracks it. |
 | Tooling | Supabase, Vercel and GitHub MCP tools are connected to Diego's account; use them. Fall back to the Supabase CLI and the Vercel CLI only if a tool is missing. |
@@ -187,6 +188,7 @@ The printed rules sheet the group received says the same thing. If you find a co
   - Nobody ever gets strokes added.
   - The Comité can override a playing handicap; overrides require a reason and are audit-logged.
 - The allowance (0.80), the cap (54), and the cut parameters (36, 2, 4) live in settings.
+- How `baseHcp` is obtained per player (a WHS index, an estimate from three scores, or a number typed by the Comité) and how it becomes a course handicap for the tee he plays each day is §13b. The rules above start from that course handicap.
 
 ### 5.3 Individual Stableford (main event)
 - Points per hole: `pickedUp ? 0 : max(0, par + strokesReceived − gross + 2)`. That gives 0 for net double bogey or worse, 1 for bogey, 2 for par, 3 for birdie, 4 for eagle, 5 for albatross.
@@ -387,18 +389,20 @@ The settlement nets to zero across all people (banker included)
 - `tournaments`: `id`, `slug`, `name`, `tagline`, `logo_url`, `accent_color`, `join_code` (6 chars, unique), `status` (`setup` | `auction` | `live` | `finished`), `current_round_id`, `settings` (jsonb, section 18: enabled modules, their parameters, labels, entry fee, handicap rules, tiers), `banker_player_id`, `timezone`, `currency`, `created_by`, `created_at`.
 - `tournament_organizers`: `tournament_id`, `auth_user_id`, `role` (`owner` | `admin`).
 - `courses`: `id`, `name`, `created_by`. Reusable across tournaments.
-- `tees`: `id`, `course_id`, `name`, `color`, `rating`, `slope`.
+- `tees`: `id`, `course_id`, `name`, `color`, `rating`, `slope`, `par_total`, `gender` (nullable).
+- `courses` also carry `source` (`manual` | `golfcourseapi` | `scorecard_photo`), `external_id`, `imported_at`, `location`.
 - `holes`: `tee_id`, `number` (1–18), `par`, `stroke_index`, optional `yards`. Unique on (`tee_id`, `number`).
 
 **People and teams**
-- `players`: `id`, `tournament_id`, `full_name`, `display_name`, `tier` (text, one of the tournament's configured tiers, nullable), `base_hcp` (numeric), `tee_id`, `is_honoree` (the first tournament's "groom"), `is_admin` (a player who may also run the Comité console), `avatar_url`, `pin_hash`, `form_guide` (text: recent rounds for the auction), `sort_order`.
+- `players`: `id`, `tournament_id`, `full_name`, `display_name`, `tier` (text, one of the tournament's configured tiers, nullable), `base_hcp` (numeric, the value the engine starts from), `handicap_source` (`index` | `estimate` | `manual`), `handicap_index` (nullable), `estimate_inputs` (jsonb: the three scores with their rating/slope/par), `default_tee_id`, `is_honoree` (the first tournament's "groom"), `is_admin` (a player who may also run the Comité console), `avatar_url`, `pin_hash`, `form_guide` (text: recent rounds for the auction), `sort_order`.
 - `device_sessions`: `auth_user_id` (PK), `player_id`, `created_at`. Maps anonymous auth users to players.
 - `pairs`: `id`, `tournament_id`, `name`, `player1_id`, `player2_id`, `kind` (text: the pairing rule's label, e.g. `AD` | `BC`), `picked_by_honoree`, `drawn_at`.
 
 **Rounds and scoring**
 - `rounds`: `id`, `tournament_id`, `number` (1..N), `date`, `course_id`, `holes` (9 | 18), `status` (`scheduled` | `live` | `finished` | `cancelled`).
 - `groups`: `id`, `round_id`, `number`, `tee_time`, `start_hole` (1 | 10).
-- `group_members`: `group_id`, `player_id`. (When the pairs module is on, a group is normally two pairs; the engine validates that, the schema doesn't require it.)
+- `group_members`: `group_id`, `player_id`.
+- `round_tees`: `round_id`, `player_id`, `tee_id`. Unique on (`round_id`, `player_id`). Which tee each player plays that day (§13b-D). (When the pairs module is on, a group is normally two pairs; the engine validates that, the schema doesn't require it.)
 - `scores`: `id`, `round_id`, `player_id`, `hole`, `strokes` (nullable), `putts` (nullable), `picked_up`, `entered_by`, `client_ts`, `updated_at`. Unique on (`round_id`, `player_id`, `hole`).
 - `snake_tiebreaks`: `round_id`, `group_id`, `hole`, `last_holed_player_id`, `decided_by`, `created_at`. Unique on (`round_id`, `group_id`, `hole`).
 - `card_signatures`: `round_id`, `pair_id` (whose card was signed), `signed_by`, `signed_at`.
@@ -620,6 +624,35 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 - **Data:** export all data as JSON and CSV, and restore from JSON.
 - **Rehearsal mode:** just another tournament ("Ensayo") with simulated data (section 17). Tournament scoping guarantees it never mixes with the real one; a "Duplicar torneo" action copies settings, course and players (no scores) so a rehearsal is one tap.
 
+### 13b. Course and handicap setup (platform features; first needed for M2)
+
+Three ways to load a course, one place to decide how each player is handicapped. All of it lives in the Comité console and is generic (§0.5): any tournament, any course, any number of tees.
+
+**A. Course search in a golf-course database.**
+- A serverless route `api/course-search.ts` proxies a course database so the API key never reaches the browser. Use **GolfCourseAPI** (`https://api.golfcourseapi.com/v1/search?search_query=…` and `/v1/courses/{id}`, header `Authorization: Key <GOLFCOURSE_API_KEY>`); it returns club/course names, location, and per-tee `course_rating`, `slope_rating`, `par_total` and 18 holes of `par` / `yardage` / `handicap` (stroke index). Adapter pattern: `src/lib/courseProviders/<provider>.ts` mapping the provider's shape to our `Course/Tee/Hole` model, so the provider can change without touching the UI.
+- UI: "Buscar campo" → type a name ("Quivira") → pick a result → pick which tees to import → the course lands in `courses`/`tees`/`holes` with `source: 'golfcourseapi'`, `external_id`, and `imported_at`. Show what was imported and let the organizer edit any cell. Missing key or provider down → the button explains "Búsqueda no disponible; sube una foto o captúralo a mano" instead of a dead button.
+
+**B. Scorecard photo → course.**
+- "Subir tarjeta" accepts a photo or PDF of a scorecard (the same downscale/HEIC pipeline as attachments). A serverless route `api/scorecard-extract.ts` sends the image to Claude (`@anthropic-ai/sdk`, model `claude-opus-5`, the image as a base64 `image` block, structured JSON via `output_config.format` with a JSON schema for `{ courseName, tees: [{ name, color, rating?, slope?, holes: [{ number, par, strokeIndex, yards? }] }] }`) and returns the parsed card plus a `confidence` per tee. The key is `ANTHROPIC_API_KEY` on Vercel only; without it the route answers 503 and the UI says "Lectura de tarjeta pendiente".
+- The result opens in the course editor **as a draft** ("Revisar antes de guardar"): every hole is editable, the route flags any tee whose pars don't sum to the printed total or whose stroke indexes aren't a permutation of 1–18, and the organizer confirms. Never save straight from the photo.
+- Keep the photo as a `documents` row attached to the course (kind `scorecard`) so the Comité can re-check it later.
+
+**C. Manual entry** stays: bulk paste from a scorecard (already in §13) and per-hole editing. All three paths produce the same rows.
+
+**D. Tees per player, per round.**
+- `round_tees` (round_id, player_id, tee_id) — which tee each player plays in each round; default comes from `players.default_tee_id` and the round's course. The Tarjeta screen shows each player's par/SI from *his* tee (a par-5 for the back tees may be a par-4 up front).
+- Course handicap follows WHS: `courseHcp = round(index × slope / 113 + (rating − par))`, computed per round from the player's tee. When players in one group play different tees, the `(rating − par)` term is what keeps it fair; show it in "¿Cómo se calculó?".
+- Then the tournament rules apply on top: playing handicap = `roundHalfUp(allowance × min(courseHcp, cap))`, then the Day-2 cut (§5.2). So the first tournament's "base handicap" becomes: `handicap_index` (or an estimate, below) → course handicap for that day's tee → allowance → cap → cut. The Comité can still override any player's base handicap by hand (`handicap_source = 'manual'`); in that case the manual number is used as the course handicap unchanged, which is how the first tournament's rules sheet read it.
+
+**E. Players without a handicap index: estimate from three scores.**
+- Per player, `handicap_source` ∈ `index | estimate | manual`. For `estimate`, the organizer enters three gross 18-hole scores: **buen día, día normal, mal día**, and for each (optional) the tee's rating/slope and par where they were shot (defaults: rating = par, slope = 113, par 72 → "asumido", shown as such).
+- Differential per score: `d = (gross − rating) × 113 / slope` (the WHS score differential).
+- Estimated index: `index ≈ 0.45·d_good + 0.40·d_avg + 0.15·d_bad`, rounded to 1 decimal, capped at `handicap.cap`. Rationale: a WHS index is the average of the best 8 of the last 20 differentials, which sits between a golfer's good and typical days; the weights encode that (a "bad day" mostly confirms the spread). The weights live in settings (`handicap.estimateWeights`), and the UI shows the three differentials and the weighted result under "¿Cómo se calculó?", labelled **"estimado"** everywhere the handicap appears (badge on the leaderboard row and the player sheet) until the Comité confirms or overrides it.
+- Sanity rails: any score below par − 5 or above par + 60 asks "¿Seguro?"; if `d_good > d_avg` or `d_avg > d_bad` (scores entered in the wrong order) sort them silently and say so.
+- Engine tests (add to §6): `(75, 82, 90)` on rating 72.0 / slope 113 → differentials 3.0 / 10.0 / 18.0 → index 8.05 → **8.1**; the same scores on rating 71.2 / slope 128 → 3.35 / 9.53 / 16.60 → 7.81 → **7.8**; `(98, 105, 115)` par 72 defaults → 26.0 / 33.0 / 43.0 → 31.35 → **31.4**; `(120, 130, 140)` → capped at 54; course handicap: index 8.1, slope 128, rating 71.2, par 72 → `8.1 × 128/113 + (71.2 − 72) = 8.37` → **8**; index 20 on slope 113 rating 72 par 72 → **20**.
+
+**Where it lands in the milestones:** the engine parts (course handicap, estimate, per-round tees in strokes received) are M1; the two import routes, the review-draft editor and the player handicap form are M2; both keys are on `docs/handoff.md`.
+
 ---
 
 ## 14. Brand and design system
@@ -702,11 +735,11 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 - Done when: a deployed preview URL is installable on Diego's phone.
 
 **M1: Engine**
-- `src/engine/` implementing all of section 5 as core + modules, plus every test in section 6, the per-module "disabled" tests and the minimal-tournament test (§0.5).
+- `src/engine/` implementing all of section 5 as core + modules, plus every test in section 6, the per-module "disabled" tests, the minimal-tournament test (§0.5), and the course-handicap / estimate tests (§13b-E).
 - Done when: all tests pass and Diego gets a short plain-Spanish summary of the rules as coded.
 
 **M2: Data and auth**
-- Schema, RLS, triggers, audit log, organizer sign-in, Mis torneos + create wizard, join link/code, PIN login, and the admin basics (players, course, tees, settings, modules).
+- Schema, RLS, triggers, audit log, organizer sign-in, Mis torneos + create wizard, join link/code, PIN login, and the admin basics (players, course, tees, settings, modules) — including course search, scorecard-photo import with the review draft, per-player tees per round, and the handicap form with the three-score estimate (§13b).
 - Done when: Diego signs in as an organizer, creates a tournament from the wizard, sets a PIN for a test player, who then joins by code on another phone — and a second tournament created the same way cannot see the first one's data (an RLS test proves it).
 
 **M3: Score entry and live board**

@@ -35,12 +35,30 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ---
 
+## Pendiente: dos llaves para cargar campos (bloquean solo esas dos funciones, no M2)
+
+### 1. GolfCourseAPI (gratis): buscar campos por nombre
+1. Safari → **golfcourseapi.com** → **Sign up** (correo + contraseña).
+2. En el dashboard copia la **API key**.
+3. Guárdala como `GOLFCOURSE_API_KEY` en Vercel (proyecto cardi-golf → Settings → Environment Variables, Production + Preview) **o** pégala en el entorno de Claude Code y Claude la sube a Vercel.
+
+**Verificación:** en el admin, "Buscar campo" → "Quivira" devuelve resultados con tees, par y SI.
+
+### 2. Anthropic API (💰 de pago por uso, centavos por tarjeta): leer fotos de tarjetas
+1. Safari → **platform.claude.com** → inicia sesión → **API Keys** → **Create Key** (nombre `cardi-golf`).
+2. Guárdala como `ANTHROPIC_API_KEY` igual que arriba.
+3. Sin esta llave la app muestra "Lectura de tarjeta pendiente"; la búsqueda y la captura manual siguen funcionando.
+
+**Verificación:** subir una foto de la tarjeta de Solmar produce un borrador editable con 18 hoyos por tee.
+
+---
+
 ## Pendiente: datos del torneo (bloquean M2+, no M0/M1)
 
 Mándalos en el chat como texto, foto o captura, como te quede más fácil. Claude los carga al admin.
 
 - [ ] **Tarjetas de los dos campos:** Solmar Golf Links (día 1) y Quivira (día 2): par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
-- [ ] **Tiers y hándicap base** de los 12 jugadores (§5.1–5.2).
+- [ ] **Tiers y hándicap** de los 12 jugadores: índice WHS si lo tienen; si no, tres scores (buen día / normal / mal día) y la app estima uno (§13b). También qué tee juega cada uno.
 - [ ] **Jugador 12** y **quién es Nacho**.
 - ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
 - [ ] **Horarios de salida por grupo** (la primera salida es 09:00 ambos días; faltan los de los grupos 2 y 3, normalmente cada 10 min).
