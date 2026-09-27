@@ -8,6 +8,7 @@
 // CHROMIUM=/path/to/chrome (defaults to Playwright's).
 // E2E_RELAY=1 routes Supabase HTTP through Node's fetch (for sandboxes whose
 // proxy breaks Chromium's CONNECT tunnel; needs NODE_USE_ENV_PROXY=1).
+import { readFile } from 'node:fs/promises'
 import { chromium } from 'playwright-core'
 import { mkdirSync } from 'node:fs'
 
@@ -132,6 +133,32 @@ try {
   await p.waitForSelector('text=Individual', { timeout: T })
   await p.waitForTimeout(800)
   check((await p.locator('text=Cambio de líder').count()) + (await p.locator('text=birdie').count()) + (await p.locator('text=Todavía no pasa nada').count()) > 0, 'feed ticker renders')
+
+  await p.goto(`${base}/t/${slug}/admin/datos`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Descargar respaldo', { timeout: T })
+  await shot('data')
+  // Export a backup, then restore the same file: row counts must survive the round trip.
+  const [download] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.locator('text=Descargar respaldo (JSON)').click()])
+  const backupPath = `${out}/backup.json`
+  await download.saveAs(backupPath)
+  const backup = JSON.parse(await readFile(backupPath, 'utf8'))
+  const scoresBefore = backup.tables.scores.length
+  check(backup.version === 1 && scoresBefore > 0 && backup.tables.players.length > 0, `backup exported (${scoresBefore} scores, ${backup.tables.players.length} players)`)
+  p.once('dialog', (d) => d.accept())
+  const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: T }), p.locator('text=Restaurar desde JSON').click()])
+  await chooser.setFiles(backupPath)
+  await p.waitForSelector('text=Respaldo restaurado', { timeout: T })
+  await p.goto(`${base}/t/${slug}/admin/datos`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Descargar respaldo', { timeout: T })
+  const [download2] = await Promise.all([p.waitForEvent('download', { timeout: T }), p.locator('text=Descargar respaldo (JSON)').click()])
+  await download2.saveAs(`${out}/backup2.json`)
+  const backup2 = JSON.parse(await readFile(`${out}/backup2.json`, 'utf8'))
+  check(backup2.tables.scores.length === scoresBefore && backup2.tables.calcutta_lots.length === backup.tables.calcutta_lots.length, 'restore round-trips every row')
+
+  await p.goto(`${base}/t/${slug}/imprimir`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Firmas', { timeout: T })
+  await shot('print')
+  check((await p.locator('table').count()) > 0, 'printable scorecards render')
 
   await p.setViewportSize({ width: 1280, height: 720 })
   await p.goto(`${base}/t/${slug}/ceremonia`, { waitUntil: 'domcontentloaded' })

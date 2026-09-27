@@ -29,6 +29,8 @@ const AdminGroups = lazy(() => import('../screens/admin/AdminGroups').then((m) =
 const AdminHandicaps = lazy(() => import('../screens/admin/AdminHandicaps').then((m) => ({ default: m.AdminHandicaps })))
 const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) => ({ default: m.AdminScores })))
 const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
+const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({ default: m.AdminData })))
+const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 
 export const router = createBrowserRouter([
@@ -60,6 +62,7 @@ export const router = createBrowserRouter([
           },
           { path: 'tv', element: <Lazy><TvScreen /></Lazy> },
           { path: 'ceremonia', element: <Lazy><CeremonyScreen /></Lazy> },
+          { path: 'imprimir', element: <Lazy><PrintScreen /></Lazy> },
           {
             path: 'admin',
             element: <AdminLayout />,
@@ -74,6 +77,7 @@ export const router = createBrowserRouter([
               { path: 'scores', element: <Lazy><AdminScores /></Lazy> },
               { path: 'calcutta', element: <Lazy><AdminAuction /></Lazy> },
               { path: 'parejas', element: <Lazy><AdminDraw /></Lazy> },
+              { path: 'datos', element: <Lazy><AdminData /></Lazy> },
             ],
           },
         ],

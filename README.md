@@ -25,7 +25,7 @@ npm run preflight            # typecheck → lint → test → build (lo mismo q
 | `src/screens/` | `organizer/` (login, Mis torneos, wizard), `tournament/` (Entrar, shell con tabs, En vivo, Más), `admin/` (Comité: torneo, jugadores, campos, rondas). |
 | `api/` | Rutas serverless de Vercel: `course-search` (GolfCourseAPI) y `scorecard-extract` (foto de tarjeta → borrador, Claude). Llaves solo en Vercel. |
 | `supabase/migrations/` | Schema, funciones/RPCs, RLS, Realtime y Storage. Se aplican con `node scripts/db.mjs migrate` (Management API). |
-| `scripts/` | `preflight.sh` (candado local y CI), `prepush-guard.sh` (hook), `db.mjs` (SQL/migraciones), `rls-test.mjs` (aislamiento entre torneos, contra el proyecto real), `seed-ensayo.mjs` (torneo de ensayo), `make-icons.mjs`. |
+| `scripts/` | `preflight.sh` (candado local y CI), `prepush-guard.sh` (hook), `db.mjs` (SQL/migraciones), `rls-test.mjs` (aislamiento entre torneos, contra el proyecto real), `seed-ensayo.mjs` (torneo de ensayo), `simulate.mjs` (simulador de rondas, solo Ensayo; `--interval N` para tiempo real), `rehearse-auction.mjs` (una Calcutta de 12 lotes), `make-icons.mjs`. El runbook del torneo está en `RUNBOOK.md`. |
 | `.github/workflows/` | `ci.yml` (job `check`) y `keepalive.yml` (ping diario a Supabase free). |
 
 Producción: `main` → Vercel, en **https://golf.cardigan.mx** (también `cardi-golf.vercel.app`). Cada rama `claude/*` obtiene un preview.
