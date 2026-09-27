@@ -32,6 +32,8 @@ export interface TournamentCtx {
 }
 
 const Ctx = createContext<TournamentCtx | null>(null)
+/** Exported for the design fixtures (`src/dev/FixtureGate`), which provide a fake tournament without Supabase. */
+export const TournamentContext = Ctx
 export function useTournamentCtx(): TournamentCtx {
   const c = useContext(Ctx)
   if (!c) throw new Error('useTournamentCtx outside TournamentGate')

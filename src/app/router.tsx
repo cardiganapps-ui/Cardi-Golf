@@ -9,6 +9,7 @@ import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
 import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
 import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
 import { TournamentGate } from '../screens/tournament/TournamentGate'
+import { FixtureGate, FixtureIndex } from '../dev/FixtureGate'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
@@ -33,21 +34,8 @@ const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({
 const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <AppShell />,
-    errorElement: <NotFoundScreen />,
-    children: [
-      { index: true, element: <HomeScreen /> },
-      { path: 'organizer/login', element: <OrganizerLoginScreen /> },
-      { path: 'organizer', element: <MyTournamentsScreen /> },
-      { path: 'organizer/new', element: <NewTournamentScreen /> },
-      { path: 'organizer/reset', element: <ResetPasswordScreen /> },
-      {
-        path: 't/:slug',
-        element: <TournamentGate />,
-        children: [
+/** Everything under one tournament; shared by the real gate and the fixtures. */
+const tournamentChildren = [
           {
             element: <TournamentShell />,
             children: [
@@ -80,8 +68,23 @@ export const router = createBrowserRouter([
               { path: 'datos', element: <Lazy><AdminData /></Lazy> },
             ],
           },
-        ],
-      },
+]
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <AppShell />,
+    errorElement: <NotFoundScreen />,
+    children: [
+      { index: true, element: <HomeScreen /> },
+      { path: 'organizer/login', element: <OrganizerLoginScreen /> },
+      { path: 'organizer', element: <MyTournamentsScreen /> },
+      { path: 'organizer/new', element: <NewTournamentScreen /> },
+      { path: 'organizer/reset', element: <ResetPasswordScreen /> },
+      { path: 'fixture', element: <FixtureIndex /> },
+      // Design fixtures: the same screens on in-memory tournaments (src/dev). Must precede `t/:slug`.
+      { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
+      { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
       { path: 'tv', element: <PlaceholderScreen title="Modo TV" /> },
       { path: '*', element: <NotFoundScreen /> },
     ],
