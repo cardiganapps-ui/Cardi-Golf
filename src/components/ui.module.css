@@ -1,0 +1,118 @@
+.crown {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  font-size: 0.9em;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 79, 87, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 160ms ease-out;
+}
+.sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92dvh;
+  background: var(--paper);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 10px var(--gutter) calc(20px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 220ms var(--ease-out);
+}
+.sheetWide {
+  max-width: 760px;
+}
+.sheetHandle {
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--hair);
+  margin: 0 auto 12px;
+}
+.sheetBody {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  padding: 20px 0;
+}
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid var(--hair);
+  border-top-color: var(--teal);
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorBox {
+  background: var(--coral);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.errorBox button {
+  color: #fff;
+  border-color: #fff;
+  align-self: flex-start;
+}
+
+.toaster {
+  position: fixed;
+  left: 50%;
+  bottom: calc(80px + var(--safe-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 60;
+  pointer-events: none;
+}
+.toast {
+  background: var(--deep);
+  color: var(--paper);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-card);
+  animation: slideUp 200ms var(--ease-out);
+}

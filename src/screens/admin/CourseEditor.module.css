@@ -1,0 +1,10 @@
+.gridWrap {
+  overflow-x: auto;
+}
+.holes td {
+  padding: 3px 4px;
+}
+.holes input {
+  width: 64px;
+  min-height: 36px;
+}

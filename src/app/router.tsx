@@ -1,8 +1,22 @@
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
-import { TournamentPlaceholder } from '../screens/TournamentPlaceholder'
+import { OrganizerLoginScreen } from '../screens/organizer/OrganizerLoginScreen'
+import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
+import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
+import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
+import { TournamentGate } from '../screens/tournament/TournamentGate'
+import { TournamentShell } from '../screens/tournament/TournamentShell'
+import { LiveScreen } from '../screens/tournament/LiveScreen'
+import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
+import { MoreScreen } from '../screens/tournament/MoreScreen'
+import { AdminLayout } from '../screens/admin/AdminLayout'
+import { AdminTournament } from '../screens/admin/AdminTournament'
+import { AdminPlayers } from '../screens/admin/AdminPlayers'
+import { AdminCourses } from '../screens/admin/AdminCourses'
+import { AdminRounds } from '../screens/admin/AdminRounds'
+import { t } from '../i18n/es-MX'
 
 export const router = createBrowserRouter([
   {
@@ -11,8 +25,38 @@ export const router = createBrowserRouter([
     errorElement: <NotFoundScreen />,
     children: [
       { index: true, element: <HomeScreen /> },
-      { path: 't/:slug/*', element: <TournamentPlaceholder /> },
-      { path: 'tv', element: <TournamentPlaceholder mode="tv" /> },
+      { path: 'organizer/login', element: <OrganizerLoginScreen /> },
+      { path: 'organizer', element: <MyTournamentsScreen /> },
+      { path: 'organizer/new', element: <NewTournamentScreen /> },
+      { path: 'organizer/reset', element: <ResetPasswordScreen /> },
+      {
+        path: 't/:slug',
+        element: <TournamentGate />,
+        children: [
+          {
+            element: <TournamentShell />,
+            children: [
+              { index: true, element: <LiveScreen /> },
+              { path: 'tarjeta', element: <PlaceholderScreen title={t.nav.card} /> },
+              { path: 'juegos', element: <PlaceholderScreen title={t.nav.games} /> },
+              { path: 'dinero', element: <PlaceholderScreen title={t.nav.money} /> },
+              { path: 'mas', element: <MoreScreen /> },
+            ],
+          },
+          {
+            path: 'admin',
+            element: <AdminLayout />,
+            children: [
+              { index: true, element: <Navigate to="torneo" replace /> },
+              { path: 'torneo', element: <AdminTournament /> },
+              { path: 'jugadores', element: <AdminPlayers /> },
+              { path: 'campos', element: <AdminCourses /> },
+              { path: 'rondas', element: <AdminRounds /> },
+            ],
+          },
+        ],
+      },
+      { path: 'tv', element: <PlaceholderScreen title="Modo TV" /> },
       { path: '*', element: <NotFoundScreen /> },
     ],
   },

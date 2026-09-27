@@ -21,7 +21,11 @@ npm run preflight            # typecheck → lint → test → build (lo mismo q
 | `src/app/`, `src/screens/`, `src/components/` | Shell PWA, router y pantallas. |
 | `src/i18n/es-MX.ts` | Todo el copy de la app. |
 | `src/styles/` | Tokens de diseño (§14) y estilos globales. |
-| `scripts/` | `preflight.sh` (candado local y CI), `prepush-guard.sh` (hook), `make-icons.mjs`. |
+| `src/data/` | Auth (organizadores por correo, jugadores anónimos + PIN), store del torneo (snapshot + engine + Realtime) y escrituras tipadas. |
+| `src/screens/` | `organizer/` (login, Mis torneos, wizard), `tournament/` (Entrar, shell con tabs, En vivo, Más), `admin/` (Comité: torneo, jugadores, campos, rondas). |
+| `api/` | Rutas serverless de Vercel: `course-search` (GolfCourseAPI) y `scorecard-extract` (foto de tarjeta → borrador, Claude). Llaves solo en Vercel. |
+| `supabase/migrations/` | Schema, funciones/RPCs, RLS, Realtime y Storage. Se aplican con `node scripts/db.mjs migrate` (Management API). |
+| `scripts/` | `preflight.sh` (candado local y CI), `prepush-guard.sh` (hook), `db.mjs` (SQL/migraciones), `rls-test.mjs` (aislamiento entre torneos, contra el proyecto real), `seed-ensayo.mjs` (torneo de ensayo), `make-icons.mjs`. |
 | `.github/workflows/` | `ci.yml` (job `check`) y `keepalive.yml` (ping diario a Supabase free). |
 
 Producción: `main` → Vercel (`cardi-golf.vercel.app`). Cada rama `claude/*` obtiene un preview.

@@ -1,15 +1,20 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wave } from '../components/Wave'
 import { Wordmark } from '../components/Wordmark'
 import { InstallGuide } from '../components/InstallGuide'
 import { supabaseConfigured } from '../lib/supabase'
+import { getLastTournament } from '../data/session'
+import { useAuth } from '../data/auth'
 import styles from './HomeScreen.module.css'
 
 export function HomeScreen() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
+  const last = getLastTournament()
+  const { user, isAnonymous } = useAuth()
+  const organizerSignedIn = !!user && !isAnonymous
 
   function onJoin(e: FormEvent) {
     e.preventDefault()
@@ -33,6 +38,12 @@ export function HomeScreen() {
         </div>
       )}
 
+      {last && (
+        <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
+          {t.home.backTo(last.name)}
+        </Link>
+      )}
+
       <section className="card">
         <span className="section-num">01</span>
         <h2>{t.home.joinTitle}</h2>
@@ -46,7 +57,7 @@ export function HomeScreen() {
             className={`input num ${styles.codeInput}`}
             placeholder={t.home.joinPlaceholder}
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 6))}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
             autoCapitalize="characters"
             autoComplete="off"
             inputMode="text"
@@ -62,10 +73,11 @@ export function HomeScreen() {
         <span className="section-num">02</span>
         <h2>{t.home.organizerTitle}</h2>
         <p className="muted">{t.home.organizerHint}</p>
-        <button className="btn btn--secondary" type="button" disabled title={t.home.comingSoon}>
-          {t.home.organizerButton}
-        </button>
-        <p className={`muted ${styles.soon}`}>{t.home.comingSoon}</p>
+        <div style={{ marginTop: 12 }}>
+          <Link className="btn btn--secondary" to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
+            {organizerSignedIn ? t.home.myTournaments : t.home.organizerButton}
+          </Link>
+        </div>
       </section>
 
       <InstallGuide />
