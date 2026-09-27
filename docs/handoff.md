@@ -13,37 +13,21 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Crear el repo en GitHub.**~~ `cardiganapps-ui/Cardi-Golf`, privado. Verificado: el primer push llegó. (2026-09-26)
 - ~~**Dar acceso a Claude al repo.**~~ Verificado: `add_repo` con permiso de push funcionó. (2026-09-26)
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
-- ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`). (2026-09-27)
+- ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
 
 ---
 
-## Pendiente: bloquea el primer deploy (M0)
+## Recomendado, no bloquea: rotar las llaves y guardarlas en el entorno
 
-### Poner las dos variables públicas en Vercel (1 minuto, desde el iPhone)
-**Por qué:** el conector de Vercel de Claude es de solo lectura (403 al crear variables). Son valores públicos (van en el bundle del navegador), así que no hay riesgo en copiarlos de aquí.
-
-1. Safari → vercel.com → proyecto **cardi-golf** → **Settings** → **Environment Variables**.
-2. Key `VITE_SUPABASE_URL` · Value `https://gmohwledjejlhcwqjnhd.supabase.co` · Environments: **Production** y **Preview** → **Save**.
-3. Key `VITE_SUPABASE_ANON_KEY` · Value `sb_publishable_AfdMuv4UnxfuskCeC-JCJw_iuEJB6sK` · Environments: **Production** y **Preview** → **Save**.
-4. Dile a Claude "variables en Vercel listas".
-
-(Alternativa sin clics futuros: crea un token en vercel.com → Settings → Tokens, scope el equipo, y guárdalo como `VERCEL_TOKEN` en el entorno de Claude Code, como en el paso de abajo. Claude entonces administra Vercel solo.)
-
-**Verificación:** el siguiente deploy de Vercel arranca sin "Almacenamiento pendiente" y la app conecta a Supabase.
-
----
-
-## Pendiente: secretos del entorno (bloquea M2, no M0/M1)
-
-### Guardar las llaves de Supabase en el entorno de Claude Code
-**Por qué:** el conector de Supabase de Claude está atado a la organización Cardigan y no ve el proyecto nuevo. Claude lo administra con la API usando dos llaves que **no pueden vivir en el repo**. Las que pegaste en el chat el 2026-09-26 hay que **rotarlas** (quedaron en el historial de la conversación) y guardar las nuevas en el entorno.
+**Por qué:** las tres llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
 
 1. Supabase dashboard → proyecto **Cardi-Golf** → **Settings → API Keys → Secret keys** → en la llave `claude` toca **⋯ → Revoke**, luego **Create new secret key** (nombre `claude`). Copia el valor.
 2. Supabase → tu avatar → **Account → Access Tokens** → revoca el token actual → **Generate new token** (nombre `claude-code`). Copia el valor.
 3. Claude app → Code → abre cualquier sesión de Cardi-Golf → toca el nombre del entorno en la barra del título → **Edit** → en **Environment variables** agrega:
    - `SUPABASE_PAT` = el token del paso 2
    - `SUPABASE_SECRET_KEY` = la llave del paso 1
+   - `VERCEL_TOKEN` = un token nuevo de vercel.com → Settings → Tokens (scope: el equipo), tras revocar el actual
    Guarda. Una sesión nueva ya las ve.
 4. Dile a Claude "llaves listas".
 
