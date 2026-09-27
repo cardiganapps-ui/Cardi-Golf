@@ -2,7 +2,7 @@
  * Small shared building blocks. Everything is 48px+ tap targets, high
  * contrast, and Spanish copy from i18n.
  */
-import { useEffect, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import styles from './ui.module.css'
 
@@ -73,6 +73,11 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       </div>
     </div>
   )
+}
+
+/** Suspense boundary for lazy-loaded screens. */
+export function Lazy({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<Spinner />}>{children}</Suspense>
 }
 
 export function Spinner({ label }: { label?: string }) {

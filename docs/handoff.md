@@ -21,7 +21,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
-## Para probar M2 a M5 (no bloquea nada)
+## Para probar M2 a M6 (no bloquea nada)
+
+- [ ] **Dazzle (M6).** En vivo ahora trae el feed ("birdie en el 7", "cambio de líder", "la víbora pasa a…") y "Compartir tabla" genera una imagen para WhatsApp. Más › **Stats y premios**: premios automáticos (Rey del Birdie, Mano de Piedra…), la carrera de puntos con ▶ para revivirla, el campo y la tabla por jugador. Más › **Reglamento**: las reglas leídas de la configuración. Más › **Modo TV** rota tableros (y el feed). Nico ve además **Ceremonia**: revela uno por uno hasta el campeón con confeti (en la tele se ve mejor).
 
 - [ ] **Noche de Calcutta (M5).** Entra como Nico → Comité › **Calcutta** → "Borrar la subasta" (la del ensayo ya está corrida) → "Sacar del sombrero" → "Abrir lote 1". En la tele abre https://cardi-golf.vercel.app/t/ensayo/tv: mientras el torneo está en modo subasta, muestra el lote, la puja, el pozo y "Lo que está en juego". Toca un postor, +$250 / +$500 / +$1,000 u "Otra", "Deshacer", "¡Vendido!" y la recompra (0 / 25 / 50 %). Un postor con 3 jugadores se apaga solo.
 - [ ] **Sorteo de parejas.** Al vender el último lote, "Sorteo de parejas": el homenajeado escoge (cuando marques a Nacho en Jugadores), el resto sale con anillos, nombra las parejas y guarda: genera los grupos del día 1 (ajusta horas en Grupos).

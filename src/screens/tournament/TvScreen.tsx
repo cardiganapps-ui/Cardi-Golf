@@ -12,10 +12,11 @@ import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { Wave } from '../../components/Wave'
 import { useTournamentCtx } from './TournamentGate'
+import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
 
-type Board = 'individual' | 'pairs' | 'snake' | 'auction'
+type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed'
 
 export function TvScreen() {
   const data = useTournament((s) => s.data)!
@@ -30,8 +31,9 @@ export function TvScreen() {
     if (state.modules.pairs) b.push('pairs')
     if (state.modules.snake) b.push('snake')
     if (state.modules.auction && state.modules.auction.soldCount > 0) b.push('auction')
+    if (state.feed.length > 0) b.push('feed')
     return b
-  }, [state.modules])
+  }, [state.modules, state.feed.length])
   const [idx, setIdx] = useState(0)
   useEffect(() => {
     if (isAuctionNight) return
@@ -129,6 +131,12 @@ export function TvScreen() {
                       </div>
                     ))}
                 </div>
+              </>
+            )}
+            {board === 'feed' && (
+              <>
+                <h2 className={styles.boardTitle}>{t.feed.title}</h2>
+                <FeedTicker limit={9} big />
               </>
             )}
             {board === 'auction' && state.modules.auction && (

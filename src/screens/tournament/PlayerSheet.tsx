@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Sheet } from '../../components/ui'
+import { ShareCardButton } from '../../components/ShareCard'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import styles from './PlayerSheet.module.css'
@@ -191,7 +192,10 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
         </section>
 
         <section className="card card--cell" style={{ padding: 12 }}>
-          <span className="label">{t.player.stats}</span>
+          <div className="row row--between">
+            <span className="label">{t.player.stats}</span>
+            <ShareCardButton what={{ kind: 'player', playerId: p.id }} className="btn btn--ghost btn--sm" />
+          </div>
           <div className={styles.stats}>
             <Stat label={t.player.birdies} v={stats.birdies} />
             <Stat label={t.player.netBirdies} v={stats.netBirdies} />

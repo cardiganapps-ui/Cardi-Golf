@@ -8,6 +8,8 @@ import type { Id, Snapshot } from './types'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
+import { computeStats, type StatsState } from './core/stats'
+import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type AnyModule } from './modules'
 import type { ModuleContext, PrizeAward } from './modules/module'
 import type { AuctionState } from './modules/auction'
@@ -47,6 +49,10 @@ export interface TournamentState {
   /** Every prize any enabled module awards, live and final. */
   prizes: PrizeAward[]
   money: MoneyState
+  /** Stats and awards (§12), display only. */
+  stats: StatsState
+  /** Derived feed events, newest first. */
+  feed: FeedEvent[]
   flags: StatusFlags
   tournamentFinal: boolean
 }
@@ -82,6 +88,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   }
 
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal)
+  const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction })
+  const feed = computeFeed(snapshot, core, modules.snake)
 
   const incompleteRounds: StatusFlags['incompleteRounds'] = []
   for (const rid of core.roundIds) {
@@ -113,6 +121,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     modules,
     prizes,
     money,
+    stats,
+    feed,
     flags: {
       incompleteRounds,
       pendingSnakeTiebreaks: modules.snake?.pending ?? [],

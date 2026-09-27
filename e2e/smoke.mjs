@@ -62,10 +62,13 @@ try {
 
   await p.goto(`${base}/t/${slug}/admin/rondas`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Agregar ronda', { timeout: T })
-  const startBtn = p.locator('button:has-text("Iniciar ronda")').first()
-  if (await startBtn.count()) {
-    await startBtn.click()
-    await p.waitForSelector('text=En juego', { timeout: T })
+  // Start round 1 only if it is not live yet (repeat runs must not start round 2).
+  if ((await p.locator('text=En juego').count()) === 0) {
+    const startBtn = p.locator('button:has-text("Iniciar ronda")').first()
+    if (await startBtn.count()) {
+      await startBtn.click()
+      await p.waitForSelector('text=En juego', { timeout: T })
+    }
   }
   check(true, 'round 1 is live')
 
@@ -97,7 +100,7 @@ try {
   await shot('money')
   const moneyBody = await p.innerText('body')
   check(/banco/i.test(moneyBody) && /\$\d/.test(moneyBody), 'Dinero shows the bank card with amounts')
-  await p.locator('button', { hasText: 'Liquidación' }).first().click()
+  await p.getByRole('tab', { name: 'Liquidación', exact: true }).click()
   await p.waitForSelector('text=Quién debe qué', { timeout: T })
   await shot('settlement')
   check((await p.locator('text=Vía banco').count()) > 0, 'settlement mode renders')
@@ -113,7 +116,32 @@ try {
   await shot('draw')
   check(true, 'pairs draw renders')
 
+  // M6: stats, rules, ceremony, feed on Live.
+  await p.goto(`${base}/t/${slug}/stats`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Premios automáticos', { timeout: T })
+  await p.waitForTimeout(800)
+  await shot('stats')
+  check((await p.locator('text=Carrera de puntos').count()) > 0, 'stats shows awards and the race chart')
+
+  await p.goto(`${base}/t/${slug}/reglamento`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Reglamento', { timeout: T })
+  await shot('rules')
+  check(/anti-sandbag/.test(await p.innerText('body')), 'rules render from settings')
+
+  await p.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Individual', { timeout: T })
+  await p.waitForTimeout(800)
+  check((await p.locator('text=Cambio de líder').count()) + (await p.locator('text=birdie').count()) + (await p.locator('text=Todavía no pasa nada').count()) > 0, 'feed ticker renders')
+
   await p.setViewportSize({ width: 1280, height: 720 })
+  await p.goto(`${base}/t/${slug}/ceremonia`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Empezar la ceremonia', { timeout: T })
+  await p.locator('text=Empezar la ceremonia').click()
+  await p.waitForSelector('text=Revelar', { timeout: T })
+  await p.locator('text=Revelar').click()
+  await p.waitForTimeout(1200)
+  await shot('ceremony')
+  check(true, 'ceremony reveals the first step')
   await p.goto(`${base}/t/${slug}/tv`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Individual', { timeout: T })
   await p.waitForTimeout(800)

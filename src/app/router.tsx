@@ -1,4 +1,6 @@
+import { lazy } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
+import { Lazy } from '../components/ui'
 import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
@@ -14,17 +16,20 @@ import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
 import { MoreScreen } from '../screens/tournament/MoreScreen'
 import { GamesScreen } from '../screens/tournament/GamesScreen'
 import { MoneyScreen } from '../screens/tournament/MoneyScreen'
-import { TvScreen } from '../screens/tournament/TvScreen'
+const TvScreen = lazy(() => import('../screens/tournament/TvScreen').then((m) => ({ default: m.TvScreen })))
+const StatsScreen = lazy(() => import('../screens/tournament/StatsScreen').then((m) => ({ default: m.StatsScreen })))
+import { RulesScreen } from '../screens/tournament/RulesScreen'
+const CeremonyScreen = lazy(() => import('../screens/tournament/CeremonyScreen').then((m) => ({ default: m.CeremonyScreen })))
 import { AdminLayout } from '../screens/admin/AdminLayout'
-import { AdminTournament } from '../screens/admin/AdminTournament'
-import { AdminPlayers } from '../screens/admin/AdminPlayers'
-import { AdminCourses } from '../screens/admin/AdminCourses'
-import { AdminRounds } from '../screens/admin/AdminRounds'
-import { AdminGroups } from '../screens/admin/AdminGroups'
-import { AdminHandicaps } from '../screens/admin/AdminHandicaps'
-import { AdminScores } from '../screens/admin/AdminScores'
-import { AdminAuction } from '../screens/admin/AdminAuction'
-import { AdminDraw } from '../screens/admin/AdminDraw'
+const AdminTournament = lazy(() => import('../screens/admin/AdminTournament').then((m) => ({ default: m.AdminTournament })))
+const AdminPlayers = lazy(() => import('../screens/admin/AdminPlayers').then((m) => ({ default: m.AdminPlayers })))
+const AdminCourses = lazy(() => import('../screens/admin/AdminCourses').then((m) => ({ default: m.AdminCourses })))
+const AdminRounds = lazy(() => import('../screens/admin/AdminRounds').then((m) => ({ default: m.AdminRounds })))
+const AdminGroups = lazy(() => import('../screens/admin/AdminGroups').then((m) => ({ default: m.AdminGroups })))
+const AdminHandicaps = lazy(() => import('../screens/admin/AdminHandicaps').then((m) => ({ default: m.AdminHandicaps })))
+const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) => ({ default: m.AdminScores })))
+const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
+const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 
 export const router = createBrowserRouter([
   {
@@ -48,24 +53,27 @@ export const router = createBrowserRouter([
               { path: 'tarjeta', element: <ScorecardScreen /> },
               { path: 'juegos', element: <GamesScreen /> },
               { path: 'dinero', element: <MoneyScreen /> },
+              { path: 'stats', element: <Lazy><StatsScreen /></Lazy> },
+              { path: 'reglamento', element: <RulesScreen /> },
               { path: 'mas', element: <MoreScreen /> },
             ],
           },
-          { path: 'tv', element: <TvScreen /> },
+          { path: 'tv', element: <Lazy><TvScreen /></Lazy> },
+          { path: 'ceremonia', element: <Lazy><CeremonyScreen /></Lazy> },
           {
             path: 'admin',
             element: <AdminLayout />,
             children: [
               { index: true, element: <Navigate to="torneo" replace /> },
-              { path: 'torneo', element: <AdminTournament /> },
-              { path: 'jugadores', element: <AdminPlayers /> },
-              { path: 'campos', element: <AdminCourses /> },
-              { path: 'rondas', element: <AdminRounds /> },
-              { path: 'grupos', element: <AdminGroups /> },
-              { path: 'handicaps', element: <AdminHandicaps /> },
-              { path: 'scores', element: <AdminScores /> },
-              { path: 'calcutta', element: <AdminAuction /> },
-              { path: 'parejas', element: <AdminDraw /> },
+              { path: 'torneo', element: <Lazy><AdminTournament /></Lazy> },
+              { path: 'jugadores', element: <Lazy><AdminPlayers /></Lazy> },
+              { path: 'campos', element: <Lazy><AdminCourses /></Lazy> },
+              { path: 'rondas', element: <Lazy><AdminRounds /></Lazy> },
+              { path: 'grupos', element: <Lazy><AdminGroups /></Lazy> },
+              { path: 'handicaps', element: <Lazy><AdminHandicaps /></Lazy> },
+              { path: 'scores', element: <Lazy><AdminScores /></Lazy> },
+              { path: 'calcutta', element: <Lazy><AdminAuction /></Lazy> },
+              { path: 'parejas', element: <Lazy><AdminDraw /></Lazy> },
             ],
           },
         ],

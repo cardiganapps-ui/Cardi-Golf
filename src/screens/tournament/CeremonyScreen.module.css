@@ -1,0 +1,156 @@
+.stage {
+  position: fixed;
+  inset: 0;
+  background: var(--deep);
+  color: var(--paper);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo {
+  height: 48px;
+  width: auto;
+}
+.title {
+  color: var(--paper);
+  font-size: 1.6rem;
+}
+.sub {
+  color: var(--seafoam);
+  font-size: 0.9rem;
+}
+.exit {
+  color: var(--seafoam);
+  text-decoration: none;
+  opacity: 0.7;
+}
+.warn {
+  color: var(--sun);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 720px;
+  padding: 8px;
+}
+.hint {
+  color: var(--seafoam);
+  max-width: 420px;
+}
+.bigBtn {
+  font-size: 1.2rem;
+  padding: 16px 32px;
+  min-height: 60px;
+}
+.stepIcon {
+  font-size: clamp(3rem, 10vh, 6rem);
+  line-height: 1;
+}
+.stepTitle {
+  color: var(--sun);
+  font-size: clamp(1.6rem, 5vh, 3rem);
+}
+.reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 18px 24px;
+  width: 100%;
+}
+.champion {
+  background: rgba(242, 182, 63, 0.18);
+  border: 2px solid var(--sun);
+}
+.avatars {
+  display: flex;
+  gap: 8px;
+}
+.avatars :global(.avatar--lg) {
+  width: clamp(72px, 14vh, 140px);
+  height: clamp(72px, 14vh, 140px);
+  font-size: clamp(1.6rem, 5vh, 3rem);
+}
+.winnerLine {
+  font-family: var(--font-display, 'Fraunces', serif);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 5vh, 3rem);
+  line-height: 1.1;
+}
+.winnerSub {
+  color: var(--seafoam);
+  font-size: clamp(1rem, 2.6vh, 1.4rem);
+}
+.trophy {
+  color: var(--sun);
+  font-weight: 700;
+  font-size: clamp(1rem, 2.8vh, 1.5rem);
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-size: clamp(1rem, 2.6vh, 1.4rem);
+}
+.listRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 8px 14px;
+}
+.wave {
+  color: var(--sun);
+  height: 10px;
+}
+.pos {
+  color: var(--seafoam);
+}
+.neg {
+  color: #f0a58f;
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.footer :global(.btn--ghost) {
+  color: var(--seafoam);
+}
+.progress {
+  color: var(--seafoam);
+  font-variant-numeric: tabular-nums;
+}

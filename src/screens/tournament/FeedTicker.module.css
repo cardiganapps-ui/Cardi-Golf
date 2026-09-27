@@ -1,0 +1,52 @@
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cell);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.95rem;
+}
+.lead {
+  background: var(--sun);
+  border-color: var(--sun);
+  color: var(--ink);
+  font-weight: 700;
+}
+.icon {
+  font-size: 1.2rem;
+}
+.text {
+  flex: 1;
+  min-width: 0;
+}
+.when {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+}
+.big .item {
+  font-size: 3vh;
+  padding: 1.4vh 2vw;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+  color: var(--paper);
+  border-radius: 1.5vh;
+}
+.big .lead {
+  background: var(--sun);
+  color: var(--ink);
+}
+.big .icon {
+  font-size: 4vh;
+}
+.big .when {
+  color: var(--seafoam);
+  font-size: 2vh;
+}
