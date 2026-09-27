@@ -11,7 +11,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Formats.** The engine has Stableford only (plus modules). The leaderboard row is designed format-agnostic (primary figure slot: points, to-par, putts, money, team total, holes-up) but only the existing figures are implemented. Gross to-par on the scorecard and a "Puntos / Gross" toggle are display-only derivations from `HoleResult.gross` and `par`; match play is a documented slot, not a feature.
 - **Icons.** No emoji as UI. One inline SVG set (`src/components/icons.tsx`, 24-px grid, single stroke weight) in phase 2; no icon dependency.
 - **Dark mode.** Not global. TV and Ceremonia use a dedicated board surface with its own tokens; phone screens are light-only because they are used in sunlight.
-- **Fonts.** Phase 1 adds `@fontsource-variable/archivo` (one variable file with a width axis serves narrow numeric columns and normal text; ~45 KB woff2, self-hosted so it works offline). Fraunces stays for one role (the event name). Instrument Sans is removed in phase 2.
+- **Fonts.** Phase 1 adds `@fontsource-variable/archivo` (one variable file with a width axis serves narrow numeric columns and normal text; ~90 KB woff2 for the Latin width+weight file, self-hosted so it works offline). Fraunces stays for one role (the event name). Instrument Sans is removed in phase 2.
 
 ## Throwaway organizer account
 

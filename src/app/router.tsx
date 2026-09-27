@@ -32,6 +32,7 @@ const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) =
 const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
 const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({ default: m.AdminData })))
 const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
+const DesignScreen = lazy(() => import('../design/DesignScreen').then((m) => ({ default: m.DesignScreen })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 
 /** Everything under one tournament; shared by the real gate and the fixtures. */
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
       { path: 'organizer/new', element: <NewTournamentScreen /> },
       { path: 'organizer/reset', element: <ResetPasswordScreen /> },
       { path: 'fixture', element: <FixtureIndex /> },
+      { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
       // Design fixtures: the same screens on in-memory tournaments (src/dev). Must precede `t/:slug`.
       { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
