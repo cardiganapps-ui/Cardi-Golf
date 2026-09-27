@@ -13,6 +13,7 @@ import { formatMoney } from '../../lib/money'
 import { shuffle } from '../../lib/pairing'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminAuction.module.css'
+import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
 
 const A = t.auction
 
@@ -67,7 +68,7 @@ export function AdminAuction() {
         <p className="help">{A.drawHint}</p>
         <div className="row row--wrap">
           <button className="btn btn--primary" type="button" onClick={() => setOrder(shuffle(draft))}>
-            🎩 {A.drawOrder}
+            {A.drawOrder}
           </button>
           <button className="btn btn--secondary btn--sm" type="button" onClick={() => setOrder([...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.id))}>
             {A.manualOrder}
@@ -81,11 +82,11 @@ export function AdminAuction() {
               </span>
               <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} size="sm" />
               <span className="grow">{name(pid)}</span>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={i === 0} onClick={() => setOrder(move(draft, i, i - 1))} aria-label="↑">
-                ↑
+              <button className="btn btn--ghost btn--sm" type="button" disabled={i === 0} onClick={() => setOrder(move(draft, i, i - 1))} aria-label={t.common.moveUp}>
+                <IconArrowUp />
               </button>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={i === draft.length - 1} onClick={() => setOrder(move(draft, i, i + 1))} aria-label="↓">
-                ↓
+              <button className="btn btn--ghost btn--sm" type="button" disabled={i === draft.length - 1} onClick={() => setOrder(move(draft, i, i + 1))} aria-label={t.common.moveDown}>
+                <IconArrowDown />
               </button>
             </li>
           ))}
@@ -218,10 +219,10 @@ export function AdminAuction() {
           </div>
           <div className="row">
             <button className="btn btn--ghost btn--sm" type="button" disabled={busy || !lastBid} onClick={() => lastBid && void run(() => deleteBid(lastBid.id))}>
-              ↶ {A.undo}
+              <IconUndo /> {A.undo}
             </button>
             <button className="btn btn--primary grow" type="button" disabled={busy} onClick={() => void hammer()}>
-              {A.gavel} {A.sold}
+              {A.sold}
             </button>
           </div>
         </>
@@ -239,12 +240,15 @@ export function AdminAuction() {
                 </span>
                 <Avatar name={name(l.playerId)} url={byId.get(l.playerId)?.avatarUrl} size="sm" />
                 <span className="grow small">
-                  <strong>{name(l.playerId)}</strong> → {l.ownerId === l.playerId ? A.self : name(l.ownerId ?? '')}
-                  {l.buybackPct > 0 && <span className="help"> · {A.buyback} {l.buybackPct}%</span>}
+                  <strong>{name(l.playerId)}</strong>
+                  <span className="help">
+                    {A.owner}: {l.ownerId === l.playerId ? A.self : name(l.ownerId ?? '')}
+                    {l.buybackPct > 0 && `, ${A.buyback} ${l.buybackPct}%`}
+                  </span>
                 </span>
                 <span className="num">{formatMoney(l.price)}</span>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void run(() => reopenLot(l.lotId))} title={A.reopen}>
-                  ↶
+                <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void run(() => reopenLot(l.lotId))} aria-label={A.reopen} title={A.reopen}>
+                  <IconUndo />
                 </button>
               </div>
             ))}

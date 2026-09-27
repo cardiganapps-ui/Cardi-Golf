@@ -213,7 +213,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                   </tr>
                 </tbody>
               </table>
-              <p style={{ marginTop: 8, fontWeight: 700 }}>{check.balanced ? `✓ ${A.balanced}` : A.notBalanced(formatMoney(Math.abs(check.difference)))}</p>
+              <p style={{ marginTop: 8, fontWeight: 700 }}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference)))}</p>
             </>
           )}
         </div>

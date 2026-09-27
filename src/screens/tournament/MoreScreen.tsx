@@ -5,6 +5,7 @@ import { Avatar, CopyButton, ShareButton } from '../../components/ui'
 import { useAuth, signOut } from '../../data/auth'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { IconBook, IconChart, IconTrophy, IconTv } from '../../components/icons'
 
 export function MoreScreen() {
   const { me, slug, lookup, leave } = useTournamentCtx()
@@ -33,17 +34,17 @@ export function MoreScreen() {
       )}
       <div className="row row--wrap">
         <Link className="btn btn--secondary" to={`/t/${slug}/stats`}>
-          📊 {t.more.stats}
+          <IconChart /> {t.more.stats}
         </Link>
         <Link className="btn btn--secondary" to={`/t/${slug}/reglamento`}>
-          📜 {t.more.rules}
+          <IconBook /> {t.more.rules}
         </Link>
         <Link className="btn btn--secondary" to={`/t/${slug}/tv`}>
-          📺 {t.more.tv}
+          <IconTv /> {t.more.tv}
         </Link>
         {me.isAdmin && (
           <Link className="btn btn--secondary" to={`/t/${slug}/ceremonia`}>
-            🏆 {t.more.ceremony}
+            <IconTrophy /> {t.more.ceremony}
           </Link>
         )}
       </div>

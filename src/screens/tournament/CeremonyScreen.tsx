@@ -15,13 +15,14 @@ import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './CeremonyScreen.module.css'
+import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, IconSpoon, IconTarget, IconTrophy } from '../../components/icons'
 
 const C = t.ceremony
 
 interface Step {
   id: string
   title: string
-  icon: string
+  icon: ReactNode
   /** Winners to show big, with a line each. */
   winners: Array<{ playerIds: string[]; line: string; sub?: string }>
   champion?: boolean
@@ -41,13 +42,13 @@ export function CeremonyScreen() {
     const nameOf = (id: string) => snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
     const out: Step[] = []
     if (m.individual && m.individual.lastPlace.length) {
-      out.push({ id: 'last', title: settings.labels.lastPlace, icon: '🥄', winners: [{ playerIds: m.individual.lastPlace, line: m.individual.lastPlace.map(nameOf).join(' & ') }] })
+      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: m.individual.lastPlace, line: m.individual.lastPlace.map(nameOf).join(' & ') }] })
     }
     if (m.fewestPutts) {
       const ids = Object.keys(m.fewestPutts.prizes)
       if (ids.length) {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
-        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: '🎯', winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: row ? `${row.putts} putts · ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: row ? `${row.putts} putts · ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.snake) {
@@ -59,7 +60,7 @@ export function CeremonyScreen() {
         out.push({
           id: 'snake',
           title: C.steps.snake(settings.modules.snake.label),
-          icon: '🐍',
+          icon: <IconSnake size={64} />,
           winners: gold ? [{ playerIds: gold.playerIds, line: gold.playerIds.map(nameOf).join(' & '), sub: `${t.stats.award.snakeGold.name} · ${C.holesHeld(gold.value)}` }] : [],
           extra: (
             <div className={styles.list}>
@@ -79,7 +80,7 @@ export function CeremonyScreen() {
         const ids = Object.keys(day.winners)
         if (!ids.length) continue
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
-        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: '🔥', winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: pts != null ? `${C.withPoints(pts)} · ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: pts != null ? `${C.withPoints(pts)} · ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.pairs) {
@@ -88,7 +89,7 @@ export function CeremonyScreen() {
         out.push({
           id: 'pairs',
           title: settings.modules.pairs.label,
-          icon: '💍',
+          icon: <IconRings size={64} />,
           winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º · ${r.name}`, sub: `${nameOf(r.playerIds[0])} & ${nameOf(r.playerIds[1])} · ${C.withPoints(r.total)}` })),
         })
       }
@@ -98,11 +99,11 @@ export function CeremonyScreen() {
       for (let place = places; place >= 2; place--) {
         const rows = m.individual.rows.filter((r) => r.position === place)
         if (!rows.length) continue
-        out.push({ id: `place${place}`, title: C.steps.place(place), icon: place === 2 ? '🥈' : place === 3 ? '🥉' : '🏅', winners: rows.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
+        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
       }
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
-        out.push({ id: 'champion', title: C.steps.place(1), icon: '🏆', champion: true, winners: champs.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
+        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
       }
     }
     if (m.auction && m.auction.soldCount > 0) {
@@ -110,7 +111,7 @@ export function CeremonyScreen() {
       out.push({
         id: 'auction',
         title: C.steps.auction(settings.modules.auction.label),
-        icon: '🔨',
+        icon: <IconGavel size={64} />,
         winners: [],
         extra: (
           <div className={styles.list}>
@@ -137,7 +138,7 @@ export function CeremonyScreen() {
     out.push({
       id: 'money',
       title: C.steps.money,
-      icon: '💸',
+      icon: <IconReceipt size={64} />,
       winners: [],
       extra: (
         <div className={styles.list}>
@@ -218,7 +219,7 @@ export function CeremonyScreen() {
                       </div>
                       <span className={styles.winnerLine}>{w.line}</span>
                       {w.sub && <span className={styles.winnerSub}>{w.sub}</span>}
-                      {step.champion && <span className={styles.trophy}>🏆 {C.champion} · {C.trophy}</span>}
+                      {step.champion && <span className={styles.trophy}>{C.champion}. {C.trophy}</span>}
                     </motion.div>
                   ))}
                   {step.extra}
@@ -236,11 +237,11 @@ export function CeremonyScreen() {
 
       <footer className={styles.footer}>
         <button className="btn btn--ghost" type="button" disabled={idx < 0} onClick={() => go(-1)}>
-          ← {C.prev}
+          {C.prev}
         </button>
         <span className={styles.progress}>{idx >= 0 ? `${Math.min(idx + 1, steps.length)} / ${steps.length}` : ''}</span>
         <button className="btn btn--secondary" type="button" disabled={idx >= steps.length} onClick={() => go(1)}>
-          {C.next} →
+          {C.next}
         </button>
       </footer>
     </div>

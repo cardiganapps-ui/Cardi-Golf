@@ -46,7 +46,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
   return (
     <>
       <button className={className ?? 'btn btn--secondary btn--sm'} type="button" disabled={busy} onClick={() => setBusy(true)}>
-        {busy ? t.share.generating : `📸 ${text}`}
+        {busy ? t.share.generating : text}
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
@@ -121,7 +121,7 @@ function Card({ what }: { what: ShareKind }) {
                 {pr.holes.map((h) => (
                   <div key={h.hole} className={`${styles.hole} ${h.points >= 3 ? styles.birdie : h.points === 0 && h.played ? styles.zero : ''}`}>
                     <span className={styles.holeNum}>{h.hole}</span>
-                    <span className={styles.holeGross}>{h.pickedUp ? '↑' : (h.gross ?? '·')}</span>
+                    <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
                     <span className={styles.holePts}>{h.played ? h.points : ''}</span>
                   </div>
                 ))}

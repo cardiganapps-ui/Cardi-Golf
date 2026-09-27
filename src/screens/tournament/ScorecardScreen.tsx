@@ -14,6 +14,7 @@ import type { Group, Round } from '../../engine/types'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
+import { IconChevronLeft, IconChevronRight } from '../../components/icons'
 
 const S = t.card
 
@@ -319,7 +320,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         <>
           <header className={styles.holeHeader}>
             <button className="btn btn--ghost" type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
-              ‹
+              <IconChevronLeft />
             </button>
             <div className={styles.holeTitle}>
               <span className="label">{t.round.hole(hole)}</span>
@@ -330,7 +331,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               </span>
             </div>
             <button className="btn btn--ghost" type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
-              ›
+              <IconChevronRight />
             </button>
           </header>
 

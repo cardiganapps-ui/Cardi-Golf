@@ -1,42 +1,140 @@
-/* Design tokens (CLAUDE.md §14). The platform's look; a tournament adds an
-   accent color on top via --accent. */
+/*
+  Cardi-Golf design tokens: direction A, "La tarjeta" (DESIGN_DIRECTION.md).
+  One source of truth for color, type, spacing (4/8), radius, borders,
+  elevation and motion. Nothing outside this file may declare a color;
+  src/styles/no-literal-colors.test.ts enforces it.
+*/
 :root {
-  --paper: #f7f1e3; /* background (sand) */
-  --panel: #efe5cf; /* cards / callouts */
-  --cell: #fbf7ee; /* inputs, table cells */
-  --ink: #12343b; /* primary text */
-  --muted: #4f6166; /* secondary text (never lighter) */
-  --teal: #0f6e77; /* primary accent */
-  --deep: #0b4f57; /* feature blocks, TV background */
-  --coral: #b04327; /* secondary accent, alerts, Cuchara */
-  --sun: #f2b63f; /* highlights on dark backgrounds */
-  --hair: #cdbf9f; /* hairlines */
-  --seafoam: #a9dcd8;
-  --midteal: #3aa6ae;
+  /* ---- Color: the card and the pencil ---- */
+  --bg: #fbfaf7; /* card stock */
+  --surface: #f3f1ea; /* ruled area, inset panels, skeletons */
+  --surface-2: #ffffff; /* inputs, sheets */
+  --ink: #1b211d; /* graphite */
+  --ink-2: #4f5751; /* secondary ink; 7.4:1 on --bg */
+  --ink-3: #6b736d; /* tertiary, never below 4.5:1 on --bg; use sparingly */
+  --rule: #d8d5cb; /* hairline */
+  --rule-2: #bdb9ac; /* control borders */
+  --accent: #1e6b3b; /* fairway: live, primary action, my row */
+  --accent-ink: #ffffff;
+  --accent-soft: #e6efe8; /* my-row tint */
+  --under: #a51d25; /* under par, red by convention; 7.2:1 (AAA); also the only error red */
+  --under-soft: #f8e6e6;
+  --over: #245583; /* over par, The Open's blue; 7.5:1 (AAA); figures only */
+  --over-soft: #e5ecf4;
+  --caution: #8a5a00; /* pending / unsigned; 6.5:1 on --bg */
+  --caution-soft: #f6ecd2;
+  --on-dark: #f6f3ea;
 
-  --accent: var(--teal);
-  --on-accent: #ffffff;
+  /* Board surfaces: TV and Ceremonia only. Not a dark mode. */
+  --board-bg: #0f2e22;
+  --board-surface: #163b2c;
+  --board-ink: #f6f3ea;
+  --board-ink-2: #a9bbaf;
+  --board-rule: #2a4d3d;
+  --board-accent: #f2c230; /* leader plate and live mark only */
+  --board-under: #ff6b6b;
+  --board-over: #8fb8e6;
 
-  --font-display: 'Fraunces', 'Iowan Old Style', 'Times New Roman', serif;
-  --font-ui: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Event personalization (curated set in src/design/accents.ts; stored in tournaments.accent_color) */
+  --event-accent: var(--accent);
+  --event-accent-ink: #ffffff;
 
-  --radius-sm: 8px;
-  --radius: 14px;
-  --radius-lg: 22px;
+  /* Categorical series for charts (race chart, legend). Same lightness band as the accents. */
+  --chart-1: #1e6b3b;
+  --chart-2: #2b5b8c;
+  --chart-3: #b4532a;
+  --chart-4: #8a2e3a;
+  --chart-5: #3f4a54;
+  --chart-6: #7a5a2e;
+  --chart-7: #1f7a72;
+  --chart-8: #6b4a8a;
+  --chart-9: #8a6a00;
+  --chart-10: #5a6b2a;
+  --chart-11: #8a4a6a;
+  --chart-12: #4f5751;
 
-  --shadow-card: 0 1px 0 rgba(18, 52, 59, 0.06), 0 8px 24px -12px rgba(18, 52, 59, 0.25);
+  /* ---- Type ---- */
+  --font-text: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-event: 'Fraunces', 'Iowan Old Style', Georgia, serif; /* the event name, nothing else */
+  --wdth-text: 100;
+  --wdth-figure: 90; /* semi-condensed for numeric columns */
+  --fs-2xs: 0.6875rem; /* 11 */
+  --fs-xs: 0.75rem; /* 12 */
+  --fs-sm: 0.875rem; /* 14 */
+  --fs-md: 1rem; /* 16 */
+  --fs-lg: 1.125rem; /* 18 */
+  --fs-xl: 1.375rem; /* 22 */
+  --fs-2xl: 1.75rem; /* 28 */
+  --fs-3xl: 2.25rem; /* 36 */
+  --fs-4xl: 3.5rem; /* 56, hero figures */
+  --lh-tight: 1.1;
+  --lh-ui: 1.3;
+  --lh-body: 1.5;
+  --track-caps: 0.04em; /* the only tracking allowed: tiny table headers */
 
-  --tap: 48px; /* minimum tap target */
+  /* ---- Space (4/8 base) ---- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+  --s12: 48px;
   --gutter: 16px;
+  --tap: 44px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur: 220ms;
+  /* ---- Radius: two values tied to hierarchy, plus round ---- */
+  --r-sm: 4px; /* controls, marks, inputs */
+  --r-md: 10px; /* sheets and the few true objects (a lot, a share card) */
+  --r-round: 999px; /* avatars, the live dot */
+
+  /* ---- Borders ---- */
+  --hairline: 1px solid var(--rule);
+  --rule-heavy: 2px solid var(--ink);
+  --control-border: 1.5px solid var(--rule-2);
+
+  /* ---- Elevation: only what floats ---- */
+  --elev-sheet: 0 -8px 32px rgba(27, 33, 29, 0.18);
+  --elev-toast: 0 6px 20px rgba(27, 33, 29, 0.22);
+
+  /* ---- Motion ---- */
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---- LEGACY aliases: removed in phase 3 as each consumer is migrated. ----
+     They exist so screen stylesheets written against the old names keep
+     resolving. New code must use the names above, never these. */
+  --paper: var(--bg);
+  --panel: var(--surface);
+  --cell: var(--surface-2);
+  --muted: var(--ink-2);
+  --teal: var(--accent);
+  --deep: var(--board-bg);
+  --coral: var(--under);
+  --sun: var(--board-accent);
+  --hair: var(--rule);
+  --seafoam: var(--board-ink-2);
+  --midteal: var(--accent);
+  --on-accent: var(--accent-ink);
+  --font-display: var(--font-text);
+  --font-ui: var(--font-text);
+  --radius-sm: var(--r-sm);
+  --radius: var(--r-md);
+  --radius-lg: var(--r-md);
+  --shadow-card: none;
+  --ease-out: var(--ease);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dur-fast: 0ms;
     --dur: 0ms;
+    --dur-slow: 0ms;
   }
 }

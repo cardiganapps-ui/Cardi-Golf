@@ -132,9 +132,7 @@ export function LiveScreen() {
               >
                 <span className={`num ${styles.pos}`}>
                   {r.label}
-                  <span className={`${styles.move} ${mv > 0 ? styles.up : mv < 0 ? styles.down : ''}`} aria-hidden="true">
-                    {mv > 0 ? '▲' : mv < 0 ? '▼' : ''}
-                  </span>
+                  {mv !== 0 && <span className={`${styles.move} ${mv > 0 ? styles.up : styles.down}`} aria-hidden="true" />}
                 </span>
                 <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
                 <span className={styles.name}>
