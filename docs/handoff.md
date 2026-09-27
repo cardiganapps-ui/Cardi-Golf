@@ -15,11 +15,15 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
-- ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git) y funcionan. (2026-09-27)
+- ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
+- ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
-## Para probar M0 (no bloquea nada)
+## Para probar M2 (no bloquea nada)
 
-- [ ] **Instalar el preview en tu teléfono.** Abre la URL del preview que te mandó Claude en Safari (iPhone) o Chrome (Android) → Compartir / menú ⋮ → "Agregar a pantalla de inicio". Debe abrir a pantalla completa con el ícono verde de la bandera. Dile a Claude si algo se ve mal.
+- [ ] **Instalar la app en tu teléfono.** Abre https://cardi-golf.vercel.app en Safari (iPhone) o Chrome (Android) → Compartir / menú ⋮ → "Agregar a pantalla de inicio". Debe abrir a pantalla completa con el ícono verde de la bandera.
+- [ ] **Entrar como jugador.** Código **ENSAYO** (o https://cardi-golf.vercel.app/t/ensayo) → toca una cara → PIN **1234** (todos los del Ensayo tienen ese PIN; Nico es admin y ve el Comité).
+- [ ] **Entrar como organizador.** https://cardi-golf.vercel.app/organizer/login → escribe tu correo → "¿Olvidaste tu contraseña?" → abre el correo en el teléfono → pon tu contraseña → verás "Mis torneos" con el Ensayo. Desde ahí, "Comité" para editar todo.
+- [ ] **Crear un torneo desde cero** con "Nuevo torneo" y comprobar que el cuadre de la bolsa se pone en rojo si cambias un premio.
 
 ---
 

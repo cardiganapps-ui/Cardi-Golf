@@ -1,0 +1,106 @@
+{
+  "modules": {
+    "individual": {
+      "enabled": true,
+      "label": "Individual",
+      "format": "stableford"
+    },
+    "bestRound": {
+      "enabled": false,
+      "label": "Mejor ronda"
+    },
+    "pairs": {
+      "enabled": false,
+      "label": "Parejas",
+      "pairing": [],
+      "honoreePicks": false
+    },
+    "snake": {
+      "enabled": false,
+      "label": "La Víbora",
+      "puttsThreshold": 3
+    },
+    "fewestPutts": {
+      "enabled": false,
+      "label": "Menos putts"
+    },
+    "auction": {
+      "enabled": false,
+      "label": "La Calcutta"
+    }
+  },
+  "tiers": [],
+  "rounds": 1,
+  "groupSize": 4,
+  "labels": {
+    "lastPlace": "Último lugar",
+    "honoree": "Homenajeado"
+  },
+  "entryFee": 500,
+  "handicap": {
+    "allowance": 0.8,
+    "cap": 54,
+    "rounding": "halfUp",
+    "perRoundSlope": false,
+    "estimateWeights": [
+      0.45,
+      0.4,
+      0.15
+    ]
+  },
+  "day2Cut": {
+    "threshold": 36,
+    "pointsPerStroke": 2,
+    "maxStrokes": 4
+  },
+  "prizes": {
+    "stableford": [
+      2500,
+      1000,
+      500
+    ],
+    "pairs": [],
+    "bestRoundPerDay": 0,
+    "snakePerSurvivor": 0,
+    "fewestPutts": 0
+  },
+  "auction": {
+    "openingBid": 250,
+    "increment": 250,
+    "maxPlayersPerOwner": 3,
+    "selfOwnedCountsTowardMax": true,
+    "guestsCanBid": false,
+    "buybackMaxPct": 50,
+    "payout": [
+      {
+        "slot": "place",
+        "place": 1,
+        "share": 0.55
+      },
+      {
+        "slot": "place",
+        "place": 2,
+        "share": 0.2
+      },
+      {
+        "slot": "bestOfTier",
+        "tier": "C",
+        "share": 0.1
+      },
+      {
+        "slot": "bestOfTier",
+        "tier": "D",
+        "share": 0.1
+      },
+      {
+        "slot": "lastPlace",
+        "share": 0.05
+      }
+    ]
+  },
+  "pickupPuttsForFewestPutts": 3,
+  "tieFallback": "split",
+  "spectatorLink": false,
+  "timezone": "America/Mazatlan",
+  "currency": "MXN"
+}

@@ -1,0 +1,124 @@
+{
+  "modules": {
+    "individual": {
+      "enabled": true,
+      "label": "Individual",
+      "format": "stableford"
+    },
+    "bestRound": {
+      "enabled": true,
+      "label": "Mejor ronda"
+    },
+    "pairs": {
+      "enabled": true,
+      "label": "Los Matrimonios",
+      "pairing": [
+        [
+          "A",
+          "D"
+        ],
+        [
+          "B",
+          "C"
+        ]
+      ],
+      "honoreePicks": true
+    },
+    "snake": {
+      "enabled": true,
+      "label": "La Víbora",
+      "puttsThreshold": 3
+    },
+    "fewestPutts": {
+      "enabled": true,
+      "label": "Menos putts"
+    },
+    "auction": {
+      "enabled": true,
+      "label": "La Calcutta"
+    }
+  },
+  "tiers": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "rounds": 2,
+  "groupSize": 4,
+  "labels": {
+    "lastPlace": "La Cuchara de Palo",
+    "honoree": "El novio"
+  },
+  "entryFee": 2500,
+  "handicap": {
+    "allowance": 0.8,
+    "cap": 54,
+    "rounding": "halfUp",
+    "perRoundSlope": false,
+    "estimateWeights": [
+      0.45,
+      0.4,
+      0.15
+    ]
+  },
+  "day2Cut": {
+    "threshold": 36,
+    "pointsPerStroke": 2,
+    "maxStrokes": 4
+  },
+  "prizes": {
+    "stableford": [
+      10000,
+      5000,
+      3000,
+      2000
+    ],
+    "pairs": [
+      2000,
+      1000
+    ],
+    "bestRoundPerDay": 1200,
+    "snakePerSurvivor": 200,
+    "fewestPutts": 1000
+  },
+  "auction": {
+    "openingBid": 250,
+    "increment": 250,
+    "maxPlayersPerOwner": 3,
+    "selfOwnedCountsTowardMax": true,
+    "guestsCanBid": false,
+    "buybackMaxPct": 50,
+    "payout": [
+      {
+        "slot": "place",
+        "place": 1,
+        "share": 0.55
+      },
+      {
+        "slot": "place",
+        "place": 2,
+        "share": 0.2
+      },
+      {
+        "slot": "bestOfTier",
+        "tier": "C",
+        "share": 0.1
+      },
+      {
+        "slot": "bestOfTier",
+        "tier": "D",
+        "share": 0.1
+      },
+      {
+        "slot": "lastPlace",
+        "share": 0.05
+      }
+    ]
+  },
+  "pickupPuttsForFewestPutts": 3,
+  "tieFallback": "split",
+  "spectatorLink": false,
+  "timezone": "America/Mazatlan",
+  "currency": "MXN"
+}
