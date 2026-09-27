@@ -6,7 +6,7 @@
  *              holes_data: [{ number, par, handicap_index, yardages: { <tee color>: n } }], _attribution }
  * Many courses are location-only (no tees/holes); the UI then asks for the photo.
  */
-import type { ProviderCourse, ProviderSearchHit, ProviderTee } from './types'
+import type { ProviderCourse, ProviderSearchHit, ProviderTee } from './types.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = Record<string, any>
