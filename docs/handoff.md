@@ -14,6 +14,8 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Dar acceso a Claude al repo.**~~ Verificado: `add_repo` con permiso de push funcionó. (2026-09-26)
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
+- ~~**Llave de GolfCourseAPI.**~~ En Vercel (`GOLFCOURSE_API_KEY`). Probada: Quivira aparece con 5 tees completos; Solmar no está en la base (se carga por foto o a mano). (2026-09-27)
+- ~~**Llave de Anthropic en Vercel.**~~ `ANTHROPIC_API_KEY`, modelo Haiku. Falta el ID del workspace (abajo). (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git) y funcionan. (2026-09-27)
 
@@ -40,21 +42,16 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ---
 
-## Pendiente: dos llaves para cargar campos (bloquean solo esas dos funciones, no M2)
+## Pendiente: una cosa para leer fotos de tarjetas (no bloquea nada más)
 
-### 1. GolfCourseAPI (gratis): buscar campos por nombre
-1. Safari → **golfcourseapi.com** → **Sign up** (correo + contraseña).
-2. En el dashboard copia la **API key**.
-3. Guárdala como `GOLFCOURSE_API_KEY` en Vercel (proyecto cardi-golf → Settings → Environment Variables, Production + Preview) **o** pégala en el entorno de Claude Code y Claude la sube a Vercel.
+### El ID del workspace de Anthropic
+**Por qué:** la llave de Anthropic que diste no está atada a un workspace, así que la API exige además el ID del workspace en cada llamada y hoy contesta error. La búsqueda de campos y la captura manual funcionan sin esto.
 
-**Verificación:** en el admin, "Buscar campo" → "Quivira" devuelve resultados con tees, par y SI.
+Elige una (desde Safari):
+- **A (más fácil):** platform.claude.com → **Settings → Workspaces** → abre **Default** (o crea "Cardi-Golf") → copia su ID (empieza con `wrkspc_`) → pégalo en el chat de Claude.
+- **B:** dentro de ese workspace → **API keys → Create key** → pega la llave nueva en el chat (reemplaza a la anterior; revoca la vieja).
 
-### 2. Anthropic API (💰 de pago por uso, centavos por tarjeta): leer fotos de tarjetas
-1. Safari → **platform.claude.com** → inicia sesión → **API Keys** → **Create Key** (nombre `cardi-golf`).
-2. Guárdala como `ANTHROPIC_API_KEY` igual que arriba.
-3. Sin esta llave la app muestra "Lectura de tarjeta pendiente"; la búsqueda y la captura manual siguen funcionando.
-
-**Verificación:** subir una foto de la tarjeta de Solmar produce un borrador editable con 18 hoyos por tee.
+**Verificación:** Claude lee una tarjeta de prueba con Haiku y los 18 pares y SI coinciden.
 
 ---
 
@@ -62,7 +59,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 Mándalos en el chat como texto, foto o captura, como te quede más fácil. Claude los carga al admin.
 
-- [ ] **Tarjetas de los dos campos:** Solmar Golf Links (día 1) y Quivira (día 2): par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
+- [ ] **Tarjeta de Solmar Golf Links (día 1):** no está en la base de datos de campos; manda una foto de la tarjeta. Quivira (día 2) ya se puede importar desde la búsqueda. Para cada campo: par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
 - [ ] **Tiers y hándicap** de los 12 jugadores: índice WHS si lo tienen; si no, tres scores (buen día / normal / mal día) y la app estima uno (§13b). También qué tee juega cada uno.
 - [ ] **Jugador 12** y **quién es Nacho**.
 - ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
