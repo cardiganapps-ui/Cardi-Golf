@@ -125,9 +125,11 @@ export function LiveScreen() {
                 className={`${styles.row} ${me.playerId === p.id ? styles.mine : ''}`}
                 onClick={() => setOpen(p.id)}
               >
-                <span className={`num ${styles.pos}`}>{r.label}</span>
-                <span className={`${styles.move} ${mv > 0 ? styles.up : mv < 0 ? styles.down : ''}`} aria-hidden="true">
-                  {mv > 0 ? '▲' : mv < 0 ? '▼' : ''}
+                <span className={`num ${styles.pos}`}>
+                  {r.label}
+                  <span className={`${styles.move} ${mv > 0 ? styles.up : mv < 0 ? styles.down : ''}`} aria-hidden="true">
+                    {mv > 0 ? '▲' : mv < 0 ? '▼' : ''}
+                  </span>
                 </span>
                 <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
                 <span className={styles.name}>
@@ -138,13 +140,15 @@ export function LiveScreen() {
                     {state.core.handicaps[p.id]?.estimated && <span className="help">{t.admin.players.estimated}</span>}
                   </span>
                 </span>
-                <span className={`num ${styles.thru}`}>
-                  <span className="label">{t.live.thru}</span>
-                  {pr ? t.round.thru(pr.thru) : '–'}
-                </span>
-                <span className={`num ${styles.today}`}>
-                  <span className="label">{t.live.today}</span>
-                  {pr?.points ?? 0}
+                <span className={styles.day}>
+                  <span className={styles.dayLine}>
+                    <span className="label">{t.live.thru}</span>
+                    <span className="num">{pr ? t.round.thru(pr.thru) : '–'}</span>
+                  </span>
+                  <span className={styles.dayLine}>
+                    <span className="label">{t.live.today}</span>
+                    <span className="num">{pr?.points ?? 0}</span>
+                  </span>
                 </span>
                 <span className={`num ${styles.total}`}>{r.total}</span>
                 <span className={`chip ${cash > 0 ? 'chip--sun' : 'chip--outline'} ${styles.cash}`}>{formatMoney(cash)}</span>
