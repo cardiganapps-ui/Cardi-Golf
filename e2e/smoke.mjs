@@ -89,6 +89,36 @@ try {
   await p.waitForSelector('text=¿Cómo se calculó?', { timeout: T })
   await shot('player')
   check(true, 'player sheet opens with explanations')
+
+  // M5: Dinero, TV board, auctioneer console, pairs draw.
+  await p.goto(`${base}/t/${slug}/dinero`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Si terminara ahora', { timeout: T })
+  await p.waitForTimeout(800)
+  await shot('money')
+  const moneyBody = await p.innerText('body')
+  check(/banco/i.test(moneyBody) && /\$\d/.test(moneyBody), 'Dinero shows the bank card with amounts')
+  await p.locator('button', { hasText: 'Liquidación' }).first().click()
+  await p.waitForSelector('text=Quién debe qué', { timeout: T })
+  await shot('settlement')
+  check((await p.locator('text=Vía banco').count()) > 0, 'settlement mode renders')
+
+  await p.goto(`${base}/t/${slug}/admin/calcutta`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Consola del subastador', { timeout: T })
+  await p.waitForTimeout(800)
+  await shot('auction')
+  check(/Pozo\s*\$\d/.test(await p.innerText('body')), 'auctioneer console shows the pot')
+
+  await p.goto(`${base}/t/${slug}/admin/parejas`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Sorteo de parejas', { timeout: T })
+  await shot('draw')
+  check(true, 'pairs draw renders')
+
+  await p.setViewportSize({ width: 1280, height: 720 })
+  await p.goto(`${base}/t/${slug}/tv`, { waitUntil: 'domcontentloaded' })
+  await p.waitForSelector('text=Individual', { timeout: T })
+  await p.waitForTimeout(800)
+  await shot('tv')
+  check(true, 'TV board renders')
 } catch (e) {
   failed++
   console.error('  ✗', e.message)

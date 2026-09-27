@@ -167,6 +167,12 @@ for (const id of ids) {
   }
 }
 console.log('players ready:', ids.length, '(PIN 1234)')
+// The admin player is also the banker (§11) so Dinero has someone to settle through.
+// Nacho is not marked as honoree until Diego confirms who he is (§15).
+{
+  const { error } = await sb.from('tournaments').update({ banker_player_id: ids[8] }).eq('id', t.id)
+  if (error) die(error, 'set banker')
+}
 
 // Rounds with the real dates (§2).
 const rounds = []

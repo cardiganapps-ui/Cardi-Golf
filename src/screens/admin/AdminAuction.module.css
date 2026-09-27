@@ -1,0 +1,49 @@
+.orderList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.lotCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bidBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.bidAmount {
+  font-size: 2.6rem;
+  color: var(--sun);
+  line-height: 1;
+}
+.bidders {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.bidderBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--cell);
+  border: 2px solid var(--hair);
+  border-radius: var(--radius-sm);
+  padding: 6px 2px;
+  min-height: 68px;
+  cursor: pointer;
+}
+.bidderBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.bidderOn {
+  border-color: var(--teal);
+  background: var(--seafoam);
+}
