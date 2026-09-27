@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   groupSize: 4,
   labels: { lastPlace: 'Último lugar', honoree: 'Homenajeado' },
   entryFee: 0,
-  handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp' },
+  handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false },
   day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 },
   prizes: {
     stableford: [],
@@ -76,7 +76,7 @@ export const FIRST_TOURNAMENT_SETTINGS: TournamentSettings = {
   groupSize: 4,
   labels: { lastPlace: 'La Cuchara de Palo', honoree: 'El novio' },
   entryFee: 2500,
-  handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp' },
+  handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false },
   day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 },
   prizes: {
     stableford: [10000, 5000, 3000, 2000],

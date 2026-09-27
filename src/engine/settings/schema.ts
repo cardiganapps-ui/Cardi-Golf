@@ -76,6 +76,12 @@ export const HandicapSettings = z.object({
   /** Base handicaps above this are capped before the allowance is applied. */
   cap: z.number().min(0).max(54),
   rounding: z.enum(['halfUp', 'halfDown', 'nearestEven', 'floor', 'ceil']),
+  /**
+   * Adjust the playing handicap per round by the round's tee slope
+   * (base × slope / 113) before the allowance. Off by default: the first
+   * tournament plays two courses with one base handicap (§5.2).
+   */
+  perRoundSlope: z.boolean().default(false),
 })
 
 /** Anti-sandbag rule: strokes cut from the next round's handicap after a big Day 1. */
