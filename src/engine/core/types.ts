@@ -14,6 +14,7 @@ export interface HoleResult {
   pickedUp: boolean
   /** Strokes or a pick-up were entered. */
   played: boolean
+  disputed: boolean
   why: Explanation
 }
 

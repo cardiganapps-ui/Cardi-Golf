@@ -12,11 +12,15 @@ import { LiveScreen } from '../screens/tournament/LiveScreen'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
 import { MoreScreen } from '../screens/tournament/MoreScreen'
+import { GamesScreen } from '../screens/tournament/GamesScreen'
 import { AdminLayout } from '../screens/admin/AdminLayout'
 import { AdminTournament } from '../screens/admin/AdminTournament'
 import { AdminPlayers } from '../screens/admin/AdminPlayers'
 import { AdminCourses } from '../screens/admin/AdminCourses'
 import { AdminRounds } from '../screens/admin/AdminRounds'
+import { AdminGroups } from '../screens/admin/AdminGroups'
+import { AdminHandicaps } from '../screens/admin/AdminHandicaps'
+import { AdminScores } from '../screens/admin/AdminScores'
 import { t } from '../i18n/es-MX'
 
 export const router = createBrowserRouter([
@@ -39,7 +43,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <LiveScreen /> },
               { path: 'tarjeta', element: <ScorecardScreen /> },
-              { path: 'juegos', element: <PlaceholderScreen title={t.nav.games} /> },
+              { path: 'juegos', element: <GamesScreen /> },
               { path: 'dinero', element: <PlaceholderScreen title={t.nav.money} /> },
               { path: 'mas', element: <MoreScreen /> },
             ],
@@ -53,6 +57,9 @@ export const router = createBrowserRouter([
               { path: 'jugadores', element: <AdminPlayers /> },
               { path: 'campos', element: <AdminCourses /> },
               { path: 'rondas', element: <AdminRounds /> },
+              { path: 'grupos', element: <AdminGroups /> },
+              { path: 'handicaps', element: <AdminHandicaps /> },
+              { path: 'scores', element: <AdminScores /> },
             ],
           },
         ],

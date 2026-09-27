@@ -165,6 +165,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
           putts: s?.putts ?? null,
           pickedUp: !!s?.pickedUp,
           played,
+          disputed: !!s?.disputed,
           why,
         })
         if (played) {
