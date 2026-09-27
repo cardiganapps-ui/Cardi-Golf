@@ -74,6 +74,11 @@ function compute(snapshot: Snapshot): TournamentData {
   return { snapshot, settings, settingsError, state: computeTournament(snapshot, settings) }
 }
 
+/** The exact pipeline the app runs on every snapshot; also feeds the design fixtures (`src/dev`). */
+export function dataFromSnapshot(snapshot: Snapshot): TournamentData {
+  return compute(snapshot)
+}
+
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
   const q = <T = Row>(table: string, col = 'tournament_id') =>

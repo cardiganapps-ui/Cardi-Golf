@@ -24,6 +24,10 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
 
+## Rediseño: revisar la dirección (bloquea la fase 2)
+
+- [ ] **Aprobar la dirección de diseño.** En el preview del PR de rediseño abre `/design` en tu teléfono (y en la laptop): tokens, tipografía y las piezas base en la dirección recomendada, «La tarjeta». Lee `DESIGN_DIRECTION.md` (dos direcciones, crítica y recomendación) y `DESIGN_AUDIT.md` (qué está mal hoy, con capturas en `design/shots/before`). Abre también `/t/_/large60` y `/t/_/longnames` para ver la app actual con 60 jugadores y nombres largos. Responde: dirección A, B, o cambios. Con tu OK arranca la fase 2 (sistema y pantalla por pantalla).
+
 ## Para probar M2 a M7 (no bloquea nada)
 
 - [ ] **Ensayo completo (M7).** El Ensayo ya tiene el día 1 terminado (simulado) y el día 2 en juego con 9 hoyos. Léete `RUNBOOK.md` (una página, en español) y sigue "6. Cerrar una ronda" y "7. Ceremonia": termina el día 2 desde Comité › Rondas, pon el torneo en Terminado y corre la Ceremonia en una tele. Comité › **Datos**: descarga el respaldo JSON y el CSV, prueba "Restaurar desde JSON…" con ese mismo archivo, y "Ver tarjetas para imprimir" → guarda el PDF. "Duplicar torneo" crea un torneo nuevo para ensayar con tus amigos sin tocar el Ensayo.
