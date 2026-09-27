@@ -13,6 +13,8 @@ import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
 import { MoreScreen } from '../screens/tournament/MoreScreen'
 import { GamesScreen } from '../screens/tournament/GamesScreen'
+import { MoneyScreen } from '../screens/tournament/MoneyScreen'
+import { TvScreen } from '../screens/tournament/TvScreen'
 import { AdminLayout } from '../screens/admin/AdminLayout'
 import { AdminTournament } from '../screens/admin/AdminTournament'
 import { AdminPlayers } from '../screens/admin/AdminPlayers'
@@ -21,7 +23,8 @@ import { AdminRounds } from '../screens/admin/AdminRounds'
 import { AdminGroups } from '../screens/admin/AdminGroups'
 import { AdminHandicaps } from '../screens/admin/AdminHandicaps'
 import { AdminScores } from '../screens/admin/AdminScores'
-import { t } from '../i18n/es-MX'
+import { AdminAuction } from '../screens/admin/AdminAuction'
+import { AdminDraw } from '../screens/admin/AdminDraw'
 
 export const router = createBrowserRouter([
   {
@@ -44,10 +47,11 @@ export const router = createBrowserRouter([
               { index: true, element: <LiveScreen /> },
               { path: 'tarjeta', element: <ScorecardScreen /> },
               { path: 'juegos', element: <GamesScreen /> },
-              { path: 'dinero', element: <PlaceholderScreen title={t.nav.money} /> },
+              { path: 'dinero', element: <MoneyScreen /> },
               { path: 'mas', element: <MoreScreen /> },
             ],
           },
+          { path: 'tv', element: <TvScreen /> },
           {
             path: 'admin',
             element: <AdminLayout />,
@@ -60,6 +64,8 @@ export const router = createBrowserRouter([
               { path: 'grupos', element: <AdminGroups /> },
               { path: 'handicaps', element: <AdminHandicaps /> },
               { path: 'scores', element: <AdminScores /> },
+              { path: 'calcutta', element: <AdminAuction /> },
+              { path: 'parejas', element: <AdminDraw /> },
             ],
           },
         ],

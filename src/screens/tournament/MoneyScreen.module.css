@@ -1,0 +1,18 @@
+.person {
+  border-bottom: 1px solid var(--hair);
+}
+.person:last-child {
+  border-bottom: 0;
+}
+.person > button {
+  border-bottom: 0;
+}
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 14px 12px 70px;
+}
+.paid {
+  opacity: 0.55;
+}

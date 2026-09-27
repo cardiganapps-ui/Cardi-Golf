@@ -12,6 +12,8 @@ const SECTIONS = [
   { to: 'grupos', label: t.admin.sections.groups },
   { to: 'handicaps', label: t.admin.sections.handicaps },
   { to: 'scores', label: t.admin.sections.scores },
+  { to: 'calcutta', label: t.admin.sections.auction },
+  { to: 'parejas', label: t.admin.sections.draw },
 ]
 
 export function AdminLayout() {

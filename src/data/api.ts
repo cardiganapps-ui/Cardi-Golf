@@ -351,3 +351,101 @@ export async function resolveDispute(roundId: string, playerId: string, hole: nu
 export async function unsignCard(roundId: string, pairId: string) {
   unwrap(await supabase().from('card_signatures').delete().eq('round_id', roundId).eq('pair_id', pairId).select('pair_id'))
 }
+
+// ---------------------------------------------------------------------------
+// Calcutta (M5)
+// ---------------------------------------------------------------------------
+/** Create one lot per player in the given order (replaces any unsold draft). */
+export async function createLots(tournamentId: string, playerIdsInOrder: string[]) {
+  const sb = supabase()
+  unwrap(await sb.from('calcutta_lots').delete().eq('tournament_id', tournamentId).neq('status', 'sold').select('id'))
+  const { data: sold } = await sb.from('calcutta_lots').select('player_id, lot_number').eq('tournament_id', tournamentId)
+  const soldIds = new Set((sold ?? []).map((r: Row) => r.player_id))
+  let n = (sold ?? []).reduce((m: number, r: Row) => Math.max(m, r.lot_number), 0)
+  const rows = playerIdsInOrder.filter((id) => !soldIds.has(id)).map((player_id) => ({ tournament_id: tournamentId, player_id, lot_number: ++n, status: 'pending' }))
+  if (rows.length) unwrap(await sb.from('calcutta_lots').insert(rows).select('id'))
+}
+
+export async function setLotStatus(lotId: string, status: 'pending' | 'open') {
+  unwrap(await supabase().from('calcutta_lots').update({ status, price: null, owner_id: null, sold_at: null }).eq('id', lotId).select('id'))
+}
+
+export async function placeBid(lotId: string, bidderId: string, amount: number) {
+  unwrap(await supabase().from('calcutta_bids').insert({ lot_id: lotId, bidder_id: bidderId, amount }).select('id'))
+}
+
+export async function deleteBid(bidId: string) {
+  unwrap(await supabase().from('calcutta_bids').delete().eq('id', bidId).select('id'))
+}
+
+export async function sellLot(lotId: string, ownerId: string, price: number) {
+  unwrap(await supabase().from('calcutta_lots').update({ status: 'sold', owner_id: ownerId, price, sold_at: new Date().toISOString() }).eq('id', lotId).select('id'))
+}
+
+export async function setBuyback(lotId: string, pct: number, amount: number) {
+  const sb = supabase()
+  if (pct <= 0) unwrap(await sb.from('calcutta_buybacks').delete().eq('lot_id', lotId).select('lot_id'))
+  else unwrap(await sb.from('calcutta_buybacks').upsert({ lot_id: lotId, pct, amount, paid: false }, { onConflict: 'lot_id' }).select('lot_id'))
+}
+
+export async function setBuybackPaid(lotId: string, paid: boolean) {
+  unwrap(await supabase().from('calcutta_buybacks').update({ paid }).eq('lot_id', lotId).select('lot_id'))
+}
+
+/** Reopen a sold lot (undo the hammer): bids stay, buyback is removed. */
+export async function reopenLot(lotId: string) {
+  const sb = supabase()
+  unwrap(await sb.from('calcutta_buybacks').delete().eq('lot_id', lotId).select('lot_id'))
+  unwrap(await sb.from('calcutta_lots').update({ status: 'open', owner_id: null, price: null, sold_at: null }).eq('id', lotId).select('id'))
+}
+
+export async function resetAuction(tournamentId: string) {
+  unwrap(await supabase().from('calcutta_lots').delete().eq('tournament_id', tournamentId).select('id'))
+}
+
+// ---------------------------------------------------------------------------
+// Pairs (M5 draw)
+// ---------------------------------------------------------------------------
+export interface PairInput {
+  name: string | null
+  player1_id: string
+  player2_id: string
+  kind: string | null
+  picked_by_honoree: boolean
+}
+
+export async function replacePairs(tournamentId: string, pairs: PairInput[]) {
+  const sb = supabase()
+  unwrap(await sb.from('pairs').delete().eq('tournament_id', tournamentId).select('id'))
+  if (pairs.length) unwrap(await sb.from('pairs').insert(pairs.map((p) => ({ ...p, tournament_id: tournamentId, drawn_at: new Date().toISOString() }))).select('id'))
+}
+
+export async function renamePair(pairId: string, name: string) {
+  unwrap(await supabase().from('pairs').update({ name: name.trim() || null }).eq('id', pairId).select('id'))
+}
+
+// ---------------------------------------------------------------------------
+// Payments (M5)
+// ---------------------------------------------------------------------------
+export interface PaymentInput {
+  from_player_id: string | null
+  to_player_id: string | null
+  amount: number
+  kind: 'entry' | 'calcutta' | 'buyback' | 'payout' | 'other'
+  paid: boolean
+  note?: string | null
+}
+
+/** One row per (kind, from, to): mark paid/unpaid with the expected amount. */
+export async function setPaymentPaid(tournamentId: string, p: PaymentInput) {
+  const sb = supabase()
+  let q = sb.from('payments').select('id').eq('tournament_id', tournamentId).eq('kind', p.kind)
+  q = p.from_player_id ? q.eq('from_player_id', p.from_player_id) : q.is('from_player_id', null)
+  q = p.to_player_id ? q.eq('to_player_id', p.to_player_id) : q.is('to_player_id', null)
+  const existing = unwrap(await q) as Array<{ id: string }>
+  if (existing.length) {
+    unwrap(await sb.from('payments').update({ paid: p.paid, amount: p.amount, note: p.note ?? null }).in('id', existing.map((e) => e.id)).select('id'))
+  } else {
+    unwrap(await sb.from('payments').insert({ ...p, tournament_id: tournamentId }).select('id'))
+  }
+}
