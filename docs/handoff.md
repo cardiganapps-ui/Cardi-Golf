@@ -14,6 +14,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - ~~**Dar acceso a Claude al repo.**~~ Verificado: `add_repo` con permiso de push funcionó. (2026-09-26)
 - ~~**Proyecto de Supabase.**~~ Diego creó la organización gratis "Cardi-Golf" con el proyecto `gmohwledjejlhcwqjnhd`. Claude activó anonymous sign-ins y las URLs de redirect. (2026-09-27)
 - ~~**Conectar el repo a Vercel.**~~ Diego importó `cardi-golf` (`prj_8JpqrzlqS3ZkYJB8JPlb35EvC9ZU`); Claude puso `VITE_SUPABASE_*` en Production + Preview y el preset Vite con el token de Vercel. (2026-09-27)
+- ~~**Llave de GolfCourseAPI.**~~ En Vercel (`GOLFCOURSE_API_KEY`). Probada: Quivira aparece con 5 tees completos; Solmar no está en la base (se carga por foto o a mano). (2026-09-27)
+- ~~**Llave de Anthropic en Vercel.**~~ `ANTHROPIC_API_KEY` con workspace, modelo Haiku. Probada: leyó una tarjeta de prueba 18/18 por ~$0.0025. (2026-09-27)
+- ~~**Llave de OpenGolfAPI.**~~ En Vercel (`OPENGOLF_API_KEY`), segunda fuente de campos. Probada: tiene Solmar y Quivira en su lista, pero sin tarjeta; los campos con datos (p. ej. Pebble Beach) traen tees, rating/slope, par y SI. (2026-09-27)
 - ~~**Subir el logo.**~~ `assets/nacho-logo.png`, 591×640 PNG con fondo transparente. (2026-09-26)
 - ~~**Llaves para esta sesión.**~~ Diego pegó las llaves; quedaron en `.env.local` (ignorado por git). La `SUPABASE_SECRET_KEY` llegó truncada (32 de 41 caracteres); Claude tomó la real con el PAT desde la Management API. (2026-09-27)
 - ~~**Cuenta de organizador.**~~ Claude creó `gaxioladiego@gmail.com` como dueño del torneo **Ensayo** (sin contraseña conocida: entra con "¿Olvidaste tu contraseña?" o "Mándame un link por correo"). (2026-09-27)
@@ -29,7 +32,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ## Recomendado, no bloquea: rotar las llaves y guardarlas en el entorno
 
-**Por qué:** las tres llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
+**Por qué:** las llaves que pegaste en el chat (secret key y PAT de Supabase, token de Vercel, GolfCourseAPI, OpenGolfAPI y las dos de Anthropic — la primera sin workspace ya no se usa: revócala) quedaron en el historial de dos conversaciones. Sirven para construir el proyecto, pero conviene rotarlas cuando el torneo esté cerca y guardar las nuevas en el entorno de Claude Code, donde las sesiones las leen sin que nadie las vuelva a pegar.
 
 1. Supabase dashboard → proyecto **Cardi-Golf** → **Settings → API Keys → Secret keys** → en la llave `claude` toca **⋯ → Revoke**, luego **Create new secret key** (nombre `claude`). Copia el valor.
 2. Supabase → tu avatar → **Account → Access Tokens** → revoca el token actual → **Generate new token** (nombre `claude-code`). Copia el valor.
@@ -44,29 +47,11 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ---
 
-## Pendiente: dos llaves para cargar campos (bloquean solo esas dos funciones, no M2)
-
-### 1. GolfCourseAPI (gratis): buscar campos por nombre
-1. Safari → **golfcourseapi.com** → **Sign up** (correo + contraseña).
-2. En el dashboard copia la **API key**.
-3. Guárdala como `GOLFCOURSE_API_KEY` en Vercel (proyecto cardi-golf → Settings → Environment Variables, Production + Preview) **o** pégala en el entorno de Claude Code y Claude la sube a Vercel.
-
-**Verificación:** en el admin, "Buscar campo" → "Quivira" devuelve resultados con tees, par y SI.
-
-### 2. Anthropic API (💰 de pago por uso, centavos por tarjeta): leer fotos de tarjetas
-1. Safari → **platform.claude.com** → inicia sesión → **API Keys** → **Create Key** (nombre `cardi-golf`).
-2. Guárdala como `ANTHROPIC_API_KEY` igual que arriba.
-3. Sin esta llave la app muestra "Lectura de tarjeta pendiente"; la búsqueda y la captura manual siguen funcionando.
-
-**Verificación:** subir una foto de la tarjeta de Solmar produce un borrador editable con 18 hoyos por tee.
-
----
-
 ## Pendiente: datos del torneo (bloquean M2+, no M0/M1)
 
 Mándalos en el chat como texto, foto o captura, como te quede más fácil. Claude los carga al admin.
 
-- [ ] **Tarjetas de los dos campos:** Solmar Golf Links (día 1) y Quivira (día 2): par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
+- [ ] **Tarjeta de Solmar Golf Links (día 1):** no está completo en ninguna de las dos bases de campos (OpenGolfAPI lo tiene sin tarjeta); manda una foto de la tarjeta o súbela en la app cuando M2 esté listo. Quivira (día 2) ya se puede importar desde la búsqueda. Para cada campo: par e índice de dificultad (SI) de los 18 hoyos por salida (tee), y rating/slope si los tienes. Una foto de cada tarjeta sirve. (Claude puede intentar sacarlas de las webs de los campos; lo que encuentre lo marca como "por confirmar" hasta que tú lo valides.)
 - [ ] **Tiers y hándicap** de los 12 jugadores: índice WHS si lo tienen; si no, tres scores (buen día / normal / mal día) y la app estima uno (§13b). También qué tee juega cada uno.
 - [ ] **Jugador 12** y **quién es Nacho**.
 - ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
