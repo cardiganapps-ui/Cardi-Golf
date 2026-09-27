@@ -26,3 +26,18 @@ Logic or product issues found while auditing; they are not design work and were 
 - `TournamentShell` shows "Conectando…" while `realtime` is `connecting` **or** `off`; on fixtures and before the first subscription this reads as a problem when nothing is wrong. Suggest treating `off` as a neutral, hidden state (phase 2 will render the chip differently but the state machine is unchanged).
 - `LiveScreen` derives money per player by summing `state.prizes` in the component; the engine already exposes `state.money.people[id].prizesTotal`. Not a bug, but two sources of truth for the same number.
 - `ScorecardScreen` grid headers use `displayName` sliced to fit; long display names truncate to six characters. Data issue: `display_name` has no length guidance in the admin form.
+
+Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`). All are behaviour, not visuals; phase 3 may touch the ones marked (UI) because the fix is in the component and changes no data or engine code, the rest wait for a separate PR.
+- `MyTournamentsScreen.tsx`: a `Link` ("Comité") is nested inside the row `Link`; nested anchors are invalid HTML. (UI)
+- `OrganizerLoginScreen.tsx`: `navigate()` is called in the render body instead of an effect. (UI)
+- `ResetPasswordScreen.tsx`: with no session it shows `t.auth.needsConfirmation` ("Revisa tu correo para confirmar la cuenta…"), the wrong message for an expired reset link.
+- `AdminAuction.tsx:58`, `AdminDraw.tsx:90`, `PlaceholderScreen.tsx:7`: the module-off guard shows `t.live.comingSoon` = "Llega en el siguiente milestone." (copy pass)
+- `AdminDraw.tsx`: the reveal timers (700ms per pair) are never cleared, so a redraw during a reveal races the old timers; saving the draw overwrites Day 1 groups and flips status to `live` with no confirmation.
+- `AdminGroups.tsx`: switching the day tab discards unsaved drafts silently; `.chip` (28px) holds a 32px `Avatar size="sm"`.
+- `AdminRounds.tsx`: start/finish/reopen/cancel have no busy guard, so a double tap fires twice; the date is rendered as raw ISO; a new round defaults to `courses[0]` before courses load.
+- `AdminTournament.tsx`: status tabs, banker select and "Nuevo código" write immediately with no busy state or success feedback.
+- `SettingsEditor.tsx`: tiers, prize lists and the pairing rule are `defaultValue`/`onBlur` inputs, so they do not reflect a realtime reload of `settings`; invalid entries are dropped silently.
+- `useCourses.ts`: no `loading` flag and `error` is never read by `AdminCourses` or `AdminRounds`.
+- `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.
+- `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.
+- `AdminScores.tsx`: tiebreaks and disputes are filtered to the selected round; pending items in other rounds are invisible. `AdminGroups.tsx` re-derives pair warnings the engine already exposes in `flags.warnings`. Nobody reads `flags.incompleteRounds`, `unsignedCards` or `missingModules`.

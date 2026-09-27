@@ -208,3 +208,180 @@ Label sizes of 0.55–0.72rem uppercase push AA pairs below readable in sunlight
 - The header sync chip reads "Conectando…" until Realtime subscribes; on fixtures (`realtime: 'off'`) it never resolves. A redesign should treat `off` as a neutral state.
 - `EnterScreen` marks the honoree with an avatar crown but the tier badge shows for everyone even in tournaments without tiers (`tier` is null, so it hides; fine) — no bug, noted for the design.
 - Print cards show tee times with seconds (fixed in M7) but rely on `state.core` per-hole strokes received; fine.
+
+---
+
+## Appendix A — Styling inventory (line level, for phase 2)
+
+Scope: everything under `src/`, `api/`, `scripts/`, `public/`, excluding `src/design/**`, `src/dev/**` and `src/styles/tokens.css`. The tokens file defines 3 radii (8/14/22px), one shadow, one duration and one ease; there is no font-size or spacing scale. Only the two confetti calls and CSS using `var(--dur)` respect `prefers-reduced-motion`; no `motion` component checks it, nor do the fixed-ms animations in `ui.module.css`.
+
+### A.1 Hard-coded colors in CSS (39)
+| File:line | Value | Where |
+|---|---|---|
+| `src/styles/global.css:196` | `#fff` | `.btn--danger` text |
+| `src/styles/global.css:303` | `#fff` | `.toggle` knob |
+| `src/styles/global.css:362`, `:370` | `#fff` | `.chip--teal`, `.chip--coral` text |
+| `src/components/ui.module.css:6` | `rgba(0,0,0,.3)` drop-shadow | `.crown` |
+| `src/components/ui.module.css:12` | `rgba(11,79,87,.45)` | `.backdrop` |
+| `src/components/ui.module.css:87`, `:93`, `:94` | `#fff` | `.errorBox` text, button, border |
+| `src/components/ShareCard.module.css:146` | `#f1d9d1` | `.zero` row |
+| `src/screens/HomeScreen.module.css:27` | `#fff` | `.warn` |
+| `src/screens/admin/AdminAuction.module.css:16` | `rgba(255,255,255,.08)` | `.bidBox` |
+| `src/screens/admin/AdminScores.module.css:29` | `rgba(242,182,63,.2)` | `.disputed` |
+| `src/screens/tournament/CeremonyScreen.module.css:86`, `:92`, `:130`, `:142` | white @8%, sun @18%, white @6%, `#f0a58f` | `.winner`, `.champion`, `.listRow`, `.neg` |
+| `src/screens/tournament/FeedTicker.module.css:37` | white @6% | `.big .item` |
+| `src/screens/tournament/PlayerSheet.module.css:18`, `:21` | sun @25%, coral @10% | `.birdie td`, `.zero td` |
+| `src/screens/tournament/PrintScreen.module.css:2,3,18,35,48,60,70,82,86` | `#fff`, `#000` ×6, `#333` ×2, `#f3f3f3` | print sheet (legitimately monochrome, but should still be tokens) |
+| `src/screens/tournament/ScorecardScreen.module.css:102`, `:127`, `:139` | `#fff`, coral @12%, sun @30% | `.pickupOn`, `.missing`, `.disputed` |
+| `src/screens/tournament/SnakeBoard.module.css:26`, `:36` | coral @8%, drop-shadow | `.holder`, `.snake` |
+| `src/screens/tournament/TvScreen.module.css:62,105,128,152,218` | white @6% ×4, coral @35% | rows, `.snakeGroup`, `.holder`, `.lot`, `.sold` |
+
+### A.2 Hard-coded colors in TS/TSX and assets
+- `src/screens/tournament/CeremonyScreen.tsx:159` and `ScorecardScreen.tsx:199`: confetti palettes (`#0F6E77 #F2B63F #B04327 #A9DCD8 #F7F1E3`).
+- `src/screens/tournament/ScorecardScreen.tsx:291`: `#8a5a00` disputed hint.
+- `src/screens/tournament/StatsScreen.tsx:15`: 12-color chart `PALETTE` (used at `:165`, `:173`); `:115` `#fff`; `:163` Recharts tooltip inline style.
+- `src/screens/tournament/LiveScreen.tsx:74`, `MoneyScreen.tsx:96`, `src/screens/admin/SettingsEditor.tsx:181`: `#fff` on coral alert cards.
+- `src/screens/admin/AdminPlayers.tsx:296`: `rgba(255,255,255,.15)`; `AdminTournament.tsx:22`: default accent `#0F6E77`.
+- `src/lib/shareImage.ts:8`: fallback `#F7F1E3`.
+- `scripts/make-icons.mjs:8–11`, `scripts/seed-ensayo.mjs:82`, `public/favicon.svg:3–12`, `index.html:9` (theme-color), `vite.config.ts:30–31` (manifest colors): all carry the old teal/paper palette and must be regenerated from the new tokens.
+
+### A.3 Inline styles (~120)
+Full list by file: `HowCalculated.tsx:12,18,20`; `ui.tsx:40,65`; `HomeScreen.tsx:76`; `NotFoundScreen.tsx:7`; `AdminScores.tsx:88,108,197`; `AdminRounds.tsx:75,81,168`; `SettingsEditor.tsx:48,56,181,190,195,216,250`; `AdminCourses.tsx:212,214,218,252,256,275`; `AdminHandicaps.tsx:75,83`; `AdminPlayers.tsx:152,154,155,251,253,272,285,286,294,296,326`; `AdminGroups.tsx:171,177,178,202,227`; `AdminDraw.tsx:98`; `AdminLayout.tsx:39`; `AdminAuction.tsx:79,157,160,162,166,171,185,186,214,237,255`; `AdminTournament.tsx:119,154,182,192,212,218`; `CourseEditor.tsx:85,132,138`; `TournamentShell.tsx:23,28`; `EnterScreen.tsx:42`; `TvScreen.tsx:47`; `LiveScreen.tsx:74,94,95,98`; `MoreScreen.tsx:25,53,56`; `StatsScreen.tsx:108,115,163,173,183,200`; `ScorecardScreen.tsx:69,291,293,300,303,350`; `GamesScreen.tsx:88,92,109,113,207,210,214,224,240,244,246,253`; `MoneyScreen.tsx:96,99,102,108,109,124,128`; `PlayerSheet.tsx:67,74,148,172,185,194,220`; `ResetPasswordScreen.tsx:32`; `MyTournamentsScreen.tsx:29,53`; `OrganizerLoginScreen.tsx:75`; `NewTournamentScreen.tsx:61,65,100,141,144,147`.
+Patterns worth a class instead: `{ display: 'block' }` on `.help` (22 times); `{ padding: 10|12|14 }` on `.card` (13 times); `{ '--accent': accent }` (3, legitimate, keep); `{ height: … }` bar height in `StatsScreen.tsx:200` (dynamic, legitimate); `{ textDecoration: 'none' }` on link buttons (4).
+
+### A.4 Magic numbers in CSS
+- **font-size**: 26 distinct rem values (0.55, 0.6, 0.65, 0.7, 0.72, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2, 2.2, 2.6 rem and `0.9em`), 11 px values (ShareCard export, body 17px), 15 vh values (TV: 2 to 11vh), 6 `clamp()` forms (Ceremony). Smallest text: `0.55rem` at `LiveScreen.module.css:96` and `PrintScreen.module.css:80`; `0.6rem` at `LiveScreen:52`, `PrintScreen:68`, `StatsScreen:92`.
+- **border-radius**: `999px` ×9, `var(--radius)` ×7, `var(--radius-sm)` ×6, literal `8px` ×3 (same value as the token), plus 12, 18, 24, 6, 3, 2 px, `22%`, `50%` ×3, and vh radii ×7 on TV.
+- **shadows**: `var(--shadow-card)` ×6; `0 0 0 2px var(--cell)` at `GamesScreen.module.css:21`; two `drop-shadow` filters.
+- **padding**: 60 distinct values (0–32px, 2vh–3vh, `4px !important` at `PrintScreen.module.css:55`, `0 14px 12px 70px` at `MoneyScreen.module.css:14`).
+- **gap**: 2px ×11, 4px ×8, 5px ×1, 6px ×17, 8px ×20, 10px ×13, 12px ×9, 14px ×2, 16px ×5, 18px ×2, 20px ×1, plus vh/vw on TV. A 4/8 scale would absorb every value but 5, 6, 10, 14, 18.
+
+### A.5 Emoji and glyphs used as UI (complete)
+- Nav: `TournamentShell.tsx:8–12` `⛳️ ✏️ 🐍 💸 •••`.
+- Feed: `FeedTicker.tsx:23` `🐦 👑 🐍 🤵`. Avatar honoree: `ui.tsx:19` `👑`.
+- Buttons: `ShareCard.tsx:49` `📸`; `AdminAuction.tsx:70` `🎩`, `:84–88` `↑ ↓` (also as aria-labels), `:221` `↶`, `:224` `🔨`, `:242` `→`, `:247` `↶`; `AdminDraw.tsx:105,152` `👑`, `:118` `👑`, `:134,144` `💍`; `AdminGroups.tsx:183,191` `✕`; `AdminHandicaps.tsx:93` `✕`; `SettingsEditor.tsx:216` `✓`; `CeremonyScreen.tsx:239,243` `← →`; `PrintScreen.tsx:37,41` `←`, `🖨`; `StatsScreen.tsx:139` `■ ▶`, `:188` `🪦`, `:193` `🍰`; `MoreScreen.tsx:36–46` `📊 📜 📺 🏆`; `MoneyScreen.tsx:106` `✓`, `:166,196` `→`, `:201` `✓`; `GamesScreen.tsx:58` `⇄`, `:46,175` `Σ`; `ScorecardScreen.tsx:279` `Σ`, `:322,333` `‹ ›`; `PrintScreen.tsx:71` `Σ`; `RulesScreen.tsx:21` `↔`; `LiveScreen.tsx:136` `▲ ▼`.
+- Ceremony step icons: `CeremonyScreen.tsx:44,50,62,82,91,101,105,113,140` `🥄 🎯 🐍 🔥 💍 🥈 🥉 🏅 🏆 🔨 💸`; `:221` `🏆`.
+- Snake: `SnakeBoard.tsx:47`, `TvScreen.tsx:113,127` `🐍`. TV: `TvScreen.tsx:232` `→`.
+- i18n: `es-MX.ts:133` `⋮`, `:536` `🔨`, `:552` `💍`, `:574` `→`, `:583` `›`, `:601` `▶`, `:641` `σ²`, `:732` `•`.
+- Functional and kept: stroke dots `•` (`AdminPlayers.tsx:297`, `ScorecardScreen.tsx:351`, `PrintScreen.tsx:117`, `PlayerSheet.tsx:125`), true minus `−` (`money.ts:21`, `ScorecardScreen.tsx:422`, `PlayerSheet.tsx:85`, `AdminHandicaps.tsx:79`).
+- Placeholders: `·` empty cell (`ShareCard.tsx:124`, `AdminScores.tsx:179`, `ScorecardScreen.tsx:269`); `–` en dash ×9; `—` em dash (`AdminRounds.tsx:82`). Pick one.
+
+### A.6 Motion (every instance)
+- Springs: `AdminDraw.tsx:142` (260/18, scale+rotate), `LiveScreen.tsx:123–129` (400/36 layout), `SnakeBoard.tsx:46` (300/24 layoutId), `TvScreen.tsx:198` (300/14 bid pop), `CeremonyScreen.tsx:211` (220/16 reveal).
+- Fades/slides: `FeedTicker.tsx:36` (x −16), `TvScreen.tsx:62,66` (y ±20, 400ms), `:211` (scale 1.15), `CeremonyScreen.tsx:195,203,213,230` (y ±30, stagger 0.6s per winner).
+- Confetti: `CeremonyScreen.tsx:160–162` (three bursts), `ScorecardScreen.tsx:199` (birdie).
+- CSS: `ui.module.css:17` fadeIn 160ms, `:28` slideUp 220ms, `:77` spin 800ms, `:117` toast 200ms; `global.css:171–178` button transition + `scale(.97)`, `:292–304` toggle, `:516–518` `.fade-in`.
+- Timers: `TvScreen.tsx:40` rotate every 12s; `StatsScreen.tsx:62` race replay 250ms/hole.
+
+### A.7 Global class usage (literal `className` tokens)
+`card` 47 (21 files) · `card--cell` 17 · `card--deep` 7 · `chip` 23 (`--teal` 11, `--sun` 9, `--coral` 8, `--outline` 5) · `tierBadge` 7 · `label` 42 · `section-num` 3 · `wave` 1 · `list` 16 · `listItem` 18 · `segmented` 8 · `btn--primary` 42 · `btn--secondary` 44 · `btn--ghost` 40 · `btn--danger` 1 · `num` 115 · `help` 90 · `muted` 31 · `small` 33 · `error` 8 · `fade-in` 2.
+Reading: three button variants are used almost interchangeably (42/44/40), which is the visual-hierarchy finding in numbers. `help` (90) and `small` (33) and `muted` (31) are three names for "secondary text".
+
+## Appendix B — Copy inventory (for the voice pass)
+
+Scope: `src/i18n/es-MX.ts` (line numbers below refer to it unless a file is named), TSX literals, and user-visible strings inside `src/engine/**` (explanations, labels, score names) which are not in the i18n file at all. The file header (`es-MX.ts:3`) declares the old voice: "fun, light roasting, never mean".
+
+### B.1 Exclamations
+- `:108` `¡Torneo creado!` (h2, `NewTournamentScreen.tsx:139`); `:515` `¡Vendido!` (auction, vernacular, keep); `:590` feed `¡… hizo águila…!`; `:591` feed `¡Cambio de líder!` (feed, keep); `:708` `Fin. ¡Salud!` (h2); `:722` `¡Campeón!`. `:214` uses `!` as a glyph for disputed holes (`ScorecardScreen.tsx:270`).
+
+### B.2 Middle dots (" · ") as separators
+- i18n: `:100`, `:141`, `:226`, `:577`, `:674`, `:682`, `:694`, `:714`, `:715`, `:718`.
+- Engine (user-visible): `src/engine/modules/snake/index.ts:160`, `bestRound/index.ts:67`, `individual/index.ts:80`.
+- TSX (≈80): `ShareCard.tsx:86,111,118,139,145`; `AdminScores.tsx:93,116,159,180,187`; `AdminRounds.tsx:82,158`; `SettingsEditor.tsx:185`; `AdminCourses.tsx:215,253,277`; `AdminHandicaps.tsx:77–79`; `AdminPlayers.tsx:158,208,291,293,323`; `AdminGroups.tsx:228`; `AdminDraw.tsx:104,105,151,152`; `AdminAuction.tsx:158,164,243`; `LiveScreen.tsx:86,100–102,144`; `MoreScreen.tsx:25`; `TvScreen.tsx:52,83,120,145,153,194`; `CeremonyScreen.tsx:50,63,82,92,101,105,221`; `StatsScreen.tsx:199`; `ScorecardScreen.tsx:70,234,328,329,352,356`; `GamesScreen.tsx:89,187,225,241,248`; `MoneyScreen.tsx:70,100,103,125,141,166`; `PrintScreen.tsx:59,60,90,97`; `PlayerSheet.tsx:68,69,98,101,153,161,179,187`; `MyTournamentsScreen.tsx:54`.
+
+### B.3 Jokes, roasts, filler, anglicisms
+- "Sí, cómo no" outside the feed: `:119` wrong PIN, `:232` no three-putts, `:244` no money yet, `:582` nothing owed. In the feed (allowed, rewrite as commentary): `:588`, `:593`.
+- Playful copy elsewhere: `:746` 404 ("¿Te pasaste de hoyo?"), `:599` "Solo por la gloria", `:696` "Todo se paga antes de dormir" (rules, keep), `:10` marketing tagline, `:103` "Como el primer torneo", `:173` `comingSoon: 'Llega en el siguiente milestone.'` shown to users at `AdminDraw.tsx:90`, `AdminAuction.tsx:58`, `PlaceholderScreen.tsx:7` (remove).
+- Award names (`:628–639`) and module labels are product names; keep, but stop Title-Casing generic nouns.
+- Anglicisms: `Thru` (`:179`), `Stats` (`:245,260,597`), `Scores`/`Score` (`:279,425`), `Link` (`:88,354`), `countback` (`:675,678`), `anti-sandbag` (`:669`), `Hcp` (`:177,178`).
+
+### B.4 Eyebrows and forced uppercase
+- Source strings in caps: `:52` `CÓDIGO`, `:329` `ESTE`, `:468,730` `SI`, `PlayerSheet.tsx:110–115` headers.
+- CSS forcing uppercase: `global.css:74–80` `.label`, `:436–440` `.table th`, `ShareCard.module.css:92–99`, `TvScreen.module.css:161–165`, `HomeScreen.module.css:37–42`.
+- The 42 `.label` uses include every `Field` label (`ui.tsx:27`), so 48-character form labels render as tracked caps: `:359`, `:364`, `:386` (48 chars), `:383`, `:379`, `:380`, `:367`, `:545`, `:407`, `SettingsEditor.tsx:57,140`.
+
+### B.5 Vernacular inconsistencies (one term each, decide once)
+- Strokes received: "golpes de ventaja" (`:194,433,732`) vs "puntos de ventaja" (`:336`, wrong) vs "Vent." (`:237`).
+- Pick-up: "Levantó" / "levantas la bola" / "hoyo levantado"; abbreviation "L" never explained (`ScorecardScreen.tsx:269`, `AdminScores.tsx:116,179`, `PlayerSheet.tsx:126`, `GamesScreen.tsx:187`); `ShareCard.tsx:124` uses `↑` instead.
+- Eagle: "águila" (`:590,673`) vs "eagle" (`src/engine/core/stableford.ts:27,37`, surfaces at `ScorecardScreen.tsx:356`); the feed fires on a *net* eagle without saying so (`FeedTicker.tsx:13`).
+- Gross/net: "Gross" (`:235`) with "Neto" (`:239`); "Birdies gross" (`:246,612,632`).
+- Same idea, two labels: `:250` "Ceros" vs `:616` "Doble o peor"; `:248` "Pares netos" vs `:614` "Pares"; `:249` vs `:615` bogeys.
+- Starting hole: "Hoyo de salida" (`:292`), "Sale por el n" (`:293`), "Salida por el n" (`:731`).
+- Stroke index: "SI" (`:468,730`, headers), "índice de dificultad (SI)" (`:668`), "índices" (`:472,476`); collides with "Índice" = WHS index (`:418,421`).
+- Handicap: "Hándicap" / "Hcp" / "Hcp de juego" / "hándicap de juego" / "hándicap base" / "hándicap de campo" (`AdminPlayers.tsx:291`).
+- Pot: "Bolsa" (`:169,665,387`) vs "Pozo" (`:220,524,687,694,383`).
+- "Campeón"/"Subcampeón" hard-coded in `TvScreen.tsx:219` and `src/engine/modules/auction/index.ts:85`, duplicating `:700`.
+- "1 putt" vs "a un putt" (`:634`); "3-putt" in `snake/index.ts:112`.
+
+### B.6 Long-string risks at 390px
+- Buttons over 24 chars: `:68` (26), `:70` (31), `:71` (30), `:74` (25), `:286` (28), `:326` (25), `:337` (26), `:547` (34), `:196` (24), `AdminAuction.tsx:221` (22 + glyph), `PrintScreen.tsx:41`.
+- Chips over 18 chars: `:181` "Grupo puntero en el hoyo n" (~26), `:182` "n víboras pendientes", `:228` "En juego: $600", `:446` (43) and `:447` (33) course-coverage chips that wrap (`AdminCourses.tsx:256`), `:141` offline banner (35), `:210/211` "Firmada y bloqueada".
+- Headings over 30 chars: `:130` (32), `:528` (43), ceremony step titles with custom labels, `snake/index.ts:160` "La Víbora · Día 2 · Grupo 12".
+- Table headers at 13+ columns: `StatsScreen.tsx:215–229` ("Hoyos con la víbora", "Pts en par 3 / 4 / 5").
+
+### B.7 User-visible strings outside i18n (must move in the copy pass)
+`SettingsEditor.tsx:57,70,74,140`; `AdminPlayers.tsx:158` (" · Comité"), `:291`; `ShareCard.tsx:86,139` ("Final"); `TvScreen.tsx:219`; `ScorecardScreen.tsx:327–329` ("Par", "SI", "y"); `PlayerSheet.tsx:110–115`; `AdminScores.tsx:180`; share text "entra con el código" in `AdminTournament.tsx:196`, `MoreScreen.tsx:58`, `NewTournamentScreen.tsx:150`; aria-labels `TournamentShell.tsx:39`, `AdminLayout.tsx:45`; `router.tsx:90` ("Modo TV"); engine explanation strings in `src/engine/core/handicap.ts:23,25,44,92,94`, `compute.ts:126`, `stableford.ts`, `money.ts:90`, `src/engine/modules/*/index.ts` (these use `→` and " · "; the engine is off-limits to this redesign, so the UI must format them or the change is logged for a separate PR).
+
+## Appendix C — Organizer and Comité screens, line level
+
+Scope: `src/screens/organizer/*`, `src/screens/admin/*`, the shared primitives they use. Facts unless marked *opinion*. Fixtures `large60` and `longnames` back the scale and long-name claims.
+
+### C.1 Shared baseline
+- `AppShell.module.css` caps `.main` at 560px with a 16px gutter. **There are no media queries in any organizer or admin file, nor in `global.css`.** The only wider surface is the CourseEditor sheet (`.sheetWide`, 760px).
+- `.btn` 48px, `.btn--sm` 40px, `:active` scale .97, no `:hover` rules anywhere. Global `:focus-visible` is a 3px sun outline; `.input:focus` replaces it with a teal border. **No `:disabled` style for `.input`/`.select`.**
+- `.listItem` 60px, `.chip` fixed 28px `nowrap`, `.segmented button` 40px (only `aria-selected` styled), `.toggle` 52×30, `.label` 0.72rem caps, `.help` 0.85rem.
+- Toasts (2.8s) are the only error channel for almost every admin mutation.
+- Engine `state.flags` (`incompleteRounds`, `pendingSnakeTiebreaks`, `unsignedCards`, `discrepancies`, `missingModules`, `warnings`): only `AdminScores` reads two of them; `LiveScreen` reads two; **nobody reads `incompleteRounds`, `unsignedCards` or `missingModules`.**
+
+### C.2 Per screen
+**Mis torneos** (`MyTournamentsScreen.tsx`): Wordmark + "Cerrar sesión", h1 + "Nuevo torneo", email as help text, list of Link rows (avatar, name, "status · Código XXXXXX", nested "Comité" button). Name wraps without ellipsis; no sort or grouping by status. **Bug:** a Link inside a Link (nested anchors). Empty/loading/error states exist; error has no retry.
+
+**Nuevo torneo** (`NewTournamentScreen.tsx`): 4 step chips (teal current, sun done, outline future; not tappable). Step 1 name + tagline; step 2 two template cards as radio buttons (2px teal border is the only selected state, no `role`/`aria-pressed`); step 3 player count (local only, never persisted) + compact SettingsEditor; step 4 deep card with a 2.6rem join code, link with `break-all`, copy/share, "Ir al Comité". Templates: `full` = first tournament settings, 12 players; `minimal` = individual only, 8 players, tiers `[]`, 1 round, fee 0. Busy state only disables the button. Form renders before auth is `ready`.
+
+**Login / Reset** (`OrganizerLoginScreen.tsx`, `ResetPasswordScreen.tsx`): a stack of 3–4 ghost buttons under one primary gives weak hierarchy. Busy only disables. **Bugs:** login calls `navigate()` in the render body; Reset with no session shows `t.auth.needsConfirmation`, the wrong message for an expired link.
+
+**AdminLayout** (`AdminLayout.tsx`): "Comité" eyebrow + 1.5rem h1 (wraps at 30+ chars beside a `nowrap` button) + 10 pill NavLinks in a horizontal scroller with the scrollbar hidden and no fade or scroll-into-view (≈950px of pills in 560px). Calcutta and Parejas render even when their modules are off. `sections.payments` exists in i18n with no route. No badges. *Opinion:* the nav is the natural home for flag counts (Scores: discrepancies + tiebreaks + unsigned; Rondas: incomplete; Torneo: warnings).
+
+**SettingsEditor** (`SettingsEditor.tsx`): 5 sections (Módulos as toggle cards, Reglas, Hándicap, Premios with the balance table, Calcutta). Three inputs (tiers, stableford prizes, pairs prizes) and the pairing rule are `defaultValue`/`onBlur` and **do not reflect external changes** after a realtime reload; invalid list entries are dropped silently; numeric inputs snap `0`/`NaN` back to defaults while typing. `.grid3` gives three numeric fields ≈100px each at 360px; labels wrap. Never exposed: `rounding`, `estimateWeights`, `tieFallback`, `spectatorLink`, `timezone`, `currency`, `individual.format`, adding/removing payout slots.
+
+**Torneo** (`AdminTournament.tsx`): brand card (72px logo, name, tagline, native color input), status segmented, banker select, join code 1.8rem + "Nuevo código", link, full SettingsEditor, sticky save bar (`zIndex:4`), danger zone. **Status tabs, banker select and "Nuevo código" mutate immediately with no confirmation, busy state or success toast.** The 60-player banker select has no search. An invalid settings state is signalled only by the coral balance card, far from the sticky button.
+
+**Jugadores** (`AdminPlayers.tsx`): header + "Agregar", flat list (avatar, unstyled row button with name + "tier · HCP n · (estimado) · Comité", PIN button ghost/secondary). Edit sheet: avatar upload, name/display/tier/tee, handicap segmented (manual / index / estimate), estimate = 3 cards × **4 inputs in one row** (cramped at 360px), deep preview card with 18 stroke chips at 0.7rem/24px, honoree/admin toggles, form guide, delete via native `confirm()`. PIN sheet 2rem input. **60 players = one flat list, no search, filter, count or grouping (~3600px).** HCP is plain help text, not `.num`. `playersWithPin` failure is swallowed.
+
+**Campos** (`AdminCourses.tsx`, `CourseEditor.tsx`, `useCourses.ts`): Buscar / Foto / Manual buttons, list of courses (unstyled row button, "location · N tees · source", attribution at 0.75rem, coral Borrar). Search sheet with coverage chips forced to wrap (`maxWidth:150`). Import sheet with toggle-as-checkbox per tee. Draft sheet (760px) → CourseEditor: notes card, name/location, tee tabs + "+ Agregar tee", 2×2 tee fields, `<details>` paste, hole table with **36px inputs** (`CourseEditor.module.css`), validation list, Borrar tee (no confirm) / Cancelar / Guardar. `useCourses` has **no `loading` flag and its `error` is never read**, so the empty text flashes before the fetch and failures are invisible.
+
+**Rondas** (`AdminRounds.tsx`): one card per round ("Día N", "Actual" chip, "date · course · N hoyos" with the **raw ISO date**, status chip) and up to 6 buttons in two rows, two of them coral ghosts side by side. **Empezar / Terminar / Reabrir / Cancelar mutate immediately with no confirmation or busy state** (double-tap possible). Tees sheet: 60 rows of selects, saves on change with no indicator. New round defaults to `courses[0]`, which may be unset before courses load.
+
+**Grupos** (`AdminGroups.tsx`): day tabs, generator buttons, one card per group (time input 110px, start-hole select, ✕ without confirm), player chips as remove buttons (no confirm/undo), unassigned names as a coral paragraph, sticky save without `zIndex`. **Switching day tabs silently discards drafts.** **`.chip` is 28px but holds a 32px avatar (`Avatar size="sm"`), which overflows.** 30-char names in `nowrap` chips overflow the card. 15 groups ≈ 3k px. Picker sheet: 60 players, no search, not "unassigned first". Re-derives pair-composition warnings locally instead of reading `flags.warnings`.
+
+**Hándicaps** (`AdminHandicaps.tsx`): day tabs, list rows with name + "Base · Campo · Día N: X pts · Corte −n" + a HowCalculated trigger (32px) wrapping the playing handicap **in a 1rem chip, not `.num`**, Editar, and ✕ **without `aria-label`**. **No empty state:** no rounds shows an empty segmented pill above an empty shadowed list box. *Opinion:* a table (Base / Campo / Corte / Juega) on wide screens.
+
+**Scores** (`AdminScores.tsx`): tiebreak card (coral left border) and dispute card (sun left border) **filtered to the selected round only**, day tabs, a 60-player select with no group context, player summary + "Quitar firma"/"Sin firmar", a 6-column hole tile grid (64px tiles, gross 1.2rem `.num`, **points and putts at 0.65rem**, `.empty` opacity .6, no `:active`), edit sheet with a 3-column grid (strokes / putts / picked-up toggle squeezed). Tiebreak answers have no busy state. **Nothing renders when there are no rounds, no players, or the selected player has no row.** *Opinion:* 9 columns mirror the two nines; this screen should be the review inbox for all four flags across all rounds.
+
+**Calcutta** (`AdminAuction.tsx`): module-off guard shows **"Llega en el siguiente milestone."** Phase 1: order list with ↑/↓ only (moving one player 30 places = 30 taps), "Abrir 1". Phase 2: pot chip (0.8rem), deep lot card (88px avatar, eyebrow, 1.5rem name, tier + hcp + pair, form guide), bid box with a 2.6rem sun figure, bidder grid `repeat(4,1fr)` of 68px cells (disabled = opacity .35 with the reason only in `title`), +inc/×2/×4/custom, "↶ Deshacer" + "🔨 Vendido" (no confirm), sold list ("Name → owner · recompra n%", ↶ with `title` only), "Reiniciar". Buyback sheet with segmented presets. **60 bidders = 15 rows of grid (~1.1k px) between the lot and the sale buttons; no search or recency.** *Opinion:* a two-pane console on desktop.
+
+**Parejas** (`AdminDraw.tsx`): same wrong module-off copy. Existing pairs list, honoree face grid (`repeat(3,1fr)`, 84px, no `:active`), "💍 Sortear", animated reveal at **700ms per pair with no skip (30 pairs = 21s) and timers never cleared** (a redraw races the old ones). **Saving overwrites Day 1 groups without warning** and flips status to live. Pair card leaves ≈250px for the name input at 360px.
+
+**Datos** (`AdminData.tsx`): four clean cards (export JSON/CSV, restore, print, duplicate). No inline styles. CSV export triggers two downloads in sequence (browsers may block the second). Restore has no progress indicator.
+
+**Shared:** `HowCalculated` trigger 32px; `InstallGuide` hard-codes section number "03"; `OfflineBanner` is full-bleed deep/sun; `ShareCard` is a fixed 540px export where `.name` has no ellipsis, the 26px title wraps for long names, and a 60-row leaderboard renders ≈2.7k px tall (WhatsApp crops the preview).
+
+### C.3 Flags coverage
+| Flag | Surfaced | Should surface (*opinion*) |
+|---|---|---|
+| `pendingSnakeTiebreaks` | Scores, selected round only | Nav badge; all rounds; Rondas before "Terminar" |
+| `discrepancies` | Scores, selected round + tiles | Nav badge; cross-round; Datos before export |
+| `unsignedCards` | nowhere (Scores recomputes for one player) | Scores inbox; Rondas before "Terminar" |
+| `incompleteRounds` | nowhere | Rondas live card; Scores player select |
+| `warnings` | LiveScreen only; Grupos re-derives | Torneo / Rondas / Campos; Grupos from the engine |
+| `missingModules` | nowhere | Torneo |
+
+### C.4 Cross-cutting, ranked
+1. No layout above 560px anywhere in admin.
+2. No pressed state on any non-`.btn` control: list rows, unstyled row buttons, segmented, chips, hole tiles, bidder cells, faces, template cards, nav pills. No hover anywhere.
+3. Immediate mutations without busy/confirm: status tabs, banker, join code, round start/finish/reopen/cancel, per-player tee, tiebreak answers, group chip removal, group ✕, draw save.
+4. Errors only as toasts; missing loading/error for courses; missing empty states in Hándicaps and Scores.
+5. No search in any 60-player list or select (six places).
+6. Numbers inconsistent: `.num` at 1.2/1.8/2.6rem, playing handicap in a chip, HCP/pts/holdings as 0.65–0.85rem help text.
+7. Wrong copy: "siguiente milestone" guards; reset-link message.
+8. Accessibility: missing `aria-label` (Hándicaps ✕, Calcutta ↶), nested anchors, pickers without radio/pressed semantics, `role="tab"` without panels, targets under 40px (HowCalculated 32, CourseEditor inputs 36, stroke chips 24).
