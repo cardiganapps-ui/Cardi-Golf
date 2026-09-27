@@ -54,7 +54,7 @@ const check = (ok, label) => {
 
 try {
   await p.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
-  await p.waitForSelector('text=Toca tu cara', { timeout: T })
+  await p.waitForSelector('text=Elige tu nombre', { timeout: T })
   await p.click(`text=${player}`)
   await p.waitForSelector('input[type=password]', { timeout: T })
   await p.fill('input[type=password]', pin)

@@ -1,45 +1,82 @@
-.header {
+.screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--s5);
+  padding-top: var(--s5);
 }
-.logo {
-  width: 140px;
-  height: 140px;
-  object-fit: contain;
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s2);
+}
+.gridDense {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .face {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 6px;
-  background: var(--cell);
-  border: 2px solid transparent;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
+  gap: var(--s2);
+  padding: var(--s3) var(--s1);
+  min-height: 132px;
+  border: var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
   cursor: pointer;
-  min-height: 140px;
+}
+.gridDense .face {
+  flex-direction: row;
+  justify-content: flex-start;
+  min-height: var(--s12);
+  padding: var(--s1) var(--s2);
+  text-align: left;
 }
 .face:active {
-  transform: scale(0.97);
+  background: var(--surface);
 }
 .faceName {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-ui);
   text-align: center;
+  overflow-wrap: anywhere;
+}
+.gridDense .faceName {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+.pinStep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding-top: var(--s4);
+  border-top: var(--rule-heavy);
+}
+.who {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
 }
 .pin {
-  font-size: 2rem;
-  letter-spacing: 0.5em;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: 0.4em;
   text-align: center;
-  min-height: 64px;
+  min-height: 60px;
+  padding-left: calc(var(--s3) + 0.4em);
+}
+.actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s2);
 }

@@ -31,14 +31,14 @@ export function InstallGuide() {
   }
 
   return (
-    <section className={`card ${styles.guide}`}>
+    <section className={styles.guide}>
       <h2>{t.install.title}</h2>
-      <p className="muted">{t.install.why}</p>
+      <p className="help">{t.install.why}</p>
       <ol className={styles.steps}>
         <li>{t.install.ios}</li>
         <li>{t.install.android}</li>
       </ol>
-      <button className="btn btn--ghost" type="button" onClick={dismiss}>
+      <button className="btn btn--ghost btn--sm" type="button" onClick={dismiss}>
         {t.install.done}
       </button>
     </section>

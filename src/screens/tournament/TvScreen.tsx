@@ -16,6 +16,7 @@ import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
+import { nearestAccent } from '../../design/accents'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed'
 
@@ -45,7 +46,7 @@ export function TvScreen() {
   const accent = snapshot.tournament.accentColor ?? undefined
 
   return (
-    <div className={styles.tv} style={accent ? ({ '--accent': accent } as React.CSSProperties) : undefined}>
+    <div className={styles.tv} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
       <header className={styles.header}>
         {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
         <div className="grow">

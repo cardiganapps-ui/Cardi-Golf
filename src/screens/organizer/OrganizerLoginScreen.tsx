@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { Field } from '../../components/ui'
 import { requestPasswordReset, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth } from '../../data/auth'
+import styles from './OrganizerAuth.module.css'
 
+/** Organizer sign-in. One primary path (email + password); the alternatives are quiet. */
 export function OrganizerLoginScreen() {
   const navigate = useNavigate()
   const { user, isAnonymous } = useAuth()
@@ -16,17 +18,28 @@ export function OrganizerLoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
-  if (user && !isAnonymous) {
-    navigate('/organizer', { replace: true })
-    return null
-  }
+  const signedIn = !!user && !isAnonymous
+  useEffect(() => {
+    if (signedIn) navigate('/organizer', { replace: true })
+  }, [signedIn, navigate])
+  if (signedIn) return null
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
+  async function run(action: () => Promise<void>) {
     setBusy(true)
     setError(null)
     setInfo(null)
     try {
+      await action()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    void run(async () => {
       if (mode === 'in') {
         await signInWithPassword(email.trim(), password)
         navigate('/organizer', { replace: true })
@@ -35,49 +48,23 @@ export function OrganizerLoginScreen() {
         if (r.needsConfirmation) setInfo(t.auth.needsConfirmation)
         else navigate('/organizer', { replace: true })
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
+    })
   }
 
-  async function magic() {
-    if (!email.trim()) return
-    setBusy(true)
-    setError(null)
-    try {
-      await signInWithMagicLink(email.trim())
-      setInfo(t.auth.magicSent)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function forgot() {
-    if (!email.trim()) return
-    setBusy(true)
-    setError(null)
-    try {
-      await requestPasswordReset(email.trim())
-      setInfo(t.auth.resetSent)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const hasEmail = email.trim().length > 0
 
   return (
-    <div className="screen">
-      <Link to="/" style={{ textDecoration: 'none' }}>
+    <div className={styles.screen}>
+      <Link to="/" className={styles.brand}>
         <Wordmark />
       </Link>
-      <h1>{t.auth.title}</h1>
-      {user && isAnonymous && <p className="help">{t.auth.anonymousWarning}</p>}
-      <form className="stack" onSubmit={submit}>
+      <header className={styles.head}>
+        <h1>{t.auth.title}</h1>
+        <p className={styles.lede}>{t.auth.intro}</p>
+        {user && isAnonymous && <p className="help">{t.auth.anonymousWarning}</p>}
+      </header>
+
+      <form className={styles.form} onSubmit={submit}>
         {mode === 'up' && (
           <Field label={t.auth.displayName}>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
@@ -97,23 +84,37 @@ export function OrganizerLoginScreen() {
             required
           />
         </Field>
-        {error && <p className="error">{error}</p>}
-        {info && <p className="teal">{info}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {info && (
+          <p className={styles.notice} role="status">
+            {info}
+          </p>
+        )}
         <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
-          {mode === 'in' ? t.auth.signIn : t.auth.signUp}
-        </button>
-        <button className="btn btn--ghost" type="button" onClick={magic} disabled={busy || !email.trim()}>
-          {t.auth.magicLink}
+          {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
         </button>
         {mode === 'in' && (
-          <button className="btn btn--ghost" type="button" onClick={forgot} disabled={busy || !email.trim()}>
-            {t.auth.forgot}
-          </button>
+          <div className={styles.quiet}>
+            <button className="btn btn--ghost btn--sm" type="button" onClick={() => void run(async () => { await signInWithMagicLink(email.trim()); setInfo(t.auth.magicSent) })} disabled={busy || !hasEmail}>
+              {t.auth.magicLink}
+            </button>
+            <button className="btn btn--ghost btn--sm" type="button" onClick={() => void run(async () => { await requestPasswordReset(email.trim()); setInfo(t.auth.resetSent) })} disabled={busy || !hasEmail}>
+              {t.auth.forgot}
+            </button>
+          </div>
         )}
-        <button className="btn btn--ghost" type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
+      </form>
+
+      <div className={styles.switch}>
+        <span>{mode === 'in' ? t.auth.firstTime : t.auth.haveAccount}</span>
+        <button className="btn btn--ghost btn--sm" type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
           {mode === 'in' ? t.auth.toggleToSignUp : t.auth.toggleToSignIn}
         </button>
-      </form>
+      </div>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
+import { nearestAccent } from '../../design/accents'
 
 const TABS = [
   { to: '', label: t.nav.live, icon: <IconFlag /> },
@@ -21,7 +22,7 @@ export function TournamentShell() {
   const status = data?.snapshot.tournament.status ?? lookup.status
 
   return (
-    <div className={styles.wrap} style={accent ? ({ '--accent': accent } as React.CSSProperties) : undefined}>
+    <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
       <header className={styles.top}>
         {(data?.snapshot.tournament.logoUrl ?? lookup.logoUrl) && <img className={styles.logo} src={data?.snapshot.tournament.logoUrl ?? lookup.logoUrl ?? ''} alt="" />}
         <div className="grow">

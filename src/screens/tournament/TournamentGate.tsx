@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { Link, Outlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
+import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, useAuth } from '../../data/auth'
 import { isOrganizerOf, lookupTournament, myDeviceSession, releaseDevice, type LookupResult } from '../../data/api'
@@ -108,11 +109,15 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <h1>{t.enter.title}</h1>
-        <p className="muted">{t.enter.notFound}</p>
-        <Link className="btn btn--secondary" to="/">
-          {t.errors.backHome}
-        </Link>
+        <EmptyState
+          title={t.enter.notFound}
+          body={t.errors.notFoundHint}
+          action={
+            <Link className="btn btn--secondary" to="/">
+              {t.errors.backHome}
+            </Link>
+          }
+        />
       </div>
     )
   }

@@ -21,6 +21,14 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Chart and confetti colors** come from tokens at runtime (`src/lib/tokens.ts`): `--chart-1..12` for series, `--event-accent` / `--board-accent` / `--under` / `--surface-2` for celebrations.
 - **Event accents.** Six curated values in `src/design/accents.ts`; the admin shows them as swatches and maps any legacy free-form color to the nearest one for display. The column and its stored values are unchanged.
 
+## Phase 3, PR 1: first impression (2026-09-28)
+
+- Home leads with one line on what Cardi-Golf does, then the returning player's tournament (name + one primary button), then the code field, then organizers as a quiet link, then the install steps as a ruled footer. No hero, no numbered cards, no dark block.
+- Entrar is the event name (serif, logo, accent rule), one instruction, the grid. Above 16 players the grid goes to two dense columns and gets a name filter. The PIN step sits under a heavy rule with one primary action.
+- The event accent now sets `--event-accent` (primary button, my row, the rule under the event name), never the platform `--accent`. Stored values map to the nearest curated swatch: the Ensayo's old teal reads as "Agua"; Diego can pick "Fairway" in Comité, Torneo.
+- Organizer sign-in: one primary path; magic link and password reset are two quiet buttons on one line; sign-up is a switch under a hairline. Busy labels change ("Entrando…"). The render-time `navigate()` moved into an effect (logged bug, fixed here because the screen was rewritten).
+- Reset: an anonymous or expired session now sees "Este enlace ya no sirve" with a link to sign in, instead of the sign-up confirmation copy.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

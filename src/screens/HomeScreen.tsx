@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
-import { Wave } from '../components/Wave'
 import { Wordmark } from '../components/Wordmark'
 import { InstallGuide } from '../components/InstallGuide'
 import { supabaseConfigured } from '../lib/supabase'
@@ -9,6 +8,11 @@ import { getLastTournament } from '../data/session'
 import { useAuth } from '../data/auth'
 import styles from './HomeScreen.module.css'
 
+/**
+ * `/`: one line on what Cardi-Golf does, then the fastest way in. A returning
+ * player sees their tournament first; everyone else sees the code field.
+ * Organizers get one quiet link.
+ */
 export function HomeScreen() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
@@ -25,35 +29,38 @@ export function HomeScreen() {
 
   return (
     <div className={styles.home}>
-      <header className={styles.hero}>
-        <Wordmark size="lg" />
-        <p className={styles.tagline}>{t.app.tagline}</p>
-        <p className="muted">{t.app.description}</p>
-        <Wave className={styles.wave} />
+      <header className={styles.intro}>
+        <Wordmark size="md" />
+        <p className={styles.lede}>{t.app.description}</p>
       </header>
 
       {!supabaseConfigured && (
-        <div className={`card ${styles.warn}`} role="alert">
-          {t.errors.missingEnv}
+        <div className="card card--alert" role="alert">
+          <strong>{t.common.error}</strong>
+          <p className="small">{t.errors.missingEnv}</p>
         </div>
       )}
 
       {last && (
-        <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
-          {t.home.backTo(last.name)}
-        </Link>
+        <section className={styles.last}>
+          <span className="label">{t.home.lastTournament}</span>
+          <span className={styles.lastName}>{last.name}</span>
+          <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
+            {t.home.joinButton}
+          </Link>
+        </section>
       )}
 
-      <section className="card">
+      <section className={styles.section}>
         <h2>{t.home.joinTitle}</h2>
-        <p className="muted">{t.home.joinHint}</p>
+        <p className="help">{t.home.joinHint}</p>
         <form className={styles.joinForm} onSubmit={onJoin}>
           <label className="sr-only" htmlFor="join-code">
             {t.home.joinPlaceholder}
           </label>
           <input
             id="join-code"
-            className={`input num ${styles.codeInput}`}
+            className={`input ${styles.codeInput}`}
             placeholder={t.home.joinPlaceholder}
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
@@ -62,17 +69,17 @@ export function HomeScreen() {
             inputMode="text"
             maxLength={6}
           />
-          <button className="btn btn--primary" type="submit" disabled={code.trim().length !== 6}>
+          <button className={`btn ${last ? 'btn--secondary' : 'btn--primary'}`} type="submit" disabled={code.trim().length !== 6}>
             {t.home.joinButton}
           </button>
         </form>
       </section>
 
-      <section className="card card--cell">
+      <section className={styles.section}>
         <h2>{t.home.organizerTitle}</h2>
-        <p className="muted">{t.home.organizerHint}</p>
-        <div style={{ marginTop: 12 }}>
-          <Link className="btn btn--secondary" to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
+        <div className={styles.quiet}>
+          <span className="help">{t.home.organizerHint}</span>
+          <Link className="btn btn--ghost btn--sm" to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
             {organizerSignedIn ? t.home.myTournaments : t.home.organizerButton}
           </Link>
         </div>
