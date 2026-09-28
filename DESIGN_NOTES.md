@@ -57,6 +57,13 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - `ScorecardGrid` gained `putts`, `showPutts` and `onHole`; `HowCalculated` lost its inline styles and exports a controlled `ExplanationSheet`.
 - `e2e/smoke.mjs` nudges the first player's strokes down when it can and up otherwise, so repeated runs on the Ensayo stop bottoming out.
 
+## Phase 3, PR 5: Dinero (2026-09-28)
+
+- The bank is a statement, not an alarm: "Entró al banco" and "Sale del banco" as two figures under a heavy rule, the verdict on the right ("Cuadra al peso" in the accent; "Por asignar" in the caution color while prizes are open, and in the under-par red only once the tournament is final and still does not balance).
+- Each person is a ruled row with the net as the figure (signed, red when negative); "Pagó x, recibe y" is the sub line; tapping opens the breakdown as aligned lines with the prize amounts as "how" triggers.
+- The settlement is two ruled lists: "Quién debe qué" (who, to whom, what for, the amount, "Pagado" for admins) and the transfers, vía banco or sin banco, with paid payouts greyed and marked with a check instead of faded by opacity.
+- One "Compartir" (the image) plus the text share when the device supports it; no camera glyph.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

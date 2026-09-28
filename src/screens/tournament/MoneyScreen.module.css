@@ -1,18 +1,191 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding-top: var(--s4);
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+.headActions {
+  display: flex;
+  gap: var(--s1);
+}
+
+/* The bank, as a statement: two figures and a verdict. */
+.bank {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0;
+  border-top: var(--rule-heavy);
+  border-bottom: var(--hairline);
+}
+.bankFigures {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--s3);
+  align-items: end;
+}
+.bankFigure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.bankAmount {
+  font-size: var(--fs-xl);
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+.bankVerdict {
+  font-size: var(--fs-sm);
+  color: var(--accent);
+  font-weight: 600;
+  text-align: right;
+}
+.bankVerdictOpen {
+  color: var(--caution);
+}
+.bankVerdictOff {
+  color: var(--under);
+}
+.bankNote {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+/* People: ruled rows with the net as the figure. */
+.people {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
 .person {
-  border-bottom: 1px solid var(--hair);
+  border-bottom: var(--hairline);
 }
-.person:last-child {
-  border-bottom: 0;
+.personRow {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 56px;
+  padding: var(--s2) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
 }
-.person > button {
-  border-bottom: 0;
+.personRow:active {
+  background: var(--surface);
+}
+.personText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+.personName {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.personSub {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.net {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.netNeg {
+  color: var(--under);
 }
 .breakdown {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0 14px 12px 70px;
+  padding: 0 0 var(--s3) calc(40px + var(--s3));
 }
-.paid {
-  opacity: 0.55;
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 36px;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  border-top: var(--hairline);
+}
+.lineAmount {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.lineNeg {
+  color: var(--under);
+}
+
+/* Settlement */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.transfers {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 52px;
+  padding: var(--s1) 0;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+}
+.transferText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+.transferKind {
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.paidRow {
+  color: var(--ink-3);
+}
+.paidRow .amount {
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.paidMark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  min-width: 64px;
+  justify-content: flex-end;
 }
