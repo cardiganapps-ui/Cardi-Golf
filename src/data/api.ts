@@ -487,3 +487,22 @@ export async function setPaymentPaid(tournamentId: string, p: PaymentInput) {
     p_note: p.note ?? null,
   })
 }
+
+// ---------------------------------------------------------------------------
+// Instance games: entrants (game_entries), hole awards, custom-bet results
+// ---------------------------------------------------------------------------
+export async function setGameEntry(tournamentId: string, gameId: string, playerId: string, on: boolean) {
+  const sb = supabase()
+  if (on) unwrap(await sb.from('game_entries').upsert({ tournament_id: tournamentId, game_id: gameId, player_id: playerId }, { onConflict: 'tournament_id,game_id,player_id' }).select('player_id'))
+  else unwrap(await sb.from('game_entries').delete().eq('tournament_id', tournamentId).eq('game_id', gameId).eq('player_id', playerId).select('player_id'))
+}
+
+/** Put every listed player in a game (used when a game switches from "todos" to a list). */
+export async function seedGameEntries(tournamentId: string, gameId: string, playerIds: string[]) {
+  if (!playerIds.length) return
+  unwrap(await supabase().from('game_entries').upsert(playerIds.map((player_id) => ({ tournament_id: tournamentId, game_id: gameId, player_id })), { onConflict: 'tournament_id,game_id,player_id' }).select('player_id'))
+}
+
+export async function saveSettings(tournamentId: string, settings: TournamentSettings) {
+  await updateTournament(tournamentId, { settings })
+}

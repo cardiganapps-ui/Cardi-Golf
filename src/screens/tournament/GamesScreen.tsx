@@ -10,8 +10,10 @@ import { IconChevronLeft } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
 import type { ModuleId } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
+import { fieldShape, individualPrizeAmounts } from '../../engine/settings/prizeCheck'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
+import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
 import { useActiveRound } from './useMyGroup'
 import styles from './GamesScreen.module.css'
 
@@ -21,11 +23,13 @@ export function GamesScreen() {
   const data = useTournament((s) => s.data)
   const round = useActiveRound()
   const [open, setOpen] = useState<string | null>(null)
-  const [tab, setTab] = useState<ModuleId | null>(null)
+  const [tab, setTab] = useState<string | null>(null)
   const tabs = useMemo(() => {
     if (!data) return []
     const m = data.settings.modules
-    return ORDER.filter((id) => m[id].enabled).map((id) => ({ value: id, label: m[id].label }))
+    const mods: Array<{ value: string; label: string }> = ORDER.filter((id) => m[id].enabled).map((id) => ({ value: id, label: m[id].label }))
+    const games = data.settings.games.filter((g) => g.enabled).map((g) => ({ value: `game:${g.id}`, label: g.label }))
+    return [...mods, ...games]
   }, [data])
   if (!data) return null
   const { snapshot, state, settings } = data
@@ -42,10 +46,15 @@ export function GamesScreen() {
     let leader: string = t.games.noResults
     let stake: { text: string; amount?: number } = { text: '' }
     const m = state.modules
+    if (id.startsWith('game:')) {
+      const g = state.games[id.slice(5)]
+      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g ? gameStake(g) : stake }
+    }
     if (id === 'individual' && m.individual) {
       const r = m.individual.rows[0]
       if (r && r.thru > 0) leader = t.games.leader(name(r.playerId), t.games.pointsFigure(r.total))
-      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.stableford[0] ?? 0)), amount: settings.prizes.stableford[0] }
+      const first = individualPrizeAmounts(settings, fieldShape(snapshot, settings))[0] ?? 0
+      stake = { text: t.games.firstPrize(formatMoney(first)), amount: first }
     } else if (id === 'pairs' && m.pairs) {
       const r = m.pairs.rows[0]
       if (r && r.thru > 0) leader = t.games.leader(r.name, t.games.pointsFigure(r.total))
@@ -92,6 +101,10 @@ export function GamesScreen() {
                     <span className={styles.gameStake}>
                       <strong>{formatMoney(g.stake.amount)}</strong>
                       <span>{g.stake.text.replace(formatMoney(g.stake.amount), '').replace(/^\s*(al|por)\s*/, '$1 ').trim() || t.games.pot}</span>
+                    </span>
+                  ) : g.stake.text ? (
+                    <span className={styles.gameStake}>
+                      <span>{g.stake.text}</span>
                     </span>
                   ) : null}
                 </button>
@@ -238,6 +251,8 @@ export function GamesScreen() {
           )}
 
           {current === 'snake' && state.modules.snake && <SnakeBoard onOpen={setOpen} />}
+
+          {current?.startsWith('game:') && <GameBoardView gameId={current.slice(5)} onOpen={setOpen} />}
 
           {current === 'fewestPutts' && state.modules.fewestPutts && (
             <Board>

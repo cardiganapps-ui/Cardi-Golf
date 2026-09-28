@@ -25,6 +25,8 @@ export interface GameContext<C extends GameConfig = GameConfig> extends ModuleCo
 export interface BoardRow {
   /** One player, or two for a pair / side. */
   playerIds: Id[]
+  /** Main text instead of the names (e.g. a segment "Ida"); the names then go under it. */
+  title?: string
   /** "1", "T2", or null when position means nothing (a hole-by-hole log). */
   pos: string | null
   /** Short text beside the names ("Hoyo 7", "2 arriba"), optional. */

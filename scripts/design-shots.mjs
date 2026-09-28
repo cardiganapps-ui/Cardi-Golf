@@ -76,9 +76,9 @@ async function shot(p, name, { full = true } = {}) {
   console.log('  ', file)
 }
 
-const FIXTURES = ['minimal4-setup', 'minimal4-live', 'full12-live', 'full12-finished', 'pairs8', 'large60', 'longnames']
-const ADMIN_ON = ['full12-live', 'large60', 'longnames']
-const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps', 'scores', 'calcutta', 'parejas', 'datos']
+const FIXTURES = ['minimal4-setup', 'minimal4-live', 'full12-live', 'full12-finished', 'pairs8', 'friends8', 'large60', 'longnames']
+const ADMIN_ON = ['full12-live', 'friends8', 'large60', 'longnames']
+const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps', 'scores', 'calcutta', 'parejas', 'juegos', 'datos']
 
 // ---- Fixture screens (phone) ----
 {

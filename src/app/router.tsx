@@ -28,6 +28,7 @@ const AdminPlayers = lazy(() => import('../screens/admin/AdminPlayers').then((m)
 const AdminCourses = lazy(() => import('../screens/admin/AdminCourses').then((m) => ({ default: m.AdminCourses })))
 const AdminRounds = lazy(() => import('../screens/admin/AdminRounds').then((m) => ({ default: m.AdminRounds })))
 const AdminGroups = lazy(() => import('../screens/admin/AdminGroups').then((m) => ({ default: m.AdminGroups })))
+const AdminGames = lazy(() => import('../screens/admin/AdminGames').then((m) => ({ default: m.AdminGames })))
 const AdminHandicaps = lazy(() => import('../screens/admin/AdminHandicaps').then((m) => ({ default: m.AdminHandicaps })))
 const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) => ({ default: m.AdminScores })))
 const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
@@ -66,6 +67,7 @@ const tournamentChildren = [
               { path: 'rondas', element: <Lazy><AdminRounds /></Lazy> },
               { path: 'grupos', element: <Lazy><AdminGroups /></Lazy> },
               { path: 'handicaps', element: <Lazy><AdminHandicaps /></Lazy> },
+              { path: 'juegos', element: <Lazy><AdminGames /></Lazy> },
               { path: 'scores', element: <Lazy><AdminScores /></Lazy> },
               { path: 'calcutta', element: <Lazy><AdminAuction /></Lazy> },
               { path: 'parejas', element: <Lazy><AdminDraw /></Lazy> },

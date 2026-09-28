@@ -223,6 +223,48 @@ function pairs8(): Fixture {
   return { name: 'pairs8', description: '8 jugadores, Individual + Parejas + Mejor ronda, sin Calcutta ni víbora', snapshot: snap, me: { playerId: 'p2', isOrganizer: false, isAdmin: false }, lookup: lookupOf(snap) }
 }
 
+/** A weekend among friends: percent main pot, house cut, and every computed side game. */
+function friends8(): Fixture {
+  const settings: TournamentSettings = {
+    ...DEFAULT_SETTINGS,
+    rounds: 2,
+    entryFee: 500,
+    houseCut: 500,
+    prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [50, 30, 20], stablefordMode: 'percent' },
+    games: [
+      { id: 'skins', type: 'skins', label: 'Skins', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', carryOver: true }, money: { source: 'side', buyIn: 200, amount: 0, stake: 0, split: [100] } },
+      {
+        id: 'nassau',
+        type: 'match',
+        label: 'Nassau',
+        enabled: true,
+        rounds: 'all',
+        entrants: 'all',
+        options: { format: 'nassau', basis: 'net', pairScoring: 'bestBall', pressAt: 2, maxPresses: 1, matches: [{ id: 'm1', a: ['p1'], b: ['p2'] }, { id: 'm2', a: ['p5', 'p6'], b: ['p7', 'p8'] }] },
+        money: { source: 'direct', buyIn: 0, amount: 0, stake: 100, split: [100] },
+      },
+      { id: 'low', type: 'lowScore', label: 'Low neto del día', enabled: true, rounds: 'all', entrants: 'list', options: { basis: 'net', scope: 'perRound' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [60, 40] } },
+      { id: 'birdies', type: 'eventPot', label: 'Birdies', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } },
+      { id: 'tres-putts', type: 'eventPot', label: 'Tres putts', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'threePutt', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 20, split: [100] } },
+    ],
+  }
+  const players = withNames(
+    Array.from({ length: 8 }, (_, i) => makePlayer(i + 1, { baseHcp: [4, 9, 12, 15, 18, 21, 24, 28][i]!, isAdmin: i === 0 })),
+    NAMES.slice(2),
+  )
+  const snap = makeSnapshot({ players, rounds: 2, settings })
+  snap.tournament = { ...snap.tournament, id: 'fx-friends', slug: 'fixture-friends8', name: 'Fin de semana en Valle', tagline: 'Skins, Nassau y lo que se deje', joinCode: 'VALLE8', accentColor: '#3f6b4f' }
+  snap.rounds = [makeRound(1, { status: 'finished', date: '2027-05-15' }), makeRound(2, { status: 'live', date: '2027-05-16' })]
+  snap.tournament.currentRoundId = 'r2'
+  for (const rid of ['r1', 'r2']) snap.groups.push(makeGroup(rid, 1, ['p1', 'p2', 'p3', 'p4']), makeGroup(rid, 2, ['p5', 'p6', 'p7', 'p8'], 10))
+  snap.gameEntries = ['p1', 'p2', 'p3', 'p5', 'p6', 'p8'].map((playerId) => ({ gameId: 'low', playerId }))
+  fillRound(snap, 'r1', 81)
+  fillRound(snap, 'r2', 82)
+  truncateRound(snap, 'r2', (pid) => (['p1', 'p2', 'p3', 'p4'].includes(pid) ? 13 : 11))
+  stamp(snap)
+  return { name: 'friends8', description: '8 amigos: bolsa 50/30/20 con "para la casa", skins, Nassau, low neto, birdies y tres putts', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+}
+
 function large60(): Fixture {
   const settings: TournamentSettings = {
     ...DEFAULT_SETTINGS,
@@ -276,6 +318,7 @@ const BUILDERS: Record<string, () => Fixture> = {
   'full12-live': () => full12(false),
   'full12-finished': () => full12(true),
   pairs8,
+  friends8,
   large60,
   longnames,
 }

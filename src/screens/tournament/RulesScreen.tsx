@@ -4,8 +4,9 @@
  */
 import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
-import { snakePotPerGroup } from '../../engine/settings/prizeCheck'
+import { fieldShape, individualPrizeAmounts, snakePotPerGroup } from '../../engine/settings/prizeCheck'
 import { formatMoney } from '../../lib/money'
+import { describeGame } from '../../engine/games/describe'
 import styles from './RulesScreen.module.css'
 
 const R = t.rules
@@ -28,7 +29,7 @@ export function RulesScreen() {
       lines: R.handicaps(Math.round(settings.handicap.allowance * 100), settings.handicap.cap, settings.day2Cut),
       on: true,
     },
-    { id: 'individual', title: m.individual.label, lines: R.individual(settings.prizes.stableford.map((x) => formatMoney(x)), settings.labels.lastPlace), on: m.individual.enabled },
+    { id: 'individual', title: m.individual.label, lines: R.individual(individualPrizeAmounts(settings, fieldShape(snapshot, settings)).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))), settings.labels.lastPlace), on: m.individual.enabled },
     { id: 'bestRound', title: m.bestRound.label, lines: R.bestRound(formatMoney(settings.prizes.bestRoundPerDay)), on: m.bestRound.enabled },
     { id: 'pairs', title: m.pairs.label, lines: R.pairs(pairingRule, settings.prizes.pairs.map((x) => formatMoney(x)), m.pairs.honoreePicks ? (honoree?.displayName ?? settings.labels.honoree) : null), on: m.pairs.enabled },
     {
@@ -44,6 +45,7 @@ export function RulesScreen() {
       lines: R.auction(formatMoney(settings.auction.openingBid), formatMoney(settings.auction.increment), settings.auction.maxPlayersPerOwner, settings.auction.buybackMaxPct, slots),
       on: m.auction.enabled,
     },
+    ...settings.games.map((g) => ({ id: `game-${g.id}`, title: g.label, lines: describeGame(g), on: g.enabled })),
     { id: 'governance', title: R.sections.governance, lines: [...R.governance], on: true },
   ].filter((s) => s.on)
 
