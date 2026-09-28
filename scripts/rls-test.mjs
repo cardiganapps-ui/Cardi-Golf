@@ -37,10 +37,13 @@ const settings = JSON.parse(await readFile(path.join(root, 'scripts', 'fixtures'
 async function organizer(tag) {
   const sb = client()
   const email = `rls-${tag}-${rand}@cardi-golf.test`
-  const { data, error } = await sb.auth.signUp({ email, password: `Pw-${rand}-${tag}!`, options: { data: { display_name: tag } } })
+  const password = `Pw-${rand}-${tag}!`
+  // Sign-ups confirm by email (mailer_autoconfirm is off), so test accounts are created confirmed by the admin API.
+  const { data: made, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: tag } })
   if (error) throw error
-  if (!data.session) throw new Error('signUp returned no session (is mailer_autoconfirm on?)')
-  created.users.push(data.user.id)
+  created.users.push(made.user.id)
+  const { error: signInErr } = await sb.auth.signInWithPassword({ email, password })
+  if (signInErr) throw signInErr
   const { data: t, error: e2 } = await sb.rpc('create_tournament', { p_name: `RLS ${tag} ${rand}`, p_settings: settings })
   if (e2) throw e2
   created.tournaments.push(t.id)
@@ -302,12 +305,38 @@ try {
   const { error: devRestore } = await dev.rpc('restore_tournament', { p_tournament_id: A.tournament.id, p_backup: backup })
   check(!!devRestore, 'a player cannot restore')
 
+  console.log('accounts:')
+  // An anonymous session that sets an email must verify it (mailer_autoconfirm off): it stays anonymous until then.
+  const probe = client()
+  const { data: probeSession } = await probe.auth.signInAnonymously()
+  created.users.push(probeSession.user.id)
+  await probe.auth.updateUser({ email: `delivered+rls-${rand}@resend.dev` })
+  const { data: probeUser } = await admin.auth.admin.getUserById(probeSession.user.id)
+  check(probeUser.user.is_anonymous === true && !probeUser.user.email_confirmed_at, 'an anonymous email change waits for the code (no instant account)', { anonymous: probeUser.user.is_anonymous, confirmed: !!probeUser.user.email_confirmed_at })
+  // A sign-up confirms with the six-digit code from the email (generateLink returns it without sending).
+  const signupEmail = `rls-signup-${rand}@example.com`
+  const { data: gen, error: genErr } = await admin.auth.admin.generateLink({ type: 'signup', email: signupEmail, password: `rls-${rand}-password` })
+  if (gen?.user?.id) created.users.push(gen.user.id)
+  const otp = gen?.properties?.email_otp ?? ''
+  const { data: verified, error: verifyErr } = await client().auth.verifyOtp({ email: signupEmail, token: otp, type: 'signup' })
+  check(!genErr && /^\d{6}$/.test(otp) && !verifyErr && !!verified.session && !!verified.user?.email_confirmed_at, 'a sign-up confirms with the six-digit code', { genErr: genErr?.message, otpLength: otp.length, verifyErr: verifyErr?.message })
+
   console.log('courses:')
   await A.sb.from('players').update({ is_admin: true }).eq('id', A.player.id)
   const { data: devCourse, error: devCourseErr } = await dev.from('courses').insert({ name: `RLS course ${rand}` }).select('id, created_by').single()
   check(!devCourseErr && devCourse.created_by === anon.user.id, 'an admin player creates a course (created_by defaults to him)')
   const { error: devUpload } = await dev.storage.from('tournament-assets').upload(`courses/${devCourse.id}/rls-${rand}.png`, new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }), { contentType: 'image/png' })
   check(!devUpload, 'and uploads a scorecard under courses/')
+  // Without a session nobody may overwrite or delete scorecards (0012 closed this).
+  const nobody = client()
+  const png = () => new Blob([new Uint8Array([137, 80, 78, 71, 1])], { type: 'image/png' })
+  await nobody.storage.from('tournament-assets').update(`courses/${devCourse.id}/rls-${rand}.png`, png(), { contentType: 'image/png' })
+  await nobody.storage.from('tournament-assets').remove([`courses/${devCourse.id}/rls-${rand}.png`])
+  const { data: listed } = await admin.storage.from('tournament-assets').list(`courses/${devCourse.id}`)
+  const kept = (listed ?? []).find((o) => o.name === `rls-${rand}.png`)
+  check(!!kept && kept.metadata?.size === 4, 'no session: a scorecard cannot be overwritten or deleted')
+  const { error: oddFolder } = await dev.storage.from('tournament-assets').upload(`zzz-${rand}/x.png`, png(), { contentType: 'image/png' })
+  check(!!oddFolder && !/invalid input syntax/i.test(oddFolder.message), 'an upload outside a tournament folder is refused cleanly', oddFolder?.message)
   await admin.storage.from('tournament-assets').remove([`courses/${devCourse.id}/rls-${rand}.png`])
   const { error: strangerCourse } = await dev2.from('courses').insert({ name: 'nope' })
   check(!!strangerCourse, 'a plain player cannot create a course')

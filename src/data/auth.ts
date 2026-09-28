@@ -52,10 +52,10 @@ export async function signUpWithPassword(email: string, password: string, displa
   const { data, error } = await supabase().auth.signUp({
     email,
     password,
-    options: { data: { display_name: displayName } },
+    options: { data: { display_name: displayName }, emailRedirectTo: `${window.location.origin}/organizer` },
   })
   if (error) throw error
-  // With autoconfirm on, a session comes back; otherwise the user must confirm by email.
+  // Accounts confirm their email (autoconfirm is off): no session until the code is typed.
   return { needsConfirmation: !data.session }
 }
 
@@ -67,6 +67,22 @@ export async function signInWithMagicLink(email: string) {
   if (error) throw error
 }
 
+/**
+ * Every Polo email carries a 6-digit code as well as a link: the code keeps
+ * the flow inside the installed app (on iOS a link from Mail opens Safari).
+ * `signup` confirms a new account, `email` signs in with a magic-link code.
+ */
+export async function verifyEmailCode(email: string, token: string, type: 'signup' | 'email') {
+  const { error } = await supabase().auth.verifyOtp({ email, token: token.trim(), type })
+  if (error) throw error
+}
+
+/** Sends the code again: the sign-up confirmation, or a fresh sign-in code. */
+export async function resendEmailCode(email: string, type: 'signup' | 'email') {
+  if (type === 'email') return signInWithMagicLink(email)
+  const { error } = await supabase().auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${window.location.origin}/organizer` } })
+  if (error) throw error
+}
 export async function requestPasswordReset(email: string) {
   const { error } = await supabase().auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/organizer/reset`,
