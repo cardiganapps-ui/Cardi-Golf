@@ -14,6 +14,12 @@ import { EntrarScreen } from '../screens/profile/EntrarScreen'
 import { OAuthReturnScreen } from '../screens/profile/OAuthReturnScreen'
 import { ProfileFixture, ProfileScreen } from '../screens/profile/ProfileScreen'
 const ProfileEditScreen = lazy(() => import('../screens/profile/ProfileEditScreen').then((m) => ({ default: m.ProfileEditScreen })))
+const FriendsScreen = lazy(() => import('../screens/profile/FriendsScreen').then((m) => ({ default: m.FriendsScreen })))
+const InboxScreen = lazy(() => import('../screens/profile/InboxScreen').then((m) => ({ default: m.InboxScreen })))
+const VersusScreen = lazy(() => import('../screens/profile/VersusScreen').then((m) => ({ default: m.VersusScreen })))
+const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
+const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
+const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
 import { FixtureGate, FixtureIndex } from '../dev/FixtureGate'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
@@ -94,6 +100,8 @@ export const router = createBrowserRouter([
       { path: 'entrar', element: <EntrarScreen /> },
       { path: 'perfil/vuelta', element: <OAuthReturnScreen /> },
       { path: 'perfil/editar', element: <Lazy><ProfileEditScreen /></Lazy> },
+      { path: 'amigos', element: <Lazy><FriendsScreen /></Lazy> },
+      { path: 'avisos', element: <Lazy><InboxScreen /></Lazy> },
       // Dev-only: the style guide and the design fixtures (the same screens on in-memory
       // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
       ...(DESIGN_ROUTES
@@ -102,10 +110,14 @@ export const router = createBrowserRouter([
             { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
             { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
             { path: 'p/_/:name', element: <ProfileFixture /> },
+            { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
+            { path: 'amigos/_', element: <Lazy><FriendsFixture /></Lazy> },
+            { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
           ]
         : []),
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
       { path: 'p/:handle', element: <ProfileScreen /> },
+      { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
       { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
       { path: '*', element: <NotFoundScreen /> },
     ],

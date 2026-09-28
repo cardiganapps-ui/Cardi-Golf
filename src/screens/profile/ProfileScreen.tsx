@@ -9,8 +9,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Avatar, CopyButton, ShareButton, Sheet, Spinner } from '../../components/ui'
+import { Avatar, CopyButton, ShareButton, Sheet, Spinner, toast } from '../../components/ui'
 import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { friendBlock, friendRemove, friendRequest, friendRespond, friendshipWith, type Friendship } from '../../data/social'
 import { IconChevronRight, IconSettings } from '../../components/icons'
 import { ensureSession, useAuth } from '../../data/auth'
 import {
@@ -47,7 +49,89 @@ export function EventMark({ name, logoUrl }: { name: string; logoUrl: string | n
 const tenths = (v: number) => (v < 0 ? `−${Math.abs(v).toFixed(1)}` : v.toFixed(1))
 const when = (r: RoundResult) => (r.playedOn ? dayMonth.format(new Date(`${r.playedOn}T12:00:00Z`)) : null)
 
-export function ProfileView({ card, tournaments, rounds, money }: { card: ProfileCard; tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }) {
+export type FriendAction = 'add' | 'accept' | 'remove' | 'block'
+
+/** What a visitor with an account can do: befriend, answer, unfriend, block. */
+function FriendBar({ name, friendship, busy, onAction }: { name: string; friendship: Friendship; busy: boolean; onAction: (a: FriendAction) => void }) {
+  const [confirm, setConfirm] = useState<'remove' | 'block' | null>(null)
+  const S = t.social
+  return (
+    <>
+      <div className={styles.actions}>
+        {friendship === 'none' && (
+          <button className="btn btn--primary" type="button" disabled={busy} onClick={() => onAction('add')}>
+            {S.addFriend}
+          </button>
+        )}
+        {friendship === 'incoming' && (
+          <button className="btn btn--primary" type="button" disabled={busy} onClick={() => onAction('accept')}>
+            {S.acceptFriend}
+          </button>
+        )}
+        {friendship === 'outgoing' && (
+          <>
+            <button className="btn btn--secondary" type="button" disabled>
+              {S.requested}
+            </button>
+            <button className="btn btn--ghost" type="button" disabled={busy} onClick={() => onAction('remove')}>
+              {S.cancel}
+            </button>
+          </>
+        )}
+        {friendship === 'friends' && <span className={styles.friendTag}>{S.areFriends}</span>}
+        {friendship === 'blocked' && (
+          <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => onAction('remove')}>
+            {S.unblock}
+          </button>
+        )}
+      </div>
+      {friendship !== 'blocked' && (
+        <div className={styles.quiet}>
+          {friendship === 'friends' && (
+            <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setConfirm('remove')}>
+              {S.removeFriend}
+            </button>
+          )}
+          <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setConfirm('block')}>
+            {S.block}
+          </button>
+        </div>
+      )}
+      <ConfirmSheet
+        open={!!confirm}
+        title={confirm === 'block' ? S.block : S.removeFriend}
+        body={confirm === 'block' ? S.blockConfirm(name) : S.removeConfirm(name)}
+        danger
+        busy={busy}
+        confirmLabel={confirm === 'block' ? S.block : S.removeFriend}
+        onConfirm={() => {
+          if (confirm) onAction(confirm)
+          setConfirm(null)
+        }}
+        onClose={() => setConfirm(null)}
+      />
+    </>
+  )
+}
+
+export function ProfileView({
+  card,
+  tournaments,
+  rounds,
+  money,
+  friendship,
+  friendBusy = false,
+  onFriend,
+}: {
+  card: ProfileCard
+  tournaments?: ProfileTournament[]
+  rounds?: RoundResult[]
+  money?: MoneyLine[]
+  /** Set when the visitor has an account and this is someone else. */
+  friendship?: Friendship
+  friendBusy?: boolean
+  onFriend?: (a: FriendAction) => void
+}) {
   const where = [card.homeClub, card.city].filter(Boolean).join(', ')
   const url = `${window.location.origin}/p/${card.handle}`
   const hasIndex = card.index != null
@@ -120,6 +204,19 @@ export function ProfileView({ card, tournaments, rounds, money }: { card: Profil
       )}
 
       {card.bio && <p className={styles.bio}>{card.bio}</p>}
+
+      {!card.isMe && friendship && onFriend && <FriendBar name={card.displayName} friendship={friendship} busy={friendBusy} onAction={onFriend} />}
+      {!card.isMe && card.related && friendship !== 'blocked' && (
+        <Link to={`/p/${card.handle}/vs`} className={`${styles.row} ${styles.rowLink}`}>
+          <span className={styles.rowText}>
+            <span className={styles.rowTitle}>{t.social.versus}</span>
+            <span className={styles.rowSub}>{t.social.versusTitle(card.displayName.split(/\s+/)[0] ?? card.displayName)}</span>
+          </span>
+          <span className={styles.rowEnd}>
+            <IconChevronRight size={20} />
+          </span>
+        </Link>
+      )}
 
       {tournaments && (
         <section className={styles.section}>
@@ -215,9 +312,14 @@ export function ProfileView({ card, tournaments, rounds, money }: { card: Profil
 
       <div className={styles.actions}>
         {card.isMe && (
-          <Link className="btn btn--secondary" to="/perfil/editar">
-            {P.edit}
-          </Link>
+          <>
+            <Link className="btn btn--secondary" to="/perfil/editar">
+              {P.edit}
+            </Link>
+            <Link className="btn btn--secondary" to="/amigos">
+              {t.social.friends}
+            </Link>
+          </>
         )}
         <CopyButton text={url} label={P.copyLink} />
         <ShareButton text={P.shareText(card.displayName)} url={url} title={card.displayName} />
@@ -292,22 +394,31 @@ function awardName(a: string): string {
 
 export function ProfileScreen() {
   const { handle = '' } = useParams()
+  // A fresh page per handle: nothing of the previous profile shows while the next loads.
+  return <ProfilePage key={handle} handle={handle} />
+}
+
+function ProfilePage({ handle }: { handle: string }) {
   const { ready, user, isAnonymous } = useAuth()
   const [card, setCard] = useState<ProfileCard | null | undefined>(undefined)
   const [extra, setExtra] = useState<{ tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }>({})
+  const [friendship, setFriendship] = useState<Friendship | undefined>(undefined)
+  const [friendBusy, setFriendBusy] = useState(false)
+  const [version, setVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const account = !!user && !isAnonymous
 
   useEffect(() => {
     if (!ready) return
     let live = true
-    setCard(undefined)
-    setExtra({})
     void (async () => {
       try {
         await ensureSession()
-        const c = await profileCard(handle)
+        const [c, f] = await Promise.all([profileCard(handle), account ? friendshipWith(handle) : Promise.resolve(undefined)])
         if (!live) return
         setCard(c)
+        setFriendship(c && !c.isMe ? f : undefined)
+        setExtra({})
         // History and finishes: only for people who may see the full profile. Money: only the owner's own.
         if (c?.related) {
           const [tournaments, rounds, money] = await Promise.all([profileTournaments(handle), profileRounds(handle), c.isMe ? myMoney() : Promise.resolve(undefined)])
@@ -320,7 +431,27 @@ export function ProfileScreen() {
     return () => {
       live = false
     }
-  }, [ready, handle, user?.id])
+  }, [ready, handle, user?.id, account, version])
+
+  async function onFriend(a: FriendAction) {
+    if (!card) return
+    setFriendBusy(true)
+    try {
+      if (a === 'add') {
+        const r = await friendRequest(handle)
+        toast(r === 'accepted' ? t.social.nowFriends(card.displayName) : r === 'not_found' ? t.social.notFound : t.social.sent)
+      } else if (a === 'accept') {
+        await friendRespond(handle, true)
+        toast(t.social.nowFriends(card.displayName))
+      } else if (a === 'remove') await friendRemove(handle)
+      else await friendBlock(handle)
+      setVersion((v) => v + 1)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setFriendBusy(false)
+    }
+  }
 
   if (error) return <EmptyState title={t.common.error} body={error} />
   if (card === undefined) return <Spinner />
@@ -345,7 +476,7 @@ export function ProfileScreen() {
       </div>
     )
   }
-  return <ProfileView card={card} tournaments={extra.tournaments} rounds={extra.rounds} money={extra.money} />
+  return <ProfileView card={card} tournaments={extra.tournaments} rounds={extra.rounds} money={extra.money} friendship={friendship} friendBusy={friendBusy} onFriend={(a) => void onFriend(a)} />
 }
 
 /** `/p/_/:name` (design routes only): the profile on fixture data. */

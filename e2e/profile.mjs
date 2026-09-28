@@ -209,6 +209,23 @@ try {
   const page = await B.page.textContent('main')
   check(page.includes(`@${prof.handle}`) && page.includes('Juego los sábados.') && page.includes(one.t.name), 'the profile page shows the handle, the bio and the tournaments')
   await B.page.screenshot({ path: `${out}/profile-page.png`, fullPage: true })
+
+  console.log('Social: the bell, friends and the inbox:')
+  await B.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('text=Tus amigos', { timeout: T })
+  const bell = await B.page.locator('a[href="/avisos"]').count()
+  const people = await B.page.locator('a[href="/amigos"]').count()
+  check(bell > 0 && people > 0, 'Mi Polo has the bell, the friends link and the feed')
+  await B.page.goto(`${base}/amigos`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('input[type="search"]', { timeout: T })
+  await B.page.fill('input[type="search"]', 'zz-nadie-zz')
+  await B.page.waitForSelector('text=Nadie con ese nombre', { timeout: T })
+  check(true, '/amigos searches (nobody found for a nonsense name)')
+  await B.page.goto(`${base}/avisos`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('h1:has-text("Avisos")', { timeout: T })
+  // The Comité proposed nothing here, but both tournaments link by PIN: the inbox renders, empty or not.
+  check((await B.page.textContent('main')).includes('Avisos'), '/avisos renders for an account')
+  await B.page.screenshot({ path: `${out}/avisos.png`, fullPage: true })
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failed++
