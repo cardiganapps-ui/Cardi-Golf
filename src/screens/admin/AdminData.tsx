@@ -21,7 +21,7 @@ export function AdminData() {
   const reload = useTournament((s) => s.reload)
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
-  const [dupName, setDupName] = useState(`${data.snapshot.tournament.name} (copia)`)
+  const [dupName, setDupName] = useState(`${data.snapshot.tournament.name} ${t.common.copySuffix}`)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null)
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')

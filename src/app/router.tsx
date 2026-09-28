@@ -33,6 +33,8 @@ const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) =
 const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
 const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({ default: m.AdminData })))
 const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
+/** `npm run dev`, or a build with VITE_DESIGN_ROUTES=1 (Vercel Preview, design-shots). */
+const DESIGN_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES === '1'
 const DesignScreen = lazy(() => import('../design/DesignScreen').then((m) => ({ default: m.DesignScreen })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 
@@ -83,10 +85,15 @@ export const router = createBrowserRouter([
       { path: 'organizer', element: <MyTournamentsScreen /> },
       { path: 'organizer/new', element: <NewTournamentScreen /> },
       { path: 'organizer/reset', element: <ResetPasswordScreen /> },
-      { path: 'fixture', element: <FixtureIndex /> },
-      { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
-      // Design fixtures: the same screens on in-memory tournaments (src/dev). Must precede `t/:slug`.
-      { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
+      // Dev-only: the style guide and the design fixtures (the same screens on in-memory
+      // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
+      ...(DESIGN_ROUTES
+        ? [
+            { path: 'fixture', element: <FixtureIndex /> },
+            { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
+            { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
+          ]
+        : []),
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
       { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
       { path: '*', element: <NotFoundScreen /> },

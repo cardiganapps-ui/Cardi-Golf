@@ -295,7 +295,7 @@ export function AdminCourses() {
               <label key={i} className="toggle">
                 <span>
                   {tee.name}
-                  {tee.gender === 'female' ? ' (damas)' : ''}
+                  {tee.gender === 'female' ? ` (${C.ladies})` : ''}
                   <span className="help">
                     Par {tee.holes.reduce((s, h) => s + h.par, 0)}
                     {tee.rating ? `, ${tee.rating} / ${tee.slope}` : ''}, {tee.holes.length} hoyos

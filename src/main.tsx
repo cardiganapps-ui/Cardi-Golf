@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
+import { MotionConfig } from 'motion/react'
 import { registerSW } from 'virtual:pwa-register'
 import './styles/global.css'
 import { router } from './app/router'
@@ -26,6 +27,9 @@ const updateSW = registerSW({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    {/* Every Motion animation honours the system's reduce-motion setting. */}
+    <MotionConfig reducedMotion="user">
+      <RouterProvider router={router} />
+    </MotionConfig>
   </StrictMode>,
 )

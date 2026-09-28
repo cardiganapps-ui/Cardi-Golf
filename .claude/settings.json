@@ -32,11 +32,17 @@
       "mcp__Vercel__buy_pro",
       "mcp__Vercel__buy_single_domain",
       "mcp__Vercel__create_or_transfer_domain",
-      "mcp__Vercel__pause_project"
+      "mcp__Vercel__pause_project",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file",
+      "mcp__github__delete_file"
     ],
     "deny": [
       "Bash(git push --force*)",
-      "Bash(git push -f *)"
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f *)",
+      "Bash(git push * -f)"
     ]
   },
   "hooks": {

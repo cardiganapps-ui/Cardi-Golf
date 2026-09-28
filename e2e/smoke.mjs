@@ -16,6 +16,11 @@ const out = process.argv[2] ?? 'test-results'
 mkdirSync(out, { recursive: true })
 const base = process.env.BASE ?? 'http://localhost:4173'
 const slug = process.env.E2E_SLUG ?? 'ensayo'
+// The smoke test writes scores and restores a backup: only ever against a rehearsal tournament.
+if (!slug.startsWith('ensayo')) {
+  console.error('Refusing to run the smoke test on a non-rehearsal tournament:', slug)
+  process.exit(1)
+}
 const player = process.env.E2E_PLAYER ?? 'Nico'
 const pin = process.env.E2E_PIN ?? '1234'
 const T = Number(process.env.E2E_TIMEOUT ?? 40000)
@@ -106,7 +111,7 @@ try {
   await shot('money')
   const moneyBody = await p.innerText('body')
   check(/banco/i.test(moneyBody) && /\$\d/.test(moneyBody), 'Dinero shows the bank card with amounts')
-  await p.getByRole('tab', { name: 'Liquidación', exact: true }).click()
+  await p.getByRole('radio', { name: 'Liquidación', exact: true }).click()
   await p.waitForSelector('text=Quién debe qué', { timeout: T })
   await shot('settlement')
   check((await p.locator('text=Vía banco').count()) > 0, 'settlement mode renders')

@@ -11,7 +11,7 @@
   --surface-2: #ffffff; /* inputs, sheets */
   --ink: #1b211d; /* graphite */
   --ink-2: #4f5751; /* secondary ink; 7.4:1 on --bg */
-  --ink-3: #6b736d; /* tertiary, never below 4.5:1 on --bg; use sparingly */
+  --ink-3: #5f6761; /* tertiary, AA (4.5:1) on --bg and on --surface; use sparingly */
   --rule: #d8d5cb; /* hairline */
   --rule-2: #bdb9ac; /* control borders */
   --accent: #1e6b3b; /* fairway: live, primary action, my row */

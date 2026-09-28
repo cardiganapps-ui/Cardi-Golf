@@ -123,8 +123,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
 
+  // Latest players and hole data for the effect below, which must run only when the hole
+  // changes (a realtime update must not wipe what is being typed).
+  const latest = useRef({ players, holeInfo })
+  useEffect(() => {
+    latest.current = { players, holeInfo }
+  })
   // (Re)initialize drafts when the hole changes: saved values or defaults (par, 2 putts).
   useEffect(() => {
+    const { players, holeInfo } = latest.current
     const next: Record<string, Draft> = {}
     for (const p of players) {
       const h = holeInfo(p.id)
@@ -132,7 +139,6 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     }
     setDrafts(next)
     initialDrafts.current = JSON.stringify(next)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hole, round.id, group.id])
   // An unsaved hole defers the "new version" reload offer (main.tsx).
   const initialDrafts = useRef('')
@@ -464,6 +470,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   <div className={styles.playerLine}>
                     <span className={styles.playerName}>
                       <span className={styles.playerNameText}>{p.displayName}</span>
+                      {locked && (
+                        <span className={styles.lockMark} aria-label={S.cardSigned}>
+                          <IconLock size={14} />
+                        </span>
+                      )}
                       {h.strokesReceived > 0 && (
                         <span className={styles.dots} aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
                           {'•'.repeat(h.strokesReceived)}
@@ -503,7 +514,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
       <Sheet open={!!tiebreak} onClose={() => setTiebreak(null)} title={S.whoHoledLast}>
         <div className="stack">
-          <p className="help">{S.whoHoledLastHint}</p>
+          <p className="help">{S.whoHoledLastHint(threshold)}</p>
           {tiebreak?.candidates.map((id) => {
             const p = players.find((x) => x.id === id)!
             return (

@@ -5,23 +5,18 @@
 //   node scripts/design-organizer.mjs          (reads/writes DESIGN_ORG_* in .env.local)
 //   node scripts/design-organizer.mjs --remove (deletes the account again)
 import { createClient } from '@supabase/supabase-js'
-import { appendFile, readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { appendFile } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import path from 'node:path'
+import { loadEnv } from './lib/env.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
 const envPath = path.join(root, '.env.local')
-if (existsSync(envPath)) {
-  for (const line of (await readFile(envPath, 'utf8')).split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv(envPath)
 const URL_ = process.env.VITE_SUPABASE_URL
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SERVICE = process.env.SUPABASE_SECRET_KEY
 if (!URL_ || !SERVICE) {
-  console.error('Missing VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY')
+  console.error('Missing VITE_SUPABASE_URL / SUPABASE_SECRET_KEY')
   process.exit(1)
 }
 const email = process.env.DESIGN_ORG_EMAIL ?? 'design-shots@cardi-golf.invalid'

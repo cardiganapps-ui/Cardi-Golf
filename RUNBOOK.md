@@ -49,7 +49,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 ## 5. Si la app se cae
 
 1. Usa las **tarjetas de papel** (sección 0). Golpes arriba, putts abajo, marca los 3 putts para la víbora.
-2. Al terminar, el admin captura todo desde Comité › **Scores** (jugador por jugador) o desde Tarjeta eligiendo el grupo.
+2. Al terminar, el admin captura todo desde Comité › **Tarjetas** (jugador por jugador) o desde Tarjeta eligiendo el grupo.
 3. Si Supabase está pausado: dashboard de Supabase → proyecto Cardi-Golf → "Restore". Tarda 1–2 minutos.
 4. Si Vercel está caído: el último respaldo JSON (sección 8) tiene todo; la liquidación se puede hacer a mano con el CSV de resultados.
 
@@ -66,7 +66,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
 2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
 3. **Dinero › Liquidación**: "Vía banco" es la lista de lo que el banquero paga a cada quien. "Sin banco" es la lista mínima de transferencias entre personas si alguien no pagó por adelantado. Marca "Pagado" conforme se pague. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
-4. **Más › Stats y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
+4. **Más › Estadísticas y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
 
 ## 8. Respaldo
 

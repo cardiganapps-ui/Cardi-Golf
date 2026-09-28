@@ -107,7 +107,7 @@ export function GamesScreen() {
             </button>
             <h1>{tabs.find((x) => x.value === current)?.label}</h1>
           </div>
-          {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} />}
+          {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} />}
 
           {current === 'individual' && state.modules.individual && (
             <div className={styles.section}>
@@ -163,7 +163,7 @@ export function GamesScreen() {
                     sub={
                       <span className={styles.sub}>
                         <span>
-                          {name(r.playerIds[0])} y {name(r.playerIds[1])}, {r.perRound.join(' + ')}
+                          {t.common.and(name(r.playerIds[0]), name(r.playerIds[1]))}, {t.common.plusList(r.perRound)}
                         </span>
                         {state.modules.pairs!.prizes[r.playerIds[0]] && <span className={styles.subMoney}>{money(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
                       </span>
@@ -190,7 +190,7 @@ export function GamesScreen() {
                               <span className={styles.rowSub}>
                                 {t.card.group} {g.number}
                               </span>
-                              <span>{pairsIn.map((p) => p.name ?? `${name(p.player1Id)} y ${name(p.player2Id)}`).join(' contra ')}</span>
+                              <span>{pairsIn.map((p) => p.name ?? t.common.and(name(p.player1Id), name(p.player2Id))).join(t.common.versus)}</span>
                             </span>
                             <span className={styles.figures}>
                               {pairsIn.map((p) => (

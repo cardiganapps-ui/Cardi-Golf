@@ -219,7 +219,7 @@ export function SettingsEditor({ value, onChange, players, groupSizes, compact }
             {value.auction.payout.map((slot, i) => (
               <div key={i} className="row">
                 <span className="grow small">
-                  {slot.slot === 'place' ? `${slot.place}º lugar` : slot.slot === 'bestOfTier' ? `Mejor ${slot.tier}` : value.labels.lastPlace}
+                  {t.rules.slotName(slot.slot, 'place' in slot ? slot.place : undefined, 'tier' in slot ? slot.tier : undefined, value.labels.lastPlace)}
                 </span>
                 {slot.slot === 'bestOfTier' && (
                   <select

@@ -2,7 +2,7 @@
 /* global document */
 // Design screenshots (redesign brief, phase 0): every screen in every data
 // state, at 390×844 (and 1024 wide for setup screens), into design/shots/<set>.
-//   npm run build && npx vite preview --port 4173 &
+//   VITE_DESIGN_ROUTES=1 npm run build && npx vite preview --port 4173 &   (the fixture routes exist only in dev and design builds)
 //   node scripts/design-shots.mjs before            # or: after, design
 //   node scripts/design-shots.mjs before --only tarjeta   # filter by name
 // Fixture states come from src/dev/fixtures.ts (no database). The few screens
@@ -10,17 +10,12 @@
 // tournament with the throwaway organizer from scripts/design-organizer.mjs.
 // Same Chromium/relay setup as e2e/smoke.mjs.
 import { chromium } from 'playwright-core'
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { loadEnv } from './lib/env.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
-if (existsSync(path.join(root, '.env.local'))) {
-  for (const line of (await readFile(path.join(root, '.env.local'), 'utf8')).split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv()
 const set = process.argv[2] ?? 'before'
 const onlyIdx = process.argv.indexOf('--only')
 const only = onlyIdx > 0 ? new RegExp(process.argv[onlyIdx + 1]) : null
@@ -121,7 +116,7 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     }
     await at('/dinero')
     await shot(p, `${f}--dinero`)
-    const liq = p.getByRole('tab', { name: 'Liquidación', exact: true })
+    const liq = p.getByRole('radio', { name: 'Liquidación', exact: true })
     if (await liq.count()) {
       await liq.click()
       await shot(p, `${f}--dinero--liquidacion`)
@@ -190,7 +185,7 @@ if (!process.env.SKIP_REAL) {
   await p.waitForTimeout(1200)
   await shot(p, `home--first-run`)
   await p.goto(`${base}/t/ensayo`, { waitUntil: 'domcontentloaded' })
-  await p.waitForSelector('text=Toca tu cara', { timeout: T }).catch(() => undefined)
+  await p.waitForSelector('text=Elige tu nombre', { timeout: T }).catch(() => undefined)
   await shot(p, `entrar--faces`)
   const face = p.locator('button', { hasText: 'Nico' }).first()
   if (await face.count()) {

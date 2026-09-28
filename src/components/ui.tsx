@@ -4,7 +4,7 @@
  * grid, marks) live in ./primitives and are re-exported here so existing
  * imports keep working.
  */
-import { Suspense, useEffect, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import styles from './ui.module.css'
 
@@ -38,9 +38,9 @@ export function Toggle({ label, checked, onChange, hint }: { label: string; chec
 }
 
 /** The sheet's frame without the backdrop; the design page renders it inline. */
-export function SheetFrame({ title, onClose, children, wide, className = '' }: { title?: string; onClose?: () => void; children: ReactNode; wide?: boolean; className?: string }) {
+export function SheetFrame({ title, onClose, children, wide, className = '', frameRef }: { title?: string; onClose?: () => void; children: ReactNode; wide?: boolean; className?: string; frameRef?: React.Ref<HTMLDivElement> }) {
   return (
-    <div className={`${styles.sheet} ${wide ? styles.sheetWide : ''} ${className}`} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+    <div ref={frameRef} tabIndex={-1} className={`${styles.sheet} ${wide ? styles.sheetWide : ''} ${className}`} role="dialog" aria-modal="true" aria-label={title ?? t.common.dialog} onClick={(e) => e.stopPropagation()}>
       <div className={styles.sheetHandle} />
       {title && (
         <div className={styles.sheetHead}>
@@ -57,22 +57,43 @@ export function SheetFrame({ title, onClose, children, wide, className = '' }: {
   )
 }
 
-/** Bottom sheet / modal. */
+/** Open sheets, outermost first: Escape closes only the last one and body scroll returns when the last one closes. */
+const openSheets: string[] = []
+
+/** Bottom sheet / modal. Focus moves in on open and back to the opener on close. */
 export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean }) {
+  const id = useId()
+  const frame = useRef<HTMLDivElement>(null)
+  const opener = useRef<HTMLElement | null>(null)
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
+    openSheets.push(id)
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+    // Focus the first control, else the frame itself (it is focusable and labelled).
+    const timer = setTimeout(() => {
+      const first = frame.current?.querySelector<HTMLElement>('input, select, textarea, button:not([disabled])')
+      ;(first ?? frame.current)?.focus()
+    }, 30)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || openSheets[openSheets.length - 1] !== id) return
+      e.stopPropagation()
+      onClose()
     }
-  }, [open, onClose])
+    window.addEventListener('keydown', onKey)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('keydown', onKey)
+      const i = openSheets.indexOf(id)
+      if (i >= 0) openSheets.splice(i, 1)
+      if (openSheets.length === 0) document.body.style.overflow = ''
+      opener.current?.focus?.()
+    }
+  }, [open, onClose, id])
   if (!open) return null
   return (
     <div className={styles.backdrop} onClick={onClose} role="presentation">
-      <SheetFrame title={title} onClose={onClose} wide={wide}>
+      <SheetFrame title={title} onClose={onClose} wide={wide} frameRef={frame}>
         {children}
       </SheetFrame>
     </div>

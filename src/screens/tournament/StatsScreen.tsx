@@ -3,7 +3,7 @@
  * that replays hole by hole, the pairs race, course stats and a per-player
  * table. Display only, no money.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Segmented } from '../../components/ui'
@@ -29,7 +29,7 @@ export function StatsScreen() {
   const stats = data?.state.stats
   const players = useMemo(() => data?.snapshot.players ?? [], [data])
   const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players])
-  const nameOf = (id: string) => byId.get(id)?.displayName ?? '?'
+  const nameOf = useCallback((id: string) => byId.get(id)?.displayName ?? '?', [byId])
 
   // Race data: one point per hole index (1..N), each series = cumulative points.
   const series = useMemo(() => {
@@ -59,8 +59,7 @@ export function StatsScreen() {
     }
     const order = data.state.modules.individual?.rows.map((r) => r.playerId) ?? list.map((s) => s.playerId)
     return { rows, keys: order.map((id) => ({ key: id, label: nameOf(id) })) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, stats, race])
+  }, [data, stats, race, nameOf])
 
   useEffect(() => {
     if (!playing) return
@@ -245,9 +244,11 @@ export function StatsScreen() {
                     const s = stats.players[pid]
                     if (!s) return null
                     return (
-                      <tr key={pid} onClick={() => setOpen(pid)}>
+                      <tr key={pid}>
                         <td>
-                          <strong>{nameOf(pid)}</strong>
+                          <button type="button" className={styles.rowBtn} onClick={() => setOpen(pid)}>
+                            <strong>{nameOf(pid)}</strong>
+                          </button>
                         </td>
                         <td className="num">{s.holesPlayed}</td>
                         <td className="num">{s.grossBirdies}</td>

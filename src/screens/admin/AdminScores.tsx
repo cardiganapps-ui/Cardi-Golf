@@ -29,7 +29,7 @@ export function AdminScores() {
   const [edit, setEdit] = useState<{ hole: number; strokes: number; putts: number; pickedUp: boolean; reason: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const [askUnsign, setAskUnsign] = useState(false)
-  const byId = new Map(snapshot.players.map((p) => [p.id, p]))
+  const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const dayOf = (rid: string) => t.round.day(snapshot.rounds.find((r) => r.id === rid)?.number ?? 0)
   const pr = state.core.rounds[roundId]?.[playerId]
@@ -47,8 +47,7 @@ export function AdminScores() {
     const rest = snapshot.players.filter((p) => !seen.has(p.id))
     if (rest.length) out.push({ label: groups.length ? SC.noGroup : SC.player, players: rest })
     return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot.groups, snapshot.players, roundId])
+  }, [snapshot.groups, snapshot.players, roundId, byId])
 
   /** Same rails as the Tarjeta (§9.3): strokes 1–15, putts 0–strokes. */
   const editError = (() => {

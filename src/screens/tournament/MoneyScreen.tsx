@@ -3,7 +3,7 @@
  * each person's net as the figure with the breakdown one tap away, and the
  * settlement (vía banco / sin banco) with "Pagado" for admins.
  */
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ShareCardButton } from '../../components/ShareCard'
@@ -25,8 +25,8 @@ export function MoneyScreen() {
   const { me, tournamentId } = useTournamentCtx()
   const { snapshot, state } = data
   const money = state.money
-  const byId = new Map(snapshot.players.map((p) => [p.id, p]))
-  const name = (id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : M.bank)
+  const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
+  const name = useCallback((id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : M.bank), [byId])
   const banker = snapshot.tournament.bankerPlayerId ? byId.get(snapshot.tournament.bankerPlayerId) : undefined
   const [mode, setMode] = useState<'live' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
@@ -69,8 +69,7 @@ export function MoneyScreen() {
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
     for (const tr of transfers) lines.push(M.pays(name(tr.from), name(tr.to), formatMoney(tr.amount)))
     return lines.join('\n')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [people, settle, money, snapshot.tournament.name])
+  }, [people, settle, money, snapshot.tournament.name, name])
 
   const verdict = money.banker.balanced ? M.bankOk : M.bankPending(formatMoney(money.banker.difference))
   const verdictClass = money.banker.balanced ? '' : state.tournamentFinal ? styles.bankVerdictOff : styles.bankVerdictOpen

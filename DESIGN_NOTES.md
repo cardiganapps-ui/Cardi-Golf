@@ -136,21 +136,21 @@ Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido
 
 Logic or product issues found while auditing; they are not design work and were not changed silently.
 
-- `listMyTournaments` (`src/data/api.ts:52`) returns one row per `tournament_organizers` row visible to the account, so a tournament with an owner and an admin shows twice in "Mis torneos" for the admin (`design/shots/before/organizer--my-tournaments.jpg`). Fix: de-duplicate by tournament id (keep the highest role).
+- ~~`listMyTournaments` (`src/data/api.ts:52`) returns one row per `tournament_organizers` row visible to the account, so a tournament with an owner and an admin shows twice in "Mis torneos" for the admin (`design/shots/before/organizer--my-tournaments.jpg`). Fix: de-duplicate by tournament id (keep the highest role).~~ Fixed in cleanup PR 3: organizers read only their own `tournament_organizers` rows.
 
-- `TournamentShell` shows "Conectando…" while `realtime` is `connecting` **or** `off`; on fixtures and before the first subscription this reads as a problem when nothing is wrong. Suggest treating `off` as a neutral, hidden state (phase 2 will render the chip differently but the state machine is unchanged).
-- `LiveScreen` derives money per player by summing `state.prizes` in the component; the engine already exposes `state.money.people[id].prizesTotal`. Not a bug, but two sources of truth for the same number.
+- ~~`TournamentShell` shows "Conectando…" while `realtime` is `connecting` **or** `off`; on fixtures and before the first subscription this reads as a problem when nothing is wrong. Suggest treating `off` as a neutral, hidden state (phase 2 will render the chip differently but the state machine is unchanged).~~ Fixed in cleanup PRs 1 and 4: `off` shows the cached-snapshot time, never "Conectando…".
+- ~~`LiveScreen` derives money per player by summing `state.prizes` in the component; the engine already exposes `state.money.people[id].prizesTotal`. Not a bug, but two sources of truth for the same number.~~ Fixed: the row reads `state.money.people[id].prizesTotal`.
 - `ScorecardScreen` grid headers use `displayName` sliced to fit; long display names truncate to six characters. Data issue: `display_name` has no length guidance in the admin form.
 
 Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`). All are behaviour, not visuals; phase 3 may touch the ones marked (UI) because the fix is in the component and changes no data or engine code, the rest wait for a separate PR.
-- `MyTournamentsScreen.tsx`: a `Link` ("Comité") is nested inside the row `Link`; nested anchors are invalid HTML. (UI)
-- `OrganizerLoginScreen.tsx`: `navigate()` is called in the render body instead of an effect. (UI)
-- `ResetPasswordScreen.tsx`: with no session it shows `t.auth.needsConfirmation` ("Revisa tu correo para confirmar la cuenta…"), the wrong message for an expired reset link.
-- `AdminAuction.tsx:58`, `AdminDraw.tsx:90`, `PlaceholderScreen.tsx:7`: the module-off guard shows `t.live.comingSoon` = "Llega en el siguiente milestone." (copy pass)
-- `AdminDraw.tsx`: the reveal timers (700ms per pair) are never cleared, so a redraw during a reveal races the old timers; saving the draw overwrites Day 1 groups and flips status to `live` with no confirmation.
+- ~~`MyTournamentsScreen.tsx`: a `Link` ("Comité") is nested inside the row `Link`; nested anchors are invalid HTML. (UI)~~ Fixed in phase 3.6: the two links are siblings.
+- ~~`OrganizerLoginScreen.tsx`: `navigate()` is called in the render body instead of an effect. (UI)~~ Fixed in phase 3.1: it runs in an effect.
+- ~~`ResetPasswordScreen.tsx`: with no session it shows `t.auth.needsConfirmation` ("Revisa tu correo para confirmar la cuenta…"), the wrong message for an expired reset link.~~ Fixed in phase 3.1: an expired link says so (`t.auth.resetExpired`).
+- ~~`AdminAuction.tsx:58`, `AdminDraw.tsx:90`, `PlaceholderScreen.tsx:7`: the module-off guard shows `t.live.comingSoon` = "Llega en el siguiente milestone." (copy pass)~~ Fixed: the copy reads "Este juego no está activo en este torneo."
+- ~~`AdminDraw.tsx`: the reveal timers (700ms per pair) are never cleared, so a redraw during a reveal races the old timers; saving the draw overwrites Day 1 groups and flips status to `live` with no confirmation.~~ Fixed: timers are cleared (phase 3.7) and the draw is one confirmed transaction (`save_draw`, cleanup PR 3).
 - `AdminGroups.tsx`: switching the day tab discards unsaved drafts silently; `.chip` (28px) holds a 32px `Avatar size="sm"`.
-- `AdminRounds.tsx`: start/finish/reopen/cancel have no busy guard, so a double tap fires twice; the date is rendered as raw ISO; a new round defaults to `courses[0]` before courses load.
-- `AdminTournament.tsx`: status tabs, banker select and "Nuevo código" write immediately with no busy state or success feedback.
+- ~~`AdminRounds.tsx`: start/finish/reopen/cancel have no busy guard, so a double tap fires twice; the date is rendered as raw ISO; a new round defaults to `courses[0]` before courses load.~~ Fixed: per-round busy (phase 3.7), formatted date, start guards (cleanup PR 3).
+- ~~`AdminTournament.tsx`: status tabs, banker select and "Nuevo código" write immediately with no busy state or success feedback.~~ Fixed in phase 3.7: busy state and a toast; the new code comes from `rotate_join_code` (cleanup PR 3).
 - `SettingsEditor.tsx`: tiers, prize lists and the pairing rule are `defaultValue`/`onBlur` inputs, so they do not reflect a realtime reload of `settings`; invalid entries are dropped silently.
 - `useCourses.ts`: no `loading` flag and `error` is never read by `AdminCourses` or `AdminRounds`.
 - `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.

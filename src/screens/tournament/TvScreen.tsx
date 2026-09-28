@@ -129,7 +129,7 @@ export function TvScreen() {
                           {name(r.playerIds[0])} & {name(r.playerIds[1])}
                         </span>
                       </span>
-                      <span className={styles.small}>{r.perRound.join(' + ')}</span>
+                      <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
                       <span className={styles.big}>{r.total}</span>
                     </div>
                   ))}
