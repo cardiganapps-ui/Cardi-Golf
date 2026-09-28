@@ -1,21 +1,25 @@
 /**
- * Tarjeta (§9.3): enter strokes and putts for the whole group, one hole at a
- * time, in seconds, offline-capable through the outbox.
+ * Tarjeta (§9.3): the whole group on one screen per hole, huge numerals,
+ * par by default, save and move on; undo instead of confirmation. The grid
+ * view is the classic card with pencil notation. Writes go through the
+ * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Sheet, toast } from '../../components/ui'
+import { Sheet, toast } from '../../components/ui'
+import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
+import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
+import { useOnline } from '../../components/OfflineBanner'
 import { enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
 import type { Group, Round } from '../../engine/types'
+import { celebrationColors } from '../../lib/tokens'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
-import { IconChevronLeft, IconChevronRight } from '../../components/icons'
-import { celebrationColors } from '../../lib/tokens'
 
 const S = t.card
 
@@ -24,6 +28,9 @@ interface Draft {
   putts: number
   pickedUp: boolean
 }
+
+/** The engine names net scores in golf English ("eagle"); the UI shows the Spanish word. Display only. */
+const scoreNameEs = (pts: number) => netScoreName(pts).replace('eagle', 'águila')
 
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
@@ -37,41 +44,38 @@ export function ScorecardScreen() {
   if (!data) return null
   if (!round) {
     return (
-      <div className="screen">
+      <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
-        <p className="muted">{t.live.noRounds}</p>
+        <EmptyState title={t.live.noRounds} body="" />
       </div>
     )
   }
   if (round.status !== 'live' && !me.isAdmin) {
     return (
-      <div className="screen">
+      <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
-        <p className="muted">{S.roundNotLive(round.number)}</p>
+        <EmptyState title={S.roundNotLive(round.number)} body="" />
       </div>
     )
   }
   if (!group) {
+    const nameOf = (id: string) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
     return (
-      <div className="screen">
+      <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         {groups.length === 0 ? (
-          <p className="muted">{S.noGroups}</p>
+          <EmptyState title={S.noGroups} body="" />
         ) : (
           <>
-            <p className="muted">{me.playerId ? S.notInGroup : S.pickGroup}</p>
+            <p className="help">{me.playerId ? S.notInGroup : S.pickGroup}</p>
             {(me.isAdmin || !me.playerId) && (
-              <div className="list">
+              <div className={styles.groupList}>
                 {groups.map((g) => (
-                  <button key={g.id} type="button" className="listItem" onClick={() => setGroupId(g.id)}>
-                    <span className="grow">
-                      <strong>
-                        {S.group} {g.number}
-                      </strong>
-                      <span className="help" style={{ display: 'block' }}>
-                        {g.playerIds.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?').join(' · ')}
-                      </span>
-                    </span>
+                  <button key={g.id} type="button" className={styles.groupBtn} onClick={() => setGroupId(g.id)}>
+                    <strong>
+                      {S.group} {g.number}
+                    </strong>
+                    <span className="help">{g.playerIds.map(nameOf).join(', ')}</span>
                   </button>
                 ))}
               </div>
@@ -88,6 +92,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const data = useTournament((s) => s.data)!
   const { me } = useTournamentCtx()
   const pending = useOutbox((s) => s.pending)
+  const lastError = useOutbox((s) => s.lastError)
+  const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
   const order = useMemo(() => playOrder(group.startHole, round.holes), [group.startHole, round.holes])
@@ -101,20 +107,20 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [tiebreak, setTiebreak] = useState<{ candidates: string[] } | null>(null)
   const [confirmWeird, setConfirmWeird] = useState<string[] | null>(null)
+  const [signing, setSigning] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const touch = useRef<{ x: number; y: number } | null>(null)
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
-  const par = holeInfo(players[0]!.id)?.par ?? 4
+  const lead = holeInfo(players[0]!.id)
+  const par = lead?.par ?? 4
 
   // (Re)initialize drafts when the hole changes: saved values or defaults (par, 2 putts).
   useEffect(() => {
     const next: Record<string, Draft> = {}
     for (const p of players) {
       const h = holeInfo(p.id)
-      next[p.id] = h?.played
-        ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp }
-        : { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
+      next[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
     }
     setDrafts(next)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,8 +152,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     for (const p of players) {
       const d = drafts[p.id]!
       if (d.pickedUp) continue
-      if (d.strokes >= 10) weird.push(`${p.displayName}: ${d.strokes} golpes`)
-      if (d.putts >= 5) weird.push(`${p.displayName}: ${d.putts} putts`)
+      if (d.strokes >= 10) weird.push(`${p.displayName}: ${d.strokes} ${S.strokes.toLowerCase()}`)
+      if (d.putts >= 5) weird.push(`${p.displayName}: ${d.putts} ${S.putts.toLowerCase()}`)
     }
     return weird
   }
@@ -163,7 +169,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     }
     setConfirmWeird(null)
     // Snake tiebreak: 2+ players at the threshold on this hole and no answer yet.
-    const candidates = players.filter((p) => !drafts[p.id]!.pickedUp || drafts[p.id]!.putts >= threshold).filter((p) => drafts[p.id]!.putts >= threshold).map((p) => p.id)
+    const candidates = players.filter((p) => drafts[p.id]!.putts >= threshold).map((p) => p.id)
     const answered = snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole)
     if (candidates.length >= 2 && !answered && !tiebreak) {
       setTiebreak({ candidates })
@@ -174,6 +180,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   async function commit(lastHoled?: string) {
     setBusy(true)
+    const savedHole = hole
+    const savedIdx = idx
     try {
       let celebrate = false
       for (const p of players) {
@@ -200,7 +208,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
       }
-      if (idx < order.length - 1) goto(idx + 1)
+      // Move on, and offer the way back instead of asking first.
+      toast(S.savedHole(savedHole), {
+        label: t.common.undo,
+        onClick: () => {
+          setView('hole')
+          goto(savedIdx)
+        },
+      })
+      if (savedIdx < order.length - 1) goto(savedIdx + 1)
       else setView('grid')
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
@@ -210,17 +226,88 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
 
   async function sign(pairId: string) {
-    if (!confirm(S.signConfirm)) return
+    setSigning(null)
     await enqueueSignature(tournamentId, { round_id: round.id, pair_id: pairId, signed_by: me.playerId })
     toast(S.signed)
   }
 
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
+  const syncText = !online ? t.sync.offlineShort : lastError ? lastError : pending > 0 ? t.sync.pending(pending) : t.sync.synced
+  const syncWarn = !online || !!lastError || pending > 0
+
+  const front = order.filter((h) => h <= 9).sort((a, b) => a - b)
+  const back = order.filter((h) => h > 9).sort((a, b) => a - b)
+  const sumPts = (pid: string, holes: number[]) => holes.reduce((a, h) => a + (roundState[pid]?.holes[h - 1]?.played ? roundState[pid]!.holes[h - 1]!.points : 0), 0)
+  const sumGross = (pid: string, holes: number[]) => {
+    const hs = holes.map((h) => roundState[pid]?.holes[h - 1]).filter((h) => h?.played && !h.pickedUp && h.gross != null)
+    return hs.length === holes.length ? hs.reduce((a, h) => a + h!.gross!, 0) : null
+  }
+  const gridRow = (h: number) => (
+    <tr key={h}>
+      <td>
+        <button
+          type="button"
+          className={`${styles.holeBtn} ${h === hole ? styles.holeCurrent : ''}`}
+          onClick={() => {
+            setHole(h)
+            setView('hole')
+          }}
+        >
+          {h}
+        </button>
+      </td>
+      <td className={styles.gridMeta}>{lead ? (roundState[players[0]!.id]?.holes[h - 1]?.par ?? '') : ''}</td>
+      <td className={styles.gridMeta}>{roundState[players[0]!.id]?.holes[h - 1]?.strokeIndex ?? ''}</td>
+      {players.map((p) => {
+        const hi = roundState[p.id]?.holes[h - 1]
+        if (!hi?.played) {
+          return (
+            <td key={p.id} className={styles.missing}>
+              –
+            </td>
+          )
+        }
+        return (
+          <td key={p.id}>
+            <span className={styles.cell}>
+              <ScoreMark value={hi.pickedUp ? 'L' : hi.gross!} kind={markFor(hi.gross, hi.par, hi.pickedUp)} />
+              <span className={styles.cellPts}>
+                {hi.points}
+                {hi.disputed && (
+                  <span className={styles.disputedMark} aria-label={S.disputed}>
+                    <IconAlert size={12} />
+                  </span>
+                )}
+              </span>
+            </span>
+          </td>
+        )
+      })}
+    </tr>
+  )
+  const subtotalRow = (label: string, holes: number[], total = false) => (
+    <tr className={total ? styles.total : styles.subtotal}>
+      <td>{label}</td>
+      <td className={styles.gridMeta}>{holes.reduce((a, h) => a + (roundState[players[0]!.id]?.holes[h - 1]?.par ?? 0), 0) || ''}</td>
+      <td />
+      {players.map((p) => {
+        const g = sumGross(p.id, holes)
+        return (
+          <td key={p.id}>
+            <span className={styles.cell}>
+              <span>{sumPts(p.id, holes)}</span>
+              <span className={styles.cellPts}>{g ?? ''}</span>
+            </span>
+          </td>
+        )
+      })}
+    </tr>
+  )
 
   return (
     <div
-      className={`screen ${styles.wrap}`}
+      className={styles.screen}
       onTouchStart={(e) => (touch.current = { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY })}
       onTouchEnd={(e) => {
         if (!touch.current || view !== 'hole') return
@@ -230,84 +317,62 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         if (Math.abs(dx) > 70 && Math.abs(dy) < 50) goto(dx < 0 ? idx + 1 : idx - 1)
       }}
     >
-      <div className="row row--between">
-        <div>
-          <span className="label">
-            {t.round.day(round.number)} · {S.group} {group.number}
-          </span>
-          {pairsOn && rivalPair && <p className="help">{S.keeping(pairName(rivalPair))}</p>}
+      <div className={styles.top}>
+        <div className={styles.topText}>
+          <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>
+          {pairsOn && rivalPair && <span>{S.keeping(pairName(rivalPair))}</span>}
         </div>
-        <div className="row">
-          <span className={`chip ${pending ? 'chip--sun' : 'chip--teal'}`}>{pending ? t.sync.pending(pending) : t.sync.synced}</span>
-          <button className="btn btn--secondary btn--sm" type="button" onClick={() => setView(view === 'hole' ? 'grid' : 'hole')}>
-            {view === 'hole' ? S.grid : S.holeView}
-          </button>
-        </div>
+        <button className="btn btn--ghost btn--sm" type="button" onClick={() => setView(view === 'hole' ? 'grid' : 'hole')}>
+          {view === 'hole' ? S.grid : S.holeView}
+        </button>
       </div>
 
       {view === 'grid' ? (
-        <div className={styles.gridWrap}>
-          <table className={`table ${styles.grid}`}>
-            <thead>
-              <tr>
-                <th>#</th>
-                {players.map((p) => (
-                  <th key={p.id}>{p.displayName.slice(0, 6)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {order.map((h) => (
-                <tr key={h}>
-                  <td>
-                    <button type="button" className={styles.holeBtn} onClick={() => { setHole(h); setView('hole') }}>
-                      {h}
-                    </button>
-                  </td>
-                  {players.map((p) => {
-                    const hi = roundState[p.id]?.holes[h - 1]
-                    return (
-                      <td key={p.id} className={`num ${hi?.played ? '' : styles.missing} ${hi?.disputed ? styles.disputed : ''}`} title={hi?.disputed ? S.disputed : undefined}>
-                        {hi?.played ? (hi.pickedUp ? 'L' : hi.points) : '·'}
-                        {hi?.disputed && <span className={styles.disputedMark} aria-label={S.disputed}>!</span>}
-                        {hi?.played && !hi.pickedUp && <span className={styles.grossMini}>{hi.gross}</span>}
-                      </td>
-                    )
-                  })}
+        <>
+          <div className={styles.gridWrap}>
+            <table className={styles.grid}>
+              <thead>
+                <tr>
+                  <th>{t.player.hole}</th>
+                  <th className={styles.gridMeta}>{t.player.par}</th>
+                  <th className={styles.gridMeta}>{t.player.si}</th>
+                  {players.map((p) => (
+                    <th key={p.id}>{p.displayName}</th>
+                  ))}
                 </tr>
-              ))}
-              <tr>
-                <td>
-                  <strong>{t.common.total}</strong>
-                </td>
-                {players.map((p) => (
-                  <td key={p.id} className="num">
-                    <strong>{roundState[p.id]?.points ?? 0}</strong>
-                    <span className={styles.grossMini}>{roundState[p.id]?.thru ?? 0}/{round.holes}</span>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-          {players.some((p) => missing(p.id).length) && <p className="help coral">{S.missingHoles}</p>}
-          {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <p className="help" style={{ color: '#8a5a00' }}>{S.disputedHint}</p>}
+              </thead>
+              <tbody>
+                {front.map(gridRow)}
+                {back.length > 0 && subtotalRow(S.front, front)}
+                {back.map(gridRow)}
+                {back.length > 0 && subtotalRow(S.back, back)}
+                {subtotalRow(t.common.total, order, true)}
+              </tbody>
+            </table>
+          </div>
+          <div className={styles.gridNotes}>
+            <span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>
+            {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
+            {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
+          </div>
           {pairsOn && complete && (
-            <div className="stack" style={{ marginTop: 12 }}>
+            <div>
               {snapshot.pairs
                 .filter((p) => [p.player1Id, p.player2Id].every((id) => group.playerIds.includes(id)))
                 .map((p) => {
                   const isSigned = snapshot.cardSignatures.some((s) => s.roundId === round.id && s.pairId === p.id)
                   const mine = myPair?.id === p.id
                   return (
-                    <div key={p.id} className="card card--cell row row--between" style={{ padding: 12 }}>
-                      <span>
+                    <div key={p.id} className={styles.signRow}>
+                      <span className={styles.signText}>
                         <strong>{pairName(p)}</strong>
-                        <span className="help" style={{ display: 'block' }}>
+                        <span className={`${styles.signState} ${isSigned ? styles.signLocked : ''}`}>
+                          {isSigned && <IconLock size={14} />}
                           {isSigned ? S.cardSigned : S.cardUnsigned}
                         </span>
                       </span>
                       {!isSigned && (!mine || me.isAdmin) && (
-                        <button className="btn btn--primary btn--sm" type="button" onClick={() => void sign(p.id)}>
+                        <button className="btn btn--primary btn--sm" type="button" onClick={() => setSigning(p.id)}>
                           {S.sign}
                         </button>
                       )}
@@ -316,31 +381,26 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                 })}
             </div>
           )}
-        </div>
+        </>
       ) : (
         <>
-          <header className={styles.holeHeader}>
-            <button className="btn btn--ghost" type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
+          <header className={styles.holeHead}>
+            <button className={styles.holeNav} type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
               <IconChevronLeft />
             </button>
             <div className={styles.holeTitle}>
-              <span className="label">{t.round.hole(hole)}</span>
+              <span className={styles.holeNum}>{hole}</span>
               <span className={styles.holeMeta}>
-                <span className="num">
-                  {t.player.par} {par}
-                </span>
-                <span>
-                  {t.player.si} {holeInfo(players[0]!.id)?.strokeIndex ?? '–'}
-                </span>
-                {holeInfo(players[0]!.id)?.yards ? <span>{t.player.yards(holeInfo(players[0]!.id)!.yards!)}</span> : null}
+                {t.player.par} {par}, {t.player.si} {lead?.strokeIndex ?? '–'}
+                {lead?.yards ? `, ${t.player.yards(lead.yards)}` : ''}
               </span>
             </div>
-            <button className="btn btn--ghost" type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
+            <button className={styles.holeNav} type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
               <IconChevronRight />
             </button>
           </header>
 
-          <div className="stack">
+          <div className={styles.players}>
             {players.map((p) => {
               const d = drafts[p.id]
               const h = holeInfo(p.id)
@@ -348,24 +408,25 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
               const locked = signed(p.id) && !me.isAdmin
               return (
-                <div key={p.id} className={`card ${styles.playerCard} ${locked ? styles.locked : ''}`}>
-                  <div className="row">
-                    <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
-                    <div className="grow">
-                      <strong>{p.displayName}</strong>
-                      <span className="help" style={{ display: 'block' }}>
-                        {h.strokesReceived > 0 ? <span className={styles.dots}>{'•'.repeat(h.strokesReceived)}</span> : S.noStrokes}
-                        {h.par !== par ? ` · Par ${h.par}` : ''}
-                      </span>
-                    </div>
-                    <span className={`chip ${pts >= 3 ? 'chip--sun' : pts === 0 ? 'chip--coral' : 'chip--teal'}`}>
-                      {pts} pts{!d.pickedUp && pts > 0 ? ` · ${netScoreName(pts)}` : ''}
+                <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`}>
+                  <div className={styles.playerLine}>
+                    <span className={styles.playerName}>
+                      <span className={styles.playerNameText}>{p.displayName}</span>
+                      {h.strokesReceived > 0 && (
+                        <span className={styles.dots} aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
+                          {'•'.repeat(h.strokesReceived)}
+                        </span>
+                      )}
+                    </span>
+                    <span className={`${styles.pts} ${pts >= 3 ? styles.ptsHigh : ''}`}>
+                      {S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null)}
+                      {h.par !== par ? `, ${S.parHere(h.par)}` : ''}
                     </span>
                   </div>
-                  <div className={styles.steppers}>
-                    <Stepper label={S.strokes} value={d.pickedUp ? null : d.strokes} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
+                  <div className={styles.controls}>
+                    <Stepper label={S.strokes} value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
                     <Stepper label={S.putts} value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
-                    <button type="button" className={`${styles.pickup} ${d.pickedUp ? styles.pickupOn : ''}`} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp}>
+                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp}>
                       {S.pickedUp}
                     </button>
                   </div>
@@ -376,9 +437,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
           <div className={styles.saveBar}>
             <button className="btn btn--primary btn--block" type="button" disabled={busy || !canEdit} onClick={() => void save()}>
-              {idx === order.length - 1 ? S.saveLast : S.save}
+              {busy ? t.common.saving : idx === order.length - 1 ? S.saveLast : S.save}
             </button>
-            {!canEdit && <p className="help coral">{anySigned ? S.lockedSigned : S.roundNotLive(round.number)}</p>}
+            {canEdit ? (
+              <span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>
+            ) : (
+              <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : S.roundNotLive(round.number)}</span>
+            )}
           </div>
         </>
       )}
@@ -389,9 +454,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           {tiebreak?.candidates.map((id) => {
             const p = players.find((x) => x.id === id)!
             return (
-              <button key={id} type="button" className="listItem" onClick={() => void commit(id)}>
-                <Avatar name={p.displayName} url={p.avatarUrl} />
-                <strong>{p.displayName}</strong>
+              <button key={id} type="button" className="btn btn--secondary btn--block" onClick={() => void commit(id)}>
+                {p.displayName}
               </button>
             )
           })}
@@ -400,7 +464,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
       <Sheet open={!!confirmWeird} onClose={() => setConfirmWeird(null)} title={S.weirdTitle}>
         <div className="stack">
-          <ul>
+          <ul className="small">
             {confirmWeird?.map((w) => (
               <li key={w}>{w}</li>
             ))}
@@ -415,26 +479,20 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           </div>
         </div>
       </Sheet>
-    </div>
-  )
-}
 
-function Stepper({ label, value, min, max, disabled, onChange }: { label: string; value: number | null; min: number; max: number; disabled?: boolean; onChange: (v: number) => void }) {
-  const v = value ?? min
-  return (
-    <div className={styles.stepper} role="group" aria-label={label}>
-      <span className="label">{label}</span>
-      <div className={styles.stepperRow}>
-        <button type="button" className={styles.stepBtn} disabled={disabled || v <= min} onClick={() => onChange(v - 1)} aria-label={`${label} −1`}>
-          −
-        </button>
-        <span className={`num ${styles.stepValue}`} aria-live="polite">
-          {value == null ? '–' : v}
-        </span>
-        <button type="button" className={styles.stepBtn} disabled={disabled || v >= max} onClick={() => onChange(v + 1)} aria-label={`${label} +1`}>
-          +
-        </button>
-      </div>
+      <Sheet open={!!signing} onClose={() => setSigning(null)} title={signing ? S.signTitle(pairName(snapshot.pairs.find((p) => p.id === signing)!)) : undefined}>
+        <div className="stack">
+          <p className="help">{S.signConfirm}</p>
+          <div className="row">
+            <button className="btn btn--secondary" type="button" onClick={() => setSigning(null)}>
+              {t.common.cancel}
+            </button>
+            <button className="btn btn--primary grow" type="button" onClick={() => signing && void sign(signing)}>
+              {S.sign}
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   )
 }
