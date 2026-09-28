@@ -22,8 +22,6 @@ const PENDING = new Set([
   'screens/tournament/CeremonyScreen.module.css',
   'screens/tournament/PlayerSheet.module.css',
   'screens/tournament/PrintScreen.module.css',
-  'screens/tournament/ScorecardScreen.module.css',
-  'screens/tournament/ScorecardScreen.tsx',
   'screens/tournament/SnakeBoard.module.css',
   'screens/tournament/TvScreen.module.css',
 ])
