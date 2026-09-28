@@ -64,6 +64,14 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - The settlement is two ruled lists: "Quién debe qué" (who, to whom, what for, the amount, "Pagado" for admins) and the transfers, vía banco or sin banco, with paid payouts greyed and marked with a check instead of faded by opacity.
 - One "Compartir" (the image) plus the text share when the device supports it; no camera glyph.
 
+## Phase 3, PR 6: Organizer (2026-09-28)
+
+- **Mis torneos** is grouped by what needs the organizer now: "En juego" (live and auction), then "En preparación", then "Terminados" at reduced emphasis. One ruled row per tournament: logo, name, status and code, and the Comité button beside the row instead of a link inside a link (the nested-anchor bug is fixed here; the duplicate rows that came from two organizer rows for one tournament are de-duplicated on screen, the query bug stays logged above).
+- **The wizard** shows progress as a four-segment rule plus "Paso n de 4, Nombre", not a row of chips. Templates are ruled radio rows with a check on the selected one; the player count moved into the games step because it drives the prize balance. Step 3 is a **summary** (name, template, games, players, entry and pot) followed by the prize statement, so the organizer reads the money before creating; the full editor opens under "Ajustar reglas y premios" only if they want to change something.
+- **Prize statement** (`PrizeSummary`) is shared with the Comité settings editor: one line per enabled game with its detail, the total, the entry pot, and "Cuadra" or the difference in red. It replaces the green/coral card.
+- **Created state** leads with the join code as the biggest figure on the page, then the link, copy and share, then "Ir al Comité".
+- Logged, not fixed: the per-line detail strings come from the engine (`prizeCheck.ts`) and print raw numbers ("$10000") rather than formatted money; the engine is out of scope for the redesign.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
