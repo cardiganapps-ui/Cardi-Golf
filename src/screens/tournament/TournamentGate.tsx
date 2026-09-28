@@ -3,7 +3,7 @@
  * needed), and either shows Entrar (face grid + PIN) or renders the shell
  * with the tournament store loaded.
  */
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -12,6 +12,8 @@ import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, useAuth } from '../../data/auth'
 import { isOrganizerOf, lookupTournament, myDeviceSession, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
+import { readCached, saveEntry } from '../../data/snapshotCache'
+import { refreshOutboxCounters } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { EnterScreen } from './EnterScreen'
@@ -50,6 +52,19 @@ export function TournamentGate() {
   const load = useTournament((s) => s.load)
   const data = useTournament((s) => s.data)
   const storeError = useTournament((s) => s.error)
+  /** True while the shell runs on the cached snapshot (no signal on open); retried when the network returns. */
+  const fromCache = useRef(false)
+
+  /** No signal: enter with the last snapshot this device saved for the slug (§8). */
+  const enterFromCache = useCallback(async (expectedId?: string): Promise<boolean> => {
+    const cached = await readCached(slug)
+    if (!cached || (expectedId && cached.entry.tournamentId !== expectedId)) return false
+    fromCache.current = true
+    useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
+    refreshOutboxCounters()
+    setPhase({ kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me })
+    return true
+  }, [slug])
 
   const resolve = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -66,22 +81,37 @@ export function TournamentGate() {
       const [device, organizer] = await Promise.all([myDeviceSession(), isOrganizerOf(lookup.id)])
       const linked = device && device.tournamentId === lookup.id ? device.playerId : null
       if (organizer || linked) {
-        const adminPlayer = linked ? lookup.players.find((p) => p.id === linked) : null
-        void adminPlayer
-        setPhase({ kind: 'in', lookup, me: { playerId: linked, isOrganizer: organizer, isAdmin: organizer } })
+        const me: Me = { playerId: linked, isOrganizer: organizer, isAdmin: organizer }
+        fromCache.current = false
+        setPhase({ kind: 'in', lookup, me })
         setLastTournament({ slug: lookup.slug, name: lookup.name })
+        void saveEntry({ slug, tournamentId: lookup.id, lookup, me })
         await load(lookup.id)
+        refreshOutboxCounters()
+        // The lookup worked but the snapshot did not: still better to show what we have.
+        if (!useTournament.getState().data) await enterFromCache(lookup.id)
       } else {
         setPhase({ kind: 'enter', lookup })
       }
     } catch (e) {
-      setPhase({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      if (await enterFromCache()) return
+      const offline = typeof navigator !== 'undefined' && !navigator.onLine
+      setPhase({ kind: 'error', message: offline ? t.errors.offlineFirstOpen : e instanceof Error ? e.message : String(e) })
     }
-  }, [slug, load])
+  }, [slug, load, enterFromCache])
 
   useEffect(() => {
     if (authReady) void resolve()
   }, [authReady, resolve])
+
+  // Back online after a cached open: resolve for real (session, role, live snapshot, Realtime).
+  useEffect(() => {
+    const retry = () => {
+      if (fromCache.current) void resolve()
+    }
+    window.addEventListener('online', retry)
+    return () => window.removeEventListener('online', retry)
+  }, [resolve])
 
   // Admin flag for linked players comes from the loaded snapshot (is_admin).
   useEffect(() => {

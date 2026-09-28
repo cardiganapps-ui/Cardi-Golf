@@ -12,6 +12,7 @@ import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primit
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
+import { RejectedWrites } from '../../components/RejectedWrites'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
@@ -93,6 +94,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const { me } = useTournamentCtx()
   const pending = useOutbox((s) => s.pending)
   const lastError = useOutbox((s) => s.lastError)
+  const rejected = useOutbox((s) => s.rejected)
   const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
@@ -123,8 +125,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       next[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
     }
     setDrafts(next)
+    initialDrafts.current = JSON.stringify(next)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hole, round.id, group.id])
+  // An unsaved hole defers the "new version" reload offer (main.tsx).
+  const initialDrafts = useRef('')
+  useEffect(() => {
+    useOutbox.setState({ editing: JSON.stringify(drafts) !== initialDrafts.current })
+  }, [drafts])
+  useEffect(() => () => useOutbox.setState({ editing: false }), [])
 
   const setDraft = (pid: string, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
 
@@ -233,8 +242,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
-  const syncText = !online ? t.sync.offlineShort : lastError ? lastError : pending > 0 ? t.sync.pending(pending) : t.sync.synced
-  const syncWarn = !online || !!lastError || pending > 0
+  const syncText = !online ? t.sync.offlineShort : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : pending > 0 ? t.sync.pending(pending) : t.sync.synced
+  const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0
 
   const front = order.filter((h) => h <= 9).sort((a, b) => a - b)
   const back = order.filter((h) => h > 9).sort((a, b) => a - b)
@@ -355,6 +364,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
+          <RejectedWrites canResend={me.isAdmin} />
           {pairsOn && complete && (
             <div>
               {snapshot.pairs
@@ -445,6 +455,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : S.roundNotLive(round.number)}</span>
             )}
           </div>
+          <RejectedWrites canResend={me.isAdmin} />
         </>
       )}
 

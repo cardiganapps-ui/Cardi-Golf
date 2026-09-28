@@ -29,6 +29,10 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [x] ~~**Nombre del remitente de los correos.**~~ Claude lo cambió a «Polo» con las llaves que pegaste (bloque SMTP completo, lo demás intacto). Verificado: un correo real de «¿Olvidaste tu contraseña?» salió de "Polo" <golf@cardigan.mx> y Resend lo marca entregado. (2026-09-28)
 - [ ] **Reinstalar la app.** Cuando esto llegue a `main`, borra la app de la pantalla de inicio y vuelve a agregarla desde https://golf.cardigan.mx: el nombre bajo el ícono debe decir «Polo» y el ícono es la P cursiva trazada a lápiz, como en la hoja que aprobaste (`design/brand/polo-logo-sheet.jpg`).
 
+## Limpieza tras la revisión (docs/audit-2026-09-28.md)
+
+- [ ] **Probar la sincronización en cancha (PR 1).** En tu teléfono con la app instalada y dentro de `/t/ensayo` como Nico: (1) pon modo avión, cierra la app del todo y vuélvela a abrir: debe mostrar los tableros y la Tarjeta con el aviso «Sin señal: mostrando lo último guardado»; (2) sigue en modo avión, guarda un hoyo, quita el modo avión: el chip pasa de «1 pendiente» a «Sincronizado» solo, y los cuatro jugadores del hoyo llegan juntos (no uno primero y tres cinco segundos después); (3) cuando yo suba una versión nueva, la app te avisa «Hay una versión nueva» con un botón, ya no se recarga sola. Como jugador sin ser Comité (otro PIN), «Más» ya no debe mostrar «Consola del Comité».
+
 ## Rediseño
 
 - [x] ~~**Aprobar la dirección de diseño.**~~ Decidido 2026-09-27: dirección A, «La tarjeta»; PR #11 fusionado; la fase 2 (sistema) va a `main` conforme quede verde y la fase 3 (pantalla por pantalla) sigue en PRs separados.

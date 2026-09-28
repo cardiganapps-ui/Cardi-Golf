@@ -8,6 +8,7 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { RejectedWrites } from '../../components/RejectedWrites'
 import { adminSaveScore, resolveDispute, unsignCard } from '../../data/api'
 import { enqueueTiebreak } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
@@ -217,6 +218,8 @@ export function AdminScores() {
           </div>
         )}
       </section>
+
+      <RejectedWrites canResend />
 
       <section className={a.section} id="admin-card">
         {rounds.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noRounds} />}

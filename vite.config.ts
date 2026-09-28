@@ -28,7 +28,8 @@ export default defineConfig({
         ICON_LINKS.reduce((out, path) => out.replaceAll(`href="${path}"`, `href="${versioned(path)}"`), html),
     },
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new deploy is offered, never forced: a reload mid-hole would lose the steppers.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: '/',
@@ -65,6 +66,14 @@ export default defineConfig({
         // Icon URLs carry ?v=<fingerprint>; offline, they still resolve to the precached file.
         ignoreURLParametersMatching: [/^v$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Logos and avatars from Storage stay available offline (§8).
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'tournament-assets', expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
       },
       devOptions: { enabled: false },
     }),
