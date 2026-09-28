@@ -5,6 +5,8 @@
 //   - 6-digit codes in every email, next to the link: the code keeps the flow
 //     inside the installed app (a link from Mail opens Safari on iOS)
 //   - Spanish subjects and templates
+//   - manual identity linking on, so an anonymous device can add Google
+//     (linkIdentity) and keep its uid
 // SMTP fields are never sent (a partial SMTP patch resets its siblings).
 //   node scripts/auth-config.mjs            → apply
 //   node scripts/auth-config.mjs --check    → print the current values only
@@ -33,6 +35,7 @@ const settings = {
   mailer_otp_length: 6,
   mailer_otp_exp: 3600,
   rate_limit_email_sent: 60,
+  security_manual_linking_enabled: true,
   mailer_subjects_confirmation: 'Tu código de Polo: {{ .Token }}',
   mailer_templates_confirmation_content: wrap('Confirma tu correo', `<p style="margin:0">Escribe este código en Polo para confirmar tu correo:</p>${code}<p style="font-size:14px;margin:0">O abre este enlace en tu teléfono: <a href="{{ .ConfirmationURL }}">confirmar mi correo</a>.</p>`),
   mailer_subjects_magic_link: 'Tu código para entrar a Polo: {{ .Token }}',
@@ -48,7 +51,7 @@ const settings = {
 }
 
 const show = (d) => {
-  const keys = ['mailer_autoconfirm', 'mailer_otp_length', 'rate_limit_email_sent', 'mailer_subjects_confirmation', 'mailer_subjects_magic_link', 'mailer_subjects_email_change', 'smtp_host', 'smtp_sender_name', 'smtp_admin_email', 'smtp_port', 'smtp_user']
+  const keys = ['mailer_autoconfirm', 'mailer_otp_length', 'rate_limit_email_sent', 'security_manual_linking_enabled', 'external_google_enabled', 'mailer_subjects_confirmation', 'mailer_subjects_magic_link', 'mailer_subjects_email_change', 'smtp_host', 'smtp_sender_name', 'smtp_admin_email', 'smtp_port', 'smtp_user']
   for (const k of keys) console.log(`  ${k} = ${JSON.stringify(d[k])}`)
   console.log(`  smtp_pass = ${d.smtp_pass ? '(set)' : '(missing!)'}`)
 }

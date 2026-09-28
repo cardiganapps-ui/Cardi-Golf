@@ -29,3 +29,16 @@ export function supabase(): SupabaseClient {
   }
   return client
 }
+
+/** Public auth settings (which sign-in providers are on). Cached for the session; `null` when unreachable. */
+let settingsCache: Promise<{ external?: Record<string, boolean> } | null> | null = null
+export function authSettings(): Promise<{ external?: Record<string, boolean> } | null> {
+  if (!url || !anonKey) return Promise.resolve(null)
+  settingsCache ??= fetch(`${url}/auth/v1/settings`, { headers: { apikey: anonKey } })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => {
+      settingsCache = null
+      return null
+    })
+  return settingsCache
+}

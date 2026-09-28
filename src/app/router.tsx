@@ -10,6 +10,10 @@ import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
 import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
 import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
 import { TournamentGate } from '../screens/tournament/TournamentGate'
+import { EntrarScreen } from '../screens/profile/EntrarScreen'
+import { OAuthReturnScreen } from '../screens/profile/OAuthReturnScreen'
+import { ProfileFixture, ProfileScreen } from '../screens/profile/ProfileScreen'
+const ProfileEditScreen = lazy(() => import('../screens/profile/ProfileEditScreen').then((m) => ({ default: m.ProfileEditScreen })))
 import { FixtureGate, FixtureIndex } from '../dev/FixtureGate'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
@@ -87,6 +91,9 @@ export const router = createBrowserRouter([
       { path: 'organizer', element: <MyTournamentsScreen /> },
       { path: 'organizer/new', element: <NewTournamentScreen /> },
       { path: 'organizer/reset', element: <ResetPasswordScreen /> },
+      { path: 'entrar', element: <EntrarScreen /> },
+      { path: 'perfil/vuelta', element: <OAuthReturnScreen /> },
+      { path: 'perfil/editar', element: <Lazy><ProfileEditScreen /></Lazy> },
       // Dev-only: the style guide and the design fixtures (the same screens on in-memory
       // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
       ...(DESIGN_ROUTES
@@ -94,9 +101,11 @@ export const router = createBrowserRouter([
             { path: 'fixture', element: <FixtureIndex /> },
             { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
             { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
+            { path: 'p/_/:name', element: <ProfileFixture /> },
           ]
         : []),
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
+      { path: 'p/:handle', element: <ProfileScreen /> },
       { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
       { path: '*', element: <NotFoundScreen /> },
     ],
