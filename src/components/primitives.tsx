@@ -58,16 +58,16 @@ export function Money({ amount, signed }: { amount: number; signed?: boolean }) 
 }
 
 // ---- Stepper ----
-export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string }) {
+export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label, disabled }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string; disabled?: boolean }) {
   return (
-    <div className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''}`} role="group" aria-label={label}>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: menos`} disabled={value <= min} onClick={() => onChange(value - 1)}>
+    <div className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''} ${disabled ? s.stepperOff : ''}`} role="group" aria-label={label}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: menos`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
         <IconMinus />
       </button>
       <span className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`} aria-live="polite">
         {value}
       </span>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: más`} disabled={value >= max} onClick={() => onChange(value + 1)}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: más`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
         <IconPlus />
       </button>
     </div>

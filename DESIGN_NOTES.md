@@ -39,6 +39,14 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - The feed is a ruled list with an icon per kind; a lead change is bold with the icon in the event accent, no yellow fill. The TV variant keeps the board tokens.
 - `e2e/smoke.mjs` now tolerates a group already on its last hole (the Ensayo has been advanced by every run) and reads today's points from the board cells.
 
+## Phase 3, PR 3: Tarjeta (2026-09-28)
+
+- One hole per screen and the whole foursome on it: the hole number is the largest thing (56 px), par and stroke index beside it, chevrons to move. Each player is a ruled row: name, stroke dots, the live points as text ("3 pts, birdie neto", red from a net birdie up), then the strokes stepper (defaults to par, par shown quiet), the putts stepper and "Levantó" as a pressed toggle. No cards, no badges.
+- Save moves on and offers "Deshacer" in the toast instead of asking first; the unusual-value check (10+ strokes, 5+ putts) stays as a sheet because the rules ask to confirm those. Signing a card uses a sheet instead of the browser confirm.
+- The sync state ("Sincronizado", "n pendientes", "Sin señal", or the outbox's last error) sits under the save button and under the grid, in the caution color when not clean.
+- Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
+- The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
