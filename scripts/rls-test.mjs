@@ -495,6 +495,98 @@ try {
   const { error: anonAvatar } = await lurker.storage.from('tournament-assets').upload(`profiles/${lurkerSession.user.id}/x-${rand}.png`, png(), { contentType: 'image/png' })
   check(!ownAvatar && !!otherAvatar && !!anonAvatar, 'an account writes only its own profiles/ folder', { ownAvatar: ownAvatar?.message })
   await admin.storage.from('tournament-assets').remove([avatar])
+
+  console.log('results: WHS in SQL, round results, the Polo index, published results:')
+  // SQL and TS agree on every shared case (src/engine/profile/cases/whs.json).
+  const whs = JSON.parse(await readFile(path.join(root, 'src', 'engine', 'profile', 'cases', 'whs.json'), 'utf8'))
+  const off = []
+  for (const c of whs.diff) {
+    const { data } = await A.sb.rpc('whs_diff10', { ags: c.ags, rating10: c.rating10, slope: c.slope })
+    if (data !== c.expect10) off.push(['diff', c, data])
+  }
+  for (const c of whs.courseHcp) {
+    const { data } = await A.sb.rpc('whs_course_hcp', { index10: c.index10, slope: c.slope, rating10: c.rating10, par: c.par })
+    if (data !== c.expect) off.push(['courseHcp', c, data])
+  }
+  for (const c of whs.strokes) {
+    const { data } = await A.sb.rpc('whs_strokes', { ch: c.ch, si: c.si })
+    if (data !== c.expect) off.push(['strokes', c, data])
+  }
+  for (const c of whs.index) {
+    const { data } = await A.sb.rpc('whs_index10', { diffs: c.diffs10 })
+    if (data !== c.expect10) off.push(['index', c, data])
+  }
+  check(off.length === 0, 'the SQL WHS functions match the shared cases', off)
+
+  // A rated par-72 course (SI = hole number), a tournament where U is a confirmed player, three rounds.
+  const { data: rc } = await admin.from('courses').insert({ name: `RLS course ${rand} results` }).select('id').single()
+  const { data: rtee } = await admin.from('tees').insert({ course_id: rc.id, name: 'Blancas', rating: 72.0, slope: 113, sort_order: 0 }).select('id').single()
+  await admin.from('holes').insert(Array.from({ length: 18 }, (_, i) => ({ tee_id: rtee.id, number: i + 1, par: 4, stroke_index: i + 1 })))
+  const R = await smallTournament(A, 'r')
+  await A.sb.rpc('comite_link_profile', { p_player_id: R.p0, p_handle: uProfile.handle })
+  await U.sb.rpc('link_my_profile', { p_player_id: R.p0 })
+  const rRounds = [R.round.id]
+  for (const n of [2, 3]) {
+    const { data: rr } = await A.sb.from('rounds').insert({ tournament_id: R.t.id, number: n, holes: 18, course_id: rc.id, status: 'live' }).select('id').single()
+    rRounds.push(rr.id)
+  }
+  await A.sb.from('rounds').update({ course_id: rc.id, status: 'live' }).eq('id', R.round.id)
+  const card = (roundId, fn) => Array.from({ length: 18 }, (_, i) => ({ round_id: roundId, player_id: R.p0, hole: i + 1, ...fn(i + 1), client_ts: new Date().toISOString() }))
+  const fives = () => ({ strokes: 5, putts: 2, picked_up: false })
+  await A.sb.from('scores').insert(card(rRounds[0], fives))
+  await A.sb.from('rounds').update({ status: 'finished' }).eq('id', rRounds[0])
+  const { data: res1 } = await U.sb.from('round_results').select('gross, ags, differential, complete, course_hcp').eq('round_id', rRounds[0]).eq('player_id', R.p0).single()
+  // Base 18 (manual) → course handicap 18 → net double bogey 7 on every par 4; 90 stands. (90 − 72.0) × 113 / 113 = 18.0.
+  check(res1?.gross === 90 && res1.ags === 90 && Number(res1.differential) === 18 && res1.complete === true && res1.course_hcp === 18, 'finishing a round writes its results (gross, AGS, differential)', res1)
+  await A.sb.from('scores').insert(card(rRounds[1], fives))
+  await A.sb.from('rounds').update({ status: 'finished' }).eq('id', rRounds[1])
+  const { data: twoRounds } = await U.sb.from('profiles').select('polo_index, polo_index_rounds').eq('id', U.id).single()
+  check(twoRounds.polo_index === null && twoRounds.polo_index_rounds === 2, 'two rounds: no index yet', twoRounds)
+  // Round 3: a 9 on hole 1 (capped at 7) and a pick-up on hole 2 (counts 7): AGS 7 + 7 + 16 × 5 = 94 → 22.0; no gross.
+  await A.sb.from('scores').insert(card(rRounds[2], (h) => (h === 1 ? { strokes: 9, putts: 2, picked_up: false } : h === 2 ? { strokes: null, putts: null, picked_up: true } : fives())))
+  await A.sb.from('rounds').update({ status: 'finished' }).eq('id', rRounds[2])
+  const { data: res3 } = await U.sb.from('round_results').select('gross, ags, differential, pickups').eq('round_id', rRounds[2]).eq('player_id', R.p0).single()
+  check(res3?.gross === null && res3.ags === 94 && Number(res3.differential) === 22 && res3.pickups === 1, 'net double bogey caps a big hole and fills a pick-up', res3)
+  const idxOf = async () => (await U.sb.from('profiles').select('polo_index, polo_index_rounds').eq('id', U.id).single()).data
+  let idx = await idxOf()
+  // Three differentials (22.0, 18.0, 18.0): the lowest − 2.0 = 16.0.
+  check(Number(idx.polo_index) === 16 && idx.polo_index_rounds === 3, 'three rounds give the Polo index (16.0)', idx)
+  await A.sb.rpc('admin_save_score', { p_round_id: rRounds[0], p_player_id: R.p0, p_hole: 3, p_strokes: 4, p_putts: 2, p_picked_up: false })
+  idx = await idxOf()
+  check(Number(idx.polo_index) === 15, 'a correction in a finished round moves the index (89 → 17.0 → 15.0)', idx)
+  await A.sb.from('rounds').update({ status: 'live' }).eq('id', rRounds[2])
+  const { data: reopened } = await U.sb.from('round_results').select('round_id').eq('round_id', rRounds[2])
+  idx = await idxOf()
+  check((reopened ?? []).length === 0 && idx.polo_index === null && idx.polo_index_rounds === 2, 'reopening a round takes its results out of the index', idx)
+  await A.sb.from('rounds').update({ status: 'finished' }).eq('id', rRounds[2])
+  await A.sb.from('tournaments').update({ counts_for_stats: false }).eq('id', R.t.id)
+  idx = await idxOf()
+  check(idx.polo_index === null && idx.polo_index_rounds === 0, 'a practice tournament does not count', idx)
+  await A.sb.from('tournaments').update({ counts_for_stats: true }).eq('id', R.t.id)
+  idx = await idxOf()
+  check(Number(idx.polo_index) === 15, 'and counts again when switched back', idx)
+
+  const payload = [
+    { playerId: R.p0, rank: 1, rankLabel: '1', points: 102, perRound: [34, 34, 34], awards: ['mostBirdies'], net: 500 },
+    { playerId: R.p1, rank: 2, rankLabel: '2', points: 80, perRound: [27, 27, 26], awards: [], net: -500 },
+  ]
+  const { error: notFinished } = await A.sb.rpc('publish_tournament_results', { p_tournament_id: R.t.id, p_rows: payload, p_currency: 'MXN' })
+  check(!!notFinished, 'results publish only once the tournament is finished')
+  await A.sb.from('tournaments').update({ status: 'finished' }).eq('id', R.t.id)
+  const { error: strangerPublish } = await S.sb.rpc('publish_tournament_results', { p_tournament_id: R.t.id, p_rows: payload, p_currency: 'MXN' })
+  const { data: published, error: publishErr } = await A.sb.rpc('publish_tournament_results', { p_tournament_id: R.t.id, p_rows: payload, p_currency: 'MXN' })
+  check(!!strangerPublish && !publishErr && published?.players === 2 && published.field === 2, 'the Comité publishes; nobody else can', { publishErr: publishErr?.message, published })
+  const { data: myMoney } = await U.sb.rpc('my_money')
+  const { data: sMoney } = await S.sb.from('tournament_money').select('net').eq('tournament_id', R.t.id)
+  const { data: uMoneyRows } = await U.sb.from('tournament_money').select('player_id, net').eq('tournament_id', R.t.id)
+  check(myMoney?.length === 1 && myMoney[0].net === 500 && (sMoney ?? []).length === 0 && uMoneyRows?.length === 1 && uMoneyRows[0].player_id === R.p0, 'money is private: its owner sees only their own net', { myMoney, uMoneyRows })
+  const { data: uHist } = await U.sb.rpc('profile_rounds', { p_handle: uProfile.handle })
+  const { data: sHist } = await S.sb.rpc('profile_rounds', { p_handle: uProfile.handle })
+  const { data: uTours } = await U.sb.rpc('profile_tournaments', { p_handle: uProfile.handle })
+  check(uHist?.length === 3 && (sHist ?? []).length === 0 && uTours?.find((x) => x.tournamentId === R.t.id)?.rankLabel === '1', 'history and finishes show to the owner and tournament mates, not strangers', { u: uHist?.length, s: sHist?.length })
+  await A.sb.from('tournaments').update({ status: 'live' }).eq('id', R.t.id)
+  const { data: gone } = await A.sb.from('tournament_results').select('player_id').eq('tournament_id', R.t.id)
+  check((gone ?? []).length === 0, 'leaving "finished" withdraws the published results')
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++

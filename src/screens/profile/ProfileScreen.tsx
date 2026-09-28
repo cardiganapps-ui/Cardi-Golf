@@ -1,22 +1,37 @@
 /**
- * `/p/:handle`: a player's profile. The photo and the name, then the index
- * as the hero figure, then who they are, then their tournaments. Strangers
- * with an account see the card; people who shared a tournament see the rest.
- * (v0: history, badges and head-to-head arrive with results and friends.)
+ * `/p/:handle`: a player's profile. The photo and the name, the Polo index
+ * as the hero figure (and how it came out), a stat strip, who they are,
+ * their tournaments with the finish, their rounds, and, for the owner only,
+ * their money. Strangers with an account see the card; people who shared a
+ * tournament see the rest.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Avatar, CopyButton, ShareButton, Spinner } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { Avatar, CopyButton, ShareButton, Sheet, Spinner } from '../../components/ui'
+import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
 import { IconChevronRight, IconSettings } from '../../components/icons'
 import { ensureSession, useAuth } from '../../data/auth'
-import { formatIndex, profileCard, useMyProfile, type MyLink, type ProfileCard } from '../../data/profiles'
+import {
+  formatIndex,
+  indexBreakdown,
+  myMoney,
+  profileCard,
+  profileRounds,
+  profileTournaments,
+  type MoneyLine,
+  type ProfileCard,
+  type ProfileTournament,
+  type RoundResult,
+} from '../../data/profiles'
 import { PROFILE_FIXTURES } from '../../dev/profileFixtures'
 import styles from './Profile.module.css'
 
+const P = t.profile
 const monthYear = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' })
+const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+const HISTORY_SHOWN = 8
 
 /** A tournament's logo, or its initial in a ruled square when it has none. */
 export function EventMark({ name, logoUrl }: { name: string; logoUrl: string | null }) {
@@ -29,10 +44,28 @@ export function EventMark({ name, logoUrl }: { name: string; logoUrl: string | n
   )
 }
 
-export function ProfileView({ card, tournaments }: { card: ProfileCard; tournaments?: MyLink[] }) {
+const tenths = (v: number) => (v < 0 ? `−${Math.abs(v).toFixed(1)}` : v.toFixed(1))
+const when = (r: RoundResult) => (r.playedOn ? dayMonth.format(new Date(`${r.playedOn}T12:00:00Z`)) : null)
+
+export function ProfileView({ card, tournaments, rounds, money }: { card: ProfileCard; tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }) {
   const where = [card.homeClub, card.city].filter(Boolean).join(', ')
   const url = `${window.location.origin}/p/${card.handle}`
   const hasIndex = card.index != null
+  const [howOpen, setHowOpen] = useState(false)
+  const [round, setRound] = useState<RoundResult | null>(null)
+  const [allRounds, setAllRounds] = useState(false)
+  const breakdown = useMemo(() => (rounds ? indexBreakdown(rounds) : null), [rounds])
+  const strip = useMemo(() => {
+    if (!rounds?.length) return null
+    const grosses = rounds.filter((r) => r.complete && r.holes === 18 && r.gross != null).map((r) => r.gross!)
+    return { rounds: rounds.length, bestGross: grosses.length ? Math.min(...grosses) : null, birdies: rounds.reduce((s, r) => s + r.birdies + r.eagles, 0) }
+  }, [rounds])
+  const totals = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const l of money ?? []) m.set(l.currency, (m.get(l.currency) ?? 0) + l.net)
+    return [...m.entries()]
+  }, [money])
+
   return (
     <div className={styles.screen}>
       <div className={styles.topBar}>
@@ -40,7 +73,7 @@ export function ProfileView({ card, tournaments }: { card: ProfileCard; tourname
           <Wordmark />
         </Link>
         {card.isMe && (
-          <Link to="/perfil/editar" className={styles.iconBtn} aria-label={t.profile.edit}>
+          <Link to="/perfil/editar" className={styles.iconBtn} aria-label={P.edit}>
             <IconSettings />
           </Link>
         )}
@@ -57,33 +90,121 @@ export function ProfileView({ card, tournaments }: { card: ProfileCard; tourname
 
       <div className={styles.stat}>
         <div className={styles.statText}>
-          <span className="label">{card.indexSource === 'manual' ? t.profile.indexManual : t.profile.index}</span>
-          <span className={styles.help}>{card.indexSource === 'manual' ? t.profile.manualNote : hasIndex ? t.profile.rounds(card.indexRounds) : t.profile.noIndex}</span>
+          <span className="label">{card.indexSource === 'manual' ? P.indexManual : P.index}</span>
+          <span className={styles.help}>{card.indexSource === 'manual' ? P.manualNote : hasIndex ? P.rounds(card.indexRounds) : P.noIndex}</span>
+          {card.indexSource === 'polo' && breakdown && (
+            <button type="button" className={`btn btn--ghost btn--sm ${styles.how}`} onClick={() => setHowOpen(true)}>
+              {t.money.howCalculated}
+            </button>
+          )}
         </div>
         {hasIndex && <span className={styles.statFigure}>{formatIndex(card.index)}</span>}
       </div>
-      {!hasIndex && card.indexSource === 'polo' && card.isMe && <p className={styles.help}>{t.profile.noIndexHint}</p>}
+      {!hasIndex && card.indexSource === 'polo' && card.isMe && !breakdown?.considered.length && <p className={styles.help}>{P.noIndexHint}</p>}
+
+      {strip && (
+        <div className={styles.strip}>
+          <span className={styles.stripItem}>
+            <span className={styles.stripFig}>{strip.rounds}</span>
+            <span className={styles.stripLabel}>{P.stats.rounds}</span>
+          </span>
+          <span className={styles.stripItem}>
+            <span className={styles.stripFig}>{strip.bestGross ?? '—'}</span>
+            <span className={styles.stripLabel}>{P.stats.bestGross}</span>
+          </span>
+          <span className={styles.stripItem}>
+            <span className={styles.stripFig}>{strip.birdies}</span>
+            <span className={styles.stripLabel}>{P.stats.birdies}</span>
+          </span>
+        </div>
+      )}
 
       {card.bio && <p className={styles.bio}>{card.bio}</p>}
 
       {tournaments && (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className="label">{t.profile.tournaments}</span>
-          </div>
+          <span className="label">{P.tournaments}</span>
           {tournaments.length === 0 ? (
-            <p className={styles.help}>{t.profile.noTournaments}</p>
+            <p className={styles.help}>{P.noTournaments}</p>
           ) : (
             <div className={styles.rows}>
-              {tournaments.map((l) => (
-                <Link key={l.playerId} to={`/t/${l.slug}`} className={styles.row}>
-                  <EventMark name={l.name} logoUrl={l.logoUrl} />
+              {tournaments.map((x) => (
+                <Link key={x.playerId} to={`/t/${x.slug}`} className={styles.row}>
+                  <EventMark name={x.name} logoUrl={x.logoUrl} />
                   <span className={styles.rowText}>
-                    <span className={styles.rowTitle}>{l.name}</span>
-                    <span className={styles.rowSub}>{l.linkStatus === 'pending' ? t.profile.pending : t.status[l.tournamentStatus]}</span>
+                    <span className={styles.rowTitle}>{x.name}</span>
+                    <span className={styles.rowSub}>
+                      {x.rankLabel ? P.finish(x.rankLabel, x.field) : t.status[x.status]}
+                      {x.awards.length > 0 ? `, ${x.awards.map(awardName).join(', ')}` : ''}
+                      {x.practice ? `, ${P.practice.toLowerCase()}` : ''}
+                    </span>
                   </span>
                   <span className={styles.rowEnd}>
+                    {x.points != null && <span className={styles.rowFig}>{x.points}</span>}
                     <IconChevronRight size={20} />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {rounds && (
+        <section className={styles.section}>
+          <span className="label">{P.history}</span>
+          {rounds.length === 0 ? (
+            <p className={styles.help}>{P.noHistory}</p>
+          ) : (
+            <div className={styles.rows}>
+              {(allRounds ? rounds : rounds.slice(0, HISTORY_SHOWN)).map((r) => (
+                <button key={r.roundId} type="button" className={styles.row} onClick={() => setRound(r)}>
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{r.course ?? r.tournament}</span>
+                    <span className={styles.rowSub}>
+                      {[when(r), r.complete ? P.roundLine(r.gross, r.ags) : P.incomplete, r.practice ? P.practice : null].filter(Boolean).join(', ')}
+                    </span>
+                  </span>
+                  <span className={styles.rowEnd}>{r.differential != null && <span className={styles.rowFig}>{tenths(r.differential)}</span>}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!allRounds && rounds.length > HISTORY_SHOWN && (
+            <button type="button" className={`btn btn--ghost btn--sm ${styles.start}`} onClick={() => setAllRounds(true)}>
+              {P.seeAll(rounds.length)}
+            </button>
+          )}
+        </section>
+      )}
+
+      {card.isMe && money && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span className="label">{P.money}</span>
+            <span className={styles.help}>{P.moneyHint}</span>
+          </div>
+          {money.length === 0 ? (
+            <p className={styles.help}>{P.noMoney}</p>
+          ) : (
+            <div className={styles.rows}>
+              {totals.map(([cur, net]) => (
+                <div key={cur} className={`${styles.row} ${styles.rowStrong}`}>
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{P.moneyTotal}</span>
+                  </span>
+                  <span className={styles.rowFig}>
+                    <Money amount={net} signed />
+                  </span>
+                </div>
+              ))}
+              {money.map((m) => (
+                <Link key={m.tournamentId} to={`/t/${m.slug}/dinero`} className={styles.row}>
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{m.name}</span>
+                  </span>
+                  <span className={styles.rowFig}>
+                    <Money amount={m.net} signed />
                   </span>
                 </Link>
               ))}
@@ -95,33 +216,103 @@ export function ProfileView({ card, tournaments }: { card: ProfileCard; tourname
       <div className={styles.actions}>
         {card.isMe && (
           <Link className="btn btn--secondary" to="/perfil/editar">
-            {t.profile.edit}
+            {P.edit}
           </Link>
         )}
-        <CopyButton text={url} label={t.profile.copyLink} />
-        <ShareButton text={t.profile.shareText(card.displayName)} url={url} title={card.displayName} />
+        <CopyButton text={url} label={P.copyLink} />
+        <ShareButton text={P.shareText(card.displayName)} url={url} title={card.displayName} />
       </div>
-      <p className={styles.foot}>{t.profile.memberSince(monthYear.format(new Date(card.memberSince)))}</p>
+      <p className={styles.foot}>{P.memberSince(monthYear.format(new Date(card.memberSince)))}</p>
+
+      <Sheet open={howOpen} onClose={() => setHowOpen(false)} title={hasIndex ? P.indexTitle(formatIndex(card.index)) : P.index}>
+        {breakdown && (
+          <div className="stack">
+            {breakdown.index10 == null ? (
+              <p className={styles.help}>{P.indexNeeds}</p>
+            ) : (
+              <p>
+                {P.indexRule(breakdown.considered.length, breakdown.count)}
+                {breakdown.adjust10 !== 0 ? ` ${P.indexAdjust(tenths(breakdown.adjust10 / 10))}` : ''}
+              </p>
+            )}
+            <p className={styles.help}>{P.indexHow}</p>
+            <div className={styles.rows}>
+              {breakdown.considered.map(({ round: r, used }) => (
+                <div key={r.roundId} className={`${styles.row} ${used ? styles.rowUsed : ''}`}>
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{r.course ?? r.tournament}</span>
+                    <span className={styles.rowSub}>{[when(r), used ? P.counts : null].filter(Boolean).join(', ')}</span>
+                  </span>
+                  <span className={styles.rowFig}>{tenths(r.differential!)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={!!round} onClose={() => setRound(null)} title={round ? P.roundTitle(round.tournament, round.roundNumber) : undefined}>
+        {round && (
+          <div className="stack">
+            <p className={styles.help}>{[round.course, P.roundFacts(round.tee, round.courseHcp), when(round)].filter(Boolean).join(', ')}</p>
+            <ScorecardGrid
+              holes={round.detail.map(([n, par, si, strokes, putts, pickedUp]) => ({ n, par, si, gross: strokes, putts, pickedUp }))}
+              playerLabel={card.displayName}
+              showPutts
+            />
+            <div className={styles.rows}>
+              <div className={styles.row}>
+                <span className={styles.rowText}>
+                  <span className={styles.rowTitle}>{P.roundLine(round.gross, round.ags)}</span>
+                  {round.rating != null && round.slope != null && <span className={styles.rowSub}>{`Rating ${round.rating}, slope ${round.slope}`}</span>}
+                </span>
+                {round.differential != null && (
+                  <span className={styles.rowEnd}>
+                    <span className={styles.help}>{P.differential}</span>
+                    <span className={styles.rowFig}>{tenths(round.differential)}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Sheet>
     </div>
   )
+}
+
+/** `award:<id>` → the fun award's name; `prize:<label>` → the label as the tournament named it. */
+function awardName(a: string): string {
+  if (a.startsWith('award:')) {
+    const id = a.slice(6) as keyof typeof t.stats.award
+    return t.stats.award[id]?.name ?? id
+  }
+  return a.replace(/^prize:/, '')
 }
 
 export function ProfileScreen() {
   const { handle = '' } = useParams()
   const { ready, user, isAnonymous } = useAuth()
-  const links = useMyProfile((s) => s.links)
   const [card, setCard] = useState<ProfileCard | null | undefined>(undefined)
+  const [extra, setExtra] = useState<{ tournaments?: ProfileTournament[]; rounds?: RoundResult[]; money?: MoneyLine[] }>({})
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!ready) return
     let live = true
     setCard(undefined)
+    setExtra({})
     void (async () => {
       try {
         await ensureSession()
         const c = await profileCard(handle)
-        if (live) setCard(c)
+        if (!live) return
+        setCard(c)
+        // History and finishes: only for people who may see the full profile. Money: only the owner's own.
+        if (c?.related) {
+          const [tournaments, rounds, money] = await Promise.all([profileTournaments(handle), profileRounds(handle), c.isMe ? myMoney() : Promise.resolve(undefined)])
+          if (live) setExtra({ tournaments, rounds, money })
+        }
       } catch (e) {
         if (live) setError(e instanceof Error ? e.message : String(e))
       }
@@ -141,8 +332,8 @@ export function ProfileScreen() {
           <Wordmark />
         </Link>
         <EmptyState
-          title={t.profile.notFound}
-          body={anonymous ? t.profile.signInToSee : t.profile.notFoundHint}
+          title={P.notFound}
+          body={anonymous ? P.signInToSee : P.notFoundHint}
           action={
             anonymous ? (
               <Link className="btn btn--primary" to={`/entrar?next=${encodeURIComponent(`/p/${handle}`)}`}>
@@ -154,12 +345,12 @@ export function ProfileScreen() {
       </div>
     )
   }
-  return <ProfileView card={card} tournaments={card.isMe ? links : undefined} />
+  return <ProfileView card={card} tournaments={extra.tournaments} rounds={extra.rounds} money={extra.money} />
 }
 
 /** `/p/_/:name` (design routes only): the profile on fixture data. */
 export function ProfileFixture() {
   const { name = 'yo' } = useParams()
   const f = PROFILE_FIXTURES[name] ?? PROFILE_FIXTURES.yo!
-  return <ProfileView card={f.card} tournaments={f.tournaments} />
+  return <ProfileView card={f.card} tournaments={f.tournaments} rounds={f.rounds} money={f.money} />
 }

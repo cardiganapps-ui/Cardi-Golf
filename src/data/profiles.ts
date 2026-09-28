@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { downscaleImage } from '../lib/images'
+import { whsIndex10, whsRule } from '../engine/profile/whs'
+import type { PublishRow } from '../engine/profile/results'
 
 export interface MyProfile {
   id: string
@@ -71,6 +73,69 @@ export interface TournamentProfile {
   displayName: string
   avatarUrl: string | null
   status: 'pending' | 'confirmed'
+  /** The profile's index (Polo or declared), for "Usar índice Polo". */
+  index?: number | null
+  indexSource?: 'polo' | 'manual'
+}
+
+/** One finished round of a profile (`round_results`, computed by the database). */
+export interface RoundResult {
+  roundId: string
+  tournamentId: string
+  slug: string
+  tournament: string
+  practice: boolean
+  playedOn: string | null
+  roundNumber: number
+  holes: number
+  complete: boolean
+  course: string | null
+  tee: string | null
+  rating: number | null
+  slope: number | null
+  par: number | null
+  courseHcp: number | null
+  gross: number | null
+  ags: number | null
+  differential: number | null
+  putts: number | null
+  eagles: number
+  birdies: number
+  pars: number
+  bogeys: number
+  doubles: number
+  pickups: number
+  /** [hole, par, stroke index, strokes, putts, picked up] */
+  detail: Array<[number, number, number, number | null, number | null, boolean]>
+}
+
+/** A profile's tournament with its published finish (rank and points from the individual game). */
+export interface ProfileTournament {
+  tournamentId: string
+  slug: string
+  name: string
+  logoUrl: string | null
+  status: 'setup' | 'auction' | 'live' | 'finished'
+  practice: boolean
+  playerId: string
+  displayName: string
+  startsOn: string | null
+  rank: number | null
+  rankLabel: string | null
+  field: number | null
+  points: number | null
+  awards: string[]
+}
+
+/** My net in one tournament (only mine; published when it finished). */
+export interface MoneyLine {
+  tournamentId: string
+  slug: string
+  name: string
+  net: number
+  currency: string
+  publishedAt: string
+  practice: boolean
 }
 
 export type LinkResult = { ok: true; playerId: string; tournamentId: string; status?: 'pending' | 'confirmed' } | { ok: false; reason: 'not_found' | 'taken' | 'already_linked' | 'not_yours' | 'expired'; playerId?: string }
@@ -186,6 +251,35 @@ export const unlinkMyProfile = (playerId: string) => rpc<boolean>('unlink_my_pro
 export const comiteLinkProfile = (playerId: string, handle: string) => rpc<LinkResult>('comite_link_profile', { p_player_id: playerId, p_handle: handle })
 export const comiteUnlinkProfile = (playerId: string) => rpc<void>('comite_unlink_profile', { p_player_id: playerId })
 export const redeemLinkToken = (token: string) => rpc<LinkResult>('redeem_link_token', { p_token: token })
+export const profileRounds = (handle: string) => rpc<RoundResult[]>('profile_rounds', { p_handle: handle })
+export const profileTournaments = (handle: string) => rpc<ProfileTournament[]>('profile_tournaments', { p_handle: handle })
+export const myMoney = () => rpc<MoneyLine[]>('my_money')
+
+/** The Comité publishes a finished tournament's results to its players' profiles. */
+export function publishTournamentResults(tournamentId: string, rows: PublishRow[], currency: string) {
+  return rpc<{ players: number; field: number }>('publish_tournament_results', { p_tournament_id: tournamentId, p_rows: rows, p_currency: currency })
+}
+
+export interface IndexBreakdown {
+  /** The rounds read (the latest 20 that count), newest first, with whether each is among the ones averaged. */
+  considered: Array<{ round: RoundResult; used: boolean }>
+  index10: number | null
+  count: number
+  adjust10: number
+}
+
+/** How the Polo index comes out of these rounds: the database's rule, recomputed here to show it. */
+export function indexBreakdown(rounds: RoundResult[]): IndexBreakdown {
+  const eligible = rounds.filter((r) => !r.practice && r.differential != null).slice(0, 20)
+  const r = whsIndex10(eligible.map((x) => Math.round(x.differential! * 10)))
+  const rule = whsRule(eligible.length)
+  return {
+    considered: eligible.map((round, i) => ({ round, used: r.used.includes(i) })),
+    index10: r.index10,
+    count: rule?.count ?? 0,
+    adjust10: rule?.adjust10 ?? 0,
+  }
+}
 
 /** The player this device holds by PIN, if any (its own row is readable). */
 export async function myDeviceClaim(): Promise<{ playerId: string; tournamentId: string } | null> {

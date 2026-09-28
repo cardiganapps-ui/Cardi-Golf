@@ -1,0 +1,36 @@
+{
+  "_note": "Integer tenths. Run by src/engine/profile/whs.test.ts (TS) and scripts/rls-test.mjs (SQL). Half-way values round up (toward +∞).",
+  "diff": [
+    { "ags": 85, "rating10": 713, "slope": 131, "expect10": 118, "why": "(85 − 71.3) × 113 / 131 = 11.82 → 11.8" },
+    { "ags": 78, "rating10": 715, "slope": 130, "expect10": 57, "why": "6.5 × 113 / 130 = 5.65 → 5.7 (half up)" },
+    { "ags": 65, "rating10": 715, "slope": 130, "expect10": -56, "why": "−6.5 × 113 / 130 = −5.65 → −5.6 (half up)" },
+    { "ags": 72, "rating10": 720, "slope": 113, "expect10": 0, "why": "par round on a par-rated tee" },
+    { "ags": 93, "rating10": 670, "slope": 113, "expect10": 260, "why": "(93 − 67.0) × 113 / 113 = 26.0" },
+    { "ags": 100, "rating10": 700, "slope": 113, "expect10": 300, "why": "30.0" }
+  ],
+  "courseHcp": [
+    { "index10": 81, "slope": 128, "rating10": 712, "par": 72, "expect": 8, "why": "8.1 × 128 / 113 − 0.8 = 8.38 → 8" },
+    { "index10": 200, "slope": 113, "rating10": 720, "par": 72, "expect": 20, "why": "20 exactly" },
+    { "index10": -12, "slope": 113, "rating10": 720, "par": 72, "expect": -1, "why": "plus 1.2 → −1.2 → −1" },
+    { "index10": 5, "slope": 113, "rating10": 720, "par": 72, "expect": 1, "why": "0.5 → 1 (half up)" }
+  ],
+  "strokes": [
+    { "ch": 0, "si": 1, "expect": 0 },
+    { "ch": 16, "si": 16, "expect": 1 },
+    { "ch": 16, "si": 17, "expect": 0 },
+    { "ch": 18, "si": 18, "expect": 1 },
+    { "ch": 43, "si": 7, "expect": 3 },
+    { "ch": 43, "si": 8, "expect": 2 },
+    { "ch": -1, "si": 18, "expect": -1 },
+    { "ch": -1, "si": 17, "expect": 0 },
+    { "ch": -2, "si": 17, "expect": -1 }
+  ],
+  "index": [
+    { "diffs10": [152, 104, 120], "expect10": 84, "used": [1], "why": "3 differentials: lowest 10.4 − 2.0 = 8.4" },
+    { "diffs10": [100, 90, 80, 120, 110, 130], "expect10": 75, "used": [1, 2], "why": "6: average of the lowest 2 (8.0, 9.0) = 8.5 − 1.0 = 7.5" },
+    { "diffs10": [81, 82, 200, 200, 200, 200, 200], "expect10": 82, "used": [0, 1], "why": "7: (8.1 + 8.2) / 2 = 8.15 → 8.2 (half up)" },
+    { "diffs10": [100, 90], "expect10": null, "used": [], "why": "fewer than 3: no index" },
+    { "diffs10": [100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 0], "expect10": 135, "used": [0, 1, 2, 3, 4, 5, 6, 7], "why": "only the latest 20 count (the 21st, 0.0, is ignored): average of 10.0…17.0 = 13.5" },
+    { "diffs10": [600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600], "expect10": 540, "used": [0, 1, 2, 3, 4, 5, 6, 7], "why": "capped at 54.0" }
+  ]
+}

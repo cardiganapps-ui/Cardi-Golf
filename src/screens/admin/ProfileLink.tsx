@@ -6,12 +6,12 @@
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
-import { handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
+import { formatIndex, handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
 import a from './Admin.module.css'
 
 const P = t.admin.players
 
-export function ProfileLink({ playerId, profile, onChanged }: { playerId: string; profile: TournamentProfile | undefined; onChanged: () => void }) {
+export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { playerId: string; profile: TournamentProfile | undefined; onChanged: () => void; onUseIndex?: (index: number) => void }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<ProfileHit[]>([])
@@ -79,7 +79,15 @@ export function ProfileLink({ playerId, profile, onChanged }: { playerId: string
             {P.unlinkProfile}
           </button>
         </div>
-      ) : (
+      ) : null}
+      {profile && profile.status === 'confirmed' && profile.index != null && onUseIndex ? (
+        <div className={a.chipRow}>
+          <button className="btn btn--secondary btn--sm" type="button" onClick={() => onUseIndex(profile.index!)}>
+            {P.applyIndex(formatIndex(profile.index), profile.indexSource === 'manual')}
+          </button>
+        </div>
+      ) : null}
+      {profile ? null : (
         <div className={a.chipRow}>
           <span className={a.help}>{P.profileHint}</span>
           <button className="btn btn--secondary btn--sm" type="button" onClick={() => setOpen(true)}>
