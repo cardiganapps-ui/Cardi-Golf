@@ -554,35 +554,22 @@
   color: var(--ink);
   display: inline-flex;
   align-items: center;
-  gap: 0.28em;
+  gap: 0.18em;
 }
 .wordmarkBoard {
   color: var(--board-ink);
 }
-/* Symbol colors: card stock, graphite, pencil red; one-color and board tones swap them. */
+/* Symbol color: the graphite pencil line; on the board it takes the leader yellow. */
 .logoMark {
-  --logo-paper: var(--bg);
   --logo-ink: var(--ink);
-  --logo-ring: var(--under);
   flex: none;
   display: block;
 }
-.logoMono {
-  --logo-ring: var(--ink);
-}
 .logoBoard {
-  --logo-paper: var(--board-bg);
-  --logo-ink: var(--board-ink);
-  --logo-ring: var(--board-accent);
-}
-.logoPaper {
-  fill: var(--logo-paper);
+  --logo-ink: var(--board-accent);
 }
 .logoInk {
   stroke: var(--logo-ink);
-}
-.logoRing {
-  stroke: var(--logo-ring);
 }
 
 /* ---- Plate (board surface only) ---- */

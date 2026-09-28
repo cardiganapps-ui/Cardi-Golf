@@ -1,30 +1,23 @@
 {
-  "_comment": "Polo symbol: a scorecard grid with a score of 3 circled in pencil (a birdie). 100x100 grid; the ring is also the knockout that clears the grid behind the figure; the card spans 16..84. Read by src/components/primitives.tsx (LogoMark) and scripts/make-icons.mjs so the app icon and the in-app mark are one drawing.",
-  "card": {
-    "x": 16,
-    "y": 16,
-    "size": 68,
-    "rx": 7,
-    "stroke": 3.8
-  },
-  "grid": {
-    "lines": [
-      33,
-      50,
-      67
-    ],
-    "stroke": 1.6
-  },
-  "figure": {
-    "d": "M40.2 38.3 A5.6 5.6 0 1 1 45.8 45.6 A6.1 6.1 0 1 1 39.9 53.9",
-    "stroke": 3.8
-  },
-  "ring": {
-    "cx": 45.5,
-    "cy": 46.3,
-    "rx": 14.6,
-    "ry": 13.2,
-    "rotate": -14,
-    "stroke": 2.6
+  "_comment": "Polo symbol: a cursive P drawn in one pencil line (stem, bowl, a loop at the foot). 100x100 grid, centred. Two passes of the same line give the pencil feel: a main stroke and a thinner, offset, lighter one. Read by src/components/primitives.tsx (LogoMark) and scripts/make-icons.mjs so the app icon and the in-app mark are one drawing.",
+  "d": "M32.5 82 C30.5 67 26.5 49 29.5 37 C32.5 23 46.5 15 59.5 19 C73.5 24 73.5 42 61.5 49 C51.5 55 38.5 55 34.5 63 C31.5 70 33.5 83 41.5 84 C49.5 85 53.5 77 47.5 73 C41.5 69 35.5 75 31.5 85",
+  "passes": [
+    {
+      "width": 5,
+      "opacity": 0.92,
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "width": 2.6,
+      "opacity": 0.55,
+      "dx": 0.7,
+      "dy": 0.5
+    }
+  ],
+  "box": {
+    "x": 10,
+    "y": 10,
+    "size": 80
   }
 }

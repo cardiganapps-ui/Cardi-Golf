@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <rect width="64" height="64" rx="14.1" fill="#fbfaf7"/>
-  <path d="M21.12 10.24 L21.12 53.76 M10.24 21.12 L53.76 21.12 M32.00 10.24 L32.00 53.76 M10.24 32.00 L53.76 32.00 M42.88 10.24 L42.88 53.76 M10.24 42.88 L53.76 42.88" stroke="#1b211d" stroke-width="1.02" fill="none"/>
-  <rect x="10.24" y="10.24" width="43.52" height="43.52" rx="4.48" fill="none" stroke="#1b211d" stroke-width="2.43"/>
   <g transform="translate(0 0) scale(0.6400)">
-    <ellipse cx="45.5" cy="46.3" rx="14.6" ry="13.2" transform="rotate(-14 45.5 46.3)" fill="#fbfaf7"/>
-    <path d="M40.2 38.3 A5.6 5.6 0 1 1 45.8 45.6 A6.1 6.1 0 1 1 39.9 53.9" fill="none" stroke="#1b211d" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <ellipse cx="45.5" cy="46.3" rx="14.6" ry="13.2" transform="rotate(-14 45.5 46.3)" fill="none" stroke="#9d1c23" stroke-width="2.6"/>
+    <path d="M32.5 82 C30.5 67 26.5 49 29.5 37 C32.5 23 46.5 15 59.5 19 C73.5 24 73.5 42 61.5 49 C51.5 55 38.5 55 34.5 63 C31.5 70 33.5 83 41.5 84 C49.5 85 53.5 77 47.5 73 C41.5 69 35.5 75 31.5 85" transform="translate(0 0)" fill="none" stroke="#1b211d" stroke-width="5" stroke-opacity="0.92" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32.5 82 C30.5 67 26.5 49 29.5 37 C32.5 23 46.5 15 59.5 19 C73.5 24 73.5 42 61.5 49 C51.5 55 38.5 55 34.5 63 C31.5 70 33.5 83 41.5 84 C49.5 85 53.5 77 47.5 73 C41.5 69 35.5 75 31.5 85" transform="translate(0.7 0.5)" fill="none" stroke="#1b211d" stroke-width="2.6" stroke-opacity="0.55" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

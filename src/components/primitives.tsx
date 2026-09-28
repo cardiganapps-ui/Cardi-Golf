@@ -313,32 +313,36 @@ export function EventName({ name, tagline, logoUrl, small }: { name: string; tag
   )
 }
 /**
- * The Polo symbol: a scorecard grid with a 3 circled in pencil (a birdie).
- * Same drawing as the app icon (src/design/logoMark.json). `tone`: full color
- * on card stock, one-color graphite, or reversed on the board surface.
+ * The Polo symbol: a cursive P drawn in one pencil line. Same drawing as the
+ * app icon (src/design/logoMark.json). `tone`: graphite on card stock (color
+ * and one-color are the same graphite line), or the board's leader yellow on
+ * the TV surface.
  */
 export type LogoTone = 'color' | 'mono' | 'board'
 export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: LogoTone }) {
-  const { card, grid, figure, ring } = logo
-  const end = card.x + card.size
-  const lines = grid.lines.map((v) => `M${v} ${card.y}V${end}M${card.x} ${v}H${end}`).join('')
-  const ringTransform = `rotate(${ring.rotate} ${ring.cx} ${ring.cy})`
-  const pad = card.stroke / 2 + 0.2
+  const { d, passes, box } = logo
   return (
     <svg
-      className={`${s.logoMark} ${tone === 'mono' ? s.logoMono : tone === 'board' ? s.logoBoard : ''}`}
+      className={`${s.logoMark} ${tone === 'board' ? s.logoBoard : ''}`}
       width={size}
       height={size}
-      viewBox={`${card.x - pad} ${card.y - pad} ${card.size + pad * 2} ${card.size + pad * 2}`}
+      viewBox={`${box.x} ${box.y} ${box.size} ${box.size}`}
       aria-hidden="true"
       focusable="false"
     >
-      <rect x={card.x} y={card.y} width={card.size} height={card.size} rx={card.rx} className={s.logoPaper} />
-      <path d={lines} className={s.logoInk} strokeWidth={grid.stroke} fill="none" />
-      <rect x={card.x} y={card.y} width={card.size} height={card.size} rx={card.rx} className={s.logoInk} strokeWidth={card.stroke} fill="none" />
-      <ellipse cx={ring.cx} cy={ring.cy} rx={ring.rx} ry={ring.ry} transform={ringTransform} className={s.logoPaper} />
-      <path d={figure.d} className={s.logoInk} strokeWidth={figure.stroke} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <ellipse cx={ring.cx} cy={ring.cy} rx={ring.rx} ry={ring.ry} transform={ringTransform} className={s.logoRing} strokeWidth={ring.stroke} fill="none" />
+      {passes.map((q, i) => (
+        <path
+          key={i}
+          d={d}
+          transform={`translate(${q.dx} ${q.dy})`}
+          className={s.logoInk}
+          strokeWidth={q.width}
+          strokeOpacity={q.opacity}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
     </svg>
   )
 }
@@ -346,7 +350,7 @@ export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: 
 export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: number; tone?: LogoTone; mark?: boolean }) {
   return (
     <span className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`} style={{ fontSize: size }} role="img" aria-label={t.app.name}>
-      {mark && <LogoMark size={Math.round(size * 1.05)} tone={tone} />}
+      {mark && <LogoMark size={Math.round(size * 1.3)} tone={tone} />}
       <span aria-hidden="true">{t.app.name}</span>
     </span>
   )
