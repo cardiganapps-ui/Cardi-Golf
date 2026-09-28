@@ -41,6 +41,8 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 - [ ] **Perfiles, parte 0 (arreglos previos).** Nada que configurar; solo pruébalo cuando puedas: (1) en https://golf.cardigan.mx/organizer/login, «Entrar con código» con tu correo: te llega un correo de "Polo" en español con un código de 6 dígitos; escríbelo y entras (si no llega, «Reenviar código»); (2) quien cree una cuenta nueva de organizador ya no entra directo: confirma su correo con ese mismo código. Por qué: con la confirmación apagada, cualquiera podía «reclamar» un correo ajeno sin comprobarlo, y los perfiles que vienen se amarran al correo. El límite de correos subió a 60 por hora. También cerré un hueco en el almacenamiento: con la llave pública se podían reemplazar o borrar las fotos de tarjetas de campo; ya no.
 
+- [ ] **Perfiles, parte 1 (identidad, del lado del servidor).** Nada nuevo que ver todavía: la app se ve igual. Por dentro, un jugador ya se puede amarrar a un perfil (cuenta con correo o Google) y una cuenta puede jugar varios torneos a la vez. Solo confirma que en `/t/ensayo` entras con cara y PIN como siempre, capturas un hoyo y el Comité funciona igual. Si algo te pide PIN de nuevo o te saca, dímelo.
+
 ## Rediseño
 
 - [x] ~~**Aprobar la dirección de diseño.**~~ Decidido 2026-09-27: dirección A, «La tarjeta»; PR #11 fusionado; la fase 2 (sistema) va a `main` conforme quede verde y la fase 3 (pantalla por pantalla) sigue en PRs separados.

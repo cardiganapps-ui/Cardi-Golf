@@ -34,6 +34,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   game_results: 'tournament_id,game_id,player_id',
   photos: 'id',
   audit_log: 'id',
+  profiles: 'id',
+  profile_link_tokens: 'token_hash',
 }
 
 /** R2 object key for a backup taken at `at` (UTC date). */

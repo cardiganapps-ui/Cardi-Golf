@@ -248,6 +248,7 @@ export const t = {
     wrongPin: 'PIN incorrecto.',
     attemptsLeft: (n: number) => (n === 1 ? 'Te queda 1 intento.' : `Te quedan ${n} intentos.`),
     locked: 'Muchos intentos. Espera 5 minutos.',
+    alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
     notFound: 'Ese torneo no existe. Revisa el enlace o el código.',
     noPlayers: 'El Comité todavía no ha cargado jugadores.',
     enterAs: (name: string) => `Entrar como ${name}`,

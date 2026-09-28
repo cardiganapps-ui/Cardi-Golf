@@ -10,7 +10,7 @@ import { ErrorBox, Spinner } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, useAuth } from '../../data/auth'
-import { isOrganizerOf, lookupTournament, myDeviceSession, releaseDevice, type LookupResult } from '../../data/api'
+import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
 import { readCached, saveEntry } from '../../data/snapshotCache'
 import { refreshOutboxCounters } from '../../data/outbox'
@@ -78,10 +78,9 @@ export function TournamentGate() {
         setPhase({ kind: 'notFound' })
         return
       }
-      const [device, organizer] = await Promise.all([myDeviceSession(), isOrganizerOf(lookup.id)])
-      const linked = device && device.tournamentId === lookup.id ? device.playerId : null
-      if (organizer || linked) {
-        const me: Me = { playerId: linked, isOrganizer: organizer, isAdmin: organizer }
+      const m = await myMembership(lookup.id)
+      if (m.isOrganizer || m.playerId) {
+        const me: Me = { playerId: m.playerId, isOrganizer: m.isOrganizer, isAdmin: m.isAdmin }
         fromCache.current = false
         setPhase({ kind: 'in', lookup, me })
         setLastTournament({ slug: lookup.slug, name: lookup.name })

@@ -44,6 +44,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       if (r.reason === 'no_pin') setError(t.enter.noPin)
       else if (r.reason === 'locked') setError(t.enter.locked)
       else if (r.reason === 'wrong_pin') setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
+      else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
       else setError(t.enter.notFound)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
