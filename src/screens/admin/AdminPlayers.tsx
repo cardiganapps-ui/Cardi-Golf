@@ -15,6 +15,8 @@ import { courseHandicap, estimateIndex, playingHandicap, strokesReceived } from 
 import type { EstimateInput, Player } from '../../engine/types'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentProfiles } from '../../data/profiles'
+import { ProfileLink } from './ProfileLink'
 import a from './Admin.module.css'
 
 const P = t.admin.players
@@ -76,6 +78,7 @@ export function AdminPlayers() {
   const [askDelete, setAskDelete] = useState(false)
   const [q, setQ] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [profiles, reloadProfiles] = useTournamentProfiles(tournamentId)
 
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
@@ -214,6 +217,7 @@ export function AdminPlayers() {
                     {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {p.baseHcp}
                     {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
                     {p.isAdmin ? `, ${P.committee}` : ''}
+                    {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
                   </span>
                 </span>
               </button>
@@ -354,6 +358,7 @@ export function AdminPlayers() {
 
             <Toggle label={`${P.honoree} (${settings.labels.honoree})`} checked={E.is_honoree} onChange={(v) => setEditing({ ...E, is_honoree: v })} />
             <Toggle label={P.admin} checked={E.is_admin} onChange={(v) => setEditing({ ...E, is_admin: v })} />
+            {E.id && <ProfileLink playerId={E.id} profile={profiles.find((x) => x.playerId === E.id)} onChanged={reloadProfiles} />}
             <Field label={P.formGuide}>
               <textarea className="textarea" value={E.form_guide ?? ''} onChange={(e) => setEditing({ ...E, form_guide: e.target.value || null })} />
             </Field>

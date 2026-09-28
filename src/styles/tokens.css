@@ -53,6 +53,12 @@
   --chart-11: #8a4a6a;
   --chart-12: #4f5751;
 
+  /* Google's own colors, only for its sign-in mark (brand guidelines). */
+  --google-blue: #4285f4;
+  --google-green: #34a853;
+  --google-yellow: #fbbc05;
+  --google-red: #ea4335;
+
   /* ---- Type ---- */
   --font-text: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-event: 'Fraunces', 'Iowan Old Style', Georgia, serif; /* the event name, nothing else */

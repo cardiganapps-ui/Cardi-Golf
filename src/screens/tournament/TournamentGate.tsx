@@ -23,6 +23,8 @@ export interface Me {
   isOrganizer: boolean
   /** Organizer account or admin player: may use the Comité console. */
   isAdmin: boolean
+  /** How this session is the player: its profile's confirmed link, or this device's PIN. */
+  via?: 'profile' | 'device' | null
 }
 
 export interface TournamentCtx {
@@ -80,7 +82,7 @@ export function TournamentGate() {
       }
       const m = await myMembership(lookup.id)
       if (m.isOrganizer || m.playerId) {
-        const me: Me = { playerId: m.playerId, isOrganizer: m.isOrganizer, isAdmin: m.isAdmin }
+        const me: Me = { playerId: m.playerId, isOrganizer: m.isOrganizer, isAdmin: m.isAdmin, via: m.via }
         fromCache.current = false
         setPhase({ kind: 'in', lookup, me })
         setLastTournament({ slug: lookup.slug, name: lookup.name })

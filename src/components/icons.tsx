@@ -248,3 +248,64 @@ export const IconReceipt = (p: P) => (
     <path d="M9 8h6M9 12h6" />
   </Svg>
 )
+/** A person: profiles. */
+export const IconPerson = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20.5c1.2-3.8 4-5.5 7.5-5.5s6.3 1.7 7.5 5.5" />
+  </Svg>
+)
+/** Two people: friends, crews. */
+export const IconPeople = (p: P) => (
+  <Svg {...p}>
+    <circle cx="9" cy="8.5" r="3.5" />
+    <path d="M2.5 20c1-3.4 3.4-5 6.5-5s5.5 1.6 6.5 5" />
+    <path d="M15.5 5.3a3.5 3.5 0 0 1 0 6.4" />
+    <path d="M17.5 15.2c2 .6 3.3 2.2 4 4.8" />
+  </Svg>
+)
+/** Notifications. */
+export const IconBell = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
+  </Svg>
+)
+/** Search. */
+export const IconSearch = (p: P) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M16 16l4.5 4.5" />
+  </Svg>
+)
+/** Upcoming outings. */
+export const IconCalendar = (p: P) => (
+  <Svg {...p}>
+    <rect x="4" y="5.5" width="16" height="15" rx="2" />
+    <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+  </Svg>
+)
+/** Home (Mi Polo). */
+export const IconHome = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 11l8-6.5 8 6.5" />
+    <path d="M6 9.5V20h12V9.5" />
+  </Svg>
+)
+/** Settings: a slider pair (not a gear, which reads as "system"). */
+export const IconSettings = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+    <circle cx="15" cy="7" r="2" />
+    <circle cx="9" cy="17" r="2" />
+  </Svg>
+)
+/** Google's "G", in its own colors (sign-in button only). */
+export const IconGoogle = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path style={{ fill: 'var(--google-blue)' }} d="M22.6 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h6a5.1 5.1 0 0 1-2.2 3.4v2.8h3.6c2.1-2 3.2-4.8 3.2-8.2z" />
+    <path style={{ fill: 'var(--google-green)' }} d="M12 23c3 0 5.5-1 7.4-2.7l-3.6-2.8c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.7H2v2.9A11 11 0 0 0 12 23z" />
+    <path style={{ fill: 'var(--google-yellow)' }} d="M5.7 13.9a6.6 6.6 0 0 1 0-4.2V6.8H2a11 11 0 0 0 0 9.9l3.7-2.8z" />
+    <path style={{ fill: 'var(--google-red)' }} d="M12 5.4c1.6 0 3.1.6 4.3 1.7l3.2-3.2A11 11 0 0 0 2 6.8l3.7 2.9C6.6 7.3 9.1 5.4 12 5.4z" />
+  </svg>
+)

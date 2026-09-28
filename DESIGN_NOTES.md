@@ -103,6 +103,17 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 
 - **Icon caching.** iOS kept showing the old flag icon after the logo shipped, because Safari caches a site's touch icon by URL and does not refetch it when the file changes. `vite.config.ts` now adds a fingerprint of each icon's bytes to its URL (`?v=…`) in `index.html` and in the manifest, so any new icon is a new URL. The service worker ignores `v` when looking up its precache, so the icons still work offline. Nothing to bump by hand: `npm run icons` changes the bytes, the build changes the URLs.
 
+## Profiles, PR 2: accounts, profile, Mi Polo (2026-09-28)
+
+- **The index is the hero figure** of a profile: label and rounds on the left, the number at `--fs-4xl` in the condensed width on the right, between the heavy rule under the hero and a hairline. Without an index the figure is omitted (a large dash read as a rule) and the line says «Sin índice todavía»; the owner also gets one sentence on how it is computed.
+- **Hero** is the photo at 88 px, the display name, `@handle`, then club and city on one line. No cover image, no card.
+- **Tournaments without a logo** get their initial in a ruled square (`EventMark`) instead of an empty box, which read as a checkbox.
+- **Mi Polo** (home for accounts): the hero links to the profile; a settings control (two sliders, not a gear) opens the editor; «¿Eres tú?» proposals are ruled rows with the two answers inline; then «En juego», «Próximos», «Jugados» as ruled rows (the player you are there, and «Organizas» when you run it); the join code and the organizer links stay at the bottom.
+- **Entrar** is one field and one code, like the organizer sign-in. When the device holds a player, the title becomes «Guarda tu perfil» and the lede names the player and the tournament. Google, when on, is a secondary button above a hairline divider, with Google's own mark (its four brand colors are tokens used only there).
+- **Más**: anonymous players see «Tu perfil» with one line and a secondary button; an account that holds the player only by PIN sees «Guardar este torneo en mi perfil»; a profile-linked account's «Cambiar de jugador» becomes «No soy yo», confirmed in a sheet.
+- New icons: person, people, bell, search, calendar, home, settings.
+- Fixtures: `/p/_/yo`, `/p/_/nuevo`, `/p/_/extrano`, `/p/_/manual`; shots `design/shots/after/perfil--*.jpg`.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

@@ -178,6 +178,16 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
   await p.context().close()
 }
 
+// ---- Profile fixtures (phone): /p/_/<name> ----
+{
+  const p = await newPage(PHONE)
+  for (const f of ['yo', 'nuevo', 'extrano', 'manual']) {
+    await p.goto(`${base}/p/_/${f}`, { waitUntil: 'domcontentloaded' })
+    await shot(p, `perfil--${f}`)
+  }
+  await p.context().close()
+}
+
 // ---- Real app: Home, Entrar, organizer (relay) ----
 if (!process.env.SKIP_REAL) {
   const p = await newPage(PHONE, { relay: true })

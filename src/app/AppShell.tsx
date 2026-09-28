@@ -4,6 +4,7 @@ import { OfflineBanner } from '../components/OfflineBanner'
 import { Toaster } from '../components/ui'
 import { useAuth } from '../data/auth'
 import { startOutbox } from '../data/outbox'
+import { useMyProfile } from '../data/profiles'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -17,6 +18,12 @@ export function AppShell() {
     void init()
     void startOutbox()
   }, [init])
+  // An account has a profile (created on first load); it follows the session.
+  const accountId = useAuth((s) => (s.user && !s.isAnonymous ? s.user.id : null))
+  useEffect(() => {
+    if (accountId) void useMyProfile.getState().load()
+    else useMyProfile.getState().clear()
+  }, [accountId])
   return (
     <div className={styles.shell}>
       <OfflineBanner />

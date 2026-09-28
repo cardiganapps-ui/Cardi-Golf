@@ -4,12 +4,15 @@
  * breakdown), pair and owners, money so far, and the basic stats.
  */
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ExplanationSheet, HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Sheet } from '../../components/ui'
 import { Money, ScorecardGrid, type GridHole } from '../../components/primitives'
 import { ShareCardButton } from '../../components/ShareCard'
 import { useTournament } from '../../data/tournamentStore'
+import { useTournamentProfiles } from '../../data/profiles'
+import { useTournamentCtx } from './TournamentGate'
 import { formatMoney } from '../../lib/money'
 import type { Explanation } from '../../engine/types'
 import styles from './PlayerSheet.module.css'
@@ -17,6 +20,8 @@ import styles from './PlayerSheet.module.css'
 export function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
   const data = useTournament((s) => s.data)
   const [why, setWhy] = useState<{ title: string; why: Explanation } | null>(null)
+  const { tournamentId } = useTournamentCtx()
+  const [profiles] = useTournamentProfiles(playerId ? tournamentId : null)
   const p = data?.snapshot.players.find((x) => x.id === playerId)
   const money = useMemo(() => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []), [data, playerId])
   const rounds = useMemo(
@@ -59,6 +64,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const hc = state.core.handicaps[p.id]
   const totals = state.core.totals[p.id]
   const putts = state.modules.fewestPutts?.rows.find((r) => r.playerId === p.id)
+  const profile = profiles.find((x) => x.playerId === p.id && x.status === 'confirmed')
 
   return (
     <Sheet open={!!playerId} onClose={onClose} wide>
@@ -72,6 +78,11 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
               {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18))}</span> : null}
             </span>
           </div>
+          {profile && (
+            <Link className="btn btn--ghost btn--sm" to={`/p/${profile.handle}`}>
+              {t.profile.viewProfile}
+            </Link>
+          )}
         </div>
 
         <section className={styles.section}>

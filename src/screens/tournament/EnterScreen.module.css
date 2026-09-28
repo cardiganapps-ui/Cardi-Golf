@@ -48,6 +48,11 @@
   text-align: center;
   overflow-wrap: anywhere;
 }
+.faceAsk {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--event-accent);
+}
 .gridDense .faceName {
   text-align: left;
   flex: 1;

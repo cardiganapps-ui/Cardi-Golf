@@ -6,6 +6,7 @@ import { EventName } from '../../components/primitives'
 import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
 import { useAuth } from '../../data/auth'
+import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
 
 /** Above this many players the grid goes dense and gets a name filter. */
@@ -22,6 +23,9 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  /** After a PIN on an account: offer to keep this tournament in the profile. */
+  const [askSave, setAskSave] = useState<LookupResult['players'][number] | null>(null)
+  const account = !!user && !isAnonymous
 
   const dense = lookup.players.length > DENSE_FROM
   const players = useMemo(() => {
@@ -37,7 +41,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
     try {
       const r = await claimPlayer(selected.id, nextPin)
       if (r.ok) {
-        onEntered()
+        if (account && !selected.hasProfile) setAskSave(selected)
+        else onEntered()
         return
       }
       setPin('')
@@ -50,6 +55,42 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
+    }
+  }
+
+  /** "¿Eres tú?": the Comité proposed this player for my profile; yes links it, no clears the proposal. */
+  async function answer(yes: boolean) {
+    if (!selected) return
+    setBusy(true)
+    setError(null)
+    try {
+      if (yes) {
+        const r = await linkMyProfile(selected.id)
+        if (!r.ok) {
+          setError(r.reason === 'already_linked' ? t.account.already : t.account.linkTaken)
+          return
+        }
+      } else await unlinkMyProfile(selected.id)
+      void useMyProfile.getState().load()
+      onEntered()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveToProfile() {
+    if (!askSave) return
+    setBusy(true)
+    try {
+      await linkMyProfile(askSave.id)
+      void useMyProfile.getState().load()
+    } catch {
+      // Entering matters more than saving; Más offers it again.
+    } finally {
+      setBusy(false)
+      onEntered()
     }
   }
 
@@ -74,7 +115,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               <button key={p.id} type="button" className={styles.face} onClick={() => setSelected(p)}>
                 <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? undefined : 'lg'} honoree={p.isHonoree} />
                 <span className={styles.faceName}>{p.displayName}</span>
-                {p.tier && <span className="tierBadge">{p.tier}</span>}
+                {p.pendingMe ? <span className={styles.faceAsk}>{t.enter.isThisYou}</span> : p.tier && <span className="tierBadge">{p.tier}</span>}
               </button>
             ))}
           </div>
@@ -84,6 +125,43 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             </Link>
           )}
         </>
+      ) : askSave ? (
+        <div className={`${styles.pinStep} fade-in`}>
+          <div className={styles.who}>
+            <Avatar name={askSave.displayName} url={askSave.avatarUrl} size="lg" honoree={askSave.isHonoree} />
+            <div className="grow">
+              <h2>{t.more.saveHere}</h2>
+              <p className="help">{t.more.saveProfileHint}</p>
+            </div>
+          </div>
+          <div className={styles.actions}>
+            <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => onEntered()}>
+              {t.common.notNow}
+            </button>
+            <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void saveToProfile()}>
+              {t.common.save}
+            </button>
+          </div>
+        </div>
+      ) : selected.pendingMe ? (
+        <div className={`${styles.pinStep} fade-in`}>
+          <div className={styles.who}>
+            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
+            <div className="grow">
+              <h2>{t.enter.isThisYou}</h2>
+              <p className="help">{t.enter.confirmYou(selected.displayName)}</p>
+            </div>
+          </div>
+          {error && <p className="error">{error}</p>}
+          <div className={styles.actions}>
+            <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void answer(false)}>
+              {t.mipolo.no}
+            </button>
+            <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void answer(true)}>
+              {t.mipolo.yes}
+            </button>
+          </div>
+        </div>
       ) : (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
