@@ -9,7 +9,8 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { replaceGroups } from '../../data/api'
+import { saveGroups } from '../../data/api'
+import { withTeeTimes } from '../../lib/teeTimes'
 import { useTournament } from '../../data/tournamentStore'
 import { generateGroupsFromStandings } from '../../engine/modules/pairs'
 import type { Group, Round } from '../../engine/types'
@@ -22,6 +23,8 @@ const SEARCH_FROM = 12
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 interface DraftGroup {
+  /** Existing group id; kept so tiebreak answers survive an edit. */
+  id?: string
   number: number
   teeTime: string
   startHole: number
@@ -49,7 +52,7 @@ export function AdminGroups() {
     return snapshot.groups
       .filter((g) => g.roundId === roundId)
       .sort((x, y) => x.number - y.number)
-      .map((g) => ({ number: g.number, teeTime: g.teeTime?.slice(0, 5) ?? '', startHole: g.startHole, playerIds: g.playerIds }))
+      .map((g) => ({ id: g.id, number: g.number, teeTime: g.teeTime?.slice(0, 5) ?? '', startHole: g.startHole, playerIds: g.playerIds }))
   }, [drafts, snapshot.groups, roundId])
 
   const assigned = new Set(current.flatMap((g) => g.playerIds))
@@ -69,12 +72,8 @@ export function AdminGroups() {
   }, [current, pairsOn, snapshot.pairs, settings.modules.pairs.pairing])
 
   function withTimes(groups: string[][]): DraftGroup[] {
-    const first = current[0]?.teeTime || '09:00'
-    const [h, m] = first.split(':').map(Number)
-    return groups.map((ids, i) => {
-      const mins = (h ?? 9) * 60 + (m ?? 0) + i * 10
-      return { number: i + 1, teeTime: `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`, startHole: 1, playerIds: ids }
-    })
+    const times = withTeeTimes(current[0]?.teeTime || '09:00', groups.length)
+    return groups.map((ids, i) => ({ number: i + 1, teeTime: times[i]!, startHole: 1, playerIds: ids }))
   }
 
   function fromStandings() {
@@ -137,7 +136,7 @@ export function AdminGroups() {
     if (!round) return
     setBusy(true)
     try {
-      await replaceGroups(round.id, current.map((g) => ({ number: g.number, tee_time: g.teeTime || null, start_hole: g.startHole, player_ids: g.playerIds })))
+      await saveGroups(round.id, current.map((g) => ({ id: g.id, number: g.number, tee_time: g.teeTime || null, start_hole: g.startHole, player_ids: g.playerIds })))
       await reload()
       setDrafts(null)
       toast(t.common.saved)

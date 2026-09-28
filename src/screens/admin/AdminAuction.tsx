@@ -45,13 +45,16 @@ export function AdminAuction() {
   const nextPending = lots.find((l) => l.status === 'pending') ?? null
   const soldCount = lots.filter((l) => l.status === 'sold').length
 
-  const run = async (fn: () => Promise<unknown>) => {
+  /** Runs a mutation and reloads; false when it failed (the toast already said why). */
+  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
     setBusy(true)
     try {
       await fn()
       await reload()
+      return true
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
+      return false
     } finally {
       setBusy(false)
     }
@@ -145,7 +148,13 @@ export function AdminAuction() {
 
   async function hammer() {
     if (!open || !bidderId) return
-    await run(() => sellLot(open.lotId, bidderId, bidAmount))
+    // Selling to himself still counts toward his limit when the setting says so (§18.3).
+    if (bidderId === open.playerId && cfg.selfOwnedCountsTowardMax && (holdings[bidderId] ?? 0) >= cfg.maxPlayersPerOwner) {
+      toast(A.selfAtLimit(cfg.maxPlayersPerOwner))
+      return
+    }
+    const ok = await run(() => sellLot(open.lotId, bidderId, bidAmount))
+    if (!ok) return
     if (bidderId !== open.playerId && cfg.buybackMaxPct > 0) {
       setBuybackFor(open.lotId)
       setBbPct(0)

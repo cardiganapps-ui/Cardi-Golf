@@ -53,7 +53,9 @@ export function MoneyScreen() {
         const lot = state.modules.auction?.lots.find((l) => l.playerId === f.from && l.ownerId === f.to)
         if (lot) await setBuybackPaid(lot.lotId, paid)
       } else {
-        await setPaymentPaid(tournamentId, { from_player_id: f.from, to_player_id: f.to, amount: f.amount, kind: f.kind, paid })
+        // One payments row per (kind, from, to): the amount is the aggregate of every flow with that key (all of an owner's lots).
+        const amount = money.flows.filter((x) => x.kind === f.kind && x.from === f.from && x.to === f.to).reduce((s, x) => s + x.amount, 0)
+        await setPaymentPaid(tournamentId, { from_player_id: f.from, to_player_id: f.to, amount, kind: f.kind, paid })
       }
     })
   const togglePayout = (playerId: string, amount: number, paid: boolean) => run(() => setPaymentPaid(tournamentId, { from_player_id: null, to_player_id: playerId, amount, kind: 'payout', paid }))

@@ -8,7 +8,7 @@ import { t } from '../../i18n/es-MX'
 import { Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
+import { ApiError, deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -24,7 +24,7 @@ function dateEs(iso: string | null): string {
   return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-type Ask = { kind: 'finish' | 'cancel' | 'delete'; round: Round } | null
+type Ask = { kind: 'finish' | 'cancel' | 'delete' | 'start'; round: Round } | null
 
 export function AdminRounds() {
   const { tournamentId } = useTournamentCtx()
@@ -49,10 +49,23 @@ export function AdminRounds() {
       await reload()
       setEditing(null)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(e instanceof ApiError && e.code === '23505' ? R.duplicateNumber(editing.number) : e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
+  }
+
+  const groupsOf = (rid: string) => data!.snapshot.groups.filter((g) => g.roundId === rid).length
+  const liveOther = (rid: string) => rounds.find((x) => x.id !== rid && x.status === 'live') ?? null
+
+  /** "Iniciar" needs groups; another live round asks first. */
+  function askStart(r: Round) {
+    if (groupsOf(r.id) === 0) {
+      toast(R.needsGroups)
+      return
+    }
+    if (liveOther(r.id)) setAsk({ kind: 'start', round: r })
+    else void status(r, 'live')
   }
 
   async function status(r: Round, s: Round['status']) {
@@ -60,6 +73,7 @@ export function AdminRounds() {
     try {
       await setRoundStatus(r.id, s)
       if (s === 'live') await updateTournament(tournamentId, { current_round_id: r.id, status: 'live' })
+      if (s === 'scheduled' && data!.snapshot.tournament.currentRoundId === r.id) await updateTournament(tournamentId, { current_round_id: null })
       await reload()
       setAsk(null)
       toast(t.common.saved)
@@ -91,14 +105,16 @@ export function AdminRounds() {
       ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}`
       : ask.kind === 'cancel'
         ? R.cancelConfirm(ask.round.number)
-        : R.deleteConfirm(ask.round.number)
+        : ask.kind === 'start'
+          ? R.startWhileLive(liveOther(ask.round.id)?.number ?? 0)
+          : R.deleteConfirm(ask.round.number)
     : ''
 
   return (
     <div className={a.screen}>
       <div className={a.head}>
         <h2>{t.admin.sections.rounds}</h2>
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing({ number: rounds.length + 1, date: '', course_id: courses[0]?.id ?? '', holes: 18 })}>
+        <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing({ number: rounds.reduce((m, r) => Math.max(m, r.number), 0) + 1, date: '', course_id: courses[0]?.id ?? '', holes: 18 })}>
           {R.add}
         </button>
       </div>
@@ -125,7 +141,7 @@ export function AdminRounds() {
             {incomplete && <span className={a.warn}>{t.admin.inbox.incomplete(incomplete.players.length)}</span>}
             <div className={a.chipRow} style={undefined}>
               {r.status === 'scheduled' && (
-                <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => void status(r, 'live')}>
+                <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => askStart(r)}>
                   {rb ? t.common.saving : R.start}
                 </button>
               )}
@@ -135,8 +151,8 @@ export function AdminRounds() {
                 </button>
               )}
               {(r.status === 'finished' || r.status === 'cancelled') && (
-                <button className="btn btn--secondary btn--sm" type="button" disabled={rb} onClick={() => void status(r, 'live')}>
-                  {rb ? t.common.saving : R.reopen}
+                <button className="btn btn--secondary btn--sm" type="button" disabled={rb} onClick={() => void status(r, isCurrent ? 'live' : 'scheduled')}>
+                  {rb ? t.common.saving : isCurrent ? R.reopen : R.reschedule}
                 </button>
               )}
               <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ id: r.id, number: r.number, date: r.date ?? '', course_id: r.courseId ?? '', holes: r.holes })}>
@@ -162,12 +178,12 @@ export function AdminRounds() {
 
       <ConfirmSheet
         open={!!ask}
-        title={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : t.common.delete) : ''}
+        title={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : ask.kind === 'start' ? R.start : t.common.delete) : ''}
         body={askBody}
-        danger={ask?.kind !== 'finish'}
+        danger={ask?.kind === 'cancel' || ask?.kind === 'delete'}
         busy={!!busyId}
-        confirmLabel={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : t.common.delete) : undefined}
-        onConfirm={() => ask && (ask.kind === 'delete' ? void remove(ask.round) : void status(ask.round, ask.kind === 'finish' ? 'finished' : 'cancelled'))}
+        confirmLabel={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : ask.kind === 'start' ? R.start : t.common.delete) : undefined}
+        onConfirm={() => ask && (ask.kind === 'delete' ? void remove(ask.round) : void status(ask.round, ask.kind === 'finish' ? 'finished' : ask.kind === 'start' ? 'live' : 'cancelled'))}
         onClose={() => setAsk(null)}
       />
 

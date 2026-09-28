@@ -8,6 +8,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
+import { rateLimited, requireCourseManager } from '../src/server/auth.js'
 
 const HoleSchema = z.object({
   number: z.number().int().min(1).max(18),
@@ -31,6 +32,10 @@ const CardSchema = z.object({
 
 export const config = { maxDuration: 60 }
 
+const MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+/** Base64 characters: 3 MB of image, well under Vercel's 4.5 MB body limit (the client caps at the same size). */
+export const MAX_IMAGE_CHARS = 4_000_000
+
 /**
  * Diego's call (CLAUDE.md §13b-B): the cheapest model that reads a scorecard
  * well, ~$0.0025 per card. If a real card comes back wrong twice, raise this
@@ -44,6 +49,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: 'POST' })
     return
   }
+  if (rateLimited(req, 'scorecard-extract', 10, 60_000)) {
+    res.status(429).json({ error: 'Muchas lecturas seguidas; espera un minuto.' })
+    return
+  }
+  if (!(await requireCourseManager(req, res))) return
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     res.status(503).json({ error: 'Lectura de tarjeta pendiente: falta configurar la llave.', code: 'no_key' })
@@ -52,8 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as { image?: string; mediaType?: string }
   const image = body.image ?? ''
   const mediaType = body.mediaType ?? 'image/jpeg'
-  if (!image || image.length > 14_000_000) {
-    res.status(400).json({ error: 'Falta la imagen o es demasiado grande.' })
+  if (!MEDIA_TYPES.includes(mediaType)) {
+    res.status(400).json({ error: 'Formato no soportado: usa JPG, PNG, WebP o PDF.' })
+    return
+  }
+  if (!image || image.length > MAX_IMAGE_CHARS) {
+    res.status(400).json({ error: 'Falta la imagen o es demasiado grande (máximo 3 MB).' })
     return
   }
 

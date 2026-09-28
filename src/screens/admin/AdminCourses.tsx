@@ -3,32 +3,26 @@
  * by hand. Every path lands in the same review editor before saving.
  */
 import { useRef, useState } from 'react'
+import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft, type CourseDraftTee } from '../../data/api'
+import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { blobToBase64, downscaleImage } from '../../lib/images'
 import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from '../../lib/courseApi'
 import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/courseProviders/types'
 import { useCourses } from './useCourses'
-import { CourseEditor } from './CourseEditor'
+import { blankTee, CourseEditor } from './CourseEditor'
 import a from './Admin.module.css'
 
 const C = t.admin.courses
 
-const blankTee = (name = 'Azules'): CourseDraftTee => ({
-  name,
-  color: null,
-  rating: null,
-  slope: null,
-  holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1, yards: null })),
-})
-
 export function AdminCourses() {
   const { courses, loading, error, refresh } = useCourses()
   const reload = useTournament((s) => s.reload)
+  const uid = useAuth((s) => s.user?.id ?? null)
   const [draft, setDraft] = useState<CourseDraft | null>(null)
   const [notes, setNotes] = useState<string[]>([])
   const [mode, setMode] = useState<'none' | 'search' | 'import'>('none')
@@ -162,9 +156,19 @@ export function AdminCourses() {
     }
   }
 
+  /** Closing the draft forgets anything armed for it (P1 21): a photo or a location-only course never lands on the next one. */
+  function closeDraft() {
+    setDraft(null)
+    setNotes([])
+    pendingPhoto.current = null
+    pendingCourseId.current = null
+  }
+
   async function edit(id: string) {
     setBusy(true)
     try {
+      pendingPhoto.current = null
+      pendingCourseId.current = null
       setDraft(await loadCourseDraft(id))
       setNotes([])
     } catch (e) {
@@ -205,6 +209,8 @@ export function AdminCourses() {
           className="btn btn--secondary btn--sm"
           type="button"
           onClick={() => {
+            pendingPhoto.current = null
+            pendingCourseId.current = null
             setDraft({ name: '', tees: [blankTee()] })
             setNotes([])
           }}
@@ -235,9 +241,13 @@ export function AdminCourses() {
                   )}
                 </span>
               </button>
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskDelete(c.id)}>
-                {t.common.delete}
-              </button>
+              {c.createdBy === uid ? (
+                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskDelete(c.id)}>
+                  {t.common.delete}
+                </button>
+              ) : (
+                <span className={a.rowSub}>{C.notMine}</span>
+              )}
             </div>
           ))}
         </div>
@@ -310,17 +320,8 @@ export function AdminCourses() {
         )}
       </Sheet>
 
-      <Sheet open={!!draft} onClose={() => setDraft(null)} title={draft?.id ? t.common.edit : C.review} wide>
-        {draft && (
-          <CourseEditor
-            draft={draft}
-            notes={notes}
-            busy={busy}
-            onCancel={() => setDraft(null)}
-            onSave={(d) => void save(d)}
-            addTee={() => setDraft({ ...draft, tees: [...draft.tees, blankTee(`Tee ${draft.tees.length + 1}`)] })}
-          />
-        )}
+      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide>
+        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} />}
       </Sheet>
     </div>
   )

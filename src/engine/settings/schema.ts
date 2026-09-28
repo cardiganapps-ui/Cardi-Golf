@@ -147,6 +147,8 @@ const TournamentSettingsBase = z.object({
   rounds: z.number().int().min(1).max(10),
   /** Players per group; groups are 2–4. Used to plan groups and to check the prize pot. */
   groupSize: z.number().int().min(2).max(4),
+  /** Field size the organizer plans for; the prize check uses it until the roster exists. */
+  expectedPlayers: z.number().int().min(2).max(200).optional(),
   labels: z.object({
     lastPlace: label,
     honoree: label,

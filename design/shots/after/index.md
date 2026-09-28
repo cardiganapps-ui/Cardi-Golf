@@ -1,8 +1,9 @@
 # after shots
 
-- [minimal4-setup--live.jpg](./minimal4-setup--live.jpg)
-- [minimal4-setup--live--player-sheet.jpg](./minimal4-setup--live--player-sheet.jpg)
+- [full12-live--dinero.jpg](./full12-live--dinero.jpg)
+- [full12-live--dinero--liquidacion.jpg](./full12-live--dinero--liquidacion.jpg)
 - [full12-live--admin-torneo.jpg](./full12-live--admin-torneo.jpg)
-- [full12-finished--juegos--la-calcutta.jpg](./full12-finished--juegos--la-calcutta.jpg)
-- [full12-finished--ceremonia.jpg](./full12-finished--ceremonia.jpg)
-- [full12-finished--ceremonia--reveal.jpg](./full12-finished--ceremonia--reveal.jpg)
+- [full12-live--admin-campos.jpg](./full12-live--admin-campos.jpg)
+- [full12-live--admin-rondas.jpg](./full12-live--admin-rondas.jpg)
+- [full12-live--admin-grupos.jpg](./full12-live--admin-grupos.jpg)
+- [full12-live--admin-datos.jpg](./full12-live--admin-datos.jpg)
