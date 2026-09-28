@@ -284,6 +284,32 @@ export const t = {
     signInToSee: 'Entra a tu perfil para ver a otros jugadores.',
     viewProfile: 'Ver perfil',
     myProfile: 'Mi perfil',
+    // Results (0015)
+    indexTitle: (v: string) => `Índice Polo ${v}`,
+    indexRule: (n: number, k: number) => `De tus últimas ${n} rondas que cuentan, ${k === 1 ? 'se toma la mejor' : `se promedian las ${k} mejores`}.`,
+    indexAdjust: (v: string) => `Con pocas rondas se ajusta: ${v}.`,
+    indexNeeds: 'Hacen falta 3 rondas completas de 18 hoyos, en un campo con rating y slope, en torneos que cuentan.',
+    indexHow: 'Cada ronda da un diferencial: (gross ajustado − rating) × 113 ÷ slope. El gross ajustado topa cada hoyo en doble bogey neto y un hoyo levantado cuenta así.',
+    counts: 'Cuenta',
+    stats: { rounds: 'Rondas', bestGross: 'Mejor gross', birdies: 'Birdies' },
+    history: 'Historial',
+    noHistory: 'Las rondas aparecen aquí cuando el Comité las marca como terminadas.',
+    practice: 'Práctica',
+    incomplete: 'Incompleta',
+    roundLine: (gross: number | null, ags: number | null) => (gross != null ? `Gross ${gross}${ags != null && ags !== gross ? `, ajustado ${ags}` : ''}` : ags != null ? `Ajustado ${ags}` : 'Sin gross'),
+    differential: 'Diferencial',
+    seeAll: (n: number) => `Ver las ${n}`,
+    roundTitle: (tournament: string, day: number) => `${tournament}, día ${day}`,
+    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${ch}` : null].filter(Boolean).join(', '),
+    finish: (label: string, field: number | null) => {
+      const n = label.replace(/^T/, '')
+      const place = label.startsWith('T') ? `Empatado en ${n}.º` : `${n}.º`
+      return field ? `${place} de ${field}` : place
+    },
+    money: 'Mi dinero',
+    moneyHint: 'Solo tú lo ves.',
+    moneyTotal: 'En total',
+    noMoney: 'Cuando un torneo tuyo termine, aquí sale lo que ganaste o pusiste.',
     // Edit
     editTitle: 'Editar perfil',
     welcome: 'Tu perfil está listo. Revisa tu nombre y tu foto.',
@@ -681,6 +707,10 @@ export const t = {
       signedLine: 'Firmada',
     },
     data: {
+      publish: 'Resultados en los perfiles',
+      publishHint: 'Se publican solos al marcar el torneo como Terminado. Si corriges algo después, publícalos otra vez.',
+      publishWaiting: 'Las rondas terminadas ya cuentan para el índice de cada jugador. Lugar, puntos y dinero se publican cuando el torneo está Terminado.',
+      publishButton: 'Publicar resultados',
       export: 'Respaldo',
       exportHint: 'Descarga todo el torneo (jugadores, rondas, grupos, tarjetas, Calcutta, pagos) como JSON, y las tarjetas y resultados como CSV. Hazlo cada noche del torneo.',
       exportJson: 'Respaldo JSON',
@@ -703,6 +733,10 @@ export const t = {
       duplicated: 'Torneo duplicado. Estás en el nuevo.',
     },
     tournament: {
+      countsForStats: 'Cuenta para el índice Polo',
+      countsForStatsHint: 'Apágalo en un ensayo: las rondas se ven en los perfiles, pero no mueven el índice.',
+      published: (n: number) => `Resultados publicados en ${n === 1 ? '1 perfil' : `los perfiles de ${n} jugadores`}.`,
+      publishFailed: 'No se publicaron los resultados:',
       unbalancedNearSave: 'La bolsa no cuadra: ajusta los premios antes de guardar.',
       brand: 'Marca',
       name: 'Nombre',
@@ -779,6 +813,8 @@ export const t = {
       profileHint: 'Si ya tiene perfil en Polo, amárralo: su índice y su historial se juntan.',
       searchProfiles: 'Nombre o usuario',
       withHandle: (h: string) => `Usar @${h}`,
+      indexApplied: 'Índice puesto. Guarda para aplicarlo.',
+      applyIndex: (idx: string, declared: boolean) => (declared ? `Usar su índice (${idx})` : `Usar índice Polo (${idx})`),
       proposed: 'Listo. Lo confirma desde su perfil.',
       linkedSelf: 'Amarrado a tu perfil',
       noProfile: 'No encontré ese perfil.',

@@ -358,7 +358,17 @@ export function AdminPlayers() {
 
             <Toggle label={`${P.honoree} (${settings.labels.honoree})`} checked={E.is_honoree} onChange={(v) => setEditing({ ...E, is_honoree: v })} />
             <Toggle label={P.admin} checked={E.is_admin} onChange={(v) => setEditing({ ...E, is_admin: v })} />
-            {E.id && <ProfileLink playerId={E.id} profile={profiles.find((x) => x.playerId === E.id)} onChanged={reloadProfiles} />}
+            {E.id && (
+              <ProfileLink
+                playerId={E.id}
+                profile={profiles.find((x) => x.playerId === E.id)}
+                onChanged={reloadProfiles}
+                onUseIndex={(index) => {
+                  setEditing({ ...E, handicap_source: 'index', handicap_index: index })
+                  toast(P.indexApplied)
+                }}
+              />
+            )}
             <Field label={P.formGuide}>
               <textarea className="textarea" value={E.form_guide ?? ''} onChange={(e) => setEditing({ ...E, form_guide: e.target.value || null })} />
             </Field>

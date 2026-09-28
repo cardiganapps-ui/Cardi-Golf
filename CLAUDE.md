@@ -429,6 +429,12 @@ The settlement nets to zero across all people (banker included)
 - `profile_link_tokens`: `token_hash`, `created_by`, `player_id`, `expires_at` (15 min), `used_at`. Carries a device's PIN claim across a sign-in to an existing account (`create_link_token` → sign in → `redeem_link_token`). No client access.
 - Other profile RPCs: `profile_card(handle)` (strangers with an account see the card of a discoverable profile; people who share a tournament see bio and full name), `search_profiles(q)` (accounts only), `my_links()`, `tournament_profiles(tid)`.
 
+**Results and the Polo index** (2026-09-28, migration 0015)
+- `round_results`: one row per player per **finished** round, computed in SQL (`refresh_round_results`) by trigger when a round becomes or stops being finished and when a finished round's scores change. It holds gross, adjusted gross (net double bogey on the WHS course handicap of the tee played; a pick-up counts as net double bogey), the differential (only for complete 18-hole rounds on a rated tee), gross counts and the per-hole detail. There is no client payload.
+- `profiles.polo_index`: WHS on the latest 20 differentials of the profile's confirmed players in tournaments with `counts_for_stats` (the Ensayo is off). `recompute_profile_index` runs by trigger on results, links, deleted players and `counts_for_stats`. The arithmetic is integer tenths in both SQL (`whs_*`) and TS (`src/engine/profile/whs.ts`); `src/engine/profile/cases/whs.json` is run against both.
+- `tournament_results` (rank label, field, points, per round, awards) and the private `tournament_money` (net: its owner and the Comité only) come from `publish_tournament_results`. It runs when the Comité marks the tournament Terminado, and from Datos › «Publicar resultados»; leaving Terminado withdraws both.
+- Reads: `profile_rounds`, `profile_tournaments` (people who may see the full profile), `my_money()` (the owner).
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.

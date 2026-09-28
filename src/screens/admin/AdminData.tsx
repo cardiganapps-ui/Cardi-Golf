@@ -11,6 +11,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { duplicateTournament } from '../../data/api'
 import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '../../data/backup'
 import { useTournament } from '../../data/tournamentStore'
+import { publishFromStore } from '../../data/publish'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 
 const D = t.admin.data
@@ -89,8 +90,28 @@ export function AdminData() {
     })
   }
 
+  const finished = data.snapshot.tournament.status === 'finished'
   return (
     <div className="stack stack--lg">
+      <section className="card stack">
+        <span className="label">{D.publish}</span>
+        <p className="help">{finished ? D.publishHint : D.publishWaiting}</p>
+        <div className="row row--wrap">
+          <button
+            className="btn btn--secondary"
+            type="button"
+            disabled={busy || !finished}
+            onClick={() =>
+              void run(async () => {
+                const r = await publishFromStore(tournamentId)
+                toast(t.admin.tournament.published(r.players))
+              })
+            }
+          >
+            {D.publishButton}
+          </button>
+        </div>
+      </section>
       <section className="card stack">
         <span className="label">{D.export}</span>
         <p className="help">{D.exportHint}</p>

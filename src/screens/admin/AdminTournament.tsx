@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { CopyButton, Field, ShareButton, toast } from '../../components/ui'
+import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
+import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteTournament, rotateJoinCode, updateTournament, uploadAsset } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -111,7 +112,18 @@ export function AdminTournament() {
       setQuick(false)
     }
   }
-  const setStatus = (status: (typeof STATUSES)[number]) => quickUpdate({ status }, (s) => (s.tournament.status = status))
+  async function setStatus(status: (typeof STATUSES)[number]) {
+    await quickUpdate({ status }, (s) => (s.tournament.status = status))
+    // Finished: the results go to the players' profiles (finish, points, awards, private net).
+    if (status !== 'finished' || useTournament.getState().data?.snapshot.tournament.status !== 'finished') return
+    try {
+      const r = await publishFromStore(tournamentId)
+      toast(A.published(r.players))
+    } catch (e) {
+      toast(`${A.publishFailed} ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  const setCounts = (v: boolean) => quickUpdate({ counts_for_stats: v }, (s) => (s.tournament.countsForStats = v))
   const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, (s) => (s.tournament.bankerPlayerId = id || null))
   async function newCode() {
     setQuick(true)
@@ -216,6 +228,7 @@ export function AdminTournament() {
             </button>
           ))}
         </div>
+        <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />
         <Field label={A.banker}>
           <select className="select" value={tr.bankerPlayerId ?? ''} disabled={quick} onChange={(e) => void setBanker(e.target.value)}>
             <option value="">{t.common.none}</option>

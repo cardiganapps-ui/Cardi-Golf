@@ -108,6 +108,37 @@
   font-size: var(--fs-sm);
   line-height: var(--lh-ui);
 }
+.how,
+.start {
+  align-self: flex-start;
+}
+.how {
+  margin-left: calc(-1 * var(--s3));
+}
+
+/* ---- Stat strip: three figures under the index ---- */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: var(--hairline);
+  padding-bottom: var(--s3);
+}
+.stripItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stripFig {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: 1.1;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.stripLabel {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
 
 /* ---- Sections and ruled rows ---- */
 .section {
@@ -164,6 +195,21 @@ button.row {
 .rowSub {
   font-size: var(--fs-sm);
   color: var(--ink-2);
+}
+.rowFig {
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  color: var(--ink);
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.rowStrong .rowTitle {
+  font-weight: 700;
+}
+/* A differential that counts toward the index: the accent rule at the left, like "my row". */
+.rowUsed {
+  box-shadow: inset 2px 0 0 var(--accent);
+  background: var(--accent-soft);
 }
 .rowEnd {
   display: flex;

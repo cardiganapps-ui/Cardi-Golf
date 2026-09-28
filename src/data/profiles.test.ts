@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatIndex, handleOk, parseIndex } from './profiles'
+import { formatIndex, handleOk, indexBreakdown, parseIndex } from './profiles'
+import { PROFILE_FIXTURES } from '../dev/profileFixtures'
 
 describe('profile helpers', () => {
   it('reads a typed index: plus handicaps with a sign, a comma as the decimal point, one decimal', () => {
@@ -20,6 +21,15 @@ describe('profile helpers', () => {
     expect(formatIndex(8)).toBe('8.0')
     expect(formatIndex(-1.2)).toBe('+1.2')
     expect(formatIndex(null)).toBe('—')
+  })
+
+  it('explains the index from the rounds: practice and incomplete rounds are left out, the best ones marked', () => {
+    const b = indexBreakdown(PROFILE_FIXTURES.yo!.rounds!)
+    expect(b.considered).toHaveLength(14)
+    expect(b.considered.some((x) => x.round.practice || x.round.differential == null)).toBe(false)
+    expect(b.count).toBe(4)
+    expect(b.index10).toBe(124) // (11.8 + 12.2 + 12.6 + 13.0) / 4 = 12.4, the card's index
+    expect(b.considered.filter((x) => x.used).map((x) => x.round.differential)).toEqual([11.8, 12.2, 12.6, 13])
   })
 
   it('checks handles like handle_ok() in the database (format; reserved words are the server’s)', () => {

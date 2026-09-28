@@ -30,6 +30,8 @@ export interface TournamentRow {
   settings: unknown
   timezone: string
   currency: string
+  /** False for practice (the Ensayo): shown in profiles, never in the Polo index. Default true. */
+  countsForStats?: boolean
 }
 
 export interface Player {

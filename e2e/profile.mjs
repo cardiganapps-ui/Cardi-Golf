@@ -204,6 +204,8 @@ try {
   const { data: prof } = await admin.from('profiles').select('handle, bio').eq('id', anonA).single()
   await B.page.goto(`${base}/p/${prof.handle}`, { waitUntil: 'domcontentloaded' })
   await B.page.waitForSelector('text=Índice Polo', { timeout: T })
+  // Tournaments and history load after the card.
+  await B.page.waitForSelector(`text=${one.t.name}`, { timeout: T })
   const page = await B.page.textContent('main')
   check(page.includes(`@${prof.handle}`) && page.includes('Juego los sábados.') && page.includes(one.t.name), 'the profile page shows the handle, the bio and the tournaments')
   await B.page.screenshot({ path: `${out}/profile-page.png`, fullPage: true })
