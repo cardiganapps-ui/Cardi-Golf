@@ -29,6 +29,8 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [x] ~~**Nombre del remitente de los correos.**~~ Claude lo cambió a «Polo» con las llaves que pegaste (bloque SMTP completo, lo demás intacto). Verificado: un correo real de «¿Olvidaste tu contraseña?» salió de "Polo" <golf@cardigan.mx> y Resend lo marca entregado. (2026-09-28)
 - [ ] **Reinstalar la app.** Cuando esto llegue a `main`, borra la app de la pantalla de inicio y vuelve a agregarla desde https://golf.cardigan.mx: el nombre bajo el ícono debe decir «Polo» y el ícono es la P cursiva trazada a lápiz, como en la hoja que aprobaste (`design/brand/polo-logo-sheet.jpg`).
 
+- [ ] **Revisar las reglas de dinero afinadas (PR 2).** Nada cambia para el torneo de Nacho salvo tres casos raros que ahora se ven en vez de esconderse: (1) si un slot de la Calcutta no tiene a quién pagarse (por ejemplo los tres D empatan en el último lugar y ya cobran «Mejor D»), ese dinero se queda en el banco y sale un aviso en Comité › Torneo; antes se le daba en silencio al dueño del campeón; (2) un hoyo levantado cuenta 3 putts como mínimo aunque se hayan capturado 2; (3) en «Menos putts» ya no lidera quien lleva menos hoyos. En `/t/ensayo` › Juegos › Calcutta y Dinero tiene que verse igual que antes; en Comité › Torneo el cuadre ahora dice «$10,000» con coma.
+
 ## Rediseño
 
 - [x] ~~**Aprobar la dirección de diseño.**~~ Decidido 2026-09-27: dirección A, «La tarjeta»; PR #11 fusionado; la fase 2 (sistema) va a `main` conforme quede verde y la fase 3 (pantalla por pantalla) sigue en PRs separados.

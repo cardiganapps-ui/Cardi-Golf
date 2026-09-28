@@ -49,8 +49,16 @@ export const bestRoundModule: GameModule<BestRoundState> = {
       const winners: BestRoundDay['winners'] = {}
       const anyScores = ids.some((id) => byPlayer[id]!.thru > 0)
       if (anyScores) {
+        const first = groups[0]!
+        // Countback within the day (§5.4): explain the decision against the runner-up when the points tie.
+        const second = groups[1]?.members[0]
+        const tieWhy: string[] = []
+        if (second && byPlayer[second]!.points === byPlayer[first.members[0]!]!.points) {
+          const res = countback(cb(first.members[0]!), cb(second))
+          tieWhy.push(...res.steps.map((st) => `${st.label}: ${nameOf(first.members[0]!)} ${st.a} – ${nameOf(second)} ${st.b}`))
+        }
         for (const s of splitPrizes(groups.slice(0, 1), [ctx.settings.prizes.bestRoundPerDay], nameOf)) {
-          winners[s.item] = { amount: s.amount, why: s.why }
+          winners[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${byPlayer[s.item]!.points} pts el día ${roundNumber}`, ...tieWhy, ...s.why.steps] } }
         }
       }
       return { roundId: rid, roundNumber, rows, groups, winners, final: ctx.roundFinal[rid] ?? false }
@@ -64,7 +72,7 @@ export const bestRoundModule: GameModule<BestRoundState> = {
       for (const [playerId, w] of Object.entries(d.winners)) {
         out.push({
           moduleId: 'bestRound',
-          label: `${label} · Día ${d.roundNumber}`,
+          label: `${label}, día ${d.roundNumber}`,
           playerId,
           amount: w.amount,
           final: d.final,

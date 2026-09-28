@@ -27,6 +27,13 @@ export interface FieldShape {
   players: number
   /** Groups per round. Defaults to ceil(players / groupSize). */
   groupsPerRound?: number
+  /** Actual group sizes per round (roundId → sizes), once groups exist: a group of 3 pays two survivors, not three. */
+  groupSizes?: number[][]
+}
+
+/** "$10,000" without Intl (the engine stays locale-free). */
+function fmt(n: number): string {
+  return `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
 }
 
 export function snakePotPerGroup(settings: TournamentSettings): number {
@@ -46,7 +53,7 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
       moduleId: 'individual',
       label: modules.individual.label,
       amount,
-      detail: prizes.stableford.map((p) => `$${p}`).join(' + ') || 'sin premios',
+      detail: prizes.stableford.map((p) => fmt(p)).join(' + ') || 'sin premios',
     })
   }
   if (modules.pairs.enabled) {
@@ -55,7 +62,7 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
       moduleId: 'pairs',
       label: modules.pairs.label,
       amount,
-      detail: prizes.pairs.map((p) => `$${p}`).join(' + ') || 'sin premios',
+      detail: prizes.pairs.map((p) => fmt(p)).join(' + ') || 'sin premios',
     })
   }
   if (modules.bestRound.enabled) {
@@ -63,24 +70,37 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
       moduleId: 'bestRound',
       label: modules.bestRound.label,
       amount: prizes.bestRoundPerDay * rounds,
-      detail: `${rounds} ${rounds === 1 ? 'día' : 'días'} × $${prizes.bestRoundPerDay}`,
+      detail: `${rounds} ${rounds === 1 ? 'día' : 'días'} × ${fmt(prizes.bestRoundPerDay)}`,
     })
   }
   if (modules.snake.enabled) {
     const perGroup = snakePotPerGroup(settings)
-    lines.push({
-      moduleId: 'snake',
-      label: modules.snake.label,
-      amount: perGroup * groups * rounds,
-      detail: `${groups} ${groups === 1 ? 'grupo' : 'grupos'} × ${rounds} ${rounds === 1 ? 'día' : 'días'} × $${perGroup}`,
-    })
+    const real = field.groupSizes?.filter((r) => r.length > 0)
+    if (real && real.length) {
+      // Real groups: each group pays (size − 1) survivors; rounds without groups yet count as planned.
+      const known = real.reduce((s, r) => s + r.reduce((x, n) => x + prizes.snakePerSurvivor * Math.max(0, n - 1), 0), 0)
+      const missing = Math.max(0, rounds - real.length)
+      lines.push({
+        moduleId: 'snake',
+        label: modules.snake.label,
+        amount: known + perGroup * groups * missing,
+        detail: `${real.map((r) => r.map((n) => `${n}`).join('+')).join(' y ')} jugadores por grupo${missing ? `, ${missing} ${missing === 1 ? 'día' : 'días'} por armar` : ''}`,
+      })
+    } else {
+      lines.push({
+        moduleId: 'snake',
+        label: modules.snake.label,
+        amount: perGroup * groups * rounds,
+        detail: `${groups} ${groups === 1 ? 'grupo' : 'grupos'} × ${rounds} ${rounds === 1 ? 'día' : 'días'} × ${fmt(perGroup)}`,
+      })
+    }
   }
   if (modules.fewestPutts.enabled) {
     lines.push({
       moduleId: 'fewestPutts',
       label: modules.fewestPutts.label,
       amount: prizes.fewestPutts,
-      detail: `$${prizes.fewestPutts}`,
+      detail: fmt(prizes.fewestPutts),
     })
   }
 

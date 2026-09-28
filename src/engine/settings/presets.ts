@@ -19,7 +19,7 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   labels: { lastPlace: 'Último lugar', honoree: 'Homenajeado' },
   entryFee: 0,
   handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false, estimateWeights: [0.45, 0.4, 0.15] },
-  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 },
+  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4, mode: 'previous' },
   prizes: {
     stableford: [],
     pairs: [],
@@ -34,11 +34,10 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
     selfOwnedCountsTowardMax: true,
     guestsCanBid: false,
     buybackMaxPct: 50,
+    // No tiers by default, so no per-tier slots: enabling the auction on a plain tournament is valid as is.
     payout: [
-      { slot: 'place', place: 1, share: 0.55 },
-      { slot: 'place', place: 2, share: 0.2 },
-      { slot: 'bestOfTier', tier: 'C', share: 0.1 },
-      { slot: 'bestOfTier', tier: 'D', share: 0.1 },
+      { slot: 'place', place: 1, share: 0.7 },
+      { slot: 'place', place: 2, share: 0.25 },
       { slot: 'lastPlace', share: 0.05 },
     ],
   },
@@ -77,7 +76,7 @@ export const FIRST_TOURNAMENT_SETTINGS: TournamentSettings = {
   labels: { lastPlace: 'La Cuchara de Palo', honoree: 'El novio' },
   entryFee: 2500,
   handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false, estimateWeights: [0.45, 0.4, 0.15] },
-  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 },
+  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4, mode: 'previous' },
   prizes: {
     stableford: [10000, 5000, 3000, 2000],
     pairs: [2000, 1000],

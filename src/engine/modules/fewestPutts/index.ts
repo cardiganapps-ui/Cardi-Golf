@@ -12,6 +12,8 @@ export interface PuttsRow {
   label: string
   putts: number
   holes: number
+  /** Has played every hole the field has played: only these compete for the prize. */
+  complete: boolean
   /** Putts per hole, 2 decimals. */
   average: number
   onePutts: number
@@ -33,7 +35,8 @@ export function puttsTotals(ctx: ModuleContext, playerId: Id) {
     for (const h of ctx.core.rounds[rid]?.[playerId]?.holes ?? []) {
       if (!h.played) continue
       t.holes++
-      const putts = h.pickedUp && h.putts == null ? ctx.settings.pickupPuttsForFewestPutts : (h.putts ?? 0)
+      // A picked-up hole counts at least the setting (§18.1): the player never holed out, so his count is a floor.
+      const putts = h.pickedUp ? Math.max(h.putts ?? 0, ctx.settings.pickupPuttsForFewestPutts) : (h.putts ?? 0)
       if (h.pickedUp) t.pickedUpHoles++
       t.putts += putts
       if (putts === 1) t.onePutts++
@@ -51,15 +54,16 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
     const order = new Map(ctx.snapshot.players.map((p) => [p.id, p.sortOrder]))
     const totals = new Map(ctx.snapshot.players.map((p) => [p.id, puttsTotals(ctx, p.id)]))
     const ids = ctx.snapshot.players.map((p) => p.id)
-    // Only players who have played count for the prize; fewer putts first.
+    // Fewest putts over the same number of holes: a player behind the field
+    // (or who withdrew) ranks after everyone who has played more holes, so
+    // the leader is never simply the one with the fewest holes.
+    const maxHoles = Math.max(0, ...ids.map((id) => totals.get(id)!.holes))
     const groups = rankBy(
       ids,
       (a, b) => {
         const ta = totals.get(a)!
         const tb = totals.get(b)!
-        if (ta.holes === 0 && tb.holes === 0) return 0
-        if (ta.holes === 0) return 1
-        if (tb.holes === 0) return -1
+        if (ta.holes !== tb.holes) return tb.holes - ta.holes
         return ta.putts - tb.putts
       },
       (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
@@ -72,6 +76,7 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
         label: r.label,
         putts: t.putts,
         holes: t.holes,
+        complete: t.holes > 0 && t.holes === maxHoles,
         average: t.holes ? Math.round((t.putts / t.holes) * 100) / 100 : 0,
         onePutts: t.onePutts,
         threePutts: t.threePutts,
@@ -79,12 +84,14 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
       }
     })
     const prizes: FewestPuttsState['prizes'] = {}
-    const anyPlayed = rows.some((r) => r.holes > 0)
+    const anyPlayed = maxHoles > 0
     if (anyPlayed) {
+      // The first group only holds players with `maxHoles` holes (the comparator sorts by holes first).
       const first = groups[0]!
-      const winners = { ...first, members: first.members.filter((id) => totals.get(id)!.holes > 0) }
+      const winners = { ...first, members: first.members.filter((id) => totals.get(id)!.holes === maxHoles) }
       for (const s of splitPrizes([winners], [ctx.settings.prizes.fewestPutts], nameOf)) {
-        prizes[s.item] = { amount: s.amount, why: s.why }
+        const w = totals.get(s.item)!
+        prizes[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${w.putts} putts en ${w.holes} hoyos`, ...(w.pickedUpHoles ? [`Hoyos levantados: cuentan ${ctx.settings.pickupPuttsForFewestPutts} putts como mínimo`] : []), ...s.why.steps] } }
       }
     }
     return { rows, groups, prizes, final: ctx.tournamentFinal }

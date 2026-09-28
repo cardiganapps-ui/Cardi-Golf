@@ -71,7 +71,7 @@ export const snakeModule: GameModule<SnakeState> = {
         // A player who picked up counts only if he actually entered ≥ threshold putts (§18.1).
         order.forEach((hole, idx) => {
           const candidates = g.playerIds.filter((pid) => {
-            const h = byPlayer[pid]?.holes[hole - 1]
+            const h = byPlayer[pid]?.holes.find((x) => x.hole === hole)
             return h?.played && h.putts != null && h.putts >= threshold
           })
           // Track holes held (the holder at the start of a hole holds it through that hole).
@@ -109,7 +109,7 @@ export const snakeModule: GameModule<SnakeState> = {
               if (pid === holderId) {
                 payouts[pid] = {
                   amount: 0,
-                  why: { title: '$0', steps: [`Terminó con la víbora (último 3-putt en el hoyo ${passes.at(-1)?.hole})`] },
+                  why: { title: '$0', steps: [`Terminó con la víbora (últimos ${threshold} putts o más en el hoyo ${passes.at(-1)?.hole})`] },
                 }
               } else {
                 payouts[pid] = {
@@ -157,7 +157,7 @@ export const snakeModule: GameModule<SnakeState> = {
         if (p.amount === 0) continue
         out.push({
           moduleId: 'snake',
-          label: `${label} · Día ${g.roundNumber} · Grupo ${g.groupNumber}`,
+          label: `${label}, día ${g.roundNumber}, grupo ${g.groupNumber}`,
           playerId,
           amount: p.amount,
           final: g.final,

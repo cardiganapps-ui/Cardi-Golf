@@ -63,7 +63,7 @@ export function GamesScreen() {
       if (r) leader = t.games.leader(name(r.playerId), t.games.puttsFigure(r.putts))
       stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts)), amount: settings.prizes.fewestPutts }
     } else if (id === 'auction' && m.auction) {
-      const s0 = m.auction.slots[0]
+      const s0 = m.auction.slots.find((x) => !x.unfilled)
       leader = s0 ? t.games.leader(s0.playerIds.map(name).join(', '), formatMoney(s0.amount)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
       stake = { text: t.games.pot, amount: m.auction.pot }
     }
@@ -279,7 +279,7 @@ export function GamesScreen() {
                       <span className={styles.rowText}>
                         <strong>{s.label}</strong>
                         <span className={styles.rowSub}>
-                          {s.playerIds.map(name).join(', ')}, {Math.round(s.share * 100)}%
+                          {s.unfilled ? t.games.unassigned : s.playerIds.map(name).join(', ')}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
                       <HowCalculated why={s.why} label={formatMoney(s.amount)} />

@@ -20,9 +20,9 @@ export function playingHandicap(courseHcp: number, h: HandicapSettings): Explain
   const raw = h.allowance * capped
   const value = Math.max(0, roundWith(raw, h.rounding))
   const steps: string[] = []
-  if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)} → tope ${fmt(h.cap)}`)
+  if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}, tope ${fmt(h.cap)}`)
   steps.push(`${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
-  if (roundTo(raw, 2) !== value) steps.push(`Redondeado → ${value}`)
+  if (roundTo(raw, 2) !== value) steps.push(`Redondeado: ${value}`)
   return { value, why: { title: `Hándicap de juego ${value}`, steps } }
 }
 
@@ -41,7 +41,7 @@ export function courseHandicap(
   const steps = [
     `Índice ${fmt(index)} × slope ${slope} ÷ 113 = ${fmt(roundTo((index * slope) / 113, 2))}`,
     `+ (rating ${fmt(rating)} − par ${tee.par}) = ${fmt(roundTo(rating - tee.par, 1))}`,
-    `= ${fmt(roundTo(raw, 2))} → ${value}`,
+    `= ${fmt(roundTo(raw, 2))}, redondeado ${value}`,
   ]
   return { value, why: { title: `Hándicap de campo ${value}`, steps } }
 }
@@ -89,9 +89,9 @@ export function estimateIndex(
   const steps = [
     `Diferenciales: ${d[0]} (buen día), ${d[1]} (normal), ${d[2]} (mal día)`,
     `${wg} × ${d[0]} + ${wa} × ${d[1]} + ${wb} × ${d[2]} = ${fmt(roundTo(weighted, 2))}`,
-    `Redondeado a 1 decimal → ${fmt(uncapped)}`,
+    `Redondeado a 1 decimal: ${fmt(uncapped)}`,
   ]
-  if (value !== uncapped) steps.push(`Tope ${fmt(h.cap)} → ${fmt(value)}`)
+  if (value !== uncapped) steps.push(`Tope ${fmt(h.cap)}: ${fmt(value)}`)
   if (reordered) steps.push('Los scores venían en otro orden; se acomodaron de mejor a peor.')
   if (assumed) steps.push('Rating/slope asumidos (par 72, slope 113) donde no se capturaron.')
   return {
@@ -115,7 +115,7 @@ export function nextRoundCut(points: number, c: CutSettings): Explained<number> 
   if (over <= 0) steps.push(`${points} pts no pasa de ${c.threshold}: sin recorte`)
   else {
     steps.push(`${points} − ${c.threshold} = ${over} pts de más`)
-    steps.push(`${over} ÷ ${c.pointsPerStroke} = ${Math.floor(over / c.pointsPerStroke)} golpes`)
+    steps.push(`${over} ÷ ${c.pointsPerStroke} = ${over % c.pointsPerStroke ? `${(over / c.pointsPerStroke).toFixed(1)}, ` : ''}${Math.floor(over / c.pointsPerStroke)} golpe${Math.floor(over / c.pointsPerStroke) === 1 ? '' : 's'}`)
     if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(`Máximo ${c.maxStrokes}`)
   }
   return { value, why: { title: value ? `Recorte de ${value}` : 'Sin recorte', steps } }
