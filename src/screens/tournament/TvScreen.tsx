@@ -10,7 +10,6 @@ import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
-import { Wave } from '../../components/Wave'
 import { useTournamentCtx } from './TournamentGate'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
@@ -51,13 +50,12 @@ export function TvScreen() {
         {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
         <div className="grow">
           <h1 className={styles.title}>{snapshot.tournament.name}</h1>
-          <span className={styles.sub}>{isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)} · ${t.roundStatus[round.status]}` : t.status[snapshot.tournament.status]}</span>
+          <span className={styles.sub}>{isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status]}</span>
         </div>
         <Link to={`/t/${slug}`} className={styles.exit}>
           {t.tv.exit}
         </Link>
       </header>
-      <Wave className={styles.wave} />
 
       <AnimatePresence mode="wait">
         {isAuctionNight && state.modules.auction ? (
@@ -73,8 +71,8 @@ export function TvScreen() {
                   {state.modules.individual.rows.slice(0, 12).map((r) => {
                     const pr = round ? state.core.rounds[round.id]?.[r.playerId] : undefined
                     return (
-                      <div key={r.playerId} className={styles.row}>
-                        <span className={`num ${styles.pos}`}>{r.label}</span>
+                      <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`}>
+                        <span className={styles.pos}>{r.label}</span>
                         <Avatar name={name(r.playerId)} url={byId.get(r.playerId)?.avatarUrl} honoree={byId.get(r.playerId)?.isHonoree} />
                         <span className={styles.name}>
                           <span>
@@ -82,8 +80,8 @@ export function TvScreen() {
                             {byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
                           </span>
                         </span>
-                        <span className={`num ${styles.small}`}>{pr ? `${t.round.thru(pr.thru)} · ${pr.points}` : ''}</span>
-                        <span className={`num ${styles.big}`}>{r.total}</span>
+                        <span className={styles.small}>{pr ? `${t.live.thru} ${t.round.thru(pr.thru)}, ${pr.points}` : ''}</span>
+                        <span className={styles.big}>{r.total}</span>
                       </div>
                     )
                   })}
@@ -95,16 +93,16 @@ export function TvScreen() {
                 <h2 className={styles.boardTitle}>{settings.modules.pairs.label}</h2>
                 <div className={styles.rows}>
                   {state.modules.pairs.rows.map((r) => (
-                    <div key={r.pairId} className={styles.row}>
-                      <span className={`num ${styles.pos}`}>{r.label}</span>
+                    <div key={r.pairId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`}>
+                      <span className={styles.pos}>{r.label}</span>
                       <span className={styles.name}>
                         {r.name}
                         <span className={styles.small}>
                           {name(r.playerIds[0])} & {name(r.playerIds[1])}
                         </span>
                       </span>
-                      <span className={`num ${styles.small}`}>{r.perRound.join(' + ')}</span>
-                      <span className={`num ${styles.big}`}>{r.total}</span>
+                      <span className={styles.small}>{r.perRound.join(' + ')}</span>
+                      <span className={styles.big}>{r.total}</span>
                     </div>
                   ))}
                 </div>
@@ -119,7 +117,7 @@ export function TvScreen() {
                     .map((g) => (
                       <div key={g.groupId} className={styles.snakeGroup}>
                         <span className={styles.small}>
-                          {t.card.group} {g.groupNumber} · {formatMoney(g.pot)}
+                          {t.card.group} {g.groupNumber}, {formatMoney(g.pot)}
                         </span>
                         <div className={styles.snakePlayers}>
                           {g.playerIds.map((pid) => (
@@ -148,7 +146,7 @@ export function TvScreen() {
             {board === 'auction' && state.modules.auction && (
               <>
                 <h2 className={styles.boardTitle}>
-                  {settings.modules.auction.label} · {formatMoney(state.modules.auction.pot)}
+                  {settings.modules.auction.label}, {formatMoney(state.modules.auction.pot)}
                 </h2>
                 <div className={styles.rows}>
                   {state.modules.auction.portfolios.map((pf) => (
@@ -156,10 +154,10 @@ export function TvScreen() {
                       <Avatar name={name(pf.ownerId)} url={byId.get(pf.ownerId)?.avatarUrl} />
                       <span className={styles.name}>
                         {name(pf.ownerId)}
-                        <span className={styles.small}>{pf.holdings.map((h) => name(h.playerId)).join(' · ')}</span>
+                        <span className={styles.small}>{pf.holdings.map((h) => name(h.playerId)).join(', ')}</span>
                       </span>
-                      <span className={`num ${styles.small}`}>{formatMoney(pf.invested)}</span>
-                      <span className={`num ${styles.big}`}>{formatMoney(pf.value)}</span>
+                      <span className={styles.small}>{formatMoney(pf.invested)}</span>
+                      <span className={styles.big}>{formatMoney(pf.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -197,12 +195,12 @@ function AuctionBoard() {
             <h2 className={styles.lotName}>{player.fullName}</h2>
             <span className={styles.lotMeta}>
               {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${player.baseHcp}`}
-              {pair ? ` · ${t.auction.pair}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
+              {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
             </span>
             {player.formGuide && <p className={styles.form}>{player.formGuide}</p>}
             {open && (
               <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }}>
-                <span className={`num ${styles.bidAmount}`}>{formatMoney(bid)}</span>
+                <span className={styles.bidAmount}>{formatMoney(bid)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
               </motion.div>
             )}
@@ -214,7 +212,7 @@ function AuctionBoard() {
       <div className={styles.side}>
         <div className={styles.potBox}>
           <span className={styles.small}>{t.auction.pot}</span>
-          <motion.span key={auction.pot} className={`num ${styles.pot}`} initial={{ scale: 1.15 }} animate={{ scale: 1 }}>
+          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }}>
             {formatMoney(auction.pot)}
           </motion.span>
         </div>
@@ -235,7 +233,7 @@ function AuctionBoard() {
             .map((l) => (
               <span key={l.lotId} className={styles.soldRow}>
                 <span>
-                  {name(l.playerId)} <span className="muted">{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
+                  {name(l.playerId)} <span className={styles.small}>{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
                 </span>
                 <span className="num">{formatMoney(l.price)}</span>
               </span>

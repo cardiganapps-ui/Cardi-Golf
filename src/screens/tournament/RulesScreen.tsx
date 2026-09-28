@@ -3,7 +3,6 @@
  * tournament's settings so it always mirrors what the engine runs.
  */
 import { t } from '../../i18n/es-MX'
-import { Wave } from '../../components/Wave'
 import { useTournament } from '../../data/tournamentStore'
 import { snakePotPerGroup } from '../../engine/settings/prizeCheck'
 import { formatMoney } from '../../lib/money'
@@ -49,16 +48,14 @@ export function RulesScreen() {
   ].filter((s) => s.on)
 
   return (
-    <div className="screen">
+    <div className={styles.screen}>
       <h1>{R.title}</h1>
-      <p className="help">{R.intro(snapshot.tournament.name)}</p>
-      {sections.map((s, i) => (
+      <p className={styles.intro}>{R.intro(snapshot.tournament.name)}</p>
+      {sections.map((s) => (
         <section key={s.id} className={styles.section}>
           <div className={styles.head}>
-            <span className={`num ${styles.number}`}>{String(i + 1).padStart(2, '0')}</span>
             <h2>{s.title}</h2>
           </div>
-          <Wave className={styles.wave} />
           <ul className={styles.lines}>
             {s.lines.map((l, j) => (
               <li key={j}>{l}</li>

@@ -83,6 +83,15 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - `AdminAuction.module.css`, `AdminPlayers.tsx` and `AdminScores.module.css` left the no-literal-colors PENDING list.
 - Logged, not fixed: SettingsEditor's `defaultValue` inputs (tiers, prize lists, pairing) still do not reflect a realtime reload; the pairs row is cramped at 360px.
 
+## Phase 3, PR 8: TV, Ceremonia, Imprimir, share, Estadísticas, Reglamento, Más (2026-09-28)
+
+- **TV and Ceremonia** use the board palette only: ruled rows on `--board-rule`, the leader on `--board-surface` with the plate accent on the position, the bid and the pot as the only `--board-accent` figures, the event name in Fraunces. No translucent rgba blocks, no wave.
+- **Share cards** are card stock: the event name over a heavy rule, ruled rows, figures in the condensed width, birdie and zero holes tinted with the soft accent and the soft red; the footer is the date and the wordmark.
+- **Imprimir** keeps pure ink-on-white through tokens (`--ink`, `--surface-2`, `--surface`).
+- **Estadísticas**: awards as ruled rows with the value as the figure on the right (no cards), the moment and the cursed hole as two plain rows, the race chart with hairline grid and ink axes, the course bars in ink-3 with the hardest hole red and the easiest green.
+- **Reglamento** drops the numbered sections and the wave; each section is a heading over a heavy rule. **Más** is a ruled list of links, the code as a figure, one identity row.
+- The `Wave` component, the LEGACY alias block in `tokens.css` and the no-literal-colors PENDING list are gone: every stylesheet resolves against the tokens directly, and the test now fails on any literal outside `tokens.css`, `accents.ts` and the fixtures.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

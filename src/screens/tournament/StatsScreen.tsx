@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Segmented } from '../../components/ui'
+import { EmptyState } from '../../components/primitives'
+import { cssVar } from '../../lib/tokens'
 import { useTournament } from '../../data/tournamentStore'
 import { PlayerSheet } from './PlayerSheet'
 import styles from './StatsScreen.module.css'
@@ -18,6 +20,7 @@ const S = t.stats
 export function StatsScreen() {
   const data = useTournament((s) => s.data)
   const PALETTE = useMemo(() => chartSeries(), [])
+  const ink = useMemo(() => ({ rule: cssVar('--rule'), ink2: cssVar('--ink-2'), surface: cssVar('--surface-2') }), [])
   const [open, setOpen] = useState<string | null>(null)
   const [race, setRace] = useState<'players' | 'pairs'>('players')
   const [playing, setPlaying] = useState(false)
@@ -80,20 +83,20 @@ export function StatsScreen() {
   const hasData = Object.values(stats.players).some((s) => s.holesPlayed > 0)
 
   return (
-    <div className="screen">
+    <div className={styles.screen}>
       <h1>{S.title}</h1>
-      {!hasData && <p className="muted">{S.noData}</p>}
+      {!hasData && <EmptyState title={S.title} body={S.noData} />}
 
       {hasData && (
         <>
-          <section className="stack">
+          <section className={styles.section}>
             <h2>{S.awards}</h2>
-            <p className="help">{S.awardsHint}</p>
+            <p className={styles.help}>{S.awardsHint}</p>
             <div className={styles.awards}>
               {stats.awards.map((a) => (
-                <div key={a.id} className={`card card--cell ${styles.award}`}>
+                <div key={a.id} className={styles.award}>
                   <span className={styles.awardName}>{S.award[a.id].name}</span>
-                  <span className="help">{S.award[a.id].desc}</span>
+                  <span className={styles.awardDesc}>{S.award[a.id].desc}</span>
                   <div className={styles.awardWinners}>
                     {a.playerIds.map((pid) => (
                       <button key={pid} type="button" className={styles.winner} onClick={() => setOpen(pid)}>
@@ -101,29 +104,31 @@ export function StatsScreen() {
                         <span>{nameOf(pid)}</span>
                       </button>
                     ))}
-                    <span className={`num ${styles.awardValue}`}>{S.unit(a.unit, a.value)}</span>
                   </div>
+                  <span className={styles.awardValue}>{S.unit(a.unit, a.value)}</span>
                 </div>
               ))}
-              {stats.moment && (
-                <div className={`card card--deep ${styles.award}`}>
-                  <span className={styles.awardName} style={{ color: 'var(--sun)' }}>
-                    {S.moment}
-                  </span>
-                  <span>{S.momentText(nameOf(stats.moment.playerId), stats.moment.hole, stats.moment.roundNumber, stats.moment.points)}</span>
-                </div>
-              )}
-              {stats.cursedHole && (
-                <div className={`card card--alert ${styles.award}`}>
-                  <span className={styles.awardName}>{S.cursed}</span>
-                  <span>{S.cursedText(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avgPoints)}</span>
-                </div>
-              )}
             </div>
+            {(stats.moment || stats.cursedHole) && (
+              <div>
+                {stats.moment && (
+                  <div className={styles.moment}>
+                    <span className={styles.momentLabel}>{S.moment}</span>
+                    <span>{S.momentText(nameOf(stats.moment.playerId), stats.moment.hole, stats.moment.roundNumber, stats.moment.points)}</span>
+                  </div>
+                )}
+                {stats.cursedHole && (
+                  <div className={styles.moment}>
+                    <span className={styles.momentLabel}>{S.cursed}</span>
+                    <span>{S.cursedText(stats.cursedHole.hole, stats.cursedHole.roundNumber, stats.cursedHole.avgPoints)}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
-          <section className="stack">
-            <div className="row row--between">
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
               <h2>{race === 'pairs' ? S.pairsRace : S.race}</h2>
               <button
                 className="btn btn--secondary btn--sm"
@@ -155,14 +160,14 @@ export function StatsScreen() {
                 }}
               />
             )}
-            <p className="help">{S.raceHint}</p>
+            <p className={styles.help}>{S.raceHint}</p>
             <div className={styles.chart}>
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={visible} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                  <CartesianGrid stroke="var(--hair)" strokeDasharray="3 3" />
-                  <XAxis dataKey="hole" type="number" domain={[1, Math.max(2, series.rows.length)]} tick={{ fontSize: 11, fill: 'var(--muted)' }} allowDecimals={false} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ background: 'var(--cell)', border: '1px solid var(--hair)', borderRadius: 8, fontSize: 12 }} labelFormatter={(h) => `${t.round.hole(Number(h))}`} />
+                  <CartesianGrid stroke={ink.rule} vertical={false} />
+                  <XAxis dataKey="hole" type="number" domain={[1, Math.max(2, series.rows.length)]} tick={{ fontSize: 11, fill: ink.ink2 }} axisLine={{ stroke: ink.rule }} tickLine={false} allowDecimals={false} />
+                  <YAxis tick={{ fontSize: 11, fill: ink.ink2 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={{ background: ink.surface, border: `1px solid ${ink.rule}`, borderRadius: 4, fontSize: 12 }} labelFormatter={(h) => `${t.round.hole(Number(h))}`} />
                   {series.keys.map((k, i) => (
                     <Line key={k.key} type="monotone" dataKey={k.key} name={k.label} stroke={PALETTE[i % PALETTE.length]} strokeWidth={i < 3 ? 3 : 1.5} dot={false} isAnimationActive={false} connectNulls />
                   ))}
@@ -179,36 +184,40 @@ export function StatsScreen() {
             </div>
           </section>
 
-          <section className="stack">
+          <section className={styles.section}>
             <h2>{S.course}</h2>
-            {stats.rounds.filter((r) => r.holes.length > 0).map((r) => (
-              <div key={r.roundId} className="card card--cell stack" style={{ padding: 12 }}>
-                <strong>{t.round.day(r.roundNumber)}</strong>
-                <div className="row row--wrap small">
-                  {r.hardest && (
-                    <span>
-                      {S.hardest}: <strong>{r.hardest.hole}</strong> ({r.hardest.avgPoints} {S.avgPoints})
-                    </span>
-                  )}
-                  {r.easiest && (
-                    <span>
-                      {S.easiest}: <strong>{r.easiest.hole}</strong> ({r.easiest.avgPoints} {S.avgPoints})
-                    </span>
-                  )}
-                </div>
-                <div className={styles.holeBars}>
-                  {r.holes.map((h) => (
-                    <div key={h.hole} className={styles.holeBar} title={`${t.round.hole(h.hole)} · par ${h.par} · ${h.avgPoints}`}>
-                      <div className={styles.bar} style={{ height: `${Math.min(100, (h.avgPoints / 4) * 100)}%` }} />
-                      <span className={styles.holeLabel}>{h.hole}</span>
+            <div className={styles.course}>
+              {stats.rounds.filter((r) => r.holes.length > 0).map((r) => (
+                <div key={r.roundId} className={styles.round}>
+                  <div className={styles.roundHead}>
+                    <strong>{t.round.day(r.roundNumber)}</strong>
+                    <div className={styles.roundFacts}>
+                      {r.hardest && (
+                        <span>
+                          {S.hardest}: {r.hardest.hole} ({r.hardest.avgPoints} {S.avgPoints})
+                        </span>
+                      )}
+                      {r.easiest && (
+                        <span>
+                          {S.easiest}: {r.easiest.hole} ({r.easiest.avgPoints} {S.avgPoints})
+                        </span>
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  <div className={styles.holeBars}>
+                    {r.holes.map((h) => (
+                      <div key={h.hole} className={styles.holeBar} title={`${t.round.hole(h.hole)}, par ${h.par}, ${h.avgPoints}`}>
+                        <div className={`${styles.bar} ${h.hole === r.hardest?.hole ? styles.barHard : h.hole === r.easiest?.hole ? styles.barEasy : ''}`} style={{ height: `${Math.min(100, (h.avgPoints / 4) * 100)}%` }} />
+                        <span className={styles.holeLabel}>{h.hole}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </section>
 
-          <section className="stack">
+          <section className={styles.section}>
             <h2>{S.perPlayer}</h2>
             <div className={styles.tableWrap}>
               <table className="table">

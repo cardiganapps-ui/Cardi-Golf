@@ -1,3 +1,7 @@
+/**
+ * Más: who I am, the way into the Comité, the other screens as a ruled list,
+ * the join code to share, the install guide, and the session controls.
+ */
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { InstallGuide } from '../../components/InstallGuide'
@@ -6,6 +10,7 @@ import { useAuth, signOut } from '../../data/auth'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import { IconBook, IconChart, IconTrophy, IconTv } from '../../components/icons'
+import styles from './MoreScreen.module.css'
 
 export function MoreScreen() {
   const { me, slug, lookup, leave } = useTournamentCtx()
@@ -17,13 +22,13 @@ export function MoreScreen() {
   const joinCode = data?.snapshot.tournament.joinCode ?? lookup.joinCode
 
   return (
-    <div className="screen">
+    <div className={styles.screen}>
       <h1>{t.more.title}</h1>
-      <div className="card card--cell row">
+      <div className={styles.me}>
         {player ? <Avatar name={player.displayName} url={player.avatarUrl} honoree={player.isHonoree} /> : <Avatar name={user?.email ?? 'O'} />}
-        <div className="grow">
+        <div className={styles.meText}>
           <span className="label">{t.more.whoAmI}</span>
-          <strong style={{ display: 'block' }}>{player?.fullName ?? (me.isOrganizer ? `${t.more.organizer} · ${user?.email ?? ''}` : '')}</strong>
+          <span className={styles.meName}>{player?.fullName ?? (me.isOrganizer ? `${t.more.organizer}, ${user?.email ?? ''}` : '')}</span>
         </div>
       </div>
 
@@ -32,29 +37,27 @@ export function MoreScreen() {
           {t.more.admin}
         </Link>
       )}
-      <div className="row row--wrap">
-        <Link className="btn btn--secondary" to={`/t/${slug}/stats`}>
+      <nav className={styles.links}>
+        <Link className={styles.link} to={`/t/${slug}/stats`}>
           <IconChart /> {t.more.stats}
         </Link>
-        <Link className="btn btn--secondary" to={`/t/${slug}/reglamento`}>
+        <Link className={styles.link} to={`/t/${slug}/reglamento`}>
           <IconBook /> {t.more.rules}
         </Link>
-        <Link className="btn btn--secondary" to={`/t/${slug}/tv`}>
+        <Link className={styles.link} to={`/t/${slug}/tv`}>
           <IconTv /> {t.more.tv}
         </Link>
         {me.isAdmin && (
-          <Link className="btn btn--secondary" to={`/t/${slug}/ceremonia`}>
+          <Link className={styles.link} to={`/t/${slug}/ceremonia`}>
             <IconTrophy /> {t.more.ceremony}
           </Link>
         )}
-      </div>
+      </nav>
 
-      <div className="card">
+      <div className={styles.join}>
         <span className="label">{t.organizer.joinCode}</span>
-        <p className="num" style={{ fontSize: '1.8rem', letterSpacing: '0.2em' }}>
-          {joinCode}
-        </p>
-        <div className="row row--wrap" style={{ marginTop: 8 }}>
+        <span className={styles.code}>{joinCode}</span>
+        <div className={styles.row}>
           <CopyButton text={link} label={t.organizer.link} />
           <ShareButton text={t.common.joinWithCode(lookup.name, joinCode)} url={link} title={lookup.name} />
         </div>
@@ -62,7 +65,7 @@ export function MoreScreen() {
 
       <InstallGuide />
 
-      <div className="stack">
+      <div className={styles.session}>
         {me.playerId && (
           <button className="btn btn--secondary" type="button" onClick={() => void leave()}>
             {t.enter.switchPlayer}
@@ -82,7 +85,7 @@ export function MoreScreen() {
           {t.errors.backHome}
         </Link>
       </div>
-      <p className="help">
+      <p className={styles.version}>
         {t.more.version} {__APP_VERSION__}
       </p>
     </div>
