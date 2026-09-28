@@ -235,6 +235,10 @@ if (!process.env.SKIP_REAL) {
         await next.click()
         await p3.waitForTimeout(400)
         await shot(p3, `organizer--new-3${suffix}`)
+        // Money step, with the sticky balance bar.
+        await p3.getByRole('button', { name: 'Siguiente' }).click()
+        await p3.waitForTimeout(400)
+        await shot(p3, `organizer--new-4${suffix}`)
       }
       await p3.context().close()
     }

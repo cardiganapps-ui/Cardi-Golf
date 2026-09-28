@@ -11,7 +11,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteTournament, rotateJoinCode, updateTournament, uploadAsset } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
-import { checkPrizePool } from '../../engine/settings/prizeCheck'
+import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
@@ -57,7 +57,9 @@ export function AdminTournament() {
   }, [data, dirty, tr.name, tr.tagline, tr.accentColor])
 
   const parsed = useMemo(() => safeParseSettings(settings), [settings])
-  const balanced = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, { players, groupSizes }).balanced : false), [parsed, players, groupSizes])
+  // Players, real group sizes and each side pot's entrants; the planned field size until the roster exists.
+  const field = useMemo(() => ({ ...fieldShape(data!.snapshot, settings), players, groupSizes }), [data, settings, players, groupSizes])
+  const balanced = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field).balanced : false), [parsed, field])
 
   async function save() {
     if (!parsed.success || !balanced) return
@@ -245,8 +247,7 @@ export function AdminTournament() {
           setSettings(v)
           setDirty(true)
         }}
-        players={players}
-        groupSizes={groupSizes}
+        field={field}
       />
       <p className={a.help}>
         {A.playersForCheck}: {players}

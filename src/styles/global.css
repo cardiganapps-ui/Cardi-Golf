@@ -579,3 +579,17 @@ textarea {
     opacity: 1;
   }
 }
+
+/* Number field with an optional prefix/suffix ("$", "%"). */
+.numField {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+.numField .input {
+  width: 7.5em;
+}
+.numField__affix {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
