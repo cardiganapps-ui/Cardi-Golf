@@ -4,6 +4,7 @@
  */
 import type { TournamentSettings } from '../settings/schema'
 import type { Explanation, Hole, Id, Player, Round, Snapshot, Tee } from '../types'
+import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
 import type { CoreState, HoleResult, PlayerRound } from './types'
@@ -113,8 +114,14 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       if (ri > 0) {
         const prev = prevPoints[p.id]
         const cut = prev == null ? { value: 0, why: { title: '', steps: ['Sin ronda anterior: sin recorte'] } } : nextRoundCut(prev, settings.day2Cut)
-        cuts.total += cut.value
-        cuts.steps.push(`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`)
+        // Rounds 3+: `previous` recomputes from the last round alone; `cumulative` adds the cuts up (§5.2 only defines Day 2).
+        if (settings.day2Cut.mode === 'cumulative') {
+          cuts.total += cut.value
+          cuts.steps.push(`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`)
+        } else {
+          cuts.total = cut.value
+          cuts.steps = [`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`]
+        }
       }
       let playingHcp = Math.max(0, ph.value - cuts.total)
       if (cuts.total > 0) steps.push(...cuts.steps, `${ph.value} − ${cuts.total} = ${playingHcp}`)
@@ -123,7 +130,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const ov = snapshot.handicapOverrides.find((o) => o.roundId === round.id && o.playerId === p.id)
       if (ov) {
         overridden = true
-        steps.push(`Ajuste del Comité: ${playingHcp} → ${ov.playingHcp} (${ov.reason})`)
+        steps.push(`Ajuste del Comité: de ${playingHcp} a ${ov.playingHcp} (${ov.reason})`)
         playingHcp = ov.playingHcp
       }
       const playingHcpWhy: Explanation = { title: `Hándicap de juego ${playingHcp}`, steps }
@@ -136,7 +143,8 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       let gross: number | null = 0
       for (const h of holes) {
         const s = scoresIdx.get(`${round.id}|${p.id}|${h.number}`)
-        const sr = strokesReceived(playingHcp, h.strokeIndex, round.holes)
+        // 9-hole round: half the playing handicap (half up), allocated on the 18-hole stroke indexes.
+        const sr = round.holes === 9 ? strokesReceived(roundHalfUp(playingHcp / 2), h.strokeIndex, 18) : strokesReceived(playingHcp, h.strokeIndex, round.holes)
         const played = !!s && (s.strokes != null || s.pickedUp)
         const g = played && !s.pickedUp ? s.strokes : null
         const pts = played ? stablefordPoints(h.par, sr, g, s.pickedUp) : 0

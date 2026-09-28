@@ -121,11 +121,13 @@ export const pairsModule: GameModule<PairsState> = {
       }
     })
     const prizes: PairsState['prizes'] = {}
-    for (const s of splitPrizes(groups, settings.prizes.pairs, nameOfPair)) {
+    const anyScores = Object.values(core.totals).some((t) => t.thru > 0)
+    for (const s of anyScores || ctx.tournamentFinal ? splitPrizes(groups, settings.prizes.pairs, nameOfPair) : []) {
       const p = byId.get(s.item)!
       const each = Math.floor(s.amount / 2)
-      const why: Explanation = { title: `$${each} cada uno`, steps: [...s.why.steps, `$${s.amount} entre los dos = $${each} cada uno`] }
-      prizes[p.player1Id] = { amount: each + (s.amount - each * 2), why, pairId: p.id }
+      const odd = s.amount - each * 2
+      const why: Explanation = { title: `$${each} cada uno`, steps: [...s.why.steps, `$${s.amount} entre los dos = $${each} cada uno${odd ? ` (+$${odd} para ${playersById.get(p.player1Id)?.displayName ?? ''})` : ''}`] }
+      prizes[p.player1Id] = { amount: each + odd, why: odd ? { ...why, title: `$${each + odd}` } : why, pairId: p.id }
       prizes[p.player2Id] = { amount: each, why, pairId: p.id }
     }
     const paired = new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id]))
@@ -146,7 +148,7 @@ export const pairsModule: GameModule<PairsState> = {
       const row = state.rows.find((r) => r.pairId === p.pairId)
       out.push({
         moduleId: 'pairs',
-        label: `${label} · ${row?.label ?? ''}º`,
+        label: `${label}, ${row?.label ?? ''}º`,
         playerId,
         amount: p.amount,
         final: state.final,

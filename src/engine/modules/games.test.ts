@@ -59,13 +59,13 @@ describe('Los Matrimonios', () => {
     }
     const first = pairs.rows[0]!
     const second = pairs.rows[1]!
-    if (!first.tied) {
-      expect(pairs.prizes[first.playerIds[0]]!.amount).toBe(1000)
-      expect(pairs.prizes[first.playerIds[1]]!.amount).toBe(1000)
-    }
-    if (!second.tied && !first.tied) {
-      expect(pairs.prizes[second.playerIds[0]]!.amount).toBe(500)
-    }
+    // The fixture's cards do not tie at the top; the pair prizes are $1,000 and $500 per player.
+    expect(first.tied).toBe(false)
+    expect(second.tied).toBe(false)
+    expect(pairs.prizes[first.playerIds[0]]!.amount).toBe(1000)
+    expect(pairs.prizes[first.playerIds[1]]!.amount).toBe(1000)
+    expect(pairs.prizes[second.playerIds[0]]!.amount).toBe(500)
+    expect(pairs.prizes[second.playerIds[1]]!.amount).toBe(500)
     expect(st.prizes.filter((p) => p.moduleId === 'pairs').reduce((s, p) => s + p.amount, 0)).toBe(3000)
     expect(pairs.groupWarnings).toEqual([])
     expect(pairs.unpaired).toEqual([])

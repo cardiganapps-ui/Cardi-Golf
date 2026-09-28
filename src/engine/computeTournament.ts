@@ -115,6 +115,14 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
 
   const discrepancies = snapshot.scores.filter((s) => s.disputed).map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
 
+  const auctionWarnings: string[] = []
+  if (modules.auction) {
+    const unfilled = modules.auction.slots.filter((s) => s.unfilled)
+    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${unfilled.map((s) => s.label).join(', ')}). El Comité decide.`)
+    const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
+    if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
+  }
+
   return {
     settings,
     core,
@@ -129,7 +137,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       unsignedCards,
       discrepancies,
       missingModules,
-      warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? [])],
+      warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings],
     },
     tournamentFinal,
   }

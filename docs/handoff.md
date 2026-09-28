@@ -32,6 +32,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 ## Limpieza tras la revisión (docs/audit-2026-09-28.md)
 
 - [ ] **Probar la sincronización en cancha (PR 1).** En tu teléfono con la app instalada y dentro de `/t/ensayo` como Nico: (1) pon modo avión, cierra la app del todo y vuélvela a abrir: debe mostrar los tableros y la Tarjeta con el aviso «Sin señal: mostrando lo último guardado»; (2) sigue en modo avión, guarda un hoyo, quita el modo avión: el chip pasa de «1 pendiente» a «Sincronizado» solo, y los cuatro jugadores del hoyo llegan juntos (no uno primero y tres cinco segundos después); (3) cuando yo suba una versión nueva, la app te avisa «Hay una versión nueva» con un botón, ya no se recarga sola. Como jugador sin ser Comité (otro PIN), «Más» ya no debe mostrar «Consola del Comité».
+- [ ] **Revisar las reglas de dinero afinadas (PR 2).** Nada cambia para el torneo de Nacho salvo tres casos raros que ahora se ven en vez de esconderse: (1) si un slot de la Calcutta no tiene a quién pagarse (por ejemplo los tres D empatan en el último lugar y ya cobran «Mejor D»), ese dinero se queda en el banco y sale un aviso en Comité › Torneo; antes se le daba en silencio al dueño del campeón; (2) un hoyo levantado cuenta 3 putts como mínimo aunque se hayan capturado 2; (3) en «Menos putts» ya no lidera quien lleva menos hoyos. En `/t/ensayo` › Juegos › Calcutta y Dinero tiene que verse igual que antes; en Comité › Torneo el cuadre ahora dice «$10,000» con coma.
 
 ## Rediseño
 

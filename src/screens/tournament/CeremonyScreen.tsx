@@ -118,7 +118,7 @@ export function CeremonyScreen() {
             {m.auction.slots.map((s, i) => (
               <div key={i} className={styles.listRow}>
                 <span>
-                  {s.label}: <strong>{s.playerIds.map(nameOf).join(' & ') || '–'}</strong>
+                  {s.label}: <strong>{s.unfilled ? t.games.unassigned : s.playerIds.map(nameOf).join(' & ')}</strong>
                 </span>
                 <span>{formatMoney(s.amount)}</span>
               </div>

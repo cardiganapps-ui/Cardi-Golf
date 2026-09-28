@@ -70,7 +70,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **The wizard** shows progress as a four-segment rule plus "Paso n de 4, Nombre", not a row of chips. Templates are ruled radio rows with a check on the selected one; the player count moved into the games step because it drives the prize balance. Step 3 is a **summary** (name, template, games, players, entry and pot) followed by the prize statement, so the organizer reads the money before creating; the full editor opens under "Ajustar reglas y premios" only if they want to change something.
 - **Prize statement** (`PrizeSummary`) is shared with the Comité settings editor: one line per enabled game with its detail, the total, the entry pot, and "Cuadra" or the difference in red. It replaces the green/coral card.
 - **Created state** leads with the join code as the biggest figure on the page, then the link, copy and share, then "Ir al Comité".
-- Logged, not fixed: the per-line detail strings come from the engine (`prizeCheck.ts`) and print raw numbers ("$10000") rather than formatted money; the engine is out of scope for the redesign.
+- ~~Logged, not fixed: the per-line detail strings come from the engine (`prizeCheck.ts`) and print raw numbers ("$10000") rather than formatted money.~~ Fixed in cleanup PR 2 (2026-09-28): the engine formats thousands itself, without Intl.
 
 ## Phase 3, PR 7: Comité (2026-09-28)
 
@@ -126,7 +126,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 
 Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido!"; no middle dots as separators (sentences, commas or a second line instead); no arrows or symbols in copy; no jokes outside `feed`; buttons under 24 characters, chips under 18.
 
-Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto"). The engine is out of scope for the redesign; logged for a separate PR. `HowCalculated` renders them as-is.
+~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs; the English net-score names stay in the engine (the screen maps them) because tests and the CSV export read them.
 
 ## Throwaway organizer account
 

@@ -97,6 +97,11 @@ export const NextRoundCutSettings = z.object({
   pointsPerStroke: z.number().int().min(1),
   /** Never cut more than this. */
   maxStrokes: z.number().int().min(0),
+  /**
+   * Rounds 3+ (the rules sheet only defines Day 2): `previous` computes each
+   * round's cut from the previous round alone; `cumulative` adds the cuts up.
+   */
+  mode: z.enum(['previous', 'cumulative']).default('previous'),
 })
 
 export const PrizeSettings = z.object({
@@ -132,7 +137,7 @@ export const AuctionSettings = z.object({
   ),
 })
 
-export const TournamentSettingsSchema = z.object({
+const TournamentSettingsBase = z.object({
   modules: ModulesSettings,
   /** Ordered best → worst, e.g. ["A","B","C","D"]. Empty = no tiers. */
   tiers: z.array(z.string().trim().min(1)).refine((t) => new Set(t).size === t.length, {
@@ -160,6 +165,25 @@ export const TournamentSettingsSchema = z.object({
   spectatorLink: z.boolean(),
   timezone: z.string().min(1),
   currency: z.string().length(3),
+})
+
+/** Cross-field rules: every tier named by a payout slot or a pairing rule must exist in `tiers`. */
+export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, ctx) => {
+  const tiers = new Set(v.tiers)
+  if (v.modules.auction.enabled) {
+    v.auction.payout.forEach((slot, i) => {
+      if (slot.slot === 'bestOfTier' && !tiers.has(slot.tier)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], message: `La categoría "${slot.tier}" del reparto de la Calcutta no existe en las categorías del torneo.` })
+      }
+    })
+  }
+  if (v.modules.pairs.enabled) {
+    v.modules.pairs.pairing.forEach((rule, i) => {
+      for (const tier of rule) {
+        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], message: `La categoría "${tier}" de la regla de parejas no existe en las categorías del torneo.` })
+      }
+    })
+  }
 })
 
 export type TournamentSettings = z.infer<typeof TournamentSettingsSchema>

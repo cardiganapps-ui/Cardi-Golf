@@ -73,14 +73,15 @@ export const individualModule: GameModule<IndividualState> = {
       const neighbour = ranked[i - 1]
       if (neighbour && (ctx.core.totals[neighbour.item]?.points ?? 0) === total) {
         const cb = countback(lastRoundPoints(ctx, neighbour.item), lastRoundPoints(ctx, r.item))
-        const lastN = ctx.core.roundIds.length
+        const lastRoundId = ctx.core.roundIds.at(-1) ?? ''
+        const lastRound = ctx.snapshot.rounds.find((x) => x.id === lastRoundId)
+        const lastN = lastRound?.number ?? ctx.core.roundIds.length
+        const lastHole = lastRound?.holes ?? 18
         countbackWhy = {
           title: r.tied ? `Empate con ${nameOf(neighbour.item)}` : `Desempate con ${nameOf(neighbour.item)}`,
-          steps: cb.steps.map(
-            (s) => `Día ${lastN} · ${s.label}: ${nameOf(neighbour.item)} ${s.a} – ${nameOf(r.item)} ${s.b}`,
-          ),
+          steps: cb.steps.map((s) => `Día ${lastN}, ${s.label}: ${nameOf(neighbour.item)} ${s.a} – ${nameOf(r.item)} ${s.b}`),
         }
-        if (cb.result === 0) countbackWhy.steps.push('Iguales hasta el hoyo 18: se reparten los premios.')
+        if (cb.result === 0) countbackWhy.steps.push(`Iguales hasta el hoyo ${lastHole}: se reparten los premios.`)
       }
       return {
         playerId: r.item,
@@ -93,13 +94,15 @@ export const individualModule: GameModule<IndividualState> = {
         countbackWhy,
       }
     })
-    const prizeShares = splitPrizes(groups, ctx.settings.prizes.stableford, nameOf)
+    // No money until a hole has been played: an all-tied field on Calcutta night is not a 12-way split.
+    const anyScores = Object.values(ctx.core.totals).some((t) => t.thru > 0)
+    const prizeShares = anyScores || ctx.tournamentFinal ? splitPrizes(groups, ctx.settings.prizes.stableford, nameOf) : []
     const prizes: IndividualState['prizes'] = {}
     for (const s of prizeShares) prizes[s.item] = { amount: s.amount, why: s.why }
     return {
       rows,
       groups,
-      lastPlace: groups.at(-1)?.members ?? [],
+      lastPlace: anyScores || ctx.tournamentFinal ? (groups.at(-1)?.members ?? []) : [],
       prizes,
       final: ctx.tournamentFinal,
     }
@@ -112,7 +115,7 @@ export const individualModule: GameModule<IndividualState> = {
       if (!p) continue
       out.push({
         moduleId: 'individual',
-        label: `${label} · ${row.label}º`,
+        label: `${label}, ${row.label}º`,
         playerId: row.playerId,
         amount: p.amount,
         final: state.final,

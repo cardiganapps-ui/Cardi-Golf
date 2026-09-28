@@ -103,8 +103,9 @@ export function computeMoney(
         to: null,
         amount: lot.price,
         kind: 'calcutta',
-        label: `Calcutta · lote ${lot.lotNumber}`,
-        paid: isPaid(payments, 'calcutta', lot.ownerId, null, lot.price),
+        label: `Calcutta, lote ${lot.lotNumber}`,
+        paid: false, // decided below on the owner's aggregate, one payment row covers all his lots
+
         final: true,
       })
       if (lot.buybackPct > 0 && lot.ownerId !== lot.playerId) {
@@ -135,6 +136,18 @@ export function computeMoney(
       final: pr.final,
     })
   }
+  // Entries, Calcutta purchases and buybacks: one payment row per person and
+  // kind covers every flow with the same (kind, from, to) once its amount
+  // reaches the aggregate owed (an owner with three lots pays once).
+  const owedByKey = new Map<string, number>()
+  const key = (f: { kind: PaymentKind; from: Id | null; to: Id | null }) => `${f.kind}|${f.from ?? ''}|${f.to ?? ''}`
+  for (const f of flows) if (f.kind !== 'payout') owedByKey.set(key(f), (owedByKey.get(key(f)) ?? 0) + f.amount)
+  for (const f of flows) {
+    if (f.kind === 'payout' || f.paid) continue
+    const owed = owedByKey.get(key(f)) ?? 0
+    f.paid = owed > 0 && isPaid(payments, f.kind, f.from, f.to, owed)
+  }
+
   // A single "payout" payment row per person marks all their payouts paid.
   const payoutPaid = new Map<Id, number>()
   for (const p of payments) if (p.paid && p.kind === 'payout' && p.fromPlayerId === null && p.toPlayerId) {

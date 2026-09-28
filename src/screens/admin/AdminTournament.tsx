@@ -40,6 +40,11 @@ export function AdminTournament() {
   const link = `${window.location.origin}/t/${slug}`
   const players = data!.snapshot.players.length || 12
   const warnings = data!.state.flags.warnings
+  // Real group sizes per round, so the snake pot in the balance follows them (a group of 3 pays two).
+  const groupSizes = useMemo(
+    () => data!.snapshot.rounds.filter((r) => r.status !== 'cancelled').map((r) => data!.snapshot.groups.filter((g) => g.roundId === r.id).map((g) => g.playerIds.length)),
+    [data],
+  )
 
   useEffect(() => {
     if (!dirty) setSettings(data!.settings)
@@ -226,6 +231,7 @@ export function AdminTournament() {
           setDirty(true)
         }}
         players={players}
+        groupSizes={groupSizes}
       />
       <p className={a.help}>
         {A.playersForCheck}: {players}

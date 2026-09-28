@@ -14,6 +14,8 @@ interface Props {
   value: TournamentSettings
   onChange: (v: TournamentSettings) => void
   players: number
+  /** Real group sizes per round once groups exist: the snake pot then follows them. */
+  groupSizes?: number[][]
   compact?: boolean
 }
 
@@ -30,14 +32,14 @@ const strList = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean)
 
-export function SettingsEditor({ value, onChange, players, compact }: Props) {
+export function SettingsEditor({ value, onChange, players, groupSizes, compact }: Props) {
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
     onChange(d)
   }
   const parsed = useMemo(() => safeParseSettings(value), [value])
-  const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, { players }) : null), [parsed, players])
+  const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, { players, groupSizes }) : null), [parsed, players, groupSizes])
   const m = value.modules
   const A = t.admin.tournament
 
@@ -136,6 +138,14 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                 <input className="input input--num" type="number" min={0} value={value.day2Cut.maxStrokes} onChange={(e) => set((d) => (d.day2Cut.maxStrokes = Number(e.target.value) || 0))} />
               </Field>
             </div>
+            {value.rounds > 2 && (
+              <Field label={A.cutMode}>
+                <select className="select" value={value.day2Cut.mode} onChange={(e) => set((d) => (d.day2Cut.mode = e.target.value === 'cumulative' ? 'cumulative' : 'previous'))}>
+                  <option value="previous">{A.cutModePrevious}</option>
+                  <option value="cumulative">{A.cutModeCumulative}</option>
+                </select>
+              </Field>
+            )}
           </>
         )}
         {!compact && <Toggle label={A.perRoundSlope} hint={A.perRoundSlopeHint} checked={value.handicap.perRoundSlope} onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))} />}
@@ -211,6 +221,26 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                 <span className="grow small">
                   {slot.slot === 'place' ? `${slot.place}º lugar` : slot.slot === 'bestOfTier' ? `Mejor ${slot.tier}` : value.labels.lastPlace}
                 </span>
+                {slot.slot === 'bestOfTier' && (
+                  <select
+                    className="select input--sm"
+                    aria-label={A.payoutTier}
+                    value={value.tiers.includes(slot.tier) ? slot.tier : ''}
+                    onChange={(e) =>
+                      set((d) => {
+                        const sl = d.auction.payout[i]!
+                        if (sl.slot === 'bestOfTier') sl.tier = e.target.value
+                      })
+                    }
+                  >
+                    {!value.tiers.includes(slot.tier) && <option value="">{slot.tier}</option>}
+                    {value.tiers.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tier}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <input
                   className="input input--sm input--num"
                   type="number"
