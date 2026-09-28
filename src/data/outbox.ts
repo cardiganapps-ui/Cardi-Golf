@@ -15,6 +15,7 @@ export type OutboxItem =
   | { key: string; kind: 'score'; tournamentId: string; payload: ScorePayload; attempts: number; createdAt: number; lastError?: string }
   | { key: string; kind: 'tiebreak'; tournamentId: string; payload: TiebreakPayload; attempts: number; createdAt: number; lastError?: string }
   | { key: string; kind: 'signature'; tournamentId: string; payload: SignaturePayload; attempts: number; createdAt: number; lastError?: string }
+  | { key: string; kind: 'award'; tournamentId: string; payload: AwardPayload; attempts: number; createdAt: number; lastError?: string }
 
 export interface ScorePayload {
   round_id: string
@@ -31,6 +32,15 @@ export interface TiebreakPayload {
   group_id: string
   hole: number
   last_holed_player_id: string
+  decided_by: string | null
+}
+/** A group's answer for a hole contest: the winners (empty = nobody), replacing its earlier answer. */
+export interface AwardPayload {
+  round_id: string
+  group_id: string
+  hole: number
+  game_id: string
+  player_ids: string[]
   decided_by: string | null
 }
 export interface SignaturePayload {
@@ -162,6 +172,10 @@ export function overlayPending(s: Snapshot): void {
       const p = it.payload
       s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
       s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
+    } else if (it.kind === 'award') {
+      const p = it.payload
+      s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))
+      for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
     } else if (it.kind === 'signature') {
       const p = it.payload
       if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
@@ -186,6 +200,9 @@ export function enqueueScore(tournamentId: string, payload: ScorePayload) {
 }
 export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload) {
   return enqueue({ key: `tiebreak:${payload.round_id}:${payload.group_id}:${payload.hole}`, kind: 'tiebreak', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+}
+export function enqueueAward(tournamentId: string, payload: AwardPayload) {
+  return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() })
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
   return enqueue({ key: `signature:${payload.round_id}:${payload.pair_id}`, kind: 'signature', tournamentId, payload, attempts: 0, createdAt: Date.now() })
@@ -217,6 +234,14 @@ async function push(item: OutboxItem): Promise<void> {
   } else if (item.kind === 'tiebreak') {
     const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' })
     if (error) throw new Error(error.message)
+  } else if (item.kind === 'award') {
+    const p = item.payload
+    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id)
+    if (del.error) throw new Error(del.error.message)
+    if (p.player_ids.length) {
+      const { error } = await sb.from('hole_awards').insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+      if (error) throw new Error(error.message)
+    }
   } else {
     const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true })
     if (error) throw new Error(error.message)

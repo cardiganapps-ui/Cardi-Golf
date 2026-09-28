@@ -503,6 +503,26 @@ export async function seedGameEntries(tournamentId: string, gameId: string, play
   unwrap(await supabase().from('game_entries').upsert(playerIds.map((player_id) => ({ tournament_id: tournamentId, game_id: gameId, player_id })), { onConflict: 'tournament_id,game_id,player_id' }).select('player_id'))
 }
 
+/** Comité: set the winners of a contest hole for the whole field (group-less rows override the groups' claims). */
+export async function adminSetAwards(roundId: string, gameId: string, hole: number, playerIds: string[] | null, decidedBy: string | null) {
+  const sb = supabase()
+  unwrap(await sb.from('hole_awards').delete().eq('round_id', roundId).eq('game_id', gameId).eq('hole', hole).is('group_id', null).select('hole'))
+  // null = clear the Comité's decision (the groups' claims count again); [] = nobody won.
+  if (playerIds === null) return
+  if (!playerIds.length) {
+    unwrap(await sb.from('hole_awards').delete().eq('round_id', roundId).eq('game_id', gameId).eq('hole', hole).select('hole'))
+    return
+  }
+  unwrap(await sb.from('hole_awards').insert(playerIds.map((player_id) => ({ round_id: roundId, group_id: null, hole, game_id: gameId, player_id, decided_by: decidedBy }))).select('hole'))
+}
+
+/** Comité: the winners of a custom bet (replaces the previous result). */
+export async function setGameResults(tournamentId: string, gameId: string, winners: Array<{ playerId: string; share: number }>) {
+  const sb = supabase()
+  unwrap(await sb.from('game_results').delete().eq('tournament_id', tournamentId).eq('game_id', gameId).select('player_id'))
+  if (winners.length) unwrap(await sb.from('game_results').insert(winners.map((w) => ({ tournament_id: tournamentId, game_id: gameId, player_id: w.playerId, share: w.share }))).select('player_id'))
+}
+
 export async function saveSettings(tournamentId: string, settings: TournamentSettings) {
   await updateTournament(tournamentId, { settings })
 }

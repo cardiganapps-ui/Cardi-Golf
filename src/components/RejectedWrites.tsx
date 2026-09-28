@@ -26,6 +26,11 @@ export function RejectedWrites({ canResend }: { canResend: boolean }) {
       const p = r.payload as { group_id: string; hole: number; last_holed_player_id: string }
       return IB.rejectedTiebreak(snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, p.hole, name(p.last_holed_player_id))
     }
+    if (r.kind === 'award') {
+      const p = r.payload as { game_id: string; hole: number; player_ids: string[] }
+      const label = data.settings.games.find((g) => g.id === p.game_id)?.label ?? p.game_id
+      return IB.rejectedAward(label, p.hole, p.player_ids.map(name).join(', ') || t.card.contest.nobody)
+    }
     const p = r.payload as { pair_id: string }
     const pair = snapshot.pairs.find((x) => x.id === p.pair_id)
     return IB.rejectedSignature(pair?.name ?? (pair ? `${name(pair.player1Id)} & ${name(pair.player2Id)}` : '?'))

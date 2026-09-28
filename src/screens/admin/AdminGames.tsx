@@ -7,7 +7,9 @@ import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { EmptyState, Segmented } from '../../components/primitives'
-import { saveSettings, seedGameEntries, setGameEntry } from '../../data/api'
+import { adminSetAwards, saveSettings, seedGameEntries, setGameEntry, setGameResults } from '../../data/api'
+import { CONTEST_SINGLE, type ContestHole, type ContestState } from '../../engine/games/contest'
+import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournament } from '../../data/tournamentStore'
 import type { GameConfig, Match } from '../../engine/settings/games'
 import type { TournamentSettings } from '../../engine/settings/schema'
@@ -31,6 +33,8 @@ export function AdminGames() {
   const tid = snapshot.tournament.id
   const [busy, setBusy] = useState(false)
   const [matchFor, setMatchFor] = useState<string | null>(null)
+  const [awardFor, setAwardFor] = useState<{ gameId: string; hole: ContestHole } | null>(null)
+  const { me } = useTournamentCtx()
   const games = settings.games
 
   async function run(fn: () => Promise<void>) {
@@ -107,6 +111,22 @@ export function AdminGames() {
                 })}
               </div>
             )}
+            {g.type === 'contest' && (
+              <>
+                <span className="label">{G.contestHoles}</span>
+                <div className={a.rows}>
+                  {((data.state.games[g.id]?.state as ContestState | undefined)?.holes ?? []).map((h) => (
+                    <button key={`${h.roundId}-${h.hole}`} type="button" className={a.rowBtn} onClick={() => setAwardFor({ gameId: g.id, hole: h })}>
+                      <span className={a.rowText}>
+                        <span className={a.rowTitle}>{G.dayHole(h.roundNumber, h.hole)}</span>
+                        <span className={h.status === 'disputed' ? a.warn : a.rowSub}>{h.status === 'won' ? h.winners.map(name).join(', ') : h.status === 'disputed' ? G.disputed(h.claims.map(name).join(', ')) : G.open}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            {g.type === 'custom' && <CustomWinners game={g} busy={busy} run={run} />}
             {g.type === 'match' && (
               <>
                 <span className="label">{G.matches}</span>
@@ -138,6 +158,16 @@ export function AdminGames() {
           </section>
         )
       })}
+      <AwardSheet
+        target={awardFor}
+        onClose={() => setAwardFor(null)}
+        onSave={(ids) =>
+          run(async () => {
+            await adminSetAwards(awardFor!.hole.roundId, awardFor!.gameId, awardFor!.hole.hole, ids, me.playerId)
+            setAwardFor(null)
+          })
+        }
+      />
       <MatchSheet
         game={games.find((g) => g.id === matchFor) ?? null}
         onClose={() => setMatchFor(null)}
@@ -226,3 +256,91 @@ function MatchSheet({ game, onClose, onSave }: { game: GameConfig | null; onClos
   )
 }
 
+
+/** Comité decision for one contest hole: pick the winner(s), "Nadie", or go back to what the groups marked. */
+function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hole: ContestHole } | null; onClose: () => void; onSave: (ids: string[] | null) => void }) {
+  const data = useTournament((s) => s.data)!
+  const [sel, setSel] = useState<string[] | null>(null)
+  const game = target ? data.settings.games.find((g) => g.id === target.gameId) : undefined
+  const single = game?.type === 'contest' ? CONTEST_SINGLE[game.options.kind] : true
+  const entrants = target ? (data.state.games[target.gameId]?.entrants ?? []) : []
+  const players = data.snapshot.players.filter((p) => entrants.includes(p.id))
+  const chosen = sel ?? target?.hole.winners ?? []
+  const close = () => {
+    setSel(null)
+    onClose()
+  }
+  const toggle = (id: string) => setSel(single ? (chosen.includes(id) ? [] : [id]) : chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id])
+  return (
+    <Sheet open={!!target} onClose={close} title={target ? `${game?.label ?? ''}, ${G.dayHole(target.hole.roundNumber, target.hole.hole)}` : undefined}>
+      <div className="stack">
+        {target && target.hole.claims.length > 0 && <p className="help">{G.claims(target.hole.claims.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?').join(', '))}</p>}
+        <div className={a.tiles}>
+          {players.map((p) => (
+            <button key={p.id} type="button" aria-pressed={chosen.includes(p.id)} className={`${a.tile} ${chosen.includes(p.id) ? a.tileOn : ''}`} onClick={() => toggle(p.id)}>
+              <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
+              <span className={a.tileText}>{p.displayName}</span>
+            </button>
+          ))}
+        </div>
+        <div className="row">
+          <button type="button" className="btn btn--secondary" onClick={() => onSave(null)}>
+            {G.useGroups}
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary grow"
+            onClick={() => {
+              onSave(chosen)
+              setSel(null)
+            }}
+          >
+            {chosen.length ? G.saveWinner : G.saveNobody}
+          </button>
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
+/** Custom bet: the Comité taps the winners and saves. */
+function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; run: (fn: () => Promise<void>) => Promise<void> }) {
+  const data = useTournament((s) => s.data)!
+  const saved = data.snapshot.gameResults.filter((r) => r.gameId === game.id).map((r) => r.playerId)
+  const [sel, setSel] = useState<string[] | null>(null)
+  const chosen = sel ?? saved
+  const entrants = data.state.games[game.id]?.entrants ?? []
+  const players = data.snapshot.players.filter((p) => entrants.includes(p.id))
+  const dirty = sel !== null && (sel.length !== saved.length || sel.some((x) => !saved.includes(x)))
+  return (
+    <>
+      <span className="label">{G.winners}</span>
+      <div className={a.tiles} role="group" aria-label={G.winners}>
+        {players.map((p) => {
+          const on = chosen.includes(p.id)
+          return (
+            <button key={p.id} type="button" aria-pressed={on} className={`${a.tile} ${on ? a.tileOn : ''}`} disabled={busy} onClick={() => setSel(on ? chosen.filter((x) => x !== p.id) : [...chosen, p.id])}>
+              <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
+              <span className={a.tileText}>{p.displayName}</span>
+            </button>
+          )
+        })}
+      </div>
+      {dirty && (
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={busy}
+          onClick={() =>
+            void run(async () => {
+              await setGameResults(data.snapshot.tournament.id, game.id, chosen.map((playerId) => ({ playerId, share: 1 })))
+              setSel(null)
+            })
+          }
+        >
+          {chosen.length ? G.saveWinners(chosen.length) : G.clearWinners}
+        </button>
+      )}
+    </>
+  )
+}

@@ -157,6 +157,24 @@
   color: var(--ink-3);
 }
 
+.contest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--rule);
+}
+.contestTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.contestPicks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
 .saveBar {
   position: sticky;
   /* Above the sticky tab bar (56 px + safe area) so "Guardar hoyo" never hides behind it on short screens. */

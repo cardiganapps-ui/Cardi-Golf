@@ -63,6 +63,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Entrar como organizador.** https://golf.cardigan.mx/organizer/login → escribe tu correo → "¿Olvidaste tu contraseña?" → abre el correo en el teléfono → pon tu contraseña → verás "Mis torneos" con el Ensayo. Desde ahí, "Comité" para editar todo.
 - [ ] **Crear un torneo desde cero** con "Nuevo torneo" y comprobar que el cuadre de la bolsa se pone en rojo si cambias un premio.
 - [ ] **Juegos nuevos, parte 1 (base):** nada que probar todavía; es la base de botes aparte, apuestas directas y "para la casa". Solo confirma que Dinero del Ensayo se ve igual que antes. Los juegos (skins, Nassau, concursos, apuesta libre) y el nuevo "Nuevo torneo" llegan en las partes 2 a 4.
+- [ ] **Juegos nuevos, parte 3 (concursos y apuesta libre):** el Ensayo ya trae "Más cerca del hoyo" (sin dinero) en todos los hoyos. En la Tarjeta, abajo de los jugadores, marca quién la dejó más cerca y guarda el hoyo; en Juegos aparece el ganador. En Comité, Juegos puedes cambiar al ganador de cualquier hoyo o resolver una disputa.
 
 ---
 

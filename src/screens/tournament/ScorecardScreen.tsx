@@ -12,7 +12,8 @@ import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primit
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
-import { enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
+import { enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
+import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
 import { RejectedWrites } from '../../components/RejectedWrites'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
@@ -147,6 +148,30 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }, [drafts])
   useEffect(() => () => useOutbox.setState({ editing: false }), [])
 
+  // Hole contests on this hole (closest to the pin, greenies...): the group's pick, saved with the hole.
+  const contests = useMemo(
+    () =>
+      settings.games.flatMap((g) => {
+        if (g.type !== 'contest' || !g.enabled) return []
+        const gs = state.games[g.id]
+        const onHole = (gs?.state as ContestState | undefined)?.holes.some((h) => h.roundId === round.id && h.hole === hole)
+        if (!gs || !onHole) return []
+        const eligible = players.filter((p) => gs.entrants.includes(p.id))
+        return eligible.length ? [{ id: g.id, label: g.label, kind: g.options.kind, single: CONTEST_SINGLE[g.options.kind], eligible }] : []
+      }),
+    [settings.games, state.games, round.id, hole, players],
+  )
+  const savedPicks = (gameId: string) => snapshot.holeAwards.filter((a) => a.roundId === round.id && a.gameId === gameId && a.hole === hole && a.groupId === group.id).map((a) => a.playerId)
+  const [picks, setPicks] = useState<Record<string, string[] | undefined>>({})
+  useEffect(() => setPicks({}), [hole, round.id, group.id])
+  const pickOf = (gameId: string) => picks[gameId] ?? savedPicks(gameId)
+  const togglePick = (c: (typeof contests)[number], pid: string | null) =>
+    setPicks((cur) => {
+      const now = cur[c.id] ?? savedPicks(c.id)
+      const next = pid === null ? [] : c.single ? (now.includes(pid) ? [] : [pid]) : now.includes(pid) ? now.filter((x) => x !== pid) : [...now, pid]
+      return { ...cur, [c.id]: next }
+    })
+
   const setDraft = (pid: string, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
 
   const idx = order.indexOf(hole)
@@ -219,6 +244,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
       if (needsReason && signed(p.id)) await adminSaveScore(payload, reason.trim())
       else await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
+    }
+    for (const c of contests) {
+      const chosen = picks[c.id]
+      if (chosen && holeNumber === hole) await enqueueAward(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, game_id: c.id, player_ids: chosen, decided_by: me.playerId })
     }
     if (lastHoled) {
       await enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, last_holed_player_id: lastHoled, decided_by: me.playerId })
@@ -497,6 +526,31 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               )
             })}
           </div>
+
+          {contests.map((c) => {
+            const chosen = pickOf(c.id)
+            return (
+              <div key={c.id} className={styles.contest} role="group" aria-label={c.label}>
+                <span className={styles.contestTitle}>
+                  <strong>{S.contest.question[c.kind] ?? c.label}</strong>
+                  <span className="help">
+                    {c.label}
+                    {c.single ? '' : `, ${S.contest.many.toLowerCase()}`}
+                  </span>
+                </span>
+                <div className={styles.contestPicks}>
+                  {c.eligible.map((p) => (
+                    <button key={p.id} type="button" className={styles.pickup} aria-pressed={chosen.includes(p.id)} disabled={!canEdit} onClick={() => togglePick(c, p.id)}>
+                      {p.displayName}
+                    </button>
+                  ))}
+                  <button type="button" className={styles.pickup} aria-pressed={picks[c.id] !== undefined && chosen.length === 0} disabled={!canEdit} onClick={() => togglePick(c, null)}>
+                    {S.contest.nobody}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
 
           <div className={styles.saveBar}>
             <button className="btn btn--primary btn--block" type="button" disabled={busy || !canEdit} onClick={() => void save()}>
