@@ -1,5 +1,5 @@
 /*
-  Cardi-Golf design tokens: direction A, "La tarjeta" (DESIGN_DIRECTION.md).
+  Polo design tokens: direction A, "La tarjeta" (DESIGN_DIRECTION.md).
   One source of truth for color, type, spacing (4/8), radius, borders,
   elevation and motion. Nothing outside this file may declare a color;
   src/styles/no-literal-colors.test.ts enforces it.

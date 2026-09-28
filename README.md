@@ -1,4 +1,6 @@
-# Cardi-Golf
+# Polo
+
+(Antes Cardi-Golf. El repo, Vercel, Supabase y los dominios conservan el nombre anterior.)
 
 Plataforma para torneos de golf entre amigos: marcador en vivo, juegos, subasta Calcutta, dinero y liquidación. Cada torneo se crea y configura desde la app; el primero es el Nacho's Bachelor Invitational.
 

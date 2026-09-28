@@ -548,23 +548,28 @@
 
 /* ---- Wordmark and icon ---- */
 .wordmark {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variation-settings: 'wdth' 92;
+  /* Fitted to the sheet's lettering; values come from logoMark.json via the component. */
+  font-weight: var(--wm-weight);
+  font-stretch: var(--wm-width);
+  letter-spacing: var(--wm-tracking);
   line-height: 1;
-  display: inline-flex;
-  align-items: baseline;
-}
-.wordmarkG {
-  position: relative;
+  color: var(--ink);
   display: inline-block;
+  white-space: nowrap;
 }
-.wordmarkRing {
-  position: absolute;
-  inset: -0.14em -0.1em -0.1em -0.08em;
-  border: 0.06em solid var(--under);
-  border-radius: 50%;
-  transform: rotate(-6deg);
+.wordmarkBoard {
+  color: var(--board-ink);
+}
+.wordmarkMark {
+  display: inline-block;
+  height: var(--mark-height);
+  width: auto;
+  vertical-align: var(--mark-drop);
+  margin-right: var(--mark-gap);
+}
+.logoMark {
+  display: block;
+  flex: none;
 }
 
 /* ---- Plate (board surface only) ---- */

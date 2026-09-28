@@ -9,7 +9,7 @@ import { useAuth } from '../data/auth'
 import styles from './HomeScreen.module.css'
 
 /**
- * `/`: one line on what Cardi-Golf does, then the fastest way in. A returning
+ * `/`: one line on what Polo does, then the fastest way in. A returning
  * player sees their tournament first; everyone else sees the code field.
  * Organizers get one quiet link.
  */
@@ -30,7 +30,7 @@ export function HomeScreen() {
   return (
     <div className={styles.home}>
       <header className={styles.intro}>
-        <Wordmark size="md" />
+        <Wordmark size="lg" />
         <p className={styles.lede}>{t.app.description}</p>
       </header>
 

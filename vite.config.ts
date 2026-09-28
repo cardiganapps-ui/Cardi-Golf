@@ -17,8 +17,8 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: '/',
-        name: 'Cardi-Golf',
-        short_name: 'Cardi-Golf',
+        name: 'Polo',
+        short_name: 'Polo',
         description:
           'Torneos de golf entre amigos: marcador en vivo, juegos, Calcutta y dinero.',
         lang: 'es-MX',

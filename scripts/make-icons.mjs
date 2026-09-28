@@ -1,6 +1,9 @@
-// Generates the platform's PWA icons and favicon from the wordmark's mark:
-// a constructed "G" with the pencil ring (the notation for a birdie), on
-// card stock. Colors are read from src/styles/tokens.css, never typed here.
+// Generates the platform's PWA icons, favicon and the in-app symbol images from
+// the Polo logo as lifted off the approved sheet (design/brand/polo-logo-sheet.jpg)
+// by scripts/brand/extract-logo.py: the pencil layers in design/brand/layer-*.png
+// (the sheet's own pixels, separated from its paper) and the outline and
+// geometry in src/design/logoMark.json. Paper and favicon ink are read from
+// src/styles/tokens.css, never typed here.
 // Run: npm run icons  (output is committed under public/)
 // A tournament's logo is NOT the app icon: brands are per tournament.
 import sharp from 'sharp'
@@ -14,49 +17,52 @@ const token = (name) => {
 }
 const BG = token('bg')
 const INK = token('ink')
-const RING = token('under')
+const G = JSON.parse(await readFile('src/design/logoMark.json', 'utf8'))
 
-/**
- * The mark on a 100×100 grid: a geometric G (stroke 13) and a thin ring
- * rotated a few degrees, like a pencil circle around a score.
- */
-function mark(size, { padding = 0, rounded = true } = {}) {
-  const inner = size - padding * 2
-  const k = inner / 100
-  const p = (n) => (padding + n * k).toFixed(2)
-  const cx = 50
-  const cy = 52
-  const r = 26
-  const rad = (deg) => (deg * Math.PI) / 180
-  const pt = (deg) => [cx + r * Math.cos(rad(deg)), cy + r * Math.sin(rad(deg))]
-  // Arc from the top-right (−45°) counter-clockwise (through the left) to the right, just below centre.
-  const [sx, sy] = pt(-45)
-  const [ex, ey] = pt(38)
-  const g = [
-    `M${p(sx)} ${p(sy)}`,
-    `A${(r * k).toFixed(2)} ${(r * k).toFixed(2)} 0 1 0 ${p(ex)} ${p(ey)}`,
-    `L${p(cx + r)} ${p(cy)}`,
-    `L${p(cx + 4)} ${p(cy)}`,
-  ].join(' ')
+/** An app icon: the sheet's tile, its pencil layer on card stock. */
+async function icon(file, size, { rounded = true, scale = 1 } = {}) {
+  const r = rounded ? (size * G.tileRadius).toFixed(1) : 0
+  const paper = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${r}" fill="${BG}"/></svg>`,
+  )
+  const inner = Math.round(size * scale)
+  const off = Math.round((size - inner) / 2)
+  const pencil = await sharp('design/brand/layer-icon.png').resize(inner, inner, { kernel: 'lanczos3' }).png().toBuffer()
+  await sharp(paper).composite([{ input: pencil, left: off, top: off }]).png().toFile(file)
+  console.log('wrote', file)
+}
+
+/** A lockup's symbol for the app: its layer, at 3x the sheet (plenty for a 3x screen). */
+async function markImage(file, layer) {
+  const { width, height } = await sharp(layer).metadata()
+  const w = Math.round((width * 3) / 4)
+  const h = Math.round((height * 3) / 4)
+  await sharp(layer).resize(w, h, { kernel: 'lanczos3' }).png({ compressionLevel: 9 }).toFile(file)
+  console.log('wrote', file, `${w}x${h}`)
+}
+
+/** Favicon: the icon copy's outline in solid ink, enlarged in its tile so it reads at 16 px. */
+function favicon() {
+  const size = 64
+  const k = (size * 0.86) / G.bbox.h
+  const tx = (size - G.bbox.w * k) / 2 - G.bbox.x * k
+  const ty = (size - G.bbox.h * k) / 2 - G.bbox.y * k
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${rounded ? (size * 0.22).toFixed(1) : 0}" fill="${BG}"/>
-  <path d="${g}" fill="none" stroke="${INK}" stroke-width="${(13 * k).toFixed(2)}" stroke-linecap="butt" stroke-linejoin="miter"/>
-  <ellipse cx="${p(51)}" cy="${p(51)}" rx="${(41 * k).toFixed(2)}" ry="${(38 * k).toFixed(2)}" transform="rotate(-8 ${p(51)} ${p(51)})" fill="none" stroke="${RING}" stroke-width="${(3.2 * k).toFixed(2)}"/>
-</svg>`
+  <rect width="${size}" height="${size}" rx="${(size * G.tileRadius).toFixed(1)}" fill="${BG}"/>
+  <path d="${G.d}" fill-rule="${G.fillRule}" fill="${INK}" transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${k.toFixed(5)})"/>
+</svg>
+`
 }
 
 await mkdir('public/icons', { recursive: true })
-const jobs = [
-  ['public/icons/icon-192.png', 192, {}],
-  ['public/icons/icon-512.png', 512, {}],
-  // Maskable: keep the artwork inside the 80% safe zone.
-  ['public/icons/icon-maskable-512.png', 512, { padding: 56, rounded: false }],
-  ['public/apple-touch-icon.png', 180, { rounded: false }],
-]
-for (const [file, size, opts] of jobs) {
-  await sharp(Buffer.from(mark(size, opts))).png().toFile(file)
-  console.log('wrote', file)
-}
-await writeFile('public/favicon.svg', mark(64))
+await mkdir('public/brand', { recursive: true })
+await icon('public/icons/icon-192.png', 192)
+await icon('public/icons/icon-512.png', 512)
+// Maskable: Android crops to a circle; logoMark.json says how far to shrink.
+await icon('public/icons/icon-maskable-512.png', 512, { rounded: false, scale: G.maskableScale })
+await icon('public/apple-touch-icon.png', 180, { rounded: false })
+await markImage('public/brand/polo-mark.png', 'design/brand/layer-lockup.png')
+await markImage('public/brand/polo-mark-board.png', 'design/brand/layer-board.png')
+await writeFile('public/favicon.svg', favicon())
 console.log('wrote public/favicon.svg')

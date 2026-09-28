@@ -5,9 +5,10 @@
  * Every visual value comes from tokens.css through primitives.module.css.
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
+import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
 
 // ---- Buttons ----
@@ -311,14 +312,56 @@ export function EventName({ name, tagline, logoUrl, small }: { name: string; tag
     </div>
   )
 }
-export function Wordmark({ size = 24 }: { size?: number }) {
+/**
+ * The Polo symbol exactly as the approved sheet draws it
+ * (design/brand/polo-logo-sheet.jpg): the sheet's own pencil, lifted off its
+ * paper by scripts/brand/extract-logo.py. Each tone uses the copy the sheet
+ * shows for it: graphite from the Horizontal Lockup (the sheet's color and
+ * one-color versions are the same line), gold from the TV board study.
+ * `size` is the image's height.
+ */
+export type LogoTone = 'color' | 'mono' | 'board'
+const lockupFor = (tone: LogoTone) => (tone === 'board' ? lockups.board : lockups.standard)
+export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: LogoTone }) {
+  const l = lockupFor(tone)
   return (
-    <span className={s.wordmark} style={{ fontSize: size }} aria-label="Cardi-Golf">
-      Cardi-
-      <span className={s.wordmarkG}>
-        <span className={s.wordmarkRing} aria-hidden="true" />G
-      </span>
-      olf
+    <img
+      className={s.logoMark}
+      src={l.image}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      width={Math.round(size * l.aspect)}
+      height={size}
+    />
+  )
+}
+// Each lockup as the sheet draws it, in em of the wordmark: the symbol's height,
+// its drop below the baseline and its gap to the P (less the P's own side
+// bearing), plus the Archivo settings fitted to the sheet's lettering.
+function lockupStyle(tone: LogoTone, size: number): CSSProperties {
+  const l = lockupFor(tone)
+  return {
+    fontSize: size,
+    '--wm-weight': String(wm.weight),
+    '--wm-width': `${wm.width}%`,
+    '--wm-tracking': `${wm.letterSpacing}em`,
+    '--mark-height': `${(l.markHeight * wm.capHeight).toFixed(4)}em`,
+    '--mark-drop': `${(-l.belowBaseline * wm.capHeight).toFixed(4)}em`,
+    '--mark-gap': `${(l.gap * wm.capHeight - wm.pSideBearing).toFixed(4)}em`,
+  } as CSSProperties
+}
+/** The lockup as on the sheet: the symbol, then "Polo". `mark={false}` gives the bare wordmark. */
+export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: number; tone?: LogoTone; mark?: boolean }) {
+  return (
+    <span
+      className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`}
+      style={lockupStyle(tone, size)}
+      role="img"
+      aria-label={t.app.name}
+    >
+      {mark && <img className={s.wordmarkMark} src={lockupFor(tone).image} alt="" draggable={false} />}
+      <span aria-hidden="true">{t.app.name}</span>
     </span>
   )
 }

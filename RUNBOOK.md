@@ -1,4 +1,4 @@
-# Cardi-Golf · Runbook del torneo
+# Polo · Runbook del torneo
 
 Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer cuando algo falla. La app vive en **https://golf.cardigan.mx** (o https://cardi-golf.vercel.app); el Comité entra como jugador con su PIN (los admins ven "Consola del Comité" en **Más**) o como organizador en `/organizer/login`.
 

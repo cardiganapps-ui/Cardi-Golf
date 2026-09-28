@@ -9,6 +9,7 @@ import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareNodeAsImage } from '../lib/shareImage'
 import { toast } from './ui'
+import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
 
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement' }
@@ -75,7 +76,7 @@ function Card({ what }: { what: ShareKind }) {
   const footer = (
     <div className={styles.footer}>
       <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-      <span className={styles.brand}>Cardi-Golf</span>
+      <Wordmark size={13} />
     </div>
   )
   if (what.kind === 'leaderboard') {

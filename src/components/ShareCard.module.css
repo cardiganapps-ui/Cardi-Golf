@@ -101,10 +101,6 @@
   color: var(--ink-2);
   font-size: 12px;
 }
-.brand {
-  font-weight: 700;
-  color: var(--ink);
-}
 .round {
   display: flex;
   flex-direction: column;

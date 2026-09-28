@@ -1,10 +1,10 @@
-# Cardi-Golf — Design direction (phase 1)
+# Polo (formerly Cardi-Golf) — Design direction (phase 1)
 
 Two directions, both grounded in golf's own material culture rather than app aesthetics. One recommendation. The living style guide at `/design` renders the recommended one.
 
 ## Givens (both directions)
 
-- **Product and event.** Cardi-Golf is the product; every tournament is an event with its own name. The product chrome (tab bar, headers, controls, tables) is consistent and quiet: ink on card stock, one accent. The event name is the only place expressive typography appears, and each event can carry one accent from a curated set. Nothing else changes per event.
+- **Product and event.** Polo is the product; every tournament is an event with its own name. The product chrome (tab bar, headers, controls, tables) is consistent and quiet: ink on card stock, one accent. The event name is the only place expressive typography appears, and each event can carry one accent from a curated set. Nothing else changes per event.
 - **Numbers are the hero.** Tabular lining figures everywhere a score or an amount appears. A true minus sign (−) for under par, "E" for even, `T3` for ties. Right-aligned numeric columns that line up to the pixel.
 - **Light mode first**, designed for sunlight: AA everywhere, AAA for figures on the leaderboard and scorecard. TV and Ceremonia use a dedicated board surface (deep green, off-white figures), which is a *surface*, not a dark mode.
 - **Convention over invention:** red for under par, blue for over par (The Open), plain ink for par. Pencil notation on the scorecard: circle = birdie, double circle = eagle or better, square = bogey, double square = double or worse.

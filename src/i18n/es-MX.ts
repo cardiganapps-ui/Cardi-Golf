@@ -9,7 +9,7 @@
  */
 export const t = {
   app: {
-    name: 'Cardi-Golf',
+    name: 'Polo',
     tagline: 'Torneos de golf entre amigos',
     description: 'Marcador en vivo, juegos, Calcutta y cuentas claras para torneos entre amigos.',
   },
