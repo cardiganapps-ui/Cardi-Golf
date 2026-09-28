@@ -64,6 +64,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Crear un torneo desde cero** con "Nuevo torneo" y comprobar que el cuadre de la bolsa se pone en rojo si cambias un premio.
 - [ ] **Juegos nuevos, parte 1 (base):** nada que probar todavía; es la base de botes aparte, apuestas directas y "para la casa". Solo confirma que Dinero del Ensayo se ve igual que antes. Los juegos (skins, Nassau, concursos, apuesta libre) y el nuevo "Nuevo torneo" llegan en las partes 2 a 4.
 - [ ] **Juegos nuevos, parte 3 (concursos y apuesta libre):** el Ensayo ya trae "Más cerca del hoyo" (sin dinero) en todos los hoyos. En la Tarjeta, abajo de los jugadores, marca quién la dejó más cerca y guarda el hoyo; en Juegos aparece el ganador. En Comité, Juegos puedes cambiar al ganador de cualquier hoyo o resolver una disputa.
+- [ ] **Juegos nuevos, parte 4 (Nuevo torneo):** en https://golf.cardigan.mx/organizer/new crea un torneo de prueba: elige "Fin de semana entre amigos", cambia jugadores y días, en Juegos agrega o quita skins, Nassau, concursos, una apuesta libre; en Dinero juega con el reparto (50/30/20, 60/40, montos fijos), "Para la casa" y los botes aparte, y mira la barra de abajo que dice si cuadra. Lo mismo está en Comité, Torneo para cualquier torneo ya creado. (Bórralo después desde Comité si quieres.)
 
 ---
 

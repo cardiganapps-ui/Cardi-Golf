@@ -264,3 +264,26 @@ describe('match play / Nassau', () => {
     expect(st.flags.warnings.some((w) => w.startsWith('Nassau:'))).toBe(true)
   })
 })
+
+describe('setup presets and catalog', () => {
+  it('every preset is valid and its main pot balances for its suggested field', async () => {
+    const { PRESETS } = await import('./presets')
+    const { safeParseSettings } = await import('../settings/schema')
+    const { checkPrizePool } = await import('../settings/prizeCheck')
+    for (const p of PRESETS) {
+      const parsed = safeParseSettings(p.build())
+      expect(parsed.success ? 'ok' : JSON.stringify(parsed.error.issues), p.id).toBe('ok')
+      if (parsed.success) expect(checkPrizePool(parsed.data, { players: p.players }).balanced, p.id).toBe(true)
+    }
+  })
+
+  it('every catalog entry creates a valid game, and ids stay unique', async () => {
+    const { GAME_ENTRIES, newGameId } = await import('./catalog')
+    const { safeParseSettings } = await import('../settings/schema')
+    const games: GameConfig[] = []
+    for (const e of GAME_ENTRIES) for (let i = 0; i < 2; i++) games.push(e.create(newGameId(games, e.key)))
+    const parsed = safeParseSettings({ ...DEFAULT_SETTINGS, games })
+    expect(parsed.success ? 'ok' : JSON.stringify(parsed.error.issues)).toBe('ok')
+    expect(new Set(games.map((g) => g.id)).size).toBe(games.length)
+  })
+})

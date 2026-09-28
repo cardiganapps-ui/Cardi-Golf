@@ -1,26 +1,29 @@
 /**
- * Nuevo torneo: four short steps. Name, then the games, then a summary of the
- * money (adjustable), then the code to share. Defaults carry the organizer.
+ * Nuevo torneo: five short steps. Name; the format (a starting preset plus
+ * days, field, groups, handicap, tiers); the game catalog; the money with a
+ * live balance bar; and the code to share. Every choice stays editable later
+ * in Comité, Torneo.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { CopyButton, Field, ShareButton } from '../../components/ui'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconCheck } from '../../components/icons'
 import { useAuth } from '../../data/auth'
 import { createTournament } from '../../data/api'
-import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../../engine/settings/presets'
+import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
-import { SettingsEditor } from '../admin/SettingsEditor'
-import { PrizeSummary } from '../admin/PrizeSummary'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { safeParseSettings } from '../../engine/settings/schema'
-import { formatMoney } from '../../lib/money'
+import { FormatEditor } from './setup/FormatEditor'
+import { GameCatalog } from './setup/GameCatalog'
+import { MoneyBar, MoneyEditor } from './setup/MoneyEditor'
 import styles from './Organizer.module.css'
 
-type Step = 1 | 2 | 3 | 4
-const TOTAL_STEPS = 4
+type Step = 1 | 2 | 3 | 4 | 5
+const TOTAL_STEPS = 5
 
 export function NewTournamentScreen() {
   const navigate = useNavigate()
@@ -28,10 +31,11 @@ export function NewTournamentScreen() {
   const [step, setStep] = useState<Step>(1)
   const [name, setName] = useState('')
   const [tagline, setTagline] = useState('')
-  const [template, setTemplate] = useState<'full' | 'minimal'>('full')
-  const [players, setPlayers] = useState(12)
-  const [settings, setSettings] = useState<TournamentSettings>(structuredClone(FIRST_TOURNAMENT_SETTINGS))
-  const [adjusting, setAdjusting] = useState(false)
+  const [preset, setPreset] = useState<PresetId>('friends')
+  const [askPreset, setAskPreset] = useState<PresetId | null>(null)
+  const [players, setPlayers] = useState(PRESETS[0]!.players)
+  const [settings, setSettings] = useState<TournamentSettings>(() => PRESETS[0]!.build())
+  const [pristine, setPristine] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ slug: string; joinCode: string } | null>(null)
@@ -40,18 +44,24 @@ export function NewTournamentScreen() {
     if (ready && (!user || isAnonymous)) navigate('/organizer/login', { replace: true })
   }, [ready, user, isAnonymous, navigate])
 
-  useEffect(() => {
-    setSettings(structuredClone(template === 'full' ? FIRST_TOURNAMENT_SETTINGS : DEFAULT_SETTINGS))
-    setPlayers(template === 'full' ? 12 : 8)
-  }, [template])
+  const edit = (s: TournamentSettings) => {
+    setSettings(s)
+    setPristine(false)
+  }
+  const applyPreset = (id: PresetId) => {
+    const p = PRESETS.find((x) => x.id === id)!
+    setPreset(id)
+    setSettings(p.build())
+    setPlayers(p.players)
+    setPristine(true)
+    setAskPreset(null)
+  }
 
+  const field = useMemo(() => ({ players }), [players])
   const parsed = useMemo(() => safeParseSettings(settings), [settings])
-  const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, { players }) : null), [parsed, players])
+  const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
   const W = t.organizer.wizard
-  const stepNames = [W.step1, W.step2, W.step3, W.step4]
-  const enabledModules = Object.values(settings.modules)
-    .filter((m) => m.enabled)
-    .map((m) => m.label)
+  const stepNames = [W.step1, W.step2, W.step3, W.step4, W.step5]
 
   async function create() {
     if (!parsed.success) return
@@ -60,13 +70,24 @@ export function NewTournamentScreen() {
     try {
       const row = await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, expectedPlayers: players } })
       setCreated({ slug: row.slug, joinCode: row.joinCode })
-      setStep(4)
+      setStep(5)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
   }
+
+  const nav = (back: Step, next: Step | null, nextLabel: string = t.common.next, disabled = false, onNext?: () => void) => (
+    <div className={styles.actions}>
+      <button className="btn btn--secondary" type="button" onClick={() => setStep(back)}>
+        {t.common.back}
+      </button>
+      <button className="btn btn--primary" type="button" disabled={disabled} onClick={() => (onNext ? onNext() : next && setStep(next))}>
+        {nextLabel}
+      </button>
+    </div>
+  )
 
   const link = created ? `${window.location.origin}/t/${created.slug}` : ''
 
@@ -76,7 +97,7 @@ export function NewTournamentScreen() {
         <Wordmark />
       </Link>
       <div className={styles.progress}>
-        <h1>{step === 4 ? W.created : W.title}</h1>
+        <h1>{step === 5 ? W.created : W.title}</h1>
         <div className={styles.progressBar} aria-hidden="true">
           {stepNames.map((s, i) => (
             <span key={s} className={`${styles.progressSeg} ${i + 1 <= step ? styles.progressDone : ''}`} />
@@ -109,70 +130,50 @@ export function NewTournamentScreen() {
 
       {step === 2 && (
         <div className={styles.form}>
-          <div className={styles.choices} role="radiogroup" aria-label={W.template}>
-            {(
-              [
-                ['full', W.templateFull, W.templateFullHint],
-                ['minimal', W.templateMinimal, W.templateMinimalHint],
-              ] as const
-            ).map(([v, label, hint]) => (
-              <button key={v} type="button" role="radio" aria-checked={template === v} className={styles.choice} onClick={() => setTemplate(v)}>
-                <span className={styles.choiceText}>
-                  <span className={styles.choiceTitle}>{label}</span>
-                  <span className={styles.choiceHint}>{hint}</span>
-                </span>
-                {template === v && (
-                  <span className={styles.choiceMark}>
-                    <IconCheck />
+          <div className="stack">
+            <span className="label">{W.template}</span>
+            <span className="help">{W.templateHint}</span>
+            <div className={styles.choices} role="radiogroup" aria-label={W.template}>
+              {PRESETS.map((p) => (
+                <button key={p.id} type="button" role="radio" aria-checked={preset === p.id} className={styles.choice} onClick={() => (p.id === preset ? undefined : pristine ? applyPreset(p.id) : setAskPreset(p.id))}>
+                  <span className={styles.choiceText}>
+                    <span className={styles.choiceTitle}>{p.name}</span>
+                    <span className={styles.choiceHint}>{p.blurb}</span>
                   </span>
-                )}
-              </button>
-            ))}
+                  {preset === p.id && (
+                    <span className={styles.choiceMark}>
+                      <IconCheck />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-          <Field label={W.players}>
-            <input className="input input--num" type="number" min={2} max={200} value={players} onChange={(e) => setPlayers(Number(e.target.value) || 0)} />
-          </Field>
-          <div className={styles.actions}>
-            <button className="btn btn--secondary" type="button" onClick={() => setStep(1)}>
-              {t.common.back}
-            </button>
-            <button className="btn btn--primary" type="button" disabled={players < 2} onClick={() => setStep(3)}>
-              {t.common.next}
-            </button>
-          </div>
+          <FormatEditor value={settings} onChange={edit} players={players} onPlayers={setPlayers} />
+          {nav(1, 3, t.common.next, players < 2)}
         </div>
       )}
 
       {step === 3 && (
         <div className={styles.form}>
-          <div className={styles.summary}>
-            <div className={styles.summaryLines}>
-              <SummaryLine k={W.step1} v={name.trim()} />
-              <SummaryLine k={W.template} v={template === 'full' ? W.templateFull : W.templateMinimal} />
-              <SummaryLine k={W.modulesOn} v={enabledModules.join(', ')} />
-              <SummaryLine k={t.live.players} v={W.playersLine(players)} />
-              <SummaryLine k={t.money.entryFee} v={W.entryLine(formatMoney(settings.entryFee), formatMoney(settings.entryFee * players))} />
-            </div>
-            <span className="label">{t.money.prizes}</span>
-            <PrizeSummary check={check} players={players} issues={parsed.success ? undefined : parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)} />
-          </div>
-          <button className="btn btn--ghost" type="button" aria-expanded={adjusting} onClick={() => setAdjusting((a) => !a)}>
-            {adjusting ? W.hideAdjust : W.adjust}
-          </button>
-          {adjusting && <SettingsEditor value={settings} onChange={setSettings} players={players} compact />}
-          {error && <p className="error">{error}</p>}
-          <div className={styles.actions}>
-            <button className="btn btn--secondary" type="button" onClick={() => setStep(2)}>
-              {t.common.back}
-            </button>
-            <button className="btn btn--primary" type="button" disabled={busy || !parsed.success || !check?.balanced} onClick={create}>
-              {busy ? W.creating : W.create}
-            </button>
-          </div>
+          <GameCatalog value={settings} onChange={edit} />
+          {nav(2, 4)}
         </div>
       )}
 
-      {step === 4 && created && (
+      {step === 4 && (
+        <div className={styles.form}>
+          <MoneyEditor value={settings} onChange={edit} field={field} />
+          {error && <p className="error">{error}</p>}
+          {(!parsed.success || !check?.balanced) && <p className="help">{W.fixToCreate}</p>}
+          <MoneyBar value={settings} field={field} />
+          {nav(3, null, busy ? W.creating : W.create, busy || !parsed.success || !check?.balanced, () => void create())}
+        </div>
+      )}
+
+      <ConfirmSheet open={!!askPreset} title={W.replaceTitle} body={W.replaceBody} confirmLabel={W.replaceConfirm} onConfirm={() => askPreset && applyPreset(askPreset)} onClose={() => setAskPreset(null)} />
+
+      {step === 5 && created && (
         <div className={`${styles.created} fade-in`}>
           <span className="label">{t.organizer.joinCode}</span>
           <span className={styles.bigCode}>{created.joinCode}</span>
@@ -188,15 +189,6 @@ export function NewTournamentScreen() {
           </Link>
         </div>
       )}
-    </div>
-  )
-}
-
-function SummaryLine({ k, v }: { k: string; v: string }) {
-  return (
-    <div className={styles.summaryLine}>
-      <span className={styles.summaryKey}>{k}</span>
-      <span className={styles.summaryValue}>{v}</span>
     </div>
   )
 }

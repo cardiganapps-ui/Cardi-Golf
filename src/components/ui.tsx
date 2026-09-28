@@ -25,14 +25,14 @@ export function Avatar({ name, url, size, honoree }: { name: string; url?: strin
   )
 }
 
-export function Toggle({ label, checked, onChange, hint }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string }) {
+export function Toggle({ label, checked, onChange, hint, ariaLabel }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; ariaLabel?: string }) {
   return (
     <label className="toggle">
       <span>
         <span>{label}</span>
         {hint && <span className="help">{hint}</span>}
       </span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" checked={checked} aria-label={ariaLabel} onChange={(e) => onChange(e.target.checked)} />
     </label>
   )
 }
