@@ -555,13 +555,14 @@
   display: inline-flex;
   align-items: baseline;
 }
-.wordmarkG {
+.wordmarkInitial {
   position: relative;
   display: inline-block;
+  margin-left: 0.1em;
 }
 .wordmarkRing {
   position: absolute;
-  inset: -0.14em -0.1em -0.1em -0.08em;
+  inset: -0.14em -0.16em -0.1em -0.12em;
   border: 0.06em solid var(--under);
   border-radius: 50%;
   transform: rotate(-6deg);

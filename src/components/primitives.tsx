@@ -313,12 +313,11 @@ export function EventName({ name, tagline, logoUrl, small }: { name: string; tag
 }
 export function Wordmark({ size = 24 }: { size?: number }) {
   return (
-    <span className={s.wordmark} style={{ fontSize: size }} aria-label="Cardi-Golf">
-      Cardi-
-      <span className={s.wordmarkG}>
-        <span className={s.wordmarkRing} aria-hidden="true" />G
+    <span className={s.wordmark} style={{ fontSize: size }} aria-label={t.app.name}>
+      <span className={s.wordmarkInitial}>
+        <span className={s.wordmarkRing} aria-hidden="true" />P
       </span>
-      olf
+      olo
     </span>
   )
 }

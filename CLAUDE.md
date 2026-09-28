@@ -1,4 +1,6 @@
-# Cardi-Golf
+# Polo (formerly Cardi-Golf)
+
+> **Name (2026-09-28):** the product is called **Polo**. Every user-facing string, the wordmark, the PWA name and the icon say Polo. Infrastructure keeps the old name on purpose: the repo `cardiganapps-ui/Cardi-Golf`, the Vercel project `cardi-golf`, the Supabase project and org, the R2 bucket, the `golf.cardigan.mx` / `cardi-golf.vercel.app` hosts, and client storage keys (`cardi-golf:*`, the `cardi-golf-outbox` IndexedDB) so no device loses its session or unsynced scores. Where the text below says "Cardi-Golf" about the product, read Polo.
 
 ## Build brief for Claude Code
 
@@ -664,7 +666,7 @@ Three ways to load a course, one place to decide how each player is handicapped.
 
 The look comes from the tournament's printed rules sheet: beachy, editorial, premium. It sits close to Cardigan's warm cream/teal and Fraunces aesthetic, but it's its own brand.
 
-**Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is a simple text wordmark "Cardi-Golf". `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.
+**Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is a simple text wordmark "Polo" (formerly "Cardi-Golf"). `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.
 
 **Color tokens**
 ```css

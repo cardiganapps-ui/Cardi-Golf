@@ -75,7 +75,7 @@ function Card({ what }: { what: ShareKind }) {
   const footer = (
     <div className={styles.footer}>
       <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-      <span className={styles.brand}>Cardi-Golf</span>
+      <span className={styles.brand}>{t.app.name}</span>
     </div>
   )
   if (what.kind === 'leaderboard') {

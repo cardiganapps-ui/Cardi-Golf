@@ -92,6 +92,12 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Reglamento** drops the numbered sections and the wave; each section is a heading over a heavy rule. **Más** is a ruled list of links, the code as a figure, one identity row.
 - The `Wave` component, the LEGACY alias block in `tokens.css` and the no-literal-colors PENDING list are gone: every stylesheet resolves against the tokens directly, and the test now fails on any literal outside `tokens.css`, `accents.ts` and the fixtures.
 
+## Rename to Polo (2026-09-28)
+
+- Diego renamed the product from Cardi-Golf to **Polo**. Changed: `t.app.name`, the page title and iOS home-screen title, the PWA `name`/`short_name`, the share-card footer (now reads `t.app.name`), and the `Wordmark` (the pencil ring moved from the "G" to the "P").
+- The app icon is a constructed "P" with the pencil ring (`scripts/make-icons.mjs`, regenerated). It is a placeholder until a designer delivers the mark (`docs/logo-brief.md`); a P in a red ring can read as a parking sign, and the brief says so.
+- Kept on purpose: storage keys (`cardi-golf:*`, `cardi-golf-auth`, the `cardi-golf-outbox` IndexedDB), because renaming them would sign every device out and orphan unsynced scores; migration headers (history); and every infrastructure name (repo, Vercel, Supabase, R2, hosts).
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

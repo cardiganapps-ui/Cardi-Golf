@@ -1,5 +1,5 @@
 // Generates the platform's PWA icons and favicon from the wordmark's mark:
-// a constructed "G" with the pencil ring (the notation for a birdie), on
+// a constructed "P" with the pencil ring (the notation for a birdie), on
 // card stock. Colors are read from src/styles/tokens.css, never typed here.
 // Run: npm run icons  (output is committed under public/)
 // A tournament's logo is NOT the app icon: brands are per tournament.
@@ -17,26 +17,23 @@ const INK = token('ink')
 const RING = token('under')
 
 /**
- * The mark on a 100×100 grid: a geometric G (stroke 13) and a thin ring
+ * The mark on a 100×100 grid: a geometric P (stroke 13) and a thin ring
  * rotated a few degrees, like a pencil circle around a score.
  */
 function mark(size, { padding = 0, rounded = true } = {}) {
   const inner = size - padding * 2
   const k = inner / 100
   const p = (n) => (padding + n * k).toFixed(2)
-  const cx = 50
-  const cy = 52
-  const r = 26
-  const rad = (deg) => (deg * Math.PI) / 180
-  const pt = (deg) => [cx + r * Math.cos(rad(deg)), cy + r * Math.sin(rad(deg))]
-  // Arc from the top-right (−45°) counter-clockwise (through the left) to the right, just below centre.
-  const [sx, sy] = pt(-45)
-  const [ex, ey] = pt(38)
+  // Stem at x 36.5 from the baseline up; the bowl is a half circle of radius 14.5.
+  const x = 36.5
+  const top = 30.5
+  const r = 14.5
   const g = [
-    `M${p(sx)} ${p(sy)}`,
-    `A${(r * k).toFixed(2)} ${(r * k).toFixed(2)} 0 1 0 ${p(ex)} ${p(ey)}`,
-    `L${p(cx + r)} ${p(cy)}`,
-    `L${p(cx + 4)} ${p(cy)}`,
+    `M${p(x)} ${p(80)}`,
+    `L${p(x)} ${p(top)}`,
+    `L${p(52)} ${p(top)}`,
+    `A${(r * k).toFixed(2)} ${(r * k).toFixed(2)} 0 0 1 ${p(52)} ${p(top + 2 * r)}`,
+    `L${p(x)} ${p(top + 2 * r)}`,
   ].join(' ')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
