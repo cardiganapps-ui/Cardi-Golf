@@ -106,29 +106,6 @@
   --dur: 200ms;
   --dur-slow: 250ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
-
-  /* ---- LEGACY aliases: removed in phase 3 as each consumer is migrated. ----
-     They exist so screen stylesheets written against the old names keep
-     resolving. New code must use the names above, never these. */
-  --paper: var(--bg);
-  --panel: var(--surface);
-  --cell: var(--surface-2);
-  --muted: var(--ink-2);
-  --teal: var(--accent);
-  --deep: var(--board-bg);
-  --coral: var(--under);
-  --sun: var(--board-accent);
-  --hair: var(--rule);
-  --seafoam: var(--board-ink-2);
-  --midteal: var(--accent);
-  --on-accent: var(--accent-ink);
-  --font-display: var(--font-text);
-  --font-ui: var(--font-text);
-  --radius-sm: var(--r-sm);
-  --radius: var(--r-md);
-  --radius-lg: var(--r-md);
-  --shadow-card: none;
-  --ease-out: var(--ease);
 }
 
 @media (prefers-reduced-motion: reduce) {

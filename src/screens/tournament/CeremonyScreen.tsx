@@ -10,7 +10,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
-import { Wave } from '../../components/Wave'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
@@ -49,7 +48,7 @@ export function CeremonyScreen() {
       const ids = Object.keys(m.fewestPutts.prizes)
       if (ids.length) {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
-        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: row ? `${row.putts} putts · ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: row ? `${row.putts} putts, ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.snake) {
@@ -62,13 +61,13 @@ export function CeremonyScreen() {
           id: 'snake',
           title: C.steps.snake(settings.modules.snake.label),
           icon: <IconSnake size={64} />,
-          winners: gold ? [{ playerIds: gold.playerIds, line: gold.playerIds.map(nameOf).join(' & '), sub: `${t.stats.award.snakeGold.name} · ${C.holesHeld(gold.value)}` }] : [],
+          winners: gold ? [{ playerIds: gold.playerIds, line: gold.playerIds.map(nameOf).join(' & '), sub: `${t.stats.award.snakeGold.name}, ${C.holesHeld(gold.value)}` }] : [],
           extra: (
             <div className={styles.list}>
               {rows.map(([pid, amt]) => (
                 <div key={pid} className={styles.listRow}>
                   <span>{nameOf(pid)}</span>
-                  <span className="num">{formatMoney(amt)}</span>
+                  <span>{formatMoney(amt)}</span>
                 </div>
               ))}
             </div>
@@ -81,7 +80,7 @@ export function CeremonyScreen() {
         const ids = Object.keys(day.winners)
         if (!ids.length) continue
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
-        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: pts != null ? `${C.withPoints(pts)} · ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: pts != null ? `${C.withPoints(pts)}, ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.pairs) {
@@ -91,7 +90,7 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º · ${r.name}`, sub: `${nameOf(r.playerIds[0])} & ${nameOf(r.playerIds[1])} · ${C.withPoints(r.total)}` })),
+          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º, ${r.name}`, sub: `${nameOf(r.playerIds[0])} & ${nameOf(r.playerIds[1])}, ${C.withPoints(r.total)}` })),
         })
       }
     }
@@ -100,11 +99,11 @@ export function CeremonyScreen() {
       for (let place = places; place >= 2; place--) {
         const rows = m.individual.rows.filter((r) => r.position === place)
         if (!rows.length) continue
-        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
+        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? `, ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
       }
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
-        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? ` · ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
+        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: `${C.withPoints(r.total)}${m.individual!.prizes[r.playerId] ? `, ${formatMoney(m.individual!.prizes[r.playerId]!.amount)}` : ''}` })) })
       }
     }
     if (m.auction && m.auction.soldCount > 0) {
@@ -121,14 +120,14 @@ export function CeremonyScreen() {
                 <span>
                   {s.label}: <strong>{s.playerIds.map(nameOf).join(' & ') || '–'}</strong>
                 </span>
-                <span className="num">{formatMoney(s.amount)}</span>
+                <span>{formatMoney(s.amount)}</span>
               </div>
             ))}
-            <Wave className={styles.wave} />
+            <div className={styles.listRule} aria-hidden="true" />
             {payouts.map((p) => (
               <div key={p.ownerId} className={styles.listRow}>
                 <span>{nameOf(p.ownerId)}</span>
-                <span className="num">{formatMoney(p.amount)}</span>
+                <span>{formatMoney(p.amount)}</span>
               </div>
             ))}
           </div>
@@ -146,7 +145,7 @@ export function CeremonyScreen() {
           {people.map((p) => (
             <div key={p.playerId} className={styles.listRow}>
               <span>{nameOf(p.playerId)}</span>
-              <span className={`num ${p.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(p.net)}</span>
+              <span className={p.net >= 0 ? styles.pos : styles.neg}>{formatSignedMoney(p.net)}</span>
             </div>
           ))}
         </div>
