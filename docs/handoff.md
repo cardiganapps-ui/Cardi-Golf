@@ -26,7 +26,7 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ## Nombre nuevo: Polo
 
-- [ ] **Nombre del remitente de los correos.** La app ya dice «Polo», pero los correos de acceso (contraseña, link mágico) todavía llegan de «Cardi-Golf». Esta sesión no tiene las llaves para cambiarlo. Pasos: Supabase dashboard → proyecto **Cardi-Golf** → **Authentication → Emails → SMTP Settings** → en **Sender name** escribe `Polo` → **Save**. No toques los demás campos. Claude lo verifica pidiendo un correo de «¿Olvidaste tu contraseña?» y revisando el remitente (o hazlo tú y dime qué dice).
+- [x] ~~**Nombre del remitente de los correos.**~~ Claude lo cambió a «Polo» con las llaves que pegaste (bloque SMTP completo, lo demás intacto). Verificado: un correo real de «¿Olvidaste tu contraseña?» salió de "Polo" <golf@cardigan.mx> y Resend lo marca entregado. (2026-09-28)
 - [ ] **Reinstalar la app.** Cuando esto llegue a `main`, borra la app de la pantalla de inicio y vuelve a agregarla desde https://golf.cardigan.mx: el nombre bajo el ícono debe decir «Polo» y el ícono es la tarjeta con el 3 en círculo rojo, como en la hoja de presentación que aprobaste (`design/brand/polo-presentation-sheet.jpg`).
 
 ## Rediseño
