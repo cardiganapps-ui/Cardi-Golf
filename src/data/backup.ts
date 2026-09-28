@@ -5,6 +5,7 @@
  * touched. Player PINs live in a separate table and are never exported.
  */
 import { supabase } from '../lib/supabase'
+import { fetchAll } from './paged'
 
 type Row = Record<string, unknown>
 
@@ -21,11 +22,24 @@ const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'calcutta_lots', 'payments'
 const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides'] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
 
+/** Primary keys of the tables without an `id` column (paging order). */
+const PK: Record<string, string[]> = {
+  group_members: ['group_id', 'player_id'],
+  round_tees: ['round_id', 'player_id'],
+  snake_tiebreaks: ['round_id', 'group_id', 'hole'],
+  card_signatures: ['round_id', 'pair_id'],
+  handicap_overrides: ['round_id', 'player_id'],
+  calcutta_buybacks: ['lot_id'],
+  holes: ['tee_id', 'number'],
+}
+
 async function rows(table: string, col: string, ids: string[]): Promise<Row[]> {
   if (!ids.length) return []
-  const { data, error } = await supabase().from(table).select('*').in(col, ids)
-  if (error) throw error
-  return (data ?? []) as Row[]
+  return fetchAll<Row>((from, to) => {
+    let qb = supabase().from(table).select('*').in(col, ids)
+    for (const c of PK[table] ?? ['id']) qb = qb.order(c)
+    return qb.range(from, to)
+  })
 }
 
 export async function exportBackup(tournamentId: string): Promise<Backup> {
@@ -48,60 +62,20 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
   return { version: 1, exportedAt: new Date().toISOString(), tournamentId, slug: (tournament as Row).slug as string, tables }
 }
 
-/** Columns of `tournaments` a restore may overwrite. */
-const TOURNAMENT_COLS = ['name', 'tagline', 'logo_url', 'accent_color', 'status', 'current_round_id', 'settings', 'banker_player_id', 'timezone', 'currency']
-
-export async function restoreBackup(tournamentId: string, backup: Backup): Promise<void> {
+/**
+ * Restore in one server transaction (`restore_tournament`): the backup is
+ * validated whole before anything is deleted, players and rounds keep their
+ * ids (PINs and device links survive), courses are left alone.
+ */
+export async function restoreBackup(tournamentId: string, backup: Backup): Promise<{ players: number; rounds: number; scores: number }> {
   if (backup.version !== 1 || backup.tournamentId !== tournamentId) throw new Error('wrong-tournament')
-  const sb = supabase()
-  const T = backup.tables
-  const ok = (r: { error: { message: string } | null }, ctx: string) => {
-    if (r.error) throw new Error(`${ctx}: ${r.error.message}`)
-  }
-  const del = async (table: string, col: string, ids: string[]) => {
-    if (ids.length) ok(await sb.from(table).delete().in(col, ids), `delete ${table}`)
-  }
-  const ins = async (table: string, list: Row[] | undefined) => {
-    if (list?.length) ok(await sb.from(table).insert(list), `insert ${table}`)
-  }
-  // Wipe dependents (cascades take care of most, but be explicit and ordered).
-  const { data: curRounds } = await sb.from('rounds').select('id').eq('tournament_id', tournamentId)
-  const roundIds = (curRounds ?? []).map((r) => r.id as string)
-  const { data: curLots } = await sb.from('calcutta_lots').select('id').eq('tournament_id', tournamentId)
-  const lotIds = (curLots ?? []).map((l) => l.id as string)
-  await del('payments', 'tournament_id', [tournamentId])
-  await del('calcutta_buybacks', 'lot_id', lotIds)
-  await del('calcutta_bids', 'lot_id', lotIds)
-  await del('calcutta_lots', 'tournament_id', [tournamentId])
-  for (const t of ['card_signatures', 'handicap_overrides', 'snake_tiebreaks', 'scores', 'round_tees', 'groups']) await del(t, 'round_id', roundIds)
-  await del('pairs', 'tournament_id', [tournamentId])
-  // Players and rounds keep their ids: upsert, then drop the ones the backup does not have.
-  ok(await sb.from('players').upsert(T.players ?? [], { onConflict: 'id' }), 'players')
-  ok(await sb.from('rounds').upsert(T.rounds ?? [], { onConflict: 'id' }), 'rounds')
-  const keepPlayers = (T.players ?? []).map((p) => p.id as string)
-  const keepRounds = (T.rounds ?? []).map((r) => r.id as string)
-  const { data: allPlayers } = await sb.from('players').select('id').eq('tournament_id', tournamentId)
-  await del('players', 'id', (allPlayers ?? []).map((p) => p.id as string).filter((id) => !keepPlayers.includes(id)))
-  await del('rounds', 'id', roundIds.filter((id) => !keepRounds.includes(id)))
-  // Then everything else, in dependency order.
-  await ins('groups', T.groups)
-  await ins('group_members', T.group_members)
-  await ins('round_tees', T.round_tees)
-  await ins('pairs', T.pairs)
-  await ins('scores', T.scores?.map((s) => ({ ...s, disputed: false, previous: null })))
-  await ins('snake_tiebreaks', T.snake_tiebreaks)
-  await ins('card_signatures', T.card_signatures)
-  await ins('handicap_overrides', T.handicap_overrides)
-  await ins('calcutta_lots', T.calcutta_lots)
-  await ins('calcutta_bids', T.calcutta_bids)
-  await ins('calcutta_buybacks', T.calcutta_buybacks)
-  await ins('payments', T.payments)
-  const tr = T.tournaments?.[0]
-  if (tr) {
-    const patch: Row = {}
-    for (const c of TOURNAMENT_COLS) if (c in tr) patch[c] = tr[c]
-    ok(await sb.from('tournaments').update(patch).eq('id', tournamentId), 'tournament')
-  }
+  const { courses: _c, tees: _t, holes: _h, ...tables } = backup.tables
+  void _c
+  void _t
+  void _h
+  const res = await supabase().rpc('restore_tournament', { p_tournament_id: tournamentId, p_backup: { ...backup, tables } })
+  if (res.error) throw new Error(res.error.message === 'wrong-tournament' ? 'wrong-tournament' : res.error.message)
+  return res.data as { players: number; rounds: number; scores: number }
 }
 
 /** Minimal CSV: quotes fields that need it. */

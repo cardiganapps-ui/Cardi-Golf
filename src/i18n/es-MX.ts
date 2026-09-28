@@ -410,6 +410,8 @@ export const t = {
       plays: 'Juega',
     },
     scores: {
+      invalidStrokes: 'Los golpes van de 1 a 15.',
+      invalidPutts: 'Los putts van de 0 a los golpes.',
       pendingTitle: 'Víboras pendientes',
       disputesTitle: 'Discrepancias',
       disputesHint: 'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
@@ -440,6 +442,7 @@ export const t = {
       restoreButton: 'Restaurar desde JSON…',
       restoreConfirm: (when: string) => `Se reemplazan todos los datos del torneo con el respaldo del ${when}. ¿Seguro?`,
       restored: 'Respaldo restaurado.',
+      restoredCount: (players: number, rounds: number, scores: number) => `Respaldo restaurado: ${players} jugadores, ${rounds} rondas, ${scores} hoyos.`,
       wrongTournament: 'Ese respaldo es de otro torneo. Solo se puede restaurar un respaldo de este mismo torneo.',
       badFile: 'Ese archivo no es un respaldo válido.',
       print: 'Tarjetas de papel',
@@ -452,6 +455,7 @@ export const t = {
       duplicated: 'Torneo duplicado. Estás en el nuevo.',
     },
     tournament: {
+      unbalancedNearSave: 'La bolsa no cuadra: ajusta los premios antes de guardar.',
       brand: 'Marca',
       name: 'Nombre',
       tagline: 'Lema',
@@ -517,6 +521,10 @@ export const t = {
     },
     players: {
       add: 'Agregar jugador',
+      deleteTakes: (partner: string | null, groups: number, payments: number) =>
+        `Se borra el jugador con su PIN${partner ? `, su pareja con ${partner}` : ''}${groups ? `, su lugar en ${groups} grupo${groups === 1 ? '' : 's'}` : ''}${payments ? ` y ${payments} pago${payments === 1 ? '' : 's'} marcado${payments === 1 ? '' : 's'}` : ''}. No se puede deshacer.`,
+      deleteBlocked: (scores: number, sold: boolean) =>
+        `No se puede borrar: ${scores ? `tiene ${scores} hoyo${scores === 1 ? '' : 's'} capturado${scores === 1 ? '' : 's'}` : ''}${scores && sold ? ' y ' : ''}${sold ? 'está en la Calcutta' : ''}. Si no va a jugar, déjalo sin grupo: sus hoyos cuentan 0.`,
       empty: 'Sin jugadores todavía.',
       emptyHint: 'Agrega a cada jugador con su nombre, categoría y hándicap. El PIN se pone después.',
       search: 'Buscar jugador',
@@ -566,6 +574,7 @@ export const t = {
     courses: {
       title: 'Campos',
       empty: 'Sin campos. Busca uno, sube una foto de la tarjeta o captúralo a mano.',
+      notMine: 'Lo creó otro organizador; solo quien lo creó puede borrarlo.',
       new: 'Nuevo campo',
       search: 'Buscar campo',
       searchPlaceholder: 'Nombre del campo (p. ej. Quivira)',
@@ -629,6 +638,10 @@ export const t = {
       pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
+      duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,
+      needsGroups: 'Arma los grupos antes de iniciar la ronda.',
+      startWhileLive: (n: number) => `El día ${n} sigue en juego. ¿Iniciar esta ronda de todos modos? La otra se queda en juego hasta que la termines.`,
+      reschedule: 'Volver a programada',
     },
   },
   auction: {
@@ -652,6 +665,7 @@ export const t = {
     soldTo: (name: string, price: string) => `Vendido a ${name} por ${price}`,
     reopen: 'Reabrir lote',
     limitReached: (n: number) => `Ya tiene ${n}`,
+    selfAtLimit: (n: number) => `Ya tiene ${n} jugadores; no puede quedarse consigo mismo. Alguien más tiene que pujar.`,
     searchBidder: 'Buscar postor',
     buyback: 'Recompra',
     buybackHint: (max: number) => `El jugador puede recomprar hasta el ${max}% de sí mismo pagándole a su dueño esa proporción del precio.`,

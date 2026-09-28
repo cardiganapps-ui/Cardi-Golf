@@ -15,5 +15,5 @@
     "noUncheckedIndexedAccess": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["api", "src/lib/courseProviders"]
+  "include": ["api", "src/lib/courseProviders", "src/server"]
 }

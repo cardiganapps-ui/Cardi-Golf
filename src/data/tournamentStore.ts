@@ -11,6 +11,7 @@ import { parseSettings, type TournamentSettings } from '../engine/settings/schem
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { supabase } from '../lib/supabase'
+import { fetchAll } from './paged'
 import { saveSnapshot } from './snapshotCache'
 import {
   mapBid,
@@ -97,17 +98,20 @@ export function dataFromSnapshot(snapshot: Snapshot): TournamentData {
   return compute(snapshot)
 }
 
+/** Primary keys of the tables without an `id` column (paging order). */
+const PK: Record<string, string[]> = {
+  group_members: ['group_id', 'player_id'],
+  round_tees: ['round_id', 'player_id'],
+  snake_tiebreaks: ['round_id', 'group_id', 'hole'],
+  card_signatures: ['round_id', 'pair_id'],
+  handicap_overrides: ['round_id', 'player_id'],
+  calcutta_buybacks: ['lot_id'],
+  holes: ['tee_id', 'number'],
+}
+
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
-  const q = <T = Row>(table: string, col = 'tournament_id') =>
-    sb
-      .from(table)
-      .select('*')
-      .eq(col, tournamentId)
-      .then(({ data, error }) => {
-        if (error) throw error
-        return (data ?? []) as T[]
-      })
+  const q = <T = Row>(table: string, col = 'tournament_id') => fetchAll<T>((from, to) => sb.from(table).select('*').eq(col, tournamentId).order('id').range(from, to))
 
   const [tRes, players, rounds, pairs, lots, payments] = await Promise.all([
     sb.from('tournaments').select('*').eq('id', tournamentId).single(),
@@ -122,16 +126,14 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const lotIds = lots.map((l) => l.id)
   const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))] as string[]
 
+  // Paged (PostgREST caps a response at 1,000 rows), ordered by each table's primary key so pages never overlap.
   const inList = <T = Row>(table: string, col: string, ids: string[]) =>
     ids.length
-      ? sb
-          .from(table)
-          .select('*')
-          .in(col, ids)
-          .then(({ data, error }) => {
-            if (error) throw error
-            return (data ?? []) as T[]
-          })
+      ? fetchAll<T>((from, to) => {
+          let qb = sb.from(table).select('*').in(col, ids)
+          for (const c of PK[table] ?? ['id']) qb = qb.order(c)
+          return qb.range(from, to)
+        })
       : Promise.resolve([] as T[])
 
   const [groups, roundTees, scores, tiebreaks, signatures, overrides, bids, buybacks, courses, tees] = await Promise.all([

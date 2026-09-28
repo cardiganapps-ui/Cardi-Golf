@@ -8,9 +8,10 @@ import { useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, toast } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deleteTournament, updateTournament, uploadAsset } from '../../data/api'
+import { deleteTournament, rotateJoinCode, updateTournament, uploadAsset } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
+import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
@@ -38,7 +39,7 @@ export function AdminTournament() {
   const fileRef = useRef<HTMLInputElement>(null)
   const A = t.admin.tournament
   const link = `${window.location.origin}/t/${slug}`
-  const players = data!.snapshot.players.length || 12
+  const players = data!.snapshot.players.length || settings.expectedPlayers || 12
   const warnings = data!.state.flags.warnings
   // Real group sizes per round, so the snake pot in the balance follows them (a group of 3 pays two).
   const groupSizes = useMemo(
@@ -46,14 +47,20 @@ export function AdminTournament() {
     [data],
   )
 
+  // Follow realtime changes while nothing is being edited here.
   useEffect(() => {
-    if (!dirty) setSettings(data!.settings)
-  }, [data, dirty])
+    if (dirty) return
+    setSettings(data!.settings)
+    setName(tr.name)
+    setTagline(tr.tagline ?? '')
+    setAccent(tr.accentColor ?? DEFAULT_ACCENT.hex)
+  }, [data, dirty, tr.name, tr.tagline, tr.accentColor])
 
   const parsed = useMemo(() => safeParseSettings(settings), [settings])
+  const balanced = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, { players, groupSizes }).balanced : false), [parsed, players, groupSizes])
 
   async function save() {
-    if (!parsed.success) return
+    if (!parsed.success || !balanced) return
     setBusy(true)
     try {
       await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: parsed.data })
@@ -104,9 +111,17 @@ export function AdminTournament() {
   const setStatus = (status: (typeof STATUSES)[number]) => quickUpdate({ status }, () => patch((s) => (s.tournament.status = status)))
   const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, () => patch((s) => (s.tournament.bankerPlayerId = id || null)))
   async function newCode() {
-    const code = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('')
-    await quickUpdate({ join_code: code }, () => patch((s) => (s.tournament.joinCode = code)))
-    setAskCode(false)
+    setQuick(true)
+    try {
+      const code = await rotateJoinCode(tournamentId)
+      patch((s) => (s.tournament.joinCode = code))
+      toast(t.common.saved)
+      setAskCode(false)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setQuick(false)
+    }
   }
 
   async function destroy() {
@@ -239,7 +254,8 @@ export function AdminTournament() {
 
       <div className={a.sticky}>
         {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
-        <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success} onClick={() => void save()}>
+        {dirty && parsed.success && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
+        <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !balanced} onClick={() => void save()}>
           {busy ? t.common.saving : t.common.save}
         </button>
       </div>

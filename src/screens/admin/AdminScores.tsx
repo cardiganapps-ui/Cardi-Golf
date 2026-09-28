@@ -9,8 +9,7 @@ import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
-import { adminSaveScore, resolveDispute, unsignCard } from '../../data/api'
-import { enqueueTiebreak } from '../../data/outbox'
+import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminScores.module.css'
@@ -22,7 +21,7 @@ const IB = t.admin.inbox
 export function AdminScores() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
-  const { me, tournamentId } = useTournamentCtx()
+  const { me } = useTournamentCtx()
   const { snapshot, state } = data
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
   const [roundId, setRoundId] = useState<string>(snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
@@ -51,14 +50,22 @@ export function AdminScores() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.groups, snapshot.players, roundId])
 
+  /** Same rails as the Tarjeta (§9.3): strokes 1–15, putts 0–strokes. */
+  const editError = (() => {
+    if (!edit) return null
+    if (!edit.pickedUp && (!Number.isInteger(edit.strokes) || edit.strokes < 1 || edit.strokes > 15)) return SC.invalidStrokes
+    if (!Number.isInteger(edit.putts) || edit.putts < 0 || edit.putts > 15 || (!edit.pickedUp && edit.putts > edit.strokes)) return SC.invalidPutts
+    if (signed && edit.reason.trim().length < 3) return SC.reasonHint
+    return null
+  })()
+
   async function save() {
-    if (!edit) return
-    if (signed && edit.reason.trim().length < 3) return
+    if (!edit || editError) return
     setBusy(true)
     try {
       await adminSaveScore(
-        { round_id: roundId, player_id: playerId, hole: edit.hole, strokes: edit.pickedUp ? null : edit.strokes, putts: edit.putts, picked_up: edit.pickedUp, entered_by: me.playerId },
-        signed ? edit.reason.trim() : null,
+        { round_id: roundId, player_id: playerId, hole: edit.hole, strokes: edit.pickedUp ? null : edit.strokes, putts: edit.putts, picked_up: edit.pickedUp },
+        edit.reason.trim() || null,
       )
       await reload()
       setEdit(null)
@@ -73,18 +80,22 @@ export function AdminScores() {
   async function answer(q: (typeof pending)[number], pid: string) {
     setBusy(true)
     try {
-      await enqueueTiebreak(tournamentId, { round_id: q.roundId, group_id: q.groupId, hole: q.hole, last_holed_player_id: pid, decided_by: me.playerId })
+      await answerTiebreak({ round_id: q.roundId, group_id: q.groupId, hole: q.hole, last_holed_player_id: pid, decided_by: me.playerId })
+      await reload()
       toast(t.common.saved)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
   }
 
-  async function keep(d: (typeof disputes)[number]) {
+  async function resolve(d: (typeof disputes)[number], keepCurrent: boolean) {
     setBusy(true)
     try {
-      await resolveDispute(d.roundId, d.playerId, d.hole)
+      await resolveDispute(d.roundId, d.playerId, d.hole, keepCurrent)
       await reload()
+      toast(t.common.saved)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
     } finally {
@@ -159,18 +170,10 @@ export function AdminScores() {
                     </span>
                   </span>
                   <span className={a.inboxActions}>
-                    <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void keep(d)}>
+                    <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void resolve(d, true)}>
                       {SC.keepCurrent}
                     </button>
-                    <button
-                      className="btn btn--ghost btn--sm"
-                      type="button"
-                      disabled={busy}
-                      onClick={() => {
-                        show(d.roundId, d.playerId)
-                        setEdit({ hole: d.hole, strokes: s.previous?.strokes ?? 4, putts: s.previous?.putts ?? 2, pickedUp: !!s.previous?.picked_up, reason: SC.restoreReason })
-                      }}
-                    >
+                    <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void resolve(d, false)}>
                       {SC.restorePrevious}
                     </button>
                   </span>
@@ -306,7 +309,8 @@ export function AdminScores() {
                 <input className="input" value={edit.reason} onChange={(e) => setEdit({ ...edit, reason: e.target.value })} autoFocus />
               </Field>
             )}
-            <button className="btn btn--primary" type="button" disabled={busy || (!!signed && edit.reason.trim().length < 3)} onClick={() => void save()}>
+            {editError && editError !== SC.reasonHint && <span className={a.error}>{editError}</span>}
+            <button className="btn btn--primary" type="button" disabled={busy || !!editError} onClick={() => void save()}>
               {busy ? t.common.saving : t.common.save}
             </button>
           </div>

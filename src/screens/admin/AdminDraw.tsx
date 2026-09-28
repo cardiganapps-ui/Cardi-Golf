@@ -10,7 +10,8 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { replaceGroups, replacePairs, updateTournament } from '../../data/api'
+import { saveDraw } from '../../data/api'
+import { withTeeTimes } from '../../lib/teeTimes'
 import { useTournament } from '../../data/tournamentStore'
 import { drawGroupsFromPairs, drawPairs, partnerTier, type DrawnPair } from '../../lib/pairing'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -74,29 +75,24 @@ export function AdminDraw() {
     if (!drawn) return
     setBusy(true)
     try {
-      await replacePairs(
+      // Day-1 groups from the drawn pairs (one of each kind per group), keyed by draw index until the server assigns ids.
+      const groups = drawGroupsFromPairs(drawn.map((p, i) => ({ id: String(i), kind: p.kind })))
+      const times = withTeeTimes('09:00', groups.length)
+      const round1Groups = groups.map((idxs, i) => ({
+        number: i + 1,
+        tee_time: times[i]!,
+        start_hole: 1,
+        player_ids: idxs.flatMap((k) => {
+          const p = drawn[Number(k)]!
+          return [p.player1Id, p.player2Id]
+        }),
+      }))
+      await saveDraw(
         tournamentId,
         drawn.map((p, i) => ({ name: names[i]?.trim() || null, player1_id: p.player1Id, player2_id: p.player2Id, kind: p.kind, picked_by_honoree: p.pickedByHonoree })),
+        snapshot.rounds.some((r) => r.number === 1) ? round1Groups : null,
+        snapshot.tournament.status === 'auction',
       )
-      await reload()
-      const fresh = useTournament.getState().data!.snapshot
-      const round1 = fresh.rounds.find((r) => r.number === 1)
-      if (round1) {
-        const groups = drawGroupsFromPairs(fresh.pairs)
-        await replaceGroups(
-          round1.id,
-          groups.map((pairIds, i) => ({
-            number: i + 1,
-            tee_time: `09:${String(i * 10).padStart(2, '0')}`,
-            start_hole: 1,
-            player_ids: pairIds.flatMap((pid) => {
-              const p = fresh.pairs.find((x) => x.id === pid)!
-              return [p.player1Id, p.player2Id]
-            }),
-          })),
-        )
-      }
-      if (fresh.tournament.status === 'auction') await updateTournament(tournamentId, { status: 'live' })
       await reload()
       setDrawn(null)
       setAskSave(false)

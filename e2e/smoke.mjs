@@ -149,9 +149,11 @@ try {
   const backup = JSON.parse(await readFile(backupPath, 'utf8'))
   const scoresBefore = backup.tables.scores.length
   check(backup.version === 1 && scoresBefore > 0 && backup.tables.players.length > 0, `backup exported (${scoresBefore} scores, ${backup.tables.players.length} players)`)
-  p.once('dialog', (d) => d.accept())
   const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: T }), p.locator('text=Restaurar desde JSON').click()])
   await chooser.setFiles(backupPath)
+  // The confirmation is a sheet now (PR 3), with the restore button as its confirm.
+  await p.waitForSelector('text=Se reemplazan todos los datos', { timeout: T })
+  await p.getByRole('dialog').getByRole('button', { name: 'Restaurar desde JSON' }).click()
   await p.waitForSelector('text=Respaldo restaurado', { timeout: T })
   await p.goto(`${base}/t/${slug}/admin/datos`, { waitUntil: 'domcontentloaded' })
   await p.waitForSelector('text=Respaldo JSON', { timeout: T })

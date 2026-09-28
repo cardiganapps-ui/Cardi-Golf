@@ -58,7 +58,7 @@ export function NewTournamentScreen() {
     setBusy(true)
     setError(null)
     try {
-      const row = await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: parsed.data })
+      const row = await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, expectedPlayers: players } })
       setCreated({ slug: row.slug, joinCode: row.joinCode })
       setStep(4)
     } catch (e) {

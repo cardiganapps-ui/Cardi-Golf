@@ -169,6 +169,20 @@ export function AdminPlayers() {
     }
   }
 
+  /** What a delete would take with it; a player with scores or a sold lot cannot be deleted (void him instead). */
+  const deleteInfo = useMemo(() => {
+    if (!editing?.id) return null
+    const id = editing.id
+    const snap = data!.snapshot
+    const scores = snap.scores.filter((s) => s.playerId === id).length
+    const sold = snap.calcuttaLots.some((l) => l.playerId === id && l.status === 'sold') || snap.calcuttaLots.some((l) => l.ownerId === id && l.status === 'sold')
+    const pair = snap.pairs.find((p) => p.player1Id === id || p.player2Id === id)
+    const partner = pair ? players.find((p) => p.id === (pair.player1Id === id ? pair.player2Id : pair.player1Id)) : undefined
+    const payments = snap.payments.filter((p) => p.fromPlayerId === id || p.toPlayerId === id).length
+    const groups = snap.groups.filter((g) => g.playerIds.includes(id)).length
+    return { scores, sold, partner, payments, groups, blocked: scores > 0 || sold }
+  }, [editing?.id, data, players])
+
   const E = editing
   return (
     <div className={a.screen}>
@@ -359,7 +373,16 @@ export function AdminPlayers() {
         )}
       </Sheet>
 
-      <ConfirmSheet open={askDelete} title={t.common.delete} body={t.common.confirmDelete} danger busy={busy} confirmLabel={t.common.delete} onConfirm={() => void remove()} onClose={() => setAskDelete(false)} />
+      <ConfirmSheet
+        open={askDelete}
+        title={t.common.delete}
+        body={deleteInfo?.blocked ? P.deleteBlocked(deleteInfo.scores, deleteInfo.sold) : deleteInfo ? P.deleteTakes(deleteInfo.partner?.displayName ?? null, deleteInfo.groups, deleteInfo.payments) : t.common.confirmDelete}
+        danger
+        busy={busy}
+        confirmLabel={t.common.delete}
+        onConfirm={() => (deleteInfo?.blocked ? setAskDelete(false) : void remove())}
+        onClose={() => setAskDelete(false)}
+      />
 
       <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
         <div className="stack">

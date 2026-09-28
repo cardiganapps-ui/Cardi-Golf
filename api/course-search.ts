@@ -10,6 +10,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import * as gca from '../src/lib/courseProviders/golfcourseapi.js'
 import * as oga from '../src/lib/courseProviders/opengolfapi.js'
 import { mergeHits, parseRef, type ProviderSearchHit } from '../src/lib/courseProviders/types.js'
+import { rateLimited, requireCourseManager } from '../src/server/auth.js'
 
 const GCA = 'https://api.golfcourseapi.com/v1'
 const OGA = 'https://api.opengolfapi.org'
@@ -33,6 +34,11 @@ async function getJson(url: string, headers: Record<string, string>): Promise<An
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
+  if (rateLimited(req, 'course-search', 30, 60_000)) {
+    res.status(429).json({ error: 'Muchas búsquedas seguidas; espera un minuto.' })
+    return
+  }
+  if (!(await requireCourseManager(req, res))) return
   const gcaKey = process.env.GOLFCOURSE_API_KEY
   const ogaKey = process.env.OPENGOLF_API_KEY
   const ogaHeaders: Record<string, string> = ogaKey ? { Authorization: `Bearer ${ogaKey}` } : {}

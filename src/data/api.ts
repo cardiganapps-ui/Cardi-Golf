@@ -6,8 +6,23 @@ import type { EstimateInput, Hole } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { mapTournament, type Row } from './mappers'
 
-function unwrap<T>(res: { data: T | null; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message)
+/** A server error with its Postgres code, so screens can map the known ones (23505, 42501, 22023) to copy. */
+export class ApiError extends Error {
+  code: string | null
+  constructor(message: string, code: string | null) {
+    super(message)
+    this.code = code
+  }
+}
+
+function unwrap<T>(res: { data: T | null; error: { message: string; code?: string } | null }): T {
+  if (res.error) throw new ApiError(res.error.message, res.error.code ?? null)
+  return res.data as T
+}
+
+async function rpc<T = unknown>(name: string, args?: Record<string, unknown>): Promise<T> {
+  const res = await supabase().rpc(name, args)
+  if (res.error) throw new ApiError(res.error.message, res.error.code ?? null)
   return res.data as T
 }
 
@@ -112,15 +127,14 @@ export async function myDeviceSession(): Promise<{ playerId: string; tournamentI
   return res.data ? { playerId: res.data.player_id, tournamentId: res.data.tournament_id } : null
 }
 
-/** True when the signed-in account is an organizer of this tournament (its own row only: any member can read the table). */
+/** True when the signed-in account is an organizer (owner or admin) of this tournament. */
 export async function isOrganizerOf(tournamentId: string): Promise<boolean> {
-  const sb = supabase()
-  const { data: auth } = await sb.auth.getSession()
-  const uid = auth.session?.user.id
-  if (!uid || auth.session?.user.is_anonymous) return false
-  const res = await sb.from('tournament_organizers').select('role').eq('tournament_id', tournamentId).eq('auth_user_id', uid).maybeSingle()
-  if (res.error) throw new Error(res.error.message)
-  return !!res.data
+  const role = await rpc<string>('my_tournament_role', { tid: tournamentId })
+  return role === 'owner' || role === 'admin'
+}
+
+export async function rotateJoinCode(tournamentId: string): Promise<string> {
+  return rpc<string>('rotate_join_code', { p_tournament_id: tournamentId })
 }
 
 // ---------------------------------------------------------------------------
@@ -238,13 +252,17 @@ export async function saveCourse(draft: CourseDraft): Promise<string> {
     )
   }
   const stale = existing.filter((e) => !keep.has(e.id)).map((e) => e.id)
-  if (stale.length) unwrap(await sb.from('tees').delete().in('id', stale).select('id'))
+  if (stale.length) {
+    const inUse = unwrap(await sb.from('round_tees').select('tee_id').in('tee_id', stale)) as Array<{ tee_id: string }>
+    if (inUse.length) throw new ApiError('Ese tee lo juega alguien en una ronda; cámbialo primero', '22023')
+    unwrap(await sb.from('tees').delete().in('id', stale).select('id'))
+  }
   return courseId
 }
 
-export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null }>> {
-  const rows = unwrap(await supabase().from('courses').select('id, name, location, source, attribution, tees(id)').order('name')) as Row[]
-  return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length, attribution: r.attribution ?? null }))
+export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null; createdBy: string | null }>> {
+  const rows = unwrap(await supabase().from('courses').select('id, name, location, source, attribution, created_by, tees(id)').order('name')) as Row[]
+  return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length, attribution: r.attribution ?? null, createdBy: r.created_by ?? null }))
 }
 
 export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
@@ -276,17 +294,20 @@ export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
   }
 }
 
+/** Refused by the server when the caller did not create it or a round uses it. */
 export async function deleteCourse(id: string) {
-  unwrap(await supabase().from('courses').delete().eq('id', id).select('id'))
+  await rpc('delete_course', { p_course_id: id })
 }
 
 // ---------------------------------------------------------------------------
 // Rounds
 // ---------------------------------------------------------------------------
+/** Insert or update by id; a taken number surfaces as ApiError 23505. */
 export async function upsertRound(tournamentId: string, r: { id?: string; number: number; date: string | null; course_id: string | null; holes: 9 | 18; status?: string }) {
-  const row: Row = { ...r, tournament_id: tournamentId }
-  if (!row.id) delete row.id
-  return unwrap(await supabase().from('rounds').upsert(row, { onConflict: 'tournament_id,number' }).select('id').single()) as { id: string }
+  const sb = supabase()
+  const { id, ...rest } = r
+  if (id) return unwrap(await sb.from('rounds').update(rest).eq('id', id).select('id').single()) as { id: string }
+  return unwrap(await sb.from('rounds').insert({ ...rest, tournament_id: tournamentId }).select('id').single()) as { id: string }
 }
 
 export async function setRoundStatus(roundId: string, status: 'scheduled' | 'live' | 'finished' | 'cancelled') {
@@ -318,20 +339,17 @@ export async function uploadAsset(path: string, file: Blob, contentType?: string
 // Groups, handicap overrides, Comité score edits (M4)
 // ---------------------------------------------------------------------------
 export interface GroupInput {
+  /** Existing group to update in place (keeps its tiebreak answers). */
+  id?: string
   number: number
   tee_time: string | null
   start_hole: number
   player_ids: string[]
 }
 
-/** Replace every group of a round (members included). Scores are keyed by player, so regrouping never loses them. */
-export async function replaceGroups(roundId: string, groups: GroupInput[]) {
-  const sb = supabase()
-  unwrap(await sb.from('groups').delete().eq('round_id', roundId).select('id'))
-  for (const g of groups) {
-    const row = unwrap(await sb.from('groups').insert({ round_id: roundId, number: g.number, tee_time: g.tee_time, start_hole: g.start_hole }).select('id').single()) as { id: string }
-    if (g.player_ids.length) unwrap(await sb.from('group_members').insert(g.player_ids.map((pid) => ({ group_id: row.id, player_id: pid }))).select('player_id'))
-  }
+/** Save a round's groups in one transaction: existing groups (by id or same members) are updated, the rest inserted, missing ones deleted. */
+export async function saveGroups(roundId: string, groups: GroupInput[]): Promise<Array<{ number: number; id: string }>> {
+  return rpc('upsert_groups', { p_round_id: roundId, p_groups: groups })
 }
 
 export async function upsertHandicapOverride(roundId: string, playerId: string, playingHcp: number, reason: string, by: string | null) {
@@ -342,16 +360,27 @@ export async function deleteHandicapOverride(roundId: string, playerId: string) 
   unwrap(await supabase().from('handicap_overrides').delete().eq('round_id', roundId).eq('player_id', playerId).select('player_id'))
 }
 
-export async function adminSaveScore(
-  payload: { round_id: string; player_id: string; hole: number; strokes: number | null; putts: number | null; picked_up: boolean; entered_by: string | null },
-  reason: string | null,
-) {
-  unwrap(await supabase().from('scores').upsert({ ...payload, reason, client_ts: new Date().toISOString() }, { onConflict: 'round_id,player_id,hole' }).select('id'))
+/** Comité correction; the server demands a reason once the card is signed and logs it. */
+export async function adminSaveScore(payload: { round_id: string; player_id: string; hole: number; strokes: number | null; putts: number | null; picked_up: boolean }, reason: string | null) {
+  await rpc('admin_save_score', {
+    p_round_id: payload.round_id,
+    p_player_id: payload.player_id,
+    p_hole: payload.hole,
+    p_strokes: payload.strokes,
+    p_putts: payload.putts,
+    p_picked_up: payload.picked_up,
+    p_reason: reason,
+  })
 }
 
-/** Keep the current values and clear the discrepancy flag. */
-export async function resolveDispute(roundId: string, playerId: string, hole: number) {
-  unwrap(await supabase().from('scores').update({ disputed: false }).eq('round_id', roundId).eq('player_id', playerId).eq('hole', hole).select('id'))
+/** keep = true: the current values stand; false: the previous device's values come back. Either way the flag clears. */
+export async function resolveDispute(roundId: string, playerId: string, hole: number, keep = true) {
+  await rpc('resolve_score_dispute', { p_round_id: roundId, p_player_id: playerId, p_hole: hole, p_keep: keep })
+}
+
+/** Comité answer to "¿Quién embocó al último?" (direct write: the console is online). */
+export async function answerTiebreak(payload: { round_id: string; group_id: string; hole: number; last_holed_player_id: string; decided_by: string | null }) {
+  unwrap(await supabase().from('snake_tiebreaks').upsert(payload, { onConflict: 'round_id,group_id,hole' }).select('hole'))
 }
 
 export async function unsignCard(roundId: string, pairId: string) {
@@ -420,10 +449,14 @@ export interface PairInput {
   picked_by_honoree: boolean
 }
 
-export async function replacePairs(tournamentId: string, pairs: PairInput[]) {
-  const sb = supabase()
-  unwrap(await sb.from('pairs').delete().eq('tournament_id', tournamentId).select('id'))
-  if (pairs.length) unwrap(await sb.from('pairs').insert(pairs.map((p) => ({ ...p, tournament_id: tournamentId, drawn_at: new Date().toISOString() }))).select('id'))
+/** The draw in one transaction: pairs, the round-1 groups and (optionally) auction → live. Refused once any card is signed. */
+export async function saveDraw(tournamentId: string, pairs: PairInput[], round1Groups: GroupInput[] | null, goLive: boolean) {
+  return rpc<{ pairs: number; groups: Array<{ number: number; id: string }> }>('save_draw', {
+    p_tournament_id: tournamentId,
+    p_pairs: pairs,
+    p_round1_groups: round1Groups,
+    p_go_live: goLive,
+  })
 }
 
 export async function renamePair(pairId: string, name: string) {
@@ -442,16 +475,15 @@ export interface PaymentInput {
   note?: string | null
 }
 
-/** One row per (kind, from, to): mark paid/unpaid with the expected amount. */
+/** One row per (kind, from, to), enforced by the server: mark paid/unpaid with the aggregate amount. */
 export async function setPaymentPaid(tournamentId: string, p: PaymentInput) {
-  const sb = supabase()
-  let q = sb.from('payments').select('id').eq('tournament_id', tournamentId).eq('kind', p.kind)
-  q = p.from_player_id ? q.eq('from_player_id', p.from_player_id) : q.is('from_player_id', null)
-  q = p.to_player_id ? q.eq('to_player_id', p.to_player_id) : q.is('to_player_id', null)
-  const existing = unwrap(await q) as Array<{ id: string }>
-  if (existing.length) {
-    unwrap(await sb.from('payments').update({ paid: p.paid, amount: p.amount, note: p.note ?? null }).in('id', existing.map((e) => e.id)).select('id'))
-  } else {
-    unwrap(await sb.from('payments').insert({ ...p, tournament_id: tournamentId }).select('id'))
-  }
+  await rpc('set_payment_paid', {
+    p_tournament_id: tournamentId,
+    p_kind: p.kind,
+    p_from: p.from_player_id,
+    p_to: p.to_player_id,
+    p_amount: p.amount,
+    p_paid: p.paid,
+    p_note: p.note ?? null,
+  })
 }

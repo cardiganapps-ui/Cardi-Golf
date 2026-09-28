@@ -7,6 +7,7 @@ import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Field, toast } from '../../components/ui'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { duplicateTournament } from '../../data/api'
 import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '../../data/backup'
 import { useTournament } from '../../data/tournamentStore'
@@ -22,6 +23,7 @@ export function AdminData() {
   const [busy, setBusy] = useState(false)
   const [dupName, setDupName] = useState(`${data.snapshot.tournament.name} (copia)`)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [pendingRestore, setPendingRestore] = useState<Backup | null>(null)
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
 
   const run = async (fn: () => Promise<void>) => {
@@ -69,11 +71,21 @@ export function AdminData() {
       toast(D.badFile)
       return
     }
-    if (!confirm(D.restoreConfirm(new Date(backup.exportedAt ?? 0).toLocaleString('es-MX')))) return
+    if (backup.version !== 1 || backup.tournamentId !== tournamentId) {
+      toast(D.wrongTournament)
+      return
+    }
+    setPendingRestore(backup)
+  }
+
+  async function doRestore() {
+    const backup = pendingRestore
+    if (!backup) return
     await run(async () => {
-      await restoreBackup(tournamentId, backup)
+      const n = await restoreBackup(tournamentId, backup)
       await reload()
-      toast(D.restored)
+      setPendingRestore(null)
+      toast(D.restoredCount(n.players, n.rounds, n.scores))
     })
   }
 
@@ -98,8 +110,28 @@ export function AdminData() {
         <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => fileRef.current?.click()}>
           {D.restoreButton}
         </button>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void onRestore(e.target.files[0])} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (f) void onRestore(f)
+          }}
+        />
       </section>
+      <ConfirmSheet
+        open={!!pendingRestore}
+        title={D.restore}
+        body={pendingRestore ? D.restoreConfirm(new Date(pendingRestore.exportedAt ?? 0).toLocaleString('es-MX')) : ''}
+        danger
+        busy={busy}
+        confirmLabel={D.restoreButton}
+        onConfirm={() => void doRestore()}
+        onClose={() => setPendingRestore(null)}
+      />
 
       <section className="card stack">
         <span className="label">{D.print}</span>

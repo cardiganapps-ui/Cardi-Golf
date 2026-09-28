@@ -38,7 +38,16 @@ export function parsePaste(text: string, holes: number): { par: number[]; si: nu
   return { par, si, yards }
 }
 
-export function CourseEditor({ draft, notes, busy, onSave, onCancel, addTee }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; addTee: () => void }) {
+export const blankTee = (name = 'Azules'): CourseDraftTee => ({
+  name,
+  color: null,
+  rating: null,
+  slope: null,
+  holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1, yards: null })),
+})
+
+/** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
+export function CourseEditor({ draft, notes, busy, onSave, onCancel }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void }) {
   const [d, setD] = useState<CourseDraft>(draft)
   const [teeIdx, setTeeIdx] = useState(0)
   const [paste, setPaste] = useState('')
@@ -72,9 +81,9 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, addTee }: {
     setD({ ...d, tees })
     setTeeIdx(0)
   }
-  // Keep the outer draft in sync when a tee is added from the parent.
-  if (draft.tees.length !== d.tees.length && draft.tees.length > d.tees.length) {
-    setD({ ...d, tees: [...d.tees, ...draft.tees.slice(d.tees.length)] })
+  function addTee() {
+    setD({ ...d, tees: [...d.tees, blankTee(`Tee ${d.tees.length + 1}`)] })
+    setTeeIdx(d.tees.length)
   }
 
   const par = tee.holes.reduce((s, h) => s + h.par, 0)
