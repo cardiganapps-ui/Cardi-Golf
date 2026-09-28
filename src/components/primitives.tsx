@@ -5,10 +5,10 @@
  * Every visual value comes from tokens.css through primitives.module.css.
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
-import logo from '../design/logoMark.json'
+import { bbox as logoBox, lockup, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
 
 // ---- Buttons ----
@@ -313,44 +313,49 @@ export function EventName({ name, tagline, logoUrl, small }: { name: string; tag
   )
 }
 /**
- * The Polo symbol: a cursive P drawn in one pencil line. Same drawing as the
- * app icon (src/design/logoMark.json). `tone`: graphite on card stock (color
- * and one-color are the same graphite line), or the board's leader yellow on
- * the TV surface.
+ * The Polo symbol: the cursive pencil P traced off the approved sheet
+ * (design/brand/polo-logo-sheet.jpg) and drawn with the sheet's own graphite.
+ * scripts/make-icons.mjs renders the images from src/design/logoMark.json.
+ * `tone`: graphite (the sheet's color and one-color versions are the same
+ * line) or the gold the sheet uses on the board surface. `size` is the height.
  */
 export type LogoTone = 'color' | 'mono' | 'board'
+const MARK_ASPECT = logoBox.w / logoBox.h
+const markSrc = (tone: LogoTone) => (tone === 'board' ? '/brand/polo-mark-board.png' : '/brand/polo-mark.png')
 export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: LogoTone }) {
-  const { d, passes, box } = logo
   return (
-    <svg
-      className={`${s.logoMark} ${tone === 'board' ? s.logoBoard : ''}`}
-      width={size}
-      height={size}
-      viewBox={`${box.x} ${box.y} ${box.size} ${box.size}`}
+    <img
+      className={s.logoMark}
+      src={markSrc(tone)}
+      alt=""
       aria-hidden="true"
-      focusable="false"
-    >
-      {passes.map((q, i) => (
-        <path
-          key={i}
-          d={d}
-          transform={`translate(${q.dx} ${q.dy})`}
-          className={s.logoInk}
-          strokeWidth={q.width}
-          strokeOpacity={q.opacity}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
-    </svg>
+      draggable={false}
+      width={Math.round(size * MARK_ASPECT)}
+      height={size}
+    />
   )
 }
-/** Horizontal lockup: the symbol, then "Polo" set in Archivo 700. `mark={false}` gives the bare wordmark. */
+// The sheet's Horizontal Lockup, in em of the wordmark: symbol height, its drop
+// below the baseline and the ink gap to the P (less the P's own side bearing),
+// plus the Archivo settings fitted to the sheet's lettering.
+const LOCKUP_STYLE = {
+  '--wm-weight': String(wm.weight),
+  '--wm-width': `${wm.width}%`,
+  '--wm-tracking': `${wm.letterSpacing}em`,
+  '--mark-height': `${(lockup.markHeight * wm.capHeight).toFixed(4)}em`,
+  '--mark-drop': `${(-lockup.belowBaseline * wm.capHeight).toFixed(4)}em`,
+  '--mark-gap': `${(lockup.gap * wm.capHeight - wm.pSideBearing).toFixed(4)}em`,
+}
+/** Horizontal lockup as on the sheet: the symbol, then "Polo". `mark={false}` gives the bare wordmark. */
 export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: number; tone?: LogoTone; mark?: boolean }) {
   return (
-    <span className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`} style={{ fontSize: size }} role="img" aria-label={t.app.name}>
-      {mark && <LogoMark size={Math.round(size * 1.3)} tone={tone} />}
+    <span
+      className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`}
+      style={{ ...LOCKUP_STYLE, fontSize: size } as CSSProperties}
+      role="img"
+      aria-label={t.app.name}
+    >
+      {mark && <img className={s.wordmarkMark} src={markSrc(tone)} alt="" draggable={false} />}
       <span aria-hidden="true">{t.app.name}</span>
     </span>
   )

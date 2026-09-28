@@ -548,28 +548,28 @@
 
 /* ---- Wordmark and icon ---- */
 .wordmark {
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  /* Fitted to the sheet's lettering; values come from logoMark.json via the component. */
+  font-weight: var(--wm-weight);
+  font-stretch: var(--wm-width);
+  letter-spacing: var(--wm-tracking);
   line-height: 1;
   color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18em;
+  display: inline-block;
+  white-space: nowrap;
 }
 .wordmarkBoard {
   color: var(--board-ink);
 }
-/* Symbol color: the graphite pencil line; on the board it takes the leader yellow. */
+.wordmarkMark {
+  display: inline-block;
+  height: var(--mark-height);
+  width: auto;
+  vertical-align: var(--mark-drop);
+  margin-right: var(--mark-gap);
+}
 .logoMark {
-  --logo-ink: var(--ink);
-  flex: none;
   display: block;
-}
-.logoBoard {
-  --logo-ink: var(--board-accent);
-}
-.logoInk {
-  stroke: var(--logo-ink);
+  flex: none;
 }
 
 /* ---- Plate (board surface only) ---- */
