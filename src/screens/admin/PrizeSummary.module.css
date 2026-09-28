@@ -1,0 +1,39 @@
+.summary {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s3);
+  min-height: 40px;
+  padding: var(--s1) 0;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+}
+.detail {
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+.amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.total {
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.verdict {
+  padding-top: var(--s2);
+  font-weight: 600;
+  color: var(--accent);
+}
+.verdictOff {
+  color: var(--under);
+}
+.invalid {
+  font-size: var(--fs-sm);
+  color: var(--under);
+}

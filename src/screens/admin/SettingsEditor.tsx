@@ -5,9 +5,9 @@
 import { useMemo } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Field, Toggle } from '../../components/ui'
-import { formatMoney } from '../../lib/money'
 import { MODULE_IDS, safeParseSettings, type ModuleId, type TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
+import { PrizeSummary } from './PrizeSummary'
 
 interface Props {
   value: TournamentSettings
@@ -178,44 +178,9 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
           </Field>
         )}
 
-        <div className={`card ${check?.balanced ? 'card--cell' : 'card--alert'}`}>
+        <div className="stack">
           <strong>{A.balance}</strong>
-          {!parsed.success && (
-            <p className="small">
-              {A.invalid} {parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(' · ')}
-            </p>
-          )}
-          {check && (
-            <>
-              <table className="table" style={{ marginTop: 8, color: 'inherit' }}>
-                <tbody>
-                  {check.lines.map((l) => (
-                    <tr key={l.moduleId}>
-                      <td>
-                        {l.label} <span className="small" style={{ opacity: 0.8 }}>({l.detail})</span>
-                      </td>
-                      <td className="num">{formatMoney(l.amount)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td>
-                      <strong>{t.money.prizes}</strong>
-                    </td>
-                    <td className="num">
-                      <strong>{formatMoney(check.prizesTotal)}</strong>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      {t.money.entryFee} × {players}
-                    </td>
-                    <td className="num">{formatMoney(check.entryPot)}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p style={{ marginTop: 8, fontWeight: 700 }}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference)))}</p>
-            </>
-          )}
+          <PrizeSummary check={check} players={players} issues={parsed.success ? undefined : parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)} />
         </div>
       </section>
 
