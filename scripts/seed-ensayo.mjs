@@ -9,17 +9,12 @@
 // Never touches any tournament other than the one with slug "ensayo".
 import { createClient } from '@supabase/supabase-js'
 import { readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { randomBytes } from 'node:crypto'
+import { loadEnv } from './lib/env.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
-if (existsSync(path.join(root, '.env.local'))) {
-  for (const line of (await readFile(path.join(root, '.env.local'), 'utf8')).split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv()
 const URL_ = process.env.VITE_SUPABASE_URL
 const SECRET = process.env.SUPABASE_SECRET_KEY
 if (!URL_ || !SECRET) {

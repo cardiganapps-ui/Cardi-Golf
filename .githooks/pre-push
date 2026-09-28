@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Git-level guard (any client, not only Claude's Bash tool): run the same
+# preflight CI runs and refuse the push when it fails.
+#   git config core.hooksPath .githooks
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+log="${TMPDIR:-/tmp}/polo-prepush.log"
+if bash "$root/scripts/preflight.sh" > "$log" 2>&1; then
+  exit 0
+fi
+echo "Push blocked: preflight failed (full log: $log)" >&2
+grep -E '^\s*✗|error|Error|FAIL' "$log" | head -40 >&2
+exit 1

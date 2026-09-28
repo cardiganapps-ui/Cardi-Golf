@@ -7,16 +7,11 @@
 // Needs VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY and SUPABASE_SECRET_KEY (.env.local).
 import { createClient } from '@supabase/supabase-js'
 import { readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { loadEnv } from './lib/env.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
-if (existsSync(path.join(root, '.env.local'))) {
-  for (const line of (await readFile(path.join(root, '.env.local'), 'utf8')).split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv()
 const URL_ = process.env.VITE_SUPABASE_URL
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
 const SECRET = process.env.SUPABASE_SECRET_KEY

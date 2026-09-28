@@ -11,17 +11,9 @@
 // Refuses any tournament whose slug does not start with "ensayo" (§0.1: never
 // touch real tournament data). Rows are exactly what the Tarjeta screen writes.
 import { createClient } from '@supabase/supabase-js'
-import { readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import path from 'node:path'
+import { loadEnv } from './lib/env.mjs'
 
-const root = path.resolve(new URL('..', import.meta.url).pathname)
-if (existsSync(path.join(root, '.env.local'))) {
-  for (const line of (await readFile(path.join(root, '.env.local'), 'utf8')).split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv()
 const URL_ = process.env.VITE_SUPABASE_URL
 const SECRET = process.env.SUPABASE_SECRET_KEY
 if (!URL_ || !SECRET) {
@@ -83,8 +75,13 @@ const cutFor = new Map()
 if (earlier.length) {
   const first = earlier[0]
   const prev = must(await sb.from('scores').select('player_id, hole, strokes, picked_up').eq('round_id', first.id), 'day1 scores')
+  // Day-1 points are scored on the tee each player had that day (it may differ from today's).
+  const firstTees = must(await sb.from('round_tees').select('player_id, tee_id').eq('round_id', first.id), 'day1 round_tees')
+  const firstRound = rounds.find((r) => r.id === first.id)
+  const firstCourseTees = firstRound?.course_id && firstRound.course_id !== round.course_id ? must(await sb.from('tees').select('id, holes(number, par, stroke_index)').eq('course_id', firstRound.course_id), 'day1 tees') : tees
+  const firstTeeFor = (p) => firstCourseTees.find((x) => x.id === (firstTees.find((rt) => rt.player_id === p.id)?.tee_id ?? p.default_tee_id)) ?? firstCourseTees[0]
   for (const p of players) {
-    const tee = teeFor(p)
+    const tee = firstTeeFor(p)
     const ph = playingHcp(p.base_hcp)
     let pts = 0
     for (const s of prev.filter((x) => x.player_id === p.id)) {
@@ -136,8 +133,10 @@ for (let i = 0; i < Math.min(maxHoles, holesPerRound); i++) {
       const putts = r3 < 0.05 + p.base_hcp / 200 ? 3 : r3 < 0.35 ? 1 : 2
       const pickedUp = noise >= 2 && rng() < 0.15
       if (pickedUp) strokes = null
-      rows.push({ round_id: round.id, player_id: p.id, hole, strokes, putts: pickedUp ? null : Math.min(putts, strokes), picked_up: pickedUp, entered_by: null, client_ts: new Date().toISOString() })
-      if (!pickedUp && putts >= S.modules.snake.puttsThreshold) threePutters.push(p.id)
+      const saved = pickedUp ? null : Math.min(putts, strokes)
+      rows.push({ round_id: round.id, player_id: p.id, hole, strokes, putts: saved, picked_up: pickedUp, entered_by: null, client_ts: new Date().toISOString() })
+      // Only what was actually saved counts toward the snake (a 3-putt clamped to 2 by a 2-stroke hole is not one).
+      if (saved != null && saved >= S.modules.snake.puttsThreshold) threePutters.push(p.id)
     }
     if (rows.length) must(await sb.from('scores').upsert(rows, { onConflict: 'round_id,player_id,hole' }).select('hole'), `scores g${g.number} h${hole}`)
     if (threePutters.length >= 2) {

@@ -196,7 +196,7 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel }: { draft: 
       <div className="row">
         {d.tees.length > 1 && (
           <button className="btn btn--ghost btn--sm coral" type="button" onClick={removeTee}>
-            {t.common.delete} tee
+            {C.deleteTee}
           </button>
         )}
         <button className="btn btn--secondary" type="button" onClick={onCancel}>

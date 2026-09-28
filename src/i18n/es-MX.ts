@@ -7,6 +7,13 @@
  * índice de golpe (SI) vs índice (WHS), bolsa (entries) vs pozo (Calcutta),
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
+/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels. */
+export function ordinal(label: string): string {
+  const tied = label.startsWith('T')
+  const n = label.replace(/^T/, '')
+  return tied ? `empatado en ${n}.º` : `${n}.º`
+}
+
 export const t = {
   app: {
     name: 'Polo',
@@ -29,6 +36,11 @@ export const t = {
     undo: 'Deshacer',
     final: 'Final',
     sections: 'Secciones',
+    dialog: 'Ventana',
+    and: (a: string, b: string) => `${a} y ${b}`,
+    versus: ' contra ',
+    plusList: (parts: Array<string | number>) => parts.join(' + '),
+    copySuffix: '(copia)',
     joinWithCode: (name: string, code: string) => `${name}: entra con el código ${code}`,
     loading: 'Cargando…',
     saving: 'Guardando…',
@@ -61,7 +73,7 @@ export const t = {
     myTournaments: 'Mis torneos',
     newTournament: 'Nuevo torneo',
     joinTitle: 'Entrar a un torneo',
-    joinHint: 'Escribe el código de seis letras que te mandaron.',
+    joinHint: 'Escribe el código de seis caracteres que te mandaron.',
     joinPlaceholder: 'Código',
     joinButton: 'Entrar',
     lastTournament: 'Tu último torneo',
@@ -226,7 +238,8 @@ export const t = {
     updatedAgo: (min: number) => `Actualizado hace ${min} min`,
     points: 'Puntos',
     gross: 'Gross',
-    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${pos}º con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
+    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
+    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => `${ordinal(pos)}, ${name}${today ? `, hoy ${today}` : ''}${thru ? `, hoyo ${thru}` : ''}, ${figure}`,
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
   card: {
@@ -259,7 +272,8 @@ export const t = {
     next: 'Hoyo siguiente',
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',
     whoHoledLast: '¿Quién embocó al último?',
-    whoHoledLastHint: 'Dos o más hicieron 3 putts en este hoyo. La víbora se la queda el que embocó al último.',
+    whoHoledLastHint: (threshold: number) => `Dos o más hicieron ${threshold} putts o más en este hoyo. La víbora se la queda el que embocó al último.`,
+    markName: { eagle: 'águila o mejor', birdie: 'birdie', par: 'par', bogey: 'bogey', double: 'doble bogey o peor', pickup: 'levantó' } as Record<string, string>,
     weirdTitle: '¿Seguro?',
     weirdFix: 'Corregir',
     weirdConfirm: 'Sí, así fue',
@@ -312,7 +326,7 @@ export const t = {
     par: 'Par',
     si: 'SI',
     pts: 'Pts',
-    yards: (y: number) => `${y} y`,
+    yards: (y: number) => `${y} yd`,
     grossShort: 'Gross',
     netShort: 'Neto',
     puttsShort: 'Putts',
@@ -331,7 +345,7 @@ export const t = {
     onePutts: 'A un putt',
     threePutts: 'A tres putts',
     snakeHoles: 'Hoyos con víbora',
-    position: (label: string, total: number, thru: string) => `${label}º, ${total} pts, por el ${thru}`,
+    position: (label: string, total: number, thru: string) => `${ordinal(label)}, ${total} pts, por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${base}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, pts: number) => `Día ${day}: ${pts} pts`,
@@ -580,6 +594,8 @@ export const t = {
       title: 'Campos',
       empty: 'Sin campos. Busca uno, sube una foto de la tarjeta o captúralo a mano.',
       notMine: 'Lo creó otro organizador; solo quien lo creó puede borrarlo.',
+      ladies: 'damas',
+      deleteTee: 'Borrar tee',
       new: 'Nuevo campo',
       search: 'Buscar campo',
       searchPlaceholder: 'Nombre del campo (p. ej. Quivira)',
@@ -670,6 +686,7 @@ export const t = {
     soldTo: (name: string, price: string) => `Vendido a ${name} por ${price}`,
     reopen: 'Reabrir lote',
     limitReached: (n: number) => `Ya tiene ${n}`,
+    minBid: (amount: string) => `La puja tiene que superar ${amount}.`,
     selfAtLimit: (n: number) => `Ya tiene ${n} jugadores; no puede quedarse consigo mismo. Alguien más tiene que pujar.`,
     searchBidder: 'Buscar postor',
     buyback: 'Recompra',
@@ -785,7 +802,7 @@ export const t = {
     momentText: (name: string, hole: number, day: number, pts: number) => `${name}, hoyo ${hole} del día ${day}: ${pts} puntos.`,
     cursed: 'Hoyo Maldito',
     cursedText: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg} pts promedio.`,
-    noData: 'Cuando haya scores, aquí salen las stats.',
+    noData: 'Cuando haya tarjetas capturadas, aquí salen las estadísticas.',
     award: {
       mostBirdies: { name: 'Rey del Birdie', desc: 'Más birdies gross' },
       mostOnePutts: { name: 'Francotirador', desc: 'Más hoyos a un putt' },
@@ -796,7 +813,7 @@ export const t = {
       bestRoi: { name: 'El Inversionista', desc: 'Mejor retorno en la Calcutta' },
       worstRoi: { name: 'El Filántropo', desc: 'Peor retorno en la Calcutta' },
     },
-    unit: (unit: 'count' | 'points' | 'pct' | 'variance', v: number) => (unit === 'pct' ? `${Math.round(v * 100)}%` : unit === 'points' ? `${v > 0 ? '+' : ''}${v} pts` : unit === 'variance' ? `varianza ${v}` : `${v}`),
+    unit: (unit: 'count' | 'points' | 'pct' | 'variance', v: number) => (unit === 'pct' ? `${Math.round(v * 100)}%` : unit === 'points' ? `${v > 0 ? '+' : ''}${v} pts` : unit === 'variance' ? `varianza ${v.toFixed(2)}` : `${v}`),
   },
   share: {
     leaderboard: 'Compartir tabla',
@@ -835,13 +852,13 @@ export const t = {
     ],
     bestRound: (prize: string) => [`${prize} por día al mejor total Stableford de ese día. Abierto a todos; el día 2 usa el hándicap ajustado. Empate: desempate por los últimos hoyos de ese día y luego se reparte.`],
     pairs: (rule: string, prizes: string[], honoree: string | null) => [
-      `Parejas fijas por categorías (${rule}), sorteadas en la cena de la Calcutta.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
+      `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas en la cena de la Calcutta.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
       'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes.',
       `Premios: ${prizes.map((p, i) => `${i + 1}º ${p}`).join(', ')}. Empate: mejor día 2 combinado, luego se reparte.`,
       'Las parejas juegan juntas los dos días y cada pareja lleva la tarjeta de la otra.',
     ],
     snake: (threshold: number, perSurvivor: string, pot: string) => [
-      `En cada grupo, la víbora la tiene quien hizo ${threshold} putts o más más recientemente. Si dos la hacen en el mismo hoyo, la carga el que embocó al último.`,
+      `En cada grupo, la víbora la tiene el último que hizo ${threshold} putts o más. Si dos la hacen en el mismo hoyo, la carga el que embocó al último.`,
       `Al terminar la ronda, los que no la tienen cobran ${perSurvivor} cada uno del pozo (${pot} por grupo). Si nadie hizo ${threshold} putts, se reparte entre los cuatro.`,
     ],
     fewestPutts: (prize: string, pickup: number) => [`${prize} al menor total de putts. Solo cuentan los golpes en el green. Un hoyo levantado cuenta ${pickup} putts. Empate: se reparte.`],

@@ -237,6 +237,12 @@ ol {
   padding: 0 var(--s3);
   font-size: var(--fs-sm);
 }
+/* On a touch screen every small button is still a full tap target (§9: 44 px+). */
+@media (pointer: coarse) {
+  .btn--sm {
+    min-height: var(--tap);
+  }
+}
 .btn--block {
   width: 100%;
 }
@@ -246,6 +252,10 @@ ol {
   color: var(--ink-3);
   filter: none;
   cursor: not-allowed;
+}
+/* A disabled ghost button stays a quiet text button, never a filled one that reads as enabled. */
+.btn--ghost:disabled {
+  background: transparent;
 }
 
 :focus-visible {

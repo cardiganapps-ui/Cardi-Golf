@@ -91,7 +91,7 @@ function Card({ what }: { what: ShareKind }) {
               <div key={r.playerId} className={styles.row}>
                 <span className={styles.pos}>{r.label}</span>
                 <span className={styles.name}>{nameOf(r.playerId)}</span>
-                <span className={styles.small}>{r.perRound.join(' + ')}</span>
+                <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
                 <span className={styles.big}>{r.total}</span>
                 <span className={styles.cash}>{cash > 0 ? formatMoney(cash) : ''}</span>
               </div>

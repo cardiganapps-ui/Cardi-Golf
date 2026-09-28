@@ -76,11 +76,12 @@ export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', 
 }
 
 // ---- Segmented ----
-export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void }) {
+/** A view toggle is a radio group; only a real set of panels (Juegos) is a tablist. */
+export function Segmented<T extends string>({ value, options, onChange, tabs, label }: { value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; tabs?: boolean; label?: string }) {
   return (
-    <div className={s.segmented} role="tablist">
+    <div className={s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label}>
       {options.map((o) => (
-        <button key={o.value} type="button" role="tab" aria-selected={o.value === value} className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`} onClick={() => onChange(o.value)}>
+        <button key={o.value} type="button" role={tabs ? 'tab' : 'radio'} aria-selected={tabs ? o.value === value : undefined} aria-checked={tabs ? undefined : o.value === value} className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}
@@ -134,7 +135,7 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
 export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
   const subLine = [sub, owners].filter(Boolean)
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick}>
+    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, today, thru)}>
       {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
       <span className={s.name}>
@@ -173,7 +174,7 @@ export function markFor(gross: number | null, par: number, pickedUp = false): Ma
 export function ScoreMark({ value, kind }: { value: string | number; kind: MarkKind }) {
   const stroke = kind === 'eagle' || kind === 'birdie' ? 'var(--under)' : 'var(--over)'
   return (
-    <span className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`} aria-label={kind}>
+    <span className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`} aria-label={t.card.markName[kind] ?? kind}>
       <svg className={s.markSvg} viewBox="0 0 30 30" style={{ stroke }} aria-hidden="true">
         {(kind === 'birdie' || kind === 'eagle') && <circle cx="15" cy="15" r="12" />}
         {kind === 'eagle' && <circle cx="15" cy="15" r="9" />}

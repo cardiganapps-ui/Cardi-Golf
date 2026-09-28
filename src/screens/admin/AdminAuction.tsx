@@ -139,7 +139,7 @@ export function AdminAuction() {
     if (!open || !bidder) return
     const amount = delta == null ? Number(custom) : bidAmount + delta
     if (!Number.isFinite(amount) || amount <= bidAmount) {
-      toast(`> ${formatMoney(bidAmount)}`)
+      toast(A.minBid(formatMoney(bidAmount)))
       return
     }
     await run(() => placeBid(open.lotId, bidder, Math.round(amount)))

@@ -6,17 +6,11 @@
 // Reads SUPABASE_PAT and SUPABASE_PROJECT_REF from the environment or .env.local.
 // Never prints the token.
 import { readFile, readdir } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { loadEnv } from './lib/env.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
-if (existsSync(path.join(root, '.env.local'))) {
-  const env = await readFile(path.join(root, '.env.local'), 'utf8')
-  for (const line of env.split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
-  }
-}
+loadEnv()
 const PAT = process.env.SUPABASE_PAT
 const REF = process.env.SUPABASE_PROJECT_REF
 if (!PAT || !REF) {

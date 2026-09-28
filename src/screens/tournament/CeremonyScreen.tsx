@@ -18,6 +18,8 @@ import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, Ico
 import { celebrationColors } from '../../lib/tokens'
 
 const C = t.ceremony
+/** "A y B", "A, B y C". */
+const andList = (names: string[]) => (names.length <= 1 ? (names[0] ?? '') : t.common.and(names.slice(0, -1).join(', '), names[names.length - 1]!))
 
 interface Step {
   id: string
@@ -42,13 +44,13 @@ export function CeremonyScreen() {
     const nameOf = (id: string) => snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
     const out: Step[] = []
     if (m.individual && m.individual.lastPlace.length) {
-      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: m.individual.lastPlace, line: m.individual.lastPlace.map(nameOf).join(' & ') }] })
+      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: m.individual.lastPlace, line: andList(m.individual.lastPlace.map(nameOf)) }] })
     }
     if (m.fewestPutts) {
       const ids = Object.keys(m.fewestPutts.prizes)
       if (ids.length) {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
-        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: row ? `${row.putts} putts, ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: row ? `${row.putts} putts, ${formatMoney(m.fewestPutts.prizes[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.snake) {
@@ -61,7 +63,7 @@ export function CeremonyScreen() {
           id: 'snake',
           title: C.steps.snake(settings.modules.snake.label),
           icon: <IconSnake size={64} />,
-          winners: gold ? [{ playerIds: gold.playerIds, line: gold.playerIds.map(nameOf).join(' & '), sub: `${t.stats.award.snakeGold.name}, ${C.holesHeld(gold.value)}` }] : [],
+          winners: gold ? [{ playerIds: gold.playerIds, line: andList(gold.playerIds.map(nameOf)), sub: `${t.stats.award.snakeGold.name}, ${C.holesHeld(gold.value)}` }] : [],
           extra: (
             <div className={styles.list}>
               {rows.map(([pid, amt]) => (
@@ -80,7 +82,7 @@ export function CeremonyScreen() {
         const ids = Object.keys(day.winners)
         if (!ids.length) continue
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
-        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: ids.map(nameOf).join(' & '), sub: pts != null ? `${C.withPoints(pts)}, ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
+        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? `${C.withPoints(pts)}, ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
       }
     }
     if (m.pairs) {
@@ -90,7 +92,7 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º, ${r.name}`, sub: `${nameOf(r.playerIds[0])} & ${nameOf(r.playerIds[1])}, ${C.withPoints(r.total)}` })),
+          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º, ${r.name}`, sub: `${t.common.and(nameOf(r.playerIds[0]), nameOf(r.playerIds[1]))}, ${C.withPoints(r.total)}` })),
         })
       }
     }
@@ -118,7 +120,7 @@ export function CeremonyScreen() {
             {m.auction.slots.map((s, i) => (
               <div key={i} className={styles.listRow}>
                 <span>
-                  {s.label}: <strong>{s.unfilled ? t.games.unassigned : s.playerIds.map(nameOf).join(' & ')}</strong>
+                  {s.label}: <strong>{s.unfilled ? t.games.unassigned : andList(s.playerIds.map(nameOf))}</strong>
                 </span>
                 <span>{formatMoney(s.amount)}</span>
               </div>

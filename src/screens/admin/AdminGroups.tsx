@@ -55,8 +55,8 @@ export function AdminGroups() {
       .map((g) => ({ id: g.id, number: g.number, teeTime: g.teeTime?.slice(0, 5) ?? '', startHole: g.startHole, playerIds: g.playerIds }))
   }, [drafts, snapshot.groups, roundId])
 
-  const assigned = new Set(current.flatMap((g) => g.playerIds))
-  const unassigned = snapshot.players.filter((p) => !assigned.has(p.id))
+  const assigned = useMemo(() => new Set(current.flatMap((g) => g.playerIds)), [current])
+  const unassigned = useMemo(() => snapshot.players.filter((p) => !assigned.has(p.id)), [snapshot.players, assigned])
 
   const warnings = useMemo(() => {
     if (!pairsOn) return []
@@ -66,7 +66,7 @@ export function AdminGroups() {
       const pairs = snapshot.pairs.filter((p) => inGroup.has(p.player1Id) && inGroup.has(p.player2Id))
       if (pairs.length * 2 !== g.playerIds.length) return G.warnIncomplete
       const found = pairs.map((p) => p.kind ?? '').sort().join(',')
-      if (kinds.length && found !== [...kinds].sort().join(',')) return G.warnKinds(kinds.join(' + '))
+      if (kinds.length && found !== [...kinds].sort().join(',')) return G.warnKinds(t.common.plusList(kinds))
       return null
     })
   }, [current, pairsOn, snapshot.pairs, settings.modules.pairs.pairing])
@@ -152,8 +152,7 @@ export function AdminGroups() {
     const needle = norm(q.trim())
     const list = [...unassigned, ...snapshot.players.filter((p) => assigned.has(p.id))]
     return needle ? list.filter((p) => norm(p.displayName).includes(needle) || norm(p.fullName).includes(needle)) : list
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, snapshot.players, current])
+  }, [q, snapshot.players, assigned, unassigned])
 
   return (
     <div className={a.screen}>

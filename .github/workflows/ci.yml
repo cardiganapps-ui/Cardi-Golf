@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Branches are checked through their pull request; main is checked on push.
   push:
-    branches: [main, "claude/**"]
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -12,11 +13,13 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
+          cache: npm
       # Until M0 scaffolds the app there is no package.json; preflight.sh
       # passes on its own in that case, so the `check` gate exists from day one.
       - if: hashFiles('package-lock.json') != ''
