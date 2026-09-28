@@ -1,18 +1,34 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
-import { Wave } from '../../components/Wave'
+import { EventName } from '../../components/primitives'
+import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
 import { useAuth } from '../../data/auth'
 import styles from './EnterScreen.module.css'
 
+/** Above this many players the grid goes dense and gets a name filter. */
+const DENSE_FROM = 16
+
+/**
+ * Entrar: the event name, the players, a PIN. Nothing else stands between
+ * a player and the tournament.
+ */
 export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEntered: () => void }) {
   const { user, isAnonymous } = useAuth()
   const [selected, setSelected] = useState<LookupResult['players'][number] | null>(null)
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+
+  const dense = lookup.players.length > DENSE_FROM
+  const players = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return lookup.players
+    return lookup.players.filter((p) => p.displayName.toLowerCase().includes(q) || p.fullName.toLowerCase().includes(q))
+  }, [lookup.players, query])
 
   async function submit(nextPin: string) {
     if (!selected || nextPin.length !== 4) return
@@ -36,39 +52,40 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
     }
   }
 
-  const accent = lookup.accentColor ?? undefined
+  const accent = nearestAccent(lookup.accentColor).hex
 
   return (
-    <div className="screen" style={accent ? ({ '--accent': accent } as React.CSSProperties) : undefined}>
-      <header className={styles.header}>
-        {lookup.logoUrl ? <img className={styles.logo} src={lookup.logoUrl} alt="" /> : null}
-        <h1>{lookup.name}</h1>
-        {lookup.tagline && <p className="muted">{lookup.tagline}</p>}
-        <Wave />
-      </header>
+    <div className={styles.screen} style={{ '--event-accent': accent } as React.CSSProperties}>
+      <EventName name={lookup.name} tagline={lookup.tagline ?? undefined} logoUrl={lookup.logoUrl} />
 
       {!selected ? (
         <>
-          <h2>{t.enter.tapYourFace}</h2>
-          {lookup.players.length === 0 && <p className="muted">{t.enter.noPlayers}</p>}
-          <div className={styles.grid}>
-            {lookup.players.map((p) => (
+          <div className={styles.top}>
+            <h2>{t.enter.tapYourFace}</h2>
+            {lookup.players.length === 0 && <p className="help">{t.enter.noPlayers}</p>}
+            {dense && (
+              <input className="input" type="search" placeholder={t.enter.search} value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" aria-label={t.enter.search} />
+            )}
+          </div>
+          {dense && players.length === 0 && query && <p className="help">{t.enter.noMatch}</p>}
+          <div className={`${styles.grid} ${dense ? styles.gridDense : ''}`}>
+            {players.map((p) => (
               <button key={p.id} type="button" className={styles.face} onClick={() => setSelected(p)}>
-                <Avatar name={p.displayName} url={p.avatarUrl} size="lg" honoree={p.isHonoree} />
+                <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? undefined : 'lg'} honoree={p.isHonoree} />
                 <span className={styles.faceName}>{p.displayName}</span>
                 {p.tier && <span className="tierBadge">{p.tier}</span>}
               </button>
             ))}
           </div>
           {user && !isAnonymous && (
-            <Link className="btn btn--ghost" to="/organizer">
+            <Link className="btn btn--ghost btn--sm" to="/organizer">
               {t.enter.organizerEnter}
             </Link>
           )}
         </>
       ) : (
-        <div className="stack stack--lg fade-in">
-          <div className="row">
+        <div className={`${styles.pinStep} fade-in`}>
+          <div className={styles.who}>
             <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
             <div className="grow">
               <h2>{t.enter.enterAs(selected.displayName)}</h2>
@@ -78,7 +95,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           <label className="field">
             <span className="label">{t.enter.pin}</span>
             <input
-              className={`input num ${styles.pin}`}
+              className={`input ${styles.pin}`}
               type="password"
               inputMode="numeric"
               pattern="[0-9]*"
@@ -95,7 +112,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             />
           </label>
           {error && <p className="error">{error}</p>}
-          <div className="row">
+          <div className={styles.actions}>
             <button
               className="btn btn--secondary"
               type="button"
@@ -107,8 +124,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             >
               {t.enter.notMe}
             </button>
-            <button className="btn btn--primary grow" type="button" disabled={busy || pin.length !== 4} onClick={() => void submit(pin)}>
-              {t.home.joinButton}
+            <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void submit(pin)}>
+              {busy ? t.auth.signingIn : t.home.joinButton}
             </button>
           </div>
         </div>
