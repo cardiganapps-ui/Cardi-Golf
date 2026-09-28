@@ -1,13 +1,30 @@
+/**
+ * Rondas (§13): one ruled block per round with its date, course and status;
+ * the one action that matters first, the rest quiet; finishing, cancelling
+ * and deleting ask once and show busy.
+ */
 import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Field, Sheet, toast } from '../../components/ui'
+import { EmptyState } from '../../components/primitives'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useCourses } from './useCourses'
+import a from './Admin.module.css'
 
 const R = t.admin.rounds
+
+function dateEs(iso: string | null): string {
+  if (!iso) return R.noDate
+  const d = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+type Ask = { kind: 'finish' | 'cancel' | 'delete'; round: Round } | null
 
 export function AdminRounds() {
   const { tournamentId } = useTournamentCtx()
@@ -17,9 +34,12 @@ export function AdminRounds() {
   const { courses } = useCourses()
   const rounds = data!.snapshot.rounds
   const players = data!.snapshot.players
+  const flags = data!.state.flags
   const [editing, setEditing] = useState<{ id?: string; number: number; date: string; course_id: string; holes: 9 | 18 } | null>(null)
   const [teesFor, setTeesFor] = useState<Round | null>(null)
   const [busy, setBusy] = useState(false)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [ask, setAsk] = useState<Ask>(null)
 
   async function save() {
     if (!editing) return
@@ -36,73 +56,87 @@ export function AdminRounds() {
   }
 
   async function status(r: Round, s: Round['status']) {
+    setBusyId(r.id)
     try {
       await setRoundStatus(r.id, s)
-      if (s === 'live') {
-        await updateTournament(tournamentId, { current_round_id: r.id, status: 'live' })
-      }
+      if (s === 'live') await updateTournament(tournamentId, { current_round_id: r.id, status: 'live' })
       await reload()
+      setAsk(null)
+      toast(t.common.saved)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusyId(null)
     }
   }
 
   async function remove(r: Round) {
-    if (!confirm(t.common.confirmDelete)) return
+    setBusyId(r.id)
     try {
       await deleteRound(r.id)
       await reload()
+      setAsk(null)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusyId(null)
     }
   }
 
   const courseTees = (courseId: string | null) => data!.snapshot.courses.find((c) => c.id === courseId)?.tees ?? []
+  const pendingFor = (rid: string) => flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length + flags.discrepancies.filter((d) => d.roundId === rid).length + flags.unsignedCards.filter((u) => u.roundId === rid).length
+
+  const askBody = ask
+    ? ask.kind === 'finish'
+      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}`
+      : ask.kind === 'cancel'
+        ? R.cancelConfirm(ask.round.number)
+        : R.deleteConfirm(ask.round.number)
+    : ''
 
   return (
-    <div className="stack">
-      <div className="row row--between">
+    <div className={a.screen}>
+      <div className={a.head}>
         <h2>{t.admin.sections.rounds}</h2>
         <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing({ number: rounds.length + 1, date: '', course_id: courses[0]?.id ?? '', holes: 18 })}>
           {R.add}
         </button>
       </div>
-      {rounds.length === 0 && <p className="muted">{R.empty}</p>}
+      {rounds.length === 0 && <EmptyState title={t.admin.sections.rounds} body={R.empty} />}
       {rounds.map((r) => {
         const course = courses.find((c) => c.id === r.courseId)
         const isCurrent = data!.snapshot.tournament.currentRoundId === r.id
+        const incomplete = flags.incompleteRounds.find((x) => x.roundId === r.id)
+        const rb = busyId === r.id
         return (
-          <div key={r.id} className="card stack" style={{ padding: 14 }}>
-            <div className="row row--between">
-              <div>
+          <section key={r.id} className={a.section} aria-busy={rb}>
+            <div className={a.sectionTitle}>
+              <span className={a.rowText}>
                 <strong>
-                  {t.round.day(r.number)} {isCurrent && <span className="chip chip--sun">{R.current}</span>}
+                  {t.round.day(r.number)}
+                  {isCurrent ? `, ${R.current.toLowerCase()}` : ''}
                 </strong>
-                <span className="help" style={{ display: 'block' }}>
-                  {r.date ?? '—'} · {course?.name ?? R.noCourse} · {r.holes} {R.holes.toLowerCase()}
+                <span className={a.rowSub}>
+                  {dateEs(r.date)}, {course?.name ?? R.noCourse}, {r.holes} {R.holes.toLowerCase()}
                 </span>
-              </div>
+              </span>
               <span className={`chip ${r.status === 'live' ? 'chip--teal' : r.status === 'cancelled' ? 'chip--coral' : ''}`}>{t.roundStatus[r.status]}</span>
             </div>
-            <div className="row row--wrap">
+            {incomplete && <span className={a.warn}>{t.admin.inbox.incomplete(incomplete.players.length)}</span>}
+            <div className={a.chipRow} style={undefined}>
               {r.status === 'scheduled' && (
-                <button className="btn btn--primary btn--sm" type="button" onClick={() => void status(r, 'live')}>
-                  {R.start}
+                <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => void status(r, 'live')}>
+                  {rb ? t.common.saving : R.start}
                 </button>
               )}
               {r.status === 'live' && (
-                <button className="btn btn--primary btn--sm" type="button" onClick={() => void status(r, 'finished')}>
+                <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'finish', round: r })}>
                   {R.finish}
                 </button>
               )}
               {(r.status === 'finished' || r.status === 'cancelled') && (
-                <button className="btn btn--secondary btn--sm" type="button" onClick={() => void status(r, 'live')}>
-                  {R.reopen}
-                </button>
-              )}
-              {r.status !== 'cancelled' && (
-                <button className="btn btn--ghost btn--sm coral" type="button" onClick={() => void status(r, 'cancelled')}>
-                  {R.cancel}
+                <button className="btn btn--secondary btn--sm" type="button" disabled={rb} onClick={() => void status(r, 'live')}>
+                  {rb ? t.common.saving : R.reopen}
                 </button>
               )}
               <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ id: r.id, number: r.number, date: r.date ?? '', course_id: r.courseId ?? '', holes: r.holes })}>
@@ -113,18 +147,34 @@ export function AdminRounds() {
                   {R.tees}
                 </button>
               )}
-              <button className="btn btn--ghost btn--sm coral" type="button" onClick={() => void remove(r)}>
+              {r.status !== 'cancelled' && (
+                <button className="btn btn--ghost btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'cancel', round: r })}>
+                  {R.cancel}
+                </button>
+              )}
+              <button className="btn btn--ghost btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'delete', round: r })}>
                 {t.common.delete}
               </button>
             </div>
-          </div>
+          </section>
         )
       })}
+
+      <ConfirmSheet
+        open={!!ask}
+        title={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : t.common.delete) : ''}
+        body={askBody}
+        danger={ask?.kind !== 'finish'}
+        busy={!!busyId}
+        confirmLabel={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : t.common.delete) : undefined}
+        onConfirm={() => ask && (ask.kind === 'delete' ? void remove(ask.round) : void status(ask.round, ask.kind === 'finish' ? 'finished' : 'cancelled'))}
+        onClose={() => setAsk(null)}
+      />
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? t.common.edit : R.add}>
         {editing && (
           <div className="stack">
-            <div className="grid2">
+            <div className={a.grid2}>
               <Field label={R.number}>
                 <input className="input input--num" type="number" min={1} value={editing.number} onChange={(e) => setEditing({ ...editing, number: Number(e.target.value) || 1 })} />
               </Field>
@@ -149,44 +199,49 @@ export function AdminRounds() {
               </select>
             </Field>
             <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void save()}>
-              {t.common.save}
+              {busy ? t.common.saving : t.common.save}
             </button>
           </div>
         )}
       </Sheet>
 
-      <Sheet open={!!teesFor} onClose={() => setTeesFor(null)} title={teesFor ? `${R.tees} · ${t.round.day(teesFor.number)}` : ''}>
+      <Sheet open={!!teesFor} onClose={() => setTeesFor(null)} title={teesFor ? `${R.tees}, ${t.round.day(teesFor.number)}` : ''}>
         {teesFor && (
-          <div className="list">
+          <div className={a.rows}>
             {players.map((p) => {
               const rt = data!.snapshot.roundTees.find((x) => x.roundId === teesFor.id && x.playerId === p.id)
               return (
-                <div key={p.id} className="listItem listItem--static">
-                  <span className="grow">{p.displayName}</span>
-                  <select
-                    className="select input--sm"
-                    style={{ width: 'auto' }}
-                    value={rt?.teeId ?? ''}
-                    onChange={async (e) => {
-                      const teeId = e.target.value || null
-                      try {
-                        await setRoundTee(teesFor.id, p.id, teeId)
-                        patch((s) => {
-                          s.roundTees = s.roundTees.filter((x) => !(x.roundId === teesFor.id && x.playerId === p.id))
-                          if (teeId) s.roundTees.push({ roundId: teesFor.id, playerId: p.id, teeId })
-                        })
-                      } catch (err) {
-                        toast(err instanceof Error ? err.message : String(err))
-                      }
-                    }}
-                  >
-                    <option value="">{R.teeDefault}</option>
-                    {courseTees(teesFor.courseId).map((tee) => (
-                      <option key={tee.id} value={tee.id}>
-                        {tee.name}
-                      </option>
-                    ))}
-                  </select>
+                <div key={p.id} className={a.row}>
+                  <span className={a.rowText} style={undefined}>
+                    <span className={a.rowTitle}>{p.displayName}</span>
+                  </span>
+                  <span className={a.rowActions}>
+                    <select
+                      className="select"
+                      value={rt?.teeId ?? ''}
+                      aria-label={`${R.tees}, ${p.displayName}`}
+                      onChange={async (e) => {
+                        const teeId = e.target.value || null
+                        try {
+                          await setRoundTee(teesFor.id, p.id, teeId)
+                          patch((s) => {
+                            s.roundTees = s.roundTees.filter((x) => !(x.roundId === teesFor.id && x.playerId === p.id))
+                            if (teeId) s.roundTees.push({ roundId: teesFor.id, playerId: p.id, teeId })
+                          })
+                          toast(R.teeSaved)
+                        } catch (err) {
+                          toast(err instanceof Error ? err.message : String(err))
+                        }
+                      }}
+                    >
+                      <option value="">{R.teeDefault}</option>
+                      {courseTees(teesFor.courseId).map((tee) => (
+                        <option key={tee.id} value={tee.id}>
+                          {tee.name}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
                 </div>
               )
             })}

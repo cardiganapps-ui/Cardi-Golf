@@ -1,14 +1,24 @@
+/**
+ * Jugadores (§13): the roster as ruled rows with the handicap as the figure,
+ * search when the list is long, and an edit sheet with the three handicap
+ * sources, the estimate from three scores (§13b-E) and a live preview.
+ */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
+import { EmptyState } from '../../components/primitives'
+import { HowCalculated } from '../../components/HowCalculated'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deletePlayer, playersWithPin, setPlayerPin, uploadAsset, upsertPlayer, type PlayerInput } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { courseHandicap, estimateIndex, playingHandicap, strokesReceived } from '../../engine/core/handicap'
 import type { EstimateInput, Player } from '../../engine/types'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
+import a from './Admin.module.css'
 
 const P = t.admin.players
+const SEARCH_FROM = 12
 
 function toInput(p: Player | null, sortOrder: number): PlayerInput {
   return {
@@ -35,6 +45,22 @@ const emptyEstimate = (): [EstimateInput, EstimateInput, EstimateInput] => [
   { gross: 100, rating: null, slope: null, par: null },
 ]
 
+/** "2 en SI 1–7, 1 en SI 8–18" from the 18 per-SI stroke counts. */
+function strokeRanges(strokes: number[]): string {
+  const parts: string[] = []
+  let start = 0
+  for (let i = 1; i <= strokes.length; i++) {
+    if (i === strokes.length || strokes[i] !== strokes[start]) {
+      const n = strokes[start]!
+      if (n > 0) parts.push(`${n} en SI ${start + 1}${i - 1 > start ? `–${i}` : ''}`)
+      start = i
+    }
+  }
+  return parts.length ? parts.join(', ') : P.strokesOn(0)
+}
+
+const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
 export function AdminPlayers() {
   const { tournamentId } = useTournamentCtx()
   const data = useTournament((s) => s.data)
@@ -47,11 +73,18 @@ export function AdminPlayers() {
   const [pinFor, setPinFor] = useState<Player | null>(null)
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
+  const [askDelete, setAskDelete] = useState(false)
+  const [q, setQ] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
   }, [tournamentId, players.length])
+
+  const shown = useMemo(() => {
+    const needle = norm(q.trim())
+    return needle ? players.filter((p) => norm(p.fullName).includes(needle) || norm(p.displayName).includes(needle)) : players
+  }, [players, q])
 
   const preview = useMemo(() => {
     if (!editing) return null
@@ -91,11 +124,12 @@ export function AdminPlayers() {
   }
 
   async function remove() {
-    if (!editing?.id || !confirm(t.common.confirmDelete)) return
+    if (!editing?.id) return
     setBusy(true)
     try {
       await deletePlayer(editing.id)
       await reload()
+      setAskDelete(false)
       setEditing(null)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
@@ -137,45 +171,57 @@ export function AdminPlayers() {
 
   const E = editing
   return (
-    <div className="stack">
-      <div className="row row--between">
-        <h2>{t.admin.sections.players}</h2>
+    <div className={a.screen}>
+      <div className={a.head}>
+        <div className={a.rowText}>
+          <h2>{t.admin.sections.players}</h2>
+          {players.length > 0 && <span className={a.count}>{P.count(players.length)}</span>}
+        </div>
         <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing(toInput(null, players.length))}>
           {P.add}
         </button>
       </div>
-      {players.length === 0 && <p className="muted">{P.empty}</p>}
-      <div className="list">
-        {players.map((p) => (
-          <div key={p.id} className="listItem listItem--static">
-            <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
-            <button type="button" className="grow" style={{ background: 'none', border: 0, textAlign: 'left', padding: 0, cursor: 'pointer' }} onClick={() => setEditing(toInput(p, p.sortOrder))}>
-              <strong>{p.fullName}</strong>
-              <span className="help" style={{ display: 'block' }}>
-                {p.tier && <span className="tierBadge" style={{ marginRight: 6 }}>{p.tier}</span>}
-                {t.live.hcp} {p.baseHcp}
-                {p.handicapSource === 'estimate' ? ` (${P.estimated})` : ''}
-                {p.isAdmin ? `, ${P.committee}` : ''}
-              </span>
-            </button>
-            <button
-              className={`btn btn--sm ${pins.has(p.id) ? 'btn--ghost' : 'btn--secondary'}`}
-              type="button"
-              onClick={() => {
-                setPinFor(p)
-                setPin('')
-              }}
-            >
-              {pins.has(p.id) ? P.resetPin : P.setPin}
-            </button>
-          </div>
-        ))}
-      </div>
+      {players.length === 0 && <EmptyState title={P.empty} body={P.emptyHint} />}
+      {players.length > SEARCH_FROM && (
+        <div className={a.search}>
+          <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={P.search} aria-label={P.search} />
+          {shown.length === 0 && <span className={a.help}>{P.noMatch}</span>}
+        </div>
+      )}
+      {players.length > 0 && (
+        <div className={a.rows}>
+          {shown.map((p) => (
+            <div key={p.id} className={a.row}>
+              <button type="button" className={a.rowBtn} onClick={() => setEditing(toInput(p, p.sortOrder))}>
+                <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
+                <span className={a.rowText}>
+                  <span className={a.rowTitle}>{p.fullName}</span>
+                  <span className={a.rowSub}>
+                    {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {p.baseHcp}
+                    {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
+                    {p.isAdmin ? `, ${P.committee}` : ''}
+                  </span>
+                </span>
+              </button>
+              <button
+                className={`btn btn--sm ${pins.has(p.id) ? 'btn--ghost' : 'btn--secondary'}`}
+                type="button"
+                onClick={() => {
+                  setPinFor(p)
+                  setPin('')
+                }}
+              >
+                {pins.has(p.id) ? P.resetPin : P.setPin}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add}>
         {E && (
           <div className="stack">
-            <div className="row">
+            <div className={a.chipRow}>
               <Avatar name={E.display_name || E.full_name || '?'} url={E.avatar_url} size="lg" honoree={E.is_honoree} />
               <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
                 {P.uploadAvatar}
@@ -185,7 +231,7 @@ export function AdminPlayers() {
             <Field label={P.fullName}>
               <input className="input" value={E.full_name} onChange={(e) => setEditing({ ...E, full_name: e.target.value })} autoFocus={!E.id} />
             </Field>
-            <div className="grid2">
+            <div className={a.grid2}>
               <Field label={P.displayName}>
                 <input className="input" value={E.display_name} onChange={(e) => setEditing({ ...E, display_name: e.target.value })} />
               </Field>
@@ -205,8 +251,8 @@ export function AdminPlayers() {
                 <option value="">{t.common.none}</option>
                 {tees.map((tee) => (
                   <option key={tee.id} value={tee.id}>
-                    {tee.courseName} · {tee.name}
-                    {tee.rating ? ` (${tee.rating}/${tee.slope})` : ''}
+                    {tee.courseName}, {tee.name}
+                    {tee.rating ? ` (${tee.rating} / ${tee.slope})` : ''}
                   </option>
                 ))}
               </select>
@@ -248,55 +294,46 @@ export function AdminPlayers() {
                   const par = row.par ?? 72
                   const weird = row.gross < par - 5 || row.gross > par + 60
                   return (
-                    <div key={lbl} className="card card--cell" style={{ padding: 10 }}>
-                      <strong>{lbl}</strong>
-                      <div className="row" style={{ marginTop: 6 }}>
+                    <div key={lbl} className={a.section}>
+                      <div className={a.sectionTitle}>
+                        <strong>{lbl}</strong>
+                      </div>
+                      <div className={a.grid2}>
                         <Field label={P.gross}>
-                          <input className="input input--sm input--num" type="number" value={row.gross} onChange={(e) => upd({ gross: Number(e.target.value) })} />
-                        </Field>
-                        <Field label={`${P.rating}${row.rating == null ? ` (${P.assumed})` : ''}`}>
-                          <input className="input input--sm input--num" type="number" step="0.1" placeholder="72" value={row.rating ?? ''} onChange={(e) => upd({ rating: e.target.value === '' ? null : Number(e.target.value) })} />
-                        </Field>
-                        <Field label={`${P.slope}${row.slope == null ? ` (${P.assumed})` : ''}`}>
-                          <input className="input input--sm input--num" type="number" placeholder="113" value={row.slope ?? ''} onChange={(e) => upd({ slope: e.target.value === '' ? null : Number(e.target.value) })} />
+                          <input className="input input--num" type="number" value={row.gross} onChange={(e) => upd({ gross: Number(e.target.value) })} />
                         </Field>
                         <Field label={P.par}>
-                          <input className="input input--sm input--num" type="number" placeholder="72" value={row.par ?? ''} onChange={(e) => upd({ par: e.target.value === '' ? null : Number(e.target.value) })} />
+                          <input className="input input--num" type="number" placeholder="72" value={row.par ?? ''} onChange={(e) => upd({ par: e.target.value === '' ? null : Number(e.target.value) })} />
+                        </Field>
+                        <Field label={`${P.rating}${row.rating == null ? `, ${P.assumed}` : ''}`}>
+                          <input className="input input--num" type="number" step="0.1" placeholder="72" value={row.rating ?? ''} onChange={(e) => upd({ rating: e.target.value === '' ? null : Number(e.target.value) })} />
+                        </Field>
+                        <Field label={`${P.slope}${row.slope == null ? `, ${P.assumed}` : ''}`}>
+                          <input className="input input--num" type="number" placeholder="113" value={row.slope ?? ''} onChange={(e) => upd({ slope: e.target.value === '' ? null : Number(e.target.value) })} />
                         </Field>
                       </div>
-                      {weird && <p className="error small">{P.areYouSure}</p>}
+                      {weird && <p className={a.warn}>{P.areYouSure}</p>}
                     </div>
                   )
                 })}
-                {preview?.estimate && (
-                  <div className="card" style={{ padding: 12 }}>
-                    <strong>{preview.estimate.why.title}</strong>
-                    <ul className="small">
-                      {preview.estimate.why.steps.map((s) => (
-                        <li key={s}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
             )}
 
             {preview && (
-              <div className="card card--deep" style={{ padding: 12 }}>
-                <span className="label" style={{ color: 'var(--seafoam)' }}>
-                  {P.preview}
-                </span>
-                <p>
-                  <strong>{P.previewPh(preview.ph.value)}</strong>
-                  {preview.courseHcp !== preview.base ? `, ${P.courseHcp(preview.courseHcp)}` : ''}
-                </p>
-                <p className="small">{preview.ph.why.steps.join(' · ')}</p>
-                <div className="row row--wrap" style={{ gap: 4, marginTop: 8 }}>
-                  {preview.strokes.map((n, i) => (
-                    <span key={i} className="chip" style={{ height: 24, padding: '0 6px', fontSize: '0.7rem', background: n ? 'var(--sun)' : 'rgba(255,255,255,0.15)', color: n ? 'var(--ink)' : 'var(--paper)' }}>
-                      SI{i + 1} {'•'.repeat(n)}
+              <div className={a.section}>
+                <div className={a.sectionTitle}>
+                  <strong>{P.preview}</strong>
+                  <HowCalculated why={preview.estimate ? [preview.estimate.why, preview.ph.why] : preview.ph.why} />
+                </div>
+                <div className={a.chipRow}>
+                  <span className={`${a.fig} ${a.figLg}`}>{preview.ph.value}</span>
+                  <span className={a.rowText}>
+                    <span>{P.previewPh(preview.ph.value)}</span>
+                    <span className={a.rowSub}>
+                      {preview.courseHcp !== preview.base ? `${P.courseHcp(preview.courseHcp)}, ` : ''}
+                      {P.strokesLine(strokeRanges(preview.strokes))}
                     </span>
-                  ))}
+                  </span>
                 </div>
               </div>
             )}
@@ -306,13 +343,15 @@ export function AdminPlayers() {
             <Field label={P.formGuide}>
               <textarea className="textarea" value={E.form_guide ?? ''} onChange={(e) => setEditing({ ...E, form_guide: e.target.value || null })} />
             </Field>
-            <div className="row">
-              {E.id && (
-                <button className="btn btn--ghost coral" type="button" onClick={() => void remove()} disabled={busy}>
+            <div className={a.formActions}>
+              {E.id ? (
+                <button className="btn btn--danger" type="button" onClick={() => setAskDelete(true)} disabled={busy}>
                   {t.common.delete}
                 </button>
+              ) : (
+                <span />
               )}
-              <button className="btn btn--primary grow" type="button" onClick={() => void save()} disabled={busy || !E.full_name.trim()}>
+              <button className="btn btn--primary" type="button" onClick={() => void save()} disabled={busy || !E.full_name.trim()}>
                 {busy ? t.common.saving : t.common.save}
               </button>
             </div>
@@ -320,12 +359,14 @@ export function AdminPlayers() {
         )}
       </Sheet>
 
-      <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin} · ${pinFor?.displayName ?? ''}`}>
+      <ConfirmSheet open={askDelete} title={t.common.delete} body={t.common.confirmDelete} danger busy={busy} confirmLabel={t.common.delete} onConfirm={() => void remove()} onClose={() => setAskDelete(false)} />
+
+      <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
         <div className="stack">
-          <p className="help">{t.enter.pinHint}</p>
-          <input className="input num" style={{ fontSize: '2rem', letterSpacing: '0.5em', textAlign: 'center' }} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus placeholder={P.pinInput} />
+          <p className={a.help}>{t.enter.pinHint}</p>
+          <input className={`input ${a.pinInput}`} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus placeholder={P.pinInput} aria-label={P.pinInput} />
           <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void savePin()}>
-            {t.common.save}
+            {busy ? t.common.saving : t.common.save}
           </button>
         </div>
       </Sheet>

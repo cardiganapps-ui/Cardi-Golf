@@ -3,47 +3,105 @@
   padding: 0;
   margin: 0;
 }
+.orderNum {
+  width: 28px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-2);
+}
 .lotCard {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--s4);
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  background: var(--board-bg);
+  color: var(--board-ink);
+}
+.lotHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.lotText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.lotLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--board-ink-2);
+}
+.lotName {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
+}
+.lotSub {
+  font-size: var(--fs-sm);
+  color: var(--board-ink-2);
+}
+.lotForm {
+  font-size: var(--fs-sm);
+  color: var(--board-ink);
+  line-height: var(--lh-body);
 }
 .bidBox {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius);
-  padding: 10px;
+  padding: var(--s3);
+  border-radius: var(--r-sm);
+  background: var(--board-surface);
 }
 .bidAmount {
-  font-size: 2.6rem;
-  color: var(--sun);
+  font-size: var(--fs-3xl);
   line-height: 1;
+  font-weight: 600;
+  color: var(--board-accent);
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
 }
-.bidders {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-.bidderBtn {
+.bidControls {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: var(--cell);
-  border: 2px solid var(--hair);
-  border-radius: var(--radius-sm);
-  padding: 6px 2px;
-  min-height: 68px;
-  cursor: pointer;
+  flex-wrap: wrap;
+  gap: var(--s2);
 }
-.bidderBtn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.custom {
+  width: 120px;
 }
-.bidderOn {
-  border-color: var(--teal);
-  background: var(--seafoam);
+.hammer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s2);
+}
+.held {
+  font-size: var(--fs-2xs);
+  color: var(--ink-2);
+}
+.potLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.pot {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 760px) {
+  .console {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s6) var(--s8);
+    align-items: start;
+  }
+  .console > .full {
+    grid-column: 1 / -1;
+  }
 }

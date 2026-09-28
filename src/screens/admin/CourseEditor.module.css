@@ -2,9 +2,22 @@
   overflow-x: auto;
 }
 .holes td {
-  padding: 3px 4px;
+  padding: var(--s1);
 }
 .holes input {
-  width: 64px;
-  min-height: 36px;
+  width: 76px;
+  min-height: var(--tap);
+}
+.paste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.paste summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
 }

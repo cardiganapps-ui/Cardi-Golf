@@ -82,7 +82,7 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, addTee }: {
   return (
     <div className="stack">
       {notes.length > 0 && (
-        <div className="card" style={{ padding: 12 }}>
+        <div className="card">
           <strong>{C.issues}</strong>
           <ul className="small">
             {notes.map((n) => (
@@ -128,14 +128,12 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, addTee }: {
         </Field>
       </div>
 
-      <details>
-        <summary className="teal" style={{ cursor: 'pointer', fontWeight: 700 }}>
-          {C.paste}
-        </summary>
+      <details className={styles.paste}>
+        <summary>{C.paste}</summary>
         <p className="help">{C.pasteHint}</p>
         <textarea className="textarea" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'4 4 3 5 4 4 3 4 5 4 3 4 5 4 4 3 4 5\n7 11 17 3 1 13 15 9 5 8 18 2 12 4 10 16 6 14'} />
         {pasteErr && <p className="error">{pasteErr}</p>}
-        <button className="btn btn--secondary btn--sm" type="button" onClick={applyPaste} style={{ marginTop: 6 }}>
+        <button className="btn btn--secondary btn--sm" type="button" onClick={applyPaste}>
           {C.pasteApply}
         </button>
       </details>
