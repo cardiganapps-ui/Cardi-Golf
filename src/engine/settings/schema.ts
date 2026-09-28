@@ -10,6 +10,7 @@
  * organizer can rename per tournament.
  */
 import { z } from 'zod'
+import { GameConfig, gameIssues } from './games'
 
 const money = z.number().int().nonnegative()
 const label = z.string().trim().min(1).max(40)
@@ -105,8 +106,13 @@ export const NextRoundCutSettings = z.object({
 })
 
 export const PrizeSettings = z.object({
-  /** Individual prizes by finishing position: [1st, 2nd, 3rd, ...]. */
+  /**
+   * Individual prizes by finishing position: [1st, 2nd, 3rd, ...]. In pesos,
+   * or (`stablefordMode: 'percent'`) as percentages of what the main pot has
+   * left after every other prize and the house cut.
+   */
   stableford: z.array(money),
+  stablefordMode: z.enum(['amount', 'percent']).default('amount'),
   /** Pair prizes by finishing position: [1st pair, 2nd pair, ...]. Each pair splits it. */
   pairs: z.array(money),
   /** Paid per round to the best single-round total. */
@@ -153,12 +159,17 @@ const TournamentSettingsBase = z.object({
     lastPlace: label,
     honoree: label,
   }),
+  /** The main pot: what every player pays to enter. */
   entryFee: money,
+  /** Pesos kept out of the main pot for the house (balls, dinner, trophies). */
+  houseCut: money.default(0),
   handicap: HandicapSettings,
   /** Applies from round 2 on; irrelevant in a one-round tournament. */
   day2Cut: NextRoundCutSettings,
   prizes: PrizeSettings,
   auction: AuctionSettings,
+  /** Side games added as instances (skins, Nassau, contests, custom bets...). */
+  games: z.array(GameConfig).default([]),
   /** Putts counted on a picked-up hole for the fewest-putts game. */
   pickupPuttsForFewestPutts: z.number().int().min(0).max(10),
   /** What happens when countback still ties: split the prizes. */
@@ -178,6 +189,16 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], message: `La categoría "${slot.tier}" del reparto de la Calcutta no existe en las categorías del torneo.` })
       }
     })
+  }
+  const gameIds = new Set<string>()
+  v.games.forEach((g, i) => {
+    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], message: `Dos juegos usan el mismo id "${g.id}".` })
+    gameIds.add(g.id)
+    for (const issue of gameIssues(g)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, ...issue.path], message: issue.message })
+  })
+  if (v.prizes.stablefordMode === 'percent' && v.modules.individual.enabled) {
+    const sum = v.prizes.stableford.reduce((s, x) => s + x, 0)
+    if (sum !== 100) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['prizes', 'stableford'], message: `El reparto individual suma ${sum}%, debe sumar 100%.` })
   }
   if (v.modules.pairs.enabled) {
     v.modules.pairs.pairing.forEach((rule, i) => {

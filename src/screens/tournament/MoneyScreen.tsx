@@ -34,7 +34,7 @@ export function MoneyScreen() {
   const [busy, setBusy] = useState(false)
 
   const people = useMemo(() => snapshot.players.map((p) => money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net), [snapshot.players, money.people])
-  const owed = useMemo(() => money.flows.filter((f) => !f.paid && (f.kind === 'entry' || f.kind === 'calcutta' || f.kind === 'buyback')), [money.flows])
+  const owed = useMemo(() => money.flows.filter((f) => !f.paid && (f.kind === 'entry' || f.kind === 'calcutta' || f.kind === 'buyback' || f.kind === 'side' || (f.kind === 'bet' && f.final))), [money.flows])
 
   async function run(fn: () => Promise<void>) {
     setBusy(true)
@@ -105,6 +105,7 @@ export function MoneyScreen() {
           </span>
           <span className={`${styles.bankVerdict} ${verdictClass}`}>{verdict}</span>
         </div>
+        {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
         {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
         {!state.tournamentFinal && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
       </section>
@@ -116,6 +117,7 @@ export function MoneyScreen() {
             const player = byId.get(p.playerId)!
             const open = openId === p.playerId
             const prizes = state.prizes.filter((x) => x.playerId === p.playerId)
+            const betsLost = state.prizes.filter((x) => x.payerId === p.playerId)
             return (
               <div key={p.playerId} className={styles.person}>
                 <button type="button" className={styles.personRow} onClick={() => setOpenId(open ? null : p.playerId)} aria-expanded={open}>
@@ -134,7 +136,17 @@ export function MoneyScreen() {
                   <div className={styles.breakdown}>
                     <Line label={M.entry} amount={-p.entry} />
                     {p.calcuttaPurchases > 0 && <Line label={M.purchases} amount={-p.calcuttaPurchases} />}
+                    {p.sidePots > 0 && <Line label={M.sidePots} amount={-p.sidePots} />}
                     {p.buybacksPaid > 0 && <Line label={M.buybacksPaid} amount={-p.buybacksPaid} />}
+                    {betsLost.map((pr, i) => (
+                      <div key={`bet${i}`} className={styles.line}>
+                        <span>
+                          {pr.label.split(',')[0]}, {M.paysTo} {name(pr.playerId)}
+                          {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
+                        </span>
+                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount)} />
+                      </div>
+                    ))}
                     {prizes.map((pr, i) => (
                       <div key={i} className={styles.line}>
                         <span>
@@ -167,7 +179,7 @@ export function MoneyScreen() {
                       <span>
                         <strong>{name(f.from)}</strong> {M.paysTo} {name(f.to)}
                       </span>
-                      <span className={styles.transferKind}>{f.kind === 'entry' ? M.owesEntry : f.kind === 'calcutta' ? M.owesCalcutta : M.owesBuyback}</span>
+                      <span className={styles.transferKind}>{f.kind === 'entry' ? M.owesEntry : f.kind === 'calcutta' ? M.owesCalcutta : f.kind === 'side' ? M.owesSide : f.kind === 'bet' ? `${M.owesBet}, ${f.label}` : M.owesBuyback}</span>
                     </span>
                     <span className={styles.amount}>{formatMoney(f.amount)}</span>
                     {me.isAdmin ? (

@@ -23,6 +23,9 @@ import {
   mapLot,
   mapPair,
   mapPayment,
+  mapGameEntry,
+  mapHoleAward,
+  mapGameResult,
   mapPlayer,
   mapRound,
   mapRoundTee,
@@ -80,7 +83,9 @@ export function registerOverlay(fn: (s: Snapshot) => void) {
   overlays.push(fn)
 }
 
-function compute(snapshot: Snapshot): TournamentData {
+function compute(raw: Snapshot): TournamentData {
+  // A snapshot cached by an older build has no instance-game tables.
+  const snapshot: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [] }
   for (const fn of overlays) fn(snapshot)
   let settings: TournamentSettings
   let settingsError: string | null = null
@@ -106,25 +111,15 @@ const PK: Record<string, string[]> = {
   card_signatures: ['round_id', 'pair_id'],
   handicap_overrides: ['round_id', 'player_id'],
   calcutta_buybacks: ['lot_id'],
+  game_entries: ['game_id', 'player_id'],
+  game_results: ['game_id', 'player_id'],
+  hole_awards: ['round_id', 'game_id', 'hole', 'player_id'],
   holes: ['tee_id', 'number'],
 }
 
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
   const q = <T = Row>(table: string, col = 'tournament_id') => fetchAll<T>((from, to) => sb.from(table).select('*').eq(col, tournamentId).order('id').range(from, to))
-
-  const [tRes, players, rounds, pairs, lots, payments] = await Promise.all([
-    sb.from('tournaments').select('*').eq('id', tournamentId).single(),
-    q('players'),
-    q('rounds'),
-    q('pairs'),
-    q('calcutta_lots'),
-    q('payments'),
-  ])
-  if (tRes.error) throw tRes.error
-  const roundIds = rounds.map((r) => r.id)
-  const lotIds = lots.map((l) => l.id)
-  const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))] as string[]
 
   // Paged (PostgREST caps a response at 1,000 rows), ordered by each table's primary key so pages never overlap.
   const inList = <T = Row>(table: string, col: string, ids: string[]) =>
@@ -136,7 +131,23 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
         })
       : Promise.resolve([] as T[])
 
-  const [groups, roundTees, scores, tiebreaks, signatures, overrides, bids, buybacks, courses, tees] = await Promise.all([
+  const [tRes, players, rounds, pairs, lots, payments, gameEntries, gameResults] = await Promise.all([
+    sb.from('tournaments').select('*').eq('id', tournamentId).single(),
+    q('players'),
+    q('rounds'),
+    q('pairs'),
+    q('calcutta_lots'),
+    q('payments'),
+    inList('game_entries', 'tournament_id', [tournamentId]),
+    inList('game_results', 'tournament_id', [tournamentId]),
+  ])
+  if (tRes.error) throw tRes.error
+  const roundIds = rounds.map((r) => r.id)
+  const lotIds = lots.map((l) => l.id)
+  const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))] as string[]
+
+
+  const [groups, roundTees, scores, tiebreaks, signatures, overrides, bids, buybacks, courses, tees, holeAwards] = await Promise.all([
     inList('groups', 'round_id', roundIds),
     inList('round_tees', 'round_id', roundIds),
     inList('scores', 'round_id', roundIds),
@@ -147,6 +158,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     inList('calcutta_buybacks', 'lot_id', lotIds),
     inList('courses', 'id', courseIds),
     inList('tees', 'course_id', courseIds),
+    inList('hole_awards', 'round_id', roundIds),
   ])
   const groupIds = groups.map((g) => g.id)
   const teeIds = tees.map((t) => t.id)
@@ -168,6 +180,9 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     calcuttaBids: bids.map(mapBid),
     calcuttaBuybacks: buybacks.map(mapBuyback),
     payments: payments.map(mapPayment),
+    gameEntries: gameEntries.map(mapGameEntry),
+    holeAwards: holeAwards.map(mapHoleAward),
+    gameResults: gameResults.map(mapGameResult),
   }
 }
 
@@ -187,6 +202,9 @@ const REALTIME_TABLES = [
   'calcutta_bids',
   'calcutta_buybacks',
   'payments',
+  'game_entries',
+  'hole_awards',
+  'game_results',
 ]
 
 export const useTournament = create<StoreState>((set, get) => ({

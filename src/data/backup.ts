@@ -18,8 +18,8 @@ export interface Backup {
 }
 
 /** Tables keyed by how they hang off the tournament. */
-const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'calcutta_lots', 'payments'] as const
-const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides'] as const
+const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'calcutta_lots', 'payments', 'game_entries', 'game_results'] as const
+const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'hole_awards'] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
 
 /** Primary keys of the tables without an `id` column (paging order). */
@@ -30,6 +30,9 @@ const PK: Record<string, string[]> = {
   card_signatures: ['round_id', 'pair_id'],
   handicap_overrides: ['round_id', 'player_id'],
   calcutta_buybacks: ['lot_id'],
+  game_entries: ['game_id', 'player_id'],
+  game_results: ['game_id', 'player_id'],
+  hole_awards: ['round_id', 'game_id', 'hole', 'player_id'],
   holes: ['tee_id', 'number'],
 }
 

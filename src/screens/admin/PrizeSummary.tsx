@@ -1,6 +1,7 @@
 /**
  * The prize pool as a statement (§5.8): one line per enabled game, the
- * total, the entry pot, and whether they balance.
+ * total, the entry pot, and whether they balance. Side pots and direct bets
+ * follow: they pay exactly what their entrants put in, so they always balance.
  */
 import { t } from '../../i18n/es-MX'
 import type { PrizeCheck } from '../../engine/settings/prizeCheck'
@@ -37,6 +38,38 @@ export function PrizeSummary({ check, players, issues }: { check: PrizeCheck | n
             <span className={styles.amount}>{formatMoney(check.entryPot)}</span>
           </div>
           <span className={`${styles.verdict} ${check.balanced ? '' : styles.verdictOff}`}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference)))}</span>
+          {check.sidePots.length > 0 && (
+            <>
+              <div className={`${styles.line} ${styles.total}`}>
+                <span>{A.sidePots}</span>
+                <span />
+              </div>
+              {check.sidePots.map((l) => (
+                <div key={l.gameId} className={styles.line}>
+                  <span>
+                    {l.label} <span className={styles.detail}>{l.detail}</span>
+                  </span>
+                  <span className={styles.amount}>{formatMoney(l.pot)}</span>
+                </div>
+              ))}
+            </>
+          )}
+          {check.bets.length > 0 && (
+            <>
+              <div className={`${styles.line} ${styles.total}`}>
+                <span>{A.bets}</span>
+                <span />
+              </div>
+              {check.bets.map((l) => (
+                <div key={l.gameId} className={styles.line}>
+                  <span>
+                    {l.label} <span className={styles.detail}>{l.detail}</span>
+                  </span>
+                  <span />
+                </div>
+              ))}
+            </>
+          )}
         </>
       )}
     </div>

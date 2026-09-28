@@ -9,7 +9,11 @@ export type Id = string
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
 export type RoundStatus = 'scheduled' | 'live' | 'finished' | 'cancelled'
 export type LotStatus = 'pending' | 'open' | 'sold'
-export type PaymentKind = 'entry' | 'calcutta' | 'buyback' | 'payout' | 'other'
+/**
+ * `side`: a player's buy-in to a side pot; `bet`: a direct payment between
+ * players (match stakes, per-event bets).
+ */
+export type PaymentKind = 'entry' | 'calcutta' | 'buyback' | 'payout' | 'side' | 'bet' | 'other'
 
 export interface TournamentRow {
   id: Id
@@ -188,6 +192,28 @@ export interface Payment {
   note: string | null
 }
 
+/** A player in a game whose `entrants` is `list` (`settings.games`). */
+export interface GameEntry {
+  gameId: string
+  playerId: Id
+}
+
+/** Who won a hole contest on a hole (closest to the pin, long drive, greenie...). */
+export interface HoleAward {
+  roundId: Id
+  groupId: Id | null
+  hole: number
+  gameId: string
+  playerId: Id
+}
+
+/** The Comité's result for a custom bet: who won and what share (weights, split pro rata). */
+export interface GameResult {
+  gameId: string
+  playerId: Id
+  share: number
+}
+
 export interface Snapshot {
   tournament: TournamentRow
   players: Player[]
@@ -204,6 +230,9 @@ export interface Snapshot {
   calcuttaBids: CalcuttaBid[]
   calcuttaBuybacks: CalcuttaBuyback[]
   payments: Payment[]
+  gameEntries: GameEntry[]
+  holeAwards: HoleAward[]
+  gameResults: GameResult[]
 }
 
 /**

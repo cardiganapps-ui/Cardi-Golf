@@ -137,6 +137,9 @@ export function makeSnapshot(opts: TournamentOpts = {}): Snapshot {
     calcuttaBids: [],
     calcuttaBuybacks: [],
     payments: [],
+    gameEntries: [],
+    holeAwards: [],
+    gameResults: [],
   }
 }
 

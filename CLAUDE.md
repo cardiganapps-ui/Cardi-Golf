@@ -417,6 +417,12 @@ The settlement nets to zero across all people (banker included)
 - `calcutta_buybacks`: `lot_id`, `pct` (0–50), `amount`, `paid`.
 - `payments`: `id`, `tournament_id`, `from_player_id` (null = banker), `to_player_id` (null = banker), `amount`, `kind` (`entry` | `calcutta` | `buyback` | `payout` | `other`), `paid`, `note`.
 
+**Instance games** (2026-09-28, migration 0011; `settings.games[]`, engine `src/engine/games/`)
+- `game_entries`: `tournament_id`, `game_id`, `player_id`. Who is in a game whose entrants are a list (side pots).
+- `hole_awards`: `round_id`, `group_id`, `hole`, `game_id`, `player_id`, `decided_by`. Hole-contest winners.
+- `game_results`: `tournament_id`, `game_id`, `player_id`, `share`. The Comité's result for a custom bet.
+- `payments.kind` also takes `side` (buy-in to a side pot, player → bank) and `bet` (direct bet, player → player).
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.

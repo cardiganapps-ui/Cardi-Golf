@@ -1,15 +1,41 @@
 /**
- * Prize-pool check (CLAUDE.md §5.8, §18): `entryFee × players` must equal the
- * sum of the enabled modules' prizes. The engine asserts it when settings load
- * and the admin shows the breakdown when it does not balance.
+ * Prize-pool check (CLAUDE.md §5.8, §18), per pot.
+ *
+ * Main pot: `entryFee × players` must equal the enabled modules' prizes, the
+ * instance games funded from it (`money.source = 'main'`) and the house cut.
+ * With `prizes.stablefordMode = 'percent'` the individual game takes whatever
+ * is left, so the main pot balances by construction (unless it goes negative).
+ *
+ * Side pots (`money.source = 'side'`) are buy-in × entrants and pay out
+ * exactly what they collect, so they always balance; they are listed so the
+ * organizer sees every peso. Direct bets never touch the bank.
  */
 import type { TournamentSettings } from './schema'
+import type { GameConfig } from './games'
+import type { Snapshot } from '../types'
 
 export interface PrizeLine {
-  moduleId: 'individual' | 'bestRound' | 'pairs' | 'snake' | 'fewestPutts'
+  /** A module id, `house`, or `game:<id>` for an instance game on the main pot. */
+  moduleId: 'individual' | 'bestRound' | 'pairs' | 'snake' | 'fewestPutts' | 'house' | `game:${string}`
   label: string
   amount: number
   /** Plain-Spanish explanation of the amount, e.g. "3 grupos × 2 días × $600". */
+  detail: string
+}
+
+export interface SidePotLine {
+  gameId: string
+  label: string
+  entrants: number
+  buyIn: number
+  pot: number
+  detail: string
+}
+
+export interface BetLine {
+  gameId: string
+  label: string
+  stake: number
   detail: string
 }
 
@@ -20,6 +46,10 @@ export interface PrizeCheck {
   /** entryPot − prizesTotal; 0 when balanced. */
   difference: number
   balanced: boolean
+  /** Side pots: each pays exactly what its entrants put in. */
+  sidePots: SidePotLine[]
+  /** Direct bets between players (no pot). */
+  bets: BetLine[]
 }
 
 export interface FieldShape {
@@ -29,6 +59,8 @@ export interface FieldShape {
   groupsPerRound?: number
   /** Actual group sizes per round (roundId → sizes), once groups exist: a group of 3 pays two survivors, not three. */
   groupSizes?: number[][]
+  /** Entrants per game id for games with a list; defaults to every player. */
+  entrants?: Record<string, number>
 }
 
 /** "$10,000" without Intl (the engine stays locale-free). */
@@ -47,7 +79,8 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
   const groups = field.groupsPerRound ?? Math.ceil(field.players / settings.groupSize)
   const lines: PrizeLine[] = []
 
-  if (modules.individual.enabled) {
+  const percentIndividual = modules.individual.enabled && prizes.stablefordMode === 'percent'
+  if (modules.individual.enabled && !percentIndividual) {
     const amount = prizes.stableford.reduce((s, x) => s + x, 0)
     lines.push({
       moduleId: 'individual',
@@ -104,10 +137,68 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     })
   }
 
+  const sidePots: SidePotLine[] = []
+  const bets: BetLine[] = []
+  for (const g of settings.games) {
+    if (!g.enabled) continue
+    const n = field.entrants?.[g.id] ?? field.players
+    if (g.money.source === 'main') {
+      lines.push({ moduleId: `game:${g.id}`, label: g.label, amount: g.money.amount, detail: fmt(g.money.amount) })
+    } else if (g.money.source === 'side') {
+      sidePots.push({ gameId: g.id, label: g.label, entrants: n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, detail: `${n} × ${fmt(g.money.buyIn)} = ${fmt(g.money.buyIn * n)}, ${payoutText(g)}` })
+    } else if (g.money.source === 'direct') {
+      bets.push({ gameId: g.id, label: g.label, stake: g.money.stake, detail: `${fmt(g.money.stake)} ${stakeUnit(g)}` })
+    }
+  }
   const entryPot = settings.entryFee * field.players
+  const houseCut = entryPot > 0 ? settings.houseCut : 0
+  if (houseCut > 0) lines.push({ moduleId: 'house', label: 'Para la casa', amount: houseCut, detail: fmt(houseCut) })
+
+  if (percentIndividual) {
+    // The individual game takes what is left, split by percentages.
+    const left = entryPot - lines.reduce((s, l) => s + l.amount, 0)
+    const amounts = percentPlaces(Math.max(0, left), prizes.stableford)
+    lines.unshift({
+      moduleId: 'individual',
+      label: modules.individual.label,
+      amount: Math.max(0, left),
+      detail: `lo que queda: ${prizes.stableford.map((p, i) => `${p}% ${fmt(amounts[i] ?? 0)}`).join(' / ')}`,
+    })
+  }
   const prizesTotal = lines.reduce((s, l) => s + l.amount, 0)
   const difference = entryPot - prizesTotal
-  return { entryPot, lines, prizesTotal, difference, balanced: difference === 0 }
+  return { entryPot, lines, prizesTotal, difference, balanced: difference === 0, sidePots, bets }
+}
+
+/** Whole-peso amounts for percent places: floor each, remainder to 1st. */
+export function percentPlaces(pot: number, split: number[]): number[] {
+  const out = split.map((pct) => Math.floor((pot * pct) / 100))
+  const rest = pot - out.reduce((s, x) => s + x, 0)
+  if (out.length && rest > 0) out[0]! += rest
+  return out
+}
+
+/** The individual game's prizes in pesos for a field, whichever mode it uses. */
+export function individualPrizeAmounts(settings: TournamentSettings, field: FieldShape): number[] {
+  if (settings.prizes.stablefordMode !== 'percent') return settings.prizes.stableford
+  const line = checkPrizePool(settings, field).lines.find((l) => l.moduleId === 'individual')
+  return percentPlaces(line?.amount ?? 0, settings.prizes.stableford)
+}
+
+function payoutText(g: GameConfig): string {
+  if (g.type === 'lowScore') return `reparte ${g.money.split.map((p) => `${p}%`).join(' / ')}`
+  if (g.type === 'skins') return 'se reparte por skin'
+  if (g.type === 'contest') return 'se reparte por hoyo ganado'
+  if (g.type === 'eventPot') return 'se reparte por cada uno'
+  return 'se reparte entre los ganadores'
+}
+
+function stakeUnit(g: GameConfig): string {
+  if (g.type === 'match') return g.options.format === 'nassau' ? 'por vuelta (ida, vuelta y total)' : 'por partido'
+  if (g.type === 'skins') return 'por skin, de cada jugador'
+  if (g.type === 'eventPot') return g.options.event === 'threePutt' ? 'a cada jugador por cada tres putts' : 'de cada jugador, por cada uno'
+  if (g.type === 'contest') return 'de cada jugador, por hoyo ganado'
+  return 'de cada perdedor'
 }
 
 export class PrizePoolError extends Error {
@@ -126,4 +217,17 @@ export function assertPrizePool(settings: TournamentSettings, field: FieldShape)
   const check = checkPrizePool(settings, field)
   if (!check.balanced) throw new PrizePoolError(check)
   return check
+}
+
+/** The field of a live tournament: players, real group sizes, and game entrants. */
+export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): FieldShape {
+  const groupSizes = snapshot.rounds
+    .filter((r) => r.status !== 'cancelled')
+    .map((r) => snapshot.groups.filter((g) => g.roundId === r.id).map((g) => g.playerIds.length))
+  const ids = new Set(snapshot.players.map((p) => p.id))
+  const entrants: Record<string, number> = {}
+  for (const g of settings.games) {
+    if (g.entrants === 'list') entrants[g.id] = (snapshot.gameEntries ?? []).filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
+  }
+  return { players: snapshot.players.length, groupSizes, entrants }
 }

@@ -29,6 +29,9 @@ export const BACKUP_TABLES: Record<string, string> = {
   calcutta_bids: 'id',
   calcutta_buybacks: 'lot_id',
   payments: 'id',
+  game_entries: 'tournament_id,game_id,player_id',
+  hole_awards: 'round_id,game_id,hole,player_id',
+  game_results: 'tournament_id,game_id,player_id',
   photos: 'id',
   audit_log: 'id',
 }

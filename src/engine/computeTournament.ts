@@ -18,6 +18,10 @@ import type { FewestPuttsState } from './modules/fewestPutts'
 import type { IndividualState } from './modules/individual'
 import type { PairsState } from './modules/pairs'
 import type { SnakeState } from './modules/snake'
+import { ALL_GAMES, type AnyGame } from './games'
+import type { GameContext, GameResultState } from './games/game'
+import { gamePot } from './games/payout'
+import type { GameType } from './settings/games'
 
 export interface ModuleStates {
   individual?: IndividualState
@@ -38,6 +42,8 @@ export interface StatusFlags {
   discrepancies: Array<{ roundId: Id; playerId: Id; hole: number }>
   /** Enabled modules with no implementation (should never happen in production). */
   missingModules: ModuleId[]
+  /** Enabled instance games whose type this build does not implement (an older app). */
+  missingGames: string[]
   warnings: string[]
 }
 
@@ -46,6 +52,8 @@ export interface TournamentState {
   core: CoreState
   /** Only the enabled modules appear here. */
   modules: ModuleStates
+  /** Enabled instance games (`settings.games`), by game id. */
+  games: Record<string, GameResultState>
   /** Every prize any enabled module awards, live and final. */
   prizes: PrizeAward[]
   money: MoneyState
@@ -60,6 +68,8 @@ export interface TournamentState {
 export interface ComputeOptions {
   /** Override the module implementations (tests). */
   modules?: Partial<Record<ModuleId, AnyModule>>
+  /** Override the instance-game implementations (tests). */
+  games?: Partial<Record<GameType, AnyGame>>
 }
 
 export function computeTournament(snapshot: Snapshot, settings: TournamentSettings, opts: ComputeOptions = {}): TournamentState {
@@ -87,7 +97,35 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     prizes.push(...mod.prizes(state, ctx))
   }
 
-  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal)
+  // Instance games (skins, matches, contests, custom bets...).
+  const games: Record<string, GameResultState> = {}
+  const missingGames: string[] = []
+  const gameWarnings: string[] = []
+  const gameImpls = { ...ALL_GAMES, ...opts.games }
+  const roster = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.id)
+  const roundNumber = new Map(snapshot.rounds.map((r) => [r.id, r.number]))
+  for (const config of settings.games) {
+    if (!config.enabled) continue
+    const impl = gameImpls[config.type]
+    if (!impl) {
+      missingGames.push(config.id)
+      gameWarnings.push(`${config.label}: esta versión de la app no conoce este juego. Actualiza la app.`)
+      continue
+    }
+    const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
+    const entrants = config.entrants === 'all' ? roster : roster.filter((id) => listed.has(id))
+    const roundIds = config.rounds === 'all' ? core.roundIds : core.roundIds.filter((rid) => (config.rounds as number[]).includes(roundNumber.get(rid) ?? 0))
+    const final = tournamentFinal || (roundIds.length > 0 && roundIds.every((rid) => roundFinal[rid]))
+    const pot = gamePot(config, entrants.length)
+    const gctx: GameContext = { ...ctx, config, entrants, roundIds, pot, final }
+    const state = impl.compute(gctx)
+    const board = impl.board(state, gctx)
+    games[config.id] = { config, entrants, pot, final, state, board }
+    prizes.push(...impl.prizes(state, gctx))
+    if (impl.warnings) gameWarnings.push(...impl.warnings(state, gctx))
+  }
+
+  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction })
   const feed = computeFeed(snapshot, core, modules.snake)
 
@@ -127,6 +165,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     settings,
     core,
     modules,
+    games,
     prizes,
     money,
     stats,
@@ -137,7 +176,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       unsignedCards,
       discrepancies,
       missingModules,
-      warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings],
+      missingGames,
+      warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
     },
     tournamentFinal,
   }
