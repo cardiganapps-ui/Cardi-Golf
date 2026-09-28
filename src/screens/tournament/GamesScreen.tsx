@@ -1,258 +1,317 @@
 /**
- * Juegos (§9.4): one sub-tab per enabled module, labels from settings.
+ * Juegos (§9.4): one line per game (who leads, what is at stake), then the
+ * detail of each enabled module on the board primitives.
  */
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
-import { Avatar, Segmented } from '../../components/ui'
+import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented } from '../../components/primitives'
+import { IconChevronLeft } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
 import type { ModuleId } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
+import { useActiveRound } from './useMyGroup'
 import styles from './GamesScreen.module.css'
+
+const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction']
 
 export function GamesScreen() {
   const data = useTournament((s) => s.data)
+  const round = useActiveRound()
   const [open, setOpen] = useState<string | null>(null)
+  const [tab, setTab] = useState<ModuleId | null>(null)
   const tabs = useMemo(() => {
     if (!data) return []
     const m = data.settings.modules
-    return (['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction'] as ModuleId[]).filter((id) => m[id].enabled).map((id) => ({ value: id, label: m[id].label }))
+    return ORDER.filter((id) => m[id].enabled).map((id) => ({ value: id, label: m[id].label }))
   }, [data])
-  const [tab, setTab] = useState<ModuleId>('individual')
   if (!data) return null
-  const { snapshot, state } = data
+  const { snapshot, state, settings } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
-  const current = tabs.some((x) => x.value === tab) ? tab : (tabs[0]?.value ?? 'individual')
+  const money = (amount: number | undefined) => (amount ? <Money amount={amount} /> : null)
+  const current = tab && tabs.some((x) => x.value === tab) ? tab : null
+
+  // One line per game: who leads, what is at stake.
+  const overview = tabs.map(({ value: id, label }) => {
+    let leader: string = t.games.noResults
+    let stake: { text: string; amount?: number } = { text: '' }
+    const m = state.modules
+    if (id === 'individual' && m.individual) {
+      const r = m.individual.rows[0]
+      if (r && r.thru > 0) leader = t.games.leader(name(r.playerId), t.games.pointsFigure(r.total))
+      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.stableford[0] ?? 0)), amount: settings.prizes.stableford[0] }
+    } else if (id === 'pairs' && m.pairs) {
+      const r = m.pairs.rows[0]
+      if (r && r.thru > 0) leader = t.games.leader(r.name, t.games.pointsFigure(r.total))
+      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.pairs[0] ?? 0)), amount: settings.prizes.pairs[0] }
+    } else if (id === 'bestRound' && m.bestRound) {
+      const d = [...m.bestRound.days].reverse().find((x) => x.rows.some((r) => r.thru > 0)) ?? m.bestRound.days.at(-1)
+      const r = d?.rows[0]
+      if (d && r && r.thru > 0) leader = `${t.round.day(d.roundNumber)}: ${t.games.leader(name(r.playerId), t.games.pointsFigure(r.points))}`
+      stake = { text: t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay)), amount: settings.prizes.bestRoundPerDay }
+    } else if (id === 'snake' && m.snake) {
+      const groups = m.snake.groups.filter((g) => !round || g.roundId === round.id)
+      const holders = groups.filter((g) => g.holderId).map((g) => name(g.holderId!))
+      leader = holders.length ? `${t.games.holders}: ${holders.join(', ')}` : groups.length ? t.games.nobodyHolds : t.games.noResults
+      const pot = groups[0]?.pot ?? 0
+      stake = { text: t.games.perGroup(formatMoney(pot)), amount: pot }
+    } else if (id === 'fewestPutts' && m.fewestPutts) {
+      const r = m.fewestPutts.rows.find((x) => x.holes > 0)
+      if (r) leader = t.games.leader(name(r.playerId), t.games.puttsFigure(r.putts))
+      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts)), amount: settings.prizes.fewestPutts }
+    } else if (id === 'auction' && m.auction) {
+      const s0 = m.auction.slots[0]
+      leader = s0 ? t.games.leader(s0.playerIds.map(name).join(', '), formatMoney(s0.amount)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
+      stake = { text: t.games.pot, amount: m.auction.pot }
+    }
+    return { id, label, leader, stake }
+  })
 
   return (
-    <div className="screen">
-      <h1>{t.nav.games}</h1>
-      <Segmented value={current} options={tabs} onChange={setTab} />
-
-      {current === 'individual' && state.modules.individual && (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>{t.games.player}</th>
-              {state.core.roundIds.map((rid, i) => (
-                <th key={rid} className="num">
-                  D{i + 1}
-                </th>
-              ))}
-              <th className="num">{t.common.total}</th>
-              <th className="num">$</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.modules.individual.rows.map((r) => (
-              <tr key={r.playerId}>
-                <td className="num">{r.label}</td>
-                <td>
-                  <button type="button" className={styles.linkBtn} onClick={() => setOpen(r.playerId)}>
-                    {name(r.playerId)}
-                  </button>
-                  {r.countbackWhy && <HowCalculated why={r.countbackWhy} label={t.games.tiebreak} />}
-                </td>
-                {r.perRound.map((p, i) => (
-                  <td key={i} className="num">
-                    {p}
-                  </td>
-                ))}
-                <td className="num">
-                  <strong>{r.total}</strong>
-                </td>
-                <td className="num">{state.modules.individual!.prizes[r.playerId] ? formatMoney(state.modules.individual!.prizes[r.playerId]!.amount) : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {current === 'pairs' && state.modules.pairs && (
-        <div className="stack">
-          {state.modules.pairs.unpaired.length > 0 && <p className="help coral">{t.games.unpaired(state.modules.pairs.unpaired.map(name).join(', '))}</p>}
-          <div className="list">
-            {state.modules.pairs.rows.map((r) => (
-              <div key={r.pairId} className="listItem listItem--static">
-                <span className={`num ${styles.pos}`}>{r.label}</span>
-                <span className={styles.pairAvatars}>
-                  <Avatar name={name(r.playerIds[0])} url={byId.get(r.playerIds[0])?.avatarUrl} size="sm" />
-                  <Avatar name={name(r.playerIds[1])} url={byId.get(r.playerIds[1])?.avatarUrl} size="sm" />
-                </span>
-                <span className="grow">
-                  <strong>{r.name}</strong>
-                  <span className="help" style={{ display: 'block' }}>
-                    {name(r.playerIds[0])} & {name(r.playerIds[1])} · {r.perRound.join(' + ')}
+    <div className={styles.screen}>
+      {current === null ? (
+        <>
+          <h1>{t.nav.games}</h1>
+          {overview.length === 0 ? (
+            <EmptyState title={t.games.noResults} body="" />
+          ) : (
+            <div className={styles.overview}>
+              {overview.map((g) => (
+                <button key={g.id} type="button" className={styles.gameRow} onClick={() => setTab(g.id)}>
+                  <span className={styles.gameText}>
+                    <span className={styles.gameLabel}>{g.label}</span>
+                    <span className={styles.gameLeader}>{g.leader}</span>
                   </span>
-                </span>
-                <span className="num" style={{ fontSize: '1.3rem' }}>
-                  {r.total}
-                </span>
-                {state.modules.pairs!.prizes[r.playerIds[0]] && <span className="chip chip--sun">{formatMoney(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
-              </div>
-            ))}
-          </div>
-          <h3>{t.games.headToHead}</h3>
-          {state.core.roundIds.map((rid) => {
-            const round = snapshot.rounds.find((r) => r.id === rid)!
-            const groups = snapshot.groups.filter((g) => g.roundId === rid)
-            return (
-              <div key={rid} className="stack">
-                <span className="label">{t.round.day(round.number)}</span>
-                {groups.map((g) => {
-                  const pairsIn = snapshot.pairs.filter((p) => [p.player1Id, p.player2Id].every((id) => g.playerIds.includes(id)))
-                  return (
-                    <div key={g.id} className="card card--cell row row--between" style={{ padding: 10 }}>
-                      <span className="help">
-                        {t.card.group} {g.number}
-                      </span>
-                      <span className="row" style={{ gap: 12 }}>
-                        {pairsIn.map((p) => {
-                          const pts = (state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)
-                          return (
-                            <span key={p.id} className="small">
-                              {p.name ?? `${name(p.player1Id)}&${name(p.player2Id)}`} <strong className="num">{pts}</strong>
-                            </span>
-                          )
-                        })}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {current === 'bestRound' && state.modules.bestRound && (
-        <div className="stack">
-          {state.modules.bestRound.days.map((d) => (
-            <div key={d.roundId} className="stack">
-              <div className="row row--between">
-                <h3>{t.round.day(d.roundNumber)}</h3>
-                <span className="chip chip--sun">{formatMoney(data.settings.prizes.bestRoundPerDay)}</span>
-              </div>
-              <table className="table">
-                <tbody>
-                  {d.rows.slice(0, 12).map((r) => (
-                    <tr key={r.playerId}>
-                      <td className="num">{r.label}</td>
-                      <td>
-                        <button type="button" className={styles.linkBtn} onClick={() => setOpen(r.playerId)}>
-                          {name(r.playerId)}
-                        </button>
-                      </td>
-                      <td className="num">{t.round.thru(r.thru)}</td>
-                      <td className="num">
-                        <strong>{r.points}</strong>
-                      </td>
-                      <td className="num">{d.winners[r.playerId] ? formatMoney(d.winners[r.playerId]!.amount) : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {current === 'snake' && state.modules.snake && <SnakeBoard onOpen={setOpen} />}
-
-      {current === 'fewestPutts' && state.modules.fewestPutts && (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>{t.games.player}</th>
-              <th className="num">{t.player.putts}</th>
-              <th className="num">{t.player.puttsAvg}</th>
-              <th className="num">1</th>
-              <th className="num">3+</th>
-              <th className="num">$</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.modules.fewestPutts.rows.map((r) => (
-              <tr key={r.playerId} className={r.holes === 0 ? 'muted' : ''}>
-                <td className="num">{r.holes ? r.label : '–'}</td>
-                <td>
-                  <button type="button" className={styles.linkBtn} onClick={() => setOpen(r.playerId)}>
-                    {name(r.playerId)}
-                  </button>
-                  {r.pickedUpHoles > 0 && <span className="help"> · {r.pickedUpHoles} L</span>}
-                </td>
-                <td className="num">
-                  <strong>{r.putts}</strong>
-                  <span className="help"> /{r.holes}</span>
-                </td>
-                <td className="num">{r.holes ? r.average.toFixed(2) : ''}</td>
-                <td className="num">{r.onePutts}</td>
-                <td className="num">{r.threePutts}</td>
-                <td className="num">{state.modules.fewestPutts!.prizes[r.playerId] ? formatMoney(state.modules.fewestPutts!.prizes[r.playerId]!.amount) : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {current === 'auction' && state.modules.auction && (
-        <div className="stack">
-          <div className="card card--deep row row--between">
-            <span>
-              <span className="label" style={{ color: 'var(--seafoam)' }}>
-                {t.games.pot}
-              </span>
-              <strong style={{ display: 'block', fontSize: '1.8rem' }} className="num">
-                {formatMoney(state.modules.auction.pot)}
-              </strong>
-            </span>
-            <span className="help" style={{ color: 'var(--seafoam)' }}>
-              {t.games.sold(state.modules.auction.soldCount, snapshot.players.length)}
-            </span>
-          </div>
-          {state.modules.auction.slots.length > 0 && (
-            <div className="list">
-              {state.modules.auction.slots.map((s, i) => (
-                <div key={i} className="listItem listItem--static">
-                  <span className="grow">
-                    <strong>{s.label}</strong>
-                    <span className="help" style={{ display: 'block' }}>
-                      {s.playerIds.map(name).join(', ')} · {Math.round(s.share * 100)}%
+                  {g.stake.amount ? (
+                    <span className={styles.gameStake}>
+                      <strong>{formatMoney(g.stake.amount)}</strong>
+                      <span>{g.stake.text.replace(formatMoney(g.stake.amount), '').replace(/^\s*(al|por)\s*/, '$1 ').trim() || t.games.pot}</span>
                     </span>
-                  </span>
-                  <HowCalculated why={s.why} label={formatMoney(s.amount)} />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className={styles.detailHead}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTab(null)} aria-label={t.common.back}>
+              <IconChevronLeft />
+            </button>
+            <h1>{tabs.find((x) => x.value === current)?.label}</h1>
+          </div>
+          {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} />}
+
+          {current === 'individual' && state.modules.individual && (
+            <div className={styles.section}>
+              <Board>
+                <BoardHead figureLabel={t.live.points} dense={state.modules.individual.rows.length > 20} />
+                {state.modules.individual.rows.map((r) => (
+                  <LeaderRow
+                    key={r.playerId}
+                    pos={r.label}
+                    name={name(r.playerId)}
+                    sub={
+                      <span className={styles.sub}>
+                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${p}`).join(', ')}</span>
+                        {state.modules.individual!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.individual!.prizes[r.playerId]!.amount)}</span>}
+                      </span>
+                    }
+                    thru={t.round.thru(r.thru)}
+                    figure={String(r.total)}
+                    dense={state.modules.individual!.rows.length > 20}
+                    onClick={() => setOpen(r.playerId)}
+                  />
+                ))}
+              </Board>
+              {state.modules.individual.rows.some((r) => r.countbackWhy) && (
+                <div className={styles.rows}>
+                  {state.modules.individual.rows
+                    .filter((r) => r.countbackWhy)
+                    .map((r) => (
+                      <div key={r.playerId} className={styles.rowLine}>
+                        <span className={styles.rowText}>
+                          <span>
+                            {r.label} {name(r.playerId)}
+                          </span>
+                        </span>
+                        <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} />
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {current === 'pairs' && state.modules.pairs && (
+            <div className={styles.section}>
+              {state.modules.pairs.unpaired.length > 0 && <p className="help">{t.games.unpaired(state.modules.pairs.unpaired.map(name).join(', '))}</p>}
+              <Board>
+                <BoardHead figureLabel={t.live.points} />
+                {state.modules.pairs.rows.map((r) => (
+                  <LeaderRow
+                    key={r.pairId}
+                    pos={r.label}
+                    name={r.name}
+                    sub={
+                      <span className={styles.sub}>
+                        <span>
+                          {name(r.playerIds[0])} y {name(r.playerIds[1])}, {r.perRound.join(' + ')}
+                        </span>
+                        {state.modules.pairs!.prizes[r.playerIds[0]] && <span className={styles.subMoney}>{money(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
+                      </span>
+                    }
+                    thru={t.round.thru(r.thru)}
+                    figure={String(r.total)}
+                    onClick={() => setOpen(r.playerIds[0])}
+                  />
+                ))}
+              </Board>
+              <h3>{t.games.headToHead}</h3>
+              {state.core.roundIds.map((rid) => {
+                const rd = snapshot.rounds.find((r) => r.id === rid)!
+                const groups = snapshot.groups.filter((g) => g.roundId === rid)
+                return (
+                  <div key={rid} className={styles.section}>
+                    <span className="label">{t.round.day(rd.number)}</span>
+                    <div className={styles.rows}>
+                      {groups.map((g) => {
+                        const pairsIn = snapshot.pairs.filter((p) => [p.player1Id, p.player2Id].every((id) => g.playerIds.includes(id)))
+                        return (
+                          <div key={g.id} className={styles.rowLine}>
+                            <span className={styles.rowText}>
+                              <span className={styles.rowSub}>
+                                {t.card.group} {g.number}
+                              </span>
+                              <span>{pairsIn.map((p) => p.name ?? `${name(p.player1Id)} y ${name(p.player2Id)}`).join(' contra ')}</span>
+                            </span>
+                            <span className={styles.figures}>
+                              {pairsIn.map((p) => (
+                                <strong key={p.id} className="num">
+                                  {(state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)}
+                                </strong>
+                              ))}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {current === 'bestRound' && state.modules.bestRound && (
+            <div className={styles.section}>
+              {state.modules.bestRound.days.map((d) => (
+                <div key={d.roundId} className={styles.section}>
+                  <div className={styles.sectionHead}>
+                    <h3>{t.round.day(d.roundNumber)}</h3>
+                    <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay))}</span>
+                  </div>
+                  <Board>
+                    <BoardHead figureLabel={t.live.points} dense={d.rows.length > 20} />
+                    {d.rows.map((r) => (
+                      <LeaderRow
+                        key={r.playerId}
+                        pos={r.label}
+                        name={name(r.playerId)}
+                        sub={d.winners[r.playerId] ? <span className={styles.subMoney}>{money(d.winners[r.playerId]!.amount)}</span> : undefined}
+                        thru={t.round.thru(r.thru)}
+                        figure={String(r.points)}
+                        dense={d.rows.length > 20}
+                        onClick={() => setOpen(r.playerId)}
+                      />
+                    ))}
+                  </Board>
                 </div>
               ))}
             </div>
           )}
-          <h3>{t.games.owners}</h3>
-          <div className="list">
-            {state.modules.auction.portfolios.map((pf) => (
-              <div key={pf.ownerId} className="listItem listItem--static">
-                <Avatar name={name(pf.ownerId)} url={byId.get(pf.ownerId)?.avatarUrl} />
-                <span className="grow">
-                  <strong>{name(pf.ownerId)}</strong>
-                  <span className="help" style={{ display: 'block' }}>
-                    {pf.holdings.map((h) => `${name(h.playerId)} ${h.pct < 100 ? `${h.pct}%` : ''}`).join(' · ')}
-                  </span>
+
+          {current === 'snake' && state.modules.snake && <SnakeBoard onOpen={setOpen} />}
+
+          {current === 'fewestPutts' && state.modules.fewestPutts && (
+            <Board>
+              <BoardHead figureLabel={t.player.putts} dense={state.modules.fewestPutts.rows.length > 20} />
+              {state.modules.fewestPutts.rows.map((r) => (
+                <LeaderRow
+                  key={r.playerId}
+                  pos={r.holes ? r.label : '–'}
+                  name={name(r.playerId)}
+                  sub={
+                    <span className={styles.sub}>
+                      <span>
+                        {r.holes ? `${r.average.toFixed(2)} por hoyo, ${r.onePutts} a uno, ${r.threePutts} a tres` : t.games.noResults}
+                        {r.pickedUpHoles > 0 ? `, ${r.pickedUpHoles} L` : ''}
+                      </span>
+                      {state.modules.fewestPutts!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.fewestPutts!.prizes[r.playerId]!.amount)}</span>}
+                    </span>
+                  }
+                  thru={r.holes ? String(r.holes) : undefined}
+                  figure={r.holes ? String(r.putts) : '–'}
+                  dense={state.modules.fewestPutts!.rows.length > 20}
+                  onClick={() => setOpen(r.playerId)}
+                />
+              ))}
+            </Board>
+          )}
+
+          {current === 'auction' && state.modules.auction && (
+            <div className={styles.section}>
+              <div className={styles.potLine}>
+                <span>
+                  <span className="label">{t.games.pot}</span>
+                  <br />
+                  <span className={styles.pot}>{formatMoney(state.modules.auction.pot)}</span>
                 </span>
-                <span style={{ textAlign: 'right' }}>
-                  <strong className="num">{formatMoney(pf.value)}</strong>
-                  <span className="help" style={{ display: 'block' }}>
-                    {t.games.invested} {formatMoney(pf.invested)}
-                    {pf.roi != null ? ` · ${pf.roi >= 0 ? '+' : ''}${Math.round(pf.roi * 100)}%` : ''}
-                  </span>
-                </span>
+                <span className="help">{t.games.sold(state.modules.auction.soldCount, snapshot.players.length)}</span>
               </div>
-            ))}
-            {state.modules.auction.portfolios.length === 0 && <p className="help" style={{ padding: 14 }}>{t.games.noAuctionYet}</p>}
-          </div>
-        </div>
+              {state.modules.auction.slots.length > 0 && (
+                <div className={styles.rows}>
+                  {state.modules.auction.slots.map((s, i) => (
+                    <div key={i} className={styles.rowLine}>
+                      <span className={styles.rowText}>
+                        <strong>{s.label}</strong>
+                        <span className={styles.rowSub}>
+                          {s.playerIds.map(name).join(', ')}, {Math.round(s.share * 100)}%
+                        </span>
+                      </span>
+                      <HowCalculated why={s.why} label={formatMoney(s.amount)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <h3>{t.games.owners}</h3>
+              {state.modules.auction.portfolios.length === 0 ? (
+                <p className="help">{t.games.noAuctionYet}</p>
+              ) : (
+                <div className={styles.rows}>
+                  {state.modules.auction.portfolios.map((pf) => (
+                    <button key={pf.ownerId} type="button" className={styles.gameRow} onClick={() => setOpen(pf.ownerId)}>
+                      <span className={styles.rowText}>
+                        <strong>{name(pf.ownerId)}</strong>
+                        <span className={styles.rowSub}>{pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 ? ` ${h.pct}%` : ''}`).join(', ')}</span>
+                      </span>
+                      <span className={styles.gameStake}>
+                        <strong>{formatMoney(pf.value)}</strong>
+                        <span>
+                          {t.games.invested} {formatMoney(pf.invested)}
+                          {pf.roi != null ? `, ${pf.roi >= 0 ? '+' : '−'}${Math.abs(Math.round(pf.roi * 100))}%` : ''}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       <PlayerSheet playerId={open} onClose={() => setOpen(null)} />

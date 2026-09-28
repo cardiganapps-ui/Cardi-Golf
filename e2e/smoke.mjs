@@ -79,7 +79,10 @@ try {
   await saveBtn.waitFor({ timeout: T })
   await shot('card')
   const firstName = (await p.locator('[class*="playerNameText"]').first().innerText()).trim()
-  await p.locator('button[aria-label="Golpes: menos"]').first().click()
+  // Nudge the first player's strokes without drifting: down when possible, else up.
+  const minus = p.locator('button[aria-label="Golpes: menos"]').first()
+  if (await minus.isEnabled()) await minus.click()
+  else await p.locator('button[aria-label="Golpes: más"]').first().click()
   await saveBtn.click()
   await p.waitForTimeout(1500)
   check((await p.locator('text=Sincronizado').count()) > 0 || (await p.locator('text=pendiente').count()) > 0, 'hole saved (sync chip visible)')

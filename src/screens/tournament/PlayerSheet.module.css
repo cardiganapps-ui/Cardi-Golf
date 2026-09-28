@@ -1,35 +1,99 @@
-.cardWrap {
-  overflow-x: auto;
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
 }
-.card td,
-.card th {
-  text-align: center;
-  padding: 4px 5px;
-  font-size: 0.85rem;
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
 }
-.dots {
-  color: var(--teal);
-  letter-spacing: 1px;
+.headText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
 }
-.unplayed {
-  color: var(--muted);
+.headText h2 {
+  overflow-wrap: anywhere;
 }
-.birdie td {
-  background: rgba(242, 182, 63, 0.25);
+.headLine {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
-.zero td {
-  background: rgba(176, 67, 39, 0.1);
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.line {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+  font-variant-numeric: tabular-nums;
+}
+.line strong {
+  color: var(--ink);
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 44px;
+  padding: var(--s1) 0;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+}
+.rowTotal {
+  border-bottom: 0;
+  border-top: var(--rule-heavy);
+  font-weight: 600;
+}
+.net {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.netNeg {
+  color: var(--under);
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s3) var(--s2);
+  border-top: var(--hairline);
+  padding-top: var(--s3);
 }
 .stat {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 2px;
+  min-width: 0;
+}
+.statValue {
+  font-size: var(--fs-xl);
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+.statLabel {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  line-height: var(--lh-ui);
 }

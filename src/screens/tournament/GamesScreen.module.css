@@ -1,22 +1,132 @@
-.linkBtn {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  font-weight: 700;
-  color: var(--ink);
-  cursor: pointer;
-  text-align: left;
-}
-.pos {
-  width: 32px;
-  text-align: center;
-  font-size: 1.1rem;
-}
-.pairAvatars {
+.screen {
   display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding-top: var(--s4);
 }
-.pairAvatars > :last-child {
-  margin-left: -10px;
-  box-shadow: 0 0 0 2px var(--cell);
+.overview {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--rule-heavy);
+}
+.gameRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 64px;
+  padding: var(--s2) 0;
+  border: 0;
+  border-bottom: var(--hairline);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.gameRow:active {
+  background: var(--surface);
+}
+.gameText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+.gameLabel {
+  font-weight: 600;
+}
+.gameLeader {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.gameStake {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.gameStake strong {
+  font-size: var(--fs-md);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.detailHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.sub {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.subMoney {
+  color: var(--ink-2);
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.rowLine {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 48px;
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+}
+.rowLine strong {
+  font-size: var(--fs-md);
+}
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+.rowSub {
+  color: var(--ink-2);
+}
+.figures {
+  display: inline-flex;
+  gap: var(--s4);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.potLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: var(--rule-heavy);
+}
+.pot {
+  font-size: var(--fs-3xl);
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
 }

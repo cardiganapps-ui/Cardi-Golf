@@ -1,18 +1,22 @@
 /**
- * Jugador (§9.5): both cards, playing handicap with its explanation, pair,
- * owners, money so far and basic stats.
+ * Jugador (§9.5): one player's tournament: position, handicap with its
+ * explanation, each round as a scorecard with notation (tap a hole for the
+ * breakdown), pair and owners, money so far, and the basic stats.
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { HowCalculated } from '../../components/HowCalculated'
+import { ExplanationSheet, HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Sheet } from '../../components/ui'
+import { Money, ScorecardGrid, type GridHole } from '../../components/primitives'
 import { ShareCardButton } from '../../components/ShareCard'
 import { useTournament } from '../../data/tournamentStore'
-import { formatMoney, formatSignedMoney } from '../../lib/money'
+import { formatMoney } from '../../lib/money'
+import type { Explanation } from '../../engine/types'
 import styles from './PlayerSheet.module.css'
 
 export function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
   const data = useTournament((s) => s.data)
+  const [why, setWhy] = useState<{ title: string; why: Explanation } | null>(null)
   const p = data?.snapshot.players.find((x) => x.id === playerId)
   const money = useMemo(() => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []), [data, playerId])
   const rounds = useMemo(
@@ -58,141 +62,106 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
 
   return (
     <Sheet open={!!playerId} onClose={onClose} wide>
-      <div className="stack stack--lg">
-        <div className="row">
+      <div className={styles.sheet}>
+        <div className={styles.head}>
           <Avatar name={p.displayName} url={p.avatarUrl} size="lg" honoree={p.isHonoree} />
-          <div className="grow">
+          <div className={styles.headText}>
             <h2>{p.fullName}</h2>
-            <span className="help">
-              {p.tier && <span className="tierBadge" style={{ marginRight: 6 }}>{p.tier}</span>}
-              {row ? `${row.label}º · ${row.total} pts` : ''}
-              {totals ? ` · ${t.live.thru} ${totals.thru}` : ''}
+            <span className={styles.headLine}>
+              {p.tier && <span className="tierBadge">{p.tier}</span>}
+              {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru))}</span> : null}
             </span>
           </div>
         </div>
 
-        <section className="card card--cell stack" style={{ padding: 12 }}>
-          <div className="row row--between">
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
             <span className="label">{t.admin.players.handicap}</span>
             {hc && <HowCalculated why={[hc.why, ...rounds.filter((r) => r.pr).map((r) => r.pr!.playingHcpWhy)]} />}
           </div>
-          <div className="row row--wrap">
-            <span className="chip">{hc?.source === 'manual' ? t.admin.players.baseHcp : t.admin.players.index}: {hc?.base ?? p.baseHcp}</span>
-            {rounds.map(({ round, pr }) =>
-              pr ? (
-                <span key={round.id} className={`chip ${pr.overridden ? 'chip--coral' : 'chip--teal'}`}>
-                  {t.round.day(round.number)}: {pr.playingHcp}
-                  {pr.cut ? ` (−${pr.cut})` : ''}
-                </span>
-              ) : null,
-            )}
-            {hc?.estimated && <span className="chip chip--sun">{t.admin.players.estimated}</span>}
-          </div>
+          <p className={styles.line}>
+            <strong>{t.player.handicapLine(hc?.base ?? p.baseHcp, hc?.source === 'manual' ? t.admin.players.baseHcp : t.admin.players.index)}</strong>
+            {hc?.estimated ? ` (${t.admin.players.estimated})` : ''}
+            {rounds.filter((r) => r.pr).map(({ round, pr }) => `, ${t.player.dayHcp(round.number, pr!.playingHcp, pr!.cut)}${pr!.overridden ? ` (${t.admin.handicaps.override.toLowerCase()})` : ''}`)}
+          </p>
         </section>
 
         {rounds.map(({ round, pr }) =>
           pr ? (
-            <section key={round.id} className="stack">
-              <div className="row row--between">
-                <h3>
-                  {t.round.day(round.number)} · {pr.points} pts
-                </h3>
-                <span className="help">
-                  {pr.gross != null ? `${t.player.gross} ${pr.gross} · ` : ''}
-                  {t.player.putts} {pr.putts}
-                </span>
+            <section key={round.id} className={styles.section}>
+              <div className={styles.sectionHead}>
+                <h3>{t.player.round(round.number, pr.points)}</h3>
+                <span className="help">{t.player.grossPutts(pr.gross, pr.putts)}</span>
               </div>
-              <div className={styles.cardWrap}>
-                <table className={`table ${styles.card}`}>
-                  <thead>
-                    <tr>
-                      <th>{t.player.hole}</th>
-                      <th>{t.player.par}</th>
-                      <th>{t.player.si}</th>
-                      <th>{t.player.strokesShort}</th>
-                      <th>{t.player.grossShort}</th>
-                      <th>{t.player.netShort}</th>
-                      <th>{t.player.pts}</th>
-                      <th>{t.player.puttsShort}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pr.holes.map((h) => (
-                      <tr key={h.hole} className={!h.played ? styles.unplayed : h.points >= 3 ? styles.birdie : h.points === 0 && h.played ? styles.zero : ''}>
-                        <td className="num">{h.hole}</td>
-                        <td className="num">{h.par}</td>
-                        <td className="num">{h.strokeIndex}</td>
-                        <td className={styles.dots}>{'•'.repeat(h.strokesReceived)}</td>
-                        <td className="num">{h.pickedUp ? 'L' : (h.gross ?? '')}</td>
-                        <td className="num">{h.net ?? ''}</td>
-                        <td className="num">
-                          {h.played ? (
-                            <HowCalculated why={h.why} label={String(h.points)}>
-                              <strong>{h.points}</strong>
-                            </HowCalculated>
-                          ) : (
-                            ''
-                          )}
-                        </td>
-                        <td className="num">{h.putts ?? ''}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ScorecardGrid
+                holes={pr.holes.map<GridHole>((h) => ({ n: h.hole, par: h.par, si: h.strokeIndex, gross: h.played ? h.gross : null, pickedUp: h.played && h.pickedUp, pts: h.played ? h.points : undefined, putts: h.played ? h.putts : null }))}
+                playerLabel={p.displayName}
+                showPoints
+                showPutts
+                onHole={(n) => {
+                  const h = pr.holes[n - 1]
+                  if (h) setWhy({ title: t.player.whyHole(n), why: h.why })
+                }}
+              />
             </section>
           ) : null,
         )}
 
         {(pair || myLot || owned.length > 0) && (
-          <section className="card card--cell stack" style={{ padding: 12 }}>
+          <section className={styles.section}>
             {pair && partner && (
-              <p>
+              <p className={styles.line}>
                 <span className="label">{settings.modules.pairs.label}</span>
                 <br />
-                {pair.name ? `${pair.name} · ` : ''}
-                {t.player.partner}: <strong>{partner.displayName}</strong>
+                {pair.name ? `${pair.name}, ` : ''}
+                {t.player.partner.toLowerCase()}: <strong>{partner.displayName}</strong>
               </p>
             )}
             {myLot && (
-              <p>
+              <p className={styles.line}>
                 <span className="label">{settings.modules.auction.label}</span>
                 <br />
-                {t.player.ownedBy}: {myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`).join(', ')} · {formatMoney(myLot.price)}
+                {t.player.ownedBy}: {myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`).join(', ')}, {formatMoney(myLot.price)}
               </p>
             )}
             {owned.length > 0 && (
-              <p className="small">
-                {t.player.owns}: {owned.map((l) => `${nameOf(l.playerId)} (${l.owners.find((o) => o.ownerId === p.id)!.pct}%)`).join(', ')}
+              <p className={styles.line}>
+                {t.player.owns}: {owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`).join(', ')}
               </p>
             )}
           </section>
         )}
 
-        <section className="card stack" style={{ padding: 12 }}>
+        <section className={styles.section}>
           <span className="label">{t.nav.money}</span>
-          {money.length === 0 && <p className="help">{t.player.noMoneyYet}</p>}
-          {money.map((m, i) => (
-            <div key={i} className="row row--between small">
-              <span>
-                {m.label}
-                {!m.final && <span className="help"> · {t.money.ifEndedNow}</span>}
-              </span>
-              <HowCalculated why={m.why} label={formatMoney(m.amount)} />
-            </div>
-          ))}
-          {person && (
-            <div className="row row--between" style={{ borderTop: '1px solid var(--hair)', paddingTop: 8 }}>
-              <span>
-                {t.money.paid} {formatMoney(person.paid)} · {t.money.receives} {formatMoney(person.receives)}
-              </span>
-              <strong className={person.net >= 0 ? 'teal' : 'coral'}>{formatSignedMoney(person.net)}</strong>
+          {money.length === 0 && <span className="help">{t.player.noMoneyYet}</span>}
+          {(money.length > 0 || person) && (
+            <div className={styles.rows}>
+              {money.map((m, i) => (
+                <div key={i} className={styles.row}>
+                  <span>
+                    {m.label}
+                    {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
+                  </span>
+                  <HowCalculated why={m.why} label={formatMoney(m.amount)} />
+                </div>
+              ))}
+              {person && (
+                <div className={`${styles.row} ${styles.rowTotal}`}>
+                  <span>
+                    {t.money.paid} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
+                  </span>
+                  <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
+                    <Money amount={person.net} signed />
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </section>
 
-        <section className="card card--cell" style={{ padding: 12 }}>
-          <div className="row row--between">
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
             <span className="label">{t.player.stats}</span>
             <ShareCardButton what={{ kind: 'player', playerId: p.id }} className="btn btn--ghost btn--sm" />
           </div>
@@ -210,6 +179,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           </div>
         </section>
       </div>
+      <ExplanationSheet why={why?.why ?? null} open={!!why} onClose={() => setWhy(null)} title={why?.title} />
     </Sheet>
   )
 }
@@ -217,10 +187,8 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
 function Stat({ label, v }: { label: string; v: number }) {
   return (
     <div className={styles.stat}>
-      <span className="num" style={{ fontSize: '1.3rem' }}>
-        {v}
-      </span>
-      <span className="help">{label}</span>
+      <span className={styles.statValue}>{v}</span>
+      <span className={styles.statLabel}>{label}</span>
     </div>
   )
 }

@@ -2,30 +2,38 @@ import { useState, type ReactNode } from 'react'
 import type { Explanation } from '../engine/types'
 import { t } from '../i18n/es-MX'
 import { Sheet } from './ui'
+import styles from './HowCalculated.module.css'
 
-/** "¿Cómo se calculó?" — tap to open the explanation steps (§2, §6). */
+/** The explanation steps, in a sheet. Controlled, for callers that own the trigger. */
+export function ExplanationSheet({ why, open, onClose, title }: { why: Explanation | Explanation[] | null; open: boolean; onClose: () => void; title?: string }) {
+  const list = why ? (Array.isArray(why) ? why : [why]) : []
+  return (
+    <Sheet open={open} onClose={onClose} title={title ?? t.money.howCalculated}>
+      <div className={styles.list}>
+        {list.map((w, i) => (
+          <section key={i} className={styles.block}>
+            <strong>{w.title}</strong>
+            <ol className={styles.steps}>
+              {w.steps.map((s, j) => (
+                <li key={j}>{s}</li>
+              ))}
+            </ol>
+          </section>
+        ))}
+      </div>
+    </Sheet>
+  )
+}
+
+/** "¿Cómo se calculó?": a quiet trigger that opens the explanation steps (§2, §6). */
 export function HowCalculated({ why, children, label }: { why: Explanation | Explanation[]; children?: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false)
-  const list = Array.isArray(why) ? why : [why]
   return (
     <>
-      <button type="button" className="btn btn--ghost btn--sm" style={{ padding: '0 6px', minHeight: 32 }} onClick={() => setOpen(true)}>
+      <button type="button" className={`btn btn--ghost btn--sm ${styles.trigger}`} onClick={() => setOpen(true)}>
         {children ?? (label ?? t.money.howCalculated)}
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={t.money.howCalculated}>
-        <div className="stack">
-          {list.map((w, i) => (
-            <div key={i} className="card card--cell" style={{ padding: 12 }}>
-              <strong>{w.title}</strong>
-              <ol className="small" style={{ marginTop: 6 }}>
-                {w.steps.map((s, j) => (
-                  <li key={j}>{s}</li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
-      </Sheet>
+      <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} />
     </>
   )
 }
