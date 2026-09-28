@@ -192,8 +192,9 @@ export interface GridHole {
   gross: number | null
   pickedUp?: boolean
   pts?: number
+  putts?: number | null
 }
-export function ScorecardGrid({ holes, playerLabel, showPoints }: { holes: GridHole[]; playerLabel: string; showPoints?: boolean }) {
+export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHole }: { holes: GridHole[]; playerLabel: string; showPoints?: boolean; showPutts?: boolean; onHole?: (n: number) => void }) {
   const front = holes.filter((h) => h.n <= 9)
   const back = holes.filter((h) => h.n > 9)
   const sum = (hs: GridHole[], f: (h: GridHole) => number | null | undefined) => hs.reduce((a, h) => a + (f(h) ?? 0), 0)
@@ -241,13 +242,25 @@ export function ScorecardGrid({ holes, playerLabel, showPoints }: { holes: GridH
           <tr>
             <td>{playerLabel}</td>
             {front.map((h) => (
-              <td key={h.n}>{h.gross != null || h.pickedUp ? <ScoreMark value={h.pickedUp ? '–' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /> : ''}</td>
+              <td key={h.n}>{h.gross != null || h.pickedUp ? (onHole ? <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${h.n}`}><ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /></button> : <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />) : ''}</td>
             ))}
             <td className={`${s.gridTotal} ${s.fig}`}>{played(front) ? sum(front, (h) => h.gross) : ''}</td>
-            {back.length > 0 && back.map((h) => <td key={h.n}>{h.gross != null || h.pickedUp ? <ScoreMark value={h.pickedUp ? '–' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /> : ''}</td>)}
+            {back.length > 0 && back.map((h) => <td key={h.n}>{h.gross != null || h.pickedUp ? (onHole ? <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${h.n}`}><ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /></button> : <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />) : ''}</td>)}
             {back.length > 0 && <td className={`${s.gridTotal} ${s.fig}`}>{played(back) ? sum(back, (h) => h.gross) : ''}</td>}
             {back.length > 0 && <td className={`${s.gridTotal} ${s.fig}`}>{played(holes) ? sum(holes, (h) => h.gross) : ''}</td>}
           </tr>
+          {showPutts && (
+            <tr className={s.gridMeta}>
+              <td>Putts</td>
+              {front.map((h) => (
+                <td key={h.n}>{h.putts ?? ''}</td>
+              ))}
+              <td className={s.gridTotal}>{sum(front, (h) => h.putts)}</td>
+              {back.length > 0 && back.map((h) => <td key={h.n}>{h.putts ?? ''}</td>)}
+              {back.length > 0 && <td className={s.gridTotal}>{sum(back, (h) => h.putts)}</td>}
+              {back.length > 0 && <td className={s.gridTotal}>{sum(holes, (h) => h.putts)}</td>}
+            </tr>
+          )}
           {showPoints && (
             <tr className={s.gridMeta}>
               <td>Pts</td>

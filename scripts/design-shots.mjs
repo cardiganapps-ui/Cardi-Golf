@@ -94,7 +94,7 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     await at()
     await shot(p, `${f}--live`)
     // Player sheet from the first leaderboard row.
-    const row = p.locator('[class*="LiveScreen"] button[class*="row"]').first()
+    const row = p.locator('button[class*="leaderRow"]').first()
     if (await row.count()) {
       await row.click()
       await p.waitForTimeout(400)
@@ -108,6 +108,10 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
       await shot(p, `${f}--tarjeta--grid`)
     }
     await at('/juegos')
+    await shot(p, `${f}--juegos`)
+    // The overview lists one row per game; the tabs appear inside a game.
+    const firstGame = p.locator('button[class*="gameRow"]').first()
+    if (await firstGame.count()) await firstGame.click()
     const tabs = p.locator('[role=tablist] [role=tab]')
     const n = await tabs.count()
     for (let i = 0; i < n; i++) {

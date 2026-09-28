@@ -1,44 +1,97 @@
-.group {
-  padding: 12px;
+.board {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--s5);
+}
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0;
+  border-top: var(--hairline);
+}
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.state {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.statePending {
+  color: var(--caution);
 }
 .players {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s2);
 }
 .player {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  background: var(--cell);
-  border: 2px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 8px 4px;
+  gap: var(--s1);
+  padding: var(--s2) var(--s1);
+  border: var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
   cursor: pointer;
   min-height: 92px;
 }
+.player:active {
+  background: var(--surface);
+}
 .holder {
-  border-color: var(--coral);
-  background: rgba(176, 67, 39, 0.08);
+  border-color: var(--event-accent);
 }
 .avatarWrap {
   position: relative;
 }
 .snake {
   position: absolute;
-  right: -10px;
-  bottom: -8px;
-  font-size: 1.3rem;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  right: -8px;
+  bottom: -6px;
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--r-round);
+  background: var(--event-accent);
+  color: var(--event-accent-ink);
+}
+.playerName {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payout {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.payoutZero {
+  color: var(--ink-3);
 }
 .history {
-  font-size: 0.85rem;
-  color: var(--muted);
+  margin: 0;
+  padding-left: var(--s5);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  line-height: var(--lh-ui);
+}
+.pending {
+  color: var(--caution);
 }

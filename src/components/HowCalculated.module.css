@@ -1,0 +1,22 @@
+.trigger {
+  min-height: 36px;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+}
+.steps {
+  margin: 0;
+  padding-left: var(--s5);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+  font-variant-numeric: tabular-nums;
+}
