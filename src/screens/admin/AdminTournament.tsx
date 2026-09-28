@@ -10,6 +10,7 @@ import { CopyButton, Field, ShareButton, toast } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteTournament, rotateJoinCode, updateTournament, uploadAsset } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
+import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { downscaleImage } from '../../lib/images'
@@ -97,12 +98,12 @@ export function AdminTournament() {
     }
   }
 
-  /** The immediate mutations: one busy flag, a toast on success. */
-  async function quickUpdate(fields: Record<string, unknown>, apply: () => void) {
+  /** The immediate mutations: one busy flag, a toast on success; `recipe` applies the change to the local snapshot. */
+  async function quickUpdate(fields: Record<string, unknown>, recipe: (s: Snapshot) => void) {
     setQuick(true)
     try {
       await updateTournament(tournamentId, fields)
-      patch(() => apply())
+      patch(recipe)
       toast(t.common.saved)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
@@ -110,8 +111,8 @@ export function AdminTournament() {
       setQuick(false)
     }
   }
-  const setStatus = (status: (typeof STATUSES)[number]) => quickUpdate({ status }, () => patch((s) => (s.tournament.status = status)))
-  const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, () => patch((s) => (s.tournament.bankerPlayerId = id || null)))
+  const setStatus = (status: (typeof STATUSES)[number]) => quickUpdate({ status }, (s) => (s.tournament.status = status))
+  const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, (s) => (s.tournament.bankerPlayerId = id || null))
   async function newCode() {
     setQuick(true)
     try {

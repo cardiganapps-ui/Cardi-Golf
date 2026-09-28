@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { Field } from '../../components/ui'
-import { requestPasswordReset, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth } from '../../data/auth'
+import { Input } from '../../components/primitives'
+import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import styles from './OrganizerAuth.module.css'
 
 /** Organizer sign-in. One primary path (email + password); the alternatives are quiet. */
@@ -17,6 +18,9 @@ export function OrganizerLoginScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  /** Waiting for the emailed code: after sign-up (`signup`) or a magic-link request (`email`). */
+  const [awaiting, setAwaiting] = useState<'signup' | 'email' | null>(null)
+  const [code, setCode] = useState('')
 
   const signedIn = !!user && !isAnonymous
   useEffect(() => {
@@ -45,7 +49,7 @@ export function OrganizerLoginScreen() {
         navigate('/organizer', { replace: true })
       } else {
         const r = await signUpWithPassword(email.trim(), password, name.trim())
-        if (r.needsConfirmation) setInfo(t.auth.needsConfirmation)
+        if (r.needsConfirmation) setAwaiting('signup')
         else navigate('/organizer', { replace: true })
       }
     })
@@ -64,57 +68,131 @@ export function OrganizerLoginScreen() {
         {user && isAnonymous && <p className="help">{t.auth.anonymousWarning}</p>}
       </header>
 
-      <form className={styles.form} onSubmit={submit}>
-        {mode === 'up' && (
-          <Field label={t.auth.displayName}>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
-          </Field>
-        )}
-        <Field label={t.auth.email}>
-          <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" required />
-        </Field>
-        <Field label={t.auth.password} hint={mode === 'up' ? t.auth.passwordHint : undefined}>
-          <input
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === 'up' ? 'new-password' : 'current-password'}
-            minLength={8}
-            required
-          />
-        </Field>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {info && (
+      {awaiting ? (
+        <form
+          className={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault()
+            void run(async () => {
+              try {
+                await verifyEmailCode(email.trim(), code, awaiting)
+              } catch {
+                throw new Error(t.auth.badCode)
+              }
+              navigate('/organizer', { replace: true })
+            })
+          }}
+        >
           <p className={styles.notice} role="status">
-            {info}
+            {info ?? (awaiting === 'signup' ? t.auth.needsConfirmation : t.auth.magicSent)}
           </p>
-        )}
-        <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
-          {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
-        </button>
-        {mode === 'in' && (
+          <Field label={t.auth.code} hint={t.auth.codeHint}>
+            <Input code value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" autoComplete="one-time-code" autoFocus required />
+          </Field>
+          <p className="help">{t.auth.codeSentTo(email.trim())}</p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="btn btn--primary btn--block" type="submit" disabled={busy || code.length < 6}>
+            {busy ? t.auth.confirming : t.auth.confirmCode}
+          </button>
           <div className={styles.quiet}>
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => void run(async () => { await signInWithMagicLink(email.trim()); setInfo(t.auth.magicSent) })} disabled={busy || !hasEmail}>
-              {t.auth.magicLink}
+            <button
+              className="btn btn--ghost btn--sm"
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  await resendEmailCode(email.trim(), awaiting)
+                  setInfo(t.auth.resent)
+                })
+              }
+            >
+              {t.auth.resend}
             </button>
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => void run(async () => { await requestPasswordReset(email.trim()); setInfo(t.auth.resetSent) })} disabled={busy || !hasEmail}>
-              {t.auth.forgot}
+            <button
+              className="btn btn--ghost btn--sm"
+              type="button"
+              onClick={() => {
+                setAwaiting(null)
+                setCode('')
+                setError(null)
+                setInfo(null)
+              }}
+            >
+              {t.auth.otherEmail}
             </button>
           </div>
-        )}
-      </form>
+        </form>
+      ) : (
+        <form className={styles.form} onSubmit={submit}>
+          {mode === 'up' && (
+            <Field label={t.auth.displayName}>
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
+            </Field>
+          )}
+          <Field label={t.auth.email}>
+            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" required />
+          </Field>
+          <Field label={t.auth.password} hint={mode === 'up' ? t.auth.passwordHint : undefined}>
+            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} minLength={8} required />
+          </Field>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          {info && (
+            <p className={styles.notice} role="status">
+              {info}
+            </p>
+          )}
+          <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
+            {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
+          </button>
+          {mode === 'in' && (
+            <div className={styles.quiet}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                onClick={() =>
+                  void run(async () => {
+                    await signInWithMagicLink(email.trim())
+                    setAwaiting('email')
+                  })
+                }
+                disabled={busy || !hasEmail}
+              >
+                {t.auth.magicLink}
+              </button>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                onClick={() =>
+                  void run(async () => {
+                    await requestPasswordReset(email.trim())
+                    setInfo(t.auth.resetSent)
+                  })
+                }
+                disabled={busy || !hasEmail}
+              >
+                {t.auth.forgot}
+              </button>
+            </div>
+          )}
+        </form>
+      )}
 
-      <div className={styles.switch}>
-        <span>{mode === 'in' ? t.auth.firstTime : t.auth.haveAccount}</span>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
-          {mode === 'in' ? t.auth.toggleToSignUp : t.auth.toggleToSignIn}
-        </button>
-      </div>
+      {!awaiting && (
+        <div className={styles.switch}>
+          <span>{mode === 'in' ? t.auth.firstTime : t.auth.haveAccount}</span>
+          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
+            {mode === 'in' ? t.auth.toggleToSignUp : t.auth.toggleToSignIn}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
