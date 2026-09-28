@@ -7,9 +7,12 @@ import type {
   CalcuttaLot,
   CardSignature,
   Course,
+  GameEntry,
+  GameResult,
   Group,
   HandicapOverride,
   Hole,
+  HoleAward,
   Pair,
   Payment,
   Player,
@@ -176,6 +179,18 @@ export const mapBuyback = (r: Row): CalcuttaBuyback => ({
   amount: r.amount,
   paid: !!r.paid,
 })
+
+export const mapGameEntry = (r: Row): GameEntry => ({ gameId: r.game_id, playerId: r.player_id })
+
+export const mapHoleAward = (r: Row): HoleAward => ({
+  roundId: r.round_id,
+  groupId: r.group_id ?? null,
+  hole: r.hole,
+  gameId: r.game_id,
+  playerId: r.player_id,
+})
+
+export const mapGameResult = (r: Row): GameResult => ({ gameId: r.game_id, playerId: r.player_id, share: Number(r.share) })
 
 export const mapPayment = (r: Row): Payment => ({
   id: r.id,

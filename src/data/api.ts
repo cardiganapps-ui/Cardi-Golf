@@ -2,7 +2,7 @@
  * Typed writes. Every function throws on error so screens can show the message.
  */
 import type { TournamentSettings } from '../engine/settings/schema'
-import type { EstimateInput, Hole } from '../engine/types'
+import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { mapTournament, type Row } from './mappers'
 
@@ -470,7 +470,7 @@ export interface PaymentInput {
   from_player_id: string | null
   to_player_id: string | null
   amount: number
-  kind: 'entry' | 'calcutta' | 'buyback' | 'payout' | 'other'
+  kind: PaymentKind
   paid: boolean
   note?: string | null
 }

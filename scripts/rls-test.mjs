@@ -245,11 +245,41 @@ try {
   const { error: payDev } = await dev.rpc('set_payment_paid', { p_tournament_id: A.tournament.id, p_kind: 'entry', p_from: A.player.id, p_to: null, p_amount: 500, p_paid: true })
   check(!!payDev, 'a player cannot mark payments')
 
+  console.log('instance games: entrants, hole awards, results, new payment kinds:')
+  const { error: entryOk } = await A.sb.from('game_entries').insert({ tournament_id: A.tournament.id, game_id: 'skins-1', player_id: A.player.id })
+  check(!entryOk, 'the Comité adds a player to a side pot')
+  const { error: entryForeign } = await A.sb.from('game_entries').insert({ tournament_id: A.tournament.id, game_id: 'skins-1', player_id: B.player.id })
+  check(!!entryForeign, 'a player of another tournament cannot enter a side pot')
+  const { error: entryCross } = await A.sb.from('game_entries').insert({ tournament_id: B.tournament.id, game_id: 'skins-1', player_id: B.player.id })
+  check(!!entryCross, 'organizer A cannot write entrants of tournament B')
+  await B.sb.from('game_entries').insert({ tournament_id: B.tournament.id, game_id: 'skins-1', player_id: B.player.id })
+  const { error: entryDev } = await dev.from('game_entries').insert({ tournament_id: A.tournament.id, game_id: 'skins-1', player_id: p2 })
+  check(!!entryDev, 'a player cannot enter people into a pot')
+  const { data: devEntries } = await dev.from('game_entries').select('tournament_id')
+  check(devEntries.length === 1 && devEntries[0].tournament_id === A.tournament.id, 'a device reads only its own tournament\'s entrants')
+  const { error: resultDev } = await dev.from('game_results').insert({ tournament_id: A.tournament.id, game_id: 'bet-1', player_id: A.player.id, share: 1 })
+  const { error: resultOk } = await A.sb.from('game_results').insert({ tournament_id: A.tournament.id, game_id: 'bet-1', player_id: p2, share: 1 })
+  check(!!resultDev && !resultOk, 'custom-bet results: the Comité writes them, a player cannot')
+  const { error: awardOk } = await dev.from('hole_awards').insert({ round_id: r1.id, group_id: gid1, hole: 3, game_id: 'ctp', player_id: p2, decided_by: A.player.id })
+  check(!awardOk, 'a player records who won a contest in his group')
+  const { error: awardForged } = await dev.from('hole_awards').insert({ round_id: r1.id, group_id: gid1, hole: 4, game_id: 'ctp', player_id: p2, decided_by: p2 })
+  check(!!awardForged, 'decided_by must be the device\'s own player')
+  const { error: awardStranger } = await dev.from('hole_awards').insert({ round_id: r1.id, group_id: gid1, hole: 5, game_id: 'ctp', player_id: B.player.id, decided_by: A.player.id })
+  check(!!awardStranger, 'the winner must be in the group')
+  const { data: bAwards } = await B.sb.from('hole_awards').select('hole').eq('round_id', r1.id)
+  check((bAwards ?? []).length === 0, 'organizer B reads no hole awards of tournament A')
+  const { error: paySide } = await A.sb.rpc('set_payment_paid', { p_tournament_id: A.tournament.id, p_kind: 'side', p_from: A.player.id, p_to: null, p_amount: 200, p_paid: true })
+  const { error: payBet } = await A.sb.rpc('set_payment_paid', { p_tournament_id: A.tournament.id, p_kind: 'bet', p_from: A.player.id, p_to: p2, p_amount: 50, p_paid: true })
+  check(!paySide && !payBet, 'side-pot buy-ins and direct bets can be marked paid')
+
   console.log('restore:')
   const fullTables = {}
   for (const t of ['tournaments', 'players', 'rounds', 'pairs', 'calcutta_lots', 'payments']) fullTables[t] = (await A.sb.from(t).select('*').eq(t === 'tournaments' ? 'id' : 'tournament_id', A.tournament.id)).data
   for (const t of ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides']) fullTables[t] = (await A.sb.from(t).select('*').eq('round_id', r1.id)).data
   fullTables.group_members = (await A.sb.from('group_members').select('*').in('group_id', fullTables.groups.map((g) => g.id))).data
+  fullTables.game_entries = (await A.sb.from('game_entries').select('*').eq('tournament_id', A.tournament.id)).data
+  fullTables.game_results = (await A.sb.from('game_results').select('*').eq('tournament_id', A.tournament.id)).data
+  fullTables.hole_awards = (await A.sb.from('hole_awards').select('*').eq('round_id', r1.id)).data
   fullTables.calcutta_bids = []
   fullTables.calcutta_buybacks = []
   const backup = { version: 1, exportedAt: new Date().toISOString(), tournamentId: A.tournament.id, slug: A.tournament.slug, tables: fullTables }
@@ -265,6 +295,10 @@ try {
   const { data: pAfter } = await A.sb.from('players').select('id').eq('tournament_id', A.tournament.id)
   const { data: devStill } = await dev.from('device_sessions').select('player_id')
   check(!restoreOk && counts?.scores === fullTables.scores.length && afterRestore.length === fullTables.scores.length && pAfter.length === 4 && devStill.length === 1, 'a good backup restores exactly, keeping player ids and device links', { restoreOk, counts, after: afterRestore.length, expected: fullTables.scores.length, players: pAfter.length, dev: devStill.length })
+  const { data: geAfter } = await A.sb.from('game_entries').select('player_id').eq('tournament_id', A.tournament.id)
+  const { data: haAfter } = await A.sb.from('hole_awards').select('hole').eq('round_id', r1.id)
+  const { data: grAfter } = await A.sb.from('game_results').select('player_id').eq('tournament_id', A.tournament.id)
+  check(geAfter.length === 1 && haAfter.length === 1 && grAfter.length === 1, 'restore brings back entrants, hole awards and results')
   const { error: devRestore } = await dev.rpc('restore_tournament', { p_tournament_id: A.tournament.id, p_backup: backup })
   check(!!devRestore, 'a player cannot restore')
 

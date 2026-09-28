@@ -309,6 +309,7 @@ export const auctionModule: GameModule<AuctionState> = {
       for (const line of p.lines) {
         out.push({
           moduleId: 'auction',
+          potId: 'calcutta',
           label: `${label}, ${line.slotLabel}`,
           playerId: p.ownerId,
           amount: line.amount,

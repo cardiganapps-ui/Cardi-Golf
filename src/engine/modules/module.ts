@@ -6,6 +6,7 @@
  * money).
  */
 import type { ModuleId, TournamentSettings } from '../settings/schema'
+import type { GameType } from '../settings/games'
 import type { Explanation, Id, Snapshot } from '../types'
 import type { CoreState } from '../core/types'
 
@@ -22,7 +23,16 @@ export interface ModuleContext {
 
 /** A single prize a module awards (live "si terminara ahora" or final). */
 export interface PrizeAward {
-  moduleId: ModuleId
+  moduleId: ModuleId | GameType
+  /**
+   * Which pot pays it: `main` (the entries), `calcutta`, or a game id for a
+   * side pot. Omitted = `main`.
+   */
+  potId?: string
+  /** Set for a direct bet: this player pays the winner (no bank involved). */
+  payerId?: Id
+  /** The instance game that awarded it (`settings.games[].id`). */
+  gameId?: string
   /** Copy for the money screens, e.g. "Individual · 1º" or "La Víbora · Día 1 · Grupo 2". */
   label: string
   playerId: Id

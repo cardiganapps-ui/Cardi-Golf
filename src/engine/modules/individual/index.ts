@@ -5,6 +5,7 @@
 import { countback, flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { fieldShape, individualPrizeAmounts } from '../../settings/prizeCheck'
 
 export interface IndividualRow {
   playerId: Id
@@ -96,7 +97,7 @@ export const individualModule: GameModule<IndividualState> = {
     })
     // No money until a hole has been played: an all-tied field on Calcutta night is not a 12-way split.
     const anyScores = Object.values(ctx.core.totals).some((t) => t.thru > 0)
-    const prizeShares = anyScores || ctx.tournamentFinal ? splitPrizes(groups, ctx.settings.prizes.stableford, nameOf) : []
+    const prizeShares = anyScores || ctx.tournamentFinal ? splitPrizes(groups, individualPrizeAmounts(ctx.settings, fieldShape(ctx.snapshot, ctx.settings)), nameOf) : []
     const prizes: IndividualState['prizes'] = {}
     for (const s of prizeShares) prizes[s.item] = { amount: s.amount, why: s.why }
     return {

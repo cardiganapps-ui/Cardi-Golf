@@ -1,12 +1,14 @@
 /**
- * Money (§11): entries and Calcutta purchases go to the banker; buybacks are
- * peer to peer; the banker pays prizes and Calcutta shares. Everything is a
- * `Flow`; `payments` rows only mark what has actually been paid.
+ * Money (§11): entries, side-pot buy-ins and Calcutta purchases go to the
+ * banker; buybacks and direct bets are peer to peer; the banker pays prizes,
+ * side-pot prizes and Calcutta shares. Everything is a `Flow`; `payments`
+ * rows only mark what has actually been paid.
  */
 import type { TournamentSettings } from '../settings/schema'
 import type { Id, Payment, PaymentKind, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
+import type { GameResultState } from '../games/game'
 
 /** null = the banker. */
 export interface Flow {
@@ -17,6 +19,8 @@ export interface Flow {
   label: string
   paid: boolean
   final: boolean
+  /** The pot a payout comes from or a buy-in goes to: `main`, `calcutta` or a game id. */
+  potId?: string
 }
 
 export interface PersonMoney {
@@ -26,9 +30,15 @@ export interface PersonMoney {
   prizesTotal: number
   calcuttaShares: number
   buybacksReceived: number
+  /** Direct bets won (net per opponent). */
+  betsReceived: number
   entry: number
+  /** Buy-ins to side pots. */
+  sidePots: number
   calcuttaPurchases: number
   buybacksPaid: number
+  /** Direct bets lost (net per opponent). */
+  betsPaid: number
   paid: number
   receives: number
   net: number
@@ -45,11 +55,13 @@ export interface MoneyState {
   people: Record<Id, PersonMoney>
   banker: {
     playerId: Id | null
-    /** Entries + hammer prices. */
+    /** Entries + side-pot buy-ins + hammer prices. */
     receives: number
-    /** Prizes + Calcutta payouts. */
+    /** Prizes + side-pot prizes + Calcutta payouts. */
     pays: number
-    /** receives − pays; 0 when everything balances. */
+    /** Kept out of the main pot for the house (`settings.houseCut`). */
+    houseCut: number
+    /** receives − pays − houseCut; 0 when everything balances. */
     difference: number
     balanced: boolean
   }
@@ -74,6 +86,7 @@ export function computeMoney(
   prizes: PrizeAward[],
   auction: AuctionState | undefined,
   tournamentFinal: boolean,
+  games: Record<string, GameResultState> = {},
 ): MoneyState {
   const flows: Flow[] = []
   const payments = snapshot.payments
@@ -91,6 +104,14 @@ export function computeMoney(
         paid: isPaid(payments, 'entry', p.id, null, settings.entryFee),
         final: true,
       })
+    }
+  }
+
+  // Side pots: each entrant pays the game's buy-in.
+  for (const g of Object.values(games)) {
+    if (g.config.money.source !== 'side' || g.config.money.buyIn <= 0) continue
+    for (const id of g.entrants) {
+      flows.push({ from: id, to: null, amount: g.config.money.buyIn, kind: 'side', label: g.config.label, paid: false, final: true, potId: g.config.id })
     }
   }
 
@@ -127,13 +148,14 @@ export function computeMoney(
   for (const pr of prizes) {
     if (pr.amount <= 0) continue
     flows.push({
-      from: null,
+      from: pr.payerId ?? null,
       to: pr.playerId,
       amount: pr.amount,
-      kind: 'payout',
+      kind: pr.payerId ? 'bet' : 'payout',
       label: pr.label,
       paid: false,
       final: pr.final,
+      potId: pr.payerId ? pr.gameId : (pr.potId ?? 'main'),
     })
   }
   // Entries, Calcutta purchases and buybacks: one payment row per person and
@@ -168,9 +190,12 @@ export function computeMoney(
       prizesTotal: 0,
       calcuttaShares: 0,
       buybacksReceived: 0,
+      betsReceived: 0,
       entry: 0,
+      sidePots: 0,
       calcuttaPurchases: 0,
       buybacksPaid: 0,
+      betsPaid: 0,
       paid: 0,
       receives: 0,
       net: 0,
@@ -182,14 +207,17 @@ export function computeMoney(
       if (f.kind === 'entry') m.entry += f.amount
       else if (f.kind === 'calcutta') m.calcuttaPurchases += f.amount
       else if (f.kind === 'buyback') m.buybacksPaid += f.amount
+      else if (f.kind === 'side') m.sidePots += f.amount
+      else if (f.kind === 'bet') m.betsPaid += f.amount
       m.paid += f.amount
     }
     if (f.to && people[f.to]) {
       const m = people[f.to]!
       if (f.kind === 'buyback') m.buybacksReceived += f.amount
+      else if (f.kind === 'bet') m.betsReceived += f.amount
       else if (f.kind === 'payout') {
         m.prizes[f.label] = (m.prizes[f.label] ?? 0) + f.amount
-        if (f.label.startsWith(settings.modules.auction.label)) m.calcuttaShares += f.amount
+        if (f.potId === 'calcutta') m.calcuttaShares += f.amount
         else m.prizesTotal += f.amount
       }
       m.receives += f.amount
@@ -205,9 +233,11 @@ export function computeMoney(
   const bankerReceives = flows.filter((f) => f.to === null).reduce((s, f) => s + f.amount, 0)
   const bankerPays = flows.filter((f) => f.from === null).reduce((s, f) => s + f.amount, 0)
   const bankerId = snapshot.tournament.bankerPlayerId
-  const difference = bankerReceives - bankerPays
-  // The banker is a person too: the bank's surplus/deficit lands on him in the net sum.
-  netSum += difference
+  const houseCut = settings.entryFee > 0 && players.length > 0 ? settings.houseCut : 0
+  const difference = bankerReceives - bankerPays - houseCut
+  // The banker is a person too: the bank's surplus/deficit lands on him in the
+  // net sum; the house cut is money spent on the group, so it closes the sum.
+  netSum += difference + houseCut
   const balanced = difference === 0
 
   // Settlement "vía banco": each person's balance against the bank.
@@ -215,17 +245,29 @@ export function computeMoney(
   for (const p of players) {
     const m = people[p.id]!
     const fromBank = m.prizesTotal + m.calcuttaShares
-    const toBank = m.entry + m.calcuttaPurchases
+    const toBank = m.entry + m.sidePots + m.calcuttaPurchases
     const bal = fromBank - toBank
     if (bal > 0) viaBank.push({ from: null, to: p.id, amount: bal })
     else if (bal < 0) viaBank.push({ from: p.id, to: null, amount: -bal })
   }
   for (const f of flows) if (f.kind === 'buyback') viaBank.push({ from: f.from, to: f.to, amount: f.amount })
+  // Direct bets settle between the two players, netted across every game.
+  const betNet = new Map<string, number>()
+  for (const f of flows) {
+    if (f.kind !== 'bet' || !f.from || !f.to) continue
+    const [a, b] = [f.from, f.to].sort() as [Id, Id]
+    betNet.set(`${a}|${b}`, (betNet.get(`${a}|${b}`) ?? 0) + (f.from === a ? f.amount : -f.amount))
+  }
+  for (const [k, v] of betNet) {
+    const [a, b] = k.split('|') as [Id, Id]
+    if (v > 0) viaBank.push({ from: a, to: b, amount: v })
+    else if (v < 0) viaBank.push({ from: b, to: a, amount: -v })
+  }
 
   return {
     flows,
     people,
-    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, difference, balanced },
+    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, difference, balanced },
     netSum: Math.round(netSum),
     viaBank,
     peerToPeer: tournamentFinal || balanced ? minimizeTransfers(people) : [],
