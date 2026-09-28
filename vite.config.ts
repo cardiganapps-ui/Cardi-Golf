@@ -4,16 +4,32 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+
+// Icons are fetched once and cached hard (iOS keeps a site's touch icon even
+// after the file changes). Every icon URL carries a fingerprint of its bytes,
+// so a new icon is a new URL and every device fetches it.
+function versioned(path: string): string {
+  const bytes = readFileSync(new URL(`./public${path}`, import.meta.url))
+  return `${path}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 10)}`
+}
+const ICON_LINKS = ['/favicon.svg', '/apple-touch-icon.png']
 
 // https://vite.dev/config/
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
+    {
+      name: 'versioned-icons',
+      transformIndexHtml: (html) =>
+        ICON_LINKS.reduce((out, path) => out.replaceAll(`href="${path}"`, `href="${versioned(path)}"`), html),
+    },
     VitePWA({
-      registerType: 'autoUpdate',
+      // A new deploy is offered, never forced: a reload mid-hole would lose the steppers.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         id: '/',
@@ -30,10 +46,10 @@ export default defineConfig({
         background_color: '#FBFAF7',
         theme_color: '#1E6B3B',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: versioned('/icons/icon-192.png'), sizes: '192x192', type: 'image/png' },
+          { src: versioned('/icons/icon-512.png'), sizes: '512x512', type: 'image/png' },
           {
-            src: '/icons/icon-maskable-512.png',
+            src: versioned('/icons/icon-maskable-512.png'),
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -47,7 +63,17 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
+        // Icon URLs carry ?v=<fingerprint>; offline, they still resolve to the precached file.
+        ignoreURLParametersMatching: [/^v$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Logos and avatars from Storage stay available offline (§8).
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'tournament-assets', expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
       },
       devOptions: { enabled: false },
     }),

@@ -23,6 +23,8 @@ export function TournamentShell() {
   const { slug, lookup } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const realtime = useTournament((s) => s.realtime)
+  const updatedAt = useTournament((s) => s.updatedAt)
+  const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const accent = data?.snapshot.tournament.accentColor ?? lookup.accentColor ?? undefined
   const logo = data?.snapshot.tournament.logoUrl ?? lookup.logoUrl
 
@@ -32,7 +34,8 @@ export function TournamentShell() {
         {logo && <img className={styles.logo} src={logo} alt="" />}
         <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
         {realtime === 'live' && <LiveStatus text={t.sync.live} />}
-        {realtime === 'error' && <LiveStatus text={t.sync.offlineShort} live={false} />}
+        {realtime === 'error' && <LiveStatus text={t.sync.noLive} live={false} />}
+        {realtime === 'off' && !isFixture && data && <LiveStatus text={t.sync.fromCache(new Date(updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }))} live={false} />}
       </header>
       <div className={styles.body}>
         <Outlet />

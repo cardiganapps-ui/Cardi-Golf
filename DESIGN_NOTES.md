@@ -101,6 +101,8 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
   - `npm run icons` (`scripts/make-icons.mjs`, sharp) composites the icon layer on `--bg` for the PWA icons, and writes the two lockup layers at 3x as `public/brand/polo-mark.png` and `polo-mark-board.png` (35 and 49 KB, precached).
   - `LogoMark` and `Wordmark` use the copy and the proportions of their tone. The lettering is Archivo at weight 740, width 98% and −0.015em tracking, the best of about 750 renders scored against the sheet's wordmark (95.3% overlap). Rendered at the sheet's scale, both lockups sit on the sheet's own to within a pixel. Home shows the lockup one step larger (`lg`) so it reads as it does on the sheet.
 
+- **Icon caching.** iOS kept showing the old flag icon after the logo shipped, because Safari caches a site's touch icon by URL and does not refetch it when the file changes. `vite.config.ts` now adds a fingerprint of each icon's bytes to its URL (`?v=…`) in `index.html` and in the manifest, so any new icon is a new URL. The service worker ignores `v` when looking up its precache, so the icons still work offline. Nothing to bump by hand: `npm run icons` changes the bytes, the build changes the URLs.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

@@ -112,8 +112,14 @@ export async function myDeviceSession(): Promise<{ playerId: string; tournamentI
   return res.data ? { playerId: res.data.player_id, tournamentId: res.data.tournament_id } : null
 }
 
+/** True when the signed-in account is an organizer of this tournament (its own row only: any member can read the table). */
 export async function isOrganizerOf(tournamentId: string): Promise<boolean> {
-  const res = await supabase().from('tournament_organizers').select('role').eq('tournament_id', tournamentId).maybeSingle()
+  const sb = supabase()
+  const { data: auth } = await sb.auth.getSession()
+  const uid = auth.session?.user.id
+  if (!uid || auth.session?.user.is_anonymous) return false
+  const res = await sb.from('tournament_organizers').select('role').eq('tournament_id', tournamentId).eq('auth_user_id', uid).maybeSingle()
+  if (res.error) throw new Error(res.error.message)
   return !!res.data
 }
 

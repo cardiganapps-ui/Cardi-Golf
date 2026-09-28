@@ -11,6 +11,7 @@ import { parseSettings, type TournamentSettings } from '../engine/settings/schem
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { supabase } from '../lib/supabase'
+import { saveSnapshot } from './snapshotCache'
 import {
   mapBid,
   mapBuyback,
@@ -48,6 +49,8 @@ interface StoreState {
   updatedAt: number
   load(tournamentId: string): Promise<void>
   reload(): Promise<void>
+  /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
+  seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
   subscribe(): void
   unsubscribe(): void
   /** Optimistic local patch: apply a change to the snapshot and recompute immediately. */
@@ -56,6 +59,19 @@ interface StoreState {
 
 let channel: RealtimeChannel | null = null
 let reloadTimer: ReturnType<typeof setTimeout> | null = null
+/** Monotonic id so a slow older fetch never overwrites a newer snapshot. */
+let fetchSeq = 0
+let listenersOn = false
+/** Reload when the device comes back or the tab is shown again: Realtime does not replay what was missed. */
+function ensureListeners() {
+  if (listenersOn || typeof window === 'undefined') return
+  listenersOn = true
+  const kick = () => {
+    if (useTournament.getState().tournamentId && !useTournament.getState().tournamentId!.startsWith('fixture:')) void useTournament.getState().reload()
+  }
+  window.addEventListener('online', kick)
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && kick())
+}
 
 /** Registered by the outbox: overlays pending writes on every fetched snapshot. */
 const overlays: Array<(s: Snapshot) => void> = []
@@ -184,23 +200,35 @@ export const useTournament = create<StoreState>((set, get) => ({
       set({ tournamentId, data: null, error: null })
     }
     set({ loading: true })
+    const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(tournamentId)
+      if (seq !== fetchSeq || get().tournamentId !== tournamentId) return
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null })
+      void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
     } catch (e) {
+      if (seq !== fetchSeq) return
       set({ loading: false, error: e instanceof Error ? e.message : String(e) })
     }
   },
   async reload() {
     const id = get().tournamentId
     if (!id) return
+    const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(id)
+      if (seq !== fetchSeq || get().tournamentId !== id) return
       set({ data: compute(snapshot), updatedAt: Date.now(), error: null })
+      void saveSnapshot(id, snapshot)
     } catch (e) {
+      if (seq !== fetchSeq) return
       set({ error: e instanceof Error ? e.message : String(e) })
     }
+  },
+  seed(tournamentId, snapshot, savedAt) {
+    if (get().tournamentId !== tournamentId) get().unsubscribe()
+    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off' })
   },
   subscribe() {
     const id = get().tournamentId
@@ -215,10 +243,16 @@ export const useTournament = create<StoreState>((set, get) => ({
         reloadTimer = setTimeout(() => void get().reload(), 150)
       })
     }
+    let wasLive = false
     ch.subscribe((status) => {
-      set({ realtime: status === 'SUBSCRIBED' ? 'live' : status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' ? 'error' : 'connecting' })
+      const live = status === 'SUBSCRIBED'
+      set({ realtime: live ? 'live' : status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' ? 'error' : 'connecting' })
+      // Back after a gap: fetch what Realtime did not replay.
+      if (live && !wasLive && get().data) void get().reload()
+      wasLive = live
     })
     channel = ch
+    ensureListeners()
   },
   unsubscribe() {
     if (channel) {
