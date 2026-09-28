@@ -47,6 +47,16 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
 - The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
 
+## Phase 3, PR 4: Juegos and Jugador (2026-09-28)
+
+- Juegos opens on one ruled row per enabled game: the label, who leads and with what figure, and what is at stake on the right (first prize, per day, per group, or the Calcutta pot). Tapping a row opens that game; the game tabs scroll and never wrap.
+- Every standings table (individual, pairs, best round per day, fewest putts) is the same `Board` / `LeaderRow` as En vivo, with money on the sub line. Countback explanations sit under the individual board as "Desempate" triggers.
+- The Calcutta is a statement: the pot as one large figure, the five slots as ruled rows with the amount as the "how" trigger, and owners with value, invested and return on one line each.
+- La Víbora: per day and group, a ruled block with the state on the right (in play with the pot, pending in the caution color, settled), four compact player cells with the holder marked by the snake in the event accent (a 250 ms tween, no spring), passes as a numbered list.
+- Jugador: name, tier and "1º, 60 pts, por el 29" on one line; the handicap as one sentence with its explanation; each round on `ScorecardGrid` (notation on gross, putts and points rows, Ida/Vuelta/Total) where tapping a hole opens that hole's breakdown; pair, owners, money and stats as ruled sections.
+- `ScorecardGrid` gained `putts`, `showPutts` and `onHole`; `HowCalculated` lost its inline styles and exports a controlled `ExplanationSheet`.
+- `e2e/smoke.mjs` nudges the first player's strokes down when it can and up otherwise, so repeated runs on the Ensayo stop bottoming out.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
