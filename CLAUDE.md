@@ -423,6 +423,12 @@ The settlement nets to zero across all people (banker included)
 - `game_results`: `tournament_id`, `game_id`, `player_id`, `share`. The Comité's result for a custom bet.
 - `payments.kind` also takes `side` (buy-in to a side pot, player → bank) and `bet` (direct bet, player → player).
 
+**Profiles and identity** (2026-09-28, migration 0013)
+- `profiles`: `id` (= auth uid), `handle` (unique, `handle_ok()`: 3–20 of `a-z0-9._`, reserved words out), `display_name`, `full_name`, `avatar_url`, `home_club`, `city`, `bio`, `index_source` (`polo` | `manual`), `manual_index`, `polo_index` + `polo_index_rounds` + `polo_index_at` (computed, 0014), `discoverable`. Only accounts (email or Google, not anonymous) have one: `ensure_my_profile()` creates it with a handle from the name. RLS: owner only; the owner may update the editable columns (column grants), never the computed index.
+- `players.profile_id` + `profile_status` (`pending` | `confirmed`): the link from a tournament player to a profile, one per profile per tournament. Written **only** by the definer RPCs (`link_my_profile`, `unlink_my_profile`, `comite_link_profile`, `comite_unlink_profile`, `redeem_link_token`, `duplicate_tournament` which copies links as `pending`); the trigger `players_guard_link` refuses direct writes from `anon`/`authenticated`, and `restore_tournament` never takes a link from a backup.
+- `profile_link_tokens`: `token_hash`, `created_by`, `player_id`, `expires_at` (15 min), `used_at`. Carries a device's PIN claim across a sign-in to an existing account (`create_link_token` → sign in → `redeem_link_token`). No client access.
+- Other profile RPCs: `profile_card(handle)` (strangers with an account see the card of a discoverable profile; people who share a tournament see bio and full name), `search_profiles(q)` (accounts only), `my_links()`, `tournament_profiles(tid)`.
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.
@@ -432,17 +438,17 @@ The settlement nets to zero across all people (banker included)
 - **Players:** on first open of a tournament link (`/t/<slug>`) or after entering a join code, the app signs in anonymously (enable anonymous sign-ins in Supabase Auth).
 - The player taps his face and enters his 4-digit PIN. A `claim_player(player_id, pin)` RPC (security definer, pgcrypto `crypt`) links the auth user to the player in `device_sessions`.
 - Rate-limit PIN attempts: after 5 failures for a player, lock for 5 minutes.
-- A helper `current_player_id()` powers the RLS policies.
+- **Who am I in a tournament:** `my_player_id(tid)` = the player confirmed-linked to my profile there, else this device's PIN claim (`device_sessions`). It powers every policy and helper (`is_tournament_member`, `is_tournament_organizer`, `shares_group`, scores/signatures/tiebreaks/awards, `admin_save_score`, `audit_row`), so one account plays several live tournaments at once. `current_player_id()` (device claim only) stays for older bundles; don't use it in new code. `my_membership(tid)` returns `{playerId, role, isOrganizer, isAdmin, via}` for the tournament gate. `claim_player` refuses (`already_linked`) when the account is confirmed as another player of that tournament.
 - The Comité sets and resets PINs from the admin.
 
 ### Permissions (RLS)
-- **Tenant boundary is the tournament.** Every policy starts from `tournament_id`: a device linked to one tournament reads nothing from another. `current_player_id()` and `is_tournament_organizer(tournament_id)` are the two helpers.
+- **Tenant boundary is the tournament.** Every policy starts from `tournament_id`: a device linked to one tournament reads nothing from another. `my_player_id(tournament_id)` and `is_tournament_organizer(tournament_id)` are the two helpers.
 - **Read:** any linked device can read everything in its tournament except `pin_hash`. Hide it with a view or column privileges.
 - **Write scores:** allowed when the writer is in the same group for that round, the round is `live`, and the card isn't signed yet. Admins can always write, but must give a reason once a card is signed.
 - **Organizer/admin-only:** tournament setup, players, pairs, groups, overrides, the auction console, and payments. Organizers (`tournament_organizers`) and players with `is_admin` both count.
 - **Spectator link** (optional, section 18): read-only boards without money, through a public view and a share token.
 - The service role key never reaches the client.
-- **Storage** (`tournament-assets`, migration 0012): every write needs a session. `courses/…` needs `can_manage_courses()`; any other top-level folder must be a tournament id (`try_uuid`, so a non-uuid folder is refused cleanly) that the writer belongs to (insert) or organizes (update, delete).
+- **Storage** (`tournament-assets`, migration 0012): every write needs a session. `courses/…` needs `can_manage_courses()`; any other top-level folder must be a tournament id (`try_uuid`, so a non-uuid folder is refused cleanly) that the writer belongs to (insert) or organizes (update, delete). `profiles/<uid>/…` is writable by that account only (0013).
 
 ---
 

@@ -98,6 +98,12 @@ export interface LookupResult {
     avatarUrl: string | null
     isHonoree: boolean
     hasPin: boolean
+    /** This session is this player (confirmed profile link or this device's PIN claim). */
+    isMe?: boolean
+    /** Someone confirmed this player as their profile. */
+    hasProfile?: boolean
+    /** The Comité proposed this player for my profile ("¿Eres tú?"). */
+    pendingMe?: boolean
   }>
 }
 
@@ -110,6 +116,8 @@ export async function lookupTournament(codeOrSlug: string): Promise<LookupResult
 export type ClaimResult =
   | { ok: true; playerId: string; tournamentId: string }
   | { ok: false; reason: 'not_found' | 'no_pin' | 'locked' | 'wrong_pin'; lockedUntil?: string; attemptsLeft?: number }
+  /** This account is already confirmed as another player of the tournament. */
+  | { ok: false; reason: 'already_linked'; playerId: string }
 
 export async function claimPlayer(playerId: string, pin: string): Promise<ClaimResult> {
   const res = await supabase().rpc('claim_player', { p_player_id: playerId, p_pin: pin })
@@ -121,16 +129,17 @@ export async function releaseDevice() {
   await supabase().rpc('release_device')
 }
 
-export async function myDeviceSession(): Promise<{ playerId: string; tournamentId: string } | null> {
-  const res = await supabase().from('device_sessions').select('player_id, tournament_id').maybeSingle()
-  if (res.error) throw new Error(res.error.message)
-  return res.data ? { playerId: res.data.player_id, tournamentId: res.data.tournament_id } : null
+/** Who this session is in a tournament: its player (profile link or device PIN claim) and its Comité rights. */
+export interface Membership {
+  playerId: string | null
+  role: 'owner' | 'admin' | 'member' | 'none'
+  isOrganizer: boolean
+  isAdmin: boolean
+  via: 'profile' | 'device' | null
 }
 
-/** True when the signed-in account is an organizer (owner or admin) of this tournament. */
-export async function isOrganizerOf(tournamentId: string): Promise<boolean> {
-  const role = await rpc<string>('my_tournament_role', { tid: tournamentId })
-  return role === 'owner' || role === 'admin'
+export async function myMembership(tournamentId: string): Promise<Membership> {
+  return rpc<Membership>('my_membership', { tid: tournamentId })
 }
 
 export async function rotateJoinCode(tournamentId: string): Promise<string> {
