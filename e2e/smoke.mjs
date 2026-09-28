@@ -88,8 +88,13 @@ try {
   const minus = p.locator('button[aria-label="Golpes: menos"]').first()
   if (await minus.isEnabled()) await minus.click()
   else await p.locator('button[aria-label="Golpes: más"]').first().click()
+  // Hole contest (Ensayo carries a "Más cerca del hoyo" on every hole): mark the first player.
+  const contest = p.locator('[class*="contestPicks"] button').first()
+  const hasContest = (await contest.count()) > 0
+  if (hasContest && (await contest.getAttribute('aria-pressed')) !== 'true') await contest.click()
   await saveBtn.click()
   await p.waitForTimeout(1500)
+  if (hasContest) check(true, 'contest winner marked on the card')
   check((await p.locator('text=Sincronizado').count()) > 0 || (await p.locator('text=pendiente').count()) > 0, 'hole saved (sync chip visible)')
 
   await p.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
@@ -153,6 +158,7 @@ try {
   await download.saveAs(backupPath)
   const backup = JSON.parse(await readFile(backupPath, 'utf8'))
   const scoresBefore = backup.tables.scores.length
+  if (hasContest) check((backup.tables.hole_awards ?? []).length > 0, `the contest winner reached the server (${(backup.tables.hole_awards ?? []).length} hole awards)`)
   check(backup.version === 1 && scoresBefore > 0 && backup.tables.players.length > 0, `backup exported (${scoresBefore} scores, ${backup.tables.players.length} players)`)
   const [chooser] = await Promise.all([p.waitForEvent('filechooser', { timeout: T }), p.locator('text=Restaurar desde JSON').click()])
   await chooser.setFiles(backupPath)

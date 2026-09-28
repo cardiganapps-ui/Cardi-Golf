@@ -50,3 +50,6 @@
 - [friends8--stats.jpg](./friends8--stats.jpg)
 - [friends8--tarjeta--grid.jpg](./friends8--tarjeta--grid.jpg)
 - [friends8--tarjeta.jpg](./friends8--tarjeta.jpg)
+- [friends8--juegos--drive-m-s-largo.jpg](./friends8--juegos--drive-m-s-largo.jpg)
+- [friends8--juegos--el-que-coma-m-s-tacos.jpg](./friends8--juegos--el-que-coma-m-s-tacos.jpg)
+- [friends8--juegos--m-s-cerca-del-hoyo.jpg](./friends8--juegos--m-s-cerca-del-hoyo.jpg)

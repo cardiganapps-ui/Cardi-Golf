@@ -246,6 +246,9 @@ function friends8(): Fixture {
       { id: 'low', type: 'lowScore', label: 'Low neto del día', enabled: true, rounds: 'all', entrants: 'list', options: { basis: 'net', scope: 'perRound' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [60, 40] } },
       { id: 'birdies', type: 'eventPot', label: 'Birdies', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } },
       { id: 'tres-putts', type: 'eventPot', label: 'Tres putts', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'threePutt', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 20, split: [100] } },
+      { id: 'cerca', type: 'contest', label: 'Más cerca del hoyo', enabled: true, rounds: 'all', entrants: 'all', options: { kind: 'closest', holes: 'par3' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] } },
+      { id: 'drive', type: 'contest', label: 'Drive más largo', enabled: true, rounds: [2], entrants: 'all', options: { kind: 'longDrive', holes: [14] }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } },
+      { id: 'tacos', type: 'custom', label: 'El que coma más tacos', enabled: true, rounds: 'all', entrants: 'all', options: { description: 'Cena del sábado. El Comité da fe.' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } },
     ],
   }
   const players = withNames(
@@ -258,11 +261,21 @@ function friends8(): Fixture {
   snap.tournament.currentRoundId = 'r2'
   for (const rid of ['r1', 'r2']) snap.groups.push(makeGroup(rid, 1, ['p1', 'p2', 'p3', 'p4']), makeGroup(rid, 2, ['p5', 'p6', 'p7', 'p8'], 10))
   snap.gameEntries = ['p1', 'p2', 'p3', 'p5', 'p6', 'p8'].map((playerId) => ({ gameId: 'low', playerId }))
+  // Closest to the pin (par 3s: 3, 7, 11, 16): day 1 settled, one dispute on the 16th.
+  snap.holeAwards = [
+    { roundId: 'r1', groupId: 'r1g1', hole: 3, gameId: 'cerca', playerId: 'p2' },
+    { roundId: 'r1', groupId: 'r1g2', hole: 7, gameId: 'cerca', playerId: 'p6' },
+    { roundId: 'r1', groupId: 'r1g1', hole: 11, gameId: 'cerca', playerId: 'p1' },
+    { roundId: 'r1', groupId: 'r1g1', hole: 16, gameId: 'cerca', playerId: 'p4' },
+    { roundId: 'r1', groupId: 'r1g2', hole: 16, gameId: 'cerca', playerId: 'p7' },
+    { roundId: 'r2', groupId: 'r2g1', hole: 3, gameId: 'cerca', playerId: 'p3' },
+  ]
+  snap.gameResults = [{ gameId: 'tacos', playerId: 'p8', share: 1 }]
   fillRound(snap, 'r1', 81)
   fillRound(snap, 'r2', 82)
   truncateRound(snap, 'r2', (pid) => (['p1', 'p2', 'p3', 'p4'].includes(pid) ? 13 : 11))
   stamp(snap)
-  return { name: 'friends8', description: '8 amigos: bolsa 50/30/20 con "para la casa", skins, Nassau, low neto, birdies y tres putts', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: 'friends8', description: '8 amigos: bolsa 50/30/20 con "para la casa", skins, Nassau, low neto, birdies, tres putts, concursos y apuesta libre', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
 }
 
 function large60(): Fixture {
