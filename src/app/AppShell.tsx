@@ -8,8 +8,11 @@ import styles from './AppShell.module.css'
 
 export function AppShell() {
   const init = useAuth((s) => s.init)
-  // The Comité gets a wider column on a laptop; every player screen stays phone-width.
-  const wide = /\/admin(\/|$)/.test(useLocation().pathname)
+  // The Comité, the TV, the ceremony and the printable cards get a wider column; every player screen stays phone-width.
+  const path = useLocation().pathname
+  const wide = /\/(admin|tv|ceremonia|imprimir)(\/|$)/.test(path)
+  // Inside the tournament shell the tab bar already pads the safe area; the main column must not add its own.
+  const tabbed = /^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)
   useEffect(() => {
     void init()
     void startOutbox()
@@ -17,7 +20,7 @@ export function AppShell() {
   return (
     <div className={styles.shell}>
       <OfflineBanner />
-      <main className={`${styles.main} ${wide ? styles.mainWide : ''}`}>
+      <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${tabbed ? styles.mainTabbed : ''}`}>
         <Outlet />
       </main>
       <Toaster />

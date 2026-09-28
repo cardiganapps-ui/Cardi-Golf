@@ -69,7 +69,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
             <h2>{p.fullName}</h2>
             <span className={styles.headLine}>
               {p.tier && <span className="tierBadge">{p.tier}</span>}
-              {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru))}</span> : null}
+              {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18))}</span> : null}
             </span>
           </div>
         </div>

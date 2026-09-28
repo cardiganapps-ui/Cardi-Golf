@@ -18,3 +18,7 @@
 .mainWide {
   max-width: 960px;
 }
+
+.mainTabbed {
+  padding-bottom: 0;
+}

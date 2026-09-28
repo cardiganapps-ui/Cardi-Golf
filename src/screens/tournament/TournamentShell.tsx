@@ -5,6 +5,7 @@ import { useTournamentCtx } from './TournamentGate'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
+import { useOnline } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
 
 const TABS = [
@@ -25,6 +26,7 @@ export function TournamentShell() {
   const realtime = useTournament((s) => s.realtime)
   const updatedAt = useTournament((s) => s.updatedAt)
   const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
+  const online = useOnline()
   const accent = data?.snapshot.tournament.accentColor ?? lookup.accentColor ?? undefined
   const logo = data?.snapshot.tournament.logoUrl ?? lookup.logoUrl
 
@@ -33,8 +35,10 @@ export function TournamentShell() {
       <header className={styles.top}>
         {logo && <img className={styles.logo} src={logo} alt="" />}
         <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
-        {realtime === 'live' && <LiveStatus text={t.sync.live} />}
-        {realtime === 'error' && <LiveStatus text={t.sync.noLive} live={false} />}
+        {/* "Sin señal" is the phone's connection; "Sin actualizaciones en vivo" is the Realtime channel with a connection. */}
+        {!online && !isFixture && <LiveStatus text={t.sync.offlineShort} live={false} />}
+        {online && realtime === 'live' && <LiveStatus text={t.sync.live} />}
+        {online && realtime === 'error' && <LiveStatus text={t.sync.noLive} live={false} />}
         {realtime === 'off' && !isFixture && data && <LiveStatus text={t.sync.fromCache(new Date(updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }))} live={false} />}
       </header>
       <div className={styles.body}>

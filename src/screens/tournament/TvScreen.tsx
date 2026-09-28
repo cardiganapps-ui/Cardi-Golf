@@ -42,6 +42,31 @@ export function TvScreen() {
     return () => clearInterval(timer)
   }, [isAuctionNight])
   const board = boards[idx % boards.length] ?? 'individual'
+  // Fields beyond 12 page through the individual board across rotations.
+  const PAGE = 12
+  const indivRows = state.modules.individual?.rows ?? []
+  const pages = Math.max(1, Math.ceil(indivRows.length / PAGE))
+  const page = Math.floor(idx / boards.length) % pages
+  // Keep the screen awake while the board is up (re-request after a tab switch).
+  useEffect(() => {
+    let lock: { release(): Promise<void> } | null = null
+    const request = async () => {
+      try {
+        lock = (await (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> } }).wakeLock?.request('screen')) ?? null
+      } catch {
+        lock = null
+      }
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void request()
+    }
+    void request()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      void lock?.release()
+    }
+  }, [])
   const accent = snapshot.tournament.accentColor ?? undefined
 
   return (
@@ -66,9 +91,12 @@ export function TvScreen() {
           <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }}>
             {board === 'individual' && state.modules.individual && (
               <>
-                <h2 className={styles.boardTitle}>{settings.modules.individual.label}</h2>
+                <h2 className={styles.boardTitle}>
+                  {settings.modules.individual.label}
+                  {pages > 1 ? ` ${page * PAGE + 1}–${Math.min(indivRows.length, (page + 1) * PAGE)}` : ''}
+                </h2>
                 <div className={styles.rows}>
-                  {state.modules.individual.rows.slice(0, 12).map((r) => {
+                  {indivRows.slice(page * PAGE, (page + 1) * PAGE).map((r) => {
                     const pr = round ? state.core.rounds[round.id]?.[r.playerId] : undefined
                     return (
                       <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`}>
@@ -80,7 +108,7 @@ export function TvScreen() {
                             {byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
                           </span>
                         </span>
-                        <span className={styles.small}>{pr ? `${t.live.thru} ${t.round.thru(pr.thru)}, ${pr.points}` : ''}</span>
+                        <span className={styles.small}>{pr && round ? `${t.live.thru} ${t.round.thru(pr.thru, round.holes)}, ${pr.points}` : ''}</span>
                         <span className={styles.big}>{r.total}</span>
                       </div>
                     )

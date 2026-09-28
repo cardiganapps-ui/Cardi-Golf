@@ -3,13 +3,14 @@
  * row detail, the individual leaderboard (points, or gross to par on a
  * toggle), and the feed. Rows re-sort once, in 200 ms.
  */
-import { AnimatePresence, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
+import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
 import { ShareCardButton } from '../../components/ShareCard'
 import { FeedTicker } from './FeedTicker'
@@ -64,6 +65,9 @@ export function LiveScreen() {
     })
     if (prevOrder.current.size) setMoves(m)
     prevOrder.current = next
+    // The arrows mark the last re-sort only; clear them once the transition is over.
+    const timer = setTimeout(() => setMoves((cur) => (cur.size ? new Map() : cur)), 600)
+    return () => clearTimeout(timer)
   }, [rows])
 
   const owners = useMemo(() => {
@@ -82,8 +86,26 @@ export function LiveScreen() {
   const honoree = snapshot.players.find((p) => p.isHonoree)
   const honoreeRow = honoree ? rows.find((r) => r.playerId === honoree.id) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
-  const leadHole = roundState ? Math.max(0, ...Object.values(roundState).map((pr) => pr.thru)) : 0
-  const lastHole = (pid: string) => roundState?.[pid]?.holes.filter((h) => h.played).at(-1) ?? null
+  // Play order matters: a group off the 10th is "on the 3rd" after hole 18 and holes 1–2.
+  const groupOf = (pid: string) => (round ? snapshot.groups.find((g) => g.roundId === round.id && g.playerIds.includes(pid)) : undefined)
+  const leadHole = (() => {
+    if (!round || !roundState) return 0
+    let best = 0
+    let bestThru = -1
+    for (const g of snapshot.groups.filter((x) => x.roundId === round.id)) {
+      const prs = g.playerIds.map((pid) => roundState[pid]).filter((pr): pr is NonNullable<typeof pr> => !!pr)
+      const thru = Math.max(0, ...prs.map((pr) => pr.thru))
+      if (thru > bestThru && prs.length) {
+        bestThru = thru
+        const lead = prs.reduce((a, b) => (b.thru > a.thru ? b : a))
+        best = thru === 0 ? 0 : currentHole(lead.holes, g.startHole, round.holes)
+      }
+    }
+    return best
+  })()
+  const lastHole = (pid: string) => (roundState?.[pid] && round ? lastPlayedHole(roundState[pid]!.holes, groupOf(pid)?.startHole ?? 1, round.holes) : null)
+  /** Re-sort animation only on boards small enough for it to read; big fields just re-render. */
+  const animate = rows.length <= 20
   const hasHandicaps = Object.values(state.core.handicaps).some((h) => h.base > 0)
 
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
@@ -159,8 +181,7 @@ export function LiveScreen() {
       ) : (
         <Board>
           <BoardHead figureLabel={view === 'points' ? t.live.points : t.live.gross} dense={rows.length > 20} />
-          <AnimatePresence initial={false}>
-            {list.map((r, i) => {
+          {list.map((r, i) => {
               const p = byId.get(r.playerId)
               if (!p) return null
               const pr = roundState?.[p.id]
@@ -192,7 +213,7 @@ export function LiveScreen() {
                 </span>
               )
               return (
-                <motion.div key={p.id} layout transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                <motion.div key={p.id} layout={animate} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
                   <LeaderRow
                     pos={view === 'gross' ? grossLabel(i) : r.label}
                     name={p.displayName}
@@ -200,7 +221,7 @@ export function LiveScreen() {
                     owners={owners.get(p.id)}
                     honoree={p.isHonoree}
                     today={today}
-                    thru={pr ? t.round.thru(pr.thru) : undefined}
+                    thru={pr && round ? t.round.thru(pr.thru, round.holes) : undefined}
                     figure={figure}
                     tone={tone}
                     mine={me.playerId === p.id}
@@ -211,7 +232,6 @@ export function LiveScreen() {
                 </motion.div>
               )
             })}
-          </AnimatePresence>
         </Board>
       )}
       <div className="row row--between">

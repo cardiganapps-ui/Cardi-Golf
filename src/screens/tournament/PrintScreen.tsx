@@ -57,7 +57,7 @@ export function PrintScreen() {
                   <h1 className={styles.title}>{snapshot.tournament.name}</h1>
                   <div className={styles.sub}>
                     {t.round.day(current.number)}
-                    {current.date ? `, ${current.date}` : ''}, {t.card.group} {g.number}
+                    {current.date ? `, ${new Date(`${current.date}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}, {t.card.group} {g.number}
                     {g.teeTime ? `, ${g.teeTime.slice(0, 5)}` : ''}, {P.startHole(g.startHole)}
                   </div>
                 </div>

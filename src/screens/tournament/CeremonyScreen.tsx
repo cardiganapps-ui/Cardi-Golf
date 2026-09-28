@@ -166,7 +166,7 @@ export function CeremonyScreen() {
         clearTimeout(timer2)
       }
     }
-  }, [revealed, step])
+  }, [revealed, step?.id, step?.champion])
 
   if (!data) return null
   const { snapshot, state } = data
