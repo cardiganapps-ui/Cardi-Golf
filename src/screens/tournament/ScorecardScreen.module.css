@@ -117,6 +117,10 @@
 .ptsHigh {
   color: var(--under);
 }
+/* Defaults nobody has touched yet on an unplayed hole: quiet until a value changes. */
+.ptsMuted {
+  color: var(--ink-3);
+}
 .controls {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
@@ -145,7 +149,8 @@
 
 .saveBar {
   position: sticky;
-  bottom: var(--s2);
+  /* Above the sticky tab bar (56 px + safe area) so "Guardar hoyo" never hides behind it on short screens. */
+  bottom: calc(56px + var(--safe-bottom) + var(--s2));
   z-index: 3;
   display: flex;
   flex-direction: column;
@@ -247,6 +252,13 @@
 .subtotal td {
   background: var(--surface);
   font-weight: 600;
+}
+.subCaption {
+  display: block;
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--ink-2);
+  line-height: 1;
 }
 .subtotal td:first-child {
   background: var(--surface);

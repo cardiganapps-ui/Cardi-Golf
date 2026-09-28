@@ -11,6 +11,7 @@ import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
+import { adminSaveScore } from '../../data/api'
 import { enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { RejectedWrites } from '../../components/RejectedWrites'
 import { useTournament } from '../../data/tournamentStore'
@@ -55,7 +56,7 @@ export function ScorecardScreen() {
     return (
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
-        <EmptyState title={S.roundNotLive(round.number)} body="" />
+        <EmptyState title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)} body="" />
       </div>
     )
   }
@@ -110,8 +111,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [tiebreak, setTiebreak] = useState<{ candidates: string[] } | null>(null)
   const [confirmWeird, setConfirmWeird] = useState<string[] | null>(null)
   const [signing, setSigning] = useState<string | null>(null)
+  const [askReason, setAskReason] = useState(false)
+  const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const touch = useRef<{ x: number; y: number } | null>(null)
+  /** The saved values of the hole before the last save, for a real undo. */
+  const undo = useRef<{ hole: number; drafts: Record<string, Draft>; wasPlayed: Record<string, boolean> } | null>(null)
+  const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
   const lead = holeInfo(players[0]!.id)
@@ -155,6 +161,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
   const anySigned = players.some((p) => signed(p.id))
   const canEdit = me.isAdmin || (round.status === 'live' && !anySigned)
+  /** A Comité correction on a signed card needs a reason (§7); it is written through the server RPC, not the outbox. */
+  const needsReason = me.isAdmin && anySigned
+  /** Untouched defaults on an unplayed hole: the points badge stays quiet (P2). */
+  const initialDraft = (pid: string): Draft | null => {
+    try {
+      return (JSON.parse(initialDrafts.current || '{}') as Record<string, Draft>)[pid] ?? null
+    } catch {
+      return null
+    }
+  }
 
   function validate(): string[] {
     const weird: string[] = []
@@ -177,6 +193,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       }
     }
     setConfirmWeird(null)
+    if (needsReason && reason.trim().length < 3) {
+      setAskReason(true)
+      return
+    }
     // Snake tiebreak: 2+ players at the threshold on this hole and no answer yet.
     const candidates = players.filter((p) => drafts[p.id]!.putts >= threshold).map((p) => p.id)
     const answered = snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole)
@@ -187,40 +207,53 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     await commit()
   }
 
+  async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string) {
+    for (const p of players) {
+      const d = values[p.id]!
+      const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
+      if (needsReason && signed(p.id)) await adminSaveScore(payload, reason.trim())
+      else await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
+    }
+    if (lastHoled) {
+      await enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, last_holed_player_id: lastHoled, decided_by: me.playerId })
+    }
+  }
+
   async function commit(lastHoled?: string) {
     setBusy(true)
+    setAskReason(false)
     const savedHole = hole
     const savedIdx = idx
     try {
       let celebrate = false
+      const before: Record<string, Draft> = {}
+      const wasPlayed: Record<string, boolean> = {}
       for (const p of players) {
         const d = drafts[p.id]!
         const h = holeInfo(p.id)
         const sr = h?.strokesReceived ?? 0
         const pts = stablefordPoints(h?.par ?? par, sr, d.pickedUp ? null : d.strokes, d.pickedUp)
         if (!d.pickedUp && pts >= 3 && p.id === me.playerId) celebrate = true
-        await enqueueScore(tournamentId, {
-          round_id: round.id,
-          player_id: p.id,
-          hole,
-          strokes: d.pickedUp ? null : d.strokes,
-          putts: d.putts,
-          picked_up: d.pickedUp,
-          entered_by: me.playerId,
-          client_ts: new Date().toISOString(),
-        })
+        wasPlayed[p.id] = !!h?.played
+        before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
       }
-      if (lastHoled) {
-        await enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole, last_holed_player_id: lastHoled, decided_by: me.playerId })
-      }
+      await writeHole(drafts, hole, lastHoled)
+      undo.current = { hole: savedHole, drafts: before, wasPlayed }
       setTiebreak(null)
       if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
       }
-      // Move on, and offer the way back instead of asking first.
+      // Move on, and offer the way back instead of asking first: a real undo when the hole
+      // already had values (they are written back), "Corregir" when it was new.
+      const canUndo = players.every((p) => wasPlayed[p.id])
       toast(S.savedHole(savedHole), {
-        label: t.common.undo,
+        label: canUndo ? t.common.undo : S.correct,
         onClick: () => {
+          const u = undo.current
+          if (canUndo && u && u.hole === savedHole) {
+            undo.current = null
+            void writeHole(u.drafts, u.hole).then(() => toast(S.savedHole(u.hole)))
+          }
           setView('hole')
           goto(savedIdx)
         },
@@ -297,7 +330,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   )
   const subtotalRow = (label: string, holes: number[], total = false) => (
     <tr className={total ? styles.total : styles.subtotal}>
-      <td>{label}</td>
+      <td>
+        {label}
+        <span className={styles.subCaption}>{S.ptsGrossCaption}</span>
+      </td>
       <td className={styles.gridMeta}>{holes.reduce((a, h) => a + (roundState[players[0]!.id]?.holes[h - 1]?.par ?? 0), 0) || ''}</td>
       <td />
       {players.map((p) => {
@@ -319,7 +355,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       className={styles.screen}
       onTouchStart={(e) => (touch.current = { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY })}
       onTouchEnd={(e) => {
-        if (!touch.current || view !== 'hole') return
+        // A drag inside a sheet must never change the hole under it.
+        if (!touch.current || view !== 'hole' || sheetOpen) {
+          touch.current = null
+          return
+        }
         const dx = e.changedTouches[0]!.clientX - touch.current.x
         const dy = e.changedTouches[0]!.clientY - touch.current.y
         touch.current = null
@@ -417,6 +457,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               if (!d || !h) return null
               const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
               const locked = signed(p.id) && !me.isAdmin
+              const init = initialDraft(p.id)
+              const untouched = !h.played && !!init && init.strokes === d.strokes && init.putts === d.putts && init.pickedUp === d.pickedUp
               return (
                 <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`}>
                   <div className={styles.playerLine}>
@@ -428,7 +470,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                         </span>
                       )}
                     </span>
-                    <span className={`${styles.pts} ${pts >= 3 ? styles.ptsHigh : ''}`}>
+                    <span className={`${styles.pts} ${untouched ? styles.ptsMuted : pts >= 3 ? styles.ptsHigh : ''}`}>
                       {S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null)}
                       {h.par !== par ? `, ${S.parHere(h.par)}` : ''}
                     </span>
@@ -452,7 +494,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {canEdit ? (
               <span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>
             ) : (
-              <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : S.roundNotLive(round.number)}</span>
+              <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
           </div>
           <RejectedWrites canResend={me.isAdmin} />
@@ -465,7 +507,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           {tiebreak?.candidates.map((id) => {
             const p = players.find((x) => x.id === id)!
             return (
-              <button key={id} type="button" className="btn btn--secondary btn--block" onClick={() => void commit(id)}>
+              <button key={id} type="button" className="btn btn--secondary btn--block" disabled={busy} onClick={() => void commit(id)}>
                 {p.displayName}
               </button>
             )
@@ -486,6 +528,21 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             </button>
             <button className="btn btn--primary grow" type="button" onClick={() => void save(true)}>
               {S.weirdConfirm}
+            </button>
+          </div>
+        </div>
+      </Sheet>
+
+      <Sheet open={askReason} onClose={() => setAskReason(false)} title={S.signedReasonTitle}>
+        <div className="stack">
+          <p className="help">{S.signedReasonHint}</p>
+          <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t.admin.scores.reason} aria-label={t.admin.scores.reason} autoFocus />
+          <div className="row">
+            <button className="btn btn--secondary" type="button" onClick={() => setAskReason(false)}>
+              {t.common.cancel}
+            </button>
+            <button className="btn btn--primary grow" type="button" disabled={busy || reason.trim().length < 3} onClick={() => void save(true)}>
+              {busy ? t.common.saving : S.save}
             </button>
           </div>
         </div>

@@ -428,15 +428,28 @@
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
-  min-width: 520px;
   font-size: var(--fs-sm);
+  table-layout: fixed;
+}
+.grid + .grid {
+  margin-top: var(--s3);
+  border-top: var(--hairline);
+}
+.gridTotals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  padding-top: var(--s2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .grid th,
 .grid td {
   text-align: center;
   padding: 0;
   height: 36px;
-  min-width: 36px;
+  min-width: 28px;
   border-bottom: var(--hairline);
   font-variant-numeric: tabular-nums;
 }
@@ -444,9 +457,13 @@
 .grid td:first-child {
   position: sticky;
   left: 0;
+  width: 21%;
   background: var(--bg);
   text-align: left;
   padding-right: var(--s2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 500;
   color: var(--ink-2);
   min-width: 64px;
@@ -464,6 +481,9 @@
 .gridTotal {
   font-weight: 600;
   background: var(--surface);
+}
+.grid th.gridTotal {
+  width: 14%;
 }
 .gridCellBtn {
   border: 0;

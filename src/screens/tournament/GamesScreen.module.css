@@ -75,12 +75,20 @@
   gap: var(--s3);
 }
 .sub {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--s2);
+  min-width: 0;
+  max-width: 100%;
+}
+.sub > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .subMoney {
   color: var(--ink-2);
+  flex-shrink: 0;
 }
 .rows {
   display: flex;

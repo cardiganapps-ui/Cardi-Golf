@@ -199,7 +199,7 @@ export const t = {
   round: {
     day: (n: number) => `Día ${n}`,
     hole: (n: number) => `Hoyo ${n}`,
-    thru: (n: number) => (n === 18 ? 'F' : `${n}`),
+    thru: (n: number, holes = 18) => (n === holes ? 'F' : `${n}`),
   },
   money: {
     ifEndedNow: 'si terminara ahora',
@@ -236,6 +236,11 @@ export const t = {
     notInGroup: 'No estás en ningún grupo de esta ronda. Pídele al Comité que te asigne.',
     pickGroup: 'Elige el grupo que vas a capturar.',
     roundNotLive: (n: number) => `El día ${n} todavía no está en juego. El Comité lo inicia desde su consola.`,
+    roundFinished: (n: number) => `El día ${n} ya terminó. Solo el Comité puede corregir tarjetas.`,
+    correct: 'Corregir',
+    ptsGrossCaption: 'pts / golpes',
+    signedReasonTitle: 'Corrección con tarjeta firmada',
+    signedReasonHint: 'Hay tarjetas firmadas en este grupo. La corrección del Comité necesita una razón y queda en la bitácora.',
     strokes: 'Golpes',
     putts: 'Putts',
     pickedUp: 'Levantó',

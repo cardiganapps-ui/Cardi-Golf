@@ -33,6 +33,9 @@ export function GamesScreen() {
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const money = (amount: number | undefined) => (amount ? <Money amount={amount} /> : null)
   const current = tab && tabs.some((x) => x.value === tab) ? tab : null
+  // "Hoyo" is where a player is in the round being played (P1 17), never a cross-round count.
+  const thruOf = (pid: string) => (round ? t.round.thru(state.core.rounds[round.id]?.[pid]?.thru ?? 0, round.holes) : undefined)
+  const pairThru = (ids: readonly string[]) => (round ? t.round.thru(Math.min(...ids.map((pid) => state.core.rounds[round.id]?.[pid]?.thru ?? 0)), round.holes) : undefined)
 
   // One line per game: who leads, what is at stake.
   const overview = tabs.map(({ value: id, label }) => {
@@ -121,7 +124,7 @@ export function GamesScreen() {
                         {state.modules.individual!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.individual!.prizes[r.playerId]!.amount)}</span>}
                       </span>
                     }
-                    thru={t.round.thru(r.thru)}
+                    thru={thruOf(r.playerId)}
                     figure={String(r.total)}
                     dense={state.modules.individual!.rows.length > 20}
                     onClick={() => setOpen(r.playerId)}
@@ -165,7 +168,7 @@ export function GamesScreen() {
                         {state.modules.pairs!.prizes[r.playerIds[0]] && <span className={styles.subMoney}>{money(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
                       </span>
                     }
-                    thru={t.round.thru(r.thru)}
+                    thru={pairThru(r.playerIds)}
                     figure={String(r.total)}
                     onClick={() => setOpen(r.playerIds[0])}
                   />
@@ -222,7 +225,7 @@ export function GamesScreen() {
                         pos={r.label}
                         name={name(r.playerId)}
                         sub={d.winners[r.playerId] ? <span className={styles.subMoney}>{money(d.winners[r.playerId]!.amount)}</span> : undefined}
-                        thru={t.round.thru(r.thru)}
+                        thru={t.round.thru(r.thru, snapshot.rounds.find((x) => x.id === d.roundId)?.holes ?? 18)}
                         figure={String(r.points)}
                         dense={d.rows.length > 20}
                         onClick={() => setOpen(r.playerId)}

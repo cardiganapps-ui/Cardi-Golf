@@ -196,86 +196,98 @@ export interface GridHole {
   putts?: number | null
 }
 export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHole }: { holes: GridHole[]; playerLabel: string; showPoints?: boolean; showPutts?: boolean; onHole?: (n: number) => void }) {
+  // Two stacked nines: each fits a phone screen without scrolling, and the totals are labelled.
   const front = holes.filter((h) => h.n <= 9)
   const back = holes.filter((h) => h.n > 9)
   const sum = (hs: GridHole[], f: (h: GridHole) => number | null | undefined) => hs.reduce((a, h) => a + (f(h) ?? 0), 0)
   const played = (hs: GridHole[]) => hs.every((h) => h.gross != null || h.pickedUp)
-  const cols = (hs: GridHole[], label: string) => (
-    <>
-      {hs.map((h) => (
-        <th key={h.n}>{h.n}</th>
-      ))}
-      <th className={s.gridTotal}>{label}</th>
-    </>
+  const mark = (h: GridHole) =>
+    h.gross != null || h.pickedUp ? (
+      onHole ? (
+        <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${t.player.hole} ${h.n}`}>
+          <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />
+        </button>
+      ) : (
+        <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />
+      )
+    ) : (
+      ''
+    )
+  const nine = (hs: GridHole[], label: string) => (
+    <table className={s.grid}>
+      <thead>
+        <tr>
+          <th>{t.player.hole}</th>
+          {hs.map((h) => (
+            <th key={h.n}>{h.n}</th>
+          ))}
+          <th className={s.gridTotal}>{label}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className={s.gridMeta}>
+          <td>{t.player.par}</td>
+          {hs.map((h) => (
+            <td key={h.n}>{h.par}</td>
+          ))}
+          <td className={s.gridTotal}>{sum(hs, (h) => h.par)}</td>
+        </tr>
+        <tr className={s.gridMeta}>
+          <td>{t.player.si}</td>
+          {hs.map((h) => (
+            <td key={h.n}>{h.si}</td>
+          ))}
+          <td className={s.gridTotal} />
+        </tr>
+        <tr>
+          <td>{playerLabel}</td>
+          {hs.map((h) => (
+            <td key={h.n}>{mark(h)}</td>
+          ))}
+          <td className={`${s.gridTotal} ${s.fig}`}>{played(hs) ? sum(hs, (h) => h.gross) : ''}</td>
+        </tr>
+        {showPutts && (
+          <tr className={s.gridMeta}>
+            <td>{t.player.putts}</td>
+            {hs.map((h) => (
+              <td key={h.n}>{h.putts ?? ''}</td>
+            ))}
+            <td className={s.gridTotal}>{sum(hs, (h) => h.putts)}</td>
+          </tr>
+        )}
+        {showPoints && (
+          <tr className={s.gridMeta}>
+            <td>{t.player.pts}</td>
+            {hs.map((h) => (
+              <td key={h.n}>{h.pts ?? ''}</td>
+            ))}
+            <td className={s.gridTotal}>{sum(hs, (h) => h.pts)}</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
   )
   return (
     <div className={s.gridWrap}>
-      <table className={s.grid}>
-        <thead>
-          <tr>
-            <th>Hoyo</th>
-            {cols(front, 'Ida')}
-            {back.length > 0 && cols(back, 'Vta')}
-            {back.length > 0 && <th className={s.gridTotal}>Tot</th>}
-          </tr>
-        </thead>
-        <tbody>
-          <tr className={s.gridMeta}>
-            <td>Par</td>
-            {front.map((h) => (
-              <td key={h.n}>{h.par}</td>
-            ))}
-            <td className={s.gridTotal}>{sum(front, (h) => h.par)}</td>
-            {back.length > 0 && back.map((h) => <td key={h.n}>{h.par}</td>)}
-            {back.length > 0 && <td className={s.gridTotal}>{sum(back, (h) => h.par)}</td>}
-            {back.length > 0 && <td className={s.gridTotal}>{sum(holes, (h) => h.par)}</td>}
-          </tr>
-          <tr className={s.gridMeta}>
-            <td>SI</td>
-            {front.map((h) => (
-              <td key={h.n}>{h.si}</td>
-            ))}
-            <td className={s.gridTotal} />
-            {back.length > 0 && back.map((h) => <td key={h.n}>{h.si}</td>)}
-            {back.length > 0 && <td className={s.gridTotal} />}
-            {back.length > 0 && <td className={s.gridTotal} />}
-          </tr>
-          <tr>
-            <td>{playerLabel}</td>
-            {front.map((h) => (
-              <td key={h.n}>{h.gross != null || h.pickedUp ? (onHole ? <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${h.n}`}><ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /></button> : <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />) : ''}</td>
-            ))}
-            <td className={`${s.gridTotal} ${s.fig}`}>{played(front) ? sum(front, (h) => h.gross) : ''}</td>
-            {back.length > 0 && back.map((h) => <td key={h.n}>{h.gross != null || h.pickedUp ? (onHole ? <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${h.n}`}><ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} /></button> : <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />) : ''}</td>)}
-            {back.length > 0 && <td className={`${s.gridTotal} ${s.fig}`}>{played(back) ? sum(back, (h) => h.gross) : ''}</td>}
-            {back.length > 0 && <td className={`${s.gridTotal} ${s.fig}`}>{played(holes) ? sum(holes, (h) => h.gross) : ''}</td>}
-          </tr>
+      {nine(front, back.length ? t.card.front : t.common.total)}
+      {back.length > 0 && nine(back, t.card.back)}
+      {back.length > 0 && (
+        <div className={s.gridTotals}>
+          <span>
+            {t.common.total}: {played(holes) ? sum(holes, (h) => h.gross) : '–'} {t.player.gross.toLowerCase()}
+          </span>
           {showPutts && (
-            <tr className={s.gridMeta}>
-              <td>Putts</td>
-              {front.map((h) => (
-                <td key={h.n}>{h.putts ?? ''}</td>
-              ))}
-              <td className={s.gridTotal}>{sum(front, (h) => h.putts)}</td>
-              {back.length > 0 && back.map((h) => <td key={h.n}>{h.putts ?? ''}</td>)}
-              {back.length > 0 && <td className={s.gridTotal}>{sum(back, (h) => h.putts)}</td>}
-              {back.length > 0 && <td className={s.gridTotal}>{sum(holes, (h) => h.putts)}</td>}
-            </tr>
+            <span>
+              {sum(holes, (h) => h.putts)} {t.player.putts.toLowerCase()}
+            </span>
           )}
           {showPoints && (
-            <tr className={s.gridMeta}>
-              <td>Pts</td>
-              {front.map((h) => (
-                <td key={h.n}>{h.pts ?? ''}</td>
-              ))}
-              <td className={s.gridTotal}>{sum(front, (h) => h.pts)}</td>
-              {back.length > 0 && back.map((h) => <td key={h.n}>{h.pts ?? ''}</td>)}
-              {back.length > 0 && <td className={s.gridTotal}>{sum(back, (h) => h.pts)}</td>}
-              {back.length > 0 && <td className={s.gridTotal}>{sum(holes, (h) => h.pts)}</td>}
-            </tr>
+            <span>
+              {sum(holes, (h) => h.pts)} {t.player.pts.toLowerCase()}
+            </span>
           )}
-        </tbody>
-      </table>
+        </div>
+      )}
     </div>
   )
 }

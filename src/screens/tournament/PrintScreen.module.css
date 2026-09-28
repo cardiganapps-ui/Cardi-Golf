@@ -98,6 +98,14 @@
   color: var(--ink-2);
   margin-top: var(--s2);
 }
+@page {
+  size: landscape;
+  margin: 10mm;
+}
+.card:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
 @media print {
   .page {
     padding: 0;
