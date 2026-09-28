@@ -666,7 +666,7 @@ Three ways to load a course, one place to decide how each player is handicapped.
 
 The look comes from the tournament's printed rules sheet: beachy, editorial, premium. It sits close to Cardigan's warm cream/teal and Fraunces aesthetic, but it's its own brand.
 
-**Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is a simple text wordmark "Polo" (formerly "Cardi-Golf"). `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.
+**Logo:** per tournament (`tournaments.logo_url`); shown on Entrar, the headers, TV mode, and share cards. The platform's own mark is the Polo lockup: a scorecard grid with a circled 3 plus the word "Polo" (`design/brand/polo-presentation-sheet.jpg`, drawn in `src/design/logoMark.json`). `assets/nacho-logo.png` (an embroidered patch cut out on a transparent background) is the first tournament's logo: seed it into that tournament's storage, don't bake it into the shell.
 
 **Color tokens**
 ```css

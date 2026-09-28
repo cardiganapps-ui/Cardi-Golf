@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { getFixture } from '../dev/fixtures'
 import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from '../components/icons'
-import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, toPar, type GridHole } from '../components/primitives'
+import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, toPar, type GridHole } from '../components/primitives'
 import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
 import { contrast as ratio, luminance } from '../lib/contrast'
 import { cssVar } from '../lib/tokens'
@@ -490,10 +490,18 @@ export function DesignScreen() {
         {/* ---- Brand ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Marca</h2>
-          <p className={s.cap}>Logotipo tipográfico: Archivo 700 semicondensada con la G rodeada a lápiz, el birdie. El mismo círculo es el ícono de la app y la marca de agua de las imágenes para compartir.</p>
+          <p className={s.cap}>Polo: una tarjeta con un 3 rodeado a lápiz, el birdie, junto al nombre en Archivo 700. El mismo símbolo es el ícono de la app y firma las imágenes para compartir. A color sobre cartulina, a una tinta y sobre el tablero.</p>
           <div className={s.row}>
+            <LogoMark size={64} />
+            <Wordmark size={36} mark={false} />
             <Wordmark size={36} />
+          </div>
+          <div className={s.row}>
             <Wordmark size={20} />
+            <Wordmark size={20} tone="mono" />
+            <span className={s.boardSwatch}>
+              <Wordmark size={20} tone="board" />
+            </span>
           </div>
           <div className={s.row}>
             <img src="/icons/icon-192.png" alt="" width={96} height={96} className={s.appIcon} />

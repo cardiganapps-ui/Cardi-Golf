@@ -1,6 +1,7 @@
-// Generates the platform's PWA icons and favicon from the wordmark's mark:
-// a constructed "P" with the pencil ring (the notation for a birdie), on
-// card stock. Colors are read from src/styles/tokens.css, never typed here.
+// Generates the platform's PWA icons and favicon from the Polo symbol: a
+// scorecard grid with a 3 circled in pencil (a birdie), on card stock. The
+// drawing lives in src/design/logoMark.json (shared with the in-app LogoMark);
+// colors are read from src/styles/tokens.css, never typed here.
 // Run: npm run icons  (output is committed under public/)
 // A tournament's logo is NOT the app icon: brands are per tournament.
 import sharp from 'sharp'
@@ -15,31 +16,34 @@ const token = (name) => {
 const BG = token('bg')
 const INK = token('ink')
 const RING = token('under')
+const G = JSON.parse(await readFile('src/design/logoMark.json', 'utf8'))
 
 /**
- * The mark on a 100×100 grid: a geometric P (stroke 13) and a thin ring
- * rotated a few degrees, like a pencil circle around a score.
+ * The symbol on its 100×100 grid, scaled into a square icon on card stock.
+ * `padding` keeps a maskable icon inside the Android safe zone.
  */
 function mark(size, { padding = 0, rounded = true } = {}) {
   const inner = size - padding * 2
   const k = inner / 100
   const p = (n) => (padding + n * k).toFixed(2)
-  // Stem at x 36.5 from the baseline up; the bowl is a half circle of radius 14.5.
-  const x = 36.5
-  const top = 30.5
-  const r = 14.5
-  const g = [
-    `M${p(x)} ${p(80)}`,
-    `L${p(x)} ${p(top)}`,
-    `L${p(52)} ${p(top)}`,
-    `A${(r * k).toFixed(2)} ${(r * k).toFixed(2)} 0 0 1 ${p(52)} ${p(top + 2 * r)}`,
-    `L${p(x)} ${p(top + 2 * r)}`,
-  ].join(' ')
+  const w = (n) => (n * k).toFixed(2)
+  const { card, grid, figure, ring } = G
+  const lines = grid.lines
+    .flatMap((v) => [
+      `M${p(v)} ${p(card.y)} L${p(v)} ${p(card.y + card.size)}`,
+      `M${p(card.x)} ${p(v)} L${p(card.x + card.size)} ${p(v)}`,
+    ])
+    .join(' ')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="${rounded ? (size * 0.22).toFixed(1) : 0}" fill="${BG}"/>
-  <path d="${g}" fill="none" stroke="${INK}" stroke-width="${(13 * k).toFixed(2)}" stroke-linecap="butt" stroke-linejoin="miter"/>
-  <ellipse cx="${p(51)}" cy="${p(51)}" rx="${(41 * k).toFixed(2)}" ry="${(38 * k).toFixed(2)}" transform="rotate(-8 ${p(51)} ${p(51)})" fill="none" stroke="${RING}" stroke-width="${(3.2 * k).toFixed(2)}"/>
+  <path d="${lines}" stroke="${INK}" stroke-width="${w(grid.stroke)}" fill="none"/>
+  <rect x="${p(card.x)}" y="${p(card.y)}" width="${w(card.size)}" height="${w(card.size)}" rx="${w(card.rx)}" fill="none" stroke="${INK}" stroke-width="${w(card.stroke)}"/>
+  <g transform="translate(${padding} ${padding}) scale(${k.toFixed(4)})">
+    <ellipse cx="${ring.cx}" cy="${ring.cy}" rx="${ring.rx}" ry="${ring.ry}" transform="rotate(${ring.rotate} ${ring.cx} ${ring.cy})" fill="${BG}"/>
+    <path d="${figure.d}" fill="none" stroke="${INK}" stroke-width="${figure.stroke}" stroke-linecap="round" stroke-linejoin="round"/>
+    <ellipse cx="${ring.cx}" cy="${ring.cy}" rx="${ring.rx}" ry="${ring.ry}" transform="rotate(${ring.rotate} ${ring.cx} ${ring.cy})" fill="none" stroke="${RING}" stroke-width="${ring.stroke}"/>
+  </g>
 </svg>`
 }
 

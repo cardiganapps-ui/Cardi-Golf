@@ -550,22 +550,39 @@
 .wordmark {
   font-weight: 700;
   letter-spacing: -0.02em;
-  font-variation-settings: 'wdth' 92;
   line-height: 1;
+  color: var(--ink);
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.28em;
 }
-.wordmarkInitial {
-  position: relative;
-  display: inline-block;
-  margin-left: 0.1em;
+.wordmarkBoard {
+  color: var(--board-ink);
 }
-.wordmarkRing {
-  position: absolute;
-  inset: -0.14em -0.16em -0.1em -0.12em;
-  border: 0.06em solid var(--under);
-  border-radius: 50%;
-  transform: rotate(-6deg);
+/* Symbol colors: card stock, graphite, pencil red; one-color and board tones swap them. */
+.logoMark {
+  --logo-paper: var(--bg);
+  --logo-ink: var(--ink);
+  --logo-ring: var(--under);
+  flex: none;
+  display: block;
+}
+.logoMono {
+  --logo-ring: var(--ink);
+}
+.logoBoard {
+  --logo-paper: var(--board-bg);
+  --logo-ink: var(--board-ink);
+  --logo-ring: var(--board-accent);
+}
+.logoPaper {
+  fill: var(--logo-paper);
+}
+.logoInk {
+  stroke: var(--logo-ink);
+}
+.logoRing {
+  stroke: var(--logo-ring);
 }
 
 /* ---- Plate (board surface only) ---- */

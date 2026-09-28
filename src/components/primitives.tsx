@@ -8,6 +8,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
+import logo from '../design/logoMark.json'
 import s from './primitives.module.css'
 
 // ---- Buttons ----
@@ -311,13 +312,42 @@ export function EventName({ name, tagline, logoUrl, small }: { name: string; tag
     </div>
   )
 }
-export function Wordmark({ size = 24 }: { size?: number }) {
+/**
+ * The Polo symbol: a scorecard grid with a 3 circled in pencil (a birdie).
+ * Same drawing as the app icon (src/design/logoMark.json). `tone`: full color
+ * on card stock, one-color graphite, or reversed on the board surface.
+ */
+export type LogoTone = 'color' | 'mono' | 'board'
+export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: LogoTone }) {
+  const { card, grid, figure, ring } = logo
+  const end = card.x + card.size
+  const lines = grid.lines.map((v) => `M${v} ${card.y}V${end}M${card.x} ${v}H${end}`).join('')
+  const ringTransform = `rotate(${ring.rotate} ${ring.cx} ${ring.cy})`
+  const pad = card.stroke / 2 + 0.2
   return (
-    <span className={s.wordmark} style={{ fontSize: size }} aria-label={t.app.name}>
-      <span className={s.wordmarkInitial}>
-        <span className={s.wordmarkRing} aria-hidden="true" />P
-      </span>
-      olo
+    <svg
+      className={`${s.logoMark} ${tone === 'mono' ? s.logoMono : tone === 'board' ? s.logoBoard : ''}`}
+      width={size}
+      height={size}
+      viewBox={`${card.x - pad} ${card.y - pad} ${card.size + pad * 2} ${card.size + pad * 2}`}
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x={card.x} y={card.y} width={card.size} height={card.size} rx={card.rx} className={s.logoPaper} />
+      <path d={lines} className={s.logoInk} strokeWidth={grid.stroke} fill="none" />
+      <rect x={card.x} y={card.y} width={card.size} height={card.size} rx={card.rx} className={s.logoInk} strokeWidth={card.stroke} fill="none" />
+      <ellipse cx={ring.cx} cy={ring.cy} rx={ring.rx} ry={ring.ry} transform={ringTransform} className={s.logoPaper} />
+      <path d={figure.d} className={s.logoInk} strokeWidth={figure.stroke} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <ellipse cx={ring.cx} cy={ring.cy} rx={ring.rx} ry={ring.ry} transform={ringTransform} className={s.logoRing} strokeWidth={ring.stroke} fill="none" />
+    </svg>
+  )
+}
+/** Horizontal lockup: the symbol, then "Polo" set in Archivo 700. `mark={false}` gives the bare wordmark. */
+export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: number; tone?: LogoTone; mark?: boolean }) {
+  return (
+    <span className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`} style={{ fontSize: size }} role="img" aria-label={t.app.name}>
+      {mark && <LogoMark size={Math.round(size * 1.05)} tone={tone} />}
+      <span aria-hidden="true">{t.app.name}</span>
     </span>
   )
 }

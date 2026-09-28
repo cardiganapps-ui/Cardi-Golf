@@ -1,5 +1,7 @@
 # Logo brief: Polo
 
+> **Delivered (2026-09-28).** Diego approved the sheet in `design/brand/polo-presentation-sheet.jpg` and it is live in the app. This brief is kept as the record of what was asked.
+
 A brief for a designer. Everything they need to know about the product to draw its mark; nothing about the code.
 
 ## The product in one paragraph

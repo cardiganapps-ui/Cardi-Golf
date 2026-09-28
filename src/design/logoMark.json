@@ -1,0 +1,30 @@
+{
+  "_comment": "Polo symbol: a scorecard grid with a score of 3 circled in pencil (a birdie). 100x100 grid; the ring is also the knockout that clears the grid behind the figure; the card spans 16..84. Read by src/components/primitives.tsx (LogoMark) and scripts/make-icons.mjs so the app icon and the in-app mark are one drawing.",
+  "card": {
+    "x": 16,
+    "y": 16,
+    "size": 68,
+    "rx": 7,
+    "stroke": 3.8
+  },
+  "grid": {
+    "lines": [
+      33,
+      50,
+      67
+    ],
+    "stroke": 1.6
+  },
+  "figure": {
+    "d": "M40.2 38.3 A5.6 5.6 0 1 1 45.8 45.6 A6.1 6.1 0 1 1 39.9 53.9",
+    "stroke": 3.8
+  },
+  "ring": {
+    "cx": 45.5,
+    "cy": 46.3,
+    "rx": 14.6,
+    "ry": 13.2,
+    "rotate": -14,
+    "stroke": 2.6
+  }
+}
