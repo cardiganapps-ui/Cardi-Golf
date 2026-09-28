@@ -4,7 +4,9 @@
  */
 import { useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Sheet, Spinner, toast } from '../../components/ui'
+import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { EmptyState } from '../../components/primitives'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft, type CourseDraftTee } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { blobToBase64, downscaleImage } from '../../lib/images'
@@ -12,6 +14,7 @@ import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from
 import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/courseProviders/types'
 import { useCourses } from './useCourses'
 import { CourseEditor } from './CourseEditor'
+import a from './Admin.module.css'
 
 const C = t.admin.courses
 
@@ -24,7 +27,7 @@ const blankTee = (name = 'Azules'): CourseDraftTee => ({
 })
 
 export function AdminCourses() {
-  const { courses, refresh } = useCourses()
+  const { courses, loading, error, refresh } = useCourses()
   const reload = useTournament((s) => s.reload)
   const [draft, setDraft] = useState<CourseDraft | null>(null)
   const [notes, setNotes] = useState<string[]>([])
@@ -36,6 +39,7 @@ export function AdminCourses() {
   const [pick, setPick] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState(false)
+  const [askDelete, setAskDelete] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function doSearch() {
@@ -171,20 +175,25 @@ export function AdminCourses() {
   }
 
   async function remove(id: string) {
-    if (!confirm(t.common.confirmDelete)) return
+    setBusy(true)
     try {
       await deleteCourse(id)
       refresh()
       await reload()
+      setAskDelete(null)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
     }
   }
 
   return (
-    <div className="stack">
-      <h2>{C.title}</h2>
-      <div className="row row--wrap">
+    <div className={a.screen}>
+      <div className={a.head}>
+        <h2>{C.title}</h2>
+      </div>
+      <div className={a.chipRow}>
         <button className="btn btn--primary btn--sm" type="button" onClick={() => setMode('search')}>
           {C.search}
         </button>
@@ -204,28 +213,37 @@ export function AdminCourses() {
         </button>
       </div>
       {reading && <Spinner label={C.photoReading} />}
-      <p className="help">{C.photoHint}</p>
-      {courses.length === 0 && <p className="muted">{C.empty}</p>}
-      <div className="list">
-        {courses.map((c) => (
-          <div key={c.id} className="listItem listItem--static">
-            <button type="button" className="grow" style={{ background: 'none', border: 0, textAlign: 'left', padding: 0, cursor: 'pointer' }} onClick={() => void edit(c.id)}>
-              <strong>{c.name}</strong>
-              <span className="help" style={{ display: 'block' }}>
-                {c.location ?? ''} {c.location ? '·' : ''} {c.tees} {C.tees.toLowerCase()} · {C.source[c.source as keyof typeof C.source] ?? c.source}
-              </span>
-              {c.attribution && (
-                <span className="help" style={{ display: 'block', fontSize: '0.75rem' }}>
-                  {C.attribution}: {c.attribution}
+      <p className={a.help}>{C.photoHint}</p>
+      {loading && <Spinner />}
+      {error && <ErrorBox message={error} onRetry={refresh} />}
+      {!loading && !error && courses.length === 0 && <EmptyState title={C.title} body={C.empty} />}
+      {courses.length > 0 && (
+        <div className={a.rows}>
+          {courses.map((c) => (
+            <div key={c.id} className={a.row}>
+              <button type="button" className={a.rowBtn} onClick={() => void edit(c.id)} disabled={busy}>
+                <span className={a.rowText}>
+                  <span className={a.rowTitle}>{c.name}</span>
+                  <span className={a.rowSub}>
+                    {c.location ? `${c.location}, ` : ''}
+                    {c.tees} {C.tees.toLowerCase()}, {C.source[c.source as keyof typeof C.source] ?? c.source}
+                  </span>
+                  {c.attribution && (
+                    <span className={a.rowSub}>
+                      {C.attribution}: {c.attribution}
+                    </span>
+                  )}
                 </span>
-              )}
-            </button>
-            <button className="btn btn--ghost btn--sm coral" type="button" onClick={() => void remove(c.id)}>
-              {t.common.delete}
-            </button>
-          </div>
-        ))}
-      </div>
+              </button>
+              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskDelete(c.id)}>
+                {t.common.delete}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ConfirmSheet open={!!askDelete} title={t.common.delete} body={t.common.confirmDelete} danger busy={busy} confirmLabel={t.common.delete} onConfirm={() => askDelete && void remove(askDelete)} onClose={() => setAskDelete(null)} />
 
       <Sheet open={mode === 'search'} onClose={() => setMode('none')} title={C.search}>
         <div className="stack">
@@ -242,19 +260,15 @@ export function AdminCourses() {
             </button>
           </form>
           {busy && <Spinner />}
-          {searchMsg && <p className="help">{searchMsg}</p>}
+          {searchMsg && <p className={a.help}>{searchMsg}</p>}
           {hits && hits.length > 0 && (
-            <div className="list">
+            <div className={a.rows}>
               {hits.map((h) => (
-                <button key={hitRef(h)} type="button" className="listItem" onClick={() => void chooseHit(h)}>
-                  <span className="grow">
-                    <strong>{h.name}</strong>
-                    <span className="help" style={{ display: 'block' }}>
-                      {[h.clubName, h.location].filter(Boolean).join(' · ')}
-                    </span>
-                  </span>
-                  <span className={`chip ${h.hasCard === true ? 'chip--teal' : h.hasCard === false ? 'chip--coral' : 'chip--outline'}`} style={{ whiteSpace: 'normal', height: 'auto', padding: '4px 10px', maxWidth: 150, textAlign: 'center' }}>
-                    {h.hasCard === true ? C.fullCard : h.hasCard === false ? C.locationOnly : C.cardUnknown}
+                <button key={hitRef(h)} type="button" className={`${a.row} ${a.rowBtn}`} onClick={() => void chooseHit(h)} disabled={busy}>
+                  <span className={a.rowText}>
+                    <span className={a.rowTitle}>{h.name}</span>
+                    <span className={a.rowSub}>{[h.clubName, h.location].filter(Boolean).join(', ')}</span>
+                    <span className={h.hasCard === false ? a.warn : a.rowSub}>{h.hasCard === true ? C.fullCard : h.hasCard === false ? C.locationOnly : C.cardUnknown}</span>
                   </span>
                 </button>
               ))}
@@ -272,9 +286,9 @@ export function AdminCourses() {
                 <span>
                   {tee.name}
                   {tee.gender === 'female' ? ' (damas)' : ''}
-                  <span className="help" style={{ display: 'block' }}>
+                  <span className="help">
                     Par {tee.holes.reduce((s, h) => s + h.par, 0)}
-                    {tee.rating ? ` · ${tee.rating} / ${tee.slope}` : ''} · {tee.holes.length} hoyos
+                    {tee.rating ? `, ${tee.rating} / ${tee.slope}` : ''}, {tee.holes.length} hoyos
                   </span>
                 </span>
                 <input

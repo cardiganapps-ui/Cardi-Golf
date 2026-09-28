@@ -16,9 +16,6 @@ const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/
 const PERMANENT = new Set(['styles/tokens.css', 'design/accents.ts', 'dev/fixtures.ts'])
 const PENDING = new Set([
   'components/ShareCard.module.css',
-  'screens/admin/AdminAuction.module.css',
-  'screens/admin/AdminPlayers.tsx',
-  'screens/admin/AdminScores.module.css',
   'screens/tournament/CeremonyScreen.module.css',
   'screens/tournament/PrintScreen.module.css',
   'screens/tournament/TvScreen.module.css',

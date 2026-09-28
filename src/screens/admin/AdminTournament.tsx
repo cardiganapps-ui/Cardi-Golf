@@ -1,7 +1,13 @@
+/**
+ * Torneo (§13): brand, status, banker, join code, every setting, and the
+ * danger zone. Immediate mutations (status, banker, new code) show busy and
+ * confirm where they can lock someone out.
+ */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, toast } from '../../components/ui'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteTournament, updateTournament, uploadAsset } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
@@ -10,6 +16,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
+import a from './Admin.module.css'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
 
@@ -25,10 +32,14 @@ export function AdminTournament() {
   const [settings, setSettings] = useState<TournamentSettings>(data!.settings)
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [quick, setQuick] = useState(false)
+  const [askCode, setAskCode] = useState(false)
   const [confirmName, setConfirmName] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const A = t.admin.tournament
   const link = `${window.location.origin}/t/${slug}`
+  const players = data!.snapshot.players.length || 12
+  const warnings = data!.state.flags.warnings
 
   useEffect(() => {
     if (!dirty) setSettings(data!.settings)
@@ -36,11 +47,11 @@ export function AdminTournament() {
 
   const parsed = useMemo(() => safeParseSettings(settings), [settings])
 
-  async function save(extra: Record<string, unknown> = {}) {
+  async function save() {
     if (!parsed.success) return
     setBusy(true)
     try {
-      await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: parsed.data, ...extra })
+      await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: parsed.data })
       patch((s) => {
         s.tournament.name = name.trim()
         s.tournament.tagline = tagline.trim() || null
@@ -72,33 +83,25 @@ export function AdminTournament() {
     }
   }
 
-  async function setStatus(status: (typeof STATUSES)[number]) {
+  /** The immediate mutations: one busy flag, a toast on success. */
+  async function quickUpdate(fields: Record<string, unknown>, apply: () => void) {
+    setQuick(true)
     try {
-      await updateTournament(tournamentId, { status })
-      patch((s) => (s.tournament.status = status))
+      await updateTournament(tournamentId, fields)
+      patch(() => apply())
+      toast(t.common.saved)
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setQuick(false)
     }
   }
-
-  async function setBanker(id: string) {
-    try {
-      await updateTournament(tournamentId, { banker_player_id: id || null })
-      patch((s) => (s.tournament.bankerPlayerId = id || null))
-    } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
-    }
-  }
-
+  const setStatus = (status: (typeof STATUSES)[number]) => quickUpdate({ status }, () => patch((s) => (s.tournament.status = status)))
+  const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, () => patch((s) => (s.tournament.bankerPlayerId = id || null)))
   async function newCode() {
-    // Let Postgres pick: set to a fresh value via the generator.
     const code = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('')
-    try {
-      await updateTournament(tournamentId, { join_code: code })
-      patch((s) => (s.tournament.joinCode = code))
-    } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
-    }
+    await quickUpdate({ join_code: code }, () => patch((s) => (s.tournament.joinCode = code)))
+    setAskCode(false)
   }
 
   async function destroy() {
@@ -114,11 +117,23 @@ export function AdminTournament() {
   }
 
   return (
-    <div className="stack stack--lg">
-      <section className="card stack">
-        <span className="label">{A.brand}</span>
-        <div className="row">
-          {tr.logoUrl ? <img src={tr.logoUrl} alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} /> : null}
+    <div className={a.screen}>
+      <div className={a.head}>
+        <h2>{t.admin.sections.tournament}</h2>
+        {dirty && <span className={a.unsaved}>{A.unsaved}</span>}
+      </div>
+      {warnings.map((w) => (
+        <p key={w} className={a.warn}>
+          {w}
+        </p>
+      ))}
+
+      <section className={a.section}>
+        <div className={a.sectionTitle}>
+          <strong>{A.brand}</strong>
+        </div>
+        <div className={a.chipRow}>
+          {tr.logoUrl ? <img src={tr.logoUrl} alt="" className={a.logo} /> : null}
           <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
             {A.uploadLogo}
           </button>
@@ -146,37 +161,40 @@ export function AdminTournament() {
         </Field>
         <Field label={A.accent}>
           <div className={styles.swatches} role="group" aria-label={A.accent}>
-            {ACCENTS.map((a) => (
+            {ACCENTS.map((sw) => (
               <button
-                key={a.id}
+                key={sw.id}
                 type="button"
                 className={styles.swatch}
-                aria-pressed={nearestAccent(accent).id === a.id}
-                style={{ '--swatch': a.hex } as React.CSSProperties}
+                aria-pressed={nearestAccent(accent).id === sw.id}
+                style={{ '--swatch': sw.hex } as React.CSSProperties}
                 onClick={() => {
-                  setAccent(a.hex)
+                  setAccent(sw.hex)
                   setDirty(true)
                 }}
               >
                 <span className={styles.swatchDot} aria-hidden="true" />
-                {a.name}
+                {sw.name}
               </button>
             ))}
           </div>
         </Field>
       </section>
 
-      <section className="card card--cell stack">
-        <span className="label">{A.status}</span>
-        <div className="segmented" role="tablist">
+      <section className={a.section}>
+        <div className={a.sectionTitle}>
+          <strong>{A.status}</strong>
+          {quick && <span className={a.count}>{t.common.saving}</span>}
+        </div>
+        <div className="segmented" role="tablist" aria-busy={quick}>
           {STATUSES.map((s) => (
-            <button key={s} type="button" role="tab" aria-selected={tr.status === s} onClick={() => void setStatus(s)}>
+            <button key={s} type="button" role="tab" aria-selected={tr.status === s} disabled={quick} onClick={() => void setStatus(s)}>
               {t.status[s]}
             </button>
           ))}
         </div>
         <Field label={A.banker}>
-          <select className="select" value={tr.bankerPlayerId ?? ''} onChange={(e) => void setBanker(e.target.value)}>
+          <select className="select" value={tr.bankerPlayerId ?? ''} disabled={quick} onChange={(e) => void setBanker(e.target.value)}>
             <option value="">{t.common.none}</option>
             {data!.snapshot.players.map((p) => (
               <option key={p.id} value={p.id}>
@@ -186,20 +204,16 @@ export function AdminTournament() {
           </select>
         </Field>
         <span className="label">{A.joinCode}</span>
-        <div className="row row--wrap">
-          <span className="num" style={{ fontSize: '1.8rem', letterSpacing: '0.2em' }}>
-            {tr.joinCode}
-          </span>
+        <div className={a.codeRow}>
+          <span className={a.code}>{tr.joinCode}</span>
           <CopyButton text={tr.joinCode} />
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => void newCode()}>
+          <button className="btn btn--ghost btn--sm" type="button" disabled={quick} onClick={() => setAskCode(true)}>
             {A.newCode}
           </button>
         </div>
         <span className="label">{A.link}</span>
-        <div className="row row--wrap">
-          <span className="small" style={{ wordBreak: 'break-all' }}>
-            {link}
-          </span>
+        <span className={a.link}>{link}</span>
+        <div className={a.chipRow}>
           <CopyButton text={link} />
           <ShareButton text={t.common.joinWithCode(tr.name, tr.joinCode)} url={link} title={tr.name} />
         </div>
@@ -211,26 +225,29 @@ export function AdminTournament() {
           setSettings(v)
           setDirty(true)
         }}
-        players={data!.snapshot.players.length || 12}
+        players={players}
       />
-      <p className="help">
-        {A.playersForCheck}: {data!.snapshot.players.length || 12}
+      <p className={a.help}>
+        {A.playersForCheck}: {players}
       </p>
 
-      <div style={{ position: 'sticky', bottom: 12, zIndex: 4 }}>
+      <div className={a.sticky}>
+        {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
         <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success} onClick={() => void save()}>
           {busy ? t.common.saving : t.common.save}
         </button>
       </div>
 
-      <section className="card stack" style={{ borderLeft: '4px solid var(--coral)' }}>
-        <span className="label coral">{A.danger}</span>
-        <p className="help">{A.deleteConfirm(tr.name)}</p>
+      <section className={a.danger}>
+        <span className={a.dangerTitle}>{A.danger}</span>
+        <p className={a.help}>{A.deleteConfirm(tr.name)}</p>
         <input className="input" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
         <button className="btn btn--danger" type="button" disabled={busy || confirmName !== tr.name} onClick={() => void destroy()}>
           {A.deleteTournament}
         </button>
       </section>
+
+      <ConfirmSheet open={askCode} title={A.newCode} body={A.newCodeConfirm} busy={quick} onConfirm={() => void newCode()} onClose={() => setAskCode(false)} />
     </div>
   )
 }

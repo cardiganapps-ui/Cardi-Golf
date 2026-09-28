@@ -14,3 +14,7 @@
   margin: 0 auto;
   padding: 0 var(--gutter) calc(24px + var(--safe-bottom));
 }
+
+.mainWide {
+  max-width: 960px;
+}

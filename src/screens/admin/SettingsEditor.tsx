@@ -8,6 +8,7 @@ import { Field, Toggle } from '../../components/ui'
 import { MODULE_IDS, safeParseSettings, type ModuleId, type TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { PrizeSummary } from './PrizeSummary'
+import a from './Admin.module.css'
 
 interface Props {
   value: TournamentSettings
@@ -45,7 +46,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
       <section className="stack">
         <span className="label">{A.modules}</span>
         {MODULE_IDS.map((id: ModuleId) => (
-          <div key={id} className="card card--cell" style={{ padding: '6px 14px' }}>
+          <div key={id} className={a.moduleRow}>
             <Toggle label={m[id].label} checked={m[id].enabled} onChange={(v) => set((d) => (d.modules[id].enabled = v))} />
             {m[id].enabled && !compact && (
               <Field label={A.moduleLabel}>
@@ -53,7 +54,7 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
               </Field>
             )}
             {m[id].enabled && id === 'pairs' && !compact && (
-              <div className="grid2" style={{ marginTop: 8 }}>
+              <div className="grid2">
                 <Field label={A.pairingRules}>
                   <input
                     className="input input--sm"
@@ -212,7 +213,6 @@ export function SettingsEditor({ value, onChange, players, compact }: Props) {
                 </span>
                 <input
                   className="input input--sm input--num"
-                  style={{ width: 90 }}
                   type="number"
                   min={0}
                   max={100}

@@ -72,6 +72,17 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Created state** leads with the join code as the biggest figure on the page, then the link, copy and share, then "Ir al Comité".
 - Logged, not fixed: the per-line detail strings come from the engine (`prizeCheck.ts`) and print raw numbers ("$10000") rather than formatted money; the engine is out of scope for the redesign.
 
+## Phase 3, PR 7: Comité (2026-09-28)
+
+- **Width.** The Comité column widens to 960px (the player screens stay at 560) and from 760px the sections become a sticky side column; Grupos and the auction console go two-column there, the hole grid shows the two nines as two rows.
+- **Badges from the engine.** The nav reads `state.flags`: Tarjetas carries tiebreaks + discrepancies (red) + unsigned cards, Rondas the unfinished rounds, Torneo the warnings. Calcutta and Parejas hide when their module is off.
+- **Tarjetas is the inbox.** Every flag across every round is one ruled row with the action beside it (answer the tiebreak, keep or restore, "Ver"); the player picker is grouped by group. Empty states for no rounds, no players, no card.
+- **Busy and confirm.** Status tabs, banker and new code show busy (new code asks first). Rounds: finish, cancel and delete ask in a sheet that also says how many items are pending in Tarjetas; per-round busy. Groups: leaving a day with a draft asks; the draw asks before replacing Day 1 groups and can skip its animation (timers are now cleared on unmount). Delete a player or course asks in a sheet, not `confirm()`.
+- **Search** above the player list, the group picker (unassigned first) and the bidder grid once the list is long; the count is on the heading.
+- **One row style** (`Admin.module.css`) for players, courses, handicaps, lots, group members; the figure (handicap, price) right-aligned in the condensed width. Tiles (faces, bidders, holes) share one pressed/selected/disabled treatment.
+- `AdminAuction.module.css`, `AdminPlayers.tsx` and `AdminScores.module.css` left the no-literal-colors PENDING list.
+- Logged, not fixed: SettingsEditor's `defaultValue` inputs (tiers, prize lists, pairing) still do not reflect a realtime reload; the pairs row is cramped at 360px.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

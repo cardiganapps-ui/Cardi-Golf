@@ -1,0 +1,13 @@
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+.body {
+  line-height: var(--lh-body);
+}
+.actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s2);
+}

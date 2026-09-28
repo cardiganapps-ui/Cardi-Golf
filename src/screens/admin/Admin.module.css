@@ -1,0 +1,322 @@
+/* Shared Comité styles. Tokens only. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.head h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.sectionTitle > .rowText {
+  flex: 1 1 160px;
+}
+.sectionTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2) var(--s3);
+  padding-bottom: var(--s1);
+  border-bottom: var(--rule-heavy);
+}
+.help {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+}
+.warn {
+  font-size: var(--fs-sm);
+  color: var(--caution);
+  line-height: var(--lh-body);
+}
+.error {
+  font-size: var(--fs-sm);
+  color: var(--under);
+  line-height: var(--lh-body);
+}
+
+/* Ruled rows with a pressable body. */
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 60px;
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+}
+.rowBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.rowBtn:active {
+  background: var(--surface);
+}
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+.rowTitle {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowSub {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  flex-shrink: 0;
+}
+.fig {
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  min-width: 2ch;
+  text-align: right;
+}
+.figLg {
+  font-size: var(--fs-2xl);
+  line-height: 1;
+}
+.count {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Search above long lists. */
+.search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+
+/* A grid of small pressable tiles (faces, holes). */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: var(--s2);
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 72px;
+  padding: var(--s2) var(--s1);
+  border: var(--control-border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.tile:active {
+  background: var(--surface);
+}
+.tileOn {
+  border-color: var(--ink);
+  background: var(--accent-soft);
+}
+.tile:disabled {
+  color: var(--ink-3);
+  background: var(--surface);
+  cursor: not-allowed;
+}
+.tileText {
+  font-size: var(--fs-xs);
+  line-height: var(--lh-ui);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sticky save bar. */
+.sticky {
+  position: sticky;
+  bottom: var(--s3);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding-top: var(--s2);
+  background: var(--bg);
+}
+
+/* Danger section: a red rule, not a coral card. */
+.danger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding-top: var(--s4);
+  border-top: 2px solid var(--under);
+}
+.dangerTitle {
+  font-weight: 600;
+  color: var(--under);
+}
+
+/* Two-column form rows. */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+.formActions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s2);
+}
+
+/* Inbox rows (Tarjetas). */
+.inbox {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.inboxRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  min-height: 56px;
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+}
+.inboxText {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--lh-ui);
+  font-size: var(--fs-sm);
+}
+.inboxTitle {
+  font-weight: 600;
+  color: var(--ink);
+}
+.inboxSub {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.inboxActions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s1);
+}
+.inboxMark {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-round);
+  background: var(--caution);
+  margin-right: var(--s2);
+  vertical-align: middle;
+}
+.inboxMarkHot {
+  background: var(--under);
+}
+
+@media (min-width: 760px) {
+  .grid3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Module rows in the settings editor. */
+.moduleRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s1) 0;
+  border-bottom: var(--hairline);
+}
+
+/* PIN entry. */
+.pinInput {
+  font-size: var(--fs-3xl);
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  min-height: 64px;
+}
+
+/* Join code figure. */
+.code {
+  font-size: var(--fs-3xl);
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+.codeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s3);
+}
+.link {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+.unsaved {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--caution);
+}
