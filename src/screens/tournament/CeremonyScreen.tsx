@@ -85,6 +85,34 @@ export function CeremonyScreen() {
         out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? `${C.withPoints(pts)}, ${formatMoney(day.winners[ids[0]!]!.amount)}` : undefined }] })
       }
     }
+    // Instance games: who took money from each (pots and bets alike).
+    for (const g of Object.values(state.games)) {
+      const totals = new Map<string, number>()
+      for (const p of state.prizes) {
+        if (p.gameId !== g.config.id) continue
+        totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+        if (p.payerId) totals.set(p.payerId, (totals.get(p.payerId) ?? 0) - p.amount)
+      }
+      const rows = [...totals].filter(([, v]) => v !== 0).sort((a, b) => b[1] - a[1])
+      if (!rows.length) continue
+      const top = rows.filter(([, v]) => v === rows[0]![1]).map(([id]) => id)
+      out.push({
+        id: `game-${g.config.id}`,
+        title: g.config.label,
+        icon: <IconTarget size={64} />,
+        winners: [{ playerIds: top, line: andList(top.map(nameOf)), sub: formatMoney(rows[0]![1]) }],
+        extra: (
+          <div className={styles.list}>
+            {rows.map(([pid, amt]) => (
+              <div key={pid} className={styles.listRow}>
+                <span>{nameOf(pid)}</span>
+                <span>{amt < 0 ? `−${formatMoney(-amt)}` : formatMoney(amt)}</span>
+              </div>
+            ))}
+          </div>
+        ),
+      })
+    }
     if (m.pairs) {
       const podium = m.pairs.rows.filter((r) => r.position <= settings.prizes.pairs.length)
       if (podium.length) {

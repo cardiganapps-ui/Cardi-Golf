@@ -17,7 +17,7 @@ import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
 
-type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed'
+type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 
 export function TvScreen() {
   const data = useTournament((s) => s.data)!
@@ -32,9 +32,10 @@ export function TvScreen() {
     if (state.modules.pairs) b.push('pairs')
     if (state.modules.snake) b.push('snake')
     if (state.modules.auction && state.modules.auction.soldCount > 0) b.push('auction')
+    for (const [id, g] of Object.entries(state.games)) if (g.board.sections[0]?.rows.length) b.push(`game:${id}`)
     if (state.feed.length > 0) b.push('feed')
     return b
-  }, [state.modules, state.feed.length])
+  }, [state.modules, state.games, state.feed.length])
   const [idx, setIdx] = useState(0)
   useEffect(() => {
     if (isAuctionNight) return
@@ -186,6 +187,25 @@ export function TvScreen() {
                       </span>
                       <span className={styles.small}>{formatMoney(pf.invested)}</span>
                       <span className={styles.big}>{formatMoney(pf.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {board.startsWith('game:') && state.games[board.slice(5)] && (
+              <>
+                <h2 className={styles.boardTitle}>{state.games[board.slice(5)]!.config.label}</h2>
+                <div className={styles.rows}>
+                  {state.games[board.slice(5)]!.board.sections[0]!.rows.slice(0, PAGE).map((r, i) => (
+                    <div key={i} className={`${styles.row} ${r.pos === '1' ? styles.leader : ''}`}>
+                      <span className={styles.pos}>{r.pos ?? ''}</span>
+                      {r.playerIds.length === 1 ? <Avatar name={name(r.playerIds[0]!)} url={byId.get(r.playerIds[0]!)?.avatarUrl} /> : <span />}
+                      <span className={styles.name}>
+                        <span>{r.title ?? r.playerIds.map(name).join(' y ')}</span>
+                        {(r.label || r.sub || r.title) && <span className={styles.small}>{[r.title ? r.playerIds.map(name).join(' y ') : null, r.label, r.sub].filter(Boolean).join(' · ')}</span>}
+                      </span>
+                      <span className={styles.small}>{r.money ? formatMoney(r.money) : ''}</span>
+                      <span className={styles.big}>{r.figure}</span>
                     </div>
                   ))}
                 </div>

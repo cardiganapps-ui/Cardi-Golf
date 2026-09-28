@@ -45,6 +45,7 @@ export function AdminLayout() {
     { to: 'scores', label: S.scores, badge: scoresBadge, hot: hot > 0 },
     { to: 'calcutta', label: S.auction, show: settings?.modules.auction.enabled ?? true },
     { to: 'parejas', label: S.draw, show: settings?.modules.pairs.enabled ?? true },
+    { to: 'juegos', label: S.games, show: (settings?.games.length ?? 0) > 0 },
     { to: 'datos', label: S.data },
   ]
   return (
