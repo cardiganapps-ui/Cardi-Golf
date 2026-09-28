@@ -7,6 +7,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { t } from '../i18n/es-MX'
 import type { Score, Snapshot } from '../engine/types'
 import { registerOverlay, useTournament } from './tournamentStore'
 
@@ -38,11 +39,23 @@ export interface SignaturePayload {
   signed_by: string | null
 }
 
+/** A write the server refused for good (RLS, constraint). Kept so the Comité can re-enter or discard it. */
+export interface RejectedItem {
+  key: string
+  kind: OutboxItem['kind']
+  tournamentId: string
+  payload: OutboxItem['payload']
+  message: string
+  at: number
+}
+
 class OutboxDb extends Dexie {
   items!: EntityTable<OutboxItem, 'key'>
+  rejected!: EntityTable<RejectedItem, 'key'>
   constructor() {
     super('cardi-golf-outbox')
     this.version(1).stores({ items: 'key, tournamentId, createdAt' })
+    this.version(2).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
   }
 }
 let db: OutboxDb | null = null
@@ -53,21 +66,77 @@ function getDb(): OutboxDb | null {
 }
 
 interface OutboxState {
+  /** Items still to push for the tournament that is open on this device. */
   pending: number
   syncing: boolean
+  /** Last push error, mapped to Spanish by `describeSyncError`. Null once a push succeeds. */
   lastError: string | null
+  /** Writes the server refused for good, for the open tournament. */
+  rejected: RejectedItem[]
+  /** True while the Tarjeta has an unsaved hole: defers the "new version" reload prompt. */
+  editing: boolean
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, syncing: false, lastError: null }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, syncing: false, lastError: null, rejected: [], editing: false }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
+let rejectedAll: RejectedItem[] = []
 let flushing = false
 let timer: ReturnType<typeof setTimeout> | null = null
+
+function activeTournamentId(): string | null {
+  return useTournament.getState().tournamentId
+}
+/** Publish the counters for the tournament that is open on this device. */
+function publish(extra: Partial<OutboxState> = {}) {
+  const tid = activeTournamentId()
+  useOutbox.setState({ pending: queue.filter((x) => x.tournamentId === tid).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
+}
+/** Call when the open tournament changes so the counters follow it. */
+export function refreshOutboxCounters() {
+  publish()
+}
 
 async function loadQueue() {
   const d = getDb()
   queue = d ? await d.items.orderBy('createdAt').toArray() : []
-  useOutbox.setState({ pending: queue.length })
+  rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
+  publish()
+}
+
+/** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
+export function describeSyncError(msg: string): string {
+  if (/signed|firmad/i.test(msg)) return t.sync.errSigned
+  if (/not live|is_live|en juego/i.test(msg)) return t.sync.errNotLive
+  if (isPermanent(msg)) return t.sync.errDenied
+  return t.sync.errNetwork
+}
+
+async function reject(item: OutboxItem, message: string) {
+  const r: RejectedItem = { key: item.key, kind: item.kind, tournamentId: item.tournamentId, payload: item.payload, message, at: Date.now() }
+  rejectedAll = [...rejectedAll.filter((x) => x.key !== r.key), r]
+  queue = queue.filter((x) => x.key !== item.key)
+  const d = getDb()
+  if (d) {
+    await d.items.delete(item.key)
+    await d.rejected.put(r)
+  }
+}
+
+/** Put a rejected write back in the queue (the Comité, whose write is allowed, or after the round reopened). */
+export async function retryRejected(key: string) {
+  const r = rejectedAll.find((x) => x.key === key)
+  if (!r) return
+  rejectedAll = rejectedAll.filter((x) => x.key !== key)
+  const d = getDb()
+  if (d) await d.rejected.delete(key)
+  await enqueue({ key: r.key, kind: r.kind, tournamentId: r.tournamentId, payload: r.payload, attempts: 0, createdAt: Date.now() } as OutboxItem)
+}
+export async function discardRejected(key: string) {
+  rejectedAll = rejectedAll.filter((x) => x.key !== key)
+  const d = getDb()
+  if (d) await d.rejected.delete(key)
+  publish()
 }
 
 /** Apply pending writes on top of a freshly fetched snapshot. */
@@ -104,7 +173,7 @@ export function overlayPending(s: Snapshot): void {
 
 async function enqueue(item: OutboxItem) {
   queue = [...queue.filter((x) => x.key !== item.key), item]
-  useOutbox.setState({ pending: queue.length })
+  publish()
   const d = getDb()
   if (d) await d.items.put(item)
   // Optimistic: recompute right away with the overlay.
@@ -120,6 +189,24 @@ export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload) 
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
   return enqueue({ key: `signature:${payload.round_id}:${payload.pair_id}`, kind: 'signature', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+}
+
+/** Replaceable for tests. */
+let pushImpl: (item: OutboxItem) => Promise<void> = push
+export const _outboxTest = {
+  setPush(fn: (item: OutboxItem) => Promise<void>) {
+    pushImpl = fn
+  },
+  reset() {
+    queue = []
+    rejectedAll = []
+    flushing = false
+    if (timer) clearTimeout(timer)
+    timer = null
+    publish({ lastError: null, syncing: false })
+  },
+  queue: () => queue,
+  enqueue,
 }
 
 async function push(item: OutboxItem): Promise<void> {
@@ -141,32 +228,39 @@ function isPermanent(msg: string): boolean {
   return /row-level security|violates|permission denied|invalid input/i.test(msg)
 }
 
+/**
+ * Push everything queued, in order. A permanent rejection moves the item to
+ * `rejected` (never dropped silently); a network error keeps it queued with
+ * backoff, forever (§2: nothing is lost). Items enqueued while a flush runs
+ * are pushed right after it, not five seconds later.
+ */
 export async function flush(): Promise<void> {
   if (flushing) return
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return
   flushing = true
   useOutbox.setState({ syncing: true })
   const d = getDb()
+  let failed = false
   try {
     for (const item of [...queue]) {
       try {
-        await push(item)
+        await pushImpl(item)
         queue = queue.filter((x) => x.key !== item.key)
         if (d) await d.items.delete(item.key)
-        useOutbox.setState({ pending: queue.length, lastError: null })
+        publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
-        const next = { ...item, attempts: item.attempts + 1, lastError: msg }
-        if (isPermanent(msg) || next.attempts >= 20) {
-          queue = queue.filter((x) => x.key !== item.key)
-          if (d) await d.items.delete(item.key)
-          useOutbox.setState({ pending: queue.length, lastError: msg })
+        if (isPermanent(msg)) {
+          await reject(item, describeSyncError(msg))
+          publish({ lastError: describeSyncError(msg) })
           // The optimistic value was wrong: fall back to the server's truth.
           void useTournament.getState().reload()
         } else {
+          failed = true
+          const next = { ...item, attempts: item.attempts + 1, lastError: msg }
           queue = queue.map((x) => (x.key === item.key ? next : x))
           if (d) await d.items.put(next)
-          useOutbox.setState({ lastError: msg })
+          publish({ lastError: describeSyncError(msg) })
           schedule(Math.min(30000, 1000 * 2 ** Math.min(next.attempts, 5)))
           break
         }
@@ -175,7 +269,7 @@ export async function flush(): Promise<void> {
   } finally {
     flushing = false
     useOutbox.setState({ syncing: false })
-    if (queue.length && !timer) schedule(5000)
+    if (queue.length && !failed && !timer) void flush()
   }
 }
 
