@@ -198,6 +198,11 @@ export const t = {
     thru: 'Hoyo',
     today: 'Hoy',
     leadGroup: (hole: number) => `Grupo puntero en el hoyo ${hole}`,
+    updatedNow: 'Actualizado ahora',
+    updatedAgo: (min: number) => `Actualizado hace ${min} min`,
+    points: 'Puntos',
+    gross: 'Gross',
+    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${pos}º con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
   card: {
@@ -618,7 +623,7 @@ export const t = {
     provisional: 'Provisional: hay premios abiertos.',
   },
   feed: {
-    title: 'En vivo',
+    title: 'Lo último',
     empty: 'Nada todavía. El primer birdie abre el marcador.',
     birdie: (name: string, hole: number, pts: number, gross: boolean) => `${name}: ${gross ? 'birdie' : 'birdie neto'} en el ${hole}, +${pts} pts`,
     eagle: (name: string, hole: number, pts: number) => `${name}: águila neta en el ${hole}, +${pts} pts`,

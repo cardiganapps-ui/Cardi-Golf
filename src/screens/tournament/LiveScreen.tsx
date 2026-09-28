@@ -1,13 +1,16 @@
 /**
- * En vivo (§9.2): top strip, honoree spotlight, animated individual
- * leaderboard with "si terminara ahora" money and Calcutta owners' initials.
+ * En vivo (§9.2): the flagship board. One status line, the honoree as one
+ * row detail, the individual leaderboard (points, or gross to par on a
+ * toggle), and the feed. Rows re-sort once, in 200 ms.
  */
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
+import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
+import { IconAlert } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
-import { formatMoney } from '../../lib/money'
+import type { TournamentState } from '../../engine/computeTournament'
 import { ShareCardButton } from '../../components/ShareCard'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
@@ -15,13 +18,40 @@ import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound } from './useMyGroup'
 import styles from './LiveScreen.module.css'
 
+/** Gross strokes to par over the holes actually played (pick-ups excluded). Display only. */
+function grossToPar(state: TournamentState, playerId: string, roundId?: string): number | null {
+  let d = 0
+  let n = 0
+  for (const rid of roundId ? [roundId] : state.core.roundIds) {
+    for (const h of state.core.rounds[rid]?.[playerId]?.holes ?? []) {
+      if (h.played && !h.pickedUp && h.gross != null) {
+        d += h.gross - h.par
+        n++
+      }
+    }
+  }
+  return n ? d : null
+}
+
+function useMinutesSince(ts: number): number | null {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  return ts ? Math.max(0, Math.floor((now - ts) / 60_000)) : null
+}
+
 export function LiveScreen() {
   const data = useTournament((s) => s.data)
+  const updatedAt = useTournament((s) => s.updatedAt)
   const { me } = useTournamentCtx()
   const round = useActiveRound()
   const [open, setOpen] = useState<string | null>(null)
+  const [view, setView] = useState<'points' | 'gross'>('points')
   const prevOrder = useRef<Map<string, number>>(new Map())
   const [moves, setMoves] = useState<Map<string, number>>(new Map())
+  const minutes = useMinutesSince(updatedAt)
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
   useEffect(() => {
@@ -36,20 +66,12 @@ export function LiveScreen() {
     prevOrder.current = next
   }, [rows])
 
-  const money = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const p of data?.state.prizes ?? []) m.set(p.playerId, (m.get(p.playerId) ?? 0) + p.amount)
-    return m
-  }, [data])
   const owners = useMemo(() => {
-    const m = new Map<string, string[]>()
+    const m = new Map<string, string>()
     if (!data?.state.modules.auction) return m
     for (const lot of data.state.modules.auction.lots) {
       if (lot.status !== 'sold') continue
-      m.set(
-        lot.playerId,
-        lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName.slice(0, 2).toUpperCase() ?? '?'),
-      )
+      m.set(lot.playerId, lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName.slice(0, 2).toUpperCase() ?? '?').join(' '))
     }
     return m
   }, [data])
@@ -61,108 +83,143 @@ export function LiveScreen() {
   const honoreeRow = honoree ? rows.find((r) => r.playerId === honoree.id) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
   const leadHole = roundState ? Math.max(0, ...Object.values(roundState).map((pr) => pr.thru)) : 0
-  const lastHole = (pid: string) => {
-    const pr = roundState?.[pid]
-    if (!pr) return null
-    const played = pr.holes.filter((h) => h.played)
-    return played.at(-1) ?? null
+  const lastHole = (pid: string) => roundState?.[pid]?.holes.filter((h) => h.played).at(-1) ?? null
+  const hasHandicaps = Object.values(state.core.handicaps).some((h) => h.base > 0)
+
+  const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
+  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, minutes == null ? null : minutes === 0 ? t.live.updatedNow : t.live.updatedAgo(minutes)].filter(Boolean).join('. ')
+
+  // Gross view: same players, sorted by strokes to par over the holes played. Display only.
+  const grossRows = view === 'gross' ? [...rows].map((r) => ({ r, d: grossToPar(state, r.playerId) })).sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity)) : null
+  const grossLabel = (i: number) => {
+    if (!grossRows) return ''
+    const d = grossRows[i]!.d
+    let first = i
+    while (first > 0 && grossRows[first - 1]!.d === d) first--
+    const tied = (i > 0 && grossRows[i - 1]!.d === d) || (i < grossRows.length - 1 && grossRows[i + 1]!.d === d)
+    return `${tied ? 'T' : ''}${first + 1}`
   }
 
+  const list = grossRows ? grossRows.map((g) => g.r) : rows
+
   return (
-    <div className="screen">
+    <div className={styles.screen}>
       {settingsError && (
         <div className="card card--alert">
           <strong>{t.admin.tournament.invalid}</strong>
           <p className="small">{settingsError}</p>
         </div>
       )}
-      {state.flags.warnings.map((w) => (
-        <p key={w} className="help coral">
-          {w}
-        </p>
-      ))}
 
       <div className={styles.strip}>
-        <span className="chip chip--teal">{round ? `${t.round.day(round.number)} · ${t.roundStatus[round.status]}` : t.status[snapshot.tournament.status]}</span>
-        {round?.status === 'live' && leadHole > 0 && <span className="chip">{t.live.leadGroup(leadHole)}</span>}
-        {state.flags.pendingSnakeTiebreaks.length > 0 && <span className="chip chip--coral">{t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}</span>}
+        <span className={styles.stripMain}>{statusLine}</span>
+        {detailLine && <span>{detailLine}</span>}
+        {state.flags.pendingSnakeTiebreaks.length > 0 && (
+          <span className={styles.caution}>
+            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}
+          </span>
+        )}
+        {state.flags.warnings.map((w) => (
+          <span key={w} className={styles.caution}>
+            <IconAlert size={16} /> {w}
+          </span>
+        ))}
       </div>
 
       {honoree && honoreeRow && (
-        <button type="button" className={`card card--deep ${styles.spotlight}`} onClick={() => setOpen(honoree.id)}>
-          <Avatar name={honoree.displayName} url={honoree.avatarUrl} size="lg" honoree />
-          <div className="grow" style={{ textAlign: 'left' }}>
-            <span className="label" style={{ color: 'var(--seafoam)' }}>
-              {settings.labels.honoree}
+        <button type="button" className={styles.spotlight} onClick={() => setOpen(honoree.id)}>
+          <Avatar name={honoree.displayName} url={honoree.avatarUrl} honoree />
+          <span className={styles.spotlightText}>
+            <span className={styles.spotlightName}>
+              {settings.labels.honoree}: {honoree.displayName}
             </span>
-            <strong style={{ display: 'block', fontSize: '1.2rem' }}>{honoree.displayName}</strong>
-            <span className="small">
-              {honoreeRow.label}º · {honoreeRow.total} pts
-              {round && roundState?.[honoree.id] ? ` · ${t.live.today} ${roundState[honoree.id]!.points}` : ''}
-              {lastHole(honoree.id) ? ` · ${t.round.hole(lastHole(honoree.id)!.hole)}: ${lastHole(honoree.id)!.points} pts` : ''}
-            </span>
-          </div>
+            <span className={styles.spotlightLine}>{t.live.spotlight(honoreeRow.label, honoreeRow.total, roundState?.[honoree.id]?.points ?? null, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)}</span>
+          </span>
         </button>
       )}
 
-      <div className="row row--between">
+      <div className={styles.boardHead}>
         <h2>{settings.modules.individual.label}</h2>
-        <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />
+        {hasHandicaps ? (
+          <Segmented
+            value={view}
+            options={[
+              { value: 'points', label: t.live.points },
+              { value: 'gross', label: t.live.gross },
+            ]}
+            onChange={setView}
+          />
+        ) : (
+          <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />
+        )}
       </div>
-      {rows.length === 0 && <p className="muted">{t.enter.noPlayers}</p>}
-      <div className={styles.board}>
-        <AnimatePresence initial={false}>
-          {rows.map((r) => {
-            const p = byId.get(r.playerId)
-            if (!p) return null
-            const pr = roundState?.[p.id]
-            const mv = moves.get(p.id) ?? 0
-            const cash = money.get(p.id) ?? 0
-            const own = owners.get(p.id)
-            return (
-              <motion.button
-                key={p.id}
-                layout
-                type="button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 36 }}
-                className={`${styles.row} ${me.playerId === p.id ? styles.mine : ''}`}
-                onClick={() => setOpen(p.id)}
-              >
-                <span className={`num ${styles.pos}`}>
-                  {r.label}
-                  {mv !== 0 && <span className={`${styles.move} ${mv > 0 ? styles.up : styles.down}`} aria-hidden="true" />}
-                </span>
-                <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
-                <span className={styles.name}>
-                  <strong>{p.displayName}</strong>
-                  <span className={styles.sub}>
-                    {p.tier && <span className="tierBadge">{p.tier}</span>}
-                    {own && own.length > 0 && <span className={styles.owners}>{own.join('·')}</span>}
-                    {state.core.handicaps[p.id]?.estimated && <span className="help">{t.admin.players.estimated}</span>}
-                  </span>
-                </span>
-                <span className={styles.day}>
-                  <span className={styles.dayLine}>
-                    <span className="label">{t.live.thru}</span>
-                    <span className="num">{pr ? t.round.thru(pr.thru) : '–'}</span>
-                  </span>
-                  <span className={styles.dayLine}>
-                    <span className="label">{t.live.today}</span>
-                    <span className="num">{pr?.points ?? 0}</span>
-                  </span>
-                </span>
-                <span className={`num ${styles.total}`}>{r.total}</span>
-                <span className={`chip ${cash > 0 ? 'chip--sun' : 'chip--outline'} ${styles.cash}`}>{formatMoney(cash)}</span>
-              </motion.button>
-            )
-          })}
-        </AnimatePresence>
-      </div>
-      <p className="help">{t.money.ifEndedNow}</p>
 
-      <h2>{t.feed.title}</h2>
+      {rows.length === 0 ? (
+        <EmptyState title={t.enter.noPlayers} body={t.stats.noData} />
+      ) : (
+        <Board>
+          <BoardHead figureLabel={view === 'points' ? t.live.points : t.live.gross} dense={rows.length > 20} />
+          <AnimatePresence initial={false}>
+            {list.map((r, i) => {
+              const p = byId.get(r.playerId)
+              if (!p) return null
+              const pr = roundState?.[p.id]
+              const mv = moves.get(p.id) ?? 0
+              const cash = state.money.people[p.id]?.prizesTotal ?? 0
+              let figure: string
+              let tone: Tone = 'even'
+              let today: string | undefined
+              if (view === 'gross') {
+                const d = grossToPar(state, p.id)
+                const tp = d == null ? null : toPar(d)
+                figure = tp ? tp.text : '–'
+                tone = tp ? tp.tone : 'even'
+                const td = round ? grossToPar(state, p.id, round.id) : null
+                today = td == null ? undefined : toPar(td).text
+              } else {
+                figure = String(r.total)
+                today = pr ? String(pr.points) : undefined
+              }
+              const sub = (
+                <span className={styles.sub}>
+                  {p.tier && <span className="tierBadge">{p.tier}</span>}
+                  {state.core.handicaps[p.id]?.estimated && <span>{t.admin.players.estimated}</span>}
+                  {cash > 0 && (
+                    <span className={styles.subMoney}>
+                      <Money amount={cash} />
+                    </span>
+                  )}
+                </span>
+              )
+              return (
+                <motion.div key={p.id} layout transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                  <LeaderRow
+                    pos={view === 'gross' ? grossLabel(i) : r.label}
+                    name={p.displayName}
+                    sub={sub}
+                    owners={owners.get(p.id)}
+                    honoree={p.isHonoree}
+                    today={today}
+                    thru={pr ? t.round.thru(pr.thru) : undefined}
+                    figure={figure}
+                    tone={tone}
+                    mine={me.playerId === p.id}
+                    moved={mv > 0 ? 'up' : mv < 0 ? 'down' : null}
+                    dense={rows.length > 20}
+                    onClick={() => setOpen(p.id)}
+                  />
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </Board>
+      )}
+      <div className="row row--between">
+        <span className="help">{t.money.ifEndedNow}</span>
+        {hasHandicaps && <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />}
+      </div>
+
+      <h2 className={styles.feedHead}>{t.feed.title}</h2>
       <FeedTicker limit={10} />
 
       <PlayerSheet playerId={open} onClose={() => setOpen(null)} />

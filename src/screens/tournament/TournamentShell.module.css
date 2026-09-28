@@ -7,62 +7,69 @@
 .top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px var(--gutter);
+  gap: var(--s3);
+  min-height: 52px;
+  padding: var(--s2) var(--gutter);
   position: sticky;
   top: 0;
-  background: var(--paper);
+  background: var(--bg);
   z-index: 5;
-  border-bottom: 1px solid var(--hair);
+  border-bottom: var(--hairline);
 }
 .logo {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 .name {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-family: var(--font-event);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
   display: block;
-  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sync {
-  flex-shrink: 0;
-}
 .body {
   flex: 1;
-  padding: 0 var(--gutter) 24px;
+  padding: 0 var(--gutter) var(--s6);
 }
 .tabbar {
   position: sticky;
   bottom: 0;
   display: flex;
-  background: var(--cell);
-  border-top: 1px solid var(--hair);
+  background: var(--bg);
+  border-top: var(--hairline);
   padding-bottom: var(--safe-bottom);
   z-index: 5;
 }
 .tab {
   flex: 1;
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 60px;
+  color: var(--ink-2);
+  font-size: var(--fs-2xs);
+  font-weight: 500;
   text-decoration: none;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+}
+.tab:active {
+  background: var(--surface);
 }
 .tabActive {
-  color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.tabActive .tabIcon {
+  color: var(--event-accent);
 }
 .tabIcon {
-  font-size: 1.25rem;
-  line-height: 1;
+  display: inline-flex;
+  line-height: 0;
 }

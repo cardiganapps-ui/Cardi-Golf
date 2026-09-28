@@ -105,7 +105,7 @@ export function TabBar({ items }: { items: Array<{ icon: ReactNode; label: strin
 export interface LeaderRowProps {
   pos: string
   name: string
-  sub?: string
+  sub?: ReactNode
   today?: string
   thru?: string
   figure: string

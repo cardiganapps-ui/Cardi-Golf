@@ -29,6 +29,16 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Organizer sign-in: one primary path; magic link and password reset are two quiet buttons on one line; sign-up is a switch under a hairline. Busy labels change ("Entrando…"). The render-time `navigate()` moved into an effect (logged bug, fixed here because the screen was rewritten).
 - Reset: an anonymous or expired session now sees "Este enlace ya no sirve" with a link to sign in, instead of the sign-up confirmation copy.
 
+## Phase 3, PR 2: En vivo (2026-09-28)
+
+- The shell header is one line: small logo, the event name in the serif, and a live dot only when Realtime is subscribed (an "off" or "connecting" state shows nothing, per the logged note). The tab bar follows the primitives: 56 px, icon in the event accent when active.
+- En vivo opens with a status line ("Día 2, en juego", then the lead group's hole and "Actualizado hace n min"), then the honoree as one ruled row, then the board. Flags and warnings are single caution lines with an icon, not chips.
+- The board is `Board` + `BoardHead` + `LeaderRow`: position with T-ties, name with tier, money and owner initials on the sub line, today's figure, holes played ("F" when finished), and the primary figure large. Rows re-sort once in 200 ms with an ease-out, no spring. Above 20 players the rows go dense.
+- Puntos / Gross toggle (when the tournament has handicaps): gross is strokes to par over the holes actually played, pick-ups excluded, derived in the screen from `HoleResult.gross` and `par`; the gross view sorts ascending and computes its own T-labels. Display only; the engine's ranking is untouched. Red under par, blue over par, "E" for even.
+- `tournamentStore.updatedAt` (additive, display only) stamps every applied snapshot so the board can say when it last changed.
+- The feed is a ruled list with an icon per kind; a lead change is bold with the icon in the event accent, no yellow fill. The TV variant keeps the board tokens.
+- `e2e/smoke.mjs` now tolerates a group already on its last hole (the Ensayo has been advanced by every run) and reads today's points from the board cells.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |

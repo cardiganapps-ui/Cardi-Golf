@@ -1,52 +1,57 @@
 .feed {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  border-top: var(--hairline);
 }
 .item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  background: var(--cell);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  font-size: 0.95rem;
+  gap: var(--s2);
+  min-height: 44px;
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-ui);
 }
 .lead {
-  background: var(--sun);
-  border-color: var(--sun);
-  color: var(--ink);
-  font-weight: 700;
+  font-weight: 600;
+}
+.lead .icon {
+  color: var(--event-accent);
 }
 .icon {
-  font-size: 1.2rem;
+  display: inline-flex;
+  color: var(--ink-2);
 }
 .text {
-  flex: 1;
   min-width: 0;
 }
 .when {
-  color: var(--muted);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* TV: the same list on the board surface. */
+.big {
+  border-top-color: var(--board-rule);
 }
 .big .item {
+  grid-template-columns: 4vh minmax(0, 1fr) auto;
   font-size: 3vh;
-  padding: 1.4vh 2vw;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: transparent;
-  color: var(--paper);
-  border-radius: 1.5vh;
-}
-.big .lead {
-  background: var(--sun);
-  color: var(--ink);
+  padding: 1.2vh 0;
+  border-bottom-color: var(--board-rule);
+  color: var(--board-ink);
 }
 .big .icon {
-  font-size: 4vh;
+  color: var(--board-ink-2);
+}
+.big .lead .icon {
+  color: var(--board-accent);
 }
 .big .when {
-  color: var(--seafoam);
+  color: var(--board-ink-2);
   font-size: 2vh;
 }

@@ -44,6 +44,8 @@ interface StoreState {
   data: TournamentData | null
   /** Realtime connection status for the sync chip. */
   realtime: 'off' | 'connecting' | 'live' | 'error'
+  /** Wall-clock time of the last snapshot applied (0 before the first). Display only. */
+  updatedAt: number
   load(tournamentId: string): Promise<void>
   reload(): Promise<void>
   subscribe(): void
@@ -175,6 +177,7 @@ export const useTournament = create<StoreState>((set, get) => ({
   error: null,
   data: null,
   realtime: 'off',
+  updatedAt: 0,
   async load(tournamentId) {
     if (get().tournamentId !== tournamentId) {
       get().unsubscribe()
@@ -183,7 +186,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     set({ loading: true })
     try {
       const snapshot = await fetchSnapshot(tournamentId)
-      set({ data: compute(snapshot), loading: false, error: null })
+      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null })
       get().subscribe()
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : String(e) })
@@ -194,7 +197,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!id) return
     try {
       const snapshot = await fetchSnapshot(id)
-      set({ data: compute(snapshot), error: null })
+      set({ data: compute(snapshot), updatedAt: Date.now(), error: null })
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) })
     }
@@ -229,6 +232,6 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!d) return
     const snapshot = structuredClone(d.snapshot)
     fn(snapshot)
-    set({ data: compute(snapshot) })
+    set({ data: compute(snapshot), updatedAt: Date.now() })
   },
 }))
