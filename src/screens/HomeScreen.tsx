@@ -30,7 +30,7 @@ export function HomeScreen() {
   return (
     <div className={styles.home}>
       <header className={styles.intro}>
-        <Wordmark size="md" />
+        <Wordmark size="lg" />
         <p className={styles.lede}>{t.app.description}</p>
       </header>
 

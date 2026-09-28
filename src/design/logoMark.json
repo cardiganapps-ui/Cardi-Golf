@@ -11,11 +11,24 @@
   },
   "maskableScale": 0.804,
   "tileRadius": 0.126,
-  "lockup": {
-    "_comment": "Measured on the sheet's Horizontal Lockup, in cap heights: symbol height, how far it drops below the baseline, and the ink gap to the P.",
-    "markHeight": 1.3,
-    "belowBaseline": 0.2,
-    "gap": 0.183
+  "lockups": {
+    "_comment": "Each lockup as the sheet draws it, in cap heights of the word: the symbol image (its ink plus a soft edge) and where it sits against the P. standard = \"Horizontal Lockup\"; board = \"Reversed Dark TV Board\".",
+    "standard": {
+      "image": "/brand/polo-mark.png",
+      "aspect": 0.9167,
+      "markHeight": 1.4,
+      "belowBaseline": 0.25,
+      "gap": 0.1333,
+      "capPx": 60
+    },
+    "board": {
+      "image": "/brand/polo-mark-board.png",
+      "aspect": 0.9136,
+      "markHeight": 1.7234,
+      "belowBaseline": 0.3617,
+      "gap": 0.234,
+      "capPx": 47
+    }
   },
   "wordmark": {
     "_comment": "Archivo settings fitted to the sheet's wordmark (95.3% overlap): weight, width axis, letter-spacing in em; capHeight and the P's left side bearing in em.",

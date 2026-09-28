@@ -490,7 +490,7 @@ export function DesignScreen() {
         {/* ---- Brand ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Marca</h2>
-          <p className={s.cap}>Polo: la P cursiva a lápiz de la hoja aprobada, trazada de la hoja y con su propio grafito, junto al nombre en Archivo ajustada a la hoja. El mismo símbolo es el ícono de la app y firma las imágenes para compartir. En grafito sobre cartulina (a color y a una tinta son el mismo trazo) y en oro sobre el tablero.</p>
+          <p className={s.cap}>Polo: la P a lápiz tal como la dibuja la hoja aprobada, con sus propios píxeles separados del papel, junto al nombre en Archivo ajustada a la hoja. Cada versión usa su copia de la hoja: el ícono de la app, el logotipo horizontal en grafito (a color y a una tinta son el mismo trazo) y el tablero en oro, con sus proporciones.</p>
           <div className={s.row}>
             <LogoMark size={64} />
             <Wordmark size={36} mark={false} />
