@@ -1,77 +1,157 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+  padding-top: var(--s4);
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.help {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+}
 .awards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  border-top: var(--rule-heavy);
 }
 @media (min-width: 640px) {
   .awards {
-    grid-template-columns: 1fr 1fr;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s8);
   }
 }
 .award {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name value'
+    'desc value'
+    'who value';
+  align-items: center;
+  column-gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
 }
 .awardName {
-  font-family: var(--font-display, 'Fraunces', serif);
+  grid-area: name;
   font-weight: 600;
-  font-size: 1.15rem;
+}
+.awardDesc {
+  grid-area: desc;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
 }
 .awardWinners {
+  grid-area: who;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s2);
 }
 .winner {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s2);
   background: transparent;
   border: 0;
   padding: 0;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   color: inherit;
   cursor: pointer;
   min-height: 36px;
+  border-radius: var(--r-sm);
+}
+.winner:active {
+  background: var(--surface);
 }
 .awardValue {
-  margin-left: auto;
-  font-size: 1.2rem;
-  color: var(--teal);
+  grid-area: value;
+  font-size: var(--fs-xl);
+  white-space: nowrap;
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.moment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+  line-height: var(--lh-body);
+}
+.momentLabel {
+  font-weight: 600;
 }
 .chart {
-  background: var(--cell);
-  border: 1px solid var(--hair);
-  border-radius: var(--radius);
-  padding: 8px 4px 0;
+  border-top: var(--hairline);
+  padding-top: var(--s2);
 }
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 0.8rem;
+  gap: var(--s1) var(--s3);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
 }
 .legendItem {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--s1);
 }
 .swatch {
-  width: 12px;
-  height: 4px;
-  border-radius: 2px;
+  width: 14px;
+  height: 3px;
   display: inline-block;
+}
+.course {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--rule-heavy);
+}
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+}
+.roundHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+.roundFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
 .holeBars {
   display: grid;
   grid-template-columns: repeat(18, 1fr);
   gap: 2px;
-  height: 70px;
+  height: 64px;
   align-items: end;
 }
 .holeBar {
@@ -84,13 +164,19 @@
 }
 .bar {
   width: 100%;
-  background: var(--teal);
-  border-radius: 3px 3px 0 0;
+  background: var(--ink-3);
   min-height: 2px;
 }
+.barHard {
+  background: var(--under);
+}
+.barEasy {
+  background: var(--accent);
+}
 .holeLabel {
-  font-size: 0.6rem;
-  color: var(--muted);
+  font-size: var(--fs-2xs);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
 .tableWrap {
   overflow-x: auto;

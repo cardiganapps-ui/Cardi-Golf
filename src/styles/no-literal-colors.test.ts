@@ -14,12 +14,7 @@ import { describe, expect, it } from 'vitest'
 const ROOT = new URL('../', import.meta.url).pathname
 const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/
 const PERMANENT = new Set(['styles/tokens.css', 'design/accents.ts', 'dev/fixtures.ts'])
-const PENDING = new Set([
-  'components/ShareCard.module.css',
-  'screens/tournament/CeremonyScreen.module.css',
-  'screens/tournament/PrintScreen.module.css',
-  'screens/tournament/TvScreen.module.css',
-])
+const PENDING = new Set<string>([])
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

@@ -1,39 +1,42 @@
+/* Ceremonia: the board palette, one reveal at a time. Tokens only. */
 .stage {
   position: fixed;
   inset: 0;
-  background: var(--deep);
-  color: var(--paper);
+  background: var(--board-bg);
+  color: var(--board-ink);
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 12px;
+  padding: var(--s4);
+  gap: var(--s3);
   overflow: hidden;
 }
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 2px solid var(--board-rule);
 }
 .logo {
   height: 48px;
   width: auto;
 }
 .title {
-  color: var(--paper);
-  font-size: 1.6rem;
+  color: var(--board-ink);
+  font-size: var(--fs-xl);
 }
 .sub {
-  color: var(--seafoam);
-  font-size: 0.9rem;
+  color: var(--board-ink-2);
+  font-size: var(--fs-sm);
+  font-family: var(--font-event);
 }
 .exit {
-  color: var(--seafoam);
+  color: var(--board-ink-2);
   text-decoration: none;
-  opacity: 0.7;
 }
 .warn {
-  color: var(--sun);
-  font-size: 0.85rem;
+  color: var(--board-accent);
+  font-size: var(--fs-sm);
   text-align: center;
 }
 .body {
@@ -49,52 +52,53 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 16px;
+  gap: var(--s4);
   width: 100%;
   max-width: 720px;
-  padding: 8px;
+  padding: var(--s2);
 }
 .hint {
-  color: var(--seafoam);
+  color: var(--board-ink-2);
   max-width: 420px;
+  line-height: var(--lh-body);
 }
 .bigBtn {
-  font-size: 1.2rem;
-  padding: 16px 32px;
+  font-size: var(--fs-lg);
+  padding: 0 var(--s8);
   min-height: 60px;
 }
 .stepIcon {
-  font-size: clamp(3rem, 10vh, 6rem);
+  display: inline-flex;
+  color: var(--board-accent);
   line-height: 1;
 }
 .stepTitle {
-  color: var(--sun);
+  color: var(--board-ink);
   font-size: clamp(1.6rem, 5vh, 3rem);
 }
 .reveal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: var(--s4);
   width: 100%;
 }
 .winner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  padding: 18px 24px;
+  gap: var(--s2);
+  background: var(--board-surface);
+  border-radius: var(--r-md);
+  padding: var(--s5) var(--s6);
   width: 100%;
 }
 .champion {
-  background: rgba(242, 182, 63, 0.18);
-  border: 2px solid var(--sun);
+  box-shadow: inset 0 0 0 2px var(--board-accent);
 }
 .avatars {
   display: flex;
-  gap: 8px;
+  gap: var(--s2);
 }
 .avatars :global(.avatar--lg) {
   width: clamp(72px, 14vh, 140px);
@@ -102,55 +106,63 @@
   font-size: clamp(1.6rem, 5vh, 3rem);
 }
 .winnerLine {
-  font-family: var(--font-display, 'Fraunces', serif);
   font-weight: 600;
   font-size: clamp(1.5rem, 5vh, 3rem);
-  line-height: 1.1;
+  line-height: var(--lh-tight);
 }
 .winnerSub {
-  color: var(--seafoam);
+  color: var(--board-ink-2);
   font-size: clamp(1rem, 2.6vh, 1.4rem);
+  font-variant-numeric: tabular-nums;
 }
 .trophy {
-  color: var(--sun);
-  font-weight: 700;
+  color: var(--board-accent);
+  font-weight: 600;
   font-size: clamp(1rem, 2.8vh, 1.5rem);
 }
 .list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   width: 100%;
   font-size: clamp(1rem, 2.6vh, 1.4rem);
+  border-top: 1px solid var(--board-rule);
 }
 .listRow {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 8px 14px;
+  gap: var(--s3);
+  padding: var(--s2) var(--s1);
+  border-bottom: 1px solid var(--board-rule);
+  font-variant-numeric: tabular-nums;
 }
-.wave {
-  color: var(--sun);
-  height: 10px;
+.listRule {
+  height: 2px;
+  background: var(--board-rule);
+  margin: var(--s2) 0;
 }
 .pos {
-  color: var(--seafoam);
+  color: var(--board-ink);
 }
 .neg {
-  color: #f0a58f;
+  color: var(--board-under);
 }
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--s2);
 }
-.footer :global(.btn--ghost) {
-  color: var(--seafoam);
+.footer :global(.btn--ghost),
+.footer :global(.btn--secondary) {
+  color: var(--board-ink);
+  border-color: var(--board-ink-2);
 }
 .progress {
-  color: var(--seafoam);
+  color: var(--board-ink-2);
   font-variant-numeric: tabular-nums;
+}
+.footer :global(.btn:disabled) {
+  background: transparent;
+  color: var(--board-rule);
+  border-color: var(--board-rule);
 }

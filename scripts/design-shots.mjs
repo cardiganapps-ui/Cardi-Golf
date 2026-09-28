@@ -156,6 +156,7 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     const start = p.getByRole('button', { name: /Empezar/ })
     if (await start.count()) {
       await start.click()
+      await p.waitForTimeout(700)
       const reveal = p.getByRole('button', { name: 'Revelar', exact: true })
       if (await reveal.count()) {
         await reveal.click()

@@ -42,8 +42,8 @@ export function PrintScreen() {
           <IconPrint /> {P.print}
         </button>
       </div>
-      {!current && <p className="muted">{t.live.noRounds}</p>}
-      {current && groups.length === 0 && <p className="muted">{P.noGroups}</p>}
+      {!current && <p className="help">{t.live.noRounds}</p>}
+      {current && groups.length === 0 && <p className="help">{P.noGroups}</p>}
       {current &&
         groups.map((g) => {
           const order = playOrder(g.startHole, current.holes)
@@ -57,8 +57,8 @@ export function PrintScreen() {
                   <h1 className={styles.title}>{snapshot.tournament.name}</h1>
                   <div className={styles.sub}>
                     {t.round.day(current.number)}
-                    {current.date ? ` · ${current.date}` : ''} · {t.card.group} {g.number}
-                    {g.teeTime ? ` · ${g.teeTime.slice(0, 5)}` : ''} · {P.startHole(g.startHole)}
+                    {current.date ? `, ${current.date}` : ''}, {t.card.group} {g.number}
+                    {g.teeTime ? `, ${g.teeTime.slice(0, 5)}` : ''}, {P.startHole(g.startHole)}
                   </div>
                 </div>
               </header>
@@ -88,14 +88,14 @@ export function PrintScreen() {
                 </thead>
                 <tbody>
                   {members.map(({ p, pr }) => (
-                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr?.playingHcp ?? '–'}${pairName(p.id) ? ` · ${pairName(p.id)}` : ''}`} dots={order.map((h) => pr?.holes.find((x) => x.hole === h)?.strokesReceived ?? 0)} />
+                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr?.playingHcp ?? '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} dots={order.map((h) => pr?.holes.find((x) => x.hole === h)?.strokesReceived ?? 0)} />
                   ))}
                 </tbody>
               </table>
               <footer className={styles.foot}>
                 <span>{P.legend}</span>
                 <span>
-                  {P.sign}: ______________________ · ______________________
+                  {P.sign}: ______________________ / ______________________
                 </span>
               </footer>
             </section>

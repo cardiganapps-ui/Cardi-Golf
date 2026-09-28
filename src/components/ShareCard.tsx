@@ -8,7 +8,6 @@ import { t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareNodeAsImage } from '../lib/shareImage'
-import { Wave } from './Wave'
 import { toast } from './ui'
 import styles from './ShareCard.module.css'
 
@@ -75,8 +74,8 @@ function Card({ what }: { what: ShareKind }) {
   )
   const footer = (
     <div className={styles.footer}>
-      <Wave className={styles.wave} />
-      <span>Cardi-Golf</span>
+      <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      <span className={styles.brand}>Cardi-Golf</span>
     </div>
   )
   if (what.kind === 'leaderboard') {
@@ -108,14 +107,14 @@ function Card({ what }: { what: ShareKind }) {
     const row = state.modules.individual?.rows.find((r) => r.playerId === p.id)
     return (
       <>
-        {header(`${p.fullName}${row ? ` · ${row.label}º · ${row.total} pts` : ''}`)}
+        {header(`${p.fullName}${row ? `, ${row.label}º, ${row.total} pts` : ''}`)}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
           return (
             <div key={rid} className={styles.round}>
               <div className={styles.roundTitle}>
-                {t.round.day(i + 1)} · {t.live.playingHcp} {pr.playingHcp} · {pr.points} pts · {pr.putts} putts
+                {t.round.day(i + 1)}, {t.live.playingHcp.toLowerCase()} {pr.playingHcp}, {pr.points} pts, {pr.putts} putts
               </div>
               <div className={styles.holes}>
                 {pr.holes.map((h) => (
@@ -142,7 +141,7 @@ function Card({ what }: { what: ShareKind }) {
           <div key={m.playerId} className={styles.row}>
             <span className={styles.name}>{nameOf(m.playerId)}</span>
             <span className={styles.small}>
-              {t.money.paid} {formatMoney(m.paid)} · {t.money.receives} {formatMoney(m.receives)}
+              {t.money.paid} {formatMoney(m.paid)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives)}
             </span>
             <span className={`${styles.big} ${m.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(m.net)}</span>
           </div>
