@@ -74,11 +74,13 @@ try {
   check(true, 'round 1 is live')
 
   await p.goto(`${base}/t/${slug}/tarjeta`, { waitUntil: 'domcontentloaded' })
-  await p.waitForSelector('text=Guardar hoyo', { timeout: T })
+  // The group may already be on its last hole after repeated runs: accept either save label.
+  const saveBtn = p.locator('button', { hasText: /^Guardar (hoyo|y ver la tarjeta)$/ }).first()
+  await saveBtn.waitFor({ timeout: T })
   await shot('card')
   const firstName = (await p.locator('[class*=playerCard] strong').first().innerText()).trim()
   await p.locator('button[aria-label="Golpes −1"]').first().click()
-  await p.click('text=Guardar hoyo')
+  await saveBtn.click()
   await p.waitForTimeout(1500)
   check((await p.locator('text=Sincronizado').count()) > 0 || (await p.locator('text=pendiente').count()) > 0, 'hole saved (sync chip visible)')
 
@@ -88,7 +90,7 @@ try {
   await shot('live')
   const body = await p.innerText('body')
   check(body.includes(firstName.split(' ')[0]), 'leaderboard shows the scorer group')
-  check(/Hoy\s*[1-9]/i.test(body), 'leaderboard shows points for today')
+  check((await p.locator('[class*="today"]').filter({ hasText: /^[1-9]\d?$/ }).count()) > 0, 'leaderboard shows points for today')
   await p.locator('button').filter({ hasText: firstName }).first().click()
   await p.waitForSelector('text=¿Cómo se calculó?', { timeout: T })
   await shot('player')

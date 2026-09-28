@@ -35,7 +35,7 @@ export function FeedTicker({ limit = 8, big = false }: { limit?: number; big?: b
       {events.length === 0 && <p className="help">{t.feed.empty}</p>}
       <AnimatePresence initial={false}>
         {events.map((e) => (
-          <motion.div key={key(e)} layout className={`${styles.item} ${e.kind === 'leadChange' ? styles.lead : ''}`} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
+          <motion.div key={key(e)} layout className={`${styles.item} ${e.kind === 'leadChange' ? styles.lead : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
             <span className={styles.icon} aria-hidden="true">
               {ICON[e.kind]}
             </span>
