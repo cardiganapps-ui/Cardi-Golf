@@ -7,6 +7,7 @@ import type { FriendCard, HeadToHead, MyFriends, Notice } from '../data/social'
 import { FriendsScreen } from '../screens/profile/FriendsScreen'
 import { InboxScreen } from '../screens/profile/InboxScreen'
 import { VersusScreen, type VersusFixture } from '../screens/profile/VersusScreen'
+import { QuickRoundView, type QuickTee } from '../screens/profile/QuickRoundScreen'
 import { PROFILE_FIXTURES } from './profileFixtures'
 
 const person = (displayName: string, handle: string, extra: Partial<FriendCard> = {}): FriendCard => ({ handle, displayName, avatarUrl: null, homeClub: null, index: null, ...extra })
@@ -70,6 +71,20 @@ const VERSUS: Record<string, HeadToHead> = {
   propuesta: { ...active, rivalry: { ...active.rivalry!, status: 'pending', iProposed: false, history: [], startedAt: null, myStrokes: 3 } },
   amigos: { ...active, rivalry: null },
   nuevo: { rounds: [], suggestion: null, friends: true, rivalry: null },
+}
+
+const quickCourses = [
+  { id: 'c1', name: 'Club de Golf Chapultepec', location: 'Ciudad de México' },
+  { id: 'c2', name: 'Bosque Real', location: 'Huixquilucan' },
+]
+const quickTees = async (): Promise<QuickTee[]> => [
+  { id: 't1', name: 'Azules', rating: 72.1, slope: 131, holes: 18 },
+  { id: 't2', name: 'Blancas', rating: 70.4, slope: 125, holes: 18 },
+]
+
+export function QuickFixture() {
+  const me = PROFILE_FIXTURES.yo!.card
+  return <QuickRoundView me={{ displayName: me.displayName, avatarUrl: me.avatarUrl, index: me.index }} friends={friends.friends} courses={quickCourses} loadTees={quickTees} onStart={async () => undefined} />
 }
 
 export function FriendsFixture() {

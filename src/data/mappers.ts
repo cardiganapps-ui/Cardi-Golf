@@ -42,6 +42,7 @@ export const mapTournament = (r: Row): TournamentRow => ({
   timezone: r.timezone,
   currency: r.currency,
   countsForStats: r.counts_for_stats ?? true,
+  quick: r.quick ?? false,
 })
 
 export const mapPlayer = (r: Row): Player => ({

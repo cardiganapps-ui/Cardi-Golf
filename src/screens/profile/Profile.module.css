@@ -460,3 +460,47 @@ button.row {
 .stat + .rows {
   border-top: 0;
 }
+
+/* ---- Ronda rápida (0017) ---- */
+.indexInput {
+  width: 5.5rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.check {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+/* A game chip: outlined when off, filled ink when picked (like the Segmented "on"). */
+.pick {
+  min-height: var(--tap);
+  padding: 0 var(--s4);
+  border-radius: var(--r-round);
+  border: var(--hairline);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pickOn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+.cta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s4) 0;
+  border-top: var(--rule-heavy);
+  border-bottom: var(--hairline);
+}

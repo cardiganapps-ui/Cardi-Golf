@@ -32,7 +32,7 @@ if (!URL_ || !ANON || !SECRET) {
 }
 const admin = createClient(URL_, SECRET, { auth: { persistSession: false, autoRefreshToken: false } })
 const rand = Math.random().toString(36).slice(2, 8)
-const created = { users: [], tournaments: [] }
+const created = { users: [], tournaments: [], courses: [] }
 let failed = 0
 const check = (ok, label, detail) => {
   console.log(`${ok ? '  ✓' : '  ✗'} ${label}`)
@@ -226,6 +226,43 @@ try {
   // The Comité proposed nothing here, but both tournaments link by PIN: the inbox renders, empty or not.
   check((await B.page.textContent('main')).includes('Avisos'), '/avisos renders for an account')
   await B.page.screenshot({ path: `${out}/avisos.png`, fullPage: true })
+
+  console.log('Ronda rápida: create in the app, score, close and publish:')
+  const { data: qc } = await admin.from('courses').insert({ name: `E2E campo ${rand}` }).select('id').single()
+  created.courses.push(qc.id)
+  const { data: qtee } = await admin.from('tees').insert({ course_id: qc.id, name: 'Blancas', rating: 72.0, slope: 113, sort_order: 0 }).select('id').single()
+  await admin.from('holes').insert(Array.from({ length: 18 }, (_, i) => ({ tee_id: qtee.id, number: i + 1, par: 4, stroke_index: i + 1 })))
+  await B.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
+  await B.page.click('a[href="/ronda"]')
+  await B.page.waitForSelector('text=Quién juega', { timeout: T })
+  await B.page.selectOption('select >> nth=0', qc.id)
+  // The tee list loads after the course is picked.
+  for (let until = Date.now() + T; Date.now() < until; await B.page.waitForTimeout(250)) {
+    if ((await B.page.locator('select').count()) > 1 && (await B.page.locator('select').nth(1).inputValue()) === qtee.id) break
+  }
+  await B.page.fill('input[placeholder="Nombre del invitado"]', 'Invitado E2E')
+  await B.page.click('button:has-text("Agregar")')
+  await B.page.click('button[aria-pressed]:has-text("Birdies")')
+  await B.page.screenshot({ path: `${out}/ronda.png`, fullPage: true })
+  await B.page.click('button:has-text("Empezar")')
+  await B.page.waitForURL(/\/t\/[^/]+\/tarjeta$/, { timeout: T })
+  const slug = new URL(B.page.url()).pathname.split('/')[2]
+  const { data: qt } = await admin.from('tournaments').select('id, status, quick, current_round_id, settings').eq('slug', slug).single()
+  created.tournaments.push(qt.id)
+  const { data: qps } = await admin.from('players').select('id, display_name, profile_id, profile_status').eq('tournament_id', qt.id).order('sort_order')
+  check(qt.status === 'live' && qt.quick && qps.length === 2 && qps[0].profile_id === anonA && qps[0].profile_status === 'confirmed' && qps[1].display_name === 'Invitado', 'the round opens on the Tarjeta: live, me confirmed, the guest in', { qt: { status: qt.status, quick: qt.quick }, qps })
+  check((qt.settings.games ?? []).map((g) => g.type).sort().join(',') === 'eventPot,skins', 'with the games picked (skins, birdies)', qt.settings.games)
+  // Both cards: fives all round (the round results need complete cards).
+  await admin.from('scores').insert(qps.flatMap((p) => Array.from({ length: 18 }, (_, i) => ({ round_id: qt.current_round_id, player_id: p.id, hole: i + 1, strokes: 5, putts: 2, picked_up: false, client_ts: new Date().toISOString() }))))
+  await B.page.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('button:has-text("Terminar y publicar")', { timeout: T })
+  await B.page.click('button:has-text("Terminar y publicar")')
+  await B.page.locator('button:has-text("Terminar y publicar")').last().click()
+  await B.page.waitForSelector('text=Ronda publicada', { timeout: T })
+  const { data: done } = await admin.from('tournaments').select('status').eq('id', qt.id).single()
+  const { data: rr } = await admin.from('round_results').select('player_id, gross, complete').eq('round_id', qt.current_round_id)
+  const { data: tr } = await admin.from('tournament_results').select('player_id, rank_label').eq('tournament_id', qt.id)
+  check(done.status === 'finished' && rr?.length === 2 && rr.every((r) => r.gross === 90 && r.complete) && tr?.length === 2, '"Terminar y publicar" closes it and the results reach the profile', { done, rr, tr })
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failed++
@@ -233,6 +270,7 @@ try {
   await b.close()
   console.log('cleaning up…')
   for (const id of created.tournaments) await admin.from('tournaments').delete().eq('id', id)
+  for (const id of created.courses) await admin.from('courses').delete().eq('id', id)
   for (const id of created.users) await admin.auth.admin.deleteUser(id).catch(() => undefined)
   await mail?.remove()
 }

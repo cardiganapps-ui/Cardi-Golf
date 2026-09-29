@@ -12,6 +12,7 @@ import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primit
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
+import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
 import { RejectedWrites } from '../../components/RejectedWrites'
@@ -89,6 +90,33 @@ export function ScorecardScreen() {
     )
   }
   return <GroupCard key={`${round.id}:${group.id}`} round={round} group={group} tournamentId={tournamentId} />
+}
+
+/** My sliding-stroke rivalries with others in this group (0016), one line each. Accounts only. */
+function RivalryLines({ tournamentId, group }: { tournamentId: string; group: Group }) {
+  const { me } = useTournamentCtx()
+  const players = useTournament((s) => s.data?.snapshot.players)
+  const [list, setList] = useState<RoundRivalry[]>([])
+  const eligible = me.via === 'profile' && !tournamentId.startsWith('fixture:')
+  useEffect(() => {
+    if (!eligible) return
+    let live = true
+    roundRivalries(tournamentId)
+      .then((r) => live && setList(r))
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [eligible, tournamentId])
+  const shown = list.filter((r) => group.playerIds.includes(r.myPlayerId) && group.playerIds.includes(r.theirPlayerId))
+  if (!shown.length) return null
+  return (
+    <>
+      {shown.map((r) => (
+        <span key={r.theirPlayerId}>{t.quick.rivalryLine(players?.find((p) => p.id === r.theirPlayerId)?.displayName ?? '', r.myStrokes)}</span>
+      ))}
+    </>
+  )
 }
 
 function GroupCard({ round, group, tournamentId }: { round: Round; group: Group; tournamentId: string }) {
@@ -405,6 +433,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         <div className={styles.topText}>
           <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>
           {pairsOn && rivalPair && <span>{S.keeping(pairName(rivalPair))}</span>}
+          <RivalryLines tournamentId={tournamentId} group={group} />
         </div>
         <button className="btn btn--ghost btn--sm" type="button" onClick={() => setView(view === 'hole' ? 'grid' : 'hole')}>
           {view === 'hole' ? S.grid : S.holeView}

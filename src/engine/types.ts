@@ -32,6 +32,8 @@ export interface TournamentRow {
   currency: string
   /** False for practice (the Ensayo): shown in profiles, never in the Polo index. Default true. */
   countsForStats?: boolean
+  /** A Ronda rápida (0017): the app offers "Terminar y publicar". */
+  quick?: boolean
 }
 
 export interface Player {
