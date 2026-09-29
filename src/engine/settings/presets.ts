@@ -19,8 +19,11 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   labels: { lastPlace: 'Último lugar', honoree: 'Homenajeado' },
   entryFee: 0,
   houseCut: 0,
-  handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false, estimateWeights: [0.45, 0.4, 0.15] },
-  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 4, mode: 'previous' },
+  // Full handicap and no anti-sandbag cut: the 80% allowance and the 36/2/4
+  // cut are the first tournament's rules (§5.2), not the platform's. A
+  // `maxStrokes` of 0 is what "no cut" means, so the other two never apply.
+  handicap: { allowance: 1, cap: 54, rounding: 'halfUp', perRoundSlope: false, estimateWeights: [0.45, 0.4, 0.15] },
+  day2Cut: { threshold: 36, pointsPerStroke: 2, maxStrokes: 0, mode: 'previous' },
   prizes: {
     stableford: [],
     stablefordMode: 'amount',
@@ -47,7 +50,8 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   pickupPuttsForFewestPutts: 3,
   tieFallback: 'split',
   spectatorLink: false,
-  timezone: 'America/Mazatlan',
+  // The create wizard replaces this with the organizer's own zone.
+  timezone: 'America/Mexico_City',
   currency: 'MXN',
 }
 

@@ -26,3 +26,36 @@
   border-radius: var(--r-round);
   background: var(--swatch);
 }
+
+/* Sub-nav for the sections of Torneo. Same language as the Comité's own tabs
+   (AdminLayout.module.css), one level in: scrolls sideways on a phone. */
+.tabs {
+  display: flex;
+  gap: var(--s4);
+  border-bottom: var(--hairline);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  margin-bottom: -1px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tabOn {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}

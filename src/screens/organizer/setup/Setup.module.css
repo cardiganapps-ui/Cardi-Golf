@@ -200,3 +200,63 @@
   color: var(--ink-2);
   line-height: var(--lh-ui);
 }
+
+/* Quick game chips: on or off in one tap, with the rules beside them. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding-right: var(--s2);
+  border: var(--control-border);
+  border-radius: var(--r-round);
+  background: var(--surface-2);
+}
+.chipOn {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.chipMain {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: var(--tap);
+  padding: 0 var(--s2) 0 var(--s3);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--r-round);
+}
+.chipOn .chipMain {
+  color: var(--accent);
+}
+
+/* The review card: what you are about to create, in plain lines. */
+.review {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--rule-heavy);
+}
+.reviewRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--s3);
+  align-items: baseline;
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+}
+.reviewKey {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.reviewValue {
+  font-weight: 500;
+}

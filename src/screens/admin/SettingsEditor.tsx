@@ -1,6 +1,13 @@
 /**
  * Form over TournamentSettings (§18) for Comité › Torneo. Every rule is a
  * field; the prize-pool balance is live in the money section.
+ *
+ * It renders **one** section at a time, because all of it at once is the
+ * screen Diego bounced off: brand + status + every rule + every game + every
+ * peso + the Calcutta on one route, past sixty controls with no way to find
+ * anything. Comité › Torneo now has a sub-nav and asks for the section it is
+ * showing; the state, the dirty flag and the single Guardar stay up there, so
+ * a change made under one tab still saves with the rest.
  */
 import { t } from '../../i18n/es-MX'
 import { Field, Toggle } from '../../components/ui'
@@ -11,11 +18,15 @@ import { FormatEditor } from '../organizer/setup/FormatEditor'
 import { GameCatalog } from '../organizer/setup/GameCatalog'
 import { MoneyEditor } from '../organizer/setup/MoneyEditor'
 
+/** Which block of the settings to show. One per sub-nav tab. */
+export type SettingsSection = 'rules' | 'games' | 'money' | 'auction'
+
 interface Props {
   value: TournamentSettings
   onChange: (v: TournamentSettings) => void
   /** The field the prize check uses: players, real group sizes, game entrants. */
   field: FieldShape
+  section: SettingsSection
 }
 
 /**
@@ -23,7 +34,7 @@ interface Props {
  * create wizard, plus the rules only the Comité touches (labels, the next-day
  * cut, slope, the Calcutta).
  */
-export function SettingsEditor({ value, onChange, field }: Props) {
+export function SettingsEditor({ value, onChange, field, section }: Props) {
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
     fn(d)
@@ -34,8 +45,8 @@ export function SettingsEditor({ value, onChange, field }: Props) {
 
   return (
     <div className="stack stack--lg">
+      {section === 'rules' && (
       <section className="stack">
-        <span className="label">{A.rules}</span>
         <FormatEditor value={value} onChange={onChange} />
         <div className="grid2">
           <Field label={A.lastPlaceLabel}>
@@ -68,12 +79,15 @@ export function SettingsEditor({ value, onChange, field }: Props) {
           </div>
         )}
       </section>
+      )}
 
+      {section === 'games' && (
       <section className="stack">
-        <span className="label">{A.modules}</span>
-        <GameCatalog value={value} onChange={onChange} />
+        <GameCatalog value={value} onChange={onChange} field={field} />
       </section>
+      )}
 
+      {section === 'rules' && (
       <section className="stack">
         <span className="label">{A.handicap}</span>
         <div className="grid2">
@@ -110,7 +124,9 @@ export function SettingsEditor({ value, onChange, field }: Props) {
         )}
         {<Toggle label={A.perRoundSlope} hint={A.perRoundSlopeHint} checked={value.handicap.perRoundSlope} onChange={(v) => set((d) => (d.handicap.perRoundSlope = v))} />}
       </section>
+      )}
 
+      {section === 'money' && (
       <section className="stack">
         <span className="label">{A.prizesTitle}</span>
         <MoneyEditor value={value} onChange={onChange} field={field} />
@@ -120,10 +136,10 @@ export function SettingsEditor({ value, onChange, field }: Props) {
           </Field>
         )}
       </section>
+      )}
 
-      {m.auction.enabled && (
+      {section === 'auction' && m.auction.enabled && (
         <section className="stack">
-          <span className="label">{A.auctionTitle}</span>
           <div className="grid3">
             <Field label={A.openingBid}>
               <NumberField min={1} prefix="$" value={value.auction.openingBid} onChange={(v) => set((d) => (d.auction.openingBid = v))} />

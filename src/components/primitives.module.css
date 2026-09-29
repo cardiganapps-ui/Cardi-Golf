@@ -218,9 +218,12 @@
   display: none;
 }
 .segBtn {
-  flex: 0 0 auto;
+  /* Grows to share whatever width the control is given, so a stretched
+     segmented reads as equal columns instead of three small options and one
+     that swallows the rest. It still hugs its own text when it is not. */
+  flex: 1 0 auto;
   white-space: nowrap;
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 0 var(--s3);
   border: 0;
   border-right: var(--control-border);

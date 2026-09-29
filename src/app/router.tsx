@@ -122,6 +122,7 @@ export const router = createBrowserRouter([
         ? [
             { path: 'fixture', element: <FixtureIndex /> },
             { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
+            { path: 'organizer/nuevo/_', element: <NewTournamentScreen demo /> },
             { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
             { path: 'p/_/:name', element: <ProfileFixture /> },
             { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
