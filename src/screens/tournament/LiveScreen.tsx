@@ -20,6 +20,7 @@ import { useTournamentCtx } from './TournamentGate'
 import { QuickFinish } from './QuickFinish'
 import { useActiveRound } from './useMyGroup'
 import styles from './LiveScreen.module.css'
+import { ease } from '../../design/motion'
 
 /** Gross strokes to par over the holes actually played (pick-ups excluded). Display only. */
 function grossToPar(state: TournamentState, playerId: string, roundId?: string): number | null {
@@ -214,7 +215,7 @@ export function LiveScreen() {
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState title={t.enter.noPlayers} body={t.stats.noData} />
+        <EmptyState title={t.enter.noPlayers} body={t.enter.noPlayersHint} />
       ) : (
         <Board>
           <BoardHead figureLabel={grossView ? t.live.gross : board?.figureLabel ?? t.live.points} dense={rows.length > 20} />
@@ -262,7 +263,7 @@ export function LiveScreen() {
                 </span>
               )
               return (
-                <motion.div key={r.playerId} layout={animate} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                <motion.div key={r.playerId} layout={animate} transition={ease}>
                   <LeaderRow
                     pos={grossView ? grossLabel(i) : r.label}
                     name={byTeam ? r.entrant.name : p.displayName}

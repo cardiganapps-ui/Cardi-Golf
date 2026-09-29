@@ -94,7 +94,7 @@ export function GamesScreen() {
         <>
           <h1>{t.nav.games}</h1>
           {overview.length === 0 ? (
-            <EmptyState title={t.games.noResults} body="" />
+            <EmptyState title={t.games.noResults} body={t.games.noResultsHint} />
           ) : (
             <div className={styles.overview}>
               {overview.map((g) => (

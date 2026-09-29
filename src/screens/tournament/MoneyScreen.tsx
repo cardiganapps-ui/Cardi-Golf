@@ -140,7 +140,7 @@ export function MoneyScreen() {
 
       {mode === 'live' && (
         <div className={styles.people}>
-          {people.length === 0 && <EmptyState title={t.enter.noPlayers} body="" />}
+          {people.length === 0 && <EmptyState title={t.enter.noPlayers} body={t.enter.noPlayersHint} />}
           {people.map((p) => {
             const player = byId.get(p.playerId)!
             const open = openId === p.playerId

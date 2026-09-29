@@ -150,6 +150,14 @@ export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', 
           </span>
         )}
       </span>
+      {/*
+        * No pencil ring here, though DESIGN_DIRECTION.md asks for one: this
+        * column holds the day's TOTAL, and the ring means "this figure is a
+        * birdie". Circling 25 points says something false, and on a real
+        * field almost every round contains a birdie, so ten of twelve rows
+        * were ringed and the mark stopped meaning anything. It stays on the
+        * Tarjeta, where the figure it rings is a hole score.
+        */}
       <span className={`${s.fig} ${s.today}`}>{today ?? ''}</span>
       <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
       <span className={`${s.fig} ${s.figure} ${s[tone]}`}>{figure}</span>
@@ -294,11 +302,21 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
 }
 
 // ---- Empty, live ----
+/**
+ * An empty state used to be one sentence between two hairlines, which is what
+ * a new account sees on five blocks of Mi Polo at once. It now carries the
+ * app's own mark: an empty pencil ring, which is exactly what a scorecard
+ * box looks like before anyone writes in it.
+ */
 export function EmptyState({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <div className={s.empty}>
+      <svg className={s.emptyMark} viewBox="0 0 30 30" aria-hidden="true">
+        <circle cx="15" cy="15" r="12" />
+        <line x1="10" y1="15" x2="20" y2="15" />
+      </svg>
       <span className={s.emptyTitle}>{title}</span>
-      <span className={s.help}>{body}</span>
+      {body && <span className={s.help}>{body}</span>}
       {action}
     </div>
   )

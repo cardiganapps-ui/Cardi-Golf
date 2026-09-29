@@ -16,6 +16,7 @@ import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
+import { easeFast, easeSlow } from '../../design/motion'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 
@@ -89,7 +90,7 @@ export function TvScreen() {
             <AuctionBoard />
           </motion.section>
         ) : (
-          <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }}>
+          <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={easeSlow}>
             {board === 'individual' && state.modules.individual && (
               <>
                 <h2 className={styles.boardTitle}>
@@ -247,7 +248,7 @@ function AuctionBoard() {
             </span>
             {player.formGuide && <p className={styles.form}>{player.formGuide}</p>}
             {open && (
-              <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }}>
+              <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeFast}>
                 <span className={styles.bidAmount}>{formatMoney(bid)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
               </motion.div>

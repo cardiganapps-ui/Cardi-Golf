@@ -20,6 +20,8 @@ import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
 import type { Group, Round } from '../../engine/types'
+import { motion } from 'motion/react'
+import { easeSlow } from '../../design/motion'
 import { celebrationColors } from '../../lib/tokens'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound, useMyGroup } from './useMyGroup'
@@ -487,6 +489,20 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                           {isSigned ? S.cardSigned : S.cardUnsigned}
                         </span>
                       </span>
+                      {/* A signed card is the one irreversible thing a player
+                          does all day. It should feel like it: the stamp a
+                          referee's desk would put on it. */}
+                      {isSigned && (
+                        <motion.span
+                          className={styles.stamp}
+                          aria-hidden="true"
+                          initial={{ scale: 1.25, opacity: 0, rotate: -14 }}
+                          animate={{ scale: 1, opacity: 1, rotate: -8 }}
+                          transition={easeSlow}
+                        >
+                          {S.stamp}
+                        </motion.span>
+                      )}
                       {!isSigned && (!mine || me.isAdmin) && (
                         <button className="btn btn--primary btn--sm" type="button" onClick={() => setSigning(p.id)}>
                           {S.sign}
