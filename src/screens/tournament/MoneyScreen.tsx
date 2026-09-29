@@ -14,6 +14,7 @@ import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Flow } from '../../engine/core/money'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
+import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './MoneyScreen.module.css'
 
@@ -22,18 +23,44 @@ const M = t.moneyScreen
 export function MoneyScreen() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
-  const { me, tournamentId } = useTournamentCtx()
-  const { snapshot, state } = data
+  const { me, tournamentId, slug } = useTournamentCtx()
+  const { snapshot, state, settings } = data
   const money = state.money
   const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
   const name = useCallback((id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : M.bank), [byId])
   const banker = snapshot.tournament.bankerPlayerId ? byId.get(snapshot.tournament.bankerPlayerId) : undefined
-  const [mode, setMode] = useState<'live' | 'final'>(state.tournamentFinal ? 'final' : 'live')
+  const [mode, setMode] = useState<'live' | 'byGame' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
   const [openId, setOpenId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const people = useMemo(() => snapshot.players.map((p) => money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net), [snapshot.players, money.people])
+  /**
+   * The same prizes, read per game instead of per person.
+   *
+   * "¿Cuánto paga este juego?" had three different answers on three screens
+   * and none of them was on Dinero, which is where anyone goes to ask it.
+   * Grouped by the game that awarded the money, biggest pot first.
+   */
+  const byGame = useMemo(() => {
+    const groups = new Map<string, { label: string; total: number; final: boolean; lines: Array<{ playerId: string; amount: number; label: string }> }>()
+    for (const pr of state.prizes) {
+      const key = pr.gameId ?? pr.moduleId
+      const gameLabel = pr.gameId
+        ? (settings.games.find((g) => g.id === pr.gameId)?.label ?? pr.gameId)
+        : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(' · ')[0] ?? pr.moduleId)
+      const g = groups.get(key) ?? { label: gameLabel, total: 0, final: true, lines: [] }
+      g.total += pr.amount
+      g.final = g.final && pr.final
+      // "Individual, 1º" → "1º": the heading already says which game it is,
+      // and the separator differs between modules and instance games.
+      const trimmed = gameLabel && pr.label.startsWith(gameLabel) ? pr.label.slice(gameLabel.length).replace(/^\s*[·,]\s*/, '') : pr.label
+      g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: trimmed })
+      groups.set(key, g)
+    }
+    return [...groups.values()].sort((a, b) => b.total - a.total)
+  }, [state.prizes, settings])
+
   const owed = useMemo(() => money.flows.filter((f) => !f.paid && (f.kind === 'entry' || f.kind === 'calcutta' || f.kind === 'buyback' || f.kind === 'side' || (f.kind === 'bet' && f.final))), [money.flows])
 
   async function run(fn: () => Promise<void>) {
@@ -87,6 +114,7 @@ export function MoneyScreen() {
         value={mode}
         options={[
           { value: 'live', label: M.live },
+          { value: 'byGame', label: M.byGame },
           { value: 'final', label: M.final },
         ]}
         onChange={setMode}
@@ -162,6 +190,35 @@ export function MoneyScreen() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {mode === 'byGame' && (
+        <div className={styles.people}>
+          {byGame.length === 0 && <EmptyState title={M.byGameEmpty} body={M.byGameEmptyHint} />}
+          {byGame.map((g) => (
+            <section key={g.label} className={styles.section}>
+              <div className={styles.gameHead}>
+                <strong>{g.label}</strong>
+                <span className={styles.amount}>{formatMoney(g.total)}</span>
+              </div>
+              {!g.final && <span className="help">{t.money.ifEndedNow}</span>}
+              <div className={styles.breakdown}>
+                {g.lines.map((l, i) => (
+                  <div key={i} className={styles.line}>
+                    <span>
+                      {name(l.playerId)}
+                      {l.label ? `, ${l.label}` : ''}
+                    </span>
+                    <span>{formatMoney(l.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+          <Link className="btn btn--ghost btn--sm" to={`/t/${slug}/reglamento`}>
+            {M.seeRules}
+          </Link>
         </div>
       )}
 

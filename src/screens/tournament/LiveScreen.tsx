@@ -5,6 +5,7 @@
  */
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
@@ -47,7 +48,7 @@ function useMinutesSince(ts: number): number | null {
 export function LiveScreen() {
   const data = useTournament((s) => s.data)
   const updatedAt = useTournament((s) => s.updatedAt)
-  const { me } = useTournamentCtx()
+  const { me, slug } = useTournamentCtx()
   const round = useActiveRound()
   const [open, setOpen] = useState<string | null>(null)
   const [view, setView] = useState<'points' | 'gross'>('points')
@@ -112,6 +113,21 @@ export function LiveScreen() {
   const animate = rows.length <= 20
   const hasHandicaps = Object.values(state.core.handicaps).some((h) => h.base > 0)
 
+  /**
+   * The hole I am standing on, when I am playing a live round.
+   *
+   * Scoring was two taps from here — Tarjeta, then find the hole — which is
+   * two taps too many for the thing the app exists to do. This is one, and it
+   * lands on the right hole.
+   */
+  const myHole = (() => {
+    if (!round || round.status !== 'live' || !me.playerId) return null
+    const group = groupOf(me.playerId)
+    const pr = roundState?.[me.playerId]
+    if (!group || !pr) return null
+    return { hole: currentHole(pr.holes, group.startHole, round.holes), thru: pr.thru }
+  })()
+
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
   const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, minutes == null ? null : minutes === 0 ? t.live.updatedNow : t.live.updatedAgo(minutes)].filter(Boolean).join('. ')
 
@@ -152,6 +168,11 @@ export function LiveScreen() {
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>
         {detailLine && <span>{detailLine}</span>}
+        {myHole && (
+          <Link className={`btn btn--primary btn--block ${styles.scoreNow}`} to={`/t/${slug}/tarjeta?hoyo=${myHole.hole}`}>
+            {myHole.thru >= (round?.holes ?? 18) ? t.live.scoreDone : t.live.scoreHole(myHole.hole)}
+          </Link>
+        )}
         {state.flags.pendingSnakeTiebreaks.length > 0 && (
           <span className={styles.caution}>
             <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}

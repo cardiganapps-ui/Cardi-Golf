@@ -59,3 +59,23 @@
   align-items: center;
   gap: var(--s2) var(--s4);
 }
+
+/* One quiet row for everything that is not "I have a code". */
+.doors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  padding-top: var(--s4);
+  border-top: var(--hairline);
+}
+.door {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+  text-decoration: none;
+}
+.door:active {
+  color: var(--ink);
+}

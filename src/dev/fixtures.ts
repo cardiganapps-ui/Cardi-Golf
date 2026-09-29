@@ -103,21 +103,27 @@ function stamp(snap: Snapshot, base = Date.UTC(2027, 3, 9, 15, 0)) {
   for (const s of snap.scores) s.updatedAt = new Date(base + i++ * 40_000).toISOString()
 }
 
-function minimal(status: 'setup' | 'live'): Fixture {
-  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 500, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [1200, 800] } }
+/**
+ * `money: false` is what the rebuilt wizard now produces by default: no entry
+ * fee, no prizes, no side pots. The tab bar must not offer Dinero for it.
+ */
+function minimal(status: 'setup' | 'live', money = true): Fixture {
+  const settings: TournamentSettings = money
+    ? { ...DEFAULT_SETTINGS, entryFee: 500, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [1200, 800] } }
+    : { ...DEFAULT_SETTINGS, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] } }
   const players = withNames(
     Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: [9, 14, 21, 27][i]!, isAdmin: i === 0 })),
     NAMES,
   )
   const snap = makeSnapshot({ players, rounds: [makeRound(1, { status: status === 'setup' ? 'scheduled' : 'live', date: '2027-05-15' })], settings, status })
-  snap.tournament = { ...snap.tournament, id: 'fx-min', slug: `fixture-minimal4-${status}`, name: 'Sábado en Bosques', tagline: null, joinCode: 'BOSQUE' }
+  snap.tournament = { ...snap.tournament, id: money ? 'fx-min' : 'fx-gloria', slug: `fixture-minimal4-${status}`, name: money ? 'Sábado en Bosques' : 'Sábado por la gloria', tagline: null, joinCode: 'BOSQUE' }
   snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
   if (status === 'live') {
     fillRound(snap, 'r1', 3)
     truncateRound(snap, 'r1', (pid) => (pid === 'p2' ? 11 : 9))
     stamp(snap)
   }
-  return { name: `minimal4-${status}`, description: `4 jugadores, 1 ronda, solo Individual, ${status === 'setup' ? 'sin empezar' : 'en juego (hoyo 9–11)'}`, snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: money ? `minimal4-${status}` : 'gloria4', description: money ? `4 jugadores, 1 ronda, solo Individual, ${status === 'setup' ? 'sin empezar' : 'en juego (hoyo 9–11)'}` : '4 jugadores, sin dinero: se juega por la pura gloria', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
 }
 
 function sellAuction(snap: Snapshot, seed: number) {
@@ -388,6 +394,8 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
 
 const BUILDERS: Record<string, () => Fixture> = {
   'minimal4-setup': () => minimal('setup'),
+  // A tournament with no money at all: the tab bar drops Dinero.
+  'gloria4': () => minimal('live', false),
   'minimal4-live': () => minimal('live'),
   'full12-live': () => full12(false),
   'full12-finished': () => full12(true),

@@ -73,3 +73,8 @@
 .feedHead {
   margin-top: var(--s2);
 }
+
+/* The one tap that matters on a course: straight to the hole being played. */
+.scoreNow {
+  margin-top: var(--s2);
+}
