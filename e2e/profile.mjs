@@ -227,6 +227,11 @@ try {
   check((await B.page.textContent('main')).includes('Avisos'), '/avisos renders for an account')
   await B.page.screenshot({ path: `${out}/avisos.png`, fullPage: true })
 
+  console.log('Push: the switch is offered (Playwright contexts are incognito, where Chrome has no Push API):')
+  await B.page.goto(`${base}/perfil/editar`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('text=Avisos en este teléfono', { timeout: T })
+  check((await B.page.locator('button:has-text("Activar avisos")').count()) === 1, '/perfil/editar offers "Activar avisos"')
+
   console.log('Crews: create one in the app:')
   await B.page.goto(`${base}/crews`, { waitUntil: 'domcontentloaded' })
   await B.page.waitForSelector('text=Crear un crew', { timeout: T })

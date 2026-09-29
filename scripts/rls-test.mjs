@@ -725,6 +725,25 @@ try {
   const { data: wMine } = await W.sb.rpc('my_crews')
   check(wGone === null && Array.isArray(wMine) && wMine.length === 0, 'leaving takes the crew away')
 
+  console.log('push: subscriptions, the prune secret:')
+  const endpoint = `https://push.example.test/rls-${rand}`
+  const { error: anonSub } = await lurker.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'x', p_auth: 'y' })
+  const { error: badSub } = await U.sb.rpc('save_push_subscription', { p_endpoint: 'http://insecure', p_p256dh: 'x', p_auth: 'y' })
+  const { error: subErr } = await U.sb.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'x', p_auth: 'y', p_user_agent: 'rls' })
+  check(!!anonSub && !!badSub && !subErr, 'an account saves an https subscription; anonymous devices cannot', { subErr: subErr?.message })
+  const { data: uSubs } = await U.sb.from('push_subscriptions').select('endpoint')
+  const { data: sSubs } = await S.sb.from('push_subscriptions').select('endpoint').eq('endpoint', endpoint)
+  const { error: forgeSub } = await S.sb.from('push_subscriptions').insert({ profile_id: S.id, endpoint: `${endpoint}-2`, p256dh: 'x', auth: 'y' })
+  check(uSubs?.some((x) => x.endpoint === endpoint) && (sSubs ?? []).length === 0 && !!forgeSub, 'subscriptions are private and written only through the RPC')
+  const { error: secretRead } = await U.sb.rpc('push_secret', { p_name: 'push_dispatch_secret' })
+  const { error: wrongPrune } = await lurker.rpc('push_prune', { p_secret: 'nope', p_endpoints: [endpoint] })
+  check(!!secretRead && !!wrongPrune, 'nobody reads the Vault secret; a wrong secret cannot prune')
+  if (process.env.PUSH_DISPATCH_SECRET) {
+    const { data: pruned, error: pruneErr } = await lurker.rpc('push_prune', { p_secret: process.env.PUSH_DISPATCH_SECRET, p_endpoints: [endpoint] })
+    const { data: after } = await U.sb.from('push_subscriptions').select('endpoint').eq('endpoint', endpoint)
+    check(!pruneErr && pruned === 1 && (after ?? []).length === 0, 'the dispatch secret prunes a dead endpoint', { pruneErr: pruneErr?.message, pruned })
+  }
+
   // Blocking ends it all.
   await U.sb.rpc('friend_block', { p_handle: sProfile.handle })
   const { data: blockedReq } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })
