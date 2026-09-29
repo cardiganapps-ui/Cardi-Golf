@@ -195,6 +195,7 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     ['p/_/nuevo/vs', 'vs--nuevo'],
     ['ronda/_', 'ronda'],
     ['c/_', 'crew'],
+    ['p/_/yo/anio', 'anio'],
   ]) {
     await p.goto(`${base}/${path}`, { waitUntil: 'domcontentloaded' })
     await p.waitForTimeout(400)

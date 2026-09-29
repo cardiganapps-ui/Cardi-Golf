@@ -24,6 +24,7 @@ const CrewsScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m)
 const CrewJoinScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewJoinScreen })))
 const CrewScreen = lazy(() => import('../screens/profile/CrewScreen').then((m) => ({ default: m.CrewScreen })))
 const CrewFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.CrewFixture })))
+const RecapFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.RecapFixture })))
 const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
 const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
 const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
             { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
             { path: 'p/_/:name', element: <ProfileFixture /> },
             { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
+            { path: 'p/_/:name/anio', element: <Lazy><RecapFixture /></Lazy> },
             { path: 'amigos/_', element: <Lazy><FriendsFixture /></Lazy> },
             { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
             { path: 'ronda/_', element: <Lazy><QuickFixture /></Lazy> },

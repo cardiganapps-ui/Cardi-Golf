@@ -10,6 +10,8 @@ import { VersusScreen, type VersusFixture } from '../screens/profile/VersusScree
 import { QuickRoundView, type QuickTee } from '../screens/profile/QuickRoundScreen'
 import { CrewView } from '../screens/profile/CrewScreen'
 import type { CrewPage } from '../data/crews'
+import { RecapCard } from '../screens/profile/Achievements'
+import { recapYears, yearRecap } from '../engine/profile/achievements'
 import { PROFILE_FIXTURES } from './profileFixtures'
 
 const person = (displayName: string, handle: string, extra: Partial<FriendCard> = {}): FriendCard => ({ handle, displayName, avatarUrl: null, homeClub: null, index: null, ...extra })
@@ -135,4 +137,19 @@ export function VersusFixtureScreen() {
   const them = { ...PROFILE_FIXTURES.extrano!.card, displayName: 'Diego Ortiz', handle: 'diego.ortiz', related: true, isMe: false }
   const fixture: VersusFixture = { me: { displayName: me.displayName, avatarUrl: me.avatarUrl }, them, h2h: VERSUS[name] ?? active }
   return <VersusScreen fixture={fixture} />
+}
+
+/** The year card as it is shared (design routes only): /p/_/:name/anio. */
+export function RecapFixture() {
+  const { name = 'yo' } = useParams()
+  const f = PROFILE_FIXTURES[name] ?? PROFILE_FIXTURES.yo!
+  const rounds = f.rounds ?? []
+  const tournaments = f.tournaments ?? []
+  const year = recapYears(rounds, tournaments)[0] ?? 2026
+  return (
+    // The card is a fixed 540px image; scaled to fit a phone for the screenshot.
+    <div style={{ padding: 16, zoom: 0.66 }}>
+      <RecapCard name={f.card.displayName} recap={yearRecap(rounds, tournaments, year)} />
+    </div>
+  )
 }

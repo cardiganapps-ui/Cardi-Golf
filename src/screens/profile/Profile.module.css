@@ -513,3 +513,89 @@ button.row {
   font-variant-numeric: tabular-nums lining-nums;
   color: var(--ink-2);
 }
+
+/* ---- Badges, records, the year (PR 7) ---- */
+.awards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+/* A badge still to earn is a dashed outline; an earned one is inked. */
+.award {
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border-radius: var(--r-round);
+  border: 1px dashed var(--ink-3);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+.awardOn {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+}
+.offscreen {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  pointer-events: none;
+}
+/* The recap card: fixed 540px, card stock, the year as the hero figure. */
+.recap {
+  width: 540px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: 28px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.recapHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding-bottom: var(--s3);
+  border-bottom: var(--rule-heavy);
+}
+.recapYear {
+  font-size: 64px;
+  line-height: 1;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.recapName {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  text-align: right;
+}
+.recapGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s4) var(--s3);
+}
+.recapItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.recapFig {
+  font-size: 34px;
+  line-height: 1.05;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.recapFoot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--s3);
+  border-top: var(--hairline);
+}
