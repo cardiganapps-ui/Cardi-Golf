@@ -1,0 +1,57 @@
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s5);
+}
+.champion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+}
+.champion strong {
+  font: 600 var(--fs-xl) / 1.1 var(--font-display);
+}
+.round {
+  display: flex;
+  flex-direction: column;
+}
+.roundName {
+  margin-bottom: var(--s2);
+  font: 600 var(--fs-sm) / 1.2 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+/* Name · result · name, with the middle column only as wide as its text so
+   two long names share what is left evenly. */
+.match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--tap);
+  border-bottom: var(--hairline);
+}
+.side {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+}
+.sideRight {
+  text-align: right;
+}
+.won {
+  color: var(--ink);
+  font-weight: 600;
+}
+.result {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: nowrap;
+}

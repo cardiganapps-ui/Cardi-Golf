@@ -13,6 +13,7 @@ import { saveGroups } from '../../data/api'
 import { withTeeTimes } from '../../lib/teeTimes'
 import { useTournament } from '../../data/tournamentStore'
 import { generateGroupsFromStandings } from '../../engine/modules/pairs'
+import { nextRoundGroups } from '../../engine/formats/bracket'
 import type { Group, Round } from '../../engine/types'
 import { IconClose } from '../../components/icons'
 import a from './Admin.module.css'
@@ -71,6 +72,9 @@ export function AdminGroups() {
     })
   }, [current, pairsOn, snapshot.pairs, settings.modules.pairs.pairing])
 
+  // The bracket round still waiting for its groups, if there is one.
+  const bracketNext = useMemo(() => (state.bracket ? nextRoundGroups(state.bracket) : null), [state.bracket])
+
   function withTimes(groups: string[][]): DraftGroup[] {
     const times = withTeeTimes(current[0]?.teeTime || '09:00', groups.length)
     return groups.map((ids, i) => ({ number: i + 1, teeTime: times[i]!, startHole: 1, playerIds: ids }))
@@ -104,6 +108,20 @@ export function AdminGroups() {
       )
     }
     setDrafts(withTimes(groups))
+  }
+
+  /**
+   * Match play: the groups ARE the bracket, so the next round's groups are
+   * whoever won. It writes only the round the bracket is waiting on, so the
+   * Comité cannot accidentally draw a semifinal before the quarters are in.
+   */
+  function fromBracket() {
+    const next = state.bracket ? nextRoundGroups(state.bracket) : null
+    if (!next) {
+      toast(t.bracket.noNextRound)
+      return
+    }
+    setDrafts(withTimes(next.groups))
   }
 
   function randomPlayers() {
@@ -181,6 +199,11 @@ export function AdminGroups() {
             {pairsOn && (
               <button className="btn btn--secondary btn--sm" type="button" onClick={randomPairs}>
                 {G.randomPairs}
+              </button>
+            )}
+            {bracketNext && (
+              <button className="btn btn--secondary btn--sm" type="button" onClick={fromBracket}>
+                {t.bracket.nextRound(bracketNext.round.name)}
               </button>
             )}
             <button className="btn btn--secondary btn--sm" type="button" onClick={randomPlayers}>

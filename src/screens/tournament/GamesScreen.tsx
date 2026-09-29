@@ -10,6 +10,7 @@ import { IconChevronLeft } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
 import type { ModuleId } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
+import { BracketBoard } from './BracketBoard'
 import { fieldShape, individualPrizeAmounts } from '../../engine/settings/prizeCheck'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
@@ -122,6 +123,14 @@ export function GamesScreen() {
           </div>
           {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} />}
 
+          {/* Under match play the bracket is the story; the points table
+              below it is the tiebreaker nobody reads first. */}
+          {current === 'individual' && state.bracket && (
+            <div className={styles.section}>
+              <BracketBoard bracket={state.bracket} />
+            </div>
+          )}
+
           {current === 'individual' && state.modules.individual && (
             <div className={styles.section}>
               <Board>
@@ -133,7 +142,9 @@ export function GamesScreen() {
                     name={name(r.playerId)}
                     sub={
                       <span className={styles.sub}>
-                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${p}`).join(', ')}</span>
+                        {/* perRound became Figure[] with the format seam; it prints
+                            as "[object Object]" if you interpolate it whole. */}
+                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${p.text}`).join(', ')}</span>
                         {state.modules.individual!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.individual!.prizes[r.playerId]!.amount)}</span>}
                       </span>
                     }

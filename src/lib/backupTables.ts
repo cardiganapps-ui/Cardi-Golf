@@ -17,6 +17,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   pin_attempts: 'auth_user_id',
   device_sessions: 'auth_user_id',
   pairs: 'id',
+  teams: 'id',
+  team_members: 'team_id,player_id',
   rounds: 'id',
   round_tees: 'round_id,player_id',
   groups: 'id',

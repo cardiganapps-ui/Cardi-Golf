@@ -14,6 +14,7 @@ import type {
   Hole,
   HoleAward,
   Pair,
+  Team,
   Payment,
   Player,
   Round,
@@ -119,6 +120,14 @@ export const mapPair = (r: Row): Pair => ({
   player2Id: r.player2_id,
   kind: r.kind ?? null,
   pickedByHonoree: !!r.picked_by_honoree,
+  drawnAt: r.drawn_at ?? null,
+})
+
+export const mapTeam = (r: Row, members: Row[]): Team => ({
+  id: r.id,
+  name: r.name ?? null,
+  number: r.number,
+  playerIds: members.filter((m) => m.team_id === r.id).map((m) => m.player_id),
   drawnAt: r.drawn_at ?? null,
 })
 
