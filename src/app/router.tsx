@@ -20,6 +20,10 @@ const VersusScreen = lazy(() => import('../screens/profile/VersusScreen').then((
 const QuickRoundScreen = lazy(() => import('../screens/profile/QuickRoundScreen').then((m) => ({ default: m.QuickRoundScreen })))
 const CoursesScreen = lazy(() => import('../screens/profile/CoursesScreen').then((m) => ({ default: m.CoursesScreen })))
 const QuickFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.QuickFixture })))
+const CrewsScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewsScreen })))
+const CrewJoinScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewJoinScreen })))
+const CrewScreen = lazy(() => import('../screens/profile/CrewScreen').then((m) => ({ default: m.CrewScreen })))
+const CrewFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.CrewFixture })))
 const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
 const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
 const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
@@ -107,6 +111,7 @@ export const router = createBrowserRouter([
       { path: 'avisos', element: <Lazy><InboxScreen /></Lazy> },
       { path: 'ronda', element: <Lazy><QuickRoundScreen /></Lazy> },
       { path: 'campos', element: <Lazy><CoursesScreen /></Lazy> },
+      { path: 'crews', element: <Lazy><CrewsScreen /></Lazy> },
       // Dev-only: the style guide and the design fixtures (the same screens on in-memory
       // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
       ...(DESIGN_ROUTES
@@ -119,11 +124,14 @@ export const router = createBrowserRouter([
             { path: 'amigos/_', element: <Lazy><FriendsFixture /></Lazy> },
             { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
             { path: 'ronda/_', element: <Lazy><QuickFixture /></Lazy> },
+            { path: 'c/_', element: <Lazy><CrewFixture /></Lazy> },
           ]
         : []),
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
       { path: 'p/:handle', element: <ProfileScreen /> },
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
+      { path: 'c/unirme/:code', element: <Lazy><CrewJoinScreen /></Lazy> },
+      { path: 'c/:slug', element: <Lazy><CrewScreen /></Lazy> },
       { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
       { path: '*', element: <NotFoundScreen /> },
     ],

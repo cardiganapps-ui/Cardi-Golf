@@ -446,6 +446,11 @@ The settlement nets to zero across all people (banker included)
 - `round_rivalries(tid)`: the caller's active rivalries with other confirmed players of that tournament; the Tarjeta shows one line per rival in the group.
 - `/campos`: the course library outside a tournament (the Comité › Campos editor), so a quick round can add its course.
 
+**Crews** (2026-09-29, migration 0018; `/crews`, `/c/<slug>`, `/c/unirme/<code>`, `src/data/crews.ts`, season in `src/engine/profile/season.ts`)
+- `crews` (`slug`, `name`, 6-character `join_code`, `created_by`) and `crew_members` (`owner` | `member`); readable by members only. `tournaments.crew_id` puts a tournament or Ronda rápida in a crew (`set_tournament_crew`: the Comité, and only into a crew they belong to). Crew-mates see each other's full profile (`profile_visible_to_me` via `shares_crew`).
+- RPCs: `create_crew`, `crew_preview(code)`, `join_crew(code)` (the owner hears `crew_join`), `leave_crew` (the last one out deletes it; an owner leaving hands it to the longest member), `rotate_crew_code` (owner), `my_crews`, `crew_page(slug)`. The page returns the members, the outings, and each member's published finish in finished, counting outings, with `tied`: how many of the whole field share that place, so a member tied with a guest shares the points.
+- Season table (computed on the client): 25/18/15/12/10/8/6/4/2/1 by place plus 1 for playing. Ties average the places they fill. Order: points, then wins, then best finish; players equal on all three share the position. Per calendar year of the outing's first round.
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.

@@ -17,6 +17,7 @@ import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
+import { CrewField } from './CrewField'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
@@ -229,6 +230,7 @@ export function AdminTournament() {
           ))}
         </div>
         <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />
+        <CrewField tournamentId={tournamentId} />
         <Field label={A.banker}>
           <select className="select" value={tr.bankerPlayerId ?? ''} disabled={quick} onChange={(e) => void setBanker(e.target.value)}>
             <option value="">{t.common.none}</option>
