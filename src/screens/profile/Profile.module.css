@@ -599,3 +599,12 @@ button.row {
   padding-top: var(--s3);
   border-top: var(--hairline);
 }
+
+/* ---- Privacy and terms: readable measure ---- */
+.legal {
+  max-width: 640px;
+}
+.legalHead {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}

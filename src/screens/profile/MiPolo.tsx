@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { InstallGuide } from '../../components/InstallGuide'
+import { LegalLinks } from '../../components/LegalLinks'
 import { Avatar, Spinner, toast } from '../../components/ui'
 import { IconBell, IconChevronRight, IconPeople, IconSettings } from '../../components/icons'
 import { listMyTournaments, type MyTournament } from '../../data/api'
@@ -312,6 +313,7 @@ export function MiPolo() {
       </section>
 
       <InstallGuide />
+      <LegalLinks />
     </div>
   )
 }

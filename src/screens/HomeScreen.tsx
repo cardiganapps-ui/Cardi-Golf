@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wordmark } from '../components/Wordmark'
 import { InstallGuide } from '../components/InstallGuide'
+import { LegalLinks } from '../components/LegalLinks'
 import { supabaseConfigured } from '../lib/supabase'
 import { getLastTournament } from '../data/session'
 import { useAuth } from '../data/auth'
@@ -101,6 +102,7 @@ export function HomeScreen() {
       </section>
 
       <InstallGuide />
+      <LegalLinks />
     </div>
   )
 }
