@@ -398,6 +398,33 @@ export const t = {
     finished: (n: number) => `Ronda publicada en ${n === 1 ? '1 perfil' : `${n} perfiles`}.`,
     rivalryLine: (name: string, n: number) => (n === 0 ? `Rivalidad con ${name}: parejos` : n > 0 ? `Rivalidad con ${name}: recibes ${n}` : `Rivalidad con ${name}: das ${-n}`),
   },
+  legal: {
+    updated: 'Última actualización: 29 de septiembre de 2026',
+    contact: 'Dudas: golf@cardigan.mx',
+    back: 'Volver a Polo',
+    privacy: {
+      title: 'Aviso de privacidad',
+      sections: [
+        ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola (golf@cardigan.mx) en golf.cardigan.mx.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección técnica que tu navegador da para mandarte notificaciones. Los montos de dinero de un torneo solo los ve su Comité y cada quien el suyo.'],
+        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados, mostrarte a ti y a la gente con la que juegas lo que les corresponde, y mandarte avisos que tú activaste. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
+        ['Quién los ve', 'Tu perfil completo lo ven tus amigos, tus crews y quienes juegan un torneo contigo. Los demás solo ven tu tarjeta básica si tu perfil aparece en búsquedas (lo puedes apagar). Tu dinero solo lo ves tú.'],
+        ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
+        ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil, y solo para crear y reconocer tu cuenta. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
+        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, apagar los avisos en cada teléfono y pedir que borremos tu cuenta y tus datos escribiendo a golf@cardigan.mx. Los resultados de torneos ya jugados pueden quedarse sin tu nombre para que los de los demás sigan cuadrando.'],
+      ] as Array<[string, string]>,
+    },
+    terms: {
+      title: 'Términos de uso',
+      sections: [
+        ['El servicio', 'Polo es gratis y se ofrece tal cual, para grupos de amigos. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.'],
+        ['El dinero', 'Polo no cobra ni mueve dinero: solo lleva la cuenta de lo que los jugadores acuerdan entre ellos. Cada grupo es responsable de sus apuestas y de pagarlas, y de que sean legales donde juegan. El Comité de cada torneo tiene la última palabra sobre sus reglas y resultados.'],
+        ['Tu cuenta', 'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Podemos suspender cuentas que lo hagan.'],
+        ['Tu contenido', 'Lo que subes (fotos, nombres, tarjetas) sigue siendo tuyo; nos das permiso de guardarlo y mostrarlo dentro de la app a quien corresponda.'],
+        ['Privacidad', 'Cómo tratamos tus datos está en el aviso de privacidad.'],
+      ] as Array<[string, string]>,
+    },
+  },
   push: {
     title: 'Avisos en este teléfono',
     hint: 'Te llegan como notificación: solicitudes de amistad, rivalidades, resultados y rondas donde te agregan. Nunca montos.',

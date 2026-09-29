@@ -25,6 +25,7 @@ const CrewJoinScreen = lazy(() => import('../screens/profile/CrewsScreen').then(
 const CrewScreen = lazy(() => import('../screens/profile/CrewScreen').then((m) => ({ default: m.CrewScreen })))
 const CrewFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.CrewFixture })))
 const RecapFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.RecapFixture })))
+const LegalScreen = lazy(() => import('../screens/LegalScreen').then((m) => ({ default: m.LegalScreen })))
 const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
 const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
 const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
@@ -106,6 +107,8 @@ export const router = createBrowserRouter([
       { path: 'organizer/new', element: <NewTournamentScreen /> },
       { path: 'organizer/reset', element: <ResetPasswordScreen /> },
       { path: 'entrar', element: <EntrarScreen /> },
+      { path: 'privacidad', element: <Lazy><LegalScreen doc="privacy" /></Lazy> },
+      { path: 'terminos', element: <Lazy><LegalScreen doc="terms" /></Lazy> },
       { path: 'perfil/vuelta', element: <OAuthReturnScreen /> },
       { path: 'perfil/editar', element: <Lazy><ProfileEditScreen /></Lazy> },
       { path: 'amigos', element: <Lazy><FriendsScreen /></Lazy> },
