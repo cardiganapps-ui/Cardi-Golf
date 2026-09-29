@@ -10,6 +10,7 @@ import { Avatar, Field, Segmented, Spinner, Toggle, toast } from '../../componen
 import { useAuth } from '../../data/auth'
 import { safeNext, signOutSafely } from '../../data/account'
 import { HandleTakenError, handleOk, parseIndex, updateMyProfile, uploadMyAvatar, useMyProfile, type MyProfile, type ProfilePatch } from '../../data/profiles'
+import { PushToggle } from './PushToggle'
 import styles from './Profile.module.css'
 
 const P = t.profile
@@ -204,6 +205,7 @@ export function ProfileEditScreen() {
         </button>
       </form>
 
+      <PushToggle />
       <div className={styles.session}>
         <Link className="btn btn--ghost" to={`/p/${profile.handle}`}>
           {P.viewProfile}

@@ -398,6 +398,18 @@ export const t = {
     finished: (n: number) => `Ronda publicada en ${n === 1 ? '1 perfil' : `${n} perfiles`}.`,
     rivalryLine: (name: string, n: number) => (n === 0 ? `Rivalidad con ${name}: parejos` : n > 0 ? `Rivalidad con ${name}: recibes ${n}` : `Rivalidad con ${name}: das ${-n}`),
   },
+  push: {
+    title: 'Avisos en este teléfono',
+    hint: 'Te llegan como notificación: solicitudes de amistad, rivalidades, resultados y rondas donde te agregan. Nunca montos.',
+    enable: 'Activar avisos',
+    disable: 'Apagar en este teléfono',
+    on: 'Activados en este teléfono.',
+    denied: 'Los bloqueaste en este teléfono. Actívalos en los ajustes del navegador para Polo.',
+    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, "Agregar a pantalla de inicio") y ábrela desde ahí.',
+    unsupported: 'Este navegador no recibe avisos.',
+    enabled: 'Listo: te avisamos aquí.',
+    disabled: 'Avisos apagados en este teléfono.',
+  },
   achievements: {
     badges: 'Insignias',
     badgesCount: (n: number, of: number) => `${n} de ${of}`,

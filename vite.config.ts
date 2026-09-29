@@ -63,6 +63,8 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
+        // Web push (PR 8): the handler lives in public/push-sw.js; bump ?v= when it changes.
+        importScripts: ['/push-sw.js?v=1'],
         // Icon URLs carry ?v=<fingerprint>; offline, they still resolve to the precached file.
         ignoreURLParametersMatching: [/^v$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
