@@ -28,6 +28,7 @@ import {
   type RoundResult,
 } from '../../data/profiles'
 import { PROFILE_FIXTURES } from '../../dev/profileFixtures'
+import { BadgesSection, RecapButton, RecordsSection } from './Achievements'
 import styles from './Profile.module.css'
 
 const P = t.profile
@@ -275,6 +276,13 @@ export function ProfileView({
         </section>
       )}
 
+      {rounds && tournaments && (
+        <>
+          <BadgesSection rounds={rounds} tournaments={tournaments} />
+          <RecordsSection rounds={rounds} tournaments={tournaments} onRound={(id) => setRound(rounds.find((r) => r.roundId === id) ?? null)} />
+        </>
+      )}
+
       {card.isMe && money && (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
@@ -321,6 +329,7 @@ export function ProfileView({
             </Link>
           </>
         )}
+        {card.isMe && rounds && tournaments && <RecapButton name={card.displayName} handle={card.handle} rounds={rounds} tournaments={tournaments} />}
         <CopyButton text={url} label={P.copyLink} />
         <ShareButton text={P.shareText(card.displayName)} url={url} title={card.displayName} />
       </div>

@@ -12,3 +12,4 @@
 - [social--vs--nuevo.jpg](./social--vs--nuevo.jpg)
 - [social--ronda.jpg](./social--ronda.jpg)
 - [social--crew.jpg](./social--crew.jpg)
+- [social--anio.jpg](./social--anio.jpg)

@@ -451,6 +451,9 @@ The settlement nets to zero across all people (banker included)
 - RPCs: `create_crew`, `crew_preview(code)`, `join_crew(code)` (the owner hears `crew_join`), `leave_crew` (the last one out deletes it; an owner leaving hands it to the longest member), `rotate_crew_code` (owner), `my_crews`, `crew_page(slug)`. The page returns the members, the outings, and each member's published finish in finished, counting outings, with `tied`: how many of the whole field share that place, so a member tied with a guest shares the points.
 - Season table (computed on the client): 25/18/15/12/10/8/6/4/2/1 by place plus 1 for playing. Ties average the places they fill. Order: points, then wins, then best finish; players equal on all three share the position. Per calendar year of the outing's first round.
 
+**Badges, records, the year** (2026-09-29, no migration; `src/engine/profile/achievements.ts`, `src/screens/profile/Achievements.tsx`)
+- Computed on read from `profile_rounds` and `profile_tournaments`; practice never counts, nothing carries money. 20 badges (rounds played, first birdie, 3 birdies, eagle, ace, breaking 100/90/80/70, 5 holes at par or better in a row, no doubles, no 3-putts, 28 putts or fewer, 5 tournaments, podium, a win, three wins), each dated by the first round or tournament that earned it. Records: best gross, best differential, most birdies in a round, fewest putts, longest par streak, best finish (the earliest stands on a tie). The owner shares «Mi <año> en Polo» as an image (the recap: rounds, tournaments, wins, podiums, birdies, eagles, best and average gross, best differential, courses, the year's badges).
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.
