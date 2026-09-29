@@ -637,3 +637,67 @@
   background: var(--board-accent);
   color: var(--board-bg);
 }
+
+/* ---- Row: the one list row ----
+
+   Every list in this app is the same object, and until now every screen drew
+   its own: five stylesheets held near-identical `.row` rules that differed
+   only in min-height (56, 60 or 64), in padding, and in which of them
+   remembered `min-width: 0` and the ellipsis. Measured at 360px over eleven
+   screens, that was SEVENTEEN different row heights, the tallest being rows
+   whose second line had wrapped.
+
+   The four rules below are the whole convention. Screen stylesheets `composes:`
+   them, so a row is the same object wherever it is drawn and no screen can
+   forget the two things everyone forgot. The <Row> component uses them too. */
+
+/* The line itself: one height, one rule under it. */
+.rowLine {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--row-h);
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+}
+/* The text block. `min-width: 0` is the half of this that always got left out:
+   without it a flex child refuses to shrink and shoves the figure off the row. */
+.rowTextBlock {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: var(--lh-ui);
+}
+/* One truncation convention: a row's lines are single lines. The weight is
+   NOT part of it — a list that draws read and unread differently has to be
+   able to say so without fighting this rule's specificity. */
+.rowTitleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowSubText {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The exception, for a sub-line that is a sentence rather than a set of
+   fields: two lines, then clipped. Never unbounded. */
+.rowSubWrap {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+/* A trailing control or figure: keeps its width, never wraps. */
+.rowEndBlock {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+}

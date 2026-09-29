@@ -27,15 +27,7 @@
   border-top: var(--hairline);
 }
 .link {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 52px;
-  padding: 0 var(--s1);
-  border-bottom: var(--hairline);
-  color: var(--ink);
-  text-decoration: none;
-  font-weight: 600;
+  composes: rowLine from '../../components/primitives.module.css';
 }
 .link:active {
   background: var(--surface);

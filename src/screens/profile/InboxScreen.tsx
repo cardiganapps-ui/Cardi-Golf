@@ -67,7 +67,10 @@ export function InboxScreen({ fixture }: { fixture?: Notice[] }) {
               <Link key={n.id} to={to} className={`${styles.row} ${n.read ? '' : styles.rowUsed}`}>
                 {n.actor ? <Avatar name={n.actor.displayName} url={n.actor.avatarUrl} /> : <span className={styles.mono}>{(n.data.tournament ?? 'P').charAt(0).toUpperCase()}</span>}
                 <span className={styles.rowText}>
-                  <span className={n.read ? '' : styles.rowTitle}>{text}</span>
+                  {/* Both states are the same row; only the weight differs. It
+                      used to be `n.read ? '' : rowTitle`, so a read notice had
+                      no truncation and wrapped to three lines. */}
+                  <span className={`${styles.rowTitle} ${n.read ? styles.rowTitleRead : ''}`}>{text}</span>
                   <span className={styles.rowSub}>{stamp.format(new Date(n.createdAt))}</span>
                 </span>
                 <span className={styles.rowEnd}>

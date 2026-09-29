@@ -99,6 +99,9 @@
   --r-round: 999px; /* avatars, the live dot */
 
   /* ---- Borders ---- */
+  /* One list-row height for the whole app. It is the tap target plus the
+     breathing room a two-line row needs; see Row in primitives.tsx. */
+  --row-h: 56px;
   --hairline: 1px solid var(--rule);
   --rule-heavy: 2px solid var(--ink);
   --control-border: 1.5px solid var(--rule-2);

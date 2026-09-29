@@ -55,12 +55,8 @@
   border-top: var(--hairline);
 }
 .row {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 60px;
-  padding: var(--s2) 0;
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
+
 }
 .rowBtn {
   flex: 1;
@@ -82,27 +78,17 @@
   background: var(--surface);
 }
 .rowText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
+
 }
 .rowTitle {
+  composes: rowTitleText from '../../components/primitives.module.css';
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
 }
 .rowSub {
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-  /* Truncate like .rowTitle above. Without this the second line wrapped and
-     pushed the row's height around, which is what made every Comité list
-     look out of alignment with its neighbours. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  composes: rowSubText from '../../components/primitives.module.css';
+
 }
 .rowActions {
   display: flex;
@@ -221,13 +207,8 @@
   border-top: var(--hairline);
 }
 .inboxRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s2) var(--s3);
-  min-height: 56px;
-  padding: var(--s2) 0;
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
+  gap: var(--s2);
 }
 .inboxText {
   flex: 1 1 240px;

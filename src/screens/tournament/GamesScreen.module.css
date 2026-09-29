@@ -10,40 +10,35 @@
   border-top: var(--rule-heavy);
 }
 .gameRow {
+  composes: rowLine from '../../components/primitives.module.css';
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 64px;
-  padding: var(--s2) 0;
-  border: 0;
-  border-bottom: var(--hairline);
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
   background: none;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
   width: 100%;
+
 }
 .gameRow:active {
   background: var(--surface);
 }
 .gameText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
+
 }
 .gameLabel {
+  composes: rowTitleText from '../../components/primitives.module.css';
   font-weight: 600;
+
 }
 .gameLeader {
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
+  composes: rowSubText from '../../components/primitives.module.css';
+
 }
 .gameStake {
   display: flex;
@@ -85,6 +80,7 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .subMoney {
   color: var(--ink-2);
@@ -96,13 +92,9 @@
   border-top: var(--hairline);
 }
 .rowLine {
+  composes: rowLine from '../../components/primitives.module.css';
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 48px;
-  padding: var(--s2) 0;
-  border-bottom: var(--hairline);
   font-size: var(--fs-sm);
 }
 .rowLine strong {
