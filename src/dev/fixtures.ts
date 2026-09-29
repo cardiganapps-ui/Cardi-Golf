@@ -327,7 +327,7 @@ function longnames(): Fixture {
 
 
 /** A format that is not Stableford: one tournament per new format. */
-function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name: string; slug: string; label: string; description: string; options?: Record<string, string>; teams?: boolean; groupSize?: number }): Fixture {
+function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name: string; slug: string; label: string; description: string; options?: Record<string, string>; teams?: boolean; teamsOf?: number; groupSize?: number }): Fixture {
   const settings: TournamentSettings = {
     ...DEFAULT_SETTINGS,
     rounds: 1,
@@ -353,6 +353,20 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
   const size = opts.groupSize ?? 4
   for (let i = 0; i < 8; i += size) {
     snap.groups.push(makeGroup('r1', i / size + 1, players.slice(i, i + size).map((p) => p.id), i === 0 ? 1 : 10))
+  }
+  // Teams of more than two live in `teams`; two-player teams here stay on
+  // `pairs`, which is the fallback teamEntrants keeps for a tournament that
+  // drew Matrimonios and then switched format.
+  if (opts.teamsOf) {
+    const n = opts.teamsOf
+    const labels = ['Los Compadres', 'Las Palmas', 'Los del Fondo', 'Tres Marías']
+    snap.teams = Array.from({ length: Math.ceil(players.length / n) }, (_, i) => ({
+      id: `tm${i + 1}`,
+      name: labels[i] ?? null,
+      number: i + 1,
+      playerIds: players.slice(i * n, i * n + n).map((x) => x.id),
+      drawnAt: null,
+    }))
   }
   if (opts.teams) {
     snap.pairs = [
@@ -382,6 +396,48 @@ const BUILDERS: Record<string, () => Fixture> = {
   'stroke8': () => formatFixture('strokePlay', { name: 'Copa del Club', slug: 'stroke8', label: 'Golpes', description: 'Stroke play neto a una vuelta: gana quien menos golpes haga', options: { scoring: 'net' } }),
   'match8': () => formatFixture('matchPlay', { name: 'Duelos de Primavera', slug: 'match8', label: 'Match play', description: 'Uno contra uno: cuatro partidos, se gana por hoyos', options: { matchMode: 'singles', scoring: 'net' }, groupSize: 2 }),
   'team8': () => formatFixture('team', { name: 'Scramble de la Casa', slug: 'team8', label: 'Por equipos', description: 'Cuatro equipos jugando la mejor bola', options: { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'net' }, teams: true }),
+  /**
+   * A knockout that has actually started: 8 players, 3 days, the quarters
+   * drawn the way the bracket seeds them (1v8, 2v7, 3v6, 4v5) and played.
+   * The semifinals then show the four winners, waiting for their groups.
+   */
+  'bracket8': () => {
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      rounds: 3,
+      entryFee: 800,
+      prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [70, 30], stablefordMode: 'percent' },
+      modules: {
+        ...DEFAULT_SETTINGS.modules,
+        individual: { enabled: true, label: 'Match play', format: 'matchPlay', formatOptions: { ...DEFAULT_SETTINGS.modules.individual.formatOptions, matchMode: 'singles', scoring: 'net' } },
+      },
+    }
+    const players = withNames(
+      Array.from({ length: 8 }, (_, i) => makePlayer(i + 1, { baseHcp: [4, 9, 12, 15, 18, 21, 24, 28][i]!, isAdmin: i === 0 })),
+      NAMES.slice(4),
+    )
+    const snap = makeSnapshot({ players, rounds: 3, settings })
+    snap.tournament = { ...snap.tournament, id: 'fx-bracket', slug: 'bracket8', name: 'Copa Eliminatoria', tagline: 'Ocho jugadores, tres días, uno queda', joinCode: 'BRACKT', accentColor: '#7a3b2e' }
+    snap.rounds = [makeRound(1, { status: 'finished', date: '2027-06-12' }), makeRound(2, { status: 'scheduled', date: '2027-06-13' }), makeRound(3, { status: 'scheduled', date: '2027-06-14' })]
+    // The seeded quarterfinals: best v worst, and so on inward.
+    snap.groups = [
+      makeGroup('r1', 1, ['p1', 'p8'], 1),
+      makeGroup('r1', 2, ['p2', 'p7'], 1),
+      makeGroup('r1', 3, ['p3', 'p6'], 10),
+      makeGroup('r1', 4, ['p4', 'p5'], 10),
+    ]
+    fillRound(snap, 'r1', 1)
+    return { name: 'bracket8', description: 'Cuadro de eliminación, cuartos jugados', snapshot: snap, me: { playerId: 'p1', isOrganizer: true, isAdmin: true }, lookup: lookupOf(snap) }
+  },
+  'scramble8': () =>
+    formatFixture('team', {
+      name: 'Scramble del Club',
+      slug: 'scramble8',
+      label: 'Scramble',
+      description: 'Dos equipos de cuatro, una bola por equipo',
+      options: { teamMode: 'scramble', teamScoring: 'strokes', scoring: 'net' },
+      teamsOf: 4,
+    }),
   large60,
   longnames,
 }

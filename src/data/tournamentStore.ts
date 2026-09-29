@@ -22,6 +22,7 @@ import {
   mapHandicapOverride,
   mapLot,
   mapPair,
+  mapTeam,
   mapPayment,
   mapGameEntry,
   mapHoleAward,
@@ -131,11 +132,12 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
         })
       : Promise.resolve([] as T[])
 
-  const [tRes, players, rounds, pairs, lots, payments, gameEntries, gameResults] = await Promise.all([
+  const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults] = await Promise.all([
     sb.from('tournaments').select('*').eq('id', tournamentId).single(),
     q('players'),
     q('rounds'),
     q('pairs'),
+    q('teams'),
     q('calcutta_lots'),
     q('payments'),
     inList('game_entries', 'tournament_id', [tournamentId]),
@@ -162,7 +164,12 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   ])
   const groupIds = groups.map((g) => g.id)
   const teeIds = tees.map((t) => t.id)
-  const [members, holes] = await Promise.all([inList('group_members', 'group_id', groupIds), inList('holes', 'tee_id', teeIds)])
+  const teamIds = teams.map((x) => x.id)
+  const [members, holes, teamMembers] = await Promise.all([
+    inList('group_members', 'group_id', groupIds),
+    inList('holes', 'tee_id', teeIds),
+    inList('team_members', 'team_id', teamIds),
+  ])
 
   return {
     tournament: mapTournament(tRes.data),
@@ -172,6 +179,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     groups: groups.map((g) => mapGroup(g, members)).sort((a, b) => a.number - b.number),
     roundTees: roundTees.map(mapRoundTee),
     pairs: pairs.map(mapPair),
+    teams: teams.map((x) => mapTeam(x, teamMembers)).sort((a, b) => a.number - b.number),
     scores: scores.map(mapScore),
     snakeTiebreaks: tiebreaks.map(mapSnakeTiebreak),
     cardSignatures: signatures.map(mapCardSignature),
@@ -190,6 +198,8 @@ const REALTIME_TABLES = [
   'tournaments',
   'players',
   'pairs',
+  'teams',
+  'team_members',
   'rounds',
   'groups',
   'group_members',

@@ -220,6 +220,16 @@ export interface GameResult {
   share: number
 }
 
+/** A team in a team format (scramble, best ball, shamble). Any size. */
+export interface Team {
+  id: Id
+  name: string | null
+  /** Draw order; also what an unnamed team is called ("Equipo 3"). */
+  number: number
+  playerIds: Id[]
+  drawnAt: string | null
+}
+
 export interface Snapshot {
   tournament: TournamentRow
   players: Player[]
@@ -228,6 +238,8 @@ export interface Snapshot {
   groups: Group[]
   roundTees: RoundTee[]
   pairs: Pair[]
+  /** Teams, when the tournament plays a team format. Empty otherwise. */
+  teams: Team[]
   scores: Score[]
   snakeTiebreaks: SnakeTiebreak[]
   cardSignatures: CardSignature[]

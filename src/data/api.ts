@@ -472,6 +472,24 @@ export async function renamePair(pairId: string, name: string) {
   unwrap(await supabase().from('pairs').update({ name: name.trim() || null }).eq('id', pairId).select('id'))
 }
 
+export interface TeamInput {
+  name: string | null
+  player_ids: string[]
+}
+
+/**
+ * The team draw, replacing whatever was there. Like save_draw it is refused
+ * once a card has been signed, so a finished round cannot lose the teams
+ * its scores were played under.
+ */
+export async function saveTeams(tournamentId: string, teams: TeamInput[]) {
+  return rpc<{ teams: number }>('save_teams', { p_tournament_id: tournamentId, p_teams: teams })
+}
+
+export async function renameTeam(teamId: string, name: string) {
+  return rpc<null>('rename_team', { p_team_id: teamId, p_name: name })
+}
+
 // ---------------------------------------------------------------------------
 // Payments (M5)
 // ---------------------------------------------------------------------------

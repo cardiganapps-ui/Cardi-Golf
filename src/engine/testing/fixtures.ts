@@ -129,6 +129,7 @@ export function makeSnapshot(opts: TournamentOpts = {}): Snapshot {
     groups: opts.groups ?? [],
     roundTees: [],
     pairs: [],
+    teams: [],
     scores: [],
     snakeTiebreaks: [],
     cardSignatures: [],

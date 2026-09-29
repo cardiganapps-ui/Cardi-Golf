@@ -57,6 +57,7 @@ const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then(
 const DESIGN_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES === '1'
 const DesignScreen = lazy(() => import('../design/DesignScreen').then((m) => ({ default: m.DesignScreen })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
+const AdminTeams = lazy(() => import('../screens/admin/AdminTeams').then((m) => ({ default: m.AdminTeams })))
 
 /** Everything under one tournament; shared by the real gate and the fixtures. */
 const tournamentChildren = [
@@ -90,6 +91,7 @@ const tournamentChildren = [
               { path: 'scores', element: <Lazy><AdminScores /></Lazy> },
               { path: 'calcutta', element: <Lazy><AdminAuction /></Lazy> },
               { path: 'parejas', element: <Lazy><AdminDraw /></Lazy> },
+              { path: 'equipos', element: <Lazy><AdminTeams /></Lazy> },
               { path: 'datos', element: <Lazy><AdminData /></Lazy> },
             ],
           },

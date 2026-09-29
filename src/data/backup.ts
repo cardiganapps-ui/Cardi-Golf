@@ -18,13 +18,14 @@ export interface Backup {
 }
 
 /** Tables keyed by how they hang off the tournament. */
-const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'calcutta_lots', 'payments', 'game_entries', 'game_results'] as const
+const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'teams', 'calcutta_lots', 'payments', 'game_entries', 'game_results'] as const
 const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'hole_awards'] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
 
 /** Primary keys of the tables without an `id` column (paging order). */
 const PK: Record<string, string[]> = {
   group_members: ['group_id', 'player_id'],
+  team_members: ['team_id', 'player_id'],
   round_tees: ['round_id', 'player_id'],
   snake_tiebreaks: ['round_id', 'group_id', 'hole'],
   card_signatures: ['round_id', 'pair_id'],
@@ -55,6 +56,7 @@ export async function exportBackup(tournamentId: string): Promise<Backup> {
   for (const t of BY_ROUND) tables[t] = await rows(t, 'round_id', roundIds)
   const groupIds = tables.groups!.map((g) => g.id as string)
   tables.group_members = await rows('group_members', 'group_id', groupIds)
+  tables.team_members = await rows('team_members', 'team_id', tables.teams!.map((x) => x.id as string))
   const lotIds = tables.calcutta_lots!.map((l) => l.id as string)
   for (const t of BY_LOT) tables[t] = await rows(t, 'lot_id', lotIds)
   // Courses used (read-only reference, so a restore elsewhere can rebuild them by hand).

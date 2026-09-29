@@ -15,12 +15,26 @@ export function playerEntrants(ctx: FormatContext): Entrant[] {
 }
 
 /**
- * One entrant per team. Teams come from `pairs`, which is what the Comité's
- * draw already writes; a team of more than two arrives with the auto draw.
+ * One entrant per team.
+ *
+ * A team format uses `teams`, which holds any size, and falls back to the
+ * pairs the Comité's Matrimonios draw writes when there are none — so a
+ * tournament that drew pairs and then switched to best ball keeps its teams
+ * instead of showing an empty board.
  */
 export function teamEntrants(ctx: FormatContext): Entrant[] {
   const name = (id: Id) => ctx.snapshot.players.find((p) => p.id === id)?.displayName ?? id
   const order = new Map(ctx.snapshot.players.map((p) => [p.id, p.sortOrder]))
+  if (ctx.snapshot.teams.length) {
+    return [...ctx.snapshot.teams]
+      .sort((a, b) => a.number - b.number)
+      .map((team) => ({
+        id: team.id,
+        playerIds: team.playerIds,
+        name: team.name?.trim() || `Equipo ${team.number}`,
+        isTeam: true,
+      }))
+  }
   return [...ctx.snapshot.pairs]
     .map((pair) => ({
       id: pair.id,

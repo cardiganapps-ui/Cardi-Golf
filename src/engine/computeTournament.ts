@@ -22,6 +22,7 @@ import { ALL_GAMES, type AnyGame } from './games'
 import type { GameContext, GameResultState } from './games/game'
 import { gamePot } from './games/payout'
 import type { GameType } from './settings/games'
+import { bracketState, type BracketState } from './formats/bracket'
 
 export interface ModuleStates {
   individual?: IndividualState
@@ -52,6 +53,8 @@ export interface TournamentState {
   core: CoreState
   /** Only the enabled modules appear here. */
   modules: ModuleStates
+  /** The knockout bracket, under match play only; null for every other format. */
+  bracket: BracketState | null
   /** Enabled instance games (`settings.games`), by game id. */
   games: Record<string, GameResultState>
   /** Every prize any enabled module awards, live and final. */
@@ -161,10 +164,15 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
   }
 
+  // The bracket is only meaningful under match play, and costs nothing to
+  // skip: every other format leaves it null.
+  const bracket = settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
+
   return {
     settings,
     core,
     modules,
+    bracket,
     games,
     prizes,
     money,

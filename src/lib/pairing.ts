@@ -73,3 +73,68 @@ export function drawGroupsFromPairs(pairs: Array<Pick<Pair, 'id' | 'kind'>>, rng
   for (let i = 0; i < n; i++) groups.push(lists.flatMap((l) => (l[i] ? [l[i]!] : [])))
   return groups
 }
+
+// ---------------------------------------------------------------------------
+// Team draw (team formats: scramble, best ball, shamble)
+// ---------------------------------------------------------------------------
+
+export interface DrawnTeam {
+  playerIds: string[]
+  /** The sum of the members' handicaps, which is what the draw evens out. */
+  totalHcp: number
+}
+
+/**
+ * Draw teams of `size`, balanced by handicap, with a snake draft.
+ *
+ * Dealing 1-2-3-4-4-3-2-1 is how a golf club has drawn even teams for as
+ * long as there have been scrambles, and it beats the obvious alternatives:
+ * dealing round-robin stacks the best players on team 1, and drawing purely
+ * at random regularly hands one team every low handicap in the field. The
+ * snake gives each team one player from each band of the field.
+ *
+ * It still has to be a draw, so equal handicaps are shuffled before the
+ * players are ranked, and the finished teams are shuffled too — otherwise
+ * team 1 would always be the one holding the best player in the field.
+ *
+ * A field that does not divide evenly leaves the last teams a player short,
+ * and they are the ones that drafted last, so they are the teams that were
+ * dealt the weakest players — which is the fair place for the gap.
+ */
+export function drawTeams(players: Player[], size: number, rng: Rng = Math.random): DrawnTeam[] {
+  const n = players.length
+  if (size < 2 || n < size) return []
+  const teamCount = Math.ceil(n / size)
+  // Shuffle first, then sort: a stable sort keeps the shuffled order inside
+  // each group of equal handicaps, so who drafts where is not fixed by the
+  // roster's order.
+  const ranked = shuffle(players, rng).sort((a, b) => a.baseHcp - b.baseHcp)
+  const teams: Player[][] = Array.from({ length: teamCount }, () => [])
+  ranked.forEach((p, i) => {
+    const round = Math.floor(i / teamCount)
+    const slot = i % teamCount
+    teams[round % 2 === 0 ? slot : teamCount - 1 - slot]!.push(p)
+  })
+  return shuffle(teams, rng).map((members) => ({
+    playerIds: members.map((p) => p.id),
+    totalHcp: members.reduce((s, p) => s + p.baseHcp, 0),
+  }))
+}
+
+/**
+ * Groups for a team format: whole teams, never split across tee times, as
+ * many per group as fit. One team of four is a group; two pairs are a group.
+ */
+export function groupsFromTeams(teams: Array<{ playerIds: string[] }>, maxGroupSize = 4): string[][] {
+  const groups: string[][] = []
+  let current: string[] = []
+  for (const team of teams) {
+    if (current.length && current.length + team.playerIds.length > maxGroupSize) {
+      groups.push(current)
+      current = []
+    }
+    current = [...current, ...team.playerIds]
+  }
+  if (current.length) groups.push(current)
+  return groups
+}
