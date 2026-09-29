@@ -1,0 +1,103 @@
+/**
+ * The main event's format.
+ *
+ * Until now Stableford was not a choice, it was the engine's only currency:
+ * `computeCore` scored every hole into `points` and the main standings ranked
+ * on nothing else. A tournament that plays stroke play, match play or a
+ * scramble had no way to say so.
+ *
+ * A format answers three questions and nothing else:
+ *   who competes (a player, or a team of them),
+ *   what each competitor's figure is for a round and for the tournament,
+ *   and which direction is better.
+ *
+ * Everything downstream — ranking, countback, ties, prize splitting, the
+ * board, the money — is shared, so adding a format never touches them. The
+ * core still scores Stableford points on every hole regardless of format:
+ * they are cheap, and the side games (best round, pairs, the snake) are
+ * separate bets that keep their own meaning whatever the main event is.
+ */
+import type { CountbackInput } from '../core/ranking'
+import type { CoreState } from '../core/types'
+import type { TournamentSettings } from '../settings/schema'
+import type { Explanation, Id, Snapshot } from '../types'
+
+export const FORMAT_IDS = ['stableford', 'strokePlay', 'matchPlay', 'team'] as const
+export type FormatId = (typeof FORMAT_IDS)[number]
+
+/** One competitor in the main standings: one player, or a team of them. */
+export interface Entrant {
+  /** A player id, or a synthetic team id. */
+  id: Id
+  /** Who it covers. One player for an individual format. */
+  playerIds: Id[]
+  name: string
+  /** A team's members are shown under its name; a single player's are not. */
+  isTeam: boolean
+}
+
+/** A number the standings rank on, plus how to show it. */
+export interface Figure {
+  /** What the ranking compares. */
+  value: number
+  /** What the board shows: "31", "74", "+2", "2–1–0". */
+  text: string
+  /** Colour the figure carries, for scores relative to par. */
+  tone?: 'under' | 'over'
+  /** No card yet: the board shows a dash instead of a zero. */
+  empty?: boolean
+}
+
+export interface FormatContext {
+  snapshot: Snapshot
+  settings: TournamentSettings
+  core: CoreState
+  tournamentFinal: boolean
+  roundFinal: Record<Id, boolean>
+}
+
+export interface FormatStandings {
+  entrants: Entrant[]
+  /** entrantId → the tournament figure. */
+  totals: Record<Id, Figure>
+  /** entrantId → roundId → that round's figure. */
+  perRound: Record<Id, Record<Id, Figure>>
+  /** entrantId → holes completed across the tournament. */
+  thru: Record<Id, number>
+  /**
+   * entrantId → the last round's hole-by-hole values for the countback, always
+   * oriented so that more is better (stroke play negates its strokes), because
+   * `countback` compares sums and does not know the format.
+   */
+  countback: Record<Id, CountbackInput>
+  /** Anything the organizer should know, e.g. a match format with no matches set. */
+  warnings: string[]
+}
+
+export interface MainFormat {
+  id: FormatId
+  /** Default name, renamable per tournament. */
+  defaultLabel: string
+  /** Header of the headline column: "Puntos", "Gross", "Neto", "Partidos". */
+  figureLabel(settings: TournamentSettings): string
+  /**
+   * True when a bigger figure wins (points, matches won), false for strokes.
+   * A function because team play flips it: the same format counts strokes down
+   * or Stableford points up depending on how the tournament set it.
+   */
+  higherIsBetter(settings: TournamentSettings): boolean
+  /** How the format explains itself, for the info sheet and the Reglamento. */
+  describe(settings: TournamentSettings): Explanation
+  standings(ctx: FormatContext): FormatStandings
+}
+
+/** The blank figure, for a competitor with no card yet. */
+export const NO_FIGURE: Figure = { value: 0, text: '—', empty: true }
+
+/** "+2", "E", "−1" — a gross or net total relative to par. */
+export function toParFigure(strokes: number, par: number): Figure {
+  const d = strokes - par
+  if (d === 0) return { value: strokes, text: 'E' }
+  // A true minus sign, not a hyphen: these sit next to tabular numerals.
+  return { value: strokes, text: d > 0 ? `+${d}` : `−${Math.abs(d)}`, tone: d > 0 ? 'over' : 'under' }
+}

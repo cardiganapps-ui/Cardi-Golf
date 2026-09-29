@@ -7,6 +7,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { fieldShape, individualPrizeAmounts, snakePotPerGroup } from '../../engine/settings/prizeCheck'
 import { formatMoney } from '../../lib/money'
 import { describeGame } from '../../engine/games/describe'
+import { formatFor } from '../../engine/formats'
 import styles from './RulesScreen.module.css'
 
 const R = t.rules
@@ -29,7 +30,7 @@ export function RulesScreen() {
       lines: R.handicaps(Math.round(settings.handicap.allowance * 100), settings.handicap.cap, settings.day2Cut),
       on: true,
     },
-    { id: 'individual', title: m.individual.label, lines: R.individual(individualPrizeAmounts(settings, fieldShape(snapshot, settings)).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))), settings.labels.lastPlace), on: m.individual.enabled },
+    { id: 'individual', title: m.individual.label, lines: R.individual(individualPrizeAmounts(settings, fieldShape(snapshot, settings)).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))), settings.labels.lastPlace, formatFor(settings).describe(settings).steps), on: m.individual.enabled },
     { id: 'bestRound', title: m.bestRound.label, lines: R.bestRound(formatMoney(settings.prizes.bestRoundPerDay)), on: m.bestRound.enabled },
     { id: 'pairs', title: m.pairs.label, lines: R.pairs(pairingRule, settings.prizes.pairs.map((x) => formatMoney(x)), m.pairs.honoreePicks ? (honoree?.displayName ?? settings.labels.honoree) : null), on: m.pairs.enabled },
     {

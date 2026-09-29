@@ -34,7 +34,7 @@ export function buildTournamentResults(state: TournamentState, players: Player[]
       rank: r?.position ?? null,
       rankLabel: r?.label ?? null,
       points: r?.total ?? null,
-      perRound: r?.perRound ?? [],
+      perRound: r?.perRound.map((f) => f.value) ?? [],
       awards: [...new Set(awards)],
       net: money ? money.net : null,
     }

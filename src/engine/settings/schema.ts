@@ -20,10 +20,30 @@ const moduleBase = {
   label,
 }
 
+/**
+ * Options the main format reads. All optional with defaults, so a tournament
+ * saved before formats existed (`format: 'stableford'`, no options) still
+ * parses unchanged — nothing has to be migrated.
+ */
+export const FormatOptions = z.object({
+  /** Stroke play, match play and team: off handicap, or scratch. */
+  scoring: z.enum(['net', 'gross']).default('net'),
+  /** Match play: one against one, or two against two on the better ball. */
+  matchMode: z.enum(['singles', 'fourball']).default('singles'),
+  /** Team: how a team's hole score comes out of its members'. */
+  teamMode: z.enum(['scramble', 'bestBall', 'shamble']).default('bestBall'),
+  /** Team: count the team's strokes, or its Stableford points. */
+  teamScoring: z.enum(['strokes', 'stableford']).default('strokes'),
+})
+
+/** What a format falls back to when the tournament says nothing. */
+export const DEFAULT_FORMAT_OPTIONS = { scoring: 'net', matchMode: 'singles', teamMode: 'bestBall', teamScoring: 'strokes' } as const
+
 export const IndividualModuleSettings = z.object({
   ...moduleBase,
-  /** Only Stableford in v1; the seam is here for stroke play / match play later. */
-  format: z.enum(['stableford']).default('stableford'),
+  /** The main event's format (§5.3 is one of these, not the only one). */
+  format: z.enum(['stableford', 'strokePlay', 'matchPlay', 'team']).default('stableford'),
+  formatOptions: FormatOptions.default(DEFAULT_FORMAT_OPTIONS),
 })
 
 export const BestRoundModuleSettings = z.object({ ...moduleBase })
