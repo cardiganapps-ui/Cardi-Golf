@@ -114,7 +114,14 @@ describe('side pots', () => {
 
 describe('direct bets', () => {
   it('each loser pays the winner per unit, netted pairwise, outside the bank', () => {
-    const settings: TournamentSettings = { ...DEFAULT_SETTINGS, games: [game({ entrants: 'list', money: { source: 'direct', buyIn: 0, amount: 0, stake: 10, split: [100] } })] }
+    // The point totals below depend on how many strokes the field receives, so
+    // this test pins the allowance rather than riding on whatever the platform
+    // default happens to be.
+    const settings: TournamentSettings = {
+      ...DEFAULT_SETTINGS,
+      handicap: { ...DEFAULT_SETTINGS.handicap, allowance: 0.8 },
+      games: [game({ entrants: 'list', money: { source: 'direct', buyIn: 0, amount: 0, stake: 10, split: [100] } })],
+    }
     const snap = finished(settings)
     snap.gameEntries = ['p2', 'p3', 'p4'].map((playerId) => ({ gameId: 'g1', playerId }))
     const st = computeTournament(snap, settings, { games: { custom: unitsGame } })

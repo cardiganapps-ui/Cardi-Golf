@@ -2,6 +2,12 @@
  * Torneo (§13): brand, status, banker, join code, every setting, and the
  * danger zone. Immediate mutations (status, banker, new code) show busy and
  * confirm where they can lock someone out.
+ *
+ * One route, six tabs. All of it used to render at once — past sixty controls
+ * on a phone, the screen that earned "se necesita un doctorado" — so the
+ * sections now take turns. The edited settings, the dirty flag and the one
+ * Guardar live here and span every tab, so a rule changed under Reglas and a
+ * prize changed under Dinero save together, exactly as before.
  */
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
@@ -17,12 +23,18 @@ import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
+import type { SettingsSection } from './SettingsEditor'
 import { CrewField } from './CrewField'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
+
+/** The sub-nav. `brand` and `status` are tournament columns; the rest are settings. */
+type Tab = 'brand' | 'status' | SettingsSection | 'danger'
+const TABS: Array<{ id: Tab }> = [{ id: 'brand' }, { id: 'status' }, { id: 'rules' }, { id: 'games' }, { id: 'money' }, { id: 'auction' }, { id: 'danger' }]
+const isSettingsTab = (x: Tab): x is SettingsSection => x === 'rules' || x === 'games' || x === 'money' || x === 'auction'
 
 export function AdminTournament() {
   const { tournamentId, slug } = useTournamentCtx()
@@ -39,6 +51,7 @@ export function AdminTournament() {
   const [quick, setQuick] = useState(false)
   const [askCode, setAskCode] = useState(false)
   const [confirmName, setConfirmName] = useState('')
+  const [tab, setTab] = useState<Tab>('brand')
   const fileRef = useRef<HTMLInputElement>(null)
   const A = t.admin.tournament
   const link = `${window.location.origin}/t/${slug}`
@@ -175,6 +188,15 @@ export function AdminTournament() {
         </p>
       ))}
 
+      <div className={styles.tabs} role="tablist" aria-label={A.sections}>
+        {TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => (
+          <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className={`${styles.tab} ${tab === x.id ? styles.tabOn : ''}`} onClick={() => setTab(x.id)}>
+            {A.tabs[x.id]}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'brand' && (
       <section className={a.section}>
         <div className={a.sectionTitle}>
           <strong>{A.brand}</strong>
@@ -227,7 +249,9 @@ export function AdminTournament() {
           </div>
         </Field>
       </section>
+      )}
 
+      {tab === 'status' && (
       <section className={a.section}>
         <div className={a.sectionTitle}>
           <strong>{A.status}</strong>
@@ -267,27 +291,40 @@ export function AdminTournament() {
           <ShareButton text={t.common.joinWithCode(tr.name, tr.joinCode)} url={link} title={tr.name} />
         </div>
       </section>
+      )}
 
-      <SettingsEditor
-        value={settings}
-        onChange={(v) => {
-          setSettings(v)
-          setDirty(true)
-        }}
-        field={field}
-      />
-      <p className={a.help}>
-        {A.playersForCheck}: {players}
-      </p>
+      {isSettingsTab(tab) && (
+        <>
+          <SettingsEditor
+            value={settings}
+            onChange={(v) => {
+              setSettings(v)
+              setDirty(true)
+            }}
+            field={field}
+            section={tab}
+          />
+          {tab === 'money' && (
+            <p className={a.help}>
+              {A.playersForCheck}: {players}
+            </p>
+          )}
+        </>
+      )}
 
-      <div className={a.sticky}>
-        {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
-        {dirty && parsed.success && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
-        <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !balanced} onClick={() => void save()}>
-          {busy ? t.common.saving : t.common.save}
-        </button>
-      </div>
+      {/* One Guardar for every tab that edits: what is dirty saves together,
+          and it follows unsaved work onto the tabs that don't edit. */}
+      {(dirty || (tab !== 'danger' && tab !== 'status')) && (
+        <div className={a.sticky}>
+          {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
+          {dirty && parsed.success && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
+          <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !balanced} onClick={() => void save()}>
+            {busy ? t.common.saving : t.common.save}
+          </button>
+        </div>
+      )}
 
+      {tab === 'danger' && (
       <section className={a.danger}>
         <span className={a.dangerTitle}>{A.danger}</span>
         <p className={a.help}>{A.deleteConfirm(tr.name)}</p>
@@ -296,6 +333,7 @@ export function AdminTournament() {
           {A.deleteTournament}
         </button>
       </section>
+      )}
 
       <ConfirmSheet open={askCode} title={A.newCode} body={A.newCodeConfirm} busy={quick} onConfirm={() => void newCode()} onClose={() => setAskCode(false)} />
     </div>

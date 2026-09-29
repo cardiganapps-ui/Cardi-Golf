@@ -10,16 +10,20 @@ import { t } from '../../../i18n/es-MX'
 import { Field, Segmented, Sheet, Toggle } from '../../../components/ui'
 import { CATEGORY_LABEL, GAME_ENTRIES, MODULE_ENTRIES, entryOf, newGameId, type CatalogCategory } from '../../../engine/games/catalog'
 import { describeGame } from '../../../engine/games/describe'
+import { moduleRules } from '../../../engine/settings/describeModule'
+import { InfoButton } from '../../../components/InfoButton'
 import type { GameConfig } from '../../../engine/settings/games'
 import type { TournamentSettings } from '../../../engine/settings/schema'
+import type { FieldShape } from '../../../engine/settings/prizeCheck'
 import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
 
 const U = t.setup
+const W = t.organizer.wizard
 const CATEGORIES: CatalogCategory[] = ['main', 'hole', 'round', 'matches', 'specials', 'free']
 
-export function GameCatalog({ value, onChange }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void }) {
+export function GameCatalog({ value, onChange, field }: { value: TournamentSettings; onChange: (v: TournamentSettings) => void; field: FieldShape }) {
   const [more, setMore] = useState<string | null>(null)
   const set = (fn: (d: TournamentSettings) => void) => {
     const d = structuredClone(value)
@@ -52,6 +56,7 @@ export function GameCatalog({ value, onChange }: { value: TournamentSettings; on
                       <span className={styles.cardTitle}>{mod.label}</span>
                       <span className={styles.cardBlurb}>{e.blurb}</span>
                     </span>
+                    <InfoButton why={{ title: mod.label, steps: moduleRules(e.id, value, field) }} label={W.formatInfo(mod.label)} title={W.formatInfoTitle} />
                     <Toggle label="" ariaLabel={mod.label} checked={mod.enabled} onChange={(v) => set((d) => (d.modules[e.id].enabled = v))} />
                   </div>
                   {mod.enabled && e.id === 'snake' && (
@@ -79,6 +84,7 @@ export function GameCatalog({ value, onChange }: { value: TournamentSettings; on
                           <span className={styles.cardTitle}>{g.label}</span>
                           <span className={styles.cardBlurb}>{describeGame(g)[0]}</span>
                         </span>
+                        <InfoButton why={{ title: g.label, steps: describeGame(g) }} label={W.formatInfo(g.label)} title={W.formatInfoTitle} />
                         <button type="button" className="btn btn--ghost btn--sm" onClick={() => set((d) => (d.games = d.games.filter((x) => x.id !== g.id)))}>
                           {U.remove}
                         </button>
@@ -103,6 +109,7 @@ export function GameCatalog({ value, onChange }: { value: TournamentSettings; on
                           <span className={styles.cardTitle}>{e.title}</span>
                           <span className={styles.cardBlurb}>{e.blurb}</span>
                         </span>
+                        <InfoButton why={{ title: e.title, steps: describeGame(e.create('preview')) }} label={W.formatInfo(e.title)} title={W.formatInfoTitle} />
                         <button type="button" className="btn btn--primary btn--sm" onClick={() => set((d) => d.games.push(e.create(newGameId(d.games, e.key))))}>
                           {U.add}
                         </button>
