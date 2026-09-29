@@ -36,6 +36,9 @@ function noticeLine(n: Notice): { text: string; to: string } {
       const finish = n.data.rankLabel ? t.profile.finish(n.data.rankLabel, n.data.field ?? null) : null
       return { text: S.notice.results(n.data.tournament ?? '', finish && finish.charAt(0).toLowerCase() + finish.slice(1)), to: n.data.slug ? `/t/${n.data.slug}` : '/' }
     }
+    case 'round_invite':
+      // Mi Polo carries the "¿Eres tú?" that confirms the player.
+      return { text: S.notice.round_invite(who, n.data.tournament ?? ''), to: '/' }
     default:
       return { text: '', to: '/' }
   }

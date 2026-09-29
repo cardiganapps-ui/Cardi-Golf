@@ -203,6 +203,13 @@ export function MiPolo() {
         </span>
       </Link>
 
+      <div className={styles.cta}>
+        <Link to="/ronda" className={`btn btn--primary ${styles.start}`}>
+          {t.quick.cta}
+        </Link>
+        <span className={styles.help}>{t.quick.ctaHint}</span>
+      </div>
+
       {pending.length > 0 && (
         <section className={styles.section}>
           <span className="label">{M.pendingTitle}</span>

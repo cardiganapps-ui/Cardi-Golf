@@ -16,6 +16,7 @@ import { ShareCardButton } from '../../components/ShareCard'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
+import { QuickFinish } from './QuickFinish'
 import { useActiveRound } from './useMyGroup'
 import styles from './LiveScreen.module.css'
 
@@ -132,6 +133,8 @@ export function LiveScreen() {
           <p className="small">{settingsError}</p>
         </div>
       )}
+
+      <QuickFinish />
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>

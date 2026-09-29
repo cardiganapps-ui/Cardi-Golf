@@ -31,7 +31,7 @@ export interface Actor {
   avatarUrl: string | null
 }
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'rivalry_proposed' | 'rivalry_accepted' | 'rivalry_round' | 'link_pending' | 'results'
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'rivalry_proposed' | 'rivalry_accepted' | 'rivalry_round' | 'link_pending' | 'results' | 'round_invite'
 
 export interface Notice {
   id: string

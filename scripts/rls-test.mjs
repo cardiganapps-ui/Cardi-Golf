@@ -662,6 +662,35 @@ try {
   const { data: feed } = await U.sb.rpc('friends_feed')
   check((feed ?? []).filter((f) => f.kind === 'rivalry').length === 3, 'the feed carries the rivalry results', feed?.map((f) => f.kind))
 
+  console.log('quick round: one call, friends pending, guests, groups, the rivalry line:')
+  const quick = (players, who = U.sb) => who.rpc('create_quick_round', { p: { name: `RLS quick ${rand}`, settings, courseId: rc.id, teeId: rtee.id, date: new Date().toISOString().slice(0, 10), players } })
+  const { error: anonQuick } = await quick([{ kind: 'me' }], lurker)
+  const { error: strangerFriend } = await quick([{ kind: 'me' }, { kind: 'friend', handle: (await W.sb.rpc('ensure_my_profile')).data.handle }])
+  const { error: withoutMe } = await quick([{ kind: 'guest', name: 'Solo Invitado' }])
+  check(!!anonQuick && !!strangerFriend && !!withoutMe, 'a quick round needs an account, only friends as friends, and the creator in it')
+  const { data: qr, error: qrErr } = await quick([{ kind: 'me' }, { kind: 'friend', handle: sProfile.handle }, { kind: 'guest', name: 'Invitado Prueba', index: 10.4 }])
+  if (qr?.id) created.tournaments.push(qr.id)
+  const { data: qt } = await U.sb.from('tournaments').select('status, quick, current_round_id, counts_for_stats').eq('id', qr?.id).single()
+  const { data: qPlayers } = await U.sb.from('players').select('id, display_name, profile_id, profile_status, handicap_source, handicap_index, default_tee_id').eq('tournament_id', qr?.id).order('sort_order')
+  const { data: qMember } = await U.sb.rpc('my_membership', { tid: qr?.id })
+  check(
+    !qrErr && qt?.status === 'live' && qt.quick === true && qt.counts_for_stats === true && qPlayers?.length === 3 && qMember?.playerId === qPlayers[0].id && qMember.isOrganizer === true,
+    'it creates a live quick tournament where the creator is a confirmed player and the Comité',
+    { qrErr: qrErr?.message, qt, qMember },
+  )
+  const guest = qPlayers?.[2]
+  check(qPlayers?.[1]?.profile_id === S.id && qPlayers[1].profile_status === 'pending' && guest?.profile_id === null && guest.handicap_source === 'index' && Number(guest.handicap_index) === 10.4 && qPlayers.every((p) => p.default_tee_id === rtee.id), 'the friend is pending, the guest plays off the index typed, everyone on the chosen tee', qPlayers)
+  const { data: qGroups } = await U.sb.from('group_members').select('player_id, groups!inner(round_id)').eq('groups.round_id', qt?.current_round_id)
+  check((qGroups ?? []).length === 3, 'one group with the three of them')
+  const sInvites = (await inbox(S)).filter((n) => n.kind === 'round_invite')
+  check(sInvites.length === 1 && sInvites[0].data.slug, 'the friend hears about the round')
+  await S.sb.rpc('link_my_profile', { p_player_id: qPlayers[1].id })
+  const { data: line } = await U.sb.rpc('round_rivalries', { tid: qr?.id })
+  const { data: lineS } = await S.sb.rpc('round_rivalries', { tid: qr?.id })
+  check(line?.length === 1 && line[0].myStrokes === 4 && line[0].theirPlayerId === qPlayers[1].id && lineS?.[0]?.myStrokes === -4, 'once confirmed, both see their rivalry strokes for the Tarjeta', { line, lineS })
+  const { data: wLine } = await W.sb.rpc('round_rivalries', { tid: qr?.id })
+  check(Array.isArray(wLine) && wLine.length === 0, 'nobody else sees it')
+
   // Blocking ends it all.
   await U.sb.rpc('friend_block', { p_handle: sProfile.handle })
   const { data: blockedReq } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })

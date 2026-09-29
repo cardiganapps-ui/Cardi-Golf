@@ -17,6 +17,9 @@ const ProfileEditScreen = lazy(() => import('../screens/profile/ProfileEditScree
 const FriendsScreen = lazy(() => import('../screens/profile/FriendsScreen').then((m) => ({ default: m.FriendsScreen })))
 const InboxScreen = lazy(() => import('../screens/profile/InboxScreen').then((m) => ({ default: m.InboxScreen })))
 const VersusScreen = lazy(() => import('../screens/profile/VersusScreen').then((m) => ({ default: m.VersusScreen })))
+const QuickRoundScreen = lazy(() => import('../screens/profile/QuickRoundScreen').then((m) => ({ default: m.QuickRoundScreen })))
+const CoursesScreen = lazy(() => import('../screens/profile/CoursesScreen').then((m) => ({ default: m.CoursesScreen })))
+const QuickFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.QuickFixture })))
 const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
 const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
 const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
@@ -102,6 +105,8 @@ export const router = createBrowserRouter([
       { path: 'perfil/editar', element: <Lazy><ProfileEditScreen /></Lazy> },
       { path: 'amigos', element: <Lazy><FriendsScreen /></Lazy> },
       { path: 'avisos', element: <Lazy><InboxScreen /></Lazy> },
+      { path: 'ronda', element: <Lazy><QuickRoundScreen /></Lazy> },
+      { path: 'campos', element: <Lazy><CoursesScreen /></Lazy> },
       // Dev-only: the style guide and the design fixtures (the same screens on in-memory
       // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
       ...(DESIGN_ROUTES
@@ -113,6 +118,7 @@ export const router = createBrowserRouter([
             { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
             { path: 'amigos/_', element: <Lazy><FriendsFixture /></Lazy> },
             { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
+            { path: 'ronda/_', element: <Lazy><QuickFixture /></Lazy> },
           ]
         : []),
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },

@@ -193,6 +193,7 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     ['p/_/propuesta/vs', 'vs--propuesta'],
     ['p/_/amigos/vs', 'vs--proponer'],
     ['p/_/nuevo/vs', 'vs--nuevo'],
+    ['ronda/_', 'ronda'],
   ]) {
     await p.goto(`${base}/${path}`, { waitUntil: 'domcontentloaded' })
     await p.waitForTimeout(400)
