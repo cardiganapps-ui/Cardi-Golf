@@ -19,6 +19,7 @@
   color: inherit;
 }
 .iconBtn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -355,4 +356,107 @@ button.row {
   font-weight: 400;
   font-size: var(--fs-md);
   text-transform: none;
+}
+
+/* ---- Social: friends, inbox, head to head (0016) ---- */
+.title {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+.iconSpacer {
+  min-width: var(--tap);
+}
+.topActions {
+  display: flex;
+  align-items: center;
+}
+/* The bell's count: a small filled disc on the icon's corner. */
+.badge {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--r-round);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2);
+  color: var(--ink-2);
+}
+.personLink {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.friendTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--accent);
+  font-weight: 600;
+}
+.rowLink {
+  border-top: var(--hairline);
+}
+.versus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s3);
+  padding-bottom: var(--s2);
+}
+.versusSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  text-align: center;
+}
+.versusSide :global(.avatar) {
+  width: 72px;
+  height: 72px;
+  font-size: var(--fs-lg);
+}
+.versusVs {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.proposeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+}
+.emptyNote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s6) var(--s3);
+  color: var(--ink-2);
+  text-align: center;
+}
+/* The rivalry figure's rule already closes the block above its history. */
+.stat + .rows {
+  border-top: 0;
 }

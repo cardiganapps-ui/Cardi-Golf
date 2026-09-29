@@ -185,6 +185,19 @@ const ADMIN = ['torneo', 'jugadores', 'campos', 'rondas', 'grupos', 'handicaps',
     await p.goto(`${base}/p/_/${f}`, { waitUntil: 'domcontentloaded' })
     await shot(p, `perfil--${f}`)
   }
+  // Social (0016): friends, inbox, head to head in each rivalry state.
+  for (const [path, name] of [
+    ['amigos/_', 'amigos'],
+    ['avisos/_', 'avisos'],
+    ['p/_/rivalidad/vs', 'vs--rivalidad'],
+    ['p/_/propuesta/vs', 'vs--propuesta'],
+    ['p/_/amigos/vs', 'vs--proponer'],
+    ['p/_/nuevo/vs', 'vs--nuevo'],
+  ]) {
+    await p.goto(`${base}/${path}`, { waitUntil: 'domcontentloaded' })
+    await p.waitForTimeout(400)
+    await shot(p, `social--${name}`)
+  }
   await p.context().close()
 }
 

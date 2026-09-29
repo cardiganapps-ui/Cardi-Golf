@@ -587,6 +587,87 @@ try {
   await A.sb.from('tournaments').update({ status: 'live' }).eq('id', R.t.id)
   const { data: gone } = await A.sb.from('tournament_results').select('player_id').eq('tournament_id', R.t.id)
   check((gone ?? []).length === 0, 'leaving "finished" withdraws the published results')
+
+  console.log('social: friends, notifications, head to head, rivalries:')
+  // U is hidden (discoverable off, above) and S shares nothing with U yet.
+  const { data: tooEarly } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })
+  check(tooEarly === 'not_found', 'a hidden profile cannot be friended by a stranger', tooEarly)
+  // Tournament Q: U is q0, S is q1, both confirmed; three rounds on the rated course.
+  const Q = await smallTournament(A, 'q')
+  await A.sb.rpc('comite_link_profile', { p_player_id: Q.p0, p_handle: uProfile.handle })
+  await A.sb.rpc('comite_link_profile', { p_player_id: Q.p1, p_handle: sProfile.handle })
+  await U.sb.rpc('link_my_profile', { p_player_id: Q.p0 })
+  await S.sb.rpc('link_my_profile', { p_player_id: Q.p1 })
+  const { data: request } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })
+  const { data: requestAgain } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })
+  const { data: uFriends } = await U.sb.rpc('my_friends')
+  check(request === 'pending' && requestAgain === 'pending' && uFriends?.incoming?.length === 1 && uFriends.incoming[0].handle === sProfile.handle, 'a tournament mate sends a request; U sees it as incoming', { request, uFriends })
+  const inbox = async (who) => (await who.sb.rpc('my_notifications')).data ?? []
+  let uInbox = await inbox(U)
+  check(uInbox.filter((n) => n.kind === 'friend_request').length === 1 && uInbox.some((n) => n.kind === 'link_pending'), 'U hears about the request once, and about the Comité proposal', uInbox.map((n) => n.kind))
+  const { data: unread } = await U.sb.rpc('unread_notifications')
+  await U.sb.rpc('mark_notifications_read')
+  const { data: unreadAfter } = await U.sb.rpc('unread_notifications')
+  check(unread > 0 && unreadAfter === 0, 'marking read clears the count', { unread, unreadAfter })
+  const { error: notifyDirect } = await U.sb.rpc('notify', { p_profile: S.id, p_kind: 'x', p_key: 'x', p_actor: U.id, p_data: {} })
+  const { error: forgeNote } = await U.sb.from('notifications').insert({ profile_id: S.id, kind: 'x', key: 'x' })
+  const { error: graph } = await S.sb.rpc('are_friends', { x: U.id, y: S.id })
+  check(!!notifyDirect && !!forgeNote && !!graph, 'nobody writes notifications or reads the friend graph directly')
+  const { data: accepted } = await U.sb.rpc('friend_respond', { p_handle: sProfile.handle, p_accept: true })
+  const { data: fw } = await S.sb.rpc('friendship_with', { p_handle: uProfile.handle })
+  const sInbox = await inbox(S)
+  check(accepted === 'accepted' && fw === 'friends' && sInbox.some((n) => n.kind === 'friend_accepted'), 'U accepts; both are friends and S is told', { accepted, fw })
+
+  // Rivalry: U proposes to receive 3 strokes; S accepts. Then three rounds.
+  await W.sb.rpc('ensure_my_profile')
+  const { error: notFriends } = await W.sb.rpc('rivalry_propose', { p_handle: uProfile.handle, p_strokes: 0 })
+  check(!!notFriends, 'rivalries are only between friends')
+  const { data: rivalryId, error: proposeErr } = await U.sb.rpc('rivalry_propose', { p_handle: sProfile.handle, p_strokes: 3 })
+  const { error: proposeTwice } = await S.sb.rpc('rivalry_propose', { p_handle: uProfile.handle, p_strokes: 0 })
+  const { error: respondOwn } = await U.sb.rpc('rivalry_respond', { p_id: rivalryId, p_accept: true })
+  const { error: acceptErr } = await S.sb.rpc('rivalry_respond', { p_id: rivalryId, p_accept: true })
+  check(!proposeErr && !!proposeTwice && !!respondOwn && !acceptErr, 'one open rivalry per pair; only the invited friend accepts', { proposeErr: proposeErr?.message, acceptErr: acceptErr?.message })
+  const qRounds = [Q.round.id]
+  for (const n of [2, 3]) {
+    const { data: qr } = await A.sb.from('rounds').insert({ tournament_id: Q.t.id, number: n, holes: 18, course_id: rc.id, status: 'live' }).select('id').single()
+    qRounds.push(qr.id)
+  }
+  await A.sb.from('rounds').update({ course_id: rc.id }).eq('id', Q.round.id)
+  // A card of fives with `sixes` holes of 6 and `fours` holes of 4 (all within net double bogey).
+  const qCard = (roundId, playerId, sixes, fours) =>
+    Array.from({ length: 18 }, (_, i) => ({ round_id: roundId, player_id: playerId, hole: i + 1, strokes: i < sixes ? 6 : i >= 18 - fours ? 4 : 5, putts: 2, picked_up: false, client_ts: new Date().toISOString() }))
+  const myStrokes = async () => (await U.sb.rpc('head_to_head', { p_handle: sProfile.handle })).data?.rivalry?.myStrokes
+  const steps = []
+  // U 92 − 3 = 89 vs S 88 → S wins, U gets one more: 4.
+  // U 90 − 4 = 86 vs S 88 → U wins, U gives one back: 3.
+  // U 91 − 3 = 88 vs S 88 → tie: 3.
+  for (const [i, [uSix, sFour]] of [[2, 2], [0, 2], [1, 2]].entries()) {
+    await A.sb.from('scores').insert([...qCard(qRounds[i], Q.p0, uSix, 0), ...qCard(qRounds[i], Q.p1, 0, sFour)])
+    await A.sb.from('rounds').update({ status: 'finished' }).eq('id', qRounds[i])
+    steps.push(await myStrokes())
+  }
+  check(steps.join(',') === '4,3,3', 'strokes slide after each shared round (3 → 4 → 3 → 3)', steps)
+  // A correction on S's last card (hole 1: 5 → 4, 88 → 87) turns the tie into an S win: 4.
+  await A.sb.rpc('admin_save_score', { p_round_id: qRounds[2], p_player_id: Q.p1, p_hole: 1, p_strokes: 4, p_putts: 2, p_picked_up: false })
+  const { data: h2h } = await U.sb.rpc('head_to_head', { p_handle: sProfile.handle })
+  const { data: h2hS } = await S.sb.rpc('head_to_head', { p_handle: uProfile.handle })
+  check(h2h?.rivalry?.myStrokes === 4 && h2h.rivalry.history[0]?.result === 'lost' && h2hS?.rivalry?.myStrokes === -4, 'a correction replays the rivalry from scratch (last round now lost, 4 strokes)', h2h?.rivalry)
+  check(h2h?.rounds?.length === 3 && h2h.rounds.every((r) => typeof r.myNet === 'number'), 'head to head lists our three shared rounds', h2h?.rounds?.length)
+  uInbox = await inbox(U)
+  check(uInbox.filter((n) => n.kind === 'rivalry_round').length === 3, 'each rivalry round notifies once, even after the replay')
+  const { data: wH2h } = await W.sb.rpc('head_to_head', { p_handle: uProfile.handle })
+  const { data: lurkerH2h } = await lurker.rpc('head_to_head', { p_handle: uProfile.handle })
+  const { data: wRivals } = await W.sb.from('rivalries').select('id')
+  check(wH2h === null && lurkerH2h === null && (wRivals ?? []).length === 0, 'strangers see no head to head and no rivalries')
+  const { data: feed } = await U.sb.rpc('friends_feed')
+  check((feed ?? []).filter((f) => f.kind === 'rivalry').length === 3, 'the feed carries the rivalry results', feed?.map((f) => f.kind))
+
+  // Blocking ends it all.
+  await U.sb.rpc('friend_block', { p_handle: sProfile.handle })
+  const { data: blockedReq } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })
+  const { data: sCardBlocked } = await S.sb.rpc('profile_card', { p_handle: uProfile.handle })
+  const { data: ended } = await U.sb.from('rivalries').select('status').eq('id', rivalryId).single()
+  check(blockedReq === 'not_found' && ended?.status === 'ended' && !sCardBlocked?.related, 'a block hides U from S, refuses requests and ends the rivalry', { blockedReq, ended, related: sCardBlocked?.related })
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++
