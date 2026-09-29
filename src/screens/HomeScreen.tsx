@@ -6,7 +6,9 @@ import { InstallGuide } from '../components/InstallGuide'
 import { LegalLinks } from '../components/LegalLinks'
 import { supabaseConfigured } from '../lib/supabase'
 import { getLastTournament } from '../data/session'
-import { useAuth } from '../data/auth'
+import { hasStoredSession, useAuth } from '../data/auth'
+import { BootProblem } from '../components/BootProblem'
+import { Spinner } from '../components/ui'
 import { MiPolo } from './profile/MiPolo'
 import styles from './HomeScreen.module.css'
 
@@ -23,7 +25,7 @@ export function HomeScreen() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
   const last = getLastTournament()
-  const { ready, user, isAnonymous } = useAuth()
+  const { ready, user, isAnonymous, bootError } = useAuth()
   const organizerSignedIn = !!user && !isAnonymous
 
   function onJoin(e: FormEvent) {
@@ -33,8 +35,12 @@ export function HomeScreen() {
     navigate(`/t/${clean}`)
   }
 
-  // Accounts live in Mi Polo; wait for the stored session so they don't see this page flash first.
-  if (supabaseConfigured && !ready) return null
+  // Accounts live in Mi Polo; wait for the stored session so they don't see
+  // this page flash first. Never render nothing while waiting: that was the
+  // blank white page. And if the session could not be confirmed on a device
+  // that has one, say so, rather than showing a signed-in person the guest page.
+  if (supabaseConfigured && !ready) return <BootWait />
+  if (bootError && !user && hasStoredSession()) return <BootProblem kind={bootError} />
   if (organizerSignedIn) return <MiPolo />
 
   return (
@@ -101,6 +107,18 @@ export function HomeScreen() {
 
       <InstallGuide />
       <LegalLinks />
+    </div>
+  )
+}
+
+/** While the session is being confirmed: the brand, and a sign of life. */
+function BootWait() {
+  return (
+    <div className={styles.home} aria-busy="true">
+      <header className={styles.intro}>
+        <Wordmark size="lg" />
+      </header>
+      <Spinner />
     </div>
   )
 }

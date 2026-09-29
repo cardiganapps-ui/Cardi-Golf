@@ -21,7 +21,49 @@
     <title>Polo</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!--
+      Shown until React mounts and replaces it. If the app bundle never loads
+      or fails before mounting — a stale cached version is the usual cause —
+      the page would otherwise stay white. After 10 s (or on an early error)
+      a reset button appears. It must work without the bundle, so it is plain
+      inline code: drop the service worker and its caches, then reload. It
+      never touches localStorage (session) or IndexedDB (unsent scores).
+    -->
+    <div id="root">
+      <div id="boot" style="font-family:system-ui,-apple-system,sans-serif;max-width:28rem;margin:0 auto;padding:48px 20px;color:CanvasText">
+        <p style="font-size:28px;font-weight:700;margin:0">Polo</p>
+        <p id="boot-msg" style="margin:12px 0 0;opacity:.7">Cargando…</p>
+        <button id="boot-reset" type="button" hidden style="margin-top:20px;min-height:44px;padding:0 18px;font:inherit;font-weight:600;border-radius:8px;border:1px solid ButtonBorder;background:ButtonFace;color:ButtonText">Reiniciar la app</button>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var shown = false
+        function offer(msg) {
+          if (window.__poloMounted || shown) return
+          shown = true
+          var m = document.getElementById('boot-msg')
+          var b = document.getElementById('boot-reset')
+          if (m) m.textContent = msg
+          if (b) b.hidden = false
+        }
+        function reset() {
+          var jobs = []
+          try {
+            if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) }))
+          } catch (e) {}
+          try {
+            if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k) })) }))
+          } catch (e) {}
+          Promise.all(jobs).catch(function () {}).then(function () { location.replace('/?r=' + Date.now()) })
+        }
+        var b = document.getElementById('boot-reset')
+        if (b) b.addEventListener('click', reset)
+        setTimeout(function () { offer('Polo está tardando en abrir. Reiniciar la app suele arreglarlo; no borra tu sesión.') }, 10000)
+        window.addEventListener('error', function () { offer('Algo falló al abrir Polo. Reiniciar la app suele arreglarlo.') })
+        window.addEventListener('unhandledrejection', function () { offer('Algo falló al abrir Polo. Reiniciar la app suele arreglarlo.') })
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

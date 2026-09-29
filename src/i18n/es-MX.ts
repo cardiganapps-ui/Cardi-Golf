@@ -70,6 +70,17 @@ export const t = {
     more: 'Más',
     admin: 'Comité',
   },
+  boot: {
+    slowTitle: 'Polo está tardando en conectar',
+    slowBody: 'No pudimos confirmar tu sesión. Suele ser la señal: vuelve a intentar en un momento.',
+    crashTitle: 'Algo falló al abrir Polo',
+    crashBody: 'Casi siempre es una versión vieja guardada en el teléfono. Reiniciar la app la reemplaza.',
+    retry: 'Reintentar',
+    retrying: 'Conectando…',
+    reset: 'Reiniciar la app',
+    resetHint: 'Reiniciar no borra tu sesión ni los hoyos que no se hayan enviado.',
+    version: (v: string) => `Versión ${v}`,
+  },
   home: {
     myTournaments: 'Mis torneos',
     newTournament: 'Nuevo torneo',
