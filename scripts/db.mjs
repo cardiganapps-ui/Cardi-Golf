@@ -8,29 +8,13 @@
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { loadEnv } from './lib/env.mjs'
+import { query } from './lib/mgmt.mjs'
 
 const root = path.resolve(new URL('..', import.meta.url).pathname)
 loadEnv()
-const PAT = process.env.SUPABASE_PAT
-const REF = process.env.SUPABASE_PROJECT_REF
-if (!PAT || !REF) {
+if (!process.env.SUPABASE_PAT || !process.env.SUPABASE_PROJECT_REF) {
   console.error('Missing SUPABASE_PAT / SUPABASE_PROJECT_REF')
   process.exit(1)
-}
-
-export async function query(sql) {
-  const res = await fetch(`https://api.supabase.com/v1/projects/${REF}/database/query`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${PAT}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: sql }),
-  })
-  const text = await res.text()
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 2000)}`)
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
-  }
 }
 
 async function migrate() {
