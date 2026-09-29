@@ -5,7 +5,7 @@
  * round and opens the Tarjeta.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Field, Spinner, Toggle, toast } from '../../components/ui'
 import { IconChevronLeft, IconClose, IconPlus } from '../../components/icons'
@@ -15,6 +15,7 @@ import { myFriends, type FriendCard } from '../../data/social'
 import { createQuickRound, type QuickPlayer, type QuickRoundInput } from '../../data/quick'
 import { QUICK_GAMES, quickSettings, quickSplit, type QuickGame } from '../../engine/games/quick'
 import { formatMoney } from '../../lib/money'
+import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 
@@ -45,6 +46,8 @@ export interface QuickRoundData {
   friends: FriendCard[]
   courses: QuickCourse[]
   loadTees: (courseId: string) => Promise<QuickTee[]>
+  crews?: MyCrew[]
+  initialCrewId?: string | null
   onStart: (input: QuickRoundInput) => Promise<void>
 }
 
@@ -55,7 +58,7 @@ const today = () => {
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const showIndex = (v: number | null) => (v == null ? '' : formatIndex(v))
 
-export function QuickRoundView({ me, friends, courses, loadTees, onStart }: QuickRoundData) {
+export function QuickRoundView({ me, friends, courses, loadTees, crews = [], initialCrewId = null, onStart }: QuickRoundData) {
   const [date, setDate] = useState(today())
   const [courseId, setCourseId] = useState(courses[0]?.id ?? '')
   const [tees, setTees] = useState<QuickTee[] | null>(null)
@@ -68,6 +71,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, onStart }: Quic
   const [money, setMoney] = useState(false)
   const [fee, setFee] = useState('200')
   const [name, setName] = useState('')
+  const [crewId, setCrewId] = useState(crews.some((c) => c.id === initialCrewId) ? initialCrewId! : '')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -131,6 +135,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, onStart }: Quic
         teeId: tee.id,
         date,
         players,
+        crewId: crewId || null,
       })
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
@@ -287,6 +292,18 @@ export function QuickRoundView({ me, friends, courses, loadTees, onStart }: Quic
       </section>
 
       <section className={styles.section}>
+        {crews.length > 0 && (
+          <Field label={t.crews.crewField} hint={t.crews.crewHint}>
+            <select className="input" value={crewId} onChange={(e) => setCrewId(e.target.value)}>
+              <option value="">{t.crews.crewNone}</option>
+              {crews.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label={Q.name}>
           <input className="input" placeholder={autoName} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -309,6 +326,8 @@ export function QuickRoundScreen() {
   const { profile, load } = useMyProfile()
   const [friends, setFriends] = useState<FriendCard[] | null>(null)
   const [courses, setCourses] = useState<QuickCourse[] | null>(null)
+  const [crews, setCrews] = useState<MyCrew[] | null>(null)
+  const [params] = useSearchParams()
 
   useEffect(() => {
     if (!ok) return
@@ -319,9 +338,12 @@ export function QuickRoundScreen() {
     listCourses()
       .then((c) => setCourses(c.filter((x) => x.tees > 0)))
       .catch(() => setCourses([]))
+    myCrews()
+      .then(setCrews)
+      .catch(() => setCrews([]))
   }, [ok, profile, load])
 
-  if (!ok || !profile || !friends || !courses) return <Spinner />
+  if (!ok || !profile || !friends || !courses || !crews) return <Spinner />
   const index = profile.indexSource === 'manual' ? profile.manualIndex : profile.poloIndex
   return (
     <QuickRoundView
@@ -329,6 +351,8 @@ export function QuickRoundScreen() {
       friends={friends}
       courses={courses}
       loadTees={loadTees}
+      crews={crews}
+      initialCrewId={params.get('crew')}
       onStart={async (input) => {
         const r = await createQuickRound(input)
         navigate(`/t/${r.slug}/tarjeta`)

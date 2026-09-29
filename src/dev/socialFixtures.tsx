@@ -8,6 +8,8 @@ import { FriendsScreen } from '../screens/profile/FriendsScreen'
 import { InboxScreen } from '../screens/profile/InboxScreen'
 import { VersusScreen, type VersusFixture } from '../screens/profile/VersusScreen'
 import { QuickRoundView, type QuickTee } from '../screens/profile/QuickRoundScreen'
+import { CrewView } from '../screens/profile/CrewScreen'
+import type { CrewPage } from '../data/crews'
 import { PROFILE_FIXTURES } from './profileFixtures'
 
 const person = (displayName: string, handle: string, extra: Partial<FriendCard> = {}): FriendCard => ({ handle, displayName, avatarUrl: null, homeClub: null, index: null, ...extra })
@@ -85,6 +87,38 @@ const quickTees = async (): Promise<QuickTee[]> => [
 export function QuickFixture() {
   const me = PROFILE_FIXTURES.yo!.card
   return <QuickRoundView me={{ displayName: me.displayName, avatarUrl: me.avatarUrl, index: me.index }} friends={friends.friends} courses={quickCourses} loadTees={quickTees} onStart={async () => undefined} />
+}
+
+// A crew mid-season: two outings this year (the hand-checked table in season.test.ts) and one last year.
+const res = (tournamentId: string, date: string, handle: string, rank: number) => ({ tournamentId, date, handle, rank, rankLabel: String(rank), field: 4 })
+const crewPageFixture: CrewPage = {
+  crew: { id: 'crew1', slug: 'los-del-sabado', name: 'Los del sábado', joinCode: 'K7Q2MX', role: 'owner', createdAt: '2025-06-01T12:00:00Z' },
+  members: [
+    { handle: 'andrea.solis', displayName: 'Andrea Solís', avatarUrl: null, index: 12.4, role: 'owner', joinedAt: '2025-06-01T12:00:00Z' },
+    { handle: 'diego.ortiz', displayName: 'Diego Ortiz', avatarUrl: null, index: 9.8, role: 'member', joinedAt: '2025-06-02T12:00:00Z' },
+    { handle: 'mau', displayName: 'Mauricio Lozano', avatarUrl: null, index: 21.3, role: 'member', joinedAt: '2025-06-03T12:00:00Z' },
+    { handle: 'rene.n', displayName: 'René Nosti', avatarUrl: null, index: 14.0, role: 'member', joinedAt: '2025-06-04T12:00:00Z' },
+  ],
+  outings: [
+    { tournamentId: 'o3', slug: 'sabado-oct', name: 'Sábado en Bosque Real', status: 'live', quick: true, practice: false, date: '2026-10-03', players: 4 },
+    { tournamentId: 'o2', slug: 'sabado-sep', name: 'Sábado en Chapultepec', status: 'finished', quick: true, practice: false, date: '2026-09-19', players: 3 },
+    { tournamentId: 'o1', slug: 'sabado-ago', name: 'Copa Agosto', status: 'finished', quick: false, practice: false, date: '2026-08-22', players: 4 },
+  ],
+  results: [
+    res('o1', '2026-08-22', 'andrea.solis', 1),
+    res('o1', '2026-08-22', 'diego.ortiz', 2),
+    res('o1', '2026-08-22', 'mau', 3),
+    res('o1', '2026-08-22', 'rene.n', 4),
+    res('o2', '2026-09-19', 'andrea.solis', 1),
+    res('o2', '2026-09-19', 'diego.ortiz', 1),
+    res('o2', '2026-09-19', 'rene.n', 3),
+    res('o0', '2025-11-08', 'mau', 1),
+    res('o0', '2025-11-08', 'andrea.solis', 2),
+  ],
+}
+
+export function CrewFixture() {
+  return <CrewView page={crewPageFixture} now={new Date('2026-10-03T12:00:00Z')} />
 }
 
 export function FriendsFixture() {

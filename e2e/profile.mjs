@@ -227,6 +227,17 @@ try {
   check((await B.page.textContent('main')).includes('Avisos'), '/avisos renders for an account')
   await B.page.screenshot({ path: `${out}/avisos.png`, fullPage: true })
 
+  console.log('Crews: create one in the app:')
+  await B.page.goto(`${base}/crews`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('text=Crear un crew', { timeout: T })
+  await B.page.fill('input[placeholder="Los del sábado"]', `E2E crew ${rand}`)
+  await B.page.click('button:has-text("Crear")')
+  await B.page.waitForURL(/\/c\/[^/]+$/, { timeout: T })
+  const crewSlug = new URL(B.page.url()).pathname.split('/')[2]
+  await B.page.waitForSelector(`text=E2E crew ${rand}`, { timeout: T })
+  const { data: crewRow } = await admin.from('crews').select('id, join_code').eq('slug', crewSlug).single()
+  check(!!crewRow?.join_code && (await B.page.textContent('main')).includes(crewRow.join_code), 'the crew page shows its join code')
+
   console.log('Ronda rápida: create in the app, score, close and publish:')
   const { data: qc } = await admin.from('courses').insert({ name: `E2E campo ${rand}` }).select('id').single()
   created.courses.push(qc.id)
@@ -243,6 +254,7 @@ try {
   await B.page.fill('input[placeholder="Nombre del invitado"]', 'Invitado E2E')
   await B.page.click('button:has-text("Agregar")')
   await B.page.click('button[aria-pressed]:has-text("Birdies")')
+  await B.page.selectOption('select >> nth=2', crewRow.id)
   await B.page.screenshot({ path: `${out}/ronda.png`, fullPage: true })
   await B.page.click('button:has-text("Empezar")')
   await B.page.waitForURL(/\/t\/[^/]+\/tarjeta$/, { timeout: T })
@@ -263,6 +275,11 @@ try {
   const { data: rr } = await admin.from('round_results').select('player_id, gross, complete').eq('round_id', qt.current_round_id)
   const { data: tr } = await admin.from('tournament_results').select('player_id, rank_label').eq('tournament_id', qt.id)
   check(done.status === 'finished' && rr?.length === 2 && rr.every((r) => r.gross === 90 && r.complete) && tr?.length === 2, '"Terminar y publicar" closes it and the results reach the profile', { done, rr, tr })
+  // Same cards, same handicap: the two tie for 1st, (25 + 18) / 2 + 1 = 22.5 for the crew member (the guest is not one).
+  await B.page.goto(`${base}/c/${crewSlug}`, { waitUntil: 'domcontentloaded' })
+  await B.page.waitForSelector('text=22.5', { timeout: T })
+  check((await B.page.textContent('main')).includes('Jugadas'), 'the outing counts for the crew season (22.5 pts for a shared win)')
+  await B.page.screenshot({ path: `${out}/crew.png`, fullPage: true })
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failed++

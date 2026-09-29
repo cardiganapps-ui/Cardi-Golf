@@ -39,6 +39,8 @@ function noticeLine(n: Notice): { text: string; to: string } {
     case 'round_invite':
       // Mi Polo carries the "¿Eres tú?" that confirms the player.
       return { text: S.notice.round_invite(who, n.data.tournament ?? ''), to: '/' }
+    case 'crew_join':
+      return { text: S.notice.crew_join(who, n.data.crew ?? ''), to: n.data.slug ? `/c/${n.data.slug}` : '/crews' }
     default:
       return { text: '', to: '/' }
   }

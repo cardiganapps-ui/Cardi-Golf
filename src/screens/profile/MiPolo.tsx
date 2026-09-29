@@ -14,6 +14,7 @@ import { IconBell, IconChevronRight, IconPeople, IconSettings } from '../../comp
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import { linkMyProfile, unlinkMyProfile, useMyProfile, type MyLink } from '../../data/profiles'
 import { friendsFeed, useUnread, type FeedItem } from '../../data/social'
+import { myCrews, type MyCrew } from '../../data/crews'
 import { EventMark } from './ProfileScreen'
 import styles from './Profile.module.css'
 
@@ -105,6 +106,7 @@ export function MiPolo() {
   const [busy, setBusy] = useState<string | null>(null)
   const [code, setCode] = useState('')
   const [feed, setFeed] = useState<FeedItem[] | null>(null)
+  const [crews, setCrews] = useState<MyCrew[] | null>(null)
   const unread = useUnread((s) => s.count)
   const refreshUnread = useUnread((s) => s.refresh)
 
@@ -117,6 +119,9 @@ export function MiPolo() {
     friendsFeed()
       .then(setFeed)
       .catch(() => setFeed([]))
+    myCrews()
+      .then(setCrews)
+      .catch(() => setCrews([]))
   }, [load, refreshUnread])
   // The shell's read-only load can land last with no profile yet: ask again, creating it.
   useEffect(() => {
@@ -234,6 +239,37 @@ export function MiPolo() {
       {section(M.live, live)}
       {section(M.upcoming, upcoming)}
       {rows.length === 0 && pending.length === 0 && <p className={styles.help}>{M.empty}</p>}
+
+      {crews && (
+        <section className={styles.section}>
+          <span className="label">{t.crews.mine}</span>
+          <div className={styles.rows}>
+            {crews.map((c) => (
+              <Link key={c.id} to={`/c/${c.slug}`} className={styles.row}>
+                <span className={styles.mono} aria-hidden="true">
+                  {c.name.charAt(0).toUpperCase()}
+                </span>
+                <span className={styles.rowText}>
+                  <span className={styles.rowTitle}>{c.name}</span>
+                  <span className={styles.rowSub}>{t.crews.members(c.members)}</span>
+                </span>
+                <span className={styles.rowEnd}>
+                  <IconChevronRight size={20} />
+                </span>
+              </Link>
+            ))}
+            <Link to="/crews" className={styles.row}>
+              <span className={styles.rowText}>
+                <span className={styles.rowTitle}>{crews.length ? t.crews.title : t.crews.create}</span>
+                <span className={styles.rowSub}>{crews.length ? `${t.crews.create}, ${t.crews.join.toLowerCase()}` : t.crews.lede}</span>
+              </span>
+              <span className={styles.rowEnd}>
+                <IconChevronRight size={20} />
+              </span>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <FeedSection feed={feed} />
 

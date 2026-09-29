@@ -31,12 +31,12 @@ export interface Actor {
   avatarUrl: string | null
 }
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'rivalry_proposed' | 'rivalry_accepted' | 'rivalry_round' | 'link_pending' | 'results' | 'round_invite'
+export type NotificationKind = 'friend_request' | 'friend_accepted' | 'rivalry_proposed' | 'rivalry_accepted' | 'rivalry_round' | 'link_pending' | 'results' | 'round_invite' | 'crew_join'
 
 export interface Notice {
   id: string
   kind: NotificationKind
-  data: { tournament?: string; slug?: string; player?: string; rankLabel?: string | null; field?: number; rivalryId?: string }
+  data: { tournament?: string; slug?: string; player?: string; rankLabel?: string | null; field?: number; rivalryId?: string; crew?: string }
   read: boolean
   createdAt: string
   actor: Actor | null

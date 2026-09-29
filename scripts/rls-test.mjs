@@ -691,6 +691,40 @@ try {
   const { data: wLine } = await W.sb.rpc('round_rivalries', { tid: qr?.id })
   check(Array.isArray(wLine) && wLine.length === 0, 'nobody else sees it')
 
+  console.log('crews: create, join by code, privacy, outings and season results:')
+  const { error: anonCrew } = await lurker.rpc('create_crew', { p_name: 'Nope' })
+  const { data: crew, error: crewErr } = await U.sb.rpc('create_crew', { p_name: `RLS crew ${rand}` })
+  check(!!anonCrew && !crewErr && crew?.joinCode?.length === 6, 'an account creates a crew; an anonymous device cannot', { crewErr: crewErr?.message })
+  const { data: wBefore } = await W.sb.rpc('crew_page', { p_slug: crew.slug })
+  const { data: wCrewRows } = await W.sb.from('crews').select('id').eq('id', crew.id)
+  const { data: wCardBefore } = await W.sb.rpc('profile_card', { p_handle: uProfile.handle })
+  check(wBefore === null && (wCrewRows ?? []).length === 0 && wCardBefore === null, 'outsiders see neither the crew nor its hidden members')
+  const { data: preview } = await W.sb.rpc('crew_preview', { p_code: crew.joinCode.toLowerCase() })
+  const { data: joined } = await W.sb.rpc('join_crew', { p_code: crew.joinCode })
+  const { data: wPage } = await W.sb.rpc('crew_page', { p_slug: crew.slug })
+  const { data: wCardAfter } = await W.sb.rpc('profile_card', { p_handle: uProfile.handle })
+  check(preview?.name === `RLS crew ${rand}` && joined === crew.slug && wPage?.members?.length === 2 && wCardAfter?.related === true, 'the code joins; crew-mates see each other in full', { preview, joined })
+  check((await inbox(U)).some((n) => n.kind === 'crew_join'), 'the owner hears that someone joined')
+  const { error: wSetCrew } = await W.sb.rpc('set_tournament_crew', { p_tournament_id: qr.id, p_crew_id: crew.id })
+  const { error: uSetCrew } = await U.sb.rpc('set_tournament_crew', { p_tournament_id: qr.id, p_crew_id: crew.id })
+  check(!!wSetCrew && !uSetCrew, 'only the Comité (and a crew member) puts a tournament in the crew', { uSetCrew: uSetCrew?.message })
+  await U.sb.from('tournaments').update({ status: 'finished' }).eq('id', qr.id)
+  await U.sb.rpc('publish_tournament_results', {
+    p_tournament_id: qr.id,
+    p_rows: qPlayers.map((p, i) => ({ playerId: p.id, rank: i + 1, rankLabel: String(i + 1), points: 40 - i, perRound: [40 - i], awards: [], net: null })),
+    p_currency: 'MXN',
+  })
+  const { data: page } = await W.sb.rpc('crew_page', { p_slug: crew.slug })
+  check(page?.outings?.length === 1 && page.results?.length === 1 && page.results[0].handle === uProfile.handle && page.results[0].rank === 1 && page.results[0].tied === 1, 'the crew page lists the outing and only members’ results for the season', { outings: page?.outings?.length, results: page?.results })
+  const { error: wRotate } = await W.sb.rpc('rotate_crew_code', { p_crew_id: crew.id })
+  const { data: rotated } = await U.sb.rpc('rotate_crew_code', { p_crew_id: crew.id })
+  const { data: oldPreview } = await S.sb.rpc('crew_preview', { p_code: crew.joinCode })
+  check(!!wRotate && typeof rotated === 'string' && rotated !== crew.joinCode && oldPreview === null, 'only the owner rotates the code; the old one stops working')
+  await W.sb.rpc('leave_crew', { p_crew_id: crew.id })
+  const { data: wGone } = await W.sb.rpc('crew_page', { p_slug: crew.slug })
+  const { data: wMine } = await W.sb.rpc('my_crews')
+  check(wGone === null && Array.isArray(wMine) && wMine.length === 0, 'leaving takes the crew away')
+
   // Blocking ends it all.
   await U.sb.rpc('friend_block', { p_handle: sProfile.handle })
   const { data: blockedReq } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })

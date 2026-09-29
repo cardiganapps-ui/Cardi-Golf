@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import type { TournamentSettings } from '../engine/settings/schema'
 import { setRoundStatus, updateTournament } from './api'
 import { publishFromStore } from './publish'
+import { setTournamentCrew } from './crews'
 import { useTournament } from './tournamentStore'
 
 export type QuickPlayer = { kind: 'me'; index?: number | null } | { kind: 'friend'; handle: string; index?: number | null } | { kind: 'guest'; name: string; index?: number | null }
@@ -18,12 +19,16 @@ export interface QuickRoundInput {
   teeId: string
   date: string
   players: QuickPlayer[]
+  /** The crew the outing counts for (0018), if any. */
+  crewId?: string | null
 }
 
-export async function createQuickRound(input: QuickRoundInput): Promise<{ id: string; slug: string }> {
+export async function createQuickRound({ crewId, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
   const { data, error } = await supabase().rpc('create_quick_round', { p: input })
   if (error) throw new Error(error.message)
-  return data as { id: string; slug: string }
+  const created = data as { id: string; slug: string }
+  if (crewId) await setTournamentCrew(created.id, crewId)
+  return created
 }
 
 export interface RoundRivalry {

@@ -34,6 +34,8 @@ export interface TournamentRow {
   countsForStats?: boolean
   /** A Ronda rápida (0017): the app offers "Terminar y publicar". */
   quick?: boolean
+  /** The crew it belongs to (0018), if any. */
+  crewId?: string | null
 }
 
 export interface Player {

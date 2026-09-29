@@ -43,6 +43,7 @@ export const mapTournament = (r: Row): TournamentRow => ({
   currency: r.currency,
   countsForStats: r.counts_for_stats ?? true,
   quick: r.quick ?? false,
+  crewId: r.crew_id ?? null,
 })
 
 export const mapPlayer = (r: Row): Player => ({

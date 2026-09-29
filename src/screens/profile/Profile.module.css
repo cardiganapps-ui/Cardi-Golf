@@ -504,3 +504,12 @@ button.row {
   border-top: var(--rule-heavy);
   border-bottom: var(--hairline);
 }
+
+/* ---- Crews (0018): the season position, in figure type ---- */
+.pos {
+  min-width: 2.25rem;
+  font-weight: 600;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink-2);
+}
