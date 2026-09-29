@@ -1,4 +1,4 @@
-import type { TournamentSettings } from './schema'
+import { DEFAULT_FORMAT_OPTIONS, type TournamentSettings } from './schema'
 
 /**
  * What the platform ships with: individual Stableford only, everything else
@@ -6,7 +6,7 @@ import type { TournamentSettings } from './schema'
  */
 export const DEFAULT_SETTINGS: TournamentSettings = {
   modules: {
-    individual: { enabled: true, label: 'Individual', format: 'stableford' },
+    individual: { enabled: true, label: 'Individual', format: 'stableford', formatOptions: DEFAULT_FORMAT_OPTIONS },
     bestRound: { enabled: false, label: 'Mejor ronda' },
     pairs: { enabled: false, label: 'Parejas', pairing: [], honoreePicks: false },
     snake: { enabled: false, label: 'La Víbora', puttsThreshold: 3 },
@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
  */
 export const FIRST_TOURNAMENT_SETTINGS: TournamentSettings = {
   modules: {
-    individual: { enabled: true, label: 'Individual', format: 'stableford' },
+    individual: { enabled: true, label: 'Individual', format: 'stableford', formatOptions: DEFAULT_FORMAT_OPTIONS },
     bestRound: { enabled: true, label: 'Mejor ronda' },
     pairs: {
       enabled: true,

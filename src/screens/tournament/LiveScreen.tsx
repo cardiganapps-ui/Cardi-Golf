@@ -84,8 +84,11 @@ export function LiveScreen() {
   if (!data) return null
   const { snapshot, state, settings, settingsError } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
+  const board = state.modules.individual
+  // A team format ranks teams, so a row covers more than one player.
+  const byTeam = board?.byTeam ?? false
   const honoree = snapshot.players.find((p) => p.isHonoree)
-  const honoreeRow = honoree ? rows.find((r) => r.playerId === honoree.id) : null
+  const honoreeRow = honoree ? rows.find((r) => r.entrant.playerIds.includes(honoree.id)) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
   // Play order matters: a group off the 10th is "on the 3rd" after hole 18 and holes 1–2.
   const groupOf = (pid: string) => (round ? snapshot.groups.find((g) => g.roundId === round.id && g.playerIds.includes(pid)) : undefined)
@@ -112,8 +115,18 @@ export function LiveScreen() {
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
   const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, minutes == null ? null : minutes === 0 ? t.live.updatedNow : t.live.updatedAgo(minutes)].filter(Boolean).join('. ')
 
+  /*
+   * The Puntos/Gross toggle only says something under Stableford, where the
+   * board's figure is points and gross is the second reading. Under stroke
+   * play the figure already is gross or net, and a match or a team score has
+   * no gross reading at all.
+   */
+  const canToggleGross = hasHandicaps && board?.formatId === 'stableford'
+  const grossView = canToggleGross && view === 'gross'
+  const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
+
   // Gross view: same players, sorted by strokes to par over the holes played. Display only.
-  const grossRows = view === 'gross' ? [...rows].map((r) => ({ r, d: grossToPar(state, r.playerId) })).sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity)) : null
+  const grossRows = grossView ? [...rows].map((r) => ({ r, d: grossToPar(state, r.playerId) })).sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity)) : null
   const grossLabel = (i: number) => {
     if (!grossRows) return ''
     const d = grossRows[i]!.d
@@ -165,7 +178,7 @@ export function LiveScreen() {
 
       <div className={styles.boardHead}>
         <h2>{settings.modules.individual.label}</h2>
-        {hasHandicaps ? (
+        {canToggleGross ? (
           <Segmented
             value={view}
             options={[
@@ -183,17 +196,19 @@ export function LiveScreen() {
         <EmptyState title={t.enter.noPlayers} body={t.stats.noData} />
       ) : (
         <Board>
-          <BoardHead figureLabel={view === 'points' ? t.live.points : t.live.gross} dense={rows.length > 20} />
+          <BoardHead figureLabel={grossView ? t.live.gross : board?.figureLabel ?? t.live.points} dense={rows.length > 20} />
           {list.map((r, i) => {
-              const p = byId.get(r.playerId)
+              const members = r.entrant.playerIds
+              // The first member stands for a team when a row is tapped.
+              const p = byId.get(members[0] ?? '')
               if (!p) return null
               const pr = roundState?.[p.id]
-              const mv = moves.get(p.id) ?? 0
-              const cash = state.money.people[p.id]?.prizesTotal ?? 0
+              const mv = moves.get(r.playerId) ?? 0
+              const cash = members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0)
               let figure: string
               let tone: Tone = 'even'
               let today: string | undefined
-              if (view === 'gross') {
+              if (grossView) {
                 const d = grossToPar(state, p.id)
                 const tp = d == null ? null : toPar(d)
                 figure = tp ? tp.text : '–'
@@ -201,13 +216,23 @@ export function LiveScreen() {
                 const td = round ? grossToPar(state, p.id, round.id) : null
                 today = td == null ? undefined : toPar(td).text
               } else {
-                figure = String(r.total)
-                today = pr ? String(pr.points) : undefined
+                figure = r.figure.text
+                tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
+                const day = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
+                today = day && !day.empty ? day.text : undefined
               }
+              // A team's "thru" is where its slowest member is.
+              const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
               const sub = (
                 <span className={styles.sub}>
-                  {p.tier && <span className="tierBadge">{p.tier}</span>}
-                  {state.core.handicaps[p.id]?.estimated && <span>{t.admin.players.estimated}</span>}
+                  {byTeam ? (
+                    <span>{members.map((id) => byId.get(id)?.displayName ?? id).join(', ')}</span>
+                  ) : (
+                    <>
+                      {p.tier && <span className="tierBadge">{p.tier}</span>}
+                      {state.core.handicaps[p.id]?.estimated && <span>{t.admin.players.estimated}</span>}
+                    </>
+                  )}
                   {cash > 0 && (
                     <span className={styles.subMoney}>
                       <Money amount={cash} />
@@ -216,18 +241,18 @@ export function LiveScreen() {
                 </span>
               )
               return (
-                <motion.div key={p.id} layout={animate} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                <motion.div key={r.playerId} layout={animate} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
                   <LeaderRow
-                    pos={view === 'gross' ? grossLabel(i) : r.label}
-                    name={p.displayName}
+                    pos={grossView ? grossLabel(i) : r.label}
+                    name={byTeam ? r.entrant.name : p.displayName}
                     sub={sub}
-                    owners={owners.get(p.id)}
-                    honoree={p.isHonoree}
+                    owners={byTeam ? undefined : owners.get(p.id)}
+                    honoree={!!honoree && members.includes(honoree.id)}
                     today={today}
-                    thru={pr && round ? t.round.thru(pr.thru, round.holes) : undefined}
+                    thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
                     figure={figure}
                     tone={tone}
-                    mine={me.playerId === p.id}
+                    mine={!!me.playerId && members.includes(me.playerId)}
                     moved={mv > 0 ? 'up' : mv < 0 ? 'down' : null}
                     dense={rows.length > 20}
                     onClick={() => setOpen(p.id)}

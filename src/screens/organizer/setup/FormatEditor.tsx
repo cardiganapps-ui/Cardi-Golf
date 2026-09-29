@@ -9,6 +9,7 @@ import { Field, Segmented, Toggle } from '../../../components/ui'
 import type { TournamentSettings } from '../../../engine/settings/schema'
 import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
+import { FormatPicker } from './FormatPicker'
 import styles from './Setup.module.css'
 
 const W = t.organizer.wizard
@@ -30,6 +31,7 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
   }
   return (
     <div className={styles.section}>
+      <FormatPicker value={value} onChange={onChange} />
       {onPlayers && (
         <Field label={W.players} hint={W.playersHint}>
           <NumberField label={W.players} value={players ?? 2} min={2} max={200} onChange={onPlayers} />

@@ -57,7 +57,7 @@ export function AdminData() {
       rows.map((r) => {
         const p = snapshot.players.find((x) => x.id === r.playerId)
         const m = state.money.people[r.playerId]
-        return [r.label, p?.fullName ?? r.playerId, p?.tier ?? '', ...r.perRound, r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
+        return [r.label, p?.fullName ?? r.playerId, p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
       }),
     )
     downloadText(`${slug}-resultados-${stamp}.csv`, standings, 'text/csv')

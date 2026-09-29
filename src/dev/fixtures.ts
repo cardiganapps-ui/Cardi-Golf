@@ -325,6 +325,53 @@ function longnames(): Fixture {
   return { name: 'longnames', description: 'Nombres largos por todos lados: jugadores, parejas, torneo y campo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
 }
 
+
+/** A format that is not Stableford: one tournament per new format. */
+function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name: string; slug: string; label: string; description: string; options?: Record<string, string>; teams?: boolean; groupSize?: number }): Fixture {
+  const settings: TournamentSettings = {
+    ...DEFAULT_SETTINGS,
+    rounds: 1,
+    entryFee: 600,
+    prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [60, 40], stablefordMode: 'percent' },
+    modules: {
+      ...DEFAULT_SETTINGS.modules,
+      individual: {
+        enabled: true,
+        label: opts.label,
+        format,
+        formatOptions: { ...DEFAULT_SETTINGS.modules.individual.formatOptions, ...opts.options },
+      },
+    },
+  }
+  const players = withNames(
+    Array.from({ length: 8 }, (_, i) => makePlayer(i + 1, { baseHcp: [4, 9, 12, 15, 18, 21, 24, 28][i]!, isAdmin: i === 0 })),
+    NAMES.slice(4),
+  )
+  const snap = makeSnapshot({ players, rounds: 1, settings })
+  snap.tournament = { ...snap.tournament, id: `fx-${format}`, slug: opts.slug, name: opts.name, tagline: opts.description, joinCode: format.slice(0, 6).toUpperCase(), accentColor: '#2b5b8c' }
+  snap.rounds = [makeRound(1, { status: 'live', date: '2027-06-12' })]
+  const size = opts.groupSize ?? 4
+  for (let i = 0; i < 8; i += size) {
+    snap.groups.push(makeGroup('r1', i / size + 1, players.slice(i, i + size).map((p) => p.id), i === 0 ? 1 : 10))
+  }
+  if (opts.teams) {
+    snap.pairs = [
+      { id: 'tA', name: 'Los Compadres', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
+      { id: 'tB', name: 'Las Palmas', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+      { id: 'tC', name: 'Los del Fondo', player1Id: 'p5', player2Id: 'p6', kind: null, pickedByHonoree: false, drawnAt: null },
+      { id: 'tD', name: 'Tres Marías', player1Id: 'p7', player2Id: 'p8', kind: null, pickedByHonoree: false, drawnAt: null },
+    ]
+  }
+  fillRound(snap, 'r1', 23)
+  return {
+    name: opts.slug,
+    description: opts.description,
+    snapshot: snap,
+    me: { playerId: 'p1', isOrganizer: true, isAdmin: true },
+    lookup: lookupOf(snap),
+  }
+}
+
 const BUILDERS: Record<string, () => Fixture> = {
   'minimal4-setup': () => minimal('setup'),
   'minimal4-live': () => minimal('live'),
@@ -332,6 +379,9 @@ const BUILDERS: Record<string, () => Fixture> = {
   'full12-finished': () => full12(true),
   pairs8,
   friends8,
+  'stroke8': () => formatFixture('strokePlay', { name: 'Copa del Club', slug: 'stroke8', label: 'Golpes', description: 'Stroke play neto a una vuelta: gana quien menos golpes haga', options: { scoring: 'net' } }),
+  'match8': () => formatFixture('matchPlay', { name: 'Duelos de Primavera', slug: 'match8', label: 'Match play', description: 'Uno contra uno: cuatro partidos, se gana por hoyos', options: { matchMode: 'singles', scoring: 'net' }, groupSize: 2 }),
+  'team8': () => formatFixture('team', { name: 'Scramble de la Casa', slug: 'team8', label: 'Por equipos', description: 'Cuatro equipos jugando la mejor bola', options: { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'net' }, teams: true }),
   large60,
   longnames,
 }

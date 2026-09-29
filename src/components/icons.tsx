@@ -309,3 +309,12 @@ export const IconGoogle = ({ size = 20 }: { size?: number }) => (
     <path style={{ fill: 'var(--google-red)' }} d="M12 5.4c1.6 0 3.1.6 4.3 1.7l3.2-3.2A11 11 0 0 0 2 6.8l3.7 2.9C6.6 7.3 9.1 5.4 12 5.4z" />
   </svg>
 )
+
+/** A circled "i": the explanation is one tap away, without shouting about it. */
+export const IconInfo = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5.5" />
+    <path d="M12 7.6v.9" />
+  </Svg>
+)

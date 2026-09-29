@@ -153,3 +153,50 @@
 .place :global(.numField .input) {
   width: 4.5em;
 }
+
+/* Format cards: a ruled row you tap, with the explanation beside it. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s2);
+  border-bottom: var(--hairline);
+  padding-right: var(--s3);
+}
+.choiceOn {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.choiceMain {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 64px;
+  padding: var(--s3) 0 var(--s3) var(--s3);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.choiceMain:active {
+  background: var(--surface);
+}
+.choiceTitle {
+  font-weight: 600;
+}
+.choiceOn .choiceTitle {
+  color: var(--accent);
+}
+.choiceBlurb {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-ui);
+}

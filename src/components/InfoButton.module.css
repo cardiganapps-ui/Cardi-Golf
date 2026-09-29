@@ -1,0 +1,19 @@
+/* Quiet until asked: a hairline circle that only fills in on press. */
+.info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  margin: calc(var(--s2) * -1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: var(--r-round);
+}
+.info:active {
+  background: var(--surface);
+  color: var(--ink);
+}

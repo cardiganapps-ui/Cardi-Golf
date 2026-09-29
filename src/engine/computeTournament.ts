@@ -177,7 +177,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       discrepancies,
       missingModules,
       missingGames,
-      warnings: [...core.warnings, ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
+      warnings: [...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
     },
     tournamentFinal,
   }
