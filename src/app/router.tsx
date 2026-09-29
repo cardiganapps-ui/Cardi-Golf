@@ -5,6 +5,7 @@ import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
+import { RouteError } from './RouteError'
 import { OrganizerLoginScreen } from '../screens/organizer/OrganizerLoginScreen'
 import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
 import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
@@ -101,7 +102,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
-    errorElement: <NotFoundScreen />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <HomeScreen /> },
       { path: 'organizer/login', element: <OrganizerLoginScreen /> },

@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { create } from 'zustand'
+import { withTimeout } from '../lib/timeout'
 import { supabase } from '../lib/supabase'
 import { downscaleImage } from '../lib/images'
 import { whsIndex10, whsRule } from '../engine/profile/whs'
@@ -373,7 +374,9 @@ export const useMyProfile = create<MyProfileState>((set) => ({
     const seq = ++loadSeq
     set({ loading: true, error: null })
     try {
-      const [profile, links] = await Promise.all([create ? ensureMyProfile() : getMyProfile(), myLinks()])
+      // Mi Polo waits on this to render; a stalled read must end in an error
+      // with a retry, not a spinner that never stops.
+      const [profile, links] = await withTimeout(Promise.all([create ? ensureMyProfile() : getMyProfile(), myLinks()]), 10000, 'perfil')
       if (seq === loadSeq) set({ profile, links, loading: false })
     } catch (e) {
       if (seq === loadSeq) set({ loading: false, error: e instanceof Error ? e.message : String(e) })

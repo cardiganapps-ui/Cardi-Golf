@@ -10,7 +10,7 @@ import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { InstallGuide } from '../../components/InstallGuide'
 import { LegalLinks } from '../../components/LegalLinks'
-import { Avatar, Spinner, toast } from '../../components/ui'
+import { Avatar, ErrorBox, Spinner, toast } from '../../components/ui'
 import { IconBell, IconChevronRight, IconPeople, IconSettings } from '../../components/icons'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import { linkMyProfile, unlinkMyProfile, useMyProfile, type MyLink } from '../../data/profiles'
@@ -156,7 +156,8 @@ export function MiPolo() {
     if (clean.length === 6) navigate(`/t/${clean}`)
   }
 
-  if (!profile) return loading || !error ? <Spinner /> : <p className="error">{error}</p>
+  // An error here used to be a bare line of red text with no way forward.
+  if (!profile) return loading || !error ? <Spinner /> : <ErrorBox message={error} onRetry={() => void load(true)} />
 
   const section = (label: string, list: Row[]) =>
     list.length > 0 && (

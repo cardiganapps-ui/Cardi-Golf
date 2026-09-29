@@ -1,0 +1,32 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: var(--s8) var(--gutter);
+}
+.title {
+  margin-top: var(--s4);
+  font-size: var(--fs-xl);
+}
+.body,
+.hint {
+  color: var(--ink-2);
+}
+.hint {
+  font-size: var(--fs-sm);
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  width: 100%;
+  margin-top: var(--s2);
+}
+.version {
+  margin-top: var(--s4);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}

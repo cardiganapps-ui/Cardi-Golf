@@ -5,6 +5,7 @@ import { MotionConfig } from 'motion/react'
 import { registerSW } from 'virtual:pwa-register'
 import './styles/global.css'
 import { router } from './app/router'
+import { RootBoundary } from './app/RootBoundary'
 import { toast } from './components/ui'
 import { useOutbox } from './data/outbox'
 import { t } from './i18n/es-MX'
@@ -29,7 +30,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* Every Motion animation honours the system's reduce-motion setting. */}
     <MotionConfig reducedMotion="user">
-      <RouterProvider router={router} />
+      <RootBoundary>
+        <RouterProvider router={router} />
+      </RootBoundary>
     </MotionConfig>
   </StrictMode>,
 )
