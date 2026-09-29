@@ -358,3 +358,17 @@
 .groupBtn:active {
   background: var(--surface);
 }
+
+/* The stamp a referee's desk would put on a card that is now final. */
+.stamp {
+  align-self: center;
+  padding: 2px var(--s2);
+  border: 2px solid var(--under);
+  border-radius: var(--r-sm);
+  color: var(--under);
+  font: 700 var(--fs-xs) / 1.2 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-8deg);
+}

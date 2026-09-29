@@ -16,6 +16,7 @@ import { useTournamentCtx } from './TournamentGate'
 import styles from './CeremonyScreen.module.css'
 import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, IconSpoon, IconTarget, IconTrophy } from '../../components/icons'
 import { celebrationColors } from '../../lib/tokens'
+import { DUR_SLOW, easeSlow, stagger } from '../../design/motion'
 
 const C = t.ceremony
 /** "A y B", "A, B y C". */
@@ -239,9 +240,9 @@ export function CeremonyScreen() {
                   {C.reveal}
                 </button>
               ) : (
-                <motion.div className={styles.reveal} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 16 }}>
+                <motion.div className={styles.reveal} initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={easeSlow}>
                   {step.winners.map((w, i) => (
-                    <motion.div key={i} className={`${styles.winner} ${step.champion ? styles.champion : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.6 }}>
+                    <motion.div key={i} className={`${styles.winner} ${step.champion ? styles.champion : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={stagger(i, DUR_SLOW)}>
                       <div className={styles.avatars}>
                         {w.playerIds.map((pid) => (
                           <Avatar key={pid} name={byId.get(pid)?.displayName ?? '?'} url={byId.get(pid)?.avatarUrl} size="lg" honoree={byId.get(pid)?.isHonoree} />

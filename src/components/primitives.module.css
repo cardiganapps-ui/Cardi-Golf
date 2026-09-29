@@ -524,6 +524,16 @@
   gap: var(--s2);
   align-items: flex-start;
 }
+/* An empty box on a scorecard: the ring, with nothing written in it. */
+.emptyMark {
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--s1);
+  fill: none;
+  stroke: var(--rule-2);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
 .emptyTitle {
   font-weight: 600;
 }

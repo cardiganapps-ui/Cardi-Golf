@@ -23,6 +23,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminDraw.module.css'
 import a from './Admin.module.css'
 import { IconRings } from '../../components/icons'
+import { easeSlow } from '../../design/motion'
 
 const E = t.teams
 const SIZES = ['2', '3', '4']
@@ -150,7 +151,7 @@ export function AdminTeams() {
           {revealed >= drawn.length && spread != null && <p className={a.help}>{E.spread(spread)}</p>}
           <AnimatePresence>
             {drawn.slice(0, revealed).map((team, i) => (
-              <motion.div key={team.playerIds.join('-')} className={styles.pairCard} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+              <motion.div key={team.playerIds.join('-')} className={styles.pairCard} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={easeSlow}>
                 <span className={styles.rings} aria-hidden="true">
                   <IconRings />
                 </span>

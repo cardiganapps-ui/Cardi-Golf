@@ -10,6 +10,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import styles from './SnakeBoard.module.css'
 import { IconSnake } from '../../components/icons'
+import { easeSlow } from '../../design/motion'
 
 export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
   const data = useTournament((s) => s.data)!
@@ -45,7 +46,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                       <span className={styles.avatarWrap}>
                         <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} />
                         {holder && (
-                          <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder} transition={{ duration: 0.25, ease: [0.2, 0, 0, 1] }}>
+                          <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder} transition={easeSlow}>
                             <IconSnake size={16} />
                           </motion.span>
                         )}
