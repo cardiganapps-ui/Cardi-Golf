@@ -3,6 +3,7 @@ import { t } from '../../i18n/es-MX'
 import { Field } from '../../components/ui'
 import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
+import { NumberField, OptionalNumberField } from '../../components/NumberField'
 
 const C = t.admin.courses
 
@@ -130,10 +131,10 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel }: { draft: 
           <input className="input input--sm" value={tee.color ?? ''} onChange={(e) => setTee({ color: e.target.value || null })} />
         </Field>
         <Field label={C.rating}>
-          <input className="input input--sm input--num" type="number" step="0.1" value={tee.rating ?? ''} onChange={(e) => setTee({ rating: e.target.value === '' ? null : Number(e.target.value) })} />
+          <OptionalNumberField inputClassName="input--sm" decimals={1} value={tee.rating} onChange={(v) => setTee({ rating: v })} />
         </Field>
         <Field label={C.slope}>
-          <input className="input input--sm input--num" type="number" value={tee.slope ?? ''} onChange={(e) => setTee({ slope: e.target.value === '' ? null : Number(e.target.value) })} />
+          <OptionalNumberField inputClassName="input--sm" value={tee.slope} onChange={(v) => setTee({ slope: v })} />
         </Field>
       </div>
 
@@ -162,13 +163,13 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel }: { draft: 
               <tr key={h.number}>
                 <td className="num">{h.number}</td>
                 <td>
-                  <input className="input input--sm input--num" type="number" min={3} max={6} value={h.par} onChange={(e) => setHole(i, { par: Number(e.target.value) || 4 })} />
+                  <NumberField inputClassName="input--sm" label={C.par} min={3} max={6} value={h.par} onChange={(v) => setHole(i, { par: v })} />
                 </td>
                 <td>
-                  <input className="input input--sm input--num" type="number" min={1} max={18} value={h.strokeIndex} onChange={(e) => setHole(i, { strokeIndex: Number(e.target.value) || 1 })} />
+                  <NumberField inputClassName="input--sm" label={C.si} min={1} max={18} value={h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v })} />
                 </td>
                 <td>
-                  <input className="input input--sm input--num" type="number" value={h.yards ?? ''} onChange={(e) => setHole(i, { yards: e.target.value === '' ? null : Number(e.target.value) })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.yards} value={h.yards} onChange={(v) => setHole(i, { yards: v })} />
                 </td>
               </tr>
             ))}

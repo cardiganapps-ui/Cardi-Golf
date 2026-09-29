@@ -13,6 +13,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { IconClose } from '../../components/icons'
 import a from './Admin.module.css'
+import { NumberField } from '../../components/NumberField'
 
 const H = t.admin.handicaps
 
@@ -114,7 +115,7 @@ export function AdminHandicaps() {
           <div className="stack">
             <p className={a.help}>{H.overrideHint}</p>
             <Field label={t.live.playingHcp}>
-              <input className="input input--num" type="number" min={0} max={60} value={editing.value} onChange={(e) => setEditing({ ...editing, value: Number(e.target.value) })} />
+              <NumberField min={0} max={60} value={editing.value} onChange={(v) => setEditing({ ...editing, value: v })} />
             </Field>
             <Field label={H.reason}>
               <input className="input" value={editing.reason} onChange={(e) => setEditing({ ...editing, reason: e.target.value })} placeholder={H.reasonPlaceholder} autoFocus />

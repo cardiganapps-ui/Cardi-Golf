@@ -103,7 +103,10 @@
   border-radius: var(--r-sm);
   background: var(--surface-2);
   color: var(--ink);
-  font: 400 var(--fs-md) var(--font-text);
+  font-family: var(--font-text);
+  font-weight: 400;
+  /* See the note on `.input` in global.css: 16px is the iOS no-zoom floor. */
+  font-size: max(16px, var(--fs-md));
 }
 .input:focus {
   border-color: var(--ink);
@@ -273,7 +276,15 @@
 .boardHead,
 .leaderRow {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 40px 36px minmax(56px, auto);
+  /*
+   * Five columns on a 360px phone leaves the name whatever the figures do not
+   * take, so the figures are not allowed to take more than they need. The last
+   * track was `minmax(56px, auto)`, which let one wide amount ("$125,000")
+   * widen the column for every row and squeeze the name in all of them; it is
+   * capped now. The rest are trimmed to the widest value they actually hold
+   * (a position label, a day's points, a "thru" count).
+   */
+  grid-template-columns: 28px minmax(0, 1fr) 36px 32px minmax(56px, 72px);
   align-items: center;
   column-gap: var(--s2);
   padding: 0 var(--s1);

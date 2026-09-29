@@ -4,6 +4,7 @@
  */
 import { t } from '../../i18n/es-MX'
 import { Field, Toggle } from '../../components/ui'
+import { NumberField } from '../../components/NumberField'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { FieldShape } from '../../engine/settings/prizeCheck'
 import { FormatEditor } from '../organizer/setup/FormatEditor'
@@ -77,17 +78,10 @@ export function SettingsEditor({ value, onChange, field }: Props) {
         <span className="label">{A.handicap}</span>
         <div className="grid2">
           <Field label={A.allowance}>
-            <input
-              className="input input--num"
-              type="number"
-              min={0}
-              max={100}
-              value={Math.round(value.handicap.allowance * 100)}
-              onChange={(e) => set((d) => (d.handicap.allowance = (Number(e.target.value) || 0) / 100))}
-            />
+            <NumberField min={0} max={100} suffix="%" value={Math.round(value.handicap.allowance * 100)} onChange={(v) => set((d) => (d.handicap.allowance = v / 100))} />
           </Field>
           <Field label={A.cap}>
-            <input className="input input--num" type="number" min={0} max={54} value={value.handicap.cap} onChange={(e) => set((d) => (d.handicap.cap = Number(e.target.value) || 0))} />
+            <NumberField min={0} max={54} value={value.handicap.cap} onChange={(v) => set((d) => (d.handicap.cap = v))} />
           </Field>
         </div>
         {value.rounds > 1 && (
@@ -95,13 +89,13 @@ export function SettingsEditor({ value, onChange, field }: Props) {
             <span className="help">{A.cutTitle}</span>
             <div className="grid3">
               <Field label={A.cutThreshold}>
-                <input className="input input--num" type="number" value={value.day2Cut.threshold} onChange={(e) => set((d) => (d.day2Cut.threshold = Number(e.target.value) || 0))} />
+                <NumberField value={value.day2Cut.threshold} onChange={(v) => set((d) => (d.day2Cut.threshold = v))} />
               </Field>
               <Field label={A.cutPer}>
-                <input className="input input--num" type="number" min={1} value={value.day2Cut.pointsPerStroke} onChange={(e) => set((d) => (d.day2Cut.pointsPerStroke = Number(e.target.value) || 1))} />
+                <NumberField min={1} value={value.day2Cut.pointsPerStroke} onChange={(v) => set((d) => (d.day2Cut.pointsPerStroke = v))} />
               </Field>
               <Field label={A.cutMax}>
-                <input className="input input--num" type="number" min={0} value={value.day2Cut.maxStrokes} onChange={(e) => set((d) => (d.day2Cut.maxStrokes = Number(e.target.value) || 0))} />
+                <NumberField min={0} value={value.day2Cut.maxStrokes} onChange={(v) => set((d) => (d.day2Cut.maxStrokes = v))} />
               </Field>
             </div>
             {value.rounds > 2 && (
@@ -122,7 +116,7 @@ export function SettingsEditor({ value, onChange, field }: Props) {
         <MoneyEditor value={value} onChange={onChange} field={field} />
         {m.fewestPutts.enabled && (
           <Field label={A.pickupPutts}>
-            <input className="input input--num" type="number" min={0} max={10} value={value.pickupPuttsForFewestPutts} onChange={(e) => set((d) => (d.pickupPuttsForFewestPutts = Number(e.target.value) || 0))} />
+            <NumberField min={0} max={10} value={value.pickupPuttsForFewestPutts} onChange={(v) => set((d) => (d.pickupPuttsForFewestPutts = v))} />
           </Field>
         )}
       </section>
@@ -132,17 +126,17 @@ export function SettingsEditor({ value, onChange, field }: Props) {
           <span className="label">{A.auctionTitle}</span>
           <div className="grid3">
             <Field label={A.openingBid}>
-              <input className="input input--num" type="number" min={1} value={value.auction.openingBid} onChange={(e) => set((d) => (d.auction.openingBid = Number(e.target.value) || 1))} />
+              <NumberField min={1} prefix="$" value={value.auction.openingBid} onChange={(v) => set((d) => (d.auction.openingBid = v))} />
             </Field>
             <Field label={A.increment}>
-              <input className="input input--num" type="number" min={1} value={value.auction.increment} onChange={(e) => set((d) => (d.auction.increment = Number(e.target.value) || 1))} />
+              <NumberField min={1} prefix="$" value={value.auction.increment} onChange={(v) => set((d) => (d.auction.increment = v))} />
             </Field>
             <Field label={A.maxPerOwner}>
-              <input className="input input--num" type="number" min={1} value={value.auction.maxPlayersPerOwner} onChange={(e) => set((d) => (d.auction.maxPlayersPerOwner = Number(e.target.value) || 1))} />
+              <NumberField min={1} value={value.auction.maxPlayersPerOwner} onChange={(v) => set((d) => (d.auction.maxPlayersPerOwner = v))} />
             </Field>
           </div>
           <Field label={A.buybackMax}>
-            <input className="input input--num" type="number" min={0} max={100} value={value.auction.buybackMaxPct} onChange={(e) => set((d) => (d.auction.buybackMaxPct = Number(e.target.value) || 0))} />
+            <NumberField min={0} max={100} suffix="%" value={value.auction.buybackMaxPct} onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))} />
           </Field>
           <Toggle label={A.selfCounts} checked={value.auction.selfOwnedCountsTowardMax} onChange={(v) => set((d) => (d.auction.selfOwnedCountsTowardMax = v))} />
           <Toggle label={A.guests} checked={value.auction.guestsCanBid} onChange={(v) => set((d) => (d.auction.guestsCanBid = v))} />
@@ -173,15 +167,16 @@ export function SettingsEditor({ value, onChange, field }: Props) {
                     ))}
                   </select>
                 )}
-                <input
-                  className="input input--sm input--num"
-                  type="number"
+                <NumberField
+                  inputClassName="input--sm"
+                  label={A.payoutSlots}
                   min={0}
                   max={100}
+                  decimals={1}
+                  suffix="%"
                   value={Math.round(slot.share * 1000) / 10}
-                  onChange={(e) => set((d) => (d.auction.payout[i]!.share = (Number(e.target.value) || 0) / 100))}
+                  onChange={(v) => set((d) => (d.auction.payout[i]!.share = v / 100))}
                 />
-                <span className="small">%</span>
               </div>
             ))}
             <p className="help">Suma: {Math.round(value.auction.payout.reduce((s, x) => s + x.share, 0) * 1000) / 10}%</p>

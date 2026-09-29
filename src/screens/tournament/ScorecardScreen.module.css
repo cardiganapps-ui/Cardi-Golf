@@ -123,6 +123,12 @@
   color: var(--ink-2);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  /* "3 pts, birdie neto, par 5" could not shrink, so a long name was cut to a
+     few characters to make room for it. Leave the name at least half the row. */
+  min-width: 0;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ptsHigh {
   color: var(--under);

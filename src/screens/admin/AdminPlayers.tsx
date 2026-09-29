@@ -18,6 +18,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
 import a from './Admin.module.css'
+import { NumberField, OptionalNumberField } from '../../components/NumberField'
 
 const P = t.admin.players
 const SEARCH_FROM = 12
@@ -292,12 +293,12 @@ export function AdminPlayers() {
             </div>
             {E.handicap_source === 'manual' && (
               <Field label={P.baseHcp}>
-                <input className="input input--num" type="number" step="0.1" min={0} max={54} value={E.base_hcp} onChange={(e) => setEditing({ ...E, base_hcp: Number(e.target.value) })} />
+                <NumberField min={0} max={54} decimals={1} value={E.base_hcp} onChange={(v) => setEditing({ ...E, base_hcp: v })} />
               </Field>
             )}
             {E.handicap_source === 'index' && (
               <Field label={P.index}>
-                <input className="input input--num" type="number" step="0.1" min={-10} max={54} value={E.handicap_index ?? ''} onChange={(e) => setEditing({ ...E, handicap_index: e.target.value === '' ? null : Number(e.target.value) })} />
+                <OptionalNumberField min={-10} max={54} decimals={1} value={E.handicap_index} onChange={(v) => setEditing({ ...E, handicap_index: v })} />
               </Field>
             )}
             {E.handicap_source === 'estimate' && E.estimate_inputs && (
@@ -318,16 +319,16 @@ export function AdminPlayers() {
                       </div>
                       <div className={a.grid2}>
                         <Field label={P.gross}>
-                          <input className="input input--num" type="number" value={row.gross} onChange={(e) => upd({ gross: Number(e.target.value) })} />
+                          <NumberField min={1} value={row.gross} onChange={(v) => upd({ gross: v })} />
                         </Field>
                         <Field label={P.par}>
-                          <input className="input input--num" type="number" placeholder="72" value={row.par ?? ''} onChange={(e) => upd({ par: e.target.value === '' ? null : Number(e.target.value) })} />
+                          <OptionalNumberField placeholder="72" value={row.par} onChange={(v) => upd({ par: v })} />
                         </Field>
                         <Field label={`${P.rating}${row.rating == null ? `, ${P.assumed}` : ''}`}>
-                          <input className="input input--num" type="number" step="0.1" placeholder="72" value={row.rating ?? ''} onChange={(e) => upd({ rating: e.target.value === '' ? null : Number(e.target.value) })} />
+                          <OptionalNumberField decimals={1} placeholder="72" value={row.rating} onChange={(v) => upd({ rating: v })} />
                         </Field>
                         <Field label={`${P.slope}${row.slope == null ? `, ${P.assumed}` : ''}`}>
-                          <input className="input input--num" type="number" placeholder="113" value={row.slope ?? ''} onChange={(e) => upd({ slope: e.target.value === '' ? null : Number(e.target.value) })} />
+                          <OptionalNumberField placeholder="113" value={row.slope} onChange={(v) => upd({ slope: v })} />
                         </Field>
                       </div>
                       {weird && <p className={a.warn}>{P.areYouSure}</p>}

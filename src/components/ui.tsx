@@ -70,10 +70,20 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
     openSheets.push(id)
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
-    // Focus the first control, else the frame itself (it is focusable and labelled).
+    /*
+     * Focus the frame, not the first field. Grabbing the first `input` raised
+     * the keyboard on every sheet, including the ones you open just to read:
+     * tapping a hole in Comité › Tarjetas opened the numeric pad over the score
+     * you wanted to check. A sheet that really should start in a field says so
+     * with `data-autofocus` (the search sheets do).
+     */
     const timer = setTimeout(() => {
-      const first = frame.current?.querySelector<HTMLElement>('input, select, textarea, button:not([disabled])')
-      ;(first ?? frame.current)?.focus()
+      const el = frame.current
+      if (!el) return
+      // A field that asked for focus itself (autoFocus) already has it: leave it.
+      if (el.contains(document.activeElement)) return
+      const wanted = el.querySelector<HTMLElement>('[data-autofocus]:not([disabled])')
+      ;(wanted ?? el).focus()
     }, 30)
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || openSheets[openSheets.length - 1] !== id) return

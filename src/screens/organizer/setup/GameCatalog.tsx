@@ -12,7 +12,7 @@ import { CATEGORY_LABEL, GAME_ENTRIES, MODULE_ENTRIES, entryOf, newGameId, type 
 import { describeGame } from '../../../engine/games/describe'
 import type { GameConfig } from '../../../engine/settings/games'
 import type { TournamentSettings } from '../../../engine/settings/schema'
-import { NumberInput } from './NumberInput'
+import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
 
@@ -56,7 +56,7 @@ export function GameCatalog({ value, onChange }: { value: TournamentSettings; on
                   </div>
                   {mod.enabled && e.id === 'snake' && (
                     <Field label={U.puttsThreshold}>
-                      <NumberInput label={U.puttsThreshold} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
+                      <NumberField label={U.puttsThreshold} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
                     </Field>
                   )}
                   {mod.enabled && e.later && <span className="help">{e.later}</span>}
@@ -237,7 +237,7 @@ function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; r
           <Segmented value={g.options.pairScoring} options={(['bestBall', 'aggregate'] as const).map((v) => ({ value: v, label: U.pairScoring[v]! }))} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.pairScoring = v))} />
           {g.options.pressAt > 0 && (
             <Field label={U.maxPresses}>
-              <NumberInput label={U.maxPresses} value={g.options.maxPresses} min={1} max={5} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.maxPresses = v))} />
+              <NumberField label={U.maxPresses} value={g.options.maxPresses} min={1} max={5} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.maxPresses = v))} />
             </Field>
           )}
         </>

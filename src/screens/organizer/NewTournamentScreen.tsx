@@ -117,7 +117,8 @@ export function NewTournamentScreen() {
           }}
         >
           <Field label={W.name}>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={W.namePlaceholder} autoFocus />
+            {/* No autoFocus: the keyboard covering the screen you just opened is not a welcome. */}
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={W.namePlaceholder} />
           </Field>
           <Field label={W.tagline}>
             <input className="input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder={W.taglinePlaceholder} />
