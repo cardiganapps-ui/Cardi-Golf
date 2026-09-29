@@ -189,3 +189,18 @@
   min-width: 64px;
   justify-content: flex-end;
 }
+
+/* Per-game money: the game's name on the left, what it pays on the right. */
+.gameHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-width: 0;
+}
+.gameHead strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
@@ -8,27 +8,44 @@ import { LiveStatus } from '../../components/primitives'
 import { useOnline } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
 
-const TABS = [
-  { to: '', label: t.nav.live, icon: <IconFlag /> },
-  { to: 'tarjeta', label: t.nav.card, icon: <IconPencil /> },
-  { to: 'juegos', label: t.nav.games, icon: <IconGames /> },
-  { to: 'dinero', label: t.nav.money, icon: <IconCoin /> },
-  { to: 'mas', label: t.nav.more, icon: <IconMore /> },
-]
+/**
+ * The tabs a tournament actually has. §9 promises the bar shows only the
+ * modules that are on, and it never did: a tournament with no money showed
+ * Dinero with nothing in it, and someone watching without a player showed a
+ * Tarjeta they cannot write on.
+ */
+function tabsFor({ hasMoney, canScore }: { hasMoney: boolean; canScore: boolean }) {
+  return [
+    { to: '', label: t.nav.live, icon: <IconFlag /> },
+    ...(canScore ? [{ to: 'tarjeta', label: t.nav.card, icon: <IconPencil /> }] : []),
+    { to: 'juegos', label: t.nav.games, icon: <IconGames /> },
+    ...(hasMoney ? [{ to: 'dinero', label: t.nav.money, icon: <IconCoin /> }] : []),
+    { to: 'mas', label: t.nav.more, icon: <IconMore /> },
+  ]
+}
 
 /**
  * The tournament frame: a one-line header (event name, connection state)
  * and the tab bar. Everything else belongs to the screens.
  */
 export function TournamentShell() {
-  const { slug, lookup } = useTournamentCtx()
+  const { slug, lookup, me } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const realtime = useTournament((s) => s.realtime)
   const updatedAt = useTournament((s) => s.updatedAt)
   const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const online = useOnline()
+  const { pathname } = useLocation()
+  const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
   const accent = data?.snapshot.tournament.accentColor ?? lookup.accentColor ?? undefined
   const logo = data?.snapshot.tournament.logoUrl ?? lookup.logoUrl
+  // Money exists if anyone pays anything: the entry pot, a side pot, a direct
+  // bet or the auction. Until the snapshot loads, assume it does, so the bar
+  // does not shuffle under a thumb already on its way to a tab.
+  const s = data?.settings
+  const hasMoney = !s || s.entryFee > 0 || s.modules.auction.enabled || s.games.some((g) => g.money.source !== 'none')
+  const canScore = !!me.playerId || me.isAdmin
+  const tabs = tabsFor({ hasMoney, canScore })
 
   return (
     <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
@@ -45,8 +62,15 @@ export function TournamentShell() {
         <Outlet />
       </div>
       <nav className={styles.tabbar} aria-label={t.common.sections}>
-        {TABS.map((tab) => (
-          <NavLink key={tab.to} to={`/t/${slug}${tab.to ? `/${tab.to}` : ''}`} end={tab.to === ''} className={({ isActive }) => `${styles.tab} ${isActive ? styles.tabActive : ''}`}>
+        {tabs.map((tab) => (
+          <NavLink
+            key={tab.to}
+            to={`/t/${slug}${tab.to ? `/${tab.to}` : ''}`}
+            end={tab.to === ''}
+            // Stats and Reglamento live under Más but are their own routes, so
+            // without this they used to leave no tab lit at all.
+            className={({ isActive }) => `${styles.tab} ${isActive || (tab.to === 'mas' && underMore) ? styles.tabActive : ''}`}
+          >
             <span className={styles.tabIcon} aria-hidden="true">
               {tab.icon}
             </span>

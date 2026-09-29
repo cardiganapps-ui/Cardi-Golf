@@ -132,9 +132,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const roundState = state.core.rounds[round.id] ?? {}
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
 
-  // Start on the first hole the group has not completed.
+  // Start on the first hole the group has not completed — or on the one the
+  // En vivo shortcut asked for, so that tap lands where it said it would.
   const firstOpen = order.find((h) => players.some((p) => !roundState[p.id]?.holes[h - 1]?.played)) ?? order[order.length - 1]!
-  const [hole, setHole] = useState<number>(firstOpen)
+  const asked = Number(new URLSearchParams(window.location.search).get('hoyo'))
+  const [hole, setHole] = useState<number>(order.includes(asked) ? asked : firstOpen)
   const [view, setView] = useState<'hole' | 'grid'>('hole')
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [tiebreak, setTiebreak] = useState<{ candidates: string[] } | null>(null)

@@ -11,9 +11,13 @@ import { MiPolo } from './profile/MiPolo'
 import styles from './HomeScreen.module.css'
 
 /**
- * `/`: one line on what Polo does, then the fastest way in. A returning
- * player sees their tournament first; everyone else sees the code field.
- * Organizers get one quiet link.
+ * `/`: one line on what Polo does, then one way in.
+ *
+ * It used to offer three at equal weight — a code, a profile and an
+ * organizer sign-in, each with its own heading — so the first screen asked
+ * a stranger to choose between three things before knowing what any of them
+ * was. Almost everyone arrives with a code a friend sent, so that is the
+ * door; everything else is one quiet row underneath.
  */
 export function HomeScreen() {
   const navigate = useNavigate()
@@ -81,25 +85,19 @@ export function HomeScreen() {
         </form>
       </section>
 
-      <section className={styles.section}>
-        <h2>{t.profile.myProfile}</h2>
-        <div className={styles.quiet}>
-          <span className="help">{t.account.enterProfileHint}</span>
-          <Link className="btn btn--ghost btn--sm" to="/entrar">
-            {t.account.enterProfile}
-          </Link>
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <h2>{t.home.organizerTitle}</h2>
-        <div className={styles.quiet}>
-          <span className="help">{t.home.organizerHint}</span>
-          <Link className="btn btn--ghost btn--sm" to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
-            {organizerSignedIn ? t.home.myTournaments : t.home.organizerButton}
-          </Link>
-        </div>
-      </section>
+      {/* Everything that is not "I was invited to a tournament", in one row.
+          Ronda rápida needs an account, so it goes through the same door. */}
+      <nav className={styles.doors} aria-label={t.home.otherWays}>
+        <Link className={styles.door} to="/entrar">
+          {t.account.enterProfile}
+        </Link>
+        <Link className={styles.door} to="/entrar">
+          {t.home.quickRound}
+        </Link>
+        <Link className={styles.door} to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
+          {organizerSignedIn ? t.home.myTournaments : t.home.organizerButton}
+        </Link>
+      </nav>
 
       <InstallGuide />
       <LegalLinks />

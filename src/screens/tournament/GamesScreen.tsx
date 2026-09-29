@@ -3,6 +3,7 @@
  * detail of each enabled module on the board primitives.
  */
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented } from '../../components/primitives'
@@ -16,6 +17,7 @@ import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
 import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
 import { useActiveRound } from './useMyGroup'
+import { useTournamentCtx } from './TournamentGate'
 import styles from './GamesScreen.module.css'
 
 const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction']
@@ -23,6 +25,9 @@ const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestP
 export function GamesScreen() {
   const data = useTournament((s) => s.data)
   const round = useActiveRound()
+  const { slug } = useTournamentCtx()
+  const cfg = data?.settings
+  const hasMoney = !!cfg && (cfg.entryFee > 0 || cfg.modules.auction.enabled || cfg.games.some((g) => g.money.source !== 'none'))
   const [open, setOpen] = useState<string | null>(null)
   const [tab, setTab] = useState<string | null>(null)
   const tabs = useMemo(() => {
@@ -112,6 +117,18 @@ export function GamesScreen() {
               ))}
             </div>
           )}
+          {/* "¿Qué es este juego?", "¿cuánto paga?" and "¿ya lo gané?" used to
+              be three screens with no link between them. */}
+          <nav className={styles.crossLinks} aria-label={t.games.more}>
+            <Link className={styles.crossLink} to={`/t/${slug}/reglamento`}>
+              {t.games.seeRules}
+            </Link>
+            {hasMoney && (
+              <Link className={styles.crossLink} to={`/t/${slug}/dinero`}>
+                {t.games.seeMoney}
+              </Link>
+            )}
+          </nav>
         </>
       ) : (
         <>

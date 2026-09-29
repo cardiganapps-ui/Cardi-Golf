@@ -138,3 +138,23 @@
   font-variation-settings: 'wdth' var(--wdth-figure);
   font-variant-numeric: tabular-nums;
 }
+
+/* One hop from "what is this game" to its rules and its money. */
+.crossLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  padding-top: var(--s3);
+  border-top: var(--hairline);
+}
+.crossLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--ink-2);
+  font-size: var(--fs-md);
+  text-decoration: none;
+}
+.crossLink:active {
+  color: var(--ink);
+}
