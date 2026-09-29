@@ -14,6 +14,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminScores.module.css'
 import a from './Admin.module.css'
+import { NumberField } from '../../components/NumberField'
 
 const SC = t.admin.scores
 const IB = t.admin.inbox
@@ -293,10 +294,10 @@ export function AdminScores() {
           <div className="stack">
             <div className={styles.editGrid}>
               <Field label={t.card.strokes}>
-                <input className="input input--num" type="number" min={1} max={15} value={edit.strokes} disabled={edit.pickedUp} onChange={(e) => setEdit({ ...edit, strokes: Number(e.target.value) })} />
+                <NumberField min={1} max={15} value={edit.strokes} disabled={edit.pickedUp} onChange={(v) => setEdit({ ...edit, strokes: v })} />
               </Field>
               <Field label={t.card.putts}>
-                <input className="input input--num" type="number" min={0} max={15} value={edit.putts} onChange={(e) => setEdit({ ...edit, putts: Number(e.target.value) })} />
+                <NumberField min={0} max={15} value={edit.putts} onChange={(v) => setEdit({ ...edit, putts: v })} />
               </Field>
             </div>
             <label className="toggle">

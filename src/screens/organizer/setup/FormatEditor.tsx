@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { t } from '../../../i18n/es-MX'
 import { Field, Segmented, Toggle } from '../../../components/ui'
 import type { TournamentSettings } from '../../../engine/settings/schema'
-import { NumberInput } from './NumberInput'
+import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
 
@@ -32,7 +32,7 @@ export function FormatEditor({ value, onChange, players, onPlayers }: { value: T
     <div className={styles.section}>
       {onPlayers && (
         <Field label={W.players} hint={W.playersHint}>
-          <NumberInput label={W.players} value={players ?? 2} min={2} max={200} onChange={onPlayers} />
+          <NumberField label={W.players} value={players ?? 2} min={2} max={200} onChange={onPlayers} />
         </Field>
       )}
       <Group label={W.rounds}>

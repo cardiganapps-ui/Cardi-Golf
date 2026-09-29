@@ -97,6 +97,12 @@
   font-size: var(--fs-sm);
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
+  /* Truncate like .rowTitle above. Without this the second line wrapped and
+     pushed the row's height around, which is what made every Comité list
+     look out of alignment with its neighbours. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rowActions {
   display: flex;

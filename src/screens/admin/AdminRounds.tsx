@@ -14,6 +14,7 @@ import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useCourses } from './useCourses'
 import a from './Admin.module.css'
+import { NumberField } from '../../components/NumberField'
 
 const R = t.admin.rounds
 
@@ -192,7 +193,7 @@ export function AdminRounds() {
           <div className="stack">
             <div className={a.grid2}>
               <Field label={R.number}>
-                <input className="input input--num" type="number" min={1} value={editing.number} onChange={(e) => setEditing({ ...editing, number: Number(e.target.value) || 1 })} />
+                <NumberField min={1} value={editing.number} onChange={(v) => setEditing({ ...editing, number: v })} />
               </Field>
               <Field label={R.holes}>
                 <select className="select" value={editing.holes} onChange={(e) => setEditing({ ...editing, holes: Number(e.target.value) === 9 ? 9 : 18 })}>

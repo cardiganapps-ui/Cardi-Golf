@@ -182,11 +182,17 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               maxLength={4}
               value={pin}
               autoFocus
-              disabled={busy}
+              /*
+               * Never `disabled` while it submits: disabling the field iOS has
+               * the keyboard open for dismisses that keyboard, so a wrong PIN
+               * left you staring at a field you had to tap again to retype.
+               * `maxLength` already stops a fifth digit; the guard stops a
+               * second submit from a backspace-and-retype mid-flight.
+               */
               onChange={(e) => {
                 const v = e.target.value.replace(/\D/g, '').slice(0, 4)
                 setPin(v)
-                if (v.length === 4) void submit(v)
+                if (v.length === 4 && !busy) void submit(v)
               }}
             />
           </label>

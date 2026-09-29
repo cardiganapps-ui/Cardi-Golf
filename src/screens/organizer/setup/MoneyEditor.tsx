@@ -13,7 +13,7 @@ import { safeParseSettings, type TournamentSettings } from '../../../engine/sett
 import { checkPrizePool, percentPlaces, type FieldShape } from '../../../engine/settings/prizeCheck'
 import { formatMoney } from '../../../lib/money'
 import { PrizeSummary } from '../../admin/PrizeSummary'
-import { NumberInput } from './NumberInput'
+import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
 
@@ -42,7 +42,7 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
     <div className={styles.section}>
       <h3>{U.mainPot}</h3>
       <Field label={U.entryFee}>
-        <NumberInput label={U.entryFee} prefix="$" value={value.entryFee} onChange={(v) => set((d) => (d.entryFee = v))} />
+        <NumberField label={U.entryFee} prefix="$" value={value.entryFee} onChange={(v) => set((d) => (d.entryFee = v))} />
       </Field>
 
       {m.individual.enabled && (
@@ -85,24 +85,24 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
           )}
           {m.bestRound.enabled && (
             <Field label={m.bestRound.label}>
-              <NumberInput label={m.bestRound.label} prefix="$" suffix={U.perDay} value={value.prizes.bestRoundPerDay} onChange={(v) => set((d) => (d.prizes.bestRoundPerDay = v))} />
+              <NumberField label={m.bestRound.label} prefix="$" suffix={U.perDay} value={value.prizes.bestRoundPerDay} onChange={(v) => set((d) => (d.prizes.bestRoundPerDay = v))} />
             </Field>
           )}
           {m.snake.enabled && (
             <Field label={m.snake.label}>
-              <NumberInput label={m.snake.label} prefix="$" suffix={U.perSurvivor} value={value.prizes.snakePerSurvivor} onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))} />
+              <NumberField label={m.snake.label} prefix="$" suffix={U.perSurvivor} value={value.prizes.snakePerSurvivor} onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))} />
             </Field>
           )}
           {m.fewestPutts.enabled && (
             <Field label={m.fewestPutts.label}>
-              <NumberInput label={m.fewestPutts.label} prefix="$" value={value.prizes.fewestPutts} onChange={(v) => set((d) => (d.prizes.fewestPutts = v))} />
+              <NumberField label={m.fewestPutts.label} prefix="$" value={value.prizes.fewestPutts} onChange={(v) => set((d) => (d.prizes.fewestPutts = v))} />
             </Field>
           )}
         </div>
       )}
 
       <Field label={U.houseCut} hint={U.houseCutHint}>
-        <NumberInput label={U.houseCut} prefix="$" value={value.houseCut} onChange={(v) => set((d) => (d.houseCut = v))} />
+        <NumberField label={U.houseCut} prefix="$" value={value.houseCut} onChange={(v) => set((d) => (d.houseCut = v))} />
       </Field>
 
       {value.games.length > 0 && (
@@ -127,9 +127,9 @@ function GameMoneyCard({ game: g, currency, onChange }: { game: GameConfig; curr
       <span className={styles.cardTitle}>{g.label}</span>
       <Segmented value={src} options={sources.map((s) => ({ value: s, label: U.source[s]! }))} onChange={(v) => onChange((x) => (x.money.source = v))} />
       <span className="help">{U.sourceHint[src]}</span>
-      {src === 'side' && <NumberInput label={U.buyIn} prefix="$" value={g.money.buyIn} onChange={(v) => onChange((x) => (x.money.buyIn = v))} />}
-      {src === 'main' && <NumberInput label={U.amount} prefix="$" value={g.money.amount} onChange={(v) => onChange((x) => (x.money.amount = v))} />}
-      {src === 'direct' && <NumberInput label={U.stake(U.unit[g.type] ?? '')} prefix="$" suffix={U.stake(U.unit[g.type] ?? '').toLowerCase()} value={g.money.stake} onChange={(v) => onChange((x) => (x.money.stake = v))} />}
+      {src === 'side' && <NumberField label={U.buyIn} prefix="$" value={g.money.buyIn} onChange={(v) => onChange((x) => (x.money.buyIn = v))} />}
+      {src === 'main' && <NumberField label={U.amount} prefix="$" value={g.money.amount} onChange={(v) => onChange((x) => (x.money.amount = v))} />}
+      {src === 'direct' && <NumberField label={U.stake(U.unit[g.type] ?? '')} prefix="$" suffix={U.stake(U.unit[g.type] ?? '').toLowerCase()} value={g.money.stake} onChange={(v) => onChange((x) => (x.money.stake = v))} />}
       {PAYS_BY_PLACE[g.type] && (src === 'side' || src === 'main') && (
         <Group label={U.placesSplit}>
           <PlacesEditor values={g.money.split} mode="percent" currency={currency} onChange={(vals) => onChange((x) => (x.money.split = vals))} />
@@ -148,7 +148,7 @@ function PlacesEditor({ values, mode, pesos, currency, onChange }: { values: num
         {values.map((v, i) => (
           <div key={i} className={styles.place}>
             <span>{U.place(i + 1)}</span>
-            <NumberInput label={U.place(i + 1)} prefix={mode === 'amount' ? '$' : undefined} suffix={mode === 'percent' ? '%' : undefined} max={mode === 'percent' ? 100 : undefined} value={v} onChange={(n) => onChange(values.map((x, j) => (j === i ? n : x)))} />
+            <NumberField label={U.place(i + 1)} prefix={mode === 'amount' ? '$' : undefined} suffix={mode === 'percent' ? '%' : undefined} max={mode === 'percent' ? 100 : undefined} value={v} onChange={(n) => onChange(values.map((x, j) => (j === i ? n : x)))} />
             {pesos && <span>{formatMoney(pesos[i] ?? 0, currency)}</span>}
           </div>
         ))}

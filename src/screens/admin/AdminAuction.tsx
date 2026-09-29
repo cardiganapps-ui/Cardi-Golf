@@ -17,6 +17,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminAuction.module.css'
 import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
+import { NumberField, keepNumeric } from '../../components/NumberField'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -244,7 +245,15 @@ export function AdminAuction() {
                     {A.bid(formatMoney(d))}
                   </button>
                 ))}
-                <input className={`input input--num ${styles.custom}`} type="number" placeholder={A.customAmount} value={custom} onChange={(e) => setCustom(e.target.value)} aria-label={A.customAmount} />
+                <input
+                  className={`input input--num ${styles.custom}`}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={A.customAmount}
+                  value={custom}
+                  onChange={(e) => setCustom(keepNumeric(e.target.value, 0, false))}
+                  aria-label={A.customAmount}
+                />
                 <button className="btn btn--secondary" type="button" disabled={busy || !bidder || !custom} onClick={() => void bid(null)}>
                   {A.custom}
                 </button>
@@ -322,7 +331,7 @@ export function AdminAuction() {
                   ))}
                 </div>
                 <Field label={`${A.custom} (%)`}>
-                  <input className="input input--num" type="number" min={0} max={cfg.buybackMaxPct} value={bbPct} onChange={(e) => setBbPct(Math.min(cfg.buybackMaxPct, Math.max(0, Number(e.target.value) || 0)))} />
+                  <NumberField min={0} max={cfg.buybackMaxPct} suffix="%" value={bbPct} onChange={setBbPct} />
                 </Field>
                 {bbPct > 0 && <p>{A.buybackPays(name(lot.playerId), formatMoney(amount), name(lot.ownerId ?? ''))}</p>}
                 <button

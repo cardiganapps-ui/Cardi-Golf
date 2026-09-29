@@ -291,6 +291,14 @@ textarea {
   border: var(--control-border);
   background: var(--surface-2);
   color: var(--ink);
+  /*
+   * 16px is a floor, not a preference: iOS Safari zooms the page in when a
+   * control under 16px takes focus and never zooms back out. Without this the
+   * size came from `font: inherit` plus whatever wrapped the field, so a field
+   * inside `.table` (--fs-sm) rendered at 14px and zoomed on every tap.
+   * A smaller control means a smaller box (`.input--sm`), never smaller text.
+   */
+  font-size: max(16px, var(--fs-md));
 }
 .textarea {
   padding: var(--s2) var(--s3);
@@ -387,6 +395,12 @@ textarea {
   width: 100%;
   cursor: pointer;
   font: inherit;
+}
+/* A flex child defaults to min-width: auto, so text refuses to shrink below its
+   own content and shoves the trailing figure out of the row. Every ruled row
+   wants the same rule `.grow` already encodes. */
+.listItem > * {
+  min-width: 0;
 }
 .listItem:active {
   background: var(--surface);

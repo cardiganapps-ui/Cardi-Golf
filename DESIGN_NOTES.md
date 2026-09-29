@@ -81,7 +81,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **Search** above the player list, the group picker (unassigned first) and the bidder grid once the list is long; the count is on the heading.
 - **One row style** (`Admin.module.css`) for players, courses, handicaps, lots, group members; the figure (handicap, price) right-aligned in the condensed width. Tiles (faces, bidders, holes) share one pressed/selected/disabled treatment.
 - `AdminAuction.module.css`, `AdminPlayers.tsx` and `AdminScores.module.css` left the no-literal-colors PENDING list.
-- Logged, not fixed: SettingsEditor's `defaultValue` inputs (tiers, prize lists, pairing) still do not reflect a realtime reload; the pairs row is cramped at 360px.
+- ~~Logged, not fixed: SettingsEditor's `defaultValue` inputs (tiers, prize lists, pairing) still do not reflect a realtime reload~~ Fixed in the input pass: every numeric field is the controlled `NumberField`, so a realtime reload lands — except while the box has the caret, which is deliberate. The pairs row is still cramped at 360px.
 
 ## Phase 3, PR 8: TV, Ceremonia, Imprimir, share, Estadísticas, Reglamento, Más (2026-09-28)
 
@@ -162,7 +162,7 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - `AdminGroups.tsx`: switching the day tab discards unsaved drafts silently; `.chip` (28px) holds a 32px `Avatar size="sm"`.
 - ~~`AdminRounds.tsx`: start/finish/reopen/cancel have no busy guard, so a double tap fires twice; the date is rendered as raw ISO; a new round defaults to `courses[0]` before courses load.~~ Fixed: per-round busy (phase 3.7), formatted date, start guards (cleanup PR 3).
 - ~~`AdminTournament.tsx`: status tabs, banker select and "Nuevo código" write immediately with no busy state or success feedback.~~ Fixed in phase 3.7: busy state and a toast; the new code comes from `rotate_join_code` (cleanup PR 3).
-- `SettingsEditor.tsx`: tiers, prize lists and the pairing rule are `defaultValue`/`onBlur` inputs, so they do not reflect a realtime reload of `settings`; invalid entries are dropped silently.
+- ~~`SettingsEditor.tsx`: tiers, prize lists and the pairing rule are `defaultValue`/`onBlur` inputs, so they do not reflect a realtime reload of `settings`; invalid entries are dropped silently.~~ Fixed in the input pass: the numeric fields are `NumberField`, which is controlled, clamps on blur instead of dropping, and only accepts an outside value while it does not have the caret.
 - `useCourses.ts`: no `loading` flag and `error` is never read by `AdminCourses` or `AdminRounds`.
 - `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.
 - `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.

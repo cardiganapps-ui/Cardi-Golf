@@ -3,7 +3,7 @@
  * danger zone. Immediate mutations (status, banker, new code) show busy and
  * confirm where they can lock someone out.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
@@ -59,21 +59,32 @@ export function AdminTournament() {
     setAccent(tr.accentColor ?? DEFAULT_ACCENT.hex)
   }, [data, dirty, tr.name, tr.tagline, tr.accentColor])
 
-  const parsed = useMemo(() => safeParseSettings(settings), [settings])
+  /*
+   * Checking the settings means a full Zod parse of the schema plus the prize
+   * check over the field. Running that synchronously on every keystroke is what
+   * made the number fields feel stuck, so it trails the typing instead. What it
+   * feeds is the balance bar and the save button — never a write (see `save`).
+   */
+  const checked = useDeferredValue(settings)
+  const parsed = useMemo(() => safeParseSettings(checked), [checked])
   // Players, real group sizes and each side pot's entrants; the planned field size until the roster exists.
-  const field = useMemo(() => ({ ...fieldShape(data!.snapshot, settings), players, groupSizes }), [data, settings, players, groupSizes])
+  const field = useMemo(() => ({ ...fieldShape(data!.snapshot, checked), players, groupSizes }), [data, checked, players, groupSizes])
   const balanced = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field).balanced : false), [parsed, field])
 
   async function save() {
-    if (!parsed.success || !balanced) return
+    // Parse what is on screen right now: `parsed` is deferred and can be a
+    // keystroke behind, and a save must never write a stale settings object.
+    const fresh = safeParseSettings(settings)
+    if (!fresh.success) return
+    if (!checkPrizePool(fresh.data, { ...fieldShape(data!.snapshot, settings), players, groupSizes }).balanced) return
     setBusy(true)
     try {
-      await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: parsed.data })
+      await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: fresh.data })
       patch((s) => {
         s.tournament.name = name.trim()
         s.tournament.tagline = tagline.trim() || null
         s.tournament.accentColor = accent
-        s.tournament.settings = parsed.data
+        s.tournament.settings = fresh.data
       })
       setDirty(false)
       toast(t.common.saved)
