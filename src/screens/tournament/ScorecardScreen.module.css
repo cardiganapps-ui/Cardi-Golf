@@ -311,13 +311,7 @@
   padding-top: var(--s2);
 }
 .signRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  min-height: 56px;
-  padding: var(--s2) 0;
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
 }
 .signText {
   display: flex;
@@ -340,14 +334,10 @@
   border-top: var(--hairline);
 }
 .groupBtn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-height: 56px;
-  padding: var(--s2) 0;
-  border: 0;
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
   background: none;
   color: inherit;
   font: inherit;

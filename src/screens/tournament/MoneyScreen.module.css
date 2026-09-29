@@ -87,21 +87,17 @@
   background: var(--surface);
 }
 .personText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
+
 }
 .personName {
+  composes: rowTitleText from '../../components/primitives.module.css';
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
 }
 .personSub {
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
+  composes: rowSubText from '../../components/primitives.module.css';
+
 }
 .net {
   font-size: var(--fs-lg);
@@ -148,14 +144,7 @@
   border-top: var(--hairline);
 }
 .transfer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 52px;
-  padding: var(--s1) 0;
-  border-bottom: var(--hairline);
-  font-size: var(--fs-sm);
+  composes: rowLine from '../../components/primitives.module.css';
 }
 .transferText {
   display: flex;

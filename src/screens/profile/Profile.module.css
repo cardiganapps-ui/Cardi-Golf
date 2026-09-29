@@ -159,14 +159,10 @@
   border-top: var(--hairline);
 }
 .row {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 56px;
-  padding: var(--s2) var(--s1);
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
   color: var(--ink);
   text-decoration: none;
+
 }
 a.row:active,
 button.row:active {
@@ -183,19 +179,17 @@ button.row {
   cursor: pointer;
 }
 .rowText {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
+
 }
 .rowTitle {
+  composes: rowTitleText from '../../components/primitives.module.css';
   font-weight: 600;
-  overflow-wrap: anywhere;
+
 }
 .rowSub {
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
+  composes: rowSubText from '../../components/primitives.module.css';
+
 }
 .rowFig {
   font-weight: 600;
@@ -213,12 +207,10 @@ button.row {
   background: var(--accent-soft);
 }
 .rowEnd {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
+  composes: rowEndBlock from '../../components/primitives.module.css';
   color: var(--ink-2);
   font-size: var(--fs-sm);
-  flex-shrink: 0;
+
 }
 .logo {
   width: 40px;
@@ -607,4 +599,9 @@ button.row {
 .legalHead {
   font-size: var(--fs-lg);
   font-weight: 600;
+}
+
+/* A notice already read: same row, lighter. */
+.rowTitleRead {
+  font-weight: 400;
 }

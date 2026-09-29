@@ -32,13 +32,7 @@
   border-top: var(--hairline);
 }
 .item {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 60px;
-  padding: var(--s2) 0;
-  border-bottom: var(--hairline);
+  composes: rowLine from '../../components/primitives.module.css';
 }
 .itemLink {
   display: grid;
@@ -117,14 +111,12 @@
   border-top: var(--hairline);
 }
 .choice {
+  composes: rowLine from '../../components/primitives.module.css';
   display: grid;
   grid-template-columns: minmax(0, 1fr) 24px;
-  align-items: center;
-  gap: var(--s3);
-  min-height: 64px;
-  padding: var(--s3) 0;
-  border: 0;
-  border-bottom: var(--hairline);
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
   background: none;
   color: inherit;
   font: inherit;
