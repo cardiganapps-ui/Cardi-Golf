@@ -2,7 +2,7 @@
  * A notice's text and where tapping it goes, for the inbox (/avisos) and for
  * the web push that carries the same notice (api/push-dispatch.ts).
  */
-import { t } from '../i18n/es-MX'
+import { t } from '../i18n/es-MX.js'
 
 const S = t.social
 
