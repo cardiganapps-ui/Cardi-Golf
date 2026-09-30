@@ -70,7 +70,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Ver el Historial del Comité.** Comité › **Historial**: cada cambio del torneo con quién, cuándo y por qué. Lo que corrijas como Admin de Polo sale marcado en rojo; los organizadores también lo ven.
 - [ ] **Limpiar el catálogo de campos.** Admin › **Campos**. «Duplicados» junta los que parecen el mismo («Quivira Golf Club» y «Quivira Los Cabos»). «Con errores» señala tarjetas mal capturadas (ventajas repetidas, pares raros, hoyos que no son 9 ni 18) y dice qué está mal. **Corregir la tarjeta** usa el mismo editor del Comité y, si ya hay rondas terminadas ahí, recalcula sus resultados y el índice. **Fusionar con este** pasa rondas y tees al bueno y borra el duplicado. Solo deja fusionar si las tarjetas califican igual hoyo por hoyo, y no toca un torneo protegido sin desbloquearlo.
 - [ ] **Ver los crews.** Admin › **Crews**: miembros, salidas, sacar a alguien (si es el dueño, el crew pasa al miembro más antiguo) o borrar el crew (sus torneos se quedan).
-- Avisos, Auditoría y Salud ya aparecen en el menú y llegan en la siguiente entrega.
+- [ ] **Mandarte un aviso de prueba.** Admin › **Avisos** › «Una persona» › búscate a ti. Escribe título y mensaje, revisa «Así se ve» y mándalo. Debe llegar a tu bandeja de Avisos y, si tienes los avisos activados, como notificación en el teléfono. A **todos** puedes mandar dos al día como máximo, y siempre te pide confirmar con cuántas personas le llega.
+- [ ] **Revisar Salud.** Admin › **Salud**. El respaldo nocturno aparece después de la próxima corrida del cron (2 am de Los Cabos); si pasan más de 36 horas sin uno bueno, se pone en rojo. Ahí están también los **interruptores** para una emergencia: pausar cuentas nuevas, pausar torneos nuevos y un aviso de mantenimiento que sale arriba de todas las pantallas. Tú siempre puedes crear cuentas y torneos, aunque estén pausados.
+- [ ] **Auditoría.** Admin › **Auditoría**: todo lo que has hecho como Admin de Polo, del panel y dentro de torneos, con su motivo. Toca una línea para ver el detalle.
 
 ## Revisión de experiencia (tus 15 puntos, 2026-09-29)
 

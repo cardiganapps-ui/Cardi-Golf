@@ -286,6 +286,64 @@ export interface PlatformCrew {
   activity: Array<{ id: number; at: string; action: string; reason: string | null }>
 }
 
+export interface AppFlags {
+  newAccountsPaused: boolean
+  newTournamentsPaused: boolean
+  maintenanceBanner: string | null
+}
+
+export interface Audience {
+  profiles: number
+  push: number
+  /** Notices to everyone in the last 24 hours (two allowed). */
+  sentToday: number
+  recent: Array<{ id: number; at: string; title: string; body: string; to: string | null; toName: string | null; count: number }>
+}
+
+export interface AuditItem {
+  source: 'platform' | 'comite'
+  id: number
+  at: string
+  action: string
+  targetKind?: string
+  targetId?: string | null
+  table?: string
+  rowId?: string
+  tournamentId: string | null
+  tournament: string | null
+  reason: string | null
+  actor: string | null
+  /** Panel actions: what it was about (a notice's title, a name, an email) when the reason does not say. */
+  detail?: string | null
+}
+
+export interface AuditDetail {
+  source: 'platform' | 'comite'
+  id: number
+  at: string
+  action: string
+  targetKind?: string
+  targetId?: string | null
+  table?: string
+  tournamentId: string | null
+  reason: string | null
+  payload?: Record<string, unknown> | null
+  before?: Record<string, unknown> | null
+  after?: Record<string, unknown> | null
+}
+
+export interface Health {
+  backup: {
+    last: { at: string; ok: boolean; key: string | null; bytes: number | null; tables: number | null; rows: number | null; error: string | null } | null
+    lastOk: { at: string; key: string | null; bytes: number | null; tables: number | null; rows: number | null } | null
+    week: { ok: number; failed: number }
+  }
+  push: { configured: boolean | null; subscriptions: number; profiles: number; recent: { total: number; failed: number; since: string | null } | null }
+  database: { lastMigration: { name: string; at: string } | null; notifications24h: number }
+  people: { blocked: number; deviceLocks: number; playerLocks: number }
+  flags: AppFlags
+}
+
 export interface PlatformApi {
   overview(): Promise<PlatformOverview>
   daily(days: number): Promise<PlatformDay[]>
@@ -314,6 +372,13 @@ export interface PlatformApi {
   crew(id: string): Promise<PlatformCrew | null>
   removeCrewMember(crewId: string, profileId: string, reason: string): Promise<'removed' | 'handed' | 'deleted'>
   deleteCrew(crewId: string, confirmName: string, reason: string): Promise<void>
+  audience(): Promise<Audience>
+  /** To everyone (to = null) or one profile; returns how many it reached. */
+  broadcast(title: string, body: string, to: string | null, url: string | null): Promise<number>
+  audit(q: { source?: 'all' | 'platform' | 'comite'; before?: string | null; q?: string; limit?: number }): Promise<AuditItem[]>
+  auditEntry(source: 'platform' | 'comite', id: number): Promise<AuditDetail | null>
+  health(): Promise<Health>
+  setFlag(key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner', value: boolean | string | null, reason: string): Promise<AppFlags>
 }
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -364,7 +429,31 @@ export const supabasePlatformApi: PlatformApi = {
   crew: (id) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id }),
   removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }),
   deleteCrew: (crewId, confirmName, reason) => rpc<void>('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
+  audience: () => rpc<Audience>('platform_audience'),
+  broadcast: (title, body, to, url) => rpc<number>('platform_broadcast', { p_title: title, p_body: body, p_to: to, p_url: url }),
+  audit: ({ source = 'all', before = null, q, limit = 50 }) =>
+    rpc<AuditItem[]>('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }),
+  auditEntry: (source, id) => rpc<AuditDetail | null>('platform_audit_entry', { p_source: source, p_id: id }),
+  health: () => rpc<Health>('platform_health'),
+  setFlag: (key, value, reason) => rpc<AppFlags>('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }),
 }
+
+/**
+ * The switches everyone sees (app_flags): the maintenance banner, and why
+ * creating an account or a tournament may be refused. Loaded once by
+ * AppShell; a slow answer never holds the app up.
+ */
+export const useAppFlags = create<{ flags: AppFlags | null; load(): Promise<void>; set(f: AppFlags): void }>((set) => ({
+  flags: null,
+  async load() {
+    try {
+      set({ flags: await withTimeout(rpc<AppFlags>('app_flags'), 5000, 'avisos') })
+    } catch {
+      // No banner is better than a stuck app.
+    }
+  },
+  set: (flags) => set({ flags }),
+}))
 
 /**
  * The tee each tee of a dropped course should become: the kept tee with the

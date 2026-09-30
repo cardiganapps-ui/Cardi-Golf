@@ -14,4 +14,11 @@ describe('noticeLine (inbox and push share it)', () => {
     expect(r).toEqual({ text: 'Resultados de Copa Otoño: quedaste empatado en 3.º de 16', to: '/t/copa' })
     expect(r.text).not.toMatch(/\$/)
   })
+  it('a notice from the Admin de Polo carries its own title for the push, and stays inside Polo', () => {
+    const n = noticeLine({ kind: 'platform_notice', data: { title: 'Mantenimiento', body: 'Polo se actualiza a las 11.', url: '/crews' }, actor: null })
+    expect(n).toEqual({ text: 'Mantenimiento: Polo se actualiza a las 11.', to: '/crews', title: 'Mantenimiento', body: 'Polo se actualiza a las 11.' })
+    for (const url of ['https://evil.example', '//evil.example', 'javascript:alert(1)', '/ok<script>']) {
+      expect(noticeLine({ kind: 'platform_notice', data: { title: 'x', body: 'y', url }, actor: null }).to).toBe('/avisos')
+    }
+  })
 })

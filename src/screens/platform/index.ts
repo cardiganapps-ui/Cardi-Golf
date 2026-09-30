@@ -1,5 +1,5 @@
 // The Admin de Polo panel, as one lazy chunk (src/app/router.tsx).
-export { PlatformLayout, SoonScreen } from './PlatformLayout'
+export { PlatformLayout } from './PlatformLayout'
 export { OverviewScreen } from './OverviewScreen'
 export { TournamentsScreen } from './TournamentsScreen'
 export { TournamentDetail } from './TournamentDetail'
@@ -8,3 +8,6 @@ export { PersonDetail } from './PersonDetail'
 export { CatalogCourses } from './CatalogCourses'
 export { CourseDetail } from './CourseDetail'
 export { CatalogCrews, CrewDetail } from './CatalogCrews'
+export { NoticesScreen } from './NoticesScreen'
+export { AuditScreen } from './AuditScreen'
+export { HealthScreen } from './HealthScreen'

@@ -51,6 +51,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   platform_admins: 'auth_user_id',
   platform_unlocks: 'auth_user_id,tournament_id',
   platform_audit_log: 'id',
+  platform_settings: 'key',
+  backup_runs: 'id',
 }
 
 /** R2 object key for a backup taken at `at` (UTC date). */

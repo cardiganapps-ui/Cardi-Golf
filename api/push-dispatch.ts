@@ -40,8 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!body.notice || subs.length === 0) return res.status(200).json({ sent: 0 })
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? 'mailto:golf@cardigan.mx', pub, priv)
-  const { text, to } = noticeLine(body.notice)
-  const payload = JSON.stringify({ title: 'Polo', body: text, url: to, tag: body.notice.id, badge: Math.max(0, body.unread ?? 0) })
+  const line = noticeLine(body.notice)
+  const payload = JSON.stringify({ title: line.title ?? 'Polo', body: line.body ?? line.text, url: line.to, tag: body.notice.id, badge: Math.max(0, body.unread ?? 0) })
 
   const dead: string[] = []
   let sent = 0

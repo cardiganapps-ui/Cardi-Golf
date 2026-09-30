@@ -4,9 +4,6 @@
 .groupLabel {
   display: none;
 }
-.navSoon {
-  color: var(--ink-3);
-}
 @media (min-width: 760px) {
   .groupLabel {
     display: block;
@@ -442,4 +439,63 @@ a.row:active {
   flex-direction: column;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ---- Avisos: how the notice will look on a phone ---- */
+.pushPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s3);
+  border: var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Salud ---- */
+.cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s3);
+}
+@media (min-width: 1024px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.healthCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3);
+  border: var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  min-width: 0;
+}
+.healthHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+.dotOk,
+.dotBad,
+.dotUnknown {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-round);
+}
+.dotOk {
+  background: var(--accent);
+}
+.dotBad {
+  background: var(--under);
+}
+.dotUnknown {
+  background: var(--ink-3);
 }

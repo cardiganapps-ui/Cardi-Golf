@@ -217,6 +217,54 @@ const api: PlatformApi = {
     return 'handed'
   },
   async deleteCrew() {},
+  async audience() {
+    return {
+      profiles: 36,
+      push: 14,
+      sentToday: 1,
+      recent: [
+        { id: 2, at: ago(3), title: 'Nueva versión de Polo', body: 'Ya puedes ver tu historial en el Comité.', to: null, toName: null, count: 36 },
+        { id: 1, at: ago(26), title: 'Tu PIN', body: 'Ya te quité el bloqueo; vuelve a entrar.', to: 'p-phone', toName: 'René', count: 1 },
+      ],
+    }
+  },
+  async broadcast(_t, _b, to) {
+    return to ? 1 : 36
+  },
+  async audit({ source }) {
+    const rows = [
+      { source: 'platform' as const, id: 12, at: ago(0.4), action: 'unlock', targetKind: 'tournament', targetId: 'f-nacho', tournamentId: 'f-nacho', tournament: "Nacho's Bachelor Invitational", reason: 'Corregir un hoyo que reportaron', actor: 'Diego Arámburu' },
+      { source: 'comite' as const, id: 9001, at: ago(0.35), action: 'UPDATE', table: 'scores', rowId: 'x', tournamentId: 'f-nacho', tournament: "Nacho's Bachelor Invitational", reason: 'Corrección reportada por el grupo 2', actor: 'Diego Arámburu' },
+      { source: 'platform' as const, id: 11, at: ago(20), action: 'block', targetKind: 'person', targetId: 'p-spam', tournamentId: null, tournament: null, reason: 'Mandaba spam a todos', actor: 'Diego Arámburu' },
+      { source: 'platform' as const, id: 10, at: ago(26), action: 'broadcast', targetKind: 'notice', targetId: 'k', tournamentId: null, tournament: null, reason: null, actor: 'Diego Arámburu', detail: 'Nueva versión de Polo' },
+    ]
+    return rows.filter((r) => !source || source === 'all' || r.source === source)
+  },
+  async auditEntry(source, id) {
+    return source === 'platform'
+      ? { source, id, at: ago(0.4), action: 'unlock', targetKind: 'tournament', targetId: 'f-nacho', tournamentId: 'f-nacho', reason: 'Corregir un hoyo que reportaron', payload: { until: ago(-0.5) } }
+      : { source, id, at: ago(0.35), action: 'UPDATE', table: 'scores', tournamentId: 'f-nacho', reason: 'Corrección', before: { strokes: 6, putts: 2 }, after: { strokes: 5, putts: 2 } }
+  },
+  async health() {
+    return {
+      backup: {
+        last: { at: ago(14), ok: true, key: 'backups/2026-09-30.json.gz', bytes: 88_210, tables: 34, rows: 36_412, error: null },
+        lastOk: { at: ago(14), key: 'backups/2026-09-30.json.gz', bytes: 88_210, tables: 34, rows: 36_412 },
+        week: { ok: 6, failed: 1 },
+      },
+      push: { configured: true, subscriptions: 17, profiles: 14, recent: { total: 9, failed: 1, since: ago(5) } },
+      database: { lastMigration: { name: '0024_platform_ops.sql', at: ago(2) }, notifications24h: 41 },
+      people: { blocked: 1, deviceLocks: 1, playerLocks: 0 },
+      flags: { newAccountsPaused: false, newTournamentsPaused: false, maintenanceBanner: null },
+    }
+  },
+  async setFlag(key, value) {
+    return {
+      newAccountsPaused: key === 'new_accounts_paused' && value === true,
+      newTournamentsPaused: key === 'new_tournaments_paused' && value === true,
+      maintenanceBanner: key === 'maintenance_banner' && typeof value === 'string' ? value : null,
+    }
+  },
 }
 
 export function PlatformFixture() {
