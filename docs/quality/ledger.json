@@ -454,9 +454,11 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 65,
+      "tests": [
+        "src/data/snapshotTables.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
