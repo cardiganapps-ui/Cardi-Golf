@@ -1,0 +1,20 @@
+import { launch, SHOTS } from './lib.mjs'
+const b = await launch()
+for (const reload of [false, true]) {
+  const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
+  const page = await ctx.newPage()
+  await page.goto('http://127.0.0.1:4193/t/_/full12-live', { waitUntil: 'networkidle' })
+  await page.evaluate(async () => { const r = await navigator.serviceWorker.ready; while (r.active?.state !== 'activated') await new Promise(res => setTimeout(res, 100)) })
+  const cached = await page.evaluate(async () => { const ks = await caches.keys(); let n = 0; for (const k of ks) n += (await (await caches.open(k)).keys()).length; return n })
+  if (reload) await page.reload({ waitUntil: 'networkidle' })
+  const controlled = await page.evaluate(() => !!navigator.serviceWorker.controller)
+  await ctx.setOffline(true)
+  await page.getByRole('link', { name: 'Más' }).click()
+  await page.getByRole('link', { name: /Estad/ }).first().click()
+  await page.waitForTimeout(3000)
+  const txt = (await page.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 160)
+  console.log(reload ? 'AFTER one reload' : 'FIRST SESSION  ', '| precached entries', cached, '| controlled', controlled, '| offline → Estadísticas:', txt)
+  if (!reload) await page.screenshot({ path: `${SHOTS}/t_stats-full12-live-15pro-light-pwa-first-session-offline.png` })
+  await ctx.close()
+}
+await b.close()

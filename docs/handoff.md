@@ -8,6 +8,40 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 ---
 
+## Plan A+: lo que necesito esta semana (desde 2026-10-01)
+
+El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/ledger.json` (`npm run quality`). Esto es lo único que depende de ti para arrancar. Va en orden.
+
+1. [ ] **Hacer privado el repo** (hallazgo CHAIR-02).
+   - **Pasos:** GitHub → repo `Cardi-Golf` → **Settings** → **General** → hasta abajo, **Danger Zone** → **Change repository visibility** → **Make private** → escribe el nombre del repo para confirmar. Arriba debe aparecer el candado **Private**.
+   - **Cómo lo verifico:** la API de GitHub dice `private: true`. Luego abro un PR de prueba para confirmar que Vercel sigue creando la vista previa: en el plan gratis de Vercel, un repo privado puede bloquear despliegues de commits que no son tuyos. Si pasa, despliego desde GitHub Actions y te aviso.
+2. [ ] **Llaves en el entorno de Claude.** Es la sección «Rotar las llaves y guardarlas en el entorno» de abajo. Antes era opcional; ahora bloquea.
+   - Sin `SUPABASE_PAT` y `SUPABASE_SECRET_KEY` no puedo aplicar migraciones: ni el arreglo de «Restaurar», ni la sincronización nueva, ni las pruebas contra producción.
+   - Sin `VERCEL_TOKEN` no puedo configurar los despliegues protegidos.
+3. [ ] **Tres secretos en GitHub Actions.** Mi entorno no puede escribirlos: el proxy lo bloquea.
+   - **Pasos:** GitHub → repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, uno por uno:
+     - `SUPABASE_PAT`: el mismo del paso 2.
+     - `VERCEL_TOKEN`: uno nuevo, solo para CI. vercel.com → avatar → **Account Settings** → **Tokens** → **Create**; en «Scope» elige tu equipo.
+     - `CRON_SECRET`: el mismo que ya está en Vercel (proyecto `cardi-golf` → **Settings** → **Environment Variables** → `CRON_SECRET` → el ojo para verlo).
+   - **Cómo lo verifico:** un workflow imprime «secretos presentes» (nunca los valores).
+4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
+   - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.
+   - Sirve para probar cada migración antes de producción, para que las vistas previas no toquen datos reales, y como respaldo en caliente si Supabase falla en el viaje.
+5. [ ] **Tres decisiones** (contesta en el chat):
+   - **a. Dos teléfonos capturan distinto el mismo hoyo.**
+     - Hoy gana el último, sin avisar.
+     - Propongo que gane el primero que llegó y que al segundo le pregunte «Diego ya capturó a Justo: 6. ¿Usar 6 o tu 5?».
+     - Esto cambia la regla del brief (§8).
+   - **b. La rúbrica del A+.** La revisión ciega es del 1 al 5 de marzo; pasa con:
+     - cero P0 y P1 abiertos;
+     - cada área con 95 o más;
+     - los P2/P3 arreglados, o aceptados por ti con una razón.
+
+     Lo que decidiste no comprar (GitHub Pro, Supabase Pro, abogado, búsqueda de marca) cuenta como decisión tuya, no como hallazgo.
+   - **c. ¿Hay algo que prefieras esconder en vez de pulir para abril?** Por ejemplo, match play o el formato por equipos. Lo que se esconda queda fuera de la revisión de marzo.
+
+---
+
 ## Hecho
 
 - ~~**Crear el repo en GitHub.**~~ `cardiganapps-ui/Cardi-Golf`, privado. Verificado: el primer push llegó. (2026-09-26)
@@ -146,6 +180,12 @@ Mándalos en el chat como texto, foto o captura, como te quede más fácil. Clau
 ## Opcional
 
 ### Proteger `main` en GitHub (💰 en un repo privado)
+**Decidido el 2026-09-30: repo privado en el plan gratis, sin GitHub Pro.**
+- En su lugar, el plan A+ protege producción con:
+  - despliegues escalonados: Vercel construye cada push a `main`, pero solo lo publica una Action cuando pasan las pruebas;
+  - candados del lado de Claude contra empujes directos a `main`.
+- Si algún día quieres el candado del lado de GitHub, esto es lo que habría que hacer con GitHub Pro (US$4 al mes).
+
 El candado local (el hook de pre-push) y el CI (`check`) ya evitan que llegue código roto. Un ruleset además impediría que *cualquiera* empuje directo a `main`. En repos **privados**, GitHub solo aplica rulesets con un plan de pago (GitHub Pro), así que es opcional.
 
 Si lo quieres:

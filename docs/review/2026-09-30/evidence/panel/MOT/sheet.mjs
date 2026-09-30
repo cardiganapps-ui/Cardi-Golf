@@ -1,0 +1,33 @@
+// Player sheet on En vivo: open animation, drag on the grabber, close animation (production preview)
+import { launch, ctx, BASE } from './lib.mjs'
+const b = await launch()
+const c = await ctx(b, '15pro')
+const p = await c.newPage()
+await p.goto(BASE + '/t/_/full12-live', { waitUntil: 'networkidle' })
+await p.waitForTimeout(1200)
+const TRACK = () => p.evaluate(() => { window.__sh = []; const t0 = performance.now(); const f = () => { const d = document.querySelector('[role="dialog"]'); const bd = d?.parentElement; const cs = d ? getComputedStyle(d) : null; const m = cs ? new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform) : null; window.__sh.push([Math.round(performance.now() - t0), d ? 1 : 0, cs ? Math.round(parseFloat(cs.opacity) * 100) / 100 : null, m ? Math.round(m.m42 * 10) / 10 : null, bd ? getComputedStyle(bd).opacity : null, d ? Math.round(d.getBoundingClientRect().top) : null]); if (performance.now() - t0 < 700) requestAnimationFrame(f) }; requestAnimationFrame(f) })
+await TRACK()
+await p.locator('button[aria-label^="1.º"], button[aria-label]').filter({ hasText: 'Camilo' }).first().click()
+await p.waitForTimeout(750)
+let s = await p.evaluate(() => window.__sh)
+const openFrames = s.filter((x) => x[1] && (x[2] < 1 || x[3] !== 0))
+console.log('OPEN: animated frames', openFrames.length, openFrames.length ? `${openFrames[0][0]}..${openFrames[openFrames.length - 1][0]}ms, y from ${openFrames[0][3]} op ${openFrames[0][2]}` : '')
+// drag the grabber down 300px with touch
+const cdp = await c.newCDPSession(p)
+const handle = await p.evaluate(() => { const h = document.querySelector('[role="dialog"] > div'); const r = h.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, top: Math.round(document.querySelector('[role="dialog"]').getBoundingClientRect().top) } })
+console.log('grabber at', JSON.stringify(handle))
+await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: handle.x, y: handle.y }] })
+const mid = []
+for (let i = 1; i <= 10; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: handle.x, y: handle.y + i * 30 }] }); await p.waitForTimeout(16); if (i === 5) mid.push(await p.evaluate(() => Math.round(document.querySelector('[role="dialog"]')?.getBoundingClientRect().top ?? -1))) }
+await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+await p.waitForTimeout(400)
+console.log('DRAG: sheet top mid-drag', mid[0], '(was', handle.top + ')', '| still open after release:', await p.evaluate(() => !!document.querySelector('[role="dialog"]')))
+// close with Escape and watch
+await TRACK()
+await p.keyboard.press('Escape')
+await p.waitForTimeout(750)
+s = await p.evaluate(() => window.__sh)
+const gone = s.find((x) => x[1] === 0)
+const closing = s.filter((x) => x[1] && (x[2] < 1 || x[3] !== 0))
+console.log('CLOSE: frames animating out', closing.length, '| dialog gone at', gone ? gone[0] + 'ms (first sampled frame)' : 'never')
+await b.close()

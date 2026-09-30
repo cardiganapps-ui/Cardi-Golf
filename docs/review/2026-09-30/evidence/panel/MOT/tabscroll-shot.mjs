@@ -1,0 +1,11 @@
+import { launch, ctx, BASE } from './lib.mjs'
+const b = await launch()
+const c = await ctx(b, '15pro')
+const p = await c.newPage()
+await p.goto(BASE + '/t/_/full12-live', { waitUntil: 'networkidle' })
+await p.waitForTimeout(900)
+await p.evaluate(() => scrollTo(0, 1100)); await p.waitForTimeout(200)
+await p.getByRole('link', { name: 'Dinero' }).click(); await p.waitForTimeout(600)
+await p.screenshot({ path: '/home/user/Cardi-Golf/docs/review/2026-09-30/shots/t_dinero-full12-live-15pro-light-after-tab-from-scrolled-envivo.png' })
+console.log('Dinero scrollY', await p.evaluate(() => scrollY))
+await b.close()

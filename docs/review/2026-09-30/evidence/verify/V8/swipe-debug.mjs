@@ -1,0 +1,26 @@
+import { chromium } from 'playwright-core'
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
+const ctx = await b.newContext({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true })
+const page = await ctx.newPage()
+await page.goto('http://127.0.0.1:4208/t/_/full12-live/tarjeta', { waitUntil: 'networkidle' })
+await page.waitForTimeout(500)
+const top = async () => (await page.locator('main').innerText()).split('\n').filter(Boolean).slice(0, 8).join(' | ')
+const val = async () => (await page.getByRole('group', { name: 'Golpes' }).count()) ? (await page.getByRole('group', { name: 'Golpes' }).first().innerText()).replace(/\s+/g, ' ') : 'no Golpes group'
+console.log('start:', await top(), '| stepper', await val())
+const plus = page.getByRole('button', { name: 'Golpes: más' }).first()
+await plus.click(); await plus.click()
+console.log('dirty:', await val())
+const cdp = await ctx.newCDPSession(page)
+const swipe = async (x0, x1, y = 400) => {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] })
+  for (let i = 1; i <= 5; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + ((x1 - x0) * i) / 5, y }] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(600)
+}
+await swipe(330, 90)
+console.log('after swipe left:', page.url().replace('http://127.0.0.1:4208', ''), '|', await top(), '| stepper', await val(), '| dialogs', await page.getByRole('dialog').count())
+await page.screenshot({ path: 'swipe-after-next.png' })
+await swipe(90, 330)
+console.log('after swipe right:', await top(), '| stepper', await val(), '| dialogs', await page.getByRole('dialog').count())
+await page.screenshot({ path: 'swipe-after-back.png' })
+await b.close()
