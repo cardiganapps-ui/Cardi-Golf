@@ -18,7 +18,7 @@ const PLATFORM_SECTIONS: Array<{ group: string; items: Array<{ to: string; label
     items: [
       { to: 'resumen', label: P.sections.overview, ready: true },
       { to: 'torneos', label: P.sections.tournaments, ready: true },
-      { to: 'personas', label: P.sections.people, ready: false },
+      { to: 'personas', label: P.sections.people, ready: true },
     ],
   },
   {

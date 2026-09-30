@@ -53,6 +53,7 @@ const AdminGames = lazy(() => import('../screens/admin/AdminGames').then((m) => 
 const AdminHandicaps = lazy(() => import('../screens/admin/AdminHandicaps').then((m) => ({ default: m.AdminHandicaps })))
 const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) => ({ default: m.AdminScores })))
 const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
+const AdminHistory = lazy(() => import('../screens/admin/AdminHistory').then((m) => ({ default: m.AdminHistory })))
 const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({ default: m.AdminData })))
 const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
 /** `npm run dev`, or a build with VITE_DESIGN_ROUTES=1 (Vercel Preview, design-shots). */
@@ -62,6 +63,8 @@ const PlatformLayout = lazy(() => import('../screens/platform').then((m) => ({ d
 const PlatformOverview = lazy(() => import('../screens/platform').then((m) => ({ default: m.OverviewScreen })))
 const PlatformTournaments = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentsScreen })))
 const PlatformTournament = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentDetail })))
+const PlatformPeople = lazy(() => import('../screens/platform').then((m) => ({ default: m.PeopleScreen })))
+const PlatformPerson = lazy(() => import('../screens/platform').then((m) => ({ default: m.PersonDetail })))
 const PlatformSoon = lazy(() => import('../screens/platform').then((m) => ({ default: m.SoonScreen })))
 const PlatformFixture = lazy(() => import('../dev/platformFixtures').then((m) => ({ default: m.PlatformFixture })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
@@ -100,6 +103,7 @@ const tournamentChildren = [
               { path: 'calcutta', element: <Lazy><AdminAuction /></Lazy> },
               { path: 'parejas', element: <Lazy><AdminDraw /></Lazy> },
               { path: 'equipos', element: <Lazy><AdminTeams /></Lazy> },
+              { path: 'historial', element: <Lazy><AdminHistory /></Lazy> },
               { path: 'datos', element: <Lazy><AdminData /></Lazy> },
             ],
           },
@@ -115,7 +119,11 @@ const platformChildren = [
     element: <Lazy><PlatformTournaments /></Lazy>,
     children: [{ path: ':id', element: <Lazy><PlatformTournament /></Lazy> }],
   },
-  { path: 'personas', element: <Lazy><PlatformSoon title={P.people} /></Lazy> },
+  {
+    path: 'personas',
+    element: <Lazy><PlatformPeople /></Lazy>,
+    children: [{ path: ':id', element: <Lazy><PlatformPerson /></Lazy> }],
+  },
   { path: 'campos', element: <Lazy><PlatformSoon title={P.courses} /></Lazy> },
   { path: 'crews', element: <Lazy><PlatformSoon title={P.crews} /></Lazy> },
   { path: 'avisos', element: <Lazy><PlatformSoon title={P.notices} /></Lazy> },

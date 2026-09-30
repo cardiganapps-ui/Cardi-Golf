@@ -7,10 +7,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { ErrorBox, Spinner, toast } from '../../components/ui'
+import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { Field, Input } from '../../components/primitives'
 import { IconChevronLeft, IconLock, IconShield } from '../../components/icons'
 import { ReasonSheet } from '../../components/ReasonSheet'
-import { usePlatformApi, type PlatformTournament } from '../../data/platform'
+import { usePlatformApi, type PersonRow, type PlatformTournament } from '../../data/platform'
+import { personName } from './names'
 import { relTime } from '../../lib/relTime'
 import { TournamentChips, type TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
@@ -24,7 +26,8 @@ export function TournamentDetail() {
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
   const [data, setData] = useState<PlatformTournament | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
-  const [sheet, setSheet] = useState<'unlock' | 'unprotect' | null>(null)
+  const [sheet, setSheet] = useState<'unlock' | 'unprotect' | 'organizer' | null>(null)
+  const [removing, setRemoving] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
@@ -132,6 +135,9 @@ export function TournamentDetail() {
       <section className={s.section}>
         <div className={s.sectionHead}>
           <strong>{P.comite}</strong>
+          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setSheet('organizer')}>
+            {P.addOrganizer}
+          </button>
         </div>
         {d.organizers.length === 0 ? (
           <p className={s.help}>{P.noComite}</p>
@@ -139,11 +145,15 @@ export function TournamentDetail() {
           <div className={s.rows}>
             {d.organizers.map((o) => (
               <div key={o.userId} className={s.row}>
-                <span className={s.rowText}>
-                  <span className={s.rowTitle}>{o.name}</span>
-                  <span className={s.rowSub}>{o.email}</span>
-                </span>
-                <span className={s.rowEnd}>{o.role === 'owner' ? P.roleOwner : P.roleAdmin}</span>
+                <Link className={s.rowLink} to={`../../personas/${o.userId}`} relative="path">
+                  <span className={s.rowText}>
+                    <span className={s.rowTitle}>{o.name}</span>
+                    <span className={s.rowSub}>{[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(' · ')}</span>
+                  </span>
+                </Link>
+                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setRemoving(o.userId)}>
+                  {P.removeOrganizer}
+                </button>
               </div>
             ))}
           </div>
@@ -196,6 +206,27 @@ export function TournamentDetail() {
       </section>
 
       <ReasonSheet
+        open={!!removing}
+        title={P.removeOrganizer}
+        body={d.organizers.find((o) => o.userId === removing)?.email ?? undefined}
+        confirmLabel={P.removeOrganizer}
+        danger
+        onClose={() => setRemoving(null)}
+        onConfirm={async (reason) => {
+          if (!removing) return
+          await api.setOrganizer(d.id, removing, null, reason)
+          await changed()
+        }}
+      />
+      <AddOrganizerSheet
+        open={sheet === 'organizer'}
+        onClose={() => setSheet(null)}
+        onPick={async (userId, reason) => {
+          await api.setOrganizer(d.id, userId, 'owner', reason)
+          await changed()
+        }}
+      />
+      <ReasonSheet
         open={sheet === 'unlock'}
         title={P.unlockTitle}
         body={P.unlockBody}
@@ -219,5 +250,70 @@ export function TournamentDetail() {
         }}
       />
     </div>
+  )
+}
+
+/** Search an account, say why, make it the tournament's owner. Accounts only: a phone cannot run a Comité. */
+function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (userId: string, reason: string) => Promise<void> }) {
+  const api = usePlatformApi()
+  const [q, setQ] = useState('')
+  const [rows, setRows] = useState<PersonRow[]>([])
+  const [picked, setPicked] = useState<PersonRow | null>(null)
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!open) return
+    setQ('')
+    setRows([])
+    setPicked(null)
+    setReason('')
+    setError(null)
+  }, [open])
+  useEffect(() => {
+    if (!open || q.trim().length < 2) return
+    const id = window.setTimeout(() => {
+      api.people({ q, filter: 'accounts', limit: 8 }).then((r) => setRows(r.rows), () => setRows([]))
+    }, 250)
+    return () => window.clearTimeout(id)
+  }, [open, q, api])
+
+  async function go() {
+    if (!picked) return
+    setBusy(true)
+    setError(null)
+    try {
+      await onPick(picked.id, reason.trim())
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title={P.addOrganizerTitle}>
+      <div className={s.section}>
+        <p className={s.help}>{P.addOrganizerBody}</p>
+        <Input type="search" value={q} placeholder={P.people.search} aria-label={P.people.search} onChange={(e) => setQ(e.target.value)} />
+        <div className={s.rows} role="listbox" aria-label={P.addOrganizerPick}>
+          {(q.trim().length < 2 ? [] : rows).map((r) => (
+            <button key={r.id} type="button" role="option" aria-selected={picked?.id === r.id} className={`${s.row} ${s.rowPick} ${picked?.id === r.id ? s.rowActive : ''}`} onClick={() => setPicked(r)}>
+              <span className={s.rowText}>
+                <span className={s.rowTitle}>{personName(r)}</span>
+                <span className={s.rowSub}>{r.email}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <Field label={P.reason} error={error}>
+          <Input value={reason} maxLength={200} placeholder={P.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+        <button className="btn btn--primary btn--block" type="button" disabled={busy || !picked || reason.trim().length < 3} onClick={() => void go()}>
+          {busy ? t.common.saving : P.addOrganizer}
+        </button>
+      </div>
+    </Sheet>
   )
 }
