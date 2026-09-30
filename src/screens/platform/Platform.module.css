@@ -1,0 +1,343 @@
+/* The Admin de Polo panel. Tokens only; rows compose the shared primitives. */
+
+/* ---- Frame: the Comité layout, plus group labels in the side column ---- */
+.groupLabel {
+  display: none;
+}
+.navSoon {
+  color: var(--ink-3);
+}
+@media (min-width: 760px) {
+  .groupLabel {
+    display: block;
+    padding: var(--s4) 0 var(--s1);
+    color: var(--ink-3);
+    font-size: var(--fs-2xs);
+    font-weight: 600;
+    letter-spacing: var(--track-caps);
+    text-transform: uppercase;
+  }
+  .groupLabel:first-child {
+    padding-top: 0;
+  }
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+  min-width: 0;
+}
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s2) var(--s3);
+  padding-bottom: var(--s1);
+  border-bottom: var(--rule-heavy);
+}
+.help {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+}
+
+/* ---- KPI tiles ---- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s3);
+}
+@media (min-width: 1024px) {
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+  padding: var(--s3);
+  border: var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.kpiLabel {
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+.kpiValue {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+/* A tile is narrow on a phone: two lines, then clipped. */
+.kpiSub {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* ---- Bars: one series, one hue, rounded data-ends on the baseline ---- */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0;
+}
+.readout {
+  min-height: 1.4em;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.plot {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 140px;
+  border-bottom: var(--hairline);
+}
+.maxLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--rule);
+  pointer-events: none;
+}
+.maxLabel {
+  position: absolute;
+  top: -1.4em;
+  right: 0;
+  color: var(--ink-3);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+}
+/* The hit target is the whole column, far bigger than the bar. */
+.col {
+  flex: 1 1 0;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  padding: 0 1px;
+  outline-offset: -2px;
+  cursor: default;
+}
+.bar {
+  width: 100%;
+  min-height: 0;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  transition: opacity var(--dur-fast) var(--ease);
+}
+.plot:hover .bar,
+.plot:focus-within .bar {
+  opacity: 0.45;
+}
+.plot .colActive .bar {
+  opacity: 1;
+}
+.axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-3);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Lists ---- */
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--hairline);
+}
+.row {
+  composes: rowLine from '../../components/primitives.module.css';
+  color: inherit;
+  text-decoration: none;
+}
+a.row:active {
+  background: var(--surface);
+}
+.rowActive {
+  background: var(--surface);
+}
+.rowIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--ink-2);
+}
+.rowText {
+  composes: rowTextBlock from '../../components/primitives.module.css';
+}
+.rowTitle {
+  composes: rowTitleText from '../../components/primitives.module.css';
+  font-weight: 600;
+}
+.rowSub {
+  composes: rowSubText from '../../components/primitives.module.css';
+}
+.rowEnd {
+  composes: rowEndBlock from '../../components/primitives.module.css';
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+
+/* ---- Torneos: filters, and list | detail side by side on a laptop ---- */
+.filters {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.filters::-webkit-scrollbar {
+  display: none;
+}
+.filter {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: var(--hairline);
+  border-radius: var(--r-round);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.filter[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+  min-width: 0;
+}
+.listPane,
+.detailPane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+.placeholder {
+  display: none;
+}
+/* Phone: the detail replaces the list. */
+.split.hasDetail .listPane {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: var(--s8);
+    align-items: start;
+  }
+  .split.hasDetail .listPane {
+    display: flex;
+  }
+  .placeholder {
+    display: block;
+    padding: var(--s8) var(--s4);
+    border: 1px dashed var(--rule);
+    border-radius: var(--r-md);
+    color: var(--ink-3);
+    text-align: center;
+  }
+  .detailPane {
+    position: sticky;
+    top: var(--s4);
+  }
+  .backLink {
+    display: none;
+  }
+}
+
+/* ---- Detail ---- */
+.detailHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.detailHead h2 {
+  font-size: var(--fs-xl);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s2);
+}
+.count {
+  display: flex;
+  flex-direction: column;
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+}
+.countValue {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.countLabel {
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+.countHot {
+  color: var(--under);
+}
+.protect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.protectOn {
+  background: var(--caution-soft);
+}
+.protectHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+.backLink {
+  align-self: flex-start;
+}

@@ -5,10 +5,10 @@
  * review and screenshots.
  */
 import { useEffect, useMemo } from 'react'
-import { Link, Outlet, useParams } from 'react-router'
+import { Link, Outlet, useParams, useSearchParams } from 'react-router'
 import { useTournament } from '../data/tournamentStore'
 import { dataFromSnapshot } from '../data/tournamentStore'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
 import { FIXTURE_NAMES, getFixture } from './fixtures'
 
 const noop = async () => undefined
@@ -17,6 +17,7 @@ export function FixtureGate() {
   const { name = '' } = useParams()
   const fixture = useMemo(() => getFixture(name), [name])
   const tournamentId = useTournament((s) => s.tournamentId)
+  const as = useSearchParams()[0].get('as')
 
   useEffect(() => {
     if (!fixture) return
@@ -26,8 +27,15 @@ export function FixtureGate() {
 
   if (!fixture) return <FixtureIndex />
   if (tournamentId !== `fixture:${fixture.name}`) return null
+  // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
+  const me: Me =
+    as === 'platform'
+      ? { playerId: null, isOrganizer: true, isAdmin: true, via: 'platform', protected: false }
+      : as === 'platform-locked'
+        ? { playerId: null, isOrganizer: false, isAdmin: false, via: 'platform', protected: true }
+        : fixture.me
   return (
-    <TournamentContext.Provider value={{ tournamentId: fixture.snapshot.tournament.id, slug: `_/${fixture.name}`, lookup: fixture.lookup, me: fixture.me, refresh: noop, leave: noop }}>
+    <TournamentContext.Provider value={{ tournamentId: fixture.snapshot.tournament.id, slug: `_/${fixture.name}`, lookup: fixture.lookup, me, refresh: noop, leave: noop }}>
       <Outlet />
     </TournamentContext.Provider>
   )

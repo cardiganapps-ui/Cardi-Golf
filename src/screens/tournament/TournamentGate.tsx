@@ -23,8 +23,16 @@ export interface Me {
   isOrganizer: boolean
   /** Organizer account or admin player: may use the Comité console. */
   isAdmin: boolean
-  /** How this session is the player: its profile's confirmed link, or this device's PIN. */
-  via?: 'profile' | 'device' | null
+  /**
+   * How this session is in the tournament: its profile's confirmed link, this
+   * device's PIN, or 'platform' — the Polo admin visiting a tournament he does
+   * not belong to (read always; Comité unless it is Protegido and locked).
+   */
+  via?: 'profile' | 'device' | 'platform' | null
+  /** Protegido: nobody deletes it; the platform admin needs an unlock to write. */
+  protected?: boolean
+  /** Platform visits: until when the admin's unlock lasts (ISO), if unlocked. */
+  unlockedUntil?: string | null
 }
 
 export interface TournamentCtx {
@@ -81,12 +89,24 @@ export function TournamentGate() {
         return
       }
       const m = await myMembership(lookup.id)
-      if (m.isOrganizer || m.playerId) {
-        const me: Me = { playerId: m.playerId, isOrganizer: m.isOrganizer, isAdmin: m.isAdmin, via: m.via }
+      const platform = m.via === 'platform'
+      if (m.isOrganizer || m.playerId || platform) {
+        const me: Me = {
+          playerId: m.playerId,
+          isOrganizer: m.isOrganizer,
+          isAdmin: m.isAdmin,
+          via: m.via,
+          protected: !!m.protected,
+          unlockedUntil: m.unlockedUntil ?? null,
+        }
         fromCache.current = false
         setPhase({ kind: 'in', lookup, me })
-        setLastTournament({ slug: lookup.slug, name: lookup.name })
-        void saveEntry({ slug, tournamentId: lookup.id, lookup, me })
+        // A platform visit is not "my tournament": it is not where home
+        // returns to, and it is not kept on the device for offline use.
+        if (!platform) {
+          setLastTournament({ slug: lookup.slug, name: lookup.name })
+          void saveEntry({ slug, tournamentId: lookup.id, lookup, me })
+        }
         await load(lookup.id)
         refreshOutboxCounters()
         // The lookup worked but the snapshot did not: still better to show what we have.

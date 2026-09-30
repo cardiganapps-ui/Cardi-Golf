@@ -6,6 +6,7 @@ import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
 import { RouteError } from './RouteError'
+import { PlatformGate } from '../screens/platform/PlatformGate'
 import { OrganizerLoginScreen } from '../screens/organizer/OrganizerLoginScreen'
 import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
 import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
@@ -57,6 +58,12 @@ const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then(
 /** `npm run dev`, or a build with VITE_DESIGN_ROUTES=1 (Vercel Preview, design-shots). */
 const DESIGN_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES === '1'
 const DesignScreen = lazy(() => import('../design/DesignScreen').then((m) => ({ default: m.DesignScreen })))
+const PlatformLayout = lazy(() => import('../screens/platform').then((m) => ({ default: m.PlatformLayout })))
+const PlatformOverview = lazy(() => import('../screens/platform').then((m) => ({ default: m.OverviewScreen })))
+const PlatformTournaments = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentsScreen })))
+const PlatformTournament = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentDetail })))
+const PlatformSoon = lazy(() => import('../screens/platform').then((m) => ({ default: m.SoonScreen })))
+const PlatformFixture = lazy(() => import('../dev/platformFixtures').then((m) => ({ default: m.PlatformFixture })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 const AdminTeams = lazy(() => import('../screens/admin/AdminTeams').then((m) => ({ default: m.AdminTeams })))
 
@@ -98,6 +105,24 @@ const tournamentChildren = [
           },
 ]
 
+/** The Admin de Polo panel's sections; shared by the real gate and the fixture. */
+const P = t.platform.sections
+const platformChildren = [
+  { index: true, element: <Navigate to="resumen" replace /> },
+  { path: 'resumen', element: <Lazy><PlatformOverview /></Lazy> },
+  {
+    path: 'torneos',
+    element: <Lazy><PlatformTournaments /></Lazy>,
+    children: [{ path: ':id', element: <Lazy><PlatformTournament /></Lazy> }],
+  },
+  { path: 'personas', element: <Lazy><PlatformSoon title={P.people} /></Lazy> },
+  { path: 'campos', element: <Lazy><PlatformSoon title={P.courses} /></Lazy> },
+  { path: 'crews', element: <Lazy><PlatformSoon title={P.crews} /></Lazy> },
+  { path: 'avisos', element: <Lazy><PlatformSoon title={P.notices} /></Lazy> },
+  { path: 'auditoria', element: <Lazy><PlatformSoon title={P.audit} /></Lazy> },
+  { path: 'salud', element: <Lazy><PlatformSoon title={P.health} /></Lazy> },
+]
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -134,8 +159,11 @@ export const router = createBrowserRouter([
             { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
             { path: 'ronda/_', element: <Lazy><QuickFixture /></Lazy> },
             { path: 'c/_', element: <Lazy><CrewFixture /></Lazy> },
+            { path: 'admin/_', element: <Lazy><PlatformFixture /></Lazy>, children: platformChildren },
           ]
         : []),
+      // The Admin de Polo panel: only the platform admin gets past the gate.
+      { path: 'admin', element: <PlatformGate />, children: [{ element: <Lazy><PlatformLayout /></Lazy>, children: platformChildren }] },
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
       { path: 'p/:handle', element: <ProfileScreen /> },
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },

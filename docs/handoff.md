@@ -61,6 +61,13 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 
 - [ ] **Abrir Polo en tu iPhone.** Si aparece «Nueva versión», acéptala. Si la pantalla se queda en blanco o dice «Cargando…» más de 10 segundos, toca **«Reiniciar la app»**: borra la versión vieja guardada en el teléfono, pero **no tu sesión ni los hoyos sin enviar**. Qué pasaba: al abrir, la app esperaba a que Supabase confirmara tu sesión y, si el 4G se atoraba, esperaba para siempre con la pantalla en blanco. Ahora espera 8 segundos como máximo. Si no le contestan, te dice «Polo está tardando en conectar» y te da **Reintentar**. Y si algo truena, te dice «Algo falló» en lugar de quedarse en blanco.
 
+## Admin de Polo (2026-09-29)
+
+- [ ] **Entrar al admin.** En Mi Polo, arriba a la derecha, hay un **escudo** que solo ve tu cuenta. Te lleva a **Resumen**: cuentas, torneos, rondas, hoyos capturados y la actividad de los últimos 30 días (toca una barra para ver el día). En **Torneos** buscas cualquier torneo por nombre, código o correo del organizador y ves su Comité, sus rondas y sus últimos cambios.
+- [ ] **Probar «Comité en cualquier torneo».** Desde un torneo en el admin, «Abrir su Comité». Arriba verás el aviso verde **Admin de Polo**. Corrige un hoyo en el Ensayo: en «Últimos cambios» aparece marcado como Admin de Polo.
+- [ ] **Proteger el torneo de abril en cuanto exista.** Comité › Torneo › Zona de peligro › **Proteger** (o desde el admin). Protegido: nadie lo puede borrar, ni tú, y para corregir algo como admin lo desbloqueas 30 minutos con un motivo.
+- Personas, Campos, Crews, Avisos, Auditoría y Salud ya aparecen en el menú y llegan en las siguientes entregas.
+
 ## Revisión de experiencia (tus 15 puntos, 2026-09-29)
 
 - [ ] **Probar el alta de un torneo, que era el problema.** En https://golf.cardigan.mx entra con tu correo → «Nuevo torneo». Son **tres pasos**: nombre → «¿Qué van a jugar?» → una tarjeta de revisión antes de crearlo. Fíjate en: (1) ya no abre con cinco plantillas encima; arranca **en blanco**, sin juegos palomeados (las plantillas están detrás de «¿Prefieres empezar de una plantilla?»); (2) el formato ya es una pregunta real — Stableford, Golpes, Match play o Por equipos — cada uno con su «i» que explica cómo se juega; (3) el paso 2 cabe casi en una pantalla y dice con todas sus letras que hay más juegos para agregar después; (4) el paso 3 te dice qué vas a crear antes de crearlo. Si quieres probarlo sin crear nada de verdad, usa https://golf.cardigan.mx/organizer/nuevo/_ (solo en las versiones de prueba). Dime dónde todavía se siente de más.

@@ -7,6 +7,7 @@ import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../compo
 import { LiveStatus } from '../../components/primitives'
 import { useOnline } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
+import { PlatformBanner } from './PlatformBanner'
 
 /**
  * The tabs a tournament actually has. §9 promises the bar shows only the
@@ -59,6 +60,7 @@ export function TournamentShell() {
         {realtime === 'off' && !isFixture && data && <LiveStatus text={t.sync.fromCache(new Date(updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }))} live={false} />}
       </header>
       <div className={styles.body}>
+        {me.via === 'platform' && <PlatformBanner />}
         <Outlet />
       </div>
       <nav className={styles.tabbar} aria-label={t.common.sections}>
