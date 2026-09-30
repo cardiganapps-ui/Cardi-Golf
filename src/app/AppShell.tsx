@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { OfflineBanner } from '../components/OfflineBanner'
+import { MaintenanceBanner } from '../components/MaintenanceBanner'
 import { Toaster } from '../components/ui'
 import { useAuth } from '../data/auth'
 import { startOutbox } from '../data/outbox'
 import { useMyProfile } from '../data/profiles'
-import { usePlatform } from '../data/platform'
+import { useAppFlags, usePlatform } from '../data/platform'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -20,6 +21,7 @@ export function AppShell() {
   useEffect(() => {
     void init()
     void startOutbox()
+    void useAppFlags.getState().load()
   }, [init])
   // An account has a profile (created on first load); it follows the session.
   const accountId = useAuth((s) => (s.user && !s.isAnonymous ? s.user.id : null))
@@ -35,6 +37,7 @@ export function AppShell() {
   return (
     <div className={styles.shell}>
       <OfflineBanner />
+      <MaintenanceBanner />
       <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${tabbed ? styles.mainTabbed : ''}`}>
         <Outlet />
       </main>

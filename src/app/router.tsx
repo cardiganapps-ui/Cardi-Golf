@@ -69,7 +69,9 @@ const PlatformCourses = lazy(() => import('../screens/platform').then((m) => ({ 
 const PlatformCourse = lazy(() => import('../screens/platform').then((m) => ({ default: m.CourseDetail })))
 const PlatformCrews = lazy(() => import('../screens/platform').then((m) => ({ default: m.CatalogCrews })))
 const PlatformCrew = lazy(() => import('../screens/platform').then((m) => ({ default: m.CrewDetail })))
-const PlatformSoon = lazy(() => import('../screens/platform').then((m) => ({ default: m.SoonScreen })))
+const PlatformNotices = lazy(() => import('../screens/platform').then((m) => ({ default: m.NoticesScreen })))
+const PlatformAudit = lazy(() => import('../screens/platform').then((m) => ({ default: m.AuditScreen })))
+const PlatformHealth = lazy(() => import('../screens/platform').then((m) => ({ default: m.HealthScreen })))
 const PlatformFixture = lazy(() => import('../dev/platformFixtures').then((m) => ({ default: m.PlatformFixture })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 const AdminTeams = lazy(() => import('../screens/admin/AdminTeams').then((m) => ({ default: m.AdminTeams })))
@@ -114,7 +116,6 @@ const tournamentChildren = [
 ]
 
 /** The Admin de Polo panel's sections; shared by the real gate and the fixture. */
-const P = t.platform.sections
 const platformChildren = [
   { index: true, element: <Navigate to="resumen" replace /> },
   { path: 'resumen', element: <Lazy><PlatformOverview /></Lazy> },
@@ -138,9 +139,9 @@ const platformChildren = [
     element: <Lazy><PlatformCrews /></Lazy>,
     children: [{ path: ':id', element: <Lazy><PlatformCrew /></Lazy> }],
   },
-  { path: 'avisos', element: <Lazy><PlatformSoon title={P.notices} /></Lazy> },
-  { path: 'auditoria', element: <Lazy><PlatformSoon title={P.audit} /></Lazy> },
-  { path: 'salud', element: <Lazy><PlatformSoon title={P.health} /></Lazy> },
+  { path: 'avisos', element: <Lazy><PlatformNotices /></Lazy> },
+  { path: 'auditoria', element: <Lazy><PlatformAudit /></Lazy> },
+  { path: 'salud', element: <Lazy><PlatformHealth /></Lazy> },
 ]
 
 export const router = createBrowserRouter([

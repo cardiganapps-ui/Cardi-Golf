@@ -28,7 +28,7 @@ const all = files.map((f) => f.sql).join('\n')
 
 /** Internal: called only from other security definer functions. */
 const INTERNAL = new Set(['platform_can_write', 'platform_log', 'platform_person_target', 'platform_refresh_rounds_on'])
-const TABLES = ['platform_admins', 'platform_unlocks', 'platform_audit_log']
+const TABLES = ['platform_admins', 'platform_unlocks', 'platform_audit_log', 'platform_settings', 'backup_runs']
 
 /** name → latest `create or replace function` text, up to its closing $$; */
 function latestDefinitions(): Map<string, string> {

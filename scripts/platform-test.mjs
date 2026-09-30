@@ -33,6 +33,7 @@ const client = () => createClient(URL_, ANON, { auth: { persistSession: false, a
 const rand = Math.random().toString(36).slice(2, 8)
 const created = { users: [], tournaments: [], courses: [], crews: [] }
 let failures = 0
+let flagsTouched = false
 const check = (cond, label, detail) => {
   console.log(`${cond ? '  ✓' : '  ✗'} ${label}`)
   if (!cond) {
@@ -83,6 +84,12 @@ const PLATFORM_CALLS = (tid, uid) => [
   ['platform_crew', { p_crew_id: tid }],
   ['platform_crew_remove_member', { p_crew_id: tid, p_profile_id: uid, p_reason: 'prueba' }],
   ['platform_delete_crew', { p_crew_id: tid, p_confirm: 'x', p_reason: 'prueba' }],
+  ['platform_set_flag', { p_key: 'maintenance_banner', p_value: 'x', p_reason: 'prueba' }],
+  ['platform_audience', {}],
+  ['platform_broadcast', { p_title: 'x', p_body: 'y', p_to: uid }],
+  ['platform_audit', {}],
+  ['platform_audit_entry', { p_source: 'platform', p_id: 1 }],
+  ['platform_health', {}],
 ]
 const denied = (e) => !!e && (e.code === '42501' || /permission denied|Solo el admin/.test(e.message ?? ''))
 
@@ -331,11 +338,77 @@ try {
   check(!!wrongName && !delCrew, 'deleting a crew needs its exact name', { wrongName: wrongName?.message, delCrew: delCrew?.message })
   const catalogLog = await query(`select action from public.platform_audit_log where actor_auth_user_id = '${uuid(P.id)}' and target_kind in ('course', 'crew') order by at`)
   check(catalogLog.map((x) => x.action).join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete', 'every catalog action is in the platform log', catalogLog)
+
+  console.log('Switches (restored at the end, whatever happens):')
+  flagsTouched = true
+  const setFlag = (key, value) => P.sb.rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: 'Prueba automática' })
+  const { error: flagNoReason } = await P.sb.rpc('platform_set_flag', { p_key: 'new_tournaments_paused', p_value: true, p_reason: '' })
+  const { error: badKey } = await P.sb.rpc('platform_set_flag', { p_key: 'drop_everything', p_value: true, p_reason: 'Prueba' })
+  check(!!flagNoReason && !!badKey, 'a switch needs a reason and a known key')
+  await setFlag('new_tournaments_paused', true)
+  const { error: nPaused } = await N.sb.rpc('create_tournament', { p_name: `Plat paused ${rand}`, p_settings: settings })
+  const { data: pT, error: pPaused } = await P.sb.rpc('create_tournament', { p_name: `Plat admin ${rand}`, p_settings: settings })
+  if (pT) created.tournaments.push(pT.id)
+  await setFlag('new_tournaments_paused', false)
+  check(/no está creando torneos/.test(nPaused?.message ?? '') && !pPaused, 'pausing new tournaments stops everyone but the admin', { nPaused: nPaused?.message, pPaused: pPaused?.message })
+  await setFlag('new_accounts_paused', true)
+  const L = await account('l', 'Lalo Tarde')
+  const { error: lPaused } = await L.sb.rpc('ensure_my_profile')
+  await setFlag('new_accounts_paused', false)
+  const { error: lLater } = await L.sb.rpc('ensure_my_profile')
+  check(/no está aceptando cuentas/.test(lPaused?.message ?? '') && !lLater, 'pausing new accounts stops a new profile, and lifting it lets it through', { lPaused: lPaused?.message, lLater: lLater?.message })
+  await setFlag('maintenance_banner', 'Prueba de mantenimiento')
+  const { data: anonFlags } = await client().rpc('app_flags')
+  await setFlag('maintenance_banner', null)
+  const { data: clearFlags } = await client().rpc('app_flags')
+  check(anonFlags?.maintenanceBanner === 'Prueba de mantenimiento' && clearFlags?.maintenanceBanner === null, 'the banner reaches even a phone with no session, and clears', { anonFlags, clearFlags })
+  flagsTouched = false
+
+  console.log('Avisos (never to everyone for real):')
+  const { error: longTitle } = await P.sb.rpc('platform_broadcast', { p_title: 'x'.repeat(61), p_body: 'y', p_to: U.id })
+  const { error: offsite } = await P.sb.rpc('platform_broadcast', { p_title: 'Hola', p_body: 'y', p_to: U.id, p_url: 'https://example.com' })
+  check(!!longTitle && !!offsite, 'a notice has a short title and links only inside Polo')
+  const { data: sent, error: sendErr } = await P.sb.rpc('platform_broadcast', { p_title: 'Prueba', p_body: 'Esto es una prueba', p_to: U.id, p_url: '/crews' })
+  const { data: inbox } = await U.sb.rpc('my_notifications')
+  const got = (inbox ?? []).find((n) => n.kind === 'platform_notice')
+  check(!sendErr && sent === 1 && got?.data?.title === 'Prueba' && got.data.url === '/crews', 'a notice to one person lands in their inbox', { sendErr: sendErr?.message, sent, got })
+  const { data: audience } = await P.sb.rpc('platform_audience')
+  check(audience?.profiles >= 3 && audience.recent.some((r) => r.title === 'Prueba' && r.to === U.id), 'platform_audience counts who a notice reaches and lists recent ones')
+  // The daily limit, checked inside a transaction that rolls back: even if it failed, nothing would be sent.
+  let limitErr = ''
+  try {
+    await query(`begin;
+      insert into public.platform_audit_log (actor_auth_user_id, action, target_kind, payload) values ('${uuid(P.id)}', 'broadcast', 'notice', '{"to":null}'), ('${uuid(P.id)}', 'broadcast', 'notice', '{"to":null}');
+      set local role authenticated;
+      select set_config('request.jwt.claims', '{"sub":"${uuid(P.id)}","role":"authenticated"}', true);
+      select public.platform_broadcast('Prueba', 'Nunca debe salir', null, null);
+      rollback;`)
+  } catch (e) {
+    limitErr = String(e.message)
+  }
+  await query('rollback').catch(() => {})
+  check(/dos avisos a todos/.test(limitErr), 'a third notice to everyone in a day is refused', limitErr.slice(0, 200))
+
+  console.log('Auditoría and Salud:')
+  const { data: feed } = await P.sb.rpc('platform_audit', { p_limit: 200 })
+  const flagRow = (feed ?? []).find((x) => x.source === 'platform' && x.action === 'set_flag')
+  const comiteRow = (feed ?? []).find((x) => x.source === 'comite' && x.tournamentId === T.id)
+  check(!!flagRow && !!comiteRow, 'the audit feed has his platform actions and his changes inside tournaments', { n: feed?.length })
+  const { data: onlyComite } = await P.sb.rpc('platform_audit', { p_source: 'comite', p_q: T.name ?? `Plat ${rand}` })
+  check((onlyComite ?? []).length > 0 && onlyComite.every((x) => x.source === 'comite'), 'filters by source and search')
+  const { data: entry } = await P.sb.rpc('platform_audit_entry', { p_source: 'comite', p_id: comiteRow?.id })
+  check(!!entry && ('after' in entry || 'before' in entry) && !JSON.stringify(entry).includes('pin_hash'), 'an entry opens in full, nothing secret in it')
+  const { data: run } = await service.from('backup_runs').insert({ ok: true, key: `backups/test-${rand}.json.gz`, bytes: 1234, tables: 3, rows: 99 }).select('id').single()
+  const { data: health, error: healthErr } = await P.sb.rpc('platform_health')
+  await service.from('backup_runs').delete().eq('id', run.id)
+  check(!healthErr && health.backup.last?.key === `backups/test-${rand}.json.gz` && health.push.configured === true && /^002[4-9]/.test(health.database.lastMigration?.name ?? '') && typeof health.people.blocked === 'number', 'platform_health: last backup (the cron can write it), push configured, last migration', healthErr?.message ?? health)
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {
   console.log('cleaning up…')
+  // Never leave a switch on in production.
+  if (flagsTouched) await query(`delete from public.platform_settings where key in ('new_accounts_paused', 'new_tournaments_paused', 'maintenance_banner') and updated_by in (select auth_user_id from public.platform_admins where note = 'platform-test')`)
   for (const id of created.tournaments) {
     await query(`begin; select set_config('cardi.protect', '1', true); update public.tournaments set is_protected = false where id = '${uuid(id)}'; commit;`)
     await service.from('tournaments').delete().eq('id', id)

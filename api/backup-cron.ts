@@ -4,6 +4,7 @@
  * every public table with the service-role key and writes one gzipped JSON
  * snapshot to R2 at backups/YYYY-MM-DD.json.gz. This is the only code allowed
  * to use SUPABASE_SECRET_KEY, and it never returns row data — only counts.
+ * Every run, good or bad, is recorded in backup_runs for Admin › Salud.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { gzipSync } from 'node:zlib'
@@ -26,6 +27,19 @@ async function readTable(url: string, key: string, table: string, order: string)
     const page = (await r.json()) as Row[]
     rows.push(...page)
     if (page.length < PAGE) return rows
+  }
+}
+
+/** Tell Admin › Salud how this run went. Never fails the backup. */
+async function record(url: string, key: string, run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string }) {
+  try {
+    await fetch(`${url}/rest/v1/backup_runs`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(run),
+    })
+  } catch {
+    // The backup itself is what matters; the record is a courtesy.
   }
 }
 
@@ -53,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       counts[table] = tables[table].length
     }
   } catch (e) {
+    await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: false, error: `read: ${(e as Error).message}`.slice(0, 500) })
     res.status(502).json({ error: 'read failed', detail: (e as Error).message })
     return
   }
@@ -65,9 +80,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body,
     headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
   })
+  const rows = Object.values(counts).reduce((a, b) => a + b, 0)
   if (!put.ok) {
+    await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: false, key, error: `upload: HTTP ${put.status}` })
     res.status(502).json({ error: 'upload failed', status: put.status })
     return
   }
+  await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: true, key, bytes: body.length, tables: Object.keys(counts).length, rows })
   res.status(200).json({ ok: true, key, bytes: body.length, counts })
 }
