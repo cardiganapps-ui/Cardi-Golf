@@ -1,0 +1,10 @@
+import { chromium } from 'playwright-core'
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
+const ctx = await b.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: 'block' })
+const p = await ctx.newPage()
+await p.goto('http://127.0.0.1:4173/t/_/longnames/tarjeta', { waitUntil: 'domcontentloaded' })
+await p.waitForTimeout(1200)
+await p.getByRole('button', { name: 'Ver tarjeta', exact: true }).click()
+await p.waitForTimeout(500)
+console.log(JSON.stringify(await p.evaluate(() => [...document.querySelectorAll('thead th')].map(th => { const r = document.createRange(); r.selectNodeContents(th); const lines = [...r.getClientRects()].length; const cs = getComputedStyle(th); return { text: th.textContent, w: Math.round(th.getBoundingClientRect().width), lines, wordBreak: cs.wordBreak, overflowWrap: cs.overflowWrap, hyphens: cs.hyphens } }))))
+await b.close()

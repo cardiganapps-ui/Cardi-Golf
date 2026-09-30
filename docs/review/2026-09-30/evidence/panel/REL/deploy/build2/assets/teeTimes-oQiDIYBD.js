@@ -1,0 +1,1 @@
+function u(i,s,o=10){const t=/^(\d{1,2}):(\d{2})/.exec(i||""),r=t?Number(t[1]):9,e=t?Number(t[2]):0,m=(Number.isFinite(r)?r:9)*60+(Number.isFinite(e)?e:0);return Array.from({length:s},(c,a)=>{const n=(m+a*o)%1440;return`${String(Math.floor(n/60)).padStart(2,"0")}:${String(n%60).padStart(2,"0")}`})}export{u as w};

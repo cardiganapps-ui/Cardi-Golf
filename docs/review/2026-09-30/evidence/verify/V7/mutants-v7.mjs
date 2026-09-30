@@ -1,0 +1,35 @@
+export const MUTANTS = {
+  // Positive control: must be KILLED (the only buyback tests use 50%, so ignoring buybacks entirely is caught).
+  V00: { what: 'CONTROL: buybacks ignored entirely', file: 'src/engine/modules/auction/index.ts',
+    find: 'Math.min(buyback?.pct ?? 0, settings.auction.buybackMaxPct)', replace: '0' },
+  // QA-03 (Calcutta buybacks)
+  V10: { what: 'buyback shares swapped: owner keeps pct, player gets 100 - pct', file: 'src/engine/modules/auction/index.ts',
+    find: 'owners.push({ ownerId, pct: 100 - buybackPct, paid: price - buybackAmount })\n        owners.push({ ownerId: lot.playerId, pct: buybackPct, paid: buybackAmount })',
+    replace: 'owners.push({ ownerId, pct: buybackPct, paid: buybackAmount })\n        owners.push({ ownerId: lot.playerId, pct: 100 - buybackPct, paid: price - buybackAmount })' },
+  V11: { what: 'buyback pct no longer clamped to settings.auction.buybackMaxPct', file: 'src/engine/modules/auction/index.ts',
+    find: 'Math.min(buyback?.pct ?? 0, settings.auction.buybackMaxPct)', replace: '(buyback?.pct ?? 0)' },
+  V12: { what: 'buyback amount is always half the hammer price, whatever the pct', file: 'src/engine/modules/auction/index.ts',
+    find: 'const buybackAmount = Math.round((price * buybackPct) / 100)', replace: 'const buybackAmount = buybackPct > 0 ? Math.round(price / 2) : 0' },
+  // QA-06 (outbox)
+  V19: { what: 'no automatic retry after a network error (backoff timer never armed)', file: 'src/data/outbox.ts',
+    find: '          schedule(Math.min(30000, 1000 * 2 ** Math.min(next.attempts, 5)))\n', replace: '\n' },
+  V20: { what: 'enqueue keeps the older write for the same hole next to the new one', file: 'src/data/outbox.ts',
+    find: 'queue = [...queue.filter((x) => x.key !== item.key), item]', replace: 'queue = [...queue, item]' },
+  V18: { what: 'CONTROL: nothing is ever a permanent rejection (must be KILLED)', file: 'src/data/outbox.ts',
+    find: 'return /row-level security|violates|permission denied|invalid input/i.test(msg)', replace: 'return msg === "never"' },
+  V21: { what: 'overlay no longer replaces an existing server score with the pending one', file: 'src/data/outbox.ts',
+    find: 'if (i >= 0) s.scores[i] = row\n      else s.scores.push(row)', replace: 'if (i < 0) s.scores.push(row)' },
+  V22: { what: '"invalid input" errors retried forever instead of moved to rejected', file: 'src/data/outbox.ts',
+    find: '/row-level security|violates|permission denied|invalid input/i', replace: '/row-level security|violates|permission denied/i' },
+  // QA-07 (data layer)
+  V30: { what: 'paging stops after a full first page (regression of audit P0-12: 1,000-row cap)', file: 'src/data/paged.ts',
+    find: 'if (rows.length < PAGE) return out', replace: 'if (rows.length <= PAGE) return out' },
+  V31: { what: 'mapper drops the pick-up flag (every Levantó scores as a played hole)', file: 'src/data/mappers.ts',
+    find: 'pickedUp: !!r.picked_up,', replace: 'pickedUp: false,' },
+  V32: { what: 'mapper reads base_hcp as 0', file: 'src/data/mappers.ts',
+    find: 'baseHcp: Number(r.base_hcp ?? 0),', replace: 'baseHcp: 0,' },
+  V25: { what: 'queue not restored from IndexedDB on app start (a reload loses every unsent score)', file: 'src/data/outbox.ts',
+    find: "queue = d ? await d.items.orderBy('createdAt').toArray() : []", replace: 'queue = []' },
+  V26: { what: 'enqueue never persists the item to IndexedDB', file: 'src/data/outbox.ts',
+    find: '  if (d) await d.items.put(item)\n  // Optimistic', replace: '  void d\n  // Optimistic' },
+}

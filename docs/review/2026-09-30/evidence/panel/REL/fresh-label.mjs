@@ -1,0 +1,31 @@
+// Does a local (offline) save make a stale board read as fresh? Online load, offline for 150 s, then save a
+// hole offline and read the En vivo status line. The context is closed while offline: nothing is sent.
+import { launch, newPhone, E, sleep, bridgeRealtime } from './lib.mjs'
+const BASE = 'http://127.0.0.1:4185'
+const log = (...a) => console.log(new Date().toISOString().slice(11, 23), ...a)
+const b = await launch()
+const ctx = await newPhone(b, `${E}/state/nico-A.json`)
+await bridgeRealtime(ctx, { fixJoin: true })
+const page = await ctx.newPage()
+const status = async () => (await page.locator('main').first().innerText()).split('\n').filter((l) => /Actualizado|Sin señal|Día \d/.test(l)).slice(0, 3)
+await page.goto(`${BASE}/t/ensayo`, { waitUntil: 'domcontentloaded' })
+await page.waitForSelector('text=Individual', { timeout: 60000 })
+await sleep(2000)
+log('online:', JSON.stringify(await status()))
+await ctx.setOffline(true)
+await sleep(75000)
+log('offline 75 s:', JSON.stringify(await status()), 'header', JSON.stringify(await page.locator('header').first().innerText()))
+await page.getByRole('link', { name: 'Tarjeta', exact: true }).click()
+const save = page.getByRole('button', { name: /^Guardar (hoyo|y ver la tarjeta)$/ })
+await save.waitFor({ timeout: 30000 })
+await page.getByRole('button', { name: 'Ver hoyo' }).click().catch(() => undefined)
+await save.click()
+const sure = page.getByRole('button', { name: 'Sí, así fue' })
+if (await sure.count()) await sure.click().catch(() => undefined)
+await sleep(1000)
+await page.getByRole('link', { name: 'En vivo', exact: true }).click()
+await sleep(1500)
+log('after one offline save:', JSON.stringify(await status()), 'header', JSON.stringify(await page.locator('header').first().innerText()))
+await page.screenshot({ path: `${E}/shots/fresh-label-after-offline-save.png`, clip: { x: 0, y: 0, width: 393, height: 190 } })
+await ctx.close() // still offline: the queued hole is discarded with the context
+await b.close()

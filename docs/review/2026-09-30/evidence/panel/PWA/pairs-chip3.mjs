@@ -1,0 +1,10 @@
+import { launch } from './lib.mjs'
+const b = await launch()
+const ctx = await b.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
+const page = await ctx.newPage()
+await page.goto('http://127.0.0.1:4173/t/_/full12-live/juegos', { waitUntil: 'networkidle' })
+await page.waitForTimeout(1000)
+console.log((await page.locator('main').innerText()).replace(/\s+/g, ' ').slice(0, 400))
+const links = await page.locator('main a, main button').allInnerTexts()
+console.log('controls:', JSON.stringify(links.slice(0, 25)))
+await b.close()

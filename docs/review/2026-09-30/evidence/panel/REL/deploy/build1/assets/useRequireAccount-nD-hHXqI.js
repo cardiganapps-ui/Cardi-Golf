@@ -1,0 +1,1 @@
+import{u as a,b as c,r as f}from"./index-CioQoym2.js";function m(n,e=!1){const o=a(),{ready:t,user:u,isAnonymous:s}=c(),r=t&&!!u&&!s;return f.useEffect(()=>{e||!t||r||o(`/entrar?next=${encodeURIComponent(n)}`,{replace:!0})},[e,t,r,o,n]),e||r}export{m as u};

@@ -1,0 +1,22 @@
+import { chromium } from 'playwright-core'
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
+const ctx = await b.newContext({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true })
+const page = await ctx.newPage()
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('  [console.' + m.type() + ']', m.text().slice(0, 300)) })
+page.on('pageerror', (e) => console.log('  [pageerror]', e.message.slice(0, 300)))
+page.on('framenavigated', (f) => { if (f === page.mainFrame()) console.log('  [nav]', f.url()) })
+await page.goto('http://127.0.0.1:4208/t/_/full12-live/tarjeta', { waitUntil: 'networkidle' })
+await page.waitForTimeout(500)
+const cdp = await ctx.newCDPSession(page)
+const swipe = async (x0, x1, y = 400) => {
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] })
+  for (let i = 1; i <= 5; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + ((x1 - x0) * i) / 5, y }] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(800)
+}
+const snap = async (tag) => console.log(tag, page.url().replace('http://127.0.0.1:4208', ''), '| body:', (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').slice(0, 160))
+await snap('start')
+await swipe(330, 90); await snap('after swipe left')
+await swipe(90, 330); await snap('after swipe right')
+await page.screenshot({ path: 'swipe-after-right.png' })
+await b.close()

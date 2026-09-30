@@ -1,0 +1,16 @@
+import { chromium } from 'playwright-core'
+import { writeFileSync } from 'node:fs'
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
+const page = await (await browser.newContext({ viewport: { width: 393, height: 852 }, locale: 'es-MX' })).newPage()
+await page.goto('http://127.0.0.1:4173/t/_/full12-live', { waitUntil: 'networkidle' })
+await page.getByText('Leonel', { exact: true }).first().click()
+await page.waitForTimeout(700)
+const sheet = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')].map((d) => d.innerText).join('\n---\n'))
+await page.goto('http://127.0.0.1:4173/t/_/full12-live/tarjeta', { waitUntil: 'networkidle' })
+await page.getByText('Ver tarjeta').click()
+await page.waitForTimeout(700)
+const grid = await page.evaluate(() => document.querySelector('main')?.innerText ?? document.body.innerText)
+writeFileSync(new URL('./text/sheet-grid.txt', import.meta.url).pathname, `SHEET\n${sheet}\n\nGRID\n${grid}`)
+await browser.close()
+console.log('SHEET:', sheet.split('\n').filter((l) => l.trim()).slice(0, 40).join(' | '))
+console.log('GRID:', grid.split('\n').filter((l) => l.trim()).filter((l) => /[a-záéíóú]/i.test(l)).slice(0, 30).join(' | '))

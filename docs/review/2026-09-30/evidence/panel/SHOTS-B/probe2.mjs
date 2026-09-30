@@ -1,0 +1,11 @@
+import { launch, close, newPage, go } from './lib.mjs'
+await launch()
+const p = await newPage('laptop')
+await go(p, '/t/_/full12-finished/admin/scores')
+const txt = await p.evaluate(() => [...document.querySelectorAll('main section')][0]?.innerText)
+console.log(txt)
+const btn = await (await newPage('tv')).evaluate(() => 0)
+const q = await newPage('tv')
+await go(q, '/t/_/full12-finished/ceremonia')
+console.log(await q.evaluate(() => { const b = [...document.querySelectorAll('footer button')].map((b) => { const s = getComputedStyle(b); return `${b.innerText} disabled=${b.disabled} color=${s.color} bg=${s.backgroundColor} opacity=${s.opacity}` }); return b.join('\n') }))
+await close()

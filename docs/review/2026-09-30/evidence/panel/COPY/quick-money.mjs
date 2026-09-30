@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core'
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' })
+const page = await (await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, locale: 'es-MX' })).newPage()
+await page.goto('http://127.0.0.1:4173/ronda/_', { waitUntil: 'networkidle' })
+for (const g of ['Skins', 'Más cerca del hoyo', 'Tres putts']) await page.getByRole('button', { name: g }).or(page.getByRole('checkbox', { name: g })).or(page.getByText(g, { exact: true })).first().click().catch(() => {})
+await page.getByText('Con dinero', { exact: true }).click().catch(() => {})
+await page.waitForTimeout(400)
+const fee = page.getByLabel(/Entrada por jugador/)
+if (await fee.count()) { await fee.first().fill('500'); await fee.first().blur() }
+await page.waitForTimeout(400)
+const txt = await page.evaluate(() => document.querySelector('main')?.innerText ?? document.body.innerText)
+console.log(txt.split('\n').filter((l) => l.trim()).join(' | '))
+await page.getByText('Con dinero', { exact: true }).scrollIntoViewIfNeeded().catch(() => {})
+await page.screenshot({ path: '/home/user/Cardi-Golf/docs/review/2026-09-30/shots/ronda-quick-15pro-light-copy-money.png' })
+await browser.close()
