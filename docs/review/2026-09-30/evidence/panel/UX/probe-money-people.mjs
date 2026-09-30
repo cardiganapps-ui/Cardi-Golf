@@ -1,0 +1,15 @@
+import { launch, phone, BASE, sleep, shot } from './lib.mjs'
+const b = await launch()
+const ctx = await phone(b, { blockSupabase: true })
+const p = await ctx.newPage()
+await p.goto(`${BASE}/t/_/full12-finished/dinero`, { waitUntil: 'networkidle' })
+await sleep(600)
+await p.getByRole('radio').first().tap()
+await sleep(600)
+const txt = await p.evaluate(() => document.body.innerText)
+const lines = txt.split('\n')
+const k = lines.findIndex((l) => /Camilo/.test(l))
+console.log(lines.slice(Math.max(0, k - 2), k + 6).join(' | '))
+const row = p.getByRole('button', { name: /Camilo/ }).first()
+if (await row.count()) { await row.tap(); await sleep(700); console.log('--- Camilo sheet:\n' + (await p.getByRole('dialog').innerText().catch(() => 'no dialog'))); await shot(p, 't_dinero-full12-finished-15pro-light-ux-camilo.png') }
+await b.close()

@@ -1,0 +1,23 @@
+import { launch, ctx, BASE } from './lib.mjs'
+const b = await launch()
+const TRACE = (p, sel, ms) => p.evaluate(([sel, ms]) => new Promise((res) => { const tr = []; const t0 = performance.now(); const f = () => { const els = [...document.querySelectorAll(sel)]; tr.push([Math.round(performance.now() - t0), els.map((el) => { const cs = getComputedStyle(el); return Math.round(parseFloat(cs.opacity) * 100) / 100 + ' ' + (cs.transform === 'none' ? 'none' : cs.transform.replace(/matrix\(|\)/g, '').split(',').map((v) => Math.round(parseFloat(v) * 1000) / 1000).join(',')) }).join(' | ')]); if (performance.now() - t0 < ms) requestAnimationFrame(f); else res(tr) }; requestAnimationFrame(f) }), [sel, ms])
+const dedupe = (tr) => tr.filter((x, i) => i === 0 || x[1] !== tr[i - 1][1]).map((x) => `${x[0]}ms ${x[1]}`)
+for (const mode of ['no-preference', 'reduce']) {
+  const c = await ctx(b, 'tv', { reducedMotion: mode })
+  const p = await c.newPage()
+  await p.goto(BASE + '/t/_/full12-live/tv', { waitUntil: 'networkidle' })
+  await p.waitForTimeout(11000)
+  const tr = await TRACE(p, 'section', 1600)
+  console.log('TV', mode, dedupe(tr).slice(0, 40).join('\n   '))
+  await c.close()
+  const c2 = await ctx(b, '15pro', { reducedMotion: mode })
+  const p2 = await c2.newPage()
+  await p2.goto(BASE + '/t/_/full12-finished/tarjeta', { waitUntil: 'networkidle' })
+  await p2.waitForTimeout(900)
+  const btn = p2.getByRole('button', { name: /Ver tarjeta|Ver hoyo/ }).first()
+  const s = TRACE(p2, '[class*="stamp"]', 500)
+  if (/Ver tarjeta/.test(await btn.textContent())) await btn.click()
+  console.log('STAMP', mode, dedupe(await s).slice(0, 30).join('\n   '))
+  await c2.close()
+}
+await b.close()

@@ -1,0 +1,1 @@
+import{r as s,a1 as l}from"./index-REL2main.js";function i(){const[a,u]=s.useState([]),[n,r]=s.useState(!0),[c,o]=s.useState(null),e=s.useCallback(()=>{r(!0),o(null),l().then(u).catch(t=>o(t instanceof Error?t.message:String(t))).finally(()=>r(!1))},[]);return s.useEffect(()=>e(),[e]),{courses:a,loading:n,error:c,refresh:e}}export{i as u};

@@ -1,0 +1,12 @@
+import { open, BASE, settle } from './lib.mjs'
+const { browser, page } = await open('15pro')
+const textLeft = (sel) => page.evaluate((sel) => { const el = [...document.querySelectorAll(sel)].find(e => e.offsetParent); if (!el) return null; const r = document.createRange(); r.selectNodeContents(el); return Math.round(r.getBoundingClientRect().left) }, sel)
+await page.goto(BASE + '/', { waitUntil: 'networkidle' }); await settle(page)
+const home = await page.evaluate(() => { const out = {}; for (const el of document.querySelectorAll('h1,h2,p,button,a,span')) { const t = el.textContent.trim(); if (['Entrar a un torneo', 'Ya la tengo', 'Instala la app', 'Organizar un torneo'].includes(t)) { const r = document.createRange(); r.selectNodeContents(el); out[t] = Math.round(r.getBoundingClientRect().left) } } return out })
+console.log('home text left edges', JSON.stringify(home))
+await page.goto(BASE + '/t/_/full12-live/juegos', { waitUntil: 'networkidle' }); await settle(page)
+const ov = await page.evaluate(() => { const h = [...document.querySelectorAll('h1,h2')].find(e => e.offsetParent); const r = document.createRange(); r.selectNodeContents(h); return { t: h.textContent, left: Math.round(r.getBoundingClientRect().left) } })
+await page.getByRole('button', { name: /La Calcutta/ }).first().click(); await settle(page, 400)
+const dt = await page.evaluate(() => { const h = [...document.querySelectorAll('h1,h2')].find(e => e.offsetParent); const r = document.createRange(); r.selectNodeContents(h); const back = h.parentElement.querySelector('button,a'); const b = back ? back.querySelector('svg').getBoundingClientRect() : null; return { t: h.textContent, left: Math.round(r.getBoundingClientRect().left), backIconLeft: b && Math.round(b.left) } })
+console.log('juegos overview title', JSON.stringify(ov), 'detail title', JSON.stringify(dt))
+await browser.close()

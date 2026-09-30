@@ -1,0 +1,20 @@
+// Dev server: Comité › Calcutta with no lots yet (full12-live patched), tap 'Sacar del sombrero', sample the order rows per frame.
+import { launch, ctx } from './lib.mjs'
+const DEVBASE = process.env.DEVBASE || 'http://127.0.0.1:4196'
+const b = await launch()
+const c = await ctx(b, '15pro')
+const p = await c.newPage()
+await p.goto(DEVBASE + '/t/_/full12-live/admin/calcutta', { waitUntil: 'networkidle' })
+await p.waitForTimeout(2000)
+await p.evaluate(async () => { const m = await import('/src/data/tournamentStore.ts'); window.__store = m.useTournament; window.__store.getState().patch((s) => { s.calcuttaLots = []; s.calcuttaBids = []; s.calcuttaBuybacks = [] }) })
+await p.waitForTimeout(800)
+const btn = p.getByRole('button', { name: 'Sortear el orden' })
+console.log('hat button visible', await btn.isVisible())
+await p.evaluate(() => { window.__h = []; const t0 = performance.now(); const f = () => { const rows = [...document.querySelectorAll('ol li')]; window.__h.push([Math.round(performance.now() - t0), rows.map((r) => r.textContent.replace(/\d+/, '').slice(0, 10)).join('|'), rows.map((r) => getComputedStyle(r).transform).filter((x) => x !== 'none').length]); if (performance.now() - t0 < 800) requestAnimationFrame(f) }; requestAnimationFrame(f) })
+await btn.click()
+await p.waitForTimeout(900)
+const h = await p.evaluate(() => window.__h)
+const changes = h.filter((x, i) => i > 0 && x[1] !== h[i - 1][1])
+console.log('order changes at', changes.map((x) => x[0] + 'ms').join(', '), '| frames with any transform', h.filter((x) => x[2] > 0).length)
+await p.screenshot({ path: 'shots/hat-after.png' })
+await b.close()
