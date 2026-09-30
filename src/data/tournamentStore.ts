@@ -13,6 +13,7 @@ import type { Snapshot } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { saveSnapshot } from './snapshotCache'
+import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import {
   mapBid,
   mapBuyback,
@@ -104,33 +105,18 @@ export function dataFromSnapshot(snapshot: Snapshot): TournamentData {
   return compute(snapshot)
 }
 
-/** Primary keys of the tables without an `id` column (paging order). */
-const PK: Record<string, string[]> = {
-  group_members: ['group_id', 'player_id'],
-  round_tees: ['round_id', 'player_id'],
-  snake_tiebreaks: ['round_id', 'group_id', 'hole'],
-  card_signatures: ['round_id', 'pair_id'],
-  handicap_overrides: ['round_id', 'player_id'],
-  calcutta_buybacks: ['lot_id'],
-  game_entries: ['game_id', 'player_id'],
-  game_results: ['game_id', 'player_id'],
-  hole_awards: ['round_id', 'game_id', 'hole', 'player_id'],
-  holes: ['tee_id', 'number'],
-}
-
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
-  const q = <T = Row>(table: string, col = 'tournament_id') => fetchAll<T>((from, to) => sb.from(table).select('*').eq(col, tournamentId).order('id').range(from, to))
-
   // Paged (PostgREST caps a response at 1,000 rows), ordered by each table's primary key so pages never overlap.
-  const inList = <T = Row>(table: string, col: string, ids: string[]) =>
+  const inList = <T = Row>(table: SnapshotTable, col: string, ids: string[]) =>
     ids.length
       ? fetchAll<T>((from, to) => {
           let qb = sb.from(table).select('*').in(col, ids)
-          for (const c of PK[table] ?? ['id']) qb = qb.order(c)
+          for (const c of SNAPSHOT_KEYS[table]) qb = qb.order(c)
           return qb.range(from, to)
         })
       : Promise.resolve([] as T[])
+  const q = <T = Row>(table: SnapshotTable) => inList<T>(table, 'tournament_id', [tournamentId])
 
   const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults] = await Promise.all([
     sb.from('tournaments').select('*').eq('id', tournamentId).single(),
