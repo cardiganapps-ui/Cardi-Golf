@@ -71,7 +71,7 @@ export function MoreScreen() {
         {player ? <Avatar name={player.displayName} url={player.avatarUrl} honoree={player.isHonoree} /> : <Avatar name={user?.email ?? 'O'} />}
         <div className={styles.meText}>
           <span className="label">{t.more.whoAmI}</span>
-          <span className={styles.meName}>{player?.fullName ?? (me.isOrganizer ? `${t.more.organizer}, ${user?.email ?? ''}` : '')}</span>
+          <span className={styles.meName}>{player?.fullName ?? (me.via === 'platform' ? t.platform.title : me.isOrganizer ? `${t.more.organizer}, ${user?.email ?? ''}` : '')}</span>
         </div>
       </div>
 

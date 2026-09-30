@@ -54,6 +54,11 @@ export async function deleteTournament(id: string) {
   unwrap(await supabase().from('tournaments').delete().eq('id', id).select('id'))
 }
 
+/** Protegido on or off: the owner or the platform admin. Off needs a reason. */
+export async function setTournamentProtected(id: string, on: boolean, reason?: string) {
+  await rpc('set_tournament_protected', { p_tournament_id: id, p_on: on, p_reason: reason ?? null })
+}
+
 export interface MyTournament {
   id: string
   slug: string
@@ -65,8 +70,13 @@ export interface MyTournament {
 }
 
 export async function listMyTournaments(): Promise<MyTournament[]> {
+  // Filter by account, never by what RLS happens to show: the platform admin
+  // reads every tournament's Comité, and those are not his tournaments.
+  const sb = supabase()
+  const uid = (await sb.auth.getSession()).data.session?.user.id
+  if (!uid) return []
   const rows = unwrap(
-    await supabase().from('tournament_organizers').select('role, tournaments(id, slug, name, status, join_code, logo_url, created_at)'),
+    await sb.from('tournament_organizers').select('role, tournaments(id, slug, name, status, join_code, logo_url, created_at)').eq('auth_user_id', uid),
   ) as Row[]
   return rows
     .filter((r) => r.tournaments)
@@ -132,10 +142,15 @@ export async function releaseDevice() {
 /** Who this session is in a tournament: its player (profile link or device PIN claim) and its Comité rights. */
 export interface Membership {
   playerId: string | null
-  role: 'owner' | 'admin' | 'member' | 'none'
+  role: 'owner' | 'admin' | 'member' | 'none' | 'platform'
   isOrganizer: boolean
   isAdmin: boolean
-  via: 'profile' | 'device' | null
+  /** 'platform': the Polo admin, visiting a tournament he does not belong to. */
+  via: 'profile' | 'device' | 'platform' | null
+  /** Protegido: nobody deletes it, and the platform admin needs an unlock to write. */
+  protected?: boolean
+  /** Platform visits only: until when this admin's unlock lasts. */
+  unlockedUntil?: string | null
 }
 
 export async function myMembership(tournamentId: string): Promise<Membership> {

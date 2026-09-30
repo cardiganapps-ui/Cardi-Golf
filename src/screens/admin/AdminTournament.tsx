@@ -15,7 +15,8 @@ import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
 import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deleteTournament, rotateJoinCode, updateTournament, uploadAsset } from '../../data/api'
+import { deleteTournament, rotateJoinCode, setTournamentProtected, updateTournament, uploadAsset } from '../../data/api'
+import { ReasonSheet } from '../../components/ReasonSheet'
 import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
@@ -37,7 +38,8 @@ const TABS: Array<{ id: Tab }> = [{ id: 'brand' }, { id: 'status' }, { id: 'rule
 const isSettingsTab = (x: Tab): x is SettingsSection => x === 'rules' || x === 'games' || x === 'money' || x === 'auction'
 
 export function AdminTournament() {
-  const { tournamentId, slug } = useTournamentCtx()
+  const { tournamentId, slug, me, refresh } = useTournamentCtx()
+  const [askUnprotect, setAskUnprotect] = useState(false)
   const data = useTournament((s) => s.data)
   const patch = useTournament((s) => s.patch)
   const navigate = useNavigate()
@@ -164,12 +166,26 @@ export function AdminTournament() {
     }
   }
 
+  async function protect() {
+    setQuick(true)
+    try {
+      await setTournamentProtected(tournamentId, true)
+      await refresh()
+      toast(t.common.saved)
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e))
+    } finally {
+      setQuick(false)
+    }
+  }
+
   async function destroy() {
     if (confirmName !== tr.name) return
     setBusy(true)
     try {
       await deleteTournament(tournamentId)
-      navigate('/organizer', { replace: true })
+      // The admin came from the panel; an organizer goes back to their list.
+      navigate(me.via === 'platform' ? '/admin/torneos' : '/organizer', { replace: true })
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
       setBusy(false)
@@ -325,15 +341,46 @@ export function AdminTournament() {
       )}
 
       {tab === 'danger' && (
-      <section className={a.danger}>
-        <span className={a.dangerTitle}>{A.danger}</span>
-        <p className={a.help}>{A.deleteConfirm(tr.name)}</p>
-        <input className="input" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
-        <button className="btn btn--danger" type="button" disabled={busy || confirmName !== tr.name} onClick={() => void destroy()}>
-          {A.deleteTournament}
-        </button>
-      </section>
+        <>
+          <section className={a.section}>
+            <div className={a.sectionTitle}>
+              <strong>{me.protected ? A.protectedTitle : A.unprotectedTitle}</strong>
+            </div>
+            <p className={a.help}>{me.protected ? A.protectedBody : A.unprotectedBody}</p>
+            {me.protected ? (
+              <button className="btn btn--secondary" type="button" onClick={() => setAskUnprotect(true)}>
+                {A.unprotect}
+              </button>
+            ) : (
+              <button className="btn btn--secondary" type="button" disabled={quick} onClick={() => void protect()}>
+                {A.protect}
+              </button>
+            )}
+          </section>
+          {!me.protected && (
+            <section className={a.danger}>
+              <span className={a.dangerTitle}>{A.danger}</span>
+              <p className={a.help}>{A.deleteConfirm(tr.name)}</p>
+              <input className="input" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
+              <button className="btn btn--danger" type="button" disabled={busy || confirmName !== tr.name} onClick={() => void destroy()}>
+                {A.deleteTournament}
+              </button>
+            </section>
+          )}
+        </>
       )}
+      <ReasonSheet
+        open={askUnprotect}
+        title={A.unprotect}
+        body={A.unprotectReason}
+        confirmLabel={A.unprotect}
+        danger
+        onClose={() => setAskUnprotect(false)}
+        onConfirm={async (reason) => {
+          await setTournamentProtected(tournamentId, false, reason)
+          await refresh()
+        }}
+      />
 
       <ConfirmSheet open={askCode} title={A.newCode} body={A.newCodeConfirm} busy={quick} onConfirm={() => void newCode()} onClose={() => setAskCode(false)} />
     </div>

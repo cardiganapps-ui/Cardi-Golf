@@ -201,6 +201,13 @@ export const IconLock = (p: P) => (
     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </Svg>
 )
+/** Admin de Polo: a shield with a check. */
+export const IconShield = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
+    <path d="M9 12l2 2 4-4" />
+  </Svg>
+)
 export const IconAlert = (p: P) => (
   <Svg {...p}>
     <path d="M12 4l9 16H3z" />

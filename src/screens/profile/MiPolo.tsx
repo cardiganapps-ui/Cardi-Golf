@@ -11,7 +11,8 @@ import { Wordmark } from '../../components/Wordmark'
 import { InstallGuide } from '../../components/InstallGuide'
 import { LegalLinks } from '../../components/LegalLinks'
 import { Avatar, ErrorBox, Spinner, toast } from '../../components/ui'
-import { IconBell, IconChevronRight, IconPeople, IconSettings } from '../../components/icons'
+import { IconBell, IconChevronRight, IconPeople, IconSettings, IconShield } from '../../components/icons'
+import { usePlatform } from '../../data/platform'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import { linkMyProfile, unlinkMyProfile, useMyProfile, type MyLink } from '../../data/profiles'
 import { friendsFeed, useUnread, type FeedItem } from '../../data/social'
@@ -109,6 +110,7 @@ export function MiPolo() {
   const [feed, setFeed] = useState<FeedItem[] | null>(null)
   const [crews, setCrews] = useState<MyCrew[] | null>(null)
   const unread = useUnread((s) => s.count)
+  const isPlatformAdmin = usePlatform((s) => s.isAdmin === true)
   const refreshUnread = useUnread((s) => s.refresh)
 
   useEffect(() => {
@@ -185,6 +187,11 @@ export function MiPolo() {
       <div className={styles.topBar}>
         <Wordmark />
         <span className={styles.topActions}>
+          {isPlatformAdmin && (
+            <Link to="/admin" className={styles.iconBtn} aria-label={t.platform.entry}>
+              <IconShield />
+            </Link>
+          )}
           <Link to="/avisos" className={styles.iconBtn} aria-label={unread > 0 ? `${S.inbox}: ${S.unread(unread)}` : S.inbox}>
             <IconBell />
             {unread > 0 && (

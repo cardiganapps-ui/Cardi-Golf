@@ -8,6 +8,7 @@ import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { EmptyState } from '../../components/primitives'
+import { PlatformBanner } from '../tournament/PlatformBanner'
 import styles from './AdminLayout.module.css'
 
 export function AdminLayout() {
@@ -16,6 +17,8 @@ export function AdminLayout() {
   if (!me.isAdmin) {
     return (
       <div className={styles.layout}>
+        {/* A Protegido tournament the platform admin has not unlocked: the banner is the way in. */}
+        {me.via === 'platform' && <PlatformBanner />}
         <EmptyState
           title={t.admin.title}
           body={t.errors.forbidden}
@@ -60,6 +63,7 @@ export function AdminLayout() {
           {t.nav.live}
         </Link>
       </div>
+      {me.via === 'platform' && <PlatformBanner />}
       <div className={styles.body}>
         <nav className={styles.nav} aria-label={t.admin.sectionsLabel}>
           {sections

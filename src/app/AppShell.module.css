@@ -19,6 +19,10 @@
   max-width: 960px;
 }
 
+.mainPlatform {
+  max-width: 1200px;
+}
+
 .mainTabbed {
   padding-bottom: 0;
 }
