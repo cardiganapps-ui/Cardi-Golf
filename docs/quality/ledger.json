@@ -2344,9 +2344,12 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 63,
+      "tests": [
+        "src/data/realtimeTables.test.ts",
+        "src/data/tournamentStore.realtime.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
