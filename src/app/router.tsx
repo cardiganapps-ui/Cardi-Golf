@@ -65,6 +65,10 @@ const PlatformTournaments = lazy(() => import('../screens/platform').then((m) =>
 const PlatformTournament = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentDetail })))
 const PlatformPeople = lazy(() => import('../screens/platform').then((m) => ({ default: m.PeopleScreen })))
 const PlatformPerson = lazy(() => import('../screens/platform').then((m) => ({ default: m.PersonDetail })))
+const PlatformCourses = lazy(() => import('../screens/platform').then((m) => ({ default: m.CatalogCourses })))
+const PlatformCourse = lazy(() => import('../screens/platform').then((m) => ({ default: m.CourseDetail })))
+const PlatformCrews = lazy(() => import('../screens/platform').then((m) => ({ default: m.CatalogCrews })))
+const PlatformCrew = lazy(() => import('../screens/platform').then((m) => ({ default: m.CrewDetail })))
 const PlatformSoon = lazy(() => import('../screens/platform').then((m) => ({ default: m.SoonScreen })))
 const PlatformFixture = lazy(() => import('../dev/platformFixtures').then((m) => ({ default: m.PlatformFixture })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
@@ -124,8 +128,16 @@ const platformChildren = [
     element: <Lazy><PlatformPeople /></Lazy>,
     children: [{ path: ':id', element: <Lazy><PlatformPerson /></Lazy> }],
   },
-  { path: 'campos', element: <Lazy><PlatformSoon title={P.courses} /></Lazy> },
-  { path: 'crews', element: <Lazy><PlatformSoon title={P.crews} /></Lazy> },
+  {
+    path: 'campos',
+    element: <Lazy><PlatformCourses /></Lazy>,
+    children: [{ path: ':id', element: <Lazy><PlatformCourse /></Lazy> }],
+  },
+  {
+    path: 'crews',
+    element: <Lazy><PlatformCrews /></Lazy>,
+    children: [{ path: ':id', element: <Lazy><PlatformCrew /></Lazy> }],
+  },
   { path: 'avisos', element: <Lazy><PlatformSoon title={P.notices} /></Lazy> },
   { path: 'auditoria', element: <Lazy><PlatformSoon title={P.audit} /></Lazy> },
   { path: 'salud', element: <Lazy><PlatformSoon title={P.health} /></Lazy> },

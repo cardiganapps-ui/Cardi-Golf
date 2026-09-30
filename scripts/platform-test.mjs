@@ -31,7 +31,7 @@ if (!URL_ || !ANON || !SECRET) {
 const service = createClient(URL_, SECRET, { auth: { persistSession: false, autoRefreshToken: false } })
 const client = () => createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } })
 const rand = Math.random().toString(36).slice(2, 8)
-const created = { users: [], tournaments: [] }
+const created = { users: [], tournaments: [], courses: [], crews: [] }
 let failures = 0
 const check = (cond, label, detail) => {
   console.log(`${cond ? '  ✓' : '  ✗'} ${label}`)
@@ -74,6 +74,15 @@ const PLATFORM_CALLS = (tid, uid) => [
   ['platform_delete_account', { p_user_id: uid, p_confirm: 'x', p_reason: 'prueba' }],
   ['platform_reset_pin_lock', { p_user_id: uid, p_reason: 'prueba' }],
   ['platform_set_organizer', { p_tournament_id: tid, p_user_id: uid, p_role: 'owner', p_reason: 'prueba' }],
+  ['platform_courses', {}],
+  ['platform_course', { p_course_id: tid }],
+  ['platform_refresh_course_results', { p_course_id: tid }],
+  ['platform_merge_courses', { p_keep: tid, p_drop: uid, p_tee_map: {}, p_reason: 'prueba' }],
+  ['platform_delete_course', { p_course_id: tid, p_reason: 'prueba' }],
+  ['platform_crews', {}],
+  ['platform_crew', { p_crew_id: tid }],
+  ['platform_crew_remove_member', { p_crew_id: tid, p_profile_id: uid, p_reason: 'prueba' }],
+  ['platform_delete_crew', { p_crew_id: tid, p_confirm: 'x', p_reason: 'prueba' }],
 ]
 const denied = (e) => !!e && (e.code === '42501' || /permission denied|Solo el admin/.test(e.message ?? ''))
 
@@ -257,6 +266,71 @@ try {
   const personLog = await query(`select action from public.platform_audit_log where target_id = '${uuid(Z.id)}' order by at`)
   check(personLog.map((x) => x.action).join(',') === 'block,unblock,delete', 'block, unblock and delete are in the platform log', personLog)
   await query(`delete from public.crews where id = '${uuid(crew.id)}'`)
+
+  console.log('Campos:')
+  const card = (pars) => Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: pars?.[i] ?? 4, stroke_index: i + 1 }))
+  async function course(name, tees) {
+    const { data: c } = await service.from('courses').insert({ name, created_by: A.id }).select('id').single()
+    created.courses.push(c.id)
+    const ids = []
+    for (const [i, t] of tees.entries()) {
+      const { data: tee } = await service.from('tees').insert({ course_id: c.id, name: t.name, rating: 72, slope: 113, sort_order: i }).select('id').single()
+      await service.from('holes').insert((t.holes ?? card()).map((h) => ({ ...h, tee_id: tee.id })))
+      ids.push(tee.id)
+    }
+    return { id: c.id, tees: ids }
+  }
+  const K = await course(`Plat Campo ${rand}`, [{ name: 'Azules' }, { name: 'Rojas', holes: card([5]) }])
+  const D = await course(`Plat Campo ${rand} Los Cabos`, [{ name: 'Azules' }, { name: 'Blancas' }])
+  const X = await course(`Plat Zzz ${rand} sin usar`, [{ name: 'Azules', holes: card().map((h) => ({ ...h, stroke_index: 1 })) }])
+  const { data: r2 } = await A.sb.from('rounds').insert({ tournament_id: T.id, number: 2, holes: 18, course_id: D.id }).select('id').single()
+  await A.sb.from('round_tees').insert({ round_id: r2.id, player_id: p0.id, tee_id: D.tees[0] })
+
+  const { data: dupes } = await P.sb.rpc('platform_courses', { p_filter: 'dupes', p_q: `plat campo ${rand}` })
+  check(dupes?.total === 2 && dupes.rows.every((r) => r.dupes >= 1), '«X» and «X Los Cabos» are flagged as duplicates', dupes)
+  const { data: broken } = await P.sb.rpc('platform_courses', { p_filter: 'broken', p_q: `plat zzz ${rand}` })
+  check(broken?.total === 1, 'a card whose stroke indexes repeat is flagged as broken')
+  const { data: dCourse } = await P.sb.rpc('platform_course', { p_course_id: D.id })
+  check(dCourse?.dupes.some((x) => x.id === K.id) && dCourse.usedBy.some((u) => u.tournamentId === T.id) && dCourse.tees[0].inUse === 1, 'platform_course: its duplicate, where it is played, which tee is in use', dCourse && { dupes: dCourse.dupes, usedBy: dCourse.usedBy })
+
+  const { error: unmapped } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: {}, p_reason: 'Duplicado' })
+  const { error: mismatch } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[1] }, p_reason: 'Duplicado' })
+  check(/Falta/.test(unmapped?.message ?? '') && /no coinciden/.test(mismatch?.message ?? ''), 'merging refuses an unmapped tee in use, and a tee whose card scores differently', { unmapped: unmapped?.message, mismatch: mismatch?.message })
+  await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: true })
+  const { error: protectedMerge } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[0] }, p_reason: 'Duplicado' })
+  await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false, p_reason: 'Fin de la prueba' })
+  check(denied(protectedMerge), 'and a course a locked Protegido tournament plays', protectedMerge?.message)
+  const { data: merged, error: mergeErr } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[0] }, p_reason: 'Duplicado de Quivira' })
+  const [after] = await query(`select (select course_id::text from public.rounds where id = '${uuid(r2.id)}') as course, (select tee_id::text from public.round_tees where round_id = '${uuid(r2.id)}') as tee, (select count(*) from public.courses where id = '${uuid(D.id)}') as dropped`)
+  check(!mergeErr && merged?.rounds === 1 && after.course === K.id && after.tee === K.tees[0] && Number(after.dropped) === 0, 'a clean merge moves the round and its tees, and the duplicate is gone', { mergeErr: mergeErr?.message, merged, after })
+  const { error: inUseDelete } = await P.sb.rpc('platform_delete_course', { p_course_id: K.id, p_reason: 'Prueba' })
+  const { error: unusedDelete } = await P.sb.rpc('platform_delete_course', { p_course_id: X.id, p_reason: 'Tarjeta mal capturada' })
+  check(/fusiónalo/.test(inUseDelete?.message ?? '') && !unusedDelete, 'a course in use cannot be deleted; an unused one can', { inUseDelete: inUseDelete?.message, unusedDelete: unusedDelete?.message })
+  const { data: refreshed, error: refreshErr } = await P.sb.rpc('platform_refresh_course_results', { p_course_id: K.id })
+  check(!refreshErr && refreshed === 0, 'recomputing results runs (no finished rounds here)', refreshErr?.message)
+
+  console.log('Crews:')
+  await A.sb.rpc('ensure_my_profile')
+  const { data: c1 } = await U.sb.rpc('create_crew', { p_name: `Plat crew ${rand}` })
+  created.crews.push(c1.id)
+  await A.sb.rpc('join_crew', { p_code: c1.joinCode })
+  const { data: crews } = await P.sb.rpc('platform_crews', { p_q: `plat crew ${rand}` })
+  const { data: crewDetail } = await P.sb.rpc('platform_crew', { p_crew_id: c1.id })
+  check(crews?.total === 1 && crews.rows[0].members === 2 && crewDetail?.members.length === 2 && crewDetail.members[0].profileId === U.id, 'platform_crews / platform_crew list the crew and its members, owner first', crewDetail?.members)
+  const { data: handed } = await P.sb.rpc('platform_crew_remove_member', { p_crew_id: c1.id, p_profile_id: U.id, p_reason: 'Lo pidió' })
+  const [owner] = await query(`select created_by::text as owner from public.crews where id = '${uuid(c1.id)}'`)
+  check(handed === 'handed' && owner?.owner === A.id, 'taking out the owner hands the crew to the next member', { handed, owner })
+  const { data: lastOut } = await P.sb.rpc('platform_crew_remove_member', { p_crew_id: c1.id, p_profile_id: A.id, p_reason: 'Lo pidió' })
+  const [gone] = await query(`select count(*)::int as n from public.crews where id = '${uuid(c1.id)}'`)
+  check(lastOut === 'deleted' && gone.n === 0, 'taking out the last member deletes it')
+  const { data: c2 } = await U.sb.rpc('create_crew', { p_name: `Plat crew2 ${rand}` })
+  created.crews.push(c2.id)
+  await A.sb.rpc('set_tournament_crew', { p_tournament_id: T.id, p_crew_id: null })
+  const { error: wrongName } = await P.sb.rpc('platform_delete_crew', { p_crew_id: c2.id, p_confirm: 'otro', p_reason: 'Prueba' })
+  const { error: delCrew } = await P.sb.rpc('platform_delete_crew', { p_crew_id: c2.id, p_confirm: `Plat crew2 ${rand}`, p_reason: 'Crew de prueba' })
+  check(!!wrongName && !delCrew, 'deleting a crew needs its exact name', { wrongName: wrongName?.message, delCrew: delCrew?.message })
+  const catalogLog = await query(`select action from public.platform_audit_log where actor_auth_user_id = '${uuid(P.id)}' and target_kind in ('course', 'crew') order by at`)
+  check(catalogLog.map((x) => x.action).join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete', 'every catalog action is in the platform log', catalogLog)
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++
@@ -267,6 +341,8 @@ try {
     await service.from('tournaments').delete().eq('id', id)
   }
   if (created.users.length) await query(`delete from public.platform_audit_log where actor_auth_user_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')}) or target_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')})`)
+  for (const id of created.crews) await service.from('crews').delete().eq('id', id)
+  for (const id of created.courses) await service.from('courses').delete().eq('id', id)
   for (const id of created.users) await service.auth.admin.deleteUser(id)
   await query(`delete from public.platform_admins where note = 'platform-test'`)
 }

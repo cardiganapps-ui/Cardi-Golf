@@ -381,3 +381,65 @@ a.row:active {
   text-align: left;
   cursor: pointer;
 }
+
+/* ---- Campos: a tee's card ---- */
+.tee {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0;
+  border-bottom: var(--hairline);
+  min-width: 0;
+}
+.teeHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+}
+.problem {
+  color: var(--under);
+  font-size: var(--fs-sm);
+}
+/* Hole number, par and stroke index, nine to a row so it fits a phone. */
+.card {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  border-top: var(--hairline);
+  border-left: var(--hairline);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.cardCell {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+  border-right: var(--hairline);
+  border-bottom: var(--hairline);
+  line-height: var(--lh-tight);
+}
+.cardNo {
+  color: var(--ink-3);
+  font-size: var(--fs-2xs);
+}
+.cardPar {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+.cardSi {
+  color: var(--ink-2);
+  font-size: var(--fs-2xs);
+}
+.mergePair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+.mergePair > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

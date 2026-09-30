@@ -216,6 +216,76 @@ export interface DeletePreview {
   hasProfile: boolean
 }
 
+export type CourseFilter = 'all' | 'unused' | 'dupes' | 'broken'
+
+export interface CourseRow {
+  id: string
+  name: string
+  location: string | null
+  source: string
+  createdAt: string
+  creatorEmail: string | null
+  tees: number
+  rounds: number
+  tournaments: number
+  dupeKey: string
+  /** How many other courses look like the same one. */
+  dupes: number
+  broken: boolean
+}
+
+export type TeeProblem = 'holes' | 'par' | 'si'
+
+export interface CourseTee {
+  id: string
+  name: string
+  color: string | null
+  rating: number | null
+  slope: number | null
+  parTotal: number | null
+  problems: TeeProblem[]
+  /** Rounds and players' default tees that point at it. */
+  inUse: number
+  holes: Array<{ n: number; par: number; si: number }>
+}
+
+export interface PlatformCourse {
+  id: string
+  name: string
+  location: string | null
+  source: string
+  attribution: string | null
+  website: string | null
+  createdAt: string
+  creatorEmail: string | null
+  tees: CourseTee[]
+  usedBy: Array<{ tournamentId: string; name: string; status: TournamentStatus; protected: boolean; rounds: number }>
+  dupes: Array<{ id: string; name: string; location: string | null; rounds: number }>
+}
+
+export interface CrewRow {
+  id: string
+  slug: string
+  name: string
+  createdAt: string
+  ownerName: string | null
+  members: number
+  outings: number
+  lastOutingAt: string | null
+}
+
+export interface PlatformCrew {
+  id: string
+  slug: string
+  name: string
+  joinCode: string
+  createdAt: string
+  ownerId: string
+  members: Array<{ profileId: string; handle: string; displayName: string; avatarUrl: string | null; role: 'owner' | 'member'; joinedAt: string }>
+  outings: Array<{ tournamentId: string; name: string; status: TournamentStatus; quick: boolean; practice: boolean; createdAt: string }>
+  activity: Array<{ id: number; at: string; action: string; reason: string | null }>
+}
+
 export interface PlatformApi {
   overview(): Promise<PlatformOverview>
   daily(days: number): Promise<PlatformDay[]>
@@ -234,6 +304,16 @@ export interface PlatformApi {
   setOrganizer(tournamentId: string, userId: string, role: 'owner' | 'admin' | null, reason: string): Promise<void>
   /** The Comité's own RPC; the admin is Comité everywhere. */
   unlinkPlayer(playerId: string): Promise<void>
+  courses(q: { q?: string; filter?: CourseFilter; limit?: number; offset?: number }): Promise<{ total: number; rows: CourseRow[] }>
+  course(id: string): Promise<PlatformCourse | null>
+  /** Recompute the finished rounds played on it; returns how many. */
+  refreshCourse(id: string): Promise<number>
+  mergeCourses(keepId: string, dropId: string, teeMap: Record<string, string>, reason: string): Promise<{ rounds: number; refreshed: number }>
+  deleteCourse(id: string, reason: string): Promise<void>
+  crews(q: { q?: string; limit?: number; offset?: number }): Promise<{ total: number; rows: CrewRow[] }>
+  crew(id: string): Promise<PlatformCrew | null>
+  removeCrewMember(crewId: string, profileId: string, reason: string): Promise<'removed' | 'handed' | 'deleted'>
+  deleteCrew(crewId: string, confirmName: string, reason: string): Promise<void>
 }
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -274,6 +354,37 @@ export const supabasePlatformApi: PlatformApi = {
   setOrganizer: (tournamentId, userId, role, reason) =>
     rpc<void>('platform_set_organizer', { p_tournament_id: tournamentId, p_user_id: userId, p_role: role, p_reason: reason }),
   unlinkPlayer: (playerId) => rpc<void>('comite_unlink_profile', { p_player_id: playerId }),
+  courses: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
+    rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
+  course: (id) => rpc<PlatformCourse | null>('platform_course', { p_course_id: id }),
+  refreshCourse: (id) => rpc<number>('platform_refresh_course_results', { p_course_id: id }),
+  mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }),
+  deleteCourse: (id, reason) => rpc<void>('platform_delete_course', { p_course_id: id, p_reason: reason }),
+  crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }),
+  crew: (id) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id }),
+  removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }),
+  deleteCrew: (crewId, confirmName, reason) => rpc<void>('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
+}
+
+/**
+ * The tee each tee of a dropped course should become: the kept tee with the
+ * same card (par and stroke index on every hole), preferring the same name.
+ * The server re-checks; this only pre-fills the merge sheet.
+ */
+export function suggestTeeMap(drop: CourseTee[], keep: CourseTee[]): Record<string, string> {
+  const card = (t: CourseTee) => t.holes.map((h) => `${h.par}/${h.si}`).join(',')
+  const out: Record<string, string> = {}
+  for (const d of drop) {
+    const same = keep.filter((k) => card(k) === card(d))
+    const pick = same.find((k) => k.name.trim().toLowerCase() === d.name.trim().toLowerCase()) ?? same[0]
+    if (pick) out[d.id] = pick.id
+  }
+  return out
+}
+
+/** Whether two tees score the same: same number of holes, same par and stroke index on each. */
+export function sameCard(a: CourseTee, b: CourseTee): boolean {
+  return a.holes.length === b.holes.length && a.holes.every((h, i) => h.par === b.holes[i]?.par && h.si === b.holes[i]?.si && h.n === b.holes[i]?.n)
 }
 
 export const PlatformApiContext = createContext<PlatformApi>(supabasePlatformApi)

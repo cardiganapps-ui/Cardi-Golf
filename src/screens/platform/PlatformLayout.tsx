@@ -24,8 +24,8 @@ const PLATFORM_SECTIONS: Array<{ group: string; items: Array<{ to: string; label
   {
     group: P.groups.catalog,
     items: [
-      { to: 'campos', label: P.sections.courses, ready: false },
-      { to: 'crews', label: P.sections.crews, ready: false },
+      { to: 'campos', label: P.sections.courses, ready: true },
+      { to: 'crews', label: P.sections.crews, ready: true },
     ],
   },
   {

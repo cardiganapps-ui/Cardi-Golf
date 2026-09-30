@@ -3,7 +3,7 @@
  * in-memory API, so it can be designed and screenshotted without an admin
  * account. Numbers are invented but shaped like Polo's real ones.
  */
-import { PlatformApiContext, type Person, type PersonRow, type PlatformApi, type PlatformDay, type PlatformTournament, type PlatformTournamentRow } from '../data/platform'
+import { PlatformApiContext, type CourseRow, type CourseTee, type CrewRow, type Person, type PersonRow, type PlatformApi, type PlatformCourse, type PlatformDay, type PlatformTournament, type PlatformTournamentRow } from '../data/platform'
 import { PlatformLayout } from '../screens/platform'
 
 const now = Date.now()
@@ -48,6 +48,41 @@ function person(id: string): Person | null {
     activity: r.blocked ? [{ id: 9, at: ago(20), action: 'block', reason: 'Mandaba spam a todos' }] : [],
   }
 }
+
+const COURSES: CourseRow[] = [
+  { id: 'c-quivira', name: 'Quivira Golf Club', location: 'Cabo San Lucas', source: 'golfcourseapi', createdAt: ago(24 * 30), creatorEmail: 'diego@example.com', tees: 5, rounds: 1, tournaments: 1, dupeKey: 'quivira', dupes: 1, broken: false },
+  { id: 'c-quivira2', name: 'Quivira Los Cabos', location: null, source: 'manual', createdAt: ago(24 * 3), creatorEmail: 'mau@example.com', tees: 1, rounds: 1, tournaments: 1, dupeKey: 'quiviraloscabos', dupes: 1, broken: false },
+  { id: 'c-solmar', name: 'Solmar Golf Links', location: 'Cabo San Lucas', source: 'scorecard_photo', createdAt: ago(24 * 29), creatorEmail: 'diego@example.com', tees: 2, rounds: 1, tournaments: 1, dupeKey: 'solmar', dupes: 0, broken: true },
+  { id: 'c-chapu', name: 'Club de Golf Chapultepec', location: 'CDMX', source: 'manual', createdAt: ago(24 * 10), creatorEmail: 'mau@example.com', tees: 1, rounds: 0, tournaments: 0, dupeKey: 'chapultepec', dupes: 0, broken: false },
+]
+
+const holes18 = (tweak?: (h: { n: number; par: number; si: number }) => { n: number; par: number; si: number }) =>
+  Array.from({ length: 18 }, (_, i) => ({ n: i + 1, par: [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 3, 4, 5, 4, 4, 3, 4, 5][i]!, si: [7, 11, 17, 1, 9, 3, 15, 13, 5, 8, 16, 2, 6, 12, 4, 18, 10, 14][i]! })).map((h) => (tweak ? tweak(h) : h))
+
+function courseDetail(id: string): PlatformCourse | null {
+  const c = COURSES.find((x) => x.id === id)
+  if (!c) return null
+  const tee = (tid: string, name: string, inUse: number, holes = holes18(), problems: CourseTee['problems'] = []): CourseTee => ({
+    id: tid, name, color: null, rating: 72.1, slope: 131, parTotal: holes.reduce((s, h) => s + h.par, 0), problems, inUse, holes,
+  })
+  const tees =
+    id === 'c-solmar'
+      ? [tee('t-s1', 'Azules', 12), tee('t-s2', 'Blancas', 0, holes18((h) => (h.n === 18 ? { ...h, si: 1 } : h)), ['si'])]
+      : id === 'c-quivira2'
+        ? [tee('t-q21', 'azules', 12)]
+        : [tee(`${id}-a`, 'Azules', c.rounds ? 12 : 0), tee(`${id}-b`, 'Blancas', 0)]
+  return {
+    id: c.id, name: c.name, location: c.location, source: c.source, attribution: null, website: null, createdAt: c.createdAt, creatorEmail: c.creatorEmail,
+    tees,
+    usedBy: c.rounds ? [{ tournamentId: 'f-nacho', name: "Nacho's Bachelor Invitational", status: 'setup', protected: true, rounds: c.rounds }] : [],
+    dupes: COURSES.filter((d) => d.id !== c.id && c.dupes > 0 && d.dupes > 0).map((d) => ({ id: d.id, name: d.name, location: d.location, rounds: d.rounds })),
+  }
+}
+
+const CREWS: CrewRow[] = [
+  { id: 'k-jueves', slug: 'los-del-jueves', name: 'Los del jueves', createdAt: ago(24 * 40), ownerName: 'Mauricio Lozano', members: 6, outings: 4, lastOutingAt: ago(50) },
+  { id: 'k-solo', slug: 'crew-de-uno', name: 'Crew de uno', createdAt: ago(24 * 2), ownerName: 'René', members: 1, outings: 0, lastOutingAt: null },
+]
 
 const daily: PlatformDay[] = Array.from({ length: 30 }, (_, i) => {
   const d = 29 - i
@@ -140,6 +175,48 @@ const api: PlatformApi = {
   async resetPinLock() {},
   async setOrganizer() {},
   async unlinkPlayer() {},
+  async courses({ q, filter }) {
+    const needle = (q ?? '').toLowerCase()
+    const rows = COURSES.filter((c) => {
+      if (needle && !`${c.name} ${c.location ?? ''}`.toLowerCase().includes(needle)) return false
+      if (filter === 'dupes') return c.dupes > 0
+      if (filter === 'broken') return c.broken
+      if (filter === 'unused') return c.rounds === 0
+      return true
+    })
+    return { total: rows.length, rows }
+  },
+  async course(id) {
+    return courseDetail(id)
+  },
+  async refreshCourse() {
+    return 3
+  },
+  async mergeCourses() {
+    return { rounds: 1, refreshed: 1 }
+  },
+  async deleteCourse() {},
+  async crews({ q }) {
+    const rows = CREWS.filter((c) => !q || c.name.toLowerCase().includes(q.toLowerCase()))
+    return { total: rows.length, rows }
+  },
+  async crew(id) {
+    const c = CREWS.find((x) => x.id === id)
+    if (!c) return null
+    return {
+      id: c.id, slug: c.slug, name: c.name, joinCode: 'JUEV3S', createdAt: c.createdAt, ownerId: 'p-mau',
+      members: [
+        { profileId: 'p-mau', handle: 'mau.lozano', displayName: 'Mauricio Lozano', avatarUrl: null, role: 'owner', joinedAt: c.createdAt },
+        { profileId: 'p-diego', handle: 'diego', displayName: 'Diego Arámburu', avatarUrl: null, role: 'member', joinedAt: ago(24 * 20) },
+      ],
+      outings: [{ tournamentId: 'f-quick', name: 'Ronda en Chapultepec', status: 'finished', quick: true, practice: false, createdAt: ago(50) }],
+      activity: [],
+    }
+  },
+  async removeCrewMember() {
+    return 'handed'
+  },
+  async deleteCrew() {},
 }
 
 export function PlatformFixture() {
