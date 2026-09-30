@@ -2344,13 +2344,13 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 63,
       "tests": [
         "src/data/realtimeTables.test.ts",
         "src/data/tournamentStore.realtime.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier 2026-09-30: fixed against production (18-table channel joins with wait; old 20-table list refused). Its two follow-ups (a server-closed channel froze silently; backoff doubled per error) are fixed in the same PR with tests. Team tables go live with the Phase 1 migration that publishes them.",
       "residual": null
     },
     {

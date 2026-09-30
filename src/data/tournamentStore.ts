@@ -277,19 +277,24 @@ export const useTournament = create<StoreState>((set, get) => ({
       pollTimer ??= setInterval(() => {
         if (typeof document === 'undefined' || document.visibilityState === 'visible') void get().reload()
       }, POLL_MS)
-      // And try the channel again later, backing off.
-      retryTimer ??= setTimeout(() => {
-        retryTimer = null
-        if (channel !== ch) return
-        void sb.removeChannel(ch)
-        channel = null
-        get().subscribe()
-      }, retryDelay)
-      retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS)
+      // And try the channel again later, backing off once per rebuild (the
+      // socket may report several errors before the rebuild fires).
+      if (!retryTimer) {
+        retryTimer = setTimeout(() => {
+          retryTimer = null
+          if (channel !== ch) return
+          // Forget the channel first: removeChannel reports CLOSED synchronously.
+          channel = null
+          void sb.removeChannel(ch)
+          get().subscribe()
+        }, retryDelay)
+        retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS)
+      }
     }
-    // Belt and braces for a server that answers the join before its bindings are up.
+    // Belt and braces for a server that answers the join before its bindings
+    // are up, or that drops the channel later (extension 'system').
     ch = ch.on('system', {}, (payload: { extension?: string; status?: string }) => {
-      if (payload?.extension === 'postgres_changes' && payload.status === 'error') degrade()
+      if ((payload?.extension === 'postgres_changes' || payload?.extension === 'system') && payload.status === 'error') degrade()
     })
     let wasLive = false
     channel = ch
@@ -300,7 +305,11 @@ export const useTournament = create<StoreState>((set, get) => ({
         stopDegraded()
         retryDelay = RETRY_MIN_MS
         set({ realtime: 'live' })
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        // CLOSED here means the server dropped a channel we still want (e.g. a
+        // token that expired while the app was hidden): realtime-js won't
+        // rejoin it, so treat it as an outage. Our own removals clear
+        // `channel` first and never reach this line.
         degrade()
       } else set({ realtime: 'connecting' })
       // Back after a gap: fetch what Realtime did not replay.
@@ -313,8 +322,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     stopDegraded()
     retryDelay = RETRY_MIN_MS
     if (channel) {
-      void supabase().removeChannel(channel)
+      // Forget the channel first: removeChannel reports CLOSED synchronously.
+      const ch = channel
       channel = null
+      void supabase().removeChannel(ch)
     }
     set({ realtime: 'off' })
   },

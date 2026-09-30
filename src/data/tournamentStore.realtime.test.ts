@@ -38,6 +38,8 @@ const fakeClient = {
   },
   async removeChannel(ch: FakeChannel) {
     removed.push(ch)
+    // Like realtime-js: leaving reports CLOSED synchronously, before this returns.
+    ch.status?.('CLOSED')
   },
 }
 
@@ -101,6 +103,31 @@ describe('tournament channel', () => {
     expect(useTournament.getState().realtime).toBe('live')
     channels[0]!.system!({ extension: 'postgres_changes', status: 'error', message: 'Unable to subscribe' })
     expect(useTournament.getState().realtime).toBe('error')
+  })
+
+  it('treats a channel the server closes as an outage, not a silent freeze', async () => {
+    useTournament.getState().subscribe()
+    channels[0]!.status!('SUBSCRIBED')
+    // The server drops the joined channel (e.g. its token expired while hidden).
+    channels[0]!.status!('CLOSED')
+    expect(useTournament.getState().realtime).toBe('error')
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(reloads).toBeGreaterThan(0)
+    expect(channels).toHaveLength(2)
+  })
+
+  it('backs off once per rebuild, however many errors arrive before it', async () => {
+    useTournament.getState().subscribe()
+    // The socket rejoins on its own and reports several errors within a minute.
+    for (let i = 0; i < 5; i++) channels[0]!.status!('CHANNEL_ERROR')
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(channels).toHaveLength(2)
+    channels[1]!.status!('CHANNEL_ERROR')
+    // Second rebuild after 60 s, not after 30 s × 2⁵.
+    await vi.advanceTimersByTimeAsync(59_000)
+    expect(channels).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(channels).toHaveLength(3)
   })
 
   it('stops polling and retries when the tournament is left', async () => {
