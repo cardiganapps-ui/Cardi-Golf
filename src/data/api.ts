@@ -54,6 +54,27 @@ export async function deleteTournament(id: string) {
   unwrap(await supabase().from('tournaments').delete().eq('id', id).select('id'))
 }
 
+/** One change in a tournament's history (migration 0022 `tournament_audit`). */
+export interface AuditEntry {
+  id: number
+  at: string
+  table: string
+  action: 'INSERT' | 'UPDATE' | 'DELETE'
+  rowId: string
+  /** The Admin de Polo, outside a tournament he belongs to. */
+  platform: boolean
+  /** The player or account name; null for the admin or when nobody is known. */
+  actor: string | null
+  reason: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+}
+
+/** The Comité's history, newest first; `before` pages by id. */
+export async function tournamentAudit(tournamentId: string, before?: number, limit = 50): Promise<AuditEntry[]> {
+  return rpc<AuditEntry[]>('tournament_audit', { p_tournament_id: tournamentId, p_before: before ?? null, p_limit: limit })
+}
+
 /** Protegido on or off: the owner or the platform admin. Off needs a reason. */
 export async function setTournamentProtected(id: string, on: boolean, reason?: string) {
   await rpc('set_tournament_protected', { p_tournament_id: id, p_on: on, p_reason: reason ?? null })

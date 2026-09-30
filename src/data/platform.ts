@@ -123,6 +123,99 @@ export interface PlatformTournament {
   audit: PlatformAuditEntry[]
 }
 
+export type PeopleFilter = 'all' | 'accounts' | 'devices' | 'blocked'
+
+export interface PersonRow {
+  id: string
+  email: string | null
+  anonymous: boolean
+  provider: string
+  handle: string | null
+  displayName: string | null
+  avatarUrl: string | null
+  /** A phone without an account is known by the player it claimed. */
+  devicePlayer: string | null
+  deviceTournament: string | null
+  createdAt: string
+  lastSignInAt: string | null
+  blocked: boolean
+  isAdmin: boolean
+  tournaments: number
+}
+
+export interface PeopleList {
+  total: number
+  rows: PersonRow[]
+}
+
+export interface PeopleQuery {
+  q?: string
+  filter?: PeopleFilter
+  limit?: number
+  offset?: number
+}
+
+export interface PersonTournament {
+  tournamentId: string
+  slug: string
+  name: string
+  status: TournamentStatus
+  quick: boolean
+  practice: boolean
+  createdAt: string
+  role: 'owner' | 'admin' | null
+  playerId: string | null
+  playerName: string | null
+  link: 'confirmed' | 'pending' | 'device' | null
+}
+
+export interface Person {
+  id: string
+  email: string | null
+  anonymous: boolean
+  provider: string
+  providers: string[]
+  createdAt: string
+  lastSignInAt: string | null
+  confirmedAt: string | null
+  blocked: boolean
+  isAdmin: boolean
+  isSelf: boolean
+  profile: {
+    handle: string
+    displayName: string
+    fullName: string | null
+    avatarUrl: string | null
+    homeClub: string | null
+    city: string | null
+    discoverable: boolean
+    index: number | null
+    indexSource: 'polo' | 'manual'
+    createdAt: string
+  } | null
+  tournaments: PersonTournament[]
+  crews: Array<{ id: string; slug: string; name: string; role: 'owner' | 'member'; members: number }>
+  friends: number
+  pendingFriends: number
+  push: { count: number; hosts: string[] }
+  deviceLock: { failed: number; lockedUntil: string | null } | null
+  playerLocks: Array<{ playerId: string; name: string; tournament: string; failed: number; lockedUntil: string | null }>
+  activity: Array<{ id: number; at: string; action: string; reason: string | null }>
+}
+
+export interface DeletePreview {
+  orphaned: Array<{ id: string; name: string }>
+  organizerOf: number
+  linkedPlayers: number
+  crewsHanded: string[]
+  crewsDeleted: string[]
+  friendships: number
+  rivalries: number
+  notifications: number
+  push: number
+  hasProfile: boolean
+}
+
 export interface PlatformApi {
   overview(): Promise<PlatformOverview>
   daily(days: number): Promise<PlatformDay[]>
@@ -131,6 +224,16 @@ export interface PlatformApi {
   unlock(tournamentId: string, reason: string, minutes?: number): Promise<string>
   relock(tournamentId: string): Promise<void>
   setProtected(tournamentId: string, on: boolean, reason?: string): Promise<void>
+  people(q: PeopleQuery): Promise<PeopleList>
+  person(id: string): Promise<Person | null>
+  deletePreview(id: string): Promise<DeletePreview>
+  block(id: string, reason: string): Promise<void>
+  unblock(id: string, reason: string): Promise<void>
+  deleteAccount(id: string, confirm: string, reason: string): Promise<void>
+  resetPinLock(target: { userId?: string; playerId?: string }, reason: string): Promise<void>
+  setOrganizer(tournamentId: string, userId: string, role: 'owner' | 'admin' | null, reason: string): Promise<void>
+  /** The Comité's own RPC; the admin is Comité everywhere. */
+  unlinkPlayer(playerId: string): Promise<void>
 }
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -157,6 +260,20 @@ export const supabasePlatformApi: PlatformApi = {
   relock: (tournamentId) => rpc<void>('platform_relock', { p_tournament_id: tournamentId }),
   setProtected: (tournamentId, on, reason) =>
     rpc<void>('set_tournament_protected', { p_tournament_id: tournamentId, p_on: on, p_reason: reason ?? null }),
+  people: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
+    rpc<PeopleList>('platform_people', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
+  person: (id) => rpc<Person | null>('platform_person', { p_user_id: id }),
+  deletePreview: (id) => rpc<DeletePreview>('platform_delete_preview', { p_user_id: id }),
+  block: (id, reason) => rpc<void>('platform_block', { p_user_id: id, p_reason: reason }),
+  unblock: (id, reason) => rpc<void>('platform_unblock', { p_user_id: id, p_reason: reason }),
+  deleteAccount: async (id, confirm, reason) => {
+    await rpc('platform_delete_account', { p_user_id: id, p_confirm: confirm, p_reason: reason })
+  },
+  resetPinLock: ({ userId, playerId }, reason) =>
+    rpc<void>('platform_reset_pin_lock', { p_user_id: userId ?? null, p_player_id: playerId ?? null, p_reason: reason }),
+  setOrganizer: (tournamentId, userId, role, reason) =>
+    rpc<void>('platform_set_organizer', { p_tournament_id: tournamentId, p_user_id: userId, p_role: role, p_reason: reason }),
+  unlinkPlayer: (playerId) => rpc<void>('comite_unlink_profile', { p_player_id: playerId }),
 }
 
 export const PlatformApiContext = createContext<PlatformApi>(supabasePlatformApi)

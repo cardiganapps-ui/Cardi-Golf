@@ -27,7 +27,7 @@ const files = readdirSync(dir)
 const all = files.map((f) => f.sql).join('\n')
 
 /** Internal: called only from other security definer functions. */
-const INTERNAL = new Set(['platform_can_write', 'platform_log'])
+const INTERNAL = new Set(['platform_can_write', 'platform_log', 'platform_person_target'])
 const TABLES = ['platform_admins', 'platform_unlocks', 'platform_audit_log']
 
 /** name → latest `create or replace function` text, up to its closing $$; */

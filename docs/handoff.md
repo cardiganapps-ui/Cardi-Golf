@@ -66,7 +66,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Entrar al admin.** En Mi Polo, arriba a la derecha, hay un **escudo** que solo ve tu cuenta. Te lleva a **Resumen**: cuentas, torneos, rondas, hoyos capturados y la actividad de los últimos 30 días (toca una barra para ver el día). En **Torneos** buscas cualquier torneo por nombre, código o correo del organizador y ves su Comité, sus rondas y sus últimos cambios.
 - [ ] **Probar «Comité en cualquier torneo».** Desde un torneo en el admin, «Abrir su Comité». Arriba verás el aviso verde **Admin de Polo**. Corrige un hoyo en el Ensayo: en «Últimos cambios» aparece marcado como Admin de Polo.
 - [ ] **Proteger el torneo de abril en cuanto exista.** Comité › Torneo › Zona de peligro › **Proteger** (o desde el admin). Protegido: nadie lo puede borrar, ni tú, y para corregir algo como admin lo desbloqueas 30 minutos con un motivo.
-- Personas, Campos, Crews, Avisos, Auditoría y Salud ya aparecen en el menú y llegan en las siguientes entregas.
+- [ ] **Probar Personas.** Admin › Personas: busca por correo, usuario o nombre (un teléfono sin cuenta aparece con el jugador que eligió). En el detalle ves sus torneos, crews, amigos y bloqueos de PIN. **Bloquear** le cierra la sesión y ya no puede entrar (si tenía la app abierta, hasta una hora). **Borrar cuenta** te dice qué se va antes de hacerlo y pide su correo exacto; sus crews pasan a su miembro más antiguo en vez de borrarse. **Quitar bloqueo** de PIN sirve cuando alguien se equivocó cinco veces. Todo pide un motivo y queda en «Lo que hizo el admin».
+- [ ] **Ver el Historial del Comité.** Comité › **Historial**: cada cambio del torneo con quién, cuándo y por qué. Lo que corrijas como Admin de Polo sale marcado en rojo; los organizadores también lo ven.
+- Campos, Crews, Avisos, Auditoría y Salud ya aparecen en el menú y llegan en las siguientes entregas.
 
 ## Revisión de experiencia (tus 15 puntos, 2026-09-29)
 

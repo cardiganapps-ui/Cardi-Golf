@@ -50,6 +50,7 @@ export function AdminLayout() {
     { to: 'parejas', label: S.draw, show: settings?.modules.pairs.enabled ?? true },
     { to: 'equipos', label: S.teams, show: settings?.modules.individual.format === 'team' },
     { to: 'juegos', label: S.games, show: (settings?.games.length ?? 0) > 0 },
+    { to: 'historial', label: S.history },
     { to: 'datos', label: S.data },
   ]
   return (

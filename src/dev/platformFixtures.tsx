@@ -3,7 +3,7 @@
  * in-memory API, so it can be designed and screenshotted without an admin
  * account. Numbers are invented but shaped like Polo's real ones.
  */
-import { PlatformApiContext, type PlatformApi, type PlatformDay, type PlatformTournament, type PlatformTournamentRow } from '../data/platform'
+import { PlatformApiContext, type Person, type PersonRow, type PlatformApi, type PlatformDay, type PlatformTournament, type PlatformTournamentRow } from '../data/platform'
 import { PlatformLayout } from '../screens/platform'
 
 const now = Date.now()
@@ -16,6 +16,38 @@ const ROWS: PlatformTournamentRow[] = [
   { id: 'f-quick', slug: 'ronda-chapultepec-4k2', name: 'Ronda en Chapultepec', status: 'finished', joinCode: 'QK4K2P', logoUrl: null, quick: true, practice: false, protected: false, crewName: 'Los del jueves', createdAt: ago(50), players: 4, rounds: 1, organizers: 1, ownerName: 'Mauricio Lozano', ownerEmail: 'mau@example.com', lastActivityAt: ago(46) },
   { id: 'f-orphan', slug: 'copa-sin-dueno', name: 'Copa de Otoño de un Organizador con un Nombre Larguísimo', status: 'setup', joinCode: 'OTONO2', logoUrl: null, quick: false, practice: false, protected: false, crewName: null, createdAt: ago(24 * 40), players: 0, rounds: 0, organizers: 0, ownerName: null, ownerEmail: null, lastActivityAt: null },
 ]
+
+const PEOPLE: PersonRow[] = [
+  { id: 'p-diego', email: 'diego@example.com', anonymous: false, provider: 'google', handle: 'diego', displayName: 'Diego Arámburu', avatarUrl: null, devicePlayer: null, deviceTournament: null, createdAt: ago(24 * 60), lastSignInAt: ago(1), blocked: false, isAdmin: true, tournaments: 3 },
+  { id: 'p-mau', email: 'mau@example.com', anonymous: false, provider: 'email', handle: 'mau.lozano', displayName: 'Mauricio Lozano', avatarUrl: null, devicePlayer: null, deviceTournament: null, createdAt: ago(24 * 9), lastSignInAt: ago(30), blocked: false, isAdmin: false, tournaments: 2 },
+  { id: 'p-spam', email: 'vendo.pelotas.baratas.con.un.correo.larguisimo@example.com', anonymous: false, provider: 'email', handle: null, displayName: null, avatarUrl: null, devicePlayer: null, deviceTournament: null, createdAt: ago(24 * 2), lastSignInAt: ago(40), blocked: true, isAdmin: false, tournaments: 0 },
+  { id: 'p-phone', email: null, anonymous: true, provider: 'anonymous', handle: null, displayName: null, avatarUrl: null, devicePlayer: 'René', deviceTournament: 'Ensayo', createdAt: ago(24 * 5), lastSignInAt: ago(3), blocked: false, isAdmin: false, tournaments: 1 },
+]
+
+function person(id: string): Person | null {
+  const r = PEOPLE.find((x) => x.id === id)
+  if (!r) return null
+  return {
+    id: r.id, email: r.email, anonymous: r.anonymous, provider: r.provider, providers: [r.provider], createdAt: r.createdAt, lastSignInAt: r.lastSignInAt,
+    confirmedAt: r.anonymous ? null : r.createdAt, blocked: r.blocked, isAdmin: r.isAdmin, isSelf: r.id === 'p-diego',
+    profile: r.handle ? { handle: r.handle, displayName: r.displayName ?? r.handle, fullName: r.displayName, avatarUrl: null, homeClub: 'Club Campestre', city: 'CDMX', discoverable: true, index: 14.2, indexSource: 'polo', createdAt: r.createdAt } : null,
+    tournaments: r.anonymous
+      ? [{ tournamentId: 'f-ensayo', slug: 'ensayo', name: 'Ensayo', status: 'live', quick: false, practice: true, createdAt: ago(24 * 12), role: null, playerId: 'pl-rene', playerName: 'René', link: 'device' }]
+      : r.tournaments
+        ? [
+            { tournamentId: 'f-quick', slug: 'ronda-chapultepec-4k2', name: 'Ronda en Chapultepec', status: 'finished', quick: true, practice: false, createdAt: ago(50), role: 'owner', playerId: 'pl-mau', playerName: 'Mauricio', link: 'confirmed' },
+            { tournamentId: 'f-ensayo', slug: 'ensayo', name: 'Ensayo', status: 'live', quick: false, practice: true, createdAt: ago(24 * 12), role: null, playerId: 'pl-mau2', playerName: 'Mauricio L.', link: 'pending' },
+          ]
+        : [],
+    crews: r.anonymous ? [] : [{ id: 'c1', slug: 'jueves', name: 'Los del jueves', role: 'owner', members: 6 }],
+    friends: r.anonymous ? 0 : 4,
+    pendingFriends: r.anonymous ? 0 : 1,
+    push: { count: r.anonymous ? 0 : 1, hosts: r.anonymous ? [] : ['web.push.apple.com'] },
+    deviceLock: r.anonymous ? { failed: 5, lockedUntil: new Date(now + 4 * 60_000).toISOString() } : null,
+    playerLocks: r.anonymous ? [{ playerId: 'pl-rene', name: 'René', tournament: 'Ensayo', failed: 3, lockedUntil: null }] : [],
+    activity: r.blocked ? [{ id: 9, at: ago(20), action: 'block', reason: 'Mandaba spam a todos' }] : [],
+  }
+}
 
 const daily: PlatformDay[] = Array.from({ length: 30 }, (_, i) => {
   const d = 29 - i
@@ -85,6 +117,29 @@ const api: PlatformApi = {
   },
   async relock() {},
   async setProtected() {},
+  async people({ q, filter }) {
+    const needle = (q ?? '').toLowerCase()
+    const rows = PEOPLE.filter((r) => {
+      if (needle && !`${r.email ?? ''} ${r.handle ?? ''} ${r.displayName ?? ''} ${r.devicePlayer ?? ''}`.toLowerCase().includes(needle)) return false
+      if (filter === 'accounts') return !r.anonymous
+      if (filter === 'devices') return r.anonymous
+      if (filter === 'blocked') return r.blocked
+      return true
+    })
+    return { total: rows.length, rows }
+  },
+  async person(id) {
+    return person(id)
+  },
+  async deletePreview() {
+    return { orphaned: [{ id: 'f-orphan', name: 'Copa de Otoño' }], organizerOf: 1, linkedPlayers: 2, crewsHanded: ['Los del jueves'], crewsDeleted: [], friendships: 4, rivalries: 1, notifications: 12, push: 1, hasProfile: true }
+  },
+  async block() {},
+  async unblock() {},
+  async deleteAccount() {},
+  async resetPinLock() {},
+  async setOrganizer() {},
+  async unlinkPlayer() {},
 }
 
 export function PlatformFixture() {
