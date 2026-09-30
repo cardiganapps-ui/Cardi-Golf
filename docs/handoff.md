@@ -68,7 +68,9 @@ Each item says **what**, **the exact steps**, and **how Claude will verify it**.
 - [ ] **Proteger el torneo de abril en cuanto exista.** Comité › Torneo › Zona de peligro › **Proteger** (o desde el admin). Protegido: nadie lo puede borrar, ni tú, y para corregir algo como admin lo desbloqueas 30 minutos con un motivo.
 - [ ] **Probar Personas.** Admin › Personas: busca por correo, usuario o nombre (un teléfono sin cuenta aparece con el jugador que eligió). En el detalle ves sus torneos, crews, amigos y bloqueos de PIN. **Bloquear** le cierra la sesión y ya no puede entrar (si tenía la app abierta, hasta una hora). **Borrar cuenta** te dice qué se va antes de hacerlo y pide su correo exacto; sus crews pasan a su miembro más antiguo en vez de borrarse. **Quitar bloqueo** de PIN sirve cuando alguien se equivocó cinco veces. Todo pide un motivo y queda en «Lo que hizo el admin».
 - [ ] **Ver el Historial del Comité.** Comité › **Historial**: cada cambio del torneo con quién, cuándo y por qué. Lo que corrijas como Admin de Polo sale marcado en rojo; los organizadores también lo ven.
-- Campos, Crews, Avisos, Auditoría y Salud ya aparecen en el menú y llegan en las siguientes entregas.
+- [ ] **Limpiar el catálogo de campos.** Admin › **Campos**. «Duplicados» junta los que parecen el mismo («Quivira Golf Club» y «Quivira Los Cabos»). «Con errores» señala tarjetas mal capturadas (ventajas repetidas, pares raros, hoyos que no son 9 ni 18) y dice qué está mal. **Corregir la tarjeta** usa el mismo editor del Comité y, si ya hay rondas terminadas ahí, recalcula sus resultados y el índice. **Fusionar con este** pasa rondas y tees al bueno y borra el duplicado. Solo deja fusionar si las tarjetas califican igual hoyo por hoyo, y no toca un torneo protegido sin desbloquearlo.
+- [ ] **Ver los crews.** Admin › **Crews**: miembros, salidas, sacar a alguien (si es el dueño, el crew pasa al miembro más antiguo) o borrar el crew (sus torneos se quedan).
+- Avisos, Auditoría y Salud ya aparecen en el menú y llegan en la siguiente entrega.
 
 ## Revisión de experiencia (tus 15 puntos, 2026-09-29)
 
