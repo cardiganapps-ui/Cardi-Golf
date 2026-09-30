@@ -10,6 +10,8 @@ Review of commit `379ed52` (identical to production at https://golf.cardigan.mx)
 
 Polo has two parts, and they are very different. The rules engine and the tenant boundary are flagship-grade. An independent re-implementation of the rules agrees with the engine on 3,000 random tie-heavy copies of the first tournament, and the full schema, replayed locally, held against every cross-tournament attack the panel tried. Around that core, the parts people touch on the day fail in core paths, and nothing in CI or production would notice.
 
+**Eleven P0s.** Six hit the first tournament directly: live updates, the settlement, cross-card overwrites, a lost correction, a dead-zone session lapse, and Comité typing. Five hit formats and paths the platform ships to other tournaments: 9-hole rounds, stroke play, team format with a Calcutta, team draws, and restore.
+
 **The five things that matter most**
 
 1. **Live updates are dead in production.**
@@ -33,7 +35,7 @@ Polo has two parts, and they are very different. The rules engine and the tenant
    - The restore path regressed (DB-02), and there is no disaster-recovery drill (DB-07).
    - The repository is public although the brief says it's private (CHAIR-02).
 
-**How far is Polo from a flagship product, and what closes the gap fastest?** Polo is several quarters of disciplined work from flagship, not a rewrite. Its engine and data boundary already meet the bar, but the sync layer, the money settlement and the show surfaces (TV, Ceremonia, Comité forms) fail in core paths that no gate would catch. The fastest way to close the gap is to stop adding surface for six weeks, fix the ten P0s behind real gates (most are S or M effort), and prove it in two rehearsals with twelve real phones. The gates are the fixture routes and the Postgres harness this panel built, running in CI as browser, visual, accessibility and SQL tests.
+**How far is Polo from a flagship product, and what closes the gap fastest?** Polo is several quarters of disciplined work from flagship, not a rewrite. Its engine and data boundary already meet the bar, but the sync layer, the money settlement and the show surfaces (TV, Ceremonia, Comité forms) fail in core paths that no gate would catch. The fastest way to close the gap is to stop adding surface for six weeks, fix the eleven P0s behind real gates (most are S or M effort), and prove it in two rehearsals with twelve real phones. The gates are the fixture routes and the Postgres harness this panel built, running in CI as browser, visual, accessibility and SQL tests.
 
 **About this copy.** The repository is public (CHAIR-02), so the reproduction details of security-sensitive findings are withheld from this committed copy and kept in the private report page. Every finding is still listed with its severity, verdict and fix.
 
@@ -68,7 +70,7 @@ Polo has two parts, and they are very different. The rules engine and the tenant
 | 1 | Correctness of rules and money | 15% | **58** | F | 69 (P0 open) | The engine matches an independent oracle on 3,000 tournaments, but the settlement people pay by is wrong when followed (MONEY-01), «Pagado» for payouts never sticks (MONEY-04), and three configurations the UI offers pay wrong money (MONEY-02/03/20) |
 | 2 | Security and privacy | 12% | **67** | D | — | Authorization proven flagship-grade on a full replica; the privacy layer fails on first read (TRUST-01…05), the repository is public (CHAIR-02), and integrity/griefing P2s remain (SEC-02, SEC-04) |
 | 3 | Reliability, offline and realtime | 12% | **46** | F | 69 (P0 open) | Live updates dead in production (REL-01); scores overwritten (REL-05), dropped (ARCH-01) or rejected after a dead-zone token lapse (REL-16); 2 s target unreachable by design (REL-11). The outbox itself never lost a score to the network |
-| 4 | Architecture and code quality | 8% | **62** | D | — | A pure engine, strict TS and no import cycles; but an untyped data boundary (ARCH-03), settings that silently fall back to defaults (ARCH-04), a team draw that makes a tournament unloadable (ARCH-09), and a refetch-everything design (PERF-07) |
+| 4 | Architecture and code quality | 8% | **62** | D | 69 (P0 open) | A pure engine, strict TS and no import cycles; but saving a team draw makes the tournament unloadable (ARCH-09, P0), the data boundary is untyped (ARCH-03), settings silently fall back to defaults (ARCH-04), and the design refetches everything (PERF-07) |
 | 5 | Data layer and database | 7% | **60** | D | 69 (P0 open) | A careful schema and a concurrency-safe write path; restore regressed (DB-02), no disaster recovery (DB-07), RLS costs ~15 helper calls per row (DB-12), and the keep-alive never worked (DB-01) |
 | 6 | Performance | 6% | **62** | D | — | A fast engine and no memory leaks; every change re-downloads the tournament on every phone (PERF-07), reopening waits on five round trips despite a cached snapshot (PERF-08), and the first share costs 1.2 MB (PERF-11/PWA-04) |
 | 7 | Testing and delivery | 5% | **60** | D | — | Engine tests are genuinely good (every §6 case, prior fixes pinned); 0% on screens, APIs and SQL in CI, 15 of 24 targeted mutants survive, `main` unprotected, migrations applied before review (QA-06…11, DB-09) |
@@ -82,7 +84,7 @@ Polo has two parts, and they are very different. The rules engine and the tenant
 
 ### 3.1 Caps applied
 
-- **Areas 1, 3, 5 and 9** have open P0s, so each is capped at 69. None of the scores reaches the cap: each is lower on its merits.
+- **Areas 1, 3, 4, 5 and 9** have open P0s, so each is capped at 69. None of the scores reaches the cap: each is lower on its merits.
 - **Overall:** open P0s in areas 1 and 3 cap the overall grade at 69. The weighted score is 59, so the cap doesn't bind either.
 
 ### 3.2 Chair's rulings on disagreements
@@ -99,6 +101,8 @@ Polo has two parts, and they are very different. The rules engine and the tenant
   - REL-06, REL-07 and REL-10 to P2: last-write-wins is what §8 specifies, and the next reload reconciles.
   - PERF-01 and PERF-02 to P2: the logo doesn't gate the board, and route splitting alone saves about 6% on a player's path.
   - DB-01 and DB-03 to P2: the backup cron keeps the project awake, and DB-02's fix removes the restore trigger.
+- **ARCH-09 (team draw).** V4 raised it from P1 to P0. The real store's `team_members` query fails with 400 against production, so every tournament in the shipped team format is unusable once its draw is saved. The first tournament is unaffected. Accepted.
+- **DB-12 (RLS cost).** Kept at P1. V4 reproduced the mechanism exactly (4,788 helper calls for 12 players) but corrected the timings measured under load: at low load a reload costs 0.64 s at 12 players and 5.8 s at 60. The statement-timeout risk at 60 players was overstated.
 - **REL-14 (outbox stall).** Kept at P1 per V11, against ARCH-11's P2: there is no timeout at all, and one hung request froze the queue for more than 150 s.
 - **COPY-24 and CHAIR-01.** P1 only because of the brief's regression rule; each fix takes minutes.
 - **Security and privacy.** SEC graded technical security 82 (B); TRUST graded privacy and compliance 58 (F). The brief grades one area, so the chair combined them and weighted the public repository (CHAIR-02), which neither panelist had seen, to reach **67**.
@@ -253,7 +257,7 @@ Lighthouse 12.8.2, mobile preset, simulated 4G and 4× CPU slowdown (benchmark i
 
 ### 4.6 Screenshots
 
-**484 canonical screenshots** plus 121 taken by panelists for specific findings, all under `shots/`, named `<route>-<fixture>-<device>-<theme>.png`. The table shows the canonical sets; the added `-<state>` suffixes mark sheets, sub-tabs and similar states.
+**484 canonical screenshots** plus 75 taken by panelists and verifiers for the findings that cite them, all under `shots/` (559 files, 22 MB; 94 uncited extras were left out), named `<route>-<fixture>-<device>-<theme>.png`. The table shows the canonical sets; the added `-<state>` suffixes mark sheets, sub-tabs and similar states.
 
 | Set | What | Devices | Fixtures |
 |---|---|---|---|
@@ -323,7 +327,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
 
 ## 6. Findings by area
 
-**282 findings**: **10 P0**, **48 P1**, 163 P2, 61 P3. They come from 327 panel reports after merging duplicates under their root cause («Merged»). Every P0 and P1 was re-checked by an independent verifier (53 carry a Verification line; the rest were re-checked by the chair and a second agent, as noted). CONFIRMED means the verifier reproduced it; PLAUSIBLE means the evidence holds but reproduction needs something unavailable here. Within each area, findings run P0 first. P0/P1 are shown in full; P2/P3 are condensed. The complete record of every finding (all evidence, reproduction steps, merged duplicates) is in `findings.json`. Sixteen security-sensitive findings are listed with their severity and fix, but their evidence and reproduction are withheld from this public copy (CHAIR-02) and kept in the private report.
+**282 findings**: **11 P0**, **47 P1**, 163 P2, 61 P3. They come from 327 raw findings (325 from the panel, 2 from the chair) after merging duplicates under their root cause («Merged»). Every P0 and P1 was re-checked by an independent verifier (55 carry a Verification line; the rest were re-checked by the chair and a second agent, as noted). CONFIRMED means the verifier reproduced it; PLAUSIBLE means the evidence holds but reproduction needs something unavailable here. Within each area, findings run P0 first. P0/P1 are shown in full; P2/P3 are condensed. The complete record of every finding (all evidence, reproduction steps, merged duplicates) is in `findings.json`. Sixteen security-sensitive findings are listed with their severity and fix, but their evidence and reproduction are withheld from this public copy (CHAIR-02) and kept in the private report.
 
 ### 6.1 Correctness of rules and money
 
@@ -580,6 +584,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - CLAUDE.md §3 states "Private repo cardiganapps-ui/Cardi-Golf"
   - Exposed in the tree: the platform administrator's personal email address (supabase/migrations/0021_platform_admin.sql:41); the PIN every Ensayo player shares (scripts/seed-ensayo.mjs:156-164, e2e/smoke.mjs:25), which gives anyone the rehearsal tournament's Comité; the trip's booking reference, lead guest, hotel and dates (CLAUDE.md §2); the twelve…
   - …1 more in `findings.json`
+- **Chair:** Reported by verifier V7 while checking QA-10 and re-checked by the chair: GitHub API visibility "public", and unauthenticated fetches of the repository page and raw CLAUDE.md return 200.
 - **Impact:** Anyone can read the friends' names, the owner's email, the booking reference and hotel for the trip, take over the Ensayo rehearsal tournament with the shared PIN (and wreck a rehearsal), and read the source of every unfixed defect in this review, including the ones a stranger can use against the real tournament during the trip. The booking reference and lead guest name are enough to attempt social engineering with the travel agency.
 - **Recommendation:** Decide deliberately: make the repository private (GitHub › Settings › General › Danger zone › Change visibility; free for a personal account, and Vercel keeps deploying) or keep it public and remove the personal data: move the admin seed to a one-off SQL run outside the repo, give Ensayo random per-player PINs outside the repo, drop the booking reference and real names from CLAUDE.md and the fixtures (invented names), and rotate anything that was ever treated as private. Add the visibility to the RUNBOOK's pre-trip checklist. Until then this review's security repro details stay out of the rep…
 
@@ -1168,11 +1173,11 @@ The complete table of all 327 items, with the evidence for each status, is in **
 
 ### 6.4 Architecture and code quality
 
-14 findings: 0 P0 · 1 P1 · 10 P2 · 3 P3.
+14 findings: 1 P0 · 0 P1 · 10 P2 · 3 P3.
 
 #### ARCH-09: Any tournament with a team draw can no longer be opened: the store orders team_members by a non-existent `id` column and production PostgREST answers 400
 
-**P1** · CONFIRMED · new · Effort S (under 2 h)
+**P0** · CONFIRMED · new (introduced in #51, 2026-09-29, after the 2026-09-28 audit). · Effort S (under 2 h) · Scope: platform
 
 - **Evidence:**
   - src/data/tournamentStore.ts:108-119 — the store's PK map lists 10 tables without an id column but not `team_members`; line 130 falls back to `for (const c of PK[table] ?? ['id']) qb = qb.order(c)`
@@ -1180,6 +1185,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - supabase/migrations/0020_teams.sql:26-30 — team_members has no id column (primary key (team_id, player_id))
   - Read-only probe against production with the public anon key: `GET /rest/v1/team_members?select=*&team_id=in.(0000…)&order=id.asc` → HTTP 400 {"code":"42703","message":"column team_members.id does not exist"}; the same query with `order=team_id.asc,player_id.asc` → HTTP 200 []
   - …4 more in `findings.json`
+- **Verification:** Independent verifier V4: CONFIRMED, P0 (platform). By the definitions this is «a core flow that fails on the day» for every tournament in a format the platform ships today. The wizard offers four formats, one of them «team» (scramble / best ball / shamble; FormatPicker.tsx:19, schema.ts:34). The moment the Comité saves the team draw, the tournament can no longer be loaded: deterministically, on every device, 100% of the time, not in an edge case. Fresh devices get a… Reproduction: (1) Code: tournamentStore.ts:108-119 PK map has no team_members…
 - **Impact:** The team formats (scramble, best ball, shamble) are offered in the wizard (FormatPicker.tsx:19) but the moment the Comité saves the team draw, every device that opens the tournament fresh gets 'column team_members.id does not exist' instead of the app, including the Comité itself, so nobody can even undo the draw from the UI. Devices with an older cached snapshot silently show pre-draw boards with no realtime. For a team event this is a total outage on the day; it does not affect the first tournament's Stableford format.
 - **Recommendation:** Add `team_members: ['team_id', 'player_id']` to the store's PK map now. Then remove the duplication that caused it: one exported registry (table → parent key → primary key → realtime yes/no) in src/lib/tournamentTables.ts used by fetchSnapshot, REALTIME_TABLES, backup.ts export and the cron's BACKUP_TABLES, with the existing migrations-vs-list test extended to it. Add an integration test that loads every fixture shape (including team8 and match8) through fetchSnapshot against the local Postgres harness or a PostgREST-faithful fake.
 
@@ -1319,7 +1325,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
 
 #### DB-02: restore_tournament (0020) silently stopped restoring side-game entrants, hole awards and bet results, which 0011 restored
 
-**P0** · CONFIRMED · regressed (AUD-P0-10: the transactional restore lost table coverage in 0020) · Effort S (under 2 h) · Scope: platform (first tournament only if a side game is added)
+**P0** · CONFIRMED · regressed (AUD-P0-10: the transactional restore lost table coverage in 0020) · Effort S (under 2 h) · Scope: platform
 
 - **Evidence:**
   - supabase/migrations/0011_games.sql:131-133, 143-144, 164-166, 187-189, 236-241 — restore_tournament carries game_entries, hole_awards and game_results through the temp tables, tenant and reference checks, the wipe and the re-insert
@@ -1327,7 +1333,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - src/data/backup.ts:21-22 — the in-app backup still exports game_entries, game_results and hole_awards; the RPC receives them and ignores them, and returns only {players, rounds, scores}, so the Comité sees success
   - scripts/rls-test.mjs:302-304 — the only test ('restore brings back entrants, hole awards and results') never changes those rows between backup and restore, so it passes against the broken function; it counts rows and never checks hole_awards.group_id; it last changed on 2026-09-28, before 0020
   - …3 more in `findings.json`
-- **Verification:** Independent verifier V4: CONFIRMED, P1 (platform (first tournament only if a side game is added)). Restoring a backup silently leaves three money-bearing tables in their current state, while the Comité is told «Respaldo restaurado: N jugadores, N rondas, N hoyos» (AdminData.tsx:86-89, es-MX.ts:1469). It also turns every hole-contest claim into a Comité ruling. In that path this is lost data with a money effect: side-pot entrants, bet winners and contest holes differ from the restored state. P1 rather than P0 beca… Reproduction: My own drill: e…
+- **Verification:** Independent verifier V4: CONFIRMED, P1 (platform). Restoring a backup silently leaves three money-bearing tables in their current state, while the Comité is told «Respaldo restaurado: N jugadores, N rondas, N hoyos» (AdminData.tsx:86-89, es-MX.ts:1469). It also turns every hole-contest claim into a Comité ruling. In that path this is lost data with a money effect: side-pot entrants, bet winners and contest holes differ from the restored state. P1 rather than P0 beca… Reproduction: My own drill: evidence/V4/restore-drill.sh on my DB v4_db (all…
 - **Chair:** The panelist and the harness builder proposed P1; the chair applies the regression rule (one severity higher). Restore is the documented recovery path (RUNBOOK) and silently drops money-bearing rows.
 - **Impact:** Restoring a tournament that has instance games (every Ronda rápida with the Más cerca / Skins / Birdies chips, any side pot or custom bet) keeps the current entrants and bet results instead of the backup's, so buy-ins and payouts differ from the state the Comité restored to, while the app reports success. Hole-contest claims survive with group_id = NULL, i.e. as Comité rulings (DB-03). Nacho's tournament has games: [] today, so its restore is unaffected until someone adds a side game.
 - **Recommendation:** New migration: restore_tournament = 0020's body plus 0011's three tables (temp tables, tenant and reference checks, wipe hole_awards before groups are deleted, re-insert after groups). Stop hand-maintaining the list: a vitest that reads the last `create or replace function public.restore_tournament` in supabase/migrations and fails when any table in backup.ts BY_TOURNAMENT/BY_ROUND/BY_LOT (+ group_members, team_members) is missing from it. Make rls-test mutate every table after the backup and assert exact equality after restore, including hole_awards.group_id.
@@ -1368,7 +1374,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
 
 #### DB-03: Deleting a group turns its players' hole-contest claims into Comité rulings (hole_awards.group_id ON DELETE SET NULL)
 
-**P2** · CONFIRMED · new (hole_awards arrived in 0011, after the 2026-09-28 audit; no earlier finding covers it). · Effort M (under a day) · Scope: platform (first tournament only if a contest game is added)
+**P2** · CONFIRMED · new (hole_awards arrived in 0011, after the 2026-09-28 audit; no earlier finding covers it). · Effort M (under a day) · Scope: platform
 
 - **Evidence:**
   - supabase/migrations/0011_games.sql:30 — hole_awards.group_id references groups(id) ON DELETE SET NULL
@@ -1462,7 +1468,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
 
 #### DB-12: Row-level security runs ~15 helper-function calls per row read (up to ~38 on other plans): a player's reload costs ~0.8 s of database time at 12 players and ~12 s at 60 (≈10 ms with set-based policies)
 
-**P1** · CONFIRMED · new · Effort M (under a day)
+**P1** · CONFIRMED · new (the 2026-09-28 audit covered paging, P0-12, fixed; not per-row RLS cost). · Effort M (under a day) · Scope: both
 
 - **Evidence:**
   - supabase/migrations/0003_rls.sql:104-113 — scores_read USING is_tournament_member(round_tournament_id(round_id)); scores_write is FOR ALL, so its USING clause is also OR'd into every SELECT. The helpers are SECURITY DEFINER SQL functions (0002, 0013, 0021), which Postgres never inlines, so each is a separate per-row execution
@@ -1470,6 +1476,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - Function calls for the client's first scores page, each in a fresh backend ($S/panel/evidence/DB/one.sh, pg_stat_xact_user_functions): 12 players, 324 rows → my_player_id 1,764 (5.4 per row), round_tournament_id 1,476; 60 players, 1,000 rows returned after evaluating all 1,620 → my_player_id 27,576 (17 per row), round_tournament_id 25,992, is_tour…
   - Exact count for the client's own query (select * … order by id limit 1000, fresh backend, after ANALYZE): 12 players → 4,788 helper calls for 324 rows (14.8/row); 60 players → 26,244 calls for the 1,764 rows page 1 must evaluate before sorting (14.9/row); plan: Bitmap Heap Scan on scores_round_idx (only this tournament's rows) + Filter (is_tournam…
   - …4 more in `findings.json`
+- **Verification:** Independent verifier V4: CONFIRMED, P1 (both). The mechanism is confirmed and costs real time on production today. CLAUDE.md §2's success criterion «other phones see a new score in under 2 seconds on 4G» is at risk in exactly the burst that matters: a foursome saves a hole, and every subscribed phone re-reads the whole tournament once per score row. A top team would never ship read policies that run about 15 security-definer function calls per row. The fix is co… Reproduction: All scripts in evidence/V4/. Own seed (perf-seed.sh, DB v4_perf): a…
 - **Impact:** Every phone's reload (DB-10) pays this. For Nacho's 12 players it is ~0.8 s of shared-CPU time per reload, multiplied by 16 phones and up to 4 reloads per hole saved: bursts of tens of CPU-seconds on the free plan's shared-CPU instance whenever groups finish holes together, so the '<2 s to other phones' target (§2) degrades exactly when it matters. At 60 players a single scores page is 3-6 s and flirts with the 8 s statement_timeout of the authenticated role (supabase.com/docs/guides/database/postgres/timeouts), so reloads start failing outright. Realtime's per-subscriber authorization of eve…
 - **Recommendation:** Rewrite the read policies set-based: USING (round_id IN (SELECT id FROM rounds WHERE tournament_id = ANY ((SELECT public.my_tournament_ids())))) with one STABLE SECURITY DEFINER function that returns the caller's tournament ids once per statement (Supabase's documented 'wrap in select' pattern); split every FOR ALL write policy into INSERT/UPDATE/DELETE so none is OR'd into SELECT (also clears splinter's multiple_permissive_policies); give holes/tees plain read policies. Order paged reads by the primary key that matches an index (scores: round_id, player_id, hole). Add a CI check: EXPLAIN ANA…
 
@@ -1623,6 +1630,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - grep -n 'VAPID\|PUSH_DISPATCH' .env.example → no match
   - The variables are read by api/push-dispatch.ts (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, PUSH_DISPATCH_SECRET), src/data/push.ts (VITE_VAPID_PUBLIC_KEY) and scripts/rls-test.mjs
   - Introduced by 72f91ec «Profiles 8: web push (#42)»; the 2026-09-28 sweep (P2, Tooling) had asked for .env.example to list every server-side name, and it was fixed before #42
+- **Chair:** Established by the history mapper (AUD-P2-35 regressed) and re-checked by the chair (grep of .env.example against every variable the code reads). P1 only by the regression rule.
 - **Impact:** Whoever sets up a new environment, a staging project or a CI job from .env.example gets a build whose push route answers 500 and whose client never offers notifications, with nothing saying which variables are missing. On the trip this matters only if Diego or a helper must rebuild or move the project in a hurry.
 - **Recommendation:** Add the five names (values blank, with a comment on where each lives: Vercel Production + Preview, Supabase Vault for the secret) to .env.example, and add a unit test that greps every process.env/import.meta.env name used in api/, src/ and scripts/ and fails when .env.example lacks it (the backupTables.test.ts pattern). P1 only because of the brief's regression rule; the fix takes minutes.
 
@@ -2850,7 +2858,7 @@ The complete table of all 327 items, with the evidence for each status, is in **
   - Quotes: «» in es-MX.ts:311,352,490,1858 but straight quotes in :612, :869, :1094-1095, :1560
   - Ordinals: "1.º" from ordinal() (es-MX.ts:10-15, :913) vs "1º" in :646-647, :1932, :1940, :1957, :1975 and engine labels ("Individual, 1º")
   - …4 more in `findings.json`
-- **Chair:** P1 by the brief's regression rule (AUD-P2-20 was P2). The fix is a string pass plus a copy-lint test.
+- **Chair:** P1 by the brief's regression rule (AUD-P2-20 was P2). Re-checked independently by two agents: the history mapper found AUD-P2-20, DA-B.2, DA-A.5 and DA-B.5 regressed with file:line evidence, and the copy panelist counted the same drift (COPY-22, COPY-24). The fix is a string pass plus a copy-lint test.
 - **Impact:** Individually nits; together they are why the product reads as assembled rather than written, which is what the redesign set out to fix.
 - **Recommendation:** Finish the copy pass with a test: fail on " · ", "→", "›", straight double quotes and /\dº/ in es-MX.ts and in engine `why`/label output from the golden fixtures; format negatives with the existing true-minus helper.
 
@@ -3638,7 +3646,7 @@ These strengths were checked by at least one panelist. Protect them while fixing
 - a local Postgres harness;
 - a history mapper, which covered 341 earlier items.
 
-Every panelist worked from the same brief with the same rules: review only, evidence or it didn't happen, and data safety. They wrote their findings and an area grade independently. The chair merged the 326 raw findings (325 from the panel plus CHAIR-01) into **281** under their root causes; 45 were duplicates. Every P0 and P1 went to one of thirteen **adversarial verifiers**. None of them had written the finding, and each was told to disprove it: reproduce it independently, attack reachability and mitigations, and judge severity against the definitions. What survived is marked CONFIRMED (the verifier reproduced it) or PLAUSIBLE (evidence holds but reproduction needs something unavailable here, stated in the finding). The chair then ruled on disagreements (§3.2) and applied the brief's caps and regression rule.
+Every panelist worked from the same brief with the same rules: review only, evidence or it didn't happen, and data safety. They wrote their findings and an area grade independently. The chair merged the 327 raw findings (325 from the panel, 2 from the chair) into **282** under their root causes; 45 were duplicates. Every P0 and P1 went to one of thirteen **adversarial verifiers**. None of them had written the finding, and each was told to disprove it: reproduce it independently, attack reachability and mitigations, and judge severity against the definitions. What survived is marked CONFIRMED (the verifier reproduced it) or PLAUSIBLE (evidence holds but reproduction needs something unavailable here, stated in the finding). The chair then ruled on disagreements (§3.2) and applied the brief's caps and regression rule.
 
 | Panelist | Area | What they ran |
 |---|---|---|

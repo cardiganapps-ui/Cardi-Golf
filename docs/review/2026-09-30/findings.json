@@ -671,10 +671,11 @@
   {
     "id": "ARCH-09",
     "title": "Any tournament with a team draw can no longer be opened: the store orders team_members by a non-existent `id` column and production PostgREST answers 400",
-    "severity": "P1",
+    "severity": "P0",
     "verdict": "CONFIRMED",
     "area": "Architecture and code quality",
-    "status": "new",
+    "status": "new (introduced in #51, 2026-09-29, after the 2026-09-28 audit).",
+    "scope": "platform",
     "evidence": [
       "src/data/tournamentStore.ts:108-119 — the store's PK map lists 10 tables without an id column but not `team_members`; line 130 falls back to `for (const c of PK[table] ?? ['id']) qb = qb.order(c)`",
       "src/data/tournamentStore.ts:171 — `inList('team_members', 'team_id', teamIds)` runs whenever the tournament has at least one team",
@@ -691,7 +692,8 @@
     "repro": "cd /home/user/Cardi-Golf && set -a && . ./.env.example && set +a && curl -s -w ' HTTP %{http_code}\\n' -H \"apikey: $VITE_SUPABASE_ANON_KEY\" -H \"Authorization: Bearer $VITE_SUPABASE_ANON_KEY\" \"$VITE_SUPABASE_URL/rest/v1/team_members?select=*&team_id=in.(00000000-0000-0000-0000-000000000000)&order=id.asc\"  → 400 42703; then sed -n 108,131p src/data/tournamentStore.ts (no team_members key, fallback to 'id'); npx vitest run --config $S/panel/evidence/ARCH/vitest.config.mjs $S/panel/evidence/ARCH/tests/teams-load.test.ts",
     "panelist": "ARCH",
     "merged_from": [],
-    "severity_original": "P1"
+    "severity_original": "P1",
+    "verification": "Independent verifier V4: CONFIRMED, P0 (platform). By the definitions this is «a core flow that fails on the day» for every tournament in a format the platform ships today. The wizard offers four formats, one of them «team» (scramble / best ball / shamble; FormatPicker.tsx:19, schema.ts:34). The moment the Comité saves the team draw, the tournament can no longer be loaded: deterministically, on every device, 100% of the time, not in an edge case. Fresh devices get a… Reproduction: (1) Code: tournamentStore.ts:108-119 PK map has no team_members; :130 `for (const c of PK[table] ?? ['id']) qb = qb.order(c)`; :171 inList('team_members', 'team_id', teamIds) runs whenever teams.length > 0. 0020_teams.sql:26-35: team_members(team_id, player_id, tournament_id), primary key (team_id, player_id), no id column. Both came in 5c7068f (#51). backup.ts:28 does map team_members correctly. (2) Production, anon key only (evidence/V4/arch09-prod.out). curl GET /rest/v1/team_members?select=*&team_id=in.(0000…)… Corrections: (a) backup.ts's team_members entry is at line 28, not 27. (b) «Devices with an older cached snapshot silently show pre-draw boards with no realtime» needs one precision. A device that was already open keeps its Realtime channel and its old data, and every event triggers a reload that fails again, so it freezes silently. A device that cold-opens with a cache gets the cached snapshot via enterFromCache without a subsc… Counter-evidence weighed: Only tournaments whose format is «team» ever create teams rows, so every other format (Stableford, stroke, match, including four-ball) is unaffected. The first tournament is unaffected. Players' score writes still go through (the outbox writes scores; only reads fail), so data entered is not lost.…"
   },
   {
     "id": "ARCH-13",
@@ -905,7 +907,8 @@
     "repro": "grep -rhoE 'process\\.env\\.[A-Z_0-9]+|import\\.meta\\.env\\.[A-Z_0-9]+' api src scripts | sort -u, then compare with .env.example",
     "panelist": "CHAIR",
     "merged_from": [],
-    "severity_original": "P1"
+    "severity_original": "P1",
+    "chair_note": "Established by the history mapper (AUD-P2-35 regressed) and re-checked by the chair (grep of .env.example against every variable the code reads). P1 only by the regression rule."
   },
   {
     "id": "CHAIR-02",
@@ -927,7 +930,8 @@
     "repro": "curl -s -o /dev/null -w \"%{http_code}\" https://raw.githubusercontent.com/cardiganapps-ui/Cardi-Golf/main/CLAUDE.md → 200 without credentials",
     "panelist": "CHAIR",
     "merged_from": [],
-    "severity_original": "P1"
+    "severity_original": "P1",
+    "chair_note": "Reported by verifier V7 while checking QA-10 and re-checked by the chair: GitHub API visibility \"public\", and unauthenticated fetches of the repository page and raw CLAUDE.md return 200."
   },
   {
     "id": "COPY-03",
@@ -1339,7 +1343,7 @@
       "COPY-22"
     ],
     "severity_original": "P3",
-    "chair_note": "P1 by the brief's regression rule (AUD-P2-20 was P2). The fix is a string pass plus a copy-lint test."
+    "chair_note": "P1 by the brief's regression rule (AUD-P2-20 was P2). Re-checked independently by two agents: the history mapper found AUD-P2-20, DA-B.2, DA-A.5 and DA-B.5 regressed with file:line evidence, and the copy panelist counted the same drift (COPY-22, COPY-24). The fix is a string pass plus a copy-lint test."
   },
   {
     "id": "COPY-25",
@@ -1413,7 +1417,7 @@
     "verdict": "CONFIRMED",
     "area": "Data layer and database",
     "status": "regressed (AUD-P0-10: the transactional restore lost table coverage in 0020)",
-    "scope": "platform (first tournament only if a side game is added)",
+    "scope": "platform",
     "evidence": [
       "supabase/migrations/0011_games.sql:131-133, 143-144, 164-166, 187-189, 236-241 — restore_tournament carries game_entries, hole_awards and game_results through the temp tables, tenant and reference checks, the wipe and the re-insert",
       "supabase/migrations/0020_teams.sql:141-148 — 'This is 0010's function with teams and team_members added'; it was rebuilt from 0010, not 0011: `grep -c 'game_entries\\|hole_awards\\|game_results' supabase/migrations/0020_teams.sql` → 0",
@@ -1430,7 +1434,7 @@
     "panelist": "DB",
     "merged_from": [],
     "severity_original": "P1",
-    "verification": "Independent verifier V4: CONFIRMED, P1 (platform (first tournament only if a side game is added)). Restoring a backup silently leaves three money-bearing tables in their current state, while the Comité is told «Respaldo restaurado: N jugadores, N rondas, N hoyos» (AdminData.tsx:86-89, es-MX.ts:1469). It also turns every hole-contest claim into a Comité ruling. In that path this is lost data with a money effect: side-pot entrants, bet winners and contest holes differ from the restored state. P1 rather than P0 beca… Reproduction: My own drill: evidence/V4/restore-drill.sh on my DB v4_db (all 24 migrations; the live restore_tournament is 0020's). The harness function has no game_entries or hole_awards references: pg_proc count 1, has_game_entries f, has_hole_awards f, has_team_members t. The drill runs every step as its own transaction under RLS, as the acting user. Setup: the organizer adds 2 players, sets settings.games (skins side pot with entrants=list, closest contest on holes 3 and 7 with a direct stake of 100, custom bet), sets the r… Counter-evidence weighed: No mitigation found: nothing re-seeds entrants or re-links claims after a restore, and the RPC's return value ({players, rounds, scores}) cannot reveal it. The first tournament's preset has no instance games. I could not read production's function body (no Management API). Production is assumed to…",
+    "verification": "Independent verifier V4: CONFIRMED, P1 (platform). Restoring a backup silently leaves three money-bearing tables in their current state, while the Comité is told «Respaldo restaurado: N jugadores, N rondas, N hoyos» (AdminData.tsx:86-89, es-MX.ts:1469). It also turns every hole-contest claim into a Comité ruling. In that path this is lost data with a money effect: side-pot entrants, bet winners and contest holes differ from the restored state. P1 rather than P0 beca… Reproduction: My own drill: evidence/V4/restore-drill.sh on my DB v4_db (all 24 migrations; the live restore_tournament is 0020's). The harness function has no game_entries or hole_awards references: pg_proc count 1, has_game_entries f, has_hole_awards f, has_team_members t. The drill runs every step as its own transaction under RLS, as the acting user. Setup: the organizer adds 2 players, sets settings.games (skins side pot with entrants=list, closest contest on holes 3 and 7 with a direct stake of 100, custom bet), sets the r… Counter-evidence weighed: No mitigation found: nothing re-seeds entrants or re-links claims after a restore, and the RPC's return value ({players, rounds, scores}) cannot reveal it. The first tournament's preset has no instance games. I could not read production's function body (no Management API). Production is assumed to…",
     "chair_note": "The panelist and the harness builder proposed P1; the chair applies the regression rule (one severity higher). Restore is the documented recovery path (RUNBOOK) and silently drops money-bearing rows."
   },
   {
@@ -1440,7 +1444,7 @@
     "verdict": "CONFIRMED",
     "area": "Data layer and database",
     "status": "new (hole_awards arrived in 0011, after the 2026-09-28 audit; no earlier finding covers it).",
-    "scope": "platform (first tournament only if a contest game is added)",
+    "scope": "platform",
     "evidence": [
       "supabase/migrations/0011_games.sql:30 — hole_awards.group_id references groups(id) ON DELETE SET NULL",
       "src/engine/games/contest/index.ts:62-64 — `const comite = rows.filter((a) => a.groupId == null)`: a group-less row is the Comité's decision and overrides every group claim",
@@ -1456,7 +1460,7 @@
     "panelist": "DB",
     "merged_from": [],
     "severity_original": "P1",
-    "verification": "Independent verifier V4: CONFIRMED, P2 (platform (first tournament only if a contest game is added)). Real and money-moving when triggered, but P2 on its own. The finding names two triggers. (1) A restore (0020 deletes and re-inserts every group). That path is DB-02's, and DB-02's fix (wipe hole_awards before the groups are deleted, re-insert after, as 0011 did) removes it. (2) The Comité deletes a group of a round that already has contest claims (Comité › Grupos: remove group, Guardar). That is the only trigger uni… Reproduction: (a) Harness, upsert_groups path (evidence/V4/db03-groups-drop.sh → db03-groups-drop.out), on my DB v4_ctl. Claims were linked to their groups by the 0011 control restore. Before: groups 1 {Ana, Beto} and 2 {Ceci, Dario}; h3 «Ana:grupo 1 Ceci:grupo 2» → the engine's rule gives 'disputed (pays nothing)'; h7 Beto. The organizer (under RLS) calls upsert_groups(round 1, [group 1 with all four]), i.e. deletes group 2 as the Grupos screen would (AdminGroups.tsx:136 removeGroup, :157 saveGroups; the round list excludes on… Corrections: «In the drill a disputed hole became a win for J5 only because group 2 was dissolved» holds (reproduced with my own data). «After a restore every surviving claim is COMITE» holds, but on its own it does not change who wins a hole; only follow-up actions and DB-02's unreverted rows do. The impact should say the first tournament is unaffected as configured (games: []). Counter-evidence weighed: The unique trigger is rare (see the severity reasoning), and the first tournament has no contests. After a restore alone, standings do not change from the SET NULL: the same players stay claimants, and a hole with two group-less claimants is still 'disputed' because a single-winner contest has 2 wi…"
+    "verification": "Independent verifier V4: CONFIRMED, P2 (platform). Real and money-moving when triggered, but P2 on its own. The finding names two triggers. (1) A restore (0020 deletes and re-inserts every group). That path is DB-02's, and DB-02's fix (wipe hole_awards before the groups are deleted, re-insert after, as 0011 did) removes it. (2) The Comité deletes a group of a round that already has contest claims (Comité › Grupos: remove group, Guardar). That is the only trigger uni… Reproduction: (a) Harness, upsert_groups path (evidence/V4/db03-groups-drop.sh → db03-groups-drop.out), on my DB v4_ctl. Claims were linked to their groups by the 0011 control restore. Before: groups 1 {Ana, Beto} and 2 {Ceci, Dario}; h3 «Ana:grupo 1 Ceci:grupo 2» → the engine's rule gives 'disputed (pays nothing)'; h7 Beto. The organizer (under RLS) calls upsert_groups(round 1, [group 1 with all four]), i.e. deletes group 2 as the Grupos screen would (AdminGroups.tsx:136 removeGroup, :157 saveGroups; the round list excludes on… Corrections: «In the drill a disputed hole became a win for J5 only because group 2 was dissolved» holds (reproduced with my own data). «After a restore every surviving claim is COMITE» holds, but on its own it does not change who wins a hole; only follow-up actions and DB-02's unreverted rows do. The impact should say the first tournament is unaffected as configured (games: []). Counter-evidence weighed: The unique trigger is rare (see the severity reasoning), and the first tournament has no contests. After a restore alone, standings do not change from the SET NULL: the same players stay claimants, and a hole with two group-less claimants is still 'disputed' because a single-winner contest has 2 wi…"
   },
   {
     "id": "DB-04",
@@ -1571,7 +1575,8 @@
     "severity": "P1",
     "verdict": "CONFIRMED",
     "area": "Performance",
-    "status": "new",
+    "status": "new (the 2026-09-28 audit covered paging, P0-12, fixed; not per-row RLS cost).",
+    "scope": "both",
     "evidence": [
       "supabase/migrations/0003_rls.sql:104-113 — scores_read USING is_tournament_member(round_tournament_id(round_id)); scores_write is FOR ALL, so its USING clause is also OR'd into every SELECT. The helpers are SECURITY DEFINER SQL functions (0002, 0013, 0021), which Postgres never inlines, so each is a separate per-row execution",
       "Harness plan ($S/panel/evidence/DB/rls-cost.1.out), player of the 60-player tournament: Index Scan … Filter: (is_tournament_organizer(round_tournament_id(round_id)) OR (shares_group(round_id, player_id) AND round_is_live(round_id) AND NOT card_is_signed(round_id, player_id)) OR is_tournament_member(round_tournament_id(round_id)))",
@@ -1588,7 +1593,8 @@
     "repro": "$S/pg/bootstrap.sh <db>; psql -d <db> -f $S/panel/evidence/DB/seed.sql; psql -d <db> -f $S/panel/evidence/DB/rls-cost.sql (Execution Time + call counts); psql -d <db> -f $S/panel/evidence/DB/rls-fix.sql (same read, set-based, rolled back); node $S/panel/evidence/DB/snapshot-cost.mjs t60 dev60 (edit the DB name inside).",
     "panelist": "DB",
     "merged_from": [],
-    "severity_original": "P1"
+    "severity_original": "P1",
+    "verification": "Independent verifier V4: CONFIRMED, P1 (both). The mechanism is confirmed and costs real time on production today. CLAUDE.md §2's success criterion «other phones see a new score in under 2 seconds on 4G» is at risk in exactly the burst that matters: a foursome saves a hole, and every subscribed phone re-reads the whole tournament once per score row. A top team would never ship read policies that run about 15 security-definer function calls per row. The fix is co… Reproduction: All scripts in evidence/V4/. Own seed (perf-seed.sh, DB v4_perf): an organizer creates the tournament via create_tournament; an 18-hole course; Day 1 finished with 18 holes, Day 2 live after 9 holes; groups of 4; one anonymous phone claimed as player 1. t12 has 324 scores and 6 groups; t60 has 1,620 scores and 30 groups. (1) Mechanism. Text plan as the player (perf-plan-t12.txt): Bitmap Index Scan on scores_round_idx, then Filter: (is_tournament_organizer(round_tournament_id(round_id)) OR (shares_group(round_id, p… Corrections: (1) «~0.8 s at 12 players / ~12 s at 60»: at low load on the harness it is 0.64 s and 5.8 s, and production runs the 12-player scores read in ~0.25-0.3 s of server time, about half the harness. The panel's figures are inflated by container load (≈9). (2) «At 60 players a single scores page is 3-6 s and flirts with the 8 s statement_timeout» is overstated for single reads: 2.4-2.6 s per page on the harness at low loa… Counter-evidence weighed: (a) Production is about 2× faster per row than my PG 16 harness: ~250-280 ms of server time for 360 rows (~0.75 ms/row) against ~1.4-1.6 ms/row locally. A plausible cause is a newer Postgres; PG 17 caches search_path switches, which these SET search_path helpers do on every call. I could not check…"
   },
   {
     "id": "DB-13",
