@@ -12,6 +12,7 @@ import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
+import { REALTIME_TABLES } from './realtimeTables'
 import { saveSnapshot } from './snapshotCache'
 import {
   mapBid,
@@ -194,28 +195,21 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   }
 }
 
-const REALTIME_TABLES = [
-  'tournaments',
-  'players',
-  'pairs',
-  'teams',
-  'team_members',
-  'rounds',
-  'groups',
-  'group_members',
-  'round_tees',
-  'scores',
-  'snake_tiebreaks',
-  'card_signatures',
-  'handicap_overrides',
-  'calcutta_lots',
-  'calcutta_bids',
-  'calcutta_buybacks',
-  'payments',
-  'game_entries',
-  'hole_awards',
-  'game_results',
-]
+/** While live updates are down, reload this often so the boards keep moving. */
+const POLL_MS = 15_000
+/** An errored channel never recovers by itself: rebuild it, backing off to this. */
+const RETRY_MIN_MS = 30_000
+const RETRY_MAX_MS = 5 * 60_000
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+let retryDelay = RETRY_MIN_MS
+
+function stopDegraded() {
+  if (pollTimer) clearInterval(pollTimer)
+  if (retryTimer) clearTimeout(retryTimer)
+  pollTimer = null
+  retryTimer = null
+}
 
 export const useTournament = create<StoreState>((set, get) => ({
   tournamentId: null,
@@ -265,7 +259,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!id || channel) return
     set({ realtime: 'connecting' })
     const sb = supabase()
-    let ch = sb.channel(`tournament:${id}`)
+    // `wait`: the server confirms every postgres_changes binding before the join
+    // succeeds, so a rejected subscription reports CHANNEL_ERROR instead of a
+    // SUBSCRIBED that never delivers anything (REL-01).
+    let ch = sb.channel(`tournament:${id}`, { config: { postgres_changes_options: { wait: true } } })
     for (const table of REALTIME_TABLES) {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
         // Coalesce bursts (a foursome saving a hole = 4 rows) into one reload.
@@ -273,21 +270,62 @@ export const useTournament = create<StoreState>((set, get) => ({
         reloadTimer = setTimeout(() => void get().reload(), 150)
       })
     }
+    const degrade = () => {
+      if (channel !== ch) return
+      set({ realtime: 'error' })
+      // Live updates are down: poll so the boards keep moving.
+      pollTimer ??= setInterval(() => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') void get().reload()
+      }, POLL_MS)
+      // And try the channel again later, backing off once per rebuild (the
+      // socket may report several errors before the rebuild fires).
+      if (!retryTimer) {
+        retryTimer = setTimeout(() => {
+          retryTimer = null
+          if (channel !== ch) return
+          // Forget the channel first: removeChannel reports CLOSED synchronously.
+          channel = null
+          void sb.removeChannel(ch)
+          get().subscribe()
+        }, retryDelay)
+        retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS)
+      }
+    }
+    // Belt and braces for a server that answers the join before its bindings
+    // are up, or that drops the channel later (extension 'system').
+    ch = ch.on('system', {}, (payload: { extension?: string; status?: string }) => {
+      if ((payload?.extension === 'postgres_changes' || payload?.extension === 'system') && payload.status === 'error') degrade()
+    })
     let wasLive = false
+    channel = ch
     ch.subscribe((status) => {
+      if (channel !== ch) return
       const live = status === 'SUBSCRIBED'
-      set({ realtime: live ? 'live' : status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' ? 'error' : 'connecting' })
+      if (live) {
+        stopDegraded()
+        retryDelay = RETRY_MIN_MS
+        set({ realtime: 'live' })
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        // CLOSED here means the server dropped a channel we still want (e.g. a
+        // token that expired while the app was hidden): realtime-js won't
+        // rejoin it, so treat it as an outage. Our own removals clear
+        // `channel` first and never reach this line.
+        degrade()
+      } else set({ realtime: 'connecting' })
       // Back after a gap: fetch what Realtime did not replay.
       if (live && !wasLive && get().data) void get().reload()
       wasLive = live
     })
-    channel = ch
     ensureListeners()
   },
   unsubscribe() {
+    stopDegraded()
+    retryDelay = RETRY_MIN_MS
     if (channel) {
-      void supabase().removeChannel(channel)
+      // Forget the channel first: removeChannel reports CLOSED synchronously.
+      const ch = channel
       channel = null
+      void supabase().removeChannel(ch)
     }
     set({ realtime: 'off' })
   },
