@@ -161,7 +161,7 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
     await expect(mark).toHaveAccessibleName(`${M.markPaid}: ${who} ${M.paysTo} ${M.bank}, ${detail}: ${amount}`)
     await mark.click()
     await expect(page.getByRole('status').filter({ hasText: M.markedPaid }).last()).toBeVisible()
-    expect(await owedRows(page)).toHaveLength(owedBefore.length - 1)
+    await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
 
     // In «Ya pagaron» the state reads «Pagado», pressed, and a tap takes it back.
     const toggle = (await openPaid(page)).getByRole('button', { name: `${M.paid}: ${who} ${M.paidTo} ${M.bank}, ${detail}: ${amount}`, exact: true })
@@ -170,11 +170,11 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
     await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last()).toBeVisible()
 
     // The same row, written back with paid false: same key, same amount, nothing else.
-    expect(writes).toHaveLength(2)
+    await expect.poll(() => writes.length).toBe(2)
     expect(writes[1]).toEqual({ ...writes[0], p_paid: false })
     expect(writes[0]).toMatchObject({ p_kind: kind, p_paid: true })
-    expect(await owedRows(page)).toEqual(owedBefore)
-    expect(await settlementRows(page)).toEqual(settlementBefore)
+    await expect.poll(() => owedRows(page)).toEqual(owedBefore)
+    await expect.poll(() => settlementRows(page)).toEqual(settlementBefore)
   }
 })
 
@@ -187,21 +187,23 @@ test('Dinero: «Deshacer» puts a payment back the way it was, both ways (UX-21)
   // A wrong «Marcar pagado», undone from the toast.
   const camilo = page.locator('section').filter({ has: page.getByRole('heading', { name: M.checklist }) }).locator('[class*="_transfer_"]').filter({ hasText: 'Camilo' }).filter({ hasText: M.owesLots([1]) })
   await camilo.getByRole('button', { name: new RegExp(`^${M.markPaid}`) }).click()
-  expect(await owedRows(page)).toHaveLength(owedBefore.length - 1)
+  // The list follows the server's answer: wait for it rather than read it once.
+  await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
   await page.getByRole('status').filter({ hasText: M.markedPaid }).last().getByRole('button', { name: t.common.undo }).click()
   await expect(page.getByRole('status').filter({ hasText: M.markedPaid })).toHaveCount(0)
-  expect(await owedRows(page)).toEqual(owedBefore)
+  await expect.poll(() => owedRows(page)).toEqual(owedBefore)
 
   // A payment taken back by mistake (Arturo's entry was paid), undone from the toast: paid again.
   const paid = await openPaid(page)
   const paidBefore = await paid.locator('[class*="_transfer_"]').allInnerTexts()
   writes.length = 0
   await paid.getByRole('button', { name: `${M.paid}: Arturo ${M.paidTo} ${M.bank}, ${M.owesEntry}: $2,500`, exact: true }).click()
-  expect(await owedRows(page)).toHaveLength(owedBefore.length + 1)
+  await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length + 1)
   await page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last().getByRole('button', { name: t.common.undo }).click()
   await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid })).toHaveCount(0)
-  expect(await owedRows(page)).toEqual(owedBefore)
-  expect(await paid.locator('[class*="_transfer_"]').allInnerTexts()).toEqual(paidBefore)
+  await expect.poll(() => owedRows(page)).toEqual(owedBefore)
+  await expect.poll(() => paid.locator('[class*="_transfer_"]').allInnerTexts()).toEqual(paidBefore)
+  await expect.poll(() => writes.length).toBe(2)
   expect(writes).toEqual([
     { p_tournament_id: 'fx-full', p_kind: 'entry', p_from: 'p1', p_to: null, p_amount: 2500, p_paid: false, p_note: null },
     { p_tournament_id: 'fx-full', p_kind: 'entry', p_from: 'p1', p_to: null, p_amount: 2500, p_paid: true, p_note: null },
@@ -222,5 +224,5 @@ test('Dinero once final: a vía-banco line marked by mistake comes back from «Y
     await paid.getByRole('button', { name: new RegExp(`^${name}: `) }).click()
   }
   await expect(line).toContainText('$10,200')
-  expect(await settlementRows(page)).toEqual(before)
+  await expect.poll(() => settlementRows(page)).toEqual(before)
 })
