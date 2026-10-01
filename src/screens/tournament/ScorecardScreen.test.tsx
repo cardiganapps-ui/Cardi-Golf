@@ -46,14 +46,16 @@ function load(s: Snapshot) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 
-function mount(edit?: (s: Snapshot) => void) {
-  const fx = getFixture('minimal4-live')!
+function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isAdmin?: boolean } = {}) {
+  const name = opts.fixture ?? 'minimal4-live'
+  const fx = getFixture(name)!
   snap = structuredClone(fx.snapshot)
   edit?.(snap)
   load(snap)
+  const me = { ...fx.me, isAdmin: opts.isAdmin ?? fx.me.isAdmin }
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -238,7 +240,13 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
 })
 
 describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () => {
-  it('what was typed comes back when the card opens again', () => {
+  /** The other phone's save on hole 10, in the snapshot this phone loads. */
+  const savedElsewhere = (playerId: string, strokes: number) => (s: Snapshot) => {
+    s.scores = s.scores.filter((x) => !(x.playerId === playerId && x.hole === 10 && x.roundId === 'r1'))
+    s.scores.push({ roundId: 'r1', playerId, hole: 10, strokes, putts: 3, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
+  }
+
+  it('what was typed comes back when the card opens again, and says it is not saved yet', () => {
     const first = mount()
     const before = strokesOf('p1')
     fireEvent.click(strokesUp('p1'))
@@ -247,24 +255,74 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
     mount()
     expect(holeOnScreen()).toBe(10)
     expect(strokesOf('p1')).toBe(before + 2)
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
   })
 
-  it('a player the other phone saved since is not restored over the save', () => {
+  it('a player the other phone saved since gets the save; the others get what was typed', () => {
     const first = mount()
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
     fireEvent.click(strokesUp('p3'))
     first.unmount()
-    // While the card was closed, the other phone saved p3 on this hole.
-    mount((s) => {
-      s.scores = s.scores.filter((x) => !(x.playerId === 'p3' && x.hole === 10 && x.roundId === 'r1'))
-      s.scores.push({ roundId: 'r1', playerId: 'p3', hole: 10, strokes: 8, putts: 3, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
-    })
+    mount(savedElsewhere('p3', 8))
+    expect(strokesOf('p1')).toBe(before + 1)
     expect(strokesOf('p3')).toBe(8)
   })
 
-  it('a saved hole leaves nothing behind', async () => {
+  it('opened on a stale snapshot, a restored draft gives way when the newer save arrives, and is never written over it', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    // Opened offline on the cached snapshot: p3's draft comes back.
     mount()
+    expect(strokesOf('p3')).not.toBe(8)
+    // The fresh snapshot brings the other phone's save of p3.
+    remoteSave('p3', 10, 8, 3)
+    expect(strokesOf('p3')).toBe(8)
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+    await tapSave(11_000)
+    expect(written().filter((r) => r.startsWith('p3@'))).toEqual([])
+  })
+
+  it('a baseline is taken once: a save that lands after p3 was typed here keeps that draft from coming back over it', () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    // The other phone saves p3 while this phone is still on the hole (what was typed here stays on screen: REL-05).
+    remoteSave('p3', 10, 8, 3)
+    // More typing rewrites the kept draft; p3's baseline must stay what the server had when he was typed.
     fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount(savedElsewhere('p3', 8))
+    expect(strokesOf('p3')).toBe(8)
+  })
+
+  it('a card that can no longer be edited (signed) never shows a leftover draft', () => {
+    const groupOf = (s: Snapshot) => s.groups.find((g) => g.roundId === 'r2' && g.playerIds.includes('p9'))!
+    const first = mount(undefined, { fixture: 'full12-live' })
+    const g = groupOf(snap)
+    const pid = g.playerIds[0]!
+    const before = strokesOf(pid)
+    fireEvent.click(strokesUp(pid))
+    first.unmount()
+    mount(
+      (s) => {
+        const pair = s.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)!
+        s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: pair.player1Id, signedAt: '2027-04-10T14:30:00Z' })
+      },
+      { fixture: 'full12-live', isAdmin: false },
+    )
+    expect(strokesOf(pid)).toBe(before)
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+  })
+
+  it('a saved hole leaves nothing behind, and the note goes', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount()
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
     await tapSave(11_000)
     expect(Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf:tarjeta:'))).toEqual([])
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
   })
 })

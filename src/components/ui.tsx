@@ -7,6 +7,7 @@
 import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import styles from './ui.module.css'
+import { anySheetOpen, isTopSheet, sheetClosed, sheetOpened } from './sheetHistory'
 
 export { Field, Segmented } from './primitives'
 
@@ -70,8 +71,6 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
   )
 }
 
-/** Open sheets, outermost first: Escape closes only the last one and body scroll returns when the last one closes. */
-const openSheets: string[] = []
 
 /** Bottom sheet / modal. Focus moves in on open and back to the opener on close. */
 export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean }) {
@@ -90,7 +89,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
   }, [onClose])
   useEffect(() => {
     if (!open) return
-    openSheets.push(id)
+    sheetOpened(id, () => close.current())
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
     /*
@@ -109,38 +108,17 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       ;(wanted ?? el).focus()
     }, 30)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || openSheets[openSheets.length - 1] !== id) return
+      if (e.key !== 'Escape' || !isTopSheet(id)) return
       e.stopPropagation()
       close.current()
     }
     window.addEventListener('keydown', onKey)
-    /*
-     * The system back closes the sheet, not the screen under it (PWA-05). The
-     * sheet gets a history entry of its own (same URL, a marker in the state):
-     * back pops it and the sheet closes; closing it any other way pops it too.
-     * Nested sheets close top first: each checks whether its own entry is still
-     * current.
-     */
-    let poppedByBack = false
-    window.history.pushState({ ...(window.history.state ?? {}), poloSheet: id }, '')
-    const onPop = () => {
-      if ((window.history.state as { poloSheet?: string } | null)?.poloSheet === id) return
-      if (!openSheets.includes(id)) return
-      // Our entry is gone, and with it every sheet opened above this one.
-      poppedByBack = true
-      close.current()
-    }
-    window.addEventListener('popstate', onPop)
     // Runs only when the sheet closes or unmounts, never on a re-render.
     return () => {
       clearTimeout(timer)
       window.removeEventListener('keydown', onKey)
-      window.removeEventListener('popstate', onPop)
-      // Closed with «Cerrar», the backdrop, Escape or an action: drop its entry, so the next back leaves the screen.
-      if (!poppedByBack && (window.history.state as { poloSheet?: string } | null)?.poloSheet === id) window.history.back()
-      const i = openSheets.indexOf(id)
-      if (i >= 0) openSheets.splice(i, 1)
-      if (openSheets.length === 0) document.body.style.overflow = ''
+      sheetClosed(id)
+      if (!anySheetOpen()) document.body.style.overflow = ''
       opener.current?.focus?.()
     }
   }, [open, id])

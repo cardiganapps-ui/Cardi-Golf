@@ -1206,6 +1206,8 @@ export const t = {
     said: (name: string, strokes: number, putts: number, pickedUp: boolean, pts: string) =>
       `${name}: ${pickedUp ? 'levantó' : `${strokes} ${strokes === 1 ? 'golpe' : 'golpes'}`}, ${putts} ${putts === 1 ? 'putt' : 'putts'}, ${pts}`,
     /** The hole header as it is read out, and announced when the hole changes. */
+    /** A half-entered hole that came back after leaving the card (PWA-05). */
+    restoredDraft: 'Lo que llevabas capturado en este hoyo sigue aquí. Falta guardarlo.',
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
