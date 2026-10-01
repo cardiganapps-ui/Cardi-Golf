@@ -5,10 +5,11 @@
  * PWA-04: html-to-image fetches every font and image itself, appends a
  * cache-busting `?<time>` (a precache miss, so it failed offline) and keeps a
  * failure in a module cache for the rest of the session. So it fetches
- * nothing here: the card's fonts (Latin subset of the families it uses) and
- * images are inlined as data URLs first, through the service worker's
- * precache, and only successes are remembered. A file that cannot be read
- * leaves that face or image out of this render only.
+ * nothing here: the card's fonts (the subsets its text needs, of the families
+ * it uses) and images are inlined as data URLs first, through the service
+ * worker's precache, and only successes are remembered. A file that cannot be
+ * read leaves that face or image out of this render only: a failed image
+ * becomes a transparent pixel, never a URL html-to-image would fetch itself.
  */
 import { toBlob } from 'html-to-image'
 import { cssVar } from './tokens'
@@ -19,10 +20,30 @@ type Load = (url: string) => Promise<string>
 /** Data URLs that loaded, by absolute URL. A failure is never stored, so the next attempt tries again. */
 const inlined = new Map<string, string>()
 
-async function fetchAsDataUrl(url: string): Promise<string> {
-  const res = await fetch(url)
+/** A transparent pixel, in place of an image that could not be read. */
+export const NO_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+async function readUrl(url: string, init?: RequestInit): Promise<Blob> {
+  const res = await fetch(url, init)
   if (!res.ok) throw new Error(`${res.status} ${url}`)
-  const blob = await res.blob()
+  return res.blob()
+}
+
+/**
+ * The file as a data URL. A tournament logo that a plain <img> showed first is
+ * cached by the service worker as an opaque response, which a CORS read cannot
+ * use. With signal, one retry under a URL of its own goes to the network.
+ */
+async function fetchAsDataUrl(url: string): Promise<string> {
+  let blob: Blob
+  try {
+    blob = await readUrl(url)
+  } catch (e) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) throw e
+    const fresh = new URL(url, typeof location !== 'undefined' ? location.href : undefined)
+    fresh.searchParams.set('polo-share', String(Date.now()))
+    blob = await readUrl(fresh.href, { cache: 'no-store' })
+  }
   return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as string)
@@ -84,21 +105,28 @@ export function familiesIn(node: HTMLElement): Set<string> {
   return used
 }
 
-/** Whether a unicode-range covers basic Latin («A»): the Spanish text, digits and $, without the other subsets. */
-export function coversLatin(range: string): boolean {
+/** Whether a unicode-range covers any of these code points. An empty range covers everything. */
+export function coversAny(range: string, codePoints: Iterable<number>): boolean {
   if (!range.trim()) return true
-  return range.split(',').some((part) => {
+  const spans = range.split(',').flatMap((part) => {
     const m = /U\+([0-9a-f?]+)(?:-([0-9a-f]+))?/i.exec(part.trim())
-    if (!m) return false
+    if (!m) return []
     const lo = parseInt(m[1]!.replace(/\?/g, '0'), 16)
     const hi = m[2] ? parseInt(m[2], 16) : parseInt(m[1]!.replace(/\?/g, 'f'), 16)
-    return lo <= 0x41 && 0x41 <= hi
+    return [[lo, hi] as const]
   })
+  for (const cp of codePoints) if (spans.some(([lo, hi]) => lo <= cp && cp <= hi)) return true
+  return false
+}
+
+/** The code points of the card's text: they decide which subsets it needs («Łukasz» needs latin-ext, Spanish only Latin). */
+export function codePointsIn(text: string): Set<number> {
+  return new Set(Array.from(text, (c) => c.codePointAt(0)!))
 }
 
 /** The @font-face CSS for the card, every file inlined. Faces whose file did not load are left out of this render. */
-export async function fontEmbedCss(faces: PageFontFace[], families: Set<string>, load: Load = fetchAsDataUrl): Promise<string> {
-  const wanted = faces.filter((f) => families.has(f.family) && coversLatin(f.unicodeRange))
+export async function fontEmbedCss(faces: PageFontFace[], families: Set<string>, codePoints: Set<number>, load: Load = fetchAsDataUrl): Promise<string> {
+  const wanted = faces.filter((f) => families.has(f.family) && coversAny(f.unicodeRange, codePoints))
   const css = await Promise.all(
     wanted.map(async (f) => {
       try {
@@ -112,24 +140,32 @@ export async function fontEmbedCss(faces: PageFontFace[], families: Set<string>,
   return css.filter(Boolean).join('\n')
 }
 
-/** Swaps every image in the node for a data URL; one that cannot be read is hidden for this render. Returns the undo. */
+/**
+ * Swaps every image in the node for a data URL. One that cannot be read becomes
+ * a hidden transparent pixel for this render: left with its URL, html-to-image
+ * would fetch it itself and reject the whole card. Returns the undo.
+ */
 export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUrl): Promise<() => void> {
   const undo: Array<() => void> = []
   await Promise.all(
     Array.from(node.querySelectorAll('img')).map(async (img) => {
       const src = img.currentSrc || img.src
       if (!src || src.startsWith('data:')) return
+      const before = { src: img.getAttribute('src'), srcset: img.getAttribute('srcset'), visibility: img.style.visibility }
+      undo.push(() => {
+        if (before.src != null) img.setAttribute('src', before.src)
+        if (before.srcset != null) img.setAttribute('srcset', before.srcset)
+        img.style.visibility = before.visibility
+      })
+      // The clone keeps srcset, and html-to-image would pick from it.
+      img.removeAttribute('srcset')
       try {
-        const data = await inline(src, load)
-        const before = img.getAttribute('src')
-        img.src = data
-        undo.push(() => before != null && img.setAttribute('src', before))
-        await img.decode().catch(() => undefined)
+        img.src = await inline(src, load)
       } catch {
-        const before = img.style.visibility
+        img.src = NO_IMAGE
         img.style.visibility = 'hidden'
-        undo.push(() => (img.style.visibility = before))
       }
+      await img.decode().catch(() => undefined)
     }),
   )
   return () => undo.forEach((u) => u())
@@ -138,7 +174,7 @@ export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUr
 export async function renderNodeToPng(node: HTMLElement): Promise<Blob> {
   // Fonts still loading would render as fallbacks in the image.
   await document.fonts?.ready
-  const [fontCss, restore] = await Promise.all([fontEmbedCss(pageFontFaces(), familiesIn(node)), inlineImages(node)])
+  const [fontCss, restore] = await Promise.all([fontEmbedCss(pageFontFaces(), familiesIn(node), codePointsIn(node.textContent ?? '')), inlineImages(node)])
   try {
     // Nothing left for html-to-image to fetch: no cache-busting, no session cache of failures.
     const blob = await toBlob(node, { pixelRatio: 2, cacheBust: false, fontEmbedCSS: fontCss, backgroundColor: getComputedStyle(node).backgroundColor || cssVar('--bg') })
