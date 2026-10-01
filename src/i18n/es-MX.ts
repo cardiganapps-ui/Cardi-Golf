@@ -893,6 +893,18 @@ export const t = {
       privacy: 'Aviso de privacidad',
       end: '.',
     },
+    /** The push switch (Editar perfil, Avisos): what turning it on stores (save_push_subscription). */
+    pushNote: {
+      start: 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el ',
+      privacy: 'Aviso de privacidad',
+      end: '.',
+    },
+    /** Comité › Campos and /campos: a scorecard photo goes to Anthropic to be read (api/scorecard-extract.ts). */
+    scorecardNote: {
+      start: 'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el ',
+      privacy: 'Aviso de privacidad',
+      end: '.',
+    },
     newTab: '(se abre en otra pestaña)',
     contact: 'Dudas: golf@cardigan.mx',
     back: 'Volver a Polo',
@@ -905,7 +917,7 @@ export const t = {
         ['Quién los ve', 'Tu perfil completo lo ven tus amigos, tus crews y quienes juegan un torneo contigo. Los demás solo ven tu tarjeta básica si tu perfil aparece en búsquedas (lo puedes apagar).'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que juegan ese torneo, en Dinero, y cualquiera de ellos puede compartirlo, por ejemplo en WhatsApp. En tu perfil, el resumen de tu dinero de torneos pasados solo lo ves tú (y el Comité de cada torneo, el de ese torneo). Los avisos nunca llevan montos.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver los datos de cualquier torneo, dinero incluido, para darle soporte o corregir un error.'],
-        ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
+        ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil, y solo para crear y reconocer tu cuenta. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
         ['Tus derechos', 'Puedes editar tu perfil cuando quieras, apagar los avisos en cada teléfono y pedir que borremos tu cuenta y tus datos escribiendo a golf@cardigan.mx. Los resultados de torneos ya jugados pueden quedarse sin tu nombre para que los de los demás sigan cuadrando.'],
       ] as Array<[string, string]>,
@@ -923,7 +935,8 @@ export const t = {
   },
   push: {
     title: 'Avisos en este teléfono',
-    hint: 'Te llegan como notificación: solicitudes de amistad, rivalidades, resultados y rondas donde te agregan. Nunca montos.',
+    /** «Los de la app»: the Admin de Polo's notices are his own text (platform_broadcast), so the promise is only about the app's. */
+    hint: 'Te llega como notificación cada aviso nuevo: solicitudes de amistad, rivalidades, resultados y más. Los de la app nunca llevan montos.',
     enable: 'Activar avisos',
     disable: 'Apagar en este teléfono',
     on: 'Activados en este teléfono.',
@@ -1756,7 +1769,6 @@ export const t = {
       importTees: 'Elige qué tees importar',
       import: 'Importar',
       photo: 'Subir tarjeta',
-      photoHint: 'Foto o PDF de la tarjeta del campo. Revisas todo antes de guardar.',
       photoReading: 'Leyendo la tarjeta…',
       photoUnavailable: 'Lectura de tarjeta pendiente: falta configurar la llave.',
       manual: 'Capturar a mano',

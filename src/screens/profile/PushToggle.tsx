@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/ui'
+import { NoticeNote } from '../../components/LegalLinks'
 import { disablePush, enablePush, pushState, type PushState } from '../../data/push'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
@@ -42,6 +43,8 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
     <div className={compact ? styles.ask : styles.section}>
       {!compact && <span className="label">{P.title}</span>}
       <span className={styles.help}>{note}</span>
+      {/* Before the tap that stores this browser's push address (TRUST-05). */}
+      {state === 'off' && <NoticeNote note={t.legal.pushNote} />}
       {(state === 'off' || state === 'on') && (
         <div className={styles.askActions}>
           {state === 'off' ? (

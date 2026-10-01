@@ -33,3 +33,11 @@ describe('the privacy notice says who sees money', () => {
     expect(t.legal.updated).toBe('Última actualización: 1 de octubre de 2026')
   })
 })
+
+describe('the privacy notice names who receives data', () => {
+  it('Anthropic, with what it receives (the scorecard image) and why (api/scorecard-extract.ts)', () => {
+    const where = sections['Dónde viven']!
+    expect(where).toContain('Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea')
+    expect(where).toContain('recibe esa imagen y nada más')
+  })
+})

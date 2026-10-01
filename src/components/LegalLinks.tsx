@@ -48,14 +48,22 @@ export function LegalConsent({ enter = false, id }: { enter?: boolean; id?: stri
   )
 }
 
-/** Where the Comité types other people's data: what happens to it. */
-export function OthersDataNotice() {
-  const O = t.legal.othersData
+/**
+ * One sentence on what happens to what is given here, ending on the notice:
+ * the push switch, a scorecard photo, the Comité typing other people's data.
+ * `id` as in LegalConsent, for the control it describes.
+ */
+export function NoticeNote({ note, id }: { note: { start: string; privacy: string; end: string }; id?: string }) {
   return (
-    <p data-legal-consent style={lineStyle}>
-      {O.start}
-      <LegalLink to="/privacidad">{O.privacy}</LegalLink>
-      {O.end}
+    <p id={id} data-legal-consent style={lineStyle}>
+      {note.start}
+      <LegalLink to="/privacidad">{note.privacy}</LegalLink>
+      {note.end}
     </p>
   )
+}
+
+/** Where the Comité types other people's data: who sees it. */
+export function OthersDataNotice({ id }: { id?: string }) {
+  return <NoticeNote note={t.legal.othersData} id={id} />
 }

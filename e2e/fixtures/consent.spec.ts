@@ -62,3 +62,18 @@ for (const [width, height] of SMALL_PHONES) {
     expect(pageErrors, 'uncaught errors').toEqual([])
   })
 }
+
+test('Comité › Campos (and /campos, the same screen): who reads a scorecard photo, before «Subir tarjeta»', async ({ page, pageErrors }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await open(page, '/t/_/full12-live/admin/campos')
+  const note = page.locator('[data-legal-consent]')
+  await expect(note).toHaveCount(1)
+  await expect(note).toContainText('Anthropic')
+  await expect(note.getByRole('link', { name: new RegExp(`^${t.legal.scorecardNote.privacy}`) })).toHaveAttribute('href', /^\/privacidad(\?|$)/)
+  const upload = page.getByRole('button', { name: t.admin.courses.photo, exact: true })
+  await expectOnScreen(page, note)
+  await expectBefore(note, upload)
+  await expect(upload).toHaveAccessibleDescription(/Anthropic/)
+  expect(await seriousViolations(page)).toEqual([])
+  expect(pageErrors, 'uncaught errors').toEqual([])
+})

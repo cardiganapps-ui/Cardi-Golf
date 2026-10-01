@@ -8,14 +8,24 @@
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// No network: the course list is empty and this browser can take push.
+vi.mock('../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/api')>()), listCourses: vi.fn(async () => []) }))
+vi.mock('../data/push', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/push')>()), pushState: vi.fn(async () => 'off') }))
+
 import type { LookupResult } from '../data/api'
 import { t } from '../i18n/es-MX'
 import { EnterScreen } from './tournament/EnterScreen'
+import { PushToggle } from './profile/PushToggle'
+import { AdminCourses } from './admin/AdminCourses'
 
 const C = t.legal.consent
 
 afterEach(cleanup)
+
+/** A note that ends on the notice, as the screen reads it (the link says it opens in another tab). */
+const noteText = (n: { start: string; privacy: string; end: string }) => `${n.start}${n.privacy} ${t.legal.newTab}${n.end}`
 
 /** In the page and not hidden by itself or by anything around it. */
 function expectShown(el: HTMLElement) {
@@ -83,5 +93,37 @@ describe('the face grid and the PIN step (TRUST-05, P1)', () => {
     expect(before(line, pin)).toBe(true)
     expect(pin.getAttribute('aria-describedby')?.split(' ')).toContain(line.id)
     expect(document.activeElement).toBe(pin)
+  })
+})
+
+describe('the push switch (TRUST-05)', () => {
+  for (const compact of [false, true]) {
+    it(`${compact ? 'Avisos (compact)' : 'Editar perfil'}: what turning them on stores, before «${t.push.enable}», with the notice`, async () => {
+      render(
+        <MemoryRouter>
+          <PushToggle compact={compact} />
+        </MemoryRouter>,
+      )
+      const enable = await screen.findByRole('button', { name: t.push.enable })
+      const line = consentLine(noteText(t.legal.pushNote))
+      expect(before(line, enable)).toBe(true)
+      expect(line.querySelector('a')?.getAttribute('href')).toMatch(/^\/privacidad(\?|$)/)
+    })
+  }
+})
+
+describe('the scorecard photo, read by Anthropic (TRUST-05)', () => {
+  it('Comité › Campos and /campos (the same screen): who reads the photo, before «Subir tarjeta», which it describes', async () => {
+    render(
+      <MemoryRouter>
+        <AdminCourses />
+      </MemoryRouter>,
+    )
+    const upload = await screen.findByRole('button', { name: t.admin.courses.photo })
+    const line = consentLine(noteText(t.legal.scorecardNote))
+    expect(line.textContent).toContain('Anthropic')
+    expect(before(line, upload)).toBe(true)
+    expect(upload.getAttribute('aria-describedby')).toBe(line.id)
+    expect(line.querySelector('a')?.getAttribute('href')).toMatch(/^\/privacidad(\?|$)/)
   })
 })
