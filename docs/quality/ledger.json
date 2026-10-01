@@ -1970,9 +1970,12 @@
       "workstream": "W7",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 77,
+      "tests": [
+        "src/lib/shareImage.test.ts",
+        "e2e/fixtures/share.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

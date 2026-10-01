@@ -1929,6 +1929,7 @@ export const t = {
     settlement: 'Compartir liquidación',
     generating: 'Generando imagen…',
     saved: 'Imagen lista',
+    shareNow: 'Compartir',
     failed: 'No se pudo generar la imagen.',
   },
   rules: {
