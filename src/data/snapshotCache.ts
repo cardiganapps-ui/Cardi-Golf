@@ -63,6 +63,16 @@ export async function readCached(slug: string): Promise<{ entry: CachedEntry; sn
     return null
   }
 }
+/** Whether the phone has boards saved for the link, without reading them: home offers them before the session is confirmed (REL-03). */
+export async function hasCached(slug: string): Promise<boolean> {
+  try {
+    const d = getDb()
+    const entry = await d?.entries.get(slug)
+    return !!entry && (await d!.snapshots.where('tournamentId').equals(entry.tournamentId).count()) > 0
+  } catch {
+    return false
+  }
+}
 export async function clearCached(slug: string): Promise<void> {
   try {
     await getDb()?.entries.delete(slug)

@@ -2455,7 +2455,8 @@
       "status": "fixed",
       "pr": 87,
       "tests": [
-        "src/screens/tournament/TournamentGate.test.tsx"
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/HomeScreen.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null

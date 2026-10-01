@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wordmark } from '../components/Wordmark'
 import { InstallGuide } from '../components/InstallGuide'
 import { LegalLinks } from '../components/LegalLinks'
 import { supabaseConfigured } from '../lib/supabase'
-import { getLastTournament } from '../data/session'
+import { getLastTournament, type LastTournament } from '../data/session'
+import { hasCached } from '../data/snapshotCache'
 import { hasStoredSession, useAuth } from '../data/auth'
 import { BootProblem } from '../components/BootProblem'
 import { Spinner } from '../components/ui'
@@ -25,6 +26,7 @@ export function HomeScreen() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
   const last = getLastTournament()
+  const saved = useSavedOnPhone(last?.slug)
   const { ready, user, isAnonymous, bootError } = useAuth()
   const organizerSignedIn = !!user && !isAnonymous
 
@@ -39,8 +41,10 @@ export function HomeScreen() {
   // this page flash first. Never render nothing while waiting: that was the
   // blank white page. And if the session could not be confirmed on a device
   // that has one, say so, rather than showing a signed-in person the guest page.
-  if (supabaseConfigured && !ready) return <BootWait />
-  if (bootError && !user && hasStoredSession()) return <BootProblem kind={bootError} />
+  // Either way the last tournament's boards saved on the phone open at once:
+  // they need no session, and the installed app opens here (REL-03).
+  if (supabaseConfigured && !ready) return <BootWait last={saved ? last : null} />
+  if (bootError && !user && hasStoredSession()) return <BootProblem kind={bootError} saved={saved ? last?.slug : undefined} />
   if (organizerSignedIn) return <MiPolo />
 
   return (
@@ -57,15 +61,7 @@ export function HomeScreen() {
         </div>
       )}
 
-      {last && (
-        <section className={styles.last}>
-          <span className="label">{t.home.lastTournament}</span>
-          <span className={styles.lastName}>{last.name}</span>
-          <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
-            {t.home.joinButton}
-          </Link>
-        </section>
-      )}
+      {last && <LastTournamentCard last={last} />}
 
       <section className={styles.section}>
         <h2>{t.home.joinTitle}</h2>
@@ -111,13 +107,41 @@ export function HomeScreen() {
   )
 }
 
-/** While the session is being confirmed: the brand, and a sign of life. */
-function BootWait() {
+/** The returning player's tournament: its name and one primary button. */
+function LastTournamentCard({ last }: { last: LastTournament }) {
+  return (
+    <section className={styles.last}>
+      <span className="label">{t.home.lastTournament}</span>
+      <span className={styles.lastName}>{last.name}</span>
+      <Link className="btn btn--primary btn--block" to={`/t/${last.slug}`}>
+        {t.home.joinButton}
+      </Link>
+    </section>
+  )
+}
+
+/** Whether the phone has the boards of the tournament at `slug` saved (an IndexedDB read, no network). */
+function useSavedOnPhone(slug: string | undefined): boolean {
+  const [saved, setSaved] = useState<{ slug: string; yes: boolean } | null>(null)
+  useEffect(() => {
+    if (!slug) return
+    let live = true
+    void hasCached(slug).then((yes) => live && setSaved({ slug, yes }))
+    return () => {
+      live = false
+    }
+  }, [slug])
+  return !!slug && saved?.slug === slug && saved.yes
+}
+
+/** While the session is being confirmed: the brand, a sign of life, and the tournament saved on the phone, which opens without it. */
+function BootWait({ last }: { last: LastTournament | null }) {
   return (
     <div className={styles.home} aria-busy="true">
       <header className={styles.intro}>
         <Wordmark size="lg" />
       </header>
+      {last && <LastTournamentCard last={last} />}
       <Spinner />
     </div>
   )

@@ -116,6 +116,8 @@ export const t = {
     retry: 'Reintentar',
     retrying: 'Conectando…',
     reset: 'Reiniciar la app',
+    /** The last tournament's boards, saved on the phone: they open without the session (REL-03). */
+    openSaved: 'Abrir lo guardado',
     resetHint: 'Reiniciar no borra tu sesión ni los hoyos que no se hayan enviado.',
     version: (v: string) => `Versión ${v}`,
   },
