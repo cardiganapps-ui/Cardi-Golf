@@ -76,9 +76,11 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 73,
+      "tests": [
+        "e2e/fixtures/pages.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2206,9 +2208,12 @@
       "workstream": "W14",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 73,
+      "tests": [
+        "e2e/fixtures/pages.spec.ts",
+        "e2e/fixtures/flows.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
