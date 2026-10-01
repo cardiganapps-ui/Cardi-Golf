@@ -138,6 +138,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
+  /** The name the card uses: the short one, or the full one when two in the group share it (two «Diego»s would be four identical controls again). */
+  const cardName = (p: { id: string; displayName: string; fullName: string }) => (players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName)
   const order = useMemo(() => playOrder(group.startHole, round.holes), [group.startHole, round.holes])
   const roundState = state.core.rounds[round.id] ?? {}
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
@@ -176,6 +178,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason || confirmDefaults
   /** One polite live region for the whole card: whose score changed and what it is worth, or the new hole (A11Y-01). */
   const [said, setSaid] = useState('')
+  /** «Hoyo 12 guardado», said with the next hole in one message instead of two at once. */
+  const savedSaid = useRef('')
   const uid = useId()
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
@@ -212,7 +216,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     if (shownHole.current !== holeKey) {
       // A new hole: saved values or defaults (par, 2 putts), nothing touched yet.
       // A screen reader hears where it landed; the first hole is the page itself.
-      if (shownHole.current) setSaid(holeSpoken)
+      if (shownHole.current) setSaid([savedSaid.current, holeSpoken].filter(Boolean).join('. '))
+      savedSaid.current = ''
       shownHole.current = holeKey
       touched.current = new Set()
       settledAt.current = performance.now()
@@ -277,7 +282,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     const p = players.find((x) => x.id === pid)
     if (h && p && drafts[pid]) {
       const next = { ...drafts[pid], ...patch }
-      setSaid(S.said(p.displayName, next.strokes, next.putts, next.pickedUp, ptsText(h, next).text))
+      setSaid(S.said(cardName(p), next.strokes, next.putts, next.pickedUp, `${ptsText(h, next).text}${h.par !== par ? `, ${S.parHere(h.par)}` : ''}`))
     }
   }
 
@@ -315,8 +320,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     for (const p of players) {
       const d = drafts[p.id]!
       if (d.pickedUp) continue
-      if (d.strokes >= 10) weird.push(`${p.displayName}: ${d.strokes} ${S.strokes.toLowerCase()}`)
-      if (d.putts >= 5) weird.push(`${p.displayName}: ${d.putts} ${S.putts.toLowerCase()}`)
+      if (d.strokes >= 10) weird.push(`${cardName(p)}: ${d.strokes} ${S.strokes.toLowerCase()}`)
+      if (d.putts >= 5) weird.push(`${cardName(p)}: ${d.putts} ${S.putts.toLowerCase()}`)
     }
     return weird
   }
@@ -410,8 +415,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
       const written = Object.keys(writes)
       showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
-      if (savedIdx < order.length - 1) goto(savedIdx + 1)
-      else setView('grid')
+      if (savedIdx < order.length - 1) {
+        savedSaid.current = S.savedHole(savedHole)
+        goto(savedIdx + 1)
+      } else {
+        setSaid(S.savedHole(savedHole))
+        setView('grid')
+      }
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e))
     } finally {
@@ -432,7 +442,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     const u = undo.current
     if (note.canUndo && u && u.hole === note.hole) {
       undo.current = null
-      void writeHole(u.drafts, u.hole).then(() => showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true }))
+      void writeHole(u.drafts, u.hole).then(() => {
+        showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true })
+        setSaid(S.restoredHole(u.hole))
+      })
     }
     setView('hole')
     goto(note.idx)
@@ -450,7 +463,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** The line under «Guardar hoyo»: the last save with its way back for a few seconds, else the sync state. */
   const statusLine = (fallback: ReactNode) =>
     savedNote ? (
-      <span className={styles.savedLine} role="status">
+      <span className={styles.savedLine}>
         <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : S.savedHole(savedNote.hole)}</span>
         {!savedNote.restored && (
           <button type="button" className={styles.savedAction} onClick={undoLast}>
@@ -551,9 +564,6 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         if (Math.abs(dx) > 70 && Math.abs(dy) < 50) goto(dx < 0 ? idx + 1 : idx - 1)
       }}
     >
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {said}
-      </p>
       <div className={styles.top}>
         <div className={styles.topText}>
           <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>
@@ -575,7 +585,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   <th className={styles.gridMeta}>{t.player.par}</th>
                   <th className={styles.gridMeta}>{t.player.si}</th>
                   {players.map((p) => (
-                    <th key={p.id}>{p.displayName}</th>
+                    <th key={p.id}>{cardName(p)}</th>
                   ))}
                 </tr>
               </thead>
@@ -670,7 +680,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   <div className={styles.playerLine}>
                     <span className={styles.playerName}>
                       <span className={styles.playerNameText} id={`${uid}-${p.id}`}>
-                        {p.displayName}
+                        {cardName(p)}
                       </span>
                       {locked && (
                         <span className={styles.lockMark} aria-label={S.cardSigned}>
@@ -689,9 +699,9 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                     </span>
                   </div>
                   <div className={styles.controls}>
-                    <Stepper label={S.strokesOf(p.displayName)} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
-                    <Stepper label={S.puttsOf(p.displayName)} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
-                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp} aria-label={S.pickedUpOf(p.displayName)}>
+                    <Stepper label={S.strokesOf(cardName(p))} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
+                    <Stepper label={S.puttsOf(cardName(p))} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
+                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp} aria-label={S.pickedUpOf(cardName(p))}>
                       {S.pickedUp}
                     </button>
                   </div>
@@ -714,7 +724,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                 <div className={styles.contestPicks}>
                   {c.eligible.map((p) => (
                     <button key={p.id} type="button" className={styles.pickup} aria-pressed={chosen.includes(p.id)} disabled={!canEdit} onClick={() => togglePick(c, p.id)}>
-                      {p.displayName}
+                      {cardName(p)}
                     </button>
                   ))}
                   <button type="button" className={styles.pickup} aria-pressed={picks[c.id] !== undefined && chosen.length === 0} disabled={!canEdit} onClick={() => togglePick(c, null)}>
@@ -746,7 +756,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             const p = players.find((x) => x.id === id)!
             return (
               <button key={id} type="button" className="btn btn--secondary btn--block" disabled={busy} onClick={() => void commit(id)}>
-                {p.displayName}
+                {cardName(p)}
               </button>
             )
           })}
@@ -813,6 +823,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           </div>
         </div>
       </Sheet>
+
+      {/* Last in the card, so reading it from the top meets the group before the last announcement. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {said}
+      </p>
     </div>
   )
 }

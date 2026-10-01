@@ -46,9 +46,10 @@ function load(s: Snapshot) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 
-function mount() {
+function mount(edit?: (s: Snapshot) => void) {
   const fx = getFixture('minimal4-live')!
   snap = structuredClone(fx.snapshot)
+  edit?.(snap)
   load(snap)
   return render(
     <MemoryRouter>
@@ -214,6 +215,23 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
     // The figures themselves are not live regions: a new hole would read out eight bare numbers.
     expect(document.querySelectorAll('[aria-live]')).toHaveLength(1)
     await tapSave(11_000)
-    expect(live()).toMatch(/^Hoyo 11, par \d/)
+    // One message, not two at once: the saved note under the button is not a second live region.
+    expect(live()).toMatch(/^Hoyo 10 guardado\. Hoyo 11, par \d/)
+  })
+
+  it('two players with the same short name are told apart by their full names', () => {
+    mount((s) => {
+      const p1 = s.players.find((p) => p.id === 'p1')!
+      const p3 = s.players.find((p) => p.id === 'p3')!
+      Object.assign(p1, { displayName: 'Diego', fullName: 'Diego Arámburu' })
+      Object.assign(p3, { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' })
+    })
+    for (const full of ['Diego Arámburu', 'Diego Ortiz Tirado']) {
+      const row = screen.getByRole('group', { name: full })
+      expect(within(row).getByRole('button', { name: `${S.strokesOf(full)}: ${t.common.stepUp}` })).toBeTruthy()
+      expect(within(row).getByRole('button', { name: S.pickedUpOf(full) })).toBeTruthy()
+    }
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
+    expect(new Set(names).size).toBe(names.length)
   })
 })
