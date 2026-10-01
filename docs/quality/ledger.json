@@ -3583,11 +3583,14 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/engine/core/markPaid.test.ts",
+        "e2e/fixtures/money.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Un-marking clears that key's whole payment row: a partial payment recorded before a mistaken full mark comes back only through the toast's «Deshacer». Settlements as events (W3, §5.3) keep a history and remove this."
     },
     {
       "id": "UX-22",
@@ -3667,9 +3670,12 @@
       "workstream": "W9",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "e2e/fixtures/money.spec.ts",
+        "src/styles/one-row.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

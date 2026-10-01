@@ -87,6 +87,40 @@ describe('one list row', () => {
     expect(offenders).toEqual([])
   })
 
+  it('a class that composes a primitive never re-declares what the primitive sets', () => {
+    // Both rules are one class, so whichever the bundle puts last wins. A
+    // screen's `display: grid` on a composed `rowLine` lost to its
+    // `display: flex` on every money list, and nothing said so (VIS-01). To
+    // change a primitive's value, compose another primitive or use a
+    // selector with two classes.
+    const decls = (body: string) =>
+      new Map(
+        body
+          .split(';')
+          .map((d) => [d.slice(0, d.indexOf(':')).trim(), d.slice(d.indexOf(':') + 1).trim()] as const)
+          .filter(([prop]) => prop),
+      )
+    const primitives = new Map<string, Map<string, string>>()
+    for (const { selector, body } of rules(sheets().find((s) => s.path === PRIMITIVES)!.text)) {
+      if (/^\.[\w-]+$/.test(selector)) primitives.set(selector.slice(1), decls(body))
+    }
+    const offenders: string[] = []
+    for (const { path, text } of sheets()) {
+      for (const { selector, body } of rules(text)) {
+        const own = decls(body)
+        const composes = own.get('composes')
+        if (!composes?.includes('primitives.module.css')) continue
+        for (const name of composes.split(/\s+from\s+/)[0]!.split(/\s+/)) {
+          for (const [prop, value] of own) {
+            const base = primitives.get(name)?.get(prop)
+            if (prop !== 'composes' && base !== undefined && base !== value) offenders.push(`${path} ${selector}: ${prop}: ${value} re-declares ${name} (${prop}: ${base})`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
   it('the shared row rules exist and carry what everyone kept forgetting', () => {
     const text = sheets().find((s) => s.path === PRIMITIVES)!.text
     const byName = new Map(rules(text).map((r) => [r.selector, r.body]))
