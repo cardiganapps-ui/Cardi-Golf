@@ -782,7 +782,8 @@ export const t = {
       return field ? `${place} de ${field}` : place
     },
     money: 'Mi dinero',
-    moneyHint: 'Solo tú lo ves.',
+    /** True of the code: my_money() is the owner's only, but each tournament's members see every net in its Dinero (TRUST-02). */
+    moneyHint: 'Solo sale en tu perfil; en cada torneo, todos lo ven en Dinero.',
     moneyTotal: 'En total',
     noMoney: 'Cuando un torneo tuyo termine, aquí sale lo que ganaste o pusiste.',
     // Edit
