@@ -67,12 +67,11 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const profile = profiles.find((x) => x.playerId === p.id && x.status === 'confirmed')
 
   return (
-    <Sheet open={!!playerId} onClose={onClose} wide>
+    <Sheet open={!!playerId} onClose={onClose} title={p.fullName} wide>
       <div className={styles.sheet}>
         <div className={styles.head}>
           <Avatar name={p.displayName} url={p.avatarUrl} size="lg" honoree={p.isHonoree} />
           <div className={styles.headText}>
-            <h2>{p.fullName}</h2>
             <span className={styles.headLine}>
               {p.tier && <span className="tierBadge">{p.tier}</span>}
               {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18))}</span> : null}

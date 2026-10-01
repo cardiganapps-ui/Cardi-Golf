@@ -59,16 +59,21 @@ export function Money({ amount, signed }: { amount: number; signed?: boolean }) 
 }
 
 // ---- Stepper ----
-export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label, disabled }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string; disabled?: boolean }) {
+/**
+ * `quiet`: the value is not a live region. A screen that announces the change
+ * itself, with whose score it is, sets it (the Tarjeta); otherwise a hole change
+ * reads out eight bare figures.
+ */
+export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label, disabled, quiet }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string; disabled?: boolean; quiet?: boolean }) {
   return (
     <div className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''} ${disabled ? s.stepperOff : ''}`} role="group" aria-label={label}>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: menos`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepDown}`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
         <IconMinus />
       </button>
-      <span className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`} aria-live="polite">
+      <span className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`} aria-live={quiet ? undefined : 'polite'}>
         {value}
       </span>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: más`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepUp}`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
         <IconPlus />
       </button>
     </div>

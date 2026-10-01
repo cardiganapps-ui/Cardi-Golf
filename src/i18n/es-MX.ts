@@ -38,6 +38,8 @@ export const t = {
     final: 'Final',
     sections: 'Secciones',
     dialog: 'Ventana',
+    stepDown: 'menos',
+    stepUp: 'más',
     and: (a: string, b: string) => `${a} y ${b}`,
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
@@ -1196,6 +1198,15 @@ export const t = {
     strokes: 'Golpes',
     putts: 'Putts',
     pickedUp: 'Levantó',
+    // Each player's controls carry his name: four «Golpes: más» are four identical targets for VoiceOver and Voice Control (A11Y-01).
+    strokesOf: (name: string) => `Golpes de ${name}`,
+    puttsOf: (name: string) => `Putts de ${name}`,
+    pickedUpOf: (name: string) => `Levantó, ${name}`,
+    /** What a screen reader hears after a change: whose score, and what it is worth. */
+    said: (name: string, strokes: number, putts: number, pickedUp: boolean, pts: string) =>
+      `${name}: ${pickedUp ? 'levantó' : `${strokes} ${strokes === 1 ? 'golpe' : 'golpes'}`}, ${putts} ${putts === 1 ? 'putt' : 'putts'}, ${pts}`,
+    /** The hole header as it is read out, and announced when the hole changes. */
+    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
