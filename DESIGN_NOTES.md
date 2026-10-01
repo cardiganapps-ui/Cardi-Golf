@@ -177,3 +177,9 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.
 - `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.
 - `AdminScores.tsx`: tiebreaks and disputes are filtered to the selected round; pending items in other rounds are invisible. `AdminGroups.tsx` re-derives pair warnings the engine already exposes in `flags.warnings`. Nobody reads `flags.incompleteRounds`, `unsignedCards` or `missingModules`.
+
+## «Para empezar» (2026-10-01, UX-06)
+
+- **The wizard's days are rounds.** «¿Cuántos días (rondas)?» creates rounds 1..N with no course or date; Rondas used to say «Sin rondas» right after.
+- **What comes next leads the success screen.** «Ir al Comité» first, with a line on what it holds. The join code waits behind a closed «Cuando tengas jugadores: el código para compartir», because players who joined with it found an empty face grid.
+- **Comité › Torneo opens with «Para empezar»** (`src/screens/admin/readiness.ts`, read from the snapshot): players, PINs (from `players_with_pin`; the line is left out while unknown), rounds, each round's course and date, the course card (par and stroke index for every hole played), tees for the next round, groups for the next round. A line is a ruled row (`rowLine`) with a ring when open and a check when done. It opens the section that fixes it, and a screen reader hears «Listo» or «Falta» first. All done in setup: one quiet line. Quick rounds and finished tournaments: nothing. The Torneo tab counts the open lines while the tournament is in setup.

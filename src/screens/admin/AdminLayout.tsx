@@ -10,6 +10,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { EmptyState } from '../../components/primitives'
 import { PlatformBanner } from '../tournament/PlatformBanner'
 import styles from './AdminLayout.module.css'
+import { readiness } from './readiness'
 
 export function AdminLayout() {
   const { me, slug } = useTournamentCtx()
@@ -36,7 +37,10 @@ export function AdminLayout() {
   const hot = (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0)
   const scoresBadge = hot + (flags?.unsignedCards.length ?? 0)
   const roundsBadge = flags?.incompleteRounds.length ?? 0
-  const tournamentBadge = (flags?.warnings.length ?? 0) + (flags?.missingModules.length ?? 0)
+  // While it is being set up, what «Para empezar» still lists (the PIN line needs the server, so it waits for the card).
+  const setup = data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
+  const readyPending = setup ? readiness(data.snapshot, data.settings, null).filter((i) => !i.done).length : 0
+  const tournamentBadge = (flags?.warnings.length ?? 0) + (flags?.missingModules.length ?? 0) + readyPending
   const S = t.admin.sections
   const sections: Array<{ to: string; label: string; badge?: number; hot?: boolean; show?: boolean }> = [
     { to: 'torneo', label: S.tournament, badge: tournamentBadge },

@@ -418,7 +418,23 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
   }
 }
 
+/**
+ * A tournament seconds after «Crear torneo» (UX-06): two days asked for, so two
+ * rounds with no course or date, and nobody in it yet. Comité › Torneo shows
+ * «Para empezar» with everything still to do.
+ */
+function justCreated(): Fixture {
+  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: 2, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] } }
+  const snap = makeSnapshot({ players: [], rounds: [makeRound(1, { status: 'scheduled', date: null, courseId: null }), makeRound(2, { status: 'scheduled', date: null, courseId: null })], settings, status: 'setup' })
+  snap.tournament = { ...snap.tournament, id: 'fx-new', slug: 'fixture-new-setup', name: 'Viaje a Valle', tagline: null, joinCode: 'VALLE1' }
+  snap.courses = []
+  snap.groups = []
+  snap.roundTees = []
+  return { name: 'new-setup', description: 'Recién creado: dos días sin campo ni fecha, sin jugadores todavía', snapshot: snap, me: { playerId: null, isOrganizer: true, isAdmin: true }, lookup: lookupOf(snap) }
+}
+
 const BUILDERS: Record<string, () => Fixture> = {
+  'new-setup': justCreated,
   'minimal4-setup': () => minimal('setup'),
   // A tournament with no money at all: the tab bar drops Dinero.
   'gloria4': () => minimal('live', false),

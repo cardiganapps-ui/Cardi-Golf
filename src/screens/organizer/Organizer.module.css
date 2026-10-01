@@ -198,3 +198,22 @@
   flex-wrap: wrap;
   gap: var(--s2);
 }
+/* The code to share, once there are players (UX-06). */
+.shareLater {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.shareLater[open] {
+  display: flex;
+}
+.shareLater summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+.shareLater > :not(summary) {
+  margin-top: var(--s2);
+}

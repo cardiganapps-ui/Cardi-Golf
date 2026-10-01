@@ -16,7 +16,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { CopyButton, Field, ShareButton } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { useAuth } from '../../data/auth'
-import { createTournament } from '../../data/api'
+import { createTournament, upsertRound } from '../../data/api'
 import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
@@ -86,7 +86,17 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
     try {
       // The organizer's own zone, not the platform's placeholder.
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || parsed.data.timezone
-      const row = demo ? { slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players } })
+      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players } })
+      // The days asked for on step 2, as rounds (UX-06): «Rondas» used to say «Sin rondas» right after.
+      // Course and date come later, in the Comité. If this fails the tournament still exists, and
+      // «Para empezar» lists the rounds still to create.
+      if (!demo) {
+        try {
+          for (let n = 1; n <= parsed.data.rounds; n++) await upsertRound(row.id, { number: n, date: null, course_id: null, holes: 18 })
+        } catch (e) {
+          console.warn('[wizard] rounds not created', e)
+        }
+      }
       setCreated({ slug: row.slug, joinCode: row.joinCode })
       setStep(DONE)
     } catch (e) {
@@ -167,18 +177,24 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
 
       {step === DONE && created && (
         <div className={`${styles.created} fade-in`}>
-          <span className="label">{t.organizer.joinCode}</span>
-          <span className={styles.bigCode}>{created.joinCode}</span>
-          <span className={styles.link}>{link}</span>
-          <p className="help">{W.shareHint}</p>
-          <div className={styles.shareRow}>
-            <CopyButton text={link} label={t.organizer.link} />
-            <CopyButton text={created.joinCode} label={t.organizer.joinCode} />
-            <ShareButton text={t.common.joinWithCode(name, created.joinCode)} url={link} title={name} />
-          </div>
+          {/* What comes next first (UX-06). The code used to lead, and players who joined
+              with it found an empty face grid: it waits until there are players. */}
+          <p>{W.nextSteps}</p>
           <Link className="btn btn--primary btn--block" to={`/t/${created.slug}/admin`}>
             {W.goAdmin}
           </Link>
+          <details className={styles.shareLater}>
+            <summary>{W.shareLater}</summary>
+            <span className="label">{t.organizer.joinCode}</span>
+            <span className={styles.bigCode}>{created.joinCode}</span>
+            <span className={styles.link}>{link}</span>
+            <p className="help">{W.shareHint}</p>
+            <div className={styles.shareRow}>
+              <CopyButton text={link} label={t.organizer.link} />
+              <CopyButton text={created.joinCode} label={t.organizer.joinCode} />
+              <ShareButton text={t.common.joinWithCode(name, created.joinCode)} url={link} title={name} />
+            </div>
+          </details>
         </div>
       )}
     </div>
