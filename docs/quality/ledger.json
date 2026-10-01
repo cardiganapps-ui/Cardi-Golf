@@ -2517,11 +2517,14 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 89,
+      "tests": [
+        "src/components/RejectedWrites.test.tsx",
+        "src/screens/admin/AdminRounds.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and «Terminar ronda» asks every group to show «Sincronizado» first. «Names the wrong day» was an Ensayo artifact (verifier V9)."
     },
     {
       "id": "REL-09",
