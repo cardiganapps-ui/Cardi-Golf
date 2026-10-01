@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { ordinal, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
@@ -19,8 +19,8 @@ import { celebrationColors } from '../../lib/tokens'
 import { DUR_SLOW, easeSlow, stagger } from '../../design/motion'
 
 const C = t.ceremony
-/** "A y B", "A, B y C". */
-const andList = (names: string[]) => (names.length <= 1 ? (names[0] ?? '') : t.common.and(names.slice(0, -1).join(', '), names[names.length - 1]!))
+/** «A y B», «A, B e Iván». */
+const andList = t.common.andList
 
 interface Step {
   id: string
@@ -121,7 +121,7 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º, ${r.name}`, sub: `${t.common.and(nameOf(r.playerIds[0]), nameOf(r.playerIds[1]))}, ${C.withPoints(r.total)}` })),
+          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${ordinal(r.label)}, ${r.name}`, sub: `${andList(r.playerIds.map(nameOf))}, ${C.withPoints(r.total)}` })),
         })
       }
     }

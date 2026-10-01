@@ -45,7 +45,7 @@ export interface Account {
   to: Id | null
   /** Everything owed on the key. «Pagado» records this amount. */
   owed: number
-  /** What has been recorded as paid. */
+  /** What has been recorded as paid. Above 0, the account is listed in «Ya pagaron», where it can be taken back. */
   paid: number
   /** owed − paid, owed by `from` to `to`. Negative when overpaid: `to` gives the difference back. */
   due: number
@@ -401,7 +401,40 @@ export function markPaidWrites(settles: readonly Account[]): PaidWrite[] {
   return settles.map((a) => (a.lotId ? { lotId: a.lotId, paid: true } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.owed), paid: a.owed > 0 }))
 }
 
-/** The undo of `markPaidWrites`: each account back to what it held before. */
+/**
+ * The undo of `markPaidWrites`, and of `unmarkPaidWrites`: each account back
+ * to what it held before (pass the accounts as they were before the tap).
+ */
 export function restorePaidWrites(settles: readonly Account[]): PaidWrite[] {
   return settles.map((a) => (a.lotId ? { lotId: a.lotId, paid: a.paid > 0 } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: a.paid > 0 }))
+}
+
+/**
+ * «Pagado» tapped off in «Ya pagaron» (UX-21): the same write as «Marcar
+ * pagado», with paid false, on each account's own key (or its lot, for a
+ * buyback). The amount stays as recorded; an unpaid row counts for nothing.
+ * Nothing else is written, so a payment marked from an empty key comes back
+ * exactly as it was before the mark.
+ */
+export function unmarkPaidWrites(paid: readonly Account[]): PaidWrite[] {
+  return paid.map((a) => (a.lotId ? { lotId: a.lotId, paid: false } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: false }))
+}
+
+/**
+ * What the server does with each write, applied to a snapshot: a `payments`
+ * row upserted on (kind, from, to), its amount, paid flag and note replaced
+ * (`set_payment_paid`); a buyback marked on its lot. Dinero shows a write
+ * with this as soon as the server confirms it, before the reload does.
+ */
+export function applyPaidWrites(snapshot: Snapshot, writes: readonly PaidWrite[]): void {
+  for (const w of writes) {
+    if ('lotId' in w) {
+      const bb = snapshot.calcuttaBuybacks.find((b) => b.lotId === w.lotId)
+      if (bb) bb.paid = w.paid
+      continue
+    }
+    const row = snapshot.payments.find((p) => p.kind === w.kind && p.fromPlayerId === w.from && p.toPlayerId === w.to)
+    if (row) Object.assign(row, { amount: w.amount, paid: w.paid, note: null })
+    else snapshot.payments.push({ id: `local:${accountKey(w.kind, w.from, w.to)}`, kind: w.kind, fromPlayerId: w.from, toPlayerId: w.to, amount: w.amount, paid: w.paid, note: null })
+  }
 }

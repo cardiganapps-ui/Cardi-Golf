@@ -77,7 +77,7 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(within(later).getByText(/^Compártelo cuando los jugadores ya estén dados de alta: /)).toBeTruthy()
   })
 
-  it('the format step says where teams and fourball pairs are drawn: Comité › Equipos', () => {
+  it('the format step says where teams and fourball pairs are drawn: Equipos, in the Comité console', () => {
     render(
       <MemoryRouter>
         <NewTournamentScreen />
@@ -86,9 +86,9 @@ describe('Nuevo torneo (UX-06)', () => {
     fireEvent.change(screen.getByPlaceholderText(W.namePlaceholder), { target: { value: 'Viaje a Valle' } })
     fireEvent.click(screen.getByRole('button', { name: t.common.next }))
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${W.formats.team.name}`) }))
-    expect(screen.getByText('Los equipos se arman en Comité › Equipos.')).toBeTruthy()
+    expect(screen.getByText('Los equipos se arman en Equipos, en la consola del Comité.')).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${W.formats.matchPlay.name}`) }))
-    expect(screen.getByText(/Las parejas se arman en Comité › Equipos\.$/)).toBeTruthy()
+    expect(screen.getByText(/Las parejas se arman en Equipos, en la consola del Comité\.$/)).toBeTruthy()
   })
 
   it('if the rounds can\'t be created the tournament still is, and the Comité lists what is missing', async () => {

@@ -5,10 +5,10 @@
  */
 export const BUILD = { id: __BUILD_ID__, sha: __BUILD_SHA__ }
 
-/** «1 oct 2026, 03:40 · abc1234», in the tournament's usual zone-free local time. */
+/** «1 oct 2026, 03:40 (abc1234)», in the tournament's usual zone-free local time. */
 export function buildLabel(build: { id: number; sha: string } = BUILD): string {
   const when = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(build.id * 1000))
-  return `${when} · ${build.sha}`
+  return `${when} (${build.sha})`
 }
 
 /** True when the server asks for a newer build than this one. Anything but a number asks for nothing. */

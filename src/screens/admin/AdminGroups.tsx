@@ -277,7 +277,7 @@ export function AdminGroups() {
               </section>
             ))}
           </div>
-          {unassigned.length > 0 && <p className={a.warn}>{G.unassigned(unassigned.map((p) => p.displayName).join(', '))}</p>}
+          {unassigned.length > 0 && <p className={a.warn}>{G.unassigned(t.common.andList(unassigned.map((p) => p.displayName)))}</p>}
           <div className={a.sticky}>
             <button className="btn btn--primary btn--block" type="button" disabled={busy || !drafts} onClick={() => void save()}>
               {busy ? t.common.saving : t.common.save}

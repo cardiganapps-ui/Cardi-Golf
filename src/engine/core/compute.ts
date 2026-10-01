@@ -7,6 +7,8 @@ import type { Explanation, Hole, Id, Player, Round, Snapshot, Tee } from '../typ
 import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
+import { withTrueMinus } from '../formats/format'
+import { handicapText } from '../../i18n/es-MX'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
@@ -61,14 +63,14 @@ function baseHandicap(player: Player, settings: TournamentSettings): CoreState['
       source: 'index',
       base: idx,
       estimated: false,
-      why: { title: `Índice ${idx}`, steps: ['Índice de hándicap capturado por el Comité'] },
+      why: { title: `Índice ${handicapText(idx)}`, steps: ['Índice de hándicap capturado por el Comité'] },
     }
   }
   return {
     source: 'manual',
     base: player.baseHcp,
     estimated: false,
-    why: { title: `Hándicap base ${player.baseHcp}`, steps: ['Capturado por el Comité; se usa tal cual'] },
+    why: { title: `Hándicap base ${handicapText(player.baseHcp)}`, steps: ['Capturado por el Comité; se usa tal cual'] },
   }
 }
 
@@ -107,6 +109,8 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       // Base → course handicap.
       let courseHcp = hc.base
       const steps: string[] = [hc.why.title]
+      // A plus handicap typed by the Comité: the arithmetic below uses it below zero.
+      if (hc.source === 'manual' && hc.base < 0) steps.push(`En la cuenta, ${withTrueMinus(hc.base)}`)
       if (hc.source !== 'manual') {
         const useTee = settings.handicap.perRoundSlope
           ? tee
@@ -135,7 +139,9 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
         }
       }
       let playingHcp = Math.max(0, ph.value - cuts.total)
-      if (cuts.total > 0) steps.push(...cuts.steps, `${ph.value} − ${cuts.total} = ${playingHcp}`)
+      // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
+      const afterCut = ph.value - cuts.total
+      if (cuts.total > 0) steps.push(...cuts.steps, `${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`)
       else if (ri > 0) steps.push(...cuts.steps)
       let overridden = false
       const ov = snapshot.handicapOverrides.find((o) => o.roundId === round.id && o.playerId === p.id)
@@ -172,8 +178,11 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
               ? ['Levantó: 0 pts']
               : [
                   `Par ${h.par}, SI ${h.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
-                  `${g} − ${sr} = ${net} neto`,
-                  `${h.par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
+                  `${g} − ${sr} = ${withTrueMinus(net ?? 0)} neto`,
+                  // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
+                  h.par + sr - (g ?? 0) + 2 < 0
+                    ? `${h.par} + ${sr} − ${g} + 2 = ${withTrueMinus(h.par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
+                    : `${h.par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
                 ]
             : ['Sin capturar'],
         }

@@ -234,7 +234,7 @@ export function ProfileView({
                     <span className={styles.rowTitle}>{x.name}</span>
                     <span className={styles.rowSub}>
                       {x.rankLabel ? P.finish(x.rankLabel, x.field) : t.status[x.status]}
-                      {x.awards.length > 0 ? `, ${x.awards.map(awardName).join(', ')}` : ''}
+                      {x.awards.length > 0 ? `, ${t.common.andList(x.awards.map(awardName))}` : ''}
                       {x.practice ? `, ${P.practice.toLowerCase()}` : ''}
                     </span>
                   </span>

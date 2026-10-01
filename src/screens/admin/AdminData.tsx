@@ -51,7 +51,7 @@ export function AdminData() {
         )
       }),
     )
-    downloadText(`${slug}-scores-${stamp}.csv`, scores, 'text/csv')
+    downloadText(`${slug}-tarjetas-${stamp}.csv`, scores, 'text/csv')
     const rows = state.modules.individual?.rows ?? []
     const standings = toCsv(
       ['pos', 'jugador', 'categoria', ...state.core.roundIds.map((_, i) => `dia${i + 1}`), 'total', 'premios', 'pago', 'recibe', 'neto'],

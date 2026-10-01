@@ -69,8 +69,8 @@ if (!t) {
     .from('tournaments')
     .insert({
       slug: 'ensayo',
-      name: 'Ensayo · Nacho Invitational',
-      tagline: 'Torneo de prueba · Los Cabos 2027',
+      name: 'Ensayo, Nacho Invitational',
+      tagline: 'Torneo de prueba, Los Cabos 2027',
       join_code: 'ENSAYO',
       status: 'setup',
       settings,

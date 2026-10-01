@@ -7,11 +7,44 @@
  * índice de golpe (SI) vs índice (WHS), bolsa (entries) vs pozo (Calcutta),
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
-/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels. */
+/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
   const n = label.replace(/^T/, '')
+  if (!/^\d+$/.test(n)) return ''
   return tied ? `empatado en ${n}.º` : `${n}.º`
+}
+
+/**
+ * «e» instead of «y» before the sound /i/ (Isabel, Íñigo, Hilario, Híjar),
+ * but «y» when that i opens a diphthong (hielo, Hiago, Ian, Yolanda). Intl's
+ * Spanish list misses the accented ones («y Íñigo»), and engines differ.
+ */
+const takesE = (word: string) => /^[hH]?[iIíÍ](?![aeouáéóúAEOUÁÉÓÚ])/.test(word.replace(/^[\s«"'“‘(¿¡]+/, ''))
+/** «u» instead of «o» before the sound /o/ (Óscar, Homero). */
+const takesU = (word: string) => /^[hH]?[oOóÓ]/.test(word.replace(/^[\s«"'“‘(¿¡]+/, ''))
+
+/** Parts joined with commas and a last connector; blank parts are left out. */
+function listWith(parts: string[], last: (word: string) => string): string {
+  const items = parts.map((p) => p.trim()).filter(Boolean)
+  if (items.length < 2) return items[0] ?? ''
+  const end = items[items.length - 1]!
+  return `${items.slice(0, -1).join(', ')} ${last(end)} ${end}`
+}
+
+/** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
+function andList(parts: string[]): string {
+  return listWith(parts, (w) => (takesE(w) ? 'e' : 'y'))
+}
+
+/** «Camilo o Damián», «Camilo u Óscar»: a choice between names. */
+function orList(parts: string[]): string {
+  return listWith(parts, (w) => (takesU(w) ? 'u' : 'o'))
+}
+
+/** A handicap as golfers write it: under zero is a «plus» handicap, +1.2 (the arithmetic in an explanation keeps −1.2). */
+export function handicapText(n: number): string {
+  return n < 0 ? `+${-n}` : String(n)
 }
 
 export const t = {
@@ -40,11 +73,12 @@ export const t = {
     dialog: 'Ventana',
     stepDown: 'menos',
     stepUp: 'más',
-    and: (a: string, b: string) => `${a} y ${b}`,
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
-    /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. */
-    andList: (parts: string[]) => new Intl.ListFormat('es-MX', { style: 'long', type: 'conjunction' }).format(parts),
+    /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. The only way copy joins names. */
+    andList,
+    /** «Camilo o Damián», «Camilo u Óscar»: who, of these. */
+    orList,
     copySuffix: '(copia)',
     joinWithCode: (name: string, code: string) => `${name}: entra con el código ${code}`,
     loading: 'Cargando…',
@@ -164,7 +198,7 @@ export const t = {
     more: 'Ver más',
     empty: 'Ningún torneo coincide.',
     chips: { protected: 'Protegido', practice: 'Ensayo', quick: 'Rápida', orphan: 'Sin Comité' },
-    rowSub: (players: number, owner: string | null) => `${players} ${players === 1 ? 'jugador' : 'jugadores'}${owner ? ` · ${owner}` : ''}`,
+    rowSub: (players: number, owner: string | null) => `${players} ${players === 1 ? 'jugador' : 'jugadores'}${owner ? `, ${owner}` : ''}`,
     lastActivity: (when: string) => `Movimiento ${when}`,
     noActivity: 'Sin movimiento',
     // Detalle
@@ -178,7 +212,7 @@ export const t = {
     noComite: 'Este torneo no tiene Comité. Solo tú puedes administrarlo.',
     rounds: 'Rondas',
     noRounds: 'Sin rondas.',
-    roundLine: (n: number, course: string | null, scores: number) => `Ronda ${n}${course ? ` · ${course}` : ''} · ${scores} ${scores === 1 ? 'hoyo' : 'hoyos'}`,
+    roundLine: (n: number, course: string | null, scores: number) => `Ronda ${n}${course ? `, ${course}` : ''}, ${scores} ${scores === 1 ? 'hoyo' : 'hoyos'}`,
     counts: {
       players: 'Jugadores',
       linked: 'Con perfil',
@@ -192,7 +226,7 @@ export const t = {
     crew: (name: string) => `Crew: ${name}`,
     audit: 'Últimos cambios',
     auditEmpty: 'Sin cambios registrados.',
-    auditLine: (table: string, action: string) => `${table} · ${action === 'INSERT' ? 'alta' : action === 'UPDATE' ? 'cambio' : 'baja'}`.replace(/^./, (c) => c.toUpperCase()),
+    auditLine: (table: string, action: string) => `${table}, ${action === 'INSERT' ? 'alta' : action === 'UPDATE' ? 'cambio' : 'baja'}`.replace(/^./, (c) => c.toUpperCase()),
     byPlatform: 'Admin de Polo',
     notFound: 'Ese torneo ya no existe.',
     // Protección
@@ -222,7 +256,7 @@ export const t = {
       phone: 'Teléfono sin cuenta',
       phoneAs: (player: string, tournament: string | null) => `Entró como ${player}${tournament ? ` en ${tournament}` : ''}`,
       phoneUnclaimed: 'Todavía no entra como ningún jugador',
-      rowSub: (who: string, n: number) => `${who}${n ? ` · ${n} ${n === 1 ? 'torneo' : 'torneos'}` : ''}`,
+      rowSub: (who: string, n: number) => `${who}${n ? `, ${n} ${n === 1 ? 'torneo' : 'torneos'}` : ''}`,
       provider: { email: 'Correo', google: 'Google', anonymous: 'Sin cuenta' } as Record<string, string>,
       chips: { blocked: 'Bloqueado', admin: 'Admin de Polo', you: 'Tú' },
       joined: (when: string) => `Se unió ${when}`,
@@ -238,12 +272,14 @@ export const t = {
       role: { owner: 'Dueño', admin: 'Comité' } as Record<string, string>,
       link: { confirmed: 'Jugador', pending: 'Por confirmar', device: 'Con PIN' } as Record<string, string>,
       tournamentLine: (role: string | null, link: string | null, player: string | null) =>
-        [role, link && player ? `${link}: ${player}` : link].filter(Boolean).join(' · '),
+        [role, link && player ? `${link}: ${player}` : link].filter(Boolean).join(', '),
+      /** What «Quitar amarre» unlinks: the player, and the tournament he plays. */
+      playerIn: (player: string | null, tournament: string) => (player ? `${player} en ${tournament}` : tournament),
       unlink: 'Quitar amarre',
       unlinked: 'Amarre quitado',
       social: 'Crews y amigos',
       friends: (n: number, pending: number) => `${n} ${n === 1 ? 'amigo' : 'amigos'}${pending ? `, ${pending} por responder` : ''}`,
-      crewLine: (role: string, members: number) => `${role === 'owner' ? 'Dueño' : 'Miembro'} · ${members} ${members === 1 ? 'miembro' : 'miembros'}`,
+      crewLine: (role: string, members: number) => `${role === 'owner' ? 'Dueño' : 'Miembro'}, ${members} ${members === 1 ? 'miembro' : 'miembros'}`,
       push: (n: number, hosts: string) => (n ? `Avisos en ${n} ${n === 1 ? 'dispositivo' : 'dispositivos'} (${hosts})` : 'Sin avisos activados'),
       pin: 'Bloqueos de PIN',
       noPinLocks: 'Sin bloqueos de PIN.',
@@ -270,7 +306,8 @@ export const t = {
       deletePlayers: (n: number) => `${n} ${n === 1 ? 'jugador conserva' : 'jugadores conservan'} sus hoyos y resultados, sin su perfil.`,
       deleteCrewsHanded: (names: string) => `Sus crews pasan a su miembro más antiguo: ${names}.`,
       deleteCrewsDeleted: (names: string) => `Se borran sus crews donde estaba solo: ${names}.`,
-      deleteSocial: (friends: number, rivalries: number) => `Se borran ${friends} ${friends === 1 ? 'amistad' : 'amistades'} y ${rivalries} ${rivalries === 1 ? 'rivalidad' : 'rivalidades'}.`,
+      deleteSocial: (friends: number, rivalries: number) =>
+        `Se borran ${andList([`${friends} ${friends === 1 ? 'amistad' : 'amistades'}`, `${rivalries} ${rivalries === 1 ? 'rivalidad' : 'rivalidades'}`])}.`,
       deleteProfile: 'Se borra su perfil, sus avisos y su índice Polo.',
       deleteConfirmEmail: (email: string) => `Escribe su correo (${email}) para confirmar`,
       deleteConfirmWord: 'Escribe BORRAR para confirmar',
@@ -291,14 +328,14 @@ export const t = {
       pickOne: 'Elige un campo para ver su tarjeta.',
       back: 'Campos',
       rowSub: (tees: number, rounds: number, where: string | null) =>
-        [where, `${tees} ${tees === 1 ? 'tee' : 'tees'}`, rounds ? `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}` : 'sin usar'].filter(Boolean).join(' · '),
+        [where, `${tees} ${tees === 1 ? 'tee' : 'tees'}`, rounds ? `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}` : 'sin usar'].filter(Boolean).join(', '),
       chips: { dupe: 'Duplicado', broken: 'Con errores' },
       source: { manual: 'A mano', golfcourseapi: 'Base de datos', opengolfapi: 'Base de datos', scorecard_photo: 'Foto de tarjeta' } as Record<string, string>,
       created: (who: string | null, when: string) => `${who ? `Lo agregó ${who}` : 'Agregado'} ${when}`,
       tees: 'Tees',
       teeLine: (par: number | null, rating: number | null, slope: number | null, inUse: number) =>
-        [par ? `Par ${par}` : null, rating != null ? `${rating} / ${slope ?? '—'}` : null, inUse ? `en uso (${inUse})` : null].filter(Boolean).join(' · '),
-      problems: { holes: 'no tiene 9 ni 18 hoyos', par: 'algún par fuera de 3–6', si: 'las ventajas se repiten o faltan' } as Record<string, string>,
+        [par ? `Par ${par}` : null, rating != null ? `${rating} / ${slope ?? '—'}` : null, inUse ? `en uso (${inUse})` : null].filter(Boolean).join(', '),
+      problems: { holes: 'no tiene 9 ni 18 hoyos', par: 'algún par fuera de 3–6', si: 'los índices de golpe se repiten o faltan' } as Record<string, string>,
       noTees: 'Sin tees: nadie puede jugarlo así.',
       usedBy: 'Dónde se juega',
       notUsed: 'Nadie lo juega todavía.',
@@ -316,7 +353,7 @@ export const t = {
       mergeMapTitle: 'A qué tee pasa cada uno',
       mergeUnmapped: 'Nadie lo juega: se borra',
       mergeNeedsMap: 'Alguien lo juega: elige a cuál pasa',
-      mergeMismatch: 'Tarjetas distintas (par o ventaja); corrígela antes',
+      mergeMismatch: 'Tarjetas distintas (par o índice de golpe); corrígela antes',
       mergeDone: (rounds: number) => `Fusionados. ${rounds} ${rounds === 1 ? 'ronda pasó' : 'rondas pasaron'} al campo que se queda.`,
       delete: 'Borrar campo',
       deleteTitle: 'Borrar este campo',
@@ -335,7 +372,7 @@ export const t = {
       pickOne: 'Elige un crew para ver su detalle.',
       back: 'Crews',
       rowSub: (members: number, outings: number, owner: string | null) =>
-        [`${members} ${members === 1 ? 'miembro' : 'miembros'}`, `${outings} ${outings === 1 ? 'salida' : 'salidas'}`, owner].filter(Boolean).join(' · '),
+        [`${members} ${members === 1 ? 'miembro' : 'miembros'}`, `${outings} ${outings === 1 ? 'salida' : 'salidas'}`, owner].filter(Boolean).join(', '),
       lastOuting: (when: string) => `Última salida ${when}`,
       noOutings: 'Sin salidas',
       code: 'Código',
@@ -415,7 +452,7 @@ export const t = {
         broadcast: 'Mandó un aviso',
         set_flag: 'Cambió un interruptor',
       } as Record<string, string>,
-      comiteLine: (table: string, op: string) => `${table} · ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
+      comiteLine: (table: string, op: string) => `${table}, ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
     },
     // Salud
     health: {
@@ -424,7 +461,7 @@ export const t = {
       backupOk: (when: string) => `Último respaldo bueno ${when}`,
       backupNever: 'Todavía no hay respaldos registrados. El siguiente corre a las 2 am de Los Cabos.',
       backupFailed: (when: string, error: string) => `El último intento falló ${when}: ${error}`,
-      backupSize: (kb: number, tables: number, rows: number) => `${kb.toLocaleString('es-MX')} KB · ${tables} tablas · ${rows.toLocaleString('es-MX')} filas`,
+      backupSize: (kb: number, tables: number, rows: number) => `${kb.toLocaleString('es-MX')} KB, ${tables} tablas, ${rows.toLocaleString('es-MX')} filas`,
       backupWeek: (ok: number, failed: number) => `Esta semana: ${ok} ${ok === 1 ? 'bueno' : 'buenos'}${failed ? `, ${failed} ${failed === 1 ? 'falló' : 'fallaron'}` : ''}`,
       backupStale: 'Más de 36 horas sin un respaldo bueno. Revisa el cron en Vercel.',
       push: 'Notificaciones',
@@ -464,7 +501,7 @@ export const t = {
     // Banner inside a tournament
     banner: 'Admin de Polo',
     bannerBody: 'Estás en un torneo de otro organizador. Lo que cambies queda registrado a tu nombre como Admin de Polo.',
-    bannerProtected: 'Protegido · solo lectura',
+    bannerProtected: 'Protegido: solo lectura',
     bannerUnlocked: (time: string) => `Desbloqueado hasta las ${time}`,
     bannerPanel: 'Ver en el admin',
   },
@@ -571,12 +608,12 @@ export const t = {
       matchMode: 'Tipo de partido',
       matchSingles: 'Uno contra uno',
       matchFourball: 'Fourball',
-      matchHint: 'El partido es el grupo: dos jugadores, o cuatro en dos parejas. Las parejas se arman en Comité › Equipos.',
+      matchHint: 'El partido es el grupo: dos jugadores, o cuatro en dos parejas. Las parejas se arman en Equipos, en la consola del Comité.',
       teamMode: 'Cómo juega el equipo',
       teamScramble: 'Scramble',
       teamBestBall: 'Mejor bola',
       teamShamble: 'Shamble',
-      teamHint: 'Los equipos se arman en Comité › Equipos.',
+      teamHint: 'Los equipos se arman en Equipos, en la consola del Comité.',
       teamScoring: 'Qué se cuenta',
       teamStrokes: 'Golpes',
       teamPoints: 'Puntos',
@@ -591,7 +628,7 @@ export const t = {
       reviewField: (n: number) => `${n} jugadores`,
       reviewMoney: (fee: string, pot: string) => `${fee} por jugador, bolsa de ${pot}`,
       reviewNoMoney: 'Sin dinero',
-      reviewGames: (names: string[]) => (names.length ? names.join(', ') : 'Ninguno por ahora'),
+      reviewGames: (names: string[]) => (names.length ? andList(names) : 'Ninguno por ahora'),
       reviewHint: 'Todo esto se cambia después en Comité.',
       players: '¿Cuántos jugadores?',
       playersHint: 'Aproximado; el cuadre de la bolsa lo usa hasta que cargues a los jugadores.',
@@ -615,7 +652,7 @@ export const t = {
     },
   },
   setup: {
-    catalogHint: 'Enciende lo que quieran jugar. Cada juego tiene sus opciones; lo demás queda en "Más opciones".',
+    catalogHint: 'Enciende lo que quieran jugar. Cada juego tiene sus opciones; lo demás queda en «Más opciones».',
     add: 'Agregar',
     addAnother: 'Agregar otro',
     remove: 'Quitar',
@@ -649,8 +686,8 @@ export const t = {
     entryFee: 'Inscripción por jugador',
     split: 'Reparto del individual',
     splitHint: 'De lo que queda en la bolsa después de los demás premios.',
-    splits: { classic: '50/30/20', wta: 'Todo al 1º', top2: '60/40', top4: '40/30/20/10', amounts: 'Montos fijos' } as Record<string, string>,
-    place: (n: number) => `${n}º`,
+    splits: { classic: '50/30/20', wta: 'Todo al 1.º', top2: '60/40', top4: '40/30/20/10', amounts: 'Montos fijos' } as Record<string, string>,
+    place: (n: number) => ordinal(String(n)),
     addPlace: 'Agregar lugar',
     houseCut: 'Para la casa',
     houseCutHint: 'Se aparta de la bolsa: pelotas, cena, trofeos.',
@@ -740,7 +777,7 @@ export const t = {
     differential: 'Diferencial',
     seeAll: (n: number) => `Ver las ${n}`,
     roundTitle: (tournament: string, day: number) => `${tournament}, día ${day}`,
-    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${ch}` : null].filter(Boolean).join(', '),
+    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${handicapText(ch)}` : null].filter(Boolean).join(', '),
     finish: (label: string, field: number | null) => {
       const n = label.replace(/^T/, '')
       const place = label.startsWith('T') ? `Empatado en ${n}.º` : `${n}.º`
@@ -872,7 +909,7 @@ export const t = {
     disable: 'Apagar en este teléfono',
     on: 'Activados en este teléfono.',
     denied: 'Los bloqueaste en este teléfono. Actívalos en los ajustes del navegador para Polo.',
-    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, "Agregar a pantalla de inicio") y ábrela desde ahí.',
+    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, «Agregar a pantalla de inicio») y ábrela desde ahí.',
     unsupported: 'Este navegador no recibe avisos.',
     enabled: 'Listo: te avisamos aquí.',
     disabled: 'Avisos apagados en este teléfono.',
@@ -1025,6 +1062,8 @@ export const t = {
     sharedRounds: 'Rondas juntos',
     noShared: 'Todavía no tienen rondas completas juntos. Cuando el Comité cierre una en la que jugaron los dos, sale aquí.',
     you: 'Tú',
+    /** Between the two faces on Cara a cara. */
+    versusJoin: 'contra',
     roundVs: (basis: 'net' | 'gross', mine: number | null, theirs: number | null) => `${basis === 'net' ? 'Neto' : 'Gross'} ${mine ?? '—'} contra ${theirs ?? '—'}`,
     // Rivalry
     rivalry: 'Rivalidad',
@@ -1069,7 +1108,7 @@ export const t = {
     feedFinish: (name: string, finish: string, tournament: string) => `${name} quedó ${finish} en ${tournament}`,
     feedRound: (name: string, what: string, where: string) => `${name}: ${what} en ${where}`,
     feedWhat: (birdies: number, eagles: number, best: boolean, gross: number | null) =>
-      [best && gross != null ? `su mejor ronda (${gross})` : null, eagles > 0 ? (eagles === 1 ? 'un eagle' : `${eagles} eagles`) : null, birdies >= 3 ? `${birdies} birdies` : null].filter(Boolean).join(', ') || 'una gran ronda',
+      andList([best && gross != null ? `su mejor ronda (${gross})` : null, eagles > 0 ? (eagles === 1 ? 'un águila' : `${eagles} águilas`) : null, birdies >= 3 ? `${birdies} birdies` : null].filter((x): x is string => !!x)) || 'una gran ronda',
     feedRivalry: (name: string, result: 'won' | 'lost' | 'tie') => (result === 'won' ? `Le ganaste la ronda a ${name}` : result === 'lost' ? `${name} te ganó la ronda` : `Empataste con ${name}`),
   },
   enter: {
@@ -1097,8 +1136,8 @@ export const t = {
   install: {
     title: 'Instala la app',
     why: 'Abre en un toque, a pantalla completa y sin señal.',
-    ios: 'iPhone: toca Compartir (el cuadro con la flecha) y luego "Agregar a pantalla de inicio".',
-    android: 'Android: toca el menú ⋮ y luego "Instalar app" o "Agregar a pantalla de inicio".',
+    ios: 'iPhone: toca Compartir (el cuadro con la flecha) y luego «Agregar a pantalla de inicio».',
+    android: 'Android: toca el menú ⋮ y luego «Instalar app» o «Agregar a pantalla de inicio».',
     done: 'Ya la tengo',
   },
   sync: {
@@ -1108,7 +1147,7 @@ export const t = {
     pending: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
     offline: 'Sin señal. Se guarda en el teléfono.',
     offlineShort: 'Sin señal',
-    offlineHoles: (n: number) => (n === 1 ? 'Sin señal · 1 hoyo en el teléfono' : `Sin señal · ${n} hoyos en el teléfono`),
+    offlineHoles: (n: number) => (n === 1 ? 'Sin señal, 1 hoyo en el teléfono' : `Sin señal, ${n} hoyos en el teléfono`),
     pendingHoles: (n: number) => (n === 1 ? '1 hoyo por subir' : `${n} hoyos por subir`),
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
     notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
@@ -1127,7 +1166,7 @@ export const t = {
       'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',
     understood: 'Entendido',
     newVersion: 'Hay una versión nueva de la app.',
-    updateRequired: 'Esta versión ya no sube scores. Actualiza y se sube todo lo guardado en el teléfono.',
+    updateRequired: 'Esta versión ya no sube hoyos. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
     fromCache: (when: string) => `Sin señal: mostrando lo último guardado (${when}).`,
   },
@@ -1176,7 +1215,7 @@ export const t = {
     points: 'Puntos',
     gross: 'Gross',
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
-    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => `${ordinal(pos)}, ${name}${today ? `, hoy ${today}` : ''}${thru ? `, hoyo ${thru}` : ''}, ${figure}`,
+    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', figure === '–' ? '' : figure].filter(Boolean).join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
   card: {
@@ -1210,7 +1249,7 @@ export const t = {
     /** The hole header as it is read out, and announced when the hole changes. */
     /** A half-entered hole that came back after leaving the card (PWA-05). */
     restoredDraft: 'Lo que llevabas capturado en este hoyo sigue aquí. Falta guardarlo.',
-    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
+    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
@@ -1263,7 +1302,7 @@ export const t = {
     nobodyHolds: 'Nadie la tiene',
     roi: 'rendimiento',
     pointsFigure: (n: number) => `${n} pts`,
-    puttsFigure: (n: number) => `${n} putts`,
+    puttsFigure: (n: number) => (n === 1 ? '1 putt' : `${n} putts`),
     player: 'Jugador',
     headToHead: 'Cara a cara por grupo',
     unpaired: (names: string) => `Sin pareja: ${names}`,
@@ -1317,7 +1356,7 @@ export const t = {
     threePutts: 'A tres putts',
     snakeHoles: 'Hoyos con víbora',
     position: (label: string, total: number, thru: string) => `${ordinal(label)}, ${total} pts, por el ${thru}`,
-    handicapLine: (base: number, source: string) => `${source} ${base}`,
+    handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, pts: number) => `Día ${day}: ${pts} pts`,
     grossPutts: (gross: number | null, putts: number) => `${gross != null ? `${gross} golpes, ` : ''}${putts} putts`,
@@ -1415,8 +1454,11 @@ export const t = {
         UPDATE: 'cambió',
         DELETE: 'borró',
       } as Record<string, string>,
+      /** «Diego, hoyo 3: de 5 a 4»; just the value when it is new, «se borró (era 5)» when it went. */
       scoreLine: (player: string, hole: string, before: string | null, after: string | null) =>
-        `${player}, hoyo ${hole}${before != null || after != null ? `: ${before ?? '—'} → ${after ?? '—'}` : ''}`,
+        `${player}, hoyo ${hole}${before != null && after != null ? `: de ${before} a ${after}` : after != null ? `: ${after}` : before != null ? `: se borró (era ${before})` : ''}`,
+      /** One field of a change, in its detail: «de 5 a 4». */
+      change: (before: string, after: string) => `de ${before} a ${after}`,
       fields: 'Qué cambió',
       detail: 'Detalle del cambio',
       reason: (r: string) => `Motivo: ${r}`,
@@ -1450,7 +1492,7 @@ export const t = {
       clearWinners: 'Quitar ganadores',
       saveMatch: 'Guardar partido',
       incomplete: 'Elige a todos los jugadores; nadie puede estar en los dos lados.',
-      vs: 'vs',
+      vs: 'contra',
       money: {
         none: 'Sin dinero',
         main: (amount: string) => `${amount} de la bolsa principal`,
@@ -1637,7 +1679,7 @@ export const t = {
       playersForCheck: 'Jugadores para el cuadre',
       danger: 'Zona de peligro',
       deleteTournament: 'Borrar este torneo',
-      deleteConfirm: (name: string) => `Escribe "${name}" para confirmar que quieres borrar el torneo y todos sus datos.`,
+      deleteConfirm: (name: string) => `Escribe «${name}» para confirmar que quieres borrar el torneo y todos sus datos.`,
       protectedTitle: 'Torneo protegido',
       protectedBody: 'Nadie puede borrarlo, ni tú. Quítale la protección si de verdad quieres borrarlo.',
       unprotectedTitle: 'Proteger este torneo',
@@ -1665,9 +1707,16 @@ export const t = {
       profileElsewhere: 'Ese perfil ya es otro jugador de este torneo.',
       linkedTo: (h: string) => `@${h}`,
       deleteTakes: (partner: string | null, groups: number, payments: number) =>
-        `Se borra el jugador con su PIN${partner ? `, su pareja con ${partner}` : ''}${groups ? `, su lugar en ${groups} grupo${groups === 1 ? '' : 's'}` : ''}${payments ? ` y ${payments} pago${payments === 1 ? '' : 's'} marcado${payments === 1 ? '' : 's'}` : ''}. No se puede deshacer.`,
+        `Se borra ${andList(
+          [
+            'el jugador con su PIN',
+            partner ? `su pareja con ${partner}` : '',
+            groups ? `su lugar en ${groups} grupo${groups === 1 ? '' : 's'}` : '',
+            payments ? `${payments} pago${payments === 1 ? '' : 's'} marcado${payments === 1 ? '' : 's'}` : '',
+          ].filter(Boolean),
+        )}. No se puede deshacer.`,
       deleteBlocked: (scores: number, sold: boolean) =>
-        `No se puede borrar: ${scores ? `tiene ${scores} hoyo${scores === 1 ? '' : 's'} capturado${scores === 1 ? '' : 's'}` : ''}${scores && sold ? ' y ' : ''}${sold ? 'está en la Calcutta' : ''}. Si no va a jugar, déjalo sin grupo: sus hoyos cuentan 0.`,
+        `No se puede borrar: ${andList([scores ? `tiene ${scores} hoyo${scores === 1 ? '' : 's'} capturado${scores === 1 ? '' : 's'}` : '', sold ? 'está en la Calcutta' : ''].filter(Boolean))}. Si no va a jugar, déjalo sin grupo: sus hoyos cuentan 0.`,
       empty: 'Sin jugadores todavía.',
       emptyHint: 'Agrega a cada jugador con su nombre, categoría y hándicap. El PIN se pone después.',
       search: 'Buscar jugador',
@@ -1708,7 +1757,7 @@ export const t = {
       estimated: 'estimado',
       preview: 'Vista previa',
       previewPh: (ph: number) => `Hándicap de juego ${ph}`,
-      courseHcp: (n: number) => `hándicap de campo ${n}`,
+      courseHcp: (n: number) => `hándicap de campo ${handicapText(n)}`,
       committee: 'Comité',
       strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
@@ -1752,7 +1801,7 @@ export const t = {
       yards: 'Yardas',
       parTotal: 'Par total',
       paste: 'Pegar de la tarjeta',
-      pasteHint: 'Pega dos o tres líneas: pares, índices y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
+      pasteHint: 'Pega dos o tres líneas: pares, índices de golpe y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
       pasteApply: 'Aplicar',
       pasteError: 'No entendí. Necesito 18 números por línea.',
       issues: 'Revisar',
@@ -1849,16 +1898,16 @@ export const t = {
   teams: {
     title: 'Equipos',
     hint: 'El sorteo reparte a los jugadores para que los equipos queden parejos de hándicap.',
-    notTeamFormat: 'Este torneo no se juega por equipos. Cámbialo en Comité › Torneo › Reglas.',
+    notTeamFormat: 'Este torneo no se juega por equipos. Cámbialo en Comité, sección Torneo, en Reglas.',
     existing: 'Equipos sorteados',
     size: '¿De cuántos?',
     sizeOption: (n: number) => `${n} por equipo`,
-    sizeHint: (players: number, teams: number) => `${players} jugadores → ${teams} ${teams === 1 ? 'equipo' : 'equipos'}.`,
+    sizeHint: (players: number, teams: number) => `${players} jugadores en ${teams} ${teams === 1 ? 'equipo' : 'equipos'}.`,
     draw: 'Sortear equipos',
     redraw: 'Sortear otra vez',
     names: 'Ponles nombre',
     unnamed: (n: number) => `Equipo ${n}`,
-    hcpTotal: (n: number) => `hcp ${n}`,
+    hcpTotal: (n: number) => `hándicap ${handicapText(n)}`,
     spread: (n: number) =>
       n === 0 ? 'Quedaron exactamente parejos: todos los equipos suman el mismo hándicap.' : `Del equipo más fuerte al más débil hay ${n} de hándicap.`,
     groupsPreview: (n: number, first: string) => `Saldrían ${n} ${n === 1 ? 'grupo' : 'grupos'}, el primero a las ${first}.`,
@@ -1875,7 +1924,7 @@ export const t = {
     draw: 'Sortear el resto',
     redraw: 'Volver a sortear',
     names: 'Nombres de las parejas',
-    namePlaceholder: (a: string, b: string) => `${a} & ${b}`,
+    namePlaceholder: (a: string, b: string) => andList([a, b]),
     save: 'Guardar parejas y grupos',
     saved: 'Parejas y grupos guardados. Ajusta las horas de salida en Grupos.',
     existing: 'Ya hay parejas. Volver a sortear las reemplaza (los grupos del día 1 también).',
@@ -1908,10 +1957,11 @@ export const t = {
       `Lista mínima de transferencias entre personas, sobre lo que falta por pagar (el que más debe le paga al que más recibe).${banker ? ` Lo que ya entró al banco lo reparte ${banker}.` : ''}`,
     settlePreview: 'Así quedaría si terminara ahora. Mientras tanto, lo que se cobra se marca en «Quién debe qué».',
     allSettled: 'Todo liquidado: nadie le debe nada a nadie.',
-    squared: (a: string, b: string) => `${a} y ${b} quedan a mano`,
+    squared: (a: string, b: string) => `${andList([a, b])} quedan a mano`,
     recordPaid: 'Registrar algo que ya se pagó',
     recordPaidHint: 'Solo si alguien ya pagó y no se marcó: la liquidación de arriba ya lo cuenta como pendiente. Al marcarlo aquí, deja de pedirse.',
     markedPaid: 'Marcado como pagado.',
+    unmarkedPaid: 'Ya no cuenta como pagado.',
     refund: 'Devolución',
     bank: 'Banco',
     bankIn: 'Entró al banco',
@@ -1921,11 +1971,18 @@ export const t = {
     pays: (from: string, to: string, amount: string) => `${from} paga a ${to}: ${amount}`,
     paysTo: 'paga a',
     markPaid: 'Marcar pagado',
+    /** The state, on its own toggle in «Ya pagaron»; the action is «Marcar pagado». */
+    paid: 'Pagado',
+    paidTo: 'pagó a',
+    paidTitle: (n: number) => `Ya pagaron (${n})`,
+    paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
+    /** A «Deshacer» tapped after a later change to the same payment: it would bring back the older value. */
+    undoStale: 'Ese pago cambió después: revísalo en «Ya pagaron».',
     share: 'Compartir liquidación',
     shareTitle: (name: string) => `Liquidación, ${name}`,
     checklist: 'Quién debe qué',
     owesEntry: 'Inscripción',
-    owesLots: (lots: number[]) => `Calcutta, ${lots.length === 1 ? 'lote' : 'lotes'} ${new Intl.ListFormat('es-MX', { type: 'conjunction' }).format(lots.map(String))}`,
+    owesLots: (lots: number[]) => `Calcutta, ${lots.length === 1 ? 'lote' : 'lotes'} ${andList(lots.map(String))}`,
     owesBuyback: 'Recompra',
     owesSide: 'Botes',
     owesBet: 'Apuestas',
@@ -1988,7 +2045,15 @@ export const t = {
       bestRoi: { name: 'El Inversionista', desc: 'Mejor retorno en la Calcutta' },
       worstRoi: { name: 'El Filántropo', desc: 'Peor retorno en la Calcutta' },
     },
-    unit: (unit: 'count' | 'points' | 'pct' | 'variance', v: number) => (unit === 'pct' ? `${Math.round(v * 100)}%` : unit === 'points' ? `${v > 0 ? '+' : ''}${v} pts` : unit === 'variance' ? `varianza ${v.toFixed(2)}` : `${v}`),
+    // Signed figures (a return on the Calcutta, a gain from day 1 to day 2) take a true minus, never a hyphen.
+    unit: (unit: 'count' | 'points' | 'pct' | 'variance', v: number) =>
+      unit === 'pct'
+        ? `${Math.round(v * 100) < 0 ? '−' : ''}${Math.abs(Math.round(v * 100))}%`
+        : unit === 'points'
+          ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} pts`
+          : unit === 'variance'
+            ? `varianza ${v.toFixed(2)}`
+            : `${v}`,
   },
   share: {
     leaderboard: 'Compartir tabla',
@@ -2023,7 +2088,7 @@ export const t = {
     /** `how` comes from the format the tournament plays, so this mirrors the engine. */
     individual: (prizes: string[], lastPlace: string, how: string[]) => [
       ...how,
-      `Premios: ${prizes.map((p, i) => `${i + 1}º ${p}`).join(', ')}.`,
+      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.`,
       'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
       `El último lugar gana ${lastPlace}.`,
     ],
@@ -2031,24 +2096,24 @@ export const t = {
     pairs: (rule: string, prizes: string[], honoree: string | null) => [
       `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas en la cena de la Calcutta.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
       'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes.',
-      `Premios: ${prizes.map((p, i) => `${i + 1}º ${p}`).join(', ')}. Empate: mejor día 2 combinado, luego se reparte.`,
+      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}. Empate: mejor día 2 combinado, luego se reparte.`,
       'Las parejas juegan juntas los dos días y cada pareja lleva la tarjeta de la otra.',
     ],
     snake: (threshold: number, perSurvivor: string, pot: string) => [
       `En cada grupo, la víbora la tiene el último que hizo ${threshold} putts o más. Si dos la hacen en el mismo hoyo, la carga el que embocó al último.`,
-      `Al terminar la ronda, los que no la tienen cobran ${perSurvivor} cada uno del pozo (${pot} por grupo). Si nadie hizo ${threshold} putts, se reparte entre los cuatro.`,
+      `Al terminar la ronda, los que no la tienen cobran ${perSurvivor} cada uno de la bolsa (${pot} por grupo). Si nadie hizo ${threshold} putts, se reparte entre los cuatro.`,
     ],
     fewestPutts: (prize: string, pickup: number) => [`${prize} al menor total de putts. Solo cuentan los golpes en el green. Un hoyo levantado cuenta ${pickup} putts. Empate: se reparte.`],
     auction: (opening: string, increment: string, max: number, buyback: number, slots: string[]) => [
       'La noche antes del día 1 se subasta a cada jugador, en orden sorteado.',
       `Cada jugador abre su propio lote en ${opening} y las pujas suben de ${increment} en ${increment}. Si nadie puja, se queda con él mismo. Máximo ${max} jugadores por dueño.`,
       `Tras el martillazo, el jugador puede recomprar hasta el ${buyback}% de sí mismo pagándole a su dueño esa proporción.`,
-      `El pozo es la suma de los martillazos y se reparte completo: ${slots.join(', ')}.`,
-      'Cada jugador cobra como máximo un lugar: el mejor que le toque. Si un C o D queda 1º o 2º, su lugar de categoría pasa al siguiente mejor de esa categoría. Los empates se reparten.',
+      `El pozo es la suma de los martillazos y se reparte completo: ${andList(slots)}.`,
+      'Cada jugador cobra como máximo un lugar: el mejor que le toque. Si un C o D queda 1.º o 2.º, su lugar de categoría pasa al siguiente mejor de esa categoría. Los empates se reparten.',
       'Todo se paga antes de dormir.',
     ],
     governance: ['El Comité tiene la última palabra. Cada corrección queda registrada con quién, cuándo y por qué.'],
-    slotName: (slot: string, place: number | undefined, tier: string | undefined, lastPlace: string) => (slot === 'place' ? (place === 1 ? 'Campeón' : place === 2 ? 'Subcampeón' : `${place}º`) : slot === 'bestOfTier' ? `Mejor ${tier}` : lastPlace),
+    slotName: (slot: string, place: number | undefined, tier: string | undefined, lastPlace: string) => (slot === 'place' ? (place === 1 ? 'Campeón' : place === 2 ? 'Subcampeón' : ordinal(String(place))) : slot === 'bestOfTier' ? `Mejor ${tier}` : lastPlace),
     slot: (slot: string, place: number | undefined, tier: string | undefined, share: number, lastPlace: string) => `${t.rules.slotName(slot, place, tier, lastPlace)} ${Math.round(share * 100)}%`,
   },
   ceremony: {
@@ -2066,7 +2131,7 @@ export const t = {
       snake: (label: string) => `${label}: totales`,
       bestRound: (label: string, day: number) => `${label}, día ${day}`,
       pairs: (label: string) => label,
-      place: (n: number) => (n === 1 ? 'El campeón' : `${n}º lugar`),
+      place: (n: number) => (n === 1 ? 'El campeón' : `${ordinal(String(n))} lugar`),
       auction: (label: string) => `${label}: pagos`,
       money: 'Resumen de dinero',
     },
