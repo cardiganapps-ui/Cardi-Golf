@@ -645,9 +645,13 @@
       "workstream": "W10",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 80,
+      "tests": [
+        "src/lib/humanError.test.ts",
+        "src/components/ErrorBox.test.tsx",
+        "src/screens/tournament/EnterScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
