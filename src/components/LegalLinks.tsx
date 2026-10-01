@@ -31,14 +31,16 @@ const lineStyle = { fontSize: 'var(--fs-xs)', color: 'var(--ink-2)', lineHeight:
  * «Al continuar aceptas los Términos de uso y el Aviso de privacidad.» Where
  * someone is about to give their data (an account, a PIN on a tournament's
  * faces, a quick round with friends), the notice is one tap away first
- * (TRUST-05).
+ * (TRUST-05). `enter`: the short «Al entrar aceptas los Términos…» that fits
+ * above a tournament's faces. `id`: for the field that takes focus below it,
+ * so a screen reader hears the line with the field (`aria-describedby`).
  */
-export function LegalConsent() {
+export function LegalConsent({ enter = false, id }: { enter?: boolean; id?: string }) {
   const C = t.legal.consent
   return (
-    <p data-legal-consent style={lineStyle}>
-      {C.start}
-      <LegalLink to="/terminos">{C.terms}</LegalLink>
+    <p id={id} data-legal-consent style={lineStyle}>
+      {enter ? C.enterStart : C.start}
+      <LegalLink to="/terminos">{enter ? C.termsShort : C.terms}</LegalLink>
       {C.middle}
       <LegalLink to="/privacidad">{C.privacy}</LegalLink>
       {C.end}

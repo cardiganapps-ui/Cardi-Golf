@@ -36,7 +36,8 @@ describe('the consent line', () => {
 
 describe('every place that collects data shows it', () => {
   const src = (f: string) => readFileSync(join(process.cwd(), 'src', f), 'utf8')
-  for (const f of ['screens/profile/EntrarScreen.tsx', 'screens/organizer/OrganizerLoginScreen.tsx', 'screens/tournament/EnterScreen.tsx', 'screens/profile/QuickRoundScreen.tsx']) {
+  // The face grid and the PIN step are rendered for real in src/screens/consentPoints.test.tsx.
+  for (const f of ['screens/profile/EntrarScreen.tsx', 'screens/organizer/OrganizerLoginScreen.tsx', 'screens/profile/QuickRoundScreen.tsx']) {
     it(f, () => expect(src(f)).toContain('<LegalConsent />'))
   }
   it('screens/admin/AdminPlayers.tsx', () => expect(src('screens/admin/AdminPlayers.tsx')).toContain('<OthersDataNotice />'))

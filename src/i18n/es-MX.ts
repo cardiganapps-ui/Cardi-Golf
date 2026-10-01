@@ -878,7 +878,10 @@ export const t = {
     /** Where data is collected (TRUST-05): the notice and the terms, a tap away, before anything is saved. */
     consent: {
       start: 'Al continuar aceptas los ',
+      /** The face grid and the PIN step: short enough to sit above the faces on a small phone. */
+      enterStart: 'Al entrar aceptas los ',
       terms: 'Términos de uso',
+      termsShort: 'Términos',
       middle: ' y el ',
       privacy: 'Aviso de privacidad',
       end: '.',
