@@ -143,21 +143,30 @@
   flex-direction: column;
   border-top: var(--hairline);
 }
+/* A debt, a settlement line or a payment on record: who and what for on the
+   left, the amount in a column, and for admins the action in a slot of one
+   width, so every amount in every money list sits on one edge (VIS-01). */
 .transfer {
   composes: rowLine from '../../components/primitives.module.css';
 }
 .transferText {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
 }
 .transferKind {
   color: var(--ink-2);
   font-size: var(--fs-xs);
 }
-/* «Registrar algo que ya se pagó»: a quiet disclosure under the settlement. */
+.action {
+  composes: rowAction from '../../components/primitives.module.css';
+}
+/* «Ya pagaron»: the record, a step quieter than what is still owed. */
+.paidRow {
+  color: var(--ink-2);
+}
+.paidRow .amount {
+  font-weight: 500;
+}
+/* «Registrar algo que ya se pagó» and «Ya pagaron»: quiet disclosures. */
 .recordSummary {
   min-height: 44px;
   display: flex;
@@ -172,9 +181,8 @@
   white-space: nowrap;
 }
 .amount {
-  font-variant-numeric: tabular-nums;
+  composes: rowFig from '../../components/primitives.module.css';
   font-weight: 600;
-  white-space: nowrap;
 }
 
 /* Per-game money: the game's name on the left, what it pays on the right. */

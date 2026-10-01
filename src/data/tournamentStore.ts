@@ -228,7 +228,9 @@ export const useTournament = create<StoreState>((set, get) => ({
   },
   async reload() {
     const id = get().tournamentId
-    if (!id) return
+    // A design fixture (`src/dev`) has no server: its snapshot is the truth,
+    // and a fetch would only replace it with nothing after a write.
+    if (!id || id.startsWith('fixture:')) return
     const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(id)
