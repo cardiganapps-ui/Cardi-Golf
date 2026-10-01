@@ -1466,13 +1466,28 @@ export const t = {
       warning: 'Aviso',
       view: 'Ver',
       rejectedTitle: 'Capturas rechazadas por el servidor',
-      rejectedHint: 'Un teléfono intentó guardar esto y el servidor lo rechazó. Revísalo y vuélvelo a mandar o descártalo.',
-      rejectedScore: (name: string, hole: number, value: string) => `${name}, hoyo ${hole}: ${value}`,
-      rejectedTiebreak: (group: number, hole: number, name: string) => `Víbora, grupo ${group}, hoyo ${hole}: ${name}`,
-      rejectedSignature: (pair: string) => `Firma de ${pair}`,
-      rejectedAward: (game: string, hole: number, names: string) => `${game}, hoyo ${hole}: ${names}`,
+      /** On a Comité device, which can send them again. */
+      rejectedHint: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
+      /** On a player's phone: the list lives only there, so the Comité learns of it from the player. */
+      rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité para que lo capture, y luego descártalo.',
+      rejectedScore: (name: string, day: number, hole: number, value: string) => `${name}, día ${day}, hoyo ${hole}: ${value}`,
+      /** What a refused hole held: «5 golpes, 2 putts», «levantó, 1 putt». */
+      scoreValue: (strokes: number | null, putts: number | null, pickedUp: boolean) => {
+        const shots = pickedUp ? 'levantó' : strokes === null ? 'sin golpes' : `${strokes} golpe${strokes === 1 ? '' : 's'}`
+        return putts === null ? shots : `${shots}, ${putts} putt${putts === 1 ? '' : 's'}`
+      },
+      rejectedTiebreak: (day: number, group: number, hole: number, name: string) => `Víbora, día ${day}, grupo ${group}, hoyo ${hole}: ${name}`,
+      rejectedSignature: (pair: string, day: number) => `Firma de ${pair}, día ${day}`,
+      rejectedAward: (game: string, day: number, hole: number, names: string) => `${game}, día ${day}, hoyo ${hole}: ${names}`,
+      /** Why, read from the tournament as it stands, not from the server's message. */
+      reasonClosed: (day: number) => `El día ${day} ya estaba cerrado cuando llegó.`,
+      reasonSigned: 'La tarjeta ya estaba firmada cuando llegó.',
       resend: 'Volver a mandar',
       discard: 'Descartar',
+      sendToComite: 'Mandar al Comité',
+      sendCopied: 'Copiado: pégalo en el chat del Comité.',
+      /** The first line of what «Mandar al Comité» sends; one line per capture follows. */
+      sendHeader: (tournament: string, who: string | null) => (who ? `${tournament}: esto no se subió desde el teléfono de ${who}.` : `${tournament}: esto no se subió desde este teléfono.`),
     },
     groups: {
       fromStandings: 'Generar por tabla de parejas',
@@ -1783,6 +1798,8 @@ export const t = {
       cancelConfirm: (n: number) => `¿Cancelar el día ${n}? Deja de contar para los premios. Se puede reabrir.`,
       deleteConfirm: (n: number) => `¿Borrar el día ${n} con todas sus tarjetas? No se puede deshacer.`,
       pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
+      /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
+      phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada grupo abra la Tarjeta con señal y vea «Sincronizado».',
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
       duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,

@@ -13,6 +13,9 @@
   color: var(--ink-2);
   line-height: var(--lh-body);
 }
+.send {
+  align-self: flex-start;
+}
 .rows {
   display: flex;
   flex-direction: column;

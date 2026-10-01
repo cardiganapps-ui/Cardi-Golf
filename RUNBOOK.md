@@ -44,7 +44,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 Sigue capturando: la app guarda en el teléfono y muestra "Sin señal · 3 hoyos en el teléfono" (y un numerito en la pestaña Tarjeta desde cualquier pantalla) Cuando vuelve la señal se sincroniza sola; nada se pierde por falta de señal, se reintenta hasta que entra. Si al llegar al club sigue en pendiente, abre la app con Wi-Fi: se vacía la cola. No borres la app ni cambies de jugador con pendientes. Cinco PINs equivocados seguidos bloquean ese teléfono 5 minutos (solo ese teléfono; el jugador entra desde otro). Si la app se cierra sin señal, al abrirla muestra lo último guardado en el teléfono (arriba dice "Sin señal: mostrando lo último guardado") y la Tarjeta sigue funcionando.
 
-**"Rechazado":** si el servidor no aceptó una captura (la tarjeta ya estaba firmada o la ronda ya se cerró antes de que sincronizara), el teléfono la muestra en rojo abajo de la tarjeta con los valores. Avísale al Comité para que la capture desde Comité › Tarjetas; después tócale "Descartar".
+**"Rechazado":** si el servidor no aceptó una captura (la tarjeta ya estaba firmada o la ronda ya se cerró antes de que sincronizara), el teléfono la muestra en rojo en **Tarjeta**, con el día, el hoyo y los valores, aunque el día ya haya terminado; la pestaña Tarjeta lleva un numerito rojo desde cualquier pantalla. Esa lista vive solo en ese teléfono: el Comité no la ve desde el suyo. Toca **"Mandar al Comité"** (manda los valores por WhatsApp o los copia), el Comité los captura desde Comité › Tarjetas con su razón, y después toca **"Descartar"**. Si el Comité vuelve a abrir el día, aparece **"Volver a mandar"**.
 
 **Regla para el Comité técnico:** no se despliega nada a `main` mientras hay una ronda en juego. La app nunca se recarga sola a media captura. Cuando hay versión nueva, cada teléfono la detecta al volver a abrir la app o en menos de 30 minutos, y arriba aparece una barra fija "Hay una versión nueva · Actualizar" que se queda hasta que el jugador la toca (no aparece mientras tiene un hoyo a medio capturar).
 
@@ -60,10 +60,11 @@ Sigue capturando: la app guarda en el teléfono y muestra "Sin señal · 3 hoyos
 ## 6. Cerrar una ronda
 
 1. Cada pareja **firma la tarjeta de la otra** al terminar el 18 ("Firmar tarjeta" en Tarjeta). Eso la bloquea.
-2. Comité › **Rondas** › "Terminar ronda". Revisa en **En vivo** que no queden hoyos sin capturar ni víboras pendientes (sale un chip rojo).
-3. Comité › **Hándicaps**: revisa el recorte del día 2 de cada jugador (regla anti-sandbag). Ajusta con razón si el Comité lo decide.
-4. Comité › **Grupos** › "Generar grupos del día 2 por tabla": las dos mejores parejas salen al último. Ajusta horas y salidas.
-5. **Dinero**: los premios del día (mejor ronda, víbora) ya aparecen como definitivos.
+2. **Antes de terminar:** que cada grupo abra la **Tarjeta con señal** y vea "Sincronizado". Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran (le salen como "Rechazado").
+3. Comité › **Rondas** › "Terminar ronda". Revisa en **En vivo** que no queden hoyos sin capturar ni víboras pendientes (sale un chip rojo).
+4. Comité › **Hándicaps**: revisa el recorte del día 2 de cada jugador (regla anti-sandbag). Ajusta con razón si el Comité lo decide.
+5. Comité › **Grupos** › "Generar grupos del día 2 por tabla": las dos mejores parejas salen al último. Ajusta horas y salidas.
+6. **Dinero**: los premios del día (mejor ronda, víbora) ya aparecen como definitivos.
 
 ## 7. Ceremonia y liquidación final
 
