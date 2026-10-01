@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Git-level guard (any client, not only Claude's Bash tool): run the same
-# preflight CI runs and refuse the push when it fails.
-#   git config core.hooksPath .githooks
+# Git-level guard (any client, not only Claude's Bash tool):
+#   1. never push to main (QA-10): main deploys to production, and it changes
+#      only by merging a green PR;
+#   2. run the same preflight CI runs and refuse the push when it fails.
+# Wired by `git config core.hooksPath .githooks`, which the Claude session
+# runs at start (.claude/settings.json, SessionStart).
 set -uo pipefail
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Push blocked: never push to main. Push a claude/<topic> branch and open a PR." >&2
+    exit 1
+  fi
+done
 root="$(git rev-parse --show-toplevel)"
 log="${TMPDIR:-/tmp}/polo-prepush.log"
 if bash "$root/scripts/preflight.sh" > "$log" 2>&1; then
