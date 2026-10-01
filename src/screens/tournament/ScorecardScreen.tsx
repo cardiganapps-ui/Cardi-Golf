@@ -5,7 +5,7 @@
  * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -174,16 +174,25 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     savedTimer.current = setTimeout(() => setSavedNote(null), SAVED_NOTE_MS)
   }
   const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason || confirmDefaults
+  /** One polite live region for the whole card: whose score changed and what it is worth, or the new hole (A11Y-01). */
+  const [said, setSaid] = useState('')
+  const uid = useId()
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
+  const holeSpoken = S.holeSpoken(hole, par, lead?.strokeIndex, lead?.yards)
+  /** The points badge's words for a draft, shared by the badge and the announcement. */
+  const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
+    const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
+    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null) }
+  }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
   // changes or the server's values for it do, never on a keystroke.
-  const latest = useRef({ players, holeInfo, drafts })
+  const latest = useRef({ players, holeInfo, drafts, holeSpoken })
   useEffect(() => {
-    latest.current = { players, holeInfo, drafts }
+    latest.current = { players, holeInfo, drafts, holeSpoken }
   })
   /** What the server has for each player on the open hole; changes when a save lands, from this phone or another. */
   const serverKey = players
@@ -195,13 +204,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const holeKey = `${round.id}|${group.id}|${hole}`
   const shownHole = useRef('')
   useEffect(() => {
-    const { players, holeInfo, drafts: current } = latest.current
+    const { players, holeInfo, drafts: current, holeSpoken } = latest.current
     const saved = (p: { id: string }): Draft | null => {
       const h = holeInfo(p.id)
       return h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : null
     }
     if (shownHole.current !== holeKey) {
       // A new hole: saved values or defaults (par, 2 putts), nothing touched yet.
+      // A screen reader hears where it landed; the first hole is the page itself.
+      if (shownHole.current) setSaid(holeSpoken)
       shownHole.current = holeKey
       touched.current = new Set()
       settledAt.current = performance.now()
@@ -262,6 +273,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const setDraft = (pid: string, patch: Partial<Draft>) => {
     touched.current.add(pid)
     setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
+    const h = holeInfo(pid)
+    const p = players.find((x) => x.id === pid)
+    if (h && p && drafts[pid]) {
+      const next = { ...drafts[pid], ...patch }
+      setSaid(S.said(p.displayName, next.strokes, next.putts, next.pickedUp, ptsText(h, next).text))
+    }
   }
 
   const idx = order.indexOf(hole)
@@ -534,6 +551,9 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         if (Math.abs(dx) > 70 && Math.abs(dy) < 50) goto(dx < 0 ? idx + 1 : idx - 1)
       }}
     >
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {said}
+      </p>
       <div className={styles.top}>
         <div className={styles.topText}>
           <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>
@@ -621,13 +641,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             <button className={styles.holeNav} type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
               <IconChevronLeft />
             </button>
-            <div className={styles.holeTitle}>
-              <span className={styles.holeNum}>{hole}</span>
-              <span className={styles.holeMeta}>
+            <h1 className={styles.holeTitle}>
+              <span className="sr-only">{holeSpoken}</span>
+              <span className={styles.holeNum} aria-hidden="true">
+                {hole}
+              </span>
+              <span className={styles.holeMeta} aria-hidden="true">
                 {t.player.par} {par}, {t.player.si} {lead?.strokeIndex ?? '–'}
                 {lead?.yards ? `, ${t.player.yards(lead.yards)}` : ''}
               </span>
-            </div>
+            </h1>
             <button className={styles.holeNav} type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
               <IconChevronRight />
             </button>
@@ -638,15 +661,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               const d = drafts[p.id]
               const h = holeInfo(p.id)
               if (!d || !h) return null
-              const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
+              const { pts, text: ptsLine } = ptsText(h, d)
               const locked = signed(p.id) && !me.isAdmin
               const init = initialDraft(p.id)
               const untouched = !h.played && !!init && init.strokes === d.strokes && init.putts === d.putts && init.pickedUp === d.pickedUp
               return (
-                <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`}>
+                <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`} role="group" aria-labelledby={`${uid}-${p.id}`}>
                   <div className={styles.playerLine}>
                     <span className={styles.playerName}>
-                      <span className={styles.playerNameText}>{p.displayName}</span>
+                      <span className={styles.playerNameText} id={`${uid}-${p.id}`}>
+                        {p.displayName}
+                      </span>
                       {locked && (
                         <span className={styles.lockMark} aria-label={S.cardSigned}>
                           <IconLock size={14} />
@@ -659,14 +684,14 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                       )}
                     </span>
                     <span className={`${styles.pts} ${untouched ? styles.ptsMuted : pts >= 3 ? styles.ptsHigh : ''}`}>
-                      {S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null)}
+                      {ptsLine}
                       {h.par !== par ? `, ${S.parHere(h.par)}` : ''}
                     </span>
                   </div>
                   <div className={styles.controls}>
-                    <Stepper label={S.strokes} value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
-                    <Stepper label={S.putts} value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
-                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp}>
+                    <Stepper label={S.strokesOf(p.displayName)} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
+                    <Stepper label={S.puttsOf(p.displayName)} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
+                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp} aria-label={S.pickedUpOf(p.displayName)}>
                       {S.pickedUp}
                     </button>
                   </div>
