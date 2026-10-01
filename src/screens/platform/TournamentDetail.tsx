@@ -16,6 +16,7 @@ import { personName } from './names'
 import { relTime } from '../../lib/relTime'
 import { TournamentChips, type TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.platform
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -35,7 +36,7 @@ export function TournamentDetail() {
     try {
       setData(await api.tournament(id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api, id])
   useEffect(() => {
@@ -55,7 +56,7 @@ export function TournamentDetail() {
       await changed()
       toast(P.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -67,7 +68,7 @@ export function TournamentDetail() {
       {P.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox message={error} onRetry={() => void load()} /></>
+  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
   if (data === undefined) return <Spinner rows={6} />
   if (data === null) return <>{back}<p className={s.help}>{P.notFound}</p></>
   const d = data
@@ -286,7 +287,7 @@ function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: 
       await onPick(picked.id, reason.trim())
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

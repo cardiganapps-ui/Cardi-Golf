@@ -9,6 +9,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { finishQuickRound } from '../../data/quick'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { humanError } from '../../lib/humanError'
 
 const Q = t.quick
 
@@ -34,7 +35,7 @@ export function QuickFinish() {
       toast(Q.finished(r.players))
       setAsk(false)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

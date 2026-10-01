@@ -44,6 +44,7 @@ export function RejectedWrites({ canResend }: { canResend: boolean }) {
           <div key={r.key} className={styles.row}>
             <span className={styles.text}>
               <span>{describe(r)}</span>
+              {/* eslint-disable-next-line no-restricted-syntax -- a RejectedItem's message is copy outbox.ts already made (describeSyncError), not an error's text */}
               <span className={styles.reason}>{r.message}</span>
             </span>
             <span className={styles.actions}>

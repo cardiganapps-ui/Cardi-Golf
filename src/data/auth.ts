@@ -6,6 +6,8 @@ import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { withTimeout } from '../lib/timeout'
+import { t } from '../i18n/es-MX'
+import { UserError } from '../lib/humanError'
 
 /** How long startup waits for the stored session before showing a way out. */
 export const SESSION_TIMEOUT_MS = 8000
@@ -79,7 +81,7 @@ export function hasStoredSession(): boolean {
  * refresh is cooling down after a failure). Retry later; the cached boards
  * stay up meanwhile.
  */
-export class SessionUnavailableError extends Error {
+export class SessionUnavailableError extends UserError {
   constructor() {
     super('No se pudo confirmar la sesión guardada; se reintenta al volver la señal.')
     this.name = 'SessionUnavailable'
@@ -103,7 +105,7 @@ export async function ensureSession(): Promise<Session> {
   if (data.session) return data.session
   if (hasStoredSession()) throw new SessionUnavailableError()
   const { data: anon, error } = await sb.auth.signInAnonymously()
-  if (error || !anon.session) throw error ?? new Error('No se pudo iniciar sesión anónima')
+  if (error || !anon.session) throw error ?? new UserError(t.errors.sessionStart)
   return anon.session
 }
 

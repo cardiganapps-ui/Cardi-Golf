@@ -6,6 +6,7 @@ import { Field } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import styles from './OrganizerAuth.module.css'
+import { humanError, UserError } from '../../lib/humanError'
 
 /** Organizer sign-in. One primary path (email + password); the alternatives are quiet. */
 export function OrganizerLoginScreen() {
@@ -35,7 +36,7 @@ export function OrganizerLoginScreen() {
     try {
       await action()
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(humanError(err))
     } finally {
       setBusy(false)
     }
@@ -77,7 +78,7 @@ export function OrganizerLoginScreen() {
               try {
                 await verifyEmailCode(email.trim(), code, awaiting)
               } catch {
-                throw new Error(t.auth.badCode)
+                throw new UserError(t.auth.badCode)
               }
               navigate('/organizer', { replace: true })
             })

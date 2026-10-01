@@ -23,6 +23,7 @@ import type { Group, Round } from '../../engine/types'
 import { motion } from 'motion/react'
 import { easeSlow } from '../../design/motion'
 import { celebrationColors } from '../../lib/tokens'
+import { humanError } from '../../lib/humanError'
 import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
@@ -423,7 +424,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         setView('grid')
       }
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

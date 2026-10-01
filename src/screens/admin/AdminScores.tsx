@@ -15,6 +15,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import styles from './AdminScores.module.css'
 import a from './Admin.module.css'
 import { NumberField } from '../../components/NumberField'
+import { humanError } from '../../lib/humanError'
 
 const SC = t.admin.scores
 const IB = t.admin.inbox
@@ -71,7 +72,7 @@ export function AdminScores() {
       setEdit(null)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -84,7 +85,7 @@ export function AdminScores() {
       await reload()
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -97,7 +98,7 @@ export function AdminScores() {
       await reload()
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -111,7 +112,7 @@ export function AdminScores() {
       await reload()
       setAskUnsign(false)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

@@ -11,7 +11,7 @@ import { BootProblem } from '../components/BootProblem'
 export function RouteError() {
   const error = useRouteError()
   if (isRouteErrorResponse(error) && error.status === 404) return <NotFoundScreen />
-  const message = error instanceof Error ? error.message : String(error)
+  // The error itself goes to the console only; the screen says what to do (COPY-04).
   if (typeof console !== 'undefined') console.error(error)
-  return <BootProblem kind="crash" detail={message} />
+  return <BootProblem kind="crash" />
 }

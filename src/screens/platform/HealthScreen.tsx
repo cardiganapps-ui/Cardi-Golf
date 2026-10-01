@@ -11,6 +11,7 @@ import { ReasonSheet } from '../../components/ReasonSheet'
 import { useAppFlags, usePlatformApi, type Health } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const H = t.platform.health
 /** A backup older than this is a problem: the cron runs nightly. */
@@ -41,14 +42,14 @@ export function HealthScreen() {
       setH(next)
       setBanner(next.flags.maintenanceBanner ?? '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api])
   useEffect(() => {
     void load()
   }, [load])
 
-  if (error) return <ErrorBox message={error} onRetry={() => void load()} />
+  if (error) return <ErrorBox error={error} onRetry={() => void load()} />
   if (!h) return <Spinner rows={6} />
 
   const lastOkAt = h.backup.lastOk?.at ? new Date(h.backup.lastOk.at).getTime() : null

@@ -6,6 +6,7 @@
  */
 import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
+import { humanError } from '../lib/humanError'
 import styles from './ui.module.css'
 
 export { Field, Segmented } from './primitives'
@@ -153,11 +154,12 @@ export function Lazy({ children }: { children: ReactNode }) {
   return <Suspense fallback={<Spinner />}>{children}</Suspense>
 }
 
-export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
+/** `error`: the caught error, or copy already made from one; it shows as humanError (COPY-04). */
+export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   return (
     <div className={`card ${styles.errorBox}`} role="alert">
       <strong>{t.common.error}</strong>
-      <p className="small">{message}</p>
+      <p className="small">{humanError(error)}</p>
       {onRetry && (
         <button className="btn btn--secondary btn--sm" type="button" onClick={onRetry}>
           {t.common.retry}

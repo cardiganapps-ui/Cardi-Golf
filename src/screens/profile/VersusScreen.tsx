@@ -15,6 +15,7 @@ import { profileCard, useMyProfile, type ProfileCard } from '../../data/profiles
 import { h2hRecord, headToHead, proposedStrokes, rivalryEnd, rivalryPropose, rivalryRespond, type HeadToHead, type H2HRound } from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const S = t.social
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -52,7 +53,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
   useEffect(() => {
     if (!ok || fixture) return
     if (!profile) void loadProfile()
-    load().catch((e) => toast(e instanceof Error ? e.message : String(e)))
+    load().catch((e) => toast(humanError(e)))
   }, [ok, fixture, profile, loadProfile, load])
   // Start the proposal from the index difference.
   useEffect(() => {
@@ -72,7 +73,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
       if (done) toast(done)
       await load()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
       setEnding(false)

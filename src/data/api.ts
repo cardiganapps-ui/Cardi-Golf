@@ -1,28 +1,36 @@
 /**
- * Typed writes. Every function throws on error so screens can show the message.
+ * Typed writes. Every function throws on error; screens show `humanError(e)` (src/lib/humanError.ts).
  */
 import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { mapTournament, type Row } from './mappers'
 
-/** A server error with its Postgres code, so screens can map the known ones (23505, 42501, 22023) to copy. */
+/**
+ * A server error with its Postgres code. humanError reads the code: our own
+ * raises (42501, 22023, 23505, P0001) keep their Spanish sentence, Postgres's
+ * own messages become copy.
+ */
 export class ApiError extends Error {
   code: string | null
   constructor(message: string, code: string | null) {
     super(message)
     this.code = code
   }
+  /** From a supabase-js error, keeping its code. */
+  static from(error: { message: string; code?: string | null }): ApiError {
+    return new ApiError(error.message, error.code ?? null)
+  }
 }
 
 function unwrap<T>(res: { data: T | null; error: { message: string; code?: string } | null }): T {
-  if (res.error) throw new ApiError(res.error.message, res.error.code ?? null)
+  if (res.error) throw ApiError.from(res.error)
   return res.data as T
 }
 
 async function rpc<T = unknown>(name: string, args?: Record<string, unknown>): Promise<T> {
   const res = await supabase().rpc(name, args)
-  if (res.error) throw new ApiError(res.error.message, res.error.code ?? null)
+  if (res.error) throw ApiError.from(res.error)
   return res.data as T
 }
 
@@ -140,7 +148,7 @@ export interface LookupResult {
 
 export async function lookupTournament(codeOrSlug: string): Promise<LookupResult | null> {
   const res = await supabase().rpc('lookup_tournament', { p_code: codeOrSlug })
-  if (res.error) throw new Error(res.error.message)
+  if (res.error) throw ApiError.from(res.error)
   return (res.data as LookupResult | null) ?? null
 }
 
@@ -152,7 +160,7 @@ export type ClaimResult =
 
 export async function claimPlayer(playerId: string, pin: string): Promise<ClaimResult> {
   const res = await supabase().rpc('claim_player', { p_player_id: playerId, p_pin: pin })
-  if (res.error) throw new Error(res.error.message)
+  if (res.error) throw ApiError.from(res.error)
   return res.data as ClaimResult
 }
 
@@ -214,12 +222,12 @@ export async function deletePlayer(id: string) {
 
 export async function setPlayerPin(playerId: string, pin: string) {
   const res = await supabase().rpc('set_player_pin', { p_player_id: playerId, p_pin: pin })
-  if (res.error) throw new Error(res.error.message)
+  if (res.error) throw ApiError.from(res.error)
 }
 
 export async function playersWithPin(tournamentId: string): Promise<Set<string>> {
   const res = await supabase().rpc('players_with_pin', { p_tournament_id: tournamentId })
-  if (res.error) throw new Error(res.error.message)
+  if (res.error) throw ApiError.from(res.error)
   return new Set((res.data as string[] | null) ?? [])
 }
 

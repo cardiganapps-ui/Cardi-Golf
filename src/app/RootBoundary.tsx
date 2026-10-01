@@ -24,6 +24,6 @@ export class RootBoundary extends Component<{ children: ReactNode }, { error: Er
     console.error(error)
   }
   render() {
-    return this.state.error ? <BootProblem kind="crash" detail={this.state.error.message} /> : this.props.children
+    return this.state.error ? <BootProblem kind="crash" /> : this.props.children
   }
 }

@@ -6,6 +6,7 @@
  */
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
+import { ApiError } from './api'
 
 type Row = Record<string, unknown>
 
@@ -79,7 +80,7 @@ export async function restoreBackup(tournamentId: string, backup: Backup): Promi
   void _t
   void _h
   const res = await supabase().rpc('restore_tournament', { p_tournament_id: tournamentId, p_backup: { ...backup, tables } })
-  if (res.error) throw new Error(res.error.message === 'wrong-tournament' ? 'wrong-tournament' : res.error.message)
+  if (res.error) throw ApiError.from(res.error)
   return res.data as { players: number; rounds: number; scores: number }
 }
 

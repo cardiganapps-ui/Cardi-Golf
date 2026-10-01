@@ -19,6 +19,7 @@ import styles from './AdminDraw.module.css'
 import a from './Admin.module.css'
 import { IconRings } from '../../components/icons'
 import { easeSlow } from '../../design/motion'
+import { humanError } from '../../lib/humanError'
 
 const D = t.draw
 
@@ -99,7 +100,7 @@ export function AdminDraw() {
       setAskSave(false)
       toast(D.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

@@ -14,6 +14,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { IconClose } from '../../components/icons'
 import a from './Admin.module.css'
 import { NumberField } from '../../components/NumberField'
+import { humanError } from '../../lib/humanError'
 
 const H = t.admin.handicaps
 
@@ -37,7 +38,7 @@ export function AdminHandicaps() {
       setEditing(null)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -48,7 +49,7 @@ export function AdminHandicaps() {
       await deleteHandicapOverride(roundId, playerId)
       await reload()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

@@ -13,6 +13,7 @@ import { relTime } from '../../lib/relTime'
 import { changedFields, showValue as show } from '../../lib/auditDiff'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import a from './Admin.module.css'
+import { humanError } from '../../lib/humanError'
 
 const H = t.admin.history
 const PAGE = 50
@@ -35,7 +36,7 @@ export function AdminHistory() {
         setEntries((prev) => (before ? [...(prev ?? []), ...page] : page))
         setDone(page.length < PAGE)
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e))
+        setError(humanError(e))
       }
     },
     [tournamentId],
@@ -70,7 +71,7 @@ export function AdminHistory() {
     return `${what}${who ? ` ${who}` : ''} · ${verb}`
   }
 
-  if (error) return <ErrorBox message={error} onRetry={() => void load()} />
+  if (error) return <ErrorBox error={error} onRetry={() => void load()} />
   if (!entries) return <Spinner rows={6} />
   const shown = platformOnly ? entries.filter((e) => e.platform) : entries
 

@@ -8,6 +8,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
+import { UserError } from '../lib/humanError'
 import type { Score, Snapshot } from '../engine/types'
 import { useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
@@ -339,7 +340,7 @@ export function overlayPending(s: Snapshot): void {
 }
 
 /** The phone could not keep the write (quota, storage pressure, private mode): the hole is not saved anywhere. */
-export class OutboxStorageError extends Error {
+export class OutboxStorageError extends UserError {
   constructor() {
     super(t.sync.storeFailed)
     this.name = 'OutboxStorageError'

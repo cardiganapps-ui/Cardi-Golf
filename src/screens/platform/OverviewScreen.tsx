@@ -11,6 +11,7 @@ import { IconFlag, IconPerson, IconShield } from '../../components/icons'
 import { usePlatformApi, type PlatformDay, type PlatformEvent, type PlatformOverview } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.platform
 const n = (v: number) => v.toLocaleString('es-MX')
@@ -29,14 +30,14 @@ export function OverviewScreen() {
       const [overview, daily] = await Promise.all([api.overview(), api.daily(30)])
       setData({ overview, daily })
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api])
   useEffect(() => {
     void load()
   }, [load])
 
-  if (error) return <ErrorBox message={error} onRetry={() => void load()} />
+  if (error) return <ErrorBox error={error} onRetry={() => void load()} />
   if (!data) return <Spinner rows={6} />
   const o = data.overview
 

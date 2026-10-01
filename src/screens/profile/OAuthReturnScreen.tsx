@@ -11,6 +11,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { Spinner } from '../../components/ui'
 import { useAuth } from '../../data/auth'
 import { accountError, finishProfileSignIn, safeNext, signInWithGoogleInstead } from '../../data/account'
+import { humanError } from '../../lib/humanError'
 import styles from './Profile.module.css'
 
 export function OAuthReturnScreen() {
@@ -36,7 +37,8 @@ export function OAuthReturnScreen() {
     if (code || params.get('error') || hash.get('error')) {
       started.current = true
       setState('error')
-      setMessage(params.get('error_description') ?? hash.get('error_description'))
+      // Never the provider's error_description: it is English at best, and anyone can put any text in a link (COPY-04).
+      setMessage(code ? humanError({ code }) : null)
       return
     }
     if (!ready) return

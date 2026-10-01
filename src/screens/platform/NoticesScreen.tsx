@@ -14,6 +14,7 @@ import { usePlatformApi, type Audience, type PersonRow } from '../../data/platfo
 import { relTime } from '../../lib/relTime'
 import { personName } from './names'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const N = t.platform.notices
 
@@ -36,7 +37,7 @@ export function NoticesScreen() {
     try {
       setAudience(await api.audience())
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api])
   useEffect(() => {
@@ -50,7 +51,7 @@ export function NoticesScreen() {
     return () => window.clearTimeout(id)
   }, [api, mode, to, q])
 
-  if (error) return <ErrorBox message={error} onRetry={() => void load()} />
+  if (error) return <ErrorBox error={error} onRetry={() => void load()} />
   if (!audience) return <Spinner rows={6} />
 
   const urlOk = !url.trim() || safeNoticeUrl(url.trim()) != null
@@ -69,7 +70,7 @@ export function NoticesScreen() {
       setAsking(false)
       await load()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

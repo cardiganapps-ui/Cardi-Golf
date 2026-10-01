@@ -4,8 +4,10 @@
  * the results. Also the rivalry strokes for the Tarjeta.
  */
 import { supabase } from '../lib/supabase'
+import { t } from '../i18n/es-MX'
+import { UserError } from '../lib/humanError'
 import type { TournamentSettings } from '../engine/settings/schema'
-import { setRoundStatus, updateTournament } from './api'
+import { ApiError, setRoundStatus, updateTournament } from './api'
 import { publishFromStore } from './publish'
 import { setTournamentCrew } from './crews'
 import { useTournament } from './tournamentStore'
@@ -25,7 +27,7 @@ export interface QuickRoundInput {
 
 export async function createQuickRound({ crewId, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
   const { data, error } = await supabase().rpc('create_quick_round', { p: input })
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   const created = data as { id: string; slug: string }
   if (crewId) await setTournamentCrew(created.id, crewId)
   return created
@@ -40,7 +42,7 @@ export interface RoundRivalry {
 
 export async function roundRivalries(tournamentId: string): Promise<RoundRivalry[]> {
   const { data, error } = await supabase().rpc('round_rivalries', { tid: tournamentId })
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return (data ?? []) as RoundRivalry[]
 }
 
@@ -48,7 +50,7 @@ export async function roundRivalries(tournamentId: string): Promise<RoundRivalry
 export async function finishQuickRound(tournamentId: string): Promise<{ players: number }> {
   const store = useTournament.getState()
   const snap = store.data?.snapshot
-  if (!snap || snap.tournament.id !== tournamentId) throw new Error('El torneo no está cargado')
+  if (!snap || snap.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
   for (const r of snap.rounds.filter((x) => x.status === 'live')) await setRoundStatus(r.id, 'finished')
   await updateTournament(tournamentId, { status: 'finished' })
   await store.reload()

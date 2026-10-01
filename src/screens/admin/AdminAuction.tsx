@@ -18,6 +18,7 @@ import styles from './AdminAuction.module.css'
 import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
 import { NumberField, keepNumeric } from '../../components/NumberField'
+import { humanError } from '../../lib/humanError'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -54,7 +55,7 @@ export function AdminAuction() {
       await reload()
       return true
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
       return false
     } finally {
       setBusy(false)
