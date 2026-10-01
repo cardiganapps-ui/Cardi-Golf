@@ -18,6 +18,7 @@ import { formatMoney } from '../../lib/money'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const Q = t.quick
 const MAX = 16
@@ -138,7 +139,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
         crewId: crewId || null,
       })
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
       setBusy(false)
     }
   }

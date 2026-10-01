@@ -12,6 +12,7 @@ import { createContext, useContext } from 'react'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { withTimeout } from '../lib/timeout'
+import { ApiError } from './api'
 
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
 
@@ -385,7 +386,7 @@ export interface PlatformApi {
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data as T
 }
 

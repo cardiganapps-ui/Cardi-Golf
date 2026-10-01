@@ -16,6 +16,7 @@ import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/c
 import { useCourses } from './useCourses'
 import { blankTee, CourseEditor } from './CourseEditor'
 import a from './Admin.module.css'
+import { humanError } from '../../lib/humanError'
 
 const C = t.admin.courses
 
@@ -45,7 +46,7 @@ export function AdminCourses() {
       setHits(r)
       if (!r.length) setSearchMsg(C.noResults)
     } catch (e) {
-      setSearchMsg(e instanceof RouteError && e.code === 'no_key' ? C.searchUnavailable : e instanceof Error ? e.message : String(e))
+      setSearchMsg(e instanceof RouteError && e.code === 'no_key' ? C.searchUnavailable : humanError(e))
     } finally {
       setBusy(false)
     }
@@ -70,7 +71,7 @@ export function AdminCourses() {
       setPick(new Set(c.tees.map((_, i) => i)))
       setMode('import')
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -123,7 +124,7 @@ export function AdminCourses() {
       // Keep the photo for later re-checks (saved once the course exists).
       pendingPhoto.current = { blob, type }
     } catch (e) {
-      toast(e instanceof RouteError && e.code === 'no_key' ? C.photoUnavailable : e instanceof Error ? e.message : String(e))
+      toast(e instanceof RouteError && e.code === 'no_key' ? C.photoUnavailable : humanError(e))
     } finally {
       setReading(false)
     }
@@ -150,7 +151,7 @@ export function AdminCourses() {
       await reload()
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -172,7 +173,7 @@ export function AdminCourses() {
       setDraft(await loadCourseDraft(id))
       setNotes([])
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -186,7 +187,7 @@ export function AdminCourses() {
       await reload()
       setAskDelete(null)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -221,7 +222,7 @@ export function AdminCourses() {
       {reading && <Spinner label={C.photoReading} />}
       <p className={a.help}>{C.photoHint}</p>
       {loading && <Spinner />}
-      {error && <ErrorBox message={error} onRetry={refresh} />}
+      {error && <ErrorBox error={error} onRetry={refresh} />}
       {!loading && !error && courses.length === 0 && <EmptyState title={C.title} body={C.empty} />}
       {courses.length > 0 && (
         <div className={a.rows}>

@@ -19,6 +19,7 @@ import { friendsFeed, useUnread, type FeedItem } from '../../data/social'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { EventMark } from './ProfileScreen'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const M = t.mipolo
 const S = t.social
@@ -146,7 +147,7 @@ export function MiPolo() {
       } else await unlinkMyProfile(l.playerId)
       await load()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(null)
     }
@@ -159,7 +160,7 @@ export function MiPolo() {
   }
 
   // An error here used to be a bare line of red text with no way forward.
-  if (!profile) return loading || !error ? <Spinner /> : <ErrorBox message={error} onRetry={() => void load(true)} />
+  if (!profile) return loading || !error ? <Spinner /> : <ErrorBox error={error} onRetry={() => void load(true)} />
 
   const section = (label: string, list: Row[]) =>
     list.length > 0 && (

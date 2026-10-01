@@ -7,6 +7,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { create } from 'zustand'
 import { withTimeout } from '../lib/timeout'
 import { supabase } from '../lib/supabase'
+import { ApiError } from './api'
+import { humanError } from '../lib/humanError'
 import { downscaleImage } from '../lib/images'
 import { whsIndex10, whsRule } from '../engine/profile/whs'
 import type { PublishRow } from '../engine/profile/results'
@@ -199,7 +201,7 @@ export function mapProfile(r: ProfileRow): MyProfile {
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data as T
 }
 
@@ -217,7 +219,7 @@ export async function ensureMyProfile(hint?: NameHint | null): Promise<MyProfile
 /** The signed-in account's profile if it has one (no create). */
 export async function getMyProfile(): Promise<MyProfile | null> {
   const { data, error } = await supabase().from('profiles').select('*').maybeSingle()
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data ? mapProfile(data as ProfileRow) : null
 }
 
@@ -229,7 +231,7 @@ export async function updateMyProfile(id: string, patch: ProfilePatch): Promise<
   if (error) {
     // Taken (unique) or reserved (the handle check); other columns are length-limited in the form.
     if (error.code === '23505' || (error.code === '23514' && error.message.includes('handle'))) throw new HandleTakenError(error.message)
-    throw new Error(error.message)
+    throw ApiError.from(error)
   }
   return mapProfile(data as ProfileRow)
 }
@@ -285,7 +287,7 @@ export function indexBreakdown(rounds: RoundResult[]): IndexBreakdown {
 /** The player this device holds by PIN, if any (its own row is readable). */
 export async function myDeviceClaim(): Promise<{ playerId: string; tournamentId: string } | null> {
   const { data, error } = await supabase().from('device_sessions').select('player_id, tournament_id').maybeSingle()
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data ? { playerId: data.player_id, tournamentId: data.tournament_id } : null
 }
 
@@ -379,7 +381,7 @@ export const useMyProfile = create<MyProfileState>((set) => ({
       const [profile, links] = await withTimeout(Promise.all([create ? ensureMyProfile() : getMyProfile(), myLinks()]), 10000, 'perfil')
       if (seq === loadSeq) set({ profile, links, loading: false })
     } catch (e) {
-      if (seq === loadSeq) set({ loading: false, error: e instanceof Error ? e.message : String(e) })
+      if (seq === loadSeq) set({ loading: false, error: humanError(e) })
     }
   },
   setProfile(p) {

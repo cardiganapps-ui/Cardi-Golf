@@ -21,6 +21,7 @@ import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './MoneyScreen.module.css'
+import { humanError } from '../../lib/humanError'
 
 const M = t.moneyScreen
 
@@ -89,7 +90,7 @@ export function MoneyScreen() {
       await fn()
       await reload()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

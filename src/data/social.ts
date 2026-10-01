@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { ApiError } from './api'
 
 export interface FriendCard {
   handle: string
@@ -98,7 +99,7 @@ export type FeedItem =
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data as T
 }
 

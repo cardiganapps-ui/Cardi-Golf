@@ -12,6 +12,7 @@ import { usePlatformApi, type AuditDetail, type AuditItem } from '../../data/pla
 import { changedFields, showValue } from '../../lib/auditDiff'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const A = t.platform.auditLog
 const PAGE = 50
@@ -41,7 +42,7 @@ export function AuditScreen() {
         setRows((prev) => (before ? [...(prev ?? []), ...page] : page))
         setDone(page.length < PAGE)
       } catch (e) {
-        if (mine === seq.current) setError(e instanceof Error ? e.message : String(e))
+        if (mine === seq.current) setError(humanError(e))
       }
     },
     [api, source, q],
@@ -58,7 +59,7 @@ export function AuditScreen() {
       <Segmented value={source} label={A.sourceLabel} options={(['all', 'platform', 'comite'] as const).map((v) => ({ value: v, label: A.sources[v] }))} onChange={setSource} />
       <Input type="search" value={q} placeholder={A.search} aria-label={A.search} onChange={(e) => setQ(e.target.value)} />
       {error ? (
-        <ErrorBox message={error} onRetry={() => void load(null)} />
+        <ErrorBox error={error} onRetry={() => void load(null)} />
       ) : !rows ? (
         <Spinner rows={6} />
       ) : rows.length === 0 ? (

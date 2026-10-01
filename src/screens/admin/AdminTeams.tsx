@@ -24,6 +24,7 @@ import styles from './AdminDraw.module.css'
 import a from './Admin.module.css'
 import { IconRings } from '../../components/icons'
 import { easeSlow } from '../../design/motion'
+import { humanError } from '../../lib/humanError'
 
 const E = t.teams
 const SIZES = ['2', '3', '4']
@@ -87,7 +88,7 @@ export function AdminTeams() {
       setAskSave(false)
       toast(E.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

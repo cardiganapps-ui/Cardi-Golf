@@ -29,6 +29,7 @@ import { CrewField } from './CrewField'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
+import { humanError } from '../../lib/humanError'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
 
@@ -104,7 +105,7 @@ export function AdminTournament() {
       setDirty(false)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -120,7 +121,7 @@ export function AdminTournament() {
       patch((s) => (s.tournament.logoUrl = url))
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -134,7 +135,7 @@ export function AdminTournament() {
       patch(recipe)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setQuick(false)
     }
@@ -147,7 +148,7 @@ export function AdminTournament() {
       const r = await publishFromStore(tournamentId)
       toast(A.published(r.players))
     } catch (e) {
-      toast(`${A.publishFailed} ${e instanceof Error ? e.message : String(e)}`)
+      toast(`${A.publishFailed} ${humanError(e)}`)
     }
   }
   const setCounts = (v: boolean) => quickUpdate({ counts_for_stats: v }, (s) => (s.tournament.countsForStats = v))
@@ -160,7 +161,7 @@ export function AdminTournament() {
       toast(t.common.saved)
       setAskCode(false)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setQuick(false)
     }
@@ -173,7 +174,7 @@ export function AdminTournament() {
       await refresh()
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setQuick(false)
     }
@@ -187,7 +188,7 @@ export function AdminTournament() {
       // The admin came from the panel; an organizer goes back to their list.
       navigate(me.via === 'platform' ? '/admin/torneos' : '/organizer', { replace: true })
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
       setBusy(false)
     }
   }

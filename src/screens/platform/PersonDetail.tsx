@@ -18,6 +18,7 @@ import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { clock, personName } from './names'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const H = t.platform.people
 
@@ -44,7 +45,7 @@ export function PersonDetail() {
     try {
       setP(await api.person(id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api, id])
   useEffect(() => {
@@ -62,7 +63,7 @@ export function PersonDetail() {
       {H.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox message={error} onRetry={() => void load()} /></>
+  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
   if (p === undefined) return <Spinner rows={6} />
   if (p === null) return <>{back}<p className={s.help}>{H.notFound}</p></>
 
@@ -296,7 +297,7 @@ export function PersonDetail() {
             toast(H.unlinked)
             setPending(null)
           } catch (e) {
-            toast(e instanceof Error ? e.message : String(e))
+            toast(humanError(e))
           } finally {
             setBusy(false)
           }
@@ -334,7 +335,7 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
     setReason('')
     setError(null)
     setPreview(null)
-    api.deletePreview(person.id).then(setPreview, (e) => setError(e instanceof Error ? e.message : String(e)))
+    api.deletePreview(person.id).then(setPreview, (e) => setError(humanError(e)))
   }, [open, api, person.id])
 
   const word = person.email ?? 'BORRAR'
@@ -349,7 +350,7 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
       onClose()
       onDeleted()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

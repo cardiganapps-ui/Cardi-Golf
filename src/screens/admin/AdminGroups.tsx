@@ -18,6 +18,7 @@ import type { Group, Round } from '../../engine/types'
 import { IconClose } from '../../components/icons'
 import a from './Admin.module.css'
 import styles from './AdminGroups.module.css'
+import { humanError } from '../../lib/humanError'
 
 const G = t.admin.groups
 const SEARCH_FROM = 12
@@ -159,7 +160,7 @@ export function AdminGroups() {
       setDrafts(null)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

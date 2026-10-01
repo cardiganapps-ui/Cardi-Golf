@@ -13,6 +13,7 @@ import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '.
 import { useTournament } from '../../data/tournamentStore'
 import { publishFromStore } from '../../data/publish'
 import { useTournamentCtx } from '../tournament/TournamentGate'
+import { humanError } from '../../lib/humanError'
 
 const D = t.admin.data
 
@@ -32,7 +33,7 @@ export function AdminData() {
     try {
       await fn()
     } catch (e) {
-      toast(e instanceof Error && e.message === 'wrong-tournament' ? D.wrongTournament : e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

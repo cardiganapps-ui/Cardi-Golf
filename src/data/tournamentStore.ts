@@ -6,10 +6,12 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { z } from 'zod'
 import { computeTournament, type TournamentState } from '../engine/computeTournament'
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
+import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { REALTIME_TABLES } from './realtimeTables'
@@ -48,6 +50,7 @@ export interface TournamentData {
 interface StoreState {
   tournamentId: string | null
   loading: boolean
+  /** Why the last load failed, as copy for people (humanError). */
   error: string | null
   data: TournamentData | null
   /** Realtime connection status for the sync chip. */
@@ -96,7 +99,8 @@ function compute(raw: Snapshot): TournamentData {
     settings = parseSettings(snapshot.tournament.settings)
   } catch (e) {
     settings = DEFAULT_SETTINGS
-    settingsError = e instanceof Error ? e.message : String(e)
+    // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
+    settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
   }
   return { snapshot, settings, settingsError, state: computeTournament(snapshot, settings) }
 }
@@ -219,7 +223,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       get().subscribe()
     } catch (e) {
       if (seq !== fetchSeq) return
-      set({ loading: false, error: e instanceof Error ? e.message : String(e) })
+      set({ loading: false, error: humanError(e) })
     }
   },
   async reload() {
@@ -233,7 +237,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       void saveSnapshot(id, snapshot)
     } catch (e) {
       if (seq !== fetchSeq) return
-      set({ error: e instanceof Error ? e.message : String(e) })
+      set({ error: humanError(e) })
     }
   },
   seed(tournamentId, snapshot, savedAt) {

@@ -8,6 +8,7 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { formatIndex, handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
 import a from './Admin.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.admin.players
 
@@ -46,7 +47,7 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
         onChanged()
       } else toast(r.reason === 'taken' ? P.profileTaken : r.reason === 'already_linked' ? P.profileElsewhere : P.noProfile)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -58,7 +59,7 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
       await comiteUnlinkProfile(playerId)
       onChanged()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

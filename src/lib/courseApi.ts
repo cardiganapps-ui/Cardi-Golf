@@ -1,4 +1,5 @@
 /** Browser side of the two serverless routes (§13b-A/B). */
+import { humanError, UserError } from './humanError'
 import { supabase } from './supabase'
 import type { ProviderCourse, ProviderSearchHit } from './courseProviders/types'
 
@@ -11,7 +12,8 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-export class RouteError extends Error {
+/** A refusal from one of our routes: its message is the route's own Spanish line, or copy for the status. */
+export class RouteError extends UserError {
   code: string | null
   status: number
   constructor(message: string, status: number, code: string | null) {
@@ -22,8 +24,9 @@ export class RouteError extends Error {
 }
 
 async function parse<T>(res: Response): Promise<T> {
-  const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string } & T
-  if (!res.ok) throw new RouteError(body.error ?? `Error ${res.status}`, res.status, body.code ?? null)
+  const body = (await res.json().catch(() => ({}))) as { error?: unknown; code?: string } & T
+  // A platform failure (a 504 page, a body that is not ours) has no line of ours: say what the status means.
+  if (!res.ok) throw new RouteError(typeof body.error === 'string' ? body.error : humanError({ status: res.status }), res.status, body.code ?? null)
   return body
 }
 

@@ -15,6 +15,7 @@ import type { GameConfig, Match } from '../../engine/settings/games'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
 import a from './Admin.module.css'
+import { humanError } from '../../lib/humanError'
 
 const G = t.admin.games
 
@@ -43,7 +44,7 @@ export function AdminGames() {
       await fn()
       await reload()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

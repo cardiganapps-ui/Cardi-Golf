@@ -38,7 +38,7 @@ export function CatalogCourses() {
           ))}
         </div>
         {error ? (
-          <ErrorBox message={error} onRetry={() => void reload()} />
+          <ErrorBox error={error} onRetry={() => void reload()} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (

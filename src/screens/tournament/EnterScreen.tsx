@@ -9,6 +9,7 @@ import { useAuth } from '../../data/auth'
 import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
+import { humanError } from '../../lib/humanError'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -55,7 +56,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
       else setError(t.enter.notFound)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -77,7 +78,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       void useMyProfile.getState().load()
       onEntered()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

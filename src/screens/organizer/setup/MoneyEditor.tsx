@@ -114,6 +114,7 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
         </>
       )}
 
+      {/* eslint-disable-next-line no-restricted-syntax -- the settings schema's validation lines, not a caught error */}
       <PrizeSummary check={check} players={field.players} issues={parsed.success ? undefined : parsed.error.issues.map((i) => i.message)} />
     </div>
   )

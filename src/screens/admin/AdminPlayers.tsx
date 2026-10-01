@@ -19,6 +19,7 @@ import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
 import a from './Admin.module.css'
 import { NumberField, OptionalNumberField } from '../../components/NumberField'
+import { humanError } from '../../lib/humanError'
 
 const P = t.admin.players
 const SEARCH_FROM = 12
@@ -121,7 +122,7 @@ export function AdminPlayers() {
       setEditing(null)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -136,7 +137,7 @@ export function AdminPlayers() {
       setAskDelete(false)
       setEditing(null)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -151,7 +152,7 @@ export function AdminPlayers() {
       const url = await uploadAsset(`${tournamentId}/avatars/${id}.jpg`, blob, type)
       setEditing({ ...editing, avatar_url: url })
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -167,7 +168,7 @@ export function AdminPlayers() {
       setPinFor(null)
       setPin('')
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

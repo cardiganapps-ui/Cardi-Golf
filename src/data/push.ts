@@ -5,6 +5,7 @@
  * the home screen (16.4+), so that case says so instead.
  */
 import { supabase } from '../lib/supabase'
+import { ApiError } from './api'
 
 export type PushState = 'unsupported' | 'needsInstall' | 'denied' | 'off' | 'on'
 
@@ -45,7 +46,7 @@ export async function enablePush(): Promise<PushState> {
   const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) as BufferSource }))
   const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } }
   const { error } = await supabase().rpc('save_push_subscription', { p_endpoint: json.endpoint, p_p256dh: json.keys.p256dh, p_auth: json.keys.auth, p_user_agent: navigator.userAgent })
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return 'on'
 }
 

@@ -25,6 +25,7 @@ import { PlayStep } from './setup/PlayStep'
 import { formatFor } from '../../engine/formats'
 import { formatMoney } from '../../lib/money'
 import styles from './Organizer.module.css'
+import { humanError } from '../../lib/humanError'
 
 const BLANK = PRESETS.find((p) => p.id === 'blank')!
 
@@ -89,7 +90,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       setCreated({ slug: row.slug, joinCode: row.joinCode })
       setStep(DONE)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

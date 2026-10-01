@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { t } from '../i18n/es-MX'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Field, Input } from './primitives'
+import { humanError } from '../lib/humanError'
 
 const MIN = 3
 
@@ -48,7 +49,7 @@ export function ReasonSheet({
       await onConfirm(reason.trim())
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }
