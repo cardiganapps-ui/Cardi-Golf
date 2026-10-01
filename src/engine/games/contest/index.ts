@@ -11,6 +11,7 @@
  * Money: a pot is split by holes won; direct bets pay `stake` from every
  * other entrant per hole won.
  */
+import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
@@ -98,7 +99,7 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
       playerIds: h.status === 'won' ? h.winners : [],
       pos: null,
       figure: h.status === 'won' ? '✓' : h.status === 'disputed' ? 'En disputa' : 'Pendiente',
-      sub: h.status === 'disputed' ? `Reclaman: ${h.claims.map(name).join(', ')}` : h.voided.length ? `No cuenta (sin par): ${h.voided.map(name).join(', ')}` : undefined,
+      sub: h.status === 'disputed' ? `Reclaman: ${t.common.andList(h.claims.map(name))}` : h.voided.length ? `No cuenta (sin par): ${t.common.andList(h.voided.map(name))}` : undefined,
     }))
     const notes: string[] = []
     if (ctx.config.money.source === 'direct') notes.push(`Cada hoyo ganado cobra ${fmt(ctx.config.money.stake)} de cada uno de los demás.`)

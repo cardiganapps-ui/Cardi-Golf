@@ -248,7 +248,7 @@ export function LiveScreen() {
               const sub = (
                 <span className={styles.sub}>
                   {byTeam ? (
-                    <span>{members.map((id) => byId.get(id)?.displayName ?? id).join(', ')}</span>
+                    <span>{t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id))}</span>
                   ) : (
                     <>
                       {p.tier && <span className="tierBadge">{p.tier}</span>}

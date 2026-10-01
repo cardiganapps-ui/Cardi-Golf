@@ -4,6 +4,7 @@
  * combined last round, then split. Also validates group composition and
  * generates the next round's groups from the standings.
  */
+import { ordinal, t } from '../../../i18n/es-MX'
 import { flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -58,7 +59,7 @@ export function checkGroupComposition(
   }
   const foundKinds = found.map((p) => p.kind ?? '').sort()
   if (kinds.length && kinds.length === found.length && foundKinds.join(',') !== [...kinds].sort().join(',')) {
-    return { ok: false, message: `El grupo no es una pareja ${kinds.join(' y una pareja ')}.` }
+    return { ok: false, message: `El grupo no es ${t.common.andList(kinds.map((k) => `una pareja ${k}`))}.` }
   }
   return { ok: true, message: '' }
 }
@@ -103,7 +104,7 @@ export const pairsModule: GameModule<PairsState> = {
     )
     const nameOfPair = (id: Id) => {
       const p = byId.get(id)!
-      return p.name ?? `${playersById.get(p.player1Id)?.displayName} & ${playersById.get(p.player2Id)?.displayName}`
+      return p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => playersById.get(id)?.displayName ?? id))
     }
     const rows: PairRow[] = flattenRanks(groups).map((r) => {
       const p = byId.get(r.item)!
@@ -148,7 +149,7 @@ export const pairsModule: GameModule<PairsState> = {
       const row = state.rows.find((r) => r.pairId === p.pairId)
       out.push({
         moduleId: 'pairs',
-        label: `${label}, ${row?.label ?? ''}º`,
+        label: `${label}, ${ordinal(row?.label ?? '')}`,
         playerId,
         amount: p.amount,
         final: state.final,

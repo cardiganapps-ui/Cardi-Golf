@@ -58,7 +58,7 @@ export const GAME_ENTRIES: GameEntry[] = [
     type: 'skins',
     category: 'hole',
     title: 'Skins',
-    blurb: 'Cada hoyo lo gana el score más bajo, solo. Empate: se acumula.',
+    blurb: 'Cada hoyo lo gana quien hace menos golpes, solo. Empate: se acumula.',
     create: (id) => ({ ...base, id, type: 'skins', label: 'Skins', options: { basis: 'net', carryOver: true }, money: m({ source: 'side', buyIn: 200 }) }),
   },
   {
@@ -85,7 +85,7 @@ export const GAME_ENTRIES: GameEntry[] = [
     type: 'lowScore',
     category: 'round',
     title: 'Low gross / low neto',
-    blurb: 'El score más bajo del día o del torneo, gross o neto.',
+    blurb: 'La mejor tarjeta del día o del torneo, gross o neta.',
     create: (id) => ({ ...base, id, type: 'lowScore', label: 'Low neto', options: { basis: 'net', scope: 'perRound' }, money: m({ source: 'side', buyIn: 100, split: [100] }) }),
   },
   {

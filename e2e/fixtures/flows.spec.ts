@@ -48,7 +48,7 @@ test('Dinero: once final, the settlement asks only for what is still owed (MONEY
 
 test('Más names the build the phone runs (PWA-03)', async ({ page }) => {
   await open(page, '/t/_/full12-live/mas')
-  await expect(page.getByText(new RegExp(`^${t.more.version} .+ · \\w+$`))).toBeVisible()
+  await expect(page.getByText(new RegExp(`^${t.more.version} .+ \\(\\w+\\)$`))).toBeVisible()
 })
 
 test('Tarjeta: every control names its player, and the hole is a heading (A11Y-01)', async ({ page }) => {

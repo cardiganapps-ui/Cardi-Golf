@@ -107,7 +107,7 @@ function PersonLine({ r, active }: { r: PersonRow; active: boolean }) {
     ? r.devicePlayer
       ? H.phoneAs(r.devicePlayer, r.deviceTournament)
       : H.phoneUnclaimed
-    : [r.handle ? `@${r.handle}` : null, r.displayName ? r.email : null].filter(Boolean).join(' · ') || (H.provider[r.provider] ?? r.provider)
+    : [r.handle ? `@${r.handle}` : null, r.displayName ? r.email : null].filter(Boolean).join(', ') || (H.provider[r.provider] ?? r.provider)
   return (
     <Link className={`${s.row} ${active ? s.rowActive : ''}`} to={r.id} aria-current={active ? 'page' : undefined}>
       <Avatar name={personName(r)} url={r.avatarUrl} size="sm" />

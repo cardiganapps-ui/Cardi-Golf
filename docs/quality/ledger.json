@@ -668,9 +668,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 84,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -878,9 +880,11 @@
       "workstream": "W10",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 84,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -123,8 +123,8 @@ try {
   await page.getByText('Estás en un torneo de otro organizador', { exact: false }).waitFor({ timeout: T })
   check(true, 'its Comité opens with the Admin de Polo banner')
   await page.getByRole('link', { name: 'Historial' }).click()
-  await page.getByText('Pablo, hoyo 1: 6 → 5').waitFor({ timeout: T })
-  const marked = await page.locator(`text=Pablo, hoyo 1: 6 → 5 >> xpath=ancestor::button[1]`).innerText()
+  await page.getByText('Pablo, hoyo 1: de 6 a 5').waitFor({ timeout: T })
+  const marked = await page.locator(`text=Pablo, hoyo 1: de 6 a 5 >> xpath=ancestor::button[1]`).innerText()
   check(/Admin de Polo/.test(marked) && /Lo reportó el grupo/.test(marked), 'Historial shows the correction, marked Admin de Polo, with its reason', marked)
   await page.screenshot({ path: `${out}/platform-historial.jpg`, type: 'jpeg', quality: 80, fullPage: true })
 

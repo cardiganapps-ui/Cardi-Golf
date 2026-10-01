@@ -206,13 +206,13 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
   if (v.modules.auction.enabled) {
     v.auction.payout.forEach((slot, i) => {
       if (slot.slot === 'bestOfTier' && !tiers.has(slot.tier)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], message: `La categoría "${slot.tier}" del reparto de la Calcutta no existe en las categorías del torneo.` })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['auction', 'payout', i, 'tier'], message: `La categoría «${slot.tier}» del reparto de la Calcutta no existe en las categorías del torneo.` })
       }
     })
   }
   const gameIds = new Set<string>()
   v.games.forEach((g, i) => {
-    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], message: `Dos juegos usan el mismo id "${g.id}".` })
+    if (gameIds.has(g.id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, 'id'], message: `Dos juegos usan el mismo id «${g.id}».` })
     gameIds.add(g.id)
     for (const issue of gameIssues(g)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['games', i, ...issue.path], message: issue.message })
   })
@@ -223,7 +223,7 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
   if (v.modules.pairs.enabled) {
     v.modules.pairs.pairing.forEach((rule, i) => {
       for (const tier of rule) {
-        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], message: `La categoría "${tier}" de la regla de parejas no existe en las categorías del torneo.` })
+        if (!tiers.has(tier)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['modules', 'pairs', 'pairing', i], message: `La categoría «${tier}» de la regla de parejas no existe en las categorías del torneo.` })
       }
     })
   }

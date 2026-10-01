@@ -80,8 +80,8 @@ export function TournamentDetail() {
         <h2>{d.name}</h2>
         <TournamentChips r={{ ...d, organizers: d.organizers.length }} />
         <span className={s.help}>
-          {P.status[d.status]} · {P.code} {d.joinCode} · {P.created(relTime(d.createdAt))}
-          {d.crew ? ` · ${P.crew(d.crew.name)}` : ''}
+          {P.status[d.status]}, {P.code} {d.joinCode}, {P.created(relTime(d.createdAt))}
+          {d.crew ? `, ${P.crew(d.crew.name)}` : ''}
         </span>
         <div className={s.actions}>
           <Link className="btn btn--primary btn--sm" to={`/t/${d.slug}`}>
@@ -149,7 +149,7 @@ export function TournamentDetail() {
                 <Link className={s.rowLink} to={`../../personas/${o.userId}`} relative="path">
                   <span className={s.rowText}>
                     <span className={s.rowTitle}>{o.name}</span>
-                    <span className={s.rowSub}>{[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(' · ')}</span>
+                    <span className={s.rowSub}>{[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(', ')}</span>
                   </span>
                 </Link>
                 <button className="btn btn--ghost btn--sm" type="button" onClick={() => setRemoving(o.userId)}>
@@ -194,7 +194,7 @@ export function TournamentDetail() {
               <div key={a.id} className={s.row}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{P.auditLine(P.tables[a.table] ?? a.table, a.action)}</span>
-                  <span className={s.rowSub}>{[a.platform ? P.byPlatform : a.actor, a.reason].filter(Boolean).join(' · ') || '—'}</span>
+                  <span className={s.rowSub}>{[a.platform ? P.byPlatform : a.actor, a.reason].filter(Boolean).join(', ') || '—'}</span>
                 </span>
                 <span className={s.rowEnd}>
                   {a.platform && <span className="chip chip--coral">{P.byPlatform}</span>}

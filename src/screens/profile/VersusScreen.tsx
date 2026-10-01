@@ -103,7 +103,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
           <Avatar name={me?.displayName ?? '?'} url={me?.avatarUrl} size="lg" />
           <span className={styles.rowTitle}>{S.you}</span>
         </span>
-        <span className={styles.versusVs}>vs</span>
+        <span className={styles.versusVs}>{S.versusJoin}</span>
         <Link to={`/p/${them.handle}`} className={`${styles.versusSide} ${styles.heroLink}`}>
           <Avatar name={them.displayName} url={them.avatarUrl} size="lg" />
           <span className={styles.rowTitle}>{first}</span>

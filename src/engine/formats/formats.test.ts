@@ -88,6 +88,22 @@ describe('stroke play', () => {
     expect(state.modules.individual!.rows.map((r) => r.figure.value)).toEqual([72, 72])
     expect(state.modules.individual!.rows.every((r) => r.figure.text === 'E')).toBe(true)
   })
+
+  it('explains the countback in strokes to par, with a true minus (COPY-24)', () => {
+    // Both go round in 72 gross. p1 plays the back nine (10–18) one under,
+    // p2 one over, so the countback puts p1 first on the back nine. The
+    // countback compares those strokes negated (more is better); the lines
+    // must turn them back into to-par figures: «−1» for p1, «+1» for p2,
+    // never «-1» or a sign flipped round.
+    const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('strokePlay', { scoring: 'gross' }) })
+    play(snap, 'r1', 'p1', [1, ...Array<number>(8).fill(0), -1, ...Array<number>(8).fill(0)])
+    play(snap, 'r1', 'p2', [-1, ...Array<number>(8).fill(0), 1, ...Array<number>(8).fill(0)])
+
+    const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
+    expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p2'])
+    expect(rows[1]!.countbackWhy!.steps).toEqual(['Día 1, Total: J1 E contra J2 E', 'Día 1, Hoyos 10–18: J1 −1 contra J2 +1'])
+  })
 })
 
 describe('match play', () => {

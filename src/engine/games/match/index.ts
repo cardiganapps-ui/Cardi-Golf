@@ -14,6 +14,7 @@
  * back nine first). Every bet pays `stake`: each player of the losing side
  * pays the player in the same position on the winning side.
  */
+import { t } from '../../../i18n/es-MX'
 import { playOrder } from '../../core/playOrder'
 import type { GameOf, Match } from '../../settings/games'
 import type { Explanation, Id } from '../../types'
@@ -182,12 +183,12 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
           playerIds: lead > 0 ? mr.a : lead < 0 ? mr.b : [],
           pos: null,
           figure: statusText(seg.bets[0]!),
-          sub: [seg.thru ? `después de ${seg.thru}` : 'sin empezar', ...seg.bets.slice(1).map((b) => `presión desde el ${b.fromHole}: ${pressText(b, mr, name)}`)].join(' · '),
+          sub: [seg.thru ? `después de ${seg.thru}` : 'sin empezar', ...seg.bets.slice(1).map((b) => `presión desde el ${b.fromHole}: ${pressText(b, mr, name)}`)].join(', '),
         }
       })
       const aSum = sum(mr.a, money)
       if (aSum !== 0) rows.push({ title: 'Van', playerIds: aSum > 0 ? mr.a : mr.b, pos: null, figure: `+${fmt(Math.abs(aSum))}`, sub: `${sideName(aSum > 0 ? mr.b : mr.a, name)} paga${mr.a.length > 1 ? 'n' : ''}` })
-      return { title: `${multi ? `Día ${mr.roundNumber}: ` : ''}${sideName(mr.a, name)} vs ${sideName(mr.b, name)}`, rows }
+      return { title: `${multi ? `Día ${mr.roundNumber}: ` : ''}${sideName(mr.a, name)} contra ${sideName(mr.b, name)}`, rows }
     })
     const o = ctx.config.options
     const notes = [
@@ -216,7 +217,7 @@ function pressText(bet: MatchBet, mr: MatchRound, name: (id: Id) => string): str
 }
 
 function sideName(side: Id[], name: (id: Id) => string): string {
-  return side.map(name).join(' y ')
+  return t.common.andList(side.map(name))
 }
 
 function sum(ids: Id[], money: Map<Id, number>): number {

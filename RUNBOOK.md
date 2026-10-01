@@ -4,7 +4,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 ## 0. Antes del viaje (checklist)
 
-- [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de dificultad por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
+- [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de golpe (SI) por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
 - [ ] **Jugadores completos.** Comité › Jugadores: los 12, con categoría, hándicap base **bloqueado**, tee, foto, quién es el homenajeado y quiénes son admins. Revisa la vista previa del 80 % y los golpes de ventaja.
 - [ ] **PINs enviados.** Comité › Jugadores › PIN: uno por jugador. Mándalos por WhatsApp uno a uno.
 - [ ] **App instalada en los 12 teléfonos.** Cada quien abre el link, "Agregar a pantalla de inicio" (la guía sale la primera vez) y entra con su cara + PIN. Una vez adentro, la sesión se queda en el teléfono.
