@@ -34,6 +34,22 @@ describe('the privacy notice says who sees money', () => {
   })
 })
 
+describe('the privacy notice covers what the Comité types about each player (TRUST-16)', () => {
+  it('says what it is and who sees it (players_read, lookup_tournament, player_pins)', () => {
+    const typed = sections['Lo que el Comité captura de cada jugador']!
+    for (const what of ['su nombre', 'su foto', 'su categoría', 'su tee', 'su hándicap', 'buen día, día normal y mal día', 'su forma reciente', 'homenajeado', 'su PIN']) expect(typed).toContain(what)
+    expect(typed).toContain('Todo eso, salvo el PIN, lo ve quien está en el torneo')
+    expect(typed).toContain('también quien tenga su enlace o su código')
+    expect(typed).toContain('nadie lo ve en la app, ni el Comité')
+  })
+
+  it('the line on the Comité sheet says who sees it and points at that section', () => {
+    expect(`${t.legal.othersData.start}${t.legal.othersData.privacy}${t.legal.othersData.end}`).toBe(
+      'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad.',
+    )
+  })
+})
+
 describe('the privacy notice names who receives data', () => {
   it('Anthropic, with what it receives (the scorecard image) and why (api/scorecard-extract.ts)', () => {
     const where = sections['Dónde viven']!

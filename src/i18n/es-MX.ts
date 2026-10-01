@@ -889,7 +889,7 @@ export const t = {
     },
     /** Comité › Jugadores: the Comité types other people's data. */
     othersData: {
-      start: 'Lo que captures de cada jugador (nombre, foto, hándicap) se guarda y se muestra según el ',
+      start: 'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el ',
       privacy: 'Aviso de privacidad',
       end: '.',
     },
@@ -915,6 +915,7 @@ export const t = {
         ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección técnica que tu navegador da para mandarte notificaciones. En cada torneo, también lo que cada quien paga, gana y debe.'],
         ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados, mostrarte a ti y a la gente con la que juegas lo que les corresponde, y mandarte avisos que tú activaste. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
         ['Quién los ve', 'Tu perfil completo lo ven tus amigos, tus crews y quienes juegan un torneo contigo. Los demás solo ven tu tarjeta básica si tu perfil aparece en búsquedas (lo puedes apagar).'],
+        ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código. El PIN no se guarda tal cual sino como una huella (hash): nadie lo ve en la app, ni el Comité, que solo puede cambiarlo.'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que juegan ese torneo, en Dinero, y cualquiera de ellos puede compartirlo, por ejemplo en WhatsApp. En tu perfil, el resumen de tu dinero de torneos pasados solo lo ves tú (y el Comité de cada torneo, el de ese torneo). Los avisos nunca llevan montos.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver los datos de cualquier torneo, dinero incluido, para darle soporte o corregir un error.'],
         ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
