@@ -1,0 +1,86 @@
+/**
+ * REL-16: writes queued before the device's identity changed (a session that
+ * lapsed in a dead zone) were pushed under the new identity, refused by the
+ * server and moved to the rejected list. They must wait, untouched, until the
+ * player is back on this device, then go out.
+ */
+import 'fake-indexeddb/auto'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+let uid: string | null = 'uid-a'
+vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: uid ? { id: uid } : null }) } }))
+vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
+vi.mock('./tournamentStore', () => ({
+  registerOverlay: () => undefined,
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+}))
+
+const { _outboxTest, adoptQueuedWrites, flush, queuedFor, useOutbox } = await import('./outbox')
+
+const score = (hole: number, player = 'p1') => ({
+  key: `score:r1:${player}:${hole}`,
+  kind: 'score' as const,
+  tournamentId: 't1',
+  payload: { round_id: 'r1', player_id: player, hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  attempts: 0,
+  createdAt: Date.now(),
+})
+
+describe('outbox across a change of identity', () => {
+  beforeEach(async () => {
+    _outboxTest.reset()
+    await _outboxTest.clearStored()
+    uid = 'uid-a'
+  })
+
+  it('holds writes queued by the earlier session, pushes them once the player is back', async () => {
+    const pushed: string[] = []
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+    // Two holes in a dead zone, two players each.
+    for (let h = 1; h <= 2; h++) for (const p of ['p1', 'p2']) await _outboxTest.enqueue(score(h, p))
+
+    // The token lapses; the device comes back as a new anonymous user.
+    uid = 'uid-b'
+    let adopted = false
+    _outboxTest.setPush(async (item) => {
+      // Under uid-b and before the PIN, the server would refuse these.
+      if (uid === 'uid-b' && !adopted) throw new Error('new row violates row-level security policy for table "scores"')
+      pushed.push(item.key)
+    })
+    await flush()
+    expect(pushed).toEqual([])
+    expect(useOutbox.getState().rejected).toEqual([])
+    expect(queuedFor('t1')).toEqual({ holes: 2, heldHoles: 2 })
+    expect(useOutbox.getState().held).toBe(4)
+
+    // The player enters the PIN again: the gate confirms membership.
+    adopted = true
+    await adoptQueuedWrites('t1')
+    await flush()
+    expect(pushed).toHaveLength(4)
+    expect(_outboxTest.queue()).toEqual([])
+    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0 })
+  })
+
+  it('still rejects a write the server refuses for the same identity', async () => {
+    _outboxTest.setPush(async () => {
+      throw new Error('new row violates row-level security policy for table "scores"')
+    })
+    await _outboxTest.enqueue(score(3))
+    await flush()
+    expect(useOutbox.getState().rejected.map((r) => r.key)).toEqual(['score:r1:p1:3'])
+  })
+
+  it('keeps held writes across a restart', async () => {
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+    await _outboxTest.enqueue(score(4))
+    uid = 'uid-b'
+    _outboxTest.reset()
+    await _outboxTest.load()
+    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1 })
+  })
+})

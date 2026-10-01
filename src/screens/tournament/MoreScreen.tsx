@@ -6,11 +6,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { InstallGuide } from '../../components/InstallGuide'
-import { Avatar, CopyButton, ShareButton, toast } from '../../components/ui'
+import { Avatar, CopyButton, ShareButton, Sheet, toast } from '../../components/ui'
 import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { queuedFor } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
@@ -24,6 +25,8 @@ export function MoreScreen() {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [askNotMe, setAskNotMe] = useState(false)
+  /** Holes still on this phone when the player tried to switch: switching would strand them (UX-09, REL-16). */
+  const [unsent, setUnsent] = useState(0)
   const account = !!user && !isAnonymous
 
   async function saveHere() {
@@ -130,7 +133,16 @@ export function MoreScreen() {
 
       <div className={styles.session}>
         {me.playerId && (
-          <button className="btn btn--secondary" type="button" onClick={() => (me.via === 'profile' ? setAskNotMe(true) : void leave())}>
+          <button
+            className="btn btn--secondary"
+            type="button"
+            onClick={() => {
+              const n = queuedFor(lookup.id).holes
+              if (n > 0) setUnsent(n)
+              else if (me.via === 'profile') setAskNotMe(true)
+              else void leave()
+            }}
+          >
             {me.via === 'profile' ? t.enter.notMe : t.enter.switchPlayer}
           </button>
         )}
@@ -148,6 +160,12 @@ export function MoreScreen() {
           {t.errors.backHome}
         </Link>
       </div>
+      <Sheet open={unsent > 0} onClose={() => setUnsent(0)} title={t.sync.unsentBeforeSwitch(unsent)}>
+        <p>{t.sync.unsentBeforeSwitchBody}</p>
+        <button className="btn btn--primary" type="button" onClick={() => setUnsent(0)}>
+          {t.sync.understood}
+        </button>
+      </Sheet>
       <ConfirmSheet
         open={askNotMe}
         title={t.enter.notMe}

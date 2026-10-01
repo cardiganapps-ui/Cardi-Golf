@@ -13,7 +13,7 @@ import { ensureSession, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
 import { readCached, saveEntry } from '../../data/snapshotCache'
-import { refreshOutboxCounters } from '../../data/outbox'
+import { adoptQueuedWrites, refreshOutboxCounters } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { EnterScreen } from './EnterScreen'
@@ -52,6 +52,9 @@ export function useTournamentCtx(): TournamentCtx {
   if (!c) throw new Error('useTournamentCtx outside TournamentGate')
   return c
 }
+
+/** While the boards come from the cache, try the live tournament again this often. */
+const CACHE_RETRY_MS = 20_000
 
 type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; message: string } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
 
@@ -101,6 +104,8 @@ export function TournamentGate() {
         }
         fromCache.current = false
         setPhase({ kind: 'in', lookup, me })
+        // Writes this phone queued under an earlier session belong to this player again (REL-16).
+        if (m.playerId || m.isOrganizer) void adoptQueuedWrites(lookup.id)
         // A platform visit is not "my tournament": it is not where home
         // returns to, and it is not kept on the device for offline use.
         if (!platform) {
@@ -126,12 +131,31 @@ export function TournamentGate() {
   }, [authReady, resolve])
 
   // Back online after a cached open: resolve for real (session, role, live snapshot, Realtime).
+  // Also retry on a timer: the stored session can stay unconfirmed for a while
+  // after the signal returns (auth-js cools down after a failed refresh), and
+  // the `online` event fires only once (REL-16).
   useEffect(() => {
-    const retry = () => {
-      if (fromCache.current) void resolve()
+    let busy = false
+    const retry = async () => {
+      if (!fromCache.current || busy) return
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      busy = true
+      try {
+        await resolve()
+      } finally {
+        busy = false
+      }
     }
-    window.addEventListener('online', retry)
-    return () => window.removeEventListener('online', retry)
+    const timer = setInterval(() => void retry(), CACHE_RETRY_MS)
+    const onOnline = () => void retry()
+    window.addEventListener('online', onOnline)
+    document.addEventListener('visibilitychange', onOnline)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('online', onOnline)
+      document.removeEventListener('visibilitychange', onOnline)
+    }
   }, [resolve])
 
   // Admin flag for linked players comes from the loaded snapshot (is_admin).

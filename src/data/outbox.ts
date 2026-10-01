@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import type { Score, Snapshot } from '../engine/types'
+import { useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
 
 /**
@@ -22,6 +23,13 @@ interface ItemBase {
   attempts: number
   createdAt: number
   seq: number
+  /**
+   * The auth user that queued the write. If the device's identity changed
+   * since (a session lapsed in a dead zone and a new one started), the server
+   * would refuse the push, so the write waits until the player is back on this
+   * device (`adoptQueuedWrites`) instead of being rejected (REL-16).
+   */
+  actingUid?: string | null
   lastError?: string
 }
 export type OutboxItem =
@@ -115,6 +123,8 @@ function getDb(): OutboxDb | null {
 interface OutboxState {
   /** Items still to push for the tournament that is open on this device. */
   pending: number
+  /** Of those, how many wait for the player to enter again (the session changed: REL-16). */
+  held: number
   syncing: boolean
   /** Last push error, mapped to Spanish by `describeSyncError`. Null once a push succeeds. */
   lastError: string | null
@@ -123,7 +133,7 @@ interface OutboxState {
   /** True while the Tarjeta has an unsaved hole: defers the "new version" reload prompt. */
   editing: boolean
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, syncing: false, lastError: null, rejected: [], editing: false }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -138,8 +148,55 @@ function activeTournamentId(): string | null {
 /** Publish the counters for the tournament that is open on this device. */
 function publish(extra: Partial<OutboxState> = {}) {
   const tid = activeTournamentId()
-  useOutbox.setState({ pending: queue.filter((x) => x.tournamentId === tid).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
+  const mine = queue.filter((x) => x.tournamentId === tid)
+  useOutbox.setState({ pending: mine.length, held: mine.filter(isHeld).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
 }
+
+function currentUid(): string | null {
+  return useAuth.getState().user?.id ?? null
+}
+/** Queued under a different identity than the device has now: the server would refuse it. */
+function isHeld(item: OutboxItem): boolean {
+  return !!item.actingUid && item.actingUid !== currentUid()
+}
+
+/**
+ * The device is a confirmed member of `tournamentId` again (the player entered
+ * their PIN, or a profile link resolved). Its writes queued under the previous
+ * identity now belong to this one: re-stamp and push them. The server still
+ * checks every one against the player's group and the round (REL-16).
+ */
+export async function adoptQueuedWrites(tournamentId: string) {
+  const uid = currentUid()
+  if (!uid) return
+  const held = queue.filter((x) => x.tournamentId === tournamentId && isHeld(x))
+  if (held.length) {
+    const adopted = new Map(held.map((x) => [`${x.key}#${x.seq}`, { ...x, actingUid: uid }]))
+    queue = queue.map((x) => adopted.get(`${x.key}#${x.seq}`) ?? x)
+    const d = getDb()
+    if (d) {
+      await d.transaction('rw', d.items, async () => {
+        for (const it of adopted.values()) {
+          const cur = await d.items.get(it.key)
+          if (cur && (cur.seq ?? cur.createdAt * 1000) === it.seq) await d.items.put(it)
+        }
+      })
+    }
+  }
+  publish()
+  void flush()
+}
+/**
+ * What this device still has to push for a tournament, counted in holes (a
+ * foursome's hole is four score rows). `heldHoles` wait for the player to
+ * enter again.
+ */
+export function queuedFor(tournamentId: string): { holes: number; heldHoles: number } {
+  const holes = (list: OutboxItem[]) => new Set(list.filter((x) => x.kind === 'score').map((x) => `${(x.payload as ScorePayload).round_id}:${(x.payload as ScorePayload).hole}`)).size
+  const mine = queue.filter((x) => x.tournamentId === tournamentId)
+  return { holes: holes(mine), heldHoles: holes(mine.filter(isHeld)) }
+}
+
 /** Call when the open tournament changes so the counters follow it. */
 export function refreshOutboxCounters() {
   publish()
@@ -239,7 +296,7 @@ export function overlayPending(s: Snapshot): void {
 async function enqueue(newItem: NewItem) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
-  const item = { ...newItem, seq: nextSeq() } as OutboxItem
+  const item = { ...newItem, seq: nextSeq(), actingUid: newItem.actingUid ?? currentUid() } as OutboxItem
   queue = [...queue.filter((x) => x.key !== item.key), item]
   publish()
   const d = getDb()
@@ -338,7 +395,8 @@ export function flush(): Promise<void> {
     .then((failed) => {
       if (running === run) running = null
       settle()
-      if (queue.length && !failed && !timer) void flush()
+      // Something was queued at the very end of the pass: go again. Held writes wait.
+      if (!failed && !timer && queue.some((x) => !isHeld(x))) void flush()
     })
   return run
 }
@@ -349,11 +407,17 @@ async function runFlush(): Promise<boolean> {
   const d = getDb()
   let failed = false
   try {
-    for (let item = queue[0]; item; item = queue[0]) {
+    // Each version is tried once per pass; writes held for the player's
+    // return are skipped (they would only be refused).
+    const tried = new Set<number>()
+    for (;;) {
+      const item = queue.find((x) => !tried.has(x.seq) && !isHeld(x))
+      if (!item) break
+      tried.add(item.seq)
       try {
         await pushImpl(item)
         if (isCurrent(item)) {
-          queue = queue.filter((x) => !(x.key === item!.key && x.seq === item!.seq))
+          queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
           await deleteStored(item)
         }
         publish({ lastError: null })

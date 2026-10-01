@@ -6,6 +6,7 @@ import { EventName } from '../../components/primitives'
 import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
 import { useAuth } from '../../data/auth'
+import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
 
@@ -26,6 +27,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   /** After a PIN on an account: offer to keep this tournament in the profile. */
   const [askSave, setAskSave] = useState<LookupResult['players'][number] | null>(null)
   const account = !!user && !isAnonymous
+  // Holes this phone queued before its session lapsed: they go out once the player is back (REL-16).
+  const { heldHoles } = queuedFor(lookup.id)
 
   const dense = lookup.players.length > DENSE_FROM
   const players = useMemo(() => {
@@ -104,6 +107,11 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
         <>
           <div className={styles.top}>
             <h2>{t.enter.tapYourFace}</h2>
+            {heldHoles > 0 && (
+              <p className="help" role="status">
+                {t.sync.heldForPin(heldHoles)}
+              </p>
+            )}
             {lookup.players.length === 0 && <p className="help">{t.enter.noPlayers}</p>}
             {dense && (
               <input className="input" type="search" placeholder={t.enter.search} value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" aria-label={t.enter.search} />

@@ -2551,9 +2551,12 @@
       "workstream": "W1",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 67,
+      "tests": [
+        "src/data/auth.session.test.ts",
+        "src/data/outbox.identity.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
