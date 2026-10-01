@@ -186,6 +186,11 @@ export function MoneyScreen() {
           <span className={`${styles.bankVerdict} ${verdictClass}`}>{verdict}</span>
         </div>
         {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
+        {state.flags.poolWarning && (
+          <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
+            {state.flags.poolWarning}
+          </span>
+        )}
         {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
         {!state.tournamentFinal && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
       </section>

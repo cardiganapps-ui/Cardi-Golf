@@ -84,3 +84,8 @@ $20,000 individual + $3,000 Matrimonios + $2,400 mejor ronda + $3,600 Víbora + 
 ## Lo que aún no está programado (viene en M3–M6)
 
 Feed de eventos, estadísticas y premios divertidos, ceremonia y tarjetas para compartir. El motor ya guarda lo necesario (hoyos con la víbora, putts de 1 y 3, etc.).
+
+## El dinero contra el torneo real
+
+- El cuadre de premios se revisa al guardar los ajustes y también todo el tiempo contra el torneo real: jugadores inscritos y rondas que existen (sin contar las canceladas). Si llega uno menos o se agrega un día, la app avisa cuánto falta o sobra.
+- El torneo termina cuando el Comité lo marca **Terminado**, o cuando todas las rondas planeadas existen y están terminadas (terminar el día 1 de un torneo de dos días no lo cierra aunque el día 2 no se haya creado).
