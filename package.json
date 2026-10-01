@@ -19,7 +19,9 @@
     "e2e:profile": "node e2e/profile.mjs",
     "simulate": "node scripts/simulate.mjs",
     "rehearse:auction": "node scripts/rehearse-auction.mjs",
-    "shots": "node scripts/design-shots.mjs"
+    "shots": "node scripts/design-shots.mjs",
+    "build:fixtures": "VITE_DESIGN_ROUTES=1 vite build --outDir dist-fixtures",
+    "e2e:fixtures": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -40,7 +42,9 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.36.0",
+    "@playwright/test": "^1.63.0",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/canvas-confetti": "^1.9.0",
