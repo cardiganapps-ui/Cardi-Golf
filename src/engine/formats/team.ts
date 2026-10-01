@@ -60,7 +60,8 @@ export const teamFormat: MainFormat = {
         how[mode],
         points ? 'Cada hoyo cuenta los puntos Stableford de la mejor bola del equipo.' : 'Cada hoyo cuenta los golpes de la mejor bola del equipo.',
         o.scoring === 'gross' ? 'Sin hándicap.' : 'Con los golpes de ventaja de cada quien.',
-        points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes.',
+        points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes contra el par.',
+        ...(points ? [] : ['Al cierre, un equipo con hoyos sin capturar queda después de los que completaron la tarjeta.']),
       ],
     }
   },

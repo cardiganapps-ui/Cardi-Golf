@@ -10,6 +10,16 @@ import { netScoreName, stablefordPoints } from './stableford'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
+/**
+ * The nine holes of a 9-hole round ranked 1–9 by their 18-hole stroke index
+ * (the hardest is 1), ties by hole number: how WHS allocates a 9-hole playing
+ * handicap. Exported for tests.
+ */
+export function nineHoleRanks(holes: Hole[]): Map<number, number> {
+  const ranked = [...holes].sort((a, b) => a.strokeIndex - b.strokeIndex || a.number - b.number)
+  return new Map(ranked.map((h, i) => [h.number, i + 1]))
+}
+
 function placeholderHoles(n: number): Hole[] {
   return Array.from({ length: n }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1, yards: null }))
 }
@@ -141,10 +151,14 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       let putts = 0
       let thru = 0
       let gross: number | null = 0
+      // A 9-hole round plays half the playing handicap (half up) over these
+      // nine holes: they are ranked 1–9 by their 18-hole stroke index and the
+      // strokes go round them, the WHS 9-hole allocation (MONEY-03). Before,
+      // the half was allocated against 1–18 and about half of it was lost.
+      const nineRank = round.holes === 9 ? nineHoleRanks(holes) : null
       for (const h of holes) {
         const s = scoresIdx.get(`${round.id}|${p.id}|${h.number}`)
-        // 9-hole round: half the playing handicap (half up), allocated on the 18-hole stroke indexes.
-        const sr = round.holes === 9 ? strokesReceived(roundHalfUp(playingHcp / 2), h.strokeIndex, 18) : strokesReceived(playingHcp, h.strokeIndex, round.holes)
+        const sr = nineRank ? strokesReceived(roundHalfUp(playingHcp / 2), nineRank.get(h.number)!, 9) : strokesReceived(playingHcp, h.strokeIndex, round.holes)
         const played = !!s && (s.strokes != null || s.pickedUp)
         const g = played && !s.pickedUp ? s.strokes : null
         const pts = played ? stablefordPoints(h.par, sr, g, s.pickedUp) : 0

@@ -145,7 +145,8 @@ export function ownerHoldings(lots: LotState[], ctx: ModuleContext): Record<Id, 
 export function assignSlots(
   ctx: ModuleContext,
   pot: number,
-  groups: Array<{ position: number; members: Id[] }>,
+  /** `places`: finishing places the group fills (its entrants: a team is one); defaults to one per member. */
+  groups: Array<{ position: number; members: Id[]; places?: number }>,
 ): SlotResult[] {
   const { settings, snapshot } = ctx
   const tierOf = new Map(snapshot.players.map((p) => [p.id, p.tier]))
@@ -158,11 +159,12 @@ export function assignSlots(
   // p..p+k−1 takes the combined shares of those places, split evenly.
   const placeSlots = slots.filter((s): s is Extract<AuctionPayoutSlot, { slot: 'place' }> => s.slot === 'place')
   const placeDone = new Set<AuctionPayoutSlot>()
+  const placesOf = (g: { members: Id[]; places?: number }) => g.places ?? g.members.length
   for (const slot of slots) {
     if (placeDone.has(slot)) continue
     if (slot.slot === 'place') {
-      const g = groups.find((x) => x.position <= slot.place && slot.place < x.position + x.members.length)
-      const covered = g ? placeSlots.filter((s) => g.position <= s.place && s.place < g.position + g.members.length) : [slot]
+      const g = groups.find((x) => x.position <= slot.place && slot.place < x.position + placesOf(x))
+      const covered = g ? placeSlots.filter((s) => g.position <= s.place && s.place < g.position + placesOf(g)) : [slot]
       const share = covered.reduce((s, x) => s + x.share, 0)
       const members = g ? g.members.filter((m) => !cashed.has(m)) : []
       for (const c of covered) placeDone.add(c)
@@ -171,11 +173,15 @@ export function assignSlots(
         results.push(unfilledSlot(slot, label, share, pot, `Nadie ocupa el ${slot.place}º lugar`))
         continue
       }
+      const places = placesOf(g!)
       const steps =
-        members.length === 1
-          ? [`${nameOf(members[0]!)} termina ${g!.position}º: ${pct(share)} del pozo`]
+        places === 1
+          ? [
+              `${members.map(nameOf).join(' y ')} ${members.length === 1 ? 'termina' : 'terminan'} ${g!.position}º: ${pct(share)} del pozo`,
+              ...(members.length > 1 ? [`Un equipo: ${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`] : []),
+            ]
           : [
-              `Empate a ${members.length} en el ${g!.position}º: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
+              `Empate a ${places} en el ${g!.position}º: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
               `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
             ]
       results.push({ slot, label, share, playerIds: members, amount: money(pot * share), unfilled: false, why: { title: label, steps } })

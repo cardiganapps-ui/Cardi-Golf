@@ -38,8 +38,14 @@ export interface Entrant {
 
 /** A number the standings rank on, plus how to show it. */
 export interface Figure {
-  /** What the ranking compares. */
+  /** The total itself (points, strokes): what exports and published results carry. */
   value: number
+  /**
+   * What the ranking compares, when that is not `value`: strokes to par over
+   * the holes played, so a player through 4 holes is not ahead of one through
+   * 12 just for having fewer strokes (MONEY-02).
+   */
+  rank?: number
   /** What the board shows: "31", "74", "+2", "2–1–0". */
   text: string
   /** Colour the figure carries, for scores relative to par. */
@@ -97,7 +103,7 @@ export const NO_FIGURE: Figure = { value: 0, text: '—', empty: true }
 /** "+2", "E", "−1" — a gross or net total relative to par. */
 export function toParFigure(strokes: number, par: number): Figure {
   const d = strokes - par
-  if (d === 0) return { value: strokes, text: 'E' }
+  if (d === 0) return { value: strokes, rank: 0, text: 'E' }
   // A true minus sign, not a hyphen: these sit next to tabular numerals.
-  return { value: strokes, text: d > 0 ? `+${d}` : `−${Math.abs(d)}`, tone: d > 0 ? 'over' : 'under' }
+  return { value: strokes, rank: d, text: d > 0 ? `+${d}` : `−${Math.abs(d)}`, tone: d > 0 ? 'over' : 'under' }
 }

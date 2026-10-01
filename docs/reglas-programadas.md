@@ -12,6 +12,13 @@ Todo lo que abajo dice "2,500", "80%", "36 puntos", "$200", etc. es un **ajuste 
 4. **Recorte anti-sandbag del día 2.** Si el día 1 haces más de 36 puntos, pierdes 1 golpe por cada 2 puntos arriba de 36, máximo 4. Ejemplos: 37 → 0, 38 → 1, 42 → 3, 47 → 4. El hándicap del día 2 es el del día 1 menos el recorte, nunca menor que 0. Nadie gana golpes nunca. Aplica a todos los juegos con hándicap.
 5. **Ajustes del Comité.** Cualquier hándicap de juego se puede sobreescribir para un día con una razón; queda en la bitácora y se muestra en el "¿Cómo se calculó?".
 6. **Dos campos.** Solmar y Quivira: par y SI son por ronda. Hay un ajuste opcional (apagado) para recalcular el hándicap de campo por tee cada día.
+7. **Rondas de 9 hoyos** (otros torneos): se juega la mitad del hándicap de juego (.5 sube), repartida entre esos nueve hoyos: se ordenan del 1 al 9 por su SI de 18 hoyos y los golpes se dan en ese orden, dando la vuelta si sobran. Ejemplo: hándicap de juego 16 → 8 golpes, uno en cada hoyo menos el más fácil de los nueve. (Antes se daban contra el SI de 18 y se perdía casi la mitad.)
+
+## Formatos por golpes (otros torneos)
+
+- **Stroke play, equipos por golpes y el juego «Low neto»** ordenan por golpes contra el par sobre los hoyos jugados: en vivo, −12 tras 12 hoyos va arriba de +8 tras 4.
+- **Al cierre, una tarjeta incompleta queda después de las completas** (un jugador que se retira a la vuelta no gana con 9 hoyos). La app lo avisa con los hoyos jugados. En Stableford no hace falta: los hoyos sin capturar no suman.
+- **Equipos en la Calcutta:** cada equipo ocupa un solo lugar; su slot se reparte entre sus jugadores (y de ahí entre los dueños de cada uno). El equipo campeón cobra el slot del campeón y el segundo equipo el del subcampeón.
 
 ## Individual (Stableford, el juego principal)
 
