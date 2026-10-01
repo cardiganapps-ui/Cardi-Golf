@@ -1,10 +1,14 @@
 /**
  * QA-07: the mappers turn the server's rows into the engine's types. The rows
  * below are written the way PostgREST returns them: snake_case, every column
- * the table has, numeric columns as text (`base_hcp: "14.0"`), timestamps
- * and times as Postgres prints them, nulls where the column allows them. A
- * slip here (a pick-up dropped, a handicap read as 0) gives a wrong board
- * with a perfect engine, so the last test runs the mapped rows through it.
+ * the table has, timestamps and times as Postgres prints them, nulls where
+ * the column allows them. Numeric columns are the exception: PostgREST sends
+ * them as JSON numbers (`14.0` arrives as 14), and these rows carry them as
+ * text (`base_hcp: "14.0"`), the stricter input, since a mapper that forgot
+ * to convert would pass a number through unharmed. Each numeric column is
+ * also mapped from a number. A slip here (a pick-up dropped, a handicap read
+ * as 0) gives a wrong board with a perfect engine, so the last test runs the
+ * mapped rows through it.
  *
  * The round trip of every design fixture through the store is in
  * snapshot.golden.test.ts.
@@ -253,9 +257,31 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
         sortOrder: 3,
       },
     ])
-    // A client that sends numerics as numbers maps the same.
+    // PostgREST's own form, JSON numbers, maps the same.
     expect(mapPlayer({ ...PLAYERS[1]!, base_hcp: 18, handicap_index: 8.1 })).toEqual(mapPlayer(PLAYERS[1]!))
     expect(mapPlayer({ ...PLAYERS[0]!, base_hcp: '0.0' }).baseHcp).toBe(0)
+  })
+
+  it('a base handicap with a decimal keeps it ("21.9" and 21.9 → 21.9), and the engine starts from it unchanged', () => {
+    // numeric(4, 1): the Comité's average of recent rounds less the course
+    // rating (§5.2) rarely comes out whole. The 80% and its rounding apply
+    // once, to the playing handicap: 80% of 21.9 = 17.52 → 18. Truncated to
+    // 21 it would be 17; rounded to 22 the board would explain a number the
+    // Comité never typed.
+    const row = { ...PLAYERS[0]!, base_hcp: '21.9' }
+    expect(mapPlayer(row).baseHcp).toBe(21.9)
+    expect(mapPlayer({ ...row, base_hcp: 21.9 }).baseHcp).toBe(21.9)
+    const settings = { ...DEFAULT_SETTINGS, handicap: { ...DEFAULT_SETTINGS.handicap, allowance: 0.8 } }
+    const snap: Snapshot = {
+      ...makeSnapshot({ settings }),
+      players: [mapPlayer(row)],
+      courses: [mapCourse(COURSE_ROW, TEES, HOLES)],
+      rounds: [mapRound(ROUND_ROW)],
+    }
+    const st = computeTournament(snap, settings)
+    const ana = st.core.rounds[ROUND]![ANA]!
+    expect([st.core.handicaps[ANA]!.base, ana.courseHcp, ana.playingHcp]).toEqual([21.9, 21.9, 18])
+    expect(ana.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', '80% de 21.9 = 17.52', 'Redondeado: 18'])
   })
 
   it('a course keeps only its own tees, in their saved order, each with only its own holes by number; rating "71.2" → 71.2', () => {
@@ -273,10 +299,14 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
     expect(blancas.holes[4]).toEqual({ number: 5, par: 4, strokeIndex: 1, yards: 360 })
     expect(blancas.holes.map((h) => [h.par, h.strokeIndex])).toEqual(PAR_72)
     expect(c.tees[1]!.holes[17]).toEqual({ number: 18, par: 5, strokeIndex: 14, yards: null })
+    // PostgREST's own form, a JSON number, maps the same.
+    expect(mapCourse(COURSE_ROW, TEES.map((t) => ({ ...t, rating: t.rating == null ? null : Number(t.rating) })), HOLES)).toEqual(c)
   })
 
   it('rounds and groups: the date and tee time as the server prints them, only that group’s members, a back-nine start', () => {
     expect(mapRound(ROUND_ROW)).toEqual({ id: ROUND, number: 1, date: '2027-04-10', courseId: COURSE, holes: 18, status: 'live' })
+    // A 9-hole round stays 9: the engine then plays half the handicap over those nine holes (MONEY-03).
+    expect(mapRound({ ...ROUND_ROW, holes: 9 }).holes).toBe(9)
     expect(mapGroup(GROUP_ROW, MEMBERS)).toEqual({ id: GROUP, roundId: ROUND, number: 1, teeTime: '09:10:00', startHole: 10, playerIds: [ANA, BETO, CHUY] })
     expect(mapRoundTee({ round_id: ROUND, player_id: ANA, tee_id: ROJAS })).toEqual({ roundId: ROUND, playerId: ANA, teeId: ROJAS })
   })
@@ -399,8 +429,9 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
       gameId: 'cerca',
       playerId: ANA,
     })
-    // numeric with no scale comes as text too.
+    // numeric with no scale, as text and as PostgREST sends it.
     expect(mapGameResult({ tournament_id: T, game_id: 'tacos', player_id: CHUY, share: '0.5', created_at: CREATED })).toEqual({ gameId: 'tacos', playerId: CHUY, share: 0.5 })
+    expect(mapGameResult({ tournament_id: T, game_id: 'tacos', player_id: CHUY, share: 0.5, created_at: CREATED })).toEqual({ gameId: 'tacos', playerId: CHUY, share: 0.5 })
   })
 
   it('a row from before a column existed gets that column’s default', () => {

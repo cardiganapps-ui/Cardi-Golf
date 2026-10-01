@@ -2213,7 +2213,8 @@
         "src/data/tournamentStore.reconnect.test.ts",
         "src/data/snapshotCache.test.ts",
         "src/data/paged.test.ts",
-        "src/data/snapshot.golden.test.ts"
+        "src/data/snapshot.golden.test.ts",
+        "src/data/backupKeys.test.ts"
       ],
       "verifiedBy": null,
       "residual": null
