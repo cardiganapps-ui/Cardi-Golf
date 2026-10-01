@@ -5,16 +5,22 @@
  * Realtime channel the store opens.
  *
  * It answers the way PostgREST does, which is what the tests lean on:
- * - rows come back in the order asked for, and never more than 1,000 in one
- *   response, whatever range was asked (the server's max-rows);
- * - ordering by a column the table doesn't have is a 400 (ARCH-09);
+ * - rows come back in the order asked for, and never more than `maxRows` in
+ *   one response, whatever range was asked (the server's max-rows);
+ * - ordering by a column the table doesn't have is a 400 (ARCH-09), but
+ *   only once the table has a row to check against: real PostgREST answers
+ *   400 for an empty table too, so the keys of tables that may be empty are
+ *   checked against the migrations (snapshotTables.test.ts, backupKeys.test.ts);
  * - each read sees the table as it was when the request was made, even if
  *   its answer is held back (`hold`) to arrive after a later one.
+ *
+ * The rows themselves are whatever the test serves: testing/rows.ts writes
+ * numeric columns as text, which PostgREST does not (see there).
  */
 import type { Row } from '../mappers'
 import { compareValues } from './rows'
 
-/** PostgREST's max-rows on Supabase: the server's cap, not the client's page size. */
+/** Supabase's default max-rows for PostgREST: the server's cap, not the client's page size. */
 export const SERVER_MAX_ROWS = 1000
 
 export interface FakeError {
@@ -69,6 +75,8 @@ export interface FakeSupabase {
   channels: FakeChannel[]
   /** Every read fails with this while set (no signal). */
   down: FakeError | null
+  /** Rows per response at most (the project's max-rows setting); SERVER_MAX_ROWS unless a test changes it. */
+  maxRows: number
   /** Hold back the answer to the next tournament snapshot (its `tournaments` read). */
   hold(): Hold
 }
@@ -138,7 +146,7 @@ class Query implements PromiseLike<Result> {
       })
     }
     const [from, to] = this.rangeArg ?? [0, Number.MAX_SAFE_INTEGER]
-    const page = rows.slice(from, Math.min(to + 1, from + SERVER_MAX_ROWS))
+    const page = rows.slice(from, Math.min(to + 1, from + server.maxRows))
     if (this.one) {
       return page.length === 1 ? { data: structuredClone(page[0]), error: null } : { data: null, error: { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' } }
     }
@@ -163,6 +171,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     rpcResult: { data: null, error: null },
     channels: [],
     down: null,
+    maxRows: SERVER_MAX_ROWS,
     client: {
       from: (table) => new Query(server, gates, table),
       rpc: async (name, args) => {

@@ -3,10 +3,14 @@
  *
  * `snapshotToRows` writes a snapshot out as the rows the server holds for it:
  * one list per table the snapshot reads, snake_case, every column the table
- * has (the mappers must ignore the ones the engine doesn't read), numeric
- * columns as text the way Postgres prints them (`base_hcp: "14.0"`), jsonb
- * as JSON. It is written by hand from supabase/migrations, not derived from
- * mappers.ts, so the two can't share a mistake.
+ * has (the mappers must ignore the ones the engine doesn't read), jsonb as
+ * JSON. Numeric columns go out as text, the way Postgres prints them
+ * (`base_hcp: "14.0"`). That is not what PostgREST sends: it sends JSON
+ * numbers (`14.0`, which arrives as 14). Text is the stricter input, since a
+ * mapper that forgot to convert passes a number through unharmed but not a
+ * string; mappers.test.ts maps both forms. It is written by hand from
+ * supabase/migrations, not derived from mappers.ts, so the two can't share a
+ * mistake.
  *
  * `asStored` is the snapshot the app must get back from those rows: column
  * defaults filled in, and every list in the order the server answers (by
@@ -39,7 +43,7 @@ function by<T>(list: readonly T[], keys: (x: T) => unknown[]): T[] {
 }
 
 const CREATED = '2027-04-01T18:00:00+00:00'
-/** numeric(4, 1) as Postgres prints it: 14 → "14.0". */
+/** numeric(4, 1) as Postgres prints it, 14 → "14.0" (PostgREST would send 14; see above). */
 const dec1 = (n: number | null) => (n == null ? null : n.toFixed(1))
 /** Scores have uuid keys; these sort in the snapshot's own order. */
 export const scoreRowId = (i: number) => `score-${String(i).padStart(6, '0')}`
@@ -178,10 +182,10 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
     })),
     game_entries: s.gameEntries.map((x) => ({ tournament_id: tid, game_id: x.gameId, player_id: x.playerId, created_at: CREATED })),
     hole_awards: s.holeAwards.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, game_id: x.gameId, player_id: x.playerId, decided_by: null, created_at: CREATED })),
-    // numeric with no scale: Postgres prints 1 as "1" and 0.5 as "0.5".
+    // numeric with no scale as Postgres prints it, 1 → "1" and 0.5 → "0.5" (PostgREST would send 1 and 0.5).
     game_results: s.gameResults.map((x) => ({ tournament_id: tid, game_id: x.gameId, player_id: x.playerId, share: String(x.share), created_at: CREATED })),
   }
-  // Through JSON, as the wire carries it.
+  // Through JSON, as the wire carries it (with the numeric columns as text, above).
   return JSON.parse(JSON.stringify(rows)) as Record<SnapshotTable, Row[]>
 }
 

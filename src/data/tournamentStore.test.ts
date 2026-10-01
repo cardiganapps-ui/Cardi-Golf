@@ -7,6 +7,8 @@
  *   signal the app opens that copy and shows the same boards.
  * - Realtime: a burst of changes is one reload; a channel that comes back
  *   fetches what it missed.
+ * - A failed load never shows another tournament's boards, and says why in
+ *   the copy for what failed, even when only the tournament's own row did.
  * Reloads on `online` and on showing the app are in
  * tournamentStore.reconnect.test.ts (they need a DOM).
  */
@@ -102,6 +104,18 @@ describe('an older answer never replaces a newer one (audit P1-15)', () => {
     expect([store().tournamentId, shownName()]).toEqual([next.tournament.id, next.tournament.name])
   })
 
+  it('a load still in flight for the tournament just left never lands on the one opened from the phone’s copy', async () => {
+    // The sequence guard alone lets it through: opening from the copy starts no read, so this load is still the newest.
+    const next = structuredClone(getFixture('gloria4')!.snapshot)
+    const slow = server.hold()
+    const older = store().load(TID)
+    await slow.received
+    store().seed(next.tournament.id, next, 1)
+    slow.release()
+    await older
+    expect([store().tournamentId, shownName(), store().loading]).toEqual([next.tournament.id, next.tournament.name, false])
+  })
+
   it('opening another tournament while the first is still loading shows the second', async () => {
     server.tables.tournaments!.push({ ...tournamentRow(), id: 'fx-otro', slug: 'otro-torneo', name: 'Otro torneo', join_code: 'OTRO22' })
     const slow = server.hold()
@@ -144,6 +158,25 @@ describe('the copy on the phone (audit P0-5)', () => {
     await store().reload()
     expect(store().data).toBe(before)
     expect(store().error).toBe(t.errors.network)
+  })
+})
+
+describe('a load that fails', () => {
+  it('opening another tournament with no signal shows nothing of the one before, never its boards under the new name', async () => {
+    expect(shownName()).toBe(fx.snapshot.tournament.name)
+    server.down = { message: 'TypeError: Failed to fetch' }
+    await store().load('otro-torneo')
+    expect([store().tournamentId, store().data, store().error, store().loading]).toEqual(['otro-torneo', null, t.errors.network, false])
+  })
+
+  it('only the tournament’s own row failing still says why: the signal dropped, not a broken page', async () => {
+    // Every other table answers; the store must stop at the missing row, not read fields off nothing.
+    const slow = server.hold()
+    const again = store().load(TID)
+    await slow.received
+    slow.fail({ message: 'TypeError: Failed to fetch' })
+    await again
+    expect([store().error, store().loading, shownName()]).toEqual([t.errors.network, false, fx.snapshot.tournament.name])
   })
 })
 
