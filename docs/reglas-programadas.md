@@ -72,7 +72,7 @@ $20,000 individual + $3,000 Matrimonios + $2,400 mejor ronda + $3,600 Víbora + 
 - Inscripciones ($2,500 × 12) y martillazos van al banquero. Recompras van de jugador a dueño. El banquero paga premios y repartos de la Calcutta.
 - Por persona: **Pagó** (inscripción + compras + recompras pagadas), **Recibe** (premios + Calcutta + recompras cobradas) y **Neto**.
 - La app comprueba que lo que entró al banco es lo que sale; mientras haya premios abiertos (ronda en juego, víbora pendiente) lo marca en rojo como "por asignar".
-- Liquidación por defecto "vía banco": el banco le paga a cada quien su neto. Opción "sin banco": lista mínima de transferencias entre personas (el que más debe le paga al que más recibe).
+- Liquidación por defecto "vía banco", sobre lo que falta por pagar: lo marcado como pagado (por ejemplo, inscripciones y martillazos cobrados la noche de la Calcutta) no se vuelve a pedir. Cada quien queda a mano con el banco en una línea: sus premios pendientes menos lo que todavía deba. Opción "sin banco": lista mínima de transferencias entre personas sobre lo mismo (el que más debe le paga al que más recibe); lo que ya está en el banco lo reparte el banquero, que también se queda con lo de la casa.
 
 ## Lo que aún no está programado (viene en M3–M6)
 

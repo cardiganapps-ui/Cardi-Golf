@@ -1145,9 +1145,11 @@
       "workstream": "W3",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 68,
+      "tests": [
+        "src/engine/core/settlement.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1187,9 +1189,11 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 68,
+      "tests": [
+        "src/engine/core/settlement.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1299,9 +1303,11 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 68,
+      "tests": [
+        "src/engine/core/settlement.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

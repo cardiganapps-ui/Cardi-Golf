@@ -149,6 +149,7 @@
 .transferText {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   line-height: var(--lh-ui);
 }
@@ -156,27 +157,14 @@
   color: var(--ink-2);
   font-size: var(--fs-xs);
 }
+/* One part of a line's breakdown never breaks inside its amount. */
+.part {
+  white-space: nowrap;
+}
 .amount {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   white-space: nowrap;
-}
-.paidRow {
-  color: var(--ink-3);
-}
-.paidRow .amount {
-  color: var(--ink-3);
-  font-weight: 500;
-}
-.paidMark {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1);
-  color: var(--accent);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  min-width: 64px;
-  justify-content: flex-end;
 }
 
 /* Per-game money: the game's name on the left, what it pays on the right. */

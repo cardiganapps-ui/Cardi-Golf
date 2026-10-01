@@ -1,18 +1,22 @@
 /**
  * Dinero (§9.6, §11): a statement. The bank in two figures and a verdict,
  * each person's net as the figure with the breakdown one tap away, and the
- * settlement (vía banco / sin banco) with "Pagado" for admins.
+ * settlement (vía banco / sin banco) with «Marcar pagado» for admins.
+ *
+ * While the tournament runs, «Quién debe qué» is where the banker collects
+ * (entries, hammer prices, buybacks). Once it is final the settlement is the
+ * one list: it already nets everything still due, so showing both would ask
+ * for the same peso twice (MONEY-01).
  */
-import { useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ShareCardButton } from '../../components/ShareCard'
 import { Avatar, Segmented, ShareButton, toast } from '../../components/ui'
 import { EmptyState, Money } from '../../components/primitives'
-import { IconCheck } from '../../components/icons'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
-import type { Flow } from '../../engine/core/money'
+import { markPaidWrites, restorePaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
@@ -61,7 +65,23 @@ export function MoneyScreen() {
     return [...groups.values()].sort((a, b) => b.total - a.total)
   }, [state.prizes, settings])
 
-  const owed = useMemo(() => money.flows.filter((f) => !f.paid && (f.kind === 'entry' || f.kind === 'calcutta' || f.kind === 'buyback' || f.kind === 'side' || (f.kind === 'bet' && f.final))), [money.flows])
+  /** «Quién debe qué»: one row per debt still due (a payment key), the way «Pagado» records it. */
+  const owed = useMemo(
+    () =>
+      money.accounts.filter((a) => a.due > 0 && a.from !== null && (a.kind === 'entry' || a.kind === 'calcutta' || a.kind === 'buyback' || a.kind === 'side' || (a.kind === 'bet' && a.final))),
+    [money.accounts],
+  )
+  const accountDetail = useCallback(
+    (a: Account) => {
+      const due = money.flows.filter((f) => f.kind === a.kind && f.from === a.from && f.to === a.to && f.outstanding > 0)
+      if (a.kind === 'entry') return M.owesEntry
+      if (a.kind === 'buyback') return M.owesBuyback
+      if (a.kind === 'calcutta') return M.owesLots(due.map((f) => f.lotNumber ?? 0))
+      if (a.kind === 'bet') return `${M.owesBet}, ${due.map((f) => f.label).join(', ')}`
+      return `${M.owesSide}, ${due.map((f) => f.label).join(', ')}`
+    },
+    [money.flows],
+  )
 
   async function run(fn: () => Promise<void>) {
     setBusy(true)
@@ -74,20 +94,33 @@ export function MoneyScreen() {
       setBusy(false)
     }
   }
-  const toggle = (f: Flow, paid: boolean) =>
+  /** One write per account, in order: a payments row upserted on its key, or a buyback on its lot. */
+  async function write(writes: PaidWrite[]) {
+    for (const w of writes) {
+      if ('lotId' in w) await setBuybackPaid(w.lotId, w.paid)
+      else await setPaymentPaid(tournamentId, { from_player_id: w.from, to_player_id: w.to, amount: w.amount, kind: w.kind, paid: w.paid })
+    }
+  }
+  /**
+   * «Marcar pagado» records every account the row closes as paid in full, so
+   * the row goes away and stays away (MONEY-04). The toast can put it back.
+   */
+  const markPaid = (settles: Account[]) =>
     run(async () => {
-      if (f.kind === 'buyback') {
-        const lot = state.modules.auction?.lots.find((l) => l.playerId === f.from && l.ownerId === f.to)
-        if (lot) await setBuybackPaid(lot.lotId, paid)
-      } else {
-        // One payments row per (kind, from, to): the amount is the aggregate of every flow with that key (all of an owner's lots).
-        const amount = money.flows.filter((x) => x.kind === f.kind && x.from === f.from && x.to === f.to).reduce((s, x) => s + x.amount, 0)
-        await setPaymentPaid(tournamentId, { from_player_id: f.from, to_player_id: f.to, amount, kind: f.kind, paid })
-      }
+      await write(markPaidWrites(settles))
+      toast(M.markedPaid, { label: t.common.undo, onClick: () => void run(() => write(restorePaidWrites(settles))) })
     })
-  const togglePayout = (playerId: string, amount: number, paid: boolean) => run(() => setPaymentPaid(tournamentId, { from_player_id: null, to_player_id: playerId, amount, kind: 'payout', paid }))
-
-  const payoutPaid = (playerId: string) => money.flows.filter((f) => f.kind === 'payout' && f.to === playerId).every((f) => f.paid) && money.flows.some((f) => f.kind === 'payout' && f.to === playerId)
+  const lineText = (from: string | null, to: string | null, amount: number) => M.pays(name(from), name(to), formatMoney(amount))
+  /** What a settlement line is made of, from its own side: «Premios +$13,200 · Compras Calcutta −$3,000». */
+  const lineParts = (tr: Transfer) =>
+    [...(tr.settles ?? [])]
+      // What the line pays first, then what it nets out.
+      .sort((a, b) => Number(a.from !== tr.from && a.to !== tr.to) - Number(b.from !== tr.from && b.to !== tr.to))
+      .map((a) => {
+        const sign = a.from === tr.from || a.to === tr.to ? 1 : -1
+        const label = a.due < 0 ? M.refund : a.kind === 'payout' ? M.prizes : a.kind === 'entry' ? M.entry : a.kind === 'calcutta' ? M.purchases : a.kind === 'side' ? M.sidePots : a.kind === 'bet' ? M.owesBet : M.owesBuyback
+        return `${label} ${formatSignedMoney(sign * a.due)}`
+      })
 
   const shareText = useMemo(() => {
     const lines = [M.shareTitle(snapshot.tournament.name), '']
@@ -224,33 +257,35 @@ export function MoneyScreen() {
 
       {mode === 'final' && (
         <>
-          <section className={styles.section}>
-            <h3>{M.checklist}</h3>
-            {owed.length === 0 ? (
-              <span className="help">{M.nothingOwed}</span>
-            ) : (
-              <div className={styles.transfers}>
-                {owed.map((f, i) => (
-                  <div key={i} className={styles.transfer}>
-                    <span className={styles.transferText}>
-                      <span>
-                        <strong>{name(f.from)}</strong> {M.paysTo} {name(f.to)}
+          {!state.tournamentFinal && (
+            <section className={styles.section}>
+              <h3>{M.checklist}</h3>
+              {owed.length === 0 ? (
+                <span className="help">{M.nothingOwed}</span>
+              ) : (
+                <div className={styles.transfers}>
+                  {owed.map((a) => (
+                    <div key={`${a.kind}|${a.from}|${a.to}`} className={styles.transfer}>
+                      <span className={styles.transferText}>
+                        <span>
+                          <strong>{name(a.from)}</strong> {M.paysTo} {name(a.to)}
+                        </span>
+                        <span className={styles.transferKind}>{accountDetail(a)}</span>
                       </span>
-                      <span className={styles.transferKind}>{f.kind === 'entry' ? M.owesEntry : f.kind === 'calcutta' ? M.owesCalcutta : f.kind === 'side' ? M.owesSide : f.kind === 'bet' ? `${M.owesBet}, ${f.label}` : M.owesBuyback}</span>
-                    </span>
-                    <span className={styles.amount}>{formatMoney(f.amount)}</span>
-                    {me.isAdmin ? (
-                      <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void toggle(f, true)}>
-                        {M.markPaid}
-                      </button>
-                    ) : (
-                      <span />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+                      <span className={styles.amount}>{formatMoney(a.due)}</span>
+                      {me.isAdmin ? (
+                        <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid([a])} aria-label={`${M.markPaid}: ${lineText(a.from, a.to, a.due)}`}>
+                          {M.markPaid}
+                        </button>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <section className={styles.section}>
             <Segmented
@@ -261,29 +296,35 @@ export function MoneyScreen() {
               ]}
               onChange={setSettle}
             />
-            <span className="help">{settle === 'bank' ? M.viaBankHint(banker?.displayName ?? M.bank) : M.p2pHint}</span>
+            <span className="help">{settle === 'bank' ? M.viaBankHint(banker?.displayName ?? M.bank) : M.p2pHint(banker?.displayName ?? null)}</span>
+            {!state.tournamentFinal && <span className="help">{M.settlePreview}</span>}
+            {state.tournamentFinal && (settle === 'bank' ? money.viaBank : money.peerToPeer).length === 0 && <span className="help">{M.allSettled}</span>}
             <div className={styles.transfers}>
               {(settle === 'bank' ? money.viaBank : money.peerToPeer).map((tr, i) => {
-                const paidFlag = settle === 'bank' && tr.from === null && tr.to ? payoutPaid(tr.to) : false
-                const canMark = me.isAdmin && settle === 'bank' && tr.from === null && !!tr.to
+                const canMark = me.isAdmin && settle === 'bank' && state.tournamentFinal && !!tr.final && !!tr.settles?.length
+                const parts = settle === 'bank' && (tr.settles?.length ?? 0) > 1 ? lineParts(tr) : []
                 return (
-                  <div key={i} className={`${styles.transfer} ${paidFlag ? styles.paidRow : ''}`}>
+                  <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
                     <span className={styles.transferText}>
                       <span>
                         <strong>{name(tr.from)}</strong> {M.paysTo} <strong>{name(tr.to)}</strong>
                       </span>
+                      {parts.length > 0 && (
+                        <span className={styles.transferKind}>
+                          {parts.map((part, j) => (
+                            <Fragment key={j}>
+                              {j > 0 && ' · '}
+                              <span className={styles.part}>{part}</span>
+                            </Fragment>
+                          ))}
+                        </span>
+                      )}
                     </span>
                     <span className={styles.amount}>{formatMoney(tr.amount)}</span>
                     {canMark ? (
-                      paidFlag ? (
-                        <button className={`btn btn--ghost btn--sm ${styles.paidMark}`} type="button" disabled={busy} onClick={() => void togglePayout(tr.to!, tr.amount, false)} aria-label={M.markPaid}>
-                          <IconCheck size={16} /> {M.markPaid}
-                        </button>
-                      ) : (
-                        <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void togglePayout(tr.to!, tr.amount, true)}>
-                          {M.markPaid}
-                        </button>
-                      )
+                      <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid(tr.settles!)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
+                        {M.markPaid}
+                      </button>
                     ) : (
                       <span />
                     )}

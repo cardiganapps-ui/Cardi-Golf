@@ -95,7 +95,7 @@ describe('Menos putts', () => {
 })
 
 describe('Money', () => {
-  it('a multi-lot owner is paid only when the aggregate covers all his lots', () => {
+  it("a multi-lot owner's payment covers his lots oldest first; the rest stays due", () => {
     const snap = makeFirstTournament()
     snap.calcuttaLots.push(
       { id: 'l1', playerId: 'p1', lotNumber: 1, status: 'sold', price: 1000, ownerId: 'p4', soldAt: '' },
@@ -106,7 +106,12 @@ describe('Money', () => {
     let st = computeTournament(snap, S)
     const lots = () => st.money.flows.filter((f) => f.kind === 'calcutta' && f.from === 'p4')
     expect(lots()).toHaveLength(3)
-    expect(lots().every((f) => !f.paid)).toBe(true)
+    expect(lots().map((f) => [f.paid, f.outstanding])).toEqual([
+      [true, 0],
+      [false, 500],
+      [false, 250],
+    ])
+    expect(st.money.accounts.find((a) => a.kind === 'calcutta' && a.from === 'p4')).toMatchObject({ owed: 1750, paid: 1000, due: 750 })
     snap.payments[0]!.amount = 1750
     st = computeTournament(snap, S)
     expect(lots().every((f) => f.paid)).toBe(true)
