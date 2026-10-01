@@ -12,6 +12,7 @@ import { safeNext, signOutSafely } from '../../data/account'
 import { HandleTakenError, handleOk, parseIndex, updateMyProfile, uploadMyAvatar, useMyProfile, type MyProfile, type ProfilePatch } from '../../data/profiles'
 import { PushToggle } from './PushToggle'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.profile
 
@@ -79,7 +80,7 @@ export function ProfileEditScreen() {
       const url = await uploadMyAvatar(profile!.id, file)
       setProfile(await updateMyProfile(profile!.id, { avatar_url: url }))
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -106,7 +107,7 @@ export function ProfileEditScreen() {
       navigate(welcome ? safeNext(params.get('next')) : `/p/${saved.handle}`, { replace: welcome })
     } catch (e) {
       if (e instanceof HandleTakenError) setHandleError(P.handleTaken)
-      else toast(e instanceof Error ? e.message : String(e))
+      else toast(humanError(e))
     } finally {
       setBusy(false)
     }

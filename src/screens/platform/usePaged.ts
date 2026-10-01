@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { humanError } from '../../lib/humanError'
 
 /**
  * A searchable, paged list for the panel: typing waits a beat, a filter
@@ -22,7 +23,7 @@ export function usePaged<T>(fetch: (offset: number) => Promise<{ total: number; 
         setTotal(res.total)
         setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
       } catch (e) {
-        if (mine === seq.current) setError(e instanceof Error ? e.message : String(e))
+        if (mine === seq.current) setError(humanError(e))
       }
     },
     [fetch],

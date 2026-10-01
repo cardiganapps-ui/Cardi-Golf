@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listCourses } from '../../data/api'
+import { humanError } from '../../lib/humanError'
 
 export function useCourses() {
   const [courses, setCourses] = useState<Awaited<ReturnType<typeof listCourses>>>([])
@@ -10,7 +11,7 @@ export function useCourses() {
     setError(null)
     listCourses()
       .then(setCourses)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(humanError(e)))
       .finally(() => setLoading(false))
   }, [])
   useEffect(() => refresh(), [refresh])

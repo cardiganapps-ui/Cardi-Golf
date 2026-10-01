@@ -16,6 +16,7 @@ import { formatIndex } from '../../data/profiles'
 import { seasons, seasonTable } from '../../engine/profile/season'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const C = t.crews
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -65,7 +66,7 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
       }
       onChanged()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
       setAsk(null)

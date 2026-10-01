@@ -17,6 +17,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
 import styles from './MoreScreen.module.css'
+import { humanError } from '../../lib/humanError'
 
 export function MoreScreen() {
   const { me, slug, lookup, leave, refresh } = useTournamentCtx()
@@ -40,7 +41,7 @@ export function MoreScreen() {
       toast(r.ok ? t.more.savedHere : r.reason === 'already_linked' ? t.account.already : t.account.linkTaken)
       await Promise.all([refresh(), useMyProfile.getState().load()])
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setSaving(false)
     }
@@ -55,7 +56,7 @@ export function MoreScreen() {
       await useMyProfile.getState().load()
       await leave()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setSaving(false)
       setAskNotMe(false)

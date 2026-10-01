@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/primitives'
 import { signOut, useAuth } from '../../data/auth'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import styles from './Organizer.module.css'
+import { humanError } from '../../lib/humanError'
 
 const GROUPS: Array<{ key: 'live' | 'setup' | 'finished'; statuses: string[]; label: string; quiet?: boolean }> = [
   { key: 'live', statuses: ['live', 'auction'], label: t.organizer.groupLive },
@@ -32,7 +33,7 @@ export function MyTournamentsScreen() {
     }
     listMyTournaments()
       .then(setItems)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(humanError(e)))
   }, [ready, user, isAnonymous, navigate])
 
   // One row per tournament even when the account holds several organizer rows (logged in DESIGN_NOTES.md).
@@ -61,7 +62,7 @@ export function MyTournamentsScreen() {
           {t.organizer.newTournament}
         </Link>
       </div>
-      {error && <ErrorBox message={error} />}
+      {error && <ErrorBox error={error} />}
       {!items && !error && <Spinner />}
       {items && unique.length === 0 && (
         <EmptyState

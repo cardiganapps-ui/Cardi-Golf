@@ -16,6 +16,7 @@ import { ReasonSheet } from '../../components/ReasonSheet'
 import { usePlatformApi } from '../../data/platform'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './PlatformBanner.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.platform
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -44,7 +45,7 @@ export function PlatformBanner() {
       await api.relock(tournamentId)
       await refresh()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

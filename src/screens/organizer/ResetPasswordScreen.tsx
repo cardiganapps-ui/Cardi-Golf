@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/primitives'
 import { Field, Spinner } from '../../components/ui'
 import { updatePassword, useAuth } from '../../data/auth'
 import styles from './OrganizerAuth.module.css'
+import { humanError } from '../../lib/humanError'
 
 /** Landing page of the password-reset email; also "Cambiar contraseña" from Más. */
 export function ResetPasswordScreen() {
@@ -24,7 +25,7 @@ export function ResetPasswordScreen() {
       await updatePassword(password)
       navigate('/organizer', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(humanError(err))
     } finally {
       setBusy(false)
     }

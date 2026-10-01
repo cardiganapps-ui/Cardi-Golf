@@ -56,7 +56,7 @@ export function useTournamentCtx(): TournamentCtx {
 /** While the boards come from the cache, try the live tournament again this often. */
 const CACHE_RETRY_MS = 20_000
 
-type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; message: string } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
+type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
 
 export function TournamentGate() {
   const { slug = '' } = useParams()
@@ -81,7 +81,7 @@ export function TournamentGate() {
 
   const resolve = useCallback(async () => {
     if (!supabaseConfigured) {
-      setPhase({ kind: 'error', message: t.errors.missingEnv })
+      setPhase({ kind: 'error', error: t.errors.missingEnv })
       return
     }
     try {
@@ -122,7 +122,7 @@ export function TournamentGate() {
     } catch (e) {
       if (await enterFromCache()) return
       const offline = typeof navigator !== 'undefined' && !navigator.onLine
-      setPhase({ kind: 'error', message: offline ? t.errors.offlineFirstOpen : e instanceof Error ? e.message : String(e) })
+      setPhase({ kind: 'error', error: offline ? t.errors.offlineFirstOpen : e })
     }
   }, [slug, load, enterFromCache])
 
@@ -200,7 +200,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox message={phase.message} onRetry={() => void resolve()} />
+        <ErrorBox error={phase.error} onRetry={() => void resolve()} />
       </div>
     )
   }
@@ -211,7 +211,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox message={storeError} onRetry={() => void load(phase.lookup.id)} />
+        <ErrorBox error={storeError} onRetry={() => void load(phase.lookup.id)} />
       </div>
     )
   }

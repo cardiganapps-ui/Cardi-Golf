@@ -14,6 +14,7 @@ import { clearAppBadge } from '../../data/push'
 import { PushToggle } from './PushToggle'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const S = t.social
 const stamp = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
@@ -37,7 +38,7 @@ export function InboxScreen({ fixture }: { fixture?: Notice[] }) {
           clearAppBadge()
         }
       })
-      .catch((e) => toast(e instanceof Error ? e.message : String(e)))
+      .catch((e) => toast(humanError(e)))
     return () => {
       live = false
     }

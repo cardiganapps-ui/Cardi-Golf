@@ -11,6 +11,7 @@ import { Input } from '../../components/primitives'
 import { usePlatformApi, type PlatformTournamentRow, type TournamentKind } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.platform
 const PAGE = 50
@@ -43,7 +44,7 @@ export function TournamentsScreen() {
         setTotal(res.total)
         setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
       } catch (e) {
-        if (mine === seq.current) setError(e instanceof Error ? e.message : String(e))
+        if (mine === seq.current) setError(humanError(e))
       }
     },
     [api, q, kind],
@@ -74,7 +75,7 @@ export function TournamentsScreen() {
           ))}
         </div>
         {error ? (
-          <ErrorBox message={error} onRetry={() => void load(0)} />
+          <ErrorBox error={error} onRetry={() => void load(0)} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (

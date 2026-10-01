@@ -13,6 +13,7 @@ import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { personName } from './names'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.platform
 const H = P.people
@@ -41,7 +42,7 @@ export function PeopleScreen() {
         setTotal(res.total)
         setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
       } catch (e) {
-        if (mine === seq.current) setError(e instanceof Error ? e.message : String(e))
+        if (mine === seq.current) setError(humanError(e))
       }
     },
     [api, q, filter],
@@ -64,7 +65,7 @@ export function PeopleScreen() {
           ))}
         </div>
         {error ? (
-          <ErrorBox message={error} onRetry={() => void load(0)} />
+          <ErrorBox error={error} onRetry={() => void load(0)} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (

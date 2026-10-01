@@ -19,6 +19,7 @@ import { relTime } from '../../lib/relTime'
 import { CourseEditor } from '../admin/CourseEditor'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const C = t.platform.courses
 
@@ -39,7 +40,7 @@ export function CourseDetail() {
     try {
       setC(await api.course(id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api, id])
   useEffect(() => {
@@ -54,7 +55,7 @@ export function CourseDetail() {
       {C.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox message={error} onRetry={() => void load()} /></>
+  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
   if (c === undefined) return <Spinner rows={6} />
   if (c === null) return <>{back}<p className={s.help}>{t.platform.notFound}</p></>
   const course = c
@@ -65,7 +66,7 @@ export function CourseDetail() {
     try {
       setDraft(await loadCourseDraft(course.id))
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -80,7 +81,7 @@ export function CourseDetail() {
       await load()
       outlet?.onChanged()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -90,7 +91,7 @@ export function CourseDetail() {
     try {
       toast(C.refreshed(await api.refreshCourse(course.id)))
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -280,7 +281,7 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
         setPair([x, y])
         setKeepFirst(keepsFirst(x, y))
       },
-      (e) => setError(e instanceof Error ? e.message : String(e)),
+      (e) => setError(humanError(e)),
     )
   }, [api, a, b])
 
@@ -310,7 +311,7 @@ function MergeSheet({ a, b, onClose, onMerged }: { a: string; b: string; onClose
       toast(C.mergeDone(res.rounds))
       onMerged(keep.id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

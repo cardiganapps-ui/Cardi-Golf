@@ -12,6 +12,7 @@ import { formatIndex, searchProfiles, type ProfileHit } from '../../data/profile
 import { friendRemove, friendRequest, friendRespond, myFriends, type FriendCard, type MyFriends } from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const S = t.social
 
@@ -44,7 +45,7 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
     try {
       setData(await myFriends())
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     }
   }, [fixture])
   useEffect(() => {
@@ -78,7 +79,7 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
       if (done) toast(done)
       await load()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(null)
     }

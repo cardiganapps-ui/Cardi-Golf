@@ -4,6 +4,7 @@
  * results (src/engine/profile/season.ts).
  */
 import { supabase } from '../lib/supabase'
+import { ApiError } from './api'
 import type { SeasonResult } from '../engine/profile/season'
 
 export interface MyCrew {
@@ -43,7 +44,7 @@ export interface CrewPage {
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) throw ApiError.from(error)
   return data as T
 }
 

@@ -11,6 +11,7 @@ import { IconChevronLeft, IconChevronRight } from '../../components/icons'
 import { createCrew, crewPreview, joinCrew, myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
+import { humanError, UserError } from '../../lib/humanError'
 
 const C = t.crews
 const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
@@ -35,7 +36,7 @@ export function CrewsScreen() {
     try {
       await fn()
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }
@@ -153,12 +154,12 @@ export function CrewJoinScreen() {
             setBusy(true)
             joinCrew(code)
               .then((slug) => {
-                if (!slug) throw new Error(C.badCode)
+                if (!slug) throw new UserError(C.badCode)
                 toast(C.joined(crew.name))
                 navigate(`/c/${slug}`, { replace: true })
               })
               .catch((e) => {
-                toast(e instanceof Error ? e.message : String(e))
+                toast(humanError(e))
                 setBusy(false)
               })
           }}

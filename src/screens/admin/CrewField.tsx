@@ -7,6 +7,7 @@ import { t } from '../../i18n/es-MX'
 import { Field, toast } from '../../components/ui'
 import { myCrews, setTournamentCrew, type MyCrew } from '../../data/crews'
 import { useTournament } from '../../data/tournamentStore'
+import { humanError } from '../../lib/humanError'
 
 export function CrewField({ tournamentId }: { tournamentId: string }) {
   const crewId = useTournament((s) => s.data?.snapshot.tournament.crewId ?? null)
@@ -30,7 +31,7 @@ export function CrewField({ tournamentId }: { tournamentId: string }) {
       patch((s) => (s.tournament.crewId = id || null))
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

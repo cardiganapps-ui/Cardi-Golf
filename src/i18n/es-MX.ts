@@ -2054,6 +2054,29 @@ export const t = {
     notFoundHint: 'Revisa el enlace o vuelve al inicio.',
     backHome: 'Volver al inicio',
     forbidden: 'No tienes permiso para ver esto.',
+    // What a failure says, from src/lib/humanError.ts (COPY-04). Never the raw error.
+    network: 'Sin señal. Vuelve a intentar en cuanto tengas señal.',
+    timeout: 'El servidor no respondió a tiempo. Vuelve a intentar en un momento.',
+    server: 'El servidor tuvo un problema. Vuelve a intentar en un momento.',
+    session: 'Tu sesión se venció. Vuelve a abrir Polo e intenta de nuevo.',
+    sessionStart: 'No se pudo abrir tu sesión. Vuelve a intentar en un momento.',
+    permission: 'No tienes permiso para hacer esto.',
+    duplicate: 'Ya hay uno igual. Cambia lo repetido y vuelve a intentar.',
+    linked: 'No se pudo: está ligado a otros datos o ya no existe.',
+    invalid: 'Hay un dato que no es válido. Revísalo y vuelve a intentar.',
+    tooMany: 'Demasiados intentos seguidos. Espera un minuto.',
+    notLoaded: 'El torneo todavía no carga. Vuelve a intentar en un momento.',
+    wrongPassword: 'Correo o contraseña incorrectos.',
+    emailNotConfirmed: 'Falta confirmar tu correo: usa «Entrar con código».',
+    emailTaken: 'Ese correo ya tiene cuenta. Entra con tu contraseña o con código.',
+    weakPassword: 'La contraseña necesita al menos 8 caracteres.',
+    samePassword: 'La contraseña nueva tiene que ser distinta de la anterior.',
+    banned: 'Esta cuenta está bloqueada por ahora.',
+    // Not «Algo salió mal»: ErrorBox already says that as its heading.
+    unknown: 'No se pudo completar. Vuelve a intentar.',
+    /** `ref`: a code, an HTTP status or the error's class, for support; never the message. */
+    unknownRef: (ref: string) => `No se pudo completar (ref. ${ref}). Vuelve a intentar.`,
+    image: 'No se pudo procesar la imagen. Prueba con otra foto.',
   },
 } as const
 

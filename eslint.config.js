@@ -37,6 +37,29 @@ export default tseslint.config(
     },
   },
   {
+    // COPY-04: an error's own text ("TypeError: Failed to fetch", PostgREST's RLS
+    // line) never reaches a screen. Show humanError(e); log the error itself.
+    files: ['src/screens/**/*.{ts,tsx}', 'src/components/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='message']",
+          message: "Don't show an error's .message: use humanError(e) from src/lib/humanError.ts.",
+        },
+        {
+          selector: "MemberExpression[computed=true][property.value='message']",
+          message: "Don't show an error's .message: use humanError(e) from src/lib/humanError.ts.",
+        },
+        {
+          selector: "ObjectPattern > Property[key.name='message']",
+          message: "Don't take an error's message apart: use humanError(e) from src/lib/humanError.ts.",
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/**/*.mjs', 'e2e/**/*.mjs', '*.js'],
     extends: [js.configs.recommended],
     languageOptions: { ecmaVersion: 2022, globals: { ...globals.node } },

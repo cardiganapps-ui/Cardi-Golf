@@ -13,6 +13,7 @@
  */
 import type { AuthError } from '@supabase/supabase-js'
 import { t } from '../i18n/es-MX'
+import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
 import { useOutbox } from './outbox'
 import { signOut } from './auth'
@@ -41,7 +42,7 @@ export async function sendProfileCode(email: string): Promise<CodeMode> {
     if (!error) return 'convert'
     if (!emailTaken(error)) throw error
     // The address has an account already: sign in to it and bring this device's player along.
-    if (useOutbox.getState().pending > 0) throw new Error(t.account.syncFirst)
+    if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
     await stashLinkToken()
   }
   const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: back() } })
@@ -81,15 +82,17 @@ export async function finishProfileSignIn(): Promise<{ firstTime: boolean; link:
   return { firstTime: profile.updatedAt === profile.createdAt, link }
 }
 
-/** Readable Spanish for the auth errors a person can hit here. */
+/**
+ * Readable Spanish for the auth errors a person can hit here. humanError knows
+ * the auth codes; in this flow a refused credential is the emailed code, and
+ * any rate limit is the one on sending codes.
+ */
 export function accountError(e: unknown): string {
-  const err = e as Partial<AuthError> | undefined
-  const code = err?.code ?? ''
-  if (code === 'over_email_send_rate_limit' || err?.status === 429) return t.account.tooFast
-  if (code === 'otp_expired' || code === 'invalid_credentials') return t.auth.badCode
-  if (code === 'email_address_invalid' || code === 'validation_failed') return t.account.badEmail
-  if (code === 'identity_already_exists') return t.account.googleTaken
-  return e instanceof Error ? e.message : String(e)
+  const status = (e as Partial<AuthError> | undefined)?.status
+  if (status === 429) return t.account.tooFast
+  // In these flows a refusal with no code is the emailed code, expired or wrong.
+  if (status === 403 && !(e as Partial<AuthError>).code) return t.auth.badCode
+  return humanError(e, { invalid_credentials: t.auth.badCode })
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +116,7 @@ export async function continueWithGoogle(next: string) {
   const sb = supabase()
   const { data } = await sb.auth.getSession()
   if (data.session?.user?.is_anonymous) {
-    if (useOutbox.getState().pending > 0) throw new Error(t.account.syncFirst)
+    if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
     const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
     if (error) throw error
     return
@@ -124,7 +127,7 @@ export async function continueWithGoogle(next: string) {
 
 /** The Google account already belongs to another Polo account: sign in to that one, bringing this device's player. */
 export async function signInWithGoogleInstead(next: string) {
-  if (useOutbox.getState().pending > 0) throw new Error(t.account.syncFirst)
+  if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
   await stashLinkToken()
   const { error } = await supabase().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
   if (error) throw error

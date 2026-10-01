@@ -30,6 +30,7 @@ import {
 import { PROFILE_FIXTURES } from '../../dev/profileFixtures'
 import { BadgesSection, RecapButton, RecordsSection } from './Achievements'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.profile
 const monthYear = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' })
@@ -434,7 +435,7 @@ function ProfilePage({ handle }: { handle: string }) {
           if (live) setExtra({ tournaments, rounds, money })
         }
       } catch (e) {
-        if (live) setError(e instanceof Error ? e.message : String(e))
+        if (live) setError(humanError(e))
       }
     })()
     return () => {
@@ -456,7 +457,7 @@ function ProfilePage({ handle }: { handle: string }) {
       else await friendBlock(handle)
       setVersion((v) => v + 1)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setFriendBusy(false)
     }

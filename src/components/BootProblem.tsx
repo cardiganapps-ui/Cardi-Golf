@@ -12,7 +12,7 @@ import { resetApp } from '../lib/resetApp'
 import { Wordmark } from './Wordmark'
 import styles from './BootProblem.module.css'
 
-export function BootProblem({ kind }: { kind: 'timeout' | 'error' | 'crash'; detail?: string }) {
+export function BootProblem({ kind }: { kind: 'timeout' | 'error' | 'crash' }) {
   const [busy, setBusy] = useState(false)
   const B = t.boot
   return (

@@ -7,6 +7,7 @@ import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/ui'
 import { disablePush, enablePush, pushState, type PushState } from '../../data/push'
 import styles from './Profile.module.css'
+import { humanError } from '../../lib/humanError'
 
 const P = t.push
 
@@ -30,7 +31,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
       setState(next)
       if (next === 'on' || next === 'off') toast(done)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusy(false)
     }

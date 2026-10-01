@@ -16,6 +16,7 @@ import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { usePaged } from './usePaged'
 import s from './Platform.module.css'
+import { humanError } from '../../lib/humanError'
 
 const K = t.platform.crews
 
@@ -33,7 +34,7 @@ export function CatalogCrews() {
         <h2>{t.platform.sections.crews}</h2>
         <Input type="search" value={q} placeholder={K.search} aria-label={K.search} onChange={(e) => setQ(e.target.value)} />
         {error ? (
-          <ErrorBox message={error} onRetry={() => void reload()} />
+          <ErrorBox error={error} onRetry={() => void reload()} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -88,7 +89,7 @@ export function CrewDetail() {
     try {
       setC(await api.crew(id))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     }
   }, [api, id])
   useEffect(() => {
@@ -102,7 +103,7 @@ export function CrewDetail() {
       {K.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox message={error} onRetry={() => void load()} /></>
+  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
   if (c === undefined) return <Spinner rows={6} />
   if (c === null) return <>{back}<p className={s.help}>{K.notFound}</p></>
   const crew = c
@@ -238,7 +239,7 @@ function DeleteCrewSheet({ open, crew, onClose, onDeleted }: { open: boolean; cr
       onClose()
       onDeleted()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(humanError(e))
     } finally {
       setBusy(false)
     }

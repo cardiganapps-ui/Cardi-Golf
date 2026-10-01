@@ -8,13 +8,14 @@ import { t } from '../../i18n/es-MX'
 import { Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { ApiError, deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
+import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useCourses } from './useCourses'
 import a from './Admin.module.css'
 import { NumberField } from '../../components/NumberField'
+import { humanError } from '../../lib/humanError'
 
 const R = t.admin.rounds
 
@@ -50,7 +51,7 @@ export function AdminRounds() {
       await reload()
       setEditing(null)
     } catch (e) {
-      toast(e instanceof ApiError && e.code === '23505' ? R.duplicateNumber(editing.number) : e instanceof Error ? e.message : String(e))
+      toast(humanError(e, { '23505': R.duplicateNumber(editing.number) }))
     } finally {
       setBusy(false)
     }
@@ -79,7 +80,7 @@ export function AdminRounds() {
       setAsk(null)
       toast(t.common.saved)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusyId(null)
     }
@@ -92,7 +93,7 @@ export function AdminRounds() {
       await reload()
       setAsk(null)
     } catch (e) {
-      toast(e instanceof Error ? e.message : String(e))
+      toast(humanError(e))
     } finally {
       setBusyId(null)
     }
@@ -247,7 +248,7 @@ export function AdminRounds() {
                           })
                           toast(R.teeSaved)
                         } catch (err) {
-                          toast(err instanceof Error ? err.message : String(err))
+                          toast(humanError(err))
                         }
                       }}
                     >
