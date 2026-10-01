@@ -61,6 +61,12 @@ export interface FieldShape {
   groupSizes?: number[][]
   /** Entrants per game id for games with a list; defaults to every player. */
   entrants?: Record<string, number>
+  /**
+   * Rounds that exist and are not cancelled. A round added beyond the plan
+   * pays its best round and snake too, so the check counts whichever is more
+   * (MONEY-06); planned rounds not created yet still count.
+   */
+  rounds?: number
 }
 
 /** "$10,000" without Intl (the engine stays locale-free). */
@@ -75,7 +81,8 @@ export function snakePotPerGroup(settings: TournamentSettings): number {
 }
 
 export function checkPrizePool(settings: TournamentSettings, field: FieldShape): PrizeCheck {
-  const { modules, prizes, rounds } = settings
+  const { modules, prizes } = settings
+  const rounds = Math.max(settings.rounds, field.rounds ?? 0)
   const groups = field.groupsPerRound ?? Math.ceil(field.players / settings.groupSize)
   const lines: PrizeLine[] = []
 
@@ -229,5 +236,5 @@ export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): Fi
   for (const g of settings.games) {
     if (g.entrants === 'list') entrants[g.id] = (snapshot.gameEntries ?? []).filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
   }
-  return { players: snapshot.players.length, groupSizes, entrants }
+  return { players: snapshot.players.length, groupSizes, entrants, rounds: groupSizes.length }
 }

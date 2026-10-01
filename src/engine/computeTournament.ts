@@ -23,6 +23,10 @@ import type { GameContext, GameResultState } from './games/game'
 import { gamePot } from './games/payout'
 import type { GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
+import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
+
+/** "$27,500": the engine stays locale-free. */
+const peso = (n: number) => `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
 
 export interface ModuleStates {
   individual?: IndividualState
@@ -46,6 +50,10 @@ export interface StatusFlags {
   /** Enabled instance games whose type this build does not implement (an older app). */
   missingGames: string[]
   warnings: string[]
+  /** The main pot against the real field and rounds (MONEY-06); `balanced` false means prizes and entries drifted apart. */
+  pool: PrizeCheck
+  /** The warning for an unbalanced pool once past setup (also in `warnings`), for the money screens. */
+  poolWarning: string | null
 }
 
 export interface TournamentState {
@@ -79,9 +87,12 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const core = computeCore(snapshot, settings)
   const roundFinal: Record<Id, boolean> = {}
   for (const r of snapshot.rounds) roundFinal[r.id] = r.status === 'finished'
+  // Final when the Comité says so, or when every planned round exists and is
+  // finished: finishing day 1 of a two-day event whose day 2 is not created
+  // yet must not finalize it (MONEY-06).
   const tournamentFinal =
     snapshot.tournament.status === 'finished' ||
-    (core.roundIds.length > 0 && core.roundIds.every((rid) => roundFinal[rid]))
+    (core.roundIds.length > 0 && core.roundIds.length >= settings.rounds && core.roundIds.every((rid) => roundFinal[rid]))
   const ctx: ModuleContext = { snapshot, settings, core, tournamentFinal, roundFinal }
   const impls = { ...ALL_MODULES, ...opts.modules }
 
@@ -164,6 +175,20 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
   }
 
+  // The money plan against the real tournament (MONEY-06): settings are
+  // checked when saved, but a player who never shows or a round added later
+  // moves the pool. Past setup, an imbalance is a warning everyone sees.
+  const pool = checkPrizePool(settings, fieldShape(snapshot, settings))
+  const poolWarnings: string[] = []
+  const pastSetup = snapshot.tournament.status !== 'setup' || snapshot.rounds.some((r) => r.status === 'live' || r.status === 'finished')
+  if (pastSetup && snapshot.players.length > 0 && !pool.balanced) {
+    poolWarnings.push(
+      pool.difference < 0
+        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité › Torneo.`
+        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité › Torneo.`,
+    )
+  }
+
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.
   const bracket = settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
@@ -185,7 +210,9 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       discrepancies,
       missingModules,
       missingGames,
-      warnings: [...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
+      pool,
+      poolWarning: poolWarnings[0] ?? null,
     },
     tournamentFinal,
   }
