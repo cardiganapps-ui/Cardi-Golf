@@ -2002,7 +2002,7 @@ export const t = {
   },
   ceremony: {
     title: 'Ceremonia',
-    hint: 'Toca para revelar, uno por uno. Con la tele conectada se ve mejor.',
+    hint: 'Revela uno por uno; en la tele se ve mejor. Con un teclado o un control de presentación: → o espacio para avanzar, ← para regresar.',
     next: 'Siguiente',
     prev: 'Anterior',
     start: 'Empezar la ceremonia',
@@ -2022,7 +2022,8 @@ export const t = {
     trophy: 'Se lleva el Putter',
     champion: 'Campeón',
     withPoints: (pts: number) => `${pts} puntos`,
-    holesHeld: (n: number) => `${n} hoyos con la víbora`,
+    /** On a plate after «Víbora de Oro», which already says what the holes are. */
+    holesHeld: (n: number) => (n === 1 ? '1 hoyo' : `${n} hoyos`),
   },
   print: {
     print: 'Imprimir o guardar PDF',

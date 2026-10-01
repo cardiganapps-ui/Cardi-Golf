@@ -84,7 +84,7 @@ export function TvScreen() {
 
       <AnimatePresence mode="wait">
         {isAuctionNight && state.modules.auction ? (
-          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeSlow}>
             <AuctionBoard />
           </motion.section>
         ) : (
@@ -373,7 +373,7 @@ function AuctionBoard() {
       <div className={styles.side}>
         <div className={styles.potBox}>
           <span className={styles.small}>{t.auction.pot}</span>
-          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }}>
+          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }} transition={easeSlow}>
             {formatMoney(auction.pot)}
           </motion.span>
         </div>

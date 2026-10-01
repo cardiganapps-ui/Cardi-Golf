@@ -237,9 +237,12 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/styles/tokens.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1468,9 +1471,12 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "src/design/motion.test.ts",
+        "e2e/fixtures/ceremony.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1751,9 +1757,12 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3737,9 +3746,12 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },

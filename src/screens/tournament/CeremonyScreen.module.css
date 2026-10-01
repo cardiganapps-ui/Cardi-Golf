@@ -1,4 +1,12 @@
-/* Ceremonia: the board palette, one reveal at a time. Tokens only. */
+/*
+ * Ceremonia: the board palette, one reveal at a time. Tokens only.
+ *
+ * It is watched from across a dinner, so it is sized for the room the way the
+ * TV board is (VIS-06): viewport-height units with a floor for a phone and a
+ * ceiling for a 4K screen. On the reveal a name is a tenth of the screen; a
+ * step that also lists people puts the winner beside the list, and a long
+ * list runs in two columns, so no step needs scrolling on a 16:9 screen.
+ */
 .stage {
   position: fixed;
   inset: 0;
@@ -8,140 +16,210 @@
   color: var(--board-ink);
   display: flex;
   flex-direction: column;
-  padding: var(--s4);
-  padding-top: max(var(--s4), var(--safe-top));
-  gap: var(--s3);
+  padding: max(3vh, var(--safe-top)) 4vw max(3vh, var(--safe-bottom));
+  gap: 2vh;
   overflow: hidden;
+  font-size: clamp(16px, 2.2vh, 30px);
+  /* The ink ring would be 1.1:1 on the board green (A11Y-15). */
+  --focus-ring: var(--board-accent);
 }
 .header {
   display: flex;
   align-items: center;
-  gap: var(--s3);
-  padding-bottom: var(--s2);
+  gap: 2vw;
+  padding-bottom: 1.5vh;
   border-bottom: 2px solid var(--board-rule);
 }
 .logo {
-  height: 48px;
+  height: clamp(40px, min(9vh, 12vw), 120px);
   width: auto;
 }
 .title {
   color: var(--board-ink);
-  font-size: var(--fs-xl);
+  /* min() with the width keeps a phone's header a phone's size. */
+  font-size: clamp(22px, min(4.5vh, 6vw), 64px);
+  line-height: var(--lh-tight);
 }
 .sub {
+  display: block;
   color: var(--board-ink-2);
-  font-size: var(--fs-sm);
+  font-size: clamp(16px, min(3vh, 4.5vw), 44px);
   font-family: var(--font-event);
+  line-height: var(--lh-tight);
 }
 .exit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--s2);
   color: var(--board-ink-2);
+  font-size: clamp(16px, min(2.6vh, 4vw), 36px);
   text-decoration: none;
 }
 .warn {
   color: var(--board-accent);
-  font-size: var(--fs-sm);
+  font-size: clamp(14px, 2.4vh, 32px);
   text-align: center;
 }
 .body {
+  /* The leaving view is laid over the coming one (AnimatePresence popLayout), positioned from here. */
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   overflow-y: auto;
 }
 .center {
+  /* Centred while it fits; when it doesn't (a phone), it scrolls from the top instead of losing its head. */
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: var(--s4);
+  gap: 2.5vh;
   width: 100%;
-  max-width: 720px;
-  padding: var(--s2);
+  max-width: 1400px;
+  padding: 1vh 0;
 }
 .hint {
   color: var(--board-ink-2);
-  max-width: 420px;
+  max-width: 30em;
   line-height: var(--lh-body);
+  font-size: clamp(16px, 2.8vh, 40px);
 }
 .bigBtn {
-  font-size: var(--fs-lg);
-  padding: 0 var(--s8);
-  min-height: 60px;
+  font-size: clamp(18px, 3.2vh, 44px);
+  padding: 0 clamp(32px, 4vw, 96px);
+  min-height: clamp(60px, 9vh, 120px);
 }
 .stepIcon {
   display: inline-flex;
   color: var(--board-accent);
   line-height: 1;
 }
+.stepIcon svg {
+  width: clamp(48px, 7vh, 112px);
+  height: clamp(48px, 7vh, 112px);
+}
 .stepTitle {
   color: var(--board-ink);
-  font-size: clamp(1.6rem, 5vh, 3rem);
+  font-size: clamp(28px, min(6.5vh, 8vw), 96px);
+  line-height: var(--lh-tight);
 }
 .reveal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s4);
+  gap: 3vh;
+  width: 100%;
+}
+.winners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  gap: 2vh 2vw;
   width: 100%;
 }
 .winner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s2);
+  justify-content: center;
+  gap: 1.2vh;
+  min-width: 0;
   background: var(--board-surface);
   border-radius: var(--r-md);
-  padding: var(--s5) var(--s6);
-  width: 100%;
+  padding: 2.5vh 3vw;
 }
 .champion {
-  box-shadow: inset 0 0 0 2px var(--board-accent);
+  box-shadow: inset 0 0 0 3px var(--board-accent);
 }
 .avatars {
   display: flex;
-  gap: var(--s2);
+  justify-content: center;
+  gap: 1.5vw;
 }
 .avatars :global(.avatar--lg) {
-  width: clamp(72px, 14vh, 140px);
-  height: clamp(72px, 14vh, 140px);
-  font-size: clamp(1.6rem, 5vh, 3rem);
+  width: clamp(72px, 18vh, 220px);
+  height: clamp(72px, 18vh, 220px);
+  font-size: clamp(1.6rem, 7vh, 5.5rem);
 }
 .winnerLine {
+  display: block;
   font-weight: 600;
-  font-size: clamp(1.5rem, 5vh, 3rem);
+  font-size: clamp(32px, min(10vh, 9vw), 140px);
   line-height: var(--lh-tight);
+  overflow-wrap: anywhere;
 }
 .winnerSub {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1vh 1vw;
   color: var(--board-ink-2);
-  font-size: clamp(1rem, 2.6vh, 1.4rem);
+  font-size: clamp(16px, 3.4vh, 48px);
+}
+/* Each figure sits on a plate, the board's own device (DESIGN_DIRECTION, «the plate numeral»); the champion's is the leader's yellow. */
+.plate {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  background: var(--board-bg);
+  color: var(--board-ink);
+  font-size: clamp(20px, 4.2vh, 60px);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  line-height: var(--lh-tight);
+}
+.plateLeader {
+  background: var(--board-accent);
+  color: var(--board-bg);
 }
 .trophy {
+  display: block;
   color: var(--board-accent);
   font-weight: 600;
-  font-size: clamp(1rem, 2.8vh, 1.5rem);
+  font-size: clamp(18px, 3.6vh, 52px);
+}
+/* Several winners (a tie, the pairs' podium) share the row, so each is a size down. */
+.winners[data-many] .avatars :global(.avatar--lg) {
+  width: clamp(64px, 13vh, 160px);
+  height: clamp(64px, 13vh, 160px);
+  font-size: clamp(1.4rem, 5vh, 4rem);
+}
+.winners[data-many] .winnerLine {
+  font-size: clamp(28px, min(7vh, 6vw), 100px);
+}
+.extra {
+  width: 100%;
+}
+.lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 2vh 4vw;
+  width: 100%;
+  align-items: start;
 }
 .list {
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  font-size: clamp(1rem, 2.6vh, 1.4rem);
+  font-size: clamp(16px, 3.2vh, 44px);
   border-top: 1px solid var(--board-rule);
+  text-align: start;
+}
+/* Twelve people run in two columns, top to bottom, so the list fits the screen. */
+.list[data-long] {
+  columns: 2 11em;
+  column-gap: 3vw;
 }
 .listRow {
   display: flex;
   justify-content: space-between;
   gap: var(--s3);
-  padding: var(--s2) var(--s1);
+  padding: 0.7vh 0.3em;
   border-bottom: 1px solid var(--board-rule);
   font-variant-numeric: tabular-nums;
-}
-.listRule {
-  height: 2px;
-  background: var(--board-rule);
-  margin: var(--s2) 0;
+  break-inside: avoid;
 }
 .pos {
   color: var(--board-ink);
@@ -149,11 +227,34 @@
 .neg {
   color: var(--board-under);
 }
+/* A winner beside the people it is about: the snake's holder and the totals, a game's winner and its money. */
+@media (min-width: 1000px) {
+  .reveal[data-split] {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: center;
+    gap: 3vw;
+  }
+  .reveal[data-split] .winners {
+    grid-template-columns: 1fr;
+  }
+  /* The name keeps its size; the face gives way to the list. */
+  .reveal[data-split] .avatars :global(.avatar--lg) {
+    width: clamp(64px, 13vh, 160px);
+    height: clamp(64px, 13vh, 160px);
+    font-size: clamp(1.4rem, 5vh, 4rem);
+  }
+}
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s2);
+}
+.footer :global(.btn) {
+  font-size: clamp(16px, 2.6vh, 36px);
+  min-height: clamp(48px, 7vh, 96px);
+  padding: 0 clamp(16px, 2.5vw, 48px);
 }
 .footer :global(.btn--ghost),
 .footer :global(.btn--secondary),
@@ -166,6 +267,7 @@
 }
 .progress {
   color: var(--board-ink-2);
+  font-size: clamp(16px, 2.6vh, 36px);
   font-variant-numeric: tabular-nums;
 }
 .footer :global(.btn:disabled) {

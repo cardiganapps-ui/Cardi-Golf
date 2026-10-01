@@ -68,7 +68,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "Sin señal · 3 hoyos
 ## 7. Ceremonia y liquidación final
 
 1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
-2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
+2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero. Con una laptop conectada a la tele, un teclado o un control de presentación lo lleva solo: → (o espacio, o el botón de avanzar del control) revela y luego pasa al siguiente; ← regresa.
 3. **Dinero › Liquidación**: con el torneo terminado es una sola lista, solo con lo que falta por pagar: lo que ya se marcó como pagado (inscripciones y martillazos del jueves) no se vuelve a pedir. "Vía banco": cada quien queda a mano con el banquero en una línea (sus premios menos lo que todavía deba), más recompras y apuestas directas. "Sin banco": la lista mínima de transferencias entre personas; lo que ya entró al banco lo reparte el banquero. Toca **Marcar pagado** conforme se pague: la línea desaparece, y el aviso trae **Deshacer** por si fue un error. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
 4. **Más › Estadísticas y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
 

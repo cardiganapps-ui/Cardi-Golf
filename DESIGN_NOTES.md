@@ -177,3 +177,11 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.
 - `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.
 - `AdminScores.tsx`: tiebreaks and disputes are filtered to the selected round; pending items in other rounds are invisible. `AdminGroups.tsx` re-derives pair warnings the engine already exposes in `flags.warnings`. Nobody reads `flags.incompleteRounds`, `unsignedCards` or `missingModules`.
+
+## Ceremonia at room scale (2026-10-01, VIS-06, MOT-01, MOT-23, A11Y-15)
+
+- **Sized like the TV.** Every size is in viewport height with a phone floor and a 4K ceiling (`clamp(…px, …vh, …px)`), and the header uses `min(vh, vw)` so a phone keeps a phone's header. At 1920×1080 a revealed name is 108 px (10vh), a step title 70 px, the event name 32 px, the controls 28 px; several winners on one step (a tie, the pairs' podium) share the row a size down. Every step fits a 16:9 screen with no scrolling: a winner and the list it belongs to sit side by side, and a list of more than six people runs in two columns.
+- **Plates.** The figures of a reveal (points, money, holes) sit on plates, the board's device from the direction; the champion's are the leader's yellow.
+- **The event's accent** is set on the stage like every other screen of the tournament.
+- **The reveal is a sequence** (`REVEAL` in `src/design/motion.ts`): the faces, the name 0.25 s later, the figures counting up from 0.5 s (`CountUp`, 0.9 s), and the champion's trophy line with one burst of confetti at 1.4 s. Reduced motion: everything at once, no count, no confetti. Steps cross-fade (`AnimatePresence mode="popLayout"`), so the stage is never blank, and every `motion` element names its transition (`motion.test.ts` fails one that doesn't).
+- **The focus ring is a token**, `--focus-ring` (graphite); board surfaces (TV, Ceremonia, `.card--deep`) set it to `--board-accent`, since graphite on board green is 1.1:1.

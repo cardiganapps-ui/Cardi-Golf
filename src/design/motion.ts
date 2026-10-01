@@ -29,3 +29,12 @@ export const easeSlow = { duration: DUR_SLOW, ease: EASE } as const
 
 /** Delay the nth item of a staggered reveal, without stretching the whole list. */
 export const stagger = (i: number, step = DUR_FAST) => ({ ...ease, delay: i * step })
+
+/**
+ * The ceremony's reveal (MOT-23), the one orchestrated moment the direction
+ * allows: the faces land, a beat later the name, then the figures count up,
+ * and the champion's trophy line and confetti arrive as the count ends.
+ * Seconds from «Revelar»; each further winner of a step starts `nextWinner`
+ * later.
+ */
+export const REVEAL = { name: DUR_SLOW, figures: DUR_SLOW * 2, countUp: 0.9, trophy: DUR_SLOW * 2 + 0.9, nextWinner: 0.3 } as const

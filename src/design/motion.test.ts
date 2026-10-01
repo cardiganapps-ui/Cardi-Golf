@@ -56,4 +56,32 @@ describe('motion tokens', () => {
     }
     expect(offenders).toEqual([])
   })
+
+  it('every animated element names its transition (MOT-01)', () => {
+    // With no `transition`, Motion falls back to its own defaults: an
+    // underdamped spring for x/y/scale (a 12% overshoot on Ceremonia) and a
+    // 0.3 s fade, neither of them a token.
+    const src = join(new URL('..', import.meta.url).pathname)
+    const offenders: string[] = []
+    for (const file of walk(src)) {
+      if (!file.endsWith('.tsx')) continue
+      const text = readFileSync(file, 'utf8')
+      for (const m of text.matchAll(/<motion\.\w+\b/g)) {
+        // The opening tag runs to the first `>` outside braces.
+        let depth = 0
+        let end = m.index! + m[0].length
+        for (; end < text.length; end++) {
+          const c = text[end]
+          if (c === '{') depth++
+          else if (c === '}') depth--
+          else if (c === '>' && depth === 0) break
+        }
+        const tag = text.slice(m.index!, end)
+        if (/\b(initial|animate|exit)=/.test(tag) && !/\btransition=/.test(tag)) {
+          offenders.push(`${file.slice(src.length)}:${text.slice(0, m.index!).split('\n').length}`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
 })
