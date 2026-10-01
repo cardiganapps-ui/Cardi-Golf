@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { fetchWithTimeout } from './fetchWithTimeout'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -25,6 +26,8 @@ export function supabase(): SupabaseClient {
         storageKey: 'cardi-golf-auth',
       },
       realtime: { params: { eventsPerSecond: 10 } },
+      // Every REST, RPC, auth and storage call gets a deadline (REL-14).
+      global: { fetch: fetchWithTimeout },
     })
   }
   return client
