@@ -71,6 +71,26 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(screen.getByText(W.shareLater).closest('summary')!.querySelector('svg')).toBeTruthy()
   })
 
+  it('the code\'s hint says whom to wait for: the players (N10)', async () => {
+    await createWithDays('1')
+    const later = screen.getByText(W.shareLater).closest('details')!
+    expect(within(later).getByText(/^Compártelo cuando los jugadores ya estén dados de alta: /)).toBeTruthy()
+  })
+
+  it('the format step says where teams and fourball pairs are drawn: Comité › Equipos', () => {
+    render(
+      <MemoryRouter>
+        <NewTournamentScreen />
+      </MemoryRouter>,
+    )
+    fireEvent.change(screen.getByPlaceholderText(W.namePlaceholder), { target: { value: 'Viaje a Valle' } })
+    fireEvent.click(screen.getByRole('button', { name: t.common.next }))
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${W.formats.team.name}`) }))
+    expect(screen.getByText('Los equipos se arman en Comité › Equipos.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${W.formats.matchPlay.name}`) }))
+    expect(screen.getByText(/Las parejas se arman en Comité › Equipos\.$/)).toBeTruthy()
+  })
+
   it('if the rounds can\'t be created the tournament still is, and the Comité lists what is missing', async () => {
     api.upsertRound.mockRejectedValue(new Error('sin señal'))
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)

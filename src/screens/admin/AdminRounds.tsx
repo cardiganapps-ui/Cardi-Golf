@@ -100,6 +100,9 @@ export function AdminRounds() {
   }
 
   const courseTees = (courseId: string | null) => data!.snapshot.courses.find((c) => c.id === courseId)?.tees ?? []
+  // A tee chosen for the day stays when the round's course changes: «Tees» shows while any is set, so it can be put back to «Por defecto».
+  const hasRoundTees = (rid: string) => data!.snapshot.roundTees.some((x) => x.roundId === rid)
+  const teeName = (teeId: string) => data!.snapshot.courses.flatMap((c) => c.tees).find((tee) => tee.id === teeId)?.name ?? null
   const pendingFor = (rid: string) => flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length + flags.discrepancies.filter((d) => d.roundId === rid).length + flags.unsignedCards.filter((u) => u.roundId === rid).length
 
   const askBody = ask
@@ -160,7 +163,7 @@ export function AdminRounds() {
               <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ id: r.id, number: r.number, date: r.date ?? '', course_id: r.courseId ?? '', holes: r.holes })}>
                 {t.common.edit}
               </button>
-              {courseTees(r.courseId).length > 1 && (
+              {(courseTees(r.courseId).length > 1 || hasRoundTees(r.id)) && (
                 <button className="btn btn--ghost btn--sm" type="button" onClick={() => setTeesFor(r)}>
                   {R.tees}
                 </button>
@@ -228,6 +231,7 @@ export function AdminRounds() {
           <div className={a.rows}>
             {players.map((p) => {
               const rt = data!.snapshot.roundTees.find((x) => x.roundId === teesFor.id && x.playerId === p.id)
+              const otherCourse = rt && !courseTees(teesFor.courseId).some((tee) => tee.id === rt.teeId) ? rt : null
               return (
                 <div key={p.id} className={a.row}>
                   <span className={a.rowText} style={undefined}>
@@ -253,6 +257,7 @@ export function AdminRounds() {
                       }}
                     >
                       <option value="">{R.teeDefault}</option>
+                      {otherCourse && <option value={otherCourse.teeId}>{R.teeOtherCourse(teeName(otherCourse.teeId))}</option>}
                       {courseTees(teesFor.courseId).map((tee) => (
                         <option key={tee.id} value={tee.id}>
                           {tee.name}

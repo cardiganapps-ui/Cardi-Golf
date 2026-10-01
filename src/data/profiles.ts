@@ -8,6 +8,7 @@ import { create } from 'zustand'
 import { withTimeout } from '../lib/timeout'
 import { supabase } from '../lib/supabase'
 import { ApiError } from './api'
+import { entryChanged } from './entryEvents'
 import { humanError } from '../lib/humanError'
 import { downscaleImage } from '../lib/images'
 import { whsIndex10, whsRule } from '../engine/profile/whs'
@@ -249,11 +250,17 @@ export const profileCard = (handle: string) => rpc<ProfileCard | null>('profile_
 export const searchProfiles = (q: string) => rpc<ProfileHit[]>('search_profiles', { q })
 export const myLinks = () => rpc<MyLink[]>('my_links')
 export const tournamentProfiles = (tournamentId: string) => rpc<TournamentProfile[]>('tournament_profiles', { tid: tournamentId })
-export const linkMyProfile = (playerId: string) => rpc<LinkResult>('link_my_profile', { p_player_id: playerId })
-export const unlinkMyProfile = (playerId: string) => rpc<boolean>('unlink_my_profile', { p_player_id: playerId })
-export const comiteLinkProfile = (playerId: string, handle: string) => rpc<LinkResult>('comite_link_profile', { p_player_id: playerId, p_handle: handle })
-export const comiteUnlinkProfile = (playerId: string) => rpc<void>('comite_unlink_profile', { p_player_id: playerId })
-export const redeemLinkToken = (token: string) => rpc<LinkResult>('redeem_link_token', { p_token: token })
+/** A write that links or unlinks a player: who can get in without a PIN changed, so «Para empezar» asks again. */
+async function linkRpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  const data = await rpc<T>(fn, args)
+  entryChanged()
+  return data
+}
+export const linkMyProfile = (playerId: string) => linkRpc<LinkResult>('link_my_profile', { p_player_id: playerId })
+export const unlinkMyProfile = (playerId: string) => linkRpc<boolean>('unlink_my_profile', { p_player_id: playerId })
+export const comiteLinkProfile = (playerId: string, handle: string) => linkRpc<LinkResult>('comite_link_profile', { p_player_id: playerId, p_handle: handle })
+export const comiteUnlinkProfile = (playerId: string) => linkRpc<void>('comite_unlink_profile', { p_player_id: playerId })
+export const redeemLinkToken = (token: string) => linkRpc<LinkResult>('redeem_link_token', { p_token: token })
 export const profileRounds = (handle: string) => rpc<RoundResult[]>('profile_rounds', { p_handle: handle })
 export const profileTournaments = (handle: string) => rpc<ProfileTournament[]>('profile_tournaments', { p_handle: handle })
 export const myMoney = () => rpc<MoneyLine[]>('my_money')

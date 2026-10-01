@@ -38,4 +38,29 @@ test('under way, the card prepares the next day, and its groups line opens Grupo
   await expect(page).toHaveURL(/\/admin\/grupos\?ronda=r2$/)
   // Grupos starts on the current round (day 1) unless told otherwise.
   await expect(page.getByRole('tab', { name: t.round.day(2) })).toHaveAttribute('aria-selected', 'true')
+  // Another day: the address follows, in place, so Back returns to Torneo and not to day 2 (N9).
+  await page.getByRole('tab', { name: t.round.day(1) }).click()
+  await expect(page).toHaveURL(/\/admin\/grupos\?ronda=r1$/)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/admin\/torneo$/)
+})
+
+test('a design fixture asks no server: everything done reads «Listo para jugar», and the tab counts nothing (N4)', async ({ page }) => {
+  const asked: string[] = []
+  page.on('request', (r) => {
+    if (/players_with_pin|tournament_profiles/.test(r.url())) asked.push(r.url())
+  })
+  await open(page, '/t/_/minimal4-setup/admin/torneo')
+  await expect(page.getByText(R.allSet('jugadores, PIN, rondas, campo y grupos'))).toBeVisible()
+  await expect(page.getByRole('link', { name: t.admin.sections.tournament, exact: true })).toBeVisible()
+  expect(asked).toEqual([])
+})
+
+test('a knockout that needs more days than the tournament has: the line opens Torneo on Reglas, where the days are (N7)', async ({ page }) => {
+  await open(page, '/t/_/match8/admin/torneo')
+  await page.getByRole('link', { name: `${R.todoLabel}: ${R.bracketDays(3, 1)}` }).click()
+  // The tab is opened and the address put back, so the same line works again.
+  await expect(page.getByRole('tab', { name: t.admin.tournament.tabs.rules })).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(/\/admin\/torneo$/)
+  await expect(page.getByRole('group', { name: W.rounds })).toBeVisible()
 })

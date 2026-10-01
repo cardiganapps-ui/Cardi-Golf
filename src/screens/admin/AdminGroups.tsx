@@ -39,10 +39,12 @@ export function AdminGroups() {
   const reload = useTournament((s) => s.reload)
   const { snapshot, state, settings } = data
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
-  // «Para empezar» opens Grupos on the day it is about (?ronda=), otherwise the current one.
-  const [params] = useSearchParams()
+  // «Para empezar» opens Grupos on the day it is about (?ronda=), otherwise the current one, else the first.
+  // A day that is not there (a bad link, a cancelled day, even a cancelled current one) is skipped.
+  const [params, setParams] = useSearchParams()
   const asked = params.get('ronda')
-  const [roundId, setRoundId] = useState<string>((asked && rounds.some((r) => r.id === asked) ? asked : null) ?? snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
+  const playable = (id: string | null) => (id && rounds.some((r) => r.id === id) ? id : null)
+  const [roundId, setRoundId] = useState<string>(playable(asked) ?? playable(snapshot.tournament.currentRoundId) ?? rounds[0]?.id ?? '')
   const round = rounds.find((r) => r.id === roundId) ?? null
   const [drafts, setDrafts] = useState<DraftGroup[] | null>(null)
   const [picking, setPicking] = useState<number | null>(null)
@@ -146,13 +148,26 @@ export function AdminGroups() {
     setDrafts(next)
   }
 
+  /** The day shown is the day in the address, so a reload or Back does not jump to another (replaced, not a new history entry). */
+  function showRound(id: string) {
+    setRoundId(id)
+    setDrafts(null)
+    setParams(
+      (p) => {
+        const q = new URLSearchParams(p)
+        q.set('ronda', id)
+        return q
+      },
+      { replace: true },
+    )
+  }
+
   function switchRound(id: string) {
     if (drafts && id !== roundId) {
       setLeaveTo(id)
       return
     }
-    setRoundId(id)
-    setDrafts(null)
+    showRound(id)
   }
 
   async function save() {
@@ -278,10 +293,7 @@ export function AdminGroups() {
         danger
         confirmLabel={t.common.confirm}
         onConfirm={() => {
-          if (leaveTo) {
-            setRoundId(leaveTo)
-            setDrafts(null)
-          }
+          if (leaveTo) showRound(leaveTo)
           setLeaveTo(null)
         }}
         onClose={() => setLeaveTo(null)}

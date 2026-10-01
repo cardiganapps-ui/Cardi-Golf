@@ -10,7 +10,7 @@
  * prize changed under Dinero save together, exactly as before.
  */
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
 import { publishFromStore } from '../../data/publish'
@@ -38,6 +38,8 @@ const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
 type Tab = 'brand' | 'status' | SettingsSection | 'danger'
 const TABS: Array<{ id: Tab }> = [{ id: 'brand' }, { id: 'status' }, { id: 'rules' }, { id: 'games' }, { id: 'money' }, { id: 'auction' }, { id: 'danger' }]
 const isSettingsTab = (x: Tab): x is SettingsSection => x === 'rules' || x === 'games' || x === 'money' || x === 'auction'
+/** The tabs a link may open (`?pestana=`). */
+const TAB_PARAM: Record<string, Tab> = { reglas: 'rules' }
 
 export function AdminTournament() {
   const { tournamentId, slug, me, refresh } = useTournamentCtx()
@@ -55,7 +57,24 @@ export function AdminTournament() {
   const [quick, setQuick] = useState(false)
   const [askCode, setAskCode] = useState(false)
   const [confirmName, setConfirmName] = useState('')
-  const [tab, setTab] = useState<Tab>('brand')
+  // «Para empezar» opens a tab by name (?pestana=reglas, where the days are). Read, then dropped, so the same line works again.
+  const [params, setParams] = useSearchParams()
+  const asked = TAB_PARAM[params.get('pestana') ?? ''] ?? null
+  const [tab, setTab] = useState<Tab>(asked ?? 'brand')
+  const tabsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!asked) return
+    setTab(asked)
+    tabsRef.current?.scrollIntoView?.({ block: 'start' })
+    setParams(
+      (p) => {
+        const q = new URLSearchParams(p)
+        q.delete('pestana')
+        return q
+      },
+      { replace: true },
+    )
+  }, [asked, setParams])
   const fileRef = useRef<HTMLInputElement>(null)
   const A = t.admin.tournament
   const link = `${window.location.origin}/t/${slug}`
@@ -207,7 +226,7 @@ export function AdminTournament() {
       ))}
       <ReadinessCard />
 
-      <div className={styles.tabs} role="tablist" aria-label={A.sections}>
+      <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label={A.sections}>
         {TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => (
           <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className={`${styles.tab} ${tab === x.id ? styles.tabOn : ''}`} onClick={() => setTab(x.id)}>
             {A.tabs[x.id]}

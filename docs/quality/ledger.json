@@ -3448,6 +3448,10 @@
       "tests": [
         "src/screens/admin/readiness.test.ts",
         "src/screens/admin/ReadinessCard.test.tsx",
+        "src/screens/admin/AdminGroups.test.tsx",
+        "src/screens/admin/AdminRounds.test.tsx",
+        "src/screens/admin/AdminTeams.test.tsx",
+        "src/data/entryEvents.test.ts",
         "src/screens/organizer/NewTournamentScreen.test.tsx",
         "e2e/fixtures/ready.spec.ts"
       ],

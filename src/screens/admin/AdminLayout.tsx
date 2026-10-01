@@ -11,12 +11,14 @@ import { EmptyState } from '../../components/primitives'
 import { PlatformBanner } from '../tournament/PlatformBanner'
 import styles from './AdminLayout.module.css'
 import { useEntryInfo } from './entryInfo'
-import { readiness, setupBadge } from './readiness'
+import { readiness, setupBadge, teamPlay } from './readiness'
 
 export function AdminLayout() {
   const { me, slug, tournamentId } = useTournamentCtx()
   const data = useTournament((s) => s.data)
-  const entry = useEntryInfo(tournamentId, data?.snapshot.players.map((p) => p.id) ?? [])
+  // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
+  const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
+  const entry = useEntryInfo(tournamentId, data?.snapshot.players, { enabled: setup })
   if (!me.isAdmin) {
     return (
       <div className={styles.layout}>
@@ -39,11 +41,10 @@ export function AdminLayout() {
   const hot = (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0)
   const scoresBadge = hot + (flags?.unsignedCards.length ?? 0)
   const roundsBadge = flags?.incompleteRounds.length ?? 0
-  // While it is being set up, the tab counts what «Para empezar» lists, and each engine warning it does not already cover.
-  const setup = data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
-  const tournamentBadge = setup
-    ? setupBadge(readiness(data.snapshot, data.settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: data.state.bracket }), flags?.warnings ?? [], flags?.missingModules.length ?? 0)
-    : (flags?.warnings.length ?? 0) + (flags?.missingModules.length ?? 0)
+  const tournamentBadge =
+    setup && data
+      ? setupBadge(readiness(data.snapshot, data.settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: data.state.bracket }), flags?.warnings ?? [], flags?.missingModules.length ?? 0)
+      : (flags?.warnings.length ?? 0) + (flags?.missingModules.length ?? 0)
   const S = t.admin.sections
   const sections: Array<{ to: string; label: string; badge?: number; hot?: boolean; show?: boolean }> = [
     { to: 'torneo', label: S.tournament, badge: tournamentBadge },
@@ -55,7 +56,7 @@ export function AdminLayout() {
     { to: 'scores', label: S.scores, badge: scoresBadge, hot: hot > 0 },
     { to: 'calcutta', label: S.auction, show: settings?.modules.auction.enabled ?? true },
     { to: 'parejas', label: S.draw, show: settings?.modules.pairs.enabled ?? true },
-    { to: 'equipos', label: S.teams, show: settings?.modules.individual.format === 'team' },
+    { to: 'equipos', label: S.teams, show: !!settings && teamPlay(settings) != null },
     { to: 'juegos', label: S.games, show: (settings?.games.length ?? 0) > 0 },
     { to: 'historial', label: S.history },
     { to: 'datos', label: S.data },
@@ -80,7 +81,7 @@ export function AdminLayout() {
               <NavLink key={s.to} to={`/t/${slug}/admin/${s.to}`} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}>
                 {s.label}
                 {s.badge ? (
-                  <span className={`${styles.badge} ${s.hot ? styles.badgeHot : ''}`} aria-label={`${s.badge} ${t.admin.inbox.title.toLowerCase()}`}>
+                  <span className={`${styles.badge} ${s.hot ? styles.badgeHot : ''}`} aria-label={t.admin.inbox.count(s.badge)}>
                     {s.badge}
                   </span>
                 ) : null}
