@@ -29,7 +29,8 @@ export default defineConfig({
     isMobile: true,
   },
   webServer: {
-    command: `npm run build:fixtures && npx vite preview --outDir dist-fixtures --port ${PORT} --strictPort`,
+    // Bound to 127.0.0.1 on purpose: on the CI runner `localhost` resolves to ::1 only, and the wait below never saw the server.
+    command: `npm run build:fixtures && npx vite preview --outDir dist-fixtures --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}/fixture`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
