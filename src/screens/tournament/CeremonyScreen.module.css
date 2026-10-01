@@ -3,9 +3,10 @@
  *
  * It is watched from across a dinner, so it is sized for the room the way the
  * TV board is (VIS-06): viewport-height units with a floor for a phone and a
- * ceiling for a 4K screen. On the reveal a name is a tenth of the screen; a
- * step that also lists people puts the winner beside the list, and a long
- * list runs in two columns, so no step needs scrolling on a 16:9 screen.
+ * ceiling for a 4K screen. On the reveal a name is a tenth of the screen. A
+ * step's title sits at the top and its reveal fills the room under it; a step
+ * that lists people puts the winner beside the list, and the list pages to
+ * the screen. Nothing scrolls.
  */
 .stage {
   position: fixed;
@@ -69,8 +70,29 @@
   display: flex;
   overflow-y: auto;
 }
+/* A step: its title at the top, the reveal filling the room under it. */
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2vh;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1vh 0;
+}
+.area {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+/* The start and the end. */
 .center {
-  /* Centred while it fits; when it doesn't (a phone), it scrolls from the top instead of losing its head. */
   margin: auto;
   display: flex;
   flex-direction: column;
@@ -112,6 +134,14 @@
   align-items: center;
   gap: 3vh;
   width: 100%;
+}
+/* A reveal without a list that would not fit is drawn smaller (--fit, set by the screen) rather than scrolled. */
+.reveal[data-fit] {
+  zoom: var(--fit, 1);
+}
+.reveal[data-list] {
+  flex: 1;
+  min-height: 0;
 }
 .winners {
   display: grid;
@@ -191,35 +221,58 @@
 .winners[data-many] .winnerLine {
   font-size: clamp(28px, min(7vh, 6vw), 100px);
 }
-.extra {
+.aside {
   width: 100%;
 }
-.lists {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
-  gap: 2vh 4vw;
+/* The list takes the height left; it pages to it (PagedList), so it never scrolls. */
+.listArea,
+.paged {
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+}
+.listBox {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
 }
 .list {
+  display: grid;
+  column-gap: 3vw;
   width: 100%;
   font-size: clamp(16px, 3.2vh, 44px);
+  line-height: 1.3;
   border-top: 1px solid var(--board-rule);
   text-align: start;
-}
-/* Twelve people run in two columns, top to bottom, so the list fits the screen. */
-.list[data-long] {
-  columns: 2 11em;
-  column-gap: 3vw;
 }
 .listRow {
   display: flex;
   justify-content: space-between;
   gap: var(--s3);
-  padding: 0.7vh 0.3em;
+  min-width: 0;
+  padding: 0.5vh 0.3em;
   border-bottom: 1px solid var(--board-rule);
   font-variant-numeric: tabular-nums;
-  break-inside: avoid;
+}
+/* One line per row, so every row is as tall as the first and the page count is exact. */
+.listName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* «1–24 de 60» when the list takes more than one page. */
+.range {
+  color: var(--board-ink-2);
+  font-size: clamp(14px, 2.4vh, 32px);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  padding-top: 0.6vh;
 }
 .pos {
   color: var(--board-ink);
@@ -227,13 +280,29 @@
 .neg {
   color: var(--board-under);
 }
+/* A phone stacks the winner over the list: the list grows and the screen scrolls, rather than paging a row at a time. */
+@media (max-width: 999px) {
+  .reveal[data-list],
+  .listArea,
+  .paged,
+  .listBox {
+    flex: none;
+  }
+  .listBox {
+    overflow: visible;
+  }
+}
 /* A winner beside the people it is about: the snake's holder and the totals, a game's winner and its money. */
 @media (min-width: 1000px) {
   .reveal[data-split] {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 1fr);
     align-items: center;
     gap: 3vw;
+  }
+  .reveal[data-split] .listArea {
+    align-self: stretch;
   }
   .reveal[data-split] .winners {
     grid-template-columns: 1fr;

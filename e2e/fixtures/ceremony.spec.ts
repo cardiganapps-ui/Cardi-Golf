@@ -2,7 +2,8 @@
  * Ceremonia on the TV at the dinner.
  * - VIS-06: sized for the room (it was a phone dialog: a 14 px event name, a
  *   48 px step title, a champion card a fifth of the screen), in the event's
- *   accent, the figures on plates, and every step fits a 16:9 screen.
+ *   accent, the figures on plates, and every step fits a 16:9 screen: a long
+ *   list pages to it (60 people) instead of scrolling.
  * - UX-18: a keyboard or a presentation clicker runs the whole show, one key
  *   per beat; Space on a focused button is that button's press, not two beats.
  * - MOT-23: the champion's reveal is a sequence (the name, then the figures
@@ -27,18 +28,51 @@ test.use({ isMobile: false, hasTouch: false, deviceScaleFactor: 1 })
 const px = (page: Page, selector: string) => page.locator(selector).first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`
 
-/** Where the show is: the step's title, «n / N», and whether «Revelar» is still waiting. */
+/** The views on the stage: the start, a step, the end (two while one leaves). */
+const VIEWS = '[class*="_center_"], [class*="_step_"]'
+
+/** Where the show is: the step's title, «n / N», whether «Revelar» is still waiting, and the list's page. */
 async function where(page: Page) {
-  return page.evaluate((reveal) => {
-    const centers = document.querySelectorAll('[class*="_center_"]')
-    const c = centers[centers.length - 1]
+  return page.evaluate(
+    ([reveal, views]) => {
+      const all = document.querySelectorAll(views)
+      const c = all[all.length - 1]
+      const range = document.querySelector<HTMLElement>('[class*="_range_"]')
+      return {
+        title: c?.querySelector('h2')?.textContent ?? null,
+        progress: document.querySelector('[class*="_progress_"]')?.textContent ?? '',
+        waiting: Array.from(document.querySelectorAll('button')).some((b) => b.textContent === reveal),
+        range: range && range.style.visibility !== 'hidden' ? range.textContent : '',
+        settled: all.length === 1,
+      }
+    },
+    [C.reveal, VIEWS] as const,
+  )
+}
+
+/**
+ * Nothing to scroll, nothing cut off, nothing spilling: the stage holds the
+ * whole step, the reveal sits inside the room under the title (an overfull
+ * one spills over the title rather than growing the page), and every row of a
+ * list is inside its box.
+ */
+async function fits(page: Page) {
+  return page.evaluate(() => {
+    const body = document.querySelector('[class*="_body_"]')!
+    const area = document.querySelector<HTMLElement>('[data-area]')
+    const reveal = area?.querySelector('[class*="_reveal_"]')
+    const box = document.querySelector('[class*="_listBox_"]')
+    const bottom = box?.getBoundingClientRect().bottom ?? Infinity
+    const a = area?.getBoundingClientRect()
+    const r = reveal?.getBoundingClientRect()
     return {
-      title: c?.querySelector('h2')?.textContent ?? null,
-      progress: document.querySelector('[class*="_progress_"]')?.textContent ?? '',
-      waiting: Array.from(document.querySelectorAll('button')).some((b) => b.textContent === reveal),
-      settled: centers.length === 1,
+      over: body.scrollHeight - body.clientHeight,
+      wide: document.documentElement.scrollWidth - innerWidth,
+      spill: a && r ? Math.max(0, a.top - r.top, r.bottom - a.bottom) : 0,
+      cut: box ? Array.from(box.querySelectorAll('[class*="_listRow_"]')).filter((row) => row.getBoundingClientRect().bottom > bottom + 0.5).length : 0,
+      zoom: area?.style.getPropertyValue('--fit') || '1',
     }
-  }, C.reveal)
+  })
 }
 
 /** Press a key and wait until the show has moved and the last view has left. */
@@ -87,10 +121,14 @@ for (const [w, h] of ROOMS) {
       if (now.waiting) continue
       revealed++
       const label = `step «${now.title}»`
-      // The whole step is on screen: nothing to scroll on a TV.
-      const fit = await page.locator('[class*="_body_"]').evaluate((el) => ({ over: el.scrollHeight - el.clientHeight, wide: document.documentElement.scrollWidth - innerWidth }))
+      // The whole step is on screen at full size: nothing to scroll on a TV, nothing drawn smaller, no list paged.
+      const fit = await fits(page)
       expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
       expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
+      expect(fit.cut, `${label}: rows cut off`).toBe(0)
+      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+      expect(fit.zoom, `${label}: drawn smaller`).toBe('1')
+      expect(now.range, `${label}: paged`).toBe('')
       expect(await px(page, 'h2'), `${label}: title`).toBeGreaterThanOrEqual(6 * vh)
       const lines = await page.locator('[class*="_winnerLine_"]').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
       for (const size of lines) expect(size, `${label}: a winner's name`).toBeGreaterThanOrEqual((lines.length > 1 ? 6.5 : 9.5) * vh)
@@ -124,6 +162,51 @@ for (const [w, h] of ROOMS) {
     now = await beat(page, ' ')
     expect(now.progress).toBe(`${total} / ${total}`)
     expect(now.waiting).toBe(true)
+    expect(pageErrors).toEqual([])
+  })
+}
+
+for (const [w, h] of ROOMS) {
+  test(`${w}×${h}, a field of 60: every step fits, and a long list pages to the screen instead of scrolling`, async ({ page, pageErrors }) => {
+    test.setTimeout(180_000)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto('/t/_/large60/ceremonia', { waitUntil: 'networkidle' })
+    let pages = 0
+    let lastShown = 0
+    let field = 0
+    for (let i = 0; i < 150; i++) {
+      const now = await beat(page, 'ArrowRight')
+      if (now.title === C.done) break
+      if (now.waiting) continue
+      const label = `step «${now.title}» ${now.range}`
+      const fit = await fits(page)
+      expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
+      expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
+      expect(fit.cut, `${label}: rows cut off`).toBe(0)
+      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+      if (now.title !== C.steps.money) continue
+      // The money summary, page by page: «1–24 de 60», «25–48 de 60»… each row once, none skipped.
+      const [, from, to, of] = /(\d+)–(\d+) de (\d+)/.exec(now.range) ?? []
+      expect(Number(from), label).toBe(lastShown + 1)
+      expect(await page.locator('[class*="_listBox_"] [class*="_listRow_"]').count(), label).toBe(Number(to) - Number(from) + 1)
+      lastShown = Number(to)
+      field = Number(of)
+      pages++
+    }
+    expect(field).toBe(60)
+    expect(lastShown).toBe(60)
+    expect(pages).toBeGreaterThan(1)
+    // ← steps back through the pages before it leaves the step.
+    let now = await beat(page, 'ArrowLeft')
+    expect(now.title).toBe(C.steps.money)
+    now = await beat(page, 'ArrowRight')
+    expect(now.range).toMatch(/^1–/)
+    now = await beat(page, 'ArrowRight')
+    expect(now.range).not.toMatch(/^1–/)
+    now = await beat(page, 'ArrowLeft')
+    expect(now.range).toMatch(/^1–/)
+    expect(now.title).toBe(C.steps.money)
     expect(pageErrors).toEqual([])
   })
 }
@@ -186,7 +269,7 @@ test('between steps the stage is never blank, and nothing bounces past its place
     const out: Array<{ shown: number; titles: string[]; ys: number[] }> = []
     const t0 = performance.now()
     while (performance.now() - t0 < 700) {
-      const centers = Array.from(document.querySelectorAll('[class*="_center_"]'))
+      const centers = Array.from(document.querySelectorAll('[class*="_center_"], [class*="_step_"]'))
       out.push({
         // How much of a view is on screen: the most opaque of the leaving and the coming one.
         shown: Math.max(0, ...centers.map((c) => Number(getComputedStyle(c).opacity))),
