@@ -2145,9 +2145,11 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 83,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2201,9 +2203,16 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 83,
+      "tests": [
+        "src/data/mappers.test.ts",
+        "src/data/tournamentStore.test.ts",
+        "src/data/tournamentStore.reconnect.test.ts",
+        "src/data/snapshotCache.test.ts",
+        "src/data/paged.test.ts",
+        "src/data/snapshot.golden.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
