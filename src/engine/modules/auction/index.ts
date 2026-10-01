@@ -41,6 +41,12 @@ export interface SlotResult {
   playerIds: Id[]
   /** Pot × share (before rounding to owners). */
   amount: number
+  /**
+   * Each player's fraction of the slot, when it is not an even split: two
+   * teams of different sizes tied for a place split it per team first, then
+   * among each team's players. Absent: even between `playerIds`.
+   */
+  weights?: Record<Id, number>
   /** Nobody qualifies (no player of that tier, or every candidate already cashed a higher slot): the money stays with the banker until the Comité decides. */
   unfilled: boolean
   why: Explanation
@@ -145,8 +151,12 @@ export function ownerHoldings(lots: LotState[], ctx: ModuleContext): Record<Id, 
 export function assignSlots(
   ctx: ModuleContext,
   pot: number,
-  /** `places`: finishing places the group fills (its entrants: a team is one); defaults to one per member. */
-  groups: Array<{ position: number; members: Id[]; places?: number }>,
+  /**
+   * `places`: finishing places the group fills (its entrants: a team is one),
+   * default one per member. `entrants`: each entrant's players, so a tie
+   * between teams splits per team.
+   */
+  groups: Array<{ position: number; members: Id[]; places?: number; entrants?: Id[][] }>,
 ): SlotResult[] {
   const { settings, snapshot } = ctx
   const tierOf = new Map(snapshot.players.map((p) => [p.id, p.tier]))
@@ -174,6 +184,10 @@ export function assignSlots(
         continue
       }
       const places = placesOf(g!)
+      // Teams: a tied place goes per team, then per player within each team.
+      const teams = (g!.entrants ?? []).map((e) => e.filter((m) => members.includes(m))).filter((e) => e.length)
+      const uneven = teams.length > 1 && new Set(teams.map((e) => e.length)).size > 1
+      const weights = uneven ? Object.fromEntries(teams.flatMap((e) => e.map((m) => [m, 1 / teams.length / e.length]))) : undefined
       const steps =
         places === 1
           ? [
@@ -182,9 +196,11 @@ export function assignSlots(
             ]
           : [
               `Empate a ${places} en el ${g!.position}º: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
-              `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
+              uneven
+                ? `${pct(share)} ÷ ${teams.length} equipos = ${pct(share / teams.length)} por equipo, repartido entre sus jugadores`
+                : `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
             ]
-      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), unfilled: false, why: { title: label, steps } })
+      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -243,8 +259,8 @@ export function payoutsToOwners(lots: LotState[], slots: SlotResult[], pot: numb
   const unfilledTotal = slots.filter((s) => s.unfilled).reduce((sum, s) => sum + s.amount, 0)
   for (const s of slots) {
     if (s.unfilled) continue
-    const perPlayer = s.amount / s.playerIds.length
     for (const pid of s.playerIds) {
+      const perPlayer = s.amount * (s.weights?.[pid] ?? 1 / s.playerIds.length)
       const lot = lots.find((l) => l.playerId === pid && l.status === 'sold')
       const owners = lot?.owners.length ? lot.owners : [{ ownerId: pid, pct: 100, paid: 0 }]
       for (const o of owners) {

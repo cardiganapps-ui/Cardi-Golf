@@ -90,8 +90,9 @@ export const strokePlayFormat: MainFormat = {
       countback[e.id] = pr
         ? countbackFrom(
             pr.holes.flatMap((h) => {
+              // To par, so a tie between cards of different lengths (live) or tees compares like with like.
               const s = holeStrokes(h, net)
-              return s == null ? [] : [{ hole: h.hole, value: s }]
+              return s == null ? [] : [{ hole: h.hole, value: s - h.par }]
             }),
             pr.holes.length || 18,
             false,

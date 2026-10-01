@@ -1161,12 +1161,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 71,
       "tests": [
         "src/engine/formats/completeCard.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #71, 2026-10-01: FIXED WITH CAVEATS (a team-par regression on mixed tees; fewer holes winning among incomplete cards; live countback on raw strokes), all three fixed in this PR with tests.",
       "residual": null
     },
     {
@@ -1177,12 +1177,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 71,
       "tests": [
         "src/engine/cleanup.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #71, 2026-10-01: FIXED (strokes total half the PH for PH 0–54; SI 1–9 card; odd and duplicate SIs; every consumer reads the core).",
       "residual": null
     },
     {
@@ -1407,12 +1407,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 71,
       "tests": [
         "src/engine/formats/completeCard.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #71, 2026-10-01: FIXED WITH ONE CAVEAT (unequal teams tied split per player), fixed in this PR with a test; individual formats matched main on 2,000 random rankings and 60 seeded first-tournament runs.",
       "residual": null
     },
     {

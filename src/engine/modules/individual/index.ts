@@ -53,7 +53,7 @@ export interface IndividualState {
 }
 
 const EMPTY_COUNTBACK = { pointsByHole: new Map<number, number>(), holes: 18 }
-/** Puts an incomplete card after every complete one without changing the order among them. */
+/** Per hole missing: an incomplete card ranks after every complete one, and after any card with more holes. */
 const INCOMPLETE_OFFSET = 1_000_000
 
 /** The format's standings, ranked. Shared by the module and the Calcutta. */
@@ -67,12 +67,15 @@ function rankStandings(ctx: ModuleContext) {
   // everyone who did (MONEY-02). Points formats need no rule, the missing
   // holes already score nothing.
   const expectedHoles = ctx.core.roundIds.reduce((sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18), 0)
-  const incomplete = (id: Id) => !up && ctx.tournamentFinal && !standings.totals[id]?.empty && (standings.thru[id] ?? 0) < expectedHoles
+  const missing = (id: Id) => (!up && ctx.tournamentFinal && !standings.totals[id]?.empty ? Math.max(0, expectedHoles - (standings.thru[id] ?? 0)) : 0)
+  const incomplete = (id: Id) => missing(id) > 0
   // An entrant with no card yet sorts last whichever way the figure counts.
+  // Among incomplete cards, more holes played ranks first: one hole at −1 is
+  // not a better card than 17 at +1.
   const rankValue = (id: Id) => {
     const f = standings.totals[id]
     if (!f || f.empty) return up ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY
-    return (f.rank ?? f.value) + (incomplete(id) ? INCOMPLETE_OFFSET : 0)
+    return (f.rank ?? f.value) + missing(id) * INCOMPLETE_OFFSET
   }
   const compare = (a: Id, b: Id) => {
     const va = rankValue(a)
@@ -103,10 +106,13 @@ function incompleteWarning(names: string[]): string[] {
  * two-player team alone in 1st fills 1st only, so 2nd goes to the next team
  * (MONEY-20); before, its two members read as a tie across 1st and 2nd.
  */
-export function rankIndividual(ctx: ModuleContext): Array<RankGroup<Id> & { places: number }> {
+export function rankIndividual(ctx: ModuleContext): Array<RankGroup<Id> & { places: number; entrants: Id[][] }> {
   const { standings, groups } = rankStandings(ctx)
   const members = new Map(standings.entrants.map((e) => [e.id, e.playerIds]))
-  return groups.map((g) => ({ position: g.position, places: g.members.length, members: g.members.flatMap((id) => members.get(id) ?? [id]) }))
+  return groups.map((g) => {
+    const entrants = g.members.map((id) => members.get(id) ?? [id])
+    return { position: g.position, places: g.members.length, entrants, members: entrants.flat() }
+  })
 }
 
 export const individualModule: GameModule<IndividualState> = {

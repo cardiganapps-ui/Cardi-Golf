@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { computeTournament } from '../computeTournament'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../settings/presets'
 import type { TournamentSettings } from '../settings/schema'
-import { PAR_72, makePlayer, makeRound, makeSnapshot, score } from '../testing/fixtures'
+import { PAR_72, makeCourse, makeHoles, makePlayer, makeRound, makeSnapshot, makeTee, score } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 
 /** Every listed hole at par + delta (default card PAR_72). */
@@ -105,6 +105,58 @@ describe('stroke play pays a full card (MONEY-02)', () => {
   })
 })
 
+describe('found by the independent verification', () => {
+  it('among incomplete cards, more holes played ranks first', () => {
+    const settings = strokePlay([1000, 500, 300, 200])
+    const snap = makeSnapshot({ players: [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: [makeRound(1, { status: 'finished' })], settings, status: 'finished' })
+    card(snap, 'p1', range(1, 18), 0)
+    card(snap, 'p2', range(1, 18), 1)
+    card(snap, 'p3', [1], -1) // −1 through 1
+    card(snap, 'p4', range(1, 17), 0) // E through 17
+    const rows = computeTournament(snap, settings).modules.individual!.rows
+    expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p2', 'p4', 'p3'])
+  })
+
+  it('live, a tie to par is not broken by who has played fewer holes', () => {
+    const settings = strokePlay([1000])
+    const snap = makeSnapshot({ players: [1, 2].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: [makeRound(1, { status: 'live' })], settings })
+    card(snap, 'p1', [1, 2], -1) // −2 through 2
+    card(snap, 'p2', [1, 2], -1)
+    card(snap, 'p2', range(3, 12), 0) // −2 through 12
+    const rows = computeTournament(snap, settings).modules.individual!.rows
+    expect(rows.map((r) => r.label)).toEqual(['T1', 'T1'])
+  })
+
+  it('best ball on mixed tees: the result does not depend on the order a team is listed in', () => {
+    const base = structuredClone(DEFAULT_SETTINGS)
+    const settings: TournamentSettings = {
+      ...base,
+      entryFee: 500,
+      prizes: { ...base.prizes, stableford: [1000] },
+      modules: { ...base.modules, individual: { ...base.modules.individual, format: 'team', formatOptions: { ...base.modules.individual.formatOptions, teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' } } },
+    }
+    // tee2 plays hole 1 as a par 5.
+    const forward = PAR_72.map(([par, si], i) => (i === 0 ? [5, si] : [par, si]) as [number, number])
+    const course = makeCourse('course1', [makeTee('tee1', 'course1'), makeTee('tee2', 'course1', { holes: makeHoles(forward) })])
+    const run = (teamB: [string, string]) => {
+      const players = [makePlayer(1, { baseHcp: 0, defaultTeeId: 'tee1' }), makePlayer(2, { baseHcp: 0, defaultTeeId: 'tee2' }), makePlayer(3, { baseHcp: 0, defaultTeeId: 'tee2' }), makePlayer(4, { baseHcp: 0, defaultTeeId: 'tee1' })]
+      const snap = makeSnapshot({ players, rounds: [makeRound(1, { status: 'finished' })], courses: [course], settings, status: 'finished' })
+      snap.pairs = [
+        { id: 'A', name: 'A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
+        { id: 'B', name: 'B', player1Id: teamB[0], player2Id: teamB[1], kind: null, pickedByHonoree: false, drawnAt: null },
+      ]
+      // The tee1 players par everything; the tee2 players make their own tee's par + 1 everywhere.
+      for (const pid of ['p1', 'p4']) card(snap, pid, range(1, 18), 0)
+      for (const pid of ['p2', 'p3']) for (const h of range(1, 18)) snap.scores.push(score('r1', pid, h, forward[h - 1]![0] + 1, 2))
+      return computeTournament(snap, settings).modules.individual!.rows.map((r) => [r.playerId, r.label, r.figure.text])
+    }
+    const one = run(['p3', 'p4'])
+    const other = run(['p4', 'p3'])
+    expect(other).toEqual(one)
+    expect(one.map((r) => r[1])).toEqual(['T1', 'T1'])
+  })
+})
+
 describe('Low neto pays a full card (MONEY-02)', () => {
   it('one birdie and gone does not win the pot', () => {
     const base = structuredClone(DEFAULT_SETTINGS)
@@ -123,6 +175,24 @@ describe('Low neto pays a full card (MONEY-02)', () => {
       ['p2', 150],
     ])
     expect(st.games.lownet!.board.notes.join(' ')).toMatch(/incompleta.*\(1 de 18\)/)
+  })
+
+  it('among incomplete cards, more holes first', () => {
+    const base = structuredClone(DEFAULT_SETTINGS)
+    const settings: TournamentSettings = {
+      ...base,
+      games: [{ id: 'lownet', type: 'lowScore', label: 'Low neto', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', scope: 'overall' }, money: { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [50, 30, 20] } }],
+    }
+    const snap = makeSnapshot({ players: [1, 2, 3].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: [makeRound(1, { status: 'finished' })], settings, status: 'finished' })
+    card(snap, 'p1', range(1, 18), 1)
+    card(snap, 'p2', [1], -1)
+    card(snap, 'p3', range(1, 17), 1)
+    const st = computeTournament(snap, settings)
+    expect(st.prizes.filter((p) => p.gameId === 'lownet').map((p) => [p.playerId, p.amount])).toEqual([
+      ['p1', 150],
+      ['p3', 90],
+      ['p2', 60],
+    ])
   })
 })
 
@@ -169,6 +239,37 @@ describe('a team is one entrant in the Calcutta (MONEY-20)', () => {
     expect(Object.values(a.payouts).reduce((s, v) => s + v.amount, 0)).toBe(6000)
     // Called what it is: a team in 1st, not a two-way tie.
     expect(a.slots[0]!.why.steps.join(' ')).not.toMatch(/Empate/)
+  })
+
+  it('teams of different sizes tied for 1st split per team, then per player', () => {
+    const base = structuredClone(FIRST_TOURNAMENT_SETTINGS)
+    const settings: TournamentSettings = {
+      ...base,
+      tiers: [],
+      modules: {
+        ...base.modules,
+        pairs: { ...base.modules.pairs, enabled: false, pairing: [] },
+        snake: { ...base.modules.snake, enabled: false },
+        bestRound: { ...base.modules.bestRound, enabled: false },
+        fewestPutts: { ...base.modules.fewestPutts, enabled: false },
+        individual: { ...base.modules.individual, format: 'team', formatOptions: { ...base.modules.individual.formatOptions, teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' } },
+      },
+      rounds: 1,
+      entryFee: 0,
+      prizes: { ...base.prizes, stableford: [] },
+      auction: { ...base.auction, payout: [{ slot: 'place', place: 1, share: 0.7 }, { slot: 'place', place: 2, share: 0.3 }] },
+    }
+    const players = [1, 2, 3, 4, 5].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: [makeRound(1, { status: 'finished' })], settings, status: 'finished' })
+    snap.teams = [
+      { id: 'T1', name: 'Uno', number: 1, playerIds: ['p1', 'p2', 'p3'], drawnAt: null },
+      { id: 'T2', name: 'Dos', number: 2, playerIds: ['p4', 'p5'], drawnAt: null },
+    ]
+    for (const p of ['p1', 'p2', 'p3', 'p4', 'p5']) card(snap, p, range(1, 18), 0)
+    // Every lot $1,200: a $6,000 pot. Each team takes half, $3,000.
+    players.forEach((p, i) => snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: 1200, ownerId: p.id, soldAt: '' }))
+    const a = computeTournament(snap, settings).modules.auction!
+    expect(Object.fromEntries(Object.entries(a.payouts).map(([k, v]) => [k, v.amount]))).toEqual({ p1: 1000, p2: 1000, p3: 1000, p4: 1500, p5: 1500 })
   })
 
   it('two teams tied for 1st share 1st and 2nd between their four players', () => {

@@ -143,6 +143,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
         steps.push(`Ajuste del Comité: de ${playingHcp} a ${ov.playingHcp} (${ov.reason})`)
         playingHcp = ov.playingHcp
       }
+      if (round.holes === 9) steps.push(`Ronda de 9 hoyos: la mitad, ${roundHalfUp(playingHcp / 2)}, repartida en los nueve hoyos del más difícil al más fácil`)
       const playingHcpWhy: Explanation = { title: `Hándicap de juego ${playingHcp}`, steps }
 
       // Holes.

@@ -70,13 +70,10 @@ function table(ctx: GameContext<Cfg>, rids: Id[], roundId: Id | null): LowScoreT
   // even (MONEY-02). Points need no rule, missing holes already score nothing.
   const holes = rids.reduce((sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18), 0)
   const played = ctx.entrants.filter((id) => vals.get(id)!.thru > 0)
-  const incomplete = !points && final ? played.filter((id) => vals.get(id)!.thru < holes) : []
-  const short = new Set(incomplete)
-  const groups = rankBy(
-    played,
-    (a, b) => Number(short.has(a)) - Number(short.has(b)) || better(vals.get(a)!.value, vals.get(b)!.value),
-    (a, b) => order.get(a)! - order.get(b)!,
-  )
+  const missing = (id: Id) => (!points && final ? Math.max(0, holes - vals.get(id)!.thru) : 0)
+  const incomplete = played.filter((id) => missing(id) > 0)
+  // More holes played first, then the score: one hole at −1 is not a better card than 17 at +1.
+  const groups = rankBy(played, (a, b) => missing(a) - missing(b) || better(vals.get(a)!.value, vals.get(b)!.value), (a, b) => order.get(a)! - order.get(b)!)
   const rows = flattenRanks(groups).map((r) => ({ playerId: r.item, label: r.label, ...vals.get(r.item)! }))
   return { roundId, rows, groups, final, incomplete, holes }
 }
