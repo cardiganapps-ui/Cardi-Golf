@@ -20,6 +20,8 @@ const PHONES = [375, 393]
 const ROOMS: Array<[string, number, number]> = [
   ['full12-live/tv', 1920, 1080],
   ['full12-live/tv', 1280, 720],
+  ['auction12/tv', 1920, 1080],
+  ['auction12/tv', 1280, 720],
   ['full12-finished/ceremonia', 1920, 1080],
 ]
 

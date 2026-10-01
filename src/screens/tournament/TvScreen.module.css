@@ -53,14 +53,20 @@
   color: var(--board-ink);
 }
 .rows {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-top: 1px solid var(--board-rule);
 }
+.range {
+  color: var(--board-ink-2);
+  font-weight: 400;
+}
 .row {
   display: grid;
-  grid-template-columns: 6vh 6vh minmax(0, 1fr) auto 14vh;
+  grid-template-columns: 6vh 6vh minmax(0, 1fr) auto minmax(14vh, max-content);
   align-items: center;
   gap: 2vw;
   padding: 0.7vh 1vw;
@@ -69,6 +75,25 @@
 }
 .leader {
   background: var(--board-surface);
+}
+/* Each board has its own columns: four cells in a five-track grid pushed names into the avatar track (VIS-04). */
+.rowPair {
+  grid-template-columns: 6vh minmax(0, 1fr) auto minmax(14vh, max-content);
+}
+.rowOwner {
+  grid-template-columns: 6vh minmax(0, 1fr) 18vh 20vh;
+}
+.colHead {
+  display: grid;
+  align-items: end;
+  gap: 2vw;
+  padding: 0 1vw 0.5vh;
+  font-size: 2vh;
+  color: var(--board-ink-2);
+}
+.colHead > span,
+.figure {
+  text-align: right;
 }
 .row :global(.avatar) {
   width: 5.5vh;
@@ -99,6 +124,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Partners and holdings in full: they wrap instead of ending in «Ca…». */
+.sub {
+  overflow-wrap: anywhere;
+}
 .name :global(.tierBadge) {
   margin-left: 1vw;
   border-color: var(--board-ink-2);
@@ -111,6 +140,8 @@
   font-variant-numeric: tabular-nums;
 }
 .big {
+  /* A figure never wraps («8 birdies»): the row would double in height and halve the page. */
+  white-space: nowrap;
   font-size: 4.6vh;
   font-weight: 600;
   text-align: right;
@@ -258,4 +289,18 @@
 .sold {
   flex: 1;
   overflow: hidden;
+}
+/* The newest sale, right under the «Vendidos» label. */
+.sold > .small + .soldRow {
+  color: var(--board-accent);
+  font-weight: 600;
+}
+.soldStamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1vh;
+  padding: 1.5vh 3vw;
+  border: 0.5vh solid var(--board-accent);
+  border-radius: var(--r-md);
 }

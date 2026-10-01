@@ -1492,9 +1492,12 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 79,
+      "tests": [
+        "src/screens/tournament/TvScreen.test.tsx",
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3684,9 +3687,11 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 79,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3698,9 +3703,11 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 79,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
