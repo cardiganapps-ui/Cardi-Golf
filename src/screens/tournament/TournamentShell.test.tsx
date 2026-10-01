@@ -78,26 +78,55 @@ function showBoards(state: { source: 'cache' | 'server'; realtime?: 'off' | 'liv
   )
 }
 const header = () => document.querySelector('header')!.textContent ?? ''
+/** The connection, in the chip beside the event name. */
+const chip = () => document.querySelector('header [class*="_live_"]')?.textContent ?? null
+/** How old the boards are, on the header's second line. */
+const age = () => document.querySelector('header [class*="_boardsAge_"]')?.textContent ?? null
+async function noSignal() {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+  await act(async () => {
+    window.dispatchEvent(new Event('offline'))
+  })
+}
 
 describe('the header says what the boards are (REL-02, REL-04)', () => {
-  it('with signal, the phone\'s copy while the live tournament is on its way: «Conectando, guardado hace 5 min»', () => {
+  it('with signal, the phone\'s copy while the live tournament is on its way: «Conectando…», and how old it is', () => {
     showBoards({ source: 'cache', minutesAgo: 5 })
-    expect(header()).toContain(t.sync.revalidating('hace 5 min'))
-    expect(header()).not.toContain(t.sync.offlineShort)
+    expect(chip()).toBe(t.sync.connecting)
+    expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
   })
 
-  it('with no signal: «Sin señal, guardado hace 5 min»', async () => {
-    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+  it('with no signal: «Sin señal», and how old the boards are', async () => {
     showBoards({ source: 'cache', minutesAgo: 5 })
-    await act(async () => {
-      window.dispatchEvent(new Event('offline'))
-    })
-    expect(header()).toContain(t.sync.fromCache('hace 5 min'))
+    await noSignal()
+    expect(chip()).toBe(t.sync.offlineShort)
+    expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
   })
 
-  it('the server\'s boards with the channel down never read «Sin señal»', () => {
+  it('with no signal and holes still on the phone, the age stays', async () => {
+    // It used to read «Sin señal, 1 hoyo en el teléfono», with no age at all.
+    useOutbox.setState({ pendingHoles: 1 })
+    showBoards({ source: 'cache', minutesAgo: 2 * 24 * 60 })
+    await noSignal()
+    expect(header()).toContain('hace 2 días')
+    expect(header()).toContain('1 hoyo en el teléfono')
+  })
+
+  it('a hole saved on a two-day-old copy leaves it two days old', () => {
+    showBoards({ source: 'cache', minutesAgo: 2 * 24 * 60 })
+    act(() =>
+      useTournament.getState().patch((s) => {
+        s.scores[0]!.strokes = 9
+      }),
+    )
+    expect(header()).toContain('hace 2 días')
+    expect(header()).not.toContain('hace un momento')
+  })
+
+  it('the server\'s boards with the channel down never read «Sin señal», and need no age', () => {
     showBoards({ source: 'server', realtime: 'off', minutesAgo: 0 })
     expect(header()).not.toContain(t.sync.offlineShort)
+    expect(age()).toBeNull()
     cleanup()
     showBoards({ source: 'server', realtime: 'error', minutesAgo: 0 })
     expect(header()).toContain(t.sync.noLive)
@@ -105,6 +134,27 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
 
   it('a two-day-old copy says so', () => {
     showBoards({ source: 'cache', minutesAgo: 2 * 24 * 60 })
-    expect(header()).toMatch(/guardado hace 2 días/)
+    expect(age()).toMatch(/hace 2 días/)
+  })
+
+  it('the chip stays short, so the event name keeps its room (chips under 18 characters)', async () => {
+    // «Conectando, guardado ayer, 7:49 a.m.» cut the event name to «Nach…» at 375 px.
+    showBoards({ source: 'cache', minutesAgo: 26 * 60 })
+    expect(chip()!.length).toBeLessThan(18)
+    useOutbox.setState({ pendingHoles: 12 })
+    await noSignal()
+    expect(chip()!.length).toBeLessThan(18)
+  })
+
+  it('the age keeps counting while the copy is up', () => {
+    vi.useFakeTimers()
+    try {
+      showBoards({ source: 'cache', minutesAgo: 5 })
+      expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
+      act(() => vi.advanceTimersByTime(60_000))
+      expect(age()).toBe(t.sync.boardsAge('hace 6 min'))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

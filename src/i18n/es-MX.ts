@@ -1168,9 +1168,12 @@ export const t = {
     newVersion: 'Hay una versión nueva de la app.',
     updateRequired: 'Esta versión ya no sube hoyos. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
-    /** The boards on screen came from the phone: no signal, or the live tournament is still on its way. `when` is from `ago`. */
-    fromCache: (when: string) => `Sin señal, guardado ${when}`,
-    revalidating: (when: string) => `Conectando, guardado ${when}`,
+    /**
+     * The header's second line while the boards are the phone's copy, or there
+     * is no signal: how old they are, and offline the holes still on the phone
+     * (REL-04). Out of the chip, which cut the event name. `when` from `ago`.
+     */
+    boardsAge: (when: string, holes = 0) => (holes > 0 ? `${holes === 1 ? '1 hoyo' : `${holes} hoyos`} en el teléfono. Actualizado ${when}` : `Actualizado ${when}`),
     /** How old a saved board is (src/lib/freshness.ts). */
     ago: {
       now: 'hace un momento',

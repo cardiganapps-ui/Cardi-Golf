@@ -55,7 +55,12 @@ interface StoreState {
   data: TournamentData | null
   /** Realtime connection status for the sync chip. */
   realtime: 'off' | 'connecting' | 'live' | 'error'
-  /** Wall-clock time of the last snapshot applied (0 before the first). Display only. */
+  /**
+   * When the server data on screen was fetched: the copy's own time when it
+   * came from the phone (0 before the first). A hole saved on the phone since
+   * leaves it, so a two-day-old copy never reads «hace un momento» (REL-04).
+   * Display only.
+   */
   updatedAt: number
   /**
    * Where the boards on screen came from: the copy this phone saved ('cache',
@@ -335,6 +340,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!d) return
     const snapshot = structuredClone(d.snapshot)
     fn(snapshot)
-    set({ data: compute(snapshot), updatedAt: Date.now() })
+    // `updatedAt` stays: nothing new came from the server.
+    set({ data: compute(snapshot) })
   },
 }))

@@ -161,6 +161,21 @@ describe('the copy on the phone (audit P0-5)', () => {
   })
 })
 
+describe('how old the boards are (REL-04)', () => {
+  it('a hole saved on the phone leaves the age of the server data', () => {
+    // A copy saved two days ago, opened with no signal.
+    const twoDaysAgo = Date.now() - 2 * 86_400_000
+    useTournament.setState({ tournamentId: null, data: null, source: null })
+    store().seed(TID, structuredClone(fx.snapshot), twoDaysAgo)
+    // The player saves a hole: the boards change on the phone at once, but nothing new came from the server.
+    store().patch((s) => {
+      s.scores[0]!.strokes = 9
+    })
+    expect(store().data!.snapshot.scores[0]!.strokes).toBe(9)
+    expect(store().updatedAt).toBe(twoDaysAgo)
+  })
+})
+
 describe('a load that fails', () => {
   it('opening another tournament with no signal shows nothing of the one before, never its boards under the new name', async () => {
     expect(shownName()).toBe(fx.snapshot.tournament.name)

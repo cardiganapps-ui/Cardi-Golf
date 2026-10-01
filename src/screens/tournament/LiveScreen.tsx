@@ -11,6 +11,7 @@ import { savedWhen } from '../../lib/freshness'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
+import { useOnline } from '../../components/OfflineBanner'
 import { useTournament } from '../../data/tournamentStore'
 import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
@@ -58,6 +59,12 @@ export function LiveScreen() {
   const prevOrder = useRef<Map<string, number>>(new Map())
   const [moves, setMoves] = useState<Map<string, number>>(new Map())
   const updatedWhen = useSavedWhen(updatedAt)
+  // While the boards may be old (the phone's copy, or no signal), the header's
+  // second line says how old: once is enough.
+  const source = useTournament((s) => s.source)
+  const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
+  const online = useOnline()
+  const ageInHeader = !isFixture && (!online || source === 'cache')
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
   useEffect(() => {
@@ -132,7 +139,7 @@ export function LiveScreen() {
   })()
 
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
-  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, updatedWhen == null ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
+  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, updatedWhen == null || ageInHeader ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
 
   /*
    * The Puntos/Gross toggle only says something under Stableford, where the
