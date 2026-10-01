@@ -12,7 +12,7 @@ import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { queuedFor } from '../../data/outbox'
+import { queuedFor, useOutbox } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
@@ -23,6 +23,8 @@ export function MoreScreen() {
   const data = useTournament((s) => s.data)
   const { user, isAnonymous } = useAuth()
   const profile = useMyProfile((s) => s.profile)
+  // The browser would not promise to keep unsent holes under storage pressure (REL-18).
+  const persistent = useOutbox((s) => s.persistent)
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [askNotMe, setAskNotMe] = useState(false)
@@ -176,6 +178,7 @@ export function MoreScreen() {
         onConfirm={() => void notMe()}
         onClose={() => setAskNotMe(false)}
       />
+      {persistent === false && <p className="help">{t.sync.notPersistent}</p>}
       <p className={styles.version}>
         {t.more.version} {buildLabel()}
       </p>

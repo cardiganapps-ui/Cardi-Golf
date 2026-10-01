@@ -2593,9 +2593,13 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 75,
+      "tests": [
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/outbox.storage.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2607,9 +2611,11 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 75,
+      "tests": [
+        "src/data/outbox.storage.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
