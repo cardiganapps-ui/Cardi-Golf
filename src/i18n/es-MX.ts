@@ -1469,19 +1469,29 @@ export const t = {
       /** On a Comité device, which can send them again. */
       rejectedHint: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
       /** On a player's phone: the list lives only there, so the Comité learns of it from the player. */
-      rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité para que lo capture, y luego descártalo.',
-      rejectedScore: (name: string, day: number, hole: number, value: string) => `${name}, día ${day}, hoyo ${hole}: ${value}`,
+      rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
+      /** The day is in play again: what is still right can go again, checked against what the card holds now. */
+      rejectedHintReopened: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. El día volvió a estar en juego: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
+      /** «día 2, hoyo 11»; a day deleted since says so. */
+      dayHole: (day: number | null, hole: number) => (day === null ? `hoyo ${hole} de un día que ya no existe` : `día ${day}, hoyo ${hole}`),
+      rejectedScore: (name: string, where: string, value: string) => `${name}, ${where}: ${value}`,
       /** What a refused hole held: «5 golpes, 2 putts», «levantó, 1 putt». */
       scoreValue: (strokes: number | null, putts: number | null, pickedUp: boolean) => {
         const shots = pickedUp ? 'levantó' : strokes === null ? 'sin golpes' : `${strokes} golpe${strokes === 1 ? '' : 's'}`
         return putts === null ? shots : `${shots}, ${putts} putt${putts === 1 ? '' : 's'}`
       },
-      rejectedTiebreak: (day: number, group: number, hole: number, name: string) => `Víbora, día ${day}, grupo ${group}, hoyo ${hole}: ${name}`,
-      rejectedSignature: (pair: string, day: number) => `Firma de ${pair}, día ${day}`,
-      rejectedAward: (game: string, day: number, hole: number, names: string) => `${game}, día ${day}, hoyo ${hole}: ${names}`,
-      /** Why, read from the tournament as it stands, not from the server's message. */
-      reasonClosed: (day: number) => `El día ${day} ya estaba cerrado cuando llegó.`,
-      reasonSigned: 'La tarjeta ya estaba firmada cuando llegó.',
+      rejectedTiebreak: (group: number, where: string, name: string) => `Víbora, grupo ${group}, ${where}: ${name}`,
+      rejectedSignature: (pair: string, day: number | null) => (day === null ? `Firma de ${pair}, de un día que ya no existe` : `Firma de ${pair}, día ${day}`),
+      rejectedAward: (game: string, where: string, names: string) => `${game}, ${where}: ${names}`,
+      /** The state of the tournament now (what was true when the server refused it isn't known here). */
+      reasonClosed: (day: number) => `El día ${day} está cerrado.`,
+      reasonSigned: 'La tarjeta está firmada.',
+      /** A refused hole the card now holds differently: resending it would replace this. */
+      nowOnCard: (value: string) => `En la tarjeta ahora: ${value}`,
+      discardTitle: '¿Descartar esta captura?',
+      discardBody: 'Solo está en este teléfono. Descártala cuando el Comité te confirme que la capturó.',
+      /** When the phone can neither share nor copy: the text, to copy by hand or show. */
+      sendManual: 'Cópialo o enséñale esta pantalla al Comité.',
       resend: 'Volver a mandar',
       discard: 'Descartar',
       sendToComite: 'Mandar al Comité',
@@ -1799,7 +1809,7 @@ export const t = {
       deleteConfirm: (n: number) => `¿Borrar el día ${n} con todas sus tarjetas? No se puede deshacer.`,
       pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
       /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
-      phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada grupo abra la Tarjeta con señal y vea «Sincronizado».',
+      phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
       duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,

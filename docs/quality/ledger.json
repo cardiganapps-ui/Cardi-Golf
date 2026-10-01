@@ -2524,7 +2524,7 @@
         "src/screens/admin/AdminRounds.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and «Terminar ronda» asks every group to show «Sincronizado» first. «Names the wrong day» was an Ensayo artifact (verifier V9)."
+      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and both «Terminar ronda» and «Terminar y publicar» ask every phone that captured to have nothing left to send. Also for that migration: snake tiebreaks and hole awards have no live-round check on the server (0013_identity.sql:231-275), so one queued offline is still accepted after «Terminar» while the same hole's scores are refused. A phone only reports once Polo is open with signal (no background sync on iOS). «Names the wrong day» was an Ensayo artifact (verifier V9); the simulator now moves current_round_id as «Iniciar» does."
     },
     {
       "id": "REL-09",

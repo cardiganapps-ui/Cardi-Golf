@@ -53,6 +53,7 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={t.live.noRounds} body="" />
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }
@@ -90,6 +91,7 @@ export function ScorecardScreen() {
             )}
           </>
         )}
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }

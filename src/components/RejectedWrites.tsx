@@ -1,58 +1,75 @@
 /**
  * Writes this device tried to save and the server refused for good (signed
  * card, round no longer live, permission). The list lives only on this
- * device, so it shows wherever the device can act on it: the Tarjeta, even
- * once the day is closed (REL-08: a player's phone that was out of signal
- * when the Comité finished the round had nowhere to see its holes), and
- * Comité › Tarjetas.
+ * device, so it shows wherever the device can act on it: every state of the
+ * Tarjeta, a closed day included (REL-08: a player's phone that was out of
+ * signal when the Comité finished the round had nowhere to see its holes),
+ * and Comité › Tarjetas.
  *
  * A Comité device sends them again. A player's phone can't, so it hands them
  * to the Comité: «Mandar al Comité» shares the values as text (WhatsApp),
- * the Comité captures them from Comité › Tarjetas, and the player discards.
- * When the day is back in play and the card unsigned, anyone can resend.
+ * the Comité captures them from Comité › Tarjetas, and the player discards
+ * once it is confirmed. When the day is back in play and the card unsigned,
+ * anyone can resend, against what the card holds now.
  */
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { t } from '../i18n/es-MX'
 import { discardRejected, retryRejected, useOutbox, type AwardPayload, type RejectedItem, type ScorePayload, type SignaturePayload, type TiebreakPayload } from '../data/outbox'
 import { useTournament } from '../data/tournamentStore'
 import type { Snapshot } from '../engine/types'
-import { toast } from './ui'
+import { ConfirmSheet } from './ConfirmSheet'
+import { Sheet, toast } from './ui'
 import styles from './RejectedWrites.module.css'
 
 const IB = t.admin.inbox
-
 
 export function RejectedWrites({ canResend, playerId = null }: { canResend: boolean; playerId?: string | null }) {
   const rejected = useOutbox((s) => s.rejected)
   const data = useTournament((s) => s.data)
   const titleId = useId()
+  /** The capture waiting for «Descartar» to be confirmed. */
+  const [discarding, setDiscarding] = useState<RejectedItem | null>(null)
+  /** The text to send, shown when the phone could neither share it nor copy it. */
+  const [manual, setManual] = useState<string | null>(null)
   if (!rejected.length || !data) return null
   const { snapshot } = data
-  const name = (id: string | null) => snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
+  /** The short name, or the full one when another player of the tournament shares it (the first tournament has two «Diego»s). */
+  const name = (id: string | null) => {
+    const p = snapshot.players.find((x) => x.id === id)
+    if (!p) return '?'
+    return snapshot.players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName
+  }
   const roundOf = (r: RejectedItem) => snapshot.rounds.find((x) => x.id === r.payload.round_id)
   const describe = (r: RejectedItem): string => {
-    const day = roundOf(r)?.number ?? 0
+    const day = roundOf(r)?.number ?? null
     if (r.kind === 'score') {
       const p = r.payload as ScorePayload
-      return IB.rejectedScore(name(p.player_id), day, p.hole, IB.scoreValue(p.strokes, p.putts, p.picked_up))
+      return IB.rejectedScore(name(p.player_id), IB.dayHole(day, p.hole), IB.scoreValue(p.strokes, p.putts, p.picked_up))
     }
     if (r.kind === 'tiebreak') {
       const p = r.payload as TiebreakPayload
-      return IB.rejectedTiebreak(day, snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, p.hole, name(p.last_holed_player_id))
+      return IB.rejectedTiebreak(snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, IB.dayHole(day, p.hole), name(p.last_holed_player_id))
     }
     if (r.kind === 'award') {
       const p = r.payload as AwardPayload
       const label = data.settings.games.find((g) => g.id === p.game_id)?.label ?? p.game_id
-      return IB.rejectedAward(label, day, p.hole, t.common.andList(p.player_ids.map(name)) || t.card.contest.nobody)
+      return IB.rejectedAward(label, IB.dayHole(day, p.hole), t.common.andList(p.player_ids.map(name)) || t.card.contest.nobody)
     }
     const pair = snapshot.pairs.find((x) => x.id === (r.payload as SignaturePayload).pair_id)
     return IB.rejectedSignature(pair?.name ?? (pair ? t.common.andList([name(pair.player1Id), name(pair.player2Id)]) : '?'), day)
   }
-  /** Why, from the tournament as it stands: the server's own message names neither. */
+  /**
+   * What stands in the way now, said as it is now: a player's score or
+   * signature meets a closed day or a signed card. The server never refuses
+   * a Comité device, a tiebreak or a contest for those, so their own
+   * message stays.
+   */
   const reason = (r: RejectedItem): string => {
     const round = roundOf(r)
-    if (round && round.status !== 'live') return IB.reasonClosed(round.number)
-    if (round && signedFor(snapshot, r)) return IB.reasonSigned
+    if (!canResend && round && (r.kind === 'score' || r.kind === 'signature')) {
+      if (round.status !== 'live') return IB.reasonClosed(round.number)
+      if (signedFor(snapshot, r)) return IB.reasonSigned
+    }
     // eslint-disable-next-line no-restricted-syntax -- a RejectedItem's message is copy outbox.ts already made (describeSyncError), not an error's text
     return r.message
   }
@@ -61,16 +78,25 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     const round = roundOf(r)
     return canResend || (round?.status === 'live' && !signedFor(snapshot, r))
   }
+  /** What the card holds now for a refused hole, when it differs: a resend would replace it. */
+  const onCard = (r: RejectedItem): string | null => {
+    if (r.kind !== 'score') return null
+    const p = r.payload as ScorePayload
+    const now = snapshot.scores.find((s) => s.roundId === p.round_id && s.playerId === p.player_id && s.hole === p.hole)
+    if (!now || (now.strokes === p.strokes && now.putts === p.putts && now.pickedUp === p.picked_up)) return null
+    return IB.nowOnCard(IB.scoreValue(now.strokes, now.putts, now.pickedUp))
+  }
   const text = [IB.sendHeader(snapshot.tournament.name, playerId ? name(playerId) : null), ...rejected.map(describe)].join('\n')
+  const hint = canResend ? IB.rejectedHint : rejected.some(resendable) ? IB.rejectedHintReopened : IB.rejectedHintPlayer
 
   return (
     <section className={styles.box} aria-labelledby={titleId}>
       <strong id={titleId} className={styles.title}>
         {IB.rejectedTitle}
       </strong>
-      <span className={styles.hint}>{canResend ? IB.rejectedHint : IB.rejectedHintPlayer}</span>
+      <span className={styles.hint}>{hint}</span>
       {!canResend && (
-        <button className={`btn btn--secondary btn--sm ${styles.send}`} type="button" onClick={() => void sendToComite(text)}>
+        <button className={`btn btn--secondary btn--sm ${styles.send}`} type="button" onClick={() => void sendToComite(text, setManual)}>
           {IB.sendToComite}
         </button>
       )}
@@ -80,6 +106,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
             <span className={styles.text}>
               <span>{describe(r)}</span>
               <span className={styles.reason}>{reason(r)}</span>
+              {resendable(r) && onCard(r) && <span className={styles.reason}>{onCard(r)}</span>}
             </span>
             <span className={styles.actions}>
               {resendable(r) && (
@@ -87,13 +114,29 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
                   {IB.resend}
                 </button>
               )}
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => void discardRejected(r.key)} aria-label={`${IB.discard}: ${describe(r)}`}>
+              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setDiscarding(r)} aria-label={`${IB.discard}: ${describe(r)}`}>
                 {IB.discard}
               </button>
             </span>
           </div>
         ))}
       </div>
+      <ConfirmSheet
+        open={!!discarding}
+        title={IB.discardTitle}
+        body={discarding ? `${describe(discarding)}. ${IB.discardBody}` : ''}
+        confirmLabel={IB.discard}
+        danger
+        onConfirm={() => {
+          if (discarding) void discardRejected(discarding.key)
+          setDiscarding(null)
+        }}
+        onClose={() => setDiscarding(null)}
+      />
+      <Sheet open={manual !== null} onClose={() => setManual(null)} title={IB.sendToComite}>
+        <p className="help">{IB.sendManual}</p>
+        <pre className={styles.manual}>{manual}</pre>
+      </Sheet>
     </section>
   )
 }
@@ -105,8 +148,8 @@ function signedFor(snapshot: Snapshot, r: RejectedItem): boolean {
   return !!pairId && snapshot.cardSignatures.some((s) => s.roundId === r.payload.round_id && s.pairId === pairId)
 }
 
-/** The values as text, for the Comité's chat: the phone's share sheet, else the clipboard. */
-async function sendToComite(text: string) {
+/** The values as text, for the Comité's chat: the phone's share sheet, else the clipboard, else on screen to copy by hand. */
+async function sendToComite(text: string, show: (text: string) => void) {
   if (navigator.share) {
     try {
       await navigator.share({ text })
@@ -120,6 +163,6 @@ async function sendToComite(text: string) {
     await navigator.clipboard.writeText(text)
     toast(IB.sendCopied)
   } catch {
-    toast(text)
+    show(text)
   }
 }

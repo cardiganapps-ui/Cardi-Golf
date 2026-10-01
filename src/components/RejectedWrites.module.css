@@ -46,3 +46,12 @@
   display: flex;
   gap: var(--s1);
 }
+/* The text «Mandar al Comité» would have sent, to copy by hand or show. */
+.manual {
+  white-space: pre-wrap;
+  user-select: text;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  margin: var(--s2) 0 0;
+}

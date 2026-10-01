@@ -6,7 +6,10 @@
  * a player never reaches on a closed day), the reason was the server's
  * generic refusal, the copy promised the Comité could resend from its own
  * phone (the list lives on this one), and «Terminar ronda» never mentioned
- * phones still holding holes.
+ * phones still holding holes. The second half pins what the PR's verifier
+ * found: two players called «Diego», reasons said as fact about the past,
+ * a reopened day, a deleted one, the list hidden when not in a group, and
+ * «Descartar» deleting the only copy in one tap.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -16,6 +19,12 @@ vi.mock('../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 const toasts = vi.hoisted(() => [] as string[])
 vi.mock('./ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('./ui')>()), toast: vi.fn((msg: string) => void toasts.push(msg)) }))
+const outbox = vi.hoisted(() => ({ discarded: [] as string[], resent: [] as string[] }))
+vi.mock('../data/outbox', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/outbox')>()),
+  discardRejected: vi.fn(async (key: string) => void outbox.discarded.push(key)),
+  retryRejected: vi.fn(async (key: string) => void outbox.resent.push(key)),
+}))
 
 import { useOutbox, type RejectedItem } from '../data/outbox'
 import { getFixture } from '../dev/fixtures'
@@ -28,6 +37,7 @@ import { RejectedWrites } from './RejectedWrites'
 
 const IB = t.admin.inbox
 const CAMILO = 'p3'
+const HOLE11 = 'Camilo, día 2, hoyo 11: 5 golpes, 2 putts'
 
 /** Camilo's hole 11 on day 2, refused by the server. */
 const hole11: RejectedItem = {
@@ -39,16 +49,16 @@ const hole11: RejectedItem = {
   at: 1,
 }
 
-function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isAdmin?: boolean; rejected?: RejectedItem[] } = {}) {
+function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isAdmin?: boolean; rejected?: RejectedItem[]; me?: string } = {}) {
   const fx = getFixture('full12-live')!
   const snapshot = structuredClone(fx.snapshot)
   opts.edit?.(snapshot)
   useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(snapshot) })
-  const me = { playerId: CAMILO, isOrganizer: false, isAdmin: opts.isAdmin ?? false }
+  const me = { playerId: opts.me ?? CAMILO, isOrganizer: false, isAdmin: opts.isAdmin ?? false }
   const view = render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'viaje', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
-        {ui === 'tarjeta' ? <ScorecardScreen /> : <RejectedWrites canResend={me.isAdmin} playerId={CAMILO} />}
+        {ui === 'tarjeta' ? <ScorecardScreen /> : <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />}
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
@@ -56,12 +66,19 @@ function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isA
   return view
 }
 const finishDay2 = (s: Snapshot) => void (s.rounds.find((r) => r.id === 'r2')!.status = 'finished')
+const signCamilo = (s: Snapshot) => {
+  const pair = s.pairs.find((p) => p.player1Id === CAMILO || p.player2Id === CAMILO)!
+  s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: CAMILO, signedAt: '2027-04-10T15:00:00Z' })
+}
 const list = () => within(screen.getByRole('region', { name: IB.rejectedTitle }))
+const send = () => act(async () => fireEvent.click(list().getByRole('button', { name: IB.sendToComite })))
 
 afterEach(() => {
   cleanup()
   useOutbox.setState({ rejected: [] })
   toasts.length = 0
+  outbox.discarded.length = 0
+  outbox.resent.length = 0
   vi.unstubAllGlobals()
 })
 
@@ -69,62 +86,152 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
   it('sees them on the Tarjeta of the closed day, with the day, the values and why', () => {
     mount('tarjeta', { edit: finishDay2 })
     expect(screen.getByText(t.card.roundFinished(2))).toBeTruthy()
-    expect(list().getByText('Camilo, día 2, hoyo 11: 5 golpes, 2 putts')).toBeTruthy()
+    expect(list().getByText(HOLE11)).toBeTruthy()
     expect(list().getByText(IB.reasonClosed(2))).toBeTruthy()
     // The truth about where the list lives, and what to do with it.
     expect(list().getByText(IB.rejectedHintPlayer)).toBeTruthy()
     expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
-    expect(list().getByRole('button', { name: `${IB.discard}: Camilo, día 2, hoyo 11: 5 golpes, 2 putts` })).toBeTruthy()
+    expect(list().getByRole('button', { name: `${IB.discard}: ${HOLE11}` })).toBeTruthy()
   })
 
   it('«Mandar al Comité» hands the values to the phone\'s share sheet', async () => {
     const share = vi.fn(async () => undefined)
     vi.stubGlobal('navigator', { ...navigator, share })
     mount('tarjeta', { edit: finishDay2 })
-    await act(async () => fireEvent.click(list().getByRole('button', { name: IB.sendToComite })))
-    expect(share).toHaveBeenCalledWith({ text: `${IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')}\nCamilo, día 2, hoyo 11: 5 golpes, 2 putts` })
+    await send()
+    expect(share).toHaveBeenCalledWith({ text: `${IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')}\n${HOLE11}` })
+  })
+
+  it('closing the share sheet is a choice: nothing is copied and nothing is said', async () => {
+    const writeText = vi.fn(async () => undefined)
+    vi.stubGlobal('navigator', { ...navigator, share: vi.fn(async () => Promise.reject(new DOMException('cancelled', 'AbortError'))), clipboard: { writeText } })
+    mount('tarjeta', { edit: finishDay2 })
+    await send()
+    expect(writeText).not.toHaveBeenCalled()
+    expect(toasts).toEqual([])
   })
 
   it('without a share sheet, it copies them and says where to paste', async () => {
     const writeText = vi.fn(async () => undefined)
     vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } })
     mount('tarjeta', { edit: finishDay2 })
-    await act(async () => fireEvent.click(list().getByRole('button', { name: IB.sendToComite })))
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Camilo, día 2, hoyo 11: 5 golpes, 2 putts'))
+    await send()
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(HOLE11))
     expect(toasts).toEqual([IB.sendCopied])
+  })
+
+  it('when the phone can neither share nor copy, the text is on screen to copy by hand or show', async () => {
+    vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText: vi.fn(async () => Promise.reject(new Error('denied'))) } })
+    mount('tarjeta', { edit: finishDay2 })
+    await send()
+    const sheet = screen.getByRole('dialog', { name: IB.sendToComite })
+    expect(within(sheet).getByText(IB.sendManual)).toBeTruthy()
+    expect(sheet.textContent).toContain(HOLE11)
+  })
+
+  it('on a live day, inside the card, the text says whose phone it came from', async () => {
+    const share = vi.fn(async () => undefined)
+    vi.stubGlobal('navigator', { ...navigator, share })
+    mount('tarjeta', { edit: signCamilo })
+    await send()
+    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')) })
+  })
+
+  it('a player in no group still sees them', () => {
+    mount('tarjeta', {
+      edit: (s) => {
+        for (const g of s.groups) g.playerIds = g.playerIds.filter((id) => id !== CAMILO)
+      },
+    })
+    expect(screen.getByText(t.card.notInGroup)).toBeTruthy()
+    expect(list().getByText(HOLE11)).toBeTruthy()
+  })
+
+  it('«Descartar» asks first: it is the only copy', () => {
+    mount('list', { edit: finishDay2 })
+    fireEvent.click(list().getByRole('button', { name: `${IB.discard}: ${HOLE11}` }))
+    expect(outbox.discarded).toEqual([])
+    const ask = screen.getByRole('dialog', { name: IB.discardTitle })
+    expect(ask.textContent).toContain(IB.discardBody)
+    fireEvent.click(within(ask).getByRole('button', { name: IB.discard }))
+    expect(outbox.discarded).toEqual([hole11.key])
   })
 })
 
-describe('the refused list says why from the tournament, and who can send it again', () => {
+describe('the refused list says what stands in the way now, and who can send it again', () => {
   it('a signed card: the reason says so, and a player can\'t resend', () => {
-    mount('list', {
-      edit: (s) => {
-        const pair = s.pairs.find((p) => p.player1Id === CAMILO || p.player2Id === CAMILO)!
-        s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: CAMILO, signedAt: '2027-04-10T15:00:00Z' })
-      },
-    })
+    mount('list', { edit: signCamilo })
     expect(list().getByText(IB.reasonSigned)).toBeTruthy()
     expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
   })
 
-  it('the day back in play and the card unsigned: a player can send it again', () => {
-    mount('list')
-    expect(list().getByText(t.sync.errDenied)).toBeTruthy()
-    expect(list().getByRole('button', { name: `${IB.resend}: Camilo, día 2, hoyo 11: 5 golpes, 2 putts` })).toBeTruthy()
+  it('a closed day with a signed card: the day being closed is what stands in the way', () => {
+    mount('list', {
+      edit: (s) => {
+        finishDay2(s)
+        signCamilo(s)
+      },
+    })
+    expect(list().getByText(IB.reasonClosed(2))).toBeTruthy()
+    expect(list().queryByText(IB.reasonSigned)).toBeNull()
   })
 
-  it('a Comité device resends anything, and is not asked to send it to itself', () => {
+  it('the day back in play and the card unsigned: a player can send it again, against what the card holds now', () => {
+    mount('list', {
+      edit: (s) => {
+        const now = s.scores.find((x) => x.roundId === 'r2' && x.playerId === CAMILO && x.hole === 11)
+        if (now) Object.assign(now, { strokes: 6, putts: 2, pickedUp: false })
+        else s.scores.push({ roundId: 'r2', playerId: CAMILO, hole: 11, strokes: 6, putts: 2, pickedUp: false, enteredBy: 'p9', updatedAt: null })
+      },
+    })
+    expect(list().getByText(IB.rejectedHintReopened)).toBeTruthy()
+    expect(list().getByText(t.sync.errDenied)).toBeTruthy()
+    expect(list().getByText(IB.nowOnCard('6 golpes, 2 putts'))).toBeTruthy()
+    fireEvent.click(list().getByRole('button', { name: `${IB.resend}: ${HOLE11}` }))
+    expect(outbox.resent).toEqual([hole11.key])
+  })
+
+  it('a Comité device resends anything, is not asked to send it to itself, and keeps the server\'s reason', () => {
     mount('list', { edit: finishDay2, isAdmin: true })
     expect(list().getByText(IB.rejectedHint)).toBeTruthy()
     expect(list().getByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeTruthy()
     expect(list().queryByRole('button', { name: IB.sendToComite })).toBeNull()
+    expect(list().getByText(t.sync.errDenied)).toBeTruthy()
   })
 
-  it('a hole picked up, and every kind of capture, names its day', () => {
+  it('every kind of capture names its day; a tiebreak keeps the server\'s reason', () => {
     const picked: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4, strokes: null, putts: 1, picked_up: true } as RejectedItem['payload'] }
     const tiebreak: RejectedItem = { ...hole11, key: 'tb', kind: 'tiebreak', payload: { round_id: 'r2', group_id: 'g1', hole: 5, last_holed_player_id: CAMILO, decided_by: CAMILO } }
-    mount('list', { rejected: [picked, tiebreak] })
+    const award: RejectedItem = { ...hole11, key: 'aw', kind: 'award', payload: { round_id: 'r2', group_id: 'g1', hole: 7, game_id: 'closest', player_ids: [CAMILO], decided_by: CAMILO } }
+    const signature: RejectedItem = { ...hole11, key: 'sig', kind: 'signature', payload: { round_id: 'r2', pair_id: 'pair1', signed_by: CAMILO } }
+    mount('list', { edit: finishDay2, rejected: [picked, tiebreak, award, signature] })
     expect(list().getByText('Camilo, día 1, hoyo 4: levantó, 1 putt')).toBeTruthy()
-    expect(list().getByText(new RegExp(`^Víbora, día 2, grupo \\d+, hoyo 5: Camilo$`))).toBeTruthy()
+    expect(list().getByText(/^Víbora, grupo \d+, día 2, hoyo 5: Camilo$/)).toBeTruthy()
+    expect(list().getByText(/, día 2, hoyo 7: Camilo$/)).toBeTruthy()
+    expect(list().getByText(/^Firma de .+, día 2$/)).toBeTruthy()
+    // The server never refuses a tiebreak for a closed day: no claim that it did.
+    const tbRow = list().getByText(/^Víbora,/).parentElement!
+    expect(tbRow.textContent).toContain(t.sync.errDenied)
+  })
+
+  it('a capture from a day deleted since says so, instead of «día 0»', () => {
+    mount('list', { edit: (s) => void (s.rounds = s.rounds.filter((r) => r.id !== 'r2')) })
+    expect(list().getByText('Camilo, hoyo 11 de un día que ya no existe: 5 golpes, 2 putts')).toBeTruthy()
+  })
+
+  it('two players with one short name are told apart by their full names, in the list and in what is sent', async () => {
+    const share = vi.fn(async () => undefined)
+    vi.stubGlobal('navigator', { ...navigator, share })
+    mount('list', {
+      edit: (s) => {
+        finishDay2(s)
+        const camilo = s.players.find((p) => p.id === CAMILO)!
+        Object.assign(camilo, { displayName: 'Diego', fullName: 'Diego Arámburu' })
+        Object.assign(s.players.find((p) => p.id === 'p4')!, { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' })
+      },
+    })
+    expect(list().getByText('Diego Arámburu, día 2, hoyo 11: 5 golpes, 2 putts')).toBeTruthy()
+    await send()
+    expect(share).toHaveBeenCalledWith({ text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Diego Arámburu')) })
   })
 })
