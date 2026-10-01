@@ -5,7 +5,7 @@
  * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -139,6 +139,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
+  /** The name the card uses: the short one, or the full one when two in the group share it (two «Diego»s would be four identical controls again). */
+  const cardName = (p: { id: string; displayName: string; fullName: string }) => (players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName)
   const order = useMemo(() => playOrder(group.startHole, round.holes), [group.startHole, round.holes])
   const roundState = state.core.rounds[round.id] ?? {}
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
@@ -175,16 +177,27 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     savedTimer.current = setTimeout(() => setSavedNote(null), SAVED_NOTE_MS)
   }
   const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason || confirmDefaults
+  /** One polite live region for the whole card: whose score changed and what it is worth, or the new hole (A11Y-01). */
+  const [said, setSaid] = useState('')
+  /** «Hoyo 12 guardado», said with the next hole in one message instead of two at once. */
+  const savedSaid = useRef('')
+  const uid = useId()
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
+  const holeSpoken = S.holeSpoken(hole, par, lead?.strokeIndex, lead?.yards)
+  /** The points badge's words for a draft, shared by the badge and the announcement. */
+  const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
+    const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
+    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null) }
+  }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
   // changes or the server's values for it do, never on a keystroke.
-  const latest = useRef({ players, holeInfo, drafts })
+  const latest = useRef({ players, holeInfo, drafts, holeSpoken })
   useEffect(() => {
-    latest.current = { players, holeInfo, drafts }
+    latest.current = { players, holeInfo, drafts, holeSpoken }
   })
   /** What the server has for each player on the open hole; changes when a save lands, from this phone or another. */
   const serverKey = players
@@ -196,13 +209,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const holeKey = `${round.id}|${group.id}|${hole}`
   const shownHole = useRef('')
   useEffect(() => {
-    const { players, holeInfo, drafts: current } = latest.current
+    const { players, holeInfo, drafts: current, holeSpoken } = latest.current
     const saved = (p: { id: string }): Draft | null => {
       const h = holeInfo(p.id)
       return h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : null
     }
     if (shownHole.current !== holeKey) {
       // A new hole: saved values or defaults (par, 2 putts), nothing touched yet.
+      // A screen reader hears where it landed; the first hole is the page itself.
+      if (shownHole.current) setSaid([savedSaid.current, holeSpoken].filter(Boolean).join('. '))
+      savedSaid.current = ''
       shownHole.current = holeKey
       touched.current = new Set()
       settledAt.current = performance.now()
@@ -263,6 +279,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const setDraft = (pid: string, patch: Partial<Draft>) => {
     touched.current.add(pid)
     setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
+    const h = holeInfo(pid)
+    const p = players.find((x) => x.id === pid)
+    if (h && p && drafts[pid]) {
+      const next = { ...drafts[pid], ...patch }
+      setSaid(S.said(cardName(p), next.strokes, next.putts, next.pickedUp, `${ptsText(h, next).text}${h.par !== par ? `, ${S.parHere(h.par)}` : ''}`))
+    }
   }
 
   const idx = order.indexOf(hole)
@@ -299,8 +321,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     for (const p of players) {
       const d = drafts[p.id]!
       if (d.pickedUp) continue
-      if (d.strokes >= 10) weird.push(`${p.displayName}: ${d.strokes} ${S.strokes.toLowerCase()}`)
-      if (d.putts >= 5) weird.push(`${p.displayName}: ${d.putts} ${S.putts.toLowerCase()}`)
+      if (d.strokes >= 10) weird.push(`${cardName(p)}: ${d.strokes} ${S.strokes.toLowerCase()}`)
+      if (d.putts >= 5) weird.push(`${cardName(p)}: ${d.putts} ${S.putts.toLowerCase()}`)
     }
     return weird
   }
@@ -394,8 +416,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
       const written = Object.keys(writes)
       showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
-      if (savedIdx < order.length - 1) goto(savedIdx + 1)
-      else setView('grid')
+      if (savedIdx < order.length - 1) {
+        savedSaid.current = S.savedHole(savedHole)
+        goto(savedIdx + 1)
+      } else {
+        setSaid(S.savedHole(savedHole))
+        setView('grid')
+      }
     } catch (e) {
       toast(humanError(e))
     } finally {
@@ -416,7 +443,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     const u = undo.current
     if (note.canUndo && u && u.hole === note.hole) {
       undo.current = null
-      void writeHole(u.drafts, u.hole).then(() => showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true }))
+      void writeHole(u.drafts, u.hole).then(() => {
+        showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true })
+        setSaid(S.restoredHole(u.hole))
+      })
     }
     setView('hole')
     goto(note.idx)
@@ -434,7 +464,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** The line under «Guardar hoyo»: the last save with its way back for a few seconds, else the sync state. */
   const statusLine = (fallback: ReactNode) =>
     savedNote ? (
-      <span className={styles.savedLine} role="status">
+      <span className={styles.savedLine}>
         <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : S.savedHole(savedNote.hole)}</span>
         {!savedNote.restored && (
           <button type="button" className={styles.savedAction} onClick={undoLast}>
@@ -556,7 +586,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   <th className={styles.gridMeta}>{t.player.par}</th>
                   <th className={styles.gridMeta}>{t.player.si}</th>
                   {players.map((p) => (
-                    <th key={p.id}>{p.displayName}</th>
+                    <th key={p.id}>{cardName(p)}</th>
                   ))}
                 </tr>
               </thead>
@@ -622,13 +652,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             <button className={styles.holeNav} type="button" onClick={() => goto(idx - 1)} disabled={idx === 0} aria-label={S.prev}>
               <IconChevronLeft />
             </button>
-            <div className={styles.holeTitle}>
-              <span className={styles.holeNum}>{hole}</span>
-              <span className={styles.holeMeta}>
+            <h1 className={styles.holeTitle}>
+              <span className="sr-only">{holeSpoken}</span>
+              <span className={styles.holeNum} aria-hidden="true">
+                {hole}
+              </span>
+              <span className={styles.holeMeta} aria-hidden="true">
                 {t.player.par} {par}, {t.player.si} {lead?.strokeIndex ?? '–'}
                 {lead?.yards ? `, ${t.player.yards(lead.yards)}` : ''}
               </span>
-            </div>
+            </h1>
             <button className={styles.holeNav} type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
               <IconChevronRight />
             </button>
@@ -639,15 +672,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               const d = drafts[p.id]
               const h = holeInfo(p.id)
               if (!d || !h) return null
-              const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
+              const { pts, text: ptsLine } = ptsText(h, d)
               const locked = signed(p.id) && !me.isAdmin
               const init = initialDraft(p.id)
               const untouched = !h.played && !!init && init.strokes === d.strokes && init.putts === d.putts && init.pickedUp === d.pickedUp
               return (
-                <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`}>
+                <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`} role="group" aria-labelledby={`${uid}-${p.id}`}>
                   <div className={styles.playerLine}>
                     <span className={styles.playerName}>
-                      <span className={styles.playerNameText}>{p.displayName}</span>
+                      <span className={styles.playerNameText} id={`${uid}-${p.id}`}>
+                        {cardName(p)}
+                      </span>
                       {locked && (
                         <span className={styles.lockMark} aria-label={S.cardSigned}>
                           <IconLock size={14} />
@@ -660,14 +695,14 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                       )}
                     </span>
                     <span className={`${styles.pts} ${untouched ? styles.ptsMuted : pts >= 3 ? styles.ptsHigh : ''}`}>
-                      {S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null)}
+                      {ptsLine}
                       {h.par !== par ? `, ${S.parHere(h.par)}` : ''}
                     </span>
                   </div>
                   <div className={styles.controls}>
-                    <Stepper label={S.strokes} value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
-                    <Stepper label={S.putts} value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
-                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp}>
+                    <Stepper label={S.strokesOf(cardName(p))} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
+                    <Stepper label={S.puttsOf(cardName(p))} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
+                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp} aria-label={S.pickedUpOf(cardName(p))}>
                       {S.pickedUp}
                     </button>
                   </div>
@@ -690,7 +725,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                 <div className={styles.contestPicks}>
                   {c.eligible.map((p) => (
                     <button key={p.id} type="button" className={styles.pickup} aria-pressed={chosen.includes(p.id)} disabled={!canEdit} onClick={() => togglePick(c, p.id)}>
-                      {p.displayName}
+                      {cardName(p)}
                     </button>
                   ))}
                   <button type="button" className={styles.pickup} aria-pressed={picks[c.id] !== undefined && chosen.length === 0} disabled={!canEdit} onClick={() => togglePick(c, null)}>
@@ -722,7 +757,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             const p = players.find((x) => x.id === id)!
             return (
               <button key={id} type="button" className="btn btn--secondary btn--block" disabled={busy} onClick={() => void commit(id)}>
-                {p.displayName}
+                {cardName(p)}
               </button>
             )
           })}
@@ -789,6 +824,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           </div>
         </div>
       </Sheet>
+
+      {/* Last in the card, so reading it from the top meets the group before the last announcement. */}
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {said}
+      </p>
     </div>
   )
 }
