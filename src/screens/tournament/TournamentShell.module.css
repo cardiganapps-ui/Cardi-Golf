@@ -11,7 +11,8 @@
   min-height: 52px;
   padding: var(--s2) var(--gutter);
   position: sticky;
-  top: 0;
+  /* Under the status bar's band, never behind it (PWA-02). */
+  top: var(--safe-top);
   background: var(--bg);
   z-index: 5;
   border-bottom: var(--hairline);

@@ -114,6 +114,11 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - New icons: person, people, bell, search, calendar, home, settings.
 - Fixtures: `/p/_/yo`, `/p/_/nuevo`, `/p/_/extrano`, `/p/_/manual`; shots `design/shots/after/perfil--*.jpg`.
 
+## Status bar (2026-10-01, PWA-02)
+- **The installed iPhone app uses the default status bar** (`apple-mobile-web-app-status-bar-style=default`): dark icons on a light bar, with the page starting below it. With `black-translucent`, the page drew under white icons that vanished on the cream paper, and the sticky header slid under the clock once you scrolled.
+- **Any top inset still reported gets a band of paper behind the bar** (`.shell::before`, as tall as `--safe-top`), for example on a translucent bar elsewhere or a notch. The tournament header sticks at `top: var(--safe-top)`, below the band.
+- **Proof:** `e2e/fixtures/statusbar.spec.ts` emulates a 59 px inset. Still to check on a device: the bar's look on a real iPhone, on the rehearsal checklist.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
