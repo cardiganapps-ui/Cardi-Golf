@@ -45,7 +45,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Save moves on and offers "Deshacer" in the toast instead of asking first; the unusual-value check (10+ strokes, 5+ putts) stays as a sheet because the rules ask to confirm those. Signing a card uses a sheet instead of the browser confirm.
 - The sync state ("Sincronizado", "n pendientes", "Sin señal", or the outbox's last error) sits under the save button and under the grid, in the caution color when not clean.
 - Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
-- The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
+- The engine's net-score names used golf English ("eagle neto"), and the screen swapped in "águila" with a one-line display mapping. Since 2026-10-01 (#84) the engine writes «águila neta» itself and the mapping is gone.
 
 ## Phase 3, PR 4: Juegos and Jugador (2026-09-28)
 
@@ -124,6 +124,17 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
   - whether a copy installed before this change picks the new bar up or needs to be removed and re-added;
   - iOS 26's glass edge.
 
+## Money in columns, and «Ya pagaron» (2026-10-01, VIS-01, UX-21)
+- **A row owns its columns.** A screen composes the row primitives and never re-declares what it composes. Both rules are one class, so the bundle's order picks the winner, and the screens' `display: grid` had lost to `rowLine`'s `display: flex` on La Calcutta, the Matrimonios head-to-head and the Liquidación.
+- **The convention.**
+  - The text block composes `rowTextBlock` and takes the free width.
+  - The amount composes `rowFig`: right-aligned, tabular, never wrapped.
+  - A control sits in `rowAction`: one 8rem slot on every row of a list that has one, left empty on a line that cannot be marked yet.
+  - So every amount in a list ends on one edge, and every button starts on one.
+- **Guards.** `src/styles/one-row.test.ts` refuses a re-declaration. `e2e/fixtures/money.spec.ts` measures the rows on every Juegos tab, every Dinero mode and the Comité inbox. The inbox keeps its tighter gap with a two-class rule (`.inbox .inboxRow`), which wins wherever the bundle puts `rowLine`.
+- **State and action are two words.** «Marcar pagado» is the action. «Pagado», with its check and pressed, is the state, shown in «Ya pagaron»: a folded list of every payment on record. It sits under «Quién debe qué» while the tournament runs, and under the settlement once it is final. Its rows read in the past («Leonel pagó a Banco») and a step quieter (`--ink-2`, the amount at 500).
+- **Taking a payment back.** A tap on «Pagado» writes the same row with paid false, and nothing else. Both directions offer «Deshacer».
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
@@ -142,12 +153,16 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 | Statistics | estadísticas | stats |
 | Link | enlace | link |
 | Countback | desempate por los últimos hoyos | countback |
+| Versus | contra | vs, vs. |
+| A plus handicap | +1.2 in a handicap's own place («Índice +1.2»); −1.2 in an explanation's arithmetic, said once («se escribe +2») | -1.2 |
 | Day-2 cut | recorte del día 2 | anti-sandbag |
 | Kept as vernacular | Stableford, putts, tee, rating, slope, par, Calcutta, martillazo, "¡Vendido!" | |
 
 Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido!"; no middle dots as separators (sentences, commas or a second line instead); no arrows or symbols in copy; no jokes outside `feed`; buttons under 24 characters, chips under 18.
 
-~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs; the English net-score names stay in the engine (the screen maps them) because tests and the CSV export read them.
+~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs. The English net-score names went too in #84 (2026-10-01): the engine writes «águila neta».
+
+**Enforced (2026-10-01, COPY-24).** The rules drifted back (39 middle dots, arrows, «1º», straight quotes, "eagle", "score", "slot", «pozo» for the snake), so `src/lib/copyRules.test.ts` now reads every string in `es-MX.ts`, what the engine writes for the golden tournament and every fixture (explanations, labels, board text, the Reglamento, the catalog), and the string literals in the rest of `src`. It fails on a middle dot, an arrow, straight quotes, an ordinal without its period (`ordinal()` writes «1.º»), a hyphen used as a minus (`withTrueMinus`, `toParText`, `formatMoney` all write «−»), a name list joined by hand or with commas only (`t.common.andList`, `t.common.orList`: «Iván e Hilario», «Camilo u Óscar»), and the «Not» column above. It also reads the API routes' messages and the push worker, runs the term table on every string with a space in it outside code, and computes a probe tournament with plus handicaps, a cut larger than the handicap and a net below zero, so the handicap and points arithmetic is read too. The engine names net scores in Spanish too («águila neta»): nothing read the English names after all. «Pozo» is the Calcutta's word only; the snake is paid from the bolsa.
 
 ## Throwaway organizer account
 

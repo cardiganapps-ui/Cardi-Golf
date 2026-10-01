@@ -33,7 +33,7 @@ export interface PrizeAward {
   payerId?: Id
   /** The instance game that awarded it (`settings.games[].id`). */
   gameId?: string
-  /** Copy for the money screens, e.g. "Individual · 1º" or "La Víbora · Día 1 · Grupo 2". */
+  /** Copy for the money screens, e.g. «Individual, 1.º» or «La Víbora, día 1, grupo 2». */
   label: string
   playerId: Id
   amount: number

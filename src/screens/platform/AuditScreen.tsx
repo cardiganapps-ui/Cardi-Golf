@@ -71,7 +71,7 @@ export function AuditScreen() {
               <button key={`${x.source}-${x.id}`} type="button" className={`${s.row} ${s.rowPick}`} onClick={() => setOpen(x)}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{titleOf(x)}</span>
-                  <span className={s.rowSub}>{[x.tournament, x.reason, x.source === 'platform' && !x.tournament ? x.detail : null].filter(Boolean).join(' · ') || '—'}</span>
+                  <span className={s.rowSub}>{[x.tournament, x.reason, x.source === 'platform' && !x.tournament ? x.detail : null].filter(Boolean).join(', ') || '—'}</span>
                 </span>
                 <span className={s.rowEnd}>
                   {x.source === 'comite' && <span className="chip chip--outline">{A.sources.comite}</span>}
@@ -115,12 +115,12 @@ function AuditEntry({ item }: { item: AuditItem }) {
       ? Object.entries(d.payload ?? {}).map(([key, v]) => ({ key, value: showValue(v) }))
       : changedFields({ action: d.action as 'INSERT' | 'UPDATE' | 'DELETE', before: d.before ?? null, after: d.after ?? null }).map((f) => ({
           key: f.key,
-          value: d.action === 'UPDATE' ? `${showValue(f.before)} → ${showValue(f.after)}` : showValue(d.action === 'INSERT' ? f.after : f.before),
+          value: d.action === 'UPDATE' ? t.admin.history.change(showValue(f.before), showValue(f.after)) : showValue(d.action === 'INSERT' ? f.after : f.before),
         }))
   return (
     <div className={s.section}>
       <strong>{titleOf(item)}</strong>
-      <span className={s.help}>{[item.actor, new Date(item.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].filter(Boolean).join(' · ')}</span>
+      <span className={s.help}>{[item.actor, new Date(item.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].filter(Boolean).join(', ')}</span>
       {item.reason && <span className={s.help}>{t.admin.history.reason(item.reason)}</span>}
       {item.tournamentId && (
         <Link className="btn btn--secondary btn--sm" to={`../torneos/${item.tournamentId}`} relative="path">

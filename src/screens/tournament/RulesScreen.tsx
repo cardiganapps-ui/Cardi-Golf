@@ -23,7 +23,7 @@ export function RulesScreen() {
   const rules = (id: Parameters<typeof moduleRules>[0]) => moduleRules(id, settings, field, honoree?.displayName)
 
   const sections: Array<{ id: string; title: string; lines: string[]; on: boolean }> = [
-    { id: 'field', title: R.sections.field, lines: R.field(n, formatMoney(settings.entryFee), formatMoney(settings.entryFee * n), settings.tiers.join(', ')), on: true },
+    { id: 'field', title: R.sections.field, lines: R.field(n, formatMoney(settings.entryFee), formatMoney(settings.entryFee * n), t.common.andList(settings.tiers)), on: true },
     {
       id: 'handicaps',
       title: R.sections.handicaps,

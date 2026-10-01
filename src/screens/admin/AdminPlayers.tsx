@@ -4,7 +4,7 @@
  * sources, the estimate from three scores (§13b-E) and a live preview.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
@@ -100,13 +100,15 @@ export function AdminPlayers() {
       base = estimate.value
     } else if (editing.handicap_source === 'index') base = editing.handicap_index ?? 0
     let courseHcp = base
+    let course: ReturnType<typeof courseHandicap> | null = null
     const tee = tees.find((x) => x.id === editing.default_tee_id)
     if (editing.handicap_source !== 'manual' && tee) {
-      courseHcp = courseHandicap(base, { slope: tee.slope, rating: tee.rating, par: tee.holes.reduce((s, h) => s + h.par, 0) || 72 }).value
+      course = courseHandicap(base, { slope: tee.slope, rating: tee.rating, par: tee.holes.reduce((s, h) => s + h.par, 0) || 72 })
+      courseHcp = course.value
     }
     const ph = playingHandicap(courseHcp, settings.handicap)
     const strokes = Array.from({ length: 18 }, (_, i) => strokesReceived(ph.value, i + 1))
-    return { base, courseHcp, ph, strokes, estimate }
+    return { base, courseHcp, course, ph, strokes, estimate }
   }, [editing, settings.handicap, tees])
 
   async function save() {
@@ -216,7 +218,7 @@ export function AdminPlayers() {
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{p.fullName}</span>
                   <span className={a.rowSub}>
-                    {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {p.baseHcp}
+                    {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {handicapText(p.baseHcp)}
                     {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
                     {p.isAdmin ? `, ${P.committee}` : ''}
                     {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
@@ -343,7 +345,7 @@ export function AdminPlayers() {
               <div className={a.section}>
                 <div className={a.sectionTitle}>
                   <strong>{P.preview}</strong>
-                  <HowCalculated why={preview.estimate ? [preview.estimate.why, preview.ph.why] : preview.ph.why} />
+                  <HowCalculated why={[preview.estimate?.why, preview.course?.why, preview.ph.why].filter((w) => !!w)} />
                 </div>
                 <div className={a.chipRow}>
                   <span className={`${a.fig} ${a.figLg}`}>{preview.ph.value}</span>

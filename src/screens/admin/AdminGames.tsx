@@ -120,7 +120,7 @@ export function AdminGames() {
                     <button key={`${h.roundId}-${h.hole}`} type="button" className={a.rowBtn} onClick={() => setAwardFor({ gameId: g.id, hole: h })}>
                       <span className={a.rowText}>
                         <span className={a.rowTitle}>{G.dayHole(h.roundNumber, h.hole)}</span>
-                        <span className={h.status === 'disputed' ? a.warn : a.rowSub}>{h.status === 'won' ? h.winners.map(name).join(', ') : h.status === 'disputed' ? G.disputed(h.claims.map(name).join(', ')) : G.open}</span>
+                        <span className={h.status === 'disputed' ? a.warn : a.rowSub}>{h.status === 'won' ? t.common.andList(h.winners.map(name)) : h.status === 'disputed' ? G.disputed(t.common.andList(h.claims.map(name))) : G.open}</span>
                       </span>
                     </button>
                   ))}
@@ -137,7 +137,7 @@ export function AdminGames() {
                     <div key={m.id} className={a.row}>
                       <span className={a.rowText}>
                         <span className={a.rowTitle}>
-                          {m.a.map(name).join(' y ')} {G.vs} {m.b.map(name).join(' y ')}
+                          {t.common.andList(m.a.map(name))} {G.vs} {t.common.andList(m.b.map(name))}
                         </span>
                       </span>
                       <button
@@ -275,7 +275,7 @@ function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hol
   return (
     <Sheet open={!!target} onClose={close} title={target ? `${game?.label ?? ''}, ${G.dayHole(target.hole.roundNumber, target.hole.hole)}` : undefined}>
       <div className="stack">
-        {target && target.hole.claims.length > 0 && <p className="help">{G.claims(target.hole.claims.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?').join(', '))}</p>}
+        {target && target.hole.claims.length > 0 && <p className="help">{G.claims(t.common.andList(target.hole.claims.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?')))}</p>}
         <div className={a.tiles}>
           {players.map((p) => (
             <button key={p.id} type="button" aria-pressed={chosen.includes(p.id)} className={`${a.tile} ${chosen.includes(p.id) ? a.tileOn : ''}`} onClick={() => toggle(p.id)}>

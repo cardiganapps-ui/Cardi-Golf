@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
@@ -190,7 +190,7 @@ export function AdminAuction() {
                   <span className={styles.lotName}>{player.fullName}</span>
                   <span className={styles.lotSub}>
                     {player.tier ? `${player.tier}, ` : ''}
-                    {ph != null ? `${t.live.playingHcp.toLowerCase()} ${ph}` : `${t.live.hcp.toLowerCase()} ${player.baseHcp}`}
+                    {ph != null ? `${t.live.playingHcp.toLowerCase()} ${ph}` : `${t.live.hcp.toLowerCase()} ${handicapText(player.baseHcp)}`}
                     {pair ? `, ${A.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
                   </span>
                 </div>

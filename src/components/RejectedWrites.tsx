@@ -29,11 +29,11 @@ export function RejectedWrites({ canResend }: { canResend: boolean }) {
     if (r.kind === 'award') {
       const p = r.payload as { game_id: string; hole: number; player_ids: string[] }
       const label = data.settings.games.find((g) => g.id === p.game_id)?.label ?? p.game_id
-      return IB.rejectedAward(label, p.hole, p.player_ids.map(name).join(', ') || t.card.contest.nobody)
+      return IB.rejectedAward(label, p.hole, t.common.andList(p.player_ids.map(name)) || t.card.contest.nobody)
     }
     const p = r.payload as { pair_id: string }
     const pair = snapshot.pairs.find((x) => x.id === p.pair_id)
-    return IB.rejectedSignature(pair?.name ?? (pair ? `${name(pair.player1Id)} & ${name(pair.player2Id)}` : '?'))
+    return IB.rejectedSignature(pair?.name ?? (pair ? t.common.andList([name(pair.player1Id), name(pair.player2Id)]) : '?'))
   }
   return (
     <section className={styles.box}>

@@ -7,8 +7,9 @@
  * they play: rank the entrants, break ties on countback, label the positions,
  * and split the prizes.
  */
+import { ordinal, t } from '../../../i18n/es-MX'
 import { countback, flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
-import { formatFor, type Entrant, type Figure, type FormatStandings } from '../../formats'
+import { formatFor, toParText, withTrueMinus, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { fieldShape, individualPrizeAmounts } from '../../settings/prizeCheck'
@@ -94,7 +95,7 @@ function rankStandings(ctx: ModuleContext) {
 
 function incompleteWarning(names: string[]): string[] {
   if (!names.length) return []
-  return [`Tarjeta incompleta, hoyos jugados: ${names.join(', ')}. ${names.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`]
+  return [`Tarjeta incompleta, hoyos jugados: ${t.common.andList(names)}. ${names.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`]
 }
 
 /**
@@ -131,7 +132,7 @@ export const individualModule: GameModule<IndividualState> = {
       const neighbour = ranked[i - 1]
       let countbackWhy: Explanation | null = null
       if (neighbour && rankValue(neighbour.item) === rankValue(r.item)) {
-        countbackWhy = explainCountback(ctx, standings, neighbour.item, r.item, nameOf, r.tied)
+        countbackWhy = explainCountback(ctx, standings, neighbour.item, r.item, nameOf, r.tied, format.higherIsBetter(ctx.settings))
       }
       return {
         playerId: r.item,
@@ -182,7 +183,7 @@ export const individualModule: GameModule<IndividualState> = {
         remainder -= extra
         out.push({
           moduleId: 'individual',
-          label: `${label}, ${row.label}º`,
+          label: `${label}, ${ordinal(row.label)}`,
           playerId,
           amount: each + extra,
           final: state.final,
@@ -194,7 +195,14 @@ export const individualModule: GameModule<IndividualState> = {
   },
 }
 
-/** Why one entrant sits above another on an equal figure. */
+/**
+ * Why one entrant sits above another on an equal figure.
+ *
+ * `up`: the format counts up (points, matches). When it counts strokes, the
+ * countback holds strokes to par negated so that more is better; the lines
+ * turn them back into to-par figures («+4», «E», «−1»), or a player 3 over
+ * would read as 3 under.
+ */
 function explainCountback(
   ctx: ModuleContext,
   standings: FormatStandings,
@@ -202,6 +210,7 @@ function explainCountback(
   id: Id,
   nameOf: (id: Id) => string,
   tied: boolean,
+  up: boolean,
 ): Explanation {
   const lastRoundId = ctx.core.roundIds.at(-1) ?? ''
   const lastRound = ctx.snapshot.rounds.find((x) => x.id === lastRoundId)
@@ -209,9 +218,10 @@ function explainCountback(
   const lastHole = lastRound?.holes ?? 18
   const empty = { pointsByHole: new Map<number, number>(), holes: 18 }
   const cb = countback(standings.countback[aboveId] ?? empty, standings.countback[id] ?? empty)
+  const figure = (n: number) => (up ? withTrueMinus(n) : toParText(-n))
   const why: Explanation = {
     title: tied ? `Empate con ${nameOf(aboveId)}` : `Desempate con ${nameOf(aboveId)}`,
-    steps: cb.steps.map((s) => `Día ${lastN}, ${s.label}: ${nameOf(aboveId)} ${s.a} – ${nameOf(id)} ${s.b}`),
+    steps: cb.steps.map((s) => `Día ${lastN}, ${s.label}: ${nameOf(aboveId)} ${figure(s.a)}${t.common.versus}${nameOf(id)} ${figure(s.b)}`),
   }
   if (cb.result === 0) why.steps.push(`Iguales hasta el hoyo ${lastHole}: se reparten los premios.`)
   return why

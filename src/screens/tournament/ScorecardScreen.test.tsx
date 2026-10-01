@@ -221,7 +221,7 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
 
   it('the hole is the page heading: «Hoyo 10, par …»', () => {
     mount()
-    expect(screen.getByRole('heading', { level: 1, name: /^Hoyo 10, par \d, índice \d+/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: /^Hoyo 10, par \d, índice de golpe \d+/ })).toBeTruthy()
   })
 
   it('a tap says whose score changed and what it is worth; a save says the new hole', async () => {

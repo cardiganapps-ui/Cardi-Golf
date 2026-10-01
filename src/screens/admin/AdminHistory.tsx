@@ -68,7 +68,7 @@ export function AdminHistory() {
     }
     const what = t.platform.tables[e.table] ?? e.table
     const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${row.number ?? ''}` : name(row.player_id)
-    return `${what}${who ? ` ${who}` : ''} · ${verb}`
+    return `${what}${who ? ` ${who}` : ''}, ${verb}`
   }
 
   if (error) return <ErrorBox error={error} onRetry={() => void load()} />
@@ -90,7 +90,7 @@ export function AdminHistory() {
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{title(e)}</span>
                   <span className={a.rowSub}>
-                    {[e.platform ? H.byPlatform : (e.actor ?? H.byComite), relTime(e.at), e.reason].filter(Boolean).join(' · ')}
+                    {[e.platform ? H.byPlatform : (e.actor ?? H.byComite), relTime(e.at), e.reason].filter(Boolean).join(', ')}
                   </span>
                 </span>
                 {e.platform && <span className="chip chip--coral">{H.byPlatform}</span>}
@@ -119,7 +119,7 @@ export function AdminHistory() {
           <div className={a.section}>
             <strong>{title(open)}</strong>
             <span className={a.help}>
-              {[open.platform ? H.byPlatform : (open.actor ?? H.byComite), new Date(open.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].join(' · ')}
+              {[open.platform ? H.byPlatform : (open.actor ?? H.byComite), new Date(open.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].join(', ')}
             </span>
             {open.reason && <span className={a.help}>{H.reason(open.reason)}</span>}
             <span className="label">{H.fields}</span>
@@ -129,7 +129,7 @@ export function AdminHistory() {
                   <span className={a.rowText}>
                     <span className={a.rowTitle}>{f.key}</span>
                     <span className={a.rowSub}>
-                      {open.action === 'UPDATE' ? `${show(f.before)} → ${show(f.after)}` : show(open.action === 'INSERT' ? f.after : f.before)}
+                      {open.action === 'UPDATE' ? H.change(show(f.before), show(f.after)) : show(open.action === 'INSERT' ? f.after : f.before)}
                     </span>
                   </span>
                 </div>

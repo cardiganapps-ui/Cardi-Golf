@@ -15,6 +15,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
 import { usePlatformApi, type DeletePreview, type Person } from '../../data/platform'
+import { formatIndex } from '../../data/profiles'
 import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { clock, personName } from './names'
@@ -73,7 +74,7 @@ export function PersonDetail() {
   const actionable = !p.isSelf && !p.isAdmin
   const pr = p.profile
   const profileLine = pr
-    ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(pr.index.toFixed(1)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(' · ')
+    ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(formatIndex(pr.index)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(', ')
     : ''
 
   return (
@@ -84,7 +85,7 @@ export function PersonDetail() {
           <Avatar name={name} url={p.profile?.avatarUrl} size="lg" />
           <div className={s.rowText}>
             <h2>{name}</h2>
-            <span className={s.help}>{[p.profile ? `@${p.profile.handle}` : null, p.profile ? p.email : null].filter(Boolean).join(' · ')}</span>
+            <span className={s.help}>{[p.profile ? `@${p.profile.handle}` : null, p.profile ? p.email : null].filter(Boolean).join(', ')}</span>
           </div>
         </div>
         <span className={s.chips}>
@@ -96,7 +97,7 @@ export function PersonDetail() {
         <span className={s.help}>
           {[H.joined(relTime(p.createdAt)), p.lastSignInAt ? H.lastSeen(relTime(p.lastSignInAt)) : H.neverSeen, !p.anonymous && !p.confirmedAt ? H.unconfirmed : null]
             .filter(Boolean)
-            .join(' · ')}
+            .join(', ')}
         </span>
         {p.profile && (
           <div className={s.actions}>
@@ -135,7 +136,7 @@ export function PersonDetail() {
                   </span>
                 </Link>
                 {(x.link === 'confirmed' || x.link === 'pending') && x.playerId && (
-                  <button className="btn btn--ghost btn--sm" type="button" onClick={() => setPending({ kind: 'unlink', playerId: x.playerId!, label: `${x.playerName ?? ''} · ${x.name}` })}>
+                  <button className="btn btn--ghost btn--sm" type="button" onClick={() => setPending({ kind: 'unlink', playerId: x.playerId!, label: H.playerIn(x.playerName, x.name) })}>
                     {H.unlink}
                   </button>
                 )}
@@ -360,11 +361,11 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
 
   const lines = preview
     ? [
-        preview.orphaned.length ? H.deleteOrphaned(preview.orphaned.map((x) => x.name).join(', ')) : null,
+        preview.orphaned.length ? H.deleteOrphaned(t.common.andList(preview.orphaned.map((x) => x.name))) : null,
         preview.organizerOf > preview.orphaned.length ? H.deleteOrganizer(preview.organizerOf) : null,
         preview.linkedPlayers ? H.deletePlayers(preview.linkedPlayers) : null,
-        preview.crewsHanded.length ? H.deleteCrewsHanded(preview.crewsHanded.join(', ')) : null,
-        preview.crewsDeleted.length ? H.deleteCrewsDeleted(preview.crewsDeleted.join(', ')) : null,
+        preview.crewsHanded.length ? H.deleteCrewsHanded(t.common.andList(preview.crewsHanded)) : null,
+        preview.crewsDeleted.length ? H.deleteCrewsDeleted(t.common.andList(preview.crewsDeleted)) : null,
         preview.friendships || preview.rivalries ? H.deleteSocial(preview.friendships, preview.rivalries) : null,
         preview.hasProfile ? H.deleteProfile : null,
       ].filter((x): x is string => !!x)

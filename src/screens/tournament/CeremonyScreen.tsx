@@ -17,7 +17,7 @@ import confetti from 'canvas-confetti'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'motion/react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { ordinal, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
@@ -30,7 +30,7 @@ import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
 
 const C = t.ceremony
-/** "A y B", "A, B y C". */
+/** «A y B», «A, B e Iván». */
 const andList = t.common.andList
 
 /** A piece of a winner's second line: words, or a figure that counts up when revealed. */
@@ -252,7 +252,7 @@ export function CeremonyScreen() {
           id: 'pairs',
           title: settings.modules.pairs.label,
           icon: <IconRings size={64} />,
-          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${r.label}º, ${r.name}`, sub: [t.common.and(nameOf(r.playerIds[0]), nameOf(r.playerIds[1])), fig(r.total, C.withPoints)] })),
+          winners: [...podium].reverse().map((r) => ({ playerIds: [...r.playerIds], line: `${ordinal(r.label)}, ${r.name}`, sub: [andList(r.playerIds.map(nameOf)), fig(r.total, C.withPoints)] })),
         })
       }
     }

@@ -6,7 +6,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
@@ -342,7 +342,7 @@ function AuctionBoard() {
             <span className={styles.lotNum}>{lot ? t.auction.lot(lot.lotNumber) : ''}</span>
             <h2 className={styles.lotName}>{player.fullName}</h2>
             <span className={styles.lotMeta}>
-              {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${player.baseHcp}`}
+              {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`}
               {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
             </span>
             {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
