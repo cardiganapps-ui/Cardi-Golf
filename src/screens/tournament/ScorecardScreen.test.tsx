@@ -26,11 +26,16 @@ vi.mock('../../data/outbox', async (importOriginal) => {
   }
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
+const admin = vi.hoisted(() => ({ saves: [] as Array<{ row: Record<string, unknown>; reason: string }> }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  adminSaveScore: vi.fn(async (row: Record<string, unknown>, reason: string) => void admin.saves.push({ row, reason })),
+}))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 import { toast } from '../../components/ui'
-import { useOutbox } from '../../data/outbox'
+import { enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
@@ -40,20 +45,32 @@ import { TournamentContext } from './TournamentGate'
 
 const S = t.card
 let clock = 0
+
+// A canceled animation rejects its `finished` promise, and the spec marks that
+// rejection as handled (browsers never report it). happy-dom doesn't, so a
+// snake marker still sliding when the card closes surfaced as an unhandled
+// AbortError. Do what the spec does.
+const cancelAnimation = Animation.prototype.cancel
+Animation.prototype.cancel = function (this: Animation) {
+  this.finished.catch(() => undefined)
+  return cancelAnimation.call(this)
+}
 let snap: Snapshot
 
 function load(s: Snapshot) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 
-function mount(edit?: (s: Snapshot) => void) {
-  const fx = getFixture('minimal4-live')!
+function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isAdmin?: boolean } = {}) {
+  const name = opts.fixture ?? 'minimal4-live'
+  const fx = getFixture(name)!
   snap = structuredClone(fx.snapshot)
   edit?.(snap)
   load(snap)
+  const me = { ...fx.me, isAdmin: opts.isAdmin ?? fx.me.isAdmin }
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -82,6 +99,7 @@ async function tapSave(at: number) {
 const written = () => outbox.scores.map((r) => `${r.player_id}@${r.hole}=${r.strokes}/${r.putts}`)
 
 beforeEach(() => {
+  localStorage.clear()
   outbox.scores = []
   clock = 10_000
   vi.spyOn(performance, 'now').mockImplementation(() => clock)
@@ -233,5 +251,179 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
     }
     const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () => {
+  /** The other phone's save on hole 10, in the snapshot this phone loads. */
+  const savedElsewhere = (playerId: string, strokes: number) => (s: Snapshot) => {
+    s.scores = s.scores.filter((x) => !(x.playerId === playerId && x.hole === 10 && x.roundId === 'r1'))
+    s.scores.push({ roundId: 'r1', playerId, hole: 10, strokes, putts: 3, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
+  }
+
+  it('what was typed comes back when the card opens again, and says it is not saved yet', () => {
+    const first = mount()
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(before + 2)
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+  })
+
+  it('a player the other phone saved since gets the save; the others get what was typed', () => {
+    const first = mount()
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    mount(savedElsewhere('p3', 8))
+    expect(strokesOf('p1')).toBe(before + 1)
+    expect(strokesOf('p3')).toBe(8)
+  })
+
+  it('opened on a stale snapshot, a restored draft gives way when the newer save arrives, and is never written over it', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    // Opened offline on the cached snapshot: p3's draft comes back.
+    mount()
+    expect(strokesOf('p3')).not.toBe(8)
+    // The fresh snapshot brings the other phone's save of p3.
+    remoteSave('p3', 10, 8, 3)
+    expect(strokesOf('p3')).toBe(8)
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+    await tapSave(11_000)
+    expect(written().filter((r) => r.startsWith('p3@'))).toEqual([])
+  })
+
+  it('a baseline is taken once: a save that lands after p3 was typed here keeps that draft from coming back over it', () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    // The other phone saves p3 while this phone is still on the hole (what was typed here stays on screen: REL-05).
+    remoteSave('p3', 10, 8, 3)
+    // More typing rewrites the kept draft; p3's baseline must stay what the server had when he was typed.
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount(savedElsewhere('p3', 8))
+    expect(strokesOf('p3')).toBe(8)
+  })
+
+  it('a card that can no longer be edited (signed) never shows a leftover draft', () => {
+    const groupOf = (s: Snapshot) => s.groups.find((g) => g.roundId === 'r2' && g.playerIds.includes('p9'))!
+    const first = mount(undefined, { fixture: 'full12-live' })
+    const g = groupOf(snap)
+    const pid = g.playerIds[0]!
+    const before = strokesOf(pid)
+    fireEvent.click(strokesUp(pid))
+    first.unmount()
+    mount(
+      (s) => {
+        const pair = s.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)!
+        s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: pair.player1Id, signedAt: '2027-04-10T14:30:00Z' })
+      },
+      { fixture: 'full12-live', isAdmin: false },
+    )
+    expect(strokesOf(pid)).toBe(before)
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+  })
+
+  it('touching a restored player keeps the note until the hole is saved', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount()
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    fireEvent.click(strokesUp('p1'))
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    await tapSave(11_000)
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+  })
+
+  it('the last hole stays open after its save: a correction there is kept against the save, and the next save writes only it', async () => {
+    window.history.replaceState(null, '', '/?hoyo=18')
+    try {
+      const first = mount()
+      expect(holeOnScreen()).toBe(18)
+      const par = strokesOf('p1')
+      fireEvent.click(strokesUp('p1'))
+      fireEvent.click(strokesUp('p3'))
+      await tapSave(11_000)
+      // The save lands for all four, and «Corregir» brings the hole back.
+      const saved = Object.fromEntries(outbox.scores.map((r) => [r.player_id as string, r]))
+      for (const pid of ['p1', 'p2', 'p3', 'p4']) remoteSave(pid, 18, saved[pid]!.strokes as number, saved[pid]!.putts as number)
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: S.correct }))
+      })
+      expect(holeOnScreen()).toBe(18)
+      fireEvent.click(strokesUp('p1'))
+      expect(strokesOf('p1')).toBe(par + 2)
+      // Leaving and coming back keeps the correction: it was made after the save.
+      first.unmount()
+      mount((s) => {
+        for (const pid of ['p1', 'p2', 'p3', 'p4']) s.scores.push({ roundId: 'r1', playerId: pid, hole: 18, strokes: saved[pid]!.strokes as number, putts: saved[pid]!.putts as number, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+      })
+      expect(strokesOf('p1')).toBe(par + 2)
+      expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+      // Saving it writes p1 alone; p3, touched before the first save, is not written again.
+      outbox.scores = []
+      await tapSave(20_000)
+      expect(written()).toEqual([`p1@18=${par + 2}/2`])
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
+  it('a saved hole leaves nothing behind, and the note goes', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount()
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    await tapSave(11_000)
+    expect(Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf:tarjeta:'))).toEqual([])
+    expect(screen.queryByText(S.restoredDraft)).toBeNull()
+  })
+})
+
+describe('Tarjeta: a Comité correction on a signed card with a snake tie (the verifier of PR #81)', () => {
+  it('the reason sheet gives way to «¿Quién embocó al último?», and the hole saves only with the answer', async () => {
+    admin.saves = []
+    vi.mocked(enqueueTiebreak).mockClear()
+    window.history.replaceState(null, '', '/?hoyo=18')
+    try {
+      mount(undefined, { fixture: 'full12-finished', isAdmin: true })
+      // Two players take 3 putts: the snake needs to know who holed out last.
+      const puttsGroups = screen.getAllByRole('group', { name: new RegExp(`^${S.puttsOf('.+')}$`) })
+      const value = (g: HTMLElement) => Number(g.textContent?.replace(/\D+/g, ''))
+      for (const g of puttsGroups.slice(0, 2)) {
+        const name = g.getAttribute('aria-label')!
+        for (let i = 0; i < 6 && value(g) < 3; i++) fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepUp}` }))
+        for (let i = 0; i < 6 && value(g) > 3; i++) fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepDown}` }))
+        expect(value(g)).toBe(3)
+      }
+      await tapSave(11_000)
+      // The card is signed: the Comité gives a reason first.
+      const reasonSheet = screen.getByRole('dialog', { name: S.signedReasonTitle })
+      fireEvent.change(within(reasonSheet).getByRole('textbox'), { target: { value: 'Error de captura' } })
+      await act(async () => {
+        fireEvent.click(within(reasonSheet).getByRole('button', { name: S.save }))
+      })
+      // Then the question, alone on top: the reason sheet is gone, nothing was saved yet.
+      expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
+      const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
+      expect(admin.saves).toEqual([])
+      // The answer saves the hole with the reason, and the answer with it.
+      await act(async () => {
+        fireEvent.click(within(ask).getAllByRole('button')[1]!)
+      })
+      expect(admin.saves.length).toBeGreaterThan(0)
+      expect(admin.saves.every((s) => s.reason === 'Error de captura')).toBe(true)
+      expect(enqueueTiebreak).toHaveBeenCalledTimes(1)
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
   })
 })
