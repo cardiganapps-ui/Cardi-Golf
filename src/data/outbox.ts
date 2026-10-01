@@ -4,13 +4,15 @@
  * The store overlays pending items on every fetched snapshot so an
  * optimistic score never flickers away while it is in flight.
  */
+import type { SupabaseClient } from '@supabase/supabase-js'
 import Dexie, { type EntityTable } from 'dexie'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
+import { withTimeout } from '../lib/timeout'
 import type { Score, Snapshot } from '../engine/types'
-import { useAuth } from './auth'
+import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
 
 /**
@@ -479,24 +481,46 @@ export const _outboxTest = {
   },
 }
 
+/**
+ * The player's own token for a push, never the anon key (REL-16). The app can
+ * stay open while the token expires in a dead zone: auth-js keeps the user, so
+ * the hole is not held, and when the signal returns inside its refresh
+ * cooldown (60 s after a failed refresh) getSession() has no session.
+ * supabase-js then sent the write with the anon key, and the server's refusal
+ * read as final: «4 rechazados» for four good holes. With no session the push
+ * fails like a network error instead: the write waits, and goes out once the
+ * session is back (the auth store's change below, the backoff, `online`).
+ */
+async function sessionToken(sb: SupabaseClient): Promise<string> {
+  const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
+  const token = data.session?.access_token
+  if (!token) throw new Error('no session to push with yet')
+  return token
+}
+
 async function push(item: OutboxItem): Promise<void> {
   const sb = supabase()
+  // Every request of this push carries the token checked here, whatever the session does meanwhile.
+  const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'score') {
-    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' })
+    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else if (item.kind === 'tiebreak') {
-    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' })
+    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else if (item.kind === 'award') {
     const p = item.payload
-    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id)
+    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).setHeader('Authorization', auth)
     if (del.error) throw new Error(del.error.message)
     if (p.player_ids.length) {
-      const { error } = await sb.from('hole_awards').insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+      const { error } = await sb
+        .from('hole_awards')
+        .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+        .setHeader('Authorization', auth)
       if (error) throw new Error(error.message)
     }
   } else if (item.kind === 'signature') {
-    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true })
+    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else {
     // Never reached: the flush skips kinds this build does not know.
@@ -641,7 +665,10 @@ export async function startOutbox() {
 }
 
 // Which writes wait depends on who the device is now: recount when that changes
-// (the held count read 0 after a change of identity until the queue moved).
+// (the held count read 0 after a change of identity until the queue moved). And
+// a session that comes back (the refresh worked after a lapse) sends what
+// waited for it, without waiting out the backoff (REL-16).
 useAuth.subscribe?.((state, prev) => {
   if (state.user?.id !== prev.user?.id) publish()
+  if (state.session && state.session !== prev.session && queue.some(canPush)) void flush()
 })
