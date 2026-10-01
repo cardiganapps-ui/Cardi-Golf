@@ -20,7 +20,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
-import { clearCached, readCached, saveEntry } from '../../data/snapshotCache'
+import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
 import { adoptQueuedWrites, refreshOutboxCounters } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
@@ -108,7 +108,8 @@ export function TournamentGate() {
       const lookup = await lookupTournament(slug)
       if (!lookup) {
         settled.current = true
-        void clearCached(slug)
+        // The link leads nowhere now (the tournament was deleted): what was saved under it goes too.
+        void clearCachedSlug(slug)
         setPhase({ kind: 'notFound' })
         return
       }
@@ -131,7 +132,9 @@ export function TournamentGate() {
         // returns to, and it is not kept on the device for offline use.
         if (!platform) {
           setLastTournament({ slug: lookup.slug, name: lookup.name })
-          void saveEntry({ slug, tournamentId: lookup.id, lookup, me })
+          // Under the tournament's own slug, even when the link was the code typed at home:
+          // «Tu último torneo» opens /t/<slug>, and with no signal the boards must be there.
+          void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })
         }
         await load(lookup.id)
         refreshOutboxCounters()
@@ -140,7 +143,7 @@ export function TournamentGate() {
       } else {
         // Not in this tournament any more (the device was released, the link removed): its saved boards go too.
         settled.current = true
-        void clearCached(slug)
+        void clearCached(lookup.id)
         setPhase({ kind: 'enter', lookup })
       }
     } catch (e) {
@@ -194,13 +197,14 @@ export function TournamentGate() {
     if (isAdmin !== phase.me.isAdmin) setPhase({ ...phase, me: { ...phase.me, isAdmin } })
   }, [phase, data])
 
+  const tournamentId = phase.kind === 'in' ? phase.lookup.id : null
   const leave = useCallback(async () => {
     await releaseDevice()
     setLastTournament(null)
     // The boards this phone saved belong to the player who just left.
-    await clearCached(slug)
+    if (tournamentId) await clearCached(tournamentId)
     await resolve()
-  }, [resolve, slug])
+  }, [resolve, tournamentId])
 
   if (phase.kind === 'loading') {
     return (

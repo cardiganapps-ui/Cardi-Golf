@@ -1856,7 +1856,8 @@
       "status": "fixed",
       "pr": 87,
       "tests": [
-        "src/screens/tournament/TournamentGate.test.tsx"
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/data/snapshotCache.test.ts"
       ],
       "verifiedBy": null,
       "residual": null
@@ -2456,7 +2457,8 @@
       "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx",
-        "src/screens/HomeScreen.test.tsx"
+        "src/screens/HomeScreen.test.tsx",
+        "src/data/snapshotCache.test.ts"
       ],
       "verifiedBy": null,
       "residual": null

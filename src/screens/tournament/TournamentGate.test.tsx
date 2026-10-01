@@ -63,9 +63,10 @@ function Board() {
     </>
   )
 }
-function open() {
+/** Open a tournament link: its slug, or the join code typed at home. */
+function open(link = slug) {
   return render(
-    <MemoryRouter initialEntries={[`/t/${slug}`]}>
+    <MemoryRouter initialEntries={[`/t/${link}`]}>
       <Routes>
         <Route path="/t/:slug" element={<TournamentGate />}>
           <Route index element={<Board />} />
@@ -98,7 +99,7 @@ function serverLoads(name: string, fail = 0) {
 
 const realLoad = useTournament.getState().load
 beforeEach(async () => {
-  await clearCached(slug)
+  await clearCached(id)
   useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
   server.ensureSession.mockReset()
   server.lookupTournament.mockReset()
@@ -189,6 +190,44 @@ describe('saved boards that no longer belong here', () => {
     })
     expect(server.releaseDevice).toHaveBeenCalled()
     expect(await readCached(slug)).toBeNull()
+  })
+})
+
+describe('a tournament joined with its code: the saved boards follow the tournament, not the link', () => {
+  const code = fx.lookup.joinCode
+
+  it('«Tu último torneo» opens the slug, and with no signal finds the boards saved when the code was typed', async () => {
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads('En vivo del servidor')
+    open(code)
+    await screen.findByText('En vivo del servidor: server')
+    // What the store's load keeps on the phone with the boards (stood in for here).
+    await saveSnapshot(id, fx.snapshot)
+    cleanup()
+    // The next morning, no signal: home's «Tu último torneo» opens /t/<slug>.
+    useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
+    server.ensureSession.mockImplementation(never)
+    open(slug)
+    expect(await screen.findByText(`${fx.snapshot.tournament.name}: cache`, {}, { timeout: 500 })).toBeTruthy()
+  })
+
+  it('the code still opens them with no signal', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.ensureSession.mockImplementation(never)
+    open(code)
+    expect(await screen.findByText('Guardado en el teléfono: cache', {}, { timeout: 500 })).toBeTruthy()
+  })
+
+  it('a device the tournament no longer knows, opened by its code, loses the boards saved under the slug', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: false, via: null })
+    open(code)
+    expect(await screen.findByText('Entrar')).toBeTruthy()
+    await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
   })
 })
 
