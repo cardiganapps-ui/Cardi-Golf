@@ -1145,12 +1145,12 @@
       "workstream": "W3",
       "phase": 0,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 68,
       "tests": [
         "src/engine/core/settlement.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #68, 2026-10-01: FIXED. Hand check of all 13 vía-banco lines of full12-finished, plus a 2,000-tournament fuzz with its own cash-replay oracle (partial, overpaid, unmarked, moved prizes, bets both ways, banker as winner and debtor, house cut, unbalanced bank). No counterexample. Its three stuck-debt caveats were fixed in the same PR (0c8e5d0).",
       "residual": null
     },
     {
@@ -1189,12 +1189,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 68,
       "tests": [
         "src/engine/core/settlement.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #68, 2026-10-01: FIXED. Hand check of all 13 vía-banco lines of full12-finished, plus a 2,000-tournament fuzz with its own cash-replay oracle (partial, overpaid, unmarked, moved prizes, bets both ways, banker as winner and debtor, house cut, unbalanced bank). No counterexample. Its three stuck-debt caveats were fixed in the same PR (0c8e5d0).",
       "residual": null
     },
     {
@@ -1303,12 +1303,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 68,
       "tests": [
         "src/engine/core/settlement.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #68, 2026-10-01: FIXED. Hand check of all 13 vía-banco lines of full12-finished, plus a 2,000-tournament fuzz with its own cash-replay oracle (partial, overpaid, unmarked, moved prizes, bets both ways, banker as winner and debtor, house cut, unbalanced bank). No counterexample. Its three stuck-debt caveats were fixed in the same PR (0c8e5d0).",
       "residual": null
     },
     {
