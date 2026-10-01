@@ -161,6 +161,20 @@ describe('the copy on the phone (audit P0-5)', () => {
   })
 })
 
+describe('where the boards on screen came from (REL-02)', () => {
+  it('the server’s once a load or a reload lands: the gate stops asking, the header stops saying «Conectando…»', async () => {
+    // Opened from the phone's copy.
+    useTournament.setState({ tournamentId: null, data: null, source: null })
+    store().seed(TID, structuredClone(fx.snapshot), 1)
+    expect(store().source).toBe('cache')
+    await store().load(TID)
+    expect(store().source).toBe('server')
+    useTournament.setState({ source: 'cache' })
+    await store().reload()
+    expect(store().source).toBe('server')
+  })
+})
+
 describe('how old the boards are (REL-04)', () => {
   it('a hole saved on the phone leaves the age of the server data', () => {
     // A copy saved two days ago, opened with no signal.

@@ -39,6 +39,8 @@ vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undef
 vi.mock('./EnterScreen', () => ({ EnterScreen: () => <p>Entrar</p> }))
 
 import { getFixture } from '../../dev/fixtures'
+import { adoptQueuedWrites } from '../../data/outbox'
+import { t } from '../../i18n/es-MX'
 import { clearCached, readCached, saveEntry, saveSnapshot } from '../../data/snapshotCache'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { TournamentGate, useTournamentCtx } from './TournamentGate'
@@ -104,6 +106,7 @@ beforeEach(async () => {
   server.ensureSession.mockReset()
   server.lookupTournament.mockReset()
   server.myMembership.mockReset()
+  vi.mocked(adoptQueuedWrites).mockClear()
 })
 afterEach(() => cleanup())
 
@@ -176,6 +179,15 @@ describe('saved boards that no longer belong here', () => {
     await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
   })
 
+  it('a deleted tournament says «no existe», and its saved boards go', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(null)
+    open()
+    expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
+    await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+  })
+
   it('a player who leaves takes the saved boards with him', async () => {
     await saveOnPhone('Guardado en el teléfono')
     server.ensureSession.mockResolvedValue({})
@@ -190,6 +202,32 @@ describe('saved boards that no longer belong here', () => {
     })
     expect(server.releaseDevice).toHaveBeenCalled()
     expect(await readCached(slug)).toBeNull()
+  })
+})
+
+describe('writes this phone queued wait for the server to confirm the player (REL-16)', () => {
+  it('the gate hands them over once it does: a player, or the Comité', async () => {
+    for (const who of [member, { playerId: null, isOrganizer: true, isAdmin: true, via: null }]) {
+      vi.mocked(adoptQueuedWrites).mockClear()
+      server.ensureSession.mockResolvedValue({})
+      server.lookupTournament.mockResolvedValue(fx.lookup)
+      server.myMembership.mockResolvedValue(who)
+      serverLoads('En vivo del servidor')
+      open()
+      await screen.findByText('En vivo del servidor: server')
+      expect(adoptQueuedWrites).toHaveBeenCalledWith(id)
+      cleanup()
+    }
+  })
+
+  it('never for the Polo admin visiting, who is nobody\'s player here', async () => {
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: true, via: 'platform' })
+    serverLoads('En vivo del servidor')
+    open()
+    await screen.findByText('En vivo del servidor: server')
+    expect(adoptQueuedWrites).not.toHaveBeenCalled()
   })
 })
 

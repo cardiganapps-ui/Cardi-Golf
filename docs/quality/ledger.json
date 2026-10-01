@@ -2440,7 +2440,9 @@
       "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx",
-        "src/screens/tournament/TournamentShell.test.tsx"
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/data/tournamentStore.test.ts"
       ],
       "verifiedBy": null,
       "residual": null
@@ -2621,7 +2623,8 @@
       "status": "fixed",
       "pr": 87,
       "tests": [
-        "src/screens/tournament/TournamentGate.test.tsx"
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
@@ -2639,7 +2642,8 @@
       "tests": [
         "src/data/auth.session.test.ts",
         "src/data/outbox.identity.test.ts",
-        "src/data/outbox.session.test.ts"
+        "src/data/outbox.session.test.ts",
+        "src/screens/tournament/TournamentGate.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
