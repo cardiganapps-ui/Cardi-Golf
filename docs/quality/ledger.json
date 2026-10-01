@@ -3332,9 +3332,11 @@
       "workstream": "W4",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 69,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
