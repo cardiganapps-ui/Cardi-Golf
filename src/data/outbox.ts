@@ -136,8 +136,12 @@ interface OutboxState {
   foreign: number
   /** The server requires a newer build: nothing is pushed until the app updates. */
   blocked: boolean
+  /** `pending`, counted in holes (a foursome's hole is four rows): what the player understands (REL-17). */
+  pendingHoles: number
+  /** The browser promised not to evict this site's storage; null until asked (REL-18). */
+  persistent: boolean | null
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -153,7 +157,14 @@ function activeTournamentId(): string | null {
 function publish(extra: Partial<OutboxState> = {}) {
   const tid = activeTournamentId()
   const mine = queue.filter((x) => x.tournamentId === tid)
-  useOutbox.setState({ pending: mine.length, held: mine.filter(isHeld).length, foreign: queue.filter(isForeign).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
+  useOutbox.setState({
+    pending: mine.length,
+    pendingHoles: holesIn(mine),
+    held: mine.filter(isHeld).length,
+    foreign: queue.filter(isForeign).length,
+    rejected: rejectedAll.filter((x) => x.tournamentId === tid),
+    ...extra,
+  })
 }
 
 /** What this build knows how to send. A newer build may queue other kinds. */
@@ -223,9 +234,12 @@ export async function adoptQueuedWrites(tournamentId: string) {
  * enter again.
  */
 export function queuedFor(tournamentId: string): { holes: number; heldHoles: number } {
-  const holes = (list: OutboxItem[]) => new Set(list.filter((x) => x.kind === 'score').map((x) => `${(x.payload as ScorePayload).round_id}:${(x.payload as ScorePayload).hole}`)).size
   const mine = queue.filter((x) => x.tournamentId === tournamentId)
-  return { holes: holes(mine), heldHoles: holes(mine.filter(isHeld)) }
+  return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)) }
+}
+/** Distinct holes among queued score writes. */
+function holesIn(list: OutboxItem[]): number {
+  return new Set(list.filter((x) => x.kind === 'score').map((x) => `${(x.payload as ScorePayload).round_id}:${(x.payload as ScorePayload).hole}`)).size
 }
 
 /** Call when the open tournament changes so the counters follow it. */
@@ -324,17 +338,88 @@ export function overlayPending(s: Snapshot): void {
   }
 }
 
+/** The phone could not keep the write (quota, storage pressure, private mode): the hole is not saved anywhere. */
+export class OutboxStorageError extends Error {
+  constructor() {
+    super(t.sync.storeFailed)
+    this.name = 'OutboxStorageError'
+  }
+}
+
 async function enqueue(newItem: NewItem) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
   const item = { ...newItem, seq: nextSeq(), actingUid: newItem.actingUid ?? currentUid() } as OutboxItem
-  queue = [...queue.filter((x) => x.key !== item.key), item]
-  publish()
+  void askPersistence()
+  // The phone's storage first, memory second (REL-18): a write that IndexedDB
+  // refused must not look saved in this tab and vanish when it closes. Never
+  // over a newer version of the same key.
   const d = getDb()
-  if (d) await d.items.put(item)
+  if (d) {
+    try {
+      await d.transaction('rw', d.items, async () => {
+        const cur = await d.items.get(item.key)
+        if (!cur || (cur.seq ?? cur.createdAt * 1000) < item.seq) await d.items.put(item)
+      })
+    } catch {
+      throw new OutboxStorageError()
+    }
+  }
+  const newer = queue.find((x) => x.key === item.key && x.seq > item.seq)
+  if (!newer) queue = [...queue.filter((x) => x.key !== item.key), item]
+  publish()
+  announce()
   // Optimistic: recompute right away with the overlay.
   useTournament.getState().patch(overlayPending)
   void flush()
+}
+
+/**
+ * Ask the browser once to keep this site's storage under pressure (REL-18):
+ * without it a phone full of photos, or Safari's 7-day rule for sites not on
+ * the home screen, can evict the only copy of unsent holes.
+ */
+let persistAsked = false
+async function askPersistence() {
+  if (persistAsked) return
+  persistAsked = true
+  const storage = typeof navigator !== 'undefined' ? navigator.storage : undefined
+  if (!storage?.persist) return
+  try {
+    const granted = (await storage.persisted?.()) || (await storage.persist())
+    useOutbox.setState({ persistent: granted })
+  } catch {
+    useOutbox.setState({ persistent: false })
+  }
+}
+
+/**
+ * Tabs of the app on one phone share the IndexedDB queue (REL-18). A tab that
+ * changes it tells the others, which reload it, and only one tab at a time
+ * pushes (Web Locks), so two tabs never send the same hole or an older
+ * version after a newer one.
+ */
+const CHANNEL = 'cardi-golf-outbox'
+let channel: BroadcastChannel | null = null
+function announce() {
+  try {
+    channel?.postMessage('changed')
+  } catch {
+    // A closed channel: the other tabs reload on their next start.
+  }
+}
+function listen() {
+  if (typeof BroadcastChannel === 'undefined' || channel) return
+  channel = new BroadcastChannel(CHANNEL)
+  channel.onmessage = () => {
+    void loadQueue().then(() => void flush())
+  }
+}
+type LockManagerLike = { request(name: string, opts: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<unknown>): Promise<unknown> }
+let locks: LockManagerLike | null | undefined
+function lockManager(): LockManagerLike | null {
+  if (locks === undefined) locks = (typeof navigator !== 'undefined' && (navigator as { locks?: LockManagerLike }).locks) || null
+  return locks
 }
 
 export function enqueueScore(tournamentId: string, payload: ScorePayload) {
@@ -356,11 +441,18 @@ export const _outboxTest = {
   setPush(fn: (item: OutboxItem) => Promise<void>) {
     pushImpl = fn
   },
+  /** Replace the Web Locks manager (null: none). */
+  setLocks(lm: LockManagerLike | null) {
+    locks = lm
+  },
+  db: () => getDb(),
   reset() {
     queue = []
     rejectedAll = []
     running = null
     blocked = false
+    persistAsked = false
+    useOutbox.setState({ persistent: null })
     useOutbox.setState({ blocked: false })
     if (timer) clearTimeout(timer)
     timer = null
@@ -427,7 +519,7 @@ export function flush(): Promise<void> {
   let settle!: () => void
   const run = new Promise<void>((r) => (settle = r))
   running = run
-  void runFlush()
+  void flushUnderLock()
     .catch(() => true)
     .then((failed) => {
       if (running === run) running = null
@@ -437,6 +529,29 @@ export function flush(): Promise<void> {
     })
   return run
 }
+
+/**
+ * One pass, if this tab gets the outbox lock. Another tab holding it is
+ * pushing the same IndexedDB queue; this one tries again shortly, in case
+ * that tab closes. Without Web Locks every tab flushes, as before.
+ */
+async function flushUnderLock(): Promise<boolean> {
+  const lm = lockManager()
+  if (!lm) return runFlush()
+  let ran = false
+  let failed = false
+  await lm.request(CHANNEL, { ifAvailable: true }, async (lock) => {
+    if (!lock) return
+    ran = true
+    failed = await runFlush()
+  })
+  if (!ran) {
+    schedule(LOCK_RETRY_MS)
+    return true
+  }
+  return failed
+}
+const LOCK_RETRY_MS = 5000
 
 /** One pass over the queue. Returns true if it stopped on a network error. */
 async function runFlush(): Promise<boolean> {
@@ -458,6 +573,7 @@ async function runFlush(): Promise<boolean> {
         if (isCurrent(item)) {
           queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
           await deleteStored(item)
+          announce()
         }
         publish({ lastError: null })
       } catch (e) {
@@ -506,6 +622,7 @@ export async function startOutbox() {
   started = true
   registerOverlay(overlayPending)
   await loadQueue()
+  listen()
   if (typeof window !== 'undefined') {
     window.addEventListener('online', () => void flush())
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void flush())

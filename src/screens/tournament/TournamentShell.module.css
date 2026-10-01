@@ -70,6 +70,27 @@
   color: var(--event-accent);
 }
 .tabIcon {
+  position: relative;
   display: inline-flex;
   line-height: 0;
+}
+/* Holes waiting on this phone (caution), or refused by the server (under). */
+.tabBadge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--caution);
+  color: var(--on-dark);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tabBadgeBad {
+  background: var(--under);
 }

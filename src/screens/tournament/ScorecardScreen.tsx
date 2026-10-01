@@ -132,6 +132,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const data = useTournament((s) => s.data)!
   const { me } = useTournamentCtx()
   const pending = useOutbox((s) => s.pending)
+  const pendingHoles = useOutbox((s) => s.pendingHoles)
   const lastError = useOutbox((s) => s.lastError)
   const rejected = useOutbox((s) => s.rejected)
   const online = useOnline()
@@ -422,10 +423,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
-  const syncText = !online ? t.sync.offlineShort : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : pending > 0 ? t.sync.pending(pending) : t.sync.synced
+  // Holes, not rows: «3 hoyos por subir» is what a player can act on (REL-17). Offline too.
+  const waiting = pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
+  const offlineText = pendingHoles > 0 ? t.sync.offlineHoles(pendingHoles) : t.sync.offlineShort
+  const syncText = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : (waiting ?? t.sync.synced)
   const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0
   /** The sync state in a few words, for the one-line saved note (a long error waits until the note goes). */
-  const syncShort = !online ? t.sync.offlineShort : rejected.length ? t.sync.rejected(rejected.length) : pending > 0 ? t.sync.pending(pending) : null
+  const syncShort = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : waiting
   /** The line under «Guardar hoyo»: the last save with its way back for a few seconds, else the sync state. */
   const statusLine = (fallback: ReactNode) =>
     savedNote ? (
