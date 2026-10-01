@@ -28,7 +28,17 @@ describe('savedWhen', () => {
     expect(savedWhen(at(1, 10, 42), now)).toBe('el 1 de abril')
     expect(savedWhen(now - 2 * 86_400_000, now)).not.toMatch(/min|^hoy|10:42$/)
   })
-  it('a clock that runs ahead of the save is «hace un momento», not a negative age', () => {
-    expect(savedWhen(now + 90_000, now)).toBe('hace un momento')
+  it('a board from another year says the year', () => {
+    // It read «el 6 de marzo», like this spring's.
+    expect(savedWhen(new Date(2026, 2, 6, 10, 0).getTime(), now)).toBe('el 6 de marzo de 2026')
+    expect(savedWhen(new Date(2026, 11, 20, 10, 0).getTime(), now)).toBe('el 20 de diciembre de 2026')
+  })
+  it('a clock a little behind the save is «hace un momento», not a negative age', () => {
+    expect(savedWhen(now + 30_000, now)).toBe('hace un momento')
+  })
+  it('a save the clock puts well in the future says when it was, never «hace un momento»', () => {
+    // The phone's clock was set back: how long ago is unknown, the time is not.
+    expect(savedWhen(now + 90_000, now)).toMatch(/^hoy, 9:31/)
+    expect(savedWhen(at(10, 9, 0), now)).toBe('el 10 de abril')
   })
 })

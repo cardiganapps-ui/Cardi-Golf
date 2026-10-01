@@ -88,6 +88,9 @@ export class SessionUnavailableError extends UserError {
   }
 }
 
+/** The `ensureSession` in flight, which every caller meanwhile shares. */
+let starting: Promise<Session> | null = null
+
 /**
  * A session of any kind (anonymous if none). Used when opening a tournament link.
  *
@@ -98,8 +101,17 @@ export class SessionUnavailableError extends UserError {
  * the stored session itself when its refresh token is really dead; only then
  * does the device start over (and its queued holes wait for the PIN, see
  * outbox `adoptQueuedWrites`).
+ *
+ * One at a time: two callers at once (the gate's retry and the PIN) used to
+ * start two anonymous users on a device with none.
  */
-export async function ensureSession(): Promise<Session> {
+export function ensureSession(): Promise<Session> {
+  starting ??= startSession().finally(() => {
+    starting = null
+  })
+  return starting
+}
+async function startSession(): Promise<Session> {
   const sb = supabase()
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
   if (data.session) return data.session

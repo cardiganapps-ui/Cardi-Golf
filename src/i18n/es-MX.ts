@@ -1161,6 +1161,8 @@ export const t = {
       n === 1
         ? 'Este teléfono tiene 1 hoyo sin subir. Entra con tu PIN y se sube solo.'
         : `Este teléfono tiene ${n} hoyos sin subir. Entra con tu PIN y se suben solos.`,
+    /** The Tarjeta's line when the phone lost its session mid-round: the holes saved since wait for the PIN (REL-16). */
+    heldForPinShort: (n: number) => (n === 1 ? '1 hoyo espera tu PIN' : `${n} hoyos esperan tu PIN`),
     unsentBeforeSwitch: (n: number) => (n === 1 ? 'Tienes 1 hoyo sin subir' : `Tienes ${n} hoyos sin subir`),
     unsentBeforeSwitchBody:
       'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',

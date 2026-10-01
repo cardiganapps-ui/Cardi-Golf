@@ -11,7 +11,7 @@
  * answers nothing. Until the server's snapshot is on screen the gate keeps
  * trying, on reconnect, on return to the app and on a timer (REL-02).
  */
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -61,7 +61,7 @@ export function useTournamentCtx(): TournamentCtx {
   return c
 }
 
-/** While the boards come from the cache, try the live tournament again this often. */
+/** Until the server has answered and its boards are up, ask again this often. */
 const CACHE_RETRY_MS = 20_000
 
 type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
@@ -69,51 +69,79 @@ type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error
 export function TournamentGate() {
   const { slug = '' } = useParams()
   const authReady = useAuth((s) => s.ready)
+  const uid = useAuth((s) => s.user?.id ?? null)
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const load = useTournament((s) => s.load)
   const data = useTournament((s) => s.data)
   const storeError = useTournament((s) => s.error)
   /** The server has answered who this device is here (in, Entrar, not found): a cache read that lands later changes nothing. */
   const settled = useRef(false)
+  /** The link whose copy may still be shown: a read for another one (the player moved on) lands on nothing. */
+  const openSlug = useRef<string | null>(null)
+  /** Each resolve's number: only the newest one's answers count (a retry still out when the PIN went in sent the player back to Entrar). */
+  const resolveSeq = useRef(0)
+  /** The device lost or changed who it is since the server last answered: ask until it answers again (REL-16). */
+  const recheck = useRef(false)
+  /** Asks still out: a retry never starts over one (on a slow connection the timer would throw away an ask nearly done). */
+  const asking = useRef(0)
+  /** The phase, for the retries, which run outside render: kept at commit, so an event right after it sees it. */
+  const phaseNow = useRef(phase)
+  useLayoutEffect(() => {
+    phaseNow.current = phase
+  }, [phase])
 
-  /** Enter with the last snapshot this device saved for the slug (§8): at once on open, and whenever the server can't be reached. */
-  const enterFromCache = useCallback(
-    async (expectedId?: string): Promise<boolean> => {
-      const cached = await readCached(slug)
-      if (!cached || (expectedId && cached.entry.tournamentId !== expectedId)) return false
-      useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
-      refreshOutboxCounters()
-      setPhase((p) => (p.kind === 'in' && p.lookup.id === cached.entry.tournamentId ? p : { kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me }))
-      return true
-    },
-    [slug],
-  )
+  /**
+   * Show the boards this phone saved for the link (§8): at once on open, and
+   * whenever the server can't be reached. Never over what the server said: an
+   * answer that landed while the copy was being read stands (a released
+   * device stays on Entrar), and boards already up stay.
+   */
+  const enterFromCache = useCallback(async (): Promise<boolean> => {
+    const cached = await readCached(slug)
+    if (!cached || settled.current || openSlug.current !== slug) return false
+    useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
+    refreshOutboxCounters()
+    setPhase((p) => (p.kind === 'loading' || p.kind === 'error' ? { kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me } : p))
+    return true
+  }, [slug])
 
   // The saved boards first, before the session is even confirmed.
   useEffect(() => {
     settled.current = false
-    void (async () => {
-      const cached = await readCached(slug)
-      if (cached && !settled.current) await enterFromCache(cached.entry.tournamentId)
-    })()
+    recheck.current = false
+    openSlug.current = slug
+    // Another link: what the gate knew was about the one before.
+    setPhase((p) => (p.kind === 'loading' ? p : { kind: 'loading' }))
+    void enterFromCache()
+    return () => {
+      openSlug.current = null
+    }
   }, [slug, enterFromCache])
 
   const resolve = useCallback(async () => {
+    const seq = ++resolveSeq.current
+    /** A newer resolve started (a retry, the PIN, another link): this one's answers no longer count. */
+    const stale = () => seq !== resolveSeq.current
     if (!supabaseConfigured) {
       setPhase({ kind: 'error', error: t.errors.missingEnv })
       return
     }
+    asking.current++
     try {
       await ensureSession()
+      if (stale()) return
       const lookup = await lookupTournament(slug)
+      if (stale()) return
       if (!lookup) {
         settled.current = true
+        recheck.current = false
         // The link leads nowhere now (the tournament was deleted): what was saved under it goes too.
         void clearCachedSlug(slug)
         setPhase({ kind: 'notFound' })
         return
       }
       const m = await myMembership(lookup.id)
+      if (stale()) return
       const platform = m.via === 'platform'
       if (m.isOrganizer || m.playerId || platform) {
         const me: Me = {
@@ -125,6 +153,7 @@ export function TournamentGate() {
           unlockedUntil: m.unlockedUntil ?? null,
         }
         settled.current = true
+        recheck.current = false
         setPhase({ kind: 'in', lookup, me })
         // Writes this phone queued under an earlier session belong to this player again (REL-16).
         if (m.playerId || m.isOrganizer) void adoptQueuedWrites(lookup.id)
@@ -137,19 +166,29 @@ export function TournamentGate() {
           void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })
         }
         await load(lookup.id)
+        if (stale()) return
         refreshOutboxCounters()
         // The lookup worked but the snapshot did not: still better to show what we have.
-        if (!useTournament.getState().data) await enterFromCache(lookup.id)
+        if (!useTournament.getState().data) {
+          const cached = await readCached(slug)
+          if (cached?.entry.tournamentId === lookup.id && !stale()) useTournament.getState().seed(lookup.id, cached.snapshot, cached.savedAt)
+        }
       } else {
         // Not in this tournament any more (the device was released, the link removed): its saved boards go too.
         settled.current = true
+        recheck.current = false
         void clearCached(lookup.id)
         setPhase({ kind: 'enter', lookup })
       }
     } catch (e) {
+      if (stale()) return
       if (await enterFromCache()) return
+      if (stale()) return
       const offline = typeof navigator !== 'undefined' && !navigator.onLine
-      setPhase({ kind: 'error', error: offline ? t.errors.offlineFirstOpen : e })
+      // Boards already up stay up while the server can't be reached.
+      setPhase((p) => (p.kind === 'in' ? p : { kind: 'error', error: offline ? t.errors.offlineFirstOpen : e }))
+    } finally {
+      asking.current--
     }
   }, [slug, load, enterFromCache])
 
@@ -157,26 +196,36 @@ export function TournamentGate() {
     if (authReady) void resolve()
   }, [authReady, resolve])
 
-  // While the boards on screen are the phone's copy, resolve for real (session,
-  // role, live snapshot, Realtime): on reconnect, on return to the app, and on
-  // a timer, since the stored session can stay unconfirmed for a while after
-  // the signal returns (auth-js cools down after a failed refresh) and `online`
-  // fires only once (REL-16). Until the server's snapshot is on screen, not
-  // just until the session is back: a lookup that worked and a snapshot that
-  // didn't used to end the retries and leave the old boards up (REL-02).
+  // The device lost or changed who it is (auth-js signed it out mid-round when
+  // its refresh token was dead): ask the server again, so holes saved since
+  // lead to Entrar and the PIN instead of waiting in silence (REL-16). Not the
+  // first identity a resolve brings (no session yet, then an anonymous one).
+  const lastUid = useRef(uid)
   useEffect(() => {
-    let busy = false
-    const retry = async () => {
-      const store = useTournament.getState()
-      if (busy || !store.data || store.source === 'server') return
+    const was = lastUid.current
+    lastUid.current = uid
+    if (!was || was === uid || !authReady) return
+    recheck.current = true
+    void resolve()
+  }, [uid, authReady, resolve])
+
+  // Until the server has answered and its boards are up, resolve for real
+  // (session, role, live snapshot, Realtime): on reconnect, on return to the
+  // app, and on a timer, since the stored session can stay unconfirmed for a
+  // while after the signal returns (auth-js cools down after a failed refresh)
+  // and `online` fires only once (REL-16). Until the server's snapshot is on
+  // screen, not just until the session is back: a lookup that worked and a
+  // snapshot that didn't used to end the retries and leave the old boards up
+  // (REL-02). Never on Entrar or «no existe»: the server answered, and asking
+  // again every 20 s for as long as the app stayed open changed nothing.
+  useEffect(() => {
+    const retry = () => {
+      const p = phaseNow.current
+      const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || useTournament.getState().source !== 'server'))
+      if (asking.current > 0 || !waiting) return
       if (typeof navigator !== 'undefined' && !navigator.onLine) return
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
-      busy = true
-      try {
-        await resolve()
-      } finally {
-        busy = false
-      }
+      void resolve()
     }
     const timer = setInterval(() => void retry(), CACHE_RETRY_MS)
     const onOnline = () => void retry()

@@ -6,11 +6,14 @@
  * - A copy read that lands after the server answered changes nothing.
  * - Until the server's boards are up the gate keeps asking (on reconnect, on
  *   return to the app, and every 20 s with no event at all); once they are
- *   up, it stops.
+ *   up, or the server said Entrar or «no existe», it stops.
+ * - Of two asks at once, only the newer one's answer counts.
+ * - A phone that loses its session mid-round asks again, so holes saved since
+ *   lead to Entrar and the PIN instead of waiting in silence (REL-16).
  *
  * The phone's copy (snapshotCache) and the server (auth, api) are mocked.
  */
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -47,7 +50,9 @@ vi.mock('./EnterScreen', () => ({
 }))
 
 import { getFixture } from '../../dev/fixtures'
+import { useAuth } from '../../data/auth'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
+import { t } from '../../i18n/es-MX'
 import { TournamentGate, useTournamentCtx } from './TournamentGate'
 
 const fx = getFixture('minimal4-live')!
@@ -69,10 +74,17 @@ function savedCopy(name = 'Guardado en el teléfono') {
 }
 /** What the shell would show: whose boards, and where they came from. */
 function Board() {
-  const { me } = useTournamentCtx()
+  const { me, leave } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const source = useTournament((s) => s.source)
-  return <p>{`${data?.snapshot.tournament.name}: ${source}, ${me.playerId}`}</p>
+  return (
+    <>
+      <p>{`${data?.snapshot.tournament.name}: ${source}, ${me.playerId}`}</p>
+      <button type="button" onClick={() => void leave()}>
+        Cambiar de jugador
+      </button>
+    </>
+  )
 }
 function open() {
   return render(
@@ -106,8 +118,10 @@ async function backOnline() {
 
 const realLoad = useTournament.getState().load
 beforeEach(() => {
+  useAuth.setState({ ready: true, user: { id: 'uid-phone' } as never })
   useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
   for (const f of [server.ensureSession, server.lookupTournament, server.myMembership, phone.readCached]) f.mockReset()
+  for (const f of [phone.clearCached, phone.clearCachedSlug, phone.saveEntry]) f.mockClear()
   server.ensureSession.mockResolvedValue({})
   server.lookupTournament.mockResolvedValue(fx.lookup)
 })
@@ -128,6 +142,44 @@ describe('a copy read that lands after the server answered changes nothing', () 
     await new Promise((r) => setTimeout(r, 20))
     expect(screen.queryByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
     expect(useTournament.getState().data).toBeNull()
+  })
+
+  it('…the same when the copy is read again to be entered, and that read is the slow one', async () => {
+    const slow = deferred<ReturnType<typeof savedCopy> | null>()
+    phone.readCached.mockResolvedValueOnce(savedCopy()).mockReturnValueOnce(slow.promise).mockResolvedValue(savedCopy())
+    server.myMembership.mockResolvedValue(stranger)
+    open()
+    expect(await screen.findByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+    // It used to put the released player back on the boards.
+    await act(async () => slow.resolve(savedCopy()))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+    expect(screen.queryByText(/: cache/)).toBeNull()
+  })
+})
+
+describe('of two asks at once, only the newer one counts', () => {
+  it('an answer from before the player left, landing after, never puts him back', async () => {
+    phone.readCached.mockResolvedValue(savedCopy())
+    // Opened with no signal: the phone's copy.
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
+    const slow = deferred<typeof member>()
+    server.myMembership.mockReturnValueOnce(slow.promise).mockResolvedValue(stranger)
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    // The signal comes back: the gate asks who this device is, and the answer is slow.
+    await backOnline()
+    await vi.waitFor(() => expect(asked()).toBe(1))
+    // Meanwhile the player hands the phone over.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cambiar de jugador' }))
+    })
+    expect(await screen.findByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+    // The first answer, from before he left, lands last: it used to put him back, and save his boards again.
+    await act(async () => slow.resolve(member))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.getByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+    expect(phone.saveEntry).not.toHaveBeenCalled()
   })
 })
 
@@ -161,5 +213,62 @@ describe('when the gate stops asking (REL-02)', () => {
     })
     expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
     expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('on Entrar, or «no existe», the server has answered: no more asking', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.myMembership.mockResolvedValue(stranger)
+    open()
+    await screen.findByRole('button', { name: 'Entrar con el PIN' })
+    const before = asked()
+    await backOnline()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60_000)
+    })
+    // It asked every 20 s, for as long as the app stayed open.
+    expect(asked()).toBe(before)
+    cleanup()
+    server.lookupTournament.mockResolvedValue(null)
+    open()
+    await screen.findByText(t.enter.notFound)
+    const lookups = server.lookupTournament.mock.calls.length
+    await backOnline()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60_000)
+    })
+    expect(server.lookupTournament.mock.calls.length).toBe(lookups)
+  })
+})
+
+describe('the phone loses its session mid-round (REL-16)', () => {
+  it('the gate asks again, and the player gets Entrar and the PIN', async () => {
+    phone.readCached.mockResolvedValue(null)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^En vivo del servidor: server/)
+    // auth-js found the refresh token dead and signed the phone out; a new anonymous session is nobody here.
+    server.myMembership.mockResolvedValue(stranger)
+    await act(async () => useAuth.setState({ user: null }))
+    expect(await screen.findByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+  })
+
+  it('with no signal then, it keeps asking until the server answers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(null)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^En vivo del servidor: server/)
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
+    server.myMembership.mockResolvedValue(stranger)
+    await act(async () => useAuth.setState({ user: null }))
+    // The ask failed: the boards stay up meanwhile.
+    expect(screen.getByText(/^En vivo del servidor: server/)).toBeTruthy()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000)
+    })
+    expect(await screen.findByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
   })
 })

@@ -130,6 +130,8 @@ interface OutboxState {
   pending: number
   /** Of those, how many wait for the player to enter again (the session changed: REL-16). */
   held: number
+  /** `held`, counted in holes. */
+  heldHoles: number
   syncing: boolean
   /** Last push error, mapped to Spanish by `describeSyncError`. Null once a push succeeds. */
   lastError: string | null
@@ -146,7 +148,7 @@ interface OutboxState {
   /** The browser promised not to evict this site's storage; null until asked (REL-18). */
   persistent: boolean | null
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -162,10 +164,12 @@ function activeTournamentId(): string | null {
 function publish(extra: Partial<OutboxState> = {}) {
   const tid = activeTournamentId()
   const mine = queue.filter((x) => x.tournamentId === tid)
+  const held = mine.filter(isHeld)
   useOutbox.setState({
     pending: mine.length,
     pendingHoles: holesIn(mine),
-    held: mine.filter(isHeld).length,
+    held: held.length,
+    heldHoles: holesIn(held),
     foreign: queue.filter(isForeign).length,
     rejected: rejectedAll.filter((x) => x.tournamentId === tid),
     ...extra,

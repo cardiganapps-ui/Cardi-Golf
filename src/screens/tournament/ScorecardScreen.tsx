@@ -12,6 +12,7 @@ import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primit
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
+import { hasStoredSession, useAuth } from '../../data/auth'
 import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
@@ -126,8 +127,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const { me } = useTournamentCtx()
   const pending = useOutbox((s) => s.pending)
   const pendingHoles = useOutbox((s) => s.pendingHoles)
+  const heldHoles = useOutbox((s) => s.heldHoles)
   const lastError = useOutbox((s) => s.lastError)
   const rejected = useOutbox((s) => s.rejected)
+  const signedOut = useAuth((s) => !s.user)
   const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
@@ -513,7 +516,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
   // Holes, not rows: «3 hoyos por subir» is what a player can act on (REL-17). Offline too.
-  const waiting = pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
+  // Holes saved after the phone lost its session (auth-js signed it out
+  // mid-round) wait for the player to enter again: say so, not only «por
+  // subir» (REL-16). A stored session still being confirmed needs no PIN.
+  const needsPin = heldHoles > 0 && signedOut && !hasStoredSession()
+  const waiting = needsPin ? t.sync.heldForPinShort(heldHoles) : pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
   const offlineText = pendingHoles > 0 ? t.sync.offlineHoles(pendingHoles) : t.sync.offlineShort
   const syncText = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : (waiting ?? t.sync.synced)
   const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0

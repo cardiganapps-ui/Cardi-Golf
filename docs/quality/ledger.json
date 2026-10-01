@@ -2643,7 +2643,9 @@
         "src/data/auth.session.test.ts",
         "src/data/outbox.identity.test.ts",
         "src/data/outbox.session.test.ts",
-        "src/screens/tournament/TournamentGate.test.tsx"
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/tournament/ScorecardScreen.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
