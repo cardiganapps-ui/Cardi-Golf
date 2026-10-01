@@ -6,6 +6,7 @@
  * «Sincronizado» first: after the day closes, their holes are refused.
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 
@@ -26,7 +27,7 @@ const R = t.admin.rounds
 
 afterEach(() => cleanup())
 
-function mount(ui: JSX.Element, name = 'full12-live', edit?: (s: Snapshot) => void, me?: { playerId: string | null; isOrganizer: boolean; isAdmin: boolean }) {
+function mount(ui: ReactElement, name = 'full12-live', edit?: (s: Snapshot) => void, me?: { playerId: string | null; isOrganizer: boolean; isAdmin: boolean }) {
   const fx = getFixture(name)!
   const snapshot = structuredClone(fx.snapshot)
   edit?.(snapshot)
