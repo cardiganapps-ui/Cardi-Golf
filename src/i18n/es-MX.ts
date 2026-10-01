@@ -1929,6 +1929,7 @@ export const t = {
     recordPaid: 'Registrar algo que ya se pagó',
     recordPaidHint: 'Solo si alguien ya pagó y no se marcó: la liquidación de arriba ya lo cuenta como pendiente. Al marcarlo aquí, deja de pedirse.',
     markedPaid: 'Marcado como pagado.',
+    unmarkedPaid: 'Ya no cuenta como pagado.',
     refund: 'Devolución',
     bank: 'Banco',
     bankIn: 'Entró al banco',
@@ -1938,6 +1939,13 @@ export const t = {
     pays: (from: string, to: string, amount: string) => `${from} paga a ${to}: ${amount}`,
     paysTo: 'paga a',
     markPaid: 'Marcar pagado',
+    /** The state, on its own toggle in «Ya pagaron»; the action is «Marcar pagado». */
+    paid: 'Pagado',
+    paidTo: 'pagó a',
+    paidTitle: (n: number) => `Ya pagaron (${n})`,
+    paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
+    /** A «Deshacer» tapped after a later change to the same payment: it would bring back the older value. */
+    undoStale: 'Ese pago cambió después: revísalo en «Ya pagaron».',
     share: 'Compartir liquidación',
     shareTitle: (name: string) => `Liquidación, ${name}`,
     checklist: 'Quién debe qué',

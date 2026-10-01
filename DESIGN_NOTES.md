@@ -124,6 +124,17 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
   - whether a copy installed before this change picks the new bar up or needs to be removed and re-added;
   - iOS 26's glass edge.
 
+## Money in columns, and «Ya pagaron» (2026-10-01, VIS-01, UX-21)
+- **A row owns its columns.** A screen composes the row primitives and never re-declares what it composes. Both rules are one class, so the bundle's order picks the winner, and the screens' `display: grid` had lost to `rowLine`'s `display: flex` on La Calcutta, the Matrimonios head-to-head and the Liquidación.
+- **The convention.**
+  - The text block composes `rowTextBlock` and takes the free width.
+  - The amount composes `rowFig`: right-aligned, tabular, never wrapped.
+  - A control sits in `rowAction`: one 8rem slot on every row of a list that has one, left empty on a line that cannot be marked yet.
+  - So every amount in a list ends on one edge, and every button starts on one.
+- **Guards.** `src/styles/one-row.test.ts` refuses a re-declaration. `e2e/fixtures/money.spec.ts` measures the rows on every Juegos tab, every Dinero mode and the Comité inbox. The inbox keeps its tighter gap with a two-class rule (`.inbox .inboxRow`), which wins wherever the bundle puts `rowLine`.
+- **State and action are two words.** «Marcar pagado» is the action. «Pagado», with its check and pressed, is the state, shown in «Ya pagaron»: a folded list of every payment on record. It sits under «Quién debe qué» while the tournament runs, and under the settlement once it is final. Its rows read in the past («Leonel pagó a Banco») and a step quieter (`--ink-2`, the amount at 500).
+- **Taking a payment back.** A tap on «Pagado» writes the same row with paid false, and nothing else. Both directions offer «Deshacer».
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
