@@ -165,11 +165,11 @@ export function TournamentGate() {
           // «Tu último torneo» opens /t/<slug>, and with no signal the boards must be there.
           void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })
         }
-        await load(lookup.id)
+        await load(lookup.id, { keepOnPhone: !platform })
         if (stale()) return
         refreshOutboxCounters()
         // The lookup worked but the snapshot did not: still better to show what we have.
-        if (!useTournament.getState().data) {
+        if (!useTournament.getState().data && !platform) {
           const cached = await readCached(slug)
           if (cached?.entry.tournamentId === lookup.id && !stale()) useTournament.getState().seed(lookup.id, cached.snapshot, cached.savedAt)
         }
@@ -294,7 +294,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox error={storeError} onRetry={() => void load(phase.lookup.id)} />
+        <ErrorBox error={storeError} onRetry={() => void load(phase.lookup.id, { keepOnPhone: phase.me.via !== 'platform' })} />
       </div>
     )
   }

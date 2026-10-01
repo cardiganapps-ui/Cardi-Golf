@@ -1857,7 +1857,9 @@
       "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx",
-        "src/data/snapshotCache.test.ts"
+        "src/data/snapshotCache.test.ts",
+        "src/data/account.signout.test.ts",
+        "src/data/tournamentStore.test.ts"
       ],
       "verifiedBy": null,
       "residual": null

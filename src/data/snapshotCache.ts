@@ -110,6 +110,19 @@ export async function clearCached(tournamentId: string): Promise<void> {
     /* ignore */
   }
 }
+/** Sign-out: the next person on the phone sees nothing of this one's tournaments. */
+export async function clearAllCached(): Promise<void> {
+  try {
+    const d = getDb()
+    if (!d) return
+    await d.transaction('rw', d.entries, d.snapshots, async () => {
+      await d.entries.clear()
+      await d.snapshots.clear()
+    })
+  } catch {
+    /* ignore */
+  }
+}
 /**
  * A link that leads nowhere now (the tournament was deleted): forget what was
  * saved under that very slug. A join code that stopped working may just have

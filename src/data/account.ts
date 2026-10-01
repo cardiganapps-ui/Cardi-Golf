@@ -15,8 +15,10 @@ import type { AuthError } from '@supabase/supabase-js'
 import { t } from '../i18n/es-MX'
 import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
-import { useOutbox } from './outbox'
+import { hasUnsentWrites, useOutbox } from './outbox'
 import { signOut } from './auth'
+import { setLastTournament } from './session'
+import { clearAllCached } from './snapshotCache'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
 
 /** Only same-app paths are followed after signing in. */
@@ -133,10 +135,18 @@ export async function signInWithGoogleInstead(next: string) {
   if (error) throw error
 }
 
-/** Signing out drops this device's session; not while it still holds unsent scores. */
+/**
+ * Signing out drops this device's session; not while it still holds unsent
+ * scores, for any tournament (it counted only the one open on screen). The
+ * boards saved on the phone and «Tu último torneo» go with it: on a shared
+ * phone the next person saw the previous one's boards and role until the
+ * server answered, and for good with no signal.
+ */
 export async function signOutSafely(): Promise<boolean> {
-  if (useOutbox.getState().pending > 0) return false
+  if (hasUnsentWrites()) return false
   await signOut()
   useMyProfile.getState().clear()
+  setLastTournament(null)
+  await clearAllCached()
   return true
 }

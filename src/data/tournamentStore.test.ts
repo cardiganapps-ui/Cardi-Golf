@@ -23,7 +23,7 @@ let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { useTournament } = await import('./tournamentStore')
-const { readCached, saveEntry } = await import('./snapshotCache')
+const { clearCached, readCached, saveEntry } = await import('./snapshotCache')
 
 const fx = getFixture('minimal4-live')!
 const TID = fx.snapshot.tournament.id
@@ -150,6 +150,26 @@ describe('the copy on the phone (audit P0-5)', () => {
     store().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
     expect(store().data!.state).toEqual(shown.state)
     expect([store().tournamentId, store().updatedAt, store().realtime]).toEqual(['fx-copia', cached.savedAt, 'off'])
+  })
+
+  it('a platform-admin visit keeps nothing on the phone: the tournament is not his', async () => {
+    const snap = structuredClone(fx.snapshot)
+    snap.tournament = { ...snap.tournament, id: 'fx-visita', slug: 'visita' }
+    server = fakeSupabase(snapshotToRows(snap))
+    // An entry for it, as a phone of one of its players would have: only the snapshot is in question here.
+    await saveEntry({ slug: 'visita', tournamentId: 'fx-visita', lookup: fx.lookup, me: fx.me })
+    await store().load('fx-visita', { keepOnPhone: false })
+    server.tables.scores![0]!.strokes = 9
+    await store().reload()
+    expect(store().data!.snapshot.scores[0]!.strokes).toBe(9)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(await readCached('visita')).toBeNull()
+    // The next tournament opened the usual way is kept again.
+    await clearCached(TID)
+    await saveEntry({ slug: fx.snapshot.tournament.slug, tournamentId: TID, lookup: fx.lookup, me: fx.me })
+    server = fakeSupabase(snapshotToRows(fx.snapshot))
+    await store().load(TID)
+    await vi.waitFor(async () => expect(await readCached(fx.snapshot.tournament.slug)).not.toBeNull())
   })
 
   it('a reload with no signal keeps the boards on screen and says why', async () => {

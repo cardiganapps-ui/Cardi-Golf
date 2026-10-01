@@ -220,14 +220,16 @@ describe('writes this phone queued wait for the server to confirm the player (RE
     }
   })
 
-  it('never for the Polo admin visiting, who is nobody\'s player here', async () => {
+  it('never for the Polo admin visiting, who is nobody\'s player here; nor is the tournament kept on his phone', async () => {
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
     server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: true, via: 'platform' })
-    serverLoads('En vivo del servidor')
+    const load = serverLoads('En vivo del servidor')
     open()
     await screen.findByText('En vivo del servidor: server')
     expect(adoptQueuedWrites).not.toHaveBeenCalled()
+    expect(load).toHaveBeenCalledWith(id, { keepOnPhone: false })
+    expect(await readCached(slug)).toBeNull()
   })
 })
 

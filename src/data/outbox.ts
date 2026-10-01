@@ -253,6 +253,10 @@ export function queuedFor(tournamentId: string): { holes: number; heldHoles: num
   const mine = queue.filter((x) => x.tournamentId === tournamentId)
   return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)) }
 }
+/** Anything still to push, for any tournament: signing out waits for it. */
+export function hasUnsentWrites(): boolean {
+  return queue.length > 0
+}
 /** Distinct holes among queued score writes. */
 function holesIn(list: OutboxItem[]): number {
   return new Set(list.filter((x) => x.kind === 'score').map((x) => `${(x.payload as ScorePayload).round_id}:${(x.payload as ScorePayload).hole}`)).size
