@@ -290,6 +290,8 @@ export interface AppFlags {
   newAccountsPaused: boolean
   newTournamentsPaused: boolean
   maintenanceBanner: string | null
+  /** The oldest build allowed to send writes (`BUILD.id`); absent or null: any. */
+  minBuild?: number | null
 }
 
 export interface Audience {

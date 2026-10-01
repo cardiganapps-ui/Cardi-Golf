@@ -132,8 +132,12 @@ interface OutboxState {
   rejected: RejectedItem[]
   /** True while the Tarjeta has an unsaved hole: defers the "new version" reload prompt. */
   editing: boolean
+  /** Writes a newer build queued on this phone; this build leaves them for it. */
+  foreign: number
+  /** The server requires a newer build: nothing is pushed until the app updates. */
+  blocked: boolean
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -149,7 +153,34 @@ function activeTournamentId(): string | null {
 function publish(extra: Partial<OutboxState> = {}) {
   const tid = activeTournamentId()
   const mine = queue.filter((x) => x.tournamentId === tid)
-  useOutbox.setState({ pending: mine.length, held: mine.filter(isHeld).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
+  useOutbox.setState({ pending: mine.length, held: mine.filter(isHeld).length, foreign: queue.filter(isForeign).length, rejected: rejectedAll.filter((x) => x.tournamentId === tid), ...extra })
+}
+
+/** What this build knows how to send. A newer build may queue other kinds. */
+const KNOWN_KINDS: ReadonlySet<string> = new Set(['score', 'tiebreak', 'award', 'signature'])
+/**
+ * Queued by a newer build (the app was rolled back, or this tab is older):
+ * left untouched, never pushed or rejected here, for that build to send.
+ */
+function isForeign(item: OutboxItem): boolean {
+  return !KNOWN_KINDS.has(item.kind)
+}
+/** This build may push it now. */
+function canPush(item: OutboxItem): boolean {
+  return !isHeld(item) && !isForeign(item)
+}
+
+/**
+ * The server asked for a newer build (`app_flags.minBuild`): nothing is
+ * pushed until the app updates. Writes stay queued, on the phone, and the
+ * updated app sends them.
+ */
+let blocked = false
+export function setOutboxBlocked(value: boolean) {
+  if (blocked === value) return
+  blocked = value
+  useOutbox.setState({ blocked })
+  if (!blocked) void flush()
 }
 
 function currentUid(): string | null {
@@ -329,6 +360,8 @@ export const _outboxTest = {
     queue = []
     rejectedAll = []
     running = null
+    blocked = false
+    useOutbox.setState({ blocked: false })
     if (timer) clearTimeout(timer)
     timer = null
     publish({ lastError: null, syncing: false })
@@ -360,9 +393,12 @@ async function push(item: OutboxItem): Promise<void> {
       const { error } = await sb.from('hole_awards').insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
       if (error) throw new Error(error.message)
     }
-  } else {
+  } else if (item.kind === 'signature') {
     const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true })
     if (error) throw new Error(error.message)
+  } else {
+    // Never reached: the flush skips kinds this build does not know.
+    throw new Error(`unknown outbox kind ${(item as { kind: string }).kind}`)
   }
 }
 
@@ -384,6 +420,7 @@ function isPermanent(msg: string): boolean {
 export function flush(): Promise<void> {
   // One flush at a time; a caller during a flush waits for that one to finish.
   if (running) return running
+  if (blocked) return Promise.resolve()
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve()
   // Mark the flush as running before it starts: a push can enqueue (and so
   // call flush) synchronously, and must join this run, not start another.
@@ -396,7 +433,7 @@ export function flush(): Promise<void> {
       if (running === run) running = null
       settle()
       // Something was queued at the very end of the pass: go again. Held writes wait.
-      if (!failed && !timer && queue.some((x) => !isHeld(x))) void flush()
+      if (!failed && !timer && queue.some(canPush)) void flush()
     })
   return run
 }
@@ -408,10 +445,12 @@ async function runFlush(): Promise<boolean> {
   let failed = false
   try {
     // Each version is tried once per pass; writes held for the player's
-    // return are skipped (they would only be refused).
+    // return are skipped (they would only be refused), and so are writes a
+    // newer build queued. A minBuild block stops the pass between pushes.
     const tried = new Set<number>()
     for (;;) {
-      const item = queue.find((x) => !tried.has(x.seq) && !isHeld(x))
+      if (blocked) break
+      const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
       if (!item) break
       tried.add(item.seq)
       try {

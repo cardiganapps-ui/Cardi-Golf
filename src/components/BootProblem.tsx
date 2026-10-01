@@ -6,6 +6,7 @@
  */
 import { useState } from 'react'
 import { t } from '../i18n/es-MX'
+import { buildLabel } from '../lib/build'
 import { retryAuth } from '../data/auth'
 import { resetApp } from '../lib/resetApp'
 import { Wordmark } from './Wordmark'
@@ -38,7 +39,7 @@ export function BootProblem({ kind }: { kind: 'timeout' | 'error' | 'crash'; det
         </button>
       </div>
       <p className={styles.hint}>{B.resetHint}</p>
-      <p className={styles.version}>{B.version(__APP_VERSION__)}</p>
+      <p className={styles.version}>{B.version(buildLabel())}</p>
     </main>
   )
 }

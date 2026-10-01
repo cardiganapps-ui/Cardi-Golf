@@ -9,3 +9,23 @@
 .maintenance {
   background: var(--caution);
 }
+
+/* The update offer: the text and its button on one line, the button a real target. */
+.update {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  padding-block: var(--s1);
+}
+.bannerAction {
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border: 1px solid currentColor;
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
