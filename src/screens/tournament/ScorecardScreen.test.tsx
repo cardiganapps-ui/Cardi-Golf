@@ -7,6 +7,8 @@
  * REL-05: a save wrote all four players, untouched ones at par, over what the
  * other phone had saved. UX-02: a second tap saved the next hole with
  * defaults. PWA-01: the confirmation toast sat on «Guardar hoyo».
+ * A11Y-01: the four players' controls had the same names, the hole was a bare
+ * figure, and a change was announced as a bare number.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -44,9 +46,10 @@ function load(s: Snapshot) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 
-function mount() {
+function mount(edit?: (s: Snapshot) => void) {
   const fx = getFixture('minimal4-live')!
   snap = structuredClone(fx.snapshot)
+  edit?.(snap)
   load(snap)
   return render(
     <MemoryRouter>
@@ -65,8 +68,10 @@ function remoteSave(playerId: string, hole: number, strokes: number, putts: numb
 }
 
 const holeOnScreen = () => Number(document.querySelector('[class*="holeNum"]')?.textContent)
-/** The strokes stepper's value for the i-th player of the group (p1 = 0). */
-const strokesOf = (i: number) => Number(screen.getAllByRole('group', { name: S.strokes })[i]!.textContent?.replace(/\D+/g, ''))
+const nameOf = (playerId: string) => snap.players.find((p) => p.id === playerId)!.displayName
+/** A player's strokes stepper, found by his name the way a screen reader finds it. */
+const strokesOf = (playerId: string) => Number(screen.getByRole('group', { name: S.strokesOf(nameOf(playerId)) }).textContent?.replace(/\D+/g, ''))
+const strokesUp = (playerId: string) => screen.getByRole('button', { name: `${S.strokesOf(nameOf(playerId))}: ${t.common.stepUp}` })
 const saveButton = () => screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) })
 async function tapSave(at: number) {
   clock = at
@@ -94,10 +99,10 @@ describe('Tarjeta: a save writes only what this phone means (REL-05)', () => {
     // p2 was saved on hole 10 by another phone before this one opened it.
     const p2Saved = snap.scores.find((x) => x.playerId === 'p2' && x.hole === 10)!
     // This phone enters p1 only.
-    fireEvent.click(screen.getAllByRole('button', { name: `${S.strokes}: más` })[0]!)
+    fireEvent.click(strokesUp('p1'))
     // Meanwhile the other phone saves p3 with a 7 and 3 putts.
     remoteSave('p3', 10, 7, 3)
-    expect(strokesOf(2)).toBe(7)
+    expect(strokesOf('p3')).toBe(7)
     await tapSave(11_000)
     const rows = written()
     expect(rows.some((r) => r.startsWith('p2@'))).toBe(false)
@@ -110,10 +115,10 @@ describe('Tarjeta: a save writes only what this phone means (REL-05)', () => {
 
   it('what this phone typed is kept when the other phone saves the same player', () => {
     mount()
-    const before = strokesOf(0)
-    fireEvent.click(screen.getAllByRole('button', { name: `${S.strokes}: más` })[0]!)
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
     remoteSave('p1', 10, 9, 2)
-    expect(strokesOf(0)).toBe(before + 1)
+    expect(strokesOf('p1')).toBe(before + 1)
   })
 })
 
@@ -177,5 +182,56 @@ describe('Tarjeta: the confirmation lives in the save bar (PWA-01)', () => {
       fireEvent.click(within(bar).getByRole('button', { name: S.correct }))
     })
     expect(holeOnScreen()).toBe(10)
+  })
+})
+
+describe('Tarjeta: a screen reader knows whose control it is and where it is (A11Y-01)', () => {
+  const live = () => document.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent ?? ''
+
+  it('every control on the hole has its own name, and each player\'s controls carry his name', () => {
+    mount()
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
+    expect(new Set(names).size).toBe(names.length)
+    for (const id of ['p1', 'p2', 'p3', 'p4']) {
+      const name = nameOf(id)
+      const row = screen.getByRole('group', { name })
+      for (const label of [`${S.strokesOf(name)}: ${t.common.stepDown}`, `${S.strokesOf(name)}: ${t.common.stepUp}`, `${S.puttsOf(name)}: ${t.common.stepDown}`, `${S.puttsOf(name)}: ${t.common.stepUp}`, S.pickedUpOf(name)]) {
+        expect(within(row).getByRole('button', { name: label })).toBeTruthy()
+      }
+    }
+  })
+
+  it('the hole is the page heading: «Hoyo 10, par …»', () => {
+    mount()
+    expect(screen.getByRole('heading', { level: 1, name: /^Hoyo 10, par \d, índice \d+/ })).toBeTruthy()
+  })
+
+  it('a tap says whose score changed and what it is worth; a save says the new hole', async () => {
+    mount()
+    expect(live()).toBe('')
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    expect(live()).toMatch(new RegExp(`^${nameOf('p1')}: ${before + 1} golpes, 2 putts, \\d pts`))
+    // The figures themselves are not live regions: a new hole would read out eight bare numbers.
+    expect(document.querySelectorAll('[aria-live]')).toHaveLength(1)
+    await tapSave(11_000)
+    // One message, not two at once: the saved note under the button is not a second live region.
+    expect(live()).toMatch(/^Hoyo 10 guardado\. Hoyo 11, par \d/)
+  })
+
+  it('two players with the same short name are told apart by their full names', () => {
+    mount((s) => {
+      const p1 = s.players.find((p) => p.id === 'p1')!
+      const p3 = s.players.find((p) => p.id === 'p3')!
+      Object.assign(p1, { displayName: 'Diego', fullName: 'Diego Arámburu' })
+      Object.assign(p3, { displayName: 'Diego', fullName: 'Diego Ortiz Tirado' })
+    })
+    for (const full of ['Diego Arámburu', 'Diego Ortiz Tirado']) {
+      const row = screen.getByRole('group', { name: full })
+      expect(within(row).getByRole('button', { name: `${S.strokesOf(full)}: ${t.common.stepUp}` })).toBeTruthy()
+      expect(within(row).getByRole('button', { name: S.pickedUpOf(full) })).toBeTruthy()
+    }
+    const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
+    expect(new Set(names).size).toBe(names.length)
   })
 })
