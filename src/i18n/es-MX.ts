@@ -1108,6 +1108,14 @@ export const t = {
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
+    heldForPin: (n: number) =>
+      n === 1
+        ? 'Este teléfono tiene 1 hoyo sin subir. Entra con tu PIN y se sube solo.'
+        : `Este teléfono tiene ${n} hoyos sin subir. Entra con tu PIN y se suben solos.`,
+    unsentBeforeSwitch: (n: number) => (n === 1 ? 'Tienes 1 hoyo sin subir' : `Tienes ${n} hoyos sin subir`),
+    unsentBeforeSwitchBody:
+      'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',
+    understood: 'Entendido',
     newVersion: 'Hay una versión nueva de la app.',
     update: 'Actualizar',
     fromCache: (when: string) => `Sin señal: mostrando lo último guardado (${when}).`,
