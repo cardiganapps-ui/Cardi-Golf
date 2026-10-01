@@ -41,6 +41,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.13",
@@ -53,6 +55,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "fake-indexeddb": "^6.2.5",
     "globals": "^16.4.0",
+    "happy-dom": "^20.14.5",
     "playwright-core": "^1.63.0",
     "sharp": "^0.34.3",
     "typescript": "~5.9.2",

@@ -65,6 +65,16 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
   const id = useId()
   const frame = useRef<HTMLDivElement>(null)
   const opener = useRef<HTMLElement | null>(null)
+  /*
+   * Callers pass `onClose` inline, so it is a new function on every render. The
+   * open/close effect below must not depend on it: when it did, every keystroke
+   * re-rendered the parent, re-ran the effect and its cleanup sent focus back to
+   * the opener, so only the first character reached the field (UX-01).
+   */
+  const close = useRef(onClose)
+  useEffect(() => {
+    close.current = onClose
+  }, [onClose])
   useEffect(() => {
     if (!open) return
     openSheets.push(id)
@@ -88,9 +98,10 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || openSheets[openSheets.length - 1] !== id) return
       e.stopPropagation()
-      onClose()
+      close.current()
     }
     window.addEventListener('keydown', onKey)
+    // Runs only when the sheet closes or unmounts, never on a re-render.
     return () => {
       clearTimeout(timer)
       window.removeEventListener('keydown', onKey)
@@ -99,7 +110,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       if (openSheets.length === 0) document.body.style.overflow = ''
       opener.current?.focus?.()
     }
-  }, [open, onClose, id])
+  }, [open, id])
   if (!open) return null
   return (
     <div className={styles.backdrop} onClick={onClose} role="presentation">
