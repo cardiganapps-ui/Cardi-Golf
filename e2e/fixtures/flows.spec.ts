@@ -28,7 +28,7 @@ test('Tarjeta: a double tap on «Guardar hoyo» saves one hole, and nothing cove
   await page.touchscreen.tap(centre.x, centre.y)
   await page.waitForTimeout(500)
   await expect(hole).toHaveText(String(before + 1))
-  await expect(page.getByText(t.card.savedHole(before))).toBeVisible()
+  await expect(page.getByText(t.card.savedHole(before), { exact: true })).toBeVisible()
   // The saved note sits under the button: the button has not moved and is what a thumb hits.
   const after = (await save.boundingBox())!
   expect(Math.round(after.y - box.y)).toBe(0)
