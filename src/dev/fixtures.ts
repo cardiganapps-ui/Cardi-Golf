@@ -150,6 +150,32 @@ function sellAuction(snap: Snapshot, seed: number) {
   })
 }
 
+/** Calcutta night (§10): the first tournament before day 1, nine lots sold, the tenth open with bids, two to go. */
+function auction12(): Fixture {
+  const snap = makeFirstTournament()
+  snap.players = withNames(snap.players, NAMES).map((p, i) => ({ ...p, isAdmin: i === 8, isHonoree: i === 3 }))
+  snap.tournament = { ...snap.tournament, id: 'fx-auction', slug: 'fixture-auction12', name: "Nacho's Bachelor Invitational", tagline: 'Los Cabos, abril 2027', joinCode: 'SUBAST', accentColor: '#0f6e77', logoUrl: null, status: 'auction', bankerPlayerId: 'p9' }
+  snap.rounds = [makeRound(1, { status: 'scheduled', date: '2027-04-09' }), makeRound(2, { status: 'scheduled', date: '2027-04-10' })]
+  snap.tournament.currentRoundId = null
+  snap.scores = []
+  snap.pairs = []
+  sellAuction(snap, 7)
+  for (const lot of snap.calcuttaLots) {
+    if (lot.lotNumber < 10) continue
+    const open = lot.lotNumber === 10
+    Object.assign(lot, { status: open ? 'open' : 'pending', ownerId: null, soldAt: null, price: open ? lot.price : 0 })
+    if (!open) snap.calcuttaBids = snap.calcuttaBids.filter((b) => b.lotId !== lot.id)
+    snap.calcuttaBuybacks = snap.calcuttaBuybacks.filter((b) => b.lotId !== lot.id)
+  }
+  return {
+    name: 'auction12',
+    description: 'Noche de la Calcutta: 9 lotes vendidos, el 10 abierto con pujas, 2 por subastar',
+    snapshot: snap,
+    me: { playerId: 'p9', isOrganizer: false, isAdmin: true },
+    lookup: lookupOf(snap),
+  }
+}
+
 function full12(finished: boolean): Fixture {
   const snap = makeFirstTournament()
   snap.players = withNames(snap.players, NAMES).map((p, i) => ({ ...p, isAdmin: i === 8, isHonoree: i === 3 }))
@@ -448,6 +474,7 @@ const BUILDERS: Record<string, () => Fixture> = {
     }),
   large60,
   longnames,
+  auction12,
 }
 
 export const FIXTURE_NAMES = Object.keys(BUILDERS)
