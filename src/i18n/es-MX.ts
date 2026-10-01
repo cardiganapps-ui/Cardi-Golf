@@ -41,6 +41,8 @@ export const t = {
     and: (a: string, b: string) => `${a} y ${b}`,
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
+    /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. */
+    andList: (parts: string[]) => new Intl.ListFormat('es-MX', { style: 'long', type: 'conjunction' }).format(parts),
     copySuffix: '(copia)',
     joinWithCode: (name: string, code: string) => `${name}: entra con el código ${code}`,
     loading: 'Cargando…',
@@ -1746,6 +1748,7 @@ export const t = {
     undo: 'Deshacer última puja',
     sold: '¡Vendido!',
     soldTo: (name: string, price: string) => `Vendido a ${name} por ${price}`,
+    soldSelf: (price: string) => `Se queda con él mismo por ${price}`,
     reopen: 'Reabrir lote',
     limitReached: (n: number) => `Ya tiene ${n}`,
     minBid: (amount: string) => `La puja tiene que superar ${amount}.`,
@@ -2023,6 +2026,10 @@ export const t = {
     now: 'Ahora',
     boards: 'Tableros',
     exit: 'Salir',
+    /** Which rows the page shows, when the board takes more than one: «1–9 de 12». */
+    range: (from: number, to: number, of: number) => `${from}–${to} de ${of}`,
+    invested: 'invirtió',
+    worth: 'vale hoy',
   },
   errors: {
     missingEnv: 'Falta configurar la conexión a la base de datos (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',

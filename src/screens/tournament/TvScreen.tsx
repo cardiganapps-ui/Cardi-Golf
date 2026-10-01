@@ -3,8 +3,8 @@
  * night (status `auction`) it shows the auction board; otherwise it rotates
  * Individual → pairs → snake holders → Calcutta values every ~12 s.
  */
-import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
@@ -44,11 +44,9 @@ export function TvScreen() {
     return () => clearInterval(timer)
   }, [isAuctionNight])
   const board = boards[idx % boards.length] ?? 'individual'
-  // Fields beyond 12 page through the individual board across rotations.
-  const PAGE = 12
+  // A board longer than the screen shows its next page on each pass of the rotation.
+  const turn = Math.floor(idx / boards.length)
   const indivRows = state.modules.individual?.rows ?? []
-  const pages = Math.max(1, Math.ceil(indivRows.length / PAGE))
-  const page = Math.floor(idx / boards.length) % pages
   // Keep the screen awake while the board is up (re-request after a tab switch).
   useEffect(() => {
     let lock: { release(): Promise<void> } | null = null
@@ -92,16 +90,14 @@ export function TvScreen() {
         ) : (
           <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={easeSlow}>
             {board === 'individual' && state.modules.individual && (
-              <>
-                <h2 className={styles.boardTitle}>
-                  {settings.modules.individual.label}
-                  {pages > 1 ? ` ${page * PAGE + 1}–${Math.min(indivRows.length, (page + 1) * PAGE)}` : ''}
-                </h2>
-                <div className={styles.rows}>
-                  {indivRows.slice(page * PAGE, (page + 1) * PAGE).map((r) => {
+              <PagedRows
+                title={settings.modules.individual.label}
+                turn={turn}
+                items={indivRows}
+                render={(r) => {
                     const pr = round ? state.core.rounds[round.id]?.[r.playerId] : undefined
                     return (
-                      <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`}>
+                      <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId}>
                         <span className={styles.pos}>{r.label}</span>
                         <Avatar name={name(r.playerId)} url={byId.get(r.playerId)?.avatarUrl} honoree={byId.get(r.playerId)?.isHonoree} />
                         <span className={styles.name}>
@@ -114,29 +110,27 @@ export function TvScreen() {
                         <span className={styles.big}>{r.total}</span>
                       </div>
                     )
-                  })}
-                </div>
-              </>
+                }}
+              />
             )}
             {board === 'pairs' && state.modules.pairs && (
-              <>
-                <h2 className={styles.boardTitle}>{settings.modules.pairs.label}</h2>
-                <div className={styles.rows}>
-                  {state.modules.pairs.rows.map((r) => (
-                    <div key={r.pairId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`}>
-                      <span className={styles.pos}>{r.label}</span>
-                      <span className={styles.name}>
-                        {r.name}
-                        <span className={styles.small}>
-                          {name(r.playerIds[0])} & {name(r.playerIds[1])}
-                        </span>
-                      </span>
-                      <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
-                      <span className={styles.big}>{r.total}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <PagedRows
+                title={settings.modules.pairs.label}
+                turn={turn}
+                items={state.modules.pairs.rows}
+                render={(r) => (
+                  // Its own grid: position, the pair with both partners in full, days, total (VIS-04).
+                  <div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`}>
+                    <span className={styles.pos}>{r.label}</span>
+                    <span className={styles.name}>
+                      <span>{r.name}</span>
+                      <span className={`${styles.small} ${styles.sub}`}>{t.common.andList([name(r.playerIds[0]), name(r.playerIds[1])])}</span>
+                    </span>
+                    <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
+                    <span className={styles.big}>{r.total}</span>
+                  </div>
+                )}
+              />
             )}
             {board === 'snake' && state.modules.snake && (
               <>
@@ -174,43 +168,54 @@ export function TvScreen() {
               </>
             )}
             {board === 'auction' && state.modules.auction && (
-              <>
-                <h2 className={styles.boardTitle}>
-                  {settings.modules.auction.label}, {formatMoney(state.modules.auction.pot)}
-                </h2>
-                <div className={styles.rows}>
-                  {state.modules.auction.portfolios.map((pf) => (
-                    <div key={pf.ownerId} className={styles.row}>
-                      <Avatar name={name(pf.ownerId)} url={byId.get(pf.ownerId)?.avatarUrl} />
-                      <span className={styles.name}>
-                        {name(pf.ownerId)}
-                        <span className={styles.small}>{pf.holdings.map((h) => name(h.playerId)).join(', ')}</span>
-                      </span>
-                      <span className={styles.small}>{formatMoney(pf.invested)}</span>
-                      <span className={styles.big}>{formatMoney(pf.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <PagedRows
+                title={`${settings.modules.auction.label}, ${formatMoney(state.modules.auction.pot)}`}
+                turn={turn}
+                items={state.modules.auction.portfolios}
+                head={
+                  <div className={`${styles.colHead} ${styles.rowOwner}`} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span>{t.tv.invested}</span>
+                    <span>{t.tv.worth}</span>
+                  </div>
+                }
+                render={(pf) => (
+                  // Its own grid: owner, holdings in full, what he put in, what it is worth now (VIS-04).
+                  <div key={pf.ownerId} className={`${styles.row} ${styles.rowOwner}`}>
+                    <Avatar name={name(pf.ownerId)} url={byId.get(pf.ownerId)?.avatarUrl} />
+                    <span className={styles.name}>
+                      <span>{name(pf.ownerId)}</span>
+                      <span className={`${styles.small} ${styles.sub}`}>{t.common.andList(pf.holdings.map((h) => name(h.playerId)))}</span>
+                    </span>
+                    <span className={`${styles.small} ${styles.figure}`} aria-label={`${t.tv.invested} ${formatMoney(pf.invested)}`}>
+                      {formatMoney(pf.invested)}
+                    </span>
+                    <span className={styles.big} aria-label={`${t.tv.worth} ${formatMoney(pf.value)}`}>
+                      {formatMoney(pf.value)}
+                    </span>
+                  </div>
+                )}
+              />
             )}
             {board.startsWith('game:') && state.games[board.slice(5)] && (
-              <>
-                <h2 className={styles.boardTitle}>{state.games[board.slice(5)]!.config.label}</h2>
-                <div className={styles.rows}>
-                  {state.games[board.slice(5)]!.board.sections[0]!.rows.slice(0, PAGE).map((r, i) => (
+              <PagedRows
+                title={state.games[board.slice(5)]!.config.label}
+                turn={turn}
+                items={state.games[board.slice(5)]!.board.sections[0]!.rows}
+                render={(r, i) => (
                     <div key={i} className={`${styles.row} ${r.pos === '1' ? styles.leader : ''}`}>
                       <span className={styles.pos}>{r.pos ?? ''}</span>
                       {r.playerIds.length === 1 ? <Avatar name={name(r.playerIds[0]!)} url={byId.get(r.playerIds[0]!)?.avatarUrl} /> : <span />}
                       <span className={styles.name}>
-                        <span>{r.title ?? r.playerIds.map(name).join(' y ')}</span>
-                        {(r.label || r.sub || r.title) && <span className={styles.small}>{[r.title ? r.playerIds.map(name).join(' y ') : null, r.label, r.sub].filter(Boolean).join(' · ')}</span>}
+                        <span>{r.title ?? t.common.andList(r.playerIds.map(name))}</span>
+                        {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label, r.sub].filter(Boolean).join(', ')}</span>}
                       </span>
                       <span className={styles.small}>{r.money ? formatMoney(r.money) : ''}</span>
                       <span className={styles.big}>{r.figure}</span>
                     </div>
-                  ))}
-                </div>
-              </>
+                )}
+              />
             )}
           </motion.section>
         )}
@@ -218,6 +223,50 @@ export function TvScreen() {
     </div>
   )
 }
+
+/**
+ * A board's rows, as many as the screen holds, paged across rotations (VIS-03).
+ * Rows are sized for the room (vh), so how many fit depends on the screen, the
+ * header and long names: it is measured, never assumed. A board longer than the
+ * screen says which rows it shows, «1–9 de 12», and the next pass shows the rest.
+ */
+function PagedRows<T>({ title, turn, items, render, head }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; head?: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null)
+  // Until measured, everything is laid out once (before paint) so the tallest row can be measured.
+  const [fit, setFit] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => {
+      const rows = Array.from(el.children) as HTMLElement[]
+      const tallest = Math.max(0, ...rows.map((r) => r.getBoundingClientRect().height))
+      if (tallest > 0) setFit((cur) => Math.max(1, Math.floor(el.clientHeight / tallest)) || cur)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [items.length])
+  const per = Math.max(1, Math.min(fit ?? items.length, items.length))
+  const pages = Math.max(1, Math.ceil(items.length / per))
+  const page = turn % pages
+  const shown = items.slice(page * per, page * per + per)
+  return (
+    <>
+      <h2 className={styles.boardTitle}>
+        {title}
+        {pages > 1 && <span className={styles.range}> {t.tv.range(page * per + 1, page * per + shown.length, items.length)}</span>}
+      </h2>
+      {head}
+      <div ref={box} className={styles.rows}>
+        {shown.map((item, i) => render(item, page * per + i))}
+      </div>
+    </>
+  )
+}
+
+/** How long a sale stays on the lot card before the next player comes up, unless the auctioneer opens a lot first. */
+const SOLD_HOLD_MS = 4000
 
 function AuctionBoard() {
   const data = useTournament((s) => s.data)!
@@ -227,12 +276,37 @@ function AuctionBoard() {
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const open = auction.lots.find((l) => l.status === 'open')
   const next = auction.lots.find((l) => l.status === 'pending')
-  const lot = open ?? next
+  const reduceMotion = useReducedMotion()
+  /*
+   * The hammer (MOT-04): the lot that was open is now sold. It stays on the card
+   * with «Vendido a …» for a few seconds, instead of the next player replacing it
+   * in the same frame. Opening the next lot ends it at once.
+   */
+  const [justSold, setJustSold] = useState<string | null>(null)
+  const lastOpen = useRef<string | null>(null)
+  const soldKey = auction.lots
+    .filter((l) => l.status === 'sold')
+    .map((l) => l.lotId)
+    .join(',')
+  useEffect(() => {
+    const was = lastOpen.current
+    lastOpen.current = open?.lotId ?? null
+    if (was && was !== open?.lotId && auction.lots.find((l) => l.lotId === was)?.status === 'sold') setJustSold(was)
+    if (open) setJustSold(null)
+  }, [open?.lotId, soldKey]) // eslint-disable-line react-hooks/exhaustive-deps -- runs on a lot opening or selling, not on every bid
+  useEffect(() => {
+    if (!justSold) return
+    const timer = setTimeout(() => setJustSold(null), SOLD_HOLD_MS)
+    return () => clearTimeout(timer)
+  }, [justSold])
+  const sold = open ? undefined : auction.lots.find((l) => l.lotId === justSold && l.status === 'sold')
+  const lot = open ?? sold ?? next
   const player = lot ? byId.get(lot.playerId) : undefined
   const bid = open?.currentBid?.amount ?? settings.auction.openingBid
   const bidder = open?.currentBid?.bidderId ?? open?.playerId
   const ph = lot ? state.core.rounds[state.core.roundIds[0] ?? '']?.[lot.playerId]?.playingHcp : undefined
   const pair = lot ? snapshot.pairs.find((p) => p.player1Id === lot.playerId || p.player2Id === lot.playerId) : undefined
+  const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
 
   return (
     <div className={styles.auction}>
@@ -251,6 +325,20 @@ function AuctionBoard() {
               <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeFast}>
                 <span className={styles.bidAmount}>{formatMoney(bid)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
+              </motion.div>
+            )}
+            {sold && (
+              // One stamp, like the Tarjeta's «Firmada»: the gavel's moment.
+              <motion.div
+                key={`sold-${sold.lotId}`}
+                className={styles.soldStamp}
+                role="status"
+                initial={reduceMotion ? { opacity: 0 } : { scale: 1.6, rotate: -8, opacity: 0 }}
+                animate={{ scale: 1, rotate: -3, opacity: 1 }}
+                transition={easeFast}
+              >
+                <span className={styles.bidAmount}>{formatMoney(sold.price)}</span>
+                <span className={styles.bidder}>{sold.ownerId === sold.playerId ? t.auction.soldSelf(formatMoney(sold.price)) : t.auction.soldTo(name(sold.ownerId ?? ''), formatMoney(sold.price))}</span>
               </motion.div>
             )}
           </>
@@ -276,11 +364,12 @@ function AuctionBoard() {
         </div>
         <div className={styles.sold}>
           <span className={styles.small}>{t.auction.soldList}</span>
+          {/* Newest first: the sale just made is the one the room looks for; the oldest fall off the bottom (MOT-04). */}
           {auction.lots
             .filter((l) => l.status === 'sold')
-            .slice(-8)
+            .sort((a, b) => (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber)
             .map((l) => (
-              <span key={l.lotId} className={styles.soldRow}>
+              <span key={l.lotId} className={styles.soldRow} data-sold-at={soldAt.get(l.lotId) ?? ''}>
                 <span>
                   {name(l.playerId)} <span className={styles.small}>{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
                 </span>
