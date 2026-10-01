@@ -1,0 +1,35 @@
+/**
+ * TRUST-02: the privacy notice said a tournament's money was seen only by its
+ * Comité and each person their own («Tu dinero solo lo ves tú»). In the
+ * product every member sees everyone's money on Dinero and can share it, and
+ * the operator can read any tournament. The notice now says what is true.
+ */
+import { describe, expect, it } from 'vitest'
+import { t } from '../i18n/es-MX'
+
+const sections = Object.fromEntries(t.legal.privacy.sections)
+const all = t.legal.privacy.sections.map(([, text]) => text).join(' ')
+
+describe('the privacy notice says who sees money', () => {
+  it('no longer promises a tournament\'s money is private', () => {
+    expect(all).not.toContain('solo los ve su Comité y cada quien el suyo')
+    expect(all).not.toContain('Tu dinero solo lo ves tú.')
+  })
+
+  it('says every member of a tournament sees its money, and can share it', () => {
+    const money = sections['El dinero de un torneo']!
+    expect(money).toContain('lo ven todos los que juegan ese torneo')
+    expect(money).toContain('puede compartirlo')
+    // What stays private: the summary on your profile (yours, and that tournament's Comité), and the push notices.
+    expect(money).toContain('solo lo ves tú')
+    expect(money).toContain('Los avisos nunca llevan montos')
+  })
+
+  it('says the operator can read any tournament, money included', () => {
+    expect(sections['Quién opera Polo']).toContain('dinero incluido')
+  })
+
+  it('is dated', () => {
+    expect(t.legal.updated).toBe('Última actualización: 1 de octubre de 2026')
+  })
+})

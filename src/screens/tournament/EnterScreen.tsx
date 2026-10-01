@@ -10,6 +10,7 @@ import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
 import { humanError } from '../../lib/humanError'
+import { LegalConsent } from '../../components/LegalLinks'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -128,6 +129,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               </button>
             ))}
           </div>
+          <LegalConsent />
           {user && !isAnonymous && (
             <Link className="btn btn--ghost btn--sm" to="/organizer">
               {t.enter.organizerEnter}

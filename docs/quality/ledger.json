@@ -3089,9 +3089,11 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 88,
+      "tests": [
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

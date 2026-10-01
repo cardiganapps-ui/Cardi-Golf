@@ -874,16 +874,33 @@ export const t = {
     rivalryLine: (name: string, n: number) => (n === 0 ? `Rivalidad con ${name}: parejos` : n > 0 ? `Rivalidad con ${name}: recibes ${n}` : `Rivalidad con ${name}: das ${-n}`),
   },
   legal: {
-    updated: 'Última actualización: 29 de septiembre de 2026',
+    updated: 'Última actualización: 1 de octubre de 2026',
+    /** Where data is collected (TRUST-05): the notice and the terms, a tap away, before anything is saved. */
+    consent: {
+      start: 'Al continuar aceptas los ',
+      terms: 'Términos de uso',
+      middle: ' y el ',
+      privacy: 'Aviso de privacidad',
+      end: '.',
+    },
+    /** Comité › Jugadores: the Comité types other people's data. */
+    othersData: {
+      start: 'Lo que captures de cada jugador (nombre, foto, hándicap) se guarda y se muestra según el ',
+      privacy: 'Aviso de privacidad',
+      end: '.',
+    },
+    newTab: '(se abre en otra pestaña)',
     contact: 'Dudas: golf@cardigan.mx',
     back: 'Volver a Polo',
     privacy: {
       title: 'Aviso de privacidad',
       sections: [
         ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola (golf@cardigan.mx) en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección técnica que tu navegador da para mandarte notificaciones. Los montos de dinero de un torneo solo los ve su Comité y cada quien el suyo.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección técnica que tu navegador da para mandarte notificaciones. En cada torneo, también lo que cada quien paga, gana y debe.'],
         ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados, mostrarte a ti y a la gente con la que juegas lo que les corresponde, y mandarte avisos que tú activaste. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
-        ['Quién los ve', 'Tu perfil completo lo ven tus amigos, tus crews y quienes juegan un torneo contigo. Los demás solo ven tu tarjeta básica si tu perfil aparece en búsquedas (lo puedes apagar). Tu dinero solo lo ves tú.'],
+        ['Quién los ve', 'Tu perfil completo lo ven tus amigos, tus crews y quienes juegan un torneo contigo. Los demás solo ven tu tarjeta básica si tu perfil aparece en búsquedas (lo puedes apagar).'],
+        ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que juegan ese torneo, en Dinero, y cualquiera de ellos puede compartirlo, por ejemplo en WhatsApp. En tu perfil, el resumen de tu dinero de torneos pasados solo lo ves tú (y el Comité de cada torneo, el de ese torneo). Los avisos nunca llevan montos.'],
+        ['Quién opera Polo', 'Quien opera Polo puede ver los datos de cualquier torneo, dinero incluido, para darle soporte o corregir un error.'],
         ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil, y solo para crear y reconocer tu cuenta. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
         ['Tus derechos', 'Puedes editar tu perfil cuando quieras, apagar los avisos en cada teléfono y pedir que borremos tu cuenta y tus datos escribiendo a golf@cardigan.mx. Los resultados de torneos ya jugados pueden quedarse sin tu nombre para que los de los demás sigan cuadrando.'],

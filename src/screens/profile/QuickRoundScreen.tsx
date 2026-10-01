@@ -19,6 +19,7 @@ import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
+import { LegalConsent } from '../../components/LegalLinks'
 
 const Q = t.quick
 const MAX = 16
@@ -311,6 +312,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
         <button className="btn btn--primary" type="button" disabled={!ready} onClick={() => void start()}>
           {busy ? Q.starting : Q.start}
         </button>
+        <LegalConsent />
       </section>
     </div>
   )

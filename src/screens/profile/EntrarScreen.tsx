@@ -16,6 +16,7 @@ import { accountError, confirmProfileCode, continueWithGoogle, finishProfileSign
 import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
 import styles from './Profile.module.css'
+import { LegalConsent } from '../../components/LegalLinks'
 
 export function EntrarScreen() {
   const navigate = useNavigate()
@@ -173,6 +174,7 @@ export function EntrarScreen() {
               {busy ? t.account.sending : t.account.sendCode}
             </button>
           </form>
+          <LegalConsent />
         </div>
       )}
     </div>

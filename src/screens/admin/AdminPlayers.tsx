@@ -18,6 +18,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
 import a from './Admin.module.css'
+import { OthersDataNotice } from '../../components/LegalLinks'
 import { NumberField, OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 
@@ -243,6 +244,7 @@ export function AdminPlayers() {
       <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add}>
         {E && (
           <div className="stack">
+            <OthersDataNotice />
             <div className={a.chipRow}>
               <Avatar name={E.display_name || E.full_name || '?'} url={E.avatar_url} size="lg" honoree={E.is_honoree} />
               <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
