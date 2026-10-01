@@ -426,7 +426,8 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
 function justCreated(): Fixture {
   const settings: TournamentSettings = { ...DEFAULT_SETTINGS, rounds: 2, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] } }
   const snap = makeSnapshot({ players: [], rounds: [makeRound(1, { status: 'scheduled', date: null, courseId: null }), makeRound(2, { status: 'scheduled', date: null, courseId: null })], settings, status: 'setup' })
-  snap.tournament = { ...snap.tournament, id: 'fx-new', slug: 'fixture-new-setup', name: 'Viaje a Valle', tagline: null, joinCode: 'VALLE1' }
+  // Just created: no round is current yet (the wizard sets none).
+  snap.tournament = { ...snap.tournament, id: 'fx-new', slug: 'fixture-new-setup', name: 'Viaje a Valle', tagline: null, joinCode: 'VALLE1', currentRoundId: null }
   snap.courses = []
   snap.groups = []
   snap.roundTees = []

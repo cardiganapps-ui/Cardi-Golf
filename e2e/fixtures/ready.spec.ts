@@ -30,3 +30,12 @@ test('the wizard leads with what comes next; the code waits for the players', as
   await page.getByText(W.shareLater).click()
   await expect(page.getByText('EJEMPL', { exact: true })).toBeVisible()
 })
+
+test('under way, the card prepares the next day, and its groups line opens Grupos on that day', async ({ page }) => {
+  await open(page, '/t/_/bracket8/admin/torneo')
+  await expect(page.getByRole('heading', { name: R.titleNext(2) })).toBeVisible()
+  await page.getByRole('link', { name: `${R.todoLabel}: ${R.groupsMissing(2)}` }).click()
+  await expect(page).toHaveURL(/\/admin\/grupos\?ronda=r2$/)
+  // Grupos starts on the current round (day 1) unless told otherwise.
+  await expect(page.getByRole('tab', { name: t.round.day(2) })).toHaveAttribute('aria-selected', 'true')
+})

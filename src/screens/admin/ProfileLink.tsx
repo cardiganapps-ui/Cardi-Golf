@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { formatIndex, handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
+import { entryChanged } from './entryInfo'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
 
@@ -41,6 +42,7 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
     try {
       const r = await comiteLinkProfile(playerId, handle)
       if (r.ok) {
+        entryChanged()
         toast(r.status === 'confirmed' ? P.linkedSelf : P.proposed)
         setOpen(false)
         setQ('')
@@ -57,6 +59,7 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
     setBusy(true)
     try {
       await comiteUnlinkProfile(playerId)
+      entryChanged()
       onChanged()
     } catch (e) {
       toast(humanError(e))

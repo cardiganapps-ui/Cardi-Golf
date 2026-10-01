@@ -1,51 +1,45 @@
 /**
  * «Para empezar» at the top of Comité › Torneo (UX-06): what is done, what is
- * missing, and one tap to the section that fixes it. Gone once the tournament
- * is ready, and for quick rounds, which are created ready to play.
+ * missing, and one tap to the section that fixes it. Once the tournament is
+ * under way it prepares the next day instead («Antes del día 2»). Gone once
+ * everything is ready, and for quick rounds, which are created ready to play.
  */
-import { useEffect, useId, useState } from 'react'
+import { useId } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { IconCheck, IconChevronRight } from '../../components/icons'
-import { playersWithPin } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
-import { readiness } from './readiness'
+import { useEntryInfo } from './entryInfo'
+import { nextRound, readiness } from './readiness'
 import styles from './ReadinessCard.module.css'
 
 export function ReadinessCard() {
   const { tournamentId, slug } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const headId = useId()
-  const [pins, setPins] = useState<Set<string> | null>(null)
-  const playerCount = data?.snapshot.players.length ?? 0
-  useEffect(() => {
-    // The design fixtures have no server to ask; their PIN line is left out.
-    if (tournamentId.startsWith('fixture:')) return
-    let alive = true
-    playersWithPin(tournamentId)
-      .then((p) => alive && setPins(p))
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [tournamentId, playerCount])
+  const entry = useEntryInfo(tournamentId, data?.snapshot.players.map((p) => p.id) ?? [])
   if (!data) return null
-  const { snapshot, settings } = data
+  const { snapshot, settings, state } = data
   if (snapshot.tournament.quick || snapshot.tournament.status === 'finished') return null
   const R = t.admin.ready
-  const items = readiness(snapshot, settings, pins)
-  if (items.every((i) => i.done)) return snapshot.tournament.status === 'setup' ? <p className={styles.allSet}>{R.allSet}</p> : null
+  const items = readiness(snapshot, settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: state.bracket })
+  const setup = snapshot.tournament.status === 'setup'
+  if (items.every((i) => i.done)) {
+    // «Listo» only once the PINs are known: until then the PIN line is not on the list.
+    return setup && entry ? <p className={styles.allSet}>{R.allSet}</p> : null
+  }
+  const next = setup ? undefined : nextRound(snapshot)
   return (
     <section className={styles.card} aria-labelledby={headId}>
       <h3 id={headId} className={styles.title}>
-        {R.title}
+        {next ? R.titleNext(next.number) : R.title}
       </h3>
-      <p className={styles.hint}>{R.hint}</p>
+      <p className={styles.hint}>{next ? R.hintNext(next.number) : R.hint}</p>
       <ul className={styles.list}>
         {items.map((i) => (
           <li key={i.id}>
-            <Link className={`${styles.row} ${i.done ? styles.done : ''}`} to={`/t/${slug}/admin/${i.to}`}>
+            <Link className={`${styles.row} ${i.done ? styles.done : ''}`} to={`/t/${slug}/admin/${i.to}${i.roundId ? `?ronda=${i.roundId}` : ''}`}>
               <span className={styles.mark} aria-hidden="true">
                 {i.done ? <IconCheck size={18} /> : null}
               </span>

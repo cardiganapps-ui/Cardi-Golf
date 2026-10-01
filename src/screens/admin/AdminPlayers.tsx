@@ -17,6 +17,7 @@ import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
+import { entryChanged } from './entryInfo'
 import a from './Admin.module.css'
 import { NumberField, OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
@@ -164,6 +165,7 @@ export function AdminPlayers() {
     try {
       await setPlayerPin(pinFor.id, pin)
       setPins(new Set([...pins, pinFor.id]))
+      entryChanged()
       toast(P.pinSet)
       setPinFor(null)
       setPin('')

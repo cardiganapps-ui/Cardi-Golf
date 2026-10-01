@@ -4,7 +4,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 ## 0. Antes del viaje (checklist)
 
-Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores, PIN, días con campo y fecha, la tarjeta del campo, tees y grupos del siguiente día) y cada línea abre su sección. La pestaña Torneo cuenta lo pendiente mientras el torneo está en preparación. Lo de abajo es lo que la app no puede revisar sola.
+Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores, PIN, días con campo y fecha, la tarjeta del campo, equipos si se juega por equipos, tees y grupos del siguiente día) y cada línea abre su sección. Ya en juego, la misma tarjeta prepara el día siguiente («Antes del día 2»). La pestaña Torneo cuenta lo pendiente mientras el torneo está en preparación. Lo de abajo es lo que la app no puede revisar sola.
 
 - [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de dificultad por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
 - [ ] **Jugadores completos.** Comité › Jugadores: los 12, con categoría, hándicap base **bloqueado**, tee, foto, quién es el homenajeado y quiénes son admins. Revisa la vista previa del 80 % y los golpes de ventaja.

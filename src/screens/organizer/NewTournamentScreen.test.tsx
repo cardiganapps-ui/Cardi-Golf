@@ -3,7 +3,7 @@
  * UX-06: the wizard asked «¿Cuántos días (rondas)?» and created no rounds,
  * and its success screen led with the join code, so players joined a
  * tournament with nobody in it. The days become rounds, and what comes next
- * leads; the code waits behind «cuando tengas jugadores».
+ * leads; the code waits, folded, until there are players.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -61,6 +61,14 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(within(later).getByText('VALLE1')).toBeTruthy()
     // The next steps come before the code in the page.
     expect(goAdmin.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('once created, the steps are gone: no «Paso 3 de 3» under «Torneo creado»', async () => {
+    await createWithDays('1')
+    expect(screen.getByRole('heading', { name: W.created })).toBeTruthy()
+    expect(screen.queryByText(new RegExp(W.stepOf(3, 3)))).toBeNull()
+    // The disclosure says it opens: a chevron beside its label.
+    expect(screen.getByText(W.shareLater).closest('summary')!.querySelector('svg')).toBeTruthy()
   })
 
   it('if the rounds can\'t be created the tournament still is, and the Comité lists what is missing', async () => {

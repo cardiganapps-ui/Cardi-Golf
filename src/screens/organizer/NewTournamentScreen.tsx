@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
+import { IconChevronRight } from '../../components/icons'
 import { CopyButton, Field, ShareButton } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { useAuth } from '../../data/auth'
@@ -126,14 +127,19 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       </Link>
       <div className={styles.progress}>
         <h1>{step === DONE ? W.created : W.title}</h1>
-        <div className={styles.progressBar} aria-hidden="true">
-          {stepNames.map((s, i) => (
-            <span key={s} className={`${styles.progressSeg} ${i + 1 <= step ? styles.progressDone : ''}`} />
-          ))}
-        </div>
-        <span className={styles.progressText}>
-          {W.stepOf(Math.min(step, TOTAL_STEPS), TOTAL_STEPS)}, <strong>{stepNames[Math.min(step, TOTAL_STEPS) - 1]}</strong>
-        </span>
+        {/* Created: the steps are behind it, so «Paso 3 de 3» would point back at them. */}
+        {step !== DONE && (
+          <>
+            <div className={styles.progressBar} aria-hidden="true">
+              {stepNames.map((s, i) => (
+                <span key={s} className={`${styles.progressSeg} ${i + 1 <= step ? styles.progressDone : ''}`} />
+              ))}
+            </div>
+            <span className={styles.progressText}>
+              {W.stepOf(step, TOTAL_STEPS)}, <strong>{stepNames[step - 1]}</strong>
+            </span>
+          </>
+        )}
       </div>
 
       {step === 1 && (
@@ -184,7 +190,10 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
             {W.goAdmin}
           </Link>
           <details className={styles.shareLater}>
-            <summary>{W.shareLater}</summary>
+            <summary>
+              {W.shareLater}
+              <IconChevronRight size={18} />
+            </summary>
             <span className="label">{t.organizer.joinCode}</span>
             <span className={styles.bigCode}>{created.joinCode}</span>
             <span className={styles.link}>{link}</span>

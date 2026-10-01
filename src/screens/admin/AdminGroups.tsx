@@ -5,6 +5,7 @@
  * Drafts are local until "Guardar"; leaving the day with a draft asks first.
  */
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
@@ -38,7 +39,10 @@ export function AdminGroups() {
   const reload = useTournament((s) => s.reload)
   const { snapshot, state, settings } = data
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
-  const [roundId, setRoundId] = useState<string>(snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
+  // «Para empezar» opens Grupos on the day it is about (?ronda=), otherwise the current one.
+  const [params] = useSearchParams()
+  const asked = params.get('ronda')
+  const [roundId, setRoundId] = useState<string>((asked && rounds.some((r) => r.id === asked) ? asked : null) ?? snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
   const round = rounds.find((r) => r.id === roundId) ?? null
   const [drafts, setDrafts] = useState<DraftGroup[] | null>(null)
   const [picking, setPicking] = useState<number | null>(null)
