@@ -45,6 +45,7 @@ Everything the project is waiting on a human for lives in `docs/handoff.md`. Tha
 - `scripts/preflight.sh` runs typecheck → lint → test → build: whichever of those `package.json` defines, with the exit code preserved.
 - `.claude/settings.json` has a `PreToolUse` hook (`scripts/prepush-guard.sh`) that runs preflight before every `git push` and **blocks the push** if it fails.
 - CI (`.github/workflows/ci.yml`, job `check`) runs the same script.
+- The hook also refuses any push to `main` and runs the preflight in the tree being pushed (`cd <dir> && git push`, `git -C <dir> push`), so a worktree's push is checked against itself (QA-10, 2026-10-01). A second PreToolUse hook (`scripts/mcp-main-guard.py`) refuses the GitHub MCP write tools (`push_files`, `create_or_update_file`, `delete_file`) on `main`. A SessionStart hook sets `core.hooksPath .githooks`, whose `pre-push` refuses `main` and runs the preflight for any git client. A worktree that symlinks `node_modules` is safe: `.gitignore` ignores `node_modules` as a file too.
 - Don't weaken or bypass either one. If the hook blocks you, fix the code.
 - Never judge a check by output piped through `tail` or `grep`, because a pipe swallows the exit code.
 - When M0 adds `package.json`, define exactly those four scripts, plus `"preflight": "bash scripts/preflight.sh"`.

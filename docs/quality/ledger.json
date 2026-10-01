@@ -599,9 +599,11 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 72,
+      "tests": [
+        "src/lib/envExample.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -907,9 +909,11 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 72,
+      "tests": [
+        "src/lib/ops.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2341,9 +2345,11 @@
       "workstream": "W14",
       "phase": 0,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 72,
+      "tests": [
+        "src/lib/ops.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
