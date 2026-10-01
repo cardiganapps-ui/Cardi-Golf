@@ -2,6 +2,7 @@
  * Plain-Spanish rules for an instance game, read from its settings (for
  * Reglamento and the setup catalog). Every number comes from the config.
  */
+import { ordinal } from '../../i18n/es-MX'
 import type { GameConfig } from '../settings/games'
 import { fmt } from './payout'
 
@@ -23,16 +24,16 @@ export function describeGame(g: GameConfig): string[] {
   switch (g.type) {
     case 'skins': {
       const o = g.options
-      lines.push(`En cada hoyo, el score ${o.basis === 'net' ? 'neto' : 'gross'} más bajo, solo, gana un skin.`)
+      lines.push(`En cada hoyo, quien hace menos golpes ${o.basis === 'net' ? 'netos' : 'gross'}, solo, gana un skin.`)
       lines.push(o.carryOver ? 'Si hay empate nadie gana y el skin se acumula al siguiente hoyo.' : 'Si hay empate nadie gana ese hoyo.')
       if (g.money.source === 'side' || g.money.source === 'main') lines.push('El bote se reparte entre los skins ganados.')
       break
     }
     case 'lowScore': {
       const o = g.options
-      lines.push(o.basis === 'points' ? 'Gana quien hace más puntos Stableford.' : `Gana el score ${o.basis === 'net' ? 'neto' : 'gross'} más bajo contra el par. Levantar cuenta como doble bogey neto.`)
+      lines.push(o.basis === 'points' ? 'Gana quien hace más puntos Stableford.' : `Gana la tarjeta ${o.basis === 'net' ? 'neta' : 'gross'} más baja contra el par. Levantar cuenta como doble bogey neto.`)
       lines.push(o.scope === 'perRound' ? 'Un premio por día (el bote se divide entre los días).' : 'Un solo premio sumando todos sus días.')
-      if (g.money.source !== 'none') lines.push(`Reparto: ${g.money.split.map((p, i) => `${i + 1}º ${p}%`).join(', ')}. Empates se reparten.`)
+      if (g.money.source !== 'none') lines.push(`Reparto: ${g.money.split.map((p, i) => `${ordinal(String(i + 1))} ${p}%`).join(', ')}. Empates se reparten.`)
       break
     }
     case 'eventPot': {

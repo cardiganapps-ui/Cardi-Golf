@@ -33,7 +33,7 @@ export function RejectedWrites({ canResend }: { canResend: boolean }) {
     }
     const p = r.payload as { pair_id: string }
     const pair = snapshot.pairs.find((x) => x.id === p.pair_id)
-    return IB.rejectedSignature(pair?.name ?? (pair ? `${name(pair.player1Id)} & ${name(pair.player2Id)}` : '?'))
+    return IB.rejectedSignature(pair?.name ?? (pair ? t.common.andList([name(pair.player1Id), name(pair.player2Id)]) : '?'))
   }
   return (
     <section className={styles.box}>

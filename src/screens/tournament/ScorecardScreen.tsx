@@ -297,7 +297,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const myPair = me.playerId ? snapshot.pairs.find((p) => p.player1Id === me.playerId || p.player2Id === me.playerId) : null
   const rivalPair = myPair ? snapshot.pairs.find((p) => p.id !== myPair.id && [p.player1Id, p.player2Id].every((id) => group.playerIds.includes(id))) : null
   const pairName = (p: { name: string | null; player1Id: string; player2Id: string }) =>
-    p.name ?? `${snapshot.players.find((x) => x.id === p.player1Id)?.displayName} & ${snapshot.players.find((x) => x.id === p.player2Id)?.displayName}`
+    p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => snapshot.players.find((x) => x.id === id)?.displayName ?? '?'))
 
   const signed = (pid: string) => {
     const pair = snapshot.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)

@@ -10,6 +10,7 @@
  * exactly what they collect, so they always balance; they are listed so the
  * organizer sees every peso. Direct bets never touch the bank.
  */
+import { t } from '../../i18n/es-MX'
 import type { TournamentSettings } from './schema'
 import type { GameConfig } from './games'
 import type { Snapshot } from '../types'
@@ -124,7 +125,7 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
         moduleId: 'snake',
         label: modules.snake.label,
         amount: known + perGroup * groups * missing,
-        detail: `${real.map((r) => r.map((n) => `${n}`).join('+')).join(' y ')} jugadores por grupo${missing ? `, ${missing} ${missing === 1 ? 'día' : 'días'} por armar` : ''}`,
+        detail: `${t.common.andList(real.map((r) => r.map((n) => `${n}`).join('+')))} jugadores por grupo${missing ? `, ${missing} ${missing === 1 ? 'día' : 'días'} por armar` : ''}`,
       })
     } else {
       lines.push({

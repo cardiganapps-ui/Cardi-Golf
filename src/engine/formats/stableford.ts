@@ -22,7 +22,7 @@ export const stablefordFormat: MainFormat = {
       title: 'Stableford',
       steps: [
         'Cada hoyo da puntos según lo que hagas contra el par, con tus golpes de ventaja.',
-        'Doble bogey neto o peor: 0 · bogey: 1 · par: 2 · birdie: 3 · eagle: 4.',
+        'En neto, doble bogey o peor da 0 puntos, bogey 1, par 2, birdie 3 y águila 4.',
         'Levantar cuenta 0 puntos, así que puedes levantar sin arruinar la tarjeta.',
         `Gana quien más puntos sume${pct === 100 ? '' : `, jugando al ${pct}% del hándicap`}.`,
       ],

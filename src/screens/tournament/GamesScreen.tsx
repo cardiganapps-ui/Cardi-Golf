@@ -204,7 +204,7 @@ export function GamesScreen() {
                     sub={
                       <span className={styles.sub}>
                         <span>
-                          {t.common.and(name(r.playerIds[0]), name(r.playerIds[1]))}, {t.common.plusList(r.perRound)}
+                          {t.common.andList(r.playerIds.map(name))}, {t.common.plusList(r.perRound)}
                         </span>
                         {state.modules.pairs!.prizes[r.playerIds[0]] && <span className={styles.subMoney}>{money(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
                       </span>
@@ -231,7 +231,7 @@ export function GamesScreen() {
                               <span className={styles.rowSub}>
                                 {t.card.group} {g.number}
                               </span>
-                              <span>{pairsIn.map((p) => p.name ?? t.common.and(name(p.player1Id), name(p.player2Id))).join(t.common.versus)}</span>
+                              <span>{pairsIn.map((p) => p.name ?? t.common.andList([name(p.player1Id), name(p.player2Id)])).join(t.common.versus)}</span>
                             </span>
                             <span className={styles.figures}>
                               {pairsIn.map((p) => (

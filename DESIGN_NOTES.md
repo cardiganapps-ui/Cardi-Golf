@@ -149,6 +149,8 @@ Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido
 
 ~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs; the English net-score names stay in the engine (the screen maps them) because tests and the CSV export read them.
 
+**Enforced (2026-10-01, COPY-24).** The rules drifted back (39 middle dots, arrows, «1º», straight quotes, "eagle", "score", "slot", «pozo» for the snake), so `src/lib/copyRules.test.ts` now reads every string in `es-MX.ts`, what the engine writes for the golden tournament and every fixture (explanations, labels, board text, the Reglamento, the catalog), and the string literals in the rest of `src`. It fails on a middle dot, an arrow, straight quotes, an ordinal without its period (`ordinal()` writes «1.º»), a hyphen used as a minus (`withTrueMinus`, `toParText`, `formatMoney` all write «−»), a name list joined by hand (`t.common.andList` only), and the «Not» column above. The engine names net scores in Spanish too («águila neta»): nothing read the English names after all. «Pozo» is the Calcutta's word only; the snake is paid from the bolsa.
+
 ## Throwaway organizer account
 
 `scripts/design-organizer.mjs` creates `design-shots@cardi-golf.invalid` (password in `.env.local`, never committed) and makes it an admin of the Ensayo tournament so "Mis torneos" and the wizard can be screenshotted signed in. Remove it with `node scripts/design-organizer.mjs --remove`. It has no access to any other tournament.

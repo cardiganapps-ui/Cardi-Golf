@@ -22,7 +22,7 @@ export function gameStake(g: GameResultState): { text: string; amount?: number }
 export function gameLeader(g: GameResultState, name: (id: string) => string): string {
   const row = g.board.sections[0]?.rows[0]
   if (!row) return t.games.noResults
-  const who = row.playerIds.map(name).join(' y ')
+  const who = t.common.andList(row.playerIds.map(name))
   if (row.title) return `${row.title}: ${who ? `${who}, ` : ''}${row.figure.toLowerCase()}`
   return t.games.leader(who, row.label ? `${row.label} ${row.figure}` : row.figure)
 }
@@ -63,7 +63,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
             {prizes.map((p, i) => (
               <div key={i} className={styles.rowLine}>
                 <span className={styles.rowText}>
-                  <strong>{p.payerId ? `${name(p.payerId)} → ${name(p.playerId)}` : name(p.playerId)}</strong>
+                  <strong>{p.payerId ? `${name(p.payerId)} ${t.moneyScreen.paysTo} ${name(p.playerId)}` : name(p.playerId)}</strong>
                   <span className={styles.rowSub}>
                     {p.label}
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
@@ -80,8 +80,8 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
 }
 
 function LeaderLine({ row, name, onOpen }: { row: GameResultState['board']['sections'][number]['rows'][number]; name: (id: string) => string; onOpen: (id: string) => void }) {
-  const names = row.playerIds.map(name).join(' y ')
-  const sub = [row.title ? names : null, row.label, row.sub].filter(Boolean).join(' · ')
+  const names = t.common.andList(row.playerIds.map(name))
+  const sub = [row.title ? names : null, row.label, row.sub].filter(Boolean).join(', ')
   return (
     <button type="button" className={styles.gameRow} onClick={() => row.playerIds[0] && onOpen(row.playerIds[0])}>
       <span className={styles.gameText}>

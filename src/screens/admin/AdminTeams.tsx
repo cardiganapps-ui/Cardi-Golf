@@ -170,7 +170,7 @@ export function AdminTeams() {
                   {/* The total first: it is the point of the draw, and a long
                       roster truncates whatever follows it. */}
                   <span className={a.rowSub}>
-                    {E.hcpTotal(Math.round(team.totalHcp * 10) / 10)} · {team.playerIds.map(name).join(', ')}
+                    {E.hcpTotal(Math.round(team.totalHcp * 10) / 10)}: {t.common.andList(team.playerIds.map(name))}
                   </span>
                 </div>
               </motion.div>

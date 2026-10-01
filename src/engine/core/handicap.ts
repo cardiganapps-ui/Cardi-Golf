@@ -92,7 +92,7 @@ export function estimateIndex(
     `Redondeado a 1 decimal: ${fmt(uncapped)}`,
   ]
   if (value !== uncapped) steps.push(`Tope ${fmt(h.cap)}: ${fmt(value)}`)
-  if (reordered) steps.push('Los scores venían en otro orden; se acomodaron de mejor a peor.')
+  if (reordered) steps.push('Las rondas venían en otro orden; se acomodaron de mejor a peor.')
   if (assumed) steps.push('Rating/slope asumidos (par 72, slope 113) donde no se capturaron.')
   return {
     value,

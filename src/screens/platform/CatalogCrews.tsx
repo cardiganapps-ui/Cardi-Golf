@@ -116,7 +116,7 @@ export function CrewDetail() {
       {back}
       <div className={s.detailHead}>
         <h2>{crew.name}</h2>
-        <span className={s.help}>{[`${K.code} ${crew.joinCode}`, `/c/${crew.slug}`, relTime(crew.createdAt)].join(' · ')}</span>
+        <span className={s.help}>{[`${K.code} ${crew.joinCode}`, `/c/${crew.slug}`, relTime(crew.createdAt)].join(', ')}</span>
         <div className={s.actions}>
           <button className="btn btn--ghost btn--sm" type="button" onClick={() => setDeleting(true)}>
             {K.delete}
@@ -135,7 +135,7 @@ export function CrewDetail() {
                 <Avatar name={m.displayName} url={m.avatarUrl} size="sm" />
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{m.displayName}</span>
-                  <span className={s.rowSub}>{[m.role === 'owner' ? K.owner : K.member, `@${m.handle}`, K.joined(relTime(m.joinedAt))].join(' · ')}</span>
+                  <span className={s.rowSub}>{[m.role === 'owner' ? K.owner : K.member, `@${m.handle}`, K.joined(relTime(m.joinedAt))].join(', ')}</span>
                 </span>
               </Link>
               <button className="btn btn--ghost btn--sm" type="button" onClick={() => setRemoving(m)}>
@@ -158,7 +158,7 @@ export function CrewDetail() {
               <Link key={o.tournamentId} className={s.row} to={`../../torneos/${o.tournamentId}`} relative="path">
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{o.name}</span>
-                  <span className={s.rowSub}>{[t.platform.status[o.status], o.quick ? t.platform.chips.quick : null, relTime(o.createdAt)].filter(Boolean).join(' · ')}</span>
+                  <span className={s.rowSub}>{[t.platform.status[o.status], o.quick ? t.platform.chips.quick : null, relTime(o.createdAt)].filter(Boolean).join(', ')}</span>
                 </span>
               </Link>
             ))}

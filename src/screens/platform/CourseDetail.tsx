@@ -116,7 +116,7 @@ export function CourseDetail() {
           {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className="chip chip--coral">{C.chips.broken}</span>}
         </span>
         <span className={s.help}>
-          {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(' · ')}
+          {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(', ')}
         </span>
         {course.attribution && <span className={s.help}>{course.attribution}</span>}
         <div className={s.actions}>
@@ -179,7 +179,7 @@ export function CourseDetail() {
                 <Link className={s.rowLink} to={`../${d.id}`} relative="path">
                   <span className={s.rowText}>
                     <span className={s.rowTitle}>{d.name}</span>
-                    <span className={s.rowSub}>{[d.location, C.usedLine(d.rounds)].filter(Boolean).join(' · ')}</span>
+                    <span className={s.rowSub}>{[d.location, C.usedLine(d.rounds)].filter(Boolean).join(', ')}</span>
                   </span>
                 </Link>
                 <button className="btn btn--secondary btn--sm" type="button" onClick={() => setMergeWith(d.id)}>
@@ -230,7 +230,7 @@ function TeeCard({ tee }: { tee: CourseTee }) {
         <strong>{tee.name}</strong>
         <span className={s.help}>{C.teeLine(tee.parTotal, tee.rating, tee.slope, tee.inUse)}</span>
       </div>
-      {tee.problems.length > 0 && <span className={s.problem}>{tee.problems.map((p) => C.problems[p]).join(' · ')}</span>}
+      {tee.problems.length > 0 && <span className={s.problem}>{t.common.andList(tee.problems.map((p) => C.problems[p] ?? p))}</span>}
       <div className={s.card} role="table" aria-label={tee.name}>
         {tee.holes.map((h) => (
           <span key={h.n} className={s.cardCell} role="cell">

@@ -137,7 +137,7 @@ export function AdminGames() {
                     <div key={m.id} className={a.row}>
                       <span className={a.rowText}>
                         <span className={a.rowTitle}>
-                          {m.a.map(name).join(' y ')} {G.vs} {m.b.map(name).join(' y ')}
+                          {t.common.andList(m.a.map(name))} {G.vs} {t.common.andList(m.b.map(name))}
                         </span>
                       </span>
                       <button

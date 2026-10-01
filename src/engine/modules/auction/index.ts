@@ -5,6 +5,7 @@
  * money goes to the player's owners by ownership percentage, whole pesos,
  * rounding remainder to the champion's owners.
  */
+import { ordinal, t } from '../../../i18n/es-MX'
 import type { AuctionPayoutSlot } from '../../settings/schema'
 import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -92,7 +93,7 @@ const money = (x: number) => Math.round(x * 100) / 100
 function slotLabel(slot: AuctionPayoutSlot, ctx: ModuleContext): string {
   switch (slot.slot) {
     case 'place':
-      return slot.place === 1 ? 'Campeón' : slot.place === 2 ? 'Subcampeón' : `${slot.place}º lugar`
+      return slot.place === 1 ? 'Campeón' : slot.place === 2 ? 'Subcampeón' : `${ordinal(String(slot.place))} lugar`
     case 'bestOfTier':
       return `Mejor ${slot.tier}`
     case 'lastPlace':
@@ -180,7 +181,7 @@ export function assignSlots(
       for (const c of covered) placeDone.add(c)
       const label = covered.length === 1 ? slotLabel(slot, ctx) : covered.map((c) => slotLabel(c, ctx)).join(' + ')
       if (!members.length) {
-        results.push(unfilledSlot(slot, label, share, pot, `Nadie ocupa el ${slot.place}º lugar`))
+        results.push(unfilledSlot(slot, label, share, pot, `Nadie ocupa el ${ordinal(String(slot.place))} lugar`))
         continue
       }
       const places = placesOf(g!)
@@ -191,11 +192,11 @@ export function assignSlots(
       const steps =
         places === 1
           ? [
-              `${members.map(nameOf).join(' y ')} ${members.length === 1 ? 'termina' : 'terminan'} ${g!.position}º: ${pct(share)} del pozo`,
+              `${t.common.andList(members.map(nameOf))} ${members.length === 1 ? 'termina' : 'terminan'} ${ordinal(String(g!.position))}: ${pct(share)} del pozo`,
               ...(members.length > 1 ? [`Un equipo: ${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`] : []),
             ]
           : [
-              `Empate a ${places} en el ${g!.position}º: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
+              `Empate a ${places} en el ${ordinal(String(g!.position))}: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
               uneven
                 ? `${pct(share)} ÷ ${teams.length} equipos = ${pct(share / teams.length)} por equipo, repartido entre sus jugadores`
                 : `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
@@ -209,11 +210,11 @@ export function assignSlots(
       const g = groups.find((x) => x.members.some((m) => tierOf.get(m) === slot.tier && !cashed.has(m)))
       if (!g) {
         const anyOfTier = snapshot.players.some((p) => p.tier === slot.tier)
-        results.push(unfilledSlot(slot, label, slot.share, pot, anyOfTier ? `Todos los de la categoría ${slot.tier} cobran un slot mayor` : `No hay jugadores de la categoría ${slot.tier}`))
+        results.push(unfilledSlot(slot, label, slot.share, pot, anyOfTier ? `Todos los de la categoría ${slot.tier} ya cobran un lugar mejor` : `No hay jugadores de la categoría ${slot.tier}`))
         continue
       }
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
-      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro slot: ${members.map(nameOf).join(', ')} (${g.position}º)`]
+      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${members.map(nameOf).join(', ')} (${ordinal(String(g.position))})`]
       if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
       results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)
@@ -224,7 +225,7 @@ export function assignSlots(
       const g = groups.at(-1)
       const members = g ? g.members.filter((m) => !cashed.has(m)) : []
       if (!members.length) {
-        results.push(unfilledSlot(slot, label, slot.share, pot, 'El último lugar ya cobra un slot mayor'))
+        results.push(unfilledSlot(slot, label, slot.share, pot, 'Quien quedó último ya cobra un lugar mejor'))
         continue
       }
       const steps = [`Último lugar: ${members.map(nameOf).join(', ')}`]

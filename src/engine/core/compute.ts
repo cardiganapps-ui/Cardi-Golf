@@ -7,6 +7,7 @@ import type { Explanation, Hole, Id, Player, Round, Snapshot, Tee } from '../typ
 import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
+import { withTrueMinus } from '../formats/format'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
@@ -171,7 +172,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
               ? ['Levantó: 0 pts']
               : [
                   `Par ${h.par}, SI ${h.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
-                  `${g} − ${sr} = ${net} neto`,
+                  `${g} − ${sr} = ${withTrueMinus(net ?? 0)} neto`,
                   `${h.par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
                 ]
             : ['Sin capturar'],

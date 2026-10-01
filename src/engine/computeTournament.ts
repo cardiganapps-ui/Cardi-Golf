@@ -184,8 +184,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   if (pastSetup && snapshot.players.length > 0 && !pool.balanced) {
     poolWarnings.push(
       pool.difference < 0
-        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité › Torneo.`
-        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité › Torneo.`,
+        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité, sección Torneo.`
+        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
     )
   }
 
