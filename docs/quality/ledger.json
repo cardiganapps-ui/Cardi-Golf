@@ -1907,9 +1907,12 @@
       "workstream": "W4",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 70,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/appUpdate.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
