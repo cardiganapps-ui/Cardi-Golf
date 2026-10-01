@@ -203,12 +203,15 @@ describe('when the gate stops asking (REL-02)', () => {
   it('with no event at all, the timer asks again until the server’s boards are up', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     phone.readCached.mockResolvedValue(savedCopy())
-    // The stored session can't be confirmed at first (auth-js cools down after a failed refresh); `online` fired long ago.
-    server.ensureSession.mockRejectedValueOnce(new Error('sin sesión todavía'))
+    // Opened with no signal: the first ask fails, and with no signal nothing is scheduled.
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
     server.myMembership.mockResolvedValue(member)
     const load = serverLoads()
     open()
     expect(await screen.findByText(/^Guardado en el teléfono: cache/)).toBeTruthy()
+    // The signal comes back without an `online` event (it fires only once, and not at all on a connection that heals).
+    onLine.mockReturnValue(true)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000)
     })
