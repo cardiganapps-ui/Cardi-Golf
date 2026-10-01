@@ -39,12 +39,25 @@ export function Toggle({ label, checked, onChange, hint, ariaLabel }: { label: s
 
 /** The sheet's frame without the backdrop; the design page renders it inline. */
 export function SheetFrame({ title, onClose, children, wide, className = '', frameRef }: { title?: string; onClose?: () => void; children: ReactNode; wide?: boolean; className?: string; frameRef?: React.Ref<HTMLDivElement> }) {
+  const titleId = useId()
+  // The dialog is named by its visible heading. A sheet you can close always
+  // shows «Cerrar»: a phone has no Escape key, and the strip of backdrop above
+  // a tall sheet is all but unreachable (A11Y-02).
   return (
-    <div ref={frameRef} tabIndex={-1} className={`${styles.sheet} ${wide ? styles.sheetWide : ''} ${className}`} role="dialog" aria-modal="true" aria-label={title ?? t.common.dialog} onClick={(e) => e.stopPropagation()}>
+    <div
+      ref={frameRef}
+      tabIndex={-1}
+      className={`${styles.sheet} ${wide ? styles.sheetWide : ''} ${className}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-label={title ? undefined : t.common.dialog}
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className={styles.sheetHandle} />
-      {title && (
+      {(title || onClose) && (
         <div className={styles.sheetHead}>
-          <h2>{title}</h2>
+          {title ? <h2 id={titleId}>{title}</h2> : <span />}
           {onClose && (
             <button className="btn btn--ghost btn--sm" type="button" onClick={onClose}>
               {t.common.close}

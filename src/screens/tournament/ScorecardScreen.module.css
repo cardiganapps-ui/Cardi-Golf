@@ -50,7 +50,10 @@
 .holeNav:disabled {
   color: var(--rule-2);
 }
+/* An h1 for screen readers (A11Y-01) that looks exactly like the div it was. */
 .holeTitle {
+  font: inherit;
+  letter-spacing: inherit;
   display: flex;
   align-items: baseline;
   justify-content: center;
