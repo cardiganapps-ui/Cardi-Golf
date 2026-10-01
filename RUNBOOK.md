@@ -11,6 +11,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 - [ ] **Banquero definido.** Comité › Torneo › Banquero (quien cobra inscripciones y martillazos y paga premios).
 - [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde. Desde que el torneo sale de preparación, la app vuelve a revisarlo con los jugadores y rondas reales: si alguien no llega o se agrega un día, En vivo, Dinero y el Comité avisan "faltan $…" hasta que se ajusten los premios.
 - [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.
+- [ ] **Máximo de filas en 1,000 o más.** Supabase › Project Settings › Data API › Max rows (de fábrica es 1,000; Claude lo revisa con la API de administración). La app y los respaldos piden las tablas en páginas de 1,000 y toman una página más corta como la última: con un tope menor, cargarían solo la primera página, sin avisar.
 - [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
 - [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
 

@@ -1850,7 +1850,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 86,
+      "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx"
       ],
@@ -2147,12 +2147,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 83,
       "tests": [
         "src/engine/modules/auction/auction.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: CONFIRMED-FIXED. All four mutants named in the finding are killed (shares swapped, cap clamp removed, cap hard-coded to 50, buyback at half price), plus flow direction and amount; three cases recomputed by hand against §5.9.",
       "residual": null
     },
     {
@@ -2216,7 +2216,7 @@
         "src/data/snapshot.golden.test.ts",
         "src/data/backupKeys.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: PARTIALLY (14 behaviour-changing mutants survived: no fixture had the first tournament's shape, paging order, switching tournaments and the backup keys were untested). Closed in bb944a5 with 18 mutants proven killed; three spot-checked by the lead before the merge.",
       "residual": null
     },
     {
@@ -2432,7 +2432,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 86,
+      "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx",
         "src/screens/tournament/TournamentShell.test.tsx"
@@ -2449,7 +2449,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 86,
+      "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx"
       ],
@@ -2465,7 +2465,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 86,
+      "pr": 87,
       "tests": [
         "src/lib/freshness.test.ts",
         "src/screens/tournament/TournamentShell.test.tsx"
@@ -2611,7 +2611,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 86,
+      "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx"
       ],
