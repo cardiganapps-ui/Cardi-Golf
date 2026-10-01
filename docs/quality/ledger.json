@@ -3092,7 +3092,8 @@
       "status": "fixed",
       "pr": 88,
       "tests": [
-        "src/screens/legalNotice.test.ts"
+        "src/screens/legalNotice.test.ts",
+        "src/screens/profile/ProfileScreen.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
@@ -3134,10 +3135,15 @@
       "phase": 2,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 88,
+      "tests": [
+        "src/screens/consentPoints.test.tsx",
+        "src/components/LegalLinks.test.tsx",
+        "src/screens/LegalScreen.test.tsx",
+        "e2e/fixtures/consent.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Part 1 is in PR #88: the line with both links, before the action, at every place that takes data (the face grid and the PIN step, /entrar, organizer sign-in and sign-up, Ronda rápida, the Comité player sheet, the push switch, the scorecard photo). Part 2 is not done: recording which version of the terms and the notice each person accepted (on the profile, and on the device for a player without an account) and showing a one-time sheet when a version changes needs a migration. Each document now carries its own version and date for it to record."
     },
     {
       "id": "TRUST-07",
