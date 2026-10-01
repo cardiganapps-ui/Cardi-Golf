@@ -4,6 +4,20 @@
   min-height: 100dvh;
   padding-top: var(--safe-top);
 }
+/*
+ * Wherever the system still draws over the page (a top inset: a translucent
+ * status bar, a notch), a band of paper sits behind it, so nothing scrolls under
+ * the clock. Above the sticky headers, below sheets and toasts (PWA-02).
+ */
+.shell::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--safe-top);
+  background: var(--bg);
+  z-index: 6;
+  pointer-events: none;
+}
 
 .main {
   flex: 1;

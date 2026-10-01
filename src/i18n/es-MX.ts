@@ -43,6 +43,8 @@ export const t = {
     and: (a: string, b: string) => `${a} y ${b}`,
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
+    /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. */
+    andList: (parts: string[]) => new Intl.ListFormat('es-MX', { style: 'long', type: 'conjunction' }).format(parts),
     copySuffix: '(copia)',
     joinWithCode: (name: string, code: string) => `${name}: entra con el código ${code}`,
     loading: 'Cargando…',
@@ -1757,6 +1759,9 @@ export const t = {
     undo: 'Deshacer última puja',
     sold: '¡Vendido!',
     soldTo: (name: string, price: string) => `Vendido a ${name} por ${price}`,
+    /** The TV's stamp at the hammer, under the price: who bought him. */
+    stampTo: (name: string) => `Vendido a ${name}`,
+    stampSelf: 'Se queda con él mismo',
     reopen: 'Reabrir lote',
     limitReached: (n: number) => `Ya tiene ${n}`,
     minBid: (amount: string) => `La puja tiene que superar ${amount}.`,
@@ -1940,6 +1945,7 @@ export const t = {
     settlement: 'Compartir liquidación',
     generating: 'Generando imagen…',
     saved: 'Imagen lista',
+    shareNow: 'Compartir',
     failed: 'No se pudo generar la imagen.',
   },
   rules: {
@@ -2034,6 +2040,10 @@ export const t = {
     now: 'Ahora',
     boards: 'Tableros',
     exit: 'Salir',
+    /** Which rows the page shows, when the board takes more than one: «1–9 de 12». */
+    range: (from: number, to: number, of: number) => `${from}–${to} de ${of}`,
+    invested: 'invirtió',
+    worth: 'vale hoy',
   },
   errors: {
     missingEnv: 'Falta configurar la conexión a la base de datos (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
