@@ -7,11 +7,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Sheet, toast } from '../../components/ui'
+import { Sheet } from '../../components/ui'
 import { Wordmark } from '../../components/primitives'
 import { IconChevronRight } from '../../components/icons'
 import { badges, records, recapYears, yearRecap, type AchRound, type AchTournament, type Badge, type PersonalRecord } from '../../engine/profile/achievements'
-import { shareNodeAsImage } from '../../lib/shareImage'
+import { shareCard } from '../../components/shareAction'
 import styles from './Profile.module.css'
 
 const A = t.achievements
@@ -122,9 +122,7 @@ export function RecapButton({ name, handle, rounds, tournaments, now = new Date(
       await new Promise((r) => setTimeout(r, 50))
       if (cancelled) return
       try {
-        await shareNodeAsImage(node, `polo-${handle}-${year}.png`, A.recap(year), A.recapShareText(year))
-      } catch (e) {
-        if (!(e instanceof Error && e.name === 'AbortError')) toast(t.share.failed)
+        await shareCard(node, `polo-${handle}-${year}.png`, A.recap(year), A.recapShareText(year))
       } finally {
         if (!cancelled) setBusy(false)
       }

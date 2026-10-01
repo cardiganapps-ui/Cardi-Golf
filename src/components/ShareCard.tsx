@@ -7,8 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
-import { shareNodeAsImage } from '../lib/shareImage'
-import { toast } from './ui'
+import { shareCard } from './shareAction'
 import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
 
@@ -29,9 +28,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
       await new Promise((r) => setTimeout(r, 50))
       if (cancelled) return
       try {
-        await shareNodeAsImage(node, `${slug}-${what.kind}.png`, name)
-      } catch (e) {
-        if (!(e instanceof Error && e.name === 'AbortError')) toast(t.share.failed)
+        await shareCard(node, `${slug}-${what.kind}.png`, name)
       } finally {
         if (!cancelled) setBusy(false)
       }

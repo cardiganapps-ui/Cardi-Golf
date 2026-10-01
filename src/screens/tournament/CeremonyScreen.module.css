@@ -2,11 +2,14 @@
 .stage {
   position: fixed;
   inset: 0;
+  /* Above the paper band behind the status bar, and clear of any top inset (PWA-02). */
+  z-index: 7;
   background: var(--board-bg);
   color: var(--board-ink);
   display: flex;
   flex-direction: column;
   padding: var(--s4);
+  padding-top: max(var(--s4), var(--safe-top));
   gap: var(--s3);
   overflow: hidden;
 }

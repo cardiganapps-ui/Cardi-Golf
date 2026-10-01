@@ -39,6 +39,14 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 
      Lo que decidiste no comprar (GitHub Pro, Supabase Pro, abogado, búsqueda de marca) cuenta como decisión tuya, no como hallazgo.
    - **c. ¿Hay algo que prefieras esconder en vez de pulir para abril?** Por ejemplo, match play o el formato por equipos. Lo que se esconda queda fuera de la revisión de marzo.
+6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
+   - **Pasos:**
+     1. Abre Polo desde el ícono de tu pantalla de inicio.
+     2. Mira la barra de arriba, la de la hora y la batería: ¿de qué color es y se lee la hora?
+     3. Baja en En vivo. Nada debe pasar por debajo de la hora.
+     4. Si la hora se ve blanca sobre fondo crema (no se lee), quita Polo de la pantalla de inicio y vuélvela a agregar (Safari → Compartir → «Agregar a inicio»). Revisa otra vez.
+     5. Abre Más → Modo TV: el título y «Salir» deben verse completos.
+   - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app y tu versión de iOS. Lo anoto para el ensayo con los 12 teléfonos.
 
 ---
 
