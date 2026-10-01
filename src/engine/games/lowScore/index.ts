@@ -8,7 +8,7 @@
  * the same cap Stableford uses. Standings compare "to par" over the holes
  * played so far, so players on different holes line up fairly.
  */
-import { ordinal } from '../../../i18n/es-MX'
+import { ordinal, t } from '../../../i18n/es-MX'
 import { flattenRanks, rankBy, type RankGroup } from '../../core/ranking'
 import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
@@ -112,7 +112,7 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     for (const tb of state.tables) {
       if (!tb.incomplete.length) continue
       const day = tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}: ` : ''
-      const who = tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`).join(', ')
+      const who = t.common.andList(tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`))
       notes.push(`${day}tarjeta incompleta, hoyos jugados: ${who}. Queda${tb.incomplete.length === 1 ? '' : 'n'} después de las tarjetas completas.`)
     }
     if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}: ${ctx.config.money.split.map((p) => `${p}%`).join(' / ')}.`)

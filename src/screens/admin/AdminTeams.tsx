@@ -118,7 +118,7 @@ export function AdminTeams() {
               <div key={team.id} className={a.row}>
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{team.name ?? E.unnamed(team.number)}</span>
-                  <span className={a.rowSub}>{team.playerIds.map(name).join(', ')}</span>
+                  <span className={a.rowSub}>{t.common.andList(team.playerIds.map(name))}</span>
                 </span>
                 <span className="small">{E.hcpTotal(Math.round(team.playerIds.reduce((s, id) => s + (byId.get(id)?.baseHcp ?? 0), 0) * 10) / 10)}</span>
               </div>

@@ -2,6 +2,7 @@
  * Handicaps (CLAUDE.md §5.2, §13b-D/E). Pure functions; every result
  * carries its explanation for "¿Cómo se calculó?".
  */
+import { handicapText } from '../../i18n/es-MX'
 import type { TournamentSettings } from '../settings/schema'
 import type { Explained } from '../types'
 import { roundHalfUp, roundTo, roundWith } from './rounding'
@@ -9,7 +10,13 @@ import { roundHalfUp, roundTo, roundWith } from './rounding'
 type HandicapSettings = TournamentSettings['handicap']
 type CutSettings = TournamentSettings['day2Cut']
 
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ''))
+/** A number in an explanation: up to 2 decimals, and a true minus (−0.8, never -0.8). */
+const fmt = (n: number) => {
+  const abs = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(2).replace(/\.?0+$/, '')
+  return n < 0 && abs !== '0' ? `−${abs}` : abs
+}
+/** A plus handicap's arithmetic is negative; say once how it is written. */
+const written = (n: number) => (n < 0 ? `, se escribe ${handicapText(n)}` : '')
 
 /**
  * Playing handicap from a course handicap: cap, then allowance, then rounding.
@@ -18,11 +25,13 @@ const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).repla
 export function playingHandicap(courseHcp: number, h: HandicapSettings): Explained<number> {
   const capped = Math.min(courseHcp, h.cap)
   const raw = h.allowance * capped
-  const value = Math.max(0, roundWith(raw, h.rounding))
+  const rounded = roundWith(raw, h.rounding)
+  const value = Math.max(0, rounded)
   const steps: string[] = []
   if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}, tope ${fmt(h.cap)}`)
   steps.push(`${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
-  if (roundTo(raw, 2) !== value) steps.push(`Redondeado: ${value}`)
+  if (roundTo(raw, 2) !== rounded) steps.push(`Redondeado: ${fmt(rounded)}`)
+  if (rounded < 0) steps.push('Un hándicap de juego no baja de 0: no recibe golpes')
   return { value, why: { title: `Hándicap de juego ${value}`, steps } }
 }
 
@@ -39,11 +48,11 @@ export function courseHandicap(
   const raw = (index * slope) / 113 + (rating - tee.par)
   const value = roundHalfUp(raw)
   const steps = [
-    `Índice ${fmt(index)} × slope ${slope} ÷ 113 = ${fmt(roundTo((index * slope) / 113, 2))}`,
+    `Índice ${index < 0 ? `${handicapText(index)}, en la cuenta ${fmt(index)},` : fmt(index)} × slope ${slope} ÷ 113 = ${fmt(roundTo((index * slope) / 113, 2))}`,
     `+ (rating ${fmt(rating)} − par ${tee.par}) = ${fmt(roundTo(rating - tee.par, 1))}`,
-    `= ${fmt(roundTo(raw, 2))}, redondeado ${value}`,
+    `= ${fmt(roundTo(raw, 2))}, redondeado ${fmt(value)}${written(value)}`,
   ]
-  return { value, why: { title: `Hándicap de campo ${value}`, steps } }
+  return { value, why: { title: `Hándicap de campo ${handicapText(value)}`, steps } }
 }
 
 export interface EstimateScore {
@@ -89,7 +98,7 @@ export function estimateIndex(
   const steps = [
     `Diferenciales: ${d[0]} (buen día), ${d[1]} (normal), ${d[2]} (mal día)`,
     `${wg} × ${d[0]} + ${wa} × ${d[1]} + ${wb} × ${d[2]} = ${fmt(roundTo(weighted, 2))}`,
-    `Redondeado a 1 decimal: ${fmt(uncapped)}`,
+    `Redondeado a 1 decimal: ${fmt(uncapped)}${value === uncapped ? written(value) : ''}`,
   ]
   if (value !== uncapped) steps.push(`Tope ${fmt(h.cap)}: ${fmt(value)}`)
   if (reordered) steps.push('Las rondas venían en otro orden; se acomodaron de mejor a peor.')
@@ -99,7 +108,7 @@ export function estimateIndex(
     differentials: [roundTo(sorted[0], 2), roundTo(sorted[1], 2), roundTo(sorted[2], 2)],
     reordered,
     assumed,
-    why: { title: `Índice estimado ${fmt(value)}`, steps },
+    why: { title: `Índice estimado ${handicapText(value)}`, steps },
   }
 }
 

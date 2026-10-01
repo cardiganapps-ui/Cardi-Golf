@@ -38,9 +38,6 @@ const DOUBLE_SAVE_MS = 3000
 /** How long the last save stays in the save bar with its «Corregir». */
 const SAVED_NOTE_MS = 6000
 
-/** The engine names net scores in golf English ("eagle"); the UI shows the Spanish word. Display only. */
-const scoreNameEs = (pts: number) => netScoreName(pts).replace('eagle', 'águila')
-
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
   const { me, tournamentId } = useTournamentCtx()
@@ -84,7 +81,7 @@ export function ScorecardScreen() {
                     <strong>
                       {S.group} {g.number}
                     </strong>
-                    <span className="help">{g.playerIds.map(nameOf).join(', ')}</span>
+                    <span className="help">{t.common.andList(g.playerIds.map(nameOf))}</span>
                   </button>
                 ))}
               </div>
@@ -185,7 +182,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** The points badge's words for a draft, shared by the badge and the announcement. */
   const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
     const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
-    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null) }
+    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
   }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole

@@ -214,7 +214,7 @@ export function assignSlots(
         continue
       }
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
-      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${members.map(nameOf).join(', ')} (${ordinal(String(g.position))})`]
+      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${t.common.andList(members.map(nameOf))} (${ordinal(String(g.position))})`]
       if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
       results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)
@@ -228,7 +228,7 @@ export function assignSlots(
         results.push(unfilledSlot(slot, label, slot.share, pot, 'Quien quedó último ya cobra un lugar mejor'))
         continue
       }
-      const steps = [`Último lugar: ${members.map(nameOf).join(', ')}`]
+      const steps = [`Último lugar: ${t.common.andList(members.map(nameOf))}`]
       if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
       results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)

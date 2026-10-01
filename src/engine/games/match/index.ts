@@ -188,7 +188,7 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
       })
       const aSum = sum(mr.a, money)
       if (aSum !== 0) rows.push({ title: 'Van', playerIds: aSum > 0 ? mr.a : mr.b, pos: null, figure: `+${fmt(Math.abs(aSum))}`, sub: `${sideName(aSum > 0 ? mr.b : mr.a, name)} paga${mr.a.length > 1 ? 'n' : ''}` })
-      return { title: `${multi ? `Día ${mr.roundNumber}: ` : ''}${sideName(mr.a, name)} vs ${sideName(mr.b, name)}`, rows }
+      return { title: `${multi ? `Día ${mr.roundNumber}: ` : ''}${sideName(mr.a, name)} contra ${sideName(mr.b, name)}`, rows }
     })
     const o = ctx.config.options
     const notes = [

@@ -11,9 +11,14 @@
  *   2. what the engine writes (explanations, prize labels, board text,
  *      warnings, the Reglamento, the game catalog) for the golden tournament
  *      and every design fixture;
- *   3. string literals and JSX text everywhere else in src, for glyphs,
- *      hand-made name joins and ordinals (their words belong in es-MX.ts,
- *      which 1 already reads).
+ *   3. string literals and JSX text everywhere else in src, in the API
+ *      routes and in the push worker, for glyphs, hand-made name joins and
+ *      ordinals (their words belong in es-MX.ts, which 1 already reads); the
+ *      API's own messages against the term table too.
+ *
+ * Names are listed with t.common.andList («Camilo, Damián e Iván»), never
+ * with commas only: the engine's text is checked against each tournament's
+ * names, the source for `.map(name).join(', ')`.
  *
  * A failure names the rule, the text and where it came from. True exceptions
  * go in an allowlist below with the reason.
@@ -33,12 +38,13 @@ import { moduleRules } from '../engine/settings/describeModule'
 import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
 import { MODULE_IDS, parseSettings, type TournamentSettings } from '../engine/settings/schema'
-import { fillRound, makeFirstTournament } from '../engine/testing/fixtures'
+import { fillRound, makeCourse, makeFirstTournament, makeGroup, makePlayer, makeSnapshot, makeTee, score } from '../engine/testing/fixtures'
 import type { Snapshot } from '../engine/types'
-import { ordinal, t } from '../i18n/es-MX'
+import { handicapText, ordinal, t } from '../i18n/es-MX'
 import { formatMoney, formatSignedMoney } from './money'
 
-const SRC = join(process.cwd(), 'src')
+const ROOT = process.cwd()
+const SRC = join(ROOT, 'src')
 
 /** A whole word, accents included («scores» yes, «escores» no). */
 const word = (w: string) => new RegExp(`(?<![\\p{L}\\p{N}])(?:${w})(?![\\p{L}\\p{N}])`, 'iu')
@@ -59,7 +65,7 @@ const TERMS: Array<[string, RegExp]> = [
   ['"score": tarjeta (or hoyos, resultado)', word('scores?')],
   ['"slot": lugar', word('slots?')],
   ['"hcp" / "PH": hándicap, hándicap de juego', /(?<![\p{L}\p{N}])(?:hcp|Hcp|HCP|PH)(?![\p{L}\p{N}])/u],
-  ['"índice de dificultad": índice de golpe', /índice de dificultad/i],
+  ['"índice de dificultad": índice de golpe', /índices? de dificultad/i],
   ['"liga" / "link": enlace', word('ligas?|links?')],
   ['"stats": estadísticas', word('stats')],
   ['"countback": desempate por los últimos hoyos', word('countback')],
@@ -70,6 +76,7 @@ const TERMS: Array<[string, RegExp]> = [
   ['"Sale por el": Salida por el', /(?<![\p{L}])Sale por el\b/u],
   ['"ceros": doble o peor', word('ceros')],
   ['"p" for putts: putts', /\d ?p(?![\p{L}.])/u],
+  ['"vs": contra', word('vs\\.?')],
 ]
 
 type Hit = string
@@ -132,25 +139,47 @@ function templateRules(where: string, pc: Piece, out: Hit[]) {
   if (pc.afterValue && /^ ?p(?![\p{L}.])/u.test(pc.text)) out.push(`${where}: "p" for putts: putts: ${JSON.stringify(pc.text)}`)
 }
 
-/** `${a} y ${b}`, `.join(' & ')`: a list joined by hand instead of t.common.andList (Intl, «e» before an i sound). */
+/** `${a} y ${b}`, `.join(' & ')`: a list joined by hand instead of t.common.andList («e» before an i sound). */
 const HAND_JOIN = /^\s+(?:y|e|&)\s+$/
 
-/**
- * True exceptions in the source scan, by file (under src/) and the source
- * line they sit on. Each says why it is not the mistake its rule looks for.
- */
-const ALLOW: Array<{ file: string; line: RegExp; why: string }> = [
-  { file: 'engine/games/match/index.ts', line: /`Gana \$\{n\} y \$\{bet\.remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
-]
+/** Names listed with commas only: `.map(name).join(', ')`, `…displayName).join(', ')`, `names.join(', ')`. */
+const COMMA_NAMES =
+  /\.map\(\s*(?:name|nameOf)\s*\)\s*\.join\(\s*', '\s*\)|displayName(?:\s*\?\?\s*[^)]*)?\)\s*\.join\(\s*', '\s*\)|\b(?:names|holders|winners|members|owners|claims)\.join\(\s*', '\s*\)|\bname(?:Of)?\([^;]*\.join\(\s*', '\s*\)/
 
-function walkSrc(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name)
-    if (statSync(p).isDirectory()) walkSrc(p, out)
-    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) out.push(p)
+/** Two or more of these names in a row with commas only («Camilo, Damián»): t.common.andList ends a list with «y» or «e». */
+function commaNameLists(text: string, names: string[]): string[] {
+  const alt = [...new Set(names)]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')
+  if (!alt) return []
+  const one = `(?<![\\p{L}\\p{N}])(?:${alt})(?![\\p{L}\\p{N}])`
+  const out: string[] = []
+  for (const [run] of text.matchAll(new RegExp(`${one}(?:(?:, | y | e )${one})+`, 'gu'))) {
+    if (run.lastIndexOf(', ') > Math.max(run.lastIndexOf(' y '), run.lastIndexOf(' e '))) out.push(run)
   }
   return out
 }
+
+/**
+ * True exceptions in the source scan, by file (from the repo root) and the
+ * source line they sit on. Each says why it is not the mistake its rule looks for.
+ */
+const ALLOW: Array<{ file: string; line: RegExp; why: string }> = [
+  { file: 'src/engine/games/match/index.ts', line: /`Gana \$\{n\} y \$\{bet\.remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
+  { file: 'api/scorecard-extract.ts', line: /índice de dificultad \(handicap\/SI, 1–18\)/, why: 'the prompt that tells the model what a printed card calls the stroke index; nobody reads it in the app' },
+]
+
+function walk(dir: string, keep: (name: string) => boolean, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) walk(p, keep, out)
+    else if (keep(name)) out.push(p)
+  }
+  return out
+}
+const code = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)
 
 // ---------------------------------------------------------------------------
 // The engine's own words, on every tournament we have.
@@ -174,8 +203,35 @@ function golden(): Snapshot {
   return snap
 }
 
+/**
+ * Plus handicaps on a tee rated under par, from an index, an estimate and a
+ * number the Comité typed: the negative arithmetic in the handicap
+ * explanations (handicap.ts), which no fixture reaches. Everyone pars every
+ * hole, so the three plus handicaps tie for the second prize, and their names
+ * take «e» in a list (Íñigo, Iván e Hilario).
+ */
+function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
+  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 100, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [300, 100] } }
+  const under = { rating: 70.4, slope: 128, par: 72 }
+  const snapshot = makeSnapshot({
+    settings,
+    rounds: 1,
+    courses: [makeCourse('course1', [makeTee('tee1', 'course1', { rating: under.rating, slope: under.slope })])],
+    players: [
+      makePlayer(1, { displayName: 'Camilo', baseHcp: 3 }),
+      makePlayer(2, { displayName: 'Íñigo', handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 }),
+      makePlayer(3, { displayName: 'Iván', handicapSource: 'estimate', estimateInputs: [{ gross: 66, ...under }, { gross: 69, ...under }, { gross: 73, ...under }] }),
+      makePlayer(4, { displayName: 'Hilario', baseHcp: -2 }),
+    ],
+  })
+  snapshot.groups.push(makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4']))
+  for (const p of snapshot.players) for (const h of snapshot.courses[0]!.tees[0]!.holes) snapshot.scores.push(score('r1', p.id, h.number, h.par))
+  return { snapshot, settings }
+}
+
 const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: TournamentSettings }> = [
   { name: 'golden', snapshot: golden(), settings: FIRST_TOURNAMENT_SETTINGS },
+  { name: 'plus handicaps', ...plusHandicaps() },
   ...FIXTURE_NAMES.map((name) => {
     const f = getFixture(name)!
     return { name, snapshot: f.snapshot, settings: parseSettings(f.snapshot.tournament.settings) }
@@ -270,6 +326,7 @@ describe('copy rules: es-MX.ts', () => {
   it('writes ordinals one way, and negatives with a true minus', () => {
     expect(ordinal('3')).toBe('3.º')
     expect(ordinal('T3')).toBe('empatado en 3.º')
+    expect(ordinal('')).toBe('')
     // Formatters that take a value that can be negative, fed a negative.
     const signed: Array<[string, string]> = [
       ['stats.unit pct', t.stats.unit('pct', -1)],
@@ -282,10 +339,35 @@ describe('copy rules: es-MX.ts', () => {
       ['player.dayHcp', t.player.dayHcp(2, 10, 2)],
       ['formatMoney', formatMoney(-300)],
       ['formatSignedMoney', formatSignedMoney(-300)],
+      ['player.handicapLine', t.player.handicapLine(-1.2, 'Índice')],
+      ['round.roundFacts', t.profile.roundFacts('Azules', -2)],
+      ['admin courseHcp', t.admin.players.courseHcp(-2)],
+      ['teams.hcpTotal', t.teams.hcpTotal(-3)],
     ]
     const hits: Hit[] = []
     for (const [where, text] of signed) check(where, text, GLYPHS, hits)
     expect(hits).toEqual([])
+  })
+
+  it('writes a plus handicap the way golfers do', () => {
+    expect(handicapText(-1.2)).toBe('+1.2')
+    expect(handicapText(0)).toBe('0')
+    expect(handicapText(-0)).toBe('0')
+    expect(handicapText(8.1)).toBe('8.1')
+    expect(t.player.handicapLine(-1.2, 'Índice')).toBe('Índice +1.2')
+    expect(t.profile.roundFacts('Azules', -2)).toBe('Tee Azules, hándicap de campo +2')
+    expect(t.teams.hcpTotal(-3)).toBe('hándicap +3')
+  })
+
+  it('ends a list with «y», or «e» before the sound /i/', () => {
+    const { andList } = t.common
+    expect(andList([])).toBe('')
+    expect(andList(['Camilo'])).toBe('Camilo')
+    expect(andList(['Camilo', 'Damián'])).toBe('Camilo y Damián')
+    expect(andList(['Camilo', 'Damián', 'Ernesto'])).toBe('Camilo, Damián y Ernesto')
+    for (const n of ['Iván', 'Íñigo', 'Ignacio', 'Hilario', 'Híjar', 'iPhone']) expect(andList(['Camilo', n])).toBe(`Camilo e ${n}`)
+    // A diphthong keeps «y»: agua y hielo; and so does a consonant y.
+    for (const n of ['Hielo', 'Hiago', 'Ian', 'Yolanda']) expect(andList(['Camilo', n])).toBe(`Camilo y ${n}`)
   })
 
   it('pays the snake from the bolsa: «pozo» is the Calcutta’s word only', () => {
@@ -298,7 +380,7 @@ describe('copy rules: what the engine writes', () => {
   const states = TOURNAMENTS.map(({ name, snapshot, settings }) => ({ name, snapshot, settings, state: computeTournament(snapshot, settings) }))
 
   it('covers every fixture and finds the explanations', () => {
-    expect(states.length).toBe(FIXTURE_NAMES.length + 1)
+    expect(states.length).toBe(FIXTURE_NAMES.length + 2)
     const copy = states.flatMap((s) => engineCopy(s.state, s.name, []))
     expect(copy.some(([path]) => /\.why\.steps/.test(path))).toBe(true)
     expect(copy.length).toBeGreaterThan(5000)
@@ -325,6 +407,26 @@ describe('copy rules: what the engine writes', () => {
     expect([...new Set(hits)]).toEqual([])
   })
 
+  it('reaches the handicap arithmetic below zero (the plus handicaps probe)', () => {
+    const plus = states.find((s) => s.name === 'plus handicaps')!
+    const text = engineCopy(plus.state, plus.name, []).map(([, x]) => x)
+    expect(text).toContain('Índice +1.2')
+    expect(text).toContain('Índice estimado +1.9')
+    expect(text.some((x) => x.startsWith('Índice +1.2, en la cuenta −1.2, × slope 128'))).toBe(true)
+    expect(text).toContain('Un hándicap de juego no baja de 0: no recibe golpes')
+    expect(text).toContain('Empatados: Íñigo, Iván e Hilario')
+  })
+
+  it('lists names with t.common.andList, never with commas only', () => {
+    const hits: Hit[] = []
+    for (const s of states) {
+      const names = s.snapshot.players.map((p) => p.displayName)
+      const copy = [...engineCopy(s.state, s.name, []), ...rulesCopy(s.name, s.settings, s.snapshot)]
+      for (const [path, text] of copy) for (const run of commaNameLists(text, names)) hits.push(`${path}: «${run}» in ${JSON.stringify(text)}`)
+    }
+    expect([...new Set(hits)]).toEqual([])
+  })
+
   it('never calls the snake’s money «pozo»', () => {
     const hits: Hit[] = []
     for (const s of states) {
@@ -335,23 +437,28 @@ describe('copy rules: what the engine writes', () => {
   })
 })
 
-describe('copy rules: the rest of src', () => {
+describe('copy rules: the rest of src, the API routes and the push worker', () => {
   // Not product copy: the style guide (/design) and the design fixtures only
   // exist in dev and preview builds (VITE_DESIGN_ROUTES); es-MX.ts is read whole above.
-  const SKIP = ['design/', 'dev/', 'i18n/es-MX.ts']
-  const files = walkSrc(SRC).filter((f) => !SKIP.some((s) => relative(SRC, f).startsWith(s)))
+  const SKIP = ['src/design/', 'src/dev/', 'src/i18n/es-MX.ts']
+  const files = [...walk(SRC, code), ...walk(join(ROOT, 'api'), code), join(ROOT, 'public/push-sw.js')].filter((f) => !SKIP.some((s) => relative(ROOT, f).startsWith(s)))
+  const allowed = (rel: string, lines: string[], n: number) => ALLOW.some((a) => a.file === rel && a.line.test(lines[n - 1] ?? ''))
+
+  it('reads the API routes and the push worker too', () => {
+    const rels = files.map((f) => relative(ROOT, f))
+    expect(rels).toEqual(expect.arrayContaining(['api/scorecard-extract.ts', 'api/course-search.ts', 'public/push-sw.js']))
+  })
 
   it('has no middle dots, arrows, ampersand joins or hand-made ordinals in strings and JSX text', () => {
     const hits: Hit[] = []
     for (const f of files) {
-      const rel = relative(SRC, f)
+      const rel = relative(ROOT, f)
       const lines = readFileSync(f, 'utf8').split('\n')
-      const allowed = (n: number) => ALLOW.some((a) => a.file === rel && a.line.test(lines[n - 1] ?? ''))
       for (const pc of pieces(f)) {
-        if (allowed(pc.line)) continue
+        if (allowed(rel, lines, pc.line)) continue
         const where = `${rel}:${pc.line}`
-        // Straight quotes only in JSX text: string literals in code also carry CSS, JSON and selectors.
-        check(where, pc.text, pc.jsx ? [...GLYPHS, QUOTES] : GLYPHS, hits)
+        // Straight quotes and the term table only in JSX text: string literals in code also carry CSS, JSON, selectors and table names.
+        check(where, pc.text, pc.jsx ? [...GLYPHS, QUOTES, ...TERMS] : GLYPHS, hits)
         templateRules(where, pc, hits)
         if (HAND_JOIN.test(pc.text)) hits.push(`${where}: names joined by hand (t.common.andList): ${JSON.stringify(pc.text)}`)
       }
@@ -359,8 +466,32 @@ describe('copy rules: the rest of src', () => {
     expect(hits).toEqual([])
   })
 
+  it('lists names with t.common.andList, never .join(\', \')', () => {
+    const hits: Hit[] = []
+    for (const f of files) {
+      const rel = relative(ROOT, f)
+      readFileSync(f, 'utf8')
+        .split('\n')
+        .forEach((l, i, lines) => {
+          if (COMMA_NAMES.test(l) && !allowed(rel, lines, i + 1)) hits.push(`${rel}:${i + 1}: names listed with commas only (t.common.andList): ${l.trim()}`)
+        })
+    }
+    expect(hits).toEqual([])
+  })
+
+  it('the API’s own messages use the term table', () => {
+    const hits: Hit[] = []
+    for (const f of files.filter((x) => !relative(ROOT, x).startsWith('src/'))) {
+      const rel = relative(ROOT, f)
+      const lines = readFileSync(f, 'utf8').split('\n')
+      // A message has a space in it; a bare word is a table, a header or a key.
+      for (const pc of pieces(f)) if (pc.text.includes(' ') && !allowed(rel, lines, pc.line)) check(`${rel}:${pc.line}`, pc.text, TERMS, hits)
+    }
+    expect(hits).toEqual([])
+  })
+
   it('keeps the allowlist honest (every entry still matches its line)', () => {
-    const stale = ALLOW.filter((a) => !readFileSync(join(SRC, a.file), 'utf8').split('\n').some((l) => a.line.test(l)))
+    const stale = ALLOW.filter((a) => !readFileSync(join(ROOT, a.file), 'utf8').split('\n').some((l) => a.line.test(l)))
     expect(stale.map((a) => a.file), 'remove these from ALLOW; the line is gone').toEqual([])
   })
 })

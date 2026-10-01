@@ -15,6 +15,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
 import { usePlatformApi, type DeletePreview, type Person } from '../../data/platform'
+import { formatIndex } from '../../data/profiles'
 import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { clock, personName } from './names'
@@ -73,7 +74,7 @@ export function PersonDetail() {
   const actionable = !p.isSelf && !p.isAdmin
   const pr = p.profile
   const profileLine = pr
-    ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(pr.index.toFixed(1)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(', ')
+    ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(formatIndex(pr.index)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(', ')
     : ''
 
   return (

@@ -5,6 +5,7 @@
  */
 import { MODULE_IDS, type ModuleId, type TournamentSettings } from './settings/schema'
 import type { Id, Snapshot } from './types'
+import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
@@ -170,7 +171,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const auctionWarnings: string[] = []
   if (modules.auction) {
     const unfilled = modules.auction.slots.filter((s) => s.unfilled)
-    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${unfilled.map((s) => s.label).join(', ')}). El Comité decide.`)
+    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
     const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
     if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
   }

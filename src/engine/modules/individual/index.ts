@@ -95,7 +95,7 @@ function rankStandings(ctx: ModuleContext) {
 
 function incompleteWarning(names: string[]): string[] {
   if (!names.length) return []
-  return [`Tarjeta incompleta, hoyos jugados: ${names.join(', ')}. ${names.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`]
+  return [`Tarjeta incompleta, hoyos jugados: ${t.common.andList(names)}. ${names.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`]
 }
 
 /**

@@ -8,6 +8,7 @@ import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
 import { withTrueMinus } from '../formats/format'
+import { handicapText } from '../../i18n/es-MX'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
@@ -61,14 +62,14 @@ function baseHandicap(player: Player, settings: TournamentSettings): CoreState['
       source: 'index',
       base: idx,
       estimated: false,
-      why: { title: `Índice ${idx}`, steps: ['Índice de hándicap capturado por el Comité'] },
+      why: { title: `Índice ${handicapText(idx)}`, steps: ['Índice de hándicap capturado por el Comité'] },
     }
   }
   return {
     source: 'manual',
     base: player.baseHcp,
     estimated: false,
-    why: { title: `Hándicap base ${player.baseHcp}`, steps: ['Capturado por el Comité; se usa tal cual'] },
+    why: { title: `Hándicap base ${handicapText(player.baseHcp)}`, steps: ['Capturado por el Comité; se usa tal cual'] },
   }
 }
 

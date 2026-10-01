@@ -45,7 +45,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Save moves on and offers "Deshacer" in the toast instead of asking first; the unusual-value check (10+ strokes, 5+ putts) stays as a sheet because the rules ask to confirm those. Signing a card uses a sheet instead of the browser confirm.
 - The sync state ("Sincronizado", "n pendientes", "Sin señal", or the outbox's last error) sits under the save button and under the grid, in the caution color when not clean.
 - Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
-- The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
+- The engine's net-score names used golf English ("eagle neto"), and the screen swapped in "águila" with a one-line display mapping. Since 2026-10-01 (#84) the engine writes «águila neta» itself and the mapping is gone.
 
 ## Phase 3, PR 4: Juegos and Jugador (2026-09-28)
 

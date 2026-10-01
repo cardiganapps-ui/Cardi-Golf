@@ -7,18 +7,31 @@
  * índice de golpe (SI) vs índice (WHS), bolsa (entries) vs pozo (Calcutta),
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
-/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels. */
+/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («») stays empty. */
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
   const n = label.replace(/^T/, '')
+  if (!n) return ''
   return tied ? `empatado en ${n}.º` : `${n}.º`
 }
 
-let listFormat: Intl.ListFormat | undefined
-/** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. Built once, on first use. */
+/**
+ * «e» instead of «y» before the sound /i/ (Isabel, Íñigo, Hilario, Híjar),
+ * but «y» when that i opens a diphthong (hielo, Hiago, Ian, Yolanda). Intl's
+ * Spanish list misses the accented ones («y Íñigo»), and engines differ.
+ */
+const takesE = (word: string) => /^[hH]?[iIíÍ](?![aeouáéóúAEOUÁÉÓÚ])/.test(word.trim())
+
+/** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
 function andList(parts: string[]): string {
-  listFormat ??= new Intl.ListFormat('es-MX', { style: 'long', type: 'conjunction' })
-  return listFormat.format(parts)
+  if (parts.length < 2) return parts[0] ?? ''
+  const last = parts[parts.length - 1]!
+  return `${parts.slice(0, -1).join(', ')} ${takesE(last) ? 'e' : 'y'} ${last}`
+}
+
+/** A handicap as golfers write it: under zero is a «plus» handicap, +1.2 (the arithmetic in an explanation keeps −1.2). */
+export function handicapText(n: number): string {
+  return n < 0 ? `+${-n}` : String(n)
 }
 
 export const t = {
@@ -600,7 +613,7 @@ export const t = {
       reviewField: (n: number) => `${n} jugadores`,
       reviewMoney: (fee: string, pot: string) => `${fee} por jugador, bolsa de ${pot}`,
       reviewNoMoney: 'Sin dinero',
-      reviewGames: (names: string[]) => (names.length ? names.join(', ') : 'Ninguno por ahora'),
+      reviewGames: (names: string[]) => (names.length ? andList(names) : 'Ninguno por ahora'),
       reviewHint: 'Todo esto se cambia después en Comité.',
       players: '¿Cuántos jugadores?',
       playersHint: 'Aproximado; el cuadre de la bolsa lo usa hasta que cargues a los jugadores.',
@@ -747,7 +760,7 @@ export const t = {
     differential: 'Diferencial',
     seeAll: (n: number) => `Ver las ${n}`,
     roundTitle: (tournament: string, day: number) => `${tournament}, día ${day}`,
-    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${ch}` : null].filter(Boolean).join(', '),
+    roundFacts: (tee: string | null, ch: number | null) => [tee ? `Tee ${tee}` : null, ch != null ? `hándicap de campo ${handicapText(ch)}` : null].filter(Boolean).join(', '),
     finish: (label: string, field: number | null) => {
       const n = label.replace(/^T/, '')
       const place = label.startsWith('T') ? `Empatado en ${n}.º` : `${n}.º`
@@ -1032,6 +1045,8 @@ export const t = {
     sharedRounds: 'Rondas juntos',
     noShared: 'Todavía no tienen rondas completas juntos. Cuando el Comité cierre una en la que jugaron los dos, sale aquí.',
     you: 'Tú',
+    /** Between the two faces on Cara a cara. */
+    versusJoin: 'contra',
     roundVs: (basis: 'net' | 'gross', mine: number | null, theirs: number | null) => `${basis === 'net' ? 'Neto' : 'Gross'} ${mine ?? '—'} contra ${theirs ?? '—'}`,
     // Rivalry
     rivalry: 'Rivalidad',
@@ -1076,7 +1091,7 @@ export const t = {
     feedFinish: (name: string, finish: string, tournament: string) => `${name} quedó ${finish} en ${tournament}`,
     feedRound: (name: string, what: string, where: string) => `${name}: ${what} en ${where}`,
     feedWhat: (birdies: number, eagles: number, best: boolean, gross: number | null) =>
-      [best && gross != null ? `su mejor ronda (${gross})` : null, eagles > 0 ? (eagles === 1 ? 'un águila' : `${eagles} águilas`) : null, birdies >= 3 ? `${birdies} birdies` : null].filter(Boolean).join(', ') || 'una gran ronda',
+      andList([best && gross != null ? `su mejor ronda (${gross})` : null, eagles > 0 ? (eagles === 1 ? 'un águila' : `${eagles} águilas`) : null, birdies >= 3 ? `${birdies} birdies` : null].filter((x): x is string => !!x)) || 'una gran ronda',
     feedRivalry: (name: string, result: 'won' | 'lost' | 'tie') => (result === 'won' ? `Le ganaste la ronda a ${name}` : result === 'lost' ? `${name} te ganó la ronda` : `Empataste con ${name}`),
   },
   enter: {
@@ -1324,7 +1339,7 @@ export const t = {
     threePutts: 'A tres putts',
     snakeHoles: 'Hoyos con víbora',
     position: (label: string, total: number, thru: string) => `${ordinal(label)}, ${total} pts, por el ${thru}`,
-    handicapLine: (base: number, source: string) => `${source} ${base}`,
+    handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, pts: number) => `Día ${day}: ${pts} pts`,
     grossPutts: (gross: number | null, putts: number) => `${gross != null ? `${gross} golpes, ` : ''}${putts} putts`,
@@ -1417,7 +1432,7 @@ export const t = {
       clearWinners: 'Quitar ganadores',
       saveMatch: 'Guardar partido',
       incomplete: 'Elige a todos los jugadores; nadie puede estar en los dos lados.',
-      vs: 'vs',
+      vs: 'contra',
       money: {
         none: 'Sin dinero',
         main: (amount: string) => `${amount} de la bolsa principal`,
@@ -1680,7 +1695,7 @@ export const t = {
       estimated: 'estimado',
       preview: 'Vista previa',
       previewPh: (ph: number) => `Hándicap de juego ${ph}`,
-      courseHcp: (n: number) => `hándicap de campo ${n}`,
+      courseHcp: (n: number) => `hándicap de campo ${handicapText(n)}`,
       committee: 'Comité',
       strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
@@ -1828,7 +1843,7 @@ export const t = {
     redraw: 'Sortear otra vez',
     names: 'Ponles nombre',
     unnamed: (n: number) => `Equipo ${n}`,
-    hcpTotal: (n: number) => `hándicap ${n}`,
+    hcpTotal: (n: number) => `hándicap ${handicapText(n)}`,
     spread: (n: number) =>
       n === 0 ? 'Quedaron exactamente parejos: todos los equipos suman el mismo hándicap.' : `Del equipo más fuerte al más débil hay ${n} de hándicap.`,
     groupsPreview: (n: number, first: string) => `Saldrían ${n} ${n === 1 ? 'grupo' : 'grupos'}, el primero a las ${first}.`,
@@ -2001,7 +2016,7 @@ export const t = {
     /** `how` comes from the format the tournament plays, so this mirrors the engine. */
     individual: (prizes: string[], lastPlace: string, how: string[]) => [
       ...how,
-      `Premios: ${prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`).join(', ')}.`,
+      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.`,
       'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
       `El último lugar gana ${lastPlace}.`,
     ],
@@ -2009,7 +2024,7 @@ export const t = {
     pairs: (rule: string, prizes: string[], honoree: string | null) => [
       `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas en la cena de la Calcutta.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
       'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes.',
-      `Premios: ${prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`).join(', ')}. Empate: mejor día 2 combinado, luego se reparte.`,
+      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}. Empate: mejor día 2 combinado, luego se reparte.`,
       'Las parejas juegan juntas los dos días y cada pareja lleva la tarjeta de la otra.',
     ],
     snake: (threshold: number, perSurvivor: string, pot: string) => [
@@ -2021,7 +2036,7 @@ export const t = {
       'La noche antes del día 1 se subasta a cada jugador, en orden sorteado.',
       `Cada jugador abre su propio lote en ${opening} y las pujas suben de ${increment} en ${increment}. Si nadie puja, se queda con él mismo. Máximo ${max} jugadores por dueño.`,
       `Tras el martillazo, el jugador puede recomprar hasta el ${buyback}% de sí mismo pagándole a su dueño esa proporción.`,
-      `El pozo es la suma de los martillazos y se reparte completo: ${slots.join(', ')}.`,
+      `El pozo es la suma de los martillazos y se reparte completo: ${andList(slots)}.`,
       'Cada jugador cobra como máximo un lugar: el mejor que le toque. Si un C o D queda 1.º o 2.º, su lugar de categoría pasa al siguiente mejor de esa categoría. Los empates se reparten.',
       'Todo se paga antes de dormir.',
     ],

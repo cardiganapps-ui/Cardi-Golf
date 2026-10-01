@@ -144,7 +144,7 @@ export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (
           `Empate a ${n} en el ${ordinal(String(g.position))}: se reparten los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))} ($${total})`,
         )
         steps.push(`$${total} ÷ ${n} = $${base}${extra ? ' (+$1 de redondeo)' : ''}`)
-        steps.push(`Empatados: ${g.members.map(name).join(', ')}`)
+        steps.push(`Empatados: ${t.common.andList(g.members.map(name))}`)
       }
       out.push({ item: m, amount, why: { title: `$${amount}`, steps } })
       void i

@@ -209,7 +209,7 @@ export function AdminScores() {
                     {IB.incomplete(r.players.length)}
                   </span>
                   <span className={a.inboxSub}>
-                    {dayOf(r.roundId)}. {r.players.map(name).join(', ')}
+                    {dayOf(r.roundId)}. {t.common.andList(r.players.map(name))}
                   </span>
                 </span>
                 <span className={a.inboxActions}>
