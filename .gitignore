@@ -11,3 +11,6 @@ test-results/
 .DS_Store
 *.log
 *.tsbuildinfo
+dist-fixtures
+test-results
+playwright-report
