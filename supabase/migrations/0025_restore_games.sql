@@ -8,7 +8,7 @@
 -- were wiped). This is 0020's function with the three tables back in the same
 -- five places: the temp tables, the tenant check, the reference check, the
 -- wipe (the awards before the groups) and the insert (after the groups).
--- `src/lib/restoreCoverage.test.ts` now fails when the latest definition of
+-- `src/data/backup.restore.test.ts` now fails when the latest definition of
 -- this function misses any table the in-app backup exports.
 --
 -- Also here: the team draw is audited like the pairs draw, and its two tables
