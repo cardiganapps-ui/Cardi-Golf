@@ -42,7 +42,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 ## 4. Sin señal
 
-Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pendientes"… Cuando vuelve la señal se sincroniza sola; nada se pierde por falta de señal, se reintenta hasta que entra. Si al llegar al club sigue en pendiente, abre la app con Wi-Fi: se vacía la cola. No borres la app ni cambies de jugador con pendientes. Cinco PINs equivocados seguidos bloquean ese teléfono 5 minutos (solo ese teléfono; el jugador entra desde otro). Si la app se cierra sin señal, al abrirla muestra lo último guardado en el teléfono (arriba dice "Sin señal: mostrando lo último guardado") y la Tarjeta sigue funcionando.
+Sigue capturando: la app guarda en el teléfono y muestra "Sin señal · 3 hoyos en el teléfono" (y un numerito en la pestaña Tarjeta desde cualquier pantalla) Cuando vuelve la señal se sincroniza sola; nada se pierde por falta de señal, se reintenta hasta que entra. Si al llegar al club sigue en pendiente, abre la app con Wi-Fi: se vacía la cola. No borres la app ni cambies de jugador con pendientes. Cinco PINs equivocados seguidos bloquean ese teléfono 5 minutos (solo ese teléfono; el jugador entra desde otro). Si la app se cierra sin señal, al abrirla muestra lo último guardado en el teléfono (arriba dice "Sin señal: mostrando lo último guardado") y la Tarjeta sigue funcionando.
 
 **"Rechazado":** si el servidor no aceptó una captura (la tarjeta ya estaba firmada o la ronda ya se cerró antes de que sincronizara), el teléfono la muestra en rojo abajo de la tarjeta con los valores. Avísale al Comité para que la capture desde Comité › Tarjetas; después tócale "Descartar".
 

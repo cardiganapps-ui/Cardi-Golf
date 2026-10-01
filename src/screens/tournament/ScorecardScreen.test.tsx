@@ -28,6 +28,7 @@ vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 import { toast } from '../../components/ui'
+import { useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
@@ -148,6 +149,20 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     await tapSave(11_000 + 4 * 60_000)
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(written().filter((r) => r.includes('@11='))).toHaveLength(3)
+  })
+})
+
+describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-17)', () => {
+  it('«Sin señal · 2 hoyos en el teléfono»', () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    try {
+      mount()
+      act(() => useOutbox.setState({ pending: 8, pendingHoles: 2 }))
+      expect(screen.getByText(t.sync.offlineHoles(2))).toBeTruthy()
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
+      useOutbox.setState({ pending: 0, pendingHoles: 0 })
+    }
   })
 })
 
