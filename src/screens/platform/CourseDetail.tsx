@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { leaveSheetHistory } from '../../components/sheetHistory'
 import { Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
@@ -202,6 +203,8 @@ export function CourseDetail() {
           await api.deleteCourse(course.id, reason)
           toast(C.deleted)
           outlet?.onChanged()
+          // From the confirm sheet: its history entry goes first, so back never returns to the deleted course (PWA-05).
+          await leaveSheetHistory()
           navigate('..', { relative: 'path', replace: true })
         }}
       />
@@ -214,7 +217,7 @@ export function CourseDetail() {
             setMergeWith(null)
             outlet?.onChanged()
             if (keepId === course.id) void load()
-            else navigate(`../${keepId}`, { relative: 'path', replace: true })
+            else void leaveSheetHistory().then(() => navigate(`../${keepId}`, { relative: 'path', replace: true }))
           }}
         />
       )}

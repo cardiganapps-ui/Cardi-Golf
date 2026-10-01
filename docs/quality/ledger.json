@@ -2005,9 +2005,13 @@
       "workstream": "W7",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 81,
+      "tests": [
+        "e2e/fixtures/back.spec.ts",
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/screens/tournament/tarjetaDrafts.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
