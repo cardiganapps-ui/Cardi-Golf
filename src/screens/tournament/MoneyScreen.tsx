@@ -58,13 +58,12 @@ export function MoneyScreen() {
       const key = pr.gameId ?? pr.moduleId
       const gameLabel = pr.gameId
         ? (settings.games.find((g) => g.id === pr.gameId)?.label ?? pr.gameId)
-        : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(' · ')[0] ?? pr.moduleId)
+        : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(', ')[0] ?? pr.moduleId)
       const g = groups.get(key) ?? { label: gameLabel, total: 0, final: true, lines: [] }
       g.total += pr.amount
       g.final = g.final && pr.final
-      // "Individual, 1º" → "1º": the heading already says which game it is,
-      // and the separator differs between modules and instance games.
-      const trimmed = gameLabel && pr.label.startsWith(gameLabel) ? pr.label.slice(gameLabel.length).replace(/^\s*[·,]\s*/, '') : pr.label
+      // «Individual, 1.º» → «1.º»: the heading already says which game it is.
+      const trimmed = gameLabel && pr.label.startsWith(gameLabel) ? pr.label.slice(gameLabel.length).replace(/^\s*,\s*/, '') : pr.label
       g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: trimmed })
       groups.set(key, g)
     }
@@ -157,7 +156,7 @@ export function MoneyScreen() {
       )}
     </div>
   )
-  /** What a settlement line is made of, from its own side: «Premios +$13,200 · Compras Calcutta −$3,000». */
+  /** What a settlement line is made of, from its own side: «Premios +$13,200, Compras Calcutta −$3,000». */
   const lineParts = (tr: Transfer) =>
     [...(tr.settles ?? [])]
       // What the line pays first, then what it nets out.
@@ -381,7 +380,7 @@ export function MoneyScreen() {
                         <span className={styles.transferKind}>
                           {parts.map((part, j) => (
                             <Fragment key={j}>
-                              {j > 0 && ' · '}
+                              {j > 0 && ', '}
                               <span className={styles.part}>{part}</span>
                             </Fragment>
                           ))}

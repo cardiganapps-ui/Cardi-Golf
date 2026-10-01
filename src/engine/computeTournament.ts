@@ -5,6 +5,7 @@
  */
 import { MODULE_IDS, type ModuleId, type TournamentSettings } from './settings/schema'
 import type { Id, Snapshot } from './types'
+import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
@@ -170,7 +171,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const auctionWarnings: string[] = []
   if (modules.auction) {
     const unfilled = modules.auction.slots.filter((s) => s.unfilled)
-    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${unfilled.map((s) => s.label).join(', ')}). El Comité decide.`)
+    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
     const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
     if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
   }
@@ -184,8 +185,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   if (pastSetup && snapshot.players.length > 0 && !pool.balanced) {
     poolWarnings.push(
       pool.difference < 0
-        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité › Torneo.`
-        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité › Torneo.`,
+        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité, sección Torneo.`
+        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
     )
   }
 

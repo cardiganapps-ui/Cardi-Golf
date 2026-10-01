@@ -157,7 +157,7 @@ export function NoticesScreen() {
               <div key={r.id} className={s.row}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{r.title}</span>
-                  <span className={s.rowSub}>{[N.recentTo(r.toName, r.count), r.body].join(' · ')}</span>
+                  <span className={s.rowSub}>{`${N.recentTo(r.toName, r.count)}: ${r.body}`}</span>
                 </span>
                 <span className={s.rowEnd}>{relTime(r.at)}</span>
               </div>

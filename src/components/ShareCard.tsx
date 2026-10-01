@@ -4,7 +4,7 @@
  * settlement. Sized for WhatsApp (1080 px wide at 2×).
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { t } from '../i18n/es-MX'
+import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'
@@ -105,7 +105,7 @@ function Card({ what }: { what: ShareKind }) {
     const row = state.modules.individual?.rows.find((r) => r.playerId === p.id)
     return (
       <>
-        {header(`${p.fullName}${row ? `, ${row.label}º, ${row.total} pts` : ''}`)}
+        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}, ${row.total} pts` : ''}`)}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null

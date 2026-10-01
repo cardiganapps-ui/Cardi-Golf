@@ -8,7 +8,9 @@
  * the same cap Stableford uses. Standings compare "to par" over the holes
  * played so far, so players on different holes line up fairly.
  */
+import { ordinal, t } from '../../../i18n/es-MX'
 import { flattenRanks, rankBy, type RankGroup } from '../../core/ranking'
+import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { BoardSection, GameContext, GameImpl } from '../game'
@@ -93,24 +95,24 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     return state.tables.flatMap((tb, i) => {
       const pot = base + (i === 0 ? ctx.pot - base * n : 0)
       const day = tb.roundId ? `Día ${roundNumberOf(ctx, tb.roundId)}, ` : ''
-      const label = (id: Id) => `${ctx.config.label}, ${day}${tb.rows.find((r) => r.playerId === id)?.label ?? ''}º`
+      const label = (id: Id) => `${ctx.config.label}, ${day}${ordinal(tb.rows.find((r) => r.playerId === id)?.label ?? '')}`
       return payPlaces({ ...ctx, final: tb.final }, tb.groups, name, label, pot)
     })
   },
   board(state, ctx) {
     const money = moneyByPlayer(lowScoreGame.prizes(state, ctx))
-    const fig = (v: number) => (ctx.config.options.basis === 'points' ? `${v} pts` : v === 0 ? 'E' : v > 0 ? `+${v}` : `${v}`)
+    const fig = (v: number) => (ctx.config.options.basis === 'points' ? `${v} pts` : toParText(v))
     const sections: BoardSection[] = state.tables.map((tb) => ({
       title: tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}` : undefined,
       rows: tb.rows.map((r) => ({ playerIds: [r.playerId], pos: r.label, figure: fig(r.value), sub: `${r.thru} hoyos`, money: money.get(r.playerId) ?? 0 })),
     }))
-    const what = ctx.config.options.basis === 'points' ? 'Más puntos Stableford' : `Menor score ${ctx.config.options.basis === 'net' ? 'neto' : 'gross'} contra el par`
+    const what = ctx.config.options.basis === 'points' ? 'Más puntos Stableford' : `La tarjeta ${ctx.config.options.basis === 'net' ? 'neta' : 'gross'} más baja contra el par`
     const notes = [`${what}${ctx.config.options.scope === 'perRound' ? ', por día' : ''}.`]
     const names = namer(ctx)
     for (const tb of state.tables) {
       if (!tb.incomplete.length) continue
       const day = tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}: ` : ''
-      const who = tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`).join(', ')
+      const who = t.common.andList(tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`))
       notes.push(`${day}tarjeta incompleta, hoyos jugados: ${who}. Queda${tb.incomplete.length === 1 ? '' : 'n'} después de las tarjetas completas.`)
     }
     if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}: ${ctx.config.money.split.map((p) => `${p}%`).join(' / ')}.`)

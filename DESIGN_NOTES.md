@@ -45,7 +45,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Save moves on and offers "Deshacer" in the toast instead of asking first; the unusual-value check (10+ strokes, 5+ putts) stays as a sheet because the rules ask to confirm those. Signing a card uses a sheet instead of the browser confirm.
 - The sync state ("Sincronizado", "n pendientes", "Sin señal", or the outbox's last error) sits under the save button and under the grid, in the caution color when not clean.
 - Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
-- The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
+- The engine's net-score names used golf English ("eagle neto"), and the screen swapped in "águila" with a one-line display mapping. Since 2026-10-01 (#84) the engine writes «águila neta» itself and the mapping is gone.
 
 ## Phase 3, PR 4: Juegos and Jugador (2026-09-28)
 
@@ -153,12 +153,16 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 | Statistics | estadísticas | stats |
 | Link | enlace | link |
 | Countback | desempate por los últimos hoyos | countback |
+| Versus | contra | vs, vs. |
+| A plus handicap | +1.2 in a handicap's own place («Índice +1.2»); −1.2 in an explanation's arithmetic, said once («se escribe +2») | -1.2 |
 | Day-2 cut | recorte del día 2 | anti-sandbag |
 | Kept as vernacular | Stableford, putts, tee, rating, slope, par, Calcutta, martillazo, "¡Vendido!" | |
 
 Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido!"; no middle dots as separators (sentences, commas or a second line instead); no arrows or symbols in copy; no jokes outside `feed`; buttons under 24 characters, chips under 18.
 
-~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs; the English net-score names stay in the engine (the screen maps them) because tests and the CSV export read them.
+~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs. The English net-score names went too in #84 (2026-10-01): the engine writes «águila neta».
+
+**Enforced (2026-10-01, COPY-24).** The rules drifted back (39 middle dots, arrows, «1º», straight quotes, "eagle", "score", "slot", «pozo» for the snake), so `src/lib/copyRules.test.ts` now reads every string in `es-MX.ts`, what the engine writes for the golden tournament and every fixture (explanations, labels, board text, the Reglamento, the catalog), and the string literals in the rest of `src`. It fails on a middle dot, an arrow, straight quotes, an ordinal without its period (`ordinal()` writes «1.º»), a hyphen used as a minus (`withTrueMinus`, `toParText`, `formatMoney` all write «−»), a name list joined by hand or with commas only (`t.common.andList`, `t.common.orList`: «Iván e Hilario», «Camilo u Óscar»), and the «Not» column above. It also reads the API routes' messages and the push worker, runs the term table on every string with a space in it outside code, and computes a probe tournament with plus handicaps, a cut larger than the handicap and a net below zero, so the handicap and points arithmetic is read too. The engine names net scores in Spanish too («águila neta»): nothing read the English names after all. «Pozo» is the Calcutta's word only; the snake is paid from the bolsa.
 
 ## Throwaway organizer account
 

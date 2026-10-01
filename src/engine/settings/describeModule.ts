@@ -31,7 +31,7 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
       return R.bestRound(formatMoney(settings.prizes.bestRoundPerDay))
     case 'pairs':
       return R.pairs(
-        m.pairs.pairing.map(([a, b]) => `${a}-${b}`).join(', '),
+        t.common.andList(m.pairs.pairing.map(([a, b]) => `${a} con ${b}`)),
         settings.prizes.pairs.map((x) => formatMoney(x)),
         m.pairs.honoreePicks ? (honoreeName ?? settings.labels.honoree) : null,
       )

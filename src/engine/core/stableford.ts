@@ -12,7 +12,7 @@ export function stablefordPoints(
   return Math.max(0, par + strokesReceived - gross + 2)
 }
 
-/** "birdie neto", "par neto"… for the live badge and the feed. */
+/** «birdie neto», «águila neta»… for the live badge and the hole's explanation (the term table: águila, never eagle). */
 export function netScoreName(points: number): string {
   switch (points) {
     case 0:
@@ -24,17 +24,17 @@ export function netScoreName(points: number): string {
     case 3:
       return 'birdie neto'
     case 4:
-      return 'eagle neto'
+      return 'águila neta'
     default:
       return points >= 5 ? 'albatros neto' : ''
   }
 }
 
-/** Gross score name relative to par: "birdie", "par", "bogey"… */
+/** Gross score name relative to par: «birdie», «par», «bogey»… */
 export function grossScoreName(par: number, gross: number): string {
   const d = gross - par
   if (d <= -3) return 'albatros'
-  if (d === -2) return 'eagle'
+  if (d === -2) return 'águila'
   if (d === -1) return 'birdie'
   if (d === 0) return 'par'
   if (d === 1) return 'bogey'

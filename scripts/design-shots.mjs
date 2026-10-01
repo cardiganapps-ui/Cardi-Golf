@@ -228,7 +228,7 @@ if (!process.env.SKIP_REAL) {
   await p.context().close()
 
   // Home with a remembered tournament.
-  const p2 = await newPage(PHONE, { relay: true, storage: { 'cardi-golf:last-tournament': JSON.stringify({ slug: 'ensayo', name: 'Ensayo · Nacho Invitational' }) } })
+  const p2 = await newPage(PHONE, { relay: true, storage: { 'cardi-golf:last-tournament': JSON.stringify({ slug: 'ensayo', name: 'Ensayo, Nacho Invitational' }) } })
   await p2.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
   await p2.waitForTimeout(1200)
   await shot(p2, `home--returning`)

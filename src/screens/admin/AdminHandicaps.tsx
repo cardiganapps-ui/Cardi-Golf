@@ -4,7 +4,7 @@
  * as the sub line; overrides with a reason (audit-logged).
  */
 import { useState } from 'react'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
@@ -83,8 +83,8 @@ export function AdminHandicaps() {
                   <span className={a.rowText} style={{ flex: 1 }}>
                     <span className={a.rowTitle}>{p.displayName}</span>
                     <span className={a.rowSub}>
-                      {H.base} {base}
-                      {pr.courseHcp !== base ? `, ${H.course.toLowerCase()} ${pr.courseHcp}` : ''}
+                      {H.base} {handicapText(base)}
+                      {pr.courseHcp !== base ? `, ${H.course.toLowerCase()} ${handicapText(pr.courseHcp)}` : ''}
                       {prev ? `, ${t.round.day(prev.roundNumber).toLowerCase()} ${prev.points} pts` : ''}
                       {pr.cut ? `, ${H.cut.toLowerCase()} −${pr.cut}` : ''}
                       {pr.overridden ? `, ${H.override.toLowerCase()}` : ''}
