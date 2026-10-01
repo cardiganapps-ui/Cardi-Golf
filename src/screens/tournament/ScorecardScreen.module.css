@@ -184,22 +184,58 @@
 .saveBar {
   position: sticky;
   /* Above the sticky tab bar (56 px + safe area) so "Guardar hoyo" never hides behind it on short screens. */
-  bottom: calc(56px + var(--safe-bottom) + var(--s2));
+  /* Its background runs down to the tab bar, so no stepper shows through underneath. */
+  bottom: calc(56px + var(--safe-bottom));
   z-index: 3;
   display: flex;
   flex-direction: column;
   gap: var(--s1);
-  padding-top: var(--s2);
+  padding: var(--s2) 0;
   background: var(--bg);
 }
 .saveStatus {
   display: flex;
+  align-items: center;
   justify-content: center;
+  /* The same height as .savedLine: «Guardar hoyo» must not move when a save lands. */
+  min-height: 40px;
   font-size: var(--fs-xs);
   color: var(--ink-2);
 }
 .saveStatusWarn {
   color: var(--caution);
+}
+/* The last save and its way back, under the button (never over it). A fixed
+   height so the button doesn't move when the line changes. */
+.savedLine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  column-gap: var(--s3);
+  /* One line, always: a second one would push the sticky button up under a thumb. */
+  height: 40px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.savedSync {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.savedAction {
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 /* Grid view: the classic card, holes down, players across. */

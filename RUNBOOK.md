@@ -29,7 +29,9 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.)
 2. Cada grupo abre **Tarjeta**: sale su grupo y "Llevas la tarjeta de: [pareja rival]". Cualquiera del grupo puede capturar a los cuatro.
-3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos.
+3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos. Abajo del botón queda "Hoyo N guardado · Corregir" unos segundos para regresar.
+   - Con dos teléfonos en el grupo, cada uno guarda solo a los jugadores que tocó (y a los que nadie ha capturado todavía): lo que ya guardó el otro teléfono no se pisa con el par. Si el otro guarda mientras tienes el hoyo abierto, sus valores aparecen solos.
+   - Un doble toque no guarda el hoyo siguiente: el segundo toque no cuenta, y si guardas un hoyo sin tocar nada segundos después del anterior, la app pregunta "¿Guardar el N con todos en par?".
 4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar.
 
 ## 3. Corregir un score
@@ -44,7 +46,9 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 
 **"Rechazado":** si el servidor no aceptó una captura (la tarjeta ya estaba firmada o la ronda ya se cerró antes de que sincronizara), el teléfono la muestra en rojo abajo de la tarjeta con los valores. Avísale al Comité para que la capture desde Comité › Tarjetas; después tócale "Descartar".
 
-**Regla para el Comité técnico:** no se despliega nada a `main` mientras hay una ronda en juego. La app avisa "Hay una versión nueva" y el jugador decide cuándo actualizar; nunca se recarga sola a media captura.
+**Regla para el Comité técnico:** no se despliega nada a `main` mientras hay una ronda en juego. La app nunca se recarga sola a media captura. Cuando hay versión nueva, cada teléfono la detecta al volver a abrir la app o en menos de 30 minutos, y arriba aparece una barra fija "Hay una versión nueva · Actualizar" que se queda hasta que el jugador la toca (no aparece mientras tiene un hoyo a medio capturar).
+
+**Después de un arreglo urgente** (por ejemplo, entre el día 1 y el día 2): pide a cada jugador que toque "Actualizar" y revisa en **Más** la línea "Versión": todos los teléfonos deben mostrar la misma fecha y el mismo código. Un teléfono con versión vieja calcula puntos y dinero con el código viejo.
 
 ## 5. Si la app se cae
 

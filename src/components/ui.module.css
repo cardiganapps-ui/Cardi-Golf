@@ -124,15 +124,17 @@
 
 .toaster {
   position: fixed;
-  left: 50%;
+  /* Gutter to gutter with the toasts centred inside: a centred box with
+     left: 50% shrank to half the screen and wrapped every toast (PWA-01). */
+  left: var(--gutter);
+  right: var(--gutter);
   bottom: calc(80px + var(--safe-bottom));
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--s2);
   z-index: 60;
   pointer-events: none;
-  max-width: calc(100vw - 2 * var(--gutter));
 }
 .toast {
   display: inline-flex;

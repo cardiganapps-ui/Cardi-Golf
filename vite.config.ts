@@ -5,8 +5,23 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+/**
+ * Which build a phone runs (PWA-03). The id is the build time in seconds:
+ * every deploy gets a higher one, so `app_flags.minBuild` can say "this one
+ * or newer". A Vercel rollback serves the old build as it was, id included.
+ */
+function gitSha(): string {
+  const fromVercel = process.env.VERCEL_GIT_COMMIT_SHA
+  if (fromVercel) return fromVercel.slice(0, 7)
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return 'local'
+  }
+}
+const BUILD_ID = Math.floor(Date.now() / 1000)
 
 // Icons are fetched once and cached hard (iOS keeps a site's touch icon even
 // after the file changes). Every icon URL carries a fingerprint of its bytes,
@@ -19,7 +34,10 @@ const ICON_LINKS = ['/favicon.svg', '/apple-touch-icon.png']
 
 // https://vite.dev/config/
 export default defineConfig({
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  define: {
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+    __BUILD_SHA__: JSON.stringify(gitSha()),
+  },
   plugins: [
     react(),
     {

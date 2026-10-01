@@ -9,4 +9,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
-declare const __APP_VERSION__: string
+/** Build time in seconds: higher on every deploy (see vite.config.ts). */
+declare const __BUILD_ID__: number
+/** Short git commit of the build. */
+declare const __BUILD_SHA__: string
