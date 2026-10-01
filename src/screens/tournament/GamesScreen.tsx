@@ -233,13 +233,16 @@ export function GamesScreen() {
                               </span>
                               <span>{pairsIn.map((p) => p.name ?? t.common.andList([name(p.player1Id), name(p.player2Id)])).join(t.common.versus)}</span>
                             </span>
-                            <span className={styles.figures}>
-                              {pairsIn.map((p) => (
-                                <strong key={p.id} className="num">
-                                  {(state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)}
-                                </strong>
-                              ))}
-                            </span>
+                            {/* Before the draw a group holds no pair yet: no figures, and the text runs to the edge. */}
+                            {pairsIn.length > 0 && (
+                              <span className={styles.figures}>
+                                {pairsIn.map((p) => (
+                                  <strong key={p.id} className="num">
+                                    {(state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)}
+                                  </strong>
+                                ))}
+                              </span>
+                            )}
                           </div>
                         )
                       })}

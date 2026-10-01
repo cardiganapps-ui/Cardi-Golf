@@ -1926,7 +1926,9 @@ export const t = {
     paid: 'Pagado',
     paidTo: 'pagó a',
     paidTitle: (n: number) => `Ya pagaron (${n})`,
-    paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente.',
+    paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
+    /** A «Deshacer» tapped after a later change to the same payment: it would bring back the older value. */
+    undoStale: 'Ese pago cambió después: revísalo en «Ya pagaron».',
     share: 'Compartir liquidación',
     shareTitle: (name: string) => `Liquidación, ${name}`,
     checklist: 'Quién debe qué',

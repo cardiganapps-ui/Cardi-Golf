@@ -11,7 +11,7 @@
  * «Ya pagaron» keeps what has been marked, so a wrong tap can be taken back
  * (UX-21): «Pagado» there writes the same row with paid false, nothing else.
  */
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { IconCheck } from '../../components/icons'
@@ -42,7 +42,8 @@ export function MoneyScreen() {
   const [mode, setMode] = useState<'live' | 'byGame' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
   const [openId, setOpenId] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  /** Payment writes queued or on their way: the buttons wait until the last one is done. */
+  const [busy, setBusy] = useState(0)
 
   const people = useMemo(() => snapshot.players.map((p) => money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net), [snapshot.players, money.people])
   /**
@@ -92,17 +93,72 @@ export function MoneyScreen() {
     [money.flows],
   )
 
-  async function run(fn: () => Promise<void>) {
-    setBusy(true)
-    try {
-      await fn()
-      await reload()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
+  /**
+   * Payment writes go one at a time, in the order they were tapped, so two
+   * writes to one key can't land the wrong way round; a «Deshacer» tapped
+   * while another write is on its way waits its turn.
+   */
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  function run(fn: () => Promise<void>) {
+    setBusy((n) => n + 1)
+    queue.current = queue.current.then(async () => {
+      try {
+        await fn()
+        await reload()
+      } catch (e) {
+        toast(humanError(e))
+      } finally {
+        setBusy((n) => n - 1)
+      }
+    })
+    return queue.current
+  }
+  /**
+   * Each payment key's latest tap. A «Deshacer» brings back the value from
+   * before its own tap, so once a later tap has changed the same key it would
+   * undo that one too: it says so instead.
+   */
+  const taps = useRef({ last: 0, byKey: new Map<string, number>() })
+  const keyOf = (a: Account) => a.lotId ?? `${a.kind}|${a.from}|${a.to}`
+  function tap(accounts: readonly Account[]) {
+    const n = ++taps.current.last
+    for (const a of accounts) taps.current.byKey.set(keyOf(a), n)
+    return n
+  }
+  function undo(accounts: Account[], n: number) {
+    if (!accounts.every((a) => taps.current.byKey.get(keyOf(a)) === n)) return toast(M.undoStale)
+    tap(accounts)
+    void run(() => write(restorePaidWrites(accounts)))
+  }
+  /**
+   * The row a button was on leaves its list once the write lands. Focus goes
+   * to the button now in its place (or the one before, at the end of the
+   * list), not to the top of the page.
+   */
+  const refocus = useRef<(() => void) | null>(null)
+  function keepFocus(button: EventTarget) {
+    // Only a button that had focus (a keyboard, or a mouse on a desktop); a tap on a phone leaves focus alone.
+    const list = button instanceof HTMLElement && document.activeElement === button ? button.closest('[data-money-list]') : null
+    if (!list) return
+    const actions = () => Array.from(list.querySelectorAll<HTMLButtonElement>('button[data-money-action]'))
+    const at = actions().indexOf(button as HTMLButtonElement)
+    const around = list.closest('details, section')
+    refocus.current = () => {
+      const active = document.activeElement
+      if (active && active !== document.body && active.isConnected) return
+      const now = list.isConnected ? actions() : []
+      const next = now[Math.min(at, now.length - 1)] ?? (around?.isConnected ? around.querySelector<HTMLElement>('summary, h2, h3') : null)
+      // A heading takes focus only with a tabindex; a summary and a button already do.
+      if (next && /^H[23]$/.test(next.tagName) && !next.hasAttribute('tabindex')) next.tabIndex = -1
+      next?.focus()
     }
   }
+  useEffect(() => {
+    if (busy > 0 || !refocus.current) return
+    const f = refocus.current
+    refocus.current = null
+    f()
+  }, [busy])
   /**
    * One write per account, in order: a payments row upserted on its key, or a
    * buyback on its lot. Each shows as soon as the server has it, so a row
@@ -119,21 +175,27 @@ export function MoneyScreen() {
    * «Marcar pagado» records every account the row closes as paid in full, so
    * the row goes away and stays away (MONEY-04). The toast can put it back.
    */
-  const markPaid = (settles: Account[]) =>
-    run(async () => {
+  const markPaid = (settles: Account[], button: EventTarget) => {
+    const n = tap(settles)
+    keepFocus(button)
+    return run(async () => {
       await write(markPaidWrites(settles))
-      toast(M.markedPaid, { label: t.common.undo, onClick: () => void run(() => write(restorePaidWrites(settles))) })
+      toast(M.markedPaid, { label: t.common.undo, onClick: () => undo(settles, n) })
     })
+  }
   /**
    * «Pagado» tapped in «Ya pagaron»: that account's own row goes back to
    * unpaid, through the same write (UX-21). The toast records it again,
    * exactly as it was.
    */
-  const unmarkPaid = (a: Account) =>
-    run(async () => {
+  const unmarkPaid = (a: Account, button: EventTarget) => {
+    const n = tap([a])
+    keepFocus(button)
+    return run(async () => {
       await write(unmarkPaidWrites([a]))
-      toast(M.unmarkedPaid, { label: t.common.undo, onClick: () => void run(() => write(restorePaidWrites([a]))) })
+      toast(M.unmarkedPaid, { label: t.common.undo, onClick: () => undo([a], n) })
     })
+  }
   const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(name(from), name(to)) : M.pays(name(from), name(to), formatMoney(amount)))
   /** A row's own name, read out with its button: who, to whom, for what and how much, so no two buttons share one. */
   const accountText = (a: Account, part: 'due' | 'paid') => `${name(a.from)} ${part === 'due' ? M.paysTo : M.paidTo} ${name(a.to)}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid)}`
@@ -149,7 +211,7 @@ export function MoneyScreen() {
       <span className={styles.amount}>{formatMoney(a.due)}</span>
       {me.isAdmin && (
         <span className={styles.action}>
-          <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid([a])} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
+          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid([a], e.currentTarget)} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
             {M.markPaid}
           </button>
         </span>
@@ -179,7 +241,7 @@ export function MoneyScreen() {
       <span className={styles.amount}>{formatMoney(a.paid)}</span>
       {me.isAdmin && (
         <span className={styles.action}>
-          <button className="btn btn--ghost btn--sm" type="button" aria-pressed="true" disabled={busy} onClick={() => void unmarkPaid(a)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
+          <button className="btn btn--ghost btn--sm" type="button" aria-pressed="true" data-money-action disabled={busy > 0} onClick={(e) => void unmarkPaid(a, e.currentTarget)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
             <IconCheck size={16} />
             {M.paid}
           </button>
@@ -192,7 +254,7 @@ export function MoneyScreen() {
     <details className={styles.section}>
       <summary className={styles.recordSummary}>{M.paidTitle(paidAccounts.length)}</summary>
       {me.isAdmin && <span className="help">{M.paidHint}</span>}
-      <div className={styles.transfers}>{paidAccounts.map(paidRow)}</div>
+      <div className={styles.transfers} data-money-list>{paidAccounts.map(paidRow)}</div>
     </details>
   )
 
@@ -344,7 +406,7 @@ export function MoneyScreen() {
               {owed.length === 0 ? (
                 <span className="help">{M.nothingOwed}</span>
               ) : (
-                <div className={styles.transfers}>{owed.map(debtRow)}</div>
+                <div className={styles.transfers} data-money-list>{owed.map(debtRow)}</div>
               )}
             </section>
           )}
@@ -362,7 +424,7 @@ export function MoneyScreen() {
             <span className="help">{settle === 'bank' ? M.viaBankHint(banker?.displayName ?? M.bank) : M.p2pHint(banker?.displayName ?? null)}</span>
             {!state.tournamentFinal && <span className="help">{M.settlePreview}</span>}
             {state.tournamentFinal && (settle === 'bank' ? money.viaBank : money.peerToPeer).length === 0 && <span className="help">{M.allSettled}</span>}
-            <div className={styles.transfers}>
+            <div className={styles.transfers} data-money-list>
               {(settle === 'bank' ? money.viaBank : money.peerToPeer).map((tr, i) => {
                 const canMark = markable && !!tr.final && !!tr.settles?.length
                 const parts = settle === 'bank' && (tr.settles?.length ?? 0) > 1 ? lineParts(tr) : []
@@ -392,7 +454,7 @@ export function MoneyScreen() {
                     {markable && (
                       <span className={styles.action}>
                         {canMark && (
-                          <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid(tr.settles!)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
+                          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid(tr.settles!, e.currentTarget)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
                             {M.markPaid}
                           </button>
                         )}
@@ -411,7 +473,7 @@ export function MoneyScreen() {
             <details className={styles.section}>
               <summary className={styles.recordSummary}>{M.recordPaid}</summary>
               <span className="help">{M.recordPaidHint}</span>
-              <div className={styles.transfers}>{owed.map(debtRow)}</div>
+              <div className={styles.transfers} data-money-list>{owed.map(debtRow)}</div>
             </details>
           )}
           {state.tournamentFinal && paidSection}

@@ -106,12 +106,18 @@ describe('one list row', () => {
     }
     const offenders: string[] = []
     for (const { path, text } of sheets()) {
-      for (const { selector, body } of rules(text)) {
-        const own = decls(body)
-        const composes = own.get('composes')
-        if (!composes?.includes('primitives.module.css')) continue
-        for (const name of composes.split(/\s+from\s+/)[0]!.split(/\s+/)) {
-          for (const [prop, value] of own) {
+      const all = rules(text)
+      // Which primitives each class composes; then every rule for that class,
+      // not only the one that composes: a second `.x {}` further down, or one
+      // inside a media query, loses or wins against the primitive the same way.
+      const composed = new Map<string, string[]>()
+      for (const { selector, body } of all) {
+        const composes = decls(body).get('composes')
+        if (/^\.[\w-]+$/.test(selector) && composes?.includes('primitives.module.css')) composed.set(selector, composes.split(/\s+from\s+/)[0]!.split(/\s+/))
+      }
+      for (const { selector, body } of all) {
+        for (const name of composed.get(selector) ?? []) {
+          for (const [prop, value] of decls(body)) {
             const base = primitives.get(name)?.get(prop)
             if (prop !== 'composes' && base !== undefined && base !== value) offenders.push(`${path} ${selector}: ${prop}: ${value} re-declares ${name} (${prop}: ${base})`)
           }

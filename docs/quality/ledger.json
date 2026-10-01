@@ -3597,14 +3597,15 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 86,
       "tests": [
+        "e2e/fixtures/money.spec.ts",
         "src/engine/core/markPaid.test.ts",
-        "e2e/fixtures/money.spec.ts"
+        "src/screens/tournament/MoneyScreen.test.tsx"
       ],
-      "verifiedBy": null,
-      "residual": "Un-marking clears that key's whole payment row: a partial payment recorded before a mistaken full mark comes back only through the toast's «Deshacer». Settlements as events (W3, §5.3) keep a history and remove this."
+      "verifiedBy": "Independent verifier agent on PR #86, 2026-10-01 (rerun at b518fde): CONFIRMED-FIXED with the declared residual. 245 taps across 16 fixtures and the golden tournament return to the exact starting state through «Ya pagaron» and «Deshacer»; 28 un-marks touch no other account; the client patch matched a server model written from the migration on 400 random taps per fixture. Its follow-ups are fixed in the same PR: the runbook and the hint state the partial-payment exception, writes run one at a time in tap order, a stale «Deshacer» says so instead of writing, focus stays in the list, and a partial key is tested on the screen.",
+      "residual": "One payments row per key holds the total paid, so a partial payment (a lot paid, then another bought) can't be re-recorded once the toast is gone: a mistaken «Marcar pagado» on the rest, or the partial row itself taken back by mistake, leaves either the whole debt or none of it. RUNBOOK §1 and §7 say how to settle it by hand. Settlements as events (W3, §5.3) keep each payment and remove this."
     },
     {
       "id": "UX-22",
@@ -3684,13 +3685,13 @@
       "workstream": "W9",
       "phase": 2,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 86,
       "tests": [
         "e2e/fixtures/money.spec.ts",
         "src/styles/one-row.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #86, 2026-10-01 (rerun at b518fde): CONFIRMED-FIXED. 624 screen states at 375, 393 and 1280 px (every Dinero mode with disclosures closed and open, admin and non-admin, 13 fixtures; every Juegos tab on 10 fixtures; the Comité scores page): 342 broken on main, 0 on the PR; TV boards, the inbox and 74 other states identical to main box for box. Its test gaps (a second rule for a composed class, a stacked row, a list mixing lines with and without a button, a one-digit pair score, the empty figures cell before the draw) are closed in the same PR.",
       "residual": null
     },
     {

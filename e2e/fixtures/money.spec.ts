@@ -12,10 +12,11 @@ const M = t.moneyScreen
 const withCount = (copy: (n: number) => string) => new RegExp(`^${copy(999).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('999', '\\d+')}$`)
 
 /**
- * The ragged-row detector. In every visible list row, the last cell ends on
- * the row's right edge, and each cell after the text ends on the same x in
- * every row of its list. A figure that floats after its label, a staircase
- * down the list, fails here with the row and how far off it is.
+ * The ragged-row detector. In every visible list row, the cells share one
+ * line, the last cell ends on the row's right edge, and each cell after the
+ * text ends on the same x in every row of its list. A figure that floats
+ * after its label, a staircase down the list, or an amount and its button
+ * pushed under the text, fails here with the row and how far off it is.
  */
 async function ragged(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -31,6 +32,10 @@ async function ragged(page: Page): Promise<string[]> {
       for (const row of rows) {
         const cells = Array.from(row.children).filter((c) => c.getBoundingClientRect().width > 0)
         if (cells.length < 2) continue
+        // One line: every cell overlaps every other vertically.
+        const boxes = cells.map((c) => c.getBoundingClientRect())
+        const gap = Math.max(...boxes.map((b) => b.top)) - Math.min(...boxes.map((b) => b.bottom))
+        if (gap > 1) out.push(`«${label(row)}»: its cells are stacked, not on one line (${Math.round(gap)}px apart)`)
         const edge = row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight)
         const short = Math.round(edge - cells.at(-1)!.getBoundingClientRect().right)
         if (Math.abs(short) > 1) out.push(`«${label(row)}»: its last cell ends ${short}px short of the row's edge`)
@@ -63,13 +68,18 @@ for (const width of [375, 393]) {
       await expect(page.getByRole('heading', { level: 3, name: t.games.headToHead })).toBeVisible()
       expect(await ragged(page)).toEqual([])
       // Inside the figures, the first pair's points and the second's are two columns.
-      const columns = await page.evaluate(() => {
-        const byIndex: number[][] = []
-        for (const row of Array.from(document.querySelectorAll('[class*="_figures_"]'))) Array.from(row.children).forEach((c, i) => (byIndex[i] ??= []).push(Math.round(c.getBoundingClientRect().right)))
-        return byIndex.map((xs) => [...new Set(xs)])
-      })
-      expect(columns.length).toBe(2)
-      for (const xs of columns) expect(xs).toHaveLength(1)
+      const columns = () =>
+        page.evaluate(() => {
+          const byIndex: number[][] = []
+          for (const row of Array.from(document.querySelectorAll('[class*="_figures_"]'))) Array.from(row.children).forEach((c, i) => (byIndex[i] ??= []).push(Math.round(c.getBoundingClientRect().right)))
+          return byIndex.map((xs) => [...new Set(xs)])
+        })
+      expect(await columns()).toHaveLength(2)
+      for (const xs of await columns()) expect(xs).toHaveLength(1)
+      // A pair on one digit (a bad day) keeps both columns: the second pair of the first group gets 7 points.
+      await page.locator('[class*="_figures_"] > :last-child').first().evaluate((el) => (el.textContent = '7'))
+      for (const xs of await columns()) expect(xs, 'a one-digit pair score').toHaveLength(1)
+      expect(await ragged(page), 'a one-digit pair score').toEqual([])
     })
 
     test('Dinero › Liquidación: every amount and every button in a column, live and once final (VIS-01)', async ({ page }) => {
@@ -84,6 +94,12 @@ for (const width of [375, 393]) {
       await open(page, '/t/_/full12-finished/dinero')
       await page.getByRole('radio', { name: M.final }).click()
       expect(await ragged(page), 'final: vía banco').toEqual([])
+      // A line with a prize still provisional has no button, and keeps its slot: take the
+      // button off every other line, as a pending tiebreak would, and the amounts stay in one column.
+      await page.evaluate(() => document.querySelectorAll('[data-money-list] [class*="_action_"]').forEach((slot, i) => i % 2 && slot.replaceChildren()))
+      expect(await ragged(page), 'final: vía banco, some lines without a button').toEqual([])
+      await open(page, '/t/_/full12-finished/dinero')
+      await page.getByRole('radio', { name: M.final }).click()
       await page.locator('summary').filter({ hasText: M.recordPaid }).click()
       await openPaid(page)
       expect(await ragged(page), 'final: Registrar and Ya pagaron, open').toEqual([])
