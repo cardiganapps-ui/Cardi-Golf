@@ -25,6 +25,7 @@ import { easeSlow } from '../../design/motion'
 import { celebrationColors } from '../../lib/tokens'
 import { humanError } from '../../lib/humanError'
 import { useTournamentCtx } from './TournamentGate'
+import { readKept, sweepKept, writeKept, type Draft, type KeptDraft } from './tarjetaDrafts'
 import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
 
@@ -36,71 +37,6 @@ const SETTLE_MS = 700
 const DOUBLE_SAVE_MS = 3000
 /** How long the last save stays in the save bar with its «Corregir». */
 const SAVED_NOTE_MS = 6000
-
-/*
- * A half-entered hole stays on the phone until it is saved (PWA-05): the
- * system back, a tab switch, another hole or the OS closing the app no longer
- * throws it away.
- * - Kept per round, group and hole, only for the players touched here.
- * - Each kept value carries what the server had for that player when he was
- *   first touched. If the server has changed since (the other phone saved him),
- *   that player's draft is dropped, not restored over the save: when the hole
- *   opens, and again whenever newer server values arrive while the restored
- *   draft is still untouched.
- * - Never restored onto a card that can't be edited (a signed card, a closed
- *   round).
- * - A restored hole says so («falta guardarlo») until it is saved.
- */
-const DRAFT_TTL_MS = 12 * 60 * 60 * 1000
-const DRAFT_PREFIX = 'cardi-golf:tarjeta:'
-interface KeptDraft {
-  at: number
-  players: Record<string, { draft: Draft; server: string }>
-}
-const draftKey = (holeKey: string) => `${DRAFT_PREFIX}${holeKey}`
-let swept = false
-/** Expired drafts go once per app start, not only when their hole opens again. */
-function sweepKept() {
-  if (swept) return
-  swept = true
-  try {
-    for (const key of Object.keys(localStorage)) {
-      if (!key.startsWith(DRAFT_PREFIX)) continue
-      const kept = JSON.parse(localStorage.getItem(key) ?? 'null') as KeptDraft | null
-      if (!kept?.at || Date.now() - kept.at > DRAFT_TTL_MS) localStorage.removeItem(key)
-    }
-  } catch {
-    // Storage unavailable: nothing to sweep.
-  }
-}
-function readKept(holeKey: string): KeptDraft | null {
-  try {
-    const raw = localStorage.getItem(draftKey(holeKey))
-    if (!raw) return null
-    const kept = JSON.parse(raw) as KeptDraft
-    if (!kept?.players || Date.now() - kept.at > DRAFT_TTL_MS) {
-      localStorage.removeItem(draftKey(holeKey))
-      return null
-    }
-    return kept
-  } catch {
-    return null
-  }
-}
-function writeKept(holeKey: string, players: KeptDraft['players']) {
-  try {
-    if (Object.keys(players).length) localStorage.setItem(draftKey(holeKey), JSON.stringify({ at: Date.now(), players }))
-    else localStorage.removeItem(draftKey(holeKey))
-  } catch {
-    // Private mode or full storage: the draft lives in memory only, as before.
-  }
-}
-
-interface Draft {
-  strokes: number
-  putts: number
-  pickedUp: boolean
-}
 
 /** The engine names net scores in golf English ("eagle"); the UI shows the Spanish word. Display only. */
 const scoreNameEs = (pts: number) => netScoreName(pts).replace('eagle', 'águila')
@@ -262,6 +198,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const baselines = useRef(new Map<string, string>())
   /** Players whose kept draft was restored and not touched since: newer server values replace it. */
   const restored = useRef(new Set<string>())
+  /** Players whose restored value is on screen, touched or not: «falta guardarlo» shows until the hole is saved. */
+  const restoredShown = useRef(new Set<string>())
   const [restoredCount, setRestoredCount] = useState(0)
   useEffect(sweepKept, [])
   /** What the server has for one player on the open hole. */
@@ -292,6 +230,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       touched.current = new Set()
       baselines.current = new Map()
       restored.current = new Set()
+      restoredShown.current = new Set()
       settledAt.current = performance.now()
       const next: Record<string, Draft> = {}
       for (const p of players) next[p.id] = saved(p) ?? { strokes: holeInfo(p.id)?.par ?? 4, putts: 2, pickedUp: false }
@@ -305,8 +244,9 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         touched.current.add(p.id)
         baselines.current.set(p.id, k.server)
         restored.current.add(p.id)
+        restoredShown.current.add(p.id)
       }
-      setRestoredCount(restored.current.size)
+      setRestoredCount(restoredShown.current.size)
       setDrafts(next)
       return
     }
@@ -319,10 +259,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     for (const pid of [...restored.current]) {
       if (serverNow(pid) === baselines.current.get(pid)) continue
       restored.current.delete(pid)
+      restoredShown.current.delete(pid)
       touched.current.delete(pid)
       baselines.current.delete(pid)
     }
-    setRestoredCount(restored.current.size)
+    setRestoredCount(restoredShown.current.size)
     for (const p of players) {
       const v = saved(p)
       const d = current[p.id]
@@ -376,7 +317,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const setDraft = (pid: string, patch: Partial<Draft>) => {
     // Its baseline is what the server has now, the first time; a restored draft touched again is a live edit.
     if (!baselines.current.has(pid)) baselines.current.set(pid, serverOf(pid))
-    if (restored.current.delete(pid)) setRestoredCount(restored.current.size)
+    // Touched again, it is a live edit; the note stays until the hole is saved.
+    restored.current.delete(pid)
     touched.current.add(pid)
     setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
     const h = holeInfo(pid)
@@ -454,10 +396,14 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       setAskReason(true)
       return
     }
-    // Snake tiebreak: 2+ players at the threshold on this hole and no answer yet.
+    // Snake tiebreak: 2+ players at the threshold on this hole and no answer yet. The hole saves
+    // only with the answer (its buttons commit). The reason sheet of a correction on a signed card
+    // gives way first: the question used to open underneath it, and a second «Guardar» saved
+    // the hole without the answer.
     const candidates = players.filter((p) => drafts[p.id]!.putts >= threshold).map((p) => p.id)
     const answered = snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole)
-    if (candidates.length >= 2 && !answered && !tiebreak) {
+    if (candidates.length >= 2 && !answered) {
+      setAskReason(false)
       setTiebreak({ candidates })
       return
     }
@@ -509,10 +455,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
       }
       await writeHole(writes, hole, lastHoled)
-      // Saved (in the outbox): nothing left to keep for this hole.
+      // Saved (in the outbox): nothing left to keep for this hole, and the save is the hole's new
+      // starting point. The last hole stays on screen after its save: a correction made there is
+      // kept against the save, and a later save writes only what was touched after it.
       writeKept(holeKey, {})
       restored.current.clear()
+      restoredShown.current.clear()
       setRestoredCount(0)
+      touched.current = new Set()
+      baselines.current = new Map()
+      initialDrafts.current = JSON.stringify(drafts)
+      useOutbox.setState({ editing: false })
       undo.current = { hole: savedHole, drafts: before, wasPlayed }
       lastSaveAt.current = performance.now()
       setTiebreak(null)

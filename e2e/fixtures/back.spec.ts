@@ -36,6 +36,20 @@ test('a sheet closed with «Cerrar» leaves no step behind: the next back leaves
   await expect(page).toHaveURL(/\/fixture$/)
 })
 
+test('a reload with a sheet open costs no back press: the first back leaves the screen (PWA-05)', async ({ page }) => {
+  await open(page, '/fixture')
+  await open(page, '/t/_/full12-live')
+  await page.locator('button[class*="leaderRow"]').first().click()
+  await expect(page.getByRole('dialog')).toHaveCount(1)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.locator('main').first().waitFor()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  // The sheet's entry was stepped off at start.
+  await expect.poll(() => page.evaluate(() => !!(history.state as { poloSheet?: boolean } | null)?.poloSheet)).toBe(false)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/fixture$/)
+})
+
 test('Tarjeta: a half-entered hole is still there after back and forward (PWA-05)', async ({ page }) => {
   await open(page, '/t/_/full12-live')
   await page.getByRole('link', { name: new RegExp(`^${t.nav.card}`) }).click()

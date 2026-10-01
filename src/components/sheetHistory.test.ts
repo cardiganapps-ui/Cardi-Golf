@@ -129,6 +129,48 @@ describe('one entry for «a sheet is open»', () => {
     expect(h.state).toEqual({ route: 'page' })
   })
 
+  it('a reload with a sheet open steps off its entry at start, so the first back leaves the screen', () => {
+    // The reload lands on the sheet's entry, with no sheet open any more.
+    h.pushState({ route: 'page', poloSheet: true, poloSheetId: 'before-reload' })
+    _sheetHistoryTest.boot()
+    vi.runAllTimers()
+    expect(h.at).toBe(0)
+    expect(isMark(h.state)).toBe(false)
+  })
+
+  it('forward past an entry that a link inside a sheet buried goes on to the page beyond it', () => {
+    // Router entries carry a key; the sheet's entry copies the page's.
+    h.replaceState({ route: 'page', key: 'k1' })
+    sheetOpened('a', vi.fn())
+    h.pushState({ route: 'next', key: 'k2' })
+    sheetClosed('a')
+    vi.runAllTimers()
+    // Back from the next page steps over the buried entry, onto the page.
+    h.back()
+    vi.runAllTimers()
+    expect(h.state).toEqual({ route: 'page', key: 'k1' })
+    // Forward from the page goes on to the next page; it used to bounce back to the page.
+    h.forward()
+    vi.runAllTimers()
+    expect(h.state).toEqual({ route: 'next', key: 'k2' })
+    // And one back is enough to return.
+    h.back()
+    vi.runAllTimers()
+    expect(h.state).toEqual({ route: 'page', key: 'k1' })
+  })
+
+  it('forward onto the entry a closed sheet gave back (nothing beyond it) steps back: forward does nothing', () => {
+    h.replaceState({ route: 'page', key: 'k1' })
+    sheetOpened('a', vi.fn())
+    sheetClosed('a')
+    vi.runAllTimers()
+    expect(h.at).toBe(0)
+    h.forward()
+    vi.runAllTimers()
+    expect(h.at).toBe(0)
+    expect(h.state).toEqual({ route: 'page', key: 'k1' })
+  })
+
   it('leaveSheetHistory gives the entry back first, so a replace lands on the page\'s own entry', async () => {
     sheetOpened('a', vi.fn())
     const left = leaveSheetHistory()
