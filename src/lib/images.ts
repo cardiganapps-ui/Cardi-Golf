@@ -3,6 +3,9 @@
  * photos). HEIC is decoded by Safari itself when drawn on a canvas; other
  * browsers get the original bytes.
  */
+import { t } from '../i18n/es-MX'
+import { UserError } from './humanError'
+
 export async function downscaleImage(file: File, maxSide = 1600, quality = 0.86): Promise<{ blob: Blob; type: string }> {
   if (!file.type.startsWith('image/') && !/\.heic$/i.test(file.name)) return { blob: file, type: file.type }
   try {
@@ -18,7 +21,7 @@ export async function downscaleImage(file: File, maxSide = 1600, quality = 0.86)
     const keepPng = file.type === 'image/png' && scale === 1 && file.size < 400_000
     const type = keepPng ? 'image/png' : 'image/jpeg'
     const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo procesar la imagen'))), type, quality),
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new UserError(t.errors.image))), type, quality),
     )
     return { blob, type }
   } catch {

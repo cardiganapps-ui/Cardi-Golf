@@ -2037,7 +2037,7 @@ export const t = {
     server: 'El servidor tuvo un problema. Vuelve a intentar en un momento.',
     session: 'Tu sesión se venció. Vuelve a abrir Polo e intenta de nuevo.',
     sessionStart: 'No se pudo abrir tu sesión. Vuelve a intentar en un momento.',
-    permission: 'No tienes permiso para esto. Pídeselo al Comité.',
+    permission: 'No tienes permiso para hacer esto.',
     duplicate: 'Ya hay uno igual. Cambia lo repetido y vuelve a intentar.',
     linked: 'No se pudo: está ligado a otros datos o ya no existe.',
     invalid: 'Hay un dato que no es válido. Revísalo y vuelve a intentar.',
@@ -2049,9 +2049,11 @@ export const t = {
     weakPassword: 'La contraseña necesita al menos 8 caracteres.',
     samePassword: 'La contraseña nueva tiene que ser distinta de la anterior.',
     banned: 'Esta cuenta está bloqueada por ahora.',
-    unknown: 'Algo salió mal. Vuelve a intentar.',
+    // Not «Algo salió mal»: ErrorBox already says that as its heading.
+    unknown: 'No se pudo completar. Vuelve a intentar.',
     /** `ref`: a code, an HTTP status or the error's class, for support; never the message. */
-    unknownRef: (ref: string) => `Algo salió mal (ref. ${ref}). Vuelve a intentar.`,
+    unknownRef: (ref: string) => `No se pudo completar (ref. ${ref}). Vuelve a intentar.`,
+    image: 'No se pudo procesar la imagen. Prueba con otra foto.',
   },
 } as const
 

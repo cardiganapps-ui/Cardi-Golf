@@ -88,7 +88,10 @@ export async function finishProfileSignIn(): Promise<{ firstTime: boolean; link:
  * any rate limit is the one on sending codes.
  */
 export function accountError(e: unknown): string {
-  if ((e as Partial<AuthError> | undefined)?.status === 429) return t.account.tooFast
+  const status = (e as Partial<AuthError> | undefined)?.status
+  if (status === 429) return t.account.tooFast
+  // In these flows a refusal with no code is the emailed code, expired or wrong.
+  if (status === 403 && !(e as Partial<AuthError>).code) return t.auth.badCode
   return humanError(e, { invalid_credentials: t.auth.badCode })
 }
 

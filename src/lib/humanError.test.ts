@@ -225,3 +225,24 @@ describe('copy stays copy', () => {
     }
   })
 })
+
+describe('found by the verifier on PR 80', () => {
+  it.each(['The network connection was lost.', 'The Internet connection appears to be offline.', 'A server with the specified hostname could not be found.', 'Could not connect to the server.'])(
+    'iPhone, «%s», is no signal',
+    (message) => {
+      expect(humanError(new TypeError(message))).toBe(E.network)
+    },
+  )
+
+  it('a raise that quotes a tee called «blue_tees» or «null» stays as written', () => {
+    for (const name of ['blue_tees', 'null', 'tees_rojas_2']) {
+      const message = `La salida «${name}» no tiene el mismo par en todos los hoyos.`
+      expect(humanError(new ApiError(message, '22023'))).toBe(message)
+    }
+  })
+
+  it('the generic line does not repeat ErrorBox\'s heading', () => {
+    expect(E.unknown).not.toMatch(/Algo salió mal/)
+    expect(humanError(new Error('boom'))).not.toMatch(/Algo salió mal/)
+  })
+})

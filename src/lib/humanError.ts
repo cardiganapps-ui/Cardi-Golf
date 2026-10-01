@@ -76,11 +76,16 @@ const TECHNICAL =
 /** The reference `unknownRef` adds (a class name or a code): not the technical part of a line. */
 const REF = /\(ref\. [^)]*\)/
 
+/** Names our raises quote in «…» (a tee called «blue_tees») are data, not technical text. */
+const QUOTED = /«[^»]*»/g
+
 function isServerCopy(p: Parts): boolean {
-  return RAISED.has(p.code) && /^[A-ZÁÉÍÓÚÑ¿¡«]/.test(p.message) && !TECHNICAL.test(p.message)
+  return RAISED.has(p.code) && /^[A-ZÁÉÍÓÚÑ¿¡«]/.test(p.message) && !TECHNICAL.test(p.message.replace(QUOTED, '«»'))
 }
 
-const NETWORK = /Failed to fetch|Load failed|NetworkError|Network request failed|network error|ERR_INTERNET_DISCONNECTED|ERR_NETWORK|^FetchError\b/i
+// Safari on iPhone also says it in its own words when the signal drops.
+const NETWORK =
+  /Failed to fetch|Load failed|NetworkError|Network request failed|network error|ERR_INTERNET_DISCONNECTED|ERR_NETWORK|^FetchError\b|network connection was lost|Internet connection appears to be offline|hostname could not be found|could not connect to the server/i
 
 /** RequestTimeout: fetchWithTimeout (supabase.ts); TimeoutError: withTimeout; AbortError: an abort without a reason. */
 const TIMEOUT_NAMES = new Set(['RequestTimeout', 'TimeoutError', 'AbortError'])
@@ -161,6 +166,6 @@ export function humanError(e: unknown, overrides: ErrorOverrides = {}): string {
   if (p.status === 403) return E.permission
   if (p.status === 429) return E.tooMany
   if (p.status != null && p.status >= 500) return E.server
-  if (isString && p.message.trim() && !TECHNICAL.test(p.message.replace(REF, ''))) return p.message
+  if (isString && p.message.trim() && !TECHNICAL.test(p.message.replace(REF, '').replace(QUOTED, '«»'))) return p.message
   return generic(p)
 }
