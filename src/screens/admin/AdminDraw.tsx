@@ -126,9 +126,9 @@ export function AdminDraw() {
             {snapshot.pairs.map((p) => (
               <div key={p.id} className={a.row}>
                 <span className={a.rowText}>
-                  <span className={a.rowTitle}>{p.name ?? `${name(p.player1Id)} & ${name(p.player2Id)}`}</span>
+                  <span className={a.rowTitle}>{p.name ?? t.common.andList([name(p.player1Id), name(p.player2Id)])}</span>
                   <span className={a.rowSub}>
-                    {name(p.player1Id)} & {name(p.player2Id)}, {p.kind}
+                    {t.common.andList([name(p.player1Id), name(p.player2Id)])}, {p.kind}
                     {p.pickedByHonoree ? `, ${D.pickedByHonoree}` : ''}
                   </span>
                 </span>
@@ -183,7 +183,7 @@ export function AdminDraw() {
                 <div className={styles.pairText}>
                   <input className="input" placeholder={D.namePlaceholder(name(p.player1Id), name(p.player2Id))} value={names[i] ?? ''} onChange={(e) => setNames({ ...names, [i]: e.target.value })} aria-label={D.names} />
                   <span className={a.rowSub}>
-                    {name(p.player1Id)} & {name(p.player2Id)}, {p.kind}
+                    {t.common.andList([name(p.player1Id), name(p.player2Id)])}, {p.kind}
                     {p.pickedByHonoree ? `, ${D.pickedByHonoree}` : ''}
                   </span>
                 </div>

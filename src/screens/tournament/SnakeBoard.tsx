@@ -61,7 +61,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                 <ol className={styles.history}>
                   {g.passes.map((p) => (
                     <li key={p.hole} className={p.pending ? styles.pending : ''}>
-                      {t.round.hole(p.hole)}: {p.pending ? t.games.snakeWho(p.candidates.map(name).join(' / ')) : t.games.snakeTo(name(p.holderId!))}
+                      {t.round.hole(p.hole)}: {p.pending ? t.games.snakeWho(t.common.orList(p.candidates.map(name))) : t.games.snakeTo(name(p.holderId!))}
                     </li>
                   ))}
                 </ol>

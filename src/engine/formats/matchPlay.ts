@@ -150,7 +150,7 @@ export const matchPlayFormat: MainFormat = {
         'Gana el hoyo quien menos golpes haga; el partido se gana por hoyos, no por golpes.',
         o.scoring === 'gross' ? 'Sin hándicap: palo contra palo.' : 'Con los golpes de ventaja de cada quien.',
         'Un partido ganado vale 1 punto, uno empatado ½, uno perdido 0.',
-        'El partido se acaba cuando alguien va más arriba que los hoyos que quedan: eso es un "3&2".',
+        'El partido se acaba cuando alguien va más arriba que los hoyos que quedan: eso es un «3&2».',
       ],
     }
   },

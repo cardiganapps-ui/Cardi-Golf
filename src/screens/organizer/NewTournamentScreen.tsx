@@ -196,7 +196,9 @@ function ReviewCard({ name, tagline, settings, players }: { name: string; taglin
   const format = formatFor(settings)
   const games = settings.games.filter((g) => g.enabled).map((g) => g.label)
   const rows: Array<[string, string]> = [
-    [W.name, [name.trim(), tagline.trim()].filter(Boolean).join(' · ')],
+    [W.name, name.trim()],
+    // The tagline is its own line, not «name · tagline».
+    ...(tagline.trim() ? [[t.admin.tournament.tagline, tagline.trim()] as [string, string]] : []),
     [W.reviewFormat, `${format.defaultLabel}, ${format.figureLabel(settings).toLowerCase()}`],
     [W.rounds, `${W.reviewDays(settings.rounds)}, ${W.reviewField(players)}`],
     [W.money, settings.entryFee > 0 ? W.reviewMoney(formatMoney(settings.entryFee), formatMoney(settings.entryFee * players)) : W.reviewNoMoney],

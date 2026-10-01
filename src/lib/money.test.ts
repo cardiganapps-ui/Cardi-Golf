@@ -7,6 +7,10 @@ describe('formatMoney', () => {
     expect(formatMoney(30000)).toBe('$30,000')
     expect(formatMoney(0)).toBe('$0')
   })
+  it('writes a negative amount with a true minus, never a hyphen', () => {
+    expect(formatMoney(-300)).toBe('−$300')
+    expect(formatMoney(-12500)).toBe('−$12,500')
+  })
   it('formats signed nets', () => {
     expect(formatSignedMoney(1200)).toBe('+$1,200')
     expect(formatSignedMoney(-300)).toBe('−$300')

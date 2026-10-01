@@ -183,7 +183,7 @@ export function AdminScores() {
             })}
             {unsignedCards.map((u) => {
               const pr2 = snapshot.pairs.find((p) => p.id === u.pairId)
-              const label = pr2 ? (pr2.name ?? `${name(pr2.player1Id)} & ${name(pr2.player2Id)}`) : '?'
+              const label = pr2 ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)])) : '?'
               return (
                 <div key={`u${u.roundId}${u.pairId}`} className={a.inboxRow}>
                   <span className={a.inboxText}>
@@ -209,7 +209,7 @@ export function AdminScores() {
                     {IB.incomplete(r.players.length)}
                   </span>
                   <span className={a.inboxSub}>
-                    {dayOf(r.roundId)}. {r.players.map(name).join(', ')}
+                    {dayOf(r.roundId)}. {t.common.andList(r.players.map(name))}
                   </span>
                 </span>
                 <span className={a.inboxActions}>
@@ -279,8 +279,10 @@ export function AdminScores() {
                       onClick={() => setEdit({ hole: h.hole, strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp, reason: '' })}
                     >
                       <span className={styles.holeNum}>{h.hole}</span>
-                      <span className={styles.holeGross}>{h.played ? (h.pickedUp ? 'L' : h.gross) : '·'}</span>
-                      <span className={styles.holeSub}>{h.played ? `${h.points} pts, ${h.putts ?? '–'} p` : `${t.player.par} ${h.par}`}</span>
+                      <span className={styles.holeGross}>{h.played ? (h.pickedUp ? 'L' : h.gross) : '–'}</span>
+                      {/* Points and putts on two lines: «putts», never «p», does not fit one line six tiles across. */}
+                      <span className={styles.holeSub}>{h.played ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}</span>
+                      {h.played && h.putts != null && <span className={styles.holeSub}>{t.games.puttsFigure(h.putts)}</span>}
                     </button>
                   ))}
                 </div>

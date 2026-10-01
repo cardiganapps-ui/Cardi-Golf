@@ -133,8 +133,8 @@ describe('low score', () => {
     const st = run(snap)
     const paid = st.prizes.filter((p) => p.gameId === 'low').map((p) => `${p.label}=${p.amount}`)
     // $200 per day: 60% = $120, 40% = $80.
-    expect(paid.sort()).toEqual(['Low neto, Día 1, 1º=120', 'Low neto, Día 1, 2º=80', 'Low neto, Día 2, 1º=120', 'Low neto, Día 2, 2º=80'])
-    expect(st.prizes.find((p) => p.label === 'Low neto, Día 2, 1º')!.playerId).toBe('p4')
+    expect(paid.sort()).toEqual(['Low neto, Día 1, 1.º=120', 'Low neto, Día 1, 2.º=80', 'Low neto, Día 2, 1.º=120', 'Low neto, Día 2, 2.º=80'])
+    expect(st.prizes.find((p) => p.label === 'Low neto, Día 2, 1.º')!.playerId).toBe('p4')
     expect(st.money.banker.balanced).toBe(true)
   })
 

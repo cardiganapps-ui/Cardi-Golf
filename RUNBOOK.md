@@ -4,7 +4,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 ## 0. Antes del viaje (checklist)
 
-- [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de dificultad por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
+- [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de golpe (SI) por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
 - [ ] **Jugadores completos.** Comité › Jugadores: los 12, con categoría, hándicap base **bloqueado**, tee, foto, quién es el homenajeado y quiénes son admins. Revisa la vista previa del 80 % y los golpes de ventaja.
 - [ ] **PINs enviados.** Comité › Jugadores › PIN: uno por jugador. Mándalos por WhatsApp uno a uno.
 - [ ] **App instalada en los 12 teléfonos.** Cada quien abre el link, "Agregar a pantalla de inicio" (la guía sale la primera vez) y entra con su cara + PIN. Una vez adentro, la sesión se queda en el teléfono.
@@ -25,6 +25,8 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 6. Si vendiste mal un lote: en la lista de vendidos toca ↶ para reabrirlo.
 7. Al vender el último: **"Sorteo de parejas"**. El homenajeado escoge a su pareja de la categoría que le toca; el resto sale con anillos. Ponles nombre y **guarda**: genera los grupos del día 1 (una pareja A+D con una B+C). Ajusta horas de salida en **Grupos**.
 8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Toca **Marcar pagado** conforme paguen (el aviso trae **Deshacer**). Todo se paga esa noche.
+   - **¿Marcaste a alguien por error?** Abre **"Ya pagaron"**, justo abajo de la lista: está todo lo marcado, con su monto. Toca **Pagado** en esa fila y vuelve a "Quién debe qué" (el aviso trae **Deshacer** por si tocaste la fila equivocada). Solo cambia esa fila.
+   - **Ojo con quien pagó a medias** (pagó un lote y luego compró otro): "Ya pagaron" muestra lo que pagó, y al quitarlo vuelve a deber **todo**, no solo esa parte. **Deshacer** la regresa tal cual; pasado el aviso, la app ya no puede registrar solo una parte. Si te pasa, cóbrale solo lo que de verdad le falta y entonces toca **Marcar pagado**: queda registrado completo.
 
 ## 2. Empezar una ronda
 
@@ -70,7 +72,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "Sin señal · 3 hoyos
 
 1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
 2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
-3. **Dinero › Liquidación**: con el torneo terminado es una sola lista, solo con lo que falta por pagar: lo que ya se marcó como pagado (inscripciones y martillazos del jueves) no se vuelve a pedir. "Vía banco": cada quien queda a mano con el banquero en una línea (sus premios menos lo que todavía deba), más recompras y apuestas directas. "Sin banco": la lista mínima de transferencias entre personas; lo que ya entró al banco lo reparte el banquero. Toca **Marcar pagado** conforme se pague: la línea desaparece, y el aviso trae **Deshacer** por si fue un error. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
+3. **Dinero › Liquidación**: con el torneo terminado es una sola lista, solo con lo que falta por pagar: lo que ya se marcó como pagado (inscripciones y martillazos del jueves) no se vuelve a pedir. "Vía banco": cada quien queda a mano con el banquero en una línea (sus premios menos lo que todavía deba), más recompras y apuestas directas. "Sin banco": la lista mínima de transferencias entre personas; lo que ya entró al banco lo reparte el banquero. Toca **Marcar pagado** conforme se pague: la línea desaparece, y el aviso trae **Deshacer** por si fue un error. Si el error se nota después: **"Ya pagaron"**, abajo de la liquidación, tiene cada pago marcado por separado (una línea vía banco marca sus premios y lo que debía, por ejemplo "Banco pagó a Camilo, Premios" y "Camilo pagó a Banco, Calcutta"); toca **Pagado** en cada uno y la línea vuelve a la liquidación. Si ese pago era solo una parte de lo que debía, vuelve a contar la deuda completa (igual que la noche de la Calcutta): usa **Deshacer** en el aviso; si ya no alcanzas, al liquidar esa línea toma en cuenta lo que ya había pagado (el banco le da eso de más, o él paga eso de menos) y márcala pagada. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
 4. **Más › Estadísticas y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
 
 ## 8. Respaldo

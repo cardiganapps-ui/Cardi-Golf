@@ -30,7 +30,7 @@ describe('Individual standings', () => {
     enterPoints(snap, 'r2', 'B', [...flat(2).slice(0, 16), 1, 1]) // 34
     const rows = computeTournament(snap, S).modules.individual!.rows
     expect(rows.map((r) => `${r.playerId}:${r.label}:${r.total}`)).toEqual(['A:1:70', 'B:2:70'])
-    expect(rows[1]!.countbackWhy?.steps[0]).toContain('Día 2, Total: A 36 – B 34')
+    expect(rows[1]!.countbackWhy?.steps[0]).toContain('Día 2, Total: A 36 contra B 34')
   })
 
   it('equal Day 2; holes 10–18 A 18, B 17 → A ahead', () => {

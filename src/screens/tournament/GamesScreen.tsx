@@ -73,7 +73,7 @@ export function GamesScreen() {
     } else if (id === 'snake' && m.snake) {
       const groups = m.snake.groups.filter((g) => !round || g.roundId === round.id)
       const holders = groups.filter((g) => g.holderId).map((g) => name(g.holderId!))
-      leader = holders.length ? `${t.games.holders}: ${holders.join(', ')}` : groups.length ? t.games.nobodyHolds : t.games.noResults
+      leader = holders.length ? `${t.games.holders}: ${t.common.andList(holders)}` : groups.length ? t.games.nobodyHolds : t.games.noResults
       const pot = groups[0]?.pot ?? 0
       stake = { text: t.games.perGroup(formatMoney(pot)), amount: pot }
     } else if (id === 'fewestPutts' && m.fewestPutts) {
@@ -82,7 +82,7 @@ export function GamesScreen() {
       stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts)), amount: settings.prizes.fewestPutts }
     } else if (id === 'auction' && m.auction) {
       const s0 = m.auction.slots.find((x) => !x.unfilled)
-      leader = s0 ? t.games.leader(s0.playerIds.map(name).join(', '), formatMoney(s0.amount)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
+      leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.amount)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
       stake = { text: t.games.pot, amount: m.auction.pot }
     }
     return { id, label, leader, stake }
@@ -193,7 +193,7 @@ export function GamesScreen() {
 
           {current === 'pairs' && state.modules.pairs && (
             <div className={styles.section}>
-              {state.modules.pairs.unpaired.length > 0 && <p className="help">{t.games.unpaired(state.modules.pairs.unpaired.map(name).join(', '))}</p>}
+              {state.modules.pairs.unpaired.length > 0 && <p className="help">{t.games.unpaired(t.common.andList(state.modules.pairs.unpaired.map(name)))}</p>}
               <Board>
                 <BoardHead figureLabel={t.live.points} />
                 {state.modules.pairs.rows.map((r) => (
@@ -204,7 +204,7 @@ export function GamesScreen() {
                     sub={
                       <span className={styles.sub}>
                         <span>
-                          {t.common.and(name(r.playerIds[0]), name(r.playerIds[1]))}, {t.common.plusList(r.perRound)}
+                          {t.common.andList(r.playerIds.map(name))}, {t.common.plusList(r.perRound)}
                         </span>
                         {state.modules.pairs!.prizes[r.playerIds[0]] && <span className={styles.subMoney}>{money(state.modules.pairs!.prizes[r.playerIds[0]]!.amount * 2)}</span>}
                       </span>
@@ -231,15 +231,18 @@ export function GamesScreen() {
                               <span className={styles.rowSub}>
                                 {t.card.group} {g.number}
                               </span>
-                              <span>{pairsIn.map((p) => p.name ?? t.common.and(name(p.player1Id), name(p.player2Id))).join(t.common.versus)}</span>
+                              <span>{pairsIn.map((p) => p.name ?? t.common.andList([name(p.player1Id), name(p.player2Id)])).join(t.common.versus)}</span>
                             </span>
-                            <span className={styles.figures}>
-                              {pairsIn.map((p) => (
-                                <strong key={p.id} className="num">
-                                  {(state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)}
-                                </strong>
-                              ))}
-                            </span>
+                            {/* Before the draw a group holds no pair yet: no figures, and the text runs to the edge. */}
+                            {pairsIn.length > 0 && (
+                              <span className={styles.figures}>
+                                {pairsIn.map((p) => (
+                                  <strong key={p.id} className="num">
+                                    {(state.core.rounds[rid]?.[p.player1Id]?.points ?? 0) + (state.core.rounds[rid]?.[p.player2Id]?.points ?? 0)}
+                                  </strong>
+                                ))}
+                              </span>
+                            )}
                           </div>
                         )
                       })}
@@ -325,7 +328,7 @@ export function GamesScreen() {
                       <span className={styles.rowText}>
                         <strong>{s.label}</strong>
                         <span className={styles.rowSub}>
-                          {s.unfilled ? t.games.unassigned : s.playerIds.map(name).join(', ')}, {Math.round(s.share * 100)}%
+                          {s.unfilled ? t.games.unassigned : t.common.andList(s.playerIds.map(name))}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
                       <HowCalculated why={s.why} label={formatMoney(s.amount)} />
@@ -342,7 +345,7 @@ export function GamesScreen() {
                     <button key={pf.ownerId} type="button" className={styles.gameRow} onClick={() => setOpen(pf.ownerId)}>
                       <span className={styles.rowText}>
                         <strong>{name(pf.ownerId)}</strong>
-                        <span className={styles.rowSub}>{pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 ? ` ${h.pct}%` : ''}`).join(', ')}</span>
+                        <span className={styles.rowSub}>{t.common.andList(pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 || pf.holdings.length > 1 ? ` ${h.pct}%` : ''}`))}</span>
                       </span>
                       <span className={styles.gameStake}>
                         <strong>{formatMoney(pf.value)}</strong>

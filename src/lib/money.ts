@@ -1,4 +1,4 @@
-/** MXN, no decimals, formatted like `$2,500` (CLAUDE.md §2). */
+/** MXN, no decimals, formatted like `$2,500` (CLAUDE.md §2); a negative amount takes a true minus, «−$300». */
 const formatters = new Map<string, Intl.NumberFormat>()
 
 export function formatMoney(amount: number, currency = 'MXN'): string {
@@ -12,7 +12,8 @@ export function formatMoney(amount: number, currency = 'MXN'): string {
     })
     formatters.set(currency, f)
   }
-  return f.format(amount)
+  // Intl writes a hyphen («-$300»); figures take the true minus sign (DESIGN_DIRECTION.md).
+  return f.format(amount).replace('-', '−')
 }
 
 /** Signed variant for nets: "+$1,200" / "−$300" / "$0". */

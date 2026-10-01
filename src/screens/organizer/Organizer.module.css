@@ -112,8 +112,6 @@
 }
 .choice {
   composes: rowLine from '../../components/primitives.module.css';
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 24px;
   border-left: 0;
   border-right: 0;
   border-top: 0;
