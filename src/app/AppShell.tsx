@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { MaintenanceBanner } from '../components/MaintenanceBanner'
+import { UpdateBar } from '../components/UpdateBar'
 import { Toaster } from '../components/ui'
 import { useAuth } from '../data/auth'
 import { startOutbox } from '../data/outbox'
@@ -38,6 +39,7 @@ export function AppShell() {
     <div className={styles.shell}>
       <OfflineBanner />
       <MaintenanceBanner />
+      <UpdateBar />
       <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${tabbed ? styles.mainTabbed : ''}`}>
         <Outlet />
       </main>

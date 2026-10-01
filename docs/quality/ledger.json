@@ -1929,9 +1929,13 @@
       "workstream": "W7",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 70,
+      "tests": [
+        "src/data/appUpdate.test.tsx",
+        "src/data/outbox.update.test.ts",
+        "src/lib/build.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

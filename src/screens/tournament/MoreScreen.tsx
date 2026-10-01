@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
+import { buildLabel } from '../../lib/build'
 import { InstallGuide } from '../../components/InstallGuide'
 import { Avatar, CopyButton, ShareButton, Sheet, toast } from '../../components/ui'
 import { useAuth } from '../../data/auth'
@@ -176,7 +177,7 @@ export function MoreScreen() {
         onClose={() => setAskNotMe(false)}
       />
       <p className={styles.version}>
-        {t.more.version} {__APP_VERSION__}
+        {t.more.version} {buildLabel()}
       </p>
     </div>
   )
