@@ -153,7 +153,11 @@
   gap: var(--s2);
 }
 .footer :global(.btn--ghost),
-.footer :global(.btn--secondary) {
+.footer :global(.btn--secondary),
+.footer :global(.btn--secondary:active) {
+  /* The board is dark: the light-surface fill of a secondary button left
+     «Siguiente» as near-white text on white (1.1:1). */
+  background: transparent;
   color: var(--board-ink);
   border-color: var(--board-ink-2);
 }
