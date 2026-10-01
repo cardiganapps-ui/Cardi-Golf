@@ -2187,9 +2187,15 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 87,
+      "tests": [
+        "src/data/outbox.offline.test.ts",
+        "src/data/outbox.overlay.test.ts",
+        "src/data/outbox.retry.test.ts",
+        "src/data/outbox.replace.test.ts",
+        "src/data/outbox.reauth.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
