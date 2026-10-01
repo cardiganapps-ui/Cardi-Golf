@@ -23,13 +23,15 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 5. **"¡Vendido!"** → pregunta la recompra (0 / 25 / 50 % o un monto). Muestra cuánto le paga el jugador a su dueño. → "Siguiente lote".
 6. Si vendiste mal un lote: en la lista de vendidos toca ↶ para reabrirlo.
 7. Al vender el último: **"Sorteo de parejas"**. El homenajeado escoge a su pareja de la categoría que le toca; el resto sale con anillos. Ponles nombre y **guarda**: genera los grupos del día 1 (una pareja A+D con una B+C). Ajusta horas de salida en **Grupos**.
-8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Marca "Pagado" conforme paguen. Todo se paga esa noche.
+8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Toca **Marcar pagado** conforme paguen (el aviso trae **Deshacer**). Todo se paga esa noche.
 
 ## 2. Empezar una ronda
 
 1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.)
 2. Cada grupo abre **Tarjeta**: sale su grupo y "Llevas la tarjeta de: [pareja rival]". Cualquiera del grupo puede capturar a los cuatro.
-3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos.
+3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos. Abajo del botón queda "Hoyo N guardado · Corregir" unos segundos para regresar.
+   - Con dos teléfonos en el grupo, cada uno guarda solo a los jugadores que tocó (y a los que nadie ha capturado todavía): lo que ya guardó el otro teléfono no se pisa con el par. Si el otro guarda mientras tienes el hoyo abierto, sus valores aparecen solos.
+   - Un doble toque no guarda el hoyo siguiente: el segundo toque no cuenta, y si guardas un hoyo sin tocar nada segundos después del anterior, la app pregunta "¿Guardar el N con todos en par?".
 4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar.
 
 ## 3. Corregir un score
@@ -67,7 +69,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 
 1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
 2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
-3. **Dinero › Liquidación**: "Vía banco" es la lista de lo que el banquero paga a cada quien. "Sin banco" es la lista mínima de transferencias entre personas si alguien no pagó por adelantado. Marca "Pagado" conforme se pague. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
+3. **Dinero › Liquidación**: con el torneo terminado es una sola lista, solo con lo que falta por pagar: lo que ya se marcó como pagado (inscripciones y martillazos del jueves) no se vuelve a pedir. "Vía banco": cada quien queda a mano con el banquero en una línea (sus premios menos lo que todavía deba), más recompras y apuestas directas. "Sin banco": la lista mínima de transferencias entre personas; lo que ya entró al banco lo reparte el banquero. Toca **Marcar pagado** conforme se pague: la línea desaparece, y el aviso trae **Deshacer** por si fue un error. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
 4. **Más › Estadísticas y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
 
 ## 8. Respaldo

@@ -880,7 +880,7 @@ exports[`golden: first tournament > prizes and money are unchanged 1`] = `
   ],
   "viaBank": [
     {
-      "amount": 3300,
+      "amount": 800,
       "from": "p1",
       "to": null,
     },

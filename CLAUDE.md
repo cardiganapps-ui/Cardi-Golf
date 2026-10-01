@@ -647,6 +647,7 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 **Settlement modes**
 - **Default, "vía banco":** the banker pays each winner, since money was collected up front.
 - **Optional, "sin banco":** a minimized list of peer-to-peer transfers (greedy: the largest debtor pays the largest creditor), for when not everyone paid ahead.
+- Both run on **what is still due** (2026-10-01, MONEY-01): flows sharing a payment key form an account (owed, paid, due), and what is marked paid is never asked for again. A vía-banco line names the accounts it closes, and «Marcar pagado» records each one in full (`markPaidWrites`); in sin banco the banker carries the bank's position (the cash he holds, the house cut, anything unassigned). While the tournament runs, «Quién debe qué» is the collection list; once it is final, the settlement is the only list.
 
 ---
 
