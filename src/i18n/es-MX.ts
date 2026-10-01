@@ -1127,7 +1127,19 @@ export const t = {
     newVersion: 'Hay una versión nueva de la app.',
     updateRequired: 'Esta versión ya no sube scores. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
-    fromCache: (when: string) => `Sin señal: mostrando lo último guardado (${when}).`,
+    /** The boards on screen came from the phone: no signal, or the live tournament is still on its way. `when` is from `ago`. */
+    fromCache: (when: string) => `Sin señal, guardado ${when}`,
+    revalidating: (when: string) => `Conectando, guardado ${when}`,
+    /** How old a saved board is (src/lib/freshness.ts). */
+    ago: {
+      now: 'hace un momento',
+      minutes: (n: number) => `hace ${n} min`,
+      hours: (n: number) => (n === 1 ? 'hace 1 hora' : `hace ${n} horas`),
+      today: (time: string) => `hoy, ${time}`,
+      yesterday: (time: string) => `ayer, ${time}`,
+      days: (n: number) => `hace ${n} días`,
+      date: (date: string) => `el ${date}`,
+    },
   },
   status: {
     setup: 'En preparación',
@@ -1169,8 +1181,8 @@ export const t = {
     scoreHole: (n: number) => `Anotar el hoyo ${n}`,
     scoreDone: 'Ver mi tarjeta',
     leadGroup: (hole: number) => `Grupo puntero en el hoyo ${hole}`,
-    updatedNow: 'Actualizado ahora',
-    updatedAgo: (min: number) => `Actualizado hace ${min} min`,
+    /** `when` from t.sync.ago: «Actualizado hace 5 min», «Actualizado ayer, 6:40 p.m.». */
+    updated: (when: string) => `Actualizado ${when}`,
     points: 'Puntos',
     gross: 'Gross',
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,

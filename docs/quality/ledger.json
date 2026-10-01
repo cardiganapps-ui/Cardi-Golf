@@ -1849,9 +1849,11 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2428,9 +2430,12 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentShell.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2442,9 +2447,11 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2456,9 +2463,12 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/lib/freshness.test.ts",
+        "src/screens/tournament/TournamentShell.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2599,9 +2609,11 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 86,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },

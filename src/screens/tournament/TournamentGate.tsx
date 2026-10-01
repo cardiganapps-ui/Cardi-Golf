@@ -2,6 +2,14 @@
  * `/t/:slug`: looks the tournament up, ensures a session (anonymous if
  * needed), and either shows Entrar (face grid + PIN) or renders the shell
  * with the tournament store loaded.
+ *
+ * Cache first (PERF-08, REL-03, REL-15): a phone that has opened this
+ * tournament before shows the boards it saved at once, and the live
+ * tournament (session, lookup, membership, snapshot) resolves behind them.
+ * Opening on the course used to wait on five round trips with signal, 16 s
+ * with no signal and an expired token, and for ever on a connection that
+ * answers nothing. Until the server's snapshot is on screen the gate keeps
+ * trying, on reconnect, on return to the app and on a timer (REL-02).
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
@@ -12,7 +20,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
-import { readCached, saveEntry } from '../../data/snapshotCache'
+import { clearCached, readCached, saveEntry } from '../../data/snapshotCache'
 import { adoptQueuedWrites, refreshOutboxCounters } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
@@ -65,19 +73,30 @@ export function TournamentGate() {
   const load = useTournament((s) => s.load)
   const data = useTournament((s) => s.data)
   const storeError = useTournament((s) => s.error)
-  /** True while the shell runs on the cached snapshot (no signal on open); retried when the network returns. */
-  const fromCache = useRef(false)
+  /** The server has answered who this device is here (in, Entrar, not found): a cache read that lands later changes nothing. */
+  const settled = useRef(false)
 
-  /** No signal: enter with the last snapshot this device saved for the slug (§8). */
-  const enterFromCache = useCallback(async (expectedId?: string): Promise<boolean> => {
-    const cached = await readCached(slug)
-    if (!cached || (expectedId && cached.entry.tournamentId !== expectedId)) return false
-    fromCache.current = true
-    useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
-    refreshOutboxCounters()
-    setPhase({ kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me })
-    return true
-  }, [slug])
+  /** Enter with the last snapshot this device saved for the slug (§8): at once on open, and whenever the server can't be reached. */
+  const enterFromCache = useCallback(
+    async (expectedId?: string): Promise<boolean> => {
+      const cached = await readCached(slug)
+      if (!cached || (expectedId && cached.entry.tournamentId !== expectedId)) return false
+      useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
+      refreshOutboxCounters()
+      setPhase((p) => (p.kind === 'in' && p.lookup.id === cached.entry.tournamentId ? p : { kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me }))
+      return true
+    },
+    [slug],
+  )
+
+  // The saved boards first, before the session is even confirmed.
+  useEffect(() => {
+    settled.current = false
+    void (async () => {
+      const cached = await readCached(slug)
+      if (cached && !settled.current) await enterFromCache(cached.entry.tournamentId)
+    })()
+  }, [slug, enterFromCache])
 
   const resolve = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -88,6 +107,8 @@ export function TournamentGate() {
       await ensureSession()
       const lookup = await lookupTournament(slug)
       if (!lookup) {
+        settled.current = true
+        void clearCached(slug)
         setPhase({ kind: 'notFound' })
         return
       }
@@ -102,7 +123,7 @@ export function TournamentGate() {
           protected: !!m.protected,
           unlockedUntil: m.unlockedUntil ?? null,
         }
-        fromCache.current = false
+        settled.current = true
         setPhase({ kind: 'in', lookup, me })
         // Writes this phone queued under an earlier session belong to this player again (REL-16).
         if (m.playerId || m.isOrganizer) void adoptQueuedWrites(lookup.id)
@@ -117,6 +138,9 @@ export function TournamentGate() {
         // The lookup worked but the snapshot did not: still better to show what we have.
         if (!useTournament.getState().data) await enterFromCache(lookup.id)
       } else {
+        // Not in this tournament any more (the device was released, the link removed): its saved boards go too.
+        settled.current = true
+        void clearCached(slug)
         setPhase({ kind: 'enter', lookup })
       }
     } catch (e) {
@@ -130,14 +154,18 @@ export function TournamentGate() {
     if (authReady) void resolve()
   }, [authReady, resolve])
 
-  // Back online after a cached open: resolve for real (session, role, live snapshot, Realtime).
-  // Also retry on a timer: the stored session can stay unconfirmed for a while
-  // after the signal returns (auth-js cools down after a failed refresh), and
-  // the `online` event fires only once (REL-16).
+  // While the boards on screen are the phone's copy, resolve for real (session,
+  // role, live snapshot, Realtime): on reconnect, on return to the app, and on
+  // a timer, since the stored session can stay unconfirmed for a while after
+  // the signal returns (auth-js cools down after a failed refresh) and `online`
+  // fires only once (REL-16). Until the server's snapshot is on screen, not
+  // just until the session is back: a lookup that worked and a snapshot that
+  // didn't used to end the retries and leave the old boards up (REL-02).
   useEffect(() => {
     let busy = false
     const retry = async () => {
-      if (!fromCache.current || busy) return
+      const store = useTournament.getState()
+      if (busy || !store.data || store.source === 'server') return
       if (typeof navigator !== 'undefined' && !navigator.onLine) return
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       busy = true
@@ -169,8 +197,10 @@ export function TournamentGate() {
   const leave = useCallback(async () => {
     await releaseDevice()
     setLastTournament(null)
+    // The boards this phone saved belong to the player who just left.
+    await clearCached(slug)
     await resolve()
-  }, [resolve])
+  }, [resolve, slug])
 
   if (phase.kind === 'loading') {
     return (

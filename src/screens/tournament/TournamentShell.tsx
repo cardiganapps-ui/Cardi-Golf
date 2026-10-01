@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
+import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './TournamentShell.module.css'
@@ -35,6 +37,7 @@ export function TournamentShell() {
   const data = useTournament((s) => s.data)
   const realtime = useTournament((s) => s.realtime)
   const updatedAt = useTournament((s) => s.updatedAt)
+  const source = useTournament((s) => s.source)
   const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const online = useOnline()
   const { pathname } = useLocation()
@@ -58,11 +61,7 @@ export function TournamentShell() {
       <header className={styles.top}>
         {logo && <img className={styles.logo} src={logo} alt="" />}
         <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
-        {/* "Sin señal" is the phone's connection; "Sin actualizaciones en vivo" is the Realtime channel with a connection. */}
-        {!online && !isFixture && <LiveStatus text={pendingHoles > 0 ? t.sync.offlineHoles(pendingHoles) : t.sync.offlineShort} live={false} />}
-        {online && realtime === 'live' && <LiveStatus text={t.sync.live} />}
-        {online && realtime === 'error' && <LiveStatus text={t.sync.noLive} live={false} />}
-        {realtime === 'off' && !isFixture && data && <LiveStatus text={t.sync.fromCache(new Date(updatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }))} live={false} />}
+        {!isFixture && <HeaderStatus online={online} source={source} realtime={realtime} updatedAt={updatedAt} pendingHoles={pendingHoles} hasData={!!data} />}
       </header>
       <div className={styles.body}>
         {me.via === 'platform' && <PlatformBanner />}
@@ -92,4 +91,29 @@ export function TournamentShell() {
       </nav>
     </div>
   )
+}
+
+/**
+ * One line from facts (REL-02): the phone's connection, where the boards came
+ * from, and the live channel. «Sin señal» is the phone; «Conectando» is the
+ * phone's copy while the live tournament is on its way; «Sin actualizaciones
+ * en vivo» is the channel with a connection. It used to read «Sin señal»
+ * whenever the channel was off, signal or not.
+ */
+function HeaderStatus({ online, source, realtime, updatedAt, pendingHoles, hasData }: { online: boolean; source: 'cache' | 'server' | null; realtime: string; updatedAt: number; pendingHoles: number; hasData: boolean }) {
+  // The age keeps counting while the phone's copy is up.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (source !== 'cache') return
+    const id = setInterval(() => tick((n) => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [source])
+  if (!online) {
+    if (pendingHoles > 0) return <LiveStatus text={t.sync.offlineHoles(pendingHoles)} live={false} />
+    return <LiveStatus text={hasData && source === 'cache' ? t.sync.fromCache(savedWhen(updatedAt)) : t.sync.offlineShort} live={false} />
+  }
+  if (hasData && source === 'cache') return <LiveStatus text={t.sync.revalidating(savedWhen(updatedAt))} live={false} />
+  if (realtime === 'live') return <LiveStatus text={t.sync.live} />
+  if (realtime === 'error') return <LiveStatus text={t.sync.noLive} live={false} />
+  return null
 }

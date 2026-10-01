@@ -7,6 +7,7 @@ import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
+import { savedWhen } from '../../lib/freshness'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
@@ -37,13 +38,14 @@ function grossToPar(state: TournamentState, playerId: string, roundId?: string):
   return n ? d : null
 }
 
-function useMinutesSince(ts: number): number | null {
+/** How old the boards are, in words (REL-04), kept current every 30 s. */
+function useSavedWhen(ts: number): string | null {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 30_000)
     return () => clearInterval(id)
   }, [])
-  return ts ? Math.max(0, Math.floor((now - ts) / 60_000)) : null
+  return ts ? savedWhen(ts, now) : null
 }
 
 export function LiveScreen() {
@@ -55,7 +57,7 @@ export function LiveScreen() {
   const [view, setView] = useState<'points' | 'gross'>('points')
   const prevOrder = useRef<Map<string, number>>(new Map())
   const [moves, setMoves] = useState<Map<string, number>>(new Map())
-  const minutes = useMinutesSince(updatedAt)
+  const updatedWhen = useSavedWhen(updatedAt)
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
   useEffect(() => {
@@ -130,7 +132,7 @@ export function LiveScreen() {
   })()
 
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
-  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, minutes == null ? null : minutes === 0 ? t.live.updatedNow : t.live.updatedAgo(minutes)].filter(Boolean).join('. ')
+  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, updatedWhen == null ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
 
   /*
    * The Puntos/Gross toggle only says something under Stableford, where the

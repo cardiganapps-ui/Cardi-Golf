@@ -57,6 +57,12 @@ interface StoreState {
   realtime: 'off' | 'connecting' | 'live' | 'error'
   /** Wall-clock time of the last snapshot applied (0 before the first). Display only. */
   updatedAt: number
+  /**
+   * Where the boards on screen came from: the copy this phone saved ('cache',
+   * shown at once on open) or the server ('server'). The gate keeps trying
+   * until it is 'server', and the header says which (REL-02).
+   */
+  source: 'cache' | 'server' | null
   load(tournamentId: string): Promise<void>
   reload(): Promise<void>
   /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
@@ -208,17 +214,18 @@ export const useTournament = create<StoreState>((set, get) => ({
   data: null,
   realtime: 'off',
   updatedAt: 0,
+  source: null,
   async load(tournamentId) {
     if (get().tournamentId !== tournamentId) {
       get().unsubscribe()
-      set({ tournamentId, data: null, error: null })
+      set({ tournamentId, data: null, error: null, source: null })
     }
     set({ loading: true })
     const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(tournamentId)
       if (seq !== fetchSeq || get().tournamentId !== tournamentId) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null })
+      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
     } catch (e) {
@@ -233,7 +240,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     try {
       const snapshot = await fetchSnapshot(id)
       if (seq !== fetchSeq || get().tournamentId !== id) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), error: null })
+      set({ data: compute(snapshot), updatedAt: Date.now(), error: null, source: 'server' })
       void saveSnapshot(id, snapshot)
     } catch (e) {
       if (seq !== fetchSeq) return
@@ -241,8 +248,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     }
   },
   seed(tournamentId, snapshot, savedAt) {
+    // Never over the live boards: a cache read that lands after the server's answer is older than it.
+    if (get().tournamentId === tournamentId && get().source === 'server') return
     if (get().tournamentId !== tournamentId) get().unsubscribe()
-    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off' })
+    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache' })
   },
   subscribe() {
     const id = get().tournamentId
