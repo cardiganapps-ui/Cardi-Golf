@@ -114,10 +114,30 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       close.current()
     }
     window.addEventListener('keydown', onKey)
+    /*
+     * The system back closes the sheet, not the screen under it (PWA-05). The
+     * sheet gets a history entry of its own (same URL, a marker in the state):
+     * back pops it and the sheet closes; closing it any other way pops it too.
+     * Nested sheets close top first: each checks whether its own entry is still
+     * current.
+     */
+    let poppedByBack = false
+    window.history.pushState({ ...(window.history.state ?? {}), poloSheet: id }, '')
+    const onPop = () => {
+      if ((window.history.state as { poloSheet?: string } | null)?.poloSheet === id) return
+      if (!openSheets.includes(id)) return
+      // Our entry is gone, and with it every sheet opened above this one.
+      poppedByBack = true
+      close.current()
+    }
+    window.addEventListener('popstate', onPop)
     // Runs only when the sheet closes or unmounts, never on a re-render.
     return () => {
       clearTimeout(timer)
       window.removeEventListener('keydown', onKey)
+      window.removeEventListener('popstate', onPop)
+      // Closed with «Cerrar», the backdrop, Escape or an action: drop its entry, so the next back leaves the screen.
+      if (!poppedByBack && (window.history.state as { poloSheet?: string } | null)?.poloSheet === id) window.history.back()
       const i = openSheets.indexOf(id)
       if (i >= 0) openSheets.splice(i, 1)
       if (openSheets.length === 0) document.body.style.overflow = ''

@@ -82,6 +82,7 @@ async function tapSave(at: number) {
 const written = () => outbox.scores.map((r) => `${r.player_id}@${r.hole}=${r.strokes}/${r.putts}`)
 
 beforeEach(() => {
+  localStorage.clear()
   outbox.scores = []
   clock = 10_000
   vi.spyOn(performance, 'now').mockImplementation(() => clock)
@@ -233,5 +234,37 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
     }
     const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () => {
+  it('what was typed comes back when the card opens again', () => {
+    const first = mount()
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    fireEvent.click(strokesUp('p1'))
+    first.unmount()
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(before + 2)
+  })
+
+  it('a player the other phone saved since is not restored over the save', () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    // While the card was closed, the other phone saved p3 on this hole.
+    mount((s) => {
+      s.scores = s.scores.filter((x) => !(x.playerId === 'p3' && x.hole === 10 && x.roundId === 'r1'))
+      s.scores.push({ roundId: 'r1', playerId: 'p3', hole: 10, strokes: 8, putts: 3, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
+    })
+    expect(strokesOf('p3')).toBe(8)
+  })
+
+  it('a saved hole leaves nothing behind', async () => {
+    mount()
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    expect(Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf:tarjeta:'))).toEqual([])
   })
 })

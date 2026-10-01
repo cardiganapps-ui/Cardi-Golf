@@ -36,6 +36,42 @@ const DOUBLE_SAVE_MS = 3000
 /** How long the last save stays in the save bar with its «Corregir». */
 const SAVED_NOTE_MS = 6000
 
+/*
+ * A half-entered hole stays on the phone until it is saved (PWA-05): the
+ * system back, a tab switch or the OS closing the app no longer throws it away.
+ * Per round, group and hole, only the players touched here, each with what the
+ * server had for him when it was typed: if the server has changed since (the
+ * other phone saved him), that player's draft is dropped, not restored over it.
+ */
+const DRAFT_TTL_MS = 12 * 60 * 60 * 1000
+interface KeptDraft {
+  at: number
+  players: Record<string, { draft: Draft; server: string }>
+}
+const draftKey = (holeKey: string) => `cardi-golf:tarjeta:${holeKey}`
+function readKept(holeKey: string): KeptDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(holeKey))
+    if (!raw) return null
+    const kept = JSON.parse(raw) as KeptDraft
+    if (!kept?.players || Date.now() - kept.at > DRAFT_TTL_MS) {
+      localStorage.removeItem(draftKey(holeKey))
+      return null
+    }
+    return kept
+  } catch {
+    return null
+  }
+}
+function writeKept(holeKey: string, players: KeptDraft['players']) {
+  try {
+    if (Object.keys(players).length) localStorage.setItem(draftKey(holeKey), JSON.stringify({ at: Date.now(), players }))
+    else localStorage.removeItem(draftKey(holeKey))
+  } catch {
+    // Private mode or full storage: the draft lives in memory only, as before.
+  }
+}
+
 interface Draft {
   strokes: number
   putts: number
@@ -198,13 +234,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   useEffect(() => {
     latest.current = { players, holeInfo, drafts, holeSpoken }
   })
+  /** What the server has for one player on the open hole. */
+  const serverOf = (pid: string) => {
+    const h = holeInfo(pid)
+    return h?.played ? `${h.gross}:${h.putts}:${h.pickedUp}` : '-'
+  }
   /** What the server has for each player on the open hole; changes when a save lands, from this phone or another. */
-  const serverKey = players
-    .map((p) => {
-      const h = holeInfo(p.id)
-      return h?.played ? `${p.id}:${h.gross}:${h.putts}:${h.pickedUp}` : `${p.id}:-`
-    })
-    .join('|')
+  const serverKey = players.map((p) => `${p.id}:${serverOf(p.id)}`).join('|')
   const holeKey = `${round.id}|${group.id}|${hole}`
   const shownHole = useRef('')
   useEffect(() => {
@@ -223,8 +259,18 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       settledAt.current = performance.now()
       const next: Record<string, Draft> = {}
       for (const p of players) next[p.id] = saved(p) ?? { strokes: holeInfo(p.id)?.par ?? 4, putts: 2, pickedUp: false }
-      setDrafts(next)
       initialDrafts.current = JSON.stringify(next)
+      // What was typed here and not saved yet comes back, unless the server has moved on for that player.
+      const kept = readKept(holeKey)
+      for (const p of players) {
+        const k = kept?.players[p.id]
+        const h = holeInfo(p.id)
+        if (k && k.server === (h?.played ? `${h.gross}:${h.putts}:${h.pickedUp}` : '-')) {
+          next[p.id] = k.draft
+          touched.current.add(p.id)
+        }
+      }
+      setDrafts(next)
       return
     }
     // Same hole, new values on the server: the other phone saved. Take them into
@@ -244,6 +290,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       initialDrafts.current = JSON.stringify(baseline)
     }
   }, [holeKey, serverKey])
+  // Keep what was typed on this hole, for the players touched here (PWA-05).
+  useEffect(() => {
+    if (!shownHole.current) return
+    const keep: KeptDraft['players'] = {}
+    for (const pid of touched.current) if (drafts[pid]) keep[pid] = { draft: drafts[pid]!, server: serverOf(pid) }
+    writeKept(shownHole.current, keep)
+  }, [drafts]) // eslint-disable-line react-hooks/exhaustive-deps -- written when the drafts change, with the server values of that moment
   // An unsaved hole defers the "new version" reload offer (main.tsx).
   const initialDrafts = useRef('')
   useEffect(() => {
@@ -404,6 +457,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
       }
       await writeHole(writes, hole, lastHoled)
+      // Saved (in the outbox): nothing left to keep for this hole.
+      writeKept(holeKey, {})
       undo.current = { hole: savedHole, drafts: before, wasPlayed }
       lastSaveAt.current = performance.now()
       setTiebreak(null)
