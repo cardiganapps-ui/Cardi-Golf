@@ -82,7 +82,8 @@ export function TvScreen() {
         </Link>
       </header>
 
-      <AnimatePresence mode="wait">
+      {/* The next board comes in while the last one leaves: the screen is never blank between boards (MOT-01). */}
+      <AnimatePresence mode="popLayout" initial={false}>
         {isAuctionNight && state.modules.auction ? (
           <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeSlow}>
             <AuctionBoard />

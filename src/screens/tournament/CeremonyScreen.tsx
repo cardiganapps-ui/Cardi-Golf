@@ -60,6 +60,47 @@ interface Step {
 
 /** The narrowest a list column may get, in its own ems: a name and an amount side by side. */
 const COLUMN_EM = 10
+/** Never drawn smaller than this on a TV; past it a step can't be read anyway. */
+const MIN_ZOOM = 0.2
+/** A phone scrolls, so it zooms only this far and lets the rest scroll (a tie of twelve would be 9 px names). */
+const MIN_ZOOM_PHONE = 0.75
+/** Below this width the ceremony is on a phone: lists stack and the screen scrolls (the stylesheet's breakpoint). */
+const PHONE = '(max-width: 999px)'
+/** A tie of several drawn smaller than this is set as a compact list instead: there a name is half the screen's tenth, whatever the zoom would leave. */
+const COMPACT_BELOW = 0.72
+
+/** `content` sits inside `room`, and no name runs out of its line (a name never breaks inside a word). */
+function holds(content: HTMLElement, room: HTMLElement): boolean {
+  const c = content.getBoundingClientRect()
+  const r = room.getBoundingClientRect()
+  if (c.height > r.height + 1 || c.width > r.width + 1) return false
+  return !Array.from(content.querySelectorAll<HTMLElement>('[data-name]')).some((n) => n.scrollWidth > n.clientWidth + 1)
+}
+
+/**
+ * The largest zoom, at most 1, at which `fits()` holds once `el` is drawn at
+ * it. Zoom re-flows what it scales (a grid's rem minimums shrink with it, so
+ * more columns fit), so each guess is measured rather than derived from the
+ * unzoomed size: a single estimate drew a tie of twelve at a fifth of its
+ * room.
+ */
+function bestZoom(el: HTMLElement, prop: string, fits: () => boolean): number {
+  const at = (k: number) => {
+    el.style.setProperty(prop, k >= 0.999 ? '1' : k.toFixed(3))
+    return fits()
+  }
+  if (at(1)) return 1
+  let lo = window.matchMedia(PHONE).matches ? MIN_ZOOM_PHONE : MIN_ZOOM
+  let hi = 1
+  if (!at(lo)) return lo
+  for (let i = 0; i < 7; i++) {
+    const mid = (lo + hi) / 2
+    if (at(mid)) lo = mid
+    else hi = mid
+  }
+  at(lo)
+  return lo
+}
 
 /**
  * A list that pages to the screen instead of scrolling: as many columns as fit
@@ -100,9 +141,12 @@ function PagedList({ rows, page, onPages }: { rows: ListRow[]; page: number; onP
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const perPage = fit ? fit.perColumn * fit.columns : rows.length
+  const perPage = Math.max(1, fit ? fit.perColumn * fit.columns : rows.length)
   const pages = Math.max(1, Math.ceil(rows.length / perPage))
-  useEffect(() => onPages(pages), [pages, onPages])
+  // Before paint, with the reveal: a second press right after it pages the list
+  // instead of finding one page and leaving the step (a passive effect reported
+  // it a task later, and a quick clicker skipped every page after the first).
+  useLayoutEffect(() => onPages(pages), [pages, onPages])
   const at = Math.min(page, pages - 1)
   const shown = rows.slice(at * perPage, at * perPage + perPage)
   // Balanced: twelve people as two columns of six, not nine and three.
@@ -240,17 +284,20 @@ export function CeremonyScreen() {
           ),
           figure: formatMoney(s.amount),
         })),
-        list: payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount) })),
+        // Nobody has cashed yet (no scores): the slots alone, not an empty list.
+        list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount) })) : undefined,
       })
     }
     const people = snapshot.players.map((p) => state.money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
-    out.push({
-      id: 'money',
-      title: C.steps.money,
-      icon: <IconReceipt size={64} />,
-      winners: [],
-      list: people.map((p) => ({ key: p.playerId, name: nameOf(p.playerId), figure: formatSignedMoney(p.net), under: p.net < 0 })),
-    })
+    if (people.length) {
+      out.push({
+        id: 'money',
+        title: C.steps.money,
+        icon: <IconReceipt size={64} />,
+        winners: [],
+        list: people.map((p) => ({ key: p.playerId, name: nameOf(p.playerId), figure: formatSignedMoney(p.net), under: p.net < 0 })),
+      })
+    }
     return out
   }, [data])
 
@@ -278,14 +325,17 @@ export function CeremonyScreen() {
   const next = () => (revealed && shownPage < pages - 1 ? setPage(shownPage + 1) : go(1))
   /** «Anterior»: the list's previous page, else the previous step. */
   const prev = () => (revealed && shownPage > 0 ? setPage(shownPage - 1) : go(-1))
+  /** The next beat: reveal this step, its list's next page, the next step. «Siguiente» and the keys both do it. */
+  const forward = () => (idx >= 0 && idx < steps.length && !revealed ? setRevealed(true) : next())
   /*
    * A keyboard or a presentation clicker runs the show: →, PageDown, Space or
-   * Enter is the next beat (reveal this step, its list's next page, the next
-   * step), ← or PageUp goes back. Space and Enter on a focused button are that
-   * button's own press. A held key doesn't race through the reveals.
+   * Enter is the next beat, ← or PageUp goes back. Space and Enter on a focused
+   * button are that button's own press, and «Siguiente» is the same beat, so a
+   * mouse click that leaves it focused never turns Space into a skip. A held
+   * key doesn't race through the reveals.
    */
   const keys = useRef({ forward: () => {}, back: () => {} })
-  keys.current = { forward: () => (idx >= 0 && idx < steps.length && !revealed ? setRevealed(true) : next()), back: prev }
+  keys.current = { forward, back: prev }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
@@ -302,22 +352,31 @@ export function CeremonyScreen() {
   }, [])
 
   /*
-   * A step without a list that would not fit (a long name that wraps, a tie
-   * of three, the «provisional» line taking a row) is drawn a little smaller
-   * instead of scrolling: `--fit` zooms the reveal to the room it has.
+   * Nothing scrolls on a TV, so what would not fit is drawn smaller: a step
+   * without a list zooms its whole reveal to the room under the title
+   * (`--fit`: a long name, a tie of three, the «provisional» line taking a
+   * row), and beside a list the winner's column zooms to its height (`--wfit`:
+   * a tie for the snake's gold, four tied for a contest). A name never breaks
+   * inside a word; it is drawn smaller first. A tie of many that would end up
+   * too small to read is set as a compact list instead (VIS-06).
    */
   const body = useRef<HTMLDivElement>(null)
   // The step's own area: while the last step leaves, both are on the page.
   const areaOf = (id: string | undefined) => (id ? body.current?.querySelector<HTMLElement>(`[data-area="${id}"]`) : null) ?? null
   const [areaSize, setAreaSize] = useState('')
+  /** The step whose winners are set as a compact list. */
+  const [compact, setCompact] = useState<string | null>(null)
   useLayoutEffect(() => {
-    const el = areaOf(step?.id)
-    const reveal = el?.querySelector<HTMLElement>('[data-fit]')
-    if (!el || !reveal) return
-    el.style.setProperty('--fit', '1')
-    const k = Math.min(1, el.clientHeight / Math.max(1, reveal.offsetHeight))
-    el.style.setProperty('--fit', k < 0.995 ? k.toFixed(3) : '1')
-  }, [step?.id, revealed, areaSize, data])
+    const area = areaOf(step?.id)
+    const reveal = area?.querySelector<HTMLElement>('[data-reveal]')
+    if (!step || !area || !reveal) return
+    const winners = reveal.querySelector<HTMLElement>('[data-winners]')
+    let k = 1
+    if (reveal.hasAttribute('data-fit')) k = bestZoom(area, '--fit', () => holds(reveal, area))
+    // Beside a list, on a screen wide enough to put them side by side.
+    else if (winners && getComputedStyle(reveal).display === 'grid') k = bestZoom(winners, '--wfit', () => holds(winners, reveal))
+    if (k < COMPACT_BELOW && step.winners.length > 1 && compact !== step.id) setCompact(step.id)
+  }, [step, revealed, areaSize, data, compact])
   useLayoutEffect(() => {
     const el = areaOf(step?.id)
     if (!el) return
@@ -346,7 +405,8 @@ export function CeremonyScreen() {
       </header>
       {!state.tournamentFinal && <p className={styles.warn}>{C.notFinal}</p>}
 
-      <div ref={body} className={styles.body}>
+      {/* On a phone a long step scrolls: keyboard users reach it (axe: scrollable-region-focusable). */}
+      <div ref={body} className={styles.body} tabIndex={0} role="region" aria-label={step?.title ?? C.title}>
         {/* The next view comes in while the last one leaves, so the stage is never blank between steps (MOT-01). */}
         <AnimatePresence mode="popLayout" initial={false}>
           {idx < 0 && (
@@ -367,9 +427,9 @@ export function CeremonyScreen() {
                     {C.reveal}
                   </button>
                 ) : (
-                  <div className={styles.reveal} data-split={((step.winners.length > 0 || !!step.aside) && !!step.list) || undefined} data-list={!!step.list || undefined} data-fit={!step.list || undefined}>
+                  <div data-reveal className={styles.reveal} data-split={((step.winners.length > 0 || !!step.aside) && !!step.list) || undefined} data-list={!!step.list || undefined} data-fit={!step.list || undefined}>
                     {step.winners.length > 0 && (
-                      <div className={styles.winners} data-many={step.winners.length > 1 || undefined}>
+                      <div data-winners className={styles.winners} data-many={step.winners.length > 1 || undefined} data-compact={compact === step.id || undefined}>
                         {step.winners.map((w, i) => {
                           const from = i * REVEAL.nextWinner
                           return (
@@ -379,7 +439,7 @@ export function CeremonyScreen() {
                                   <Avatar key={pid} name={byId.get(pid)?.displayName ?? '?'} url={byId.get(pid)?.avatarUrl} size="lg" honoree={byId.get(pid)?.isHonoree} />
                                 ))}
                               </div>
-                              <motion.span className={styles.winnerLine} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}>
+                              <motion.span data-name className={styles.winnerLine} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}>
                                 {w.line}
                               </motion.span>
                               {w.sub && (
@@ -443,7 +503,7 @@ export function CeremonyScreen() {
           {C.prev}
         </button>
         <span className={styles.progress}>{idx >= 0 ? `${Math.min(idx + 1, steps.length)} / ${steps.length}` : ''}</span>
-        <button className="btn btn--secondary" type="button" disabled={idx >= steps.length} onClick={next}>
+        <button className="btn btn--secondary" type="button" disabled={idx >= steps.length} onClick={forward}>
           {C.next}
         </button>
       </footer>

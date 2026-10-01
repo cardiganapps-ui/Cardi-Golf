@@ -4,13 +4,19 @@
  *   48 px step title, a champion card a fifth of the screen), in the event's
  *   accent, the figures on plates, and every step fits a 16:9 screen: a long
  *   list pages to it (60 people) instead of scrolling.
+ *   Ties and long names fit too: a tie beside a list zooms the winner's
+ *   column, a tie of many is a compact list, and a name never breaks inside
+ *   a word.
  * - UX-18: a keyboard or a presentation clicker runs the whole show, one key
- *   per beat; Space on a focused button is that button's press, not two beats.
+ *   per beat; Space on a focused button is that button's press, not two beats,
+ *   and «Siguiente» is the same beat as the keys. A second press right after a
+ *   reveal pages the list instead of leaving the step.
  * - MOT-23: the champion's reveal is a sequence (the name, then the figures
  *   counting up, then the trophy line), not everything at once.
  * - MOT-01: no blank stage and no bounce between steps.
  * - A11Y-15: the focus ring shows on the board green.
  */
+import AxeBuilder from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import { t } from '../../src/i18n/es-MX'
 import { expect, test } from './base'
@@ -65,12 +71,26 @@ async function fits(page: Page) {
     const bottom = box?.getBoundingClientRect().bottom ?? Infinity
     const a = area?.getBoundingClientRect()
     const r = reveal?.getBoundingClientRect()
+    // A name broken inside a word: one of its words on two lines.
+    const broken = Array.from(reveal?.querySelectorAll('[data-name]') ?? []).filter((n) => {
+      const text = n.firstChild
+      if (!text?.textContent) return false
+      let at = 0
+      return text.textContent.split(' ').some((word) => {
+        const range = document.createRange()
+        range.setStart(text, at)
+        range.setEnd(text, at + word.length)
+        at += word.length + 1
+        return new Set(Array.from(range.getClientRects()).map((x) => Math.round(x.top))).size > 1
+      })
+    })
     return {
       over: body.scrollHeight - body.clientHeight,
       wide: document.documentElement.scrollWidth - innerWidth,
       spill: a && r ? Math.max(0, a.top - r.top, r.bottom - a.bottom) : 0,
       cut: box ? Array.from(box.querySelectorAll('[class*="_listRow_"]')).filter((row) => row.getBoundingClientRect().bottom > bottom + 0.5).length : 0,
       zoom: area?.style.getPropertyValue('--fit') || '1',
+      broken: broken.map((n) => n.textContent),
     }
   })
 }
@@ -157,11 +177,12 @@ for (const [w, h] of ROOMS) {
     expect(now.waiting).toBe(true)
     now = await beat(page, 'PageUp')
     expect(now.progress).toBe(`${total - 1} / ${total}`)
-    // Space on a focused «Siguiente» is that button's press: one step, not a reveal and a step.
+    // Space on a focused «Siguiente» is that button's press, and the button is the same beat as the keys:
+    // it reveals the step waiting, rather than skipping it (and is not a reveal and a step).
     await page.getByRole('button', { name: C.next }).focus()
     now = await beat(page, ' ')
-    expect(now.progress).toBe(`${total} / ${total}`)
-    expect(now.waiting).toBe(true)
+    expect(now.progress).toBe(`${total - 1} / ${total}`)
+    expect(now.waiting).toBe(false)
     expect(pageErrors).toEqual([])
   })
 }
@@ -306,4 +327,136 @@ test('the focus ring shows on the board green, and stays graphite on paper (A11Y
   await page.goto(`/t/_/${FIXTURE}/dinero`, { waitUntil: 'networkidle' })
   await page.keyboard.press('Tab')
   expect(await page.evaluate(() => getComputedStyle(document.activeElement!).outlineColor)).toBe('rgb(27, 33, 29)')
+})
+
+/**
+ * Where a tie or a long name meets the room (the verifier's walk): a four-way
+ * tie beside its list, a winner whose name is wider than its column, a tie of
+ * twelve. Each step fits with nothing scrolling or spilling, and no name
+ * breaks inside a word («Maurici / o»).
+ */
+for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
+  for (const fixture of ['friends8', 'auction12', 'bracket8']) {
+    test(`${fixture} at ${w}×${h}: ties and long names fit, and no name breaks inside a word`, async ({ page, pageErrors }) => {
+      test.setTimeout(120_000)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.setViewportSize({ width: w, height: h })
+      const vh = h / 100
+      await page.goto(`/t/_/${fixture}/ceremonia`, { waitUntil: 'networkidle' })
+      let revealed = 0
+      for (let i = 0; i < 80; i++) {
+        const now = await beat(page, 'ArrowRight')
+        if (now.title === C.done) break
+        if (now.waiting) continue
+        revealed++
+        const label = `step «${now.title}»`
+        const fit = await fits(page)
+        expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
+        expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
+        expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+        expect(fit.broken, `${label}: a name broken inside a word`).toEqual([])
+        // Drawn smaller to fit, but still read from across the room: a name's letters at least 4 % of the screen.
+        const names = await page.locator('[data-name]').evaluateAll((els) =>
+          els.map((el) => {
+            const range = document.createRange()
+            range.setStart(el.firstChild!, 0)
+            range.setEnd(el.firstChild!, 1)
+            return range.getBoundingClientRect().height
+          }),
+        )
+        for (const size of names) expect(size, `${label}: a name`).toBeGreaterThanOrEqual(4 * vh)
+        // Nothing reads «NaN» (an empty list once counted its pages as NaN).
+        expect(await page.locator('body').textContent(), label).not.toContain('NaN')
+      }
+      expect(revealed).toBeGreaterThan(0)
+      expect(pageErrors).toEqual([])
+    })
+  }
+}
+
+test('a second press right after a reveal pages the list, never leaving the step (UX-18)', async ({ page }) => {
+  test.setTimeout(180_000)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/t/_/large60/ceremonia', { waitUntil: 'networkidle' })
+  // To the money summary, waiting for «Revelar»: its list takes several pages.
+  for (let i = 0; i < 150; i++) {
+    const now = await beat(page, 'ArrowRight')
+    if (now.title === C.steps.money && now.waiting) break
+  }
+  expect((await where(page)).title).toBe(C.steps.money)
+  // A clicker's double press: the reveal, then the next press a moment later (a task, a frame, a microtask).
+  for (const gap of ['task', 'frame', 'microtask'] as const) {
+    await page.evaluate(async (gap) => {
+      const press = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }))
+      press()
+      if (gap === 'task') await new Promise((r) => setTimeout(r, 0))
+      else if (gap === 'frame') await new Promise((r) => requestAnimationFrame(() => r(null)))
+      else await Promise.resolve()
+      press()
+    }, gap)
+    await expect.poll(async () => (await where(page)).settled).toBe(true)
+    const now = await where(page)
+    expect(now.title, `after a ${gap}`).toBe(C.steps.money)
+    expect(now.range, `after a ${gap}`).toMatch(/^\d+–\d+ de 60$/)
+    expect(now.range, `after a ${gap}`).not.toMatch(/^1–/)
+    // Back to the step waiting: the first page, the step before (waiting), its reveal, then this step again.
+    await beat(page, 'ArrowLeft')
+    await beat(page, 'ArrowLeft')
+    await beat(page, 'ArrowRight')
+    const back = await beat(page, 'ArrowRight')
+    expect(back.title).toBe(C.steps.money)
+    expect(back.waiting).toBe(true)
+  }
+})
+
+test('after a mouse click on «Siguiente», Space reveals the next step instead of skipping it (UX-18)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
+  const next = page.getByRole('button', { name: C.next })
+  // The mouse starts the show from «Siguiente», which keeps the focus.
+  await next.click()
+  await expect.poll(async () => (await where(page)).settled).toBe(true)
+  let now = await where(page)
+  expect(now.progress).toMatch(/^1 \//)
+  expect(now.waiting).toBe(true)
+  // Space on it is the next beat: the reveal of step 1, not step 2 unrevealed.
+  await page.keyboard.press(' ')
+  await expect.poll(async () => (await where(page)).waiting).toBe(false)
+  now = await where(page)
+  expect(now.progress).toMatch(/^1 \//)
+  await page.keyboard.press('Enter')
+  await expect.poll(async () => (await where(page)).progress).toMatch(/^2 \//)
+  expect((await where(page)).waiting).toBe(true)
+})
+
+test('on a phone a long step scrolls, and the scrolling region can be reached by keyboard (axe)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 393, height: 852 })
+  await page.goto('/t/_/friends8/ceremonia', { waitUntil: 'networkidle' })
+  let scrolled = false
+  for (let i = 0; i < 40 && !scrolled; i++) {
+    const now = await beat(page, 'ArrowRight')
+    if (now.title === C.done) break
+    if (now.waiting) continue
+    scrolled = (await fits(page)).over > 1
+  }
+  expect(scrolled).toBe(true)
+  const results = await new AxeBuilder({ page }).withRules(['scrollable-region-focusable']).analyze()
+  expect(results.violations.map((v) => v.id)).toEqual([])
+})
+
+test('the auction console keeps the yellow focus ring on its board-green lot card (A11Y-15)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto('/t/_/auction12/admin/calcutta', { waitUntil: 'networkidle' })
+  const card = page.locator('[class*="_lotCard_"]').first()
+  await expect(card).toBeVisible()
+  // The card's ring is the board's yellow, not the paper's graphite.
+  expect(await card.evaluate((el) => getComputedStyle(el).getPropertyValue('--focus-ring').trim())).toBe(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--board-accent').trim()))
+  const control = card.locator('button, a').first()
+  if (await control.count()) {
+    await control.focus()
+    expect(await control.evaluate((el) => getComputedStyle(el).outlineColor)).toBe(BOARD_ACCENT)
+  }
 })

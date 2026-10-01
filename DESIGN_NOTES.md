@@ -185,4 +185,12 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - **Plates.** The figures of a reveal (points, money, holes) sit on plates, the board's device from the direction; the champion's are the leader's yellow.
 - **The event's accent** is set on the stage like every other screen of the tournament.
 - **The reveal is a sequence** (`REVEAL` in `src/design/motion.ts`): the faces, the name 0.25 s later, the figures counting up from 0.5 s (`CountUp`, 0.9 s), and the champion's trophy line with one burst of confetti at 1.4 s. Reduced motion: everything at once, no count, no confetti. Steps cross-fade (`AnimatePresence mode="popLayout"`), so the stage is never blank, and every `motion` element names its transition (`motion.test.ts` fails one that doesn't).
-- **The focus ring is a token**, `--focus-ring` (graphite); board surfaces (TV, Ceremonia, `.card--deep`) set it to `--board-accent`, since graphite on board green is 1.1:1.
+- **The focus ring is a token**, `--focus-ring` (graphite); board surfaces (TV, Ceremonia, `.card--deep`, the auction console's lot card) set it to `--board-accent`, since graphite on board green is 1.1:1.
+- **Ties and long names, after the verifier's pass.**
+  - A name breaks between words only. A name too long for its line, or a tie too tall for its room, is drawn smaller first. The zoom is searched at the zoomed layout, because zoom re-flows what it scales: a single estimate drew a tie of twelve at a fifth of its room.
+  - Beside a list, the winner's column fits its own height (`--wfit`).
+  - A tie of several that would end below 0.72 is set as a compact list: one line per winner, the face small, the name at 5vh.
+  - A phone zooms only to 0.75 and lets the rest scroll; the scrolling body is a labelled region that keyboard users can reach.
+  - An empty list (nobody paid yet) is left out instead of reading «NaN».
+- **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.
+- **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either.

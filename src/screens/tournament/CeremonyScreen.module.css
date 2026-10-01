@@ -165,6 +165,7 @@
 }
 .avatars {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 1.5vw;
 }
@@ -178,7 +179,8 @@
   font-weight: 600;
   font-size: clamp(32px, min(10vh, 9vw), 140px);
   line-height: var(--lh-tight);
-  overflow-wrap: anywhere;
+  /* Breaks between words only: a name too long for its line is drawn smaller (the screen's fit), never «Maurici / o». */
+  overflow-wrap: normal;
 }
 .winnerSub {
   display: flex;
@@ -280,6 +282,45 @@
 .neg {
   color: var(--board-under);
 }
+/*
+ * A tie of many, past what zoom can make readable (twelve tied before any
+ * score, a five-way last place in a big field): one line per winner, in
+ * columns, the face small and the name and figures beside it.
+ */
+.winners[data-compact] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  gap: 1vh 2vw;
+}
+.winners[data-compact] .winner {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  text-align: start;
+  gap: 0.6vh 1.2vw;
+  padding: 1vh 1.2vw;
+}
+.winners[data-compact] .avatars {
+  flex-wrap: nowrap;
+}
+.winners[data-compact] .avatars :global(.avatar--lg) {
+  width: clamp(40px, 7vh, 96px);
+  height: clamp(40px, 7vh, 96px);
+  font-size: clamp(1rem, 2.8vh, 2.4rem);
+}
+.winners[data-compact] .winnerLine {
+  /* The room left beside the face, but never less than the name: a long one goes to its own line. */
+  flex: 1 1 auto;
+  font-size: clamp(20px, min(5vh, 5vw), 72px);
+}
+.winners[data-compact] .winnerSub {
+  justify-content: flex-start;
+}
+.winners[data-compact] .plate {
+  font-size: clamp(16px, 3.2vh, 46px);
+}
+.winners[data-compact] .trophy {
+  font-size: clamp(14px, 2.6vh, 38px);
+}
 /* A phone stacks the winner over the list: the list grows and the screen scrolls, rather than paging a row at a time. */
 @media (max-width: 999px) {
   .reveal[data-list],
@@ -290,6 +331,10 @@
   }
   .listBox {
     overflow: visible;
+  }
+  /* Nothing is fitted where the screen scrolls: a name longer than a phone is wide may break. */
+  .reveal[data-list] .winnerLine {
+    overflow-wrap: anywhere;
   }
 }
 /* A winner beside the people it is about: the snake's holder and the totals, a game's winner and its money. */
@@ -306,6 +351,8 @@
   }
   .reveal[data-split] .winners {
     grid-template-columns: 1fr;
+    /* The winner's column, drawn smaller to the room beside the list when a tie or a long name would not fit (--wfit, set by the screen). */
+    zoom: var(--wfit, 1);
   }
   /* The name keeps its size; the face gives way to the list. */
   .reveal[data-split] .avatars :global(.avatar--lg) {

@@ -84,4 +84,12 @@ describe('motion tokens', () => {
     }
     expect(offenders).toEqual([])
   })
+  it('the show surfaces never go blank between views (MOT-01)', () => {
+    // `mode="wait"` takes the last view out before the next comes in: the TV
+    // showed an empty board for 0.2 s at every rotation. The next view comes
+    // in while the last one leaves.
+    const screens = join(new URL('../screens/tournament', import.meta.url).pathname)
+    const offenders = ['TvScreen.tsx', 'CeremonyScreen.tsx'].filter((f) => /<AnimatePresence[^>]*mode="wait"/.test(readFileSync(join(screens, f), 'utf8')))
+    expect(offenders).toEqual([])
+  })
 })
