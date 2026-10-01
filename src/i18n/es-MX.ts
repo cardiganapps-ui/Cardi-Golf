@@ -875,7 +875,6 @@ export const t = {
     rivalryLine: (name: string, n: number) => (n === 0 ? `Rivalidad con ${name}: parejos` : n > 0 ? `Rivalidad con ${name}: recibes ${n}` : `Rivalidad con ${name}: das ${-n}`),
   },
   legal: {
-    updated: 'Última actualización: 1 de octubre de 2026',
     /** Where data is collected (TRUST-05): the notice and the terms, a tap away, before anything is saved. */
     consent: {
       start: 'Al continuar aceptas los ',
@@ -906,30 +905,44 @@ export const t = {
       end: '.',
     },
     newTab: '(se abre en otra pestaña)',
-    contact: 'Dudas: golf@cardigan.mx',
+    /** Both pages end on it. golf@cardigan.mx only sends the code emails: it has no mailbox yet (TRUST-01). */
+    contact: 'Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.',
     back: 'Volver a Polo',
+    /**
+     * Each document has its own version and date, and changes them only when
+     * its own text changes: legalNotice.test.ts holds each version's
+     * fingerprint, so an edit without a new version fails. Every sentence is
+     * checked against the migrations, the API routes and the screens; what
+     * the product cannot promise yet (an anonymizing deletion, a mailbox) is
+     * said as it is today.
+     */
     privacy: {
       title: 'Aviso de privacidad',
+      version: '2026-10-01',
+      updated: 'Última actualización: 1 de octubre de 2026',
       sections: [
-        ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola (golf@cardigan.mx) en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección técnica que tu navegador da para mandarte notificaciones. En cada torneo, también lo que cada quien paga, gana y debe.'],
-        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados, mostrarte a ti y a la gente con la que juegas lo que les corresponde, y mandarte avisos que tú activaste. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
-        ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si tu perfil aparece en búsquedas: viene prendido y lo puedes apagar.'],
+        ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN y el historial de cambios a sus golpes, jugadores, grupos y pagos.'],
+        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte y corregir errores. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
+        ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si tu perfil aparece en búsquedas: viene prendido y lo puedes apagar. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
+        ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si un amigo te agrega a una Ronda rápida, tu nombre completo, tu foto y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú.'],
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código. El PIN no se guarda tal cual sino como una huella (hash): nadie lo ve en la app, ni el Comité, que solo puede cambiarlo.'],
-        ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que juegan ese torneo, en Dinero, y cualquiera de ellos puede compartirlo, por ejemplo en WhatsApp. En tu perfil, el resumen de tu dinero de torneos pasados solo lo ves tú (y el Comité de cada torneo, el de ese torneo). Los avisos nunca llevan montos.'],
+        ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo sale en tu perfil, pero cada cifra sigue a la vista de su torneo en Dinero. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; si el torneo está Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Lo usa para dar soporte y corregir errores.'],
-        ['Dónde viven', 'En Supabase (base de datos y archivos), Vercel (la app), Resend (los correos con código) y Cloudflare R2 (respaldos cifrados cada noche). Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. Los avisos pasan por el servicio de notificaciones de tu navegador (Apple, Google o Mozilla).'],
-        ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil, y solo para crear y reconocer tu cuenta. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
-        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, apagar los avisos en cada teléfono y pedir que borremos tu cuenta y tus datos escribiendo a golf@cardigan.mx. Los resultados de torneos ya jugados pueden quedarse sin tu nombre para que los de los demás sigan cuadrando.'],
+        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (la app) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) se guardan como archivos que abre cualquiera que tenga su enlace. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos; Cloudflare cifra lo que guarda. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
+        ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
+        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, sacarlo de las búsquedas y apagar los avisos en cada teléfono. La app todavía no tiene cómo borrar tu cuenta ni cómo descargar tus datos: borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes, así que hoy hay que pedírselo a él directamente. Al borrarla se van tu perfil, tus amistades, tus rivalidades y tus avisos, y sales de tus crews; pero tu nombre, tu foto, tus golpes y tu dinero como jugador se quedan en los torneos que jugaste, en su historial de cambios y en los respaldos, y tu correo queda en el registro del borrado.'],
       ] as Array<[string, string]>,
     },
     terms: {
       title: 'Términos de uso',
+      version: '2026-10-01',
+      updated: 'Última actualización: 1 de octubre de 2026',
       sections: [
         ['El servicio', 'Polo es gratis y se ofrece tal cual, para grupos de amigos. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.'],
-        ['El dinero', 'Polo no cobra ni mueve dinero: solo lleva la cuenta de lo que los jugadores acuerdan entre ellos. Cada grupo es responsable de sus apuestas y de pagarlas, y de que sean legales donde juegan. El Comité de cada torneo tiene la última palabra sobre sus reglas y resultados.'],
+        ['El dinero', 'Polo no cobra ni mueve dinero: solo lleva la cuenta de lo que los jugadores acuerdan entre ellos. Cada grupo es responsable de sus apuestas y de pagarlas, y de que sean legales donde juegan. El Comité de cada torneo decide sus reglas y sus resultados, y quien opera Polo también puede corregir un error en cualquier torneo.'],
         ['Tu cuenta', 'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Podemos suspender cuentas que lo hagan.'],
-        ['Tu contenido', 'Lo que subes (fotos, nombres, tarjetas) sigue siendo tuyo; nos das permiso de guardarlo y mostrarlo dentro de la app a quien corresponda.'],
+        ['Tu contenido', 'Lo que subes o escribes (fotos, nombres, tarjetas) sigue siendo tuyo. Nos das permiso de guardarlo, de mostrarlo a quien dice el aviso de privacidad y, si es la foto o el PDF de la tarjeta de un campo, de mandarlo a Anthropic para leerlo.'],
         ['Privacidad', 'Cómo tratamos tus datos está en el aviso de privacidad.'],
       ] as Array<[string, string]>,
     },

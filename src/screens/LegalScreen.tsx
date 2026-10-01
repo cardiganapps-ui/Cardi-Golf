@@ -18,7 +18,7 @@ export function LegalScreen({ doc }: { doc: 'privacy' | 'terms' }) {
       </Link>
       <div className={styles.head}>
         <h1>{page.title}</h1>
-        <p className={styles.help}>{L.updated}</p>
+        <p className={styles.help}>{page.updated}</p>
       </div>
       {page.sections.map(([heading, body]) => (
         <section key={heading} className={styles.section}>
