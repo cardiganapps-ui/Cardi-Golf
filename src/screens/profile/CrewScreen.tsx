@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, CopyButton, Segmented, ShareButton, Spinner, toast } from '../../components/ui'
+import { leaveSheetHistory } from '../../components/sheetHistory'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconChevronLeft, IconChevronRight } from '../../components/icons'
@@ -58,6 +59,8 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
       if (which === 'rotate') await rotateCrewCode(crew.id)
       else {
         await leaveCrew(crew.id)
+        // From the confirm sheet: its history entry goes first, so the replace lands on this page's entry (PWA-05).
+        await leaveSheetHistory()
         navigate('/crews', { replace: true })
         return
       }
