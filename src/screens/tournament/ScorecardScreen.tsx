@@ -5,7 +5,7 @@
  * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -28,6 +28,13 @@ import { useActiveRound, useMyGroup } from './useMyGroup'
 import styles from './ScorecardScreen.module.css'
 
 const S = t.card
+
+/** Taps on «Guardar hoyo» this soon after the hole changed are ignored: a double tap must not save the next hole (UX-02). */
+const SETTLE_MS = 700
+/** A save of untouched defaults this soon after the last save asks first. */
+const DOUBLE_SAVE_MS = 3000
+/** How long the last save stays in the save bar with its «Corregir». */
+const SAVED_NOTE_MS = 6000
 
 interface Draft {
   strokes: number
@@ -147,32 +154,79 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [askReason, setAskReason] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmDefaults, setConfirmDefaults] = useState(false)
   const touch = useRef<{ x: number; y: number } | null>(null)
   /** The saved values of the hole before the last save, for a real undo. */
   const undo = useRef<{ hole: number; drafts: Record<string, Draft>; wasPlayed: Record<string, boolean> } | null>(null)
-  const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason
+  /** Players whose steppers were changed on this hole: only they, and players the server has nothing for, are written (REL-05). */
+  const touched = useRef<Set<string>>(new Set())
+  /** When the hole on screen last changed, and when the last save went out: a second tap must not save the next hole (UX-02). */
+  const settledAt = useRef(0)
+  const lastSaveAt = useRef(-Infinity)
+  /** The last save, shown in the save bar instead of a toast over «Guardar hoyo» (PWA-01). */
+  const [savedNote, setSavedNote] = useState<{ hole: number; idx: number; canUndo: boolean; restored?: boolean } | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(savedTimer.current), [])
+  const showSaved = (note: NonNullable<typeof savedNote>) => {
+    clearTimeout(savedTimer.current)
+    setSavedNote(note)
+    savedTimer.current = setTimeout(() => setSavedNote(null), SAVED_NOTE_MS)
+  }
+  const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason || confirmDefaults
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
 
-  // Latest players and hole data for the effect below, which must run only when the hole
-  // changes (a realtime update must not wipe what is being typed).
-  const latest = useRef({ players, holeInfo })
+  // Latest players, hole data and drafts for the effect below: it runs when the hole
+  // changes or the server's values for it do, never on a keystroke.
+  const latest = useRef({ players, holeInfo, drafts })
   useEffect(() => {
-    latest.current = { players, holeInfo }
+    latest.current = { players, holeInfo, drafts }
   })
-  // (Re)initialize drafts when the hole changes: saved values or defaults (par, 2 putts).
-  useEffect(() => {
-    const { players, holeInfo } = latest.current
-    const next: Record<string, Draft> = {}
-    for (const p of players) {
+  /** What the server has for each player on the open hole; changes when a save lands, from this phone or another. */
+  const serverKey = players
+    .map((p) => {
       const h = holeInfo(p.id)
-      next[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : { strokes: h?.par ?? 4, putts: 2, pickedUp: false }
+      return h?.played ? `${p.id}:${h.gross}:${h.putts}:${h.pickedUp}` : `${p.id}:-`
+    })
+    .join('|')
+  const holeKey = `${round.id}|${group.id}|${hole}`
+  const shownHole = useRef('')
+  useEffect(() => {
+    const { players, holeInfo, drafts: current } = latest.current
+    const saved = (p: { id: string }): Draft | null => {
+      const h = holeInfo(p.id)
+      return h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : null
     }
-    setDrafts(next)
-    initialDrafts.current = JSON.stringify(next)
-  }, [hole, round.id, group.id])
+    if (shownHole.current !== holeKey) {
+      // A new hole: saved values or defaults (par, 2 putts), nothing touched yet.
+      shownHole.current = holeKey
+      touched.current = new Set()
+      settledAt.current = performance.now()
+      const next: Record<string, Draft> = {}
+      for (const p of players) next[p.id] = saved(p) ?? { strokes: holeInfo(p.id)?.par ?? 4, putts: 2, pickedUp: false }
+      setDrafts(next)
+      initialDrafts.current = JSON.stringify(next)
+      return
+    }
+    // Same hole, new values on the server: the other phone saved. Take them into
+    // every player nobody here has touched, so a save from this phone never
+    // writes a default over them (REL-05). What was typed here stays.
+    let next: Record<string, Draft> | null = null
+    const baseline = (JSON.parse(initialDrafts.current || '{}') as Record<string, Draft>) ?? {}
+    for (const p of players) {
+      const v = saved(p)
+      const d = current[p.id]
+      if (!v || touched.current.has(p.id) || (d && d.strokes === v.strokes && d.putts === v.putts && d.pickedUp === v.pickedUp)) continue
+      next = { ...(next ?? current), [p.id]: v }
+      baseline[p.id] = v
+    }
+    if (next) {
+      setDrafts(next)
+      initialDrafts.current = JSON.stringify(baseline)
+    }
+  }, [holeKey, serverKey])
   // An unsaved hole defers the "new version" reload offer (main.tsx).
   const initialDrafts = useRef('')
   useEffect(() => {
@@ -204,7 +258,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       return { ...cur, [c.id]: next }
     })
 
-  const setDraft = (pid: string, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
+  const setDraft = (pid: string, patch: Partial<Draft>) => {
+    touched.current.add(pid)
+    setDrafts((d) => ({ ...d, [pid]: { ...d[pid]!, ...patch } }))
+  }
 
   const idx = order.indexOf(hole)
   const goto = (i: number) => {
@@ -247,8 +304,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
 
   async function save(force = false) {
-    if (!canEdit) return
+    if (!canEdit || busy) return
     if (!force) {
+      // A second tap right after the hole changed is the first tap again, not a save of this hole.
+      if (performance.now() - settledAt.current < SETTLE_MS) return
+      // Nothing touched on a hole nobody has played, seconds after the last save: a double tap, or did all four make par?
+      const allDefaults = players.every((p) => !touched.current.has(p.id) && !holeInfo(p.id)?.played)
+      if (allDefaults && performance.now() - lastSaveAt.current < DOUBLE_SAVE_MS) {
+        setConfirmDefaults(true)
+        return
+      }
       const weird = validate()
       if (weird.length) {
         setConfirmWeird(weird)
@@ -256,6 +321,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       }
     }
     setConfirmWeird(null)
+    setConfirmDefaults(false)
     if (needsReason && reason.trim().length < 3) {
       setAskReason(true)
       return
@@ -270,9 +336,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     await commit()
   }
 
+  /** Writes the players in `values` and nobody else: a player left out keeps what the server has. */
   async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string) {
     for (const p of players) {
-      const d = values[p.id]!
+      const d = values[p.id]
+      if (!d) continue
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
       if (needsReason && signed(p.id)) await adminSaveScore(payload, reason.trim())
       else await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
@@ -295,8 +363,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       let celebrate = false
       const before: Record<string, Draft> = {}
       const wasPlayed: Record<string, boolean> = {}
+      // Only what this phone means to write: the players touched here, and the
+      // ones the server has nothing for yet (that is how an all-par hole stays
+      // one tap). A player the other phone already saved is left alone (REL-05).
+      const writes: Record<string, Draft> = {}
       for (const p of players) {
-        const d = drafts[p.id]!
+        if (touched.current.has(p.id) || !holeInfo(p.id)?.played) writes[p.id] = drafts[p.id]!
+      }
+      for (const p of players) {
+        const d = writes[p.id]
+        if (!d) continue
         const h = holeInfo(p.id)
         const sr = h?.strokesReceived ?? 0
         const pts = stablefordPoints(h?.par ?? par, sr, d.pickedUp ? null : d.strokes, d.pickedUp)
@@ -304,27 +380,18 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         wasPlayed[p.id] = !!h?.played
         before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
       }
-      await writeHole(drafts, hole, lastHoled)
+      await writeHole(writes, hole, lastHoled)
       undo.current = { hole: savedHole, drafts: before, wasPlayed }
+      lastSaveAt.current = performance.now()
       setTiebreak(null)
       if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
       }
       // Move on, and offer the way back instead of asking first: a real undo when the hole
-      // already had values (they are written back), "Corregir" when it was new.
-      const canUndo = players.every((p) => wasPlayed[p.id])
-      toast(S.savedHole(savedHole), {
-        label: canUndo ? t.common.undo : S.correct,
-        onClick: () => {
-          const u = undo.current
-          if (canUndo && u && u.hole === savedHole) {
-            undo.current = null
-            void writeHole(u.drafts, u.hole).then(() => toast(S.savedHole(u.hole)))
-          }
-          setView('hole')
-          goto(savedIdx)
-        },
-      })
+      // already had values (they are written back), "Corregir" when it was new. It lives in
+      // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
+      const written = Object.keys(writes)
+      showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
       if (savedIdx < order.length - 1) goto(savedIdx + 1)
       else setView('grid')
     } catch (e) {
@@ -340,10 +407,40 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     toast(S.signed)
   }
 
+  function undoLast() {
+    const note = savedNote
+    if (!note || note.restored) return
+    setSavedNote(null)
+    const u = undo.current
+    if (note.canUndo && u && u.hole === note.hole) {
+      undo.current = null
+      void writeHole(u.drafts, u.hole).then(() => showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true }))
+    }
+    setView('hole')
+    goto(note.idx)
+  }
+
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
   const syncText = !online ? t.sync.offlineShort : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : pending > 0 ? t.sync.pending(pending) : t.sync.synced
   const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0
+  /** The sync state in a few words, for the one-line saved note (a long error waits until the note goes). */
+  const syncShort = !online ? t.sync.offlineShort : rejected.length ? t.sync.rejected(rejected.length) : pending > 0 ? t.sync.pending(pending) : null
+  /** The line under «Guardar hoyo»: the last save with its way back for a few seconds, else the sync state. */
+  const statusLine = (fallback: ReactNode) =>
+    savedNote ? (
+      <span className={styles.savedLine} role="status">
+        <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : S.savedHole(savedNote.hole)}</span>
+        {!savedNote.restored && (
+          <button type="button" className={styles.savedAction} onClick={undoLast}>
+            {savedNote.canUndo ? t.common.undo : S.correct}
+          </button>
+        )}
+        {syncShort && <span className={`${styles.savedSync} ${styles.saveStatusWarn}`}>{syncShort}</span>}
+      </span>
+    ) : (
+      fallback
+    )
 
   const front = order.filter((h) => h <= 9).sort((a, b) => a - b)
   const back = order.filter((h) => h > 9).sort((a, b) => a - b)
@@ -468,7 +565,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             </table>
           </div>
           <div className={styles.gridNotes}>
-            <span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>
+            {statusLine(<span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>)}
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
@@ -604,7 +701,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               {busy ? t.common.saving : idx === order.length - 1 ? S.saveLast : S.save}
             </button>
             {canEdit ? (
-              <span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>
+              statusLine(<span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>)
             ) : (
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
@@ -624,6 +721,20 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               </button>
             )
           })}
+        </div>
+      </Sheet>
+
+      <Sheet open={confirmDefaults} onClose={() => setConfirmDefaults(false)} title={S.allDefaultsTitle(hole)}>
+        <div className="stack">
+          <p className="help">{S.allDefaultsHint}</p>
+          <div className="row">
+            <button className="btn btn--secondary" type="button" onClick={() => setConfirmDefaults(false)}>
+              {S.allDefaultsBack}
+            </button>
+            <button className="btn btn--primary grow" type="button" onClick={() => void save(true)}>
+              {S.allDefaultsConfirm}
+            </button>
+          </div>
         </div>
       </Sheet>
 

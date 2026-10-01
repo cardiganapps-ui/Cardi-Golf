@@ -29,7 +29,9 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 
 1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.)
 2. Cada grupo abre **Tarjeta**: sale su grupo y "Llevas la tarjeta de: [pareja rival]". Cualquiera del grupo puede capturar a los cuatro.
-3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos.
+3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. Los demás teléfonos ven el cambio en menos de 2 segundos. Abajo del botón queda "Hoyo N guardado · Corregir" unos segundos para regresar.
+   - Con dos teléfonos en el grupo, cada uno guarda solo a los jugadores que tocó (y a los que nadie ha capturado todavía): lo que ya guardó el otro teléfono no se pisa con el par. Si el otro guarda mientras tienes el hoyo abierto, sus valores aparecen solos.
+   - Un doble toque no guarda el hoyo siguiente: el segundo toque no cuenta, y si guardas un hoyo sin tocar nada segundos después del anterior, la app pregunta "¿Guardar el N con todos en par?".
 4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar.
 
 ## 3. Corregir un score
