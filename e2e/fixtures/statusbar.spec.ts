@@ -36,3 +36,19 @@ for (const path of ['', 'tarjeta', 'juegos', 'dinero', 'mas']) {
     await expect(page.getByRole('navigation', { name: t.common.sections })).toBeVisible()
   })
 }
+
+for (const path of ['tv', 'ceremonia']) {
+  test(`with a 59 px top inset, the ${path} board stays above the band and below the bar (PWA-02)`, async ({ page }) => {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 59, bottom: 34 } })
+    await page.setViewportSize({ width: 393, height: 852 })
+    await page.goto(`/t/_/full12-finished/${path}`, { waitUntil: 'networkidle' })
+    await page.waitForTimeout(500)
+    const heading = page.getByRole('heading').first()
+    const box = (await heading.boundingBox())!
+    expect(Math.round(box.y), 'heading top').toBeGreaterThanOrEqual(59)
+    // What is drawn at the heading's centre is the heading: the band does not cover the board.
+    const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('h1, h2') !== null, { x: box.x + Math.min(20, box.width / 2), y: box.y + box.height / 2 })
+    expect(hit).toBe(true)
+  })
+}
