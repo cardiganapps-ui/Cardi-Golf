@@ -52,7 +52,8 @@ export const strokePlayFormat: MainFormat = {
         'Se cuentan todos los golpes de la vuelta. Gana quien menos haga.',
         net ? `Cada quien descuenta sus golpes de ventaja${pct === 100 ? '' : `, jugando al ${pct}% del hándicap`}.` : 'Sin hándicap: golpes tal cual, palo contra palo.',
         'Si levantas, el hoyo cuenta como doble bogey neto (par más tus golpes de ventaja, más dos).',
-        'La tabla muestra cuántos golpes llevas sobre o bajo par.',
+        'La tabla muestra cuántos golpes llevas sobre o bajo par, y ordena por eso: no importa en qué hoyo vaya cada quien.',
+        'Al cierre, una tarjeta incompleta queda después de las completas.',
       ],
     }
   },
@@ -89,8 +90,9 @@ export const strokePlayFormat: MainFormat = {
       countback[e.id] = pr
         ? countbackFrom(
             pr.holes.flatMap((h) => {
+              // To par, so a tie between cards of different lengths (live) or tees compares like with like.
               const s = holeStrokes(h, net)
-              return s == null ? [] : [{ hole: h.hole, value: s }]
+              return s == null ? [] : [{ hole: h.hole, value: s - h.par }]
             }),
             pr.holes.length || 18,
             false,

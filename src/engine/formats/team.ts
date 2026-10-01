@@ -19,23 +19,27 @@ type Mode = 'scramble' | 'bestBall' | 'shamble'
 
 const MODE_NAME: Record<Mode, string> = { scramble: 'Scramble', bestBall: 'Mejor bola', shamble: 'Shamble' }
 
-/** The team's ball on one hole: fewest strokes, or most points. */
+/**
+ * The team's ball on one hole: most points, or the best score *to par*. Each
+ * member plays his own tee, and a par 5 for one may be a par 4 for another,
+ * so the ball that counts is the lowest strokes − par, carried with its own
+ * par. (Taking the fewest strokes against whichever par came last made the
+ * result depend on the order the team was listed in.)
+ */
 function teamHole(ctx: FormatContext, roundId: Id, team: Entrant, hole: number, net: boolean, points: boolean): { strokes: number; par: number } | { points: number } | null {
-  const strokes: number[] = []
-  const pts: number[] = []
-  let par = 0
+  let bestPoints: number | null = null
+  let best: { strokes: number; par: number } | null = null
   for (const playerId of team.playerIds) {
     const h = ctx.core.rounds[roundId]?.[playerId]?.holes.find((x) => x.hole === hole)
     if (!h?.played) continue
-    par = h.par
-    if (points) pts.push(h.points)
+    if (points) bestPoints = Math.max(bestPoints ?? Number.NEGATIVE_INFINITY, h.points)
     else {
       const s = holeStrokes(h, net)
-      if (s != null) strokes.push(s)
+      if (s != null && (!best || s - h.par < best.strokes - best.par)) best = { strokes: s, par: h.par }
     }
   }
-  if (points) return pts.length ? { points: Math.max(...pts) } : null
-  return strokes.length ? { strokes: Math.min(...strokes), par } : null
+  if (points) return bestPoints == null ? null : { points: bestPoints }
+  return best
 }
 
 export const teamFormat: MainFormat = {
@@ -60,7 +64,8 @@ export const teamFormat: MainFormat = {
         how[mode],
         points ? 'Cada hoyo cuenta los puntos Stableford de la mejor bola del equipo.' : 'Cada hoyo cuenta los golpes de la mejor bola del equipo.',
         o.scoring === 'gross' ? 'Sin hándicap.' : 'Con los golpes de ventaja de cada quien.',
-        points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes.',
+        points ? 'Gana el equipo con más puntos.' : 'Gana el equipo con menos golpes contra el par.',
+        ...(points ? [] : ['Al cierre, un equipo con hoyos sin capturar queda después de los que completaron la tarjeta.']),
       ],
     }
   },
@@ -100,7 +105,8 @@ export const teamFormat: MainFormat = {
             rTotal += h.strokes
             rPar += h.par
           }
-          if (rid === lastRound) lastHoles.push({ hole, value: 'points' in h ? h.points : h.strokes })
+          // Countback on strokes compares each hole to par, so holes on different tees line up.
+          if (rid === lastRound) lastHoles.push({ hole, value: 'points' in h ? h.points : h.strokes - h.par })
         }
         byRound[rid] = rPlayed === 0 ? { value: 0, text: '—', empty: true } : points ? { value: rTotal, text: String(rTotal) } : toParFigure(rTotal, rPar)
         total += rTotal

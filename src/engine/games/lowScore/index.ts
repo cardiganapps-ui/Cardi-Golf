@@ -31,6 +31,10 @@ export interface LowScoreTable {
   rows: LowScoreRow[]
   groups: RankGroup<Id>[]
   final: boolean
+  /** Final, on strokes, and short of the holes: ranked after every complete card (MONEY-02). */
+  incomplete: Id[]
+  /** Holes a complete card has over these rounds. */
+  holes: number
 }
 
 export interface LowScoreState {
@@ -58,12 +62,20 @@ function playerValue(ctx: GameContext<Cfg>, rids: Id[], id: Id): { value: number
 function table(ctx: GameContext<Cfg>, rids: Id[], roundId: Id | null): LowScoreTable {
   const order = new Map(ctx.entrants.map((id, i) => [id, i]))
   const vals = new Map(ctx.entrants.map((id) => [id, playerValue(ctx, rids, id)]))
-  const better = ctx.config.options.basis === 'points' ? (a: number, b: number) => b - a : (a: number, b: number) => a - b
-  const played = ctx.entrants.filter((id) => vals.get(id)!.thru > 0)
-  const groups = rankBy(played, (a, b) => better(vals.get(a)!.value, vals.get(b)!.value), (a, b) => order.get(a)! - order.get(b)!)
-  const rows = flattenRanks(groups).map((r) => ({ playerId: r.item, label: r.label, ...vals.get(r.item)! }))
+  const points = ctx.config.options.basis === 'points'
+  const better = points ? (a: number, b: number) => b - a : (a: number, b: number) => a - b
   const final = ctx.tournamentFinal || rids.every((rid) => ctx.roundFinal[rid])
-  return { roundId, rows, groups, final }
+  // To par over the holes played is fair while the round is on. At the end a
+  // strokes prize goes to a full card: one hole at birdie must not beat 18 at
+  // even (MONEY-02). Points need no rule, missing holes already score nothing.
+  const holes = rids.reduce((sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18), 0)
+  const played = ctx.entrants.filter((id) => vals.get(id)!.thru > 0)
+  const missing = (id: Id) => (!points && final ? Math.max(0, holes - vals.get(id)!.thru) : 0)
+  const incomplete = played.filter((id) => missing(id) > 0)
+  // More holes played first, then the score: one hole at −1 is not a better card than 17 at +1.
+  const groups = rankBy(played, (a, b) => missing(a) - missing(b) || better(vals.get(a)!.value, vals.get(b)!.value), (a, b) => order.get(a)! - order.get(b)!)
+  const rows = flattenRanks(groups).map((r) => ({ playerId: r.item, label: r.label, ...vals.get(r.item)! }))
+  return { roundId, rows, groups, final, incomplete, holes }
 }
 
 export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
@@ -94,6 +106,13 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     }))
     const what = ctx.config.options.basis === 'points' ? 'Más puntos Stableford' : `Menor score ${ctx.config.options.basis === 'net' ? 'neto' : 'gross'} contra el par`
     const notes = [`${what}${ctx.config.options.scope === 'perRound' ? ', por día' : ''}.`]
+    const names = namer(ctx)
+    for (const tb of state.tables) {
+      if (!tb.incomplete.length) continue
+      const day = tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}: ` : ''
+      const who = tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`).join(', ')
+      notes.push(`${day}tarjeta incompleta, hoyos jugados: ${who}. Queda${tb.incomplete.length === 1 ? '' : 'n'} después de las tarjetas completas.`)
+    }
     if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}: ${ctx.config.money.split.map((p) => `${p}%`).join(' / ')}.`)
     return { sections, notes }
   },

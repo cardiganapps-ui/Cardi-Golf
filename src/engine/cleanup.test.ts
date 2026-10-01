@@ -4,11 +4,11 @@
  */
 import { describe, expect, it } from 'vitest'
 import { computeTournament } from './computeTournament'
-import { computeCore } from './core/compute'
+import { computeCore, nineHoleRanks } from './core/compute'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './settings/presets'
 import { checkPrizePool } from './settings/prizeCheck'
 import { safeParseSettings, type TournamentSettings } from './settings/schema'
-import { fillRound, makeFirstTournament, makePlayer, makeRound, makeSnapshot, score } from './testing/fixtures'
+import { fillRound, makeCourse, makeFirstTournament, makeHoles, makePlayer, makeRound, makeSnapshot, makeTee, score } from './testing/fixtures'
 import type { Snapshot } from './types'
 
 const S = FIRST_TOURNAMENT_SETTINGS
@@ -170,14 +170,31 @@ describe('Handicap rules beyond the rules sheet', () => {
     expect(core.rounds.r3!.p1!.playingHcp).toBe(11)
   })
 
-  it('a 9-hole round gives half the playing handicap on the 18-hole stroke indexes', () => {
+  it('a 9-hole round plays half the playing handicap over the nine, ranked by stroke index (MONEY-03)', () => {
     const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: [makeRound(1, { holes: 9 })], settings: S })
-    const core = computeCore(snap, S)
-    const pr = core.rounds.r1!.p1!
-    // PH 16 → 8 strokes over the nine, on the holes with SI 1–8.
+    const pr = computeCore(snap, S).rounds.r1!.p1!
+    // PH 16 → 8 over the nine. The front nine's SIs are 7, 11, 17, 3, 1, 13, 15, 9, 5:
+    // ranked 1–9, the eight hardest get one each and the 17 (hole 3) none.
     expect(pr.holes).toHaveLength(9)
-    const total = pr.holes.reduce((s, h) => s + h.strokesReceived, 0)
-    expect(total).toBe(pr.holes.filter((h) => h.strokeIndex <= 8).length)
-    expect(total).toBeLessThanOrEqual(8)
+    expect(pr.holes.map((h) => h.strokesReceived)).toEqual([1, 1, 0, 1, 1, 1, 1, 1, 1])
+    // Before: 8 allocated against 1–18 gave strokes only on SI 1–8, four holes.
+  })
+
+  it('a real 9-hole card (SI 1–9) gives every stroke due, more than one a hole when needed (MONEY-03)', () => {
+    const nine = makeHoles([
+      [4, 1], [4, 2], [3, 3], [5, 4], [4, 5], [4, 6], [3, 7], [5, 8], [4, 9],
+    ])
+    const course = makeCourse('nine', [makeTee('t9', 'nine', { holes: nine })])
+    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 37.5, defaultTeeId: 't9' })], rounds: [makeRound(1, { holes: 9, courseId: 'nine' })], courses: [course], settings: S })
+    const pr = computeCore(snap, S).rounds.r1!.p1!
+    // base 37.5 → PH 30 → 15 over the nine: one each, and one more on the six hardest.
+    expect(pr.playingHcp).toBe(30)
+    expect(pr.holes.map((h) => h.strokesReceived)).toEqual([2, 2, 2, 2, 2, 2, 1, 1, 1])
+    expect(pr.holes.reduce((s, h) => s + h.strokesReceived, 0)).toBe(15)
+  })
+
+  it('nine holes are ranked by stroke index, ties by hole number', () => {
+    const ranks = nineHoleRanks(makeHoles([[4, 7], [4, 11], [3, 17], [4, 3], [4, 1], [5, 13], [3, 15], [4, 9], [5, 5]]))
+    expect([...ranks.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r)).toEqual([4, 6, 9, 2, 1, 7, 8, 5, 3])
   })
 })

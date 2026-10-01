@@ -53,6 +53,8 @@ export interface IndividualState {
 }
 
 const EMPTY_COUNTBACK = { pointsByHole: new Map<number, number>(), holes: 18 }
+/** Per hole missing: an incomplete card ranks after every complete one, and after any card with more holes. */
+const INCOMPLETE_OFFSET = 1_000_000
 
 /** The format's standings, ranked. Shared by the module and the Calcutta. */
 function rankStandings(ctx: ModuleContext) {
@@ -60,11 +62,20 @@ function rankStandings(ctx: ModuleContext) {
   const standings = format.standings(ctx)
   const up = format.higherIsBetter(ctx.settings)
 
+  // Where fewer is better (strokes), the prize goes to a full card: once the
+  // tournament is final, an entrant who did not finish every hole ranks after
+  // everyone who did (MONEY-02). Points formats need no rule, the missing
+  // holes already score nothing.
+  const expectedHoles = ctx.core.roundIds.reduce((sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18), 0)
+  const missing = (id: Id) => (!up && ctx.tournamentFinal && !standings.totals[id]?.empty ? Math.max(0, expectedHoles - (standings.thru[id] ?? 0)) : 0)
+  const incomplete = (id: Id) => missing(id) > 0
   // An entrant with no card yet sorts last whichever way the figure counts.
+  // Among incomplete cards, more holes played ranks first: one hole at −1 is
+  // not a better card than 17 at +1.
   const rankValue = (id: Id) => {
     const f = standings.totals[id]
     if (!f || f.empty) return up ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY
-    return f.value
+    return (f.rank ?? f.value) + missing(id) * INCOMPLETE_OFFSET
   }
   const compare = (a: Id, b: Id) => {
     const va = rankValue(a)
@@ -78,18 +89,30 @@ function rankStandings(ctx: ModuleContext) {
     compare,
     (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
   )
-  return { format, standings, groups, rankValue }
+  return { format, standings, groups, rankValue, incomplete, expectedHoles }
+}
+
+function incompleteWarning(names: string[]): string[] {
+  if (!names.length) return []
+  return [`Tarjeta incompleta, hoyos jugados: ${names.join(', ')}. ${names.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`]
 }
 
 /**
  * The finishing order as *player* ids, which is what the Calcutta pays on: it
  * auctions people, and a team's members all finished where their team did.
  * For an individual format this is the ranking unchanged.
+ *
+ * `places` is how many finishing places the group fills: one per entrant. A
+ * two-player team alone in 1st fills 1st only, so 2nd goes to the next team
+ * (MONEY-20); before, its two members read as a tie across 1st and 2nd.
  */
-export function rankIndividual(ctx: ModuleContext): RankGroup<Id>[] {
+export function rankIndividual(ctx: ModuleContext): Array<RankGroup<Id> & { places: number; entrants: Id[][] }> {
   const { standings, groups } = rankStandings(ctx)
   const members = new Map(standings.entrants.map((e) => [e.id, e.playerIds]))
-  return groups.map((g) => ({ position: g.position, members: g.members.flatMap((id) => members.get(id) ?? [id]) }))
+  return groups.map((g) => {
+    const entrants = g.members.map((id) => members.get(id) ?? [id])
+    return { position: g.position, places: g.members.length, entrants, members: entrants.flat() }
+  })
 }
 
 export const individualModule: GameModule<IndividualState> = {
@@ -97,7 +120,7 @@ export const individualModule: GameModule<IndividualState> = {
   defaultLabel: 'Individual',
 
   compute(ctx) {
-    const { format, standings, groups, rankValue } = rankStandings(ctx)
+    const { format, standings, groups, rankValue, incomplete, expectedHoles } = rankStandings(ctx)
     const byId = new Map(standings.entrants.map((e) => [e.id, e]))
     const nameOf = (id: Id) => byId.get(id)?.name ?? id
     const ranked = flattenRanks(groups)
@@ -140,7 +163,7 @@ export const individualModule: GameModule<IndividualState> = {
       lastPlace: anyScores || ctx.tournamentFinal ? (groups.at(-1)?.members ?? []) : [],
       prizes,
       final: ctx.tournamentFinal,
-      warnings: standings.warnings,
+      warnings: [...standings.warnings, ...incompleteWarning(standings.entrants.filter((e) => incomplete(e.id)).map((e) => `${e.name} (${standings.thru[e.id] ?? 0} de ${expectedHoles})`))],
     }
   },
 
