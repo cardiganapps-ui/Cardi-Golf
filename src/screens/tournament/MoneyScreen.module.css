@@ -157,6 +157,16 @@
   color: var(--ink-2);
   font-size: var(--fs-xs);
 }
+/* «Registrar algo que ya se pagó»: a quiet disclosure under the settlement. */
+.recordSummary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
 /* One part of a line's breakdown never breaks inside its amount. */
 .part {
   white-space: nowrap;

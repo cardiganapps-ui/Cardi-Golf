@@ -79,6 +79,7 @@ export interface PersonMoney {
 export interface Transfer {
   from: Id | null
   to: Id | null
+  /** 0 on a vía-banco line whose accounts cancel out: nothing changes hands, the line only closes them. */
   amount: number
   /**
    * Vía banco only: the accounts this line closes. Marking the line paid
@@ -305,6 +306,9 @@ export function computeMoney(
     const bal = settles.reduce((s, a) => s + (a.from === null ? a.due : -a.due), 0)
     if (bal > 0) viaBank.push(line(null, p.id, bal, settles))
     else if (bal < 0) viaBank.push(line(p.id, null, -bal, settles))
+    // Prizes still owed that exactly cover his debts: no cash moves, but the
+    // line is how both accounts get closed.
+    else if (settles.length) viaBank.push(line(p.id, null, 0, settles))
   }
   for (const a of open) if (a.kind === 'buyback' && a.from && a.to) viaBank.push(a.due > 0 ? line(a.from, a.to, a.due, [a]) : line(a.to, a.from, -a.due, [a]))
   // Direct bets settle between the two players, netted across every game.
@@ -321,6 +325,7 @@ export function computeMoney(
     const [x, y] = k.split('|') as [Id, Id]
     if (net > 0) viaBank.push(line(x, y, net, settles))
     else if (net < 0) viaBank.push(line(y, x, -net, settles))
+    else viaBank.push(line(x, y, 0, settles))
   }
 
   // "Sin banco": everyone's position on what is still due, with the bank as

@@ -108,6 +108,16 @@ describe('settlement on what is still due (MONEY-01)', () => {
     ])
   })
 
+  it('debts exactly covered by prizes still get a line, so they can be closed', () => {
+    const { s, snap } = fourPlayers()
+    const prizes = [prize('p1', 1000), prize('p2', 3000, { label: 'Individual, 2º' })]
+    const m = money(snap, s, prizes)
+    const square = m.viaBank.find((t) => t.from === 'p1')!
+    expect([square.amount, square.settles!.map((a) => a.kind)]).toEqual([0, ['entry', 'payout']])
+    apply(snap, markPaidWrites(square.settles!))
+    expect(money(snap, s, prizes).viaBank.some((t) => t.from === 'p1' || t.to === 'p1')).toBe(false)
+  })
+
   it('a buyback already paid is not asked for again', () => {
     const s = settings({ entryFee: 0 })
     const snap = makeSnapshot({ players: 2, rounds: 1, settings: s })
@@ -312,7 +322,8 @@ describe('settlement properties', () => {
       for (const [id, due] of expected) expect(via.get(id) ?? 0, `${ctx}: vía banco for ${id}`).toBe(due)
       const seen = new Set<string>()
       for (const t of m.viaBank) {
-        expect(t.amount, ctx).toBeGreaterThan(0)
+        // Zero only on a line that closes accounts cancelling each other out.
+        expect(t.amount > 0 || (t.amount === 0 && t.settles!.length > 0 && t.settles!.every((a) => a.due !== 0)), ctx).toBe(true)
         expect(Number.isInteger(t.amount), ctx).toBe(true)
         for (const a of t.settles!) {
           const k = `${a.kind}|${a.from}|${a.to}`

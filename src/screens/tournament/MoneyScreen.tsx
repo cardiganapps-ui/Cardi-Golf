@@ -110,7 +110,26 @@ export function MoneyScreen() {
       await write(markPaidWrites(settles))
       toast(M.markedPaid, { label: t.common.undo, onClick: () => void run(() => write(restorePaidWrites(settles))) })
     })
-  const lineText = (from: string | null, to: string | null, amount: number) => M.pays(name(from), name(to), formatMoney(amount))
+  const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(name(from), name(to)) : M.pays(name(from), name(to), formatMoney(amount)))
+  /** One debt still due, with «Marcar pagado» for admins. */
+  const debtRow = (a: Account) => (
+    <div key={`${a.kind}|${a.from}|${a.to}`} className={styles.transfer}>
+      <span className={styles.transferText}>
+        <span>
+          <strong>{name(a.from)}</strong> {M.paysTo} {name(a.to)}
+        </span>
+        <span className={styles.transferKind}>{accountDetail(a)}</span>
+      </span>
+      <span className={styles.amount}>{formatMoney(a.due)}</span>
+      {me.isAdmin ? (
+        <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid([a])} aria-label={`${M.markPaid}: ${lineText(a.from, a.to, a.due)}`}>
+          {M.markPaid}
+        </button>
+      ) : (
+        <span />
+      )}
+    </div>
+  )
   /** What a settlement line is made of, from its own side: «Premios +$13,200 · Compras Calcutta −$3,000». */
   const lineParts = (tr: Transfer) =>
     [...(tr.settles ?? [])]
@@ -127,7 +146,7 @@ export function MoneyScreen() {
     for (const p of people) lines.push(`${name(p.playerId)}: ${t.money.paid.toLowerCase()} ${formatMoney(p.paid)}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net)}`)
     lines.push('', settle === 'bank' ? M.viaBank : M.p2p)
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
-    for (const tr of transfers) lines.push(M.pays(name(tr.from), name(tr.to), formatMoney(tr.amount)))
+    for (const tr of transfers) if (tr.amount > 0) lines.push(M.pays(name(tr.from), name(tr.to), formatMoney(tr.amount)))
     return lines.join('\n')
   }, [people, settle, money, snapshot.tournament.name, name])
 
@@ -263,26 +282,7 @@ export function MoneyScreen() {
               {owed.length === 0 ? (
                 <span className="help">{M.nothingOwed}</span>
               ) : (
-                <div className={styles.transfers}>
-                  {owed.map((a) => (
-                    <div key={`${a.kind}|${a.from}|${a.to}`} className={styles.transfer}>
-                      <span className={styles.transferText}>
-                        <span>
-                          <strong>{name(a.from)}</strong> {M.paysTo} {name(a.to)}
-                        </span>
-                        <span className={styles.transferKind}>{accountDetail(a)}</span>
-                      </span>
-                      <span className={styles.amount}>{formatMoney(a.due)}</span>
-                      {me.isAdmin ? (
-                        <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid([a])} aria-label={`${M.markPaid}: ${lineText(a.from, a.to, a.due)}`}>
-                          {M.markPaid}
-                        </button>
-                      ) : (
-                        <span />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <div className={styles.transfers}>{owed.map(debtRow)}</div>
               )}
             </section>
           )}
@@ -306,9 +306,13 @@ export function MoneyScreen() {
                 return (
                   <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
                     <span className={styles.transferText}>
-                      <span>
-                        <strong>{name(tr.from)}</strong> {M.paysTo} <strong>{name(tr.to)}</strong>
-                      </span>
+                      {tr.amount === 0 ? (
+                        <span>{M.squared(name(tr.from), name(tr.to))}</span>
+                      ) : (
+                        <span>
+                          <strong>{name(tr.from)}</strong> {M.paysTo} <strong>{name(tr.to)}</strong>
+                        </span>
+                      )}
                       {parts.length > 0 && (
                         <span className={styles.transferKind}>
                           {parts.map((part, j) => (
@@ -333,6 +337,17 @@ export function MoneyScreen() {
               })}
             </div>
           </section>
+
+          {/* Once final, the settlement already nets every debt. A payment made
+              but never marked (cash on Calcutta night, say) is recorded here,
+              so the settlement stops counting it. */}
+          {state.tournamentFinal && me.isAdmin && owed.length > 0 && (
+            <details className={styles.section}>
+              <summary className={styles.recordSummary}>{M.recordPaid}</summary>
+              <span className="help">{M.recordPaidHint}</span>
+              <div className={styles.transfers}>{owed.map(debtRow)}</div>
+            </details>
+          )}
         </>
       )}
     </div>
