@@ -237,13 +237,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 82,
       "tests": [
         "e2e/fixtures/ceremony.spec.ts",
         "src/styles/tokens.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Yellow ring at 8.74:1 on Ceremonia, the TV and a control inside the lot card; graphite ring at 15.7:1 on Tarjeta and Dinero.",
       "residual": null
     },
     {
@@ -1475,13 +1475,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 82,
       "tests": [
-        "src/design/motion.test.ts",
-        "e2e/fixtures/ceremony.spec.ts"
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/design/motion.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Ceremonia: 25 step changes at 1920 and 393 px, motion on and off, no blank frame (lowest opacity 0.38) and no overshoot; TV: 6 board changes on 3 fixtures, no blank frame (lowest 0.54), the leaving board doesn't move, no horizontal scroll. Its surviving mutant (mode={'wait'} passed the text match) is caught since.",
       "residual": null
     },
     {
@@ -1761,13 +1761,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 82,
       "tests": [
         "e2e/fixtures/ceremony.spec.ts",
         "src/components/CountUp.test.tsx"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Exactly one confetti burst per full champion reveal, none when leaving within 0.6 s, none with reduced motion. The count-up now reserves its final width, so a step fitted at the reveal still fits when it ends.",
       "residual": null
     },
     {
@@ -3778,7 +3778,7 @@
         "src/components/CountUp.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-verify found two P2s left (a one-word name wider than its card never drawn smaller; on a phone the top of a tall step out of reach) and P3s; each is fixed in this PR with the verifier's own checked change and a test that fails without it. A 4K TV at 100% scaling still draws names near 5vh (the design's pixel caps)."
     },
     {
       "id": "VIS-07",

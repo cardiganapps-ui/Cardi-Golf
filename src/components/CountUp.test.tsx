@@ -68,6 +68,16 @@ describe('CountUp', () => {
     expect(seen(container)).toBe('120')
   })
 
+  it('takes the final value\'s width from the first frame, so a step fitted at the reveal still fits when the count ends (VIS-06)', () => {
+    const { container } = render(<CountUp value={6600} format={(n) => `$${n.toLocaleString('en-US')}`} />)
+    expect(seen(container)).toBe('$0')
+    const final = container.querySelector('[data-final]')!
+    expect(final.textContent).toBe('$6,600')
+    // In the same cell as the figure, unseen and unspoken.
+    expect(final.parentElement).toBe(container.querySelector('[aria-hidden="true"]')!.parentElement)
+    expect(final.getAttribute('aria-hidden')).toBe('true')
+  })
+
   it('with reduced motion the value is there at once', () => {
     const { container } = render(
       <MotionConfig reducedMotion="always">

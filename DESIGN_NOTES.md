@@ -207,5 +207,12 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
   - A tie of several that would end below 0.72 is set as a compact list: one line per winner, the face small, the name at 5vh.
   - A phone zooms only to 0.75 and lets the rest scroll; the scrolling body is a labelled region that keyboard users can reach.
   - An empty list (nobody paid yet) is left out instead of reading «NaN».
+- **After the second pass.**
+  - A name's line is as wide as its card. A centred line grew with the name, so a one-word name wider than its card («Maximiliano») never counted as too long and ran 31 px past the card at 1024×768.
+  - A reveal taller than its room starts at the top, under its title, and scrolls from there. Centring sent half the overflow above the top: on a phone the 60-row money summary never showed its first 23 rows, and a tie covered its own title.
+  - A figure that counts up holds its final width from the first frame, so the step is fitted to «$6,600», not to «$0».
+  - The compact list belongs to the size that needed it; a bigger screen tries the full size again.
+  - A last word of up to three letters stays on its name's line («Hugo I.»).
+  - On a TV the stage never scrolls, so a view rising into place doesn't flash a scrollbar on desktops that show them.
 - **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.
-- **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either.
+- **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either, however it is written.

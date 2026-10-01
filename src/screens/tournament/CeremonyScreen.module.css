@@ -89,7 +89,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+}
+/*
+ * Centred while it fits; taller than the room, it starts at the top, where
+ * scrolling reaches it. (`justify-content: center` put half the overflow
+ * above the top: on a phone a long list's first rows, and a tie's faces,
+ * could never be scrolled to, and the reveal covered its own title.)
+ */
+.area > * {
+  margin-block: auto;
 }
 /* The start and the end. */
 .center {
@@ -176,6 +184,8 @@
 }
 .winnerLine {
   display: block;
+  /* As wide as its card, so a name wider than the card overflows it and the screen draws the step smaller (a centred line grew to fit the name instead, and nothing noticed). */
+  align-self: stretch;
   font-weight: 600;
   font-size: clamp(32px, min(10vh, 9vw), 140px);
   line-height: var(--lh-tight);
@@ -310,6 +320,8 @@
 .winners[data-compact] .winnerLine {
   /* The room left beside the face, but never less than the name: a long one goes to its own line. */
   flex: 1 1 auto;
+  /* Beside the face, on its middle (in a row, stretch would pin the name to the top). */
+  align-self: center;
   font-size: clamp(20px, min(5vh, 5vw), 72px);
 }
 .winners[data-compact] .winnerSub {
@@ -339,6 +351,10 @@
 }
 /* A winner beside the people it is about: the snake's holder and the totals, a game's winner and its money. */
 @media (min-width: 1000px) {
+  /* A TV never scrolls (every step is fitted or paged), so a view arriving from below doesn't flash a scrollbar. */
+  .body {
+    overflow: hidden;
+  }
   .reveal[data-split] {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);

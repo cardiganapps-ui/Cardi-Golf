@@ -7,6 +7,7 @@
 import { useReducedMotionConfig } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { REVEAL } from '../design/motion'
+import styles from './CountUp.module.css'
 
 export function CountUp({ value, format, delayMs = 0 }: { value: number; format: (n: number) => string; delayMs?: number }) {
   const reduce = useReducedMotionConfig()
@@ -31,7 +32,13 @@ export function CountUp({ value, format, delayMs = 0 }: { value: number; format:
   }, [value, delayMs, reduce])
   return (
     <>
-      <span aria-hidden="true">{format(reduce ? value : shown)}</span>
+      {/* The final value, unseen, holds the width from the first frame: the screen fits the step to «$6,600», not to «$0», so the count never spills. */}
+      <span className={styles.figure}>
+        <span aria-hidden="true">{format(reduce ? value : shown)}</span>
+        <span className={styles.final} aria-hidden="true" data-final>
+          {format(value)}
+        </span>
+      </span>
       <span className="sr-only">{format(value)}</span>
     </>
   )

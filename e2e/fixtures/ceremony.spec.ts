@@ -58,9 +58,10 @@ async function where(page: Page) {
 
 /**
  * Nothing to scroll, nothing cut off, nothing spilling: the stage holds the
- * whole step, the reveal sits inside the room under the title (an overfull
- * one spills over the title rather than growing the page), and every row of a
- * list is inside its box.
+ * whole step, the reveal sits inside the room under the title, and every row
+ * of a list is inside its box. The fit allows a pixel of rounding (`holds`),
+ * and a reveal starts at the top of its room, so that pixel shows at the
+ * bottom: `spill` is held to 1 px.
  */
 async function fits(page: Page) {
   return page.evaluate(() => {
@@ -84,6 +85,14 @@ async function fits(page: Page) {
         return new Set(Array.from(range.getClientRects()).map((x) => Math.round(x.top))).size > 1
       })
     })
+    // A name whose letters run past its card's edges.
+    const outside = Array.from(reveal?.querySelectorAll('[data-name]') ?? []).filter((n) => {
+      const card = n.closest('[class*="_winner_"]')?.getBoundingClientRect()
+      const range = document.createRange()
+      range.selectNodeContents(n)
+      const text = range.getBoundingClientRect()
+      return !!card && (text.left < card.left - 1 || text.right > card.right + 1)
+    })
     return {
       over: body.scrollHeight - body.clientHeight,
       wide: document.documentElement.scrollWidth - innerWidth,
@@ -91,6 +100,7 @@ async function fits(page: Page) {
       cut: box ? Array.from(box.querySelectorAll('[class*="_listRow_"]')).filter((row) => row.getBoundingClientRect().bottom > bottom + 0.5).length : 0,
       zoom: area?.style.getPropertyValue('--fit') || '1',
       broken: broken.map((n) => n.textContent),
+      outside: outside.map((n) => n.textContent),
     }
   })
 }
@@ -146,7 +156,7 @@ for (const [w, h] of ROOMS) {
       expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
       expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
       expect(fit.cut, `${label}: rows cut off`).toBe(0)
-      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
       expect(fit.zoom, `${label}: drawn smaller`).toBe('1')
       expect(now.range, `${label}: paged`).toBe('')
       expect(await px(page, 'h2'), `${label}: title`).toBeGreaterThanOrEqual(6 * vh)
@@ -205,7 +215,7 @@ for (const [w, h] of ROOMS) {
       expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
       expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
       expect(fit.cut, `${label}: rows cut off`).toBe(0)
-      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
       if (now.title !== C.steps.money) continue
       // The money summary, page by page: «1–24 de 60», «25–48 de 60»… each row once, none skipped.
       const [, from, to, of] = /(\d+)–(\d+) de (\d+)/.exec(now.range) ?? []
@@ -353,7 +363,7 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
         const fit = await fits(page)
         expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
         expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
-        expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(0.5)
+        expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
         expect(fit.broken, `${label}: a name broken inside a word`).toEqual([])
         // Drawn smaller to fit, but still read from across the room: a name's letters at least 4 % of the screen.
         const names = await page.locator('[data-name]').evaluateAll((els) =>
@@ -373,6 +383,111 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
     })
   }
 }
+
+/**
+ * A name of one long word («Maximiliano») can't break, so it is drawn
+ * smaller. Its line was as wide as the name, never overflowed, and the screen
+ * left it 31 px outside its card at 1024×768 (124 px at 2560×1440): every
+ * winner's name is set to it here, and the step must fit again.
+ */
+for (const [w, h] of [[1024, 768], [1920, 1080], [2560, 1440]] as Array<[number, number]>) {
+  test(`${w}×${h}: a one-word name wider than its card is drawn smaller, inside the card, never broken`, async ({ page, pageErrors }) => {
+    test.setTimeout(180_000)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
+    let tried = 0
+    for (let i = 0; i < 80; i++) {
+      const now = await beat(page, 'ArrowRight')
+      if (now.title === C.done) break
+      if (now.waiting) continue
+      const names = await page.locator('[data-area] [data-name]').evaluateAll((els) => {
+        for (const el of els) el.firstChild!.textContent = 'Maximiliano'
+        return els.length
+      })
+      if (!names) continue
+      tried++
+      // A new size makes the screen fit the step again, to the name now in it (a step is at most 1400 px wide, so the height changes).
+      await page.setViewportSize({ width: w, height: tried % 2 ? h - 50 : h })
+      const label = `step «${now.title}»`
+      await expect.poll(async () => (await fits(page)).outside, { message: `${label}: a name outside its card`, timeout: 5000 }).toEqual([])
+      const fit = await fits(page)
+      expect(fit.broken, `${label}: a name broken inside a word`).toEqual([])
+      expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
+      expect(fit.over, `${label}: overflow (px)`).toBeLessThanOrEqual(1)
+    }
+    expect(tried).toBeGreaterThan(3)
+    expect(pageErrors).toEqual([])
+  })
+}
+
+/**
+ * On a phone a step taller than the screen scrolls, and all of it can be
+ * reached: the reveal starts where scrolling starts, under its title. It was
+ * centred in its room, so half of what didn't fit sat above the top: the
+ * money summary of 60 never showed its first 23 rows, and a tie covered its
+ * own title. A tie is drawn smaller only so far (then it scrolls), never to
+ * 9 px names.
+ */
+for (const fixture of ['full12-finished', 'large60', 'auction12', 'friends8']) {
+  test(`393×852, ${fixture}: every step can be scrolled through from its title, and no tie is drawn below three quarters`, async ({ page, pageErrors }) => {
+    test.setTimeout(180_000)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.setViewportSize({ width: 393, height: 852 })
+    await page.goto(`/t/_/${fixture}/ceremonia`, { waitUntil: 'networkidle' })
+    let revealed = 0
+    for (let i = 0; i < 150; i++) {
+      const now = await beat(page, 'ArrowRight')
+      if (now.title === C.done) break
+      if (now.waiting) continue
+      revealed++
+      const label = `step «${now.title}» ${now.range}`
+      const at = await page.evaluate(() => {
+        const body = document.querySelector<HTMLElement>('[class*="_body_"]')!
+        body.scrollTop = 0
+        const area = document.querySelector<HTMLElement>('[data-area]')!
+        const reveal = area.querySelector<HTMLElement>('[data-reveal]')!
+        const title = area.parentElement!.querySelector('h2')!.getBoundingClientRect()
+        const zooms = [area.style.getPropertyValue('--fit'), reveal.querySelector<HTMLElement>('[data-winners]')?.style.getPropertyValue('--wfit') ?? ''].filter(Boolean).map(Number)
+        return { above: area.getBoundingClientRect().top - reveal.getBoundingClientRect().top, overTitle: title.bottom - reveal.getBoundingClientRect().top, zoom: Math.min(1, ...zooms) }
+      })
+      expect(at.above, `${label}: the reveal starts above where scrolling reaches (px)`).toBeLessThanOrEqual(1)
+      expect(at.overTitle, `${label}: the reveal covers its title (px)`).toBeLessThanOrEqual(1)
+      expect(at.zoom, `${label}: drawn smaller than a phone allows`).toBeGreaterThanOrEqual(0.75)
+    }
+    expect(revealed).toBeGreaterThan(0)
+    expect(pageErrors).toEqual([])
+  })
+}
+
+test('a tie set as a compact list goes back to full size once the screen has room for it', async ({ page }) => {
+  test.setTimeout(120_000)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
+  // To the pairs' podium: two winners side by side, at full size.
+  for (let i = 0; i < 60; i++) {
+    const now = await beat(page, 'ArrowRight')
+    if (now.title === C.steps.pairs('Los Matrimonios') && !now.waiting) break
+  }
+  const compact = page.locator('[data-area] [data-compact]')
+  await expect(compact).toHaveCount(0)
+  // Names too long for that room: the tie becomes a compact list.
+  const names = await page.locator('[data-area] [data-name]').evaluateAll((els) =>
+    els.map((el) => {
+      const was = el.firstChild!.textContent!
+      el.firstChild!.textContent = 'Maximilianomaximilianomaximiliano'
+      return was
+    }),
+  )
+  await page.setViewportSize({ width: 1024, height: 718 })
+  await expect(compact).toHaveCount(1)
+  // The names back as they were, and the room changes: it is fitted again, at full size (the compact list used to stay).
+  await page.locator('[data-area] [data-name]').evaluateAll((els, was) => els.forEach((el, i) => (el.firstChild!.textContent = was[i]!)), names)
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await expect(compact).toHaveCount(0)
+  expect((await fits(page)).outside).toEqual([])
+})
 
 test('a second press right after a reveal pages the list, never leaving the step (UX-18)', async ({ page }) => {
   test.setTimeout(180_000)

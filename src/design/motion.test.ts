@@ -89,7 +89,8 @@ describe('motion tokens', () => {
     // showed an empty board for 0.2 s at every rotation. The next view comes
     // in while the last one leaves.
     const screens = join(new URL('../screens/tournament', import.meta.url).pathname)
-    const offenders = ['TvScreen.tsx', 'CeremonyScreen.tsx'].filter((f) => /<AnimatePresence[^>]*mode="wait"/.test(readFileSync(join(screens, f), 'utf8')))
+    // However it is written: mode="wait", mode={'wait'}, mode={`wait`}.
+    const offenders = ['TvScreen.tsx', 'CeremonyScreen.tsx'].filter((f) => /<AnimatePresence[^>]*mode=\{?\s*["'`]wait["'`]/.test(readFileSync(join(screens, f), 'utf8')))
     expect(offenders).toEqual([])
   })
 })

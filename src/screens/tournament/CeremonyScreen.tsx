@@ -32,6 +32,8 @@ import { CountUp } from '../../components/CountUp'
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
 const andList = t.common.andList
+/** «Hugo I.» never ends a line on «Hugo»: a last word of up to three letters is joined to the one before it. */
+const keepInitial = (name: string) => name.replace(/ (\S{1,3})$/, '\u00A0$1')
 
 /** A piece of a winner's second line: words, or a figure that counts up when revealed. */
 type Part = string | { value: number; format: (n: number) => string }
@@ -191,7 +193,8 @@ export function CeremonyScreen() {
     if (!data) return []
     const { snapshot, state, settings } = data
     const m = state.modules
-    const nameOf = (id: string) => snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
+    // A short last word (an initial, «Hugo I.») stays on its name's line.
+    const nameOf = (id: string) => keepInitial(snapshot.players.find((p) => p.id === id)?.displayName ?? '?')
     const out: Step[] = []
     if (m.individual && m.individual.lastPlace.length) {
       out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: m.individual.lastPlace, line: andList(m.individual.lastPlace.map(nameOf)) }] })
@@ -364,8 +367,9 @@ export function CeremonyScreen() {
   // The step's own area: while the last step leaves, both are on the page.
   const areaOf = (id: string | undefined) => (id ? body.current?.querySelector<HTMLElement>(`[data-area="${id}"]`) : null) ?? null
   const [areaSize, setAreaSize] = useState('')
-  /** The step whose winners are set as a compact list. */
-  const [compact, setCompact] = useState<string | null>(null)
+  /** The step whose winners are set as a compact list, at the area size that needed it: a bigger screen tries the full size again. */
+  const [compact, setCompact] = useState<{ step: string; size: string } | null>(null)
+  const isCompact = !!step && compact?.step === step.id && compact.size === areaSize
   useLayoutEffect(() => {
     const area = areaOf(step?.id)
     const reveal = area?.querySelector<HTMLElement>('[data-reveal]')
@@ -375,8 +379,8 @@ export function CeremonyScreen() {
     if (reveal.hasAttribute('data-fit')) k = bestZoom(area, '--fit', () => holds(reveal, area))
     // Beside a list, on a screen wide enough to put them side by side.
     else if (winners && getComputedStyle(reveal).display === 'grid') k = bestZoom(winners, '--wfit', () => holds(winners, reveal))
-    if (k < COMPACT_BELOW && step.winners.length > 1 && compact !== step.id) setCompact(step.id)
-  }, [step, revealed, areaSize, data, compact])
+    if (k < COMPACT_BELOW && step.winners.length > 1 && !isCompact) setCompact({ step: step.id, size: areaSize })
+  }, [step, revealed, areaSize, data, isCompact])
   useLayoutEffect(() => {
     const el = areaOf(step?.id)
     if (!el) return
@@ -429,7 +433,7 @@ export function CeremonyScreen() {
                 ) : (
                   <div data-reveal className={styles.reveal} data-split={((step.winners.length > 0 || !!step.aside) && !!step.list) || undefined} data-list={!!step.list || undefined} data-fit={!step.list || undefined}>
                     {step.winners.length > 0 && (
-                      <div data-winners className={styles.winners} data-many={step.winners.length > 1 || undefined} data-compact={compact === step.id || undefined}>
+                      <div data-winners className={styles.winners} data-many={step.winners.length > 1 || undefined} data-compact={isCompact || undefined}>
                         {step.winners.map((w, i) => {
                           const from = i * REVEAL.nextWinner
                           return (
