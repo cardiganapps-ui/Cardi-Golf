@@ -426,6 +426,7 @@ The settlement nets to zero across all people (banker included)
 - `hole_awards`: `round_id`, `group_id`, `hole`, `game_id`, `player_id`, `decided_by`. Hole-contest winners.
 - `game_results`: `tournament_id`, `game_id`, `player_id`, `share`. The Comité's result for a custom bet.
 - `payments.kind` also takes `side` (buy-in to a side pot, player → bank) and `bet` (direct bet, player → player).
+- `restore_tournament` brings the three back (0011 added them, 0020 lost them, 0025 restores them again; DB-02). `src/data/backup.restore.test.ts` fails when the function's latest definition misses a table `backup.ts` exports, and `supabase/tests/restore_roundtrip.sql` changes every table after a backup and compares each one after the restore (local Postgres harness). The team draw tables are audited and published for Realtime since 0025; the client subscribes to them only once 0025 is applied in production.
 
 **Profiles and identity** (2026-09-28, migration 0013)
 - `profiles`: `id` (= auth uid), `handle` (unique, `handle_ok()`: 3–20 of `a-z0-9._`, reserved words out), `display_name`, `full_name`, `avatar_url`, `home_club`, `city`, `bio`, `index_source` (`polo` | `manual`), `manual_index`, `polo_index` + `polo_index_rounds` + `polo_index_at` (computed, 0014), `discoverable`. Only accounts (email or Google, not anonymous) have one: `ensure_my_profile()` creates it with a handle from the name. RLS: owner only; the owner may update the editable columns (column grants), never the computed index.
