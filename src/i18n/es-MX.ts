@@ -1117,6 +1117,7 @@ export const t = {
       'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',
     understood: 'Entendido',
     newVersion: 'Hay una versión nueva de la app.',
+    updateRequired: 'Esta versión ya no sube scores. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
     fromCache: (when: string) => `Sin señal: mostrando lo último guardado (${when}).`,
   },

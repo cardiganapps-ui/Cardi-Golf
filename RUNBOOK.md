@@ -46,7 +46,9 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 
 **"Rechazado":** si el servidor no aceptó una captura (la tarjeta ya estaba firmada o la ronda ya se cerró antes de que sincronizara), el teléfono la muestra en rojo abajo de la tarjeta con los valores. Avísale al Comité para que la capture desde Comité › Tarjetas; después tócale "Descartar".
 
-**Regla para el Comité técnico:** no se despliega nada a `main` mientras hay una ronda en juego. La app avisa "Hay una versión nueva" y el jugador decide cuándo actualizar; nunca se recarga sola a media captura.
+**Regla para el Comité técnico:** no se despliega nada a `main` mientras hay una ronda en juego. La app nunca se recarga sola a media captura. Cuando hay versión nueva, cada teléfono la detecta al volver a abrir la app o en menos de 30 minutos, y arriba aparece una barra fija "Hay una versión nueva · Actualizar" que se queda hasta que el jugador la toca (no aparece mientras tiene un hoyo a medio capturar).
+
+**Después de un arreglo urgente** (por ejemplo, entre el día 1 y el día 2): pide a cada jugador que toque "Actualizar" y revisa en **Más** la línea "Versión": todos los teléfonos deben mostrar la misma fecha y el mismo código. Un teléfono con versión vieja calcula puntos y dinero con el código viejo.
 
 ## 5. Si la app se cae
 
