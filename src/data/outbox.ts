@@ -28,7 +28,9 @@ interface ItemBase {
    * The auth user that queued the write. If the device's identity changed
    * since (a session lapsed in a dead zone and a new one started), the server
    * would refuse the push, so the write waits until the player is back on this
-   * device (`adoptQueuedWrites`) instead of being rejected (REL-16).
+   * device (`adoptQueuedWrites`) instead of being rejected (REL-16). None: the
+   * write was saved before the session was confirmed (the phone opened from
+   * its saved boards), and it waits the same way.
    */
   actingUid?: string | null
   lastError?: string
@@ -198,9 +200,16 @@ export function setOutboxBlocked(value: boolean) {
 function currentUid(): string | null {
   return useAuth.getState().user?.id ?? null
 }
-/** Queued under a different identity than the device has now: the server would refuse it. */
+/**
+ * Queued under a different identity than the device has now, or before any
+ * was confirmed: the server could refuse it, so it waits for the tournament's
+ * gate to confirm the player (`adoptQueuedWrites`). A phone that opens from
+ * its saved boards with no signal saves holes before its session is known; if
+ * that session turned out dead and a new one started, those holes used to go
+ * out under it, be refused and land in the rejected list.
+ */
 function isHeld(item: OutboxItem): boolean {
-  return !!item.actingUid && item.actingUid !== currentUid()
+  return !item.actingUid || item.actingUid !== currentUid()
 }
 
 /**
@@ -630,3 +639,9 @@ export async function startOutbox() {
   }
   void flush()
 }
+
+// Which writes wait depends on who the device is now: recount when that changes
+// (the held count read 0 after a change of identity until the queue moved).
+useAuth.subscribe?.((state, prev) => {
+  if (state.user?.id !== prev.user?.id) publish()
+})

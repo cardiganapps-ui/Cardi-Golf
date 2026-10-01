@@ -2,13 +2,30 @@
  * REL-16: writes queued before the device's identity changed (a session that
  * lapsed in a dead zone) were pushed under the new identity, refused by the
  * server and moved to the rejected list. They must wait, untouched, until the
- * player is back on this device, then go out.
+ * player is back on this device, then go out. So must writes saved before the
+ * session was confirmed at all (a phone that opened from its saved boards).
  */
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 let uid: string | null = 'uid-a'
-vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: uid ? { id: uid } : null }) } }))
+type AuthListener = (state: { user: { id: string } | null }, prev: { user: { id: string } | null }) => void
+const authListeners = new Set<AuthListener>()
+/** The device's identity changes, the way the auth store announces it. */
+function becomes(next: string | null) {
+  const prev = { user: uid ? { id: uid } : null }
+  uid = next
+  for (const l of authListeners) l({ user: uid ? { id: uid } : null }, prev)
+}
+vi.mock('./auth', () => ({
+  useAuth: {
+    getState: () => ({ user: uid ? { id: uid } : null }),
+    subscribe: (l: AuthListener) => {
+      authListeners.add(l)
+      return () => authListeners.delete(l)
+    },
+  },
+}))
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
@@ -71,6 +88,46 @@ describe('outbox across a change of identity', () => {
     await _outboxTest.enqueue(score(3))
     await flush()
     expect(useOutbox.getState().rejected.map((r) => r.key)).toEqual(['score:r1:p1:3'])
+  })
+
+  it('holds a hole saved before the session was confirmed, and sends it as the player the gate confirms', async () => {
+    const pushed: Array<{ key: string; as: string | null | undefined }> = []
+    _outboxTest.setPush(async (item) => {
+      // Before the PIN, under a new anonymous session, the server would refuse it.
+      if (uid !== 'uid-c' || !item.actingUid) throw new Error('new row violates row-level security policy for table "scores"')
+      pushed.push({ key: item.key, as: item.actingUid })
+    })
+    // Opened from the saved boards with no signal: nobody confirmed yet.
+    uid = null
+    await _outboxTest.enqueue(score(5))
+    await flush()
+    expect(pushed).toEqual([])
+    expect(useOutbox.getState().rejected).toEqual([])
+    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1 })
+    // The stored session was dead: a new anonymous one starts, before the PIN.
+    becomes('uid-c')
+    await flush()
+    expect(pushed).toEqual([])
+    expect(useOutbox.getState().rejected).toEqual([])
+    // The player enters the PIN: the gate confirms membership and adopts the hole.
+    await adoptQueuedWrites('t1')
+    await flush()
+    expect(pushed).toEqual([{ key: 'score:r1:p1:5', as: 'uid-c' }])
+    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0 })
+  })
+
+  it('the held count follows the device\'s identity, not only the queue', async () => {
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+    await _outboxTest.enqueue(score(6))
+    await flush()
+    expect(useOutbox.getState().held).toBe(0)
+    // The session lapses and a new one starts: nothing in the queue moved.
+    becomes('uid-b')
+    expect(useOutbox.getState().held).toBe(1)
+    becomes('uid-a')
+    expect(useOutbox.getState().held).toBe(0)
   })
 
   it('keeps held writes across a restart', async () => {
