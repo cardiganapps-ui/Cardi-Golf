@@ -47,6 +47,13 @@
   gap: var(--s3);
   margin-bottom: var(--s3);
 }
+.sheetHead h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sheetHead > button {
+  flex-shrink: 0;
+}
 .sheetBody {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
