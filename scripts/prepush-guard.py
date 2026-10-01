@@ -65,7 +65,10 @@ def main() -> None:
     def to_main(spec: str) -> bool:
         dest = spec.split(":")[-1].lstrip("+")
         return dest in ("main", "refs/heads/main")
-    current = subprocess.run(["git", "-C", target, "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True).stdout.strip()
+    # An inherited GIT_DIR (git exports it to hooks) would make `-C target`
+    # read another repository's branch and let a push to main through.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    current = subprocess.run(["git", "-C", target, "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, env=env).stdout.strip()
     if any(to_main(s) for s in refspecs) or (not refspecs and current == "main") or any(s == "HEAD" and current == "main" for s in refspecs):
         blocked(
             "Push blocked: never push to main (QA-10). Push a claude/<topic> branch and open a PR; "
@@ -77,9 +80,9 @@ def main() -> None:
     override = os.environ.get("PREPUSH_PREFLIGHT")
     with open(log, "w") as out:
         if override:
-            code = subprocess.run(["bash", "-c", override], cwd=target, stdout=out, stderr=subprocess.STDOUT).returncode
+            code = subprocess.run(["bash", "-c", override], cwd=target, stdout=out, stderr=subprocess.STDOUT, env=env).returncode
         else:
-            code = subprocess.run(["bash", os.path.join(target, "scripts", "preflight.sh")], stdout=out, stderr=subprocess.STDOUT).returncode
+            code = subprocess.run(["bash", os.path.join(target, "scripts", "preflight.sh")], cwd=target, stdout=out, stderr=subprocess.STDOUT, env=env).returncode
     if code == 0:
         sys.exit(0)
     with open(log) as f:

@@ -1234,9 +1234,11 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 74,
+      "tests": [
+        "src/engine/settings/livePool.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -13,6 +13,13 @@ while read -r _local_ref _local_sha remote_ref _remote_sha; do
   fi
 done
 root="$(git rev-parse --show-toplevel)"
+# Git exports GIT_DIR and friends to its hooks. Left in place, every git call
+# the preflight makes (the guard tests build throwaway repos) acts on this
+# repository instead: commits landed on the branch being pushed and
+# `git init` marked the checkout bare. Preflight runs from the root, so it
+# finds the repository without them.
+unset $(git rev-parse --local-env-vars)
+cd "$root" || exit 1
 log="${TMPDIR:-/tmp}/polo-prepush.log"
 if bash "$root/scripts/preflight.sh" > "$log" 2>&1; then
   exit 0

@@ -9,7 +9,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 - [ ] **PINs enviados.** Comité › Jugadores › PIN: uno por jugador. Mándalos por WhatsApp uno a uno.
 - [ ] **App instalada en los 12 teléfonos.** Cada quien abre el link, "Agregar a pantalla de inicio" (la guía sale la primera vez) y entra con su cara + PIN. Una vez adentro, la sesión se queda en el teléfono.
 - [ ] **Banquero definido.** Comité › Torneo › Banquero (quien cobra inscripciones y martillazos y paga premios).
-- [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde.
+- [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde. Desde que el torneo sale de preparación, la app vuelve a revisarlo con los jugadores y rondas reales: si alguien no llega o se agrega un día, En vivo, Dinero y el Comité avisan "faltan $…" hasta que se ajusten los premios.
 - [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.
 - [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
 - [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
