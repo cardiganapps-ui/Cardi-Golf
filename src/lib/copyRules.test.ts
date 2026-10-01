@@ -40,6 +40,7 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/
 import { MODULE_IDS, parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import { fillRound, makeCourse, makeFirstTournament, makeGroup, makePlayer, makeSnapshot, makeTee, score } from '../engine/testing/fixtures'
 import type { Snapshot } from '../engine/types'
+import { courseHandicap, estimateIndex, playingHandicap } from '../engine/core/handicap'
 import { handicapText, ordinal, t } from '../i18n/es-MX'
 import { formatMoney, formatSignedMoney } from './money'
 
@@ -98,7 +99,15 @@ interface Piece {
   jsx: boolean
 }
 
+const parsed = new Map<string, Piece[]>()
+/** Each file is parsed once, however many rules read it. */
 function pieces(file: string): Piece[] {
+  let out = parsed.get(file)
+  if (!out) parsed.set(file, (out = parse(file)))
+  return out
+}
+
+function parse(file: string): Piece[] {
   const code = readFileSync(file, 'utf8')
   const sf = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const out: Piece[] = []
@@ -117,7 +126,9 @@ function pieces(file: string): Piece[] {
         ts.isCaseClause(p) ||
         ts.isElementAccessExpression(p))
     if (!code) {
-      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) add(node, node.text, false, false)
+      // A string the JSX renders as it is ({'vs'}, aria-label="…", title, alt, placeholder) is copy, like JSX text.
+      const shown = !!p && (ts.isJsxExpression(p) || (ts.isJsxAttribute(p) && /^(aria-label|title|alt|placeholder|label)$/.test(p.name.getText(sf))))
+      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) add(node, node.text, false, false, shown)
       else if (ts.isTemplateHead(node)) add(node, node.text, false, true)
       else if (ts.isTemplateMiddle(node)) add(node, node.text, true, true)
       else if (ts.isTemplateTail(node)) add(node, node.text, true, false)
@@ -142,9 +153,14 @@ function templateRules(where: string, pc: Piece, out: Hit[]) {
 /** `${a} y ${b}`, `.join(' & ')`: a list joined by hand instead of t.common.andList («e» before an i sound). */
 const HAND_JOIN = /^\s+(?:y|e|&)\s+$/
 
-/** Names listed with commas only: `.map(name).join(', ')`, `…displayName).join(', ')`, `names.join(', ')`. */
-const COMMA_NAMES =
-  /\.map\(\s*(?:name|nameOf)\s*\)\s*\.join\(\s*', '\s*\)|displayName(?:\s*\?\?\s*[^)]*)?\)\s*\.join\(\s*', '\s*\)|\b(?:names|holders|winners|members|owners|claims)\.join\(\s*', '\s*\)|\bname(?:Of)?\([^;]*\.join\(\s*', '\s*\)/
+/** A list joined with commas or slashes, in any quotes: `.join(', ')`, `.join(" / ")`. */
+const COMMA_JOIN = /\.join\(\s*(['"`])\s*[,/]\s*\1\s*\)/
+/** On the same line, names: a name lookup, a display or full name, or a list of people by its usual names. */
+const NAMES_ON_LINE = /\bname(?:Of|For)?\(|\.map\(\s*(?:name|nameOf)\s*\)|\b(?:displayName|fullName)\b|\b(?:names|holders|winners|members|owners|claims|candidates|people)\b/
+/** A line of separate facts (`[club, city].filter(Boolean).join(', ')`) is commas by design, not a list of names. */
+const FACTS_LINE = /\]\.filter\(Boolean\)\.join\(/
+/** Names listed with commas only: `.map(name).join(', ')`, `…displayName).join(", ")`, `names.join(' / ')`. */
+const commaNames = (line: string) => COMMA_JOIN.test(line) && NAMES_ON_LINE.test(line) && !FACTS_LINE.test(line)
 
 /** Two or more of these names in a row with commas only («Camilo, Damián»): t.common.andList ends a list with «y» or «e». */
 function commaNameLists(text: string, names: string[]): string[] {
@@ -206,16 +222,23 @@ function golden(): Snapshot {
 /**
  * Plus handicaps on a tee rated under par, from an index, an estimate and a
  * number the Comité typed: the negative arithmetic in the handicap
- * explanations (handicap.ts), which no fixture reaches. Everyone pars every
- * hole, so the three plus handicaps tie for the second prize, and their names
- * take «e» in a list (Íñigo, Iván e Hilario).
+ * explanations (handicap.ts), which no fixture reaches. The three plus
+ * handicaps par every hole, so they tie for the second prize and their names
+ * take «e» in a list (Íñigo, Iván e Hilario). Camilo makes five birdies on
+ * day 1 (44 points), so day 2's cut of 4 is larger than his handicap of 3.
  */
 function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
-  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 100, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [300, 100] } }
+  const settings: TournamentSettings = {
+    ...DEFAULT_SETTINGS,
+    rounds: 2,
+    entryFee: 100,
+    prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [300, 100] },
+    day2Cut: { ...DEFAULT_SETTINGS.day2Cut, maxStrokes: 4 },
+  }
   const under = { rating: 70.4, slope: 128, par: 72 }
   const snapshot = makeSnapshot({
     settings,
-    rounds: 1,
+    rounds: 2,
     courses: [makeCourse('course1', [makeTee('tee1', 'course1', { rating: under.rating, slope: under.slope })])],
     players: [
       makePlayer(1, { displayName: 'Camilo', baseHcp: 3 }),
@@ -224,14 +247,36 @@ function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
       makePlayer(4, { displayName: 'Hilario', baseHcp: -2 }),
     ],
   })
-  snapshot.groups.push(makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4']))
-  for (const p of snapshot.players) for (const h of snapshot.courses[0]!.tees[0]!.holes) snapshot.scores.push(score('r1', p.id, h.number, h.par))
+  const holes = snapshot.courses[0]!.tees[0]!.holes
+  for (const r of ['r1', 'r2']) {
+    snapshot.groups.push(makeGroup(r, 1, ['p1', 'p2', 'p3', 'p4']))
+    // Day 1: Camilo birdies five holes he gets no stroke on.
+    for (const p of snapshot.players) for (const h of holes) snapshot.scores.push(score(r, p.id, h.number, h.par - (r === 'r1' && p.id === 'p1' && h.strokeIndex > 3 && h.number <= 7 ? 1 : 0)))
+  }
+  snapshot.rounds[0]!.status = 'finished'
+  return { snapshot, settings }
+}
+
+/**
+ * Below zero in a hole's arithmetic: an ace with three strokes received
+ * (net −2) and a twelve on a par 4 (points below zero count 0).
+ */
+function belowZero(): { snapshot: Snapshot; settings: TournamentSettings } {
+  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] } }
+  const snapshot = makeSnapshot({ settings, rounds: 1, players: [makePlayer(1, { displayName: 'Camilo', baseHcp: 54 }), makePlayer(2, { displayName: 'Damián', baseHcp: 0 })] })
+  snapshot.groups.push(makeGroup('r1', 1, ['p1', 'p2']))
+  const holes = snapshot.courses[0]!.tees[0]!.holes
+  const par3 = holes.find((h) => h.par === 3)!.number
+  for (const h of holes) {
+    snapshot.scores.push(score('r1', 'p1', h.number, h.number === par3 ? 1 : h.par), score('r1', 'p2', h.number, h.number === 1 ? 12 : h.par))
+  }
   return { snapshot, settings }
 }
 
 const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: TournamentSettings }> = [
   { name: 'golden', snapshot: golden(), settings: FIRST_TOURNAMENT_SETTINGS },
   { name: 'plus handicaps', ...plusHandicaps() },
+  { name: 'below zero', ...belowZero() },
   ...FIXTURE_NAMES.map((name) => {
     const f = getFixture(name)!
     return { name, snapshot: f.snapshot, settings: parseSettings(f.snapshot.tournament.settings) }
@@ -327,6 +372,8 @@ describe('copy rules: es-MX.ts', () => {
     expect(ordinal('3')).toBe('3.º')
     expect(ordinal('T3')).toBe('empatado en 3.º')
     expect(ordinal('')).toBe('')
+    expect(ordinal('–')).toBe('')
+    expect(ordinal('T')).toBe('')
     // Formatters that take a value that can be negative, fed a negative.
     const signed: Array<[string, string]> = [
       ['stats.unit pct', t.stats.unit('pct', -1)],
@@ -339,6 +386,12 @@ describe('copy rules: es-MX.ts', () => {
       ['player.dayHcp', t.player.dayHcp(2, 10, 2)],
       ['formatMoney', formatMoney(-300)],
       ['formatSignedMoney', formatSignedMoney(-300)],
+      // The handicap functions' own titles and steps, below zero (the Comité's preview shows them as they are).
+      ...(['title', 'steps'] as const).flatMap((k) => [
+        [`playingHandicap ${k}`, [playingHandicap(-3, DEFAULT_SETTINGS.handicap).why[k]].flat().join(' | ')],
+        [`courseHandicap ${k}`, [courseHandicap(-1.2, { slope: 128, rating: 70.4, par: 72 }).why[k]].flat().join(' | ')],
+        [`estimateIndex ${k}`, [estimateIndex([{ gross: 66, rating: 70.4, slope: 128, par: 72 }, { gross: 69, rating: 70.4, slope: 128, par: 72 }, { gross: 73, rating: 70.4, slope: 128, par: 72 }], DEFAULT_SETTINGS.handicap).why[k]].flat().join(' | ')],
+      ] as Array<[string, string]>),
       ['player.handicapLine', t.player.handicapLine(-1.2, 'Índice')],
       ['round.roundFacts', t.profile.roundFacts('Azules', -2)],
       ['admin courseHcp', t.admin.players.courseHcp(-2)],
@@ -365,9 +418,17 @@ describe('copy rules: es-MX.ts', () => {
     expect(andList(['Camilo'])).toBe('Camilo')
     expect(andList(['Camilo', 'Damián'])).toBe('Camilo y Damián')
     expect(andList(['Camilo', 'Damián', 'Ernesto'])).toBe('Camilo, Damián y Ernesto')
-    for (const n of ['Iván', 'Íñigo', 'Ignacio', 'Hilario', 'Híjar', 'iPhone']) expect(andList(['Camilo', n])).toBe(`Camilo e ${n}`)
+    for (const n of ['Iván', 'Íñigo', 'Ignacio', 'Hilario', 'Híjar', 'Ítalo']) expect(andList(['Camilo', n])).toBe(`Camilo e ${n}`)
     // A diphthong keeps «y»: agua y hielo; and so does a consonant y.
     for (const n of ['Hielo', 'Hiago', 'Ian', 'Yolanda']) expect(andList(['Camilo', n])).toBe(`Camilo y ${n}`)
+    // Spaces and blanks never reach the copy; a quoted name is read by its first letter.
+    expect(andList([' Camilo ', '', ' Iván'])).toBe('Camilo e Iván')
+    expect(andList(['Camilo', '«Iván»'])).toBe('Camilo e «Iván»')
+    // «o», and «u» before the sound /o/.
+    const { orList } = t.common
+    expect(orList(['Camilo', 'Damián'])).toBe('Camilo o Damián')
+    expect(orList(['Camilo', 'Damián', 'Óscar'])).toBe('Camilo, Damián u Óscar')
+    expect(orList(['Camilo', 'Homero'])).toBe('Camilo u Homero')
   })
 
   it('pays the snake from the bolsa: «pozo» is the Calcutta’s word only', () => {
@@ -380,7 +441,7 @@ describe('copy rules: what the engine writes', () => {
   const states = TOURNAMENTS.map(({ name, snapshot, settings }) => ({ name, snapshot, settings, state: computeTournament(snapshot, settings) }))
 
   it('covers every fixture and finds the explanations', () => {
-    expect(states.length).toBe(FIXTURE_NAMES.length + 2)
+    expect(states.length).toBe(FIXTURE_NAMES.length + 3)
     const copy = states.flatMap((s) => engineCopy(s.state, s.name, []))
     expect(copy.some(([path]) => /\.why\.steps/.test(path))).toBe(true)
     expect(copy.length).toBeGreaterThan(5000)
@@ -407,14 +468,24 @@ describe('copy rules: what the engine writes', () => {
     expect([...new Set(hits)]).toEqual([])
   })
 
-  it('reaches the handicap arithmetic below zero (the plus handicaps probe)', () => {
-    const plus = states.find((s) => s.name === 'plus handicaps')!
-    const text = engineCopy(plus.state, plus.name, []).map(([, x]) => x)
-    expect(text).toContain('Índice +1.2')
-    expect(text).toContain('Índice estimado +1.9')
-    expect(text.some((x) => x.startsWith('Índice +1.2, en la cuenta −1.2, × slope 128'))).toBe(true)
-    expect(text).toContain('Un hándicap de juego no baja de 0: no recibe golpes')
-    expect(text).toContain('Empatados: Íñigo, Iván e Hilario')
+  it('reaches the arithmetic below zero (the plus handicaps and below zero probes)', () => {
+    const text = (name: string) => {
+      const s = states.find((x) => x.name === name)!
+      return engineCopy(s.state, s.name, []).map(([, x]) => x)
+    }
+    const plus = text('plus handicaps')
+    expect(plus).toContain('Índice +1.2')
+    expect(plus).toContain('Índice estimado +1.9')
+    expect(plus.some((x) => x.startsWith('Índice +1.2, en la cuenta −1.2, × slope 128'))).toBe(true)
+    expect(plus).toContain('Un hándicap de juego no baja de 0: no recibe golpes')
+    expect(plus).toContain('Empatados: Íñigo, Iván e Hilario')
+    // A typed plus handicap says once how the arithmetic reads it.
+    expect(plus).toContain('En la cuenta, −2')
+    // A cut larger than the handicap: never «3 − 4 = 0».
+    expect(plus).toContain('3 − 4 = −1, no baja de 0: 0')
+    const below = text('below zero')
+    expect(below).toContain('1 − 3 = −2 neto')
+    expect(below).toContain('4 + 0 − 12 + 2 = −6, cuenta 0 pts (doble bogey neto o peor)')
   })
 
   it('lists names with t.common.andList, never with commas only', () => {
@@ -457,14 +528,17 @@ describe('copy rules: the rest of src, the API routes and the push worker', () =
       for (const pc of pieces(f)) {
         if (allowed(rel, lines, pc.line)) continue
         const where = `${rel}:${pc.line}`
-        // Straight quotes and the term table only in JSX text: string literals in code also carry CSS, JSON, selectors and table names.
-        check(where, pc.text, pc.jsx ? [...GLYPHS, QUOTES, ...TERMS] : GLYPHS, hits)
+        // Straight quotes only in JSX text: string literals in code also carry CSS, JSON and selectors.
+        check(where, pc.text, pc.jsx ? [...GLYPHS, QUOTES] : GLYPHS, hits)
+        // The term table on anything with a space in it: a bare word is a table, a key or a class name; a phrase is copy.
+        if (pc.jsx || pc.text.includes(' ')) check(where, pc.text, TERMS, hits)
         templateRules(where, pc, hits)
         if (HAND_JOIN.test(pc.text)) hits.push(`${where}: names joined by hand (t.common.andList): ${JSON.stringify(pc.text)}`)
       }
     }
     expect(hits).toEqual([])
-  })
+    // Every file in src, api and the push worker, parsed once: give it room on a loaded machine.
+  }, 30_000)
 
   it('lists names with t.common.andList, never .join(\', \')', () => {
     const hits: Hit[] = []
@@ -473,11 +547,12 @@ describe('copy rules: the rest of src, the API routes and the push worker', () =
       readFileSync(f, 'utf8')
         .split('\n')
         .forEach((l, i, lines) => {
-          if (COMMA_NAMES.test(l) && !allowed(rel, lines, i + 1)) hits.push(`${rel}:${i + 1}: names listed with commas only (t.common.andList): ${l.trim()}`)
+          if (commaNames(l) && !allowed(rel, lines, i + 1)) hits.push(`${rel}:${i + 1}: names listed with commas only (t.common.andList): ${l.trim()}`)
         })
     }
     expect(hits).toEqual([])
-  })
+    // Every file in src, api and the push worker, parsed once: give it room on a loaded machine.
+  }, 30_000)
 
   it('the API’s own messages use the term table', () => {
     const hits: Hit[] = []

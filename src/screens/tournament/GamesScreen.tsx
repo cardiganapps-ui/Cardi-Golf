@@ -342,7 +342,7 @@ export function GamesScreen() {
                     <button key={pf.ownerId} type="button" className={styles.gameRow} onClick={() => setOpen(pf.ownerId)}>
                       <span className={styles.rowText}>
                         <strong>{name(pf.ownerId)}</strong>
-                        <span className={styles.rowSub}>{t.common.andList(pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 ? ` ${h.pct}%` : ''}`))}</span>
+                        <span className={styles.rowSub}>{t.common.andList(pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 || pf.holdings.length > 1 ? ` ${h.pct}%` : ''}`))}</span>
                       </span>
                       <span className={styles.gameStake}>
                         <strong>{formatMoney(pf.value)}</strong>

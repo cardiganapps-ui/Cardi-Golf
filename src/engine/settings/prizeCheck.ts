@@ -213,7 +213,7 @@ export class PrizePoolError extends Error {
   readonly check: PrizeCheck
   constructor(check: PrizeCheck) {
     super(
-      `Prize pool does not balance: entries $${check.entryPot} vs prizes $${check.prizesTotal} (difference $${check.difference}).`,
+      `La bolsa no cuadra: entran $${check.entryPot} y se reparten $${check.prizesTotal}.`,
     )
     this.name = 'PrizePoolError'
     this.check = check

@@ -361,11 +361,11 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
 
   const lines = preview
     ? [
-        preview.orphaned.length ? H.deleteOrphaned(preview.orphaned.map((x) => x.name).join(', ')) : null,
+        preview.orphaned.length ? H.deleteOrphaned(t.common.andList(preview.orphaned.map((x) => x.name))) : null,
         preview.organizerOf > preview.orphaned.length ? H.deleteOrganizer(preview.organizerOf) : null,
         preview.linkedPlayers ? H.deletePlayers(preview.linkedPlayers) : null,
-        preview.crewsHanded.length ? H.deleteCrewsHanded(preview.crewsHanded.join(', ')) : null,
-        preview.crewsDeleted.length ? H.deleteCrewsDeleted(preview.crewsDeleted.join(', ')) : null,
+        preview.crewsHanded.length ? H.deleteCrewsHanded(t.common.andList(preview.crewsHanded)) : null,
+        preview.crewsDeleted.length ? H.deleteCrewsDeleted(t.common.andList(preview.crewsDeleted)) : null,
         preview.friendships || preview.rivalries ? H.deleteSocial(preview.friendships, preview.rivalries) : null,
         preview.hasProfile ? H.deleteProfile : null,
       ].filter((x): x is string => !!x)

@@ -7,11 +7,11 @@
  * índice de golpe (SI) vs índice (WHS), bolsa (entries) vs pozo (Calcutta),
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
-/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («») stays empty. */
+/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
   const n = label.replace(/^T/, '')
-  if (!n) return ''
+  if (!/^\d+$/.test(n)) return ''
   return tied ? `empatado en ${n}.º` : `${n}.º`
 }
 
@@ -20,13 +20,26 @@ export function ordinal(label: string): string {
  * but «y» when that i opens a diphthong (hielo, Hiago, Ian, Yolanda). Intl's
  * Spanish list misses the accented ones («y Íñigo»), and engines differ.
  */
-const takesE = (word: string) => /^[hH]?[iIíÍ](?![aeouáéóúAEOUÁÉÓÚ])/.test(word.trim())
+const takesE = (word: string) => /^[hH]?[iIíÍ](?![aeouáéóúAEOUÁÉÓÚ])/.test(word.replace(/^[\s«"'“‘(¿¡]+/, ''))
+/** «u» instead of «o» before the sound /o/ (Óscar, Homero). */
+const takesU = (word: string) => /^[hH]?[oOóÓ]/.test(word.replace(/^[\s«"'“‘(¿¡]+/, ''))
+
+/** Parts joined with commas and a last connector; blank parts are left out. */
+function listWith(parts: string[], last: (word: string) => string): string {
+  const items = parts.map((p) => p.trim()).filter(Boolean)
+  if (items.length < 2) return items[0] ?? ''
+  const end = items[items.length - 1]!
+  return `${items.slice(0, -1).join(', ')} ${last(end)} ${end}`
+}
 
 /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
 function andList(parts: string[]): string {
-  if (parts.length < 2) return parts[0] ?? ''
-  const last = parts[parts.length - 1]!
-  return `${parts.slice(0, -1).join(', ')} ${takesE(last) ? 'e' : 'y'} ${last}`
+  return listWith(parts, (w) => (takesE(w) ? 'e' : 'y'))
+}
+
+/** «Camilo o Damián», «Camilo u Óscar»: a choice between names. */
+function orList(parts: string[]): string {
+  return listWith(parts, (w) => (takesU(w) ? 'u' : 'o'))
 }
 
 /** A handicap as golfers write it: under zero is a «plus» handicap, +1.2 (the arithmetic in an explanation keeps −1.2). */
@@ -64,6 +77,8 @@ export const t = {
     plusList: (parts: Array<string | number>) => parts.join(' + '),
     /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. The only way copy joins names. */
     andList,
+    /** «Camilo o Damián», «Camilo u Óscar»: who, of these. */
+    orList,
     copySuffix: '(copia)',
     joinWithCode: (name: string, code: string) => `${name}: entra con el código ${code}`,
     loading: 'Cargando…',
@@ -1198,7 +1213,7 @@ export const t = {
     points: 'Puntos',
     gross: 'Gross',
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
-    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => `${ordinal(pos)}, ${name}${today ? `, hoy ${today}` : ''}${thru ? `, hoyo ${thru}` : ''}, ${figure}`,
+    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', figure === '–' ? '' : figure].filter(Boolean).join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
   card: {
@@ -1232,7 +1247,7 @@ export const t = {
     /** The hole header as it is read out, and announced when the hole changes. */
     /** A half-entered hole that came back after leaving the card (PWA-05). */
     restoredDraft: 'Lo que llevabas capturado en este hoyo sigue aquí. Falta guardarlo.',
-    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
+    holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
@@ -1739,7 +1754,7 @@ export const t = {
       yards: 'Yardas',
       parTotal: 'Par total',
       paste: 'Pegar de la tarjeta',
-      pasteHint: 'Pega dos o tres líneas: pares, índices y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
+      pasteHint: 'Pega dos o tres líneas: pares, índices de golpe y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
       pasteApply: 'Aplicar',
       pasteError: 'No entendí. Necesito 18 números por línea.',
       issues: 'Revisar',
