@@ -647,9 +647,14 @@
    screens, that was SEVENTEEN different row heights, the tallest being rows
    whose second line had wrapped.
 
-   The four rules below are the whole convention. Screen stylesheets `composes:`
+   The rules below are the whole convention. Screen stylesheets `composes:`
    them, so a row is the same object wherever it is drawn and no screen can
-   forget the two things everyone forgot. The <Row> component uses them too. */
+   forget the two things everyone forgot.
+
+   A screen never re-declares what it composes: both rules have one class,
+   so the bundle's order picks the winner, and a local `display: grid` lost
+   to `display: flex` on every money list (VIS-01). The text block composes
+   `rowTextBlock`, and that is what puts the figures in a column. */
 
 /* The line itself: one height, one rule under it. */
 .rowLine {
@@ -700,4 +705,26 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
+}
+/* A row's figure (an amount, a score). The text block takes the free width,
+   so every figure in a list ends on the same right edge: a column, read
+   down, never a staircase after each label (VIS-01). */
+.rowFig {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* The control after the figure («Marcar pagado», «Pagado»): one width on
+   every row of every list that has one, filled or empty, so the figures
+   before it stay in their column. 8rem holds the longest label at the
+   small button size; a longer one widens the slot instead of being cut. */
+.rowAction {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 8rem;
+}
+.rowAction > * {
+  flex: 1 1 auto;
 }

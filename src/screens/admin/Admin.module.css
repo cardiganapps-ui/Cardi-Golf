@@ -208,6 +208,10 @@
 }
 .inboxRow {
   composes: rowLine from '../../components/primitives.module.css';
+}
+/* Tighter than a plain row. Two classes, so it beats rowLine's own gap
+   wherever the bundle puts either rule (a re-declaration would not). */
+.inbox .inboxRow {
   gap: var(--s2);
 }
 .inboxText {

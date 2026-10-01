@@ -7,16 +7,20 @@
  * (entries, hammer prices, buybacks). Once it is final the settlement is the
  * one list: it already nets everything still due, so showing both would ask
  * for the same peso twice (MONEY-01).
+ *
+ * «Ya pagaron» keeps what has been marked, so a wrong tap can be taken back
+ * (UX-21): «Pagado» there writes the same row with paid false, nothing else.
  */
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
+import { IconCheck } from '../../components/icons'
 import { ShareCardButton } from '../../components/ShareCard'
 import { Avatar, Segmented, ShareButton, toast } from '../../components/ui'
 import { EmptyState, Money } from '../../components/primitives'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
-import { markPaidWrites, restorePaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
+import { applyPaidWrites, markPaidWrites, restorePaidWrites, unmarkPaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
@@ -28,6 +32,7 @@ const M = t.moneyScreen
 export function MoneyScreen() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
+  const patch = useTournament((s) => s.patch)
   const { me, tournamentId, slug } = useTournamentCtx()
   const { snapshot, state, settings } = data
   const money = state.money
@@ -37,7 +42,8 @@ export function MoneyScreen() {
   const [mode, setMode] = useState<'live' | 'byGame' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
   const [openId, setOpenId] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  /** Payment writes queued or on their way: the buttons wait until the last one is done. */
+  const [busy, setBusy] = useState(0)
 
   const people = useMemo(() => snapshot.players.map((p) => money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net), [snapshot.players, money.people])
   /**
@@ -71,46 +77,128 @@ export function MoneyScreen() {
       money.accounts.filter((a) => a.due > 0 && a.from !== null && (a.kind === 'entry' || a.kind === 'calcutta' || a.kind === 'buyback' || a.kind === 'side' || (a.kind === 'bet' && a.final))),
     [money.accounts],
   )
+  /** «Ya pagaron»: every account with a payment on record, where a wrong «Marcar pagado» is taken back (UX-21). */
+  const paidAccounts = useMemo(() => money.accounts.filter((a) => a.paid > 0), [money.accounts])
+  /** What a row is for: the flows still due on the account, or the ones its payment covers. */
   const accountDetail = useCallback(
-    (a: Account) => {
-      const due = money.flows.filter((f) => f.kind === a.kind && f.from === a.from && f.to === a.to && f.outstanding > 0)
+    (a: Account, part: 'due' | 'paid' = 'due') => {
+      const flows = money.flows.filter((f) => f.kind === a.kind && f.from === a.from && f.to === a.to && (part === 'due' ? f.outstanding > 0 : f.outstanding < f.amount))
       if (a.kind === 'entry') return M.owesEntry
       if (a.kind === 'buyback') return M.owesBuyback
-      if (a.kind === 'calcutta') return M.owesLots(due.map((f) => f.lotNumber ?? 0))
-      if (a.kind === 'bet') return `${M.owesBet}, ${due.map((f) => f.label).join(', ')}`
-      return `${M.owesSide}, ${due.map((f) => f.label).join(', ')}`
+      if (a.kind === 'payout') return M.prizes
+      if (a.kind === 'calcutta') return flows.length ? M.owesLots(flows.map((f) => f.lotNumber ?? 0)) : M.shares
+      const kind = a.kind === 'bet' ? M.owesBet : M.owesSide
+      return flows.length ? `${kind}, ${flows.map((f) => f.label).join(', ')}` : kind
     },
     [money.flows],
   )
 
-  async function run(fn: () => Promise<void>) {
-    setBusy(true)
-    try {
-      await fn()
-      await reload()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(false)
+  /**
+   * Payment writes go one at a time, in the order they were tapped, so two
+   * writes to one key can't land the wrong way round; a «Deshacer» tapped
+   * while another write is on its way waits its turn.
+   */
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  function run(fn: () => Promise<void>) {
+    setBusy((n) => n + 1)
+    queue.current = queue.current.then(async () => {
+      try {
+        await fn()
+        await reload()
+      } catch (e) {
+        toast(humanError(e))
+      } finally {
+        setBusy((n) => n - 1)
+      }
+    })
+    return queue.current
+  }
+  /**
+   * Each payment key's latest tap. A «Deshacer» brings back the value from
+   * before its own tap, so once a later tap has changed the same key it would
+   * undo that one too: it says so instead.
+   */
+  const taps = useRef({ last: 0, byKey: new Map<string, number>() })
+  const keyOf = (a: Account) => a.lotId ?? `${a.kind}|${a.from}|${a.to}`
+  function tap(accounts: readonly Account[]) {
+    const n = ++taps.current.last
+    for (const a of accounts) taps.current.byKey.set(keyOf(a), n)
+    return n
+  }
+  function undo(accounts: Account[], n: number) {
+    if (!accounts.every((a) => taps.current.byKey.get(keyOf(a)) === n)) return toast(M.undoStale)
+    tap(accounts)
+    void run(() => write(restorePaidWrites(accounts)))
+  }
+  /**
+   * The row a button was on leaves its list once the write lands. Focus goes
+   * to the button now in its place (or the one before, at the end of the
+   * list), not to the top of the page.
+   */
+  const refocus = useRef<(() => void) | null>(null)
+  function keepFocus(button: EventTarget) {
+    // Only a button that had focus (a keyboard, or a mouse on a desktop); a tap on a phone leaves focus alone.
+    const list = button instanceof HTMLElement && document.activeElement === button ? button.closest('[data-money-list]') : null
+    if (!list) return
+    const actions = () => Array.from(list.querySelectorAll<HTMLButtonElement>('button[data-money-action]'))
+    const at = actions().indexOf(button as HTMLButtonElement)
+    const around = list.closest('details, section')
+    refocus.current = () => {
+      const active = document.activeElement
+      if (active && active !== document.body && active.isConnected) return
+      const now = list.isConnected ? actions() : []
+      const next = now[Math.min(at, now.length - 1)] ?? (around?.isConnected ? around.querySelector<HTMLElement>('summary, h2, h3') : null)
+      // A heading takes focus only with a tabindex; a summary and a button already do.
+      if (next && /^H[23]$/.test(next.tagName) && !next.hasAttribute('tabindex')) next.tabIndex = -1
+      next?.focus()
     }
   }
-  /** One write per account, in order: a payments row upserted on its key, or a buyback on its lot. */
+  useEffect(() => {
+    if (busy > 0 || !refocus.current) return
+    const f = refocus.current
+    refocus.current = null
+    f()
+  }, [busy])
+  /**
+   * One write per account, in order: a payments row upserted on its key, or a
+   * buyback on its lot. Each shows as soon as the server has it, so a row
+   * moves under the thumb that tapped it; the reload then confirms them all.
+   */
   async function write(writes: PaidWrite[]) {
     for (const w of writes) {
       if ('lotId' in w) await setBuybackPaid(w.lotId, w.paid)
       else await setPaymentPaid(tournamentId, { from_player_id: w.from, to_player_id: w.to, amount: w.amount, kind: w.kind, paid: w.paid })
+      patch((s) => applyPaidWrites(s, [w]))
     }
   }
   /**
    * «Marcar pagado» records every account the row closes as paid in full, so
    * the row goes away and stays away (MONEY-04). The toast can put it back.
    */
-  const markPaid = (settles: Account[]) =>
-    run(async () => {
+  const markPaid = (settles: Account[], button: EventTarget) => {
+    const n = tap(settles)
+    keepFocus(button)
+    return run(async () => {
       await write(markPaidWrites(settles))
-      toast(M.markedPaid, { label: t.common.undo, onClick: () => void run(() => write(restorePaidWrites(settles))) })
+      toast(M.markedPaid, { label: t.common.undo, onClick: () => undo(settles, n) })
     })
+  }
+  /**
+   * «Pagado» tapped in «Ya pagaron»: that account's own row goes back to
+   * unpaid, through the same write (UX-21). The toast records it again,
+   * exactly as it was.
+   */
+  const unmarkPaid = (a: Account, button: EventTarget) => {
+    const n = tap([a])
+    keepFocus(button)
+    return run(async () => {
+      await write(unmarkPaidWrites([a]))
+      toast(M.unmarkedPaid, { label: t.common.undo, onClick: () => undo([a], n) })
+    })
+  }
   const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(name(from), name(to)) : M.pays(name(from), name(to), formatMoney(amount)))
+  /** A row's own name, read out with its button: who, to whom, for what and how much, so no two buttons share one. */
+  const accountText = (a: Account, part: 'due' | 'paid') => `${name(a.from)} ${part === 'due' ? M.paysTo : M.paidTo} ${name(a.to)}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid)}`
   /** One debt still due, with «Marcar pagado» for admins. */
   const debtRow = (a: Account) => (
     <div key={`${a.kind}|${a.from}|${a.to}`} className={styles.transfer}>
@@ -121,12 +209,12 @@ export function MoneyScreen() {
         <span className={styles.transferKind}>{accountDetail(a)}</span>
       </span>
       <span className={styles.amount}>{formatMoney(a.due)}</span>
-      {me.isAdmin ? (
-        <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid([a])} aria-label={`${M.markPaid}: ${lineText(a.from, a.to, a.due)}`}>
-          {M.markPaid}
-        </button>
-      ) : (
-        <span />
+      {me.isAdmin && (
+        <span className={styles.action}>
+          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid([a], e.currentTarget)} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
+            {M.markPaid}
+          </button>
+        </span>
       )}
     </div>
   )
@@ -141,6 +229,35 @@ export function MoneyScreen() {
         return `${label} ${formatSignedMoney(sign * a.due)}`
       })
 
+  /** One payment on record, with «Pagado» for admins: on, with its check, and a tap takes it back (UX-21). */
+  const paidRow = (a: Account) => (
+    <div key={`${a.kind}|${a.from}|${a.to}`} className={`${styles.transfer} ${styles.paidRow}`}>
+      <span className={styles.transferText}>
+        <span>
+          <strong>{name(a.from)}</strong> {M.paidTo} {name(a.to)}
+        </span>
+        <span className={styles.transferKind}>{accountDetail(a, 'paid')}</span>
+      </span>
+      <span className={styles.amount}>{formatMoney(a.paid)}</span>
+      {me.isAdmin && (
+        <span className={styles.action}>
+          <button className="btn btn--ghost btn--sm" type="button" aria-pressed="true" data-money-action disabled={busy > 0} onClick={(e) => void unmarkPaid(a, e.currentTarget)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
+            <IconCheck size={16} />
+            {M.paid}
+          </button>
+        </span>
+      )}
+    </div>
+  )
+  /** Folded by default: under «Quién debe qué» while the tournament runs, under the settlement once it is final. */
+  const paidSection = paidAccounts.length > 0 && (
+    <details className={styles.section}>
+      <summary className={styles.recordSummary}>{M.paidTitle(paidAccounts.length)}</summary>
+      {me.isAdmin && <span className="help">{M.paidHint}</span>}
+      <div className={styles.transfers} data-money-list>{paidAccounts.map(paidRow)}</div>
+    </details>
+  )
+
   const shareText = useMemo(() => {
     const lines = [M.shareTitle(snapshot.tournament.name), '']
     for (const p of people) lines.push(`${name(p.playerId)}: ${t.money.paid.toLowerCase()} ${formatMoney(p.paid)}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net)}`)
@@ -150,6 +267,8 @@ export function MoneyScreen() {
     return lines.join('\n')
   }, [people, settle, money, snapshot.tournament.name, name])
 
+  /** Vía banco, once final, an admin marks lines paid: the list gets a slot for the button. */
+  const markable = me.isAdmin && settle === 'bank' && state.tournamentFinal
   const verdict = money.banker.balanced ? M.bankOk : M.bankPending(formatMoney(money.banker.difference))
   const verdictClass = money.banker.balanced ? '' : state.tournamentFinal ? styles.bankVerdictOff : styles.bankVerdictOpen
 
@@ -287,10 +406,11 @@ export function MoneyScreen() {
               {owed.length === 0 ? (
                 <span className="help">{M.nothingOwed}</span>
               ) : (
-                <div className={styles.transfers}>{owed.map(debtRow)}</div>
+                <div className={styles.transfers} data-money-list>{owed.map(debtRow)}</div>
               )}
             </section>
           )}
+          {!state.tournamentFinal && paidSection}
 
           <section className={styles.section}>
             <Segmented
@@ -304,9 +424,9 @@ export function MoneyScreen() {
             <span className="help">{settle === 'bank' ? M.viaBankHint(banker?.displayName ?? M.bank) : M.p2pHint(banker?.displayName ?? null)}</span>
             {!state.tournamentFinal && <span className="help">{M.settlePreview}</span>}
             {state.tournamentFinal && (settle === 'bank' ? money.viaBank : money.peerToPeer).length === 0 && <span className="help">{M.allSettled}</span>}
-            <div className={styles.transfers}>
+            <div className={styles.transfers} data-money-list>
               {(settle === 'bank' ? money.viaBank : money.peerToPeer).map((tr, i) => {
-                const canMark = me.isAdmin && settle === 'bank' && state.tournamentFinal && !!tr.final && !!tr.settles?.length
+                const canMark = markable && !!tr.final && !!tr.settles?.length
                 const parts = settle === 'bank' && (tr.settles?.length ?? 0) > 1 ? lineParts(tr) : []
                 return (
                   <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
@@ -330,12 +450,15 @@ export function MoneyScreen() {
                       )}
                     </span>
                     <span className={styles.amount}>{formatMoney(tr.amount)}</span>
-                    {canMark ? (
-                      <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void markPaid(tr.settles!)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
-                        {M.markPaid}
-                      </button>
-                    ) : (
-                      <span />
+                    {/* Every line keeps the slot, so a line with a provisional prize (no button) keeps its amount in the column. */}
+                    {markable && (
+                      <span className={styles.action}>
+                        {canMark && (
+                          <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid(tr.settles!, e.currentTarget)} aria-label={`${M.markPaid}: ${lineText(tr.from, tr.to, tr.amount)}`}>
+                            {M.markPaid}
+                          </button>
+                        )}
+                      </span>
                     )}
                   </div>
                 )
@@ -350,9 +473,10 @@ export function MoneyScreen() {
             <details className={styles.section}>
               <summary className={styles.recordSummary}>{M.recordPaid}</summary>
               <span className="help">{M.recordPaidHint}</span>
-              <div className={styles.transfers}>{owed.map(debtRow)}</div>
+              <div className={styles.transfers} data-money-list>{owed.map(debtRow)}</div>
             </details>
           )}
+          {state.tournamentFinal && paidSection}
         </>
       )}
     </div>

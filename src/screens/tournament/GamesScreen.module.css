@@ -11,8 +11,6 @@
 }
 .gameRow {
   composes: rowLine from '../../components/primitives.module.css';
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   border-left: 0;
   border-right: 0;
   border-top: 0;
@@ -91,20 +89,17 @@
   flex-direction: column;
   border-top: var(--hairline);
 }
+/* The text block takes the free width, so the amount (or the points) after
+   it sits on the row's right edge, in one column down the list (VIS-01). */
 .rowLine {
   composes: rowLine from '../../components/primitives.module.css';
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   font-size: var(--fs-sm);
 }
 .rowLine strong {
   font-size: var(--fs-md);
 }
 .rowText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: var(--lh-ui);
+  composes: rowTextBlock from '../../components/primitives.module.css';
 }
 .rowSub {
   color: var(--ink-2);
@@ -114,6 +109,11 @@
   gap: var(--s4);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* Each pair's points in a column of their own, as wide on every row. */
+.figures > * {
+  min-width: 3ch;
+  text-align: right;
 }
 .potLine {
   display: flex;
