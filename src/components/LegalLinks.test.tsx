@@ -1,44 +1,63 @@
 // @vitest-environment happy-dom
 /**
- * TRUST-05: where someone gives their data (an account, a PIN on a
- * tournament's faces, a quick round, the Comité typing other people's), the
- * notice and the terms are a tap away first. They open beside the form, so a
- * half-typed email, code or PIN survives the read.
+ * TRUST-05: the consent line and the notes link the terms and the notice,
+ * each in a new tab (a half-typed email, code or PIN survives the read), and
+ * say so to a screen reader only. Where each one shows, rendered for real, is
+ * src/screens/consentPoints.test.tsx.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { t } from '../i18n/es-MX'
-import { LegalConsent, OthersDataNotice } from './LegalLinks'
+import { LegalConsent, NoticeNote, OthersDataNotice } from './LegalLinks'
 
-afterEach(() => cleanup())
+const C = t.legal.consent
+
+afterEach(cleanup)
+
+/** Its page, in a new tab that cannot reach back to the form's window, and «(se abre en otra pestaña)» for a screen reader only. */
+function expectNewTabLink(a: HTMLElement, page: string) {
+  expect(a.getAttribute('href')?.split('?')[0]).toBe(page)
+  expect(a.getAttribute('target')).toBe('_blank')
+  expect(a.getAttribute('rel')).toContain('noopener')
+  const said = [...a.querySelectorAll('span')].filter((s) => s.textContent?.trim() === t.legal.newTab)
+  expect(said).toHaveLength(1)
+  expect(said[0]!.className).toBe('sr-only')
+}
 
 describe('the consent line', () => {
-  it('links the terms and the notice, each in a new tab, and says so to a screen reader', () => {
+  it('«Al continuar»: the terms, then the notice', () => {
     render(<LegalConsent />)
-    const terms = screen.getByRole('link', { name: `${t.legal.consent.terms} ${t.legal.newTab}` })
-    const privacy = screen.getByRole('link', { name: `${t.legal.consent.privacy} ${t.legal.newTab}` })
-    expect(terms.getAttribute('href')).toBe('/terminos')
-    expect(privacy.getAttribute('href')).toBe('/privacidad')
-    for (const a of [terms, privacy]) {
-      expect(a.getAttribute('target')).toBe('_blank')
-      expect(a.getAttribute('rel')).toContain('noopener')
-    }
-    expect(screen.getByText(/Al continuar aceptas los/).textContent).toBe(`Al continuar aceptas los Términos de uso ${t.legal.newTab} y el Aviso de privacidad ${t.legal.newTab}.`)
+    const terms = screen.getByRole('link', { name: `${C.terms} ${t.legal.newTab}` })
+    expectNewTabLink(terms, '/terminos')
+    expectNewTabLink(screen.getByRole('link', { name: `${C.privacy} ${t.legal.newTab}` }), '/privacidad')
+    expect(terms.closest('p')!.textContent).toBe('Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).')
   })
 
-  it('the Comité, typing other people\'s data, is told what happens to it', () => {
-    render(<OthersDataNotice />)
-    expect(screen.getByRole('link', { name: `${t.legal.othersData.privacy} ${t.legal.newTab}` }).getAttribute('href')).toBe('/privacidad')
+  it('«Al entrar»: short enough to sit above a tournament\'s faces, with an id for the field it describes', () => {
+    render(<LegalConsent enter id="consent" />)
+    const terms = screen.getByRole('link', { name: `${C.termsShort} ${t.legal.newTab}` })
+    expectNewTabLink(terms, '/terminos')
+    expectNewTabLink(screen.getByRole('link', { name: `${C.privacy} ${t.legal.newTab}` }), '/privacidad')
+    const line = terms.closest('p')!
+    expect(line.id).toBe('consent')
+    expect(line.textContent).toBe('Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).')
   })
 })
 
-describe('every place that collects data shows it', () => {
-  const src = (f: string) => readFileSync(join(process.cwd(), 'src', f), 'utf8')
-  // The face grid and the PIN step are rendered for real in src/screens/consentPoints.test.tsx.
-  for (const f of ['screens/profile/EntrarScreen.tsx', 'screens/organizer/OrganizerLoginScreen.tsx', 'screens/profile/QuickRoundScreen.tsx']) {
-    it(f, () => expect(src(f)).toContain('<LegalConsent />'))
-  }
-  it('screens/admin/AdminPlayers.tsx', () => expect(src('screens/admin/AdminPlayers.tsx')).toContain('<OthersDataNotice />'))
+describe('the notes that end on the notice', () => {
+  it('the Comité, typing other people\'s data, is told who sees it', () => {
+    render(<OthersDataNotice id="others" />)
+    const link = screen.getByRole('link', { name: `${t.legal.othersData.privacy} ${t.legal.newTab}` })
+    expectNewTabLink(link, '/privacidad')
+    expect(link.closest('p')!.id).toBe('others')
+  })
+
+  it('the push switch and the scorecard photo', () => {
+    for (const note of [t.legal.pushNote, t.legal.scorecardNote]) {
+      render(<NoticeNote note={note} />)
+      expectNewTabLink(screen.getByRole('link', { name: `${note.privacy} ${t.legal.newTab}` }), '/privacidad')
+      expect(document.querySelector('[data-legal-consent]')!.textContent).toBe(`${note.start}${note.privacy} ${t.legal.newTab}${note.end}`)
+      cleanup()
+    }
+  })
 })
