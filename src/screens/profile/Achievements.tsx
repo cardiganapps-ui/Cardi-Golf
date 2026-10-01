@@ -11,7 +11,7 @@ import { Sheet } from '../../components/ui'
 import { Wordmark } from '../../components/primitives'
 import { IconChevronRight } from '../../components/icons'
 import { badges, records, recapYears, yearRecap, type AchRound, type AchTournament, type Badge, type PersonalRecord } from '../../engine/profile/achievements'
-import { shareCard } from '../../components/shareCard'
+import { shareCard } from '../../components/shareAction'
 import styles from './Profile.module.css'
 
 const A = t.achievements

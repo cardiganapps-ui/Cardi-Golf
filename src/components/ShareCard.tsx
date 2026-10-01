@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
-import { shareCard } from './shareCard'
+import { shareCard } from './shareAction'
 import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
 
