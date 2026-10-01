@@ -8,6 +8,7 @@ import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 're
 import { t } from '../i18n/es-MX'
 import { humanError } from '../lib/humanError'
 import styles from './ui.module.css'
+import { anySheetOpen, isTopSheet, sheetClosed, sheetOpened } from './sheetHistory'
 
 export { Field, Segmented } from './primitives'
 
@@ -71,8 +72,6 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
   )
 }
 
-/** Open sheets, outermost first: Escape closes only the last one and body scroll returns when the last one closes. */
-const openSheets: string[] = []
 
 /** Bottom sheet / modal. Focus moves in on open and back to the opener on close. */
 export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean }) {
@@ -91,7 +90,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
   }, [onClose])
   useEffect(() => {
     if (!open) return
-    openSheets.push(id)
+    sheetOpened(id, () => close.current())
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
     /*
@@ -110,7 +109,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       ;(wanted ?? el).focus()
     }, 30)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || openSheets[openSheets.length - 1] !== id) return
+      if (e.key !== 'Escape' || !isTopSheet(id)) return
       e.stopPropagation()
       close.current()
     }
@@ -119,9 +118,8 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
     return () => {
       clearTimeout(timer)
       window.removeEventListener('keydown', onKey)
-      const i = openSheets.indexOf(id)
-      if (i >= 0) openSheets.splice(i, 1)
-      if (openSheets.length === 0) document.body.style.overflow = ''
+      sheetClosed(id)
+      if (!anySheetOpen()) document.body.style.overflow = ''
       opener.current?.focus?.()
     }
   }, [open, id])

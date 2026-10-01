@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { leaveSheetHistory } from '../../components/sheetHistory'
 import { Field, Input } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { ReasonSheet } from '../../components/ReasonSheet'
@@ -311,7 +312,8 @@ export function PersonDetail() {
         onDeleted={() => {
           toast(H.deleted)
           outlet?.onChanged()
-          navigate('..', { relative: 'path', replace: true })
+          // From the delete sheet: its history entry goes first, so back never returns to the deleted account (PWA-05).
+          void leaveSheetHistory().then(() => navigate('..', { relative: 'path', replace: true }))
         }}
       />
     </div>

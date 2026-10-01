@@ -73,6 +73,16 @@
   white-space: nowrap;
 }
 
+/* A half-entered hole that came back (PWA-05): it is not saved yet. */
+.restoredNote {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+}
+
 /* One row per player: name line, then the controls. Four fit on one screen. */
 .players {
   display: flex;

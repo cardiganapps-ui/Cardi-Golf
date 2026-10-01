@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet, useNavigate, useOutlet, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { leaveSheetHistory } from '../../components/sheetHistory'
 import { Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
@@ -108,7 +109,8 @@ export function CrewDetail() {
   const crew = c
   const gone = () => {
     outlet?.onChanged()
-    navigate('..', { relative: 'path', replace: true })
+    // From a sheet: its history entry goes first, so back never returns to the deleted crew (PWA-05).
+    void leaveSheetHistory().then(() => navigate('..', { relative: 'path', replace: true }))
   }
 
   return (
