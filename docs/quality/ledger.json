@@ -370,9 +370,12 @@
       "workstream": "W1",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 66,
+      "tests": [
+        "src/data/outbox.race.test.ts",
+        "src/data/outbox.upgrade.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2517,9 +2520,12 @@
       "workstream": "W0",
       "phase": 0,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 66,
+      "tests": [
+        "src/lib/fetchWithTimeout.test.ts",
+        "src/data/outbox.race.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

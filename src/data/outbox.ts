@@ -11,11 +11,26 @@ import { t } from '../i18n/es-MX'
 import type { Score, Snapshot } from '../engine/types'
 import { registerOverlay, useTournament } from './tournamentStore'
 
+/**
+ * `seq` identifies this version of the write: a newer write to the same key
+ * replaces the item with a higher seq, and a push only settles the exact
+ * version it sent (ARCH-01). Items saved by older builds get one on load.
+ */
+interface ItemBase {
+  key: string
+  tournamentId: string
+  attempts: number
+  createdAt: number
+  seq: number
+  lastError?: string
+}
 export type OutboxItem =
-  | { key: string; kind: 'score'; tournamentId: string; payload: ScorePayload; attempts: number; createdAt: number; lastError?: string }
-  | { key: string; kind: 'tiebreak'; tournamentId: string; payload: TiebreakPayload; attempts: number; createdAt: number; lastError?: string }
-  | { key: string; kind: 'signature'; tournamentId: string; payload: SignaturePayload; attempts: number; createdAt: number; lastError?: string }
-  | { key: string; kind: 'award'; tournamentId: string; payload: AwardPayload; attempts: number; createdAt: number; lastError?: string }
+  | (ItemBase & { kind: 'score'; payload: ScorePayload })
+  | (ItemBase & { kind: 'tiebreak'; payload: TiebreakPayload })
+  | (ItemBase & { kind: 'signature'; payload: SignaturePayload })
+  | (ItemBase & { kind: 'award'; payload: AwardPayload })
+/** What callers hand to `enqueue`: the outbox stamps the version. */
+type NewItem = OutboxItem extends infer I ? (I extends OutboxItem ? Omit<I, 'seq'> & { seq?: number } : never) : never
 
 export interface ScorePayload {
   round_id: string
@@ -66,7 +81,29 @@ class OutboxDb extends Dexie {
     super('cardi-golf-outbox')
     this.version(1).stores({ items: 'key, tournamentId, createdAt' })
     this.version(2).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
+    // v3: every item carries its version (`seq`); older items get one from their creation time.
+    this.version(3)
+      .stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
+      .upgrade((tx) =>
+        tx
+          .table('items')
+          .toCollection()
+          .modify((it: { seq?: number; createdAt?: number }) => {
+            it.seq ??= (it.createdAt ?? 0) * 1000
+          }),
+      )
   }
+}
+
+/** Monotonic across reloads: newer writes always get a higher seq than anything stored. */
+let lastSeq = 0
+function nextSeq(): number {
+  lastSeq = Math.max(Date.now() * 1000, lastSeq + 1)
+  return lastSeq
+}
+/** The queued version of this key, if it is still exactly the one we pushed. */
+function isCurrent(item: OutboxItem): boolean {
+  return queue.some((x) => x.key === item.key && x.seq === item.seq)
 }
 let db: OutboxDb | null = null
 function getDb(): OutboxDb | null {
@@ -91,7 +128,8 @@ export const useOutbox = create<OutboxState>(() => ({ pending: 0, syncing: false
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
 let rejectedAll: RejectedItem[] = []
-let flushing = false
+/** The flush in progress, if any. */
+let running: Promise<void> | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
 
 function activeTournamentId(): string | null {
@@ -109,9 +147,21 @@ export function refreshOutboxCounters() {
 
 async function loadQueue() {
   const d = getDb()
-  queue = d ? await d.items.orderBy('createdAt').toArray() : []
+  const stored = d ? await d.items.toArray() : []
+  queue = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 })).sort((a, b) => a.seq - b.seq)
+  lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
   rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
   publish()
+}
+
+/** Remove `item` from Dexie only if the stored version is still the one we pushed. */
+async function deleteStored(item: OutboxItem) {
+  const d = getDb()
+  if (!d) return
+  await d.transaction('rw', d.items, async () => {
+    const cur = await d.items.get(item.key)
+    if (cur && (cur.seq ?? cur.createdAt * 1000) === item.seq) await d.items.delete(item.key)
+  })
 }
 
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
@@ -123,14 +173,15 @@ export function describeSyncError(msg: string): string {
 }
 
 async function reject(item: OutboxItem, message: string) {
+  // A newer write to the same key replaced this one while it was in flight:
+  // that write still goes out, so this refusal no longer matters.
+  if (!isCurrent(item)) return
   const r: RejectedItem = { key: item.key, kind: item.kind, tournamentId: item.tournamentId, payload: item.payload, message, at: Date.now() }
   rejectedAll = [...rejectedAll.filter((x) => x.key !== r.key), r]
-  queue = queue.filter((x) => x.key !== item.key)
+  queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
+  await deleteStored(item)
   const d = getDb()
-  if (d) {
-    await d.items.delete(item.key)
-    await d.rejected.put(r)
-  }
+  if (d) await d.rejected.put(r)
 }
 
 /** Put a rejected write back in the queue (the Comité, whose write is allowed, or after the round reopened). */
@@ -140,7 +191,7 @@ export async function retryRejected(key: string) {
   rejectedAll = rejectedAll.filter((x) => x.key !== key)
   const d = getDb()
   if (d) await d.rejected.delete(key)
-  await enqueue({ key: r.key, kind: r.kind, tournamentId: r.tournamentId, payload: r.payload, attempts: 0, createdAt: Date.now() } as OutboxItem)
+  await enqueue({ key: r.key, kind: r.kind, tournamentId: r.tournamentId, payload: r.payload, attempts: 0, createdAt: Date.now() } as NewItem)
 }
 export async function discardRejected(key: string) {
   rejectedAll = rejectedAll.filter((x) => x.key !== key)
@@ -185,7 +236,10 @@ export function overlayPending(s: Snapshot): void {
   }
 }
 
-async function enqueue(item: OutboxItem) {
+async function enqueue(newItem: NewItem) {
+  // A newer version of the same key replaces the queued one, even while that
+  // one is in flight: the flush pushes this version after it (ARCH-01).
+  const item = { ...newItem, seq: nextSeq() } as OutboxItem
   queue = [...queue.filter((x) => x.key !== item.key), item]
   publish()
   const d = getDb()
@@ -217,13 +271,20 @@ export const _outboxTest = {
   reset() {
     queue = []
     rejectedAll = []
-    flushing = false
+    running = null
     if (timer) clearTimeout(timer)
     timer = null
     publish({ lastError: null, syncing: false })
   },
   queue: () => queue,
   enqueue,
+  /** Re-read the queue from IndexedDB, as an app restart does. */
+  load: loadQueue,
+  stored: async () => (getDb() ? await getDb()!.items.toArray() : []),
+  async clearStored() {
+    const d = getDb()
+    if (d) await Promise.all([d.items.clear(), d.rejected.clear()])
+  },
 }
 
 async function push(item: OutboxItem): Promise<void> {
@@ -254,24 +315,47 @@ function isPermanent(msg: string): boolean {
 }
 
 /**
- * Push everything queued, in order. A permanent rejection moves the item to
- * `rejected` (never dropped silently); a network error keeps it queued with
- * backoff, forever (§2: nothing is lost). Items enqueued while a flush runs
- * are pushed right after it, not five seconds later.
+ * Push everything queued, oldest first. A permanent rejection moves the item
+ * to `rejected` (never dropped silently); a network error (a timeout included)
+ * keeps it queued with backoff, forever (§2: nothing is lost).
+ *
+ * The loop always takes the oldest item of the live queue, so a write queued
+ * while a flush runs goes out in the same pass. A push only settles the exact
+ * version it sent: if the player corrected the hole meanwhile, the newer
+ * version stays queued and is pushed after it (ARCH-01).
  */
-export async function flush(): Promise<void> {
-  if (flushing) return
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) return
-  flushing = true
+export function flush(): Promise<void> {
+  // One flush at a time; a caller during a flush waits for that one to finish.
+  if (running) return running
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve()
+  // Mark the flush as running before it starts: a push can enqueue (and so
+  // call flush) synchronously, and must join this run, not start another.
+  let settle!: () => void
+  const run = new Promise<void>((r) => (settle = r))
+  running = run
+  void runFlush()
+    .catch(() => true)
+    .then((failed) => {
+      if (running === run) running = null
+      settle()
+      if (queue.length && !failed && !timer) void flush()
+    })
+  return run
+}
+
+/** One pass over the queue. Returns true if it stopped on a network error. */
+async function runFlush(): Promise<boolean> {
   useOutbox.setState({ syncing: true })
   const d = getDb()
   let failed = false
   try {
-    for (const item of [...queue]) {
+    for (let item = queue[0]; item; item = queue[0]) {
       try {
         await pushImpl(item)
-        queue = queue.filter((x) => x.key !== item.key)
-        if (d) await d.items.delete(item.key)
+        if (isCurrent(item)) {
+          queue = queue.filter((x) => !(x.key === item!.key && x.seq === item!.seq))
+          await deleteStored(item)
+        }
         publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
@@ -282,20 +366,26 @@ export async function flush(): Promise<void> {
           void useTournament.getState().reload()
         } else {
           failed = true
-          const next = { ...item, attempts: item.attempts + 1, lastError: msg }
-          queue = queue.map((x) => (x.key === item.key ? next : x))
-          if (d) await d.items.put(next)
+          if (isCurrent(item)) {
+            const next = { ...item, attempts: item.attempts + 1, lastError: msg }
+            queue = queue.map((x) => (x.key === next.key && x.seq === next.seq ? next : x))
+            if (d) {
+              await d.transaction('rw', d.items, async () => {
+                const cur = await d.items.get(next.key)
+                if (cur && (cur.seq ?? cur.createdAt * 1000) === next.seq) await d.items.put(next)
+              })
+            }
+          }
           publish({ lastError: describeSyncError(msg) })
-          schedule(Math.min(30000, 1000 * 2 ** Math.min(next.attempts, 5)))
+          schedule(Math.min(30000, 1000 * 2 ** Math.min(item.attempts + 1, 5)))
           break
         }
       }
     }
   } finally {
-    flushing = false
     useOutbox.setState({ syncing: false })
-    if (queue.length && !failed && !timer) void flush()
   }
+  return failed
 }
 
 function schedule(ms: number) {
