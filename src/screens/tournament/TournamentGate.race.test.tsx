@@ -128,6 +128,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('a copy read that lands after the server answered changes nothing', () => {
@@ -213,6 +214,25 @@ describe('when the gate stops asking (REL-02)', () => {
     })
     expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
     expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('an ask lost as the signal came back is tried again in seconds, not on the 20 s timer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    // Opened with no signal; when it comes back, the first lookup is lost on the way.
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
+    server.lookupTournament.mockRejectedValueOnce(new Error('TypeError: Failed to fetch')).mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    onLine.mockReturnValue(true)
+    await backOnline()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_500)
+    })
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
   })
 
   it('on Entrar, or «no existe», the server has answered: no more asking', async () => {

@@ -8,8 +8,9 @@
  * tournament (session, lookup, membership, snapshot) resolves behind them.
  * Opening on the course used to wait on five round trips with signal, 16 s
  * with no signal and an expired token, and for ever on a connection that
- * answers nothing. Until the server's snapshot is on screen the gate keeps
- * trying, on reconnect, on return to the app and on a timer (REL-02).
+ * answers nothing. Until the server has answered and its snapshot is on
+ * screen the gate keeps trying: on reconnect, on return to the app, soon
+ * after an ask that failed, and on a timer (REL-02).
  */
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
@@ -63,6 +64,8 @@ export function useTournamentCtx(): TournamentCtx {
 
 /** Until the server has answered and its boards are up, ask again this often. */
 const CACHE_RETRY_MS = 20_000
+/** After an ask that failed with signal, the next one comes this soon, doubling up to CACHE_RETRY_MS. */
+const RETRY_SOON_MS = 2_000
 
 type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
 
@@ -84,6 +87,11 @@ export function TournamentGate() {
   const recheck = useRef(false)
   /** Asks still out: a retry never starts over one (on a slow connection the timer would throw away an ask nearly done). */
   const asking = useRef(0)
+  /** Asks that failed in a row with signal, and the retry they scheduled. */
+  const failures = useRef(0)
+  const soon = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  /** The retry below, for the asks that schedule it. */
+  const retryNow = useRef<() => void>(() => undefined)
   /** The phase, for the retries, which run outside render: kept at commit, so an event right after it sees it. */
   const phaseNow = useRef(phase)
   useLayoutEffect(() => {
@@ -118,6 +126,17 @@ export function TournamentGate() {
     }
   }, [slug, enterFromCache])
 
+  /**
+   * An ask failed with signal (a request lost as the signal came back): the
+   * next one in 2 s, then 4, 8 and 16, not only on the 20 s timer. Its first
+   * lookup lost used to leave the phone's copy up for 17 s more.
+   */
+  const askSoon = useCallback(() => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return
+    clearTimeout(soon.current)
+    soon.current = setTimeout(() => retryNow.current(), Math.min(CACHE_RETRY_MS, RETRY_SOON_MS * 2 ** failures.current++))
+  }, [])
+
   const resolve = useCallback(async () => {
     const seq = ++resolveSeq.current
     /** A newer resolve started (a retry, the PIN, another link): this one's answers no longer count. */
@@ -135,6 +154,7 @@ export function TournamentGate() {
       if (!lookup) {
         settled.current = true
         recheck.current = false
+        failures.current = 0
         // The link leads nowhere now (the tournament was deleted): what was saved under it goes too.
         void clearCachedSlug(slug)
         setPhase({ kind: 'notFound' })
@@ -168,6 +188,9 @@ export function TournamentGate() {
         await load(lookup.id, { keepOnPhone: !platform })
         if (stale()) return
         refreshOutboxCounters()
+        // The boards came: the asking is over. They didn't: ask again soon.
+        if (useTournament.getState().source === 'server') failures.current = 0
+        else askSoon()
         // The lookup worked but the snapshot did not: still better to show what we have.
         if (!useTournament.getState().data && !platform) {
           const cached = await readCached(slug)
@@ -177,11 +200,13 @@ export function TournamentGate() {
         // Not in this tournament any more (the device was released, the link removed): its saved boards go too.
         settled.current = true
         recheck.current = false
+        failures.current = 0
         void clearCached(lookup.id)
         setPhase({ kind: 'enter', lookup })
       }
     } catch (e) {
       if (stale()) return
+      askSoon()
       if (await enterFromCache()) return
       if (stale()) return
       const offline = typeof navigator !== 'undefined' && !navigator.onLine
@@ -190,7 +215,7 @@ export function TournamentGate() {
     } finally {
       asking.current--
     }
-  }, [slug, load, enterFromCache])
+  }, [slug, load, enterFromCache, askSoon])
 
   useEffect(() => {
     if (authReady) void resolve()
@@ -227,11 +252,14 @@ export function TournamentGate() {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       void resolve()
     }
+    retryNow.current = retry
     const timer = setInterval(() => void retry(), CACHE_RETRY_MS)
     const onOnline = () => void retry()
     window.addEventListener('online', onOnline)
     document.addEventListener('visibilitychange', onOnline)
     return () => {
+      retryNow.current = () => undefined
+      clearTimeout(soon.current)
       clearInterval(timer)
       window.removeEventListener('online', onOnline)
       document.removeEventListener('visibilitychange', onOnline)
