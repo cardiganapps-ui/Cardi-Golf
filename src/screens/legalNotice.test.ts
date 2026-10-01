@@ -50,6 +50,28 @@ describe('the privacy notice covers what the Comité types about each player (TR
   })
 })
 
+describe('the privacy notice says what the operator sees and can do (TRUST-17)', () => {
+  it('any tournament, seen and corrected with its Comité\'s rights; a Protegido one only after an unlock (0021)', () => {
+    const op = sections['Quién opera Polo']!
+    expect(op).toContain('puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité')
+    expect(op).toContain('si el torneo está Protegido, primero lo desbloquea por un rato y anota el motivo')
+  })
+
+  it('the accounts: email, how they sign in, sign-up and last sign-in, the profile, crews and friend counts (0022, 0023)', () => {
+    const op = sections['Quién opera Polo']!
+    for (const what of ['su correo', 'si entran con correo o con Google', 'cuándo se crearon y cuándo entraron por última vez', 'el nombre, la foto, el club, la ciudad y el índice de su perfil', 'sus crews con sus miembros', 'cuántos amigos tienen', 'los teléfonos que entraron sin cuenta']) {
+      expect(op).toContain(what)
+    }
+    expect(op).toContain('Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona.')
+  })
+
+  it('«the others only see your card» no longer leaves him out', () => {
+    const profile = sections['Quién ve tu perfil']!
+    expect(profile).toContain('Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta')
+    expect(profile).not.toContain('Los demás solo ven tu tarjeta')
+  })
+})
+
 describe('the privacy notice names who receives data', () => {
   it('Anthropic, with what it receives (the scorecard image) and why (api/scorecard-extract.ts)', () => {
     const where = sections['Dónde viven']!
