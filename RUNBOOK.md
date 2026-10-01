@@ -23,7 +23,7 @@ Una página para el Comité. Todo lo que hay que hacer, en orden, y qué hacer c
 5. **"¡Vendido!"** → pregunta la recompra (0 / 25 / 50 % o un monto). Muestra cuánto le paga el jugador a su dueño. → "Siguiente lote".
 6. Si vendiste mal un lote: en la lista de vendidos toca ↶ para reabrirlo.
 7. Al vender el último: **"Sorteo de parejas"**. El homenajeado escoge a su pareja de la categoría que le toca; el resto sale con anillos. Ponles nombre y **guarda**: genera los grupos del día 1 (una pareja A+D con una B+C). Ajusta horas de salida en **Grupos**.
-8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Marca "Pagado" conforme paguen. Todo se paga esa noche.
+8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Toca **Marcar pagado** conforme paguen (el aviso trae **Deshacer**). Todo se paga esa noche.
 
 ## 2. Empezar una ronda
 
@@ -65,7 +65,7 @@ Sigue capturando: la app guarda en el teléfono y muestra "1 pendiente", "2 pend
 
 1. Comité › Rondas: las dos rondas en "Terminada". Comité › Torneo: estado **Terminado**.
 2. En la tele: `/t/<slug>/ceremonia` (desde **Más › Ceremonia**, solo admins). Toca "Revelar" uno por uno: Cuchara de Palo, menos putts, víbora, mejor ronda, parejas, 4º–2º, **el campeón** (confeti y el Putter), pagos de la Calcutta, resumen de dinero.
-3. **Dinero › Liquidación**: "Vía banco" es la lista de lo que el banquero paga a cada quien. "Sin banco" es la lista mínima de transferencias entre personas si alguien no pagó por adelantado. Marca "Pagado" conforme se pague. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
+3. **Dinero › Liquidación**: con el torneo terminado es una sola lista, solo con lo que falta por pagar: lo que ya se marcó como pagado (inscripciones y martillazos del jueves) no se vuelve a pedir. "Vía banco": cada quien queda a mano con el banquero en una línea (sus premios menos lo que todavía deba), más recompras y apuestas directas. "Sin banco": la lista mínima de transferencias entre personas; lo que ya entró al banco lo reparte el banquero. Toca **Marcar pagado** conforme se pague: la línea desaparece, y el aviso trae **Deshacer** por si fue un error. **Compartir** manda la liquidación a WhatsApp como imagen o texto.
 4. **Más › Estadísticas y premios**: los premios automáticos (Rey del Birdie, Mano de Piedra…) y la carrera de puntos para revivirla en la cena.
 
 ## 8. Respaldo
