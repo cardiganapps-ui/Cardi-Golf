@@ -64,7 +64,7 @@
 }
 .row {
   display: grid;
-  grid-template-columns: 6vh 6vh minmax(0, 1fr) auto 14vh;
+  grid-template-columns: 6vh 6vh minmax(0, 1fr) auto minmax(14vh, max-content);
   align-items: center;
   gap: 2vw;
   padding: 0.7vh 1vw;
@@ -76,7 +76,7 @@
 }
 /* Each board has its own columns: four cells in a five-track grid pushed names into the avatar track (VIS-04). */
 .rowPair {
-  grid-template-columns: 6vh minmax(0, 1fr) auto 14vh;
+  grid-template-columns: 6vh minmax(0, 1fr) auto minmax(14vh, max-content);
 }
 .rowOwner {
   grid-template-columns: 6vh minmax(0, 1fr) 18vh 20vh;
@@ -138,6 +138,8 @@
   font-variant-numeric: tabular-nums;
 }
 .big {
+  /* A figure never wraps («8 birdies»): the row would double in height and halve the page. */
+  white-space: nowrap;
   font-size: 4.6vh;
   font-weight: 600;
   text-align: right;
@@ -286,7 +288,8 @@
   flex: 1;
   overflow: hidden;
 }
-.sold .soldRow:nth-of-type(1) {
+/* The newest sale, right under the «Vendidos» label. */
+.sold > .small + .soldRow {
   color: var(--board-accent);
   font-weight: 600;
 }

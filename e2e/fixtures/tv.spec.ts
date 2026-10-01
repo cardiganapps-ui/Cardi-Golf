@@ -26,16 +26,21 @@ for (const fixture of ['full12-finished', 'large60']) {
       await page.setViewportSize({ width: w, height: h })
       await page.goto(`/t/_/${fixture}/tv`, { waitUntil: 'networkidle' })
       await page.waitForTimeout(500)
-      // «Individual 1–9 de 12»: the field size is on the board.
+      // «Individual 1–9 de 12»: the field size is on the board; a board that fits on one page has no range.
       const title = (await page.locator('section h2').first().textContent()) ?? ''
-      const total = Number(/de (\d+)$/.exec(title.trim())?.[1])
-      expect(total, `a paged title, got «${title}»`).toBeGreaterThan(0)
+      const total = Number(/de (\d+)$/.exec(title.trim())?.[1]) || (await page.locator('[data-player]').count())
+      expect(total).toBeGreaterThan(0)
       const seen = new Set<string>()
       for (let tick = 0; tick < 80 && seen.size < total; tick++) {
+        // Inside the board's own box (it clips what overflows), not just the window.
         const rows = await page.locator('[data-player]').evaluateAll((els) =>
-          els.map((el) => ({ id: el.getAttribute('data-player')!, bottom: el.getBoundingClientRect().bottom, inside: el.getBoundingClientRect().bottom <= window.innerHeight })),
+          els.map((el) => {
+            const box = el.parentElement!.getBoundingClientRect()
+            const r = el.getBoundingClientRect()
+            return { id: el.getAttribute('data-player')!, bottom: r.bottom, limit: Math.min(box.bottom, window.innerHeight), inside: r.bottom <= Math.min(box.bottom, window.innerHeight) + 0.5 }
+          }),
         )
-        for (const r of rows) expect(r.inside, `row ${r.id} fully on screen (bottom ${Math.round(r.bottom)})`).toBe(true)
+        for (const r of rows) expect(r.inside, `row ${r.id} fully on screen (bottom ${Math.round(r.bottom)} of ${Math.round(r.limit)})`).toBe(true)
         rows.forEach((r) => seen.add(r.id))
         await page.clock.runFor(12_000)
         await page.waitForTimeout(100)

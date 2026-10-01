@@ -1759,7 +1759,9 @@ export const t = {
     undo: 'Deshacer última puja',
     sold: '¡Vendido!',
     soldTo: (name: string, price: string) => `Vendido a ${name} por ${price}`,
-    soldSelf: (price: string) => `Se queda con él mismo por ${price}`,
+    /** The TV's stamp at the hammer, under the price: who bought him. */
+    stampTo: (name: string) => `Vendido a ${name}`,
+    stampSelf: 'Se queda con él mismo',
     reopen: 'Reabrir lote',
     limitReached: (n: number) => `Ya tiene ${n}`,
     minBid: (amount: string) => `La puja tiene que superar ${amount}.`,

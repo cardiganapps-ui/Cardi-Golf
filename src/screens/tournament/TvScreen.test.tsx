@@ -56,8 +56,9 @@ describe('Calcutta night on the TV (MOT-04)', () => {
     const { owner, price } = hammer(10)
     // Same frame as the hammer: still the sold player, now with who bought him and for how much.
     expect(screen.getByRole('heading', { name: full(lot(10).playerId) })).toBeTruthy()
-    const sale = owner === lot(10).playerId ? t.auction.soldSelf(formatMoney(price)) : t.auction.soldTo(short(owner), formatMoney(price))
+    const sale = owner === lot(10).playerId ? t.auction.stampSelf : t.auction.stampTo(short(owner))
     expect(screen.getByText(sale)).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain(formatMoney(price))
     act(() => void vi.advanceTimersByTime(4000))
     expect(screen.queryByText(sale)).toBeNull()
     expect(screen.getByRole('heading', { name: full(lot(11).playerId) })).toBeTruthy()

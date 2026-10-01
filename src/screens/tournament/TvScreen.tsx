@@ -234,19 +234,39 @@ function PagedRows<T>({ title, turn, items, render, head }: { title: string; tur
   const box = useRef<HTMLDivElement>(null)
   // Until measured, everything is laid out once (before paint) so the tallest row can be measured.
   const [fit, setFit] = useState<number | null>(null)
+  /** The tallest row seen so far: a taller one on a later page (a long name that wraps) tightens the fit. */
+  const tallest = useRef(0)
+  /** What the last measure was for: a new screen size or a different field measures again from scratch. */
+  const measuredFor = useRef('')
+  const [resized, remeasure] = useState(0)
   useLayoutEffect(() => {
     const el = box.current
     if (!el) return
-    const measure = () => {
-      const rows = Array.from(el.children) as HTMLElement[]
-      const tallest = Math.max(0, ...rows.map((r) => r.getBoundingClientRect().height))
-      if (tallest > 0) setFit((cur) => Math.max(1, Math.floor(el.clientHeight / tallest)) || cur)
+    const key = `${el.clientWidth}x${el.clientHeight}:${items.length}`
+    if (key !== measuredFor.current) {
+      measuredFor.current = key
+      tallest.current = 0
+      if (fit !== null) {
+        setFit(null)
+        return
+      }
     }
-    measure()
-    const ro = new ResizeObserver(measure)
+    const rows = Array.from(el.children) as HTMLElement[]
+    tallest.current = Math.max(tallest.current, ...rows.map((r) => r.getBoundingClientRect().height))
+    if (tallest.current > 0) {
+      const n = Math.max(1, Math.floor(el.clientHeight / tallest.current))
+      if (n !== fit) setFit(n)
+    }
+    // On every page shown (turn), every fit, and every resize.
+  }, [items, turn, fit, resized])
+  // A resize renders again, and the measure above sees the new size.
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(() => remeasure((n) => n + 1))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [items.length])
+  }, [])
   const per = Math.max(1, Math.min(fit ?? items.length, items.length))
   const pages = Math.max(1, Math.ceil(items.length / per))
   const page = turn % pages
@@ -291,7 +311,11 @@ function AuctionBoard() {
   useEffect(() => {
     const was = lastOpen.current
     lastOpen.current = open?.lotId ?? null
-    if (was && was !== open?.lotId && auction.lots.find((l) => l.lotId === was)?.status === 'sold') setJustSold(was)
+    if (was && was !== open?.lotId && auction.lots.find((l) => l.lotId === was)?.status === 'sold') {
+      // Several updates in one reload (a dropped connection): the stamp is for the latest sale, not the first one seen.
+      const latest = auction.lots.filter((l) => l.status === 'sold').sort((a, b) => (soldAt.get(b.lotId) ?? '').localeCompare(soldAt.get(a.lotId) ?? '') || b.lotNumber - a.lotNumber)[0]
+      setJustSold(latest?.lotId ?? was)
+    }
     if (open) setJustSold(null)
   }, [open?.lotId, soldKey]) // eslint-disable-line react-hooks/exhaustive-deps -- runs on a lot opening or selling, not on every bid
   useEffect(() => {
@@ -320,7 +344,7 @@ function AuctionBoard() {
               {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${player.baseHcp}`}
               {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
             </span>
-            {player.formGuide && <p className={styles.form}>{player.formGuide}</p>}
+            {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
             {open && (
               <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeFast}>
                 <span className={styles.bidAmount}>{formatMoney(bid)}</span>
@@ -338,7 +362,7 @@ function AuctionBoard() {
                 transition={easeFast}
               >
                 <span className={styles.bidAmount}>{formatMoney(sold.price)}</span>
-                <span className={styles.bidder}>{sold.ownerId === sold.playerId ? t.auction.soldSelf(formatMoney(sold.price)) : t.auction.soldTo(name(sold.ownerId ?? ''), formatMoney(sold.price))}</span>
+                <span className={styles.bidder}>{sold.ownerId === sold.playerId ? t.auction.stampSelf : t.auction.stampTo(name(sold.ownerId ?? ''))}</span>
               </motion.div>
             )}
           </>
