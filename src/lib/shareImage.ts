@@ -23,10 +23,20 @@ const inlined = new Map<string, string>()
 /** A transparent pixel, in place of an image that could not be read. */
 export const NO_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
+/** A read that stalls on weak signal gives up, so «Generando imagen…» never hangs; the card goes without that file. */
+const READ_TIMEOUT_MS = 8000
+
 async function readUrl(url: string, init?: RequestInit): Promise<Blob> {
-  const res = await fetch(url, init)
-  if (!res.ok) throw new Error(`${res.status} ${url}`)
-  return res.blob()
+  // AbortController, not AbortSignal.timeout: that one needs iOS 16.
+  const abort = new AbortController()
+  const timer = setTimeout(() => abort.abort(), READ_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, { ...init, signal: abort.signal })
+    if (!res.ok) throw new Error(`${res.status} ${url}`)
+    return await res.blob()
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**
@@ -142,8 +152,8 @@ export async function fontEmbedCss(faces: PageFontFace[], families: Set<string>,
 
 /**
  * Swaps every image in the node for a data URL. One that cannot be read becomes
- * a hidden transparent pixel for this render: left with its URL, html-to-image
- * would fetch it itself and reject the whole card. Returns the undo.
+ * a transparent pixel, out of the layout, for this render: left with its URL,
+ * html-to-image would fetch it itself and reject the whole card. Returns the undo.
  */
 export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUrl): Promise<() => void> {
   const undo: Array<() => void> = []
@@ -151,11 +161,11 @@ export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUr
     Array.from(node.querySelectorAll('img')).map(async (img) => {
       const src = img.currentSrc || img.src
       if (!src || src.startsWith('data:')) return
-      const before = { src: img.getAttribute('src'), srcset: img.getAttribute('srcset'), visibility: img.style.visibility }
+      const before = { src: img.getAttribute('src'), srcset: img.getAttribute('srcset'), display: img.style.display }
       undo.push(() => {
         if (before.src != null) img.setAttribute('src', before.src)
         if (before.srcset != null) img.setAttribute('srcset', before.srcset)
-        img.style.visibility = before.visibility
+        img.style.display = before.display
       })
       // The clone keeps srcset, and html-to-image would pick from it.
       img.removeAttribute('srcset')
@@ -163,7 +173,7 @@ export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUr
         img.src = await inline(src, load)
       } catch {
         img.src = NO_IMAGE
-        img.style.visibility = 'hidden'
+        img.style.display = 'none'
       }
       await img.decode().catch(() => undefined)
     }),

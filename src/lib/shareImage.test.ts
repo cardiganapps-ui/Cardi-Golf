@@ -61,7 +61,7 @@ describe('a failure is never remembered (the session is not poisoned)', () => {
     expect(load).toHaveBeenCalledTimes(2)
   })
 
-  it('an image that cannot load is a hidden transparent pixel for this render only; the others are inlined, and all restored after', async () => {
+  it('an image that cannot load is a transparent pixel, out of the layout, for this render only; the others are inlined, and all restored after', async () => {
     const node = document.createElement('div')
     node.innerHTML = '<img src="http://polo.test/logo.png" srcset="http://polo.test/logo@2x.png 2x"><img src="http://polo.test/avatar.jpg">'
     const [logo, avatar] = Array.from(node.querySelectorAll('img'))
@@ -75,12 +75,12 @@ describe('a failure is never remembered (the session is not poisoned)', () => {
     expect(logo!.hasAttribute('srcset')).toBe(false)
     // Never the URL: html-to-image would fetch it and reject the whole card.
     expect(avatar!.getAttribute('src')).toBe(NO_IMAGE)
-    expect(avatar!.style.visibility).toBe('hidden')
+    expect(avatar!.style.display).toBe('none')
     restore()
     expect(logo!.getAttribute('src')).toBe('http://polo.test/logo.png')
     expect(logo!.getAttribute('srcset')).toBe('http://polo.test/logo@2x.png 2x')
     expect(avatar!.getAttribute('src')).toBe('http://polo.test/avatar.jpg')
-    expect(avatar!.style.visibility).toBe('')
+    expect(avatar!.style.display).toBe('')
     // Signal back: the avatar is tried again.
     load.mockImplementation(async () => 'data:image/jpeg;base64,BBBB')
     await inlineImages(node, load)
@@ -107,6 +107,8 @@ describe('a logo the service worker cached as an opaque response (PWA-04)', () =
     expect(new URL(retry as string).searchParams.get('v')).toBe('3')
     expect(new URL(retry as string).searchParams.get('polo-share')).toMatch(/^\d+$/)
     expect(init).toMatchObject({ cache: 'no-store' })
+    // Every read can give up: a stalled connection never leaves the button on «Generando imagen…».
+    expect((init as RequestInit).signal).toBeInstanceOf(AbortSignal)
     vi.unstubAllGlobals()
   })
 
