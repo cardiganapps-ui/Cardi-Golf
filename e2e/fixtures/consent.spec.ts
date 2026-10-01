@@ -77,3 +77,60 @@ test('Comité › Campos (and /campos, the same screen): who reads a scorecard p
   expect(await seriousViolations(page)).toEqual([])
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
+
+for (const [width, height] of SMALL_PHONES) {
+  test(`/entrar with Google at ${width}×${height}: the line on the first screen, before Google and the email (P3)`, async ({ page, pageErrors }) => {
+    await page.setViewportSize({ width, height })
+    // Registered after the fixture's catch-all, so it answers first: Google sign-in is on.
+    await page.route(/\/auth\/v1\/settings/, (r) => r.fulfill({ json: { external: { google: true, email: true } } }))
+    await open(page, '/entrar')
+    const google = page.getByRole('button', { name: new RegExp(t.account.google) })
+    await expect(google).toBeVisible()
+    const line = page.locator('[data-legal-consent]')
+    await expect(line).toHaveCount(1)
+    await expectOnScreen(page, line)
+    await expectBefore(line, google)
+    await expectBefore(line, page.getByLabel(t.account.email))
+    await expectBefore(line, page.getByRole('button', { name: t.account.sendCode }))
+    // Keyboard order too: the line's two links come before the first way in.
+    await page.keyboard.press('Tab')
+    const order: string[] = []
+    for (let i = 0; i < 6; i++) {
+      order.push(await page.evaluate(() => document.activeElement?.getAttribute('href') ?? document.activeElement?.textContent?.trim() ?? ''))
+      await page.keyboard.press('Tab')
+    }
+    const google_ = order.findIndex((x) => x.includes(t.account.google))
+    expect(order.findIndex((x) => x.startsWith('/terminos')), order.join(' | ')).toBeLessThan(google_)
+    expect(order.findIndex((x) => x.startsWith('/privacidad')), order.join(' | ')).toBeLessThan(google_)
+    expect(await seriousViolations(page)).toEqual([])
+    expect(pageErrors, 'uncaught errors').toEqual([])
+  })
+}
+
+test('Comité, a new player: the field that takes focus is described by the notice above it (P3)', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await open(page, '/t/_/full12-live/admin/jugadores')
+  await page.getByRole('button', { name: t.admin.players.add }).click()
+  const name = page.getByRole('dialog').getByLabel(t.admin.players.fullName)
+  await expect(name).toBeFocused()
+  await expect(name).toHaveAccessibleDescription(new RegExp(`^${t.legal.othersData.start}`))
+})
+
+test('a page opened from a consent link offers to close its tab, and closing it leaves the form as it was (P3)', async ({ page, pageErrors }) => {
+  // The new tab is a page of its own: answer its Supabase calls too.
+  await page.context().route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await open(page, '/entrar')
+  const email = page.getByLabel(t.account.email)
+  await email.fill('medio@escri')
+  const [tab] = await Promise.all([page.waitForEvent('popup'), page.locator('[data-legal-consent]').getByRole('link', { name: new RegExp(`^${C.privacy}`) }).click()])
+  await expect(tab.getByRole('heading', { level: 1, name: t.legal.privacy.title })).toBeVisible()
+  await expect(tab.getByRole('link', { name: t.legal.back })).toHaveCount(0)
+  // Across to the terms, still in that tab: it replaces the page, so the tab can still close.
+  await tab.getByRole('link', { name: t.legal.terms.title }).click()
+  await expect(tab.getByRole('heading', { level: 1, name: t.legal.terms.title })).toBeVisible()
+  const closed = tab.waitForEvent('close')
+  await tab.getByRole('button', { name: t.legal.close }).click()
+  await closed
+  await expect(email).toHaveValue('medio@escri')
+  expect(pageErrors, 'uncaught errors').toEqual([])
+})

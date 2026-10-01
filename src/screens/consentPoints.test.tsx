@@ -122,8 +122,12 @@ describe('/entrar: an account by email code or Google', () => {
           <EntrarScreen />
         </MemoryRouter>,
       )
-      if (google) await screen.findByRole('button', { name: new RegExp(t.account.google) })
-      consentLine(continueLine, BOTH)
+      const googleButton = google ? await screen.findByRole('button', { name: new RegExp(t.account.google) }) : null
+      const line = consentLine(continueLine, BOTH)
+      // Before every way in: Google, the email and its button (P3: it came two controls after Google).
+      if (googleButton) expect(before(line, googleButton)).toBe(true)
+      expect(before(line, screen.getByLabelText(t.account.email))).toBe(true)
+      expect(before(line, screen.getByRole('button', { name: t.account.sendCode }))).toBe(true)
     })
   }
 })
@@ -137,8 +141,8 @@ describe('organizer sign-in and sign-up', () => {
         </MemoryRouter>,
       )
       if (mode === 'up') fireEvent.click(screen.getByRole('button', { name: t.auth.toggleToSignUp }))
-      expect(screen.getByRole('button', { name: mode === 'in' ? t.auth.signIn : t.auth.signUp })).toBeTruthy()
-      consentLine(continueLine, BOTH)
+      const submit = screen.getByRole('button', { name: mode === 'in' ? t.auth.signIn : t.auth.signUp })
+      expect(before(consentLine(continueLine, BOTH), submit)).toBe(true)
     })
   }
 })
@@ -150,8 +154,8 @@ describe('Ronda rápida: friends and guests added by the organizer', () => {
         <QuickFixture />
       </MemoryRouter>,
     )
-    await screen.findByRole('button', { name: t.quick.start })
-    consentLine(continueLine, BOTH)
+    const start = await screen.findByRole('button', { name: t.quick.start })
+    expect(before(consentLine(continueLine, BOTH), start)).toBe(true)
   })
 })
 
@@ -168,11 +172,15 @@ describe('Comité › Jugadores: other people\'s data (TRUST-05, TRUST-16)', () 
     )
   }
 
-  it('a new player: the sheet opens on who sees what you type', () => {
+  it('a new player: the sheet opens on who sees what you type, and the name field, which takes focus below it, is described by it', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: t.admin.players.add }))
     const line = consentLine(noteText(t.legal.othersData), NOTICE)
-    expect(before(line, screen.getByLabelText(t.admin.players.fullName))).toBe(true)
+    const name = screen.getByLabelText(t.admin.players.fullName)
+    expect(before(line, name)).toBe(true)
+    // P3: focus lands below the notice, so a screen reader would start past it.
+    expect(document.activeElement).toBe(name)
+    expect(name.getAttribute('aria-describedby')?.split(' ')).toContain(line.id)
   })
 
   it('an existing player: the same', () => {

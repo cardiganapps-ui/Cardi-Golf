@@ -15,10 +15,17 @@ export function LegalLinks() {
   )
 }
 
+/**
+ * `?desde=formulario`: the legal page was opened from a consent line, in a tab
+ * of its own, so it offers to close that tab instead of loading a second Polo
+ * (LegalScreen).
+ */
+export const FROM_FORM = 'formulario'
+
 /** A legal page opened beside the form, so a half-typed email, code or PIN survives the read. */
 function LegalLink({ to, children }: { to: '/privacidad' | '/terminos'; children: string }) {
   return (
-    <a href={to} target="_blank" rel="noopener" style={{ color: 'var(--ink-2)' }}>
+    <a href={`${to}?desde=${FROM_FORM}`} target="_blank" rel="noopener" style={{ color: 'var(--ink-2)' }}>
       {children}
       <span className="sr-only"> {t.legal.newTab}</span>
     </a>

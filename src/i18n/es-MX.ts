@@ -908,6 +908,9 @@ export const t = {
     /** Both pages end on it. golf@cardigan.mx only sends the code emails: it has no mailbox yet (TRUST-01). */
     contact: 'Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.',
     back: 'Volver a Polo',
+    /** A legal page opened from a consent line is a tab of its own: closing it goes back to the form, still filled in. */
+    close: 'Cerrar y volver',
+    closeBlocked: 'Este navegador no deja cerrar la pestaña desde aquí: ciérrala tú y vuelve a la de Polo.',
     /**
      * Each document has its own version and date, and changes them only when
      * its own text changes: legalNotice.test.ts holds each version's

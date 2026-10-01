@@ -3,7 +3,7 @@
  * search when the list is long, and an edit sheet with the three handicap
  * sources, the estimate from three scores (§13b-E) and a live preview.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
@@ -82,6 +82,7 @@ export function AdminPlayers() {
   const [q, setQ] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const [profiles, reloadProfiles] = useTournamentProfiles(tournamentId)
+  const noticeId = useId()
 
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
@@ -244,7 +245,7 @@ export function AdminPlayers() {
       <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add}>
         {E && (
           <div className="stack">
-            <OthersDataNotice />
+            <OthersDataNotice id={noticeId} />
             <div className={a.chipRow}>
               <Avatar name={E.display_name || E.full_name || '?'} url={E.avatar_url} size="lg" honoree={E.is_honoree} />
               <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -253,7 +254,8 @@ export function AdminPlayers() {
               <input ref={fileRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => e.target.files?.[0] && void onAvatar(e.target.files[0])} />
             </div>
             <Field label={P.fullName}>
-              <input className="input" value={E.full_name} onChange={(e) => setEditing({ ...E, full_name: e.target.value })} autoFocus={!E.id} />
+              {/* A new player's sheet opens on this field, below the notice: a screen reader hears the notice with it. */}
+              <input className="input" value={E.full_name} onChange={(e) => setEditing({ ...E, full_name: e.target.value })} autoFocus={!E.id} aria-describedby={noticeId} />
             </Field>
             <div className={a.grid2}>
               <Field label={P.displayName}>

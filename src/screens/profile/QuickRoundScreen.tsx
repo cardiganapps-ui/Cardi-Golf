@@ -309,10 +309,11 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
         <Field label={Q.name}>
           <input className="input" placeholder={autoName} value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
+        {/* Before «Empezar», which saves everyone's names and indexes (TRUST-05). */}
+        <LegalConsent />
         <button className="btn btn--primary" type="button" disabled={!ready} onClick={() => void start()}>
           {busy ? Q.starting : Q.start}
         </button>
-        <LegalConsent />
       </section>
     </div>
   )

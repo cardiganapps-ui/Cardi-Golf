@@ -153,6 +153,8 @@ export function EntrarScreen() {
         </form>
       ) : (
         <div className={styles.form}>
+          {/* First, before every way in, in reading and keyboard order (TRUST-05). */}
+          <LegalConsent />
           {google && (
             <>
               <button className={`btn btn--secondary btn--block ${styles.google}`} type="button" disabled={busy} onClick={() => void run(() => continueWithGoogle(next))}>
@@ -174,7 +176,6 @@ export function EntrarScreen() {
               {busy ? t.account.sending : t.account.sendCode}
             </button>
           </form>
-          <LegalConsent />
         </div>
       )}
     </div>

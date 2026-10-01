@@ -14,9 +14,13 @@ const C = t.legal.consent
 
 afterEach(cleanup)
 
-/** Its page, in a new tab that cannot reach back to the form's window, and «(se abre en otra pestaña)» for a screen reader only. */
+/**
+ * Its page, marked as opened beside a form (so the page offers to close its
+ * tab instead of loading a second Polo), in a new tab that cannot reach back
+ * to the form's window, and «(se abre en otra pestaña)» for a screen reader only.
+ */
 function expectNewTabLink(a: HTMLElement, page: string) {
-  expect(a.getAttribute('href')?.split('?')[0]).toBe(page)
+  expect(a.getAttribute('href')).toBe(`${page}?desde=formulario`)
   expect(a.getAttribute('target')).toBe('_blank')
   expect(a.getAttribute('rel')).toContain('noopener')
   const said = [...a.querySelectorAll('span')].filter((s) => s.textContent?.trim() === t.legal.newTab)

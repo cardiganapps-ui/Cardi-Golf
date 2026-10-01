@@ -151,10 +151,11 @@ export function OrganizerLoginScreen() {
               {info}
             </p>
           )}
+          {/* Before the button that sends the email (TRUST-05). */}
+          <LegalConsent />
           <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
             {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
           </button>
-          <LegalConsent />
           {mode === 'in' && (
             <div className={styles.quiet}>
               <button
