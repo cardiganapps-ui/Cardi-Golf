@@ -9,8 +9,12 @@ export default tseslint.config(
     ignores: [
       'dist',
       'dev-dist',
+      'dist-fixtures',
       'coverage',
       'node_modules',
+      // The browser suites' output: a run that ends mid-lint takes its files away under it.
+      'test-results',
+      'playwright-report',
       // Review evidence and tooling, kept verbatim as the panel ran it: not product code.
       'docs/review/**/evidence/**',
       'docs/review/method/**',
