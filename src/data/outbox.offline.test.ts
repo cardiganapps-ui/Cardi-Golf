@@ -5,10 +5,10 @@
  * with, and reaches the server when the signal returns, with nothing else to
  * tap, as the player who saved it.
  *
- * A restart here is a restart: the page's IndexedDB connections, listeners
- * and channels are closed and every app module is loaded again, so nothing
- * survives but what the phone stored: the outbox and the saved boards in
- * (fake) IndexedDB, and the session auth-js keeps in localStorage. The app
+ * A restart here is a restart: the page's outbox connection, timers,
+ * listeners and channels are closed and every app module is loaded again, so
+ * nothing survives but what the phone stored: the outbox and the saved boards
+ * in (fake) IndexedDB, and the session auth-js keeps in localStorage. The app
  * opens the way AppShell and the tournament gate open it, and its real
  * Supabase client talks to the fake server (src/data/testing/fakePhone.ts).
  */
