@@ -3146,7 +3146,7 @@
         "e2e/fixtures/consent.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": "Part 1 is in PR #88: the line with both links, before the action, at every place that takes data (the face grid and the PIN step, /entrar, organizer sign-in and sign-up, Ronda rápida, the Comité player sheet, the push switch, the scorecard photo). Part 2 is not done: recording which version of the terms and the notice each person accepted (on the profile, and on the device for a player without an account) and showing a one-time sheet when a version changes needs a migration. Each document now carries its own version and date for it to record."
+      "residual": "Part 1 is in PR #88: the line with both links, before the action, readable and on screen, at every place that takes data (the face grid at any field size and the PIN step, /entrar, organizer sign-in and sign-up, Ronda rápida, the Comité player sheet, the push switch, the scorecard photo). Two things remain. Part 2: recording which version of the terms and the notice each person accepted (on the profile, and on the device for a player without an account) and showing a one-time sheet when a version changes needs a migration; each document carries its own version and date for it to record. And opening a tournament or profile link still creates an anonymous user before any line shows (ensureSession runs before the gate looks the tournament up): the notice says so (version 2026-10-02), but the line does not come first."
     },
     {
       "id": "TRUST-07",
