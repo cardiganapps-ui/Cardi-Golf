@@ -255,6 +255,17 @@ describe('the refused list says what stands in the way now, and who can send it 
     expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([expect.stringMatching(/^Volver a mandar: Víbora, grupo 3,/), expect.stringMatching(/hoyo 7/)])
   })
 
+  it('a signature goes again only for the other pair of his group: a pair never signs its own card', () => {
+    const sig = (pair: string): RejectedItem => ({ ...hole11, key: `sig:${pair}`, kind: 'signature', payload: { round_id: 'r2', pair_id: pair, signed_by: CAMILO } })
+    // Camilo's group on day 2: his pair (pair3, with p12) and pair6 (p6, p9); pair1 plays in another group.
+    mount('list', { edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((x) => x.roundId !== 'r2')), rejected: [sig('pair6'), sig('pair3'), sig('pair1')] })
+    const resend = list().getAllByRole('button', { name: new RegExp(`^${IB.resend}`) })
+    expect(resend).toHaveLength(1)
+    const pair6 = getFixture('full12-live')!.snapshot.pairs.find((x) => x.id === 'pair6')!.name!
+    expect(resend[0]!.getAttribute('aria-label')).toBe(`${IB.resend}: ${IB.rejectedSignature(pair6, 2)}`)
+    expect(list().getAllByText(IB.reasonNotInGroup(2))).toHaveLength(2)
+  })
+
   it('a Comité device resends anything, is not asked to send it to itself, and keeps the server\'s reason', () => {
     mount('list', { edit: finishDay2, isAdmin: true })
     expect(list().getByText(IB.rejectedHint)).toBeTruthy()
