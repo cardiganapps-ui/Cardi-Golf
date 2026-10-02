@@ -216,6 +216,7 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
   - On a TV the stage never scrolls, so a view rising into place doesn't flash a scrollbar on desktops that show them.
 - **After the re-check.**
   - A count-up ends on the value itself, not on a rounded one: the frames between are whole numbers, the last is the figure a screen reader hears. Points read as golf writes them, as on the standings: «1½ puntos», «½ punto», «1 punto».
+  - With reduced motion nothing rises into place, not even for the first frame: Motion drew that frame at the entrance's offset (a card 24 px low, unseen at opacity 0) and the stage could scroll by it.
   - A winner's card pads its sides by 3vw up to 48 px. A name has to fit inside that padding, and on a 4K screen an uncapped 3vw (115 px) drew ties smaller than before.
   - The no-break space before a short last word and the TV's no-scroll stage are tested in the fixture suite; `motion.test.ts` reads the AnimatePresence `mode` from the parsed JSX (a constant, any prop order, either branch of a `?:`), and a mode it can't read fails it.
 - **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.

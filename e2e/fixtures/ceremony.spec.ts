@@ -400,6 +400,41 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
 }
 
 /**
+ * With reduced motion nothing moves, not even for one frame: the reveal's
+ * first frame drew each card at its entrance offset (24 px low, at opacity 0)
+ * before Motion jumped to the end, and the stage could scroll by 12–17 px for
+ * that frame; a check that landed on it failed at random.
+ */
+test('reduced motion: no frame of a reveal reaches past the stage', async ({ page }) => {
+  test.setTimeout(120_000)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/t/_/friends8/ceremonia', { waitUntil: 'networkidle' })
+  await page.evaluate(() => {
+    const w = window as unknown as { __over: Array<{ title: string; over: number }> }
+    w.__over = []
+    const tick = () => {
+      const body = document.querySelector('[class*="_body_"]')
+      if (body) w.__over.push({ title: document.querySelector('[class*="_step_"] h2')?.textContent ?? '', over: body.scrollHeight - body.clientHeight })
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+  let revealed = 0
+  for (let i = 0; i < 80; i++) {
+    const now = await beat(page, 'ArrowRight')
+    if (now.title === C.done) break
+    if (!now.waiting) revealed++
+    // A few frames after each beat, so the reveal's first frames are sampled.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
+  }
+  expect(revealed).toBeGreaterThan(5)
+  const frames = await page.evaluate(() => (window as unknown as { __over: Array<{ title: string; over: number }> }).__over)
+  expect(frames.length).toBeGreaterThan(revealed)
+  expect(frames.filter((f) => f.over > 1)).toEqual([])
+})
+
+/**
  * A 4K TV at 100% scaling. A name has to fit inside its card's padding, which
  * was an uncapped 3vw (115 px here): a lone game winner was drawn at 4.7vh and
  * bracket8's four-way tie for champion became a compact list. Capped at 48 px,

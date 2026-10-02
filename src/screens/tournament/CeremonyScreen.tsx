@@ -308,6 +308,9 @@ export function CeremonyScreen() {
   const reduce = useReducedMotionConfig()
   /** A beat of the reveal, in seconds from «Revelar»; with reduced motion everything lands at once. */
   const at = (s: number) => (reduce ? 0 : s)
+  // With reduced motion nothing moves into place, not even for the one frame before Motion jumps to the end: that
+  // frame drew a card 24 px low (unseen, at opacity 0), and the stage could scroll by it.
+  const rise = (px: number) => (reduce ? 0 : px)
   useEffect(() => {
     if (!revealed || !step?.champion || reduce) return
     // One burst, as the trophy line lands.
@@ -422,7 +425,7 @@ export function CeremonyScreen() {
             </motion.div>
           )}
           {step && (
-            <motion.div key={step.id} className={styles.step} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0, transition: easeSlow }} exit={{ opacity: 0, y: -16, transition: easeFast }} transition={easeSlow}>
+            <motion.div key={step.id} className={styles.step} initial={{ opacity: 0, y: rise(16) }} animate={{ opacity: 1, y: 0, transition: easeSlow }} exit={{ opacity: 0, y: rise(-16), transition: easeFast }} transition={easeSlow}>
               <span className={styles.stepIcon}>{step.icon}</span>
               <h2 className={styles.stepTitle}>{step.title}</h2>
               <div data-area={step.id} className={styles.area}>
@@ -437,13 +440,13 @@ export function CeremonyScreen() {
                         {step.winners.map((w, i) => {
                           const from = i * REVEAL.nextWinner
                           return (
-                            <motion.div key={i} className={`${styles.winner} ${step.champion ? styles.champion : ''}`} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from) }}>
+                            <motion.div key={i} className={`${styles.winner} ${step.champion ? styles.champion : ''}`} initial={{ opacity: 0, y: rise(24) }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from) }}>
                               <div className={styles.avatars}>
                                 {w.playerIds.map((pid) => (
                                   <Avatar key={pid} name={byId.get(pid)?.displayName ?? '?'} url={byId.get(pid)?.avatarUrl} size="lg" honoree={byId.get(pid)?.isHonoree} />
                                 ))}
                               </div>
-                              <motion.span data-name className={styles.winnerLine} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}>
+                              <motion.span data-name className={styles.winnerLine} initial={{ opacity: 0, y: rise(12) }} animate={{ opacity: 1, y: 0 }} transition={{ ...easeSlow, delay: at(from + REVEAL.name) }}>
                                 {w.line}
                               </motion.span>
                               {w.sub && (
