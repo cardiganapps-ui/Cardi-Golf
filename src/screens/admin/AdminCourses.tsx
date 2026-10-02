@@ -2,12 +2,13 @@
  * Courses (§13, §13b): search a provider, read a scorecard photo, or type it
  * by hand. Every path lands in the same review editor before saving.
  */
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { NoticeNote } from '../../components/LegalLinks'
 import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { blobToBase64, downscaleImage } from '../../lib/images'
@@ -36,6 +37,7 @@ export function AdminCourses() {
   const [reading, setReading] = useState(false)
   const [askDelete, setAskDelete] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const photoNoteId = useId()
 
   async function doSearch() {
     setBusy(true)
@@ -198,11 +200,13 @@ export function AdminCourses() {
       <div className={a.head}>
         <h2>{C.title}</h2>
       </div>
+      {/* Before the buttons: a photo goes to Anthropic to be read (TRUST-04, TRUST-05). */}
+      <NoticeNote note={t.legal.scorecardNote} id={photoNoteId} />
       <div className={a.chipRow}>
         <button className="btn btn--primary btn--sm" type="button" onClick={() => setMode('search')}>
           {C.search}
         </button>
-        <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={reading}>
+        <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={reading} aria-describedby={photoNoteId}>
           {C.photo}
         </button>
         <input ref={fileRef} type="file" accept="image/*,application/pdf" hidden onChange={(e) => e.target.files?.[0] && void onPhoto(e.target.files[0])} />
@@ -220,7 +224,6 @@ export function AdminCourses() {
         </button>
       </div>
       {reading && <Spinner label={C.photoReading} />}
-      <p className={a.help}>{C.photoHint}</p>
       {loading && <Spinner />}
       {error && <ErrorBox error={error} onRetry={refresh} />}
       {!loading && !error && courses.length === 0 && <EmptyState title={C.title} body={C.empty} />}

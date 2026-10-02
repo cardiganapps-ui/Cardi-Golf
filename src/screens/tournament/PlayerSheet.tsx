@@ -131,12 +131,12 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
               <p className={styles.line}>
                 <span className="label">{settings.modules.auction.label}</span>
                 <br />
-                {t.player.ownedBy}: {myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`).join(', ')}, {formatMoney(myLot.price)}
+                {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))}, {formatMoney(myLot.price)}
               </p>
             )}
             {owned.length > 0 && (
               <p className={styles.line}>
-                {t.player.owns}: {owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`).join(', ')}
+                {t.player.owns}: {t.common.andList(owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`))}
               </p>
             )}
           </section>

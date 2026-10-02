@@ -1,5 +1,6 @@
 /**
- * Equipos: the team draw for a team format (scramble, best ball, shamble).
+ * Equipos: the team draw for a team format (scramble, best ball, shamble),
+ * and the pairs of a fourball match play («Para empezar» sends both here).
  *
  * Separate from Parejas, which belongs to the pairs game and draws by tier.
  * A team format's teams can be any size and there are usually no tiers, so
@@ -25,6 +26,7 @@ import a from './Admin.module.css'
 import { IconRings } from '../../components/icons'
 import { easeSlow } from '../../design/motion'
 import { humanError } from '../../lib/humanError'
+import { teamPlay } from './readiness'
 
 const E = t.teams
 const SIZES = ['2', '3', '4']
@@ -37,7 +39,10 @@ export function AdminTeams() {
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const teamMode = settings.modules.individual.formatOptions.teamMode
-  const [size, setSize] = useState(teamMode === 'scramble' ? '4' : '2')
+  // Fourball match play draws its pairs here too: a match is two pairs.
+  const pairsOnly = teamPlay(settings) === 'pairs'
+  const sizes = pairsOnly ? ['2'] : SIZES
+  const [size, setSize] = useState(pairsOnly ? '2' : teamMode === 'scramble' ? '4' : '2')
   const [drawn, setDrawn] = useState<DrawnTeam[] | null>(null)
   const [names, setNames] = useState<Record<number, string>>({})
   const [revealed, setRevealed] = useState(0)
@@ -94,7 +99,7 @@ export function AdminTeams() {
     }
   }
 
-  if (settings.modules.individual.format !== 'team') return <EmptyState title={E.title} body={E.notTeamFormat} />
+  if (!teamPlay(settings)) return <EmptyState title={E.title} body={E.notTeamFormat} />
 
   // What the round's groups would look like, so nobody is surprised later.
   const preview = drawn ? groupsFromTeams(drawn) : []
@@ -118,7 +123,7 @@ export function AdminTeams() {
               <div key={team.id} className={a.row}>
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{team.name ?? E.unnamed(team.number)}</span>
-                  <span className={a.rowSub}>{team.playerIds.map(name).join(', ')}</span>
+                  <span className={a.rowSub}>{t.common.andList(team.playerIds.map(name))}</span>
                 </span>
                 <span className="small">{E.hcpTotal(Math.round(team.playerIds.reduce((s, id) => s + (byId.get(id)?.baseHcp ?? 0), 0) * 10) / 10)}</span>
               </div>
@@ -131,7 +136,7 @@ export function AdminTeams() {
         <div className={a.sectionTitle}>
           <strong>{E.size}</strong>
         </div>
-        <Segmented value={size} options={SIZES.map((n) => ({ value: n, label: E.sizeOption(Number(n)) }))} onChange={setSize} label={E.size} />
+        <Segmented value={size} options={sizes.map((n) => ({ value: n, label: E.sizeOption(Number(n)) }))} onChange={setSize} label={E.size} />
         <p className={a.help}>{E.sizeHint(snapshot.players.length, Math.ceil(snapshot.players.length / Number(size)))}</p>
       </section>
 
@@ -170,7 +175,7 @@ export function AdminTeams() {
                   {/* The total first: it is the point of the draw, and a long
                       roster truncates whatever follows it. */}
                   <span className={a.rowSub}>
-                    {E.hcpTotal(Math.round(team.totalHcp * 10) / 10)} · {team.playerIds.map(name).join(', ')}
+                    {E.hcpTotal(Math.round(team.totalHcp * 10) / 10)}: {t.common.andList(team.playerIds.map(name))}
                   </span>
                 </div>
               </motion.div>

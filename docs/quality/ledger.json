@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-01",
+  "updated": "2026-10-02",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -237,10 +237,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/styles/tokens.test.ts"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Yellow ring at 8.74:1 on Ceremonia, the TV and a control inside the lot card; graphite ring at 15.7:1 on Tarjeta and Dinero.",
       "residual": null
     },
     {
@@ -668,9 +671,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 84,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -878,9 +883,11 @@
       "workstream": "W10",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 84,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -937,10 +944,13 @@
       "phase": 1,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 90,
+      "tests": [
+        "src/data/backup.restore.test.ts",
+        "supabase/tests/restore_roundtrip.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migration 0025 restores the three side-game tables and is proven on the local harness (the round trip fails on 0020 and passes on 0025, and re-running the file is harmless). Production keeps 0020's function until 0025 is applied, which needs SUPABASE_PAT (docs/handoff.md); the RUNBOOK says to check side games by hand after a restore until then. Status moves to fixed when it is applied."
     },
     {
       "id": "DB-03",
@@ -1468,11 +1478,14 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "verified",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/design/motion.test.ts"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Ceremonia: 25 step changes at 1920 and 393 px, motion on and off, no blank frame (lowest opacity 0.38) and no overshoot; TV: 6 board changes on 3 fixtures, no blank frame (lowest 0.54), the leaving board doesn't move, no horizontal scroll. Its surviving mutant (mode={'wait'} passed the text match) is caught since.",
+      "residual": "motion.test now reads the parsed JSX: mode={WAIT} through a constant, a mode after an arrow-function prop, either branch of a ?:, and an unreadable mode (a spread, a call) all fail it; the re-check's two surviving spellings are killed."
     },
     {
       "id": "MOT-02",
@@ -1751,11 +1764,14 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Exactly one confetti burst per full champion reveal, none when leaving within 0.6 s, none with reduced motion. The count-up now reserves its final width, so a step fitted at the reveal still fits when it ends.",
+      "residual": "The re-check at 38add6b found the count-up ended on a rounded figure (a match-play champion on 1.5 points ended on «2 puntos» while a screen reader said «1.5 puntos»). Fixed: the last frame is the value itself, and points read as golf writes them («1½ puntos», «1 punto»); CountUp.test fails without it, and the fixture walk checks every champion figure ends on its spoken value. Awaiting re-verification."
     },
     {
       "id": "PERF-01",
@@ -1849,10 +1865,17 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/data/snapshotCache.test.ts",
+        "src/data/account.signout.test.ts",
+        "src/data/tournamentStore.test.ts",
+        "src/data/auth.signout.test.ts",
+        "src/screens/organizer/MyTournamentsScreen.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2145,10 +2168,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 83,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts"
+      ],
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: CONFIRMED-FIXED. All four mutants named in the finding are killed (shares swapped, cap clamp removed, cap hard-coded to 50, buyback at half price), plus flow direction and amount; three cases recomputed by hand against §5.9.",
       "residual": null
     },
     {
@@ -2207,10 +2232,18 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 83,
+      "tests": [
+        "src/data/mappers.test.ts",
+        "src/data/tournamentStore.test.ts",
+        "src/data/tournamentStore.reconnect.test.ts",
+        "src/data/snapshotCache.test.ts",
+        "src/data/paged.test.ts",
+        "src/data/snapshot.golden.test.ts",
+        "src/data/backupKeys.test.ts"
+      ],
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: PARTIALLY (14 behaviour-changing mutants survived: no fixture had the first tournament's shape, paging order, switching tournaments and the backup keys were untested). Closed in bb944a5 with 18 mutants proven killed; three spot-checked by the lead before the merge.",
       "residual": null
     },
     {
@@ -2425,10 +2458,15 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/data/tournamentStore.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2439,10 +2477,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/HomeScreen.test.tsx",
+        "src/data/snapshotCache.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2453,10 +2495,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/lib/freshness.test.ts",
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/data/tournamentStore.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2509,11 +2555,14 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 89,
+      "tests": [
+        "src/components/RejectedWrites.test.tsx",
+        "src/screens/admin/AdminRounds.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and both «Terminar ronda» and «Terminar y publicar» ask every phone that captured to have nothing left to send. Also for that migration: snake tiebreaks and hole awards have no live-round check on the server (0013_identity.sql:231-275), so one queued offline is still accepted after «Terminar» while the same hole's scores are refused. A phone only reports once Polo is open with signal (no background sync on iOS). «Names the wrong day» was an Ensayo artifact (verifier V9); the simulator now moves current_round_id as «Iniciar» does. The re-check at 29435c4 confirmed the client half and found «El día volvió a estar en juego» with a dead «Volver a mandar» on a day that never closed (the player moved to another group): a player's phone now offers a resend only for what it could write now (the day live, the card unsigned, its player in that group that day), says «Ya no juegas en ese grupo» otherwise, and words the hint per state, so a mixed list keeps «Mandar al Comité». Its two surviving mutants (R8, a putts-only difference; R15, the no-rounds Tarjeta) are killed. Awaiting re-verification."
     },
     {
       "id": "REL-09",
@@ -2596,10 +2645,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/HomeScreen.account.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2610,14 +2663,20 @@
       "workstream": "W1",
       "phase": 0,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 67,
       "tests": [
         "src/data/auth.session.test.ts",
-        "src/data/outbox.identity.test.ts"
+        "src/data/outbox.identity.test.ts",
+        "src/data/outbox.session.test.ts",
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/auth.signout.test.ts",
+        "src/screens/tournament/MoreScreen.test.tsx"
       ],
-      "verifiedBy": null,
-      "residual": null
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): the session-lapse matrix O1–O8 (no identity yet, dead stored session, lapse in a dead zone inside the refresh cooldown, sign-out mid-round, auth server down 150 s) refused 0 writes at 733e3d4",
+      "residual": "P3 follow-ups from that run: a sign-out on lie-fi or during a token refresh can still leave an orphan anonymous user; held writes of a deleted tournament block sign-out; «Confirmando tu sesión…» also shows for plain network failures once the token expired."
     },
     {
       "id": "REL-17",
@@ -3081,10 +3140,13 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 88,
+      "tests": [
+        "src/screens/legalNotice.test.ts",
+        "src/screens/profile/ProfileScreen.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #88 round 2 (2026-10-02): CONFIRMED-FIXED at 5c68d53; its P2/P3 follow-ups fixed in c6310fd and pinned by legalNotice.test.ts",
       "residual": null
     },
     {
@@ -3124,10 +3186,15 @@
       "phase": 2,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 88,
+      "tests": [
+        "src/screens/consentPoints.test.tsx",
+        "src/components/LegalLinks.test.tsx",
+        "src/screens/LegalScreen.test.tsx",
+        "e2e/fixtures/consent.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Part 1 is in PR #88: the line with both links, before the action, readable and on screen, at every place that takes data (the face grid at any field size and the PIN step, /entrar, organizer sign-in and sign-up, Ronda rápida, the Comité player sheet, the push switch, the scorecard photo). Two things remain. Part 2: recording which version of the terms and the notice each person accepted (on the profile, and on the device for a player without an account) and showing a one-time sheet when a version changes needs a migration; each document carries its own version and date for it to record. And opening a tournament or profile link still creates an anonymous user before any line shows (ensureSession runs before the gate looks the tournament up): the notice says so (version 2026-10-02), but the line does not come first."
     },
     {
       "id": "TRUST-07",
@@ -3141,7 +3208,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Next migration batch: drop the assets_public_read policy (a public bucket still serves each file by its URL without it), so the bucket can no longer be listed. src/screens/legalNotice.test.ts pins that policy and fails when it goes, to have the notice sentence on uploaded files read again."
     },
     {
       "id": "TRUST-08",
@@ -3449,11 +3516,21 @@
       "workstream": "W6",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 85,
+      "tests": [
+        "src/screens/admin/readiness.test.ts",
+        "src/screens/admin/ReadinessCard.test.tsx",
+        "src/data/tournamentStore.test.ts",
+        "src/screens/admin/AdminGroups.test.tsx",
+        "src/screens/admin/AdminRounds.tees.test.tsx",
+        "src/screens/admin/AdminTeams.test.tsx",
+        "src/data/entryEvents.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/ready.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-check at 3908b21 confirmed the fix and found three P3s, now fixed with tests that fail without them: a realtime reload that changed no player asked for the PINs again (the answer is now keyed on the players' rows as fetched, and the card asks nothing where it shows nothing); a late answer about another tournament blanked the card (answers are kept per tournament; the surviving mutant M11 is killed); and under fourball any team counted as a pair (a pair is now two players). Awaiting re-verification."
     },
     {
       "id": "UX-08",
@@ -3589,11 +3666,15 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "verified",
+      "pr": 86,
+      "tests": [
+        "e2e/fixtures/money.spec.ts",
+        "src/engine/core/markPaid.test.ts",
+        "src/screens/tournament/MoneyScreen.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #86, 2026-10-01 (rerun at b518fde): CONFIRMED-FIXED with the declared residual. 245 taps across 16 fixtures and the golden tournament return to the exact starting state through «Ya pagaron» and «Deshacer»; 28 un-marks touch no other account; the client patch matched a server model written from the migration on 400 random taps per fixture. Its follow-ups are fixed in the same PR: the runbook and the hint state the partial-payment exception, writes run one at a time in tap order, a stale «Deshacer» says so instead of writing, focus stays in the list, and a partial key is tested on the screen.",
+      "residual": "One payments row per key holds the total paid, so a partial payment (a lot paid, then another bought) can't be re-recorded once the toast is gone: a mistaken «Marcar pagado» on the rest, or the partial row itself taken back by mistake, leaves either the whole debt or none of it. RUNBOOK §1 and §7 say how to settle it by hand. Settlements as events (W3, §5.3) keep each payment and remove this."
     },
     {
       "id": "UX-22",
@@ -3673,10 +3754,13 @@
       "workstream": "W9",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 86,
+      "tests": [
+        "e2e/fixtures/money.spec.ts",
+        "src/styles/one-row.test.ts"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #86, 2026-10-01 (rerun at b518fde): CONFIRMED-FIXED. 624 screen states at 375, 393 and 1280 px (every Dinero mode with disclosures closed and open, admin and non-admin, 13 fixtures; every Juegos tab on 10 fixtures; the Comité scores page): 342 broken on main, 0 on the PR; TV boards, the inbox and 74 other states identical to main box for box. Its test gaps (a second rule for a composed class, a stacked row, a list mixing lines with and without a button, a one-digit pair score, the empty figures cell before the draw) are closed in the same PR.",
       "residual": null
     },
     {
@@ -3747,11 +3831,14 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-check at 38add6b found names drawn smaller on a 4K screen at 100% scaling (the card's padding was an uncapped 3vw, 115 px, and a name must fit inside it). The padding is now capped at 48 px: at 3840×2160 a three-way champion tie is 4.49vh (4.40 before the follow-up, 3.89 at 38add6b), a four-way tie 4.17vh at full size (a compact list at 3.61), a two-way snake tie 6.34vh (6.81 before; the rest is the no-break space keeping «Gael H.» together, 7.04 without it). The no-break space and the TV's no-scroll stage now have fixture tests."
     },
     {
       "id": "VIS-07",

@@ -6,7 +6,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
@@ -82,9 +82,10 @@ export function TvScreen() {
         </Link>
       </header>
 
-      <AnimatePresence mode="wait">
+      {/* The next board comes in while the last one leaves: the screen is never blank between boards (MOT-01). */}
+      <AnimatePresence mode="popLayout" initial={false}>
         {isAuctionNight && state.modules.auction ? (
-          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeSlow}>
             <AuctionBoard />
           </motion.section>
         ) : (
@@ -341,7 +342,7 @@ function AuctionBoard() {
             <span className={styles.lotNum}>{lot ? t.auction.lot(lot.lotNumber) : ''}</span>
             <h2 className={styles.lotName}>{player.fullName}</h2>
             <span className={styles.lotMeta}>
-              {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${player.baseHcp}`}
+              {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`}
               {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
             </span>
             {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
@@ -373,7 +374,7 @@ function AuctionBoard() {
       <div className={styles.side}>
         <div className={styles.potBox}>
           <span className={styles.small}>{t.auction.pot}</span>
-          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }}>
+          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }} transition={easeSlow}>
             {formatMoney(auction.pot)}
           </motion.span>
         </div>

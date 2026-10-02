@@ -9,11 +9,11 @@
  * holes go by themselves; another tournament's keep waiting for its own PIN.
  *
  * Fake clock for setTimeout only; the app's real Supabase client runs against
- * a fake server (src/data/testing/fakeSupabase.ts).
+ * a fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { holeScore, installFakeSupabase, refusedByRls, settle } from './testing/fakeSupabase'
+import { holeScore, installFakeSupabase, refusedByRls, settle } from './testing/fakePhone'
 
 let uid: string | null = 'uid-a'
 vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: uid ? { id: uid } : null }) } }))

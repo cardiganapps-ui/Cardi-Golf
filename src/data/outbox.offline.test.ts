@@ -7,11 +7,11 @@
  * A restart here is a restart: the page's IndexedDB connection, listeners and
  * outbox channel are closed and every app module is loaded again, so nothing
  * survives but what the real Dexie wrote to (fake) IndexedDB. The app's real
- * Supabase client talks to a fake server (src/data/testing/fakeSupabase.ts).
+ * Supabase client talks to a fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { holeScore, installFakeSupabase, snakeAnswer, until } from './testing/fakeSupabase'
+import { holeScore, installFakeSupabase, snakeAnswer, until } from './testing/fakePhone'
 
 vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
 

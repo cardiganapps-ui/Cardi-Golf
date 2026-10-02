@@ -45,6 +45,14 @@ export interface TournamentData {
   settings: TournamentSettings
   settingsError: string | null
   state: TournamentState
+  /**
+   * What the players' rows read as, hashed: the same after a reload that
+   * changed none of them (a score, a payment), new when one did, a link made
+   * or undone included, which the snapshot's players don't carry. Readers
+   * that ask the server about the players (who has a PIN) key on it, so a
+   * realtime reload of another table costs them nothing.
+   */
+  playersKey: string
 }
 
 interface StoreState {
@@ -55,9 +63,22 @@ interface StoreState {
   data: TournamentData | null
   /** Realtime connection status for the sync chip. */
   realtime: 'off' | 'connecting' | 'live' | 'error'
-  /** Wall-clock time of the last snapshot applied (0 before the first). Display only. */
+  /**
+   * When the server data on screen was fetched: the copy's own time when it
+   * came from the phone (0 before the first). A hole saved on the phone since
+   * leaves it, so a two-day-old copy never reads «hace un momento» (REL-04).
+   * Display only.
+   */
   updatedAt: number
-  load(tournamentId: string): Promise<void>
+  /**
+   * Where the boards on screen came from: the copy this phone saved ('cache',
+   * shown at once on open) or the server ('server'). The gate keeps trying
+   * until it is 'server', and the header says which (REL-02).
+   */
+  source: 'cache' | 'server' | null
+  /** Whether the snapshots shown are kept on the phone for offline use: not on a platform-admin visit, where the tournament is not his. */
+  keepOnPhone: boolean
+  load(tournamentId: string, opts?: { keepOnPhone?: boolean }): Promise<void>
   reload(): Promise<void>
   /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
   seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
@@ -89,7 +110,24 @@ export function registerOverlay(fn: (s: Snapshot) => void) {
   overlays.push(fn)
 }
 
-function compute(raw: Snapshot): TournamentData {
+/** A short, stable hash of a string (cyrb53): a key, not a secret. */
+function hashKey(text: string): string {
+  let h1 = 0xdeadbeef
+  let h2 = 0x41c6ce57
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 2654435761)
+    h2 = Math.imul(h2 ^ c, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36)
+}
+/** The players' rows as fetched, for the snapshots fetchSnapshot returns (their columns include the profile link). */
+const fetchedPlayers = new WeakMap<Snapshot, string>()
+const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? hashKey(JSON.stringify(snapshot.players))
+
+function compute(raw: Snapshot, playersKey = playersKeyOf(raw)): TournamentData {
   // A snapshot cached by an older build has no instance-game tables.
   const snapshot: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [] }
   for (const fn of overlays) fn(snapshot)
@@ -102,7 +140,7 @@ function compute(raw: Snapshot): TournamentData {
     // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
     settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
   }
-  return { snapshot, settings, settingsError, state: computeTournament(snapshot, settings) }
+  return { snapshot, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
 }
 
 /** The exact pipeline the app runs on every snapshot; also feeds the design fixtures (`src/dev`). */
@@ -162,7 +200,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     inList('team_members', 'team_id', teamIds),
   ])
 
-  return {
+  const snapshot: Snapshot = {
     tournament: mapTournament(tRes.data),
     players: players.map(mapPlayer).sort((a, b) => a.sortOrder - b.sortOrder),
     courses: courses.map((c) => mapCourse(c, tees, holes)),
@@ -183,6 +221,8 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     holeAwards: holeAwards.map(mapHoleAward),
     gameResults: gameResults.map(mapGameResult),
   }
+  fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => String(a.id).localeCompare(String(b.id))))))
+  return snapshot
 }
 
 /** While live updates are down, reload this often so the boards keep moving. */
@@ -208,18 +248,20 @@ export const useTournament = create<StoreState>((set, get) => ({
   data: null,
   realtime: 'off',
   updatedAt: 0,
-  async load(tournamentId) {
+  source: null,
+  keepOnPhone: true,
+  async load(tournamentId, opts) {
     if (get().tournamentId !== tournamentId) {
       get().unsubscribe()
-      set({ tournamentId, data: null, error: null })
+      set({ tournamentId, data: null, error: null, source: null })
     }
-    set({ loading: true })
+    set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(tournamentId)
       if (seq !== fetchSeq || get().tournamentId !== tournamentId) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null })
-      void saveSnapshot(tournamentId, snapshot)
+      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
     } catch (e) {
       if (seq !== fetchSeq) return
@@ -228,21 +270,26 @@ export const useTournament = create<StoreState>((set, get) => ({
   },
   async reload() {
     const id = get().tournamentId
-    if (!id) return
+    // A design fixture (`src/dev`) has no server: its snapshot is the truth,
+    // and a fetch would only replace it with nothing after a write.
+    if (!id || id.startsWith('fixture:')) return
     const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(id)
       if (seq !== fetchSeq || get().tournamentId !== id) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), error: null })
-      void saveSnapshot(id, snapshot)
+      set({ data: compute(snapshot), updatedAt: Date.now(), error: null, source: 'server' })
+      if (get().keepOnPhone) void saveSnapshot(id, snapshot)
     } catch (e) {
       if (seq !== fetchSeq) return
       set({ error: humanError(e) })
     }
   },
   seed(tournamentId, snapshot, savedAt) {
+    // Never over the live boards: a cache read that lands after the server's answer is older than it.
+    if (get().tournamentId === tournamentId && get().source === 'server') return
     if (get().tournamentId !== tournamentId) get().unsubscribe()
-    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off' })
+    // A copy on the phone is of a tournament the phone keeps.
+    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
   },
   subscribe() {
     const id = get().tournamentId
@@ -324,6 +371,9 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!d) return
     const snapshot = structuredClone(d.snapshot)
     fn(snapshot)
-    set({ data: compute(snapshot), updatedAt: Date.now() })
+    // `updatedAt` stays: nothing new came from the server (REL-04). A patch
+    // that leaves the players alone (a score, a mark) keeps their key.
+    const same = JSON.stringify(snapshot.players) === JSON.stringify(d.snapshot.players)
+    set({ data: compute(snapshot, same ? d.playersKey : undefined) })
   },
 }))

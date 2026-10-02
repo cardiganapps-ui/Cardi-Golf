@@ -35,6 +35,7 @@ vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 import { toast } from '../../components/ui'
+import { useAuth } from '../../data/auth'
 import { enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -189,6 +190,28 @@ describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-
   })
 })
 
+describe('Tarjeta: holes saved after the phone lost its session need the PIN, and it says so (REL-16)', () => {
+  afterEach(() => {
+    useOutbox.setState({ pending: 0, pendingHoles: 0, held: 0, heldHoles: 0 })
+    useAuth.setState({ user: null })
+  })
+
+  it('«1 hoyo espera tu PIN», not only «por subir»', () => {
+    mount()
+    // auth-js signed the phone out mid-round (its refresh token was dead): the hole saved since waits for the player.
+    act(() => useOutbox.setState({ pending: 4, pendingHoles: 1, held: 4, heldHoles: 1 }))
+    expect(screen.getByText(t.sync.heldForPinShort(1))).toBeTruthy()
+  })
+
+  it('while the stored session is only waiting to be confirmed, the holes are only waiting too', () => {
+    localStorage.setItem('cardi-golf-auth', '{}')
+    mount()
+    act(() => useOutbox.setState({ pending: 4, pendingHoles: 1, held: 4, heldHoles: 1 }))
+    expect(screen.getByText(t.sync.pendingHoles(1))).toBeTruthy()
+    expect(screen.queryByText(/PIN/)).toBeNull()
+  })
+})
+
 describe('Tarjeta: the confirmation lives in the save bar (PWA-01)', () => {
   it('shows «Hoyo N guardado · Corregir» under the button, not in a toast over it', async () => {
     mount()
@@ -221,7 +244,7 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
 
   it('the hole is the page heading: «Hoyo 10, par …»', () => {
     mount()
-    expect(screen.getByRole('heading', { level: 1, name: /^Hoyo 10, par \d, índice \d+/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: /^Hoyo 10, par \d, índice de golpe \d+/ })).toBeTruthy()
   })
 
   it('a tap says whose score changed and what it is worth; a save says the new hole', async () => {

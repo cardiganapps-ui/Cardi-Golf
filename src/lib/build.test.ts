@@ -19,6 +19,6 @@ describe('build identity (PWA-03)', () => {
   })
 
   it('the label names the moment and the commit', () => {
-    expect(buildLabel({ id: Date.UTC(2026, 9, 1, 12, 0) / 1000, sha: 'abc1234' })).toMatch(/2026.*· abc1234$/)
+    expect(buildLabel({ id: Date.UTC(2026, 9, 1, 12, 0) / 1000, sha: 'abc1234' })).toMatch(/2026.* \(abc1234\)$/)
   })
 })

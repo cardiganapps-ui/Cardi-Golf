@@ -234,7 +234,7 @@ export function ProfileView({
                     <span className={styles.rowTitle}>{x.name}</span>
                     <span className={styles.rowSub}>
                       {x.rankLabel ? P.finish(x.rankLabel, x.field) : t.status[x.status]}
-                      {x.awards.length > 0 ? `, ${x.awards.map(awardName).join(', ')}` : ''}
+                      {x.awards.length > 0 ? `, ${t.common.andList(x.awards.map(awardName))}` : ''}
                       {x.practice ? `, ${P.practice.toLowerCase()}` : ''}
                     </span>
                   </span>
@@ -286,10 +286,8 @@ export function ProfileView({
 
       {card.isMe && money && (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className="label">{P.money}</span>
-            <span className={styles.help}>{P.moneyHint}</span>
-          </div>
+          <span className="label">{P.money}</span>
+          <p className={styles.help}>{P.moneyHint}</p>
           {money.length === 0 ? (
             <p className={styles.help}>{P.noMoney}</p>
           ) : (

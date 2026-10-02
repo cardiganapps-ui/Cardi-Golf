@@ -5,11 +5,11 @@
  * server's own again. A write the server refuses stops showing.
  *
  * Real outbox, real tournament store (fetch, overlay, engine), and the app's
- * real Supabase client against a fake server (src/data/testing/fakeSupabase.ts).
+ * real Supabase client against a fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { gate, holeScore, installFakeSupabase, refusedByRls, settle, snakeAnswer, until } from './testing/fakeSupabase'
+import { gate, holeScore, installFakeSupabase, refusedByRls, settle, snakeAnswer, until } from './testing/fakePhone'
 
 vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
 

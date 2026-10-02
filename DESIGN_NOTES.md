@@ -32,6 +32,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 ## Phase 3, PR 2: En vivo (2026-09-28)
 
 - The shell header is one line: small logo, the event name in the serif, and a live dot only when Realtime is subscribed (an "off" or "connecting" state shows nothing, per the logged note). The tab bar follows the primitives: 56 px, icon in the event accent when active.
+- (2026-10-01, #87.) While the boards may be old, the phone's copy or no signal, the header's chip says so in a word or two («Sin señal», «Conectando…», under 18 characters) and a second line under the event name says how old they are («Actualizado hace 2 días»; offline, the holes still on the phone first). The age used to ride in the chip («Conectando, guardado ayer, 7:49 a.m.», 31 to 39 characters), which cut the event name to «Nach…» at 375 px. The age is the server data's: a hole saved on the phone leaves it. While that line shows, En vivo's status line leaves «Actualizado» to it.
 - En vivo opens with a status line ("Día 2, en juego", then the lead group's hole and "Actualizado hace n min"), then the honoree as one ruled row, then the board. Flags and warnings are single caution lines with an icon, not chips.
 - The board is `Board` + `BoardHead` + `LeaderRow`: position with T-ties, name with tier, money and owner initials on the sub line, today's figure, holes played ("F" when finished), and the primary figure large. Rows re-sort once in 200 ms with an ease-out, no spring. Above 20 players the rows go dense.
 - Puntos / Gross toggle (when the tournament has handicaps): gross is strokes to par over the holes actually played, pick-ups excluded, derived in the screen from `HoleResult.gross` and `par`; the gross view sorts ascending and computes its own T-labels. Display only; the engine's ranking is untouched. Red under par, blue over par, "E" for even.
@@ -45,7 +46,7 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - Save moves on and offers "Deshacer" in the toast instead of asking first; the unusual-value check (10+ strokes, 5+ putts) stays as a sheet because the rules ask to confirm those. Signing a card uses a sheet instead of the browser confirm.
 - The sync state ("Sincronizado", "n pendientes", "Sin señal", or the outbox's last error) sits under the save button and under the grid, in the caution color when not clean.
 - Grid view is the classic card: holes down (1 to 18 regardless of the group's start hole), par and SI columns, players across with the pencil notation on gross and the points beneath, Ida, Vuelta and Total rows with points and gross, a dash for missing holes, the current hole marked. The first column is pinned on horizontal scroll.
-- The engine's net-score names use golf English ("eagle neto"); the screen shows "águila" through a one-line display mapping. The engine is unchanged.
+- The engine's net-score names used golf English ("eagle neto"), and the screen swapped in "águila" with a one-line display mapping. Since 2026-10-01 (#84) the engine writes «águila neta» itself and the mapping is gone.
 
 ## Phase 3, PR 4: Juegos and Jugador (2026-09-28)
 
@@ -124,6 +125,17 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
   - whether a copy installed before this change picks the new bar up or needs to be removed and re-added;
   - iOS 26's glass edge.
 
+## Money in columns, and «Ya pagaron» (2026-10-01, VIS-01, UX-21)
+- **A row owns its columns.** A screen composes the row primitives and never re-declares what it composes. Both rules are one class, so the bundle's order picks the winner, and the screens' `display: grid` had lost to `rowLine`'s `display: flex` on La Calcutta, the Matrimonios head-to-head and the Liquidación.
+- **The convention.**
+  - The text block composes `rowTextBlock` and takes the free width.
+  - The amount composes `rowFig`: right-aligned, tabular, never wrapped.
+  - A control sits in `rowAction`: one 8rem slot on every row of a list that has one, left empty on a line that cannot be marked yet.
+  - So every amount in a list ends on one edge, and every button starts on one.
+- **Guards.** `src/styles/one-row.test.ts` refuses a re-declaration. `e2e/fixtures/money.spec.ts` measures the rows on every Juegos tab, every Dinero mode and the Comité inbox. The inbox keeps its tighter gap with a two-class rule (`.inbox .inboxRow`), which wins wherever the bundle puts `rowLine`.
+- **State and action are two words.** «Marcar pagado» is the action. «Pagado», with its check and pressed, is the state, shown in «Ya pagaron»: a folded list of every payment on record. It sits under «Quién debe qué» while the tournament runs, and under the settlement once it is final. Its rows read in the past («Leonel pagó a Banco») and a step quieter (`--ink-2`, the amount at 500).
+- **Taking a payment back.** A tap on «Pagado» writes the same row with paid false, and nothing else. Both directions offer «Deshacer».
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
@@ -142,12 +154,16 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 | Statistics | estadísticas | stats |
 | Link | enlace | link |
 | Countback | desempate por los últimos hoyos | countback |
+| Versus | contra | vs, vs. |
+| A plus handicap | +1.2 in a handicap's own place («Índice +1.2»); −1.2 in an explanation's arithmetic, said once («se escribe +2») | -1.2 |
 | Day-2 cut | recorte del día 2 | anti-sandbag |
 | Kept as vernacular | Stableford, putts, tee, rating, slope, par, Calcutta, martillazo, "¡Vendido!" | |
 
 Voice rules: no exclamation marks outside `feed` and the auctioneer's "¡Vendido!"; no middle dots as separators (sentences, commas or a second line instead); no arrows or symbols in copy; no jokes outside `feed`; buttons under 24 characters, chips under 18.
 
-~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs; the English net-score names stay in the engine (the screen maps them) because tests and the CSV export read them.
+~~Engine explanation strings (`src/engine/core/*.ts`, `src/engine/modules/*/index.ts`) still use "→" and " · " and English score names ("eagle neto").~~ Fixed in cleanup PR 2 (2026-09-28): commas and words instead of glyphs. The English net-score names went too in #84 (2026-10-01): the engine writes «águila neta».
+
+**Enforced (2026-10-01, COPY-24).** The rules drifted back (39 middle dots, arrows, «1º», straight quotes, "eagle", "score", "slot", «pozo» for the snake), so `src/lib/copyRules.test.ts` now reads every string in `es-MX.ts`, what the engine writes for the golden tournament and every fixture (explanations, labels, board text, the Reglamento, the catalog), and the string literals in the rest of `src`. It fails on a middle dot, an arrow, straight quotes, an ordinal without its period (`ordinal()` writes «1.º»), a hyphen used as a minus (`withTrueMinus`, `toParText`, `formatMoney` all write «−»), a name list joined by hand or with commas only (`t.common.andList`, `t.common.orList`: «Iván e Hilario», «Camilo u Óscar»), and the «Not» column above. It also reads the API routes' messages and the push worker, runs the term table on every string with a space in it outside code, and computes a probe tournament with plus handicaps, a cut larger than the handicap and a net below zero, so the handicap and points arithmetic is read too. The engine names net scores in Spanish too («águila neta»): nothing read the English names after all. «Pozo» is the Calcutta's word only; the snake is paid from the bolsa.
 
 ## Throwaway organizer account
 
@@ -177,3 +193,49 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - `AdminPlayers.tsx`: a `playersWithPin` failure is swallowed.
 - `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.
 - `AdminScores.tsx`: tiebreaks and disputes are filtered to the selected round; pending items in other rounds are invisible. `AdminGroups.tsx` re-derives pair warnings the engine already exposes in `flags.warnings`. Nobody reads `flags.incompleteRounds`, `unsignedCards` or `missingModules`.
+
+## Ceremonia at room scale (2026-10-01, VIS-06, MOT-01, MOT-23, A11Y-15)
+
+- **Sized like the TV.** Every size is in viewport height with a phone floor and a 4K ceiling (`clamp(…px, …vh, …px)`), and the header uses `min(vh, vw)` so a phone keeps a phone's header. At 1920×1080 a revealed name is 108 px (10vh), a step title 70 px, the event name 32 px, the controls 28 px; several winners on one step (a tie, the pairs' podium) share the row a size down.
+- **Nothing scrolls on a TV.** A step's title sits at the top and its reveal fills the room under it. A winner and the list it belongs to sit side by side. A list fills as many columns and rows as the screen holds and pages to it («1–24 de 60»): the next beat shows the next page, ← the previous one (60 people take three pages at 1080p, two at 720p). Any other step that would not fit (a long name, a three-way tie, the «provisional» line) is drawn a little smaller (`--fit`, CSS `zoom`) instead of spilling. On a phone (under 1000 px wide) the winner stacks over the list and the screen scrolls, as any phone page does.
+- **Plates.** The figures of a reveal (points, money, holes) sit on plates, the board's device from the direction; the champion's are the leader's yellow.
+- **The event's accent** is set on the stage like every other screen of the tournament.
+- **The reveal is a sequence** (`REVEAL` in `src/design/motion.ts`): the faces, the name 0.25 s later, the figures counting up from 0.5 s (`CountUp`, 0.9 s), and the champion's trophy line with one burst of confetti at 1.4 s. Reduced motion: everything at once, no count, no confetti. Steps cross-fade (`AnimatePresence mode="popLayout"`), so the stage is never blank, and every `motion` element names its transition (`motion.test.ts` fails one that doesn't).
+- **The focus ring is a token**, `--focus-ring` (graphite); board surfaces (TV, Ceremonia, `.card--deep`, the auction console's lot card) set it to `--board-accent`, since graphite on board green is 1.1:1.
+- **Ties and long names, after the verifier's pass.**
+  - A name breaks between words only. A name too long for its line, or a tie too tall for its room, is drawn smaller first. The zoom is searched at the zoomed layout, because zoom re-flows what it scales: a single estimate drew a tie of twelve at a fifth of its room.
+  - Beside a list, the winner's column fits its own height (`--wfit`).
+  - A tie of several that would end below 0.72 is set as a compact list: one line per winner, the face small, the name at 5vh.
+  - A phone zooms only to 0.75 and lets the rest scroll; the scrolling body is a labelled region that keyboard users can reach.
+  - An empty list (nobody paid yet) is left out instead of reading «NaN».
+- **After the second pass.**
+  - A name's line is as wide as its card. A centred line grew with the name, so a one-word name wider than its card («Maximiliano») never counted as too long and ran 31 px past the card at 1024×768.
+  - A reveal taller than its room starts at the top, under its title, and scrolls from there. Centring sent half the overflow above the top: on a phone the 60-row money summary never showed its first 23 rows, and a tie covered its own title.
+  - A figure that counts up holds its final width from the first frame, so the step is fitted to «$6,600», not to «$0».
+  - The compact list belongs to the size that needed it; a bigger screen tries the full size again.
+  - A last word of up to three letters stays on its name's line («Hugo I.»).
+  - On a TV the stage never scrolls, so a view rising into place doesn't flash a scrollbar on desktops that show them.
+- **After the re-check.**
+  - A count-up ends on the value itself, not on a rounded one: the frames between are whole numbers, the last is the figure a screen reader hears. Points read as golf writes them, as on the standings: «1½ puntos», «½ punto», «1 punto».
+  - With reduced motion nothing rises into place, not even for the first frame: Motion drew that frame at the entrance's offset (a card 24 px low, unseen at opacity 0) and the stage could scroll by it.
+  - A winner's card pads its sides by 3vw up to 48 px. A name has to fit inside that padding, and on a 4K screen an uncapped 3vw (115 px) drew ties smaller than before.
+  - The no-break space before a short last word and the TV's no-scroll stage are tested in the fixture suite; `motion.test.ts` reads the AnimatePresence `mode` from the parsed JSX (a constant, any prop order, either branch of a `?:`), and a mode it can't read fails it.
+- **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.
+- **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either, however it is written.
+
+## «Para empezar» (2026-10-01, UX-06)
+
+- **The wizard's days are rounds.** «¿Cuántos días (rondas)?» creates rounds 1..N with no course or date; Rondas used to say «Sin rondas» right after.
+- **What comes next leads the success screen.** «Ir al Comité» first, with a line on what it holds. The join code waits behind a closed «Código para invitar» (a chevron that turns when it opens), whose hint says to share it once the players are in, because players who joined with it found an empty face grid. The step bar goes once the tournament exists.
+- **Comité › Torneo opens with «Para empezar»** (`src/screens/admin/readiness.ts`, read from the snapshot): players, PINs, rounds, each round's course and date, the course card, teams or pairs (when the main game plays in teams), the bracket's days (match play), tees and groups for the next round. A line is a ruled row (`rowLine`) with a ring when open and a check when done. It opens the section that fixes it (Grupos on the day in question, `?ronda=`; Torneo on its Reglas tab, `?pestana=reglas`, where the days are), and a screen reader hears «Listo» or «Pendiente» first. Open lines say the action («Cambia la ronda a 9 hoyos», «Captura la tarjeta»). Under way, the same card prepares the next day («Antes del día 2»); with no day left to play (the rest cancelled) it shows nothing. Quick rounds and finished tournaments: nothing.
+- **«Listo para jugar» only when the day can be played:** every line done, the PINs known, and the engine warning about nothing the list does not say (the Torneo tab reads 0). It names what it checked («jugadores, PIN, rondas, campo y grupos»; tees only when there was a tee line, equipos or parejas only when they apply).
+- **The Torneo tab** counts the open lines while the tournament is in setup, plus each engine warning the list does not say. A warning counts once only while the line about it, on its day, is open: «sin campo cargado» (no course, a course with no card, a tee of an unloaded course), a match-play group that is not a match (for fourball also while the pairs are not drawn), a team format with no teams. The bracket's own warnings never reach the engine's list, so none is claimed. The badge reads «1 pendiente» / «n pendientes» to a screen reader.
+- **What each line checks, after the verifiers' passes:**
+  - PINs come from `players_with_pin`, and a player confirmed-linked to an account counts as able to get in (a pending link does not). The card and the tab read one shared answer per tournament (`entryInfo.ts`, `useSyncExternalStore`), asked again whenever a reader opens, when the players' rows change (a link undone on another phone: the store's `playersKey`, a hash of the rows as fetched, which a reload of scores or payments leaves alone), and when this phone changes a PIN or a link: the writes themselves call `entryChanged` (`src/data/entryEvents.ts`: `setPlayerPin`, the link RPCs, the platform's unlink and account delete, a restore). Readers that open together share one request; an answer about one tournament is never read as another's, a late one never blanks another's card, and an older answer landing after a newer one is dropped. A reader that shows nothing asks nothing (quick rounds, finished tournaments, no day left). A design fixture (the store's id is `fixture:<name>`, as the shell reads it) asks no server and counts its players as able to get in.
+  - A cancelled round is created, not missing; every round cancelled is an open line («vuelve a programar una»). More rounds than days says to raise the days in Reglas or delete the extra one.
+  - The card is read on the tees the engine will play (`teeForPlayerRound`). A tee with too few holes is missing, a nine-hole course under an 18-hole round sends you to Rondas, «Capturar a mano»'s untouched template (par 4 everywhere, the stroke index in hole order) is not a card, and neither is a stroke index left in hole order under real pars.
+  - A tee chosen for a day that belongs to another course (the day's course changed after) is its own line, «Cambia los tees de otro campo», to Rondas: the engine plays that tee, or par 4 everywhere when its course is not loaded. Rondas shows «Tee de cada jugador» whenever a day has a tee chosen, and lists the stray one so it can go back to «Por defecto».
+  - A single-tee course has no tee line: everyone plays it. On several tees, a player with no tee for the day and no default on that course plays the first one («saldría desde Azules»).
+  - Teams: a team format needs its teams, fourball match play its pairs (at least two, each of two players: teams of 4 left from a team format, or the odd one of a 7-player draw, are «no es pareja»), and nobody left on no team. Both are drawn in Equipos, which now offers fourball pairs (two per team only).
+  - Under match play the bracket sets how many rounds it takes (1 v N up to a power of two, halved each day): fewer days than that is a line to raise them in Reglas, and the rounds it needs are not «extra». The groups are the bracket's matches for that day: a match counts only when a group holds exactly its two sides, the knocked out need no group, and a bye skips the day only when the bracket goes on to a later one. A match left without a winner (tied, or never finished) stops the bracket; the line says the Comité decides who goes through and groups the next day by hand in Grupos, and is done once that day has groups.
+- **Grupos** keeps `?ronda=` in step with the day shown, replacing the entry, so a reload or Back does not jump to another day. A day that is not there (a bad link, a cancelled day, a cancelled current round) is skipped: it used to open on no day at all.

@@ -2,6 +2,7 @@
  * Who competes in the main standings. An individual format enters every
  * player; a team format enters the teams the Comité drew.
  */
+import { t } from '../../i18n/es-MX'
 import type { CountbackInput } from '../core/ranking'
 import type { PlayerRound } from '../core/types'
 import type { Id } from '../types'
@@ -39,7 +40,7 @@ export function teamEntrants(ctx: FormatContext): Entrant[] {
     .map((pair) => ({
       id: pair.id,
       playerIds: [pair.player1Id, pair.player2Id],
-      name: pair.name?.trim() || `${name(pair.player1Id)} y ${name(pair.player2Id)}`,
+      name: pair.name?.trim() || t.common.andList([name(pair.player1Id), name(pair.player2Id)]),
       isTeam: true,
     }))
     .sort((a, b) => Math.min(...a.playerIds.map((p) => order.get(p) ?? 0)) - Math.min(...b.playerIds.map((p) => order.get(p) ?? 0)))

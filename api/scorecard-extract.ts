@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (t.parTotalPrinted != null && parSum !== t.parTotalPrinted) issues.push(`Los pares suman ${parSum}, la tarjeta dice ${t.parTotalPrinted}.`)
       const sis = t.holes.map((h) => h.strokeIndex).sort((a, b) => a - b)
       const expected = t.holes.map((_, i) => i + 1)
-      if (sis.join(',') !== expected.join(',')) issues.push('Los índices de dificultad no son una permutación de 1 a ' + t.holes.length + '.')
+      if (sis.join(',') !== expected.join(',')) issues.push(`Los índices de golpe (SI) deben ir del 1 al ${t.holes.length}, sin repetir ninguno.`)
       if (t.holes.length !== 18 && t.holes.length !== 9) issues.push(`Se leyeron ${t.holes.length} hoyos.`)
       return { ...t, parTotal: parSum, issues }
     })

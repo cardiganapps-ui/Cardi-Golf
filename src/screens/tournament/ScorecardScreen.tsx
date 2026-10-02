@@ -12,6 +12,7 @@ import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primit
 import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
+import { hasStoredSession, useAuth } from '../../data/auth'
 import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
@@ -38,9 +39,6 @@ const DOUBLE_SAVE_MS = 3000
 /** How long the last save stays in the save bar with its «Corregir». */
 const SAVED_NOTE_MS = 6000
 
-/** The engine names net scores in golf English ("eagle"); the UI shows the Spanish word. Display only. */
-const scoreNameEs = (pts: number) => netScoreName(pts).replace('eagle', 'águila')
-
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
   const { me, tournamentId } = useTournamentCtx()
@@ -56,6 +54,7 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={t.live.noRounds} body="" />
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }
@@ -64,6 +63,8 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)} body="" />
+        {/* Holes this phone couldn't send before the day closed: the only place a player sees them (REL-08). */}
+        <RejectedWrites canResend={false} playerId={me.playerId} />
       </div>
     )
   }
@@ -84,13 +85,14 @@ export function ScorecardScreen() {
                     <strong>
                       {S.group} {g.number}
                     </strong>
-                    <span className="help">{g.playerIds.map(nameOf).join(', ')}</span>
+                    <span className="help">{t.common.andList(g.playerIds.map(nameOf))}</span>
                   </button>
                 ))}
               </div>
             )}
           </>
         )}
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }
@@ -129,8 +131,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const { me } = useTournamentCtx()
   const pending = useOutbox((s) => s.pending)
   const pendingHoles = useOutbox((s) => s.pendingHoles)
+  const heldHoles = useOutbox((s) => s.heldHoles)
   const lastError = useOutbox((s) => s.lastError)
   const rejected = useOutbox((s) => s.rejected)
+  const signedOut = useAuth((s) => !s.user)
   const online = useOnline()
   const { snapshot, state, settings } = data
   const players = group.playerIds.map((id) => snapshot.players.find((p) => p.id === id)!).filter(Boolean)
@@ -185,7 +189,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** The points badge's words for a draft, shared by the badge and the announcement. */
   const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
     const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
-    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? scoreNameEs(pts) : null) }
+    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
   }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
@@ -339,7 +343,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const myPair = me.playerId ? snapshot.pairs.find((p) => p.player1Id === me.playerId || p.player2Id === me.playerId) : null
   const rivalPair = myPair ? snapshot.pairs.find((p) => p.id !== myPair.id && [p.player1Id, p.player2Id].every((id) => group.playerIds.includes(id))) : null
   const pairName = (p: { name: string | null; player1Id: string; player2Id: string }) =>
-    p.name ?? `${snapshot.players.find((x) => x.id === p.player1Id)?.displayName} & ${snapshot.players.find((x) => x.id === p.player2Id)?.displayName}`
+    p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => snapshot.players.find((x) => x.id === id)?.displayName ?? '?'))
 
   const signed = (pid: string) => {
     const pair = snapshot.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)
@@ -516,7 +520,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const complete = players.every((p) => roundState[p.id]?.complete)
   const missing = (pid: string) => order.filter((h) => !roundState[pid]?.holes[h - 1]?.played)
   // Holes, not rows: «3 hoyos por subir» is what a player can act on (REL-17). Offline too.
-  const waiting = pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
+  // Holes saved after the phone lost its session (auth-js signed it out
+  // mid-round) wait for the player to enter again: say so, not only «por
+  // subir» (REL-16). A stored session still being confirmed needs no PIN.
+  const needsPin = heldHoles > 0 && signedOut && !hasStoredSession()
+  const waiting = needsPin ? t.sync.heldForPinShort(heldHoles) : pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
   const offlineText = pendingHoles > 0 ? t.sync.offlineHoles(pendingHoles) : t.sync.offlineShort
   const syncText = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : (waiting ?? t.sync.synced)
   const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0
@@ -665,7 +673,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
-          <RejectedWrites canResend={me.isAdmin} />
+          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
           {pairsOn && complete && (
             <div>
               {snapshot.pairs
@@ -808,7 +816,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
           </div>
-          <RejectedWrites canResend={me.isAdmin} />
+          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
         </>
       )}
 

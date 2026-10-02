@@ -9,11 +9,11 @@
  * step (REL-17).
  *
  * Real outbox on the real Dexie (fake-indexeddb), and the app's real Supabase
- * client against a fake server (src/data/testing/fakeSupabase.ts).
+ * client against a fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { gate, holeScore, installFakeSupabase, settle, snakeAnswer, until, type Outcome } from './testing/fakeSupabase'
+import { gate, holeScore, installFakeSupabase, settle, snakeAnswer, until, type Outcome } from './testing/fakePhone'
 
 vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
 

@@ -14,6 +14,9 @@ vi.mock('./tournamentStore', () => ({
 }))
 
 const { _outboxTest, flush, useOutbox } = await import('./outbox')
+const { useAuth } = await import('./auth')
+// A phone that entered with its PIN: its writes carry who wrote them (unconfirmed ones wait, see outbox.identity.test).
+useAuth.setState({ user: { id: 'uid-phone' } as never })
 
 const hole5 = (strokes: number) => ({
   key: 'score:r1:p1:5',

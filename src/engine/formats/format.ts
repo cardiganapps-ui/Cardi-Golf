@@ -100,10 +100,22 @@ export interface MainFormat {
 /** The blank figure, for a competitor with no card yet. */
 export const NO_FIGURE: Figure = { value: 0, text: '—', empty: true }
 
+/**
+ * A whole number as copy: «−2», «0», «3». A true minus sign, never a hyphen:
+ * these sit next to tabular numerals and en dashes (DESIGN_DIRECTION.md).
+ */
+export function withTrueMinus(n: number): string {
+  return n < 0 ? `−${Math.abs(n)}` : String(n)
+}
+
+/** «+2», «E», «−1»: strokes relative to par. */
+export function toParText(d: number): string {
+  return d === 0 ? 'E' : d > 0 ? `+${d}` : withTrueMinus(d)
+}
+
 /** "+2", "E", "−1" — a gross or net total relative to par. */
 export function toParFigure(strokes: number, par: number): Figure {
   const d = strokes - par
   if (d === 0) return { value: strokes, rank: 0, text: 'E' }
-  // A true minus sign, not a hyphen: these sit next to tabular numerals.
-  return { value: strokes, rank: d, text: d > 0 ? `+${d}` : `−${Math.abs(d)}`, tone: d > 0 ? 'over' : 'under' }
+  return { value: strokes, rank: d, text: toParText(d), tone: d > 0 ? 'over' : 'under' }
 }

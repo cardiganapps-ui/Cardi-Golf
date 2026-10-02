@@ -1,4 +1,13 @@
-/* Ceremonia: the board palette, one reveal at a time. Tokens only. */
+/*
+ * Ceremonia: the board palette, one reveal at a time. Tokens only.
+ *
+ * It is watched from across a dinner, so it is sized for the room the way the
+ * TV board is (VIS-06): viewport-height units with a floor for a phone and a
+ * ceiling for a 4K screen. On the reveal a name is a tenth of the screen. A
+ * step's title sits at the top and its reveal fills the room under it; a step
+ * that lists people puts the winner beside the list, and the list pages to
+ * the screen. Nothing scrolls.
+ */
 .stage {
   position: fixed;
   inset: 0;
@@ -8,140 +17,275 @@
   color: var(--board-ink);
   display: flex;
   flex-direction: column;
-  padding: var(--s4);
-  padding-top: max(var(--s4), var(--safe-top));
-  gap: var(--s3);
+  padding: max(3vh, var(--safe-top)) 4vw max(3vh, var(--safe-bottom));
+  gap: 2vh;
   overflow: hidden;
+  font-size: clamp(16px, 2.2vh, 30px);
+  /* The ink ring would be 1.1:1 on the board green (A11Y-15). */
+  --focus-ring: var(--board-accent);
 }
 .header {
   display: flex;
   align-items: center;
-  gap: var(--s3);
-  padding-bottom: var(--s2);
+  gap: 2vw;
+  padding-bottom: 1.5vh;
   border-bottom: 2px solid var(--board-rule);
 }
 .logo {
-  height: 48px;
+  height: clamp(40px, min(9vh, 12vw), 120px);
   width: auto;
 }
 .title {
   color: var(--board-ink);
-  font-size: var(--fs-xl);
+  /* min() with the width keeps a phone's header a phone's size. */
+  font-size: clamp(22px, min(4.5vh, 6vw), 64px);
+  line-height: var(--lh-tight);
 }
 .sub {
+  display: block;
   color: var(--board-ink-2);
-  font-size: var(--fs-sm);
+  font-size: clamp(16px, min(3vh, 4.5vw), 44px);
   font-family: var(--font-event);
+  line-height: var(--lh-tight);
 }
 .exit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--s2);
   color: var(--board-ink-2);
+  font-size: clamp(16px, min(2.6vh, 4vw), 36px);
   text-decoration: none;
 }
 .warn {
   color: var(--board-accent);
-  font-size: var(--fs-sm);
+  font-size: clamp(14px, 2.4vh, 32px);
   text-align: center;
 }
 .body {
+  /* The leaving view is laid over the coming one (AnimatePresence popLayout), positioned from here. */
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
   overflow-y: auto;
 }
-.center {
+/* A step: its title at the top, the reveal filling the room under it. */
+.step {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: var(--s4);
+  gap: 2vh;
   width: 100%;
-  max-width: 720px;
-  padding: var(--s2);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1vh 0;
+}
+.area {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/*
+ * Centred while it fits; taller than the room, it starts at the top, where
+ * scrolling reaches it. (`justify-content: center` put half the overflow
+ * above the top: on a phone a long list's first rows, and a tie's faces,
+ * could never be scrolled to, and the reveal covered its own title.)
+ */
+.area > * {
+  margin-block: auto;
+}
+/* The start and the end. */
+.center {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2.5vh;
+  width: 100%;
+  max-width: 1400px;
+  padding: 1vh 0;
 }
 .hint {
   color: var(--board-ink-2);
-  max-width: 420px;
+  max-width: 30em;
   line-height: var(--lh-body);
+  font-size: clamp(16px, 2.8vh, 40px);
 }
 .bigBtn {
-  font-size: var(--fs-lg);
-  padding: 0 var(--s8);
-  min-height: 60px;
+  font-size: clamp(18px, 3.2vh, 44px);
+  padding: 0 clamp(32px, 4vw, 96px);
+  min-height: clamp(60px, 9vh, 120px);
 }
 .stepIcon {
   display: inline-flex;
   color: var(--board-accent);
   line-height: 1;
 }
+.stepIcon svg {
+  width: clamp(48px, 7vh, 112px);
+  height: clamp(48px, 7vh, 112px);
+}
 .stepTitle {
   color: var(--board-ink);
-  font-size: clamp(1.6rem, 5vh, 3rem);
+  font-size: clamp(28px, min(6.5vh, 8vw), 96px);
+  line-height: var(--lh-tight);
 }
 .reveal {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s4);
+  gap: 3vh;
+  width: 100%;
+}
+/* A reveal without a list that would not fit is drawn smaller (--fit, set by the screen) rather than scrolled. */
+.reveal[data-fit] {
+  zoom: var(--fit, 1);
+}
+.reveal[data-list] {
+  flex: 1;
+  min-height: 0;
+}
+.winners {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  gap: 2vh 2vw;
   width: 100%;
 }
 .winner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s2);
+  justify-content: center;
+  gap: 1.2vh;
+  min-width: 0;
   background: var(--board-surface);
   border-radius: var(--r-md);
-  padding: var(--s5) var(--s6);
-  width: 100%;
+  /* Capped: a name must fit inside this padding («holds»), and an uncapped 3vw (115 px on a 4K screen) drew 4K ties smaller than before. */
+  padding: 2.5vh min(3vw, 48px);
 }
 .champion {
-  box-shadow: inset 0 0 0 2px var(--board-accent);
+  box-shadow: inset 0 0 0 3px var(--board-accent);
 }
 .avatars {
   display: flex;
-  gap: var(--s2);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5vw;
 }
 .avatars :global(.avatar--lg) {
-  width: clamp(72px, 14vh, 140px);
-  height: clamp(72px, 14vh, 140px);
-  font-size: clamp(1.6rem, 5vh, 3rem);
+  width: clamp(72px, 18vh, 220px);
+  height: clamp(72px, 18vh, 220px);
+  font-size: clamp(1.6rem, 7vh, 5.5rem);
 }
 .winnerLine {
+  display: block;
+  /* As wide as its card, so a name wider than the card overflows it and the screen draws the step smaller (a centred line grew to fit the name instead, and nothing noticed). */
+  align-self: stretch;
   font-weight: 600;
-  font-size: clamp(1.5rem, 5vh, 3rem);
+  font-size: clamp(32px, min(10vh, 9vw), 140px);
   line-height: var(--lh-tight);
+  /* Breaks between words only: a name too long for its line is drawn smaller (the screen's fit), never «Maurici / o». */
+  overflow-wrap: normal;
 }
 .winnerSub {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1vh 1vw;
   color: var(--board-ink-2);
-  font-size: clamp(1rem, 2.6vh, 1.4rem);
+  font-size: clamp(16px, 3.4vh, 48px);
+}
+/* Each figure sits on a plate, the board's own device (DESIGN_DIRECTION, «the plate numeral»); the champion's is the leader's yellow. */
+.plate {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  background: var(--board-bg);
+  color: var(--board-ink);
+  font-size: clamp(20px, 4.2vh, 60px);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  line-height: var(--lh-tight);
+}
+.plateLeader {
+  background: var(--board-accent);
+  color: var(--board-bg);
 }
 .trophy {
+  display: block;
   color: var(--board-accent);
   font-weight: 600;
-  font-size: clamp(1rem, 2.8vh, 1.5rem);
+  font-size: clamp(18px, 3.6vh, 52px);
 }
-.list {
+/* Several winners (a tie, the pairs' podium) share the row, so each is a size down. */
+.winners[data-many] .avatars :global(.avatar--lg) {
+  width: clamp(64px, 13vh, 160px);
+  height: clamp(64px, 13vh, 160px);
+  font-size: clamp(1.4rem, 5vh, 4rem);
+}
+.winners[data-many] .winnerLine {
+  font-size: clamp(28px, min(7vh, 6vw), 100px);
+}
+.aside {
+  width: 100%;
+}
+/* The list takes the height left; it pages to it (PagedList), so it never scrolls. */
+.listArea,
+.paged {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
+}
+.listBox {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.list {
+  display: grid;
+  column-gap: 3vw;
   width: 100%;
-  font-size: clamp(1rem, 2.6vh, 1.4rem);
+  font-size: clamp(16px, 3.2vh, 44px);
+  line-height: 1.3;
   border-top: 1px solid var(--board-rule);
+  text-align: start;
 }
 .listRow {
   display: flex;
   justify-content: space-between;
   gap: var(--s3);
-  padding: var(--s2) var(--s1);
+  min-width: 0;
+  padding: 0.5vh 0.3em;
   border-bottom: 1px solid var(--board-rule);
   font-variant-numeric: tabular-nums;
 }
-.listRule {
-  height: 2px;
-  background: var(--board-rule);
-  margin: var(--s2) 0;
+/* One line per row, so every row is as tall as the first and the page count is exact. */
+.listName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* «1–24 de 60» when the list takes more than one page. */
+.range {
+  color: var(--board-ink-2);
+  font-size: clamp(14px, 2.4vh, 32px);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  padding-top: 0.6vh;
 }
 .pos {
   color: var(--board-ink);
@@ -149,11 +293,101 @@
 .neg {
   color: var(--board-under);
 }
+/*
+ * A tie of many, past what zoom can make readable (twelve tied before any
+ * score, a five-way last place in a big field): one line per winner, in
+ * columns, the face small and the name and figures beside it.
+ */
+.winners[data-compact] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  gap: 1vh 2vw;
+}
+.winners[data-compact] .winner {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  text-align: start;
+  gap: 0.6vh 1.2vw;
+  padding: 1vh 1.2vw;
+}
+.winners[data-compact] .avatars {
+  flex-wrap: nowrap;
+}
+.winners[data-compact] .avatars :global(.avatar--lg) {
+  width: clamp(40px, 7vh, 96px);
+  height: clamp(40px, 7vh, 96px);
+  font-size: clamp(1rem, 2.8vh, 2.4rem);
+}
+.winners[data-compact] .winnerLine {
+  /* The room left beside the face, but never less than the name: a long one goes to its own line. */
+  flex: 1 1 auto;
+  /* Beside the face, on its middle (in a row, stretch would pin the name to the top). */
+  align-self: center;
+  font-size: clamp(20px, min(5vh, 5vw), 72px);
+}
+.winners[data-compact] .winnerSub {
+  justify-content: flex-start;
+}
+.winners[data-compact] .plate {
+  font-size: clamp(16px, 3.2vh, 46px);
+}
+.winners[data-compact] .trophy {
+  font-size: clamp(14px, 2.6vh, 38px);
+}
+/* A phone stacks the winner over the list: the list grows and the screen scrolls, rather than paging a row at a time. */
+@media (max-width: 999px) {
+  .reveal[data-list],
+  .listArea,
+  .paged,
+  .listBox {
+    flex: none;
+  }
+  .listBox {
+    overflow: visible;
+  }
+  /* Nothing is fitted where the screen scrolls: a name longer than a phone is wide may break. */
+  .reveal[data-list] .winnerLine {
+    overflow-wrap: anywhere;
+  }
+}
+/* A winner beside the people it is about: the snake's holder and the totals, a game's winner and its money. */
+@media (min-width: 1000px) {
+  /* A TV never scrolls (every step is fitted or paged), so a view arriving from below doesn't flash a scrollbar. */
+  .body {
+    overflow: hidden;
+  }
+  .reveal[data-split] {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 3vw;
+  }
+  .reveal[data-split] .listArea {
+    align-self: stretch;
+  }
+  .reveal[data-split] .winners {
+    grid-template-columns: 1fr;
+    /* The winner's column, drawn smaller to the room beside the list when a tie or a long name would not fit (--wfit, set by the screen). */
+    zoom: var(--wfit, 1);
+  }
+  /* The name keeps its size; the face gives way to the list. */
+  .reveal[data-split] .avatars :global(.avatar--lg) {
+    width: clamp(64px, 13vh, 160px);
+    height: clamp(64px, 13vh, 160px);
+    font-size: clamp(1.4rem, 5vh, 4rem);
+  }
+}
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s2);
+}
+.footer :global(.btn) {
+  font-size: clamp(16px, 2.6vh, 36px);
+  min-height: clamp(48px, 7vh, 96px);
+  padding: 0 clamp(16px, 2.5vw, 48px);
 }
 .footer :global(.btn--ghost),
 .footer :global(.btn--secondary),
@@ -166,6 +400,7 @@
 }
 .progress {
   color: var(--board-ink-2);
+  font-size: clamp(16px, 2.6vh, 36px);
   font-variant-numeric: tabular-nums;
 }
 .footer :global(.btn:disabled) {

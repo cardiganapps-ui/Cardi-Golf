@@ -3,8 +3,8 @@
  * search when the list is long, and an edit sheet with the three handicap
  * sources, the estimate from three scores (§13b-E) and a live preview.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { t } from '../../i18n/es-MX'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
@@ -18,6 +18,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
 import a from './Admin.module.css'
+import { OthersDataNotice } from '../../components/LegalLinks'
 import { NumberField, OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 
@@ -81,6 +82,7 @@ export function AdminPlayers() {
   const [q, setQ] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const [profiles, reloadProfiles] = useTournamentProfiles(tournamentId)
+  const noticeId = useId()
 
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
@@ -100,13 +102,15 @@ export function AdminPlayers() {
       base = estimate.value
     } else if (editing.handicap_source === 'index') base = editing.handicap_index ?? 0
     let courseHcp = base
+    let course: ReturnType<typeof courseHandicap> | null = null
     const tee = tees.find((x) => x.id === editing.default_tee_id)
     if (editing.handicap_source !== 'manual' && tee) {
-      courseHcp = courseHandicap(base, { slope: tee.slope, rating: tee.rating, par: tee.holes.reduce((s, h) => s + h.par, 0) || 72 }).value
+      course = courseHandicap(base, { slope: tee.slope, rating: tee.rating, par: tee.holes.reduce((s, h) => s + h.par, 0) || 72 })
+      courseHcp = course.value
     }
     const ph = playingHandicap(courseHcp, settings.handicap)
     const strokes = Array.from({ length: 18 }, (_, i) => strokesReceived(ph.value, i + 1))
-    return { base, courseHcp, ph, strokes, estimate }
+    return { base, courseHcp, course, ph, strokes, estimate }
   }, [editing, settings.handicap, tees])
 
   async function save() {
@@ -162,6 +166,7 @@ export function AdminPlayers() {
     if (!pinFor || !/^\d{4}$/.test(pin)) return
     setBusy(true)
     try {
+      // setPlayerPin itself tells «Para empezar» (entryChanged): the card and the Torneo tab ask again.
       await setPlayerPin(pinFor.id, pin)
       setPins(new Set([...pins, pinFor.id]))
       toast(P.pinSet)
@@ -216,7 +221,7 @@ export function AdminPlayers() {
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{p.fullName}</span>
                   <span className={a.rowSub}>
-                    {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {p.baseHcp}
+                    {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {handicapText(p.baseHcp)}
                     {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
                     {p.isAdmin ? `, ${P.committee}` : ''}
                     {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
@@ -241,6 +246,7 @@ export function AdminPlayers() {
       <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add}>
         {E && (
           <div className="stack">
+            <OthersDataNotice id={noticeId} />
             <div className={a.chipRow}>
               <Avatar name={E.display_name || E.full_name || '?'} url={E.avatar_url} size="lg" honoree={E.is_honoree} />
               <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
@@ -249,7 +255,8 @@ export function AdminPlayers() {
               <input ref={fileRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => e.target.files?.[0] && void onAvatar(e.target.files[0])} />
             </div>
             <Field label={P.fullName}>
-              <input className="input" value={E.full_name} onChange={(e) => setEditing({ ...E, full_name: e.target.value })} autoFocus={!E.id} />
+              {/* A new player's sheet opens on this field, below the notice: a screen reader hears the notice with it. */}
+              <input className="input" value={E.full_name} onChange={(e) => setEditing({ ...E, full_name: e.target.value })} autoFocus={!E.id} aria-describedby={noticeId} />
             </Field>
             <div className={a.grid2}>
               <Field label={P.displayName}>
@@ -343,7 +350,7 @@ export function AdminPlayers() {
               <div className={a.section}>
                 <div className={a.sectionTitle}>
                   <strong>{P.preview}</strong>
-                  <HowCalculated why={preview.estimate ? [preview.estimate.why, preview.ph.why] : preview.ph.why} />
+                  <HowCalculated why={[preview.estimate?.why, preview.course?.why, preview.ph.why].filter((w) => !!w)} />
                 </div>
                 <div className={a.chipRow}>
                   <span className={`${a.fig} ${a.figLg}`}>{preview.ph.value}</span>

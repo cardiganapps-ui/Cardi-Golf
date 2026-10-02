@@ -11,7 +11,7 @@
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { holeScore, installFakeSupabase, refusedByRls, settle, turn, until } from './testing/fakeSupabase'
+import { holeScore, installFakeSupabase, refusedByRls, settle, turn, until } from './testing/fakePhone'
 
 vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
 
