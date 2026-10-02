@@ -1865,10 +1865,17 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/data/snapshotCache.test.ts",
+        "src/data/account.signout.test.ts",
+        "src/data/tournamentStore.test.ts",
+        "src/data/auth.signout.test.ts",
+        "src/screens/organizer/MyTournamentsScreen.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2161,12 +2168,12 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 83,
       "tests": [
         "src/engine/modules/auction/auction.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: CONFIRMED-FIXED. All four mutants named in the finding are killed (shares swapped, cap clamp removed, cap hard-coded to 50, buyback at half price), plus flow direction and amount; three cases recomputed by hand against §5.9.",
       "residual": null
     },
     {
@@ -2230,7 +2237,7 @@
         "src/data/snapshot.golden.test.ts",
         "src/data/backupKeys.test.ts"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier on PR #83, 2026-10-01: PARTIALLY (14 behaviour-changing mutants survived: no fixture had the first tournament's shape, paging order, switching tournaments and the backup keys were untested). Closed in bb944a5 with 18 mutants proven killed; three spot-checked by the lead before the merge.",
       "residual": null
     },
     {
@@ -2445,10 +2452,15 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/data/tournamentStore.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2459,10 +2471,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/HomeScreen.test.tsx",
+        "src/data/snapshotCache.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2473,10 +2489,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/lib/freshness.test.ts",
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/data/tournamentStore.test.ts"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2619,10 +2639,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/HomeScreen.account.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
       "residual": null
     },
     {
@@ -2633,14 +2657,20 @@
       "workstream": "W1",
       "phase": 0,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 67,
       "tests": [
         "src/data/auth.session.test.ts",
-        "src/data/outbox.identity.test.ts"
+        "src/data/outbox.identity.test.ts",
+        "src/data/outbox.session.test.ts",
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/auth.signout.test.ts",
+        "src/screens/tournament/MoreScreen.test.tsx"
       ],
-      "verifiedBy": null,
-      "residual": null
+      "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): the session-lapse matrix O1–O8 (no identity yet, dead stored session, lapse in a dead zone inside the refresh cooldown, sign-out mid-round, auth server down 150 s) refused 0 writes at 733e3d4",
+      "residual": "P3 follow-ups from that run: a sign-out on lie-fi or during a token refresh can still leave an orphan anonymous user; held writes of a deleted tournament block sign-out; «Confirmando tu sesión…» also shows for plain network failures once the token expired."
     },
     {
       "id": "REL-17",
@@ -3107,10 +3137,13 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 88,
+      "tests": [
+        "src/screens/legalNotice.test.ts",
+        "src/screens/profile/ProfileScreen.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier, PR #88 round 2 (2026-10-02): CONFIRMED-FIXED at 5c68d53; its P2/P3 follow-ups fixed in c6310fd and pinned by legalNotice.test.ts",
       "residual": null
     },
     {
@@ -3150,10 +3183,15 @@
       "phase": 2,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 88,
+      "tests": [
+        "src/screens/consentPoints.test.tsx",
+        "src/components/LegalLinks.test.tsx",
+        "src/screens/LegalScreen.test.tsx",
+        "e2e/fixtures/consent.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Part 1 is in PR #88: the line with both links, before the action, readable and on screen, at every place that takes data (the face grid at any field size and the PIN step, /entrar, organizer sign-in and sign-up, Ronda rápida, the Comité player sheet, the push switch, the scorecard photo). Two things remain. Part 2: recording which version of the terms and the notice each person accepted (on the profile, and on the device for a player without an account) and showing a one-time sheet when a version changes needs a migration; each document carries its own version and date for it to record. And opening a tournament or profile link still creates an anonymous user before any line shows (ensureSession runs before the gate looks the tournament up): the notice says so (version 2026-10-02), but the line does not come first."
     },
     {
       "id": "TRUST-07",
@@ -3167,7 +3205,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Next migration batch: drop the assets_public_read policy (a public bucket still serves each file by its URL without it), so the bucket can no longer be listed. src/screens/legalNotice.test.ts pins that policy and fails when it goes, to have the notice sentence on uploaded files read again."
     },
     {
       "id": "TRUST-08",

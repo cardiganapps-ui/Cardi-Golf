@@ -29,8 +29,13 @@ export function MoreScreen() {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [askNotMe, setAskNotMe] = useState(false)
-  /** Holes still on this phone when the player tried to switch: switching would strand them (UX-09, REL-16). */
-  const [unsent, setUnsent] = useState(0)
+  /**
+   * What is still on this phone when the player tried to switch: switching
+   * would strand it (UX-09, REL-16). Any write, not only score holes: a card
+   * signature still queued went out after the release under an identity no
+   * longer in the group, and was refused for good.
+   */
+  const [unsent, setUnsent] = useState<{ holes: number; writes: number } | null>(null)
   const account = !!user && !isAnonymous
 
   async function saveHere() {
@@ -64,8 +69,9 @@ export function MoreScreen() {
   }
 
   async function logout() {
-    if (await signOutSafely()) navigate('/')
-    else toast(t.account.signOutBlocked)
+    const r = await signOutSafely()
+    if (r.done) navigate('/')
+    else toast(r.reason)
   }
   const player = data?.snapshot.players.find((p) => p.id === me.playerId)
   const link = `${window.location.origin}/t/${slug}`
@@ -141,8 +147,8 @@ export function MoreScreen() {
             className="btn btn--secondary"
             type="button"
             onClick={() => {
-              const n = queuedFor(lookup.id).holes
-              if (n > 0) setUnsent(n)
+              const q = queuedFor(lookup.id)
+              if (q.writes > 0) setUnsent(q)
               else if (me.via === 'profile') setAskNotMe(true)
               else void leave()
             }}
@@ -164,9 +170,9 @@ export function MoreScreen() {
           {t.errors.backHome}
         </Link>
       </div>
-      <Sheet open={unsent > 0} onClose={() => setUnsent(0)} title={t.sync.unsentBeforeSwitch(unsent)}>
+      <Sheet open={!!unsent} onClose={() => setUnsent(null)} title={unsent?.holes ? t.sync.unsentBeforeSwitch(unsent.holes) : t.sync.unsentWritesBeforeSwitch}>
         <p>{t.sync.unsentBeforeSwitchBody}</p>
-        <button className="btn btn--primary" type="button" onClick={() => setUnsent(0)}>
+        <button className="btn btn--primary" type="button" onClick={() => setUnsent(null)}>
           {t.sync.understood}
         </button>
       </Sheet>

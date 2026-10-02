@@ -56,4 +56,14 @@ describe('ensureSession', () => {
     await expect(ensureSession()).resolves.toEqual({ user: { id: 'new-anon' } })
     expect(anonCalls).toBe(1)
   })
+
+  it('two callers at once (a retry and the PIN) start one anonymous session, not two', async () => {
+    const [a, b] = await Promise.all([ensureSession(), ensureSession()])
+    expect(anonCalls).toBe(1)
+    expect(a).toBe(b)
+    // Once it is settled, the next caller asks again.
+    session = a
+    await expect(ensureSession()).resolves.toBe(a)
+    expect(anonCalls).toBe(1)
+  })
 })

@@ -16,6 +16,7 @@ import { accountError, confirmProfileCode, continueWithGoogle, finishProfileSign
 import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
 import styles from './Profile.module.css'
+import { LegalConsent } from '../../components/LegalLinks'
 
 export function EntrarScreen() {
   const navigate = useNavigate()
@@ -152,6 +153,8 @@ export function EntrarScreen() {
         </form>
       ) : (
         <div className={styles.form}>
+          {/* First, before every way in, in reading and keyboard order (TRUST-05). */}
+          <LegalConsent />
           {google && (
             <>
               <button className={`btn btn--secondary btn--block ${styles.google}`} type="button" disabled={busy} onClick={() => void run(() => continueWithGoogle(next))}>

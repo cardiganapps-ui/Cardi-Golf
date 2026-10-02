@@ -5,10 +5,11 @@
  * review and screenshots.
  */
 import { useEffect, useMemo } from 'react'
-import { Link, Outlet, useParams, useSearchParams } from 'react-router'
+import { Link, Outlet, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTournament } from '../data/tournamentStore'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
+import { EnterScreen } from '../screens/tournament/EnterScreen'
 import { FIXTURE_NAMES, getFixture } from './fixtures'
 
 const noop = async () => undefined
@@ -18,6 +19,7 @@ export function FixtureGate() {
   const fixture = useMemo(() => getFixture(name), [name])
   const tournamentId = useTournament((s) => s.tournamentId)
   const as = useSearchParams()[0].get('as')
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!fixture) return
@@ -26,6 +28,8 @@ export function FixtureGate() {
   }, [fixture])
 
   if (!fixture) return <FixtureIndex />
+  // `?as=new-phone`: the same tournament on a phone that has not picked its face yet (the grid, then the PIN).
+  if (as === 'new-phone') return <EnterScreen lookup={fixture.lookup} onEntered={() => navigate(`/t/_/${fixture.name}`)} />
   if (tournamentId !== `fixture:${fixture.name}`) return null
   // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
   const me: Me =
