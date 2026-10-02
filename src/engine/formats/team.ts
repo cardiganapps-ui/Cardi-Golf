@@ -76,7 +76,7 @@ export const teamFormat: MainFormat = {
     const net = o.scoring !== 'gross'
     const entrants = teamEntrants(ctx)
     const warnings: string[] = []
-    if (entrants.length === 0) warnings.push('Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Parejas.')
+    if (entrants.length === 0) warnings.push('Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.')
 
     const totals: FormatStandings['totals'] = {}
     const perRound: FormatStandings['perRound'] = {}

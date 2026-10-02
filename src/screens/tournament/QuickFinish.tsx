@@ -51,7 +51,7 @@ export function QuickFinish() {
       <ConfirmSheet
         open={ask}
         title={Q.finishTitle}
-        body={missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishConfirm}` : Q.finishConfirm}
+        body={`${missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishConfirm}` : Q.finishConfirm} ${t.admin.rounds.phonesBeforeFinish}`}
         busy={busy}
         confirmLabel={Q.finishTitle}
         onConfirm={() => void finish()}

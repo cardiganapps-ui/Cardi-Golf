@@ -30,7 +30,8 @@ export function activeRounds(snapshot: Snapshot): Round[] {
   return [...snapshot.rounds].filter((r) => r.status !== 'cancelled').sort((a, b) => a.number - b.number)
 }
 
-function teeById(snapshot: Snapshot): Map<Id, Tee> {
+/** Every loaded tee by id, whatever its course: what `teeForPlayerRound` looks a chosen tee up in. */
+export function teeById(snapshot: Snapshot): Map<Id, Tee> {
   const m = new Map<Id, Tee>()
   for (const c of snapshot.courses) for (const t of c.tees) m.set(t.id, t)
   return m

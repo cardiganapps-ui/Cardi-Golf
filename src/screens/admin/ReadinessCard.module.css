@@ -1,0 +1,56 @@
+/* «Para empezar» (UX-06): a short ruled list on card stock. Tokens only. */
+.card {
+  border: var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  padding: var(--s3) var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.title {
+  font-size: var(--fs-lg);
+}
+.hint {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  composes: rowLine from '../../components/primitives.module.css';
+  color: var(--ink);
+  text-decoration: none;
+}
+.list li:last-child .row {
+  border-bottom: none;
+}
+/* Open: a hollow ring. Done: the check, quieter. */
+.mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--caution);
+}
+.done {
+  color: var(--ink-2);
+}
+.done .mark {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.text {
+  composes: rowTextBlock from '../../components/primitives.module.css';
+}
+.allSet {
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}

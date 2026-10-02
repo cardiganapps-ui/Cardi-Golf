@@ -4,6 +4,7 @@
 import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { supabase } from '../lib/supabase'
+import { entryChanged } from './entryEvents'
 import { mapTournament, type Row } from './mappers'
 
 /**
@@ -223,6 +224,7 @@ export async function deletePlayer(id: string) {
 export async function setPlayerPin(playerId: string, pin: string) {
   const res = await supabase().rpc('set_player_pin', { p_player_id: playerId, p_pin: pin })
   if (res.error) throw ApiError.from(res.error)
+  entryChanged()
 }
 
 export async function playersWithPin(tournamentId: string): Promise<Set<string>> {

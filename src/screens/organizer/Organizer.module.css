@@ -196,3 +196,35 @@
   flex-wrap: wrap;
   gap: var(--s2);
 }
+/* The code to share, once there are players (UX-06). */
+.shareLater {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.shareLater[open] {
+  display: flex;
+}
+.shareLater summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  list-style: none;
+}
+/* The flex summary drops the browser's marker; the chevron says it opens, and turns when it has. */
+.shareLater summary::-webkit-details-marker {
+  display: none;
+}
+.shareLater summary svg {
+  transition: transform var(--dur-fast) var(--ease);
+}
+.shareLater[open] summary svg {
+  transform: rotate(90deg);
+}
+.shareLater > :not(summary) {
+  margin-top: var(--s2);
+}
