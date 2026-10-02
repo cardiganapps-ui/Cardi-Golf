@@ -53,14 +53,21 @@ describe('the notes that end on the notice', () => {
     render(<OthersDataNotice id="others" />)
     const link = screen.getByRole('link', { name: `${t.legal.othersData.privacy} ${t.legal.newTab}` })
     expectNewTabLink(link, '/privacidad')
-    expect(link.closest('p')!.id).toBe('others')
+    const note = link.closest('p')!
+    expect(note.id).toBe('others')
+    expect(note.textContent).toBe('Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).')
   })
 
-  it('the push switch and the scorecard photo', () => {
-    for (const note of [t.legal.pushNote, t.legal.scorecardNote]) {
+  // Word for word, not rebuilt from the strings they check (PR #88's second verifier turned both into their opposite and nothing failed).
+  it('the push switch and the scorecard photo, word for word', () => {
+    const notes = [
+      [t.legal.pushNote, 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'],
+      [t.legal.scorecardNote, 'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el Aviso de privacidad (se abre en otra pestaña).'],
+    ] as const
+    for (const [note, text] of notes) {
       render(<NoticeNote note={note} />)
       expectNewTabLink(screen.getByRole('link', { name: `${note.privacy} ${t.legal.newTab}` }), '/privacidad')
-      expect(document.querySelector('[data-legal-consent]')!.textContent).toBe(`${note.start}${note.privacy} ${t.legal.newTab}${note.end}`)
+      expect(document.querySelector('[data-legal-consent]')!.textContent).toBe(text)
       cleanup()
     }
   })

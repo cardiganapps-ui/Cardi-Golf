@@ -7,16 +7,22 @@
  * way it keeps «Volver a Polo».
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useNavigationType } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { t } from '../i18n/es-MX'
 import { LegalScreen } from './LegalScreen'
 
 const L = t.legal
 
+/** How the last move got here: a «REPLACE» leaves the tab one page long, so the browser still lets it close. */
+function HowWeGotHere() {
+  return <span data-testid="nav">{useNavigationType()}</span>
+}
+
 function mount(url: string) {
   render(
     <MemoryRouter initialEntries={[url]}>
+      <HowWeGotHere />
       <Routes>
         <Route path="/privacidad" element={<LegalScreen doc="privacy" />} />
         <Route path="/terminos" element={<LegalScreen doc="terms" />} />
@@ -42,10 +48,11 @@ describe('opened from a consent link', () => {
     expect(close).toHaveBeenCalledTimes(1)
   })
 
-  it('the other document keeps the marker, so it can close too', () => {
+  it('the other document keeps the marker, and replaces this one, so the tab can still close', () => {
     mount('/privacidad?desde=formulario')
     fireEvent.click(screen.getByRole('link', { name: L.terms.title }))
     expect(screen.getByRole('heading', { level: 1, name: L.terms.title })).toBeTruthy()
+    expect(screen.getByTestId('nav').textContent).toBe('REPLACE')
     expect(screen.getByRole('button', { name: L.close })).toBeTruthy()
     expect(screen.getByRole('link', { name: L.privacy.title }).getAttribute('href')).toBe('/privacidad?desde=formulario')
   })
@@ -75,5 +82,20 @@ describe('opened any other way (the home footer, Google\'s consent screen, a typ
     expect(back.map((a) => a.getAttribute('href'))).toEqual(['/', '/'])
     expect(screen.queryByRole('button', { name: L.close })).toBeNull()
     expect(screen.getByRole('link', { name: L.terms.title }).getAttribute('href')).toBe('/terminos')
+  })
+
+  it('the other document is an ordinary step, which back undoes', () => {
+    mount('/privacidad')
+    fireEvent.click(screen.getByRole('link', { name: L.terms.title }))
+    expect(screen.getByRole('heading', { level: 1, name: L.terms.title })).toBeTruthy()
+    expect(screen.getByTestId('nav').textContent).toBe('PUSH')
+  })
+
+  it('both pages end on how to reach whoever runs Polo, word for word (the mailbox cannot receive yet, TRUST-01)', () => {
+    for (const url of ['/privacidad', '/terminos?desde=formulario']) {
+      mount(url)
+      expect(screen.getByText('Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.')).toBeTruthy()
+      cleanup()
+    }
   })
 })
