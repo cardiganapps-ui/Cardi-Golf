@@ -162,7 +162,12 @@ export async function unsentReason(action: 'signOut' | 'switch'): Promise<string
   const name = await tournamentName(u.tournamentId, u.name)
   return u.waitsFor === 'pin' ? t.account.unsentPin(name, action) : t.account.unsentSignal(name, action)
 }
-async function refuseWithUnsent(action: 'switch') {
+/**
+ * Throws, in words, while this device may not become another account: every
+ * switch calls it first, the organizer's email sign-in too (it skipped it,
+ * and a hole of the anonymous phone was left waiting for a PIN).
+ */
+export async function refuseWithUnsent(action: 'switch') {
   const reason = await unsentReason(action)
   if (reason) throw new UserError(reason)
 }
