@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'e5a9897861f86ee9' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '8edeb2dd76fdb755' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -93,15 +93,19 @@ describe('the sections, in order', () => {
   })
 })
 
+/** The one thing about money only its owner sees: «Mi dinero» on his profile (ProfileScreen draws it for the owner only). */
+const PROFILE_SUMMARY = 'ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo'
+
 describe('who sees a tournament\'s money (TRUST-02)', () => {
   it('word for word: everyone in it on every screen it shows, anyone of them can share it, the profile summary, the notices', () => {
     expect(sections['El dinero de un torneo']).toBe(
-      'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo sale en tu perfil, pero cada cifra sigue a la vista de su torneo en Dinero. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.',
+      'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.',
     )
   })
 
-  it('promises nowhere that money is private', () => {
-    for (const text of [all, ...t.legal.terms.sections.map(([, x]) => x)]) {
+  it('promises nowhere that money is private: only the profile summary is yours alone, and the same sentence says who sees each figure', () => {
+    expect(all.split(PROFILE_SUMMARY)).toHaveLength(2)
+    for (const text of [all.replace(PROFILE_SUMMARY, ''), ...t.legal.terms.sections.map(([, x]) => x)]) {
       expect(text).not.toContain('solo los ve su Comité y cada quien el suyo')
       expect(text).not.toMatch(/(solo|nada más) (lo|los) ves tú|tu dinero solo/i)
     }
@@ -111,8 +115,16 @@ describe('who sees a tournament\'s money (TRUST-02)', () => {
 describe('what the operator sees and can do (TRUST-17)', () => {
   it('word for word', () => {
     expect(sections['Quién opera Polo']).toBe(
-      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; si el torneo está Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Lo usa para dar soporte y corregir errores.',
+      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Lo usa para dar soporte y corregir errores.',
     )
+  })
+
+  it('an unlock is to correct a Protegido tournament, not to see it (P3: is_tournament_member vs platform_can_write, 0021)', () => {
+    expect(sections['Quién opera Polo']).toContain('para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo')
+    expect(all).not.toContain('si el torneo está Protegido, primero lo desbloquea')
+    const rules = source('supabase/migrations/0021_platform_admin.sql')
+    expect(rules).toContain('select public.is_tournament_participant(tid) or public.is_platform_admin()')
+    expect(rules).toContain('select public.is_tournament_organizer_own(tid) or public.platform_can_write(tid)')
   })
 
   it('«only your card» leaves him out, since he sees more (0022_platform_people.sql)', () => {
@@ -128,7 +140,9 @@ describe('what the Comité types about each player (TRUST-16)', () => {
     for (const what of ['su nombre', 'su foto', 'su categoría', 'su tee', 'su hándicap', 'buen día, día normal y mal día', 'su forma reciente', 'homenajeado', 'su PIN']) expect(typed).toContain(what)
     expect(typed).toContain('Todo eso, salvo el PIN, lo ve quien está en el torneo')
     expect(typed).toContain('también quien tenga su enlace o su código')
-    expect(typed).toContain('nadie lo ve en la app, ni el Comité')
+    // P3: the Comité picks the PIN and types it; only once it is saved can nobody read it in the app.
+    expect(typed).toContain('El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.')
+    expect(typed).not.toContain('nadie lo ve en la app')
   })
 
   it('the line on the Comité sheet says who sees it and points at that section', () => {
@@ -154,9 +168,9 @@ describe('the rest of the verifier\'s list', () => {
     expect(money()).toContain('lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia')
   })
 
-  it('2. the profile summary is only on the profile, but each figure stays in its tournament\'s Dinero', () => {
-    expect(money()).toContain('ese resumen solo sale en tu perfil, pero cada cifra sigue a la vista de su torneo en Dinero')
-    expect(all).not.toMatch(/solo lo ves tú/i)
+  it('2. only you see the profile summary, but each figure stays in its tournament\'s Dinero (P3: «solo sale en tu perfil» read as anyone opening it)', () => {
+    expect(money()).toContain(PROFILE_SUMMARY)
+    expect(all).not.toContain('solo sale en tu perfil')
   })
 
   it('3. the app\'s notices carry no amounts; the operator\'s are free text (platform_broadcast)', () => {
