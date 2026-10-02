@@ -2908,8 +2908,8 @@
       "workstream": "W6",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 91,
       "tests": [
         "src/engine/core/feed.test.ts",
         "e2e/fixtures/formats.spec.ts"
