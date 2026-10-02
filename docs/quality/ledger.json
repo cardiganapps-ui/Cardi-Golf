@@ -3160,7 +3160,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Next migration batch: drop the assets_public_read policy (a public bucket still serves each file by its URL without it), so the bucket can no longer be listed. src/screens/legalNotice.test.ts pins that policy and fails when it goes, to have the notice sentence on uploaded files read again."
     },
     {
       "id": "TRUST-08",
