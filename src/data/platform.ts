@@ -13,6 +13,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { withTimeout } from '../lib/timeout'
 import { ApiError } from './api'
+import { entryChanged } from './entryEvents'
 
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
 
@@ -416,12 +417,17 @@ export const supabasePlatformApi: PlatformApi = {
   unblock: (id, reason) => rpc<void>('platform_unblock', { p_user_id: id, p_reason: reason }),
   deleteAccount: async (id, confirm, reason) => {
     await rpc('platform_delete_account', { p_user_id: id, p_confirm: confirm, p_reason: reason })
+    // Its players lose their link (players.profile_id is set null).
+    entryChanged()
   },
   resetPinLock: ({ userId, playerId }, reason) =>
     rpc<void>('platform_reset_pin_lock', { p_user_id: userId ?? null, p_player_id: playerId ?? null, p_reason: reason }),
   setOrganizer: (tournamentId, userId, role, reason) =>
     rpc<void>('platform_set_organizer', { p_tournament_id: tournamentId, p_user_id: userId, p_role: role, p_reason: reason }),
-  unlinkPlayer: (playerId) => rpc<void>('comite_unlink_profile', { p_player_id: playerId }),
+  unlinkPlayer: async (playerId) => {
+    await rpc<void>('comite_unlink_profile', { p_player_id: playerId })
+    entryChanged()
+  },
   courses: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
     rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
   course: (id) => rpc<PlatformCourse | null>('platform_course', { p_course_id: id }),

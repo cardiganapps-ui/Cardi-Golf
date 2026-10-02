@@ -47,6 +47,8 @@ const PAIRS: Array<[string, string, number]> = [
   ['board-under', 'board-bg', 4.5],
   ['board-over', 'board-bg', 4.5],
   ['board-bg', 'board-accent', 4.5],
+  // The focus ring on a board surface (A11Y-15): 3:1 against both of its greens.
+  ['board-accent', 'board-surface', 3],
   ['bg', 'ink', 4.5], // toast text
 ]
 
