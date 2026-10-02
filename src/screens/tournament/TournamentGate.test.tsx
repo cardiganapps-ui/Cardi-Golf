@@ -24,11 +24,16 @@ const server = vi.hoisted(() => ({
   lookupTournament: vi.fn(),
   myMembership: vi.fn(),
   releaseDevice: vi.fn(async () => undefined),
+  /** Where this device's one PIN claim is (profiles' `myDeviceClaim`). */
+  myDeviceClaim: vi.fn(async (): Promise<{ playerId: string; tournamentId: string } | null> => null),
 }))
 vi.mock('../../data/auth', () => ({
   ensureSession: server.ensureSession,
+  signedOutOnPurpose: () => false,
+  signOutsAsked: () => 0,
   useAuth: (sel: (s: { ready: boolean }) => unknown) => sel({ ready: true }),
 }))
+vi.mock('../../data/profiles', () => ({ myDeviceClaim: server.myDeviceClaim }))
 vi.mock('../../data/api', () => ({
   lookupTournament: server.lookupTournament,
   myMembership: server.myMembership,
@@ -206,6 +211,35 @@ describe('saved boards that no longer belong here', () => {
     expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
     await vi.waitFor(() => expect(rejectGoneTournament).toHaveBeenCalledWith('ABC123', null))
     expect(screen.queryByText(t.enter.goneUnsent, { exact: false })).toBeNull()
+  })
+
+  /**
+   * «No soy yo» on an account here by its profile: release_device drops the
+   * device's one PIN claim wherever it is, so it released another
+   * tournament's (the phone was nobody there, and its holes still on the
+   * phone were refused). Only this tournament's claim goes.
+   */
+  it('«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one\'s', async () => {
+    for (const [claimIn, released] of [['t-otro', false], [id, true]] as const) {
+      server.releaseDevice.mockClear()
+      server.myDeviceClaim.mockResolvedValue({ playerId: 'p-otro', tournamentId: claimIn })
+      await saveOnPhone('Guardado en el teléfono')
+      server.ensureSession.mockResolvedValue({})
+      server.lookupTournament.mockResolvedValue(fx.lookup)
+      server.myMembership.mockResolvedValue({ ...member, via: 'profile' })
+      serverLoads('En vivo del servidor')
+      open()
+      await screen.findByText('En vivo del servidor: server')
+      server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: false, via: null })
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Cambiar de jugador' }))
+      })
+      expect(await screen.findByText('Entrar')).toBeTruthy()
+      expect(server.releaseDevice.mock.calls.length, `claim in ${claimIn}`).toBe(released ? 1 : 0)
+      // This tournament's boards go either way: they belong to the player who left.
+      expect(await readCached(slug)).toBeNull()
+      cleanup()
+    }
   })
 
   it('a player who leaves takes the saved boards with him', async () => {

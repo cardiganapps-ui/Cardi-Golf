@@ -20,6 +20,7 @@ import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
 import { ensureSession, signedOutOnPurpose, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
+import { myDeviceClaim } from '../../data/profiles'
 import { setLastTournament } from '../../data/session'
 import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
 import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneTournament } from '../../data/outbox'
@@ -288,13 +289,20 @@ export function TournamentGate() {
   }, [phase, data])
 
   const tournamentId = phase.kind === 'in' ? phase.lookup.id : null
+  const via = phase.kind === 'in' ? phase.me.via : null
   const leave = useCallback(async () => {
-    await releaseDevice()
+    // release_device drops this device's one PIN claim, wherever it is. Here
+    // by the profile («No soy yo»), that claim may be another tournament's:
+    // the phone was then nobody there, and its holes still on the phone were
+    // refused. Only this tournament's claim goes; when the server can't say
+    // where it is (no signal, an old saved entry), as before.
+    const claim = via === 'device' ? undefined : await myDeviceClaim().catch(() => undefined)
+    if (claim === undefined || claim?.tournamentId === tournamentId) await releaseDevice()
     setLastTournament(null)
     // The boards this phone saved belong to the player who just left.
     if (tournamentId) await clearCached(tournamentId)
     await resolve()
-  }, [resolve, tournamentId])
+  }, [resolve, tournamentId, via])
 
   if (phase.kind === 'loading') {
     return (
