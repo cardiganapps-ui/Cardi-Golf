@@ -17,6 +17,7 @@ import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
 import { easeFast, easeSlow } from '../../design/motion'
+import { dayFigureText } from '../../lib/figureText'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 
@@ -113,7 +114,7 @@ export function TvScreen() {
                             {!team && byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
                           </span>
                         </span>
-                        <span className={styles.small}>{round && thru > 0 ? [`${t.live.thru} ${t.round.thru(thru, round.holes)}`, today && !today.empty ? today.text : null].filter(Boolean).join(', ') : ''}</span>
+                        <span className={styles.small}>{round && thru > 0 ? [`${t.live.thru} ${t.round.thru(thru, round.holes)}`, today && !today.empty ? dayFigureText(today) : null].filter(Boolean).join(', ') : ''}</span>
                         <span className={styles.big}>{r.figure.text}</span>
                       </div>
                     )

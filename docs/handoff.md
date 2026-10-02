@@ -180,6 +180,7 @@ Mándalos en el chat como texto, foto o captura, como te quede más fácil. Clau
 - ~~**Fechas.**~~ Confirmadas con la reserva de Golfbreaks (US61296): cena Calcutta jue 8 abr 2027; día 1 vie 9 abr en Solmar Golf Links 09:00; día 2 sáb 10 abr en Quivira 09:00. Hotel Pueblo Bonito Pacifica. (2026-09-27)
 - [ ] **Horarios de salida por grupo** (la primera salida es 09:00 ambos días; faltan los de los grupos 2 y 3, normalmente cada 10 min).
 - [ ] **Banquero** y **miembros del Comité**.
+- [ ] **El trofeo del campeón.** Desde 2026-10-02 la Ceremonia dice «Se lleva …» solo con el trofeo que pongas: en el torneo real (y en el Ensayo, si quieres verlo ahí), Comité › Reglas › **Trofeo del campeón** → escribe `el Putter` → Guardar. Un torneo nuevo hecho con la plantilla del primer torneo ya lo trae. Lo verifico en la Ceremonia del Ensayo: el último paso dice «Campeón. Se lleva el Putter».
 - ~~**Agencia de viajes.**~~ Golfbreaks. (2026-09-27)
 - [ ] **Sección 18:** o "quedan los defaults", o tus respuestas punto por punto. (Todo esto se captura en el wizard del torneo; no hay que tocar código para el siguiente torneo.) En particular: ¿link de espectador (9)? ¿dominio propio (10)? El dominio cuesta dinero.
 

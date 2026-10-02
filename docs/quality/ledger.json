@@ -2942,6 +2942,9 @@
       "pr": 91,
       "tests": [
         "src/engine/core/feed.test.ts",
+        "src/engine/core/formatParity.test.ts",
+        "src/engine/formats/formats.test.ts",
+        "src/lib/figureText.test.ts",
         "e2e/fixtures/formats.spec.ts"
       ],
       "verifiedBy": null,

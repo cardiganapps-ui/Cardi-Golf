@@ -16,6 +16,8 @@ import { useTournamentCtx } from './TournamentGate'
 import { formatMoney } from '../../lib/money'
 import type { Explanation } from '../../engine/types'
 import { figureKind, mainScoring, strokesWhy, type Figure } from '../../engine/formats'
+import type { PlayerRound } from '../../engine/core/types'
+import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
 
 export function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
@@ -67,9 +69,17 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const scoring = mainScoring(settings)
   /** Points rows and points explanations only where something counts points (STRAT-03). */
   const showPoints = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
-  /** A day's figure as the board writes it, with its unit; a match's day is its result («3&2»). */
-  const dayFigure = (f: Figure | undefined, points: number) =>
-    scoring === 'points' ? t.common.figure(String(points), points, 'points') : !f || f.empty ? '—' : kind === 'match' ? f.text : t.common.figure(f.text, f.value, kind)
+  /** In a team format the row is the team's; this sheet is his own card. */
+  const team = row?.entrant.isTeam ? row.entrant : null
+  /**
+   * A day's figure as the board writes it, with its unit; a match's day is its
+   * result with its side («ganó 3&2»); a team player's day is his own card.
+   */
+  const dayFigure = (f: Figure | undefined, pr: PlayerRound) => {
+    if (team) return ownDayText(pr, scoring) ?? '—'
+    if (scoring === 'points') return t.common.figure(String(pr.points), pr.points, 'points')
+    return !f || f.empty ? '—' : kind === 'match' ? dayFigureText(f) : t.common.figure(f.text, f.value, kind)
+  }
   const hc = state.core.handicaps[p.id]
   const totals = state.core.totals[p.id]
   const putts = state.modules.fewestPutts?.rows.find((r) => r.playerId === p.id)
@@ -83,7 +93,14 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           <div className={styles.headText}>
             <span className={styles.headLine}>
               {p.tier && <span className="tierBadge">{p.tier}</span>}
-              {row && totals ? <span>{t.player.position(row.label, t.common.figure(row.figure.text, row.figure.value, kind), t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18))}</span> : null}
+              {row && totals ? (
+                <span>
+                  {(team ? (f: string, thru: string) => t.player.positionTeam(row.label, team.name, f, thru) : (f: string, thru: string) => t.player.position(row.label, f, thru))(
+                    t.common.figure(row.figure.text, row.figure.value, kind),
+                    t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18),
+                  )}
+                </span>
+              ) : null}
             </span>
           </div>
           {profile && (
@@ -109,7 +126,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           pr ? (
             <section key={round.id} className={styles.section}>
               <div className={styles.sectionHead}>
-                <h3>{t.player.round(round.number, dayFigure(row?.perRound[idx], pr.points))}</h3>
+                <h3>{t.player.round(round.number, dayFigure(row?.perRound[idx], pr))}</h3>
                 <span className="help">{t.player.grossPutts(pr.gross, pr.putts)}</span>
               </div>
               <ScorecardGrid

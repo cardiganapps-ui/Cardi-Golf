@@ -1315,6 +1315,9 @@ export const t = {
     updated: (when: string) => `Actualizado ${when}`,
     points: 'Puntos',
     gross: 'Gross',
+    /** The honoree's card where the event does not count points: its figure, today's, and his last hole in words. */
+    spotlightFigure: (pos: string, figure: string, today: string | null, lastHole: number | null, lastText: string | null) =>
+      `${ordinal(pos)} con ${figure}${today ? `, hoy ${today}` : ''}${lastHole != null && lastText ? `, hoyo ${lastHole}: ${lastText}` : ''}`,
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
     /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6». */
     matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text}` : text),
@@ -1337,6 +1340,8 @@ export const t = {
     roundFinished: (n: number) => `El día ${n} ya terminó. Solo el Comité puede corregir tarjetas.`,
     correct: 'Corregir',
     ptsGrossCaption: 'pts / golpes',
+    netGrossCaption: 'neto / golpes',
+    grossCaption: 'golpes',
     signedReasonTitle: 'Corrección con tarjeta firmada',
     signedReasonHint: 'Hay tarjetas firmadas en este grupo. La corrección del Comité necesita una razón y queda en la bitácora.',
     strokes: 'Golpes',
@@ -1460,6 +1465,8 @@ export const t = {
     snakeHoles: 'Hoyos con víbora',
     /** `figure` already carries its unit (`common.figure`). */
     position: (label: string, figure: string, thru: string) => `${ordinal(label)}, ${figure}, por el ${thru}`,
+    /** A team format: where his team stands, and its figure. */
+    positionTeam: (label: string, team: string, figure: string, thru: string) => `${ordinal(label)} con ${team}, ${figure}, por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, figure: string) => `Día ${day}: ${figure}`,
@@ -2139,6 +2146,8 @@ export const t = {
     leadChange: (name: string, figure: string) => `¡Cambio de líder! ${name} toma la punta ${figure === 'E' ? 'en par' : `con ${figure}`}`,
     snakePass: (name: string, hole: number) => `La víbora pasa a ${name} en el ${hole}`,
     honoreeHole: (name: string, hole: number, pts: number) => (pts === 0 ? `${name} en el ${hole}: cero puntos.` : `${name} en el ${hole}: ${pts} pts`),
+    /** A hole named on the score the event counts: «par», «bogey neto», «birdie», «levantó». */
+    scoreName: (toPar: number | null, net: boolean) => (toPar == null ? 'levantó' : overParName(toPar, net)),
     /** The honoree's hole under strokes: «par», «bogey neto», «levantó». */
     honoreeToPar: (name: string, hole: number, toPar: number | null, net: boolean) => `${name} en el ${hole}: ${toPar == null ? 'levantó' : overParName(toPar, net)}.`,
     day: (n: number) => `Día ${n}`,
@@ -2275,7 +2284,7 @@ export const t = {
       ...how,
       `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.`,
       matchPlay
-        ? 'Empate en puntos: va adelante quien ganó por más hoyos su partido del último día. Si sigue el empate, se reparten los premios de los lugares que ocupan.'
+        ? 'Empate en puntos: va adelante quien terminó mejor su partido del último día (más hoyos arriba, o menos abajo). Si sigue el empate, se reparten los premios de los lugares que ocupan.'
         : 'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
       ...(lastPlace ? [`El último lugar gana ${lastPlace}.`] : []),
     ],

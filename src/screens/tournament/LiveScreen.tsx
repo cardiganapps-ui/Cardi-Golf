@@ -21,6 +21,7 @@ import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
 import { QuickFinish } from './QuickFinish'
 import { useActiveRound } from './useMyGroup'
+import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
 import { ease } from '../../design/motion'
 
@@ -150,6 +151,14 @@ export function LiveScreen() {
   const canToggleGross = hasHandicaps && board?.formatId === 'stableford'
   const grossView = canToggleGross && view === 'gross'
   const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
+  // The honoree's card speaks the event's figure (STRAT-03): «+5 neto», «hoy ganó 3&2», «hoyo 7: bogey neto».
+  const scoring = mainScoring(settings)
+  const spotlightFigure = (row: (typeof rows)[number], h: ReturnType<typeof lastHole>) => {
+    const day = roundIdx >= 0 ? row.perRound[roundIdx] : undefined
+    const today = !day || day.empty ? null : day.result ? t.live.matchDay(day.result, day.text) : day.text
+    const last = h ? t.feed.scoreName(h.pickedUp ? null : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par, scoring === 'net') : null
+    return t.live.spotlightFigure(row.label, t.common.figure(row.figure.text, row.figure.value, figureKind(settings)), today, h?.hole ?? null, last)
+  }
 
   // Gross view: same players, sorted by strokes to par over the holes played. Display only.
   const grossRows = grossView ? [...rows].map((r) => ({ r, d: grossToPar(state, r.playerId) })).sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity)) : null
@@ -202,7 +211,11 @@ export function LiveScreen() {
             <span className={styles.spotlightName}>
               {settings.labels.honoree}: {honoree.displayName}
             </span>
-            <span className={styles.spotlightLine}>{t.live.spotlight(honoreeRow.label, honoreeRow.total, roundState?.[honoree.id]?.points ?? null, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)}</span>
+            <span className={styles.spotlightLine}>
+              {scoring === 'points'
+                ? t.live.spotlight(honoreeRow.label, honoreeRow.total, roundState?.[honoree.id]?.points ?? null, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)
+                : spotlightFigure(honoreeRow, lastHole(honoree.id))}
+            </span>
           </span>
         </button>
       )}

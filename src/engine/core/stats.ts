@@ -46,6 +46,10 @@ export interface PlayerStats {
   variance: number | null
   /** The hole figure, cumulative hole by hole across rounds (for the race chart). */
   race: number[]
+  /** Stableford points, cumulative hole by hole: the pairs game counts points whatever the main event does. */
+  pointsRace: number[]
+  /** Per round in order: whether every hole of it was played (a day-to-day comparison needs both days whole). */
+  roundComplete: boolean[]
 }
 
 export interface HoleStat {
@@ -124,15 +128,19 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
       longestStreak: 0,
       variance: null,
       race: [],
+      pointsRace: [],
+      roundComplete: [],
     }
     let puttHoles = 0
     let streak = 0
     const valueList: number[] = []
     let cum = 0
+    let cumPoints = 0
     for (const rid of core.roundIds) {
       const pr = core.rounds[rid]?.[p.id]
       if (!pr) continue
       st.pointsPerRound.push(pr.points)
+      st.roundComplete.push(pr.holes.length > 0 && pr.holes.every((h) => h.played))
       let roundValue = 0
       for (const h of pr.holes) {
         if (!h.played) continue
@@ -140,24 +148,30 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
         st.holesPlayed++
         valueList.push(v)
         cum += v
+        cumPoints += h.points
         roundValue += v
         st.race.push(cum)
+        st.pointsRace.push(cumPoints)
         const par = (h.par === 3 || h.par === 5 ? h.par : 4) as 3 | 4 | 5
         st.pointsByPar[par] += h.points
         st.valueByPar[par] += v
         if (h.pickedUp) st.pickUps++
         else if (h.gross != null && h.gross <= h.par - 1) st.grossBirdies++
+        // «Birdies netos» says what it counts. Pars, bogeys, doubles and the streak are
+        // read on the score the event counts: net points, or the net or gross score.
         if (h.points >= 3) st.netBirdies++
-        else if (h.points === 2) st.pars++
-        else if (h.points === 1) st.bogeys++
-        else if (!h.pickedUp) st.doubleOrWorse++
+        const level = points ? 2 - h.points : v
+        if (level === 0) st.pars++
+        else if (level === 1) st.bogeys++
+        else if (level >= 2 && !h.pickedUp) st.doubleOrWorse++
         if (h.putts != null) {
           st.putts += h.putts
           puttHoles++
           if (h.putts === 1) st.onePutts++
           if (h.putts >= 3) st.threePutts++
         }
-        streak = h.points > 0 ? streak + 1 : 0
+        // A scoring hole: some points, or no worse than bogey on the counted score.
+        streak = (points ? h.points > 0 : v <= 1) ? streak + 1 : 0
         st.longestStreak = Math.max(st.longestStreak, streak)
         const m = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, value: v, strokeIndex: h.strokeIndex }
         if (!st.bestHole || better(m.value, st.bestHole.value) || (m.value === st.bestHole.value && m.strokeIndex < st.bestHole.strokeIndex)) st.bestHole = m
@@ -210,9 +224,11 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   top('mostBirdies', 'count', (s) => s.grossBirdies)
   top('mostOnePutts', 'count', (s) => s.onePutts)
   top('mostThreePutts', 'count', (s) => s.threePutts)
-  // Points gained from day 1 to day 2, or strokes saved against par.
+  // Points gained from day 1 to day 2, or strokes saved against par: only for a
+  // player who played both days whole. Under strokes an unplayed day reads 0,
+  // which is a gain on any day-1 card over par (a knocked-out player won it).
   top('biggestGain', points ? 'points' : 'strokes', (s) => (s.valuePerRound.length >= 2 ? (points ? 1 : -1) * (s.valuePerRound[1]! - s.valuePerRound[0]!) : null), {
-    ok: (s) => s.holesPlayed >= 2 * 9,
+    ok: (s) => s.holesPlayed >= 2 * 9 && s.roundComplete[0] === true && s.roundComplete[1] === true,
   })
   top('mostConsistent', 'variance', (s) => s.variance, { min: true, ok: (s) => s.holesPlayed >= 9 })
   if (mods.snake) top('snakeGold', 'count', (s) => s.snakeHoles)

@@ -29,6 +29,7 @@ import { REVEAL, ease, easeFast, easeSlow } from '../../design/motion'
 import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
+import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -213,7 +214,8 @@ export function CeremonyScreen() {
     }
     const facesOf = (ids: string[]) => ids.flatMap((id) => entrants.get(id)?.playerIds ?? [id])
     const out: Step[] = []
-    if (m.individual && m.individual.lastPlace.length) {
+    // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
+    if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
       out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) }] })
     }
     if (m.fewestPutts) {

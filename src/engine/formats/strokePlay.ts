@@ -34,7 +34,7 @@ export function strokesWhy(h: HoleResult, net: boolean): Explanation {
   const strokes = (n: number) => `${n} golpe${n === 1 ? '' : 's'}`
   const steps: string[] = [`Par ${h.par}, SI ${h.strokeIndex}${net ? `: ${strokes(h.strokesReceived)} de ventaja` : ''}`]
   if (h.pickedUp) {
-    steps.push(`Levantó: cuenta como doble bogey neto, ${h.par} + ${h.strokesReceived} + 2 = ${h.par + h.strokesReceived + 2}`)
+    steps.push(`Levantó: cuenta como doble bogey neto, par ${h.par} + ${strokes(h.strokesReceived)} de ventaja + 2 = ${h.par + h.strokesReceived + 2}`)
     if (net) steps.push(`${h.par + h.strokesReceived + 2} − ${h.strokesReceived} = ${counted} neto`)
   } else if (net) steps.push(`${h.gross} − ${h.strokesReceived} = ${counted} neto`)
   else steps.push(`${strokes(h.gross!)}`)

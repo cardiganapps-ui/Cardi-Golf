@@ -54,13 +54,14 @@ export function StatsScreen() {
     if (!data || !stats) return { rows: [] as Array<Record<string, number>>, keys: [] as Array<{ key: string; label: string }> }
     if (raceKind === 'pairs' && data.state.modules.pairs) {
       const pairs = data.state.modules.pairs.rows
-      const n = Math.max(0, ...pairs.map((pr) => Math.max(stats.players[pr.playerIds[0]]?.race.length ?? 0, stats.players[pr.playerIds[1]]?.race.length ?? 0)))
+      // The pairs game counts Stableford points whatever the main event plays: its own race.
+      const n = Math.max(0, ...pairs.map((pr) => Math.max(stats.players[pr.playerIds[0]]?.pointsRace.length ?? 0, stats.players[pr.playerIds[1]]?.pointsRace.length ?? 0)))
       const rows: Array<Record<string, number>> = []
       for (let i = 0; i < n; i++) {
         const row: Record<string, number> = { hole: i + 1 }
         for (const pr of pairs) {
-          const a = stats.players[pr.playerIds[0]]?.race ?? []
-          const b = stats.players[pr.playerIds[1]]?.race ?? []
+          const a = stats.players[pr.playerIds[0]]?.pointsRace ?? []
+          const b = stats.players[pr.playerIds[1]]?.pointsRace ?? []
           row[pr.pairId] = (a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0)
         }
         rows.push(row)
@@ -198,7 +199,11 @@ export function StatsScreen() {
                     tickLine={false}
                     allowDecimals={false}
                   />
-                  <Tooltip contentStyle={{ background: ink.surface, border: `1px solid ${ink.rule}`, borderRadius: 4, fontSize: 12 }} labelFormatter={(h) => `${t.round.hole(Number(h))}`} />
+                  <Tooltip
+                    contentStyle={{ background: ink.surface, border: `1px solid ${ink.rule}`, borderRadius: 4, fontSize: 12 }}
+                    labelFormatter={(h) => `${t.round.hole(Number(h))}`}
+                    formatter={raceKind === 'players' && strokes ? (v) => toParText(Number(v)) : undefined}
+                  />
                   {series.keys.map((k, i) => (
                     <Line key={k.key} type="monotone" dataKey={k.key} name={k.label} stroke={PALETTE[i % PALETTE.length]} strokeWidth={i < 3 ? 3 : 1.5} dot={false} isAnimationActive={false} connectNulls />
                   ))}

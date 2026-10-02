@@ -125,6 +125,9 @@ describe('match play', () => {
     // Both sides read the match's own score; the points column says who won it.
     expect(rows[1]!.perRound[0]!.text).toBe('3&2')
     expect(rows[1]!.figure.value).toBe(0)
+    // And each side's day says whose it was, and is coloured that way (STRAT-03).
+    expect(rows[0]!.perRound[0]).toMatchObject({ result: 'won', tone: 'under' })
+    expect(rows[1]!.perRound[0]).toMatchObject({ result: 'lost', tone: 'over' })
   })
 
   it('halves a match and splits the point', () => {
@@ -138,6 +141,7 @@ describe('match play', () => {
     expect(rows.map((r) => r.perRound[0]!.text)).toEqual(['Empate', 'Empate'])
     expect(rows.map((r) => r.figure.value)).toEqual([0.5, 0.5])
     expect(rows.map((r) => r.figure.text)).toEqual(['½', '½'])
+    expect(rows.map((r) => r.perRound[0]!.result)).toEqual(['halved', 'halved'])
   })
 
   it('plays fourball off the better ball of each pair', () => {

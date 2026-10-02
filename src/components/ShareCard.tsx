@@ -8,7 +8,8 @@ import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'
-import { figureKind, holeStrokes, mainScoring } from '../engine/formats'
+import { figureKind, mainScoring } from '../engine/formats'
+import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
 
@@ -90,7 +91,7 @@ function Card({ what }: { what: ShareKind }) {
               <div key={r.playerId} className={styles.row}>
                 <span className={styles.pos}>{r.label}</span>
                 <span className={styles.name}>{r.entrant.isTeam ? r.entrant.name : nameOf(r.playerId)}</span>
-                <span className={styles.small}>{t.common.plusList(r.perRound.map((f) => f.text))}</span>
+                <span className={styles.small}>{t.common.plusList(r.perRound.map(dayFigureText))}</span>
                 <span className={styles.big}>{r.figure.text}</span>
                 <span className={styles.cash}>{cash > 0 ? formatMoney(cash) : ''}</span>
               </div>
@@ -110,13 +111,21 @@ function Card({ what }: { what: ShareKind }) {
     const scoring = mainScoring(settings)
     return (
       <>
-        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
+        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${row.entrant.name}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
           const day = row?.perRound[i]
-          const dayFigure =
-            scoring === 'points' ? t.common.figure(String(pr.points), pr.points, 'points') : !day || day.empty ? null : kind === 'match' ? day.text : t.common.figure(day.text, day.value, kind)
+          // His own card: a team's day is the team's, his is his own score (STRAT-03).
+          const dayFigure = row?.entrant.isTeam
+            ? ownDayText(pr, scoring)
+            : scoring === 'points'
+              ? t.common.figure(String(pr.points), pr.points, 'points')
+              : !day || day.empty
+                ? null
+                : kind === 'match'
+                  ? dayFigureText(day)
+                  : t.common.figure(day.text, day.value, kind)
           return (
             <div key={rid} className={styles.round}>
               <div className={styles.roundTitle}>
@@ -125,11 +134,9 @@ function Card({ what }: { what: ShareKind }) {
               <div className={styles.holes}>
                 {pr.holes.map((h) => {
                   // Under strokes a hole is marked on the score the event counts, and shows no points.
-                  const toPar = scoring === 'points' || !h.played ? null : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par
-                  const good = scoring === 'points' ? h.points >= 3 : toPar != null && toPar <= -1
-                  const bad = scoring === 'points' ? h.points === 0 && h.played : toPar != null && toPar >= 2
+                  const mark = holeMark(h, scoring)
                   return (
-                    <div key={h.hole} className={`${styles.hole} ${good ? styles.birdie : bad ? styles.zero : ''}`}>
+                    <div key={h.hole} className={`${styles.hole} ${mark === 'good' ? styles.birdie : mark === 'bad' ? styles.zero : ''}`}>
                       <span className={styles.holeNum}>{h.hole}</span>
                       <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
                       <span className={styles.holePts}>{h.played && scoring === 'points' ? h.points : ''}</span>

@@ -14,6 +14,7 @@ import { formatMoney } from '../../lib/money'
 import { BracketBoard } from './BracketBoard'
 import { fieldShape, individualPrizeAmounts } from '../../engine/settings/prizeCheck'
 import { figureKind } from '../../engine/formats'
+import { dayFigureText } from '../../lib/figureText'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
 import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
@@ -164,7 +165,7 @@ export function GamesScreen() {
                       <span className={styles.sub}>
                         {/* perRound became Figure[] with the format seam; it prints
                             as "[object Object]" if you interpolate it whole. */}
-                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${p.text}`).join(', ')}</span>
+                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${dayFigureText(p)}`).join(', ')}</span>
                         {state.modules.individual!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.individual!.prizes[r.playerId]!.amount)}</span>}
                       </span>
                     }
