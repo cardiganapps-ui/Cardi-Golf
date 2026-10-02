@@ -20,10 +20,16 @@ const srv = vi.hoisted(() => {
     session: null as { access_token: string } | null,
     /** The server refuses the write even with the player's token (a signed card, a closed round). */
     refuseForPlayer: false,
+    /** The session goes right after the push read it (auth-js dropped it mid-push). */
+    dropAfterRead: false,
     sent: [] as Array<{ table: string; method: string; auth: string }>,
     client: null as unknown,
   }
-  const getSession = async () => ({ data: { session: state.session }, error: state.session ? null : new Error('refresh cooling down') })
+  const getSession = async () => {
+    const session = state.session
+    if (state.dropAfterRead) state.session = null
+    return { data: { session }, error: session ? null : new Error('refresh cooling down') }
+  }
   function request(table: string, method: string) {
     const headers = new Map<string, string>()
     const req = {
@@ -59,7 +65,7 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
 }))
 
-const { _outboxTest, flush, useOutbox } = await import('./outbox')
+const { _outboxTest, describeSyncError, flush, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 const { t } = await import('../i18n/es-MX')
 
@@ -84,6 +90,7 @@ beforeEach(() => {
   _outboxTest.reset()
   srv.sent = []
   srv.refuseForPlayer = false
+  srv.dropAfterRead = false
   srv.session = { access_token: 'tok-1' }
   // The player entered with the PIN on this phone: its writes carry who wrote them.
   useAuth.setState({ user: { id: 'uid-phone' } as never, session: { access_token: 'tok-1' } as never })
@@ -102,7 +109,8 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
     expect(srv.sent.filter((s) => s.auth === 'Bearer anon-key')).toEqual([])
     expect(useOutbox.getState().rejected).toEqual([])
     expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:12', 'award:r1:g1:closest:12'])
-    expect(useOutbox.getState().lastError).toBe(t.sync.errNetwork)
+    // Not «Sin conexión con el servidor» under an «En vivo» header: the session is what it waits for.
+    expect(useOutbox.getState().lastError).toBe(t.sync.errSession)
 
     // The refresh works: auth-js announces the new session and the queue goes out with it.
     srv.session = { access_token: 'tok-2' }
@@ -114,6 +122,24 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
       { table: 'hole_awards', method: 'insert', auth: 'Bearer tok-2' },
     ])
     expect(useOutbox.getState().rejected).toEqual([])
+  })
+
+  it('every request carries the token the push checked, whatever the session does meanwhile', async () => {
+    // supabase-js would read the session again at send time, and with it gone send the anon key.
+    srv.dropAfterRead = true
+    await _outboxTest.enqueue(award(14))
+    await flush()
+    expect(srv.sent).toEqual([
+      { table: 'hole_awards', method: 'delete', auth: 'Bearer tok-1' },
+      { table: 'hole_awards', method: 'insert', auth: 'Bearer tok-1' },
+    ])
+    expect(useOutbox.getState().rejected).toEqual([])
+    expect(_outboxTest.queue()).toEqual([])
+  })
+
+  it('a network error still reads as one', () => {
+    expect(describeSyncError('TypeError: Failed to fetch')).toBe(t.sync.errNetwork)
+    expect(describeSyncError('Timeout: sesión')).toBe(t.sync.errNetwork)
   })
 
   it('the server refusing the signed-in player is still final', async () => {

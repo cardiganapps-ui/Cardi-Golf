@@ -307,8 +307,16 @@ async function deleteStored(item: OutboxItem) {
   })
 }
 
+/**
+ * The push found no session to go out with. Not the network: the Tarjeta
+ * said «Sin conexión con el servidor» under an «En vivo» header for as long
+ * as the session took to come back (48 s inside auth-js's cooldown).
+ */
+const NO_SESSION_YET = 'no session to push with yet'
+
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
 export function describeSyncError(msg: string): string {
+  if (msg === NO_SESSION_YET) return t.sync.errSession
   if (/signed|firmad/i.test(msg)) return t.sync.errSigned
   if (/not live|is_live|en juego/i.test(msg)) return t.sync.errNotLive
   if (isPermanent(msg)) return t.sync.errDenied
@@ -523,7 +531,7 @@ export const _outboxTest = {
 async function sessionToken(sb: SupabaseClient): Promise<string> {
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
   const token = data.session?.access_token
-  if (!token) throw new Error('no session to push with yet')
+  if (!token) throw new Error(NO_SESSION_YET)
   return token
 }
 

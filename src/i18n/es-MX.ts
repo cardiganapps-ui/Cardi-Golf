@@ -1166,6 +1166,8 @@ export const t = {
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
+    /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
+    errSession: 'Confirmando tu sesión… Se reintenta solo.',
     heldForPin: (n: number) =>
       n === 1
         ? 'Este teléfono tiene 1 hoyo sin subir. Entra con tu PIN y se sube solo.'
