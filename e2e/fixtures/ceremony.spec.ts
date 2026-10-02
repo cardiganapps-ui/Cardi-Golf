@@ -288,6 +288,14 @@ test('the champion is revealed in beats: the name, then the figures counting up,
   const nameIn = samples.find((s) => s.name === 1)!.at
   const trophyIn = samples.find((s) => s.trophy > 0)!.at
   expect(trophyIn).toBeGreaterThan(nameIn)
+  // Every figure ends on exactly what a screen reader says and reduced motion shows: the value itself, never a
+  // rounded one (a match-play 1.5 ended on «2 puntos»).
+  const figures = () =>
+    page.locator('[class*="_champion_"] [class*="_plate"]').evaluateAll((plates) =>
+      plates.map((p) => [p.querySelector('[aria-hidden="true"]')?.textContent, p.querySelector('[data-final]')?.textContent, p.querySelector('.sr-only')?.textContent]),
+    )
+  await expect.poll(async () => (await figures()).every(([shown, final, spoken]) => shown === final && final === spoken)).toBe(true)
+  expect((await figures()).length).toBeGreaterThan(0)
 })
 
 test('between steps the stage is never blank, and nothing bounces past its place (MOT-01)', async ({ page }) => {
@@ -354,6 +362,7 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
       const vh = h / 100
       await page.goto(`/t/_/${fixture}/ceremonia`, { waitUntil: 'networkidle' })
       let revealed = 0
+      let initials = 0
       for (let i = 0; i < 80; i++) {
         const now = await beat(page, 'ArrowRight')
         if (now.title === C.done) break
@@ -365,6 +374,10 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
         expect(fit.wide, `${label}: horizontal scroll (px)`).toBeLessThanOrEqual(0)
         expect(fit.spill, `${label}: spills out of its room (px)`).toBeLessThanOrEqual(1)
         expect(fit.broken, `${label}: a name broken inside a word`).toEqual([])
+        // A short last word («Gael H.») is held to its name by a no-break space: never «Gael / H.» across two lines.
+        const lines = await page.locator('[data-area] [data-name]').allTextContents()
+        initials += lines.join(' ').match(/\u00A0\S{1,3}(?=$| |,)/g)?.length ?? 0
+        expect(lines.filter((l) => / \p{Lu}\.(?=$| |,)/u.test(l)), `${label}: an initial after a breaking space`).toEqual([])
         // Drawn smaller to fit, but still read from across the room: a name's letters at least 4 % of the screen.
         const names = await page.locator('[data-name]').evaluateAll((els) =>
           els.map((el) => {
@@ -379,6 +392,8 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
         expect(await page.locator('body').textContent(), label).not.toContain('NaN')
       }
       expect(revealed).toBeGreaterThan(0)
+      // The fixtures' names are «Gael H.»-shaped, so the check above saw some.
+      expect(initials).toBeGreaterThan(0)
       expect(pageErrors).toEqual([])
     })
   }
@@ -544,6 +559,35 @@ test('after a mouse click on «Siguiente», Space reveals the next step instead 
   await page.keyboard.press('Enter')
   await expect.poll(async () => (await where(page)).progress).toMatch(/^2 \//)
   expect((await where(page)).waiting).toBe(true)
+})
+
+/**
+ * A TV never scrolls: every step is fitted or paged. A view arriving from below
+ * still overflows for a moment, and while the stage could scroll a desktop
+ * browser with classic scrollbars flashed a bar at 12 of 12 beats, shifting the
+ * title sideways. A phone scrolls a long step, so there the stage does.
+ */
+test('the stage scrolls on a phone and never on a TV, so no scrollbar flashes between views', async ({ page }) => {
+  await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
+  const overflow = () => page.locator('[class*="_body_"]').evaluate((el) => getComputedStyle(el).overflowY)
+  for (const [w, h] of [...ROOMS, [1024, 768], [3840, 2160]] as Array<[number, number]>) {
+    await page.setViewportSize({ width: w, height: h })
+    expect(await overflow(), `${w}×${h}`).toBe('hidden')
+  }
+  await page.setViewportSize({ width: 393, height: 852 })
+  expect(await overflow(), 'a phone').toBe('auto')
+  // A wheel turned while a view arrives (the moment it overflows) moves nothing.
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.mouse.move(960, 600)
+  let top = 0
+  for (let beat = 0; beat < 4; beat++) {
+    await page.keyboard.press('ArrowRight')
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, 400)
+      top = Math.max(top, await page.locator('[class*="_body_"]').evaluate((el) => el.scrollTop))
+    }
+  }
+  expect(top).toBe(0)
 })
 
 test('on a phone a long step scrolls, and the scrolling region can be reached by keyboard (axe)', async ({ page }) => {
