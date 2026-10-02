@@ -1416,6 +1416,8 @@ export const t = {
       pairs: (n: number) => (n === 1 ? '1 pareja armada' : `${n} parejas armadas`),
       pairsMissing: 'Arma las parejas del fourball',
       pairsLoose: (n: number) => (n === 1 ? '1 jugador sin pareja' : `${n} jugadores sin pareja`),
+      /** Under fourball a team that isn't two players (teams of 4 from a team format, the odd one of a draw). */
+      pairsNotTwo: (n: number) => (n === 1 ? '1 equipo no es pareja: el fourball se juega en parejas de 2' : `${n} equipos no son parejas: el fourball se juega en parejas de 2`),
       bracketDays: (needed: number, days: number) => `El cuadro necesita ${needed} rondas y el torneo es de ${days} ${days === 1 ? 'día' : 'días'}: sube los días a ${needed} en Reglas`,
       bracketUndecided: (round: string, n: number, day: number) => `${round}: ${n === 1 ? 'un partido quedó' : `${n} partidos quedaron`} sin ganador. Decide quién pasa y arma los grupos del día ${day}`,
       tees: (day: number) => `Todos tienen tee para el día ${day}`,

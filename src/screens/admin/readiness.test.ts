@@ -241,6 +241,29 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     expect(paired.pairs).toMatchObject({ done: true, text: '4 parejas armadas' })
   })
 
+  it('under fourball a pair is two players: teams of 4 left from a team format, or an odd draw, never read «Listo»', () => {
+    const fourball = (s: Snapshot) => {
+      knockout(s, { days: 3 })
+      settingsOf(s).modules.individual.formatOptions.matchMode = 'fourball'
+    }
+    // Two teams of 4 from a scramble: two «teams», no pairs.
+    const fours = check('match8', (s) => {
+      fourball(s)
+      s.teams = [0, 1].map((i) => ({ id: `tm${i}`, name: null, number: i + 1, playerIds: [1, 2, 3, 4].map((k) => `p${4 * i + k}`), drawnAt: null }))
+    })
+    expect(fours.pairs).toMatchObject({ done: false, text: '2 equipos no son parejas: el fourball se juega en parejas de 2', to: 'equipos' })
+    // Seven players drawn in Equipos: 2, 2, 2 and 1.
+    const odd = check('match8', (s) => {
+      fourball(s)
+      s.players = s.players.slice(0, 7)
+      s.teams = [[1, 2], [3, 4], [5, 6], [7]].map((ks, i) => ({ id: `tm${i}`, name: null, number: i + 1, playerIds: ks.map((k) => `p${k}`), drawnAt: null }))
+    })
+    expect(odd.pairs).toMatchObject({ done: false, text: '1 equipo no es pareja: el fourball se juega en parejas de 2' })
+    // A team format keeps its teams of any size.
+    const scramble = check('scramble8')
+    expect(scramble.teams).toMatchObject({ done: true, text: '2 equipos armados' })
+  })
+
   it('a team format counts the players on no team', () => {
     const r = check('team8', (s) => {
       s.pairs = s.pairs.slice(0, 1)

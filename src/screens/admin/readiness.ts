@@ -147,12 +147,26 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
     const inTeam = new Set(teams.flat())
     const loose = players.filter((p) => !inTeam.has(p.id)).length
     const pairs = kind === 'pairs'
-    // A fourball match is two pairs.
-    const enough = teams.length >= (pairs ? 2 : 1)
+    // A fourball match is two pairs, and a pair is two players: teams of 4 left from a team format, or the odd
+    // one of a 7-player draw (2, 2, 2, 1), are not pairs, and the engine would play them as they are.
+    const notPairs = pairs ? teams.filter((x) => x.length !== 2).length : 0
+    const enough = teams.length - notPairs >= (pairs ? 2 : 1)
     items.push({
       id: kind,
-      done: enough && !loose,
-      text: !enough ? (pairs ? R.pairsMissing : R.teamsMissing) : loose ? (pairs ? R.pairsLoose(loose) : R.teamsLoose(loose)) : pairs ? R.pairs(teams.length) : R.teams(teams.length),
+      done: enough && !loose && !notPairs,
+      text: notPairs
+        ? R.pairsNotTwo(notPairs)
+        : !enough
+          ? pairs
+            ? R.pairsMissing
+            : R.teamsMissing
+          : loose
+            ? pairs
+              ? R.pairsLoose(loose)
+              : R.teamsLoose(loose)
+            : pairs
+              ? R.pairs(teams.length)
+              : R.teams(teams.length),
       to: 'equipos',
     })
   }
