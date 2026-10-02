@@ -191,5 +191,50 @@ reset role;
 select coalesce(string_agg(k, ', ' order by k), '') as differ from jsonb_each((select s from before_a)) e(k, v) where v is distinct from (pg_temp.state(:'t_a') -> k) \gset
 select harness.check(:'differ' = '', 'tables the restore did not bring back: ' || :'differ') \g /dev/null
 select harness.check((select s from before_b) = pg_temp.state(:'t_b'), 'the other tournament changed') \g /dev/null
+-- 6. A backup is the client's JSON: a row aimed at the other tournament is
+-- refused whole (22023), and neither tournament moves. Without these checks a
+-- restore could write into tournament B or link A's games to B's players.
+select id as pb1 from harness.seed where key = 'player_b1' \gset
+select id as rb1 from harness.seed where key = 'round_b1' \gset
+select id as gb1 from harness.seed where key = 'group_b1' \gset
+create temp table bad on commit drop as
+  select 'game_entries of tournament B' as what, jsonb_set(b, '{tables,game_entries,0,tournament_id}', to_jsonb(:'t_b'::text)) as b from bk
+  union all select 'game_entries with a player of B', jsonb_set(b, '{tables,game_entries,0,player_id}', to_jsonb(:'pb1'::text)) from bk
+  union all select 'game_results of tournament B', jsonb_set(b, '{tables,game_results,0,tournament_id}', to_jsonb(:'t_b'::text)) from bk
+  union all select 'game_results with a player of B', jsonb_set(b, '{tables,game_results,0,player_id}', to_jsonb(:'pb1'::text)) from bk
+  union all select 'hole_awards in a round of B', jsonb_set(b, '{tables,hole_awards,0,round_id}', to_jsonb(:'rb1'::text)) from bk
+  union all select 'hole_awards in a group of B', jsonb_set(b, '{tables,hole_awards,0,group_id}', to_jsonb(:'gb1'::text)) from bk
+  union all select 'hole_awards with a player of B', jsonb_set(b, '{tables,hole_awards,0,player_id}', to_jsonb(:'pb1'::text)) from bk;
+create temp table outcome (what text, state text) on commit drop;
+grant select on bad to authenticated;
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+-- Each attempt as the Comité, as in the app; between attempts the restore's own
+-- temp tables (r_*) are dropped, since here every call shares one transaction.
+do $$
+declare
+  r record;
+  tmp text;
+begin
+  for r in select * from bad loop
+    for tmp in select c.relname from pg_class c where c.relnamespace = pg_my_temp_schema() and c.relkind = 'r' and c.relname like 'r\_%' loop
+      execute format('drop table %I', tmp);
+    end loop;
+    begin
+      set local role authenticated;
+      perform public.restore_tournament((r.b ->> 'tournamentId')::uuid, r.b);
+      reset role;
+      insert into outcome values (r.what, 'restored');
+    exception when others then
+      reset role;
+      insert into outcome values (r.what, sqlstate);
+    end;
+  end loop;
+end $$;
+select coalesce(string_agg(what || ' (' || state || ')', ', ' order by what), '') as let_in from outcome where state <> '22023' \gset
+select harness.check((select count(*) from outcome) = 7 and :'let_in' = '', 'backups aimed at another tournament were not refused: ' || :'let_in') \g /dev/null
+select coalesce(string_agg(k, ', ' order by k), '') as moved from jsonb_each((select s from before_a)) e(k, v) where v is distinct from (pg_temp.state(:'t_a') -> k) \gset
+select harness.check(:'moved' = '', 'a refused restore changed tournament A: ' || :'moved') \g /dev/null
+select harness.check((select s from before_b) = pg_temp.state(:'t_b'), 'a refused restore changed the other tournament') \g /dev/null
+
 select 'restore round trip: ok';
 rollback;

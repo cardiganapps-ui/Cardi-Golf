@@ -12,9 +12,11 @@
 -- this function misses any table the in-app backup exports.
 --
 -- Also here: the team draw is audited like the pairs draw, and its two tables
--- join the Realtime publication, so a draw shows on other phones without a
--- reload. (The client subscribes to them only once this is applied: a channel
--- that names an unpublished table fails as a whole, REL-01.)
+-- join the Realtime publication. That alone changes nothing on the phones:
+-- the client's channel (src/data/realtimeTables.ts) adds them in a later
+-- change, shipped only once this is applied in production, because a channel
+-- that names an unpublished table fails as a whole (REL-01). Until then a
+-- team draw shows on other phones at their next reload.
 
 create or replace function public.restore_tournament(p_tournament_id uuid, p_backup jsonb)
 returns jsonb
