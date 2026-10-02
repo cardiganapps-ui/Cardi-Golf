@@ -47,6 +47,15 @@ export function handicapText(n: number): string {
   return n < 0 ? `+${-n}` : String(n)
 }
 
+/** What the phone may not do yet while a tournament's writes are still on it (account.ts). */
+export type UnsentAction = 'signOut' | 'switch' | 'enter'
+const UNSENT_ACTION: Record<UnsentAction, string> = {
+  signOut: 'cerrar sesión',
+  switch: 'cambiar de cuenta',
+  // A PIN in another tournament: the phone keeps one PIN at a time.
+  enter: 'entrar a otro torneo',
+}
+
 export const t = {
   app: {
     name: 'Polo',
@@ -729,14 +738,14 @@ export const t = {
     google: 'Continuar con Google',
     or: 'o con tu correo',
     /**
-     * Why the phone may not sign out or change account yet: what was entered in
-     * a tournament is still on the phone. `name` null: a tournament the phone
-     * has no name for.
+     * Why the phone may not sign out, change account or enter another
+     * tournament with a PIN yet: what was entered in a tournament is still on
+     * the phone. `name` null: a tournament the phone has no name for.
      */
-    unsentSignal: (name: string | null, action: 'signOut' | 'switch') =>
-      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
-    unsentPin: (name: string | null, action: 'signOut' | 'switch') =>
-      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
+    unsentSignal: (name: string | null, action: UnsentAction) =>
+      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${UNSENT_ACTION[action]}.`,
+    unsentPin: (name: string | null, action: UnsentAction) =>
+      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${UNSENT_ACTION[action]}.`,
     tooFast: 'Espera un minuto antes de pedir otro código.',
     badEmail: 'Revisa el correo.',
     googleTaken: 'Esa cuenta de Google ya tiene perfil.',

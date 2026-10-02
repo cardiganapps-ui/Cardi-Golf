@@ -281,9 +281,29 @@ export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pi
   if (!first) return null
   const uid = currentUid()
   const pin = mine.some((x) => x.tournamentId === first.tournamentId && !!x.actingUid && x.actingUid !== uid)
-  // The name it had when the newest of them was queued: the boards saved on the phone may be gone.
-  const name = mine.filter((x) => x.tournamentId === first.tournamentId && !!x.tournamentName).at(-1)?.tournamentName ?? null
-  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal', name }
+  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal', name: queuedName(mine, first.tournamentId) }
+}
+/** The name a tournament had when the newest of its writes was queued: the boards saved on the phone may be gone. */
+function queuedName(list: OutboxItem[], tournamentId: string): string | null {
+  return list.filter((x) => x.tournamentId === tournamentId && !!x.tournamentName).at(-1)?.tournamentName ?? null
+}
+
+/**
+ * What still has to go out before this device enters `entering` with a PIN.
+ * A device holds one PIN claim (claim_player replaces it), so entering one
+ * tournament makes it nobody in the one before: that one's writes still on
+ * the phone then went out and were refused for good. They count until they
+ * are sent: the ones written as this phone, and the ones saved before its
+ * session was confirmed (they go out once that tournament confirms the
+ * player). Not the ones held for a PIN (they wait for the PIN in their own
+ * tournament either way), nor the tournament being entered's own: its PIN is
+ * what sends them. Writes a newer build queued stay for it.
+ */
+export function unsentBeforeClaim(entering: string): { tournamentId: string; name: string | null } | null {
+  const uid = currentUid()
+  const mine = queue.filter((x) => !isForeign(x) && x.tournamentId !== entering && !(x.actingUid && x.actingUid !== uid))
+  const first = mine[0]
+  return first ? { tournamentId: first.tournamentId, name: queuedName(queue, first.tournamentId) } : null
 }
 
 /**

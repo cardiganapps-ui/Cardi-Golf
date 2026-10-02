@@ -32,7 +32,7 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
 }))
 
-const { _outboxTest, adoptQueuedWrites, flush, hasUnsentWrites, queuedFor, unsentWrites, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, flush, hasUnsentWrites, queuedFor, unsentBeforeClaim, unsentWrites, useOutbox } = await import('./outbox')
 
 const score = (hole: number, player = 'p1') => ({
   key: `score:r1:${player}:${hole}`,
@@ -195,5 +195,46 @@ describe('what still has to go out before the phone changes who it is', () => {
     expect(hasUnsentWrites()).toBe(false)
     expect(queuedFor('t1').writes).toBe(0)
     expect((await _outboxTest.stored()).map((x) => x.key)).toEqual(['photo:r1:p1:9'])
+  })
+})
+
+/**
+ * A PIN in another tournament: the device keeps one PIN claim (claim_player
+ * replaces it), so entering a tournament makes the phone nobody in the one
+ * before, and that one's writes still on the phone went out and were refused
+ * for good. What counts is what the claim would strand.
+ */
+describe('what still has to go out before the phone enters another tournament with a PIN', () => {
+  beforeEach(async () => {
+    _outboxTest.reset()
+    await _outboxTest.clearStored()
+    uid = 'uid-a'
+  })
+
+  it('another tournament\'s writes, written as this phone, named by the name they were queued under', async () => {
+    expect(unsentBeforeClaim('t-nuevo')).toBeNull()
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-ensayo', tournamentName: 'Ensayo' })
+    expect(unsentBeforeClaim('t-nuevo')).toEqual({ tournamentId: 't-ensayo', name: 'Ensayo' })
+  })
+
+  it('…and the ones saved there before the session was confirmed: they go out once that tournament confirms the player', async () => {
+    uid = null
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-ensayo' })
+    becomes('uid-a')
+    expect(unsentBeforeClaim('t-nuevo')).toEqual({ tournamentId: 't-ensayo', name: null })
+  })
+
+  it('not the tournament being entered: its PIN is what sends its own, held ones too', async () => {
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-nuevo' })
+    await _outboxTest.enqueue({ ...score(4), tournamentId: 't-nuevo', actingUid: 'uid-viejo' })
+    expect(unsentBeforeClaim('t-nuevo')).toBeNull()
+  })
+
+  it('not writes held for a PIN elsewhere (they wait for it there either way), nor a newer build\'s', async () => {
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-ensayo', actingUid: 'uid-viejo' })
+    await _outboxTest.enqueue({ ...score(9), tournamentId: 't-ensayo', key: 'photo:r1:p1:9', kind: 'photo' as unknown as 'score' })
+    expect(unsentBeforeClaim('t-nuevo')).toBeNull()
+    // Sign-out and the account switches still count the held one.
+    expect(unsentWrites()).toMatchObject({ tournamentId: 't-ensayo', waitsFor: 'pin' })
   })
 })

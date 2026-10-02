@@ -16,7 +16,7 @@ import { create } from 'zustand'
 import { t } from '../i18n/es-MX'
 import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
-import { unsentWrites } from './outbox'
+import { unsentBeforeClaim, unsentWrites } from './outbox'
 import { signOut, signOutRunning } from './auth'
 import { setLastTournament } from './session'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
@@ -170,6 +170,17 @@ export async function unsentReason(action: 'signOut' | 'switch'): Promise<string
 export async function refuseWithUnsent(action: 'switch') {
   const reason = await unsentReason(action)
   if (reason) throw new UserError(reason)
+}
+
+/**
+ * Throws, in words, while entering `tournamentId` with a PIN would leave
+ * another tournament's writes with nobody to send them: the device keeps one
+ * PIN claim, so entering here makes it nobody there, and those writes went
+ * out and were refused for good (outbox `unsentBeforeClaim`).
+ */
+export async function refuseClaimWithUnsent(tournamentId: string) {
+  const u = unsentBeforeClaim(tournamentId)
+  if (u) throw new UserError(t.account.unsentSignal(await tournamentName(u.tournamentId, u.name), 'enter'))
 }
 
 /** `done`: signed out; otherwise why not, ready to show. */
