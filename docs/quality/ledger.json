@@ -2898,9 +2898,12 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "src/engine/core/feed.test.ts",
+        "e2e/fixtures/formats.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The ceremony follows once the Ceremonia rework (#82) is on main. Match and team play show no player race in Estadísticas (a race of teams or matches is not built yet). The day-2 cut is still computed on Stableford points in every format, and the Reglamento says so."
     },
     {
       "id": "STRAT-05",
