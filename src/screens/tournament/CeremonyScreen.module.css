@@ -166,7 +166,8 @@
   min-width: 0;
   background: var(--board-surface);
   border-radius: var(--r-md);
-  padding: 2.5vh 3vw;
+  /* Capped: a name must fit inside this padding («holds»), and an uncapped 3vw (115 px on a 4K screen) drew 4K ties smaller than before. */
+  padding: 2.5vh min(3vw, 48px);
 }
 .champion {
   box-shadow: inset 0 0 0 3px var(--board-accent);
