@@ -107,7 +107,7 @@ export function AdminRounds() {
 
   const askBody = ask
     ? ask.kind === 'finish'
-      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}`
+      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''} ${R.phonesBeforeFinish}`
       : ask.kind === 'cancel'
         ? R.cancelConfirm(ask.round.number)
         : ask.kind === 'start'
