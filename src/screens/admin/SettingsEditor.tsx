@@ -55,6 +55,9 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
           <Field label={A.honoreeLabel}>
             <input className="input" value={value.labels.honoree} onChange={(e) => set((d) => (d.labels.honoree = e.target.value))} />
           </Field>
+          <Field label={A.trophyLabel} hint={A.trophyHint}>
+            <input className="input" value={value.labels.trophy} maxLength={40} onChange={(e) => set((d) => (d.labels.trophy = e.target.value))} />
+          </Field>
         </div>
         {m.pairs.enabled && (
           <div className="grid2">

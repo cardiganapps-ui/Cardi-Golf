@@ -1643,6 +1643,8 @@ export const t = {
       payoutSlots: 'Reparto del pozo, suma 100%',
       lastPlaceLabel: 'Nombre del último lugar',
       honoreeLabel: 'Nombre del homenajeado',
+      trophyLabel: 'Trofeo del campeón',
+      trophyHint: 'Lo que se lleva el campeón en la ceremonia, como «el Putter». Vacío: sin trofeo.',
       pickupPutts: 'Putts por hoyo levantado',
       balance: 'Cuadre de la bolsa',
       balanced: 'Cuadra',
