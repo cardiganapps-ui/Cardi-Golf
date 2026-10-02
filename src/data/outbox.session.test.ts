@@ -82,6 +82,15 @@ async function serverAnswers() {
     vi.unstubAllGlobals()
   }
 }
+/** The app's latest request is lost (lie-fi, no route): nothing gets through. */
+async function requestsLost() {
+  vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+  try {
+    await fetchWithTimeout('https://example.supabase.co/rest/v1/tournaments').catch(() => undefined)
+  } finally {
+    vi.unstubAllGlobals()
+  }
+}
 
 const score = (hole: number) => ({
   key: `score:r1:p1:${hole}`,
@@ -155,7 +164,8 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
   })
 
   it('the auth server down: getSession stalls, the write waits, and the Tarjeta says the session, not the network', async () => {
-    // The rest of the server answers: what the write waits for is the session.
+    // The rest of the server answers (after some requests were lost): what the write waits for is the session.
+    await requestsLost()
     await serverAnswers()
     vi.useFakeTimers()
     try {
@@ -180,10 +190,11 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
    * back). With nothing answering, what the write waits for is the network.
    */
   it('nothing answers (lie-fi) once the token expired: the session read stalls, and the Tarjeta says the network, not the session', async () => {
+    // The app's requests are lost (the server answered before the phone went into lie-fi).
+    await serverAnswers()
+    await requestsLost()
     vi.useFakeTimers()
     try {
-      // The server's last answer is long gone.
-      vi.advanceTimersByTime(61_000)
       srv.stall = true
       await _outboxTest.enqueue(score(17))
       const done = flush()
@@ -199,9 +210,9 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
   })
 
   it('every request failing at once (no route, the phone believes it has signal): the network too', async () => {
+    await requestsLost()
     vi.useFakeTimers()
     try {
-      vi.advanceTimersByTime(61_000)
       // The refresh failed at once: auth-js has no session to give.
       srv.session = null
       await _outboxTest.enqueue(score(18))

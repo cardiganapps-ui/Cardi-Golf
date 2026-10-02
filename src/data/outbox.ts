@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
-import { serverAnsweredWithin } from '../lib/fetchWithTimeout'
+import { serverAnswering } from '../lib/fetchWithTimeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
@@ -344,13 +344,12 @@ async function deleteStored(item: OutboxItem) {
  */
 const NO_SESSION_YET = 'no session to push with yet'
 /**
- * No session to push with, and nothing answers either (lie-fi, no route): the
- * network, not the session. Once the token had expired, any failed or stalled
- * session read said «Confirmando tu sesión…», for 40 s after lie-fi healed.
+ * No session to push with, and the app's requests are lost too (lie-fi, no
+ * route): the network, not the session. Once the token had expired, any
+ * failed or stalled session read said «Confirmando tu sesión…», on lie-fi
+ * from 8 s and with no route at all from 6 s.
  */
 const NO_SESSION_NO_SERVER = 'no session to push with, and no answer from the server'
-/** How recent an answer from the server must be for a missing session to be what a write waits for. */
-const SERVER_ANSWERED_MS = 30_000
 
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
 export function describeSyncError(msg: string): string {
@@ -578,11 +577,11 @@ export const _outboxTest = {
  */
 async function sessionToken(sb: SupabaseClient): Promise<string> {
   // A getSession that stalls or fails (the refresh hanging, the auth server
-  // down) is the session not confirmed yet too, while the server answers the
-  // app's other requests. With nothing answering it is the network.
+  // down) is the session not confirmed yet too, while the app's requests get
+  // answers. While they are lost it is the network.
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión').catch(() => ({ data: { session: null } }))
   const token = data.session?.access_token
-  if (!token) throw new Error(serverAnsweredWithin(SERVER_ANSWERED_MS) ? NO_SESSION_YET : NO_SESSION_NO_SERVER)
+  if (!token) throw new Error(serverAnswering() ? NO_SESSION_YET : NO_SESSION_NO_SERVER)
   return token
 }
 

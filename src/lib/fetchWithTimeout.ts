@@ -23,16 +23,21 @@ export function timeoutFor(url: string, method: string): number {
   return /\/storage\/v1\/object\//.test(url) && method !== 'GET' && method !== 'HEAD' ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS
 }
 
-/** When the server last answered a request: any status below 500, a refusal included. */
-let lastAnswerAt = 0
+/** The order of the requests' outcomes, and the latest answered and the latest lost. */
+let outcomes = 0
+let lastAnswered = 0
+let lastLost = 0
 /**
- * Whether the server answered within the last `ms`. A write that has no
- * session to go out with says «Confirmando tu sesión…» only while the server
- * answers the app's other requests; with nothing answering (lie-fi, no route)
- * it is the network the write waits for, and the Tarjeta says so.
+ * Whether the app's latest request got through: answered, with any status (a
+ * refusal or a 500 is the server answering), rather than lost (no route, or
+ * nothing before its deadline). A write with no session to go out with says
+ * «Confirmando tu sesión…» only while requests get answers (auth-js cooling
+ * down after a failed refresh, the auth server down while the rest answers);
+ * while they are lost (lie-fi, no route) it is the network the write waits
+ * for, and the Tarjeta says so. A caller's own abort says nothing either way.
  */
-export function serverAnsweredWithin(ms: number): boolean {
-  return Date.now() - lastAnswerAt <= ms
+export function serverAnswering(): boolean {
+  return lastAnswered > lastLost
 }
 
 export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
@@ -48,9 +53,15 @@ export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {
   }
   const timer = setTimeout(() => ctrl.abort(new RequestTimeoutError(ms)), ms)
   return fetch(input, { ...init, signal: ctrl.signal })
-    .then((res) => {
-      if (res.status < 500) lastAnswerAt = Date.now()
-      return res
-    })
+    .then(
+      (res) => {
+        lastAnswered = ++outcomes
+        return res
+      },
+      (e: unknown) => {
+        if (!outer?.aborted) lastLost = ++outcomes
+        throw e
+      },
+    )
     .finally(() => clearTimeout(timer))
 }
