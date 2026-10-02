@@ -202,6 +202,9 @@ describe('the push switch', () => {
       const enable = await screen.findByRole('button', { name: t.push.enable })
       const line = consentLine(noteText(t.legal.pushNote), NOTICE)
       expect(before(line, enable)).toBe(true)
+      // P3: like the PIN field and «Subir tarjeta», a screen reader hears the note with the button.
+      expect(line.id).not.toBe('')
+      expect(enable.getAttribute('aria-describedby')?.split(' ')).toContain(line.id)
     })
   }
 })
