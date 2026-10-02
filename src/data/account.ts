@@ -178,7 +178,7 @@ export type SignOutResult = { done: true } | { done: false; reason: string }
 /**
  * A sign-out that ended after its screen had stopped waiting and said the
  * person was still signed in: what the phone kept of them is cleared by then,
- * and the shell takes the phone home and says so (AppShell).
+ * and the shell takes the phone home and says so (app/LateSignOut.tsx).
  */
 export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null }))
 

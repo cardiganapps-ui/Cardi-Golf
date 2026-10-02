@@ -160,10 +160,13 @@ export function TournamentGate() {
         // saved under it goes too, and its writes, which can never go out now,
         // move to the rejected list (held ones kept the phone from signing out
         // or changing account for good).
-        void clearCachedSlug(slug).then(async (tid) => {
-          const dropped = await rejectGoneTournament(slug, tid)
-          if (dropped && !stale()) setPhase((p) => (p.kind === 'notFound' ? { kind: 'notFound', dropped } : p))
-        })
+        void clearCachedSlug(slug)
+          .then(async (tid) => {
+            const dropped = await rejectGoneTournament(slug, tid)
+            if (dropped && !stale()) setPhase((p) => (p.kind === 'notFound' ? { kind: 'notFound', dropped } : p))
+          })
+          // The phone's storage refused: the writes stay queued, and the next «no existe» tries again.
+          .catch(() => undefined)
         setPhase({ kind: 'notFound', dropped: 0 })
         return
       }
