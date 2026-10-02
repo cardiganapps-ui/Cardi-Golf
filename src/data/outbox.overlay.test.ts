@@ -5,17 +5,17 @@
  * server's own again. A write the server refuses stops showing.
  *
  * Real outbox, real tournament store (fetch, overlay, engine), and the app's
- * real Supabase client against a fake server (src/data/testing/fakePhone.ts).
+ * real Supabase client, entered as p1 with the PIN, against the fake server
+ * (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { gate, holeScore, installFakeSupabase, refusedByRls, settle, snakeAnswer, until } from './testing/fakePhone'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { enterAs, gate, holeScore, installFakePhone, isWrite, settle, snakeAnswer, until } from './testing/fakePhone'
 
-vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
-
-const { server, browser } = installFakeSupabase()
+const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, enqueueTiebreak, startOutbox, useOutbox } = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
+const { t } = await import('../i18n/es-MX')
 
 /** What this phone shows for a player's hole: the snapshot's row and the engine's gross. */
 function shown(player: string, hole: number) {
@@ -31,14 +31,15 @@ function answers(hole: number): string[] {
 
 describe('the optimistic overlay', () => {
   beforeAll(async () => {
+    await enterAs('p1')
     await startOutbox()
   })
   beforeEach(async () => {
     server.reset()
     // Earlier in the round: the server has p1's hole 5 as a 5, and p1 as the last to hole out there.
-    server.tables.scores = [{ ...holeScore('p1', 5, 5), updated_at: '2027-04-09T15:00:00.000Z' }]
-    server.tables.snake_tiebreaks = [{ ...snakeAnswer(5, 'p1') }]
-    browser.online = true
+    server.seed('scores', [holeScore('p1', 5, 5)])
+    server.seed('snake_tiebreaks', [snakeAnswer(5, 'p1')])
+    phone.online = true
     _outboxTest.reset()
     await _outboxTest.clearStored()
     useTournament.setState({ tournamentId: 't1', data: null })
@@ -52,7 +53,7 @@ describe('the optimistic overlay', () => {
     const inFlight = gate()
     let first = true
     server.decide = (req) => {
-      if (req.method !== 'POST' || !first) return 'answer'
+      if (!isWrite(req) || !first) return 'answer'
       first = false
       return inFlight.wait.then(() => 'answer' as const)
     }
@@ -88,13 +89,15 @@ describe('the optimistic overlay', () => {
   })
 
   it('stops showing a write the server refuses: the board goes back to the server value', async () => {
-    server.decide = (req) => (req.method === 'POST' ? refusedByRls('scores') : 'answer')
+    // The Comité closed the round while the hole was on its way: the server refuses it (§7).
+    server.tables.rounds![0]!.status = 'finished'
     await enqueueScore('t1', holeScore('p1', 5, 9))
     expect(shown('p1', 5).strokes).toBe(9)
 
     await until(() => useOutbox.getState().rejected.length === 1, 'the refusal')
     await until(() => shown('p1', 5).strokes === 5, "the server's value to show again")
     expect(shown('p1', 5)).toMatchObject({ strokes: 5, gross: 5 })
-    expect(server.writeRequests()).toHaveLength(1)
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:5', message: t.sync.errDenied })])
+    expect(server.writeRequests().map((r) => r.result)).toEqual([403])
   })
 })

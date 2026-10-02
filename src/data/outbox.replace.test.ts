@@ -9,39 +9,41 @@
  * step (REL-17).
  *
  * Real outbox on the real Dexie (fake-indexeddb), and the app's real Supabase
- * client against a fake server (src/data/testing/fakePhone.ts).
+ * client, entered as p1 with the PIN, against the fake server's network door
+ * (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { gate, holeScore, installFakeSupabase, settle, snakeAnswer, until, type Outcome } from './testing/fakePhone'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { enterAs, gate, holeScore, installFakePhone, isWrite, OUTBOX_CHANNEL, settle, snakeAnswer, until, type Outcome } from './testing/fakePhone'
 
-vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
-
-const { server, browser } = installFakeSupabase()
+const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, enqueueTiebreak, queuedFor, startOutbox, useOutbox } = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
 
 const FOURSOME = ['p1', 'p2', 'p3', 'p4']
 const strokesOf = (x: { payload: unknown }) => (x.payload as { strokes: number }).strokes
 
-/** The first push is held in flight until `open()`; everything else is answered. */
+/** The first score push is held in flight until `open()`; everything else is answered. */
 function holdFirstPush(): { open: () => void } {
   const inFlight = gate()
   let first = true
   server.decide = (req): Outcome | Promise<Outcome> => {
-    if (req.method !== 'POST' || !first) return 'answer'
+    if (!isWrite(req) || !first) return 'answer'
     first = false
     return inFlight.wait.then(() => 'answer' as const)
   }
   return inFlight
 }
 
+/** The user p1's PIN claimed on this phone. */
+let player = ''
 beforeAll(async () => {
+  player = await enterAs('p1')
   await startOutbox()
 })
 beforeEach(async () => {
   server.reset()
-  browser.online = true
+  phone.online = true
   _outboxTest.reset()
   await _outboxTest.clearStored()
   useTournament.setState({ tournamentId: 't1' })
@@ -49,24 +51,26 @@ beforeEach(async () => {
 
 describe('the same hole saved again', () => {
   it('while the first save waits for signal: only the newest value ever goes out', async () => {
-    browser.goOffline()
+    phone.goOffline()
     await enqueueScore('t1', holeScore('p1', 5, 5))
     await enqueueScore('t1', holeScore('p1', 5, 6))
     expect((await _outboxTest.stored()).map(strokesOf)).toEqual([6])
 
-    browser.goOnline()
+    phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'the hole to be sent')
     await settle(useOutbox)
     expect(server.strokesWritten('p1', 5)).toEqual([6])
     expect(server.writeRequests()).toHaveLength(1)
+    // As the player: with the token of the session that holds p1.
+    expect(server.writes.map((w) => w.by)).toEqual([player])
   })
 
   it('while it waits behind another push of the same pass: only the newest value goes', async () => {
-    browser.goOffline()
+    phone.goOffline()
     await enqueueScore('t1', holeScore('p1', 6, 4))
     await enqueueScore('t1', holeScore('p2', 6, 7))
     const p1InFlight = holdFirstPush()
-    browser.goOnline()
+    phone.goOnline()
     await until(() => server.writeRequests().length === 1, "p1's push to go out")
     // p2's hole is corrected while the pass that holds it is still on p1.
     await enqueueScore('t1', holeScore('p2', 6, 8))
@@ -99,7 +103,7 @@ describe('the same hole saved again', () => {
     const inFlight = gate()
     let n = 0
     server.decide = (req): Outcome | Promise<Outcome> => {
-      if (req.method !== 'POST') return 'answer'
+      if (!isWrite(req)) return 'answer'
       n++
       // The first save is in flight and lands; then the signal drops.
       return n === 1 ? inFlight.wait.then(() => 'answer' as const) : 'offline'
@@ -117,7 +121,7 @@ describe('the same hole saved again', () => {
     _outboxTest.reset()
     await _outboxTest.load()
     server.decide = () => 'answer'
-    browser.goOnline()
+    phone.goOnline()
     await until(() => server.strokesWritten('p1', 8).length === 2, 'the correction to be sent')
     expect(server.strokesWritten('p1', 8)).toEqual([5, 6])
   })
@@ -135,7 +139,7 @@ describe('the same hole saved again', () => {
     expect((await _outboxTest.stored()).map(strokesOf)).toEqual([6])
 
     // The other tab's message arrives: this tab reloads the queue and sends the newer save.
-    const otherTab = new BroadcastChannel('cardi-golf-outbox')
+    const otherTab = new BroadcastChannel(OUTBOX_CHANNEL)
     otherTab.postMessage('changed')
     await until(() => server.strokesWritten('p1', 9).length === 2, "the other tab's save to be sent")
     otherTab.close()
@@ -147,31 +151,31 @@ describe('the pending count', () => {
   it('is what is queued, in rows and in holes, through corrections, answers and each landing', async () => {
     const counts = () => {
       const s = useOutbox.getState()
-      return [s.pending, s.pendingHoles, queuedFor('t1').holes]
+      return [s.pending, s.pendingHoles, queuedFor('t1').holes, queuedFor('t1').writes]
     }
-    browser.goOffline()
+    phone.goOffline()
     for (const p of FOURSOME) await enqueueScore('t1', holeScore(p, 1, 4))
-    expect(counts()).toEqual([4, 1, 1])
+    expect(counts()).toEqual([4, 1, 1, 4])
     for (const p of FOURSOME) await enqueueScore('t1', holeScore(p, 2, 5))
-    expect(counts()).toEqual([8, 2, 2])
+    expect(counts()).toEqual([8, 2, 2, 8])
     // A correction replaces a row; it adds nothing.
     await enqueueScore('t1', holeScore('p2', 2, 6))
-    expect(counts()).toEqual([8, 2, 2])
+    expect(counts()).toEqual([8, 2, 2, 8])
     // The snake answer is one more write, not one more hole.
     await enqueueTiebreak('t1', snakeAnswer(2, 'p3'))
-    expect(counts()).toEqual([9, 2, 2])
+    expect(counts()).toEqual([9, 2, 2, 9])
     expect(await _outboxTest.stored()).toHaveLength(9)
 
     // Back online: read the count as each write reaches the server (the one arriving still counts).
     const seen: Array<[string, number, number]> = []
     server.decide = (req) => {
-      if (req.method === 'POST') {
+      if (isWrite(req) || isWrite(req, 'snake_tiebreaks')) {
         const body = req.body as { player_id?: string; hole: number }
         seen.push([`${body.player_id ?? 'answer'}:${body.hole}`, useOutbox.getState().pending, useOutbox.getState().pendingHoles])
       }
       return 'answer'
     }
-    browser.goOnline()
+    phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'the queue to drain')
     await settle(useOutbox)
     expect(seen).toEqual([
@@ -185,7 +189,7 @@ describe('the pending count', () => {
       ['p2:2', 2, 1],
       ['answer:2', 1, 0],
     ])
-    expect(counts()).toEqual([0, 0, 0])
+    expect(counts()).toEqual([0, 0, 0, 0])
     expect(await _outboxTest.stored()).toEqual([])
   })
 })

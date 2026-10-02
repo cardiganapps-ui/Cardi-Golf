@@ -7,19 +7,17 @@
  * once and is never sent again; an expired session is not a refusal.
  *
  * The clock is fake for setTimeout only: IndexedDB (fake-indexeddb) and the
- * app's real Supabase client keep running on real event-loop turns.
+ * app's real Supabase client, entered as p1 with the PIN, keep running on
+ * real event-loop turns against the fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { holeScore, installFakeSupabase, refusedByRls, settle, turn, until } from './testing/fakePhone'
+import { enterAs, holeScore, installFakePhone, isWrite, settle, turn, until } from './testing/fakePhone'
 
-vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
-
-const { server, browser } = installFakeSupabase()
+const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, startOutbox, useOutbox } = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
 const { REQUEST_TIMEOUT_MS } = await import('../lib/fetchWithTimeout')
-const { supabase } = await import('../lib/supabase')
 const { t } = await import('../i18n/es-MX')
 
 const sent = (hole: number) => server.writeRequests().filter((r) => (r.body as { hole: number }).hole === hole).length
@@ -27,12 +25,12 @@ const sent = (hole: number) => server.writeRequests().filter((r) => (r.body as {
 describe('retries', () => {
   beforeAll(async () => {
     // The auth client arms its own timers when it starts: let it start on the real clock.
-    await supabase().auth.getSession()
+    await enterAs('p1')
     await startOutbox()
   })
   beforeEach(async () => {
     server.reset()
-    browser.online = true
+    phone.online = true
     _outboxTest.reset()
     await _outboxTest.clearStored()
     useTournament.setState({ tournamentId: 't1' })
@@ -75,7 +73,7 @@ describe('retries', () => {
   it('gives up on a request that never answers after 12 s, retries it, and the holes behind it follow', async () => {
     let first = true
     server.decide = (req) => {
-      if (req.method !== 'POST' || !first) return 'answer'
+      if (!isWrite(req) || !first) return 'answer'
       first = false
       return 'stall'
     }
@@ -105,33 +103,35 @@ describe('retries', () => {
   })
 
   it('sets a refused write aside once, keeps it on the phone, and never sends it again', async () => {
-    server.decide = (req) => (req.method === 'POST' && (req.body as { hole: number }).hole === 9 ? refusedByRls('scores') : 'answer')
-    await enqueueScore('t1', holeScore('p1', 9, 4))
+    // The Comité moved p4 to another group while this phone still had him: the server refuses his hole (§7).
+    server.tables.group_members = server.tables.group_members!.filter((m) => m.player_id !== 'p4')
+    await enqueueScore('t1', holeScore('p4', 9, 4))
     await settle(useOutbox)
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:9', message: t.sync.errDenied })])
+    expect(server.writeRequests().map((r) => r.result)).toEqual([403])
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p4:9', message: t.sync.errDenied })])
     expect(useOutbox.getState()).toMatchObject({ pending: 0, lastError: t.sync.errDenied })
     expect(await _outboxTest.stored()).toEqual([])
     // On the phone, for the Comité, across a restart.
-    expect((await _outboxTest.db()!.rejected.toArray()).map((r) => r.key)).toEqual(['score:r1:p1:9'])
+    expect((await _outboxTest.db()!.rejected.toArray()).map((r) => r.key)).toEqual(['score:r1:p4:9'])
 
     // Time passes, the signal comes and goes, the app comes to the front, other holes are saved and sent.
     await vi.advanceTimersByTimeAsync(10 * 60_000)
-    browser.goOffline()
-    browser.goOnline()
-    browser.show()
+    phone.goOffline()
+    phone.goOnline()
+    phone.show()
     await enqueueScore('t1', holeScore('p1', 10, 5))
     await settle(useOutbox)
     await vi.advanceTimersByTimeAsync(10 * 60_000)
     await settle(useOutbox)
     expect(server.score('p1', 10)).toMatchObject({ strokes: 5 })
     expect(sent(9)).toBe(1)
-    expect(server.score('p1', 9)).toBeUndefined()
-    expect(useOutbox.getState().rejected.map((r) => r.key)).toEqual(['score:r1:p1:9'])
+    expect(server.score('p4', 9)).toBeUndefined()
+    expect(useOutbox.getState().rejected.map((r) => r.key)).toEqual(['score:r1:p4:9'])
   })
 
   it('retries a write refused for an expired session: that is not a refusal of the hole', async () => {
     let n = 0
-    server.decide = (req) => (req.method === 'POST' && n++ === 0 ? { status: 401, body: { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' } } : 'answer')
+    server.decide = (req) => (isWrite(req) && n++ === 0 ? { status: 401, body: { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' } } : 'answer')
     await enqueueScore('t1', holeScore('p1', 11, 6))
     await settle(useOutbox)
     expect(useOutbox.getState()).toMatchObject({ pending: 1, rejected: [] })
