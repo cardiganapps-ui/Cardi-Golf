@@ -265,3 +265,33 @@ describe('Realtime changes become reloads', () => {
     expect(store().realtime).toBe('live')
   })
 })
+
+describe('the players key: what readers of the players (who has a PIN) ask again on', () => {
+  const players = () => server.tables.players!
+
+  it('a reload that changes no player keeps it; a player row that changes, the profile link included, gives a new one', async () => {
+    const first = store().data!.playersKey
+    expect(first).toBeTruthy()
+    // A score: every table is fetched again, the players are a new array, the key is the same.
+    server.tables.scores!.push({ ...server.tables.scores![0]!, id: 'otro', hole: 18 })
+    await store().reload()
+    expect(store().data!.playersKey).toBe(first)
+    // A link undone on another phone: a column the snapshot's players don't carry.
+    players()[0]!.profile_status = 'confirmed'
+    await store().reload()
+    const linked = store().data!.playersKey
+    expect(linked).not.toBe(first)
+    expect(store().data!.snapshot.players).toEqual(fx.snapshot.players.map((p) => expect.objectContaining({ id: p.id })))
+    players()[0]!.profile_status = null
+    await store().reload()
+    expect(store().data!.playersKey).not.toBe(linked)
+  })
+
+  it('a local patch that leaves the players alone keeps it; one that changes a player does not', () => {
+    const first = store().data!.playersKey
+    store().patch((s) => void (s.tournament.name = 'Otro nombre'))
+    expect(store().data!.playersKey).toBe(first)
+    store().patch((s) => void (s.players[0]!.displayName = 'Otro'))
+    expect(store().data!.playersKey).not.toBe(first)
+  })
+})

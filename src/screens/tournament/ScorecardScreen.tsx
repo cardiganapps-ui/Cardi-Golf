@@ -54,6 +54,7 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={t.live.noRounds} body="" />
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }
@@ -62,6 +63,8 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)} body="" />
+        {/* Holes this phone couldn't send before the day closed: the only place a player sees them (REL-08). */}
+        <RejectedWrites canResend={false} playerId={me.playerId} />
       </div>
     )
   }
@@ -89,6 +92,7 @@ export function ScorecardScreen() {
             )}
           </>
         )}
+        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
   }
@@ -669,7 +673,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
-          <RejectedWrites canResend={me.isAdmin} />
+          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
           {pairsOn && complete && (
             <div>
               {snapshot.pairs
@@ -812,7 +816,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
           </div>
-          <RejectedWrites canResend={me.isAdmin} />
+          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
         </>
       )}
 

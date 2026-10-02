@@ -6,7 +6,8 @@
  * Sends one web push per subscription, signed with the VAPID pair, and hands
  * the endpoints the push service rejected for good (404/410) back to the
  * database through push_prune (the same secret, the anon key). Never the
- * service-role key; never an amount (notices carry none).
+ * service-role key; never an amount the app wrote (its notices carry none;
+ * a platform_notice is the Admin de Polo's own text).
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'

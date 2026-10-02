@@ -106,7 +106,11 @@ if (reset) {
   must(await sb.from('card_signatures').delete().eq('round_id', round.id).select('pair_id'), 'reset signatures')
   must(await sb.from('scores').delete().eq('round_id', round.id).select('hole'), 'reset scores')
 }
-if (round.status === 'scheduled') must(await sb.from('rounds').update({ status: 'live' }).eq('id', round.id).select('id'), 'round live')
+if (round.status === 'scheduled') {
+  must(await sb.from('rounds').update({ status: 'live' }).eq('id', round.id).select('id'), 'round live')
+  // As «Iniciar ronda» does: the Tarjeta names the day the tournament is on (REL-08's verifier saw «día 1» over a day-2 round).
+  must(await sb.from('tournaments').update({ current_round_id: round.id }).eq('id', t.id).select('id'), 'current round')
+}
 
 const holesPerRound = round.holes ?? 18
 const order = (start) => Array.from({ length: holesPerRound }, (_, i) => ((start - 1 + i) % 18) + 1)

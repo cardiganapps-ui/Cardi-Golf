@@ -7,6 +7,7 @@
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { ApiError } from './api'
+import { entryChanged } from './entryEvents'
 
 type Row = Record<string, unknown>
 
@@ -88,6 +89,8 @@ export async function restoreBackup(tournamentId: string, backup: Backup): Promi
   void _h
   const res = await supabase().rpc('restore_tournament', { p_tournament_id: tournamentId, p_backup: { ...backup, tables } })
   if (res.error) throw ApiError.from(res.error)
+  // A player missing from the backup goes, and his PIN and link with him.
+  entryChanged()
   return res.data as { players: number; rounds: number; scores: number }
 }
 

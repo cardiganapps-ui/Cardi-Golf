@@ -169,6 +169,7 @@ ol {
   background: var(--board-bg);
   color: var(--board-ink);
   border-color: transparent;
+  --focus-ring: var(--board-accent);
 }
 .card--deep .muted,
 .card--deep .help,
@@ -259,7 +260,7 @@ ol {
 }
 
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
