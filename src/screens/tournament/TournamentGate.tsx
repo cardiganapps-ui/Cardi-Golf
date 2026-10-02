@@ -18,7 +18,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
-import { ensureSession, useAuth } from '../../data/auth'
+import { ensureSession, signedOutOnPurpose, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
 import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
@@ -230,6 +230,9 @@ export function TournamentGate() {
     const was = lastUid.current
     lastUid.current = uid
     if (!was || was === uid || !authReady) return
+    // The person signed out on purpose: nothing was lost, and asking again
+    // would only sign the phone in anonymously behind them.
+    if (!uid && signedOutOnPurpose()) return
     recheck.current = true
     void resolve()
   }, [uid, authReady, resolve])

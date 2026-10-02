@@ -22,6 +22,8 @@ const server = vi.hoisted(() => ({
   lookupTournament: vi.fn(),
   myMembership: vi.fn(),
   releaseDevice: vi.fn(async () => undefined),
+  /** The person signed out on purpose (auth's `signedOutOnPurpose`). */
+  signedOut: false,
 }))
 const phone = vi.hoisted(() => ({
   readCached: vi.fn(),
@@ -31,7 +33,11 @@ const phone = vi.hoisted(() => ({
 }))
 vi.mock('../../data/auth', async () => {
   const { create } = await import('zustand')
-  return { ensureSession: server.ensureSession, useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } as { id: string } | null })) }
+  return {
+    ensureSession: server.ensureSession,
+    signedOutOnPurpose: () => server.signedOut,
+    useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } as { id: string } | null })),
+  }
 })
 vi.mock('../../data/api', () => ({
   lookupTournament: server.lookupTournament,
@@ -124,6 +130,7 @@ beforeEach(() => {
   for (const f of [phone.clearCached, phone.clearCachedSlug, phone.saveEntry]) f.mockClear()
   server.ensureSession.mockResolvedValue({})
   server.lookupTournament.mockResolvedValue(fx.lookup)
+  server.signedOut = false
 })
 afterEach(() => {
   cleanup()
@@ -265,6 +272,25 @@ describe('when the gate stops asking (REL-02)', () => {
 })
 
 describe('the phone loses its session mid-round (REL-16)', () => {
+  it('not when the person signed out on purpose: nothing asks again, so no anonymous session starts behind them', async () => {
+    phone.readCached.mockResolvedValue(null)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^En vivo del servidor: server/)
+    const sessions = server.ensureSession.mock.calls.length
+    const asks = asked()
+    // Más › «Cerrar sesión»: the session goes, and the phone is on its way home.
+    server.signedOut = true
+    await act(async () => useAuth.setState({ user: null }))
+    await backOnline()
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50))
+    })
+    expect(server.ensureSession.mock.calls.length).toBe(sessions)
+    expect(asked()).toBe(asks)
+  })
+
   it('the gate asks again, and the player gets Entrar and the PIN', async () => {
     phone.readCached.mockResolvedValue(null)
     server.myMembership.mockResolvedValue(member)
