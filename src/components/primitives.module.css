@@ -385,6 +385,13 @@
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
+/* A match won or lost that day: the result reads the same for both sides, the colour says whose it was. */
+.today.under {
+  color: var(--under);
+}
+.today.over {
+  color: var(--over);
+}
 .figure {
   font-size: var(--fs-xl);
   line-height: 1;

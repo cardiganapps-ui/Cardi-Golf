@@ -21,6 +21,27 @@ export function holeStrokes(h: HoleResult, net: boolean): number | null {
   return net ? gross - h.strokesReceived : gross
 }
 
+/**
+ * A hole explained in strokes, for «¿Cómo se calculó?» where the event counts
+ * strokes: the hole's own explanation (`HoleResult.why`) is in Stableford
+ * points, which that event never shows.
+ */
+export function strokesWhy(h: HoleResult, net: boolean): Explanation {
+  if (!h.played) return { title: 'Sin capturar', steps: ['Sin capturar'] }
+  const counted = holeStrokes(h, net)!
+  const d = counted - h.par
+  const rel = d === 0 ? 'par' : d > 0 ? `${d} sobre par` : `${-d} bajo par`
+  const strokes = (n: number) => `${n} golpe${n === 1 ? '' : 's'}`
+  const steps: string[] = [`Par ${h.par}, SI ${h.strokeIndex}${net ? `: ${strokes(h.strokesReceived)} de ventaja` : ''}`]
+  if (h.pickedUp) {
+    steps.push(`Levantó: cuenta como doble bogey neto, ${h.par} + ${h.strokesReceived} + 2 = ${h.par + h.strokesReceived + 2}`)
+    if (net) steps.push(`${h.par + h.strokesReceived + 2} − ${h.strokesReceived} = ${counted} neto`)
+  } else if (net) steps.push(`${h.gross} − ${h.strokesReceived} = ${counted} neto`)
+  else steps.push(`${strokes(h.gross!)}`)
+  steps.push(`${strokes(counted)}${net ? ' netos' : ''}: ${rel}`)
+  return { title: `${strokes(counted)}${net ? ' netos' : ''}`, steps }
+}
+
 /** Strokes and par over the holes actually played. */
 function tally(holes: HoleResult[], net: boolean): { strokes: number; par: number; played: number } {
   let strokes = 0

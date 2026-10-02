@@ -114,6 +114,10 @@ export interface LeaderRowProps {
   name: string
   sub?: ReactNode
   today?: string
+  /** Colour of the day's figure, for a figure that has a side (a match won or lost). */
+  todayTone?: Tone
+  /** How a screen reader says the day's figure, when the text alone does not («ganó 8&6»). */
+  todaySpoken?: string
   thru?: string
   figure: string
   tone?: Tone
@@ -137,10 +141,10 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     </div>
   )
 }
-export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
+export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
   const subLine = [sub, owners].filter(Boolean)
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, today, thru)}>
+    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru)}>
       {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
       <span className={s.name}>
@@ -163,7 +167,7 @@ export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', 
         * were ringed and the mark stopped meaning anything. It stays on the
         * Tarjeta, where the figure it rings is a hole score.
         */}
-      <span className={`${s.fig} ${s.today}`}>{today ?? ''}</span>
+      <span className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>{today ?? ''}</span>
       <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
       <span className={`${s.fig} ${s.figure} ${s[tone]}`}>{figure}</span>
     </button>

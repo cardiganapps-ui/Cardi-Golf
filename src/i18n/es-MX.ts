@@ -87,6 +87,12 @@ export const t = {
     stepUp: 'más',
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
+    /**
+     * A main-event figure with its unit: «34 pts», «−3 neto», «+2 gross»,
+     * «1½ puntos» (match points). Points only where the event counts them.
+     */
+    figure: (text: string, value: number, kind: 'points' | 'net' | 'gross' | 'match') =>
+      kind === 'points' ? `${text} pts` : kind === 'match' ? `${text} ${value > 0 && value <= 1 ? 'punto' : 'puntos'}` : `${text} ${kind === 'net' ? 'neto' : 'gross'}`,
     /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. The only way copy joins names. */
     andList,
     /** «Camilo o Damián», «Camilo u Óscar»: who, of these. */
@@ -1225,6 +1231,8 @@ export const t = {
     points: 'Puntos',
     gross: 'Gross',
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
+    /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6». */
+    matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text}` : text),
     rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', figure === '–' ? '' : figure].filter(Boolean).join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
@@ -1365,10 +1373,11 @@ export const t = {
     onePutts: 'A un putt',
     threePutts: 'A tres putts',
     snakeHoles: 'Hoyos con víbora',
-    position: (label: string, total: number, thru: string) => `${ordinal(label)}, ${total} pts, por el ${thru}`,
+    /** `figure` already carries its unit (`common.figure`). */
+    position: (label: string, figure: string, thru: string) => `${ordinal(label)}, ${figure}, por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
-    round: (day: number, pts: number) => `Día ${day}: ${pts} pts`,
+    round: (day: number, figure: string) => `Día ${day}: ${figure}`,
     grossPutts: (gross: number | null, putts: number) => `${gross != null ? `${gross} golpes, ` : ''}${putts} putts`,
     whyHole: (n: number) => `Hoyo ${n}`,
   },
@@ -1974,6 +1983,8 @@ export const t = {
     awardsHint: 'Sin dinero en juego.',
     race: 'Carrera de puntos',
     raceHint: 'Puntos acumulados hoyo por hoyo. Toca «Revivir» para verla de nuevo.',
+    raceStrokes: 'Carrera de golpes',
+    raceHintStrokes: 'Golpes sobre o bajo par, acumulados hoyo por hoyo: más arriba va mejor. Toca «Revivir» para verla de nuevo.',
     pairsRace: 'Carrera de parejas',
     play: 'Revivir',
     stop: 'Parar',
@@ -1984,6 +1995,11 @@ export const t = {
     perPlayer: 'Por jugador',
     holesPlayed: 'Hoyos',
     byPar: 'Pts en par 3 / 4 / 5',
+    byParStrokes: 'Contra par en par 3 / 4 / 5',
+    /** A total against par in a table cell: «+3», «0», «−2». */
+    signed: (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0'),
+    /** An average against par: «1.25 sobre par en promedio», «en par en promedio». */
+    avgToPar: (avg: number) => (avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`),
     birdiesGross: 'Birdies gross',
     birdiesNet: 'Birdies netos',
     pars: 'Pares',
@@ -2000,8 +2016,10 @@ export const t = {
     streak: 'Racha',
     moment: 'Momento del torneo',
     momentText: (name: string, hole: number, day: number, pts: number) => `${name}, hoyo ${hole} del día ${day}: ${pts} puntos.`,
+    momentStrokes: (name: string, hole: number, day: number, toPar: number, net: boolean) => `${name}, hoyo ${hole} del día ${day}: ${overParName(toPar, net)}.`,
     cursed: 'Hoyo Maldito',
     cursedText: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg} pts promedio.`,
+    cursedStrokes: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`}.`,
     noData: 'Cuando haya tarjetas capturadas, aquí salen las estadísticas.',
     award: {
       mostBirdies: { name: 'Rey del Birdie', desc: 'Más birdies gross' },
@@ -2013,9 +2031,13 @@ export const t = {
       bestRoi: { name: 'El Inversionista', desc: 'Mejor retorno en la Calcutta' },
       worstRoi: { name: 'El Filántropo', desc: 'Peor retorno en la Calcutta' },
     },
+    /** Under strokes the awards that read the hole figure say so. */
+    awardStrokes: { mostConsistent: 'Menor varianza de golpes por hoyo', biggestGain: 'Más golpes menos del día 1 al día 2' } as Partial<Record<string, string>>,
     // Signed figures (a return on the Calcutta, a gain from day 1 to day 2) take a true minus, never a hyphen.
-    unit: (unit: 'count' | 'points' | 'pct' | 'variance', v: number) =>
-      unit === 'pct'
+    unit: (unit: 'count' | 'points' | 'strokes' | 'pct' | 'variance', v: number) =>
+      unit === 'strokes'
+        ? `${v} ${v === 1 ? 'golpe' : 'golpes'} menos`
+        : unit === 'pct'
         ? `${Math.round(v * 100) < 0 ? '−' : ''}${Math.abs(Math.round(v * 100))}%`
         : unit === 'points'
           ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} pts`
@@ -2047,18 +2069,49 @@ export const t = {
       governance: 'El Comité',
     },
     field: (n: number, fee: string, pot: string, tiers: string) => [`${n} jugadores, ${fee} de inscripción cada uno: bolsa de ${pot}.`, tiers ? `Categorías por hándicap: ${tiers}, asignadas por el Comité.` : 'Sin categorías.'],
-    handicaps: (allowancePct: number, cap: number, cut: { threshold: number; pointsPerStroke: number; maxStrokes: number }) => [
-      `Hándicap de juego = ${allowancePct}% del hándicap base (tope ${cap}), redondeado al entero (mitad hacia arriba).`,
-      `Golpes de ventaja por hoyo según el índice de golpe (SI) del tee que juegas.`,
-      `Recorte del día 2: si en el día 1 haces más de ${cut.threshold} puntos, para el día 2 se te recorta 1 golpe por cada ${cut.pointsPerStroke} puntos por encima, máximo ${cut.maxStrokes}. Nunca se suman golpes.`,
-      'El Comité puede ajustar un hándicap con razón escrita; todo queda en la bitácora.',
-    ],
+    /**
+     * The cut line only where a cut can happen: more than one day and a
+     * maximum above zero (a one-day event, or a wizard-made one with
+     * `maxStrokes: 0`, read «máximo 0» before, STRAT-03). It is computed on
+     * Stableford points whatever the main event plays, and says so where the
+     * event does not count points.
+     */
+    handicaps: (
+      allowancePct: number,
+      cap: number,
+      cut: { threshold: number; pointsPerStroke: number; maxStrokes: number; mode?: 'previous' | 'cumulative' },
+      event: { rounds: number; points: boolean },
+    ) => {
+      const unit = event.points ? 'puntos' : 'puntos Stableford'
+      const cutLine =
+        event.rounds <= 1 || cut.maxStrokes <= 0
+          ? []
+          : event.rounds === 2
+            ? [`Recorte del día 2: si en el día 1 haces más de ${cut.threshold} ${unit}, para el día 2 se te recorta 1 golpe por cada ${cut.pointsPerStroke} puntos por encima, máximo ${cut.maxStrokes}. Nunca se suman golpes.`]
+            : [
+                `Recorte de hándicap: si en un día haces más de ${cut.threshold} ${unit}, al día siguiente se te recorta 1 golpe por cada ${cut.pointsPerStroke} puntos por encima, máximo ${cut.maxStrokes}${cut.mode === 'cumulative' ? ' cada vez; los recortes de los días se acumulan' : '; cada día se calcula solo con el anterior'}. Nunca se suman golpes.`,
+              ]
+      return [
+        `Hándicap de juego = ${allowancePct}% del hándicap base (tope ${cap}), redondeado al entero (mitad hacia arriba).`,
+        `Golpes de ventaja por hoyo según el índice de golpe (SI) del tee que juegas.`,
+        ...cutLine,
+        'El Comité puede ajustar un hándicap con razón escrita; todo queda en la bitácora.',
+      ]
+    },
     /** `how` comes from the format the tournament plays, so this mirrors the engine. */
-    individual: (prizes: string[], lastPlace: string, how: string[]) => [
+    /**
+     * `lastPlace` is null when the tournament gave last place no name of its
+     * own: «El último lugar gana Último lugar.» named a trophy nobody set up.
+     * Match play breaks a tie on its own countback (holes up in the last
+     * day's match), not on the last holes' scores.
+     */
+    individual: (prizes: string[], lastPlace: string | null, how: string[], matchPlay = false) => [
       ...how,
       `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.`,
-      'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
-      `El último lugar gana ${lastPlace}.`,
+      matchPlay
+        ? 'Empate en puntos: va adelante quien ganó por más hoyos su partido del último día. Si sigue el empate, se reparten los premios de los lugares que ocupan.'
+        : 'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
+      ...(lastPlace ? [`El último lugar gana ${lastPlace}.`] : []),
     ],
     bestRound: (prize: string) => [`${prize} por día al mejor total Stableford de ese día. Abierto a todos; el día 2 usa el hándicap ajustado. Empate: desempate por los últimos hoyos de ese día y luego se reparte.`],
     pairs: (rule: string, prizes: string[], honoree: string | null) => [

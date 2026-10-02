@@ -178,7 +178,10 @@ export const matchPlayFormat: MainFormat = {
       const byRound: Record<string, Figure> = {}
       for (const rid of ctx.core.roundIds) {
         const r = mine.find((x) => x.roundId === rid)
-        byRound[rid] = r && r.played > 0 ? { value: r.points ?? 0, text: r.text, tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined } : { value: 0, text: '—', empty: true }
+        byRound[rid] =
+          r && r.played > 0
+            ? { value: r.points ?? 0, text: r.text, tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined, ...(r.done ? { result: r.up > 0 ? ('won' as const) : r.up < 0 ? ('lost' as const) : ('halved' as const) } : {}) }
+            : { value: 0, text: '—', empty: true }
       }
       perRound[e.id] = byRound
 

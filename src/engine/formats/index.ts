@@ -37,6 +37,12 @@ export function mainScoring(settings: TournamentSettings): MainScoring {
   return formatOptions.scoring === 'gross' ? 'gross' : 'net'
 }
 
+/** What a main-event figure is, to write its unit: points, strokes net or gross, or match points. */
+export type FigureKind = MainScoring | 'match'
+export function figureKind(settings: TournamentSettings): FigureKind {
+  return settings.modules.individual.format === 'matchPlay' ? 'match' : mainScoring(settings)
+}
+
 /**
  * Whether one player's running total is what the board ranks: true for
  * Stableford and stroke play, false where the board ranks teams or matches,
@@ -50,4 +56,4 @@ export function ranksPlayersByTotal(settings: TournamentSettings): boolean {
 
 export * from './format'
 export { matchPointsText, playMatches, type MatchResult } from './matchPlay'
-export { holeStrokes } from './strokePlay'
+export { holeStrokes, strokesWhy } from './strokePlay'

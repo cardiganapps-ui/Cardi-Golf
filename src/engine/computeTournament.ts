@@ -142,7 +142,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   }
 
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
-  const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction })
+  const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
   const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
 
   const incompleteRounds: StatusFlags['incompleteRounds'] = []

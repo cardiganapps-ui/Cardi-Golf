@@ -230,6 +230,8 @@ export function LiveScreen() {
               let figure: string
               let tone: Tone = 'even'
               let today: string | undefined
+              let todayTone: Tone | undefined
+              let todaySpoken: string | undefined
               if (grossView) {
                 const d = grossToPar(state, p.id)
                 const tp = d == null ? null : toPar(d)
@@ -242,6 +244,11 @@ export function LiveScreen() {
                 tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
                 const day = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
                 today = day && !day.empty ? day.text : undefined
+                // A match result reads the same for both sides: its colour and spoken form say who won it.
+                if (day?.result) {
+                  todayTone = day.result === 'won' ? 'under' : day.result === 'lost' ? 'over' : 'even'
+                  todaySpoken = t.live.matchDay(day.result, day.text)
+                }
               }
               // A team's "thru" is where its slowest member is.
               const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
@@ -271,6 +278,8 @@ export function LiveScreen() {
                     owners={byTeam ? undefined : owners.get(p.id)}
                     honoree={!!honoree && members.includes(honoree.id)}
                     today={today}
+                    todayTone={todayTone}
+                    todaySpoken={todaySpoken}
                     thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
                     figure={figure}
                     tone={tone}
