@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '8edeb2dd76fdb755' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '3980af12be41c596' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -115,7 +115,7 @@ describe('who sees a tournament\'s money (TRUST-02)', () => {
 describe('what the operator sees and can do (TRUST-17)', () => {
   it('word for word', () => {
     expect(sections['Quién opera Polo']).toBe(
-      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Lo usa para dar soporte y corregir errores.',
+      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.',
     )
   })
 
@@ -278,5 +278,55 @@ describe('uploaded files: public, listed for anyone, never deleted (assets_publi
     expect(source('src/data/profiles.ts')).toContain('`profiles/${id}/')
     expect(source('src/screens/admin/AdminPlayers.tsx')).toContain('`${tournamentId}/avatars/')
     expect(source('src/screens/admin/AdminCourses.tsx')).toContain('`courses/${id}/')
+  })
+})
+
+/**
+ * PR #88's second verifier, P3-6: what the notice left out. Each is data
+ * collected or shared, so each is said, with what makes it true today:
+ * Supabase keeps each session's IP address and browser; a tournament or
+ * profile link creates an anonymous user before any line shows; Vercel
+ * carries the backup, the notices and the scorecard images; a Google photo
+ * is fetched from Google by everyone who sees it; and each browser that
+ * enters a tournament keeps its last snapshot, money included.
+ */
+describe('what the notice left out (P3-6)', () => {
+  it('Supabase keeps the IP address and the browser of every session, and the operator can read them', () => {
+    expect(sections['Qué datos guardamos']).toContain('Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella.')
+    expect(sections['Quién opera Polo']).toContain('Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión.')
+  })
+
+  it('opening a tournament or a profile link creates an anonymous user, before any line shows', () => {
+    expect(sections['Qué datos guardamos']).toContain('Abrir el enlace de un torneo o de un perfil en un navegador sin sesión le crea un usuario anónimo (sin correo ni nombre), aunque no entres.')
+    expect(source('src/data/auth.ts')).toMatch(/export async function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
+    // The gate signs in before it even looks the tournament up, so before Entrar and its line.
+    expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/await ensureSession\(\)\s+const lookup = await lookupTournament\(slug\)/)
+    expect(source('src/screens/profile/ProfileScreen.tsx')).toContain('await ensureSession()')
+  })
+
+  it('Vercel serves the app and runs the nightly backup, the notices and the scorecard reading', () => {
+    expect(sections['Dónde viven']).toContain(
+      'Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic)',
+    )
+    for (const route of ['api/backup-cron.ts', 'api/push-dispatch.ts', 'api/scorecard-extract.ts']) expect(source(route).length).toBeGreaterThan(0)
+    expect(JSON.parse(source('vercel.json')).crons).toEqual([expect.objectContaining({ path: '/api/backup-cron' })])
+  })
+
+  it('a Google photo stays on Google: whoever sees it fetches it from there', () => {
+    expect(sections['Google']).toContain('Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP.')
+    // The profile keeps Google's address for it, not a copy, and every face shows it straight from that address.
+    expect(source('supabase/migrations/0014_profile_name_hint.sql')).toContain("coalesce(meta ->> 'avatar_url', meta ->> 'picture', '')")
+    expect(source('src/components/ui.tsx')).toContain('<img src={url} alt="" loading="lazy" />')
+  })
+
+  it('each browser that enters a tournament keeps its last snapshot, money included, and what it has not sent yet', () => {
+    expect(sections['Dónde viven']).toContain(
+      'En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal; salir del torneo o de la cuenta no la borra.',
+    )
+    expect(source('src/engine/types.ts')).toMatch(/export interface Snapshot \{[^}]*\bpayments: Payment\[\]/)
+    expect(source('src/data/tournamentStore.ts')).toContain('void saveSnapshot(tournamentId, snapshot)')
+    // Nothing clears that copy: not leaving the tournament, not signing out.
+    const callers = filesUnder('src', (n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n)).filter((f) => f !== join('src', 'data', 'snapshotCache.ts') && /\bclearCached\(/.test(source(f)))
+    expect(callers).toEqual([])
   })
 })
