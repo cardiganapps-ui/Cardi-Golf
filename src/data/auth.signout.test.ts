@@ -202,6 +202,30 @@ describe('a sign-out that takes a while', () => {
     }
   })
 
+  it('a second tap while auth-js still works on the first: the first one\'s late answer leaves the second alone', async () => {
+    fake()
+    try {
+      const answers: Array<(r: { error: unknown }) => void> = []
+      sb.signOut = () => new Promise((resolve) => answers.push(resolve))
+      const first = signOut()
+      await vi.advanceTimersByTimeAsync(16_000)
+      expect(await first).toBe(false)
+      const second = signOut()
+      // auth-js answers the first: it kept the session (its refresh failed)...
+      answers[0]!({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(signedOutOnPurpose()).toBe(true)
+      // ...then ends it for the second: still a sign-out the person asked for.
+      storage.delete(KEY)
+      sb.listener?.('SIGNED_OUT', null)
+      expect(signedOutOnPurpose()).toBe(true)
+      answers[1]!({ error: null })
+      expect(await second).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('a late answer that keeps the session changes nothing, and the identity going away later is no longer on purpose', async () => {
     fake()
     try {
