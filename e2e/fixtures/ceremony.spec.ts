@@ -400,6 +400,45 @@ for (const [w, h] of [...ROOMS, [1024, 768] as [number, number]]) {
 }
 
 /**
+ * A 4K TV at 100% scaling. A name has to fit inside its card's padding, which
+ * was an uncapped 3vw (115 px here): a lone game winner was drawn at 4.7vh and
+ * bracket8's four-way tie for champion became a compact list. Capped at 48 px,
+ * a lone winner's name keeps at least 5.5vh and a tie of four stays full size.
+ */
+test('3840×2160: a lone winner keeps a big name, and a tie of four stays full size', async ({ page, pageErrors }) => {
+  test.setTimeout(180_000)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 3840, height: 2160 })
+  const vh = 2160 / 100
+  let tie = false
+  for (const fixture of ['friends8', 'bracket8', 'full12-finished']) {
+    await page.goto(`/t/_/${fixture}/ceremonia`, { waitUntil: 'networkidle' })
+    for (let i = 0; i < 80; i++) {
+      const now = await beat(page, 'ArrowRight')
+      if (now.title === C.done) break
+      if (now.waiting) continue
+      const label = `${fixture}, step «${now.title}»`
+      const names = await page.locator('[data-area] [data-name]').evaluateAll((els) =>
+        els.map((el) => {
+          const range = document.createRange()
+          range.setStart(el.firstChild!, 0)
+          range.setEnd(el.firstChild!, 1)
+          return range.getBoundingClientRect().height
+        }),
+      )
+      if (names.length === 1) expect(names[0]!, `${label}: a lone winner's name`).toBeGreaterThanOrEqual(5.5 * vh)
+      if (names.length > 1 && names.length <= 4) {
+        tie = true
+        await expect(page.locator('[data-area] [data-compact]'), `${label}: a tie of ${names.length}`).toHaveCount(0)
+      }
+      expect((await fits(page)).outside, `${label}: a name outside its card`).toEqual([])
+    }
+  }
+  expect(tie).toBe(true)
+  expect(pageErrors).toEqual([])
+})
+
+/**
  * A name of one long word («Maximiliano») can't break, so it is drawn
  * smaller. Its line was as wide as the name, never overflowed, and the screen
  * left it 31 px outside its card at 1024×768 (124 px at 2560×1440): every
