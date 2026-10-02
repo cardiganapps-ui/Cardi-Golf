@@ -12,16 +12,40 @@
  * word for word, and each claim keeps its own test.
  */
 import { createHash } from 'node:crypto'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { t } from '../i18n/es-MX'
+import { BACKUP_TABLES } from '../lib/backupTables'
 
 type Doc = { title: string; version: string; updated: string; sections: Array<[string, string]> }
+
+/** A file of the repo, read as text: what a sentence about the product rests on. */
+const source = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
+
+function filesUnder(dir: string, keep: (name: string) => boolean, out: string[] = []): string[] {
+  for (const name of readdirSync(join(process.cwd(), dir))) {
+    const path = join(dir, name)
+    if (statSync(join(process.cwd(), path)).isDirectory()) filesUnder(path, keep, out)
+    else if (keep(name)) out.push(path)
+  }
+  return out
+}
+
+/** Every place the app, its routes or a migration deletes a stored file (Supabase Storage). */
+function storageRemovals(): string[] {
+  const code = [...filesUnder('src', (n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n)), ...filesUnder('api', (n) => n.endsWith('.ts'))]
+  return [
+    ...code.filter((f) => /\.storage\s*\.from\([^)]*\)\s*\.remove\(/.test(source(f))),
+    ...filesUnder('supabase/migrations', (n) => n.endsWith('.sql')).filter((f) => /delete\s+from\s+storage\.objects/i.test(source(f))),
+  ]
+}
 
 const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.title, d.sections])).digest('hex').slice(0, 16)
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'defa4ccb34c092a7' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -41,7 +65,7 @@ describe('each document is pinned to its own version and date', () => {
   }
 
   it('the two documents carry their own date (the terms used to take the notice\'s)', () => {
-    expect(t.legal.privacy.updated).toBe('Última actualización: 1 de octubre de 2026')
+    expect(t.legal.privacy.updated).toBe('Última actualización: 2 de octubre de 2026')
     expect(t.legal.terms.updated).toBe('Última actualización: 1 de octubre de 2026')
     expect(t.legal).not.toHaveProperty('updated')
   })
@@ -156,7 +180,7 @@ describe('the rest of the verifier\'s list', () => {
     const rights = sections['Tus derechos']!
     expect(all).not.toContain('sin tu nombre')
     expect(rights).toContain('borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes')
-    expect(rights).toContain('tu nombre, tu foto, tus golpes y tu dinero como jugador se quedan en los torneos que jugaste, en su historial de cambios y en los respaldos')
+    expect(rights).toContain('Se quedan tu nombre, tu foto, tus golpes y tu dinero como jugador en los torneos que jugaste y en su historial de cambios')
     expect(sections['Quiénes somos']).not.toContain('golf@cardigan.mx')
     expect(t.legal.contact).toContain('todavía no recibe mensajes')
   })
@@ -169,7 +193,39 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-01')
+    expect(t.legal.privacy.version).toBe('2026-10-02')
     expect(t.legal.terms.version).toBe('2026-10-01')
+  })
+})
+
+/**
+ * PR #88's second verifier, P2: «Al borrarla se van tu perfil, tus
+ * amistades, tus rivalidades y tus avisos» was true of the database only.
+ * Every nightly backup keeps them and none is ever deleted, and every profile
+ * photo ever uploaded stays in the bucket.
+ */
+describe('what deleting an account takes and what it leaves (platform_delete_account, 0022)', () => {
+  const rights = () => sections['Tus derechos']!
+
+  it('what goes, and only from the database', () => {
+    expect(rights()).toContain('Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos y los navegadores donde los activaste, y sales de tus crews.')
+    expect(rights()).not.toContain('se van tu perfil')
+  })
+
+  it('what stays: the tournaments, every profile photo, the email in the log, and all of it in the backups', () => {
+    expect(rights()).toContain('Se quedan tu nombre, tu foto, tus golpes y tu dinero como jugador en los torneos que jugaste y en su historial de cambios;')
+    expect(rights()).toContain('cada foto de perfil que subiste, también las anteriores, como archivo público;')
+    expect(rights()).toContain('tu correo, en el registro del borrado;')
+    expect(rights()).toContain('y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.')
+  })
+
+  it('the facts it rests on: when one changes, so does the sentence', () => {
+    // The nightly backup copies what the deletion removes from the database…
+    for (const table of ['profiles', 'friendships', 'rivalries', 'notifications', 'push_subscriptions', 'crew_members']) expect(BACKUP_TABLES).toHaveProperty(table)
+    // …and the route only ever writes its object: no backup is deleted.
+    expect(source('api/backup-cron.ts')).not.toMatch(/method:\s*['"]DELETE/)
+    // Each new profile photo is a new file, and no code removes a stored file.
+    expect(source('src/data/profiles.ts')).toContain('`profiles/${id}/avatar-${Date.now()}.')
+    expect(storageRemovals()).toEqual([])
   })
 })
