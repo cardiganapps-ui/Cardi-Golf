@@ -1851,8 +1851,8 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 92,
       "tests": [
         "src/data/realtimeApply.test.ts",
         "src/data/tournamentStore.apply.test.ts",
@@ -2598,8 +2598,8 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 92,
       "tests": [
         "src/data/realtimeApply.test.ts",
         "src/data/tournamentStore.apply.test.ts"
