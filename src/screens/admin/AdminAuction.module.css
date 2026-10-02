@@ -17,6 +17,8 @@
   border-radius: var(--r-md);
   background: var(--board-bg);
   color: var(--board-ink);
+  /* The ink ring would be 1.1:1 on the board green (A11Y-15). */
+  --focus-ring: var(--board-accent);
 }
 .lotHead {
   display: flex;

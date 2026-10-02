@@ -35,6 +35,10 @@
   --board-under: #ff6b6b;
   --board-over: #8fb8e6;
 
+  /* The keyboard focus ring. Board surfaces (TV, Ceremonia, deep cards) set it to
+     --board-accent: the graphite ring is 1.1:1 on the board green (A11Y-15). */
+  --focus-ring: var(--ink);
+
   /* Event personalization (curated set in src/design/accents.ts; stored in tournaments.accent_color) */
   --event-accent: var(--accent);
   --event-accent-ink: #ffffff;

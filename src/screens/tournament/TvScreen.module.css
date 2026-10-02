@@ -12,6 +12,8 @@
   gap: 2vh;
   overflow: hidden;
   font-size: clamp(16px, 2.2vh, 30px);
+  /* The ink ring would be 1.1:1 on the board green (A11Y-15). */
+  --focus-ring: var(--board-accent);
 }
 .header {
   display: flex;
