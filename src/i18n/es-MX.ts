@@ -1173,6 +1173,8 @@ export const t = {
     /** The Tarjeta's line when the phone lost its session mid-round: the holes saved since wait for the PIN (REL-16). */
     heldForPinShort: (n: number) => (n === 1 ? '1 hoyo espera tu PIN' : `${n} hoyos esperan tu PIN`),
     unsentBeforeSwitch: (n: number) => (n === 1 ? 'Tienes 1 hoyo sin subir' : `Tienes ${n} hoyos sin subir`),
+    /** The same, when what waits is a card signature, a snake answer or a hole award, not a hole. */
+    unsentWritesBeforeSwitch: 'Tienes cambios sin subir',
     unsentBeforeSwitchBody:
       'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',
     understood: 'Entendido',
