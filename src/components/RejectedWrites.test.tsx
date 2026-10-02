@@ -137,7 +137,7 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
     expect(share).toHaveBeenCalledWith({ text: expect.stringContaining(IB.sendHeader("Nacho's Bachelor Invitational", 'Camilo')) })
   })
 
-  it('a player in no group still sees them', () => {
+  it('a player in no group still sees them, and is not offered a resend the server would refuse', () => {
     mount('tarjeta', {
       edit: (s) => {
         for (const g of s.groups) g.playerIds = g.playerIds.filter((id) => id !== CAMILO)
@@ -145,6 +145,14 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
     })
     expect(screen.getByText(t.card.notInGroup)).toBeTruthy()
     expect(list().getByText(HOLE11)).toBeTruthy()
+    expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
+    expect(list().getByText(IB.rejectedHintPlayer)).toBeTruthy()
+  })
+
+  it('a tournament with no days left at all still shows them on the Tarjeta (R15)', () => {
+    mount('tarjeta', { edit: (s) => void (s.rounds = []) })
+    expect(screen.getByText(t.live.noRounds)).toBeTruthy()
+    expect(list().getByText('Camilo, hoyo 11 de un día que ya no existe: 5 golpes, 2 putts')).toBeTruthy()
   })
 
   it('«Descartar» asks first: it is the only copy', () => {
@@ -184,11 +192,67 @@ describe('the refused list says what stands in the way now, and who can send it 
         else s.scores.push({ roundId: 'r2', playerId: CAMILO, hole: 11, strokes: 6, putts: 2, pickedUp: false, enteredBy: 'p9', updatedAt: null })
       },
     })
-    expect(list().getByText(IB.rejectedHintReopened)).toBeTruthy()
+    expect(list().getByText(IB.rejectedHintResend)).toBeTruthy()
     expect(list().getByText(t.sync.errDenied)).toBeTruthy()
     expect(list().getByText(IB.nowOnCard('6 golpes, 2 putts'))).toBeTruthy()
     fireEvent.click(list().getByRole('button', { name: `${IB.resend}: ${HOLE11}` }))
     expect(outbox.resent).toEqual([hole11.key])
+  })
+
+  it('a putts-only difference still shows what the card holds now: a resend would replace it (R8)', () => {
+    mount('list', {
+      edit: (s) => {
+        const now = s.scores.find((x) => x.roundId === 'r2' && x.playerId === CAMILO && x.hole === 11)!
+        Object.assign(now, { strokes: 5, putts: 3, pickedUp: false })
+      },
+    })
+    expect(list().getByText(IB.nowOnCard('5 golpes, 3 putts'))).toBeTruthy()
+  })
+
+  it('a day that never closed, but this phone\'s player moved to another group: no resend, and the reason says so', () => {
+    mount('list', {
+      edit: (s) => {
+        // The Comité swaps Camilo (group 3) with Arturo (group 1) on day 2; the day stays live.
+        const g1 = s.groups.find((g) => g.id === 'r2g1')!
+        const g3 = s.groups.find((g) => g.id === 'r2g3')!
+        g1.playerIds = g1.playerIds.map((id) => (id === 'p1' ? CAMILO : id))
+        g3.playerIds = g3.playerIds.map((id) => (id === CAMILO ? 'p1' : id))
+      },
+      rejected: [{ ...hole11, key: 'score:r2:p12:11', payload: { ...hole11.payload, player_id: 'p12' } as RejectedItem['payload'] }],
+    })
+    expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeNull()
+    expect(list().getByText(IB.reasonNotInGroup(2))).toBeTruthy()
+    // Not «the day is back in play»: the Comité is who can capture it.
+    expect(list().getByText(IB.rejectedHintPlayer)).toBeTruthy()
+    expect(list().getByRole('button', { name: IB.sendToComite })).toBeTruthy()
+  })
+
+  it('his own hole, after a move to another group, can still go again: the server asks only that writer and player share a group', () => {
+    mount('list', {
+      edit: (s) => {
+        for (const g of s.groups.filter((x) => x.roundId === 'r2')) g.playerIds = g.playerIds.filter((id) => id !== CAMILO)
+        s.groups.push({ id: 'r2g4', roundId: 'r2', number: 4, teeTime: null, startHole: 1, playerIds: [CAMILO] })
+      },
+    })
+    expect(list().queryByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeTruthy()
+  })
+
+  it('a mixed list keeps both instructions: resend what can go, send the rest to the Comité', () => {
+    const day1: RejectedItem = { ...hole11, key: 'score:r1:p3:4', payload: { ...hole11.payload, round_id: 'r1', hole: 4 } as RejectedItem['payload'] }
+    mount('list', { rejected: [hole11, day1] })
+    expect(list().getByText(IB.rejectedHintMixed)).toBeTruthy()
+    expect(list().getByRole('button', { name: `${IB.resend}: ${HOLE11}` })).toBeTruthy()
+    expect(list().queryByRole('button', { name: `${IB.resend}: Camilo, día 1, hoyo 4: 5 golpes, 2 putts` })).toBeNull()
+    expect(list().getByText(IB.reasonClosed(1))).toBeTruthy()
+    expect(list().getByRole('button', { name: IB.sendToComite })).toBeTruthy()
+  })
+
+  it('a tiebreak or a contest goes again only from a phone in that group, naming players of that group', () => {
+    const tiebreak = (group: string, last: string): RejectedItem => ({ ...hole11, key: `tb:${group}:${last}`, kind: 'tiebreak', payload: { round_id: 'r2', group_id: group, hole: 5, last_holed_player_id: last, decided_by: CAMILO } })
+    const award: RejectedItem = { ...hole11, key: 'aw', kind: 'award', payload: { round_id: 'r2', group_id: 'r2g3', hole: 7, game_id: 'closest', player_ids: ['p6', 'p9'], decided_by: CAMILO } }
+    mount('list', { rejected: [tiebreak('r2g3', 'p12'), tiebreak('r2g1', 'p1'), award] })
+    const resend = list().getAllByRole('button', { name: new RegExp(`^${IB.resend}`) })
+    expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([expect.stringMatching(/^Volver a mandar: Víbora, grupo 3,/), expect.stringMatching(/hoyo 7/)])
   })
 
   it('a Comité device resends anything, is not asked to send it to itself, and keeps the server\'s reason', () => {

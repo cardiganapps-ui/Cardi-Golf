@@ -9,8 +9,9 @@
  * A Comité device sends them again. A player's phone can't, so it hands them
  * to the Comité: «Mandar al Comité» shares the values as text (WhatsApp),
  * the Comité captures them from Comité › Tarjetas, and the player discards
- * once it is confirmed. When the day is back in play and the card unsigned,
- * anyone can resend, against what the card holds now.
+ * once it is confirmed. A player's phone may resend only what it could write
+ * now (the day live, the card unsigned, and its player in that group that
+ * day), against what the card holds now; the hint says which lines go where.
  */
 import { useId, useState } from 'react'
 import { t } from '../i18n/es-MX'
@@ -69,15 +70,34 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     if (!canResend && round && (r.kind === 'score' || r.kind === 'signature')) {
       if (round.status !== 'live') return IB.reasonClosed(round.number)
       if (signedFor(snapshot, r)) return IB.reasonSigned
+      if (!writable(r)) return IB.reasonNotInGroup(round.number)
     }
     // eslint-disable-next-line no-restricted-syntax -- a RejectedItem's message is copy outbox.ts already made (describeSyncError), not an error's text
     return r.message
   }
-  /** A Comité device always can; anyone, once the day is back in play and the card unsigned. */
-  const resendable = (r: RejectedItem) => {
+  /**
+   * This phone's player could write it now, as the server would let him: the
+   * day live, the card unsigned, and he in that group that day with whoever
+   * the capture is about (a signature is of the other pair of his group).
+   * Moved to another group, he could not, and a resend would be refused again.
+   */
+  const writable = (r: RejectedItem): boolean => {
     const round = roundOf(r)
-    return canResend || (round?.status === 'live' && !signedFor(snapshot, r))
+    if (!playerId || !round || round.status !== 'live' || signedFor(snapshot, r)) return false
+    const groups = snapshot.groups.filter((g) => g.roundId === round.id && g.playerIds.includes(playerId))
+    const together = (...ids: string[]) => groups.some((g) => ids.every((id) => g.playerIds.includes(id)))
+    if (r.kind === 'score') return together((r.payload as ScorePayload).player_id)
+    if (r.kind === 'signature') {
+      const pair = snapshot.pairs.find((x) => x.id === (r.payload as SignaturePayload).pair_id)
+      return !!pair && pair.player1Id !== playerId && pair.player2Id !== playerId && together(pair.player1Id, pair.player2Id)
+    }
+    const p = r.payload as TiebreakPayload | AwardPayload
+    const group = groups.find((g) => g.id === p.group_id)
+    const named = 'player_ids' in p ? p.player_ids : [p.last_holed_player_id]
+    return !!group && named.every((id) => group.playerIds.includes(id))
   }
+  /** A Comité device always can; a player's phone, what it could write now. */
+  const resendable = (r: RejectedItem) => canResend || writable(r)
   /** What the card holds now for a refused hole, when it differs: a resend would replace it. */
   const onCard = (r: RejectedItem): string | null => {
     if (r.kind !== 'score') return null
@@ -87,7 +107,9 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     return IB.nowOnCard(IB.scoreValue(now.strokes, now.putts, now.pickedUp))
   }
   const text = [IB.sendHeader(snapshot.tournament.name, playerId ? name(playerId) : null), ...rejected.map(describe)].join('\n')
-  const hint = canResend ? IB.rejectedHint : rejected.some(resendable) ? IB.rejectedHintReopened : IB.rejectedHintPlayer
+  // Per state: a list where some lines can go again and some can't says both, so neither instruction is lost.
+  const again = rejected.filter(resendable).length
+  const hint = canResend ? IB.rejectedHint : again === rejected.length ? IB.rejectedHintResend : again ? IB.rejectedHintMixed : IB.rejectedHintPlayer
 
   return (
     <section className={styles.box} aria-labelledby={titleId}>

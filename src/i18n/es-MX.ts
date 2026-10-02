@@ -1470,8 +1470,10 @@ export const t = {
       rejectedHint: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
       /** On a player's phone: the list lives only there, so the Comité learns of it from the player. */
       rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
-      /** The day is in play again: what is still right can go again, checked against what the card holds now. */
-      rejectedHintReopened: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. El día volvió a estar en juego: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
+      /** Every line can go again now (the day live, the card unsigned, this phone's player in that group): checked against what the card holds now. */
+      rejectedHintResend: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Ahora sí se puede volver a mandar: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
+      /** Some lines can go again and some can't: both instructions. */
+      rejectedHintMixed: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Lo que tiene «Volver a mandar» ya se puede mandar otra vez: compáralo con lo que ya tiene la tarjeta. Lo demás solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
       /** «día 2, hoyo 11»; a day deleted since says so. */
       dayHole: (day: number | null, hole: number) => (day === null ? `hoyo ${hole} de un día que ya no existe` : `día ${day}, hoyo ${hole}`),
       rejectedScore: (name: string, where: string, value: string) => `${name}, ${where}: ${value}`,
@@ -1486,6 +1488,8 @@ export const t = {
       /** The state of the tournament now (what was true when the server refused it isn't known here). */
       reasonClosed: (day: number) => `El día ${day} está cerrado.`,
       reasonSigned: 'La tarjeta está firmada.',
+      /** The day is live and the card unsigned, but this phone's player is no longer in that group that day. */
+      reasonNotInGroup: (day: number) => `Ya no juegas en ese grupo el día ${day}.`,
       /** A refused hole the card now holds differently: resending it would replace this. */
       nowOnCard: (value: string) => `En la tarjeta ahora: ${value}`,
       discardTitle: '¿Descartar esta captura?',
