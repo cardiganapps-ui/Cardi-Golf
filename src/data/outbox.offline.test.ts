@@ -1,21 +1,24 @@
 /**
- * QA-06 (1): the promise the day rests on (§2, "syncs later without losing
- * anything"). A hole saved with no signal is kept on the phone, survives the
- * app being closed and opened again, and reaches the server when the signal
- * returns, with nothing else to tap.
+ * QA-06 (1): the promise the day rests on (§2, «syncs later without losing
+ * anything»). A hole saved with no signal is kept on the phone, survives the
+ * app being closed and opened again, shows on the boards the phone opens
+ * with, and reaches the server when the signal returns, with nothing else to
+ * tap, as the player who saved it.
  *
- * A restart here is a restart: the page's IndexedDB connection, listeners and
- * outbox channel are closed and every app module is loaded again, so nothing
- * survives but what the real Dexie wrote to (fake) IndexedDB. The app's real
- * Supabase client talks to a fake server (src/data/testing/fakePhone.ts).
+ * A restart here is a restart: the page's IndexedDB connections, listeners
+ * and channels are closed and every app module is loaded again, so nothing
+ * survives but what the phone stored: the outbox and the saved boards in
+ * (fake) IndexedDB, and the session auth-js keeps in localStorage. The app
+ * opens the way AppShell and the tournament gate open it, and its real
+ * Supabase client talks to the fake server (src/data/testing/fakePhone.ts).
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { holeScore, installFakeSupabase, snakeAnswer, until } from './testing/fakePhone'
+import type { LookupResult } from './api'
+import type { Me } from '../screens/tournament/TournamentGate'
+import { enterAs, holeScore, installFakePhone, PIN, settle, snakeAnswer, turn, until } from './testing/fakePhone'
 
-vi.mock('./auth', () => ({ useAuth: { getState: () => ({ user: { id: 'uid-a' } }) } }))
-
-const { server, browser } = installFakeSupabase()
+const { server, phone } = installFakePhone()
 
 // A restart in one test process makes a second auth client; a real one does not.
 const warn = console.warn
@@ -23,78 +26,197 @@ vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
   if (!String(args[0]).includes('Multiple GoTrueClient instances')) warn(...args)
 })
 
-type App = typeof import('./outbox')
+/** The app's modules, as one page load has them. */
+interface App {
+  outbox: typeof import('./outbox')
+  auth: typeof import('./auth')
+  api: typeof import('./api')
+  store: typeof import('./tournamentStore')
+  cache: typeof import('./snapshotCache')
+}
 let app: App | null = null
 
-/** Close the app if it is open, then open it: a fresh page and modules over whatever IndexedDB holds. */
+const LOOKUP: LookupResult = { id: 't1', slug: 'ensayo', name: 'Ensayo', tagline: null, logoUrl: null, accentColor: null, status: 'live', joinCode: 'ABC123', players: [] }
+const ME: Me = { playerId: 'p1', isOrganizer: false, isAdmin: false, via: 'device' }
+
+/** Close the app if it is open, then load it again: a fresh page and modules over what the phone stored. */
 async function restart(): Promise<App> {
-  app?._outboxTest.db()?.close()
-  browser.reloadPage()
+  app?.outbox._outboxTest.db()?.close()
+  phone.reloadPage()
   vi.resetModules()
-  app = await import('./outbox')
-  const { useTournament } = await import('./tournamentStore')
-  useTournament.setState({ tournamentId: 't1' })
+  app = {
+    outbox: await import('./outbox'),
+    auth: await import('./auth'),
+    api: await import('./api'),
+    store: await import('./tournamentStore'),
+    cache: await import('./snapshotCache'),
+  }
   return app
+}
+
+/**
+ * Opening the app on the tournament: AppShell confirms the stored session and
+ * starts the outbox; the gate puts up the boards the phone kept, and points
+ * the outbox's counters at that tournament (`enterFromCache`).
+ */
+async function open(a: App): Promise<void> {
+  await Promise.all([a.auth.useAuth.getState().init(), a.outbox.startOutbox()])
+  await openFromPhone(a)
+}
+async function openFromPhone(a: App): Promise<void> {
+  const kept = await a.cache.readCached('ensayo')
+  if (!kept) return
+  a.store.useTournament.getState().seed(kept.entry.tournamentId, kept.snapshot, kept.savedAt)
+  a.outbox.refreshOutboxCounters()
+}
+
+/** The gate, once the server confirmed the player: the tournament's entry and its boards stay on the phone. */
+async function keepOnPhone(a: App): Promise<void> {
+  await a.cache.saveEntry({ slug: 'ensayo', tournamentId: 't1', lookup: LOOKUP, me: ME })
+  a.store.useTournament.setState({ tournamentId: 't1' })
+  await a.store.useTournament.getState().reload()
+  for (let i = 0; i < 500 && !(await a.cache.readCached('ensayo')); i++) await turn()
+  expect(await a.cache.readCached('ensayo'), 'the boards kept on the phone').not.toBeNull()
+}
+
+/** What the boards show for a player's hole: the snapshot's row and the engine's gross. */
+function shown(a: App, player: string, hole: number) {
+  const data = a.store.useTournament.getState().data!
+  const row = data.snapshot.scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
+  const gross = data.state.core.rounds.r1?.[player]?.holes.find((h) => h.hole === hole)?.gross ?? null
+  return { strokes: row?.strokes ?? null, gross }
+}
+
+function deleteDatabase(name: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(name)
+    req.onsuccess = () => resolve()
+    req.onerror = () => reject(req.error)
+  })
 }
 
 // Each restart loads the app's modules again, which is slower than the rest of the suite.
 describe('a hole saved with no signal', { timeout: 20_000 }, () => {
   beforeEach(async () => {
     server.reset()
-    browser.online = true
+    phone.online = true
     // A phone that has never stored anything.
-    await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.deleteDatabase('cardi-golf-outbox')
-      req.onsuccess = () => resolve()
-      req.onerror = () => reject(req.error)
-    })
+    phone.localStorage.clear()
+    await deleteDatabase('cardi-golf-outbox')
   })
-  afterEach(() => {
-    app?._outboxTest.db()?.close()
-    browser.reloadPage()
+  afterEach(async () => {
+    // The saved boards go through the page's own connection: deleting that database under it would only make Dexie complain.
+    await app?.cache.clearAllCached()
+    app?.outbox._outboxTest.db()?.close()
+    phone.reloadPage()
     app = null
   })
 
-  it('survives a restart and goes out when the signal returns', async () => {
-    browser.goOffline()
-    const before = await restart()
-    await before.startOutbox()
-    await before.enqueueScore('t1', holeScore('p1', 7, 5))
-    await before.enqueueScore('t1', holeScore('p2', 7, 6))
-    await before.enqueueTiebreak('t1', snakeAnswer(7, 'p2'))
-    expect(before.useOutbox.getState()).toMatchObject({ pending: 3, pendingHoles: 1 })
+  it('survives a restart, shows on the boards the phone opens with, and goes out when the signal returns', async () => {
+    // The first time the app opens on the tournament, with signal: the session, the PIN, the boards kept.
+    const first = await restart()
+    await open(first)
+    const player = await enterAs('p1')
+    await keepOnPhone(first)
 
+    // No signal on the course.
+    phone.goOffline()
+    await first.outbox.enqueueScore('t1', holeScore('p1', 7, 5))
+    await first.outbox.enqueueScore('t1', holeScore('p2', 7, 6))
+    await first.outbox.enqueueTiebreak('t1', snakeAnswer(7, 'p2'))
+    expect(first.outbox.useOutbox.getState()).toMatchObject({ pending: 3, pendingHoles: 1 })
+
+    // The phone restarts, still with no signal.
     const after = await restart()
-    await after.startOutbox()
-    // Restored from the phone and counted before any signal; nothing went out offline.
-    expect(after._outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:7', 'score:r1:p2:7', 'tiebreak:r1:g1:7'])
-    expect(after.useOutbox.getState()).toMatchObject({ pending: 3, pendingHoles: 1, rejected: [] })
-    expect(server.requests).toEqual([])
+    await open(after)
+    // Restored from the phone and counted before any signal, as the player's; nothing went out offline.
+    expect(after.outbox._outboxTest.queue().map((x) => [x.key, x.actingUid])).toEqual([
+      ['score:r1:p1:7', player],
+      ['score:r1:p2:7', player],
+      ['tiebreak:r1:g1:7', player],
+    ])
+    expect(after.outbox.useOutbox.getState()).toMatchObject({ pending: 3, pendingHoles: 1, held: 0, rejected: [] })
+    expect(server.writes).toEqual([])
+    // The boards it opened from its saved copy show them at once.
+    expect(shown(after, 'p1', 7)).toEqual({ strokes: 5, gross: 5 })
+    expect(shown(after, 'p2', 7)).toEqual({ strokes: 6, gross: 6 })
+    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' })])
 
-    // The signal comes back while the app is open: it sends everything by itself.
-    browser.goOnline()
-    await until(() => after.useOutbox.getState().pending === 0, 'the restored writes to reach the server')
+    // The signal comes back while the app is open: it sends everything by itself, as the player.
+    phone.goOnline()
+    await until(() => after.outbox.useOutbox.getState().pending === 0, 'the restored writes to reach the server')
     expect(server.score('p1', 7)).toMatchObject({ strokes: 5, putts: 2 })
     expect(server.score('p2', 7)).toMatchObject({ strokes: 6, putts: 2 })
     expect(server.tables.snake_tiebreaks).toEqual([expect.objectContaining({ hole: 7, last_holed_player_id: 'p2' })])
+    expect(server.writes.map((w) => [w.table, w.by])).toEqual([
+      ['scores', player],
+      ['scores', player],
+      ['snake_tiebreaks', player],
+    ])
     expect(server.writeRequests('scores')).toHaveLength(2)
-    expect(await after._outboxTest.stored()).toEqual([])
+    expect(await after.outbox._outboxTest.stored()).toEqual([])
   })
 
   it('is sent as soon as the app opens again with signal', async () => {
-    browser.goOffline()
-    const before = await restart()
-    await before.startOutbox()
-    await before.enqueueScore('t1', holeScore('p3', 8, 4))
+    const first = await restart()
+    await open(first)
+    const player = await enterAs('p1')
+    phone.goOffline()
+    await first.outbox.enqueueScore('t1', holeScore('p3', 8, 4))
 
     // The signal came back while the app was closed: no `online` event will come.
-    browser.online = true
+    phone.online = true
     const after = await restart()
-    await after.startOutbox()
+    await open(after)
     await until(() => server.score('p3', 8) !== undefined, 'the kept hole to reach the server')
     expect(server.score('p3', 8)).toMatchObject({ strokes: 4 })
-    await until(() => after.useOutbox.getState().pending === 0, 'the outbox to empty')
-    expect(server.writeRequests('scores')).toHaveLength(1)
-    expect(await after._outboxTest.stored()).toEqual([])
+    await until(() => after.outbox.useOutbox.getState().pending === 0, 'the outbox to empty')
+    expect(server.writes.map((w) => w.by)).toEqual([player])
+    expect(server.writeRequests()).toHaveLength(1)
+    expect(await after.outbox._outboxTest.stored()).toEqual([])
+  })
+
+  it('saved before the reopened session is confirmed: waits for the PIN when that session turns out dead, then goes as the player', async () => {
+    const first = await restart()
+    await open(first)
+    const before = await enterAs('p1')
+    await keepOnPhone(first)
+
+    // Closed overnight: the token runs out, and the server forgets the refresh token.
+    server.auth.lapse(before)
+    phone.ageSession()
+
+    // On the course the app opens from its saved boards, and a hole is saved before the session is confirmed.
+    const after = await restart()
+    await after.outbox.startOutbox()
+    await openFromPhone(after)
+    await after.outbox.enqueueScore('t1', holeScore('p1', 1, 5))
+    expect(after.outbox._outboxTest.queue().map((x) => x.actingUid ?? null)).toEqual([null])
+    expect(shown(after, 'p1', 1)).toEqual({ strokes: 5, gross: 5 })
+
+    // Confirming the session: auth-js refreshes it, the server refuses, and the phone is signed out.
+    await after.auth.useAuth.getState().init()
+    expect(server.wire.filter((r) => r.target === 'auth/token').map((r) => r.result)).toEqual([400])
+    expect(after.auth.useAuth.getState().user).toBeNull()
+    // The gate starts a new anonymous session. The hole must not go out under it: the server would refuse it for good.
+    await after.auth.ensureSession()
+    const fresh = after.auth.useAuth.getState().user!.id
+    expect(fresh).not.toBe(before)
+    phone.goOffline()
+    phone.goOnline()
+    phone.show()
+    await after.outbox.flush()
+    await settle(after.outbox.useOutbox)
+    expect(server.writes).toEqual([])
+    expect(server.writeRequests()).toEqual([])
+    expect(after.outbox.useOutbox.getState()).toMatchObject({ pending: 1, held: 1, rejected: [] })
+
+    // The PIN, and the gate confirming the player: the hole goes out by itself, as the player.
+    expect(await after.api.claimPlayer('p1', PIN)).toMatchObject({ ok: true })
+    expect(await after.api.myMembership('t1')).toMatchObject({ playerId: 'p1' })
+    await after.outbox.adoptQueuedWrites('t1')
+    await until(() => after.outbox.useOutbox.getState().pending === 0, 'the hole to go out')
+    expect(server.writes.map((w) => [w.row.player_id, w.row.hole, w.row.strokes, w.by])).toEqual([['p1', 1, 5, fresh]])
+    expect(after.outbox.useOutbox.getState()).toMatchObject({ held: 0, rejected: [] })
   })
 })
