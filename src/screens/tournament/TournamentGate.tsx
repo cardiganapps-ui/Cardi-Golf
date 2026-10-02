@@ -18,7 +18,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
-import { ensureSession, signedOutOnPurpose, useAuth } from '../../data/auth'
+import { ensureSession, signedOutOnPurpose, signOutsAsked, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { myDeviceClaim } from '../../data/profiles'
 import { setLastTournament } from '../../data/session'
@@ -99,6 +99,8 @@ export function TournamentGate() {
   useLayoutEffect(() => {
     phaseNow.current = phase
   }, [phase])
+  /** The sign-outs asked for before this link opened: one asked for while it is open ends the retries (below). */
+  const signOutsAtOpen = useRef(signOutsAsked())
 
   /**
    * Show the boards this phone saved for the link (§8): at once on open, and
@@ -120,6 +122,7 @@ export function TournamentGate() {
     settled.current = false
     recheck.current = false
     openSlug.current = slug
+    signOutsAtOpen.current = signOutsAsked()
     // Another link: what the gate knew was about the one before.
     setPhase((p) => (p.kind === 'loading' ? p : { kind: 'loading' }))
     void enterFromCache()
@@ -259,6 +262,11 @@ export function TournamentGate() {
   // again every 20 s for as long as the app stayed open changed nothing.
   useEffect(() => {
     const retry = () => {
+      // Its person is signing out on purpose (asked while this link was open):
+      // the phone is on its way home, and asking again once the session is
+      // gone would sign it in anonymously behind them. A link opened after a
+      // sign-out asks as usual.
+      if (signOutsAsked() !== signOutsAtOpen.current && signedOutOnPurpose()) return
       const p = phaseNow.current
       const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || useTournament.getState().source !== 'server'))
       if (asking.current > 0 || !waiting) return

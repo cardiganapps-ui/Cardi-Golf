@@ -24,6 +24,8 @@ const server = vi.hoisted(() => ({
   releaseDevice: vi.fn(async () => undefined),
   /** The person signed out on purpose (auth's `signedOutOnPurpose`). */
   signedOut: false,
+  /** How many sign-outs this tab has asked for (auth's `signOutsAsked`). */
+  signOuts: 0,
 }))
 const phone = vi.hoisted(() => ({
   readCached: vi.fn(),
@@ -36,6 +38,7 @@ vi.mock('../../data/auth', async () => {
   return {
     ensureSession: server.ensureSession,
     signedOutOnPurpose: () => server.signedOut,
+    signOutsAsked: () => server.signOuts,
     useAuth: create(() => ({ ready: true, user: { id: 'uid-phone' } as { id: string } | null })),
   }
 })
@@ -131,6 +134,7 @@ beforeEach(() => {
   server.ensureSession.mockResolvedValue({})
   server.lookupTournament.mockResolvedValue(fx.lookup)
   server.signedOut = false
+  server.signOuts = 0
 })
 afterEach(() => {
   cleanup()
@@ -319,5 +323,47 @@ describe('the phone loses its session mid-round (REL-16)', () => {
       await vi.advanceTimersByTimeAsync(20_000)
     })
     expect(await screen.findByRole('button', { name: 'Entrar con el PIN' })).toBeTruthy()
+  })
+})
+
+/**
+ * A sign-out asked for while the gate is still asking (lie-fi, the boards are
+ * the phone's copy): once auth-js removes the session, a retry on the timer,
+ * the signal or the app shown again found no session and signed the phone in
+ * anonymously behind the person, before the screen went home.
+ */
+describe('a sign-out asked for while the gate is still asking', () => {
+  it('ends the asking: no session starts behind the person', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.ensureSession.mockRejectedValue(new Error('sin señal'))
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await vi.waitFor(() => expect(server.ensureSession).toHaveBeenCalled())
+    // Más › «Cerrar sesión»: asked for, then auth-js removes the session.
+    server.signOuts++
+    server.signedOut = true
+    await act(async () => useAuth.setState({ user: null }))
+    const sessions = server.ensureSession.mock.calls.length
+    await backOnline()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+    expect(server.ensureSession.mock.calls.length).toBe(sessions)
+  })
+
+  it('a link opened after a sign-out asks as usual, with no signal at first too', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    server.signOuts = 1
+    server.signedOut = true
+    useAuth.setState({ user: null })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await backOnline()
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
   })
 })

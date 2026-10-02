@@ -201,6 +201,11 @@ export function signOutRunning(): boolean {
   return ending
 }
 
+/** How many sign-outs this tab has asked for: a screen that was open when one started knows its person is leaving. */
+export function signOutsAsked(): number {
+  return signOutSeq
+}
+
 /** For tests: no sign-out asked for, and none still running (a later answer of one changes nothing). */
 export const _authTest = {
   resetSignOut() {
