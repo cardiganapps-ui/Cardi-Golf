@@ -22,8 +22,9 @@ export function CountUp({ value, format, delayMs = 0 }: { value: number; format:
     const tick = (now: number) => {
       start ??= now + delayMs
       const p = Math.min(1, Math.max(0, (now - start) / (REVEAL.countUp * 1000)))
-      // Ease out: fast at first, settling on the value.
-      onScreen.current = Math.round(from + (value - from) * (1 - (1 - p) ** 3))
+      // Ease out: fast at first, settling on the value. The frames between are whole numbers; the last is the
+      // value itself, so a match-play 1.5 ends on «1½», not on a rounded «2» (MOT-23).
+      onScreen.current = p >= 1 ? value : Math.round(from + (value - from) * (1 - (1 - p) ** 3))
       setShown(onScreen.current)
       if (p < 1) frame = requestAnimationFrame(tick)
     }

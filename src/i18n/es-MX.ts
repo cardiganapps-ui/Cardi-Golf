@@ -2088,7 +2088,12 @@ export const t = {
     },
     trophy: 'Se lleva el Putter',
     champion: 'Campeón',
-    withPoints: (pts: number) => `${pts} puntos`,
+    /** Match points come in halves and read as golf writes them, as on the standings: «1½ puntos», «½ punto». */
+    withPoints: (pts: number) => {
+      const whole = Math.floor(pts)
+      const figure = pts - whole === 0.5 ? `${whole || ''}½` : String(pts)
+      return `${figure} ${pts === 1 || pts === 0.5 ? 'punto' : 'puntos'}`
+    },
     /** On a plate after «Víbora de Oro», which already says what the holes are. */
     holesHeld: (n: number) => (n === 1 ? '1 hoyo' : `${n} hoyos`),
   },

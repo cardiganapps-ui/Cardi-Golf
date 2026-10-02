@@ -8,6 +8,7 @@ import { act, cleanup, render } from '@testing-library/react'
 import { MotionConfig } from 'motion/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { REVEAL } from '../design/motion'
+import { t } from '../i18n/es-MX'
 import { CountUp } from './CountUp'
 
 const fmt = (n: number) => `${n} puntos`
@@ -76,6 +77,29 @@ describe('CountUp', () => {
     // In the same cell as the figure, unseen and unspoken.
     expect(final.parentElement).toBe(container.querySelector('[aria-hidden="true"]')!.parentElement)
     expect(final.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('lands on the value itself, not on a rounded one: a match-play champion on 1.5 ends on «1½ puntos», never «2 puntos» (MOT-23)', () => {
+    const { container } = render(<CountUp value={1.5} format={t.ceremony.withPoints} />)
+    advance(COUNT_MS / 2)
+    advance(COUNT_MS)
+    expect(seen(container)).toBe('1½ puntos')
+    // What the room reads at the end is what a screen reader and reduced motion get.
+    expect(seen(container)).toBe(spoken(container))
+    expect(seen(container)).toBe(container.querySelector('[data-final]')!.textContent)
+  })
+
+  it('a figure that changes to a half mid-count still ends exactly on it', () => {
+    const { container, rerender } = render(<CountUp value={3} format={t.ceremony.withPoints} />)
+    advance(COUNT_MS / 2)
+    rerender(<CountUp value={2.5} format={t.ceremony.withPoints} />)
+    advance(COUNT_MS * 2)
+    expect(seen(container)).toBe('2½ puntos')
+  })
+
+  it('points read as golf writes them: halves as ½, and one point is «punto»', () => {
+    const f = t.ceremony.withPoints
+    expect([0, 0.5, 1, 1.5, 2, 73].map(f)).toEqual(['0 puntos', '½ punto', '1 punto', '1½ puntos', '2 puntos', '73 puntos'])
   })
 
   it('with reduced motion the value is there at once', () => {
