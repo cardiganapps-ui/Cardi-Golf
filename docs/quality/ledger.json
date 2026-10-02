@@ -944,10 +944,13 @@
       "phase": 1,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 90,
+      "tests": [
+        "src/data/backup.restore.test.ts",
+        "supabase/tests/restore_roundtrip.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migration 0025 restores the three side-game tables and is proven on the local harness (the round trip fails on 0020 and passes on 0025, and re-running the file is harmless). Production keeps 0020's function until 0025 is applied, which needs SUPABASE_PAT (docs/handoff.md); the RUNBOOK says to check side games by hand after a restore until then. Status moves to fixed when it is applied."
     },
     {
       "id": "DB-03",
