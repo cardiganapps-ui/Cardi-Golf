@@ -1192,6 +1192,8 @@ export const t = {
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
     alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
     notFound: 'Ese torneo no existe. Revisa el enlace o el código.',
+    /** «no existe», when this phone still had writes of that tournament: they can never go out now. */
+    goneUnsent: 'Lo que este teléfono tenía sin subir de ese torneo ya no se puede subir.',
     noPlayersHint: 'El Comité los carga en un momento. Mientras, ve preparando el swing.',
     noPlayers: 'El Comité todavía no ha cargado jugadores.',
     enterAs: (name: string) => `Entrar como ${name}`,
@@ -1222,6 +1224,8 @@ export const t = {
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
+    /** A write of a tournament that was deleted: it can never go out (its link leads nowhere). */
+    errGone: 'El torneo ya no existe.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
     /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
     errSession: 'Confirmando tu sesión… Se reintenta solo.',

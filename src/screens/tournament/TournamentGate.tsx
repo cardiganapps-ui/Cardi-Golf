@@ -22,7 +22,7 @@ import { ensureSession, signedOutOnPurpose, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { setLastTournament } from '../../data/session'
 import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
-import { adoptQueuedWrites, refreshOutboxCounters } from '../../data/outbox'
+import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { EnterScreen } from './EnterScreen'
@@ -67,7 +67,8 @@ const CACHE_RETRY_MS = 20_000
 /** After an ask that failed with signal, the next one comes this soon, doubling up to CACHE_RETRY_MS. */
 const RETRY_SOON_MS = 2_000
 
-type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
+/** `dropped`: writes this phone still had for the tournament that is gone, moved to the rejected list. */
+type Phase = { kind: 'loading' } | { kind: 'notFound'; dropped: number } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
 
 export function TournamentGate() {
   const { slug = '' } = useParams()
@@ -155,9 +156,15 @@ export function TournamentGate() {
         settled.current = true
         recheck.current = false
         failures.current = 0
-        // The link leads nowhere now (the tournament was deleted): what was saved under it goes too.
-        void clearCachedSlug(slug)
-        setPhase({ kind: 'notFound' })
+        // The link leads nowhere now (the tournament was deleted): what was
+        // saved under it goes too, and its writes, which can never go out now,
+        // move to the rejected list (held ones kept the phone from signing out
+        // or changing account for good).
+        void clearCachedSlug(slug).then(async (tid) => {
+          const dropped = await rejectGoneTournament(slug, tid)
+          if (dropped && !stale()) setPhase((p) => (p.kind === 'notFound' ? { kind: 'notFound', dropped } : p))
+        })
+        setPhase({ kind: 'notFound', dropped: 0 })
         return
       }
       const m = await myMembership(lookup.id)
@@ -300,7 +307,7 @@ export function TournamentGate() {
         <Wordmark />
         <EmptyState
           title={t.enter.notFound}
-          body={t.errors.notFoundHint}
+          body={phase.dropped ? `${t.enter.goneUnsent} ${t.errors.notFoundHint}` : t.errors.notFoundHint}
           action={
             <Link className="btn btn--secondary" to="/">
               {t.errors.backHome}

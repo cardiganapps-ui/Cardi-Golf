@@ -163,21 +163,21 @@ describe('what still has to go out before the phone changes who it is', () => {
   it('names the tournament, for any tournament, and says whether signal is enough', async () => {
     expect(unsentWrites()).toBeNull()
     await _outboxTest.enqueue({ ...score(3), tournamentId: 't-otro' })
-    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'signal' })
+    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'signal', name: null })
     expect(hasUnsentWrites()).toBe(true)
   })
 
   it('…or the PIN: the writes were queued under an identity the device no longer has', async () => {
     await _outboxTest.enqueue({ ...score(3), tournamentId: 't-otro' })
     becomes('uid-b')
-    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'pin' })
+    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'pin', name: null })
   })
 
   it('saved before the session was confirmed: opening the tournament with signal sends them, no PIN', async () => {
     uid = null
     await _outboxTest.enqueue(score(3))
     becomes('uid-a')
-    expect(unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal' })
+    expect(unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal', name: null })
   })
 
   it('a write a newer build queued never blocks: this build can never send it, and it stays on the phone', async () => {

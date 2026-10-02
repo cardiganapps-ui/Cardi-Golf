@@ -59,7 +59,7 @@ const { useMyProfile } = await import('./profiles')
 const { t } = await import('../i18n/es-MX')
 const { _outboxTest } = await import('./outbox')
 const { getLastTournament, setLastTournament } = await import('./session')
-const { readCached, saveEntry, saveSnapshot } = await import('./snapshotCache')
+const { clearAllCached, readCached, saveEntry, saveSnapshot } = await import('./snapshotCache')
 const { getFixture } = await import('../dev/fixtures')
 
 const fx = getFixture('minimal4-live')!
@@ -133,6 +133,21 @@ describe('what the refusal says', () => {
   it('says the PIN, not signal, when the phone is someone else now', async () => {
     await holeOfSaved()
     useAuth.setState({ user: { id: 'uid-b' } as never })
+    expect(await signOutSafely()).toEqual({ done: false, reason: t.account.unsentPin(name, 'signOut') })
+  })
+
+  it('names the tournament from its writes once the boards saved on the phone are gone (Entrar and «no existe» clear them)', async () => {
+    await clearAllCached()
+    await _outboxTest.enqueue({
+      key: 'score:r1:p1:4',
+      kind: 'score',
+      tournamentId: id,
+      tournamentName: name,
+      actingUid: 'uid-viejo',
+      payload: { round_id: 'r1', player_id: 'p1', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+      attempts: 0,
+      createdAt: 1,
+    })
     expect(await signOutSafely()).toEqual({ done: false, reason: t.account.unsentPin(name, 'signOut') })
   })
 })

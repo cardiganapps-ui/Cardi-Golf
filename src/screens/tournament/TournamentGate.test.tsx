@@ -35,11 +35,11 @@ vi.mock('../../data/api', () => ({
   releaseDevice: server.releaseDevice,
 }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn() }))
+vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0) }))
 vi.mock('./EnterScreen', () => ({ EnterScreen: () => <p>Entrar</p> }))
 
 import { getFixture } from '../../dev/fixtures'
-import { adoptQueuedWrites } from '../../data/outbox'
+import { adoptQueuedWrites, rejectGoneTournament } from '../../data/outbox'
 import { t } from '../../i18n/es-MX'
 import { clearCached, readCached, saveEntry, saveSnapshot } from '../../data/snapshotCache'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -186,6 +186,26 @@ describe('saved boards that no longer belong here', () => {
     open()
     expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
     await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+  })
+
+  it('and its writes, which can never go out now, leave the queue (they kept the phone from signing out), saying so', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(null)
+    vi.mocked(rejectGoneTournament).mockResolvedValueOnce(2)
+    open()
+    expect(await screen.findByText(t.enter.goneUnsent, { exact: false })).toBeTruthy()
+    expect(rejectGoneTournament).toHaveBeenCalledWith(slug, id)
+  })
+
+  it('a join code that stopped working says «no existe» but moves nothing it cannot tie to the code', async () => {
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(null)
+    vi.mocked(rejectGoneTournament).mockClear()
+    open('ABC123')
+    expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
+    await vi.waitFor(() => expect(rejectGoneTournament).toHaveBeenCalledWith('ABC123', null))
+    expect(screen.queryByText(t.enter.goneUnsent, { exact: false })).toBeNull()
   })
 
   it('a player who leaves takes the saved boards with him', async () => {

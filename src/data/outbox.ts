@@ -36,6 +36,14 @@ interface ItemBase {
    */
   actingUid?: string | null
   lastError?: string
+  /**
+   * The tournament's name and slug when the write was queued. The refusal to
+   * sign out or change account names the tournament from it once the boards
+   * saved on the phone are gone (Entrar and «no existe» clear them), and a
+   * link that leads nowhere finds its writes by the slug.
+   */
+  tournamentName?: string
+  slug?: string
 }
 export type OutboxItem =
   | (ItemBase & { kind: 'score'; payload: ScorePayload })
@@ -266,13 +274,34 @@ export function queuedFor(tournamentId: string): { holes: number; heldHoles: num
  * so counting them kept a person signed in for good. They stay on the phone,
  * for that build to send after the PIN.
  */
-export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin' } | null {
+export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin'; name: string | null } | null {
   const mine = queue.filter((x) => !isForeign(x))
   const first = mine[0]
   if (!first) return null
   const uid = currentUid()
   const pin = mine.some((x) => x.tournamentId === first.tournamentId && !!x.actingUid && x.actingUid !== uid)
-  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal' }
+  // The name it had when the newest of them was queued: the boards saved on the phone may be gone.
+  const name = mine.filter((x) => x.tournamentId === first.tournamentId && !!x.tournamentName).at(-1)?.tournamentName ?? null
+  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal', name }
+}
+
+/**
+ * The tournament at `slug` no longer exists (its link leads nowhere: it was
+ * deleted). Its writes can never go out, and the held ones waited for a PIN
+ * that could never come, which kept the phone from signing out or changing
+ * account for good. They move to the rejected list saying why, like any write
+ * the server refuses for good: by the tournament's id (from the boards the
+ * phone kept under that slug) or by the slug saved on the write. Writes a
+ * newer build queued stay for it. Returns how many moved.
+ */
+export async function rejectGoneTournament(slug: string, tournamentId: string | null): Promise<number> {
+  const gone = queue.filter((x) => !isForeign(x) && ((!!tournamentId && x.tournamentId === tournamentId) || x.slug === slug))
+  for (const it of gone) await reject(it, t.sync.errGone)
+  if (gone.length) {
+    publish()
+    announce()
+  }
+  return gone.length
 }
 /** Anything still to push, for any tournament: signing out waits for it. */
 export function hasUnsentWrites(): boolean {
@@ -398,7 +427,16 @@ export class OutboxStorageError extends UserError {
 async function enqueue(newItem: NewItem) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
-  const item = { ...newItem, seq: nextSeq(), actingUid: newItem.actingUid ?? currentUid() } as OutboxItem
+  // Writes are queued from the tournament open on screen: its name and slug go with them.
+  const open = useTournament.getState()
+  const tour = open.tournamentId === newItem.tournamentId ? open.data?.snapshot.tournament : undefined
+  const item = {
+    ...newItem,
+    seq: nextSeq(),
+    actingUid: newItem.actingUid ?? currentUid(),
+    tournamentName: newItem.tournamentName ?? tour?.name,
+    slug: newItem.slug ?? tour?.slug,
+  } as OutboxItem
   void askPersistence()
   // The phone's storage first, memory second (REL-18): a write that IndexedDB
   // refused must not look saved in this tab and vanish when it closes. Never

@@ -137,11 +137,15 @@ export async function signInWithGoogleInstead(next: string) {
   if (error) throw error
 }
 
-/** The name of the tournament with id `tid`: the one open, else the boards saved on the phone. */
-async function tournamentName(tid: string): Promise<string | null> {
+/**
+ * The name of the tournament with id `tid`: the one open, else the boards
+ * saved on the phone, else the name its writes were queued under (Entrar and
+ * «no existe» clear the saved boards, and the refusal said «un torneo»).
+ */
+async function tournamentName(tid: string, queuedAs: string | null): Promise<string | null> {
   const open = useTournament.getState()
   if (open.tournamentId === tid && open.data) return open.data.snapshot.tournament.name
-  return cachedTournamentName(tid)
+  return (await cachedTournamentName(tid)) ?? queuedAs
 }
 
 /**
@@ -155,7 +159,7 @@ async function tournamentName(tid: string): Promise<string | null> {
 export async function unsentReason(action: 'signOut' | 'switch'): Promise<string | null> {
   const u = unsentWrites()
   if (!u) return null
-  const name = await tournamentName(u.tournamentId)
+  const name = await tournamentName(u.tournamentId, u.name)
   return u.waitsFor === 'pin' ? t.account.unsentPin(name, action) : t.account.unsentSignal(name, action)
 }
 async function refuseWithUnsent(action: 'switch') {

@@ -46,7 +46,7 @@ vi.mock('../../data/api', () => ({
 }))
 vi.mock('../../data/snapshotCache', () => ({ ...phone, saveSnapshot: vi.fn(async () => undefined) }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn() }))
+vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0) }))
 vi.mock('./EnterScreen', () => ({
   EnterScreen: ({ onEntered }: { onEntered: () => void }) => (
     <button type="button" onClick={onEntered}>
