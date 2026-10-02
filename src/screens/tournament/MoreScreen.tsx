@@ -64,8 +64,9 @@ export function MoreScreen() {
   }
 
   async function logout() {
-    if (await signOutSafely()) navigate('/')
-    else toast(t.account.signOutBlocked)
+    const r = await signOutSafely()
+    if (r.done) navigate('/')
+    else toast(r.reason)
   }
   const player = data?.snapshot.players.find((p) => p.id === me.playerId)
   const link = `${window.location.origin}/t/${slug}`

@@ -51,7 +51,7 @@ export function MyTournamentsScreen() {
           <Wordmark />
         </Link>
         {/* The same sign-out as everywhere: never with holes still on the phone, and it takes the phone's saved boards. */}
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => void signOutSafely().then((done) => (done ? navigate('/') : toast(t.account.signOutBlocked)))}>
+        <button className="btn btn--ghost btn--sm" type="button" onClick={() => void signOutSafely().then((r) => (r.done ? navigate('/') : toast(r.reason)))}>
           {t.common.logout}
         </button>
       </div>

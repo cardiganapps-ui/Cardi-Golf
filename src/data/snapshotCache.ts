@@ -97,6 +97,15 @@ export async function hasCached(slugOrCode: string): Promise<boolean> {
     return false
   }
 }
+/** The name of a tournament whose boards the phone keeps, by its id (the outbox knows only ids). */
+export async function cachedTournamentName(tournamentId: string): Promise<string | null> {
+  try {
+    const entry = await getDb()?.entries.where('tournamentId').equals(tournamentId).first()
+    return entry?.lookup.name ?? null
+  } catch {
+    return null
+  }
+}
 /** Forget what this phone saved for a tournament: its entries, under any key, and its boards. */
 export async function clearCached(tournamentId: string): Promise<void> {
   try {

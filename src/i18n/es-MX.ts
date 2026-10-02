@@ -726,7 +726,15 @@ export const t = {
     codeSent: (email: string) => `Te mandamos un código a ${email}. Escríbelo aquí.`,
     google: 'Continuar con Google',
     or: 'o con tu correo',
-    syncFirst: 'Espera a que se sincronicen tus hoyos antes de cambiar de cuenta.',
+    /**
+     * Why the phone may not sign out or change account yet: what was entered in
+     * a tournament is still on the phone. `name` null: a tournament the phone
+     * has no name for.
+     */
+    unsentSignal: (name: string | null, action: 'signOut' | 'switch') =>
+      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
+    unsentPin: (name: string | null, action: 'signOut' | 'switch') =>
+      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
     tooFast: 'Espera un minuto antes de pedir otro código.',
     badEmail: 'Revisa el correo.',
     googleTaken: 'Esa cuenta de Google ya tiene perfil.',
@@ -737,7 +745,8 @@ export const t = {
     linkTaken: 'Ese jugador ya está en el perfil de otra persona. Pídele al Comité que lo revise.',
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
-    signOutBlocked: 'Tienes hoyos sin sincronizar. Espera a tener señal antes de cerrar sesión.',
+    /** Signing out needs the server to end the session (no signal and an expired token): nothing was cleared. */
+    signOutNeedsSignal: 'Para cerrar sesión hace falta señal. Sigues dentro y lo guardado en el teléfono sigue aquí.',
     enterProfile: 'Entrar a mi perfil',
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },

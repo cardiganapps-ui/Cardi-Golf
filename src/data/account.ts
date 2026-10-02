@@ -15,10 +15,11 @@ import type { AuthError } from '@supabase/supabase-js'
 import { t } from '../i18n/es-MX'
 import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
-import { hasUnsentWrites, useOutbox } from './outbox'
+import { unsentWrites } from './outbox'
 import { signOut } from './auth'
 import { setLastTournament } from './session'
-import { clearAllCached } from './snapshotCache'
+import { cachedTournamentName, clearAllCached } from './snapshotCache'
+import { useTournament } from './tournamentStore'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
 
 /** Only same-app paths are followed after signing in. */
@@ -44,7 +45,7 @@ export async function sendProfileCode(email: string): Promise<CodeMode> {
     if (!error) return 'convert'
     if (!emailTaken(error)) throw error
     // The address has an account already: sign in to it and bring this device's player along.
-    if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
+    await refuseWithUnsent('switch')
     await stashLinkToken()
   }
   const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: back() } })
@@ -118,7 +119,7 @@ export async function continueWithGoogle(next: string) {
   const sb = supabase()
   const { data } = await sb.auth.getSession()
   if (data.session?.user?.is_anonymous) {
-    if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
+    await refuseWithUnsent('switch')
     const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
     if (error) throw error
     return
@@ -129,24 +130,56 @@ export async function continueWithGoogle(next: string) {
 
 /** The Google account already belongs to another Polo account: sign in to that one, bringing this device's player. */
 export async function signInWithGoogleInstead(next: string) {
-  if (useOutbox.getState().pending > 0) throw new UserError(t.account.syncFirst)
+  await refuseWithUnsent('switch')
   await stashLinkToken()
   const { error } = await supabase().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
   if (error) throw error
 }
 
+/** The name of the tournament with id `tid`: the one open, else the boards saved on the phone. */
+async function tournamentName(tid: string): Promise<string | null> {
+  const open = useTournament.getState()
+  if (open.tournamentId === tid && open.data) return open.data.snapshot.tournament.name
+  return cachedTournamentName(tid)
+}
+
+/**
+ * Why this device may not change who it is yet, in words: which tournament
+ * still has writes on the phone, and whether they wait for signal or for the
+ * PIN. Null: nothing in the way. Counts every tournament (the account checks
+ * counted only the one open on screen, and a hole of another tournament went
+ * on to wait for a PIN), and said «espera a tener señal» even when no signal
+ * would ever send them.
+ */
+export async function unsentReason(action: 'signOut' | 'switch'): Promise<string | null> {
+  const u = unsentWrites()
+  if (!u) return null
+  const name = await tournamentName(u.tournamentId)
+  return u.waitsFor === 'pin' ? t.account.unsentPin(name, action) : t.account.unsentSignal(name, action)
+}
+async function refuseWithUnsent(action: 'switch') {
+  const reason = await unsentReason(action)
+  if (reason) throw new UserError(reason)
+}
+
+/** `done`: signed out; otherwise why not, ready to show. */
+export type SignOutResult = { done: true } | { done: false; reason: string }
+
 /**
  * Signing out drops this device's session; not while it still holds unsent
- * scores, for any tournament (it counted only the one open on screen). The
- * boards saved on the phone and «Tu último torneo» go with it: on a shared
- * phone the next person saw the previous one's boards and role until the
- * server answered, and for good with no signal.
+ * writes, for any tournament. The boards saved on the phone and «Tu último
+ * torneo» go with it: on a shared phone the next person saw the previous
+ * one's boards and role until the server answered, and for good with no
+ * signal. Only once the session is really gone: with no signal and an
+ * expired token it stays, and this used to say it worked and wipe the boards
+ * of a person who was still signed in.
  */
-export async function signOutSafely(): Promise<boolean> {
-  if (hasUnsentWrites()) return false
-  await signOut()
+export async function signOutSafely(): Promise<SignOutResult> {
+  const unsent = await unsentReason('signOut')
+  if (unsent) return { done: false, reason: unsent }
+  if (!(await signOut())) return { done: false, reason: t.account.signOutNeedsSignal }
   useMyProfile.getState().clear()
   setLastTournament(null)
   await clearAllCached()
-  return true
+  return { done: true }
 }

@@ -32,7 +32,7 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
 }))
 
-const { _outboxTest, adoptQueuedWrites, flush, queuedFor, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, flush, hasUnsentWrites, queuedFor, unsentWrites, useOutbox } = await import('./outbox')
 
 const score = (hole: number, player = 'p1') => ({
   key: `score:r1:${player}:${hole}`,
@@ -69,7 +69,7 @@ describe('outbox across a change of identity', () => {
     await flush()
     expect(pushed).toEqual([])
     expect(useOutbox.getState().rejected).toEqual([])
-    expect(queuedFor('t1')).toEqual({ holes: 2, heldHoles: 2 })
+    expect(queuedFor('t1')).toEqual({ holes: 2, heldHoles: 2, writes: 4 })
     expect(useOutbox.getState().held).toBe(4)
 
     // The player enters the PIN again: the gate confirms membership.
@@ -78,7 +78,7 @@ describe('outbox across a change of identity', () => {
     await flush()
     expect(pushed).toHaveLength(4)
     expect(_outboxTest.queue()).toEqual([])
-    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0 })
+    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0, writes: 0 })
   })
 
   it('still rejects a write the server refuses for the same identity', async () => {
@@ -103,7 +103,7 @@ describe('outbox across a change of identity', () => {
     await flush()
     expect(pushed).toEqual([])
     expect(useOutbox.getState().rejected).toEqual([])
-    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1 })
+    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1, writes: 1 })
     // The stored session was dead: a new anonymous one starts, before the PIN.
     becomes('uid-c')
     await flush()
@@ -113,7 +113,7 @@ describe('outbox across a change of identity', () => {
     await adoptQueuedWrites('t1')
     await flush()
     expect(pushed).toEqual([{ key: 'score:r1:p1:5', as: 'uid-c' }])
-    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0 })
+    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0, writes: 0 })
   })
 
   it('the held count follows the device\'s identity, not only the queue', async () => {
@@ -138,6 +138,54 @@ describe('outbox across a change of identity', () => {
     uid = 'uid-b'
     _outboxTest.reset()
     await _outboxTest.load()
-    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1 })
+    expect(queuedFor('t1')).toEqual({ holes: 1, heldHoles: 1, writes: 1 })
+  })
+})
+
+describe('what still has to go out before the phone changes who it is', () => {
+  beforeEach(async () => {
+    _outboxTest.reset()
+    await _outboxTest.clearStored()
+    uid = 'uid-a'
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+  })
+
+  it('counts a card signature, a snake answer or a hole award, not only score holes («Cambiar de jugador»)', async () => {
+    await _outboxTest.enqueue({ key: 'signature:r1:pair1', kind: 'signature', tournamentId: 't1', payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    expect(queuedFor('t1')).toEqual({ holes: 0, heldHoles: 0, writes: 1 })
+    await _outboxTest.enqueue({ key: 'tiebreak:r1:g1:7', kind: 'tiebreak', tournamentId: 't1', payload: { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p2', decided_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    expect(queuedFor('t1').writes).toBe(2)
+    expect(queuedFor('t-otro').writes).toBe(0)
+  })
+
+  it('names the tournament, for any tournament, and says whether signal is enough', async () => {
+    expect(unsentWrites()).toBeNull()
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-otro' })
+    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'signal' })
+    expect(hasUnsentWrites()).toBe(true)
+  })
+
+  it('…or the PIN: the writes were queued under an identity the device no longer has', async () => {
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-otro' })
+    becomes('uid-b')
+    expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'pin' })
+  })
+
+  it('saved before the session was confirmed: opening the tournament with signal sends them, no PIN', async () => {
+    uid = null
+    await _outboxTest.enqueue(score(3))
+    becomes('uid-a')
+    expect(unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal' })
+  })
+
+  it('a write a newer build queued never blocks: this build can never send it, and it stays on the phone', async () => {
+    const foreign = { ...score(9), key: 'photo:r1:p1:9', kind: 'photo' as unknown as 'score' }
+    await _outboxTest.enqueue(foreign)
+    expect(unsentWrites()).toBeNull()
+    expect(hasUnsentWrites()).toBe(false)
+    expect(queuedFor('t1').writes).toBe(0)
+    expect((await _outboxTest.stored()).map((x) => x.key)).toEqual(['photo:r1:p1:9'])
   })
 })

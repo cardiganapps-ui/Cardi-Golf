@@ -249,13 +249,34 @@ export async function adoptQueuedWrites(tournamentId: string) {
  * foursome's hole is four score rows). `heldHoles` wait for the player to
  * enter again.
  */
-export function queuedFor(tournamentId: string): { holes: number; heldHoles: number } {
+export function queuedFor(tournamentId: string): { holes: number; heldHoles: number; writes: number } {
   const mine = queue.filter((x) => x.tournamentId === tournamentId)
-  return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)) }
+  // `writes`: everything this build sends, card signatures, snake answers and hole awards too.
+  return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)), writes: mine.filter((x) => !isForeign(x)).length }
+}
+/**
+ * What still has to go out before this device may change who it is (sign
+ * out, another account), for any tournament: the first tournament with
+ * writes, and what they wait for. `pin`: some were queued under an identity
+ * the device no longer has and go out only once the player enters again;
+ * `signal`: they go out once the server answers (opening the tournament with
+ * signal also sends the ones saved before the session was confirmed).
+ *
+ * Writes a newer build queued do not count: this build can never send them,
+ * so counting them kept a person signed in for good. They stay on the phone,
+ * for that build to send after the PIN.
+ */
+export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin' } | null {
+  const mine = queue.filter((x) => !isForeign(x))
+  const first = mine[0]
+  if (!first) return null
+  const uid = currentUid()
+  const pin = mine.some((x) => x.tournamentId === first.tournamentId && !!x.actingUid && x.actingUid !== uid)
+  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal' }
 }
 /** Anything still to push, for any tournament: signing out waits for it. */
 export function hasUnsentWrites(): boolean {
-  return queue.length > 0
+  return unsentWrites() !== null
 }
 /** Distinct holes among queued score writes. */
 function holesIn(list: OutboxItem[]): number {
