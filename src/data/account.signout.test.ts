@@ -19,6 +19,8 @@ const auth = vi.hoisted(() => ({
   anonymous: true,
   oauth: 0,
   otp: 0,
+  /** What updateUser({ email }) answers: by default the address has an account already. */
+  updateUser: async (): Promise<{ error: unknown }> => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) }),
 }))
 vi.mock('../lib/supabase', () => ({
   supabaseConfigured: true,
@@ -31,8 +33,8 @@ vi.mock('../lib/supabase', () => ({
       },
       getSession: async () => ({ data: { session: { user: { id: 'uid-a', is_anonymous: auth.anonymous } } } }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
-      // The address already has an account: the device signs in to it instead of converting.
-      updateUser: async () => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) }),
+      // By default the address already has an account: the device signs in to it instead of converting.
+      updateUser: () => auth.updateUser(),
       signInWithOtp: async () => {
         auth.otp++
         return { error: null }
@@ -70,6 +72,7 @@ beforeEach(async () => {
   auth.oauth = 0
   auth.otp = 0
   auth.anonymous = true
+  auth.updateUser = async () => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) })
   auth.signOut = async () => {
     localStorage.removeItem('cardi-golf-auth')
     return { error: null }
@@ -87,11 +90,15 @@ beforeEach(async () => {
 })
 
 describe('signing out of a shared phone', () => {
-  it('takes the boards saved on the phone and «Tu último torneo» with the session', async () => {
+  it('takes the boards saved on the phone, «Tu último torneo» and the profile in memory with the session', async () => {
+    useMyProfile.setState({ profile: { id: 'uid-a', handle: 'ivanj' } as never, links: [{ playerId: 'p1' }] as never })
     expect(await signOutSafely()).toEqual({ done: true })
     expect(auth.signOuts).toBe(1)
     expect(await readCached(slug)).toBeNull()
     expect(getLastTournament()).toBeNull()
+    // The next person on the phone must not see the previous one's profile, even for a moment.
+    expect(useMyProfile.getState().profile).toBeNull()
+    expect(useMyProfile.getState().links).toEqual([])
   })
 
   it('never while a write is still on the phone, for any tournament, and then nothing goes', async () => {
@@ -218,5 +225,22 @@ describe('changing account with a write of another tournament on the phone', () 
     await expect(signInWithGoogleInstead('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
     await expect(continueWithGoogle('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
     expect(auth.oauth).toBe(0)
+  })
+})
+
+/**
+ * Converting this anonymous device in place (`updateUser({ email })`, then the
+ * `email_change` code) keeps its uid: its PIN claim and its queued writes stay
+ * valid, and go out as before. So it is not refused while writes wait, unlike
+ * the switches to another account (the verifier of #87, round 3, mutant V6:
+ * nothing pinned which way it should go).
+ */
+describe('saving the profile on this same device', () => {
+  it('goes ahead with writes still on the phone: same uid, so nothing is stranded', async () => {
+    await holeOfSaved()
+    auth.updateUser = async () => ({ error: null })
+    expect(await sendProfileCode('nuevo@example.com')).toBe('convert')
+    expect(auth.otp).toBe(0)
+    expect(_outboxTest.queue().map((x) => [x.key, x.actingUid])).toEqual([['score:r1:p1:4', 'uid-a']])
   })
 })

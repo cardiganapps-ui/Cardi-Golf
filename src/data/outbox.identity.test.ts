@@ -173,6 +173,14 @@ describe('what still has to go out before the phone changes who it is', () => {
     expect(unsentWrites()).toEqual({ tournamentId: 't-otro', waitsFor: 'pin', name: null })
   })
 
+  it('«PIN» is said of the tournament it names: another tournament\'s held writes do not make this one wait for a PIN', async () => {
+    // This tournament's hole waits only for signal (written as the phone's own identity)...
+    await _outboxTest.enqueue({ ...score(3), tournamentId: 't-primero' })
+    // ...while another tournament's was written under an identity the phone no longer has.
+    await _outboxTest.enqueue({ ...score(4), tournamentId: 't-segundo', actingUid: 'uid-viejo' })
+    expect(unsentWrites()).toEqual({ tournamentId: 't-primero', waitsFor: 'signal', name: null })
+  })
+
   it('saved before the session was confirmed: opening the tournament with signal sends them, no PIN', async () => {
     uid = null
     await _outboxTest.enqueue(score(3))

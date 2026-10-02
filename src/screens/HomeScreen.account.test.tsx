@@ -103,6 +103,26 @@ describe('an account holder at home with no signal (REL-15)', () => {
     expect(await screen.findByText('Tablero guardado')).toBeTruthy()
   })
 
+  /**
+   * Before the first load has started (the verifier of #87, round 3, mutant
+   * V7): no profile, not loading and no error yet is waiting, not a failure.
+   * Treating only `loading` as busy flashed «Algo salió mal» and «Reintentar».
+   */
+  it('before the first load starts, waits: no error box flashes, with the card or without', async () => {
+    useMyProfile.setState({ profile: null, loading: false, error: null })
+    await savedOnPhone()
+    open()
+    await screen.findByRole('link', { name: t.home.joinButton }, { timeout: 500 })
+    expect(screen.getByRole('status', { name: t.common.loading })).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: t.common.retry })).toBeNull()
+    cleanup()
+    await clearAllCached()
+    open()
+    expect(await screen.findByRole('status', { name: t.common.loading })).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('offers nothing when the phone has no boards saved', async () => {
     open()
     await new Promise((r) => setTimeout(r, 100))
