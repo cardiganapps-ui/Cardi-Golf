@@ -23,6 +23,13 @@ export interface Backup {
 const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'teams', 'calcutta_lots', 'payments', 'game_entries', 'game_results'] as const
 const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'hole_awards'] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
+/**
+ * Every table a backup carries back through `restore_tournament`. Courses,
+ * tees and holes ride along as a read-only reference and are never restored.
+ * `backup.restore.test.ts` fails when the function's latest definition misses
+ * one of these (DB-02: 0020 rebuilt it without the side-game tables).
+ */
+export const RESTORED_TABLES: readonly string[] = ['tournaments', ...BY_TOURNAMENT, ...BY_ROUND, 'group_members', 'team_members', ...BY_LOT]
 
 /** Primary keys of the tables without an `id` column (paging order). */
 const PK: Record<string, string[]> = {
