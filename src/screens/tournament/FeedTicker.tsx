@@ -13,13 +13,15 @@ import { ease } from '../../design/motion'
 function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
   switch (e.kind) {
     case 'birdie':
+      // Points only where the event counts them (STRAT-03).
+      if (e.scoring !== 'points') return t.feed.underPar(nameOf(e.playerId), e.hole, e.under, e.scoring === 'net')
       return e.points >= 4 ? t.feed.eagle(nameOf(e.playerId), e.hole, e.points) : t.feed.birdie(nameOf(e.playerId), e.hole, e.points, e.gross)
     case 'leadChange':
-      return t.feed.leadChange(nameOf(e.playerId), e.total)
+      return t.feed.leadChange(nameOf(e.playerId), e.figure)
     case 'snakePass':
       return t.feed.snakePass(nameOf(e.playerId), e.hole)
     case 'honoreeHole':
-      return t.feed.honoreeHole(nameOf(e.playerId), e.hole, e.points)
+      return e.scoring === 'points' ? t.feed.honoreeHole(nameOf(e.playerId), e.hole, e.points) : t.feed.honoreeToPar(nameOf(e.playerId), e.hole, e.toPar, e.scoring === 'net')
   }
 }
 

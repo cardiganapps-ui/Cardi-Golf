@@ -32,6 +32,18 @@ function listWith(parts: string[], last: (word: string) => string): string {
   return `${items.slice(0, -1).join(', ')} ${last(end)} ${end}`
 }
 
+/** «birdie», «águila», «albatros», with «neto/neta» when the event plays off handicap. */
+function underParName(under: number, net: boolean): string {
+  const [word, neto] = under >= 3 ? ['albatros', 'neto'] : under === 2 ? ['águila', 'neta'] : ['birdie', 'neto']
+  return net ? `${word} ${neto}` : word
+}
+/** «par», «bogey», «doble bogey», «triple bogey», «4 sobre par», with «neto» when off handicap. */
+function overParName(d: number, net: boolean): string {
+  if (d < 0) return underParName(-d, net)
+  const word = d === 0 ? 'par' : d === 1 ? 'bogey' : d === 2 ? 'doble bogey' : d === 3 ? 'triple bogey' : `${d} sobre par`
+  return net ? `${word} neto` : word
+}
+
 /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
 function andList(parts: string[]): string {
   return listWith(parts, (w) => (takesE(w) ? 'e' : 'y'))
@@ -1946,9 +1958,14 @@ export const t = {
     empty: 'Nada todavía. El primer birdie abre el marcador.',
     birdie: (name: string, hole: number, pts: number, gross: boolean) => `${name}: ${gross ? 'birdie' : 'birdie neto'} en el ${hole}, +${pts} pts`,
     eagle: (name: string, hole: number, pts: number) => `${name}: águila neta en el ${hole}, +${pts} pts`,
-    leadChange: (name: string, total: number) => `¡Cambio de líder! ${name} toma la punta con ${total}`,
+    /** Under strokes: «birdie neto», «águila» (gross), «albatros neto». No points: the event does not count them. */
+    underPar: (name: string, hole: number, under: number, net: boolean) => `${name}: ${underParName(under, net)} en el ${hole}`,
+    /** `figure` as the board writes the total: «34» points, «−3» or «E» against par. */
+    leadChange: (name: string, figure: string) => `¡Cambio de líder! ${name} toma la punta ${figure === 'E' ? 'en par' : `con ${figure}`}`,
     snakePass: (name: string, hole: number) => `La víbora pasa a ${name} en el ${hole}`,
     honoreeHole: (name: string, hole: number, pts: number) => (pts === 0 ? `${name} en el ${hole}: cero puntos.` : `${name} en el ${hole}: ${pts} pts`),
+    /** The honoree's hole under strokes: «par», «bogey neto», «levantó». */
+    honoreeToPar: (name: string, hole: number, toPar: number | null, net: boolean) => `${name} en el ${hole}: ${toPar == null ? 'levantó' : overParName(toPar, net)}.`,
     day: (n: number) => `Día ${n}`,
   },
   stats: {

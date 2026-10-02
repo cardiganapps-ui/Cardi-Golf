@@ -24,6 +24,7 @@ import type { GameContext, GameResultState } from './games/game'
 import { gamePot } from './games/payout'
 import type { GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
+import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
 
 /** "$27,500": the engine stays locale-free. */
@@ -142,7 +143,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
 
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction })
-  const feed = computeFeed(snapshot, core, modules.snake)
+  const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
 
   const incompleteRounds: StatusFlags['incompleteRounds'] = []
   for (const rid of core.roundIds) {
