@@ -17,6 +17,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
 import { TournamentContext } from './TournamentGate'
 import { TournamentShell } from './TournamentShell'
+import { LiveScreen } from './LiveScreen'
 
 function mount() {
   const fx = getFixture('minimal4-live')!
@@ -156,5 +157,48 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+/** En vivo inside the shell, as the app shows it. */
+function showLive(state: { source: 'cache' | 'server'; minutesAgo: number }) {
+  const fx = getFixture('minimal4-live')!
+  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: 'off', updatedAt: Date.now() - state.minutesAgo * 60_000 })
+  return render(
+    <MemoryRouter initialEntries={['/t/nacho']}>
+      <Routes>
+        <Route
+          path="/t/:slug"
+          element={
+            <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+              <TournamentShell />
+            </TournamentContext.Provider>
+          }
+        >
+          <Route index element={<LiveScreen />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+const times = (text: string) => (document.body.textContent ?? '').split(text).length - 1
+
+describe('En vivo says how old the boards are once (REL-04)', () => {
+  it('the phone\'s copy: the header says it, the status line does not repeat it', () => {
+    showLive({ source: 'cache', minutesAgo: 5 })
+    expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
+    expect(times('hace 5 min')).toBe(1)
+  })
+
+  it('with no signal, the same', async () => {
+    showLive({ source: 'cache', minutesAgo: 5 })
+    await noSignal()
+    expect(times('hace 5 min')).toBe(1)
+  })
+
+  it('the server\'s boards: no age in the header, so the status line gives it, once', () => {
+    showLive({ source: 'server', minutesAgo: 5 })
+    expect(age()).toBeNull()
+    expect(times(t.live.updated('hace 5 min'))).toBe(1)
   })
 })
