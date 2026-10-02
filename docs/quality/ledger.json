@@ -2213,7 +2213,7 @@
       "phase": 1,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 87,
+      "pr": null,
       "tests": [
         "src/data/outbox.offline.test.ts",
         "src/data/outbox.overlay.test.ts",
@@ -2222,7 +2222,7 @@
         "src/data/outbox.reauth.test.ts"
       ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "loadQueue() publishes the counters but never re-applies the overlay. After a restart the gate's enterFromCache (a child effect, so it starts before AppShell's startOutbox; both read IndexedDB) can put the saved boards up before the queue is loaded, and the queued holes are then missing from them until the next compute: the gate re-reading the copy once its lookup fails offline (a moment, or the 8 s session timeout with an expired token), a server reload, or the next save. The same when another tab's change reloads the queue. Reproduced with the real modules; outbox.offline.test.ts pins the queue-first order. Fix, not made here (outbox.ts): end loadQueue() with useTournament.getState().patch(overlayPending)."
     },
     {
       "id": "QA-07",
