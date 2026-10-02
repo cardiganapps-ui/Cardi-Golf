@@ -20,6 +20,7 @@ function mount(url: string) {
       <Routes>
         <Route path="/privacidad" element={<LegalScreen doc="privacy" />} />
         <Route path="/terminos" element={<LegalScreen doc="terms" />} />
+        <Route path="/" element={<h1>Polo</h1>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -49,14 +50,20 @@ describe('opened from a consent link', () => {
     expect(screen.getByRole('link', { name: L.privacy.title }).getAttribute('href')).toBe('/privacidad?desde=formulario')
   })
 
-  it('a browser that keeps the tab open: says how to get back instead', () => {
+  it('a browser that keeps the tab open: says how to get back, and offers «Volver a Polo» (P3: opened on its own, it was a dead end)', () => {
     vi.useFakeTimers()
     vi.spyOn(window, 'close').mockImplementation(() => undefined)
     mount('/terminos?desde=formulario')
     fireEvent.click(screen.getByRole('button', { name: L.close }))
     expect(screen.queryByText(L.closeBlocked)).toBeNull()
+    expect(screen.queryByRole('link', { name: L.back })).toBeNull()
     act(() => void vi.advanceTimersByTime(1000))
     expect(screen.getByRole('status').textContent).toBe(L.closeBlocked)
+    // Typed or bookmarked with the marker, there is no form behind it: the way back is Polo itself, in this tab.
+    const back = screen.getByRole('link', { name: L.back })
+    expect(back.getAttribute('href')).toBe('/')
+    fireEvent.click(back)
+    expect(screen.getByRole('heading', { level: 1, name: 'Polo' })).toBeTruthy()
   })
 })
 

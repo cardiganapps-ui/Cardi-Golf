@@ -5,7 +5,9 @@
  * Opened from a consent line (`?desde=formulario`), the page is a tab of its
  * own beside a half-filled form, so it offers to close that tab instead of
  * loading a second Polo. The other document then opens in place of this one:
- * a browser lets a page close its tab only while nothing is behind it.
+ * a browser lets a page close its tab only while nothing is behind it. If the
+ * browser keeps the tab open anyway, the page says how to get back and offers
+ * «Volver a Polo» too.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -60,9 +62,17 @@ export function LegalScreen({ doc }: { doc: 'privacy' | 'terms' }) {
           {doc === 'privacy' ? L.terms.title : L.privacy.title}
         </Link>
         {fromForm ? (
-          <button className="btn btn--ghost btn--sm" type="button" onClick={closeTab}>
-            {L.close}
-          </button>
+          <>
+            <button className="btn btn--ghost btn--sm" type="button" onClick={closeTab}>
+              {L.close}
+            </button>
+            {/* The tab would not close: opened on its own (a typed address, a bookmark), it has no form behind it. */}
+            {closeBlocked && (
+              <Link className="btn btn--ghost btn--sm" to="/">
+                {L.back}
+              </Link>
+            )}
+          </>
         ) : (
           <Link className="btn btn--ghost btn--sm" to="/">
             {L.back}
