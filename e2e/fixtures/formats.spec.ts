@@ -5,10 +5,11 @@
  * Reglamento described a Day-2 points cut in a one-day match, the team race
  * chart was empty with «?» names, the share card said «pts».
  *
- * Every screen people read or screenshot, on every non-Stableford fixture:
- * no «pts», no «Putter», no player shown as «?», and, where the event counts
- * strokes, no «puntos» (the print page's «Los puntos (•)» are stroke dots;
- * match play's points are match points and stay).
+ * Every screen people read or screenshot, on every non-Stableford fixture,
+ * the Ceremonia walked step by step included: no «pts», no «Putter», no
+ * player shown as «?», and, where the event counts strokes, no «puntos» (the
+ * print page's «Los puntos (•)» are stroke dots; match play's points are
+ * match points and stay).
  */
 import { t } from '../../src/i18n/es-MX'
 import { expect, open, test } from './base'
@@ -65,6 +66,26 @@ for (const f of FORMATS) {
     const cards = await page.evaluate(() => (window as unknown as { __cards: string[] }).__cards)
     expect(cards.length).toBeGreaterThanOrEqual(2)
     for (const c of cards) expect(offending(c, f.strokes), 'share card').toEqual([])
+  })
+}
+
+for (const f of FORMATS) {
+  test(`${f.name}: the Ceremonia, every step revealed`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await open(page, `/t/_/${f.name}/ceremonia`)
+    const seen: string[] = []
+    for (let i = 0; i < 80; i++) {
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(250)
+      const text = await page.locator('main').first().innerText()
+      seen.push(text)
+      if (text.includes(t.ceremony.done)) break
+    }
+    expect(seen.at(-1)).toContain(t.ceremony.done)
+    expect(offending(seen.join('\n'), f.strokes), `${f.name} Ceremonia`).toEqual([])
+    // The champion's line names no trophy the tournament did not set.
+    expect(seen.join('\n')).not.toMatch(/Se lleva/)
   })
 }
 

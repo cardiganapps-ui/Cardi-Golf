@@ -2240,7 +2240,8 @@ export const t = {
       auction: (label: string) => `${label}: pagos`,
       money: 'Resumen de dinero',
     },
-    trophy: 'Se lleva el Putter',
+    /** `name` is the tournament's own trophy (`labels.trophy`): «el Putter» for the first one. */
+    trophy: (name: string) => `Se lleva ${name}`,
     champion: 'Campeón',
     /** Match points come in halves and read as golf writes them, as on the standings: «1½ puntos», «½ punto». */
     withPoints: (pts: number) => {
