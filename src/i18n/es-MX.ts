@@ -116,6 +116,8 @@ export const t = {
     retry: 'Reintentar',
     retrying: 'Conectando…',
     reset: 'Reiniciar la app',
+    /** The last tournament's boards, saved on the phone: they open without the session (REL-03). */
+    openSaved: 'Abrir lo guardado',
     resetHint: 'Reiniciar no borra tu sesión ni los hoyos que no se hayan enviado.',
     version: (v: string) => `Versión ${v}`,
   },
@@ -726,7 +728,15 @@ export const t = {
     codeSent: (email: string) => `Te mandamos un código a ${email}. Escríbelo aquí.`,
     google: 'Continuar con Google',
     or: 'o con tu correo',
-    syncFirst: 'Espera a que se sincronicen tus hoyos antes de cambiar de cuenta.',
+    /**
+     * Why the phone may not sign out or change account yet: what was entered in
+     * a tournament is still on the phone. `name` null: a tournament the phone
+     * has no name for.
+     */
+    unsentSignal: (name: string | null, action: 'signOut' | 'switch') =>
+      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
+    unsentPin: (name: string | null, action: 'signOut' | 'switch') =>
+      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
     tooFast: 'Espera un minuto antes de pedir otro código.',
     badEmail: 'Revisa el correo.',
     googleTaken: 'Esa cuenta de Google ya tiene perfil.',
@@ -737,7 +747,8 @@ export const t = {
     linkTaken: 'Ese jugador ya está en el perfil de otra persona. Pídele al Comité que lo revise.',
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
-    signOutBlocked: 'Tienes hoyos sin sincronizar. Espera a tener señal antes de cerrar sesión.',
+    /** Signing out needs the server to end the session (no signal and an expired token): nothing was cleared. */
+    signOutNeedsSignal: 'Para cerrar sesión hace falta señal. Sigues dentro y lo guardado en el teléfono sigue aquí.',
     enterProfile: 'Entrar a mi perfil',
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },
@@ -934,7 +945,7 @@ export const t = {
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.'],
-        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal; salir del torneo o de la cuenta no la borra. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
+        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
         ['Tus derechos', 'Puedes editar tu perfil cuando quieras, sacarlo de las búsquedas y apagar los avisos en cada teléfono. La app todavía no tiene cómo borrar tu cuenta ni cómo descargar tus datos: borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes, así que hoy hay que pedírselo a él directamente. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos y los navegadores donde los activaste, y sales de tus crews. Se quedan tu nombre, tu foto, tus golpes y tu dinero como jugador en los torneos que jugaste y en su historial de cambios; cada foto de perfil que subiste, también las anteriores, como archivo público; tu correo, en el registro del borrado; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
       ] as Array<[string, string]>,
@@ -1208,18 +1219,39 @@ export const t = {
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
+    /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
+    errSession: 'Confirmando tu sesión… Se reintenta solo.',
     heldForPin: (n: number) =>
       n === 1
         ? 'Este teléfono tiene 1 hoyo sin subir. Entra con tu PIN y se sube solo.'
         : `Este teléfono tiene ${n} hoyos sin subir. Entra con tu PIN y se suben solos.`,
+    /** The Tarjeta's line when the phone lost its session mid-round: the holes saved since wait for the PIN (REL-16). */
+    heldForPinShort: (n: number) => (n === 1 ? '1 hoyo espera tu PIN' : `${n} hoyos esperan tu PIN`),
     unsentBeforeSwitch: (n: number) => (n === 1 ? 'Tienes 1 hoyo sin subir' : `Tienes ${n} hoyos sin subir`),
+    /** The same, when what waits is a card signature, a snake answer or a hole award, not a hole. */
+    unsentWritesBeforeSwitch: 'Tienes cambios sin subir',
     unsentBeforeSwitchBody:
       'Si cambias de jugador ahora, este teléfono ya no los puede subir. Espera a tener señal: cuando la Tarjeta diga «Sincronizado», ya puedes cambiar.',
     understood: 'Entendido',
     newVersion: 'Hay una versión nueva de la app.',
     updateRequired: 'Esta versión ya no sube hoyos. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
-    fromCache: (when: string) => `Sin señal: mostrando lo último guardado (${when}).`,
+    /**
+     * The header's second line while the boards are the phone's copy, or there
+     * is no signal: how old they are, and offline the holes still on the phone
+     * (REL-04). Out of the chip, which cut the event name. `when` from `ago`.
+     */
+    boardsAge: (when: string, holes = 0) => (holes > 0 ? `${holes === 1 ? '1 hoyo' : `${holes} hoyos`} en el teléfono. Actualizado ${when}` : `Actualizado ${when}`),
+    /** How old a saved board is (src/lib/freshness.ts). */
+    ago: {
+      now: 'hace un momento',
+      minutes: (n: number) => `hace ${n} min`,
+      hours: (n: number) => (n === 1 ? 'hace 1 hora' : `hace ${n} horas`),
+      today: (time: string) => `hoy, ${time}`,
+      yesterday: (time: string) => `ayer, ${time}`,
+      days: (n: number) => `hace ${n} días`,
+      date: (date: string) => `el ${date}`,
+    },
   },
   status: {
     setup: 'En preparación',
@@ -1261,8 +1293,8 @@ export const t = {
     scoreHole: (n: number) => `Anotar el hoyo ${n}`,
     scoreDone: 'Ver mi tarjeta',
     leadGroup: (hole: number) => `Grupo puntero en el hoyo ${hole}`,
-    updatedNow: 'Actualizado ahora',
-    updatedAgo: (min: number) => `Actualizado hace ${min} min`,
+    /** `when` from t.sync.ago: «Actualizado hace 5 min», «Actualizado ayer, 6:40 p.m.». */
+    updated: (when: string) => `Actualizado ${when}`,
     points: 'Puntos',
     gross: 'Gross',
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,

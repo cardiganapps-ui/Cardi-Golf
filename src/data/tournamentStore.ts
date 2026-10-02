@@ -63,9 +63,22 @@ interface StoreState {
   data: TournamentData | null
   /** Realtime connection status for the sync chip. */
   realtime: 'off' | 'connecting' | 'live' | 'error'
-  /** Wall-clock time of the last snapshot applied (0 before the first). Display only. */
+  /**
+   * When the server data on screen was fetched: the copy's own time when it
+   * came from the phone (0 before the first). A hole saved on the phone since
+   * leaves it, so a two-day-old copy never reads «hace un momento» (REL-04).
+   * Display only.
+   */
   updatedAt: number
-  load(tournamentId: string): Promise<void>
+  /**
+   * Where the boards on screen came from: the copy this phone saved ('cache',
+   * shown at once on open) or the server ('server'). The gate keeps trying
+   * until it is 'server', and the header says which (REL-02).
+   */
+  source: 'cache' | 'server' | null
+  /** Whether the snapshots shown are kept on the phone for offline use: not on a platform-admin visit, where the tournament is not his. */
+  keepOnPhone: boolean
+  load(tournamentId: string, opts?: { keepOnPhone?: boolean }): Promise<void>
   reload(): Promise<void>
   /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
   seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
@@ -235,18 +248,20 @@ export const useTournament = create<StoreState>((set, get) => ({
   data: null,
   realtime: 'off',
   updatedAt: 0,
-  async load(tournamentId) {
+  source: null,
+  keepOnPhone: true,
+  async load(tournamentId, opts) {
     if (get().tournamentId !== tournamentId) {
       get().unsubscribe()
-      set({ tournamentId, data: null, error: null })
+      set({ tournamentId, data: null, error: null, source: null })
     }
-    set({ loading: true })
+    set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
     try {
       const snapshot = await fetchSnapshot(tournamentId)
       if (seq !== fetchSeq || get().tournamentId !== tournamentId) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null })
-      void saveSnapshot(tournamentId, snapshot)
+      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
     } catch (e) {
       if (seq !== fetchSeq) return
@@ -262,16 +277,19 @@ export const useTournament = create<StoreState>((set, get) => ({
     try {
       const snapshot = await fetchSnapshot(id)
       if (seq !== fetchSeq || get().tournamentId !== id) return
-      set({ data: compute(snapshot), updatedAt: Date.now(), error: null })
-      void saveSnapshot(id, snapshot)
+      set({ data: compute(snapshot), updatedAt: Date.now(), error: null, source: 'server' })
+      if (get().keepOnPhone) void saveSnapshot(id, snapshot)
     } catch (e) {
       if (seq !== fetchSeq) return
       set({ error: humanError(e) })
     }
   },
   seed(tournamentId, snapshot, savedAt) {
+    // Never over the live boards: a cache read that lands after the server's answer is older than it.
+    if (get().tournamentId === tournamentId && get().source === 'server') return
     if (get().tournamentId !== tournamentId) get().unsubscribe()
-    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off' })
+    // A copy on the phone is of a tournament the phone keeps.
+    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
   },
   subscribe() {
     const id = get().tournamentId
@@ -353,8 +371,9 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!d) return
     const snapshot = structuredClone(d.snapshot)
     fn(snapshot)
-    // A patch that leaves the players alone (a score, a mark) keeps their key.
+    // `updatedAt` stays: nothing new came from the server (REL-04). A patch
+    // that leaves the players alone (a score, a mark) keeps their key.
     const same = JSON.stringify(snapshot.players) === JSON.stringify(d.snapshot.players)
-    set({ data: compute(snapshot, same ? d.playersKey : undefined), updatedAt: Date.now() })
+    set({ data: compute(snapshot, same ? d.playersKey : undefined) })
   },
 }))

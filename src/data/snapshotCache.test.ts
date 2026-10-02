@@ -7,7 +7,7 @@
 import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture, type Fixture } from '../dev/fixtures'
-import { clearCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
+import { clearCached, clearCachedSlug, hasCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
 
 const live = getFixture('full12-live')!
 const small = getFixture('minimal4-live')!
@@ -59,14 +59,47 @@ describe('the copy on the phone (audit P0-5)', () => {
     expect(await readCached('sin-tablero')).toBeNull()
   })
 
-  it('leaving forgets the slug, and only that slug', async () => {
+  it('forgetting a tournament takes its entry and its boards, and only that tournament', async () => {
     for (const fx of [live, small]) {
       await saveEntry(entryOf(fx))
       await saveSnapshot(fx.snapshot.tournament.id, fx.snapshot)
     }
-    await clearCached(small.snapshot.tournament.slug)
+    await clearCached(small.snapshot.tournament.id)
     expect(await readCached(small.snapshot.tournament.slug)).toBeNull()
     expect(await readCached(live.snapshot.tournament.slug)).not.toBeNull()
+    // The boards went too: they used to stay in IndexedDB for good.
+    await saveEntry(entryOf(small))
+    expect(await readCached(small.snapshot.tournament.slug)).toBeNull()
+  })
+
+  it('a tournament joined with its code is found by its slug, and by the code', async () => {
+    // The gate saves under the tournament's own slug, whatever link opened it.
+    await saveEntry(entryOf(live))
+    await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
+    const code = live.lookup.joinCode
+    for (const key of [live.snapshot.tournament.slug, code, code.toLowerCase()]) {
+      expect((await readCached(key))?.entry.tournamentId, key).toBe(live.snapshot.tournament.id)
+      expect(await hasCached(key), key).toBe(true)
+    }
+    expect(await hasCached('OTRO99')).toBe(false)
+  })
+
+  it('an entry an older build saved under the code is found by the slug, and gives way to it', async () => {
+    await saveEntry({ ...entryOf(live), slug: live.lookup.joinCode })
+    await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
+    expect((await readCached(live.snapshot.tournament.slug))?.entry.tournamentId).toBe(live.snapshot.tournament.id)
+    await saveEntry(entryOf(live))
+    expect((await readCached(live.lookup.joinCode))!.entry.slug).toBe(live.snapshot.tournament.slug)
+  })
+
+  it('a link that leads nowhere forgets what was saved under it; a code that stopped working may just have been replaced', async () => {
+    await saveEntry(entryOf(live))
+    await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
+    await clearCachedSlug(live.lookup.joinCode)
+    expect(await readCached(live.snapshot.tournament.slug)).not.toBeNull()
+    await clearCachedSlug(live.snapshot.tournament.slug)
+    expect(await readCached(live.snapshot.tournament.slug)).toBeNull()
+    expect(await readCached(live.lookup.joinCode)).toBeNull()
   })
 
   it('a full storage refuses the write: nothing is thrown and the last good copy stays', async () => {

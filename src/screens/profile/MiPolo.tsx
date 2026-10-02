@@ -4,7 +4,7 @@
  * what needs you now: in play, coming up, played. The join code and the
  * organizer's way in stay at the bottom.
  */
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
@@ -102,7 +102,12 @@ function rowsOf(links: MyLink[], organizing: MyTournament[]): Row[] {
   return [...byId.values()]
 }
 
-export function MiPolo() {
+/**
+ * `saved`: the tournament whose boards are saved on the phone («Tu último
+ * torneo»), shown while the profile loads or can't: those boards need no
+ * signal, and with none the profile never comes (REL-15).
+ */
+export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
   const navigate = useNavigate()
   const { profile, links, loading, error, load } = useMyProfile()
   const [organizing, setOrganizing] = useState<MyTournament[]>([])
@@ -160,7 +165,20 @@ export function MiPolo() {
   }
 
   // An error here used to be a bare line of red text with no way forward.
-  if (!profile) return loading || !error ? <Spinner /> : <ErrorBox error={error} onRetry={() => void load(true)} />
+  if (!profile) {
+    const busy = loading || !error
+    const wait = busy ? <Spinner /> : <ErrorBox error={error} onRetry={() => void load(true)} />
+    if (!saved) return wait
+    return (
+      <div className={styles.screen} aria-busy={busy}>
+        <div className={styles.topBar}>
+          <Wordmark />
+        </div>
+        {saved}
+        {wait}
+      </div>
+    )
+  }
 
   const section = (label: string, list: Row[]) =>
     list.length > 0 && (

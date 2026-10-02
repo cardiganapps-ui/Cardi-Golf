@@ -114,8 +114,9 @@ export function ProfileEditScreen() {
   }
 
   async function leave() {
-    if (await signOutSafely()) navigate('/', { replace: true })
-    else toast(t.account.signOutBlocked)
+    const r = await signOutSafely()
+    if (r.done) navigate('/', { replace: true })
+    else toast(r.reason)
   }
 
   return (

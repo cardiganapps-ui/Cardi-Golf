@@ -4,13 +4,15 @@
  * The store overlays pending items on every fetched snapshot so an
  * optimistic score never flickers away while it is in flight.
  */
+import type { SupabaseClient } from '@supabase/supabase-js'
 import Dexie, { type EntityTable } from 'dexie'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
+import { withTimeout } from '../lib/timeout'
 import type { Score, Snapshot } from '../engine/types'
-import { useAuth } from './auth'
+import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
 
 /**
@@ -28,7 +30,9 @@ interface ItemBase {
    * The auth user that queued the write. If the device's identity changed
    * since (a session lapsed in a dead zone and a new one started), the server
    * would refuse the push, so the write waits until the player is back on this
-   * device (`adoptQueuedWrites`) instead of being rejected (REL-16).
+   * device (`adoptQueuedWrites`) instead of being rejected (REL-16). None: the
+   * write was saved before the session was confirmed (the phone opened from
+   * its saved boards), and it waits the same way.
    */
   actingUid?: string | null
   lastError?: string
@@ -126,6 +130,8 @@ interface OutboxState {
   pending: number
   /** Of those, how many wait for the player to enter again (the session changed: REL-16). */
   held: number
+  /** `held`, counted in holes. */
+  heldHoles: number
   syncing: boolean
   /** Last push error, mapped to Spanish by `describeSyncError`. Null once a push succeeds. */
   lastError: string | null
@@ -142,7 +148,7 @@ interface OutboxState {
   /** The browser promised not to evict this site's storage; null until asked (REL-18). */
   persistent: boolean | null
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -158,10 +164,12 @@ function activeTournamentId(): string | null {
 function publish(extra: Partial<OutboxState> = {}) {
   const tid = activeTournamentId()
   const mine = queue.filter((x) => x.tournamentId === tid)
+  const held = mine.filter(isHeld)
   useOutbox.setState({
     pending: mine.length,
     pendingHoles: holesIn(mine),
-    held: mine.filter(isHeld).length,
+    held: held.length,
+    heldHoles: holesIn(held),
     foreign: queue.filter(isForeign).length,
     rejected: rejectedAll.filter((x) => x.tournamentId === tid),
     ...extra,
@@ -198,9 +206,16 @@ export function setOutboxBlocked(value: boolean) {
 function currentUid(): string | null {
   return useAuth.getState().user?.id ?? null
 }
-/** Queued under a different identity than the device has now: the server would refuse it. */
+/**
+ * Queued under a different identity than the device has now, or before any
+ * was confirmed: the server could refuse it, so it waits for the tournament's
+ * gate to confirm the player (`adoptQueuedWrites`). A phone that opens from
+ * its saved boards with no signal saves holes before its session is known; if
+ * that session turned out dead and a new one started, those holes used to go
+ * out under it, be refused and land in the rejected list.
+ */
 function isHeld(item: OutboxItem): boolean {
-  return !!item.actingUid && item.actingUid !== currentUid()
+  return !item.actingUid || item.actingUid !== currentUid()
 }
 
 /**
@@ -234,9 +249,34 @@ export async function adoptQueuedWrites(tournamentId: string) {
  * foursome's hole is four score rows). `heldHoles` wait for the player to
  * enter again.
  */
-export function queuedFor(tournamentId: string): { holes: number; heldHoles: number } {
+export function queuedFor(tournamentId: string): { holes: number; heldHoles: number; writes: number } {
   const mine = queue.filter((x) => x.tournamentId === tournamentId)
-  return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)) }
+  // `writes`: everything this build sends, card signatures, snake answers and hole awards too.
+  return { holes: holesIn(mine), heldHoles: holesIn(mine.filter(isHeld)), writes: mine.filter((x) => !isForeign(x)).length }
+}
+/**
+ * What still has to go out before this device may change who it is (sign
+ * out, another account), for any tournament: the first tournament with
+ * writes, and what they wait for. `pin`: some were queued under an identity
+ * the device no longer has and go out only once the player enters again;
+ * `signal`: they go out once the server answers (opening the tournament with
+ * signal also sends the ones saved before the session was confirmed).
+ *
+ * Writes a newer build queued do not count: this build can never send them,
+ * so counting them kept a person signed in for good. They stay on the phone,
+ * for that build to send after the PIN.
+ */
+export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin' } | null {
+  const mine = queue.filter((x) => !isForeign(x))
+  const first = mine[0]
+  if (!first) return null
+  const uid = currentUid()
+  const pin = mine.some((x) => x.tournamentId === first.tournamentId && !!x.actingUid && x.actingUid !== uid)
+  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal' }
+}
+/** Anything still to push, for any tournament: signing out waits for it. */
+export function hasUnsentWrites(): boolean {
+  return unsentWrites() !== null
 }
 /** Distinct holes among queued score writes. */
 function holesIn(list: OutboxItem[]): number {
@@ -267,8 +307,16 @@ async function deleteStored(item: OutboxItem) {
   })
 }
 
+/**
+ * The push found no session to go out with. Not the network: the Tarjeta
+ * said «Sin conexión con el servidor» under an «En vivo» header for as long
+ * as the session took to come back (48 s inside auth-js's cooldown).
+ */
+const NO_SESSION_YET = 'no session to push with yet'
+
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
 export function describeSyncError(msg: string): string {
+  if (msg === NO_SESSION_YET) return t.sync.errSession
   if (/signed|firmad/i.test(msg)) return t.sync.errSigned
   if (/not live|is_live|en juego/i.test(msg)) return t.sync.errNotLive
   if (isPermanent(msg)) return t.sync.errDenied
@@ -470,24 +518,48 @@ export const _outboxTest = {
   },
 }
 
+/**
+ * The player's own token for a push, never the anon key (REL-16). The app can
+ * stay open while the token expires in a dead zone: auth-js keeps the user, so
+ * the hole is not held, and when the signal returns inside its refresh
+ * cooldown (60 s after a failed refresh) getSession() has no session.
+ * supabase-js then sent the write with the anon key, and the server's refusal
+ * read as final: «4 rechazados» for four good holes. With no session the push
+ * fails like a network error instead: the write waits, and goes out once the
+ * session is back (the auth store's change below, the backoff, `online`).
+ */
+async function sessionToken(sb: SupabaseClient): Promise<string> {
+  // A getSession that stalls or fails (the refresh hanging on lie-fi, the
+  // auth server down) is the session not confirmed yet too, not the network.
+  const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión').catch(() => ({ data: { session: null } }))
+  const token = data.session?.access_token
+  if (!token) throw new Error(NO_SESSION_YET)
+  return token
+}
+
 async function push(item: OutboxItem): Promise<void> {
   const sb = supabase()
+  // Every request of this push carries the token checked here, whatever the session does meanwhile.
+  const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'score') {
-    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' })
+    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else if (item.kind === 'tiebreak') {
-    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' })
+    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else if (item.kind === 'award') {
     const p = item.payload
-    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id)
+    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).setHeader('Authorization', auth)
     if (del.error) throw new Error(del.error.message)
     if (p.player_ids.length) {
-      const { error } = await sb.from('hole_awards').insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+      const { error } = await sb
+        .from('hole_awards')
+        .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+        .setHeader('Authorization', auth)
       if (error) throw new Error(error.message)
     }
   } else if (item.kind === 'signature') {
-    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true })
+    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
   } else {
     // Never reached: the flush skips kinds this build does not know.
@@ -630,3 +702,12 @@ export async function startOutbox() {
   }
   void flush()
 }
+
+// Which writes wait depends on who the device is now: recount when that changes
+// (the held count read 0 after a change of identity until the queue moved). And
+// a session that comes back (the refresh worked after a lapse) sends what
+// waited for it, without waiting out the backoff (REL-16).
+useAuth.subscribe?.((state, prev) => {
+  if (state.user?.id !== prev.user?.id) publish()
+  if (state.session && state.session !== prev.session && queue.some(canPush)) void flush()
+})

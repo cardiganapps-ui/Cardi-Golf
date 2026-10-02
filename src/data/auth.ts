@@ -45,6 +45,8 @@ export const useAuth = create<AuthState>((set) => ({
     // moment later, the session still lands and the error clears itself.
     unsubscribe?.()
     const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
+      // A new session ends a sign-out the person asked for.
+      if (session) signingOut = false
       set({ ...fromSession(session), ready: true, bootError: null })
     })
     unsubscribe = () => sub.subscription.unsubscribe()
@@ -88,6 +90,9 @@ export class SessionUnavailableError extends UserError {
   }
 }
 
+/** The `ensureSession` in flight, which every caller meanwhile shares. */
+let starting: Promise<Session> | null = null
+
 /**
  * A session of any kind (anonymous if none). Used when opening a tournament link.
  *
@@ -98,8 +103,17 @@ export class SessionUnavailableError extends UserError {
  * the stored session itself when its refresh token is really dead; only then
  * does the device start over (and its queued holes wait for the PIN, see
  * outbox `adoptQueuedWrites`).
+ *
+ * One at a time: two callers at once (the gate's retry and the PIN) used to
+ * start two anonymous users on a device with none.
  */
-export async function ensureSession(): Promise<Session> {
+export function ensureSession(): Promise<Session> {
+  starting ??= startSession().finally(() => {
+    starting = null
+  })
+  return starting
+}
+async function startSession(): Promise<Session> {
   const sb = supabase()
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
   if (data.session) return data.session
@@ -161,6 +175,35 @@ export async function updatePassword(password: string) {
   if (error) throw error
 }
 
-export async function signOut() {
-  await supabase().auth.signOut()
+/** The person asked to sign out (until the next session): the identity going away is no lost session. */
+let signingOut = false
+
+/**
+ * Whether this device has no session because its person signed out on
+ * purpose. The tournament gate asks the server again when the identity goes
+ * away mid-round (REL-16), which signs the phone in anonymously; after a
+ * sign-out the person asked for, that left a new anonymous user behind every
+ * time.
+ */
+export function signedOutOnPurpose(): boolean {
+  return signingOut
+}
+
+/**
+ * Signs this device out. True once the stored session is gone; false when it
+ * is still there. With no signal and an expired token auth-js cannot load the
+ * session to end it, returns an error and keeps it: that used to read as
+ * done, and the caller wiped the boards saved on the phone of a person who
+ * was still signed in.
+ */
+export async function signOut(): Promise<boolean> {
+  signingOut = true
+  try {
+    await withTimeout(supabase().auth.signOut(), SESSION_TIMEOUT_MS, 'sesión')
+  } catch {
+    // Judged by what is left on the device, below.
+  }
+  const gone = !hasStoredSession()
+  if (!gone) signingOut = false
+  return gone
 }

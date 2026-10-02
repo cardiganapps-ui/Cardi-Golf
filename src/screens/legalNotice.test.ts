@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'dbef08ac45d02a7d' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -294,9 +294,10 @@ describe('what the notice left out (P3-6)', () => {
 
   it('opening a tournament or a profile link creates an anonymous user, before any line shows', () => {
     expect(sections['Qué datos guardamos']).toContain('Con solo abrir el enlace de un torneo o de un perfil en un navegador sin sesión, se le crea un usuario anónimo (sin correo ni nombre).')
-    expect(source('src/data/auth.ts')).toMatch(/export async function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
+    // ensureSession starts one session at a time (startSession); with no session stored, that is an anonymous one.
+    expect(source('src/data/auth.ts')).toMatch(/export (?:async )?function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
     // The gate signs in before it even looks the tournament up, so before Entrar and its line.
-    expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/await ensureSession\(\)\s+const lookup = await lookupTournament\(slug\)/)
+    expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/await ensureSession\(\)\s+(?:if \(stale\(\)\) return\s+)?const lookup = await lookupTournament\(slug\)/)
     expect(source('src/screens/profile/ProfileScreen.tsx')).toContain('await ensureSession()')
   })
 
@@ -317,12 +318,15 @@ describe('what the notice left out (P3-6)', () => {
 
   it('each browser that enters a tournament keeps its last snapshot, money included, and what it has not sent yet', () => {
     expect(sections['Dónde viven']).toContain(
-      'En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal; salir del torneo o de la cuenta no la borra.',
+      'En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda.',
     )
     expect(source('src/engine/types.ts')).toMatch(/export interface Snapshot \{[^}]*\bpayments: Payment\[\]/)
     expect(source('src/data/tournamentStore.ts')).toContain('void saveSnapshot(tournamentId, snapshot)')
-    // Nothing clears that copy: not leaving the tournament, not signing out.
-    const callers = filesUnder('src', (n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$/.test(n)).filter((f) => f !== join('src', 'data', 'snapshotCache.ts') && /\bclearCached\(/.test(source(f)))
-    expect(callers).toEqual([])
+    // Who clears it (PR #87): «Cambiar de jugador» this tournament's, a sign-out every one, a link that no longer exists its own.
+    expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/const leave = useCallback\(async \(\) => \{[\s\S]*?await clearCached\(tournamentId\)/)
+    expect(source('src/data/account.ts')).toMatch(/export async function signOutSafely\(\)[\s\S]*?await clearAllCached\(\)/)
+    expect(source('src/screens/tournament/TournamentGate.tsx')).toContain('void clearCachedSlug(slug)')
+    // What has not gone out is not part of that copy: sign-out and «Cambiar de jugador» wait for it.
+    expect(source('src/data/snapshotCache.ts')).not.toMatch(/from '\.\/outbox'/)
   })
 })

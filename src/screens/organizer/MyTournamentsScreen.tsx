@@ -6,9 +6,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Avatar, ErrorBox, Spinner } from '../../components/ui'
+import { Avatar, ErrorBox, Spinner, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
-import { signOut, useAuth } from '../../data/auth'
+import { useAuth } from '../../data/auth'
+import { signOutSafely } from '../../data/account'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import styles from './Organizer.module.css'
 import { humanError } from '../../lib/humanError'
@@ -49,7 +50,8 @@ export function MyTournamentsScreen() {
         <Link to="/" className={styles.brand}>
           <Wordmark />
         </Link>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => signOut().then(() => navigate('/'))}>
+        {/* The same sign-out as everywhere: never with holes still on the phone, and it takes the phone's saved boards. */}
+        <button className="btn btn--ghost btn--sm" type="button" onClick={() => void signOutSafely().then((r) => (r.done ? navigate('/') : toast(r.reason)))}>
           {t.common.logout}
         </button>
       </div>

@@ -1,7 +1,12 @@
 /**
  * Last known snapshot per tournament, on the device (§8: the app opens and
  * shows the last boards with no signal). Written on every successful fetch;
- * read only when the network fails on open. Never used for fixtures.
+ * shown at once on open (PERF-08). Never used for fixtures.
+ *
+ * An entry is kept under the tournament's own slug, whatever link opened it:
+ * a player who typed the join code at home goes back through «Tu último
+ * torneo», which opens `/t/<slug>`, and with no signal the boards must be
+ * there. The code still finds them.
  */
 import Dexie, { type EntityTable } from 'dexie'
 import type { Snapshot } from '../engine/types'
@@ -36,9 +41,19 @@ function getDb(): CacheDb | null {
   return db
 }
 
+/** `entry.slug` is the tournament's own slug. Any other key it was saved under goes (an older build saved the join code). */
 export async function saveEntry(entry: Omit<CachedEntry, 'savedAt'>): Promise<void> {
   try {
-    await getDb()?.entries.put({ ...entry, savedAt: Date.now() })
+    const d = getDb()
+    if (!d) return
+    await d.transaction('rw', d.entries, async () => {
+      await d.entries
+        .where('tournamentId')
+        .equals(entry.tournamentId)
+        .and((e) => e.slug !== entry.slug)
+        .delete()
+      await d.entries.put({ ...entry, savedAt: Date.now() })
+    })
   } catch {
     /* cache is best effort */
   }
@@ -50,11 +65,20 @@ export async function saveSnapshot(tournamentId: string, snapshot: Snapshot): Pr
     /* cache is best effort */
   }
 }
-export async function readCached(slug: string): Promise<{ entry: CachedEntry; snapshot: Snapshot; savedAt: number } | null> {
+/**
+ * The entry a link leads to: by the tournament's slug, or by the join code
+ * typed at home. An entry an older build kept under the code is found by its
+ * slug too.
+ */
+async function findEntry(d: CacheDb, slugOrCode: string): Promise<CachedEntry | undefined> {
+  const code = slugOrCode.toUpperCase()
+  return (await d.entries.get(slugOrCode)) ?? (await d.entries.filter((e) => e.lookup.slug === slugOrCode || e.lookup.joinCode?.toUpperCase() === code).first())
+}
+export async function readCached(slugOrCode: string): Promise<{ entry: CachedEntry; snapshot: Snapshot; savedAt: number } | null> {
   try {
     const d = getDb()
     if (!d) return null
-    const entry = await d.entries.get(slug)
+    const entry = await findEntry(d, slugOrCode)
     if (!entry) return null
     const snap = await d.snapshots.get(entry.tournamentId)
     if (!snap) return null
@@ -63,9 +87,60 @@ export async function readCached(slug: string): Promise<{ entry: CachedEntry; sn
     return null
   }
 }
-export async function clearCached(slug: string): Promise<void> {
+/** Whether the phone has boards saved for the link, without reading them: home offers them before the session is confirmed (REL-03). */
+export async function hasCached(slugOrCode: string): Promise<boolean> {
   try {
-    await getDb()?.entries.delete(slug)
+    const d = getDb()
+    const entry = d && (await findEntry(d, slugOrCode))
+    return !!entry && (await d!.snapshots.where('tournamentId').equals(entry.tournamentId).count()) > 0
+  } catch {
+    return false
+  }
+}
+/** The name of a tournament whose boards the phone keeps, by its id (the outbox knows only ids). */
+export async function cachedTournamentName(tournamentId: string): Promise<string | null> {
+  try {
+    const entry = await getDb()?.entries.where('tournamentId').equals(tournamentId).first()
+    return entry?.lookup.name ?? null
+  } catch {
+    return null
+  }
+}
+/** Forget what this phone saved for a tournament: its entries, under any key, and its boards. */
+export async function clearCached(tournamentId: string): Promise<void> {
+  try {
+    const d = getDb()
+    if (!d) return
+    await d.transaction('rw', d.entries, d.snapshots, async () => {
+      await d.entries.where('tournamentId').equals(tournamentId).delete()
+      await d.snapshots.delete(tournamentId)
+    })
+  } catch {
+    /* ignore */
+  }
+}
+/** Sign-out: the next person on the phone sees nothing of this one's tournaments. */
+export async function clearAllCached(): Promise<void> {
+  try {
+    const d = getDb()
+    if (!d) return
+    await d.transaction('rw', d.entries, d.snapshots, async () => {
+      await d.entries.clear()
+      await d.snapshots.clear()
+    })
+  } catch {
+    /* ignore */
+  }
+}
+/**
+ * A link that leads nowhere now (the tournament was deleted): forget what was
+ * saved under that very slug. A join code that stopped working may just have
+ * been replaced by a new one, so a code alone forgets nothing.
+ */
+export async function clearCachedSlug(slug: string): Promise<void> {
+  try {
+    const entry = await getDb()?.entries.get(slug)
+    if (entry) await clearCached(entry.tournamentId)
   } catch {
     /* ignore */
   }
