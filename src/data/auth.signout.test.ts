@@ -35,7 +35,7 @@ vi.mock('../lib/supabase', () => ({
   }),
 }))
 
-const { _authTest, signOut, signOutRunning, signedOutOnPurpose, useAuth } = await import('./auth')
+const { _authTest, signOut, signOutRunning, signOutsAsked, signedOutOnPurpose, useAuth } = await import('./auth')
 await useAuth.getState().init()
 
 const KEY = 'cardi-golf-auth'
@@ -101,6 +101,22 @@ describe('signOut', () => {
  * gate read the session going away as lost and signed the phone in
  * anonymously 22 ms after the logout.
  */
+/** The tournament gate stops its retries when a sign-out was asked for while it was open (TournamentGate.race.test). */
+describe('the sign-outs asked for', () => {
+  it('count up by one with each, whatever its outcome', async () => {
+    const before = signOutsAsked()
+    sb.signOut = async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+    expect(await signOut()).toBe(false)
+    expect(signOutsAsked()).toBe(before + 1)
+    sb.signOut = async () => {
+      storage.delete(KEY)
+      return { error: null }
+    }
+    expect(await signOut()).toBe(true)
+    expect(signOutsAsked()).toBe(before + 2)
+  })
+})
+
 describe('what ends a deliberate sign-out', () => {
   /** auth-js's signOut, with `before` happening inside it, then the session going; what the gate would read at that moment. */
   function signsOutAfter(before: () => void) {

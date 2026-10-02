@@ -219,10 +219,11 @@ describe('saved boards that no longer belong here', () => {
    * tournament's (the phone was nobody there, and its holes still on the
    * phone were refused). Only this tournament's claim goes.
    */
-  it('«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one\'s', async () => {
-    for (const [claimIn, released] of [['t-otro', false], [id, true]] as const) {
+  it('«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one\'s (as before when the server can\'t say where it is)', async () => {
+    for (const [claimIn, released] of [['t-otro', false], [id, true], [null, true]] as const) {
       server.releaseDevice.mockClear()
-      server.myDeviceClaim.mockResolvedValue({ playerId: 'p-otro', tournamentId: claimIn })
+      if (claimIn) server.myDeviceClaim.mockResolvedValue({ playerId: 'p-otro', tournamentId: claimIn })
+      else server.myDeviceClaim.mockRejectedValue(new Error('TypeError: Failed to fetch'))
       await saveOnPhone('Guardado en el teléfono')
       server.ensureSession.mockResolvedValue({})
       server.lookupTournament.mockResolvedValue(fx.lookup)
