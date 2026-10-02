@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
+import { serverAnsweredWithin } from '../lib/fetchWithTimeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { registerOverlay, useTournament } from './tournamentStore'
@@ -342,10 +343,19 @@ async function deleteStored(item: OutboxItem) {
  * as the session took to come back (48 s inside auth-js's cooldown).
  */
 const NO_SESSION_YET = 'no session to push with yet'
+/**
+ * No session to push with, and nothing answers either (lie-fi, no route): the
+ * network, not the session. Once the token had expired, any failed or stalled
+ * session read said «Confirmando tu sesión…», for 40 s after lie-fi healed.
+ */
+const NO_SESSION_NO_SERVER = 'no session to push with, and no answer from the server'
+/** How recent an answer from the server must be for a missing session to be what a write waits for. */
+const SERVER_ANSWERED_MS = 30_000
 
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
 export function describeSyncError(msg: string): string {
   if (msg === NO_SESSION_YET) return t.sync.errSession
+  if (msg === NO_SESSION_NO_SERVER) return t.sync.errNetwork
   if (/signed|firmad/i.test(msg)) return t.sync.errSigned
   if (/not live|is_live|en juego/i.test(msg)) return t.sync.errNotLive
   if (isPermanent(msg)) return t.sync.errDenied
@@ -567,11 +577,12 @@ export const _outboxTest = {
  * session is back (the auth store's change below, the backoff, `online`).
  */
 async function sessionToken(sb: SupabaseClient): Promise<string> {
-  // A getSession that stalls or fails (the refresh hanging on lie-fi, the
-  // auth server down) is the session not confirmed yet too, not the network.
+  // A getSession that stalls or fails (the refresh hanging, the auth server
+  // down) is the session not confirmed yet too, while the server answers the
+  // app's other requests. With nothing answering it is the network.
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión').catch(() => ({ data: { session: null } }))
   const token = data.session?.access_token
-  if (!token) throw new Error(NO_SESSION_YET)
+  if (!token) throw new Error(serverAnsweredWithin(SERVER_ANSWERED_MS) ? NO_SESSION_YET : NO_SESSION_NO_SERVER)
   return token
 }
 

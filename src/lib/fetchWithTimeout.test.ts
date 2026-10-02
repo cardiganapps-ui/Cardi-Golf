@@ -3,7 +3,7 @@
  * instead of freezing every queued score behind it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchWithTimeout, REQUEST_TIMEOUT_MS, RequestTimeoutError, timeoutFor, UPLOAD_TIMEOUT_MS } from './fetchWithTimeout'
+import { fetchWithTimeout, REQUEST_TIMEOUT_MS, RequestTimeoutError, serverAnsweredWithin, timeoutFor, UPLOAD_TIMEOUT_MS } from './fetchWithTimeout'
 
 /** A fetch that never answers, but rejects with the abort reason like browsers do. */
 function hangingFetch() {
@@ -49,5 +49,44 @@ describe('fetchWithTimeout', () => {
     const result = expect(p).rejects.toBe('stop')
     ctrl.abort('stop')
     await result
+  })
+})
+
+/**
+ * Whether the server is answering, for the Tarjeta's line while a write waits
+ * for its session (the verifier of #87, round 3): «Confirmando tu sesión…»
+ * showed on lie-fi and with no route at all once the token had expired, for
+ * 40 s after the network was back.
+ */
+describe('serverAnsweredWithin', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('any answer below 500 means the server was reachable then, a refusal too', async () => {
+    vi.advanceTimersByTime(60_000)
+    expect(serverAnsweredWithin(30_000)).toBe(false)
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"message":"JWT expired"}', { status: 401 })))
+    await fetchWithTimeout('https://x.supabase.co/rest/v1/rpc/lookup_tournament', { method: 'POST' })
+    expect(serverAnsweredWithin(30_000)).toBe(true)
+    vi.advanceTimersByTime(31_000)
+    expect(serverAnsweredWithin(30_000)).toBe(false)
+  })
+
+  it('a 5xx, a network error or a request the network swallows is no answer', async () => {
+    // Well past the answer of the test before.
+    vi.advanceTimersByTime(120_000)
+    expect(serverAnsweredWithin(30_000)).toBe(false)
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })))
+    await fetchWithTimeout('https://x.supabase.co/auth/v1/token', { method: 'POST' })
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+    await expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores')).rejects.toThrow('Failed to fetch')
+    vi.stubGlobal('fetch', hangingFetch())
+    const stalled = expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores')).rejects.toBeInstanceOf(RequestTimeoutError)
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS)
+    await stalled
+    expect(serverAnsweredWithin(30_000)).toBe(false)
   })
 })
