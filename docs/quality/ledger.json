@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-01",
+  "updated": "2026-10-02",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -1859,7 +1859,9 @@
         "src/screens/tournament/TournamentGate.test.tsx",
         "src/data/snapshotCache.test.ts",
         "src/data/account.signout.test.ts",
-        "src/data/tournamentStore.test.ts"
+        "src/data/tournamentStore.test.ts",
+        "src/data/auth.signout.test.ts",
+        "src/screens/organizer/MyTournamentsScreen.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
@@ -2648,7 +2650,9 @@
         "src/data/outbox.session.test.ts",
         "src/screens/tournament/TournamentGate.test.tsx",
         "src/screens/tournament/TournamentGate.race.test.tsx",
-        "src/screens/tournament/ScorecardScreen.test.tsx"
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/auth.signout.test.ts",
+        "src/screens/tournament/MoreScreen.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
