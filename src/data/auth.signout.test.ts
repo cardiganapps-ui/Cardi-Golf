@@ -35,7 +35,7 @@ vi.mock('../lib/supabase', () => ({
   }),
 }))
 
-const { _authTest, signOut, signedOutOnPurpose, useAuth } = await import('./auth')
+const { _authTest, signOut, signOutRunning, signedOutOnPurpose, useAuth } = await import('./auth')
 await useAuth.getState().init()
 
 const KEY = 'cardi-golf-auth'
@@ -187,14 +187,16 @@ describe('a sign-out that takes a while', () => {
       const late = vi.fn()
       const done = signOut(late)
       await vi.advanceTimersByTimeAsync(20_000)
-      // The person is told the truth of that moment: the session is still there.
+      // The person is told the truth of that moment: the session is still there, and auth-js still on it.
       expect(await done).toBe(false)
       expect(storage.has(KEY)).toBe(true)
+      expect(signOutRunning()).toBe(true)
       expect(late).not.toHaveBeenCalled()
       await vi.advanceTimersByTimeAsync(20_000)
       expect(seen.onPurpose).toBe(true)
       expect(late).toHaveBeenCalledTimes(1)
       expect(signedOutOnPurpose()).toBe(true)
+      expect(signOutRunning()).toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -212,6 +214,7 @@ describe('a sign-out that takes a while', () => {
       expect(late).not.toHaveBeenCalled()
       expect(storage.has(KEY)).toBe(true)
       expect(signedOutOnPurpose()).toBe(false)
+      expect(signOutRunning()).toBe(false)
     } finally {
       vi.useRealTimers()
     }

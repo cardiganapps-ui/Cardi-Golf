@@ -193,12 +193,20 @@ let signingOut = false
 let leaving: string | null = null
 /** Each sign-out's number: an older one's late answer leaves a newer one's flag and outcome alone. */
 let signOutSeq = 0
+/** auth-js is still working on the latest sign-out (its refresh retrying, its logout unanswered). */
+let ending = false
+
+/** Whether the sign-out the person asked for is still running: a `false` from signOut() may yet turn into a sign-out. */
+export function signOutRunning(): boolean {
+  return ending
+}
 
 /** For tests: no sign-out asked for, and none still running (a later answer of one changes nothing). */
 export const _authTest = {
   resetSignOut() {
     signingOut = false
     leaving = null
+    ending = false
     signOutSeq++
   },
 }
@@ -243,6 +251,7 @@ export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean>
   // Before auth-js starts: it announces the session going away (and may refresh it first) inside its own signOut.
   signingOut = true
   leaving = useAuth.getState().user?.id ?? storedUid()
+  ending = true
   return new Promise<boolean>((resolve) => {
     /** What the caller was told, once it was: the session gone, or still there. */
     let told: boolean | null = null
@@ -261,6 +270,7 @@ export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean>
       if (seq !== signOutSeq) return
       // auth-js is done: from here on any session is a new sign-in, the same account's too.
       leaving = null
+      ending = false
       if (!gone) signingOut = false
       else if (late) {
         try {
@@ -270,13 +280,13 @@ export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean>
         }
       }
     }
-    let ending: Promise<unknown>
+    let call: Promise<unknown>
     try {
-      ending = supabase().auth.signOut()
+      call = supabase().auth.signOut()
     } catch (e) {
-      ending = Promise.reject(e)
+      call = Promise.reject(e)
     }
     // Judged by what is left on the device, either way.
-    void ending.then(settle, settle)
+    void call.then(settle, settle)
   })
 }

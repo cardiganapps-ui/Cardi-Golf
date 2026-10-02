@@ -155,10 +155,20 @@ describe('what the refusal says', () => {
 describe('signing out with no signal and an expired token', () => {
   it('auth-js keeps the session: not done, and the saved boards and «Tu último torneo» stay', async () => {
     auth.signOut = async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
-    expect(await signOutSafely()).toEqual({ done: false, reason: t.account.signOutNeedsSignal })
+    expect(await signOutSafely()).toEqual({ done: false, reason: t.account.signOutUnconfirmed })
     expect(auth.signOuts).toBe(1)
     expect(await readCached(slug)).not.toBeNull()
     expect(getLastTournament()).toEqual({ slug, name })
+  })
+
+  /**
+   * The same refusal comes, with the signal back, inside auth-js's 60 s retry
+   * cooldown after a failed refresh: no request is even sent (the verifier of
+   * #87, round 3, in 2 of 3 runs). It used to say «hace falta señal».
+   */
+  it('says what is true either way: the session could not be confirmed, not that there is no signal', () => {
+    expect(t.account.signOutUnconfirmed).not.toMatch(/hace falta señal|sin señal|no hay señal/i)
+    expect(t.account.signOutUnconfirmed).toMatch(/Intenta de nuevo en un minuto/)
   })
 })
 
@@ -181,8 +191,8 @@ describe('a sign-out that ends after its screen stopped waiting', () => {
         )
       const result = signOutSafely()
       await vi.advanceTimersByTimeAsync(20_000)
-      // Told the truth of that moment: still signed in, nothing cleared yet.
-      expect((await result).done).toBe(false)
+      // Told the truth of that moment: still signed in for now, the server has not answered, nothing cleared yet.
+      expect(await result).toEqual({ done: false, reason: t.account.signOutPending })
       expect(await readCached(slug)).not.toBeNull()
       expect(getLastTournament()).toEqual({ slug, name })
       await vi.advanceTimersByTimeAsync(20_000)

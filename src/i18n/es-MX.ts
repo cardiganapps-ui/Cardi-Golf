@@ -749,8 +749,14 @@ export const t = {
     signOut: 'Cerrar sesión',
     /** The sign-out button while it waits for the server (up to 15 s on lie-fi). */
     signingOut: 'Cerrando sesión…',
-    /** Signing out needs the server to end the session (no signal and an expired token): nothing was cleared. */
-    signOutNeedsSignal: 'Para cerrar sesión hace falta señal. Sigues dentro y lo guardado en el teléfono sigue aquí.',
+    /**
+     * auth-js kept the session: it could not confirm it with the server to end
+     * it (no signal and an expired token, or the signal just back inside its
+     * 60 s retry cooldown, when no request is even sent). Nothing was cleared.
+     */
+    signOutUnconfirmed: 'No se pudo confirmar tu sesión con el servidor, así que sigue abierta y lo guardado en el teléfono sigue aquí. Intenta de nuevo en un minuto.',
+    /** The server has not answered yet (lie-fi, an expired token still refreshing): the session may still end, and then the phone says so. */
+    signOutPending: 'El servidor no ha respondido: por ahora sigues dentro. Si la sesión se cierra, se borra lo guardado en el teléfono y te avisamos.',
     /** The session ended after the phone had said it was still there: what it kept of the person is gone now too. */
     signedOutLate: 'Ya se cerró tu sesión y se borró lo guardado en el teléfono.',
     enterProfile: 'Entrar a mi perfil',

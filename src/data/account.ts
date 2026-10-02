@@ -17,7 +17,7 @@ import { t } from '../i18n/es-MX'
 import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
 import { unsentWrites } from './outbox'
-import { signOut } from './auth'
+import { signOut, signOutRunning } from './auth'
 import { setLastTournament } from './session'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
@@ -201,7 +201,8 @@ export async function signOutSafely(): Promise<SignOutResult> {
     await forgetSignedOut()
     useLateSignOut.setState({ at: Date.now() })
   }
-  if (!(await signOut(late))) return { done: false, reason: t.account.signOutNeedsSignal }
+  // Not done: auth-js kept the session (it could not confirm it), or it is still working on it and may yet end it.
+  if (!(await signOut(late))) return { done: false, reason: signOutRunning() ? t.account.signOutPending : t.account.signOutUnconfirmed }
   await forgetSignedOut()
   return { done: true }
 }
