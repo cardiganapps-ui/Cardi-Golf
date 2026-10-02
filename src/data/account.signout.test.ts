@@ -17,8 +17,11 @@ const auth = vi.hoisted(() => ({
   /** What auth-js's signOut does: by default it removes the stored session. */
   signOut: async (): Promise<{ error: unknown }> => ({ error: null }),
   anonymous: true,
+  /** `none`: getSession gives no session (none stored, or one auth-js could not refresh: lie-fi, its retry cooldown). */
+  session: 'anon' as 'anon' | 'none',
   oauth: 0,
   otp: 0,
+  verifies: 0,
   /** What updateUser({ email }) answers: by default the address has an account already. */
   updateUser: async (): Promise<{ error: unknown }> => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) }),
 }))
@@ -31,12 +34,16 @@ vi.mock('../lib/supabase', () => ({
         auth.signOuts++
         return auth.signOut()
       },
-      getSession: async () => ({ data: { session: { user: { id: 'uid-a', is_anonymous: auth.anonymous } } } }),
+      getSession: async () => ({ data: { session: auth.session === 'none' ? null : { user: { id: 'uid-a', is_anonymous: auth.anonymous } } } }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
       // By default the address already has an account: the device signs in to it instead of converting.
       updateUser: () => auth.updateUser(),
       signInWithOtp: async () => {
         auth.otp++
+        return { error: null }
+      },
+      verifyOtp: async () => {
+        auth.verifies++
         return { error: null }
       },
       signInWithOAuth: async () => {
@@ -55,7 +62,7 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't-open', patch: () => undefined, reload: async () => undefined }) },
 }))
 
-const { continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely, useLateSignOut } = await import('./account')
+const { confirmProfileCode, continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely, useLateSignOut } = await import('./account')
 const { useAuth } = await import('./auth')
 const { useMyProfile } = await import('./profiles')
 const { t } = await import('../i18n/es-MX')
@@ -71,7 +78,9 @@ beforeEach(async () => {
   auth.signOuts = 0
   auth.oauth = 0
   auth.otp = 0
+  auth.verifies = 0
   auth.anonymous = true
+  auth.session = 'anon'
   auth.updateUser = async () => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) })
   auth.signOut = async () => {
     localStorage.removeItem('cardi-golf-auth')
@@ -225,6 +234,39 @@ describe('changing account with a write of another tournament on the phone', () 
     await expect(signInWithGoogleInstead('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
     await expect(continueWithGoogle('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
     expect(auth.oauth).toBe(0)
+  })
+
+  /**
+   * With no session to convert or add Google to (none, or one auth-js could
+   * not confirm: lie-fi, or the signal just back inside its retry cooldown),
+   * the code and Google sign this phone in as the account. Both skipped the
+   * check, and the phone's holes were left waiting for a PIN.
+   */
+  it('with no session auth-js could confirm, the email code and Google are refused too', async () => {
+    await holeOfSaved()
+    auth.session = 'none'
+    await expect(sendProfileCode('otro@example.com')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
+    await expect(continueWithGoogle('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
+    expect(auth.otp + auth.oauth).toBe(0)
+  })
+
+  it('so is Google from an account: it signs this phone in as the Google one', async () => {
+    await holeOfSaved()
+    auth.anonymous = false
+    await expect(continueWithGoogle('/')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
+    expect(auth.oauth).toBe(0)
+  })
+
+  it('the sign-in code is checked again when it is typed: a hole saved since it was sent refuses it', async () => {
+    auth.session = 'none'
+    expect(await sendProfileCode('otro@example.com')).toBe('signin')
+    expect(auth.otp).toBe(1)
+    await holeOfSaved()
+    await expect(confirmProfileCode('otro@example.com', '123456', 'signin')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
+    expect(auth.verifies).toBe(0)
+    // Converting in place keeps the uid: its code goes ahead.
+    await confirmProfileCode('nuevo@example.com', '123456', 'convert')
+    expect(auth.verifies).toBe(1)
   })
 })
 

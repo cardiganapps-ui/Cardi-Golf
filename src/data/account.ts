@@ -48,6 +48,9 @@ export async function sendProfileCode(email: string): Promise<CodeMode> {
     // The address has an account already: sign in to it and bring this device's player along.
     await refuseWithUnsent('switch')
     await stashLinkToken()
+  } else {
+    // No session to convert (none, or one auth-js could not confirm: lie-fi, its retry cooldown): the code signs this phone in as the account.
+    await refuseWithUnsent('switch')
   }
   const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: back() } })
   if (error) throw error
@@ -65,6 +68,8 @@ export async function resendProfileCode(email: string, mode: CodeMode) {
 
 /** Step 2: the code from the email. */
 export async function confirmProfileCode(email: string, code: string, mode: CodeMode) {
+  // A sign-in code is what switches the phone: anything saved since it was sent counts too. Converting in place keeps the uid.
+  if (mode === 'signin') await refuseWithUnsent('switch')
   const { error } = await supabase().auth.verifyOtp({ email, token: code.trim(), type: mode === 'convert' ? 'email_change' : 'email' })
   if (error) throw error
 }
@@ -115,12 +120,17 @@ export async function googleAvailable(): Promise<boolean> {
 
 const oauthReturn = (next: string) => `${window.location.origin}/perfil/vuelta?next=${encodeURIComponent(next)}`
 
-/** Adds Google to this device's anonymous session, or signs in with it. */
+/**
+ * Adds Google to this device's anonymous session, or signs in with it. Either
+ * way not while writes wait: with no session to add it to (none, or one
+ * auth-js could not confirm) the sign-in makes this phone the Google account,
+ * and it skipped the check.
+ */
 export async function continueWithGoogle(next: string) {
   const sb = supabase()
   const { data } = await sb.auth.getSession()
+  await refuseWithUnsent('switch')
   if (data.session?.user?.is_anonymous) {
-    await refuseWithUnsent('switch')
     const { error } = await sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
     if (error) throw error
     return
