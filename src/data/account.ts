@@ -12,6 +12,7 @@
  *   OAuth return lands in Safari instead of the app.
  */
 import type { AuthError } from '@supabase/supabase-js'
+import { create } from 'zustand'
 import { t } from '../i18n/es-MX'
 import { humanError, UserError } from '../lib/humanError'
 import { authSettings, supabase } from '../lib/supabase'
@@ -166,20 +167,37 @@ async function refuseWithUnsent(action: 'switch') {
 export type SignOutResult = { done: true } | { done: false; reason: string }
 
 /**
+ * A sign-out that ended after its screen had stopped waiting and said the
+ * person was still signed in: what the phone kept of them is cleared by then,
+ * and the shell takes the phone home and says so (AppShell).
+ */
+export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null }))
+
+/** What a signed-out person leaves on the phone goes with them: the profile in memory, «Tu último torneo», the saved boards. */
+async function forgetSignedOut() {
+  useMyProfile.getState().clear()
+  setLastTournament(null)
+  await clearAllCached()
+}
+
+/**
  * Signing out drops this device's session; not while it still holds unsent
  * writes, for any tournament. The boards saved on the phone and «Tu último
  * torneo» go with it: on a shared phone the next person saw the previous
  * one's boards and role until the server answered, and for good with no
  * signal. Only once the session is really gone: with no signal and an
  * expired token it stays, and this used to say it worked and wipe the boards
- * of a person who was still signed in.
+ * of a person who was still signed in. When it goes only after this said it
+ * was still there (lie-fi, an expired token still refreshing), they go then.
  */
 export async function signOutSafely(): Promise<SignOutResult> {
   const unsent = await unsentReason('signOut')
   if (unsent) return { done: false, reason: unsent }
-  if (!(await signOut())) return { done: false, reason: t.account.signOutNeedsSignal }
-  useMyProfile.getState().clear()
-  setLastTournament(null)
-  await clearAllCached()
+  const late = async () => {
+    await forgetSignedOut()
+    useLateSignOut.setState({ at: Date.now() })
+  }
+  if (!(await signOut(late))) return { done: false, reason: t.account.signOutNeedsSignal }
+  await forgetSignedOut()
   return { done: true }
 }

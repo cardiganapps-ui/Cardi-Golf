@@ -74,7 +74,7 @@ describe('signOut', () => {
     vi.useFakeTimers()
     sb.signOut = () => new Promise(() => undefined)
     const done = signOut()
-    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(20_000)
     expect(await done).toBe(false)
     vi.useRealTimers()
   })
@@ -88,5 +88,82 @@ describe('signOut', () => {
     expect(signedOutOnPurpose()).toBe(true)
     sb.listener?.('SIGNED_IN', { user: { id: 'anon-nuevo' } })
     expect(signedOutOnPurpose()).toBe(false)
+  })
+})
+
+/**
+ * Lie-fi or a slow server (the verifier of #87, round 3): signOut gave up at
+ * 8 s while auth-js's own logout request lives 12 s, said «Sigues dentro»,
+ * and dropped the deliberate flag; auth-js then removed the session anyway
+ * (a network error from the logout ends a valid session), the gate saw a lost
+ * session and started an anonymous user, and the previous person's boards
+ * and «Tu último torneo» stayed for the next one.
+ */
+describe('a sign-out that takes a while', () => {
+  /** auth-js's signOut, answering after `ms`; `ends`: it removed the session by then. */
+  function answersAfter(ms: number, ends: boolean, seen?: { onPurpose: boolean | null }) {
+    sb.signOut = () =>
+      new Promise((resolve) =>
+        setTimeout(() => {
+          if (ends) {
+            storage.delete(KEY)
+            sb.listener?.('SIGNED_OUT', null)
+            if (seen) seen.onPurpose = signedOutOnPurpose()
+          }
+          resolve({ error: ends ? null : Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+        }, ms),
+      )
+  }
+  const fake = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+  it('is waited for past the logout request\'s own deadline: on lie-fi auth-js ends a valid session at 12 s, and the sign-out is done', async () => {
+    fake()
+    try {
+      answersAfter(12_000, true)
+      const done = signOut()
+      await vi.advanceTimersByTimeAsync(12_500)
+      expect(await done).toBe(true)
+      expect(signedOutOnPurpose()).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a session that ends after the wait gave up: still no lost session to the gate, and what the caller would have done is done then', async () => {
+    fake()
+    try {
+      const seen = { onPurpose: null as boolean | null }
+      answersAfter(40_000, true, seen)
+      const late = vi.fn()
+      const done = signOut(late)
+      await vi.advanceTimersByTimeAsync(20_000)
+      // The person is told the truth of that moment: the session is still there.
+      expect(await done).toBe(false)
+      expect(storage.has(KEY)).toBe(true)
+      expect(late).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(seen.onPurpose).toBe(true)
+      expect(late).toHaveBeenCalledTimes(1)
+      expect(signedOutOnPurpose()).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a late answer that keeps the session changes nothing, and the identity going away later is no longer on purpose', async () => {
+    fake()
+    try {
+      answersAfter(40_000, false)
+      const late = vi.fn()
+      const done = signOut(late)
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(await done).toBe(false)
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(late).not.toHaveBeenCalled()
+      expect(storage.has(KEY)).toBe(true)
+      expect(signedOutOnPurpose()).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

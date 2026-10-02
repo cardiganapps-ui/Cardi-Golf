@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { MaintenanceBanner } from '../components/MaintenanceBanner'
 import { UpdateBar } from '../components/UpdateBar'
-import { Toaster } from '../components/ui'
+import { Toaster, toast } from '../components/ui'
+import { t } from '../i18n/es-MX'
+import { useLateSignOut } from '../data/account'
 import { useAuth } from '../data/auth'
 import { startOutbox } from '../data/outbox'
 import { useMyProfile } from '../data/profiles'
@@ -35,6 +37,16 @@ export function AppShell() {
       usePlatform.getState().clear()
     }
   }, [accountId])
+  // A sign-out that ended after its screen said the person was still signed in
+  // (lie-fi): what the phone kept of them is gone by now, and nothing of theirs
+  // stays on screen for the next person either.
+  const navigate = useNavigate()
+  const lateSignOut = useLateSignOut((s) => s.at)
+  useEffect(() => {
+    if (!lateSignOut) return
+    toast(t.account.signedOutLate)
+    navigate('/', { replace: true })
+  }, [lateSignOut, navigate])
   return (
     <div className={styles.shell}>
       <OfflineBanner />

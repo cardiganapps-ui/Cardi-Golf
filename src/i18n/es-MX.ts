@@ -747,8 +747,12 @@ export const t = {
     linkTaken: 'Ese jugador ya está en el perfil de otra persona. Pídele al Comité que lo revise.',
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
+    /** The sign-out button while it waits for the server (up to 15 s on lie-fi). */
+    signingOut: 'Cerrando sesión…',
     /** Signing out needs the server to end the session (no signal and an expired token): nothing was cleared. */
     signOutNeedsSignal: 'Para cerrar sesión hace falta señal. Sigues dentro y lo guardado en el teléfono sigue aquí.',
+    /** The session ended after the phone had said it was still there: what it kept of the person is gone now too. */
+    signedOutLate: 'Ya se cerró tu sesión y se borró lo guardado en el teléfono.',
     enterProfile: 'Entrar a mi perfil',
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },

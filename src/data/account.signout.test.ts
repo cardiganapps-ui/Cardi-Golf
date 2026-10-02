@@ -53,8 +53,9 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't-open', patch: () => undefined, reload: async () => undefined }) },
 }))
 
-const { continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely } = await import('./account')
+const { continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely, useLateSignOut } = await import('./account')
 const { useAuth } = await import('./auth')
+const { useMyProfile } = await import('./profiles')
 const { t } = await import('../i18n/es-MX')
 const { _outboxTest } = await import('./outbox')
 const { getLastTournament, setLastTournament } = await import('./session')
@@ -143,6 +144,40 @@ describe('signing out with no signal and an expired token', () => {
     expect(auth.signOuts).toBe(1)
     expect(await readCached(slug)).not.toBeNull()
     expect(getLastTournament()).toEqual({ slug, name })
+  })
+})
+
+/**
+ * Lie-fi or a slow server (the verifier of #87, round 3): the sign-out said
+ * «Sigues dentro», then auth-js ended the session anyway, and the previous
+ * person's profile, «Tu último torneo» and boards stayed for the next one.
+ */
+describe('a sign-out that ends after its screen stopped waiting', () => {
+  it('finishes the cleanup then, and says so', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      useMyProfile.setState({ profile: { id: 'uid-a', handle: 'ivanj' } as never })
+      auth.signOut = () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            localStorage.removeItem('cardi-golf-auth')
+            resolve({ error: null })
+          }, 40_000),
+        )
+      const result = signOutSafely()
+      await vi.advanceTimersByTimeAsync(20_000)
+      // Told the truth of that moment: still signed in, nothing cleared yet.
+      expect((await result).done).toBe(false)
+      expect(await readCached(slug)).not.toBeNull()
+      expect(getLastTournament()).toEqual({ slug, name })
+      await vi.advanceTimersByTimeAsync(20_000)
+      await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+      expect(getLastTournament()).toBeNull()
+      expect(useMyProfile.getState().profile).toBeNull()
+      expect(useLateSignOut.getState().at).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

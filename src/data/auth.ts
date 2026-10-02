@@ -5,12 +5,20 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { REQUEST_TIMEOUT_MS } from '../lib/fetchWithTimeout'
 import { withTimeout } from '../lib/timeout'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 
 /** How long startup waits for the stored session before showing a way out. */
 export const SESSION_TIMEOUT_MS = 8000
+/**
+ * How long a sign-out waits for auth-js: past its own logout request's
+ * deadline. With a valid token auth-js ends the session even when that request
+ * fails, so on lie-fi the session went at 12 s, 4 s after a sign-out that gave
+ * up at 8 s had said «Sigues dentro».
+ */
+export const SIGN_OUT_TIMEOUT_MS = REQUEST_TIMEOUT_MS + 3000
 
 interface AuthState {
   ready: boolean
@@ -177,6 +185,8 @@ export async function updatePassword(password: string) {
 
 /** The person asked to sign out (until the next session): the identity going away is no lost session. */
 let signingOut = false
+/** Each sign-out's number: an older one's late answer leaves a newer one's flag and outcome alone. */
+let signOutSeq = 0
 
 /**
  * Whether this device has no session because its person signed out on
@@ -190,20 +200,54 @@ export function signedOutOnPurpose(): boolean {
 }
 
 /**
- * Signs this device out. True once the stored session is gone; false when it
- * is still there. With no signal and an expired token auth-js cannot load the
- * session to end it, returns an error and keeps it: that used to read as
+ * Signs this device out. True once the stored session is gone; false while
+ * it is still there. With no signal and an expired token auth-js cannot load
+ * the session to end it, returns an error and keeps it: that used to read as
  * done, and the caller wiped the boards saved on the phone of a person who
  * was still signed in.
+ *
+ * It waits past auth-js's own logout request (SIGN_OUT_TIMEOUT_MS), so lie-fi
+ * and a slow server get the real outcome. auth-js can still end the session
+ * after that (an expired token whose refresh is still retrying): the flag
+ * stays up until auth-js is done, so the gate never starts an anonymous user
+ * for it, and `whenLate` does what the caller did not get to do (clear what
+ * the phone kept of that person, and say so).
  */
-export async function signOut(): Promise<boolean> {
+export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean> {
+  const seq = ++signOutSeq
   signingOut = true
-  try {
-    await withTimeout(supabase().auth.signOut(), SESSION_TIMEOUT_MS, 'sesión')
-  } catch {
-    // Judged by what is left on the device, below.
-  }
-  const gone = !hasStoredSession()
-  if (!gone) signingOut = false
-  return gone
+  return new Promise<boolean>((resolve) => {
+    /** What the caller was told, once it was: the session gone, or still there. */
+    let told: boolean | null = null
+    const tell = (gone: boolean) => {
+      told = gone
+      resolve(gone)
+    }
+    const timer = setTimeout(() => tell(!hasStoredSession()), SIGN_OUT_TIMEOUT_MS)
+    const settle = async () => {
+      clearTimeout(timer)
+      const gone = !hasStoredSession()
+      // The caller stopped waiting and said the session was still there.
+      const late = told === false
+      if (told === null) tell(gone)
+      // A newer sign-out owns the flag and what comes after.
+      if (seq !== signOutSeq) return
+      if (!gone) signingOut = false
+      else if (late) {
+        try {
+          await whenLate?.()
+        } catch {
+          // Best effort, like the cleanup it stands for.
+        }
+      }
+    }
+    let ending: Promise<unknown>
+    try {
+      ending = supabase().auth.signOut()
+    } catch (e) {
+      ending = Promise.reject(e)
+    }
+    // Judged by what is left on the device, either way.
+    void ending.then(settle, settle)
+  })
 }

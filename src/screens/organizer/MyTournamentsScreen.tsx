@@ -25,6 +25,8 @@ export function MyTournamentsScreen() {
   const { ready, user, isAnonymous } = useAuth()
   const [items, setItems] = useState<MyTournament[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Waiting for the server to end the session: on lie-fi that takes until auth-js's own deadline. */
+  const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
     if (!ready) return
@@ -44,15 +46,26 @@ export function MyTournamentsScreen() {
     return [...seen.values()]
   }, [items])
 
+  // The same sign-out as everywhere: never with holes still on the phone, and it takes the phone's saved boards.
+  async function logout() {
+    setSigningOut(true)
+    try {
+      const r = await signOutSafely()
+      if (r.done) navigate('/')
+      else toast(r.reason)
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   return (
     <div className={styles.screen}>
       <div className={styles.topRow}>
         <Link to="/" className={styles.brand}>
           <Wordmark />
         </Link>
-        {/* The same sign-out as everywhere: never with holes still on the phone, and it takes the phone's saved boards. */}
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => void signOutSafely().then((r) => (r.done ? navigate('/') : toast(r.reason)))}>
-          {t.common.logout}
+        <button className="btn btn--ghost btn--sm" type="button" disabled={signingOut} onClick={() => void logout()}>
+          {signingOut ? t.account.signingOut : t.common.logout}
         </button>
       </div>
       <div className={styles.titleRow}>
