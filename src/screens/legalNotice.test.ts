@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'defa4ccb34c092a7' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'e5a9897861f86ee9' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -172,7 +172,7 @@ describe('the rest of the verifier\'s list', () => {
   it('6. backups are plain gzipped JSON that only Cloudflare encrypts at rest; Microsoft is among the push services', () => {
     const where = sections['Dónde viven']!
     expect(where).not.toContain('cifrados')
-    expect(where).toContain('Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos; Cloudflare cifra lo que guarda.')
+    expect(where).toContain('Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos (Cloudflare cifra lo que guarda)')
     expect(where).toContain('(el de Apple, Google, Microsoft o Mozilla)')
   })
 
@@ -227,5 +227,42 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     // Each new profile photo is a new file, and no code removes a stored file.
     expect(source('src/data/profiles.ts')).toContain('`profiles/${id}/avatar-${Date.now()}.')
     expect(storageRemovals()).toEqual([])
+  })
+})
+
+/**
+ * PR #88's second verifier, P2: «se guardan como archivos que abre
+ * cualquiera que tenga su enlace» understated it. The read policy on the
+ * bucket has no role, so anyone with the app's public key lists every file,
+ * and each path starts with the id of its account, tournament or course.
+ * Changing the policy is TRUST-07; until then the notice says it as it is.
+ */
+describe('uploaded files: public, listed for anyone, never deleted (assets_public_read, 0003)', () => {
+  const where = () => sections['Dónde viven']!
+
+  it('anyone, without an account, sees the whole list and opens any file; the list shows whose each one is', () => {
+    expect(where()).toContain(
+      'Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede ver la lista completa y abrir cualquiera, y en esa lista se ve a qué cuenta, torneo o campo pertenece cada uno, por su identificador interno.',
+    )
+    expect(all).not.toContain('que abre cualquiera que tenga su enlace')
+  })
+
+  it('no file is ever deleted, and no backup either', () => {
+    expect(where()).toContain('La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra.')
+    expect(where()).toContain('nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca.')
+  })
+
+  it('the rules it rests on: a public bucket, read by every role, and nothing ever replaced that policy', () => {
+    const migrations = filesUnder('supabase/migrations', (n) => n.endsWith('.sql'))
+      .sort()
+      .map(source)
+      .join('\n')
+    expect(migrations).toMatch(/values \('tournament-assets', 'tournament-assets', true,/)
+    const statements = migrations.split(';').filter((s) => s.includes('assets_public_read'))
+    expect(statements.map((s) => s.trim().replace(/\s+/g, ' '))).toEqual(["create policy assets_public_read on storage.objects for select using (bucket_id = 'tournament-assets')"])
+    // The paths those lists show: profiles/<account>/…, <tournament>/…, courses/<course>/….
+    expect(source('src/data/profiles.ts')).toContain('`profiles/${id}/')
+    expect(source('src/screens/admin/AdminPlayers.tsx')).toContain('`${tournamentId}/avatars/')
+    expect(source('src/screens/admin/AdminCourses.tsx')).toContain('`courses/${id}/')
   })
 })
