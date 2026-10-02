@@ -3104,13 +3104,13 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "fixed",
+      "status": "verified",
       "pr": 88,
       "tests": [
         "src/screens/legalNotice.test.ts",
         "src/screens/profile/ProfileScreen.test.tsx"
       ],
-      "verifiedBy": null,
+      "verifiedBy": "Independent verifier, PR #88 round 2 (2026-10-02): CONFIRMED-FIXED at 5c68d53; its P2/P3 follow-ups fixed in c6310fd and pinned by legalNotice.test.ts",
       "residual": null
     },
     {
