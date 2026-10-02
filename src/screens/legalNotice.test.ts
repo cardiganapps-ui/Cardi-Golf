@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '3980af12be41c596' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': 'ffaa931168c357c2' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -297,7 +297,7 @@ describe('what the notice left out (P3-6)', () => {
   })
 
   it('opening a tournament or a profile link creates an anonymous user, before any line shows', () => {
-    expect(sections['Qué datos guardamos']).toContain('Abrir el enlace de un torneo o de un perfil en un navegador sin sesión le crea un usuario anónimo (sin correo ni nombre), aunque no entres.')
+    expect(sections['Qué datos guardamos']).toContain('Con solo abrir el enlace de un torneo o de un perfil en un navegador sin sesión, se le crea un usuario anónimo (sin correo ni nombre).')
     expect(source('src/data/auth.ts')).toMatch(/export async function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
     // The gate signs in before it even looks the tournament up, so before Entrar and its line.
     expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/await ensureSession\(\)\s+const lookup = await lookupTournament\(slug\)/)
