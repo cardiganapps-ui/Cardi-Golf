@@ -529,7 +529,9 @@ export const _outboxTest = {
  * session is back (the auth store's change below, the backoff, `online`).
  */
 async function sessionToken(sb: SupabaseClient): Promise<string> {
-  const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
+  // A getSession that stalls or fails (the refresh hanging on lie-fi, the
+  // auth server down) is the session not confirmed yet too, not the network.
+  const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión').catch(() => ({ data: { session: null } }))
   const token = data.session?.access_token
   if (!token) throw new Error(NO_SESSION_YET)
   return token

@@ -22,10 +22,13 @@ const srv = vi.hoisted(() => {
     refuseForPlayer: false,
     /** The session goes right after the push read it (auth-js dropped it mid-push). */
     dropAfterRead: false,
+    /** getSession never answers (the auth server down, auth-js retrying the refresh). */
+    stall: false,
     sent: [] as Array<{ table: string; method: string; auth: string }>,
     client: null as unknown,
   }
   const getSession = async () => {
+    if (state.stall) await new Promise(() => undefined)
     const session = state.session
     if (state.dropAfterRead) state.session = null
     return { data: { session }, error: session ? null : new Error('refresh cooling down') }
@@ -91,6 +94,7 @@ beforeEach(() => {
   srv.sent = []
   srv.refuseForPlayer = false
   srv.dropAfterRead = false
+  srv.stall = false
   srv.session = { access_token: 'tok-1' }
   // The player entered with the PIN on this phone: its writes carry who wrote them.
   useAuth.setState({ user: { id: 'uid-phone' } as never, session: { access_token: 'tok-1' } as never })
@@ -135,6 +139,23 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
     ])
     expect(useOutbox.getState().rejected).toEqual([])
     expect(_outboxTest.queue()).toEqual([])
+  })
+
+  it('the auth server down: getSession stalls, the write waits, and the Tarjeta says the session, not the network', async () => {
+    vi.useFakeTimers()
+    try {
+      srv.stall = true
+      await _outboxTest.enqueue(score(16))
+      const done = flush()
+      await vi.advanceTimersByTimeAsync(9000)
+      await done
+      expect(srv.sent).toEqual([])
+      expect(useOutbox.getState().rejected).toEqual([])
+      expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:16'])
+      expect(useOutbox.getState().lastError).toBe(t.sync.errSession)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('a network error still reads as one', () => {
