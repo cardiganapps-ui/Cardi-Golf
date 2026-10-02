@@ -2626,7 +2626,8 @@
       "pr": 87,
       "tests": [
         "src/screens/tournament/TournamentGate.test.tsx",
-        "src/screens/tournament/TournamentGate.race.test.tsx"
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/screens/HomeScreen.account.test.tsx"
       ],
       "verifiedBy": null,
       "residual": null
