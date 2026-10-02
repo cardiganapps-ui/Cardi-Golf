@@ -4,9 +4,11 @@
  * screens on the fixtures; each test failed before its fix.
  *
  * «On the screen» means read, not only present: PR #88's second verifier set
- * the line at 1px and every test still passed. So each line is checked for
- * readable type, a real box and full opacity, and its words are held as the
- * reader gets them, not rebuilt from the strings under test.
+ * the line at 1px, and painted it the colour of the page, and every check
+ * still passed (axe files a 1:1 contrast as «incomplete», not as a
+ * violation). So each line is checked for readable type, a real box, full
+ * opacity and contrast, and its words are held as the reader gets them, not
+ * rebuilt from the strings under test.
  */
 import AxeBuilder from '@axe-core/playwright'
 import type { Locator, Page } from '@playwright/test'
@@ -25,6 +27,8 @@ const CONTINUE_LINE = 'Al continuar aceptas los Términos de uso (se abre en otr
 const OTHERS_NOTE = /^Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad/
 /** The smallest text the design sets for reading: --fs-xs. */
 const MIN_READING_PX = 12
+/** WCAG AA for text this size. */
+const MIN_CONTRAST = 4.5
 
 /** On the screen as it is: nothing to scroll before reading it. */
 async function expectOnScreen(page: Page, el: Locator) {
@@ -35,7 +39,31 @@ async function expectOnScreen(page: Page, el: Locator) {
   expect(box.y + box.height, 'bottom edge').toBeLessThanOrEqual(view.height)
 }
 
-/** Readable: type at least --fs-xs, a box that holds it (not a 1px or visually hidden one), and fully opaque once it settles. */
+/** WCAG contrast of the element's text against the first background behind it (white if the page sets none). */
+function contrastOf(el: Locator) {
+  return el.evaluate((e) => {
+    const channels = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number)
+    const luminance = ([r, g, b]: number[]) => {
+      const linear = (v: number) => {
+        const s = v / 255
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+      }
+      return 0.2126 * linear(r!) + 0.7152 * linear(g!) + 0.0722 * linear(b!)
+    }
+    let back = [255, 255, 255]
+    for (let n: Element | null = e; n; n = n.parentElement) {
+      const c = channels(getComputedStyle(n).backgroundColor)
+      if (c.length >= 3 && (c[3] ?? 1) > 0) {
+        back = c.slice(0, 3)
+        break
+      }
+    }
+    const [hi, lo] = [luminance(channels(getComputedStyle(e).color)), luminance(back)].sort((a, b) => b - a)
+    return (hi! + 0.05) / (lo! + 0.05)
+  })
+}
+
+/** Readable: type at least --fs-xs, a box that holds it (not a 1px or visually hidden one), fully opaque once it settles, and in a colour that stands out from what is behind it. */
 async function expectReadable(el: Locator) {
   await expect(el).toBeVisible()
   await expect
@@ -53,6 +81,7 @@ async function expectReadable(el: Locator) {
   expect(size, 'font size').toBeGreaterThanOrEqual(MIN_READING_PX)
   expect(height, 'height').toBeGreaterThanOrEqual(size)
   expect(width, 'width').toBeGreaterThanOrEqual(120)
+  expect(await contrastOf(el), 'contrast with what is behind it').toBeGreaterThanOrEqual(MIN_CONTRAST)
 }
 
 /** `a` comes before `b` in reading and keyboard order. */
@@ -227,9 +256,8 @@ test('a page opened from a consent link offers to close its tab, and closing it 
   await tab.getByRole('link', { name: t.legal.terms.title }).click()
   await expect(tab.getByRole('heading', { level: 1, name: t.legal.terms.title })).toBeVisible()
   expect(await tab.evaluate(() => history.length)).toBe(1)
-  const closed = tab.waitForEvent('close')
-  await tab.getByRole('button', { name: t.legal.close }).click()
-  await closed
+  // The tab closes inside the click, so the click may find its page already gone: the close event is the proof.
+  await Promise.all([tab.waitForEvent('close'), tab.getByRole('button', { name: t.legal.close }).click().catch(() => undefined)])
   await expect(email).toHaveValue('medio@escri')
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
@@ -249,3 +277,14 @@ test('a page with the marker that the browser will not close says so and offers 
   await expect(page).toHaveURL(/\/$/)
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
+
+for (const path of ['/privacidad', '/terminos?desde=formulario']) {
+  test(`${path} at 320×568: the whole text fits a small phone and passes axe`, async ({ page, pageErrors }) => {
+    await page.setViewportSize({ width: 320, height: 568 })
+    await open(page, path)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(await seriousViolations(page)).toEqual([])
+    expect(pageErrors, 'uncaught errors').toEqual([])
+  })
+}
