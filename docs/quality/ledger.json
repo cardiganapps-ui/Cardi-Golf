@@ -2529,11 +2529,14 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 89,
+      "tests": [
+        "src/components/RejectedWrites.test.tsx",
+        "src/screens/admin/AdminRounds.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and both «Terminar ronda» and «Terminar y publicar» ask every phone that captured to have nothing left to send. Also for that migration: snake tiebreaks and hole awards have no live-round check on the server (0013_identity.sql:231-275), so one queued offline is still accepted after «Terminar» while the same hole's scores are refused. A phone only reports once Polo is open with signal (no background sync on iOS). «Names the wrong day» was an Ensayo artifact (verifier V9); the simulator now moves current_round_id as «Iniciar» does. The re-check at 29435c4 confirmed the client half and found «El día volvió a estar en juego» with a dead «Volver a mandar» on a day that never closed (the player moved to another group): a player's phone now offers a resend only for what it could write now (the day live, the card unsigned, its player in that group that day), says «Ya no juegas en ese grupo» otherwise, and words the hint per state, so a mixed list keeps «Mandar al Comité». Its two surviving mutants (R8, a putts-only difference; R15, the no-rounds Tarjeta) are killed. Awaiting re-verification."
     },
     {
       "id": "REL-09",
@@ -3469,11 +3472,21 @@
       "workstream": "W6",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 85,
+      "tests": [
+        "src/screens/admin/readiness.test.ts",
+        "src/screens/admin/ReadinessCard.test.tsx",
+        "src/data/tournamentStore.test.ts",
+        "src/screens/admin/AdminGroups.test.tsx",
+        "src/screens/admin/AdminRounds.tees.test.tsx",
+        "src/screens/admin/AdminTeams.test.tsx",
+        "src/data/entryEvents.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/ready.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-check at 3908b21 confirmed the fix and found three P3s, now fixed with tests that fail without them: a realtime reload that changed no player asked for the PINs again (the answer is now keyed on the players' rows as fetched, and the card asks nothing where it shows nothing); a late answer about another tournament blanked the card (answers are kept per tournament; the surviving mutant M11 is killed); and under fourball any team counted as a pair (a pair is now two players). Awaiting re-verification."
     },
     {
       "id": "UX-08",

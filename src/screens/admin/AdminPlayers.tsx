@@ -164,6 +164,7 @@ export function AdminPlayers() {
     if (!pinFor || !/^\d{4}$/.test(pin)) return
     setBusy(true)
     try {
+      // setPlayerPin itself tells «Para empezar» (entryChanged): the card and the Torneo tab ask again.
       await setPlayerPin(pinFor.id, pin)
       setPins(new Set([...pins, pinFor.id]))
       toast(P.pinSet)

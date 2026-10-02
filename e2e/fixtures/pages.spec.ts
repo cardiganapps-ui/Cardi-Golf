@@ -11,6 +11,7 @@ const PAGES: Record<string, string[]> = {
   'full12-finished': ['', 'dinero', 'juegos'],
   'minimal4-live': ['', 'tarjeta', 'dinero'],
   'minimal4-setup': ['', 'admin/torneo'],
+  'new-setup': ['', 'admin/torneo'],
   friends8: ['', 'juegos', 'tarjeta'],
   stroke8: ['', 'juegos'],
   match8: ['', 'juegos'],

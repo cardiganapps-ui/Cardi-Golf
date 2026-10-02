@@ -608,12 +608,12 @@ export const t = {
       matchMode: 'Tipo de partido',
       matchSingles: 'Uno contra uno',
       matchFourball: 'Fourball',
-      matchHint: 'El partido es el grupo: dos jugadores, o cuatro en dos parejas.',
+      matchHint: 'El partido es el grupo: dos jugadores, o cuatro en dos parejas. Las parejas se arman en Equipos, en la consola del Comité.',
       teamMode: 'Cómo juega el equipo',
       teamScramble: 'Scramble',
       teamBestBall: 'Mejor bola',
       teamShamble: 'Shamble',
-      teamHint: 'Los equipos se arman en Comité, en Parejas.',
+      teamHint: 'Los equipos se arman en Equipos, en la consola del Comité.',
       teamScoring: 'Qué se cuenta',
       teamStrokes: 'Golpes',
       teamPoints: 'Puntos',
@@ -644,7 +644,9 @@ export const t = {
       create: 'Crear torneo',
       creating: 'Creando…',
       created: 'Torneo creado',
-      shareHint: 'Comparte el código o el enlace con los jugadores. Después carga jugadores, campo y PIN en el Comité.',
+      shareHint: 'Compártelo cuando los jugadores ya estén dados de alta: con el código o el enlace entran a este torneo con su cara y su PIN.',
+      nextSteps: 'Ya existe. Ahora, en el Comité: los jugadores con su PIN, el campo, la fecha y los grupos. «Para empezar» te dice qué falta.',
+      shareLater: 'Código para invitar',
       goAdmin: 'Ir al Comité',
       fixToCreate: 'Ajusta el dinero para que cuadre y poder crear el torneo.',
     },
@@ -1380,6 +1382,51 @@ export const t = {
   },
   admin: {
     title: 'Comité',
+    /** «Para empezar» (UX-06): what the tournament still needs before the first tee. */
+    ready: {
+      title: 'Para empezar',
+      hint: 'Lo que falta para el primer tee. Toca una línea para ir a su sección.',
+      titleNext: (day: number) => `Antes del día ${day}`,
+      hintNext: (day: number) => `Lo que falta para el día ${day}. Toca una línea para ir a su sección.`,
+      doneLabel: 'Listo',
+      todoLabel: 'Pendiente',
+      /** `what`: the lines it checked, from `checked` (andList). */
+      allSet: (what: string) => `Listo para jugar: ${what}.`,
+      checked: { players: 'jugadores', pins: 'PIN', rounds: 'rondas', roundSetup: 'rondas', card: 'campo', foreignTees: 'tees', teams: 'equipos', pairs: 'parejas', bracket: 'cuadro', tees: 'tees', groups: 'grupos' },
+      day: (n: number) => `día ${n}`,
+      players: (n: number) => `${n} jugadores dados de alta`,
+      playersMissing: 'Da de alta a los jugadores (al menos 2)',
+      pins: 'Todos tienen PIN para entrar',
+      pinsMissing: (n: number) => (n === 1 ? 'A 1 jugador le falta su PIN' : `A ${n} jugadores les falta su PIN`),
+      rounds: (n: number) => (n === 1 ? '1 ronda creada' : `${n} rondas creadas`),
+      roundsMissing: (n: number) => (n === 1 ? 'Falta crear 1 ronda' : `Faltan ${n} rondas por crear`),
+      roundsCancelled: (n: number) => (n === 1 ? 'La ronda está cancelada: vuelve a programarla' : 'Todas las rondas están canceladas: vuelve a programar una'),
+      roundsExtra: (n: number, days: number, extra: number) => `${n} rondas para un torneo de ${days} ${days === 1 ? 'día' : 'días'}: sube los días en Reglas o borra ${extra === 1 ? 'la que sobra' : `las ${extra} que sobran`}`,
+      roundSetup: 'Cada ronda tiene campo y fecha',
+      roundSetupMissing: (days: string) => `Falta campo o fecha: ${days}`,
+      card: 'El campo de cada ronda tiene su tarjeta',
+      cardMissing: (days: string) => `Falta la tarjeta del campo (par e índice de golpe): ${days}`,
+      cardBlank: (days: string) => `Captura la tarjeta (sigue en par 4 en todos los hoyos): ${days}`,
+      cardNoIndex: (days: string) => `Captura el índice de golpe de cada hoyo: ${days}`,
+      cardNine: (days: string) => `Cambia la ronda a 9 hoyos (el campo tiene 9): ${days}`,
+      teesForeign: (days: string) => `Cambia los tees de otro campo: ${days}`,
+      teams: (n: number) => (n === 1 ? '1 equipo armado' : `${n} equipos armados`),
+      teamsMissing: 'Arma los equipos',
+      teamsLoose: (n: number) => (n === 1 ? '1 jugador sin equipo' : `${n} jugadores sin equipo`),
+      pairs: (n: number) => (n === 1 ? '1 pareja armada' : `${n} parejas armadas`),
+      pairsMissing: 'Arma las parejas del fourball',
+      pairsLoose: (n: number) => (n === 1 ? '1 jugador sin pareja' : `${n} jugadores sin pareja`),
+      /** Under fourball a team that isn't two players (teams of 4 from a team format, the odd one of a draw). */
+      pairsNotTwo: (n: number) => (n === 1 ? '1 equipo no es pareja: el fourball se juega en parejas de 2' : `${n} equipos no son parejas: el fourball se juega en parejas de 2`),
+      bracketDays: (needed: number, days: number) => `El cuadro necesita ${needed} rondas y el torneo es de ${days} ${days === 1 ? 'día' : 'días'}: sube los días a ${needed} en Reglas`,
+      bracketUndecided: (round: string, n: number, day: number) => `${round}: ${n === 1 ? 'un partido quedó' : `${n} partidos quedaron`} sin ganador. Decide quién pasa y arma los grupos del día ${day}`,
+      tees: (day: number) => `Todos tienen tee para el día ${day}`,
+      teesMissing: (n: number, day: number, tee: string) => (n === 1 ? `1 jugador sin tee para el día ${day}: saldría desde ${tee}` : `${n} jugadores sin tee para el día ${day}: saldrían desde ${tee}`),
+      groups: (day: number) => `Grupos del día ${day} listos`,
+      groupsMissing: (day: number) => `Arma los grupos del día ${day}`,
+      groupsPartial: (n: number, day: number) => (n === 1 ? `1 jugador sin grupo el día ${day}` : `${n} jugadores sin grupo el día ${day}`),
+      groupsMatches: (n: number, day: number) => (n === 1 ? `Arma el grupo de 1 partido del día ${day}` : `Arma los grupos de ${n} partidos del día ${day}`),
+    },
     sections: {
       tournament: 'Torneo',
       players: 'Jugadores',
@@ -1458,6 +1505,8 @@ export const t = {
     sectionsLabel: 'Secciones del Comité',
     inbox: {
       title: 'Pendientes',
+      /** A tab's badge, to a screen reader. */
+      count: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
       none: 'Nada pendiente.',
       tiebreak: (group: number, hole: number) => `Víbora, grupo ${group}, hoyo ${hole}`,
       dispute: (name: string, hole: number) => `Discrepancia, ${name}, hoyo ${hole}`,
@@ -1466,13 +1515,42 @@ export const t = {
       warning: 'Aviso',
       view: 'Ver',
       rejectedTitle: 'Capturas rechazadas por el servidor',
-      rejectedHint: 'Un teléfono intentó guardar esto y el servidor lo rechazó. Revísalo y vuélvelo a mandar o descártalo.',
-      rejectedScore: (name: string, hole: number, value: string) => `${name}, hoyo ${hole}: ${value}`,
-      rejectedTiebreak: (group: number, hole: number, name: string) => `Víbora, grupo ${group}, hoyo ${hole}: ${name}`,
-      rejectedSignature: (pair: string) => `Firma de ${pair}`,
-      rejectedAward: (game: string, hole: number, names: string) => `${game}, hoyo ${hole}: ${names}`,
+      /** On a Comité device, which can send them again. */
+      rejectedHint: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Revísalo y vuélvelo a mandar, o descártalo.',
+      /** On a player's phone: the list lives only there, so the Comité learns of it from the player. */
+      rejectedHintPlayer: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
+      /** Every line can go again now (the day live, the card unsigned, this phone's player in that group): checked against what the card holds now. */
+      rejectedHintResend: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Ahora sí se puede volver a mandar: compara cada línea con lo que ya tiene la tarjeta y vuelve a mandar lo que siga siendo correcto, o descártalo.',
+      /** Some lines can go again and some can't: both instructions. */
+      rejectedHintMixed: 'Este teléfono intentó guardar esto y el servidor no lo aceptó. Lo que tiene «Volver a mandar» ya se puede mandar otra vez: compáralo con lo que ya tiene la tarjeta. Lo demás solo está en este teléfono: mándaselo al Comité, y descártalo cuando te confirme que lo capturó.',
+      /** «día 2, hoyo 11»; a day deleted since says so. */
+      dayHole: (day: number | null, hole: number) => (day === null ? `hoyo ${hole} de un día que ya no existe` : `día ${day}, hoyo ${hole}`),
+      rejectedScore: (name: string, where: string, value: string) => `${name}, ${where}: ${value}`,
+      /** What a refused hole held: «5 golpes, 2 putts», «levantó, 1 putt». */
+      scoreValue: (strokes: number | null, putts: number | null, pickedUp: boolean) => {
+        const shots = pickedUp ? 'levantó' : strokes === null ? 'sin golpes' : `${strokes} golpe${strokes === 1 ? '' : 's'}`
+        return putts === null ? shots : `${shots}, ${putts} putt${putts === 1 ? '' : 's'}`
+      },
+      rejectedTiebreak: (group: number, where: string, name: string) => `Víbora, grupo ${group}, ${where}: ${name}`,
+      rejectedSignature: (pair: string, day: number | null) => (day === null ? `Firma de ${pair}, de un día que ya no existe` : `Firma de ${pair}, día ${day}`),
+      rejectedAward: (game: string, where: string, names: string) => `${game}, ${where}: ${names}`,
+      /** The state of the tournament now (what was true when the server refused it isn't known here). */
+      reasonClosed: (day: number) => `El día ${day} está cerrado.`,
+      reasonSigned: 'La tarjeta está firmada.',
+      /** The day is live and the card unsigned, but this phone's player is no longer in that group that day. */
+      reasonNotInGroup: (day: number) => `Ya no juegas en ese grupo el día ${day}.`,
+      /** A refused hole the card now holds differently: resending it would replace this. */
+      nowOnCard: (value: string) => `En la tarjeta ahora: ${value}`,
+      discardTitle: '¿Descartar esta captura?',
+      discardBody: 'Solo está en este teléfono. Descártala cuando el Comité te confirme que la capturó.',
+      /** When the phone can neither share nor copy: the text, to copy by hand or show. */
+      sendManual: 'Cópialo o enséñale esta pantalla al Comité.',
       resend: 'Volver a mandar',
       discard: 'Descartar',
+      sendToComite: 'Mandar al Comité',
+      sendCopied: 'Copiado: pégalo en el chat del Comité.',
+      /** The first line of what «Mandar al Comité» sends; one line per capture follows. */
+      sendHeader: (tournament: string, who: string | null) => (who ? `${tournament}: esto no se subió desde el teléfono de ${who}.` : `${tournament}: esto no se subió desde este teléfono.`),
     },
     groups: {
       fromStandings: 'Generar por tabla de parejas',
@@ -1777,12 +1855,16 @@ export const t = {
       reopen: 'Reabrir',
       tees: 'Tee de cada jugador',
       teeDefault: 'Por defecto',
+      /** A tee chosen for the day that belongs to another course (the round's course changed): shown so it can be put back to «Por defecto». */
+      teeOtherCourse: (name: string | null) => (name ? `${name}, de otro campo` : 'Tee de otro campo'),
       noCourse: 'Sin campo',
       current: 'Ronda actual',
       finishConfirm: (n: number) => `¿Terminar el día ${n}? Se cierran las tarjetas y se calculan los premios del día.`,
       cancelConfirm: (n: number) => `¿Cancelar el día ${n}? Deja de contar para los premios. Se puede reabrir.`,
       deleteConfirm: (n: number) => `¿Borrar el día ${n} con todas sus tarjetas? No se puede deshacer.`,
       pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
+      /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
+      phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
       duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,
