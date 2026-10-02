@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-01",
+  "updated": "2026-10-02",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -3462,6 +3462,7 @@
       "tests": [
         "src/screens/admin/readiness.test.ts",
         "src/screens/admin/ReadinessCard.test.tsx",
+        "src/data/tournamentStore.test.ts",
         "src/screens/admin/AdminGroups.test.tsx",
         "src/screens/admin/AdminRounds.test.tsx",
         "src/screens/admin/AdminTeams.test.tsx",
@@ -3470,7 +3471,7 @@
         "e2e/fixtures/ready.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-check at 3908b21 confirmed the fix and found three P3s, now fixed with tests that fail without them: a realtime reload that changed no player asked for the PINs again (the answer is now keyed on the players' rows as fetched, and the card asks nothing where it shows nothing); a late answer about another tournament blanked the card (answers are kept per tournament; the surviving mutant M11 is killed); and under fourball any team counted as a pair (a pair is now two players). Awaiting re-verification."
     },
     {
       "id": "UX-08",
