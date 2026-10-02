@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
@@ -10,6 +10,7 @@ import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
 import { humanError } from '../../lib/humanError'
+import { LegalConsent } from '../../components/LegalLinks'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -28,6 +29,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   /** After a PIN on an account: offer to keep this tournament in the profile. */
   const [askSave, setAskSave] = useState<LookupResult['players'][number] | null>(null)
   const account = !!user && !isAnonymous
+  const pinHintId = useId()
+  const consentId = useId()
   // Holes this phone queued before its session lapsed: they go out once the player is back (REL-16).
   const { heldHoles } = queuedFor(lookup.id)
 
@@ -108,6 +111,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
         <>
           <div className={styles.top}>
             <h2>{t.enter.tapYourFace}</h2>
+            {/* Above the faces: with a full field the grid runs past the first screen (TRUST-05). */}
+            <LegalConsent enter />
             {heldHoles > 0 && (
               <p className="help" role="status">
                 {t.sync.heldForPin(heldHoles)}
@@ -177,9 +182,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
             <div className="grow">
               <h2>{t.enter.enterAs(selected.displayName)}</h2>
-              <p className="help">{t.enter.pinHint}</p>
+              <p className="help" id={pinHintId}>
+                {t.enter.pinHint}
+              </p>
             </div>
           </div>
+          {/* Before the field: the fourth digit claims the player (claim_player), so there is no later moment to read it. */}
+          <LegalConsent enter id={consentId} />
           <label className="field">
             <span className="label">{t.enter.pin}</span>
             <input
@@ -191,6 +200,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               maxLength={4}
               value={pin}
               autoFocus
+              aria-describedby={`${pinHintId} ${consentId}`}
               /*
                * Never `disabled` while it submits: disabling the field iOS has
                * the keyboard open for dismisses that keyboard, so a wrong PIN

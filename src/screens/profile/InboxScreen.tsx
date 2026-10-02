@@ -1,7 +1,8 @@
 /**
  * `/avisos`: what happened while you were away, newest first. Opening it
- * marks everything read; new ones keep the accent rule until then. No
- * amounts here, ever: money stays on your own profile.
+ * marks everything read; new ones keep the accent rule until then. The
+ * app's notices never carry an amount (money stays on your own profile); a
+ * notice from the Admin de Polo is his own text (platform_broadcast).
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'

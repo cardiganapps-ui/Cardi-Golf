@@ -6,6 +6,7 @@ import { Field } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import styles from './OrganizerAuth.module.css'
+import { LegalConsent } from '../../components/LegalLinks'
 import { humanError, UserError } from '../../lib/humanError'
 
 /** Organizer sign-in. One primary path (email + password); the alternatives are quiet. */
@@ -150,6 +151,8 @@ export function OrganizerLoginScreen() {
               {info}
             </p>
           )}
+          {/* Before the button that sends the email (TRUST-05). */}
+          <LegalConsent />
           <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
             {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
           </button>

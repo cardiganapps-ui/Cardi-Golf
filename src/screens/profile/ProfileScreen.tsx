@@ -286,10 +286,8 @@ export function ProfileView({
 
       {card.isMe && money && (
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className="label">{P.money}</span>
-            <span className={styles.help}>{P.moneyHint}</span>
-          </div>
+          <span className="label">{P.money}</span>
+          <p className={styles.help}>{P.moneyHint}</p>
           {money.length === 0 ? (
             <p className={styles.help}>{P.noMoney}</p>
           ) : (
