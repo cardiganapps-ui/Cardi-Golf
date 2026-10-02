@@ -1853,9 +1853,13 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts",
+        "src/data/tournamentStore.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Structural changes (the tournament row, players, rounds, groups, pairs, teams) and a score delete still reload the whole tournament; the single snapshot RPC (REL-10) turns that reload into one request."
     },
     {
       "id": "PERF-08",
@@ -2596,9 +2600,12 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Client half: a saved hole now reaches the other phones in the time Realtime takes to deliver it plus one recompute, with no fetch; the p95 under 2 s on 4G is to be measured on the e2e-stack job and in the field (telemetry, STRAT-02). The server half (Broadcast from the database on a private topic, sequence numbers for gaps) needs migrations (PLAN §5.2)."
     },
     {
       "id": "REL-13",

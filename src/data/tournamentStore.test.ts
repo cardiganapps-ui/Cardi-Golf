@@ -237,13 +237,15 @@ describe('Realtime changes become reloads', () => {
     expect(store().realtime).toBe('connecting')
   })
 
-  it('a burst of changes is one reload, 150 ms after the last of them', async () => {
+  it('a burst of structural changes is one reload, 150 ms after the last of them', async () => {
     vi.useFakeTimers()
     const before = reads()
-    // A foursome saving a hole: four rows, then a signature a moment later.
-    for (let i = 0; i < 4; i++) channel().bindings.get('scores')!({ eventType: 'UPDATE' })
+    // The Comité redraws a group: its members, then the group a moment later.
+    // (Scores, signatures and the other rows that move during play are applied
+    // from the event instead: tournamentStore.apply.test.ts.)
+    for (let i = 0; i < 4; i++) channel().bindings.get('group_members')!({ eventType: 'INSERT' })
     await vi.advanceTimersByTimeAsync(100)
-    channel().bindings.get('card_signatures')!({ eventType: 'INSERT' })
+    channel().bindings.get('groups')!({ eventType: 'UPDATE' })
     await vi.advanceTimersByTimeAsync(149)
     expect(reads()).toBe(before)
     await vi.advanceTimersByTimeAsync(1)

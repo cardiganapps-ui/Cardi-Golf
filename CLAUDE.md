@@ -507,7 +507,10 @@ The settlement nets to zero across all people (banker included)
 
 ## 8. Realtime and offline
 
-- **Subscriptions:** `scores`, `snake_tiebreaks`, `card_signatures`, `groups`, `pairs`, `calcutta_lots`, `calcutta_bids`, `calcutta_buybacks`, `payments`, and `tournaments`. On any change, update the local snapshot and recompute.
+- **Subscriptions:** every table in `src/data/realtimeTables.ts` (only published ones: a channel naming an unpublished table fails whole, REL-01). On any change, update the local snapshot and recompute.
+  - The tables that move during play (`APPLIED_TABLES` in `src/data/realtimeApply.ts`: scores, tiebreaks, signatures, contest claims, overrides, tees of the day, payments, lots, bids, buybacks, game entries and results) are applied from the event's own row, by key, through the fetch's mappers: a foursome's hole is one recompute and no request (REL-11, PERF-07). Another tournament's rows are ignored; a delete is applied only when its key is one of this snapshot's rows (deletes are not filtered by RLS, DB-05).
+  - Everything else reloads, coalesced (150 ms): the structural tables (the tournament row, players, rounds, groups, pairs, teams), a score's delete (its key is an id the snapshot does not keep) and a row of a round or lot not loaded yet.
+  - A reload that was on its way when a change landed gets the changes applied since it started (`replayChanges`), so it never takes one back.
 - **Writes go through an IndexedDB outbox:**
   - Apply locally first, then push, then retry with backoff.
   - Show a sync chip: "Sincronizado" or "3 pendientes".

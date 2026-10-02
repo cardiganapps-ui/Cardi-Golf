@@ -1,8 +1,10 @@
 /**
  * One tournament's live snapshot + computed state. Loads every table for the
  * tournament, recomputes with the engine on every change, and subscribes to
- * Realtime (§8). Data per tournament is tiny, so a change reloads the
- * affected table and recomputes everything.
+ * Realtime (§8). A change to a table that moves during play (a score, a
+ * signature, a payment, a bid) is applied from the event itself
+ * (`realtimeApply.ts`, REL-11, PERF-07); any other change reloads the
+ * tournament.
  */
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
@@ -15,6 +17,7 @@ import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { REALTIME_TABLES } from './realtimeTables'
+import { APPLIED_TABLES, applyChange, type LiveChange } from './realtimeApply'
 import { saveSnapshot } from './snapshotCache'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import {
@@ -90,6 +93,73 @@ interface StoreState {
 
 let channel: RealtimeChannel | null = null
 let reloadTimer: ReturnType<typeof setTimeout> | null = null
+
+/** A reload, coalesced: a burst of structural changes (a draw writes many rows) costs one. */
+function scheduleReload() {
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadTimer = setTimeout(() => void useTournament.getState().reload(), 150)
+}
+
+const APPLIED = new Set<string>(APPLIED_TABLES)
+/** Live changes wait this long, so a foursome saving a hole (four rows) recomputes once. */
+const APPLY_MS = 40
+let pendingChanges: LiveChange[] = []
+let applyTimer: ReturnType<typeof setTimeout> | null = null
+/**
+ * Every change applied, numbered, for a short while: a reload that was on its
+ * way when one arrived may have read its table before the change, so the
+ * changes after its start are applied again on what it brings (they are
+ * keyed, so applying one twice changes nothing).
+ */
+let changeSeq = 0
+const changeLog: Array<{ seq: number; at: number; change: LiveChange }> = []
+const LOG_MS = 2 * 60_000
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function receive(change: LiveChange) {
+  pendingChanges.push(change)
+  applyTimer ??= setTimeout(flushChanges, APPLY_MS)
+}
+
+function flushChanges() {
+  applyTimer = null
+  const batch = pendingChanges
+  pendingChanges = []
+  const st = useTournament.getState()
+  const d = st.data
+  const id = st.tournamentId
+  if (!d || !id) return scheduleReload()
+  const next = structuredClone(d.snapshot)
+  let applied = 0
+  let reload = false
+  const now = Date.now()
+  for (const change of batch) {
+    const r = applyChange(next, id, change)
+    if (r === 'applied') {
+      applied++
+      changeLog.push({ seq: ++changeSeq, at: now, change })
+    } else if (r === 'reload') reload = true
+  }
+  while (changeLog.length && (changeLog.length > 1000 || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
+  if (applied) {
+    // The players are untouched, so their key stays; the boards are as fresh as the server's last change.
+    useTournament.setState({ data: compute(next, d.playersKey), ...(st.source === 'server' ? { updatedAt: now } : {}) })
+    if (st.keepOnPhone) {
+      if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => {
+        saveTimer = null
+        const cur = useTournament.getState()
+        if (cur.tournamentId === id && cur.data) void saveSnapshot(id, cur.data.snapshot)
+      }, 1500)
+    }
+  }
+  if (reload) scheduleReload()
+}
+
+/** The changes applied since a reload started, on what it brought. */
+function replayChanges(snapshot: Snapshot, tournamentId: string, since: number) {
+  for (const { seq, change } of changeLog) if (seq > since) applyChange(snapshot, tournamentId, change)
+}
 /** Monotonic id so a slow older fetch never overwrites a newer snapshot. */
 let fetchSeq = 0
 let listenersOn = false
@@ -274,9 +344,12 @@ export const useTournament = create<StoreState>((set, get) => ({
     // and a fetch would only replace it with nothing after a write.
     if (!id || id.startsWith('fixture:')) return
     const seq = ++fetchSeq
+    const since = changeSeq
     try {
       const snapshot = await fetchSnapshot(id)
       if (seq !== fetchSeq || get().tournamentId !== id) return
+      // A live change that landed while this was on its way may be newer than what it read.
+      replayChanges(snapshot, id, since)
       set({ data: compute(snapshot), updatedAt: Date.now(), error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
     } catch (e) {
@@ -301,10 +374,11 @@ export const useTournament = create<StoreState>((set, get) => ({
     // SUBSCRIBED that never delivers anything (REL-01).
     let ch = sb.channel(`tournament:${id}`, { config: { postgres_changes_options: { wait: true } } })
     for (const table of REALTIME_TABLES) {
-      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        // Coalesce bursts (a foursome saving a hole = 4 rows) into one reload.
-        if (reloadTimer) clearTimeout(reloadTimer)
-        reloadTimer = setTimeout(() => void get().reload(), 150)
+      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, (payload: { eventType?: LiveChange['eventType']; new?: Record<string, unknown>; old?: Record<string, unknown>; errors?: unknown }) => {
+        // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
+        const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
+        if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
+        else scheduleReload()
       })
     }
     const degrade = () => {
@@ -358,6 +432,10 @@ export const useTournament = create<StoreState>((set, get) => ({
   unsubscribe() {
     stopDegraded()
     retryDelay = RETRY_MIN_MS
+    // Changes still waiting belong to the channel being left.
+    if (applyTimer) clearTimeout(applyTimer)
+    applyTimer = null
+    pendingChanges = []
     if (channel) {
       // Forget the channel first: removeChannel reports CLOSED synchronously.
       const ch = channel
