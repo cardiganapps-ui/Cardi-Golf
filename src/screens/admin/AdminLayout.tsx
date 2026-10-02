@@ -18,7 +18,7 @@ export function AdminLayout() {
   const data = useTournament((s) => s.data)
   // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
   const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
-  const entry = useEntryInfo(tournamentId, data?.snapshot.players, { enabled: setup })
+  const entry = useEntryInfo(tournamentId, data, { enabled: setup })
   if (!me.isAdmin) {
     return (
       <div className={styles.layout}>

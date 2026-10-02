@@ -5,18 +5,20 @@
  * answer, so they never disagree.
  *
  * It is asked again whenever a reader opens (the Torneo card, the Comité),
- * when the players reload (a link made or undone on another phone arrives
- * that way), and when this phone sets a PIN or links a profile
- * (`entryChanged`, called by those writes in `src/data`). A PIN set on
- * another phone has no realtime event: the next time the card opens, it is
- * asked for. Readers that open together share one request.
+ * when the players' rows change (a link made or undone on another phone
+ * arrives with the realtime reload: `playersKey`), and when this phone sets
+ * a PIN or links a profile (`entryChanged`, called by those writes in
+ * `src/data`). A reload that changes no player (a score, a payment) asks
+ * nothing. A PIN set on another phone has no realtime event: the next time
+ * the card opens, it is asked for. Readers that open together share one
+ * request. Answers are kept per tournament, so a late answer about one never
+ * blanks another's card.
  */
 import { useEffect, useSyncExternalStore } from 'react'
 import { playersWithPin } from '../../data/api'
 import { onEntryChanged } from '../../data/entryEvents'
 import { tournamentProfiles } from '../../data/profiles'
-import { useTournament } from '../../data/tournamentStore'
-import type { Player } from '../../engine/types'
+import { useTournament, type TournamentData } from '../../data/tournamentStore'
 
 export interface EntryInfo {
   pins: Set<string>
@@ -24,12 +26,12 @@ export interface EntryInfo {
 }
 
 interface Shared {
-  /** The latest answer and the tournament it is about. */
-  answer: { tournamentId: string; info: EntryInfo } | null
+  /** The latest answer about each tournament. */
+  answers: Readonly<Record<string, EntryInfo>>
   /** Bumped by every change this phone makes: each reader asks again. */
   stamp: number
 }
-let shared: Shared = { answer: null, stamp: 0 }
+let shared: Shared = { answers: {}, stamp: 0 }
 const listeners = new Set<() => void>()
 function update(next: Partial<Shared>) {
   shared = { ...shared, ...next }
@@ -42,15 +44,6 @@ const subscribe = (l: () => void) => {
 const read = () => shared
 
 onEntryChanged(() => update({ stamp: shared.stamp + 1 }))
-
-/** Each reload of the players is a new list: numbered, so readers given the same list share a request. */
-const lists = new WeakMap<object, number>()
-let listCount = 0
-function listNumber(players: Player[]): number {
-  let n = lists.get(players)
-  if (n == null) lists.set(players, (n = ++listCount))
-  return n
-}
 
 /** Requests still on their way; a settled one is dropped, so the next reader asks again. */
 const inflight = new Set<string>()
@@ -66,7 +59,8 @@ function ask(tournamentId: string, key: string) {
   Promise.all([playersWithPin(tournamentId), tournamentProfiles(tournamentId).catch(() => [])])
     .then(([pins, profiles]) => {
       if (newest.get(tournamentId) !== mine) return
-      update({ answer: { tournamentId, info: { pins, linked: new Set(profiles.filter((x) => x.status === 'confirmed').map((x) => x.playerId)) } } })
+      const info = { pins, linked: new Set(profiles.filter((x) => x.status === 'confirmed').map((x) => x.playerId)) }
+      update({ answers: { ...shared.answers, [tournamentId]: info } })
     })
     // No signal: the last answer stands, and the next reader asks again.
     .catch(() => undefined)
@@ -75,18 +69,19 @@ function ask(tournamentId: string, key: string) {
 
 /**
  * Null while unknown (loading, no signal): the PIN line waits and «Listo
- * para jugar» is not said. `enabled: false` reads without asking. A design
- * fixture (the store's tournament is `fixture:<name>`, as the shell reads
- * it) has no server: its players count as able to get in.
+ * para jugar» is not said. `enabled: false` reads without asking (a reader
+ * that shows nothing asks nothing). A design fixture (the store's tournament
+ * is `fixture:<name>`, as the shell reads it) has no server: its players
+ * count as able to get in.
  */
-export function useEntryInfo(tournamentId: string, players: Player[] | undefined, { enabled = true }: { enabled?: boolean } = {}): EntryInfo | null {
-  const { answer, stamp } = useSyncExternalStore(subscribe, read)
+export function useEntryInfo(tournamentId: string, data: TournamentData | null | undefined, { enabled = true }: { enabled?: boolean } = {}): EntryInfo | null {
+  const { answers, stamp } = useSyncExternalStore(subscribe, read)
   const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
-  const list = players ? listNumber(players) : 0
+  const playersKey = data?.playersKey
   useEffect(() => {
-    if (fixture || !enabled || !list) return
-    ask(tournamentId, `${tournamentId}|${list}|${stamp}`)
-  }, [tournamentId, list, stamp, fixture, enabled])
-  if (fixture) return { pins: new Set(players?.map((p) => p.id)), linked: new Set() }
-  return answer?.tournamentId === tournamentId ? answer.info : null
+    if (fixture || !enabled || !playersKey) return
+    ask(tournamentId, `${tournamentId}|${playersKey}|${stamp}`)
+  }, [tournamentId, playersKey, stamp, fixture, enabled])
+  if (fixture) return { pins: new Set(data?.snapshot.players.map((p) => p.id)), linked: new Set() }
+  return answers[tournamentId] ?? null
 }

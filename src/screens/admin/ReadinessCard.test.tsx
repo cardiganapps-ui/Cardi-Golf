@@ -201,10 +201,11 @@ describe('Para empezar: «Listo» only when the day can be played (N1, N5)', () 
       s.tournament.settings = { ...(s.tournament.settings as TournamentSettings), rounds: 2 }
       s.rounds = [makeRound(1, { status: 'finished', date: '2027-05-15' }), makeRound(2, { status: 'cancelled', date: '2027-05-16' })]
     })
-    await waitFor(() => expect(api.playersWithPin).toHaveBeenCalled())
     await act(async () => undefined)
     expect(screen.queryByRole('heading')).toBeNull()
     expect(screen.queryByRole('link')).toBeNull()
+    // Showing nothing, it asks nothing.
+    expect(api.playersWithPin).not.toHaveBeenCalled()
   })
 
   it('a line about the day count opens Torneo on its Reglas tab', async () => {
@@ -261,8 +262,9 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     const { snapshot } = mountComite('minimal4-setup')
     expect(await screen.findByText(LISTO)).toBeTruthy()
     api.tournamentProfiles.mockResolvedValue([])
-    // Realtime: the players table changed, and the store reloads the snapshot.
-    await act(async () => useTournament.setState({ data: dataFromSnapshot(structuredClone(snapshot)) }))
+    // Realtime: a players row changed (its profile link, which the snapshot's players don't carry), and the
+    // store reloads with a new players key (tournamentStore.test: the key follows the rows as fetched).
+    await act(async () => useTournament.setState({ data: { ...dataFromSnapshot(structuredClone(snapshot)), playersKey: 'p4-unlinked' } }))
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
   })
 
@@ -278,6 +280,68 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     await waitFor(() => expect(api.playersWithPin).toHaveBeenCalledTimes(2))
     expect(await screen.findByText(LISTO)).toBeTruthy()
     expect(screen.queryByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeNull()
+  })
+
+  it('a reload that changes no player asks nothing: ten realtime reloads of scores, one request pair', async () => {
+    api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3', 'p4']))
+    const { snapshot } = mountComite('minimal4-setup')
+    expect(await screen.findByText(LISTO)).toBeTruthy()
+    for (let i = 0; i < 10; i++) {
+      // The store rebuilds everything, players included, on every reload: a new array, the same rows.
+      await act(async () => useTournament.setState({ data: dataFromSnapshot(structuredClone(snapshot)) }))
+    }
+    await act(async () => undefined)
+    expect(api.playersWithPin).toHaveBeenCalledTimes(1)
+    expect(api.tournamentProfiles).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(LISTO)).toBeTruthy()
+  })
+
+  it('where the card shows nothing it asks nothing: a quick round, a finished tournament', async () => {
+    api.playersWithPin.mockResolvedValue(new Set())
+    mount('minimal4-live', (s) => {
+      s.tournament.quick = true
+    })
+    cleanup()
+    mount('minimal4-live', (s) => {
+      s.tournament.status = 'finished'
+    })
+    await act(async () => undefined)
+    expect(api.playersWithPin).not.toHaveBeenCalled()
+    expect(api.tournamentProfiles).not.toHaveBeenCalled()
+  })
+
+  it('an older answer that lands after a newer one about the same tournament is dropped (M11)', async () => {
+    const answers: Array<(pins: Set<string>) => void> = []
+    api.playersWithPin.mockImplementation(() => new Promise((resolve) => answers.push(resolve)))
+    mount('minimal4-setup')
+    await waitFor(() => expect(answers).toHaveLength(1))
+    // This phone sets a PIN: asked again while the first answer is still on its way.
+    await act(async () => entryChanged())
+    await waitFor(() => expect(answers).toHaveLength(2))
+    await act(async () => answers[1]!(pinsOf(['p1', 'p2', 'p3', 'p4'])))
+    expect(await screen.findByText(LISTO)).toBeTruthy()
+    // The first answer, from before the PIN, arrives last: it is not applied.
+    await act(async () => answers[0]!(pinsOf(['p1', 'p2', 'p3'])))
+    await act(async () => undefined)
+    expect(screen.getByText(LISTO)).toBeTruthy()
+    expect(screen.queryByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeNull()
+  })
+
+  it('a late answer about another tournament never blanks this one\'s card', async () => {
+    let first: (pins: Set<string>) => void = () => undefined
+    api.playersWithPin.mockReturnValueOnce(new Promise((resolve) => (first = resolve)))
+    const one = mount('minimal4-setup', undefined, 't-late-1')
+    await act(async () => undefined)
+    one.unmount()
+    // The second tournament's answer arrives first.
+    api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
+    mount('minimal4-setup', undefined, 't-late-2')
+    expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
+    // Then the first tournament's lands.
+    await act(async () => first(pinsOf(['p1', 'p2', 'p3', 'p4'])))
+    await act(async () => undefined)
+    expect(screen.getByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
+    expect(screen.queryByText(LISTO)).toBeNull()
   })
 
   it('an answer about one tournament is never read as another\'s (M10)', async () => {

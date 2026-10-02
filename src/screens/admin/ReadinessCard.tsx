@@ -19,15 +19,15 @@ export function ReadinessCard() {
   const { tournamentId, slug } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const headId = useId()
-  const entry = useEntryInfo(tournamentId, data?.snapshot.players)
-  if (!data) return null
+  // Gone for quick rounds and finished tournaments, and under way with every day left cancelled (no next day to
+  // prepare): there it shows nothing, so it asks nothing.
+  const shown = !!data && !data.snapshot.tournament.quick && data.snapshot.tournament.status !== 'finished' && (data.snapshot.tournament.status === 'setup' || !!nextRound(data.snapshot))
+  const entry = useEntryInfo(tournamentId, data, { enabled: shown })
+  if (!data || !shown) return null
   const { snapshot, settings, state } = data
-  if (snapshot.tournament.quick || snapshot.tournament.status === 'finished') return null
   const R = t.admin.ready
   const setup = snapshot.tournament.status === 'setup'
   const next = nextRound(snapshot)
-  // Under way with every day left cancelled: there is no next day to prepare.
-  if (!setup && !next) return null
   const items = readiness(snapshot, settings, { pins: entry?.pins ?? null, linked: entry?.linked, bracket: state.bracket })
   if (items.every((i) => i.done)) {
     // «Listo» only once the PINs are known, and only when the engine warns about nothing the list doesn't say: the Torneo tab reads 0.
