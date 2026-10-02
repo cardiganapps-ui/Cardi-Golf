@@ -2151,7 +2151,7 @@ export const t = {
   },
   ceremony: {
     title: 'Ceremonia',
-    hint: 'Toca para revelar, uno por uno. Con la tele conectada se ve mejor.',
+    hint: 'Revela uno por uno; en la tele se ve mejor. Con un teclado o un control de presentación: la flecha derecha o la barra espaciadora avanzan, la flecha izquierda regresa.',
     next: 'Siguiente',
     prev: 'Anterior',
     start: 'Empezar la ceremonia',
@@ -2170,8 +2170,14 @@ export const t = {
     },
     trophy: 'Se lleva el Putter',
     champion: 'Campeón',
-    withPoints: (pts: number) => `${pts} puntos`,
-    holesHeld: (n: number) => `${n} hoyos con la víbora`,
+    /** Match points come in halves and read as golf writes them, as on the standings: «1½ puntos», «½ punto». */
+    withPoints: (pts: number) => {
+      const whole = Math.floor(pts)
+      const figure = pts - whole === 0.5 ? `${whole || ''}½` : String(pts)
+      return `${figure} ${pts === 1 || pts === 0.5 ? 'punto' : 'puntos'}`
+    },
+    /** On a plate after «Víbora de Oro», which already says what the holes are. */
+    holesHeld: (n: number) => (n === 1 ? '1 hoyo' : `${n} hoyos`),
   },
   print: {
     print: 'Imprimir o guardar PDF',

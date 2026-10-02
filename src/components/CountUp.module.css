@@ -1,0 +1,11 @@
+/* The shown value and the final one in one cell: the final one, hidden, keeps the width while the other counts. */
+.figure {
+  display: inline-grid;
+  justify-items: end;
+}
+.figure > * {
+  grid-area: 1 / 1;
+}
+.final {
+  visibility: hidden;
+}

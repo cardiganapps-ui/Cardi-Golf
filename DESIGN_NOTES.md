@@ -193,6 +193,35 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - `AdminData.tsx`: CSV export triggers two downloads back to back; browsers may block the second.
 - `AdminScores.tsx`: tiebreaks and disputes are filtered to the selected round; pending items in other rounds are invisible. `AdminGroups.tsx` re-derives pair warnings the engine already exposes in `flags.warnings`. Nobody reads `flags.incompleteRounds`, `unsignedCards` or `missingModules`.
 
+## Ceremonia at room scale (2026-10-01, VIS-06, MOT-01, MOT-23, A11Y-15)
+
+- **Sized like the TV.** Every size is in viewport height with a phone floor and a 4K ceiling (`clamp(…px, …vh, …px)`), and the header uses `min(vh, vw)` so a phone keeps a phone's header. At 1920×1080 a revealed name is 108 px (10vh), a step title 70 px, the event name 32 px, the controls 28 px; several winners on one step (a tie, the pairs' podium) share the row a size down.
+- **Nothing scrolls on a TV.** A step's title sits at the top and its reveal fills the room under it. A winner and the list it belongs to sit side by side. A list fills as many columns and rows as the screen holds and pages to it («1–24 de 60»): the next beat shows the next page, ← the previous one (60 people take three pages at 1080p, two at 720p). Any other step that would not fit (a long name, a three-way tie, the «provisional» line) is drawn a little smaller (`--fit`, CSS `zoom`) instead of spilling. On a phone (under 1000 px wide) the winner stacks over the list and the screen scrolls, as any phone page does.
+- **Plates.** The figures of a reveal (points, money, holes) sit on plates, the board's device from the direction; the champion's are the leader's yellow.
+- **The event's accent** is set on the stage like every other screen of the tournament.
+- **The reveal is a sequence** (`REVEAL` in `src/design/motion.ts`): the faces, the name 0.25 s later, the figures counting up from 0.5 s (`CountUp`, 0.9 s), and the champion's trophy line with one burst of confetti at 1.4 s. Reduced motion: everything at once, no count, no confetti. Steps cross-fade (`AnimatePresence mode="popLayout"`), so the stage is never blank, and every `motion` element names its transition (`motion.test.ts` fails one that doesn't).
+- **The focus ring is a token**, `--focus-ring` (graphite); board surfaces (TV, Ceremonia, `.card--deep`, the auction console's lot card) set it to `--board-accent`, since graphite on board green is 1.1:1.
+- **Ties and long names, after the verifier's pass.**
+  - A name breaks between words only. A name too long for its line, or a tie too tall for its room, is drawn smaller first. The zoom is searched at the zoomed layout, because zoom re-flows what it scales: a single estimate drew a tie of twelve at a fifth of its room.
+  - Beside a list, the winner's column fits its own height (`--wfit`).
+  - A tie of several that would end below 0.72 is set as a compact list: one line per winner, the face small, the name at 5vh.
+  - A phone zooms only to 0.75 and lets the rest scroll; the scrolling body is a labelled region that keyboard users can reach.
+  - An empty list (nobody paid yet) is left out instead of reading «NaN».
+- **After the second pass.**
+  - A name's line is as wide as its card. A centred line grew with the name, so a one-word name wider than its card («Maximiliano») never counted as too long and ran 31 px past the card at 1024×768.
+  - A reveal taller than its room starts at the top, under its title, and scrolls from there. Centring sent half the overflow above the top: on a phone the 60-row money summary never showed its first 23 rows, and a tie covered its own title.
+  - A figure that counts up holds its final width from the first frame, so the step is fitted to «$6,600», not to «$0».
+  - The compact list belongs to the size that needed it; a bigger screen tries the full size again.
+  - A last word of up to three letters stays on its name's line («Hugo I.»).
+  - On a TV the stage never scrolls, so a view rising into place doesn't flash a scrollbar on desktops that show them.
+- **After the re-check.**
+  - A count-up ends on the value itself, not on a rounded one: the frames between are whole numbers, the last is the figure a screen reader hears. Points read as golf writes them, as on the standings: «1½ puntos», «½ punto», «1 punto».
+  - With reduced motion nothing rises into place, not even for the first frame: Motion drew that frame at the entrance's offset (a card 24 px low, unseen at opacity 0) and the stage could scroll by it.
+  - A winner's card pads its sides by 3vw up to 48 px. A name has to fit inside that padding, and on a 4K screen an uncapped 3vw (115 px) drew ties smaller than before.
+  - The no-break space before a short last word and the TV's no-scroll stage are tested in the fixture suite; `motion.test.ts` reads the AnimatePresence `mode` from the parsed JSX (a constant, any prop order, either branch of a `?:`), and a mode it can't read fails it.
+- **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.
+- **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either, however it is written.
+
 ## «Para empezar» (2026-10-01, UX-06)
 
 - **The wizard's days are rounds.** «¿Cuántos días (rondas)?» creates rounds 1..N with no course or date; Rondas used to say «Sin rondas» right after.

@@ -237,10 +237,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "verified",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/styles/tokens.test.ts"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Yellow ring at 8.74:1 on Ceremonia, the TV and a control inside the lot card; graphite ring at 15.7:1 on Tarjeta and Dinero.",
       "residual": null
     },
     {
@@ -1475,11 +1478,14 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "verified",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/design/motion.test.ts"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Ceremonia: 25 step changes at 1920 and 393 px, motion on and off, no blank frame (lowest opacity 0.38) and no overshoot; TV: 6 board changes on 3 fixtures, no blank frame (lowest 0.54), the leaving board doesn't move, no horizontal scroll. Its surviving mutant (mode={'wait'} passed the text match) is caught since.",
+      "residual": "motion.test now reads the parsed JSX: mode={WAIT} through a constant, a mode after an arrow-function prop, either branch of a ?:, and an unreadable mode (a spread, a call) all fail it; the re-check's two surviving spellings are killed."
     },
     {
       "id": "MOT-02",
@@ -1758,11 +1764,14 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
+      "verifiedBy": "Independent verifier agent on PR #82, 2026-10-01 (re-verify at 1ca863c): CONFIRMED-FIXED. Exactly one confetti burst per full champion reveal, none when leaving within 0.6 s, none with reduced motion. The count-up now reserves its final width, so a step fitted at the reveal still fits when it ends.",
+      "residual": "The re-check at 38add6b found the count-up ended on a rounded figure (a match-play champion on 1.5 points ended on «2 puntos» while a screen reader said «1.5 puntos»). Fixed: the last frame is the value itself, and points read as golf writes them («1½ puntos», «1 punto»); CountUp.test fails without it, and the fixture walk checks every champion figure ends on its spoken value. Awaiting re-verification."
     },
     {
       "id": "PERF-01",
@@ -3778,11 +3787,14 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts",
+        "src/components/CountUp.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The re-check at 38add6b found names drawn smaller on a 4K screen at 100% scaling (the card's padding was an uncapped 3vw, 115 px, and a name must fit inside it). The padding is now capped at 48 px: at 3840×2160 a three-way champion tie is 4.49vh (4.40 before the follow-up, 3.89 at 38add6b), a four-way tie 4.17vh at full size (a compact list at 3.61), a two-way snake tie 6.34vh (6.81 before; the rest is the no-break space keeping «Gael H.» together, 7.04 without it). The no-break space and the TV's no-scroll stage now have fixture tests."
     },
     {
       "id": "VIS-07",
