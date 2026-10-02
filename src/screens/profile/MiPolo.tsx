@@ -104,10 +104,14 @@ function rowsOf(links: MyLink[], organizing: MyTournament[]): Row[] {
 
 /**
  * `saved`: the tournament whose boards are saved on the phone («Tu último
- * torneo»), shown while the profile loads or can't: those boards need no
- * signal, and with none the profile never comes (REL-15).
+ * torneo», its card and slug), shown while the profile loads or can't: those
+ * boards need no signal, and with none the profile never comes (REL-15). Once
+ * the profile is there the card stays where it was if it was on screen first
+ * (the profile's greeting took its spot, and a tap meant for the boards
+ * opened the profile), or if the account's list doesn't have that tournament
+ * (an account not linked to it lost it from Mi Polo); the list then skips it.
  */
-export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
+export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } = {}) {
   const navigate = useNavigate()
   const { profile, links, loading, error, load } = useMyProfile()
   const [organizing, setOrganizing] = useState<MyTournament[]>([])
@@ -118,6 +122,9 @@ export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
   const unread = useUnread((s) => s.count)
   const isPlatformAdmin = usePlatform((s) => s.isAdmin === true)
   const refreshUnread = useUnread((s) => s.refresh)
+  /** The saved card was on screen before the profile came: from then on it keeps its place. */
+  const [cardFirst, setCardFirst] = useState(false)
+  if (!profile && saved && !cardFirst) setCardFirst(true)
 
   useEffect(() => {
     void load(true)
@@ -139,9 +146,12 @@ export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
 
   const pending = links.filter((l) => l.linkStatus === 'pending')
   const rows = useMemo(() => rowsOf(links, organizing), [links, organizing])
-  const live = rows.filter((r) => r.status === 'live' || r.status === 'auction')
-  const upcoming = rows.filter((r) => r.status === 'setup')
-  const past = rows.filter((r) => r.status === 'finished')
+  // The card stays (see above), and the list doesn't show its tournament again.
+  const keepCard = !!saved && (cardFirst || !rows.some((r) => r.slug === saved.slug))
+  const listed = keepCard ? rows.filter((r) => r.slug !== saved?.slug) : rows
+  const live = listed.filter((r) => r.status === 'live' || r.status === 'auction')
+  const upcoming = listed.filter((r) => r.status === 'setup')
+  const past = listed.filter((r) => r.status === 'finished')
 
   async function answer(l: MyLink, yes: boolean) {
     setBusy(l.playerId)
@@ -171,10 +181,11 @@ export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
     if (!saved) return wait
     return (
       <div className={styles.screen} aria-busy={busy}>
-        <div className={styles.topBar}>
+        {/* As tall as the loaded view's, with its icons: the card below must not move when the profile lands. */}
+        <div className={`${styles.topBar} ${styles.topBarSteady}`}>
           <Wordmark />
         </div>
-        {saved}
+        {saved.card}
         {wait}
       </div>
     )
@@ -203,7 +214,7 @@ export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
 
   return (
     <div className={styles.screen}>
-      <div className={styles.topBar}>
+      <div className={`${styles.topBar} ${styles.topBarSteady}`}>
         <Wordmark />
         <span className={styles.topActions}>
           {isPlatformAdmin && (
@@ -227,6 +238,8 @@ export function MiPolo({ saved }: { saved?: ReactNode } = {}) {
           </Link>
         </span>
       </div>
+
+      {keepCard && saved?.card}
 
       <Link to={`/p/${profile.handle}`} className={`${styles.hero} ${styles.heroLink}`}>
         <Avatar name={profile.displayName} url={profile.avatarUrl} size="lg" />

@@ -46,7 +46,7 @@ export function HomeScreen() {
   if (supabaseConfigured && !ready) return <BootWait last={saved ? last : null} />
   if (bootError && !user && hasStoredSession()) return <BootProblem kind={bootError} saved={saved ? last?.slug : undefined} />
   // Mi Polo needs the server for the profile; the saved boards don't (REL-15).
-  if (organizerSignedIn) return <MiPolo saved={saved && last ? <LastTournamentCard last={last} /> : undefined} />
+  if (organizerSignedIn) return <MiPolo saved={saved && last ? { slug: last.slug, card: <LastTournamentCard last={last} /> } : undefined} />
 
   return (
     <div className={styles.home}>
