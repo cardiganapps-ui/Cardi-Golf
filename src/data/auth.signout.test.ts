@@ -35,13 +35,16 @@ vi.mock('../lib/supabase', () => ({
   }),
 }))
 
-const { signOut, signedOutOnPurpose, useAuth } = await import('./auth')
+const { _authTest, signOut, signedOutOnPurpose, useAuth } = await import('./auth')
 await useAuth.getState().init()
 
 const KEY = 'cardi-golf-auth'
 beforeEach(() => {
   storage.clear()
   storage.set(KEY, JSON.stringify({ access_token: 'expired', refresh_token: 'r' }))
+  // Each test starts with no sign-out asked for and nobody in the auth store.
+  _authTest.resetSignOut()
+  useAuth.setState({ user: null, session: null })
 })
 
 describe('signOut', () => {
@@ -87,6 +90,53 @@ describe('signOut', () => {
     await signOut()
     expect(signedOutOnPurpose()).toBe(true)
     sb.listener?.('SIGNED_IN', { user: { id: 'anon-nuevo' } })
+    expect(signedOutOnPurpose()).toBe(false)
+  })
+})
+
+/**
+ * Only a real sign-in ends a sign-out the person asked for (the verifier of
+ * #87, round 3): auth-js refreshing the token of the account being signed out
+ * (it does every 30 s near the end of a token's life) ended it midway, the
+ * gate read the session going away as lost and signed the phone in
+ * anonymously 22 ms after the logout.
+ */
+describe('what ends a deliberate sign-out', () => {
+  /** auth-js's signOut, with `before` happening inside it, then the session going; what the gate would read at that moment. */
+  function signsOutAfter(before: () => void) {
+    const seen = { onPurpose: null as boolean | null }
+    sb.signOut = async () => {
+      before()
+      storage.delete(KEY)
+      sb.listener?.('SIGNED_OUT', null)
+      seen.onPurpose = signedOutOnPurpose()
+      return { error: null }
+    }
+    return seen
+  }
+  const account = { user: { id: 'uid-cuenta' }, access_token: 'nuevo' }
+  beforeEach(() => storage.set(KEY, JSON.stringify({ access_token: 'a', refresh_token: 'r', user: { id: 'uid-cuenta' } })))
+
+  it('a token refresh, then the sign-out, inside signOut: the identity going away is still on purpose', async () => {
+    const seen = signsOutAfter(() => sb.listener?.('TOKEN_REFRESHED', account))
+    expect(await signOut()).toBe(true)
+    expect(seen.onPurpose).toBe(true)
+    expect(signedOutOnPurpose()).toBe(true)
+  })
+
+  it('nor does auth-js confirming the same account again on its way out', async () => {
+    const seen = signsOutAfter(() => sb.listener?.('SIGNED_IN', account))
+    expect(await signOut()).toBe(true)
+    expect(seen.onPurpose).toBe(true)
+  })
+
+  it('the same account signing in again afterwards is a real sign-in, and ends it', async () => {
+    signsOutAfter(() => undefined)
+    await signOut()
+    expect(signedOutOnPurpose()).toBe(true)
+    sb.listener?.('TOKEN_REFRESHED', account)
+    expect(signedOutOnPurpose()).toBe(true)
+    sb.listener?.('SIGNED_IN', account)
     expect(signedOutOnPurpose()).toBe(false)
   })
 })

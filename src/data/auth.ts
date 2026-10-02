@@ -52,9 +52,13 @@ export const useAuth = create<AuthState>((set) => ({
     // Listen FIRST: if getSession below gives up but the refresh finishes a
     // moment later, the session still lands and the error clears itself.
     unsubscribe?.()
-    const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
-      // A new session ends a sign-out the person asked for.
-      if (session) signingOut = false
+    const { data: sub } = sb.auth.onAuthStateChange((evt, session) => {
+      // Only a real sign-in ends a sign-out the person asked for: a new
+      // session (a tournament link opened afterwards, another account). Not a
+      // token refresh, nor auth-js confirming the account it is signing out:
+      // a refresh that landed mid-sign-out ended it, and the gate started an
+      // anonymous user behind the person.
+      if (evt === 'SIGNED_IN' && session && session.user?.id !== leaving) signingOut = false
       set({ ...fromSession(session), ready: true, bootError: null })
     })
     unsubscribe = () => sub.subscription.unsubscribe()
@@ -183,10 +187,31 @@ export async function updatePassword(password: string) {
   if (error) throw error
 }
 
-/** The person asked to sign out (until the next session): the identity going away is no lost session. */
+/** The person asked to sign out (until the next real sign-in): the identity going away is no lost session. */
 let signingOut = false
+/** Whom auth-js is still signing out: a session of theirs meanwhile (a refresh, a confirmation) is no new sign-in. */
+let leaving: string | null = null
 /** Each sign-out's number: an older one's late answer leaves a newer one's flag and outcome alone. */
 let signOutSeq = 0
+
+/** For tests: no sign-out asked for, and none still running (a later answer of one changes nothing). */
+export const _authTest = {
+  resetSignOut() {
+    signingOut = false
+    leaving = null
+    signOutSeq++
+  },
+}
+
+/** The user of the session stored on this device, if any (the auth store may not have it yet). */
+function storedUid(): string | null {
+  try {
+    const raw = localStorage.getItem('cardi-golf-auth')
+    return raw ? ((JSON.parse(raw) as { user?: { id?: string } }).user?.id ?? null) : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Whether this device has no session because its person signed out on
@@ -215,7 +240,9 @@ export function signedOutOnPurpose(): boolean {
  */
 export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean> {
   const seq = ++signOutSeq
+  // Before auth-js starts: it announces the session going away (and may refresh it first) inside its own signOut.
   signingOut = true
+  leaving = useAuth.getState().user?.id ?? storedUid()
   return new Promise<boolean>((resolve) => {
     /** What the caller was told, once it was: the session gone, or still there. */
     let told: boolean | null = null
@@ -232,6 +259,8 @@ export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean>
       if (told === null) tell(gone)
       // A newer sign-out owns the flag and what comes after.
       if (seq !== signOutSeq) return
+      // auth-js is done: from here on any session is a new sign-in, the same account's too.
+      leaving = null
       if (!gone) signingOut = false
       else if (late) {
         try {
