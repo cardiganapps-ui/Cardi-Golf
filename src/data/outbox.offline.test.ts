@@ -33,15 +33,27 @@ interface App {
   api: typeof import('./api')
   store: typeof import('./tournamentStore')
   cache: typeof import('./snapshotCache')
+  client: typeof import('../lib/supabase')
 }
 let app: App | null = null
 
 const LOOKUP: LookupResult = { id: 't1', slug: 'ensayo', name: 'Ensayo', tagline: null, logoUrl: null, accentColor: null, status: 'live', joinCode: 'ABC123', players: [] }
 const ME: Me = { playerId: 'p1', isOrganizer: false, isAdmin: false, via: 'device' }
 
+/**
+ * The page goes away, and its timers with it: the outbox's retry and the
+ * auth client's refresh ticker (in one test process they would otherwise
+ * live on, and act on the storage the next page shares).
+ */
+async function closePage(a: App): Promise<void> {
+  a.outbox._outboxTest.reset()
+  if (a.auth.useAuth.getState().ready) await a.client.supabase().auth.stopAutoRefresh()
+  a.outbox._outboxTest.db()?.close()
+}
+
 /** Close the app if it is open, then load it again: a fresh page and modules over what the phone stored. */
 async function restart(): Promise<App> {
-  app?.outbox._outboxTest.db()?.close()
+  if (app) await closePage(app)
   phone.reloadPage()
   vi.resetModules()
   app = {
@@ -50,6 +62,7 @@ async function restart(): Promise<App> {
     api: await import('./api'),
     store: await import('./tournamentStore'),
     cache: await import('./snapshotCache'),
+    client: await import('../lib/supabase'),
   }
   return app
 }
@@ -107,7 +120,7 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
   afterEach(async () => {
     // The saved boards go through the page's own connection: deleting that database under it would only make Dexie complain.
     await app?.cache.clearAllCached()
-    app?.outbox._outboxTest.db()?.close()
+    if (app) await closePage(app)
     phone.reloadPage()
     app = null
   })
@@ -121,6 +134,7 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
 
     // No signal on the course.
     phone.goOffline()
+    const sentBefore = server.wire.length
     await first.outbox.enqueueScore('t1', holeScore('p1', 7, 5))
     await first.outbox.enqueueScore('t1', holeScore('p2', 7, 6))
     await first.outbox.enqueueTiebreak('t1', snakeAnswer(7, 'p2'))
@@ -129,14 +143,14 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     // The phone restarts, still with no signal.
     const after = await restart()
     await open(after)
-    // Restored from the phone and counted before any signal, as the player's; nothing went out offline.
+    // Restored from the phone and counted before any signal, as the player's; not one request was even tried offline.
     expect(after.outbox._outboxTest.queue().map((x) => [x.key, x.actingUid])).toEqual([
       ['score:r1:p1:7', player],
       ['score:r1:p2:7', player],
       ['tiebreak:r1:g1:7', player],
     ])
     expect(after.outbox.useOutbox.getState()).toMatchObject({ pending: 3, pendingHoles: 1, held: 0, rejected: [] })
-    expect(server.writes).toEqual([])
+    expect(server.wire.slice(sentBefore)).toEqual([])
     // The boards it opened from its saved copy show them at once.
     expect(shown(after, 'p1', 7)).toEqual({ strokes: 5, gross: 5 })
     expect(shown(after, 'p2', 7)).toEqual({ strokes: 6, gross: 6 })
@@ -218,5 +232,43 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     await until(() => after.outbox.useOutbox.getState().pending === 0, 'the hole to go out')
     expect(server.writes.map((w) => [w.row.player_id, w.row.hole, w.row.strokes, w.by])).toEqual([['p1', 1, 5, fresh]])
     expect(after.outbox.useOutbox.getState()).toMatchObject({ held: 0, rejected: [] })
+  })
+
+  it('the PIN’s adoption is kept on the phone: after a restart the holes are the player’s, waiting only for signal', async () => {
+    const first = await restart()
+    await open(first)
+    const before = await enterAs('p1')
+    await keepOnPhone(first)
+
+    // A dead zone: a hole is saved, and meanwhile the session lapses.
+    phone.goOffline()
+    await first.outbox.enqueueScore('t1', holeScore('p2', 2, 4))
+    server.auth.lapse(before)
+    phone.ageSession()
+
+    // A bar of signal: the gate finds the session dead and starts a new one, the PIN claims p1 for it, and the gate sees him in.
+    phone.online = true
+    await first.auth.ensureSession()
+    const fresh = first.auth.useAuth.getState().user!.id
+    expect(fresh).not.toBe(before)
+    expect(await first.api.claimPlayer('p1', PIN)).toMatchObject({ ok: true })
+    expect(await first.api.myMembership('t1')).toMatchObject({ playerId: 'p1' })
+    // The bar is gone as the gate adopts the writes: nothing is even tried, so only the adoption itself is on the phone.
+    phone.goOffline()
+    await first.outbox.adoptQueuedWrites('t1')
+    await settle(first.outbox.useOutbox)
+    expect(server.writeRequests()).toEqual([])
+
+    // The phone restarts with no signal: the hole is the player's now, waiting for signal, not for the PIN again.
+    const after = await restart()
+    await open(after)
+    expect(after.outbox._outboxTest.queue().map((x) => [x.key, x.actingUid])).toEqual([['score:r1:p2:2', fresh]])
+    expect(after.outbox.useOutbox.getState()).toMatchObject({ pending: 1, held: 0 })
+    expect(after.outbox.unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal' })
+
+    // Signal: it goes out by itself, as the player.
+    phone.goOnline()
+    await until(() => after.outbox.useOutbox.getState().pending === 0, 'the hole to go out')
+    expect(server.writes.map((w) => [w.row.player_id, w.row.hole, w.by])).toEqual([['p2', 2, fresh]])
   })
 })

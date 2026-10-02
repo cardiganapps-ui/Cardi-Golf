@@ -129,6 +129,20 @@ describe('retries', () => {
     expect(useOutbox.getState().rejected.map((r) => r.key)).toEqual(['score:r1:p4:9'])
   })
 
+  it('sets aside a write the database cannot take as typed («invalid input»), as it does a refused one', async () => {
+    // What PostgREST answers when a value does not parse as its column's type (22P02): sending it again changes nothing.
+    server.decide = (req) => (isWrite(req) ? { status: 400, body: { code: '22P02', details: null, hint: null, message: 'invalid input syntax for type uuid: "p1"' } } : 'answer')
+    await enqueueScore('t1', holeScore('p1', 12, 4))
+    await settle(useOutbox)
+    expect(useOutbox.getState()).toMatchObject({ pending: 0, lastError: t.sync.errDenied })
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:12', message: t.sync.errDenied })])
+    expect(await _outboxTest.stored()).toEqual([])
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+    await settle(useOutbox)
+    expect(sent(12)).toBe(1)
+  })
+
   it('retries a write refused for an expired session: that is not a refusal of the hole', async () => {
     let n = 0
     server.decide = (req) => (isWrite(req) && n++ === 0 ? { status: 401, body: { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' } } : 'answer')
