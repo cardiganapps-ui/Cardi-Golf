@@ -14,9 +14,12 @@
  *   sign-in, token refresh) come in this way only. Every request is judged by
  *   the `Authorization` header it actually carries, as #87's outbox tests
  *   judge theirs: the publishable key is `anon`, a live token is its user, a
- *   lapsed or unknown one is a 401. A write must pass the row-level security
- *   of §7: the caller's user holds a player by PIN (`claim_player`), the
- *   round is live, and the row is that player's group's.
+ *   lapsed or unknown one is a 401. Reads and the phone's writes meet the
+ *   database's own rules, ported from the migrations: the row-level security
+ *   of every policy, one PIN claim per user (`claim_player`), the unique keys,
+ *   column grants and checks, and the discrepancy trigger. The requests in
+ *   cases/serverRules.json pin them against the real migrations too (see
+ *   serverRules.test.ts).
  *
  * Both ways answer the way PostgREST does, which is what the tests lean on:
  * - rows come back in the order asked for, and never more than `maxRows` in
@@ -99,12 +102,10 @@ export interface Exchange {
  */
 export type Outcome = 'answer' | 'offline' | 'stall' | { status: number; body: unknown }
 
-/** The auth server's side of who the phone is. */
+/** The auth server's side of who the phone is. Who holds which player by PIN is the `device_sessions` table, as on the server. */
 export interface FakeAuth {
   /** Every user it created, oldest first (each anonymous sign-in is a new one). */
   users: string[]
-  /** Who holds which player by PIN (`claim_player`): the server's device_sessions. */
-  claims: Array<{ uid: string; playerId: string }>
   /** Each player's PIN; a player without one can't be claimed. */
   pins: Record<string, string>
   /** Seconds a new access token lives. */
@@ -117,6 +118,8 @@ export interface FakeAuth {
   lapse(uid: string): void
   /** The player a user holds in a tournament (`my_player_id`), or null. */
   playerOf(uid: string, tournamentId: string): string | null
+  /** A live access token for this user, as if it had just signed in (the rule cases name their callers). */
+  sessionFor(uid: string): string
 }
 
 export interface FakeSupabase {
@@ -159,9 +162,9 @@ export interface FakeSupabase {
   /** False while the phone has no signal: no request gets out at all. */
   reachable: () => boolean
   auth: FakeAuth
-  /** Rows the server already holds (another phone wrote them): stored with the columns' defaults, outside the logs. */
+  /** Rows the server already holds (another phone wrote them): stored as the database stores a new row (its defaults and insert triggers), outside the logs and the rules. */
   seed(table: string, rows: Row[]): void
-  /** Back to these tables (or the ones it started with), with empty logs and a network that answers. Users, tokens and claims stay. */
+  /** Back to these tables (or the ones it started with), with empty logs and a network that answers. Users, tokens and PIN claims stay. */
   reset(tables?: Record<string, Row[]>): void
   /** Write requests (POST, DELETE) to a table, oldest first. */
   writeRequests(table?: string): Exchange[]
@@ -191,8 +194,8 @@ interface ReadSpec {
   single: boolean
 }
 
-/** What the server answers to a read, read now. */
-function read(server: FakeSupabase, q: ReadSpec): Result {
+/** What the server answers to a read, read now. Over the network, `visible` is the row-level security the caller meets. */
+function read(server: FakeSupabase, q: ReadSpec, visible?: (r: Row) => boolean): Result {
   const { table } = q
   server.requests.push({ table, filters: q.filters.map((f) => f.label), order: q.order.map((o) => o.column), range: q.range, single: q.single })
   if (server.down) return { data: null, error: server.down }
@@ -200,7 +203,7 @@ function read(server: FakeSupabase, q: ReadSpec): Result {
   if (!all) return { data: null, error: { message: `Could not find the table 'public.${table}' in the schema cache`, code: 'PGRST205' } }
   const missing = all.length ? q.order.find((o) => !(o.column in all[0]!)) : undefined
   if (missing) return { data: null, error: { message: `column ${table}.${missing.column} does not exist`, code: '42703' } }
-  const rows = all.filter((r) => q.filters.every((f) => f.test(r)))
+  const rows = all.filter((r) => (!visible || visible(r)) && q.filters.every((f) => f.test(r)))
   if (q.order.length) {
     rows.sort((a, b) => {
       for (const o of q.order) {
@@ -266,8 +269,51 @@ const URL_BASE = 'https://fake-polo.supabase.test'
 const ANON_KEY = 'anon-key-for-tests'
 /** Query parameters that are not filters. */
 const NOT_FILTERS = new Set(['select', 'order', 'offset', 'limit', 'on_conflict', 'columns'])
-/** The tables a player's phone writes (§7, «Write scores»): every other write is refused. */
-const PHONE_TABLES = new Set(['scores', 'snake_tiebreaks', 'hole_awards', 'card_signatures'])
+
+// The database's rules for the tables a player's phone writes (§7), ported
+// from the migrations as written: the policies, unique keys, column grants,
+// checks and triggers the phone's requests meet. The requests in
+// cases/serverRules.json pin them: this server (serverRules.test.ts) and the
+// real migrations (scripts/server-rules.mjs, in the db job) must answer each
+// as written there. A write to any other table is not served (`unexpected`).
+
+/** Each phone table's unique keys, primary first, with the constraint's name. */
+const UNIQUE_KEYS: Record<string, Array<{ name: string; columns: string[] }>> = {
+  scores: [
+    { name: 'scores_pkey', columns: ['id'] },
+    { name: 'scores_round_id_player_id_hole_key', columns: ['round_id', 'player_id', 'hole'] },
+  ],
+  snake_tiebreaks: [{ name: 'snake_tiebreaks_pkey', columns: ['round_id', 'group_id', 'hole'] }],
+  card_signatures: [{ name: 'card_signatures_pkey', columns: ['round_id', 'pair_id'] }],
+  hole_awards: [{ name: 'hole_awards_pkey', columns: ['round_id', 'game_id', 'hole', 'player_id'] }],
+}
+/** What a session may insert and update in `scores` (0010): the flags and the Comité's reason are not a phone's to send. */
+const SCORE_INSERT = new Set(['id', 'round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
+const SCORE_UPDATE = new Set(['round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
+const NOT_NULL: Record<string, string[]> = {
+  scores: ['round_id', 'player_id', 'hole', 'picked_up'],
+  snake_tiebreaks: ['round_id', 'group_id', 'hole', 'last_holed_player_id'],
+  card_signatures: ['round_id', 'pair_id'],
+  hole_awards: ['round_id', 'hole', 'game_id', 'player_id'],
+}
+const between = (v: unknown, lo: number, hi: number) => v == null || (typeof v === 'number' && v >= lo && v <= hi)
+/** Each table's checks, in the order Postgres runs them (by name). A check holds when it is not false. */
+const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
+  scores: [
+    ['scores_check', (r) => r.picked_up === true || r.strokes != null],
+    ['scores_check1', (r) => r.putts == null || r.strokes == null || Number(r.putts) <= Number(r.strokes)],
+    ['scores_hole_check', (r) => between(r.hole, 1, 18)],
+    ['scores_putts_check', (r) => between(r.putts, 0, 15)],
+    ['scores_strokes_check', (r) => between(r.strokes, 1, 15)],
+  ],
+  snake_tiebreaks: [['snake_tiebreaks_hole_check', (r) => between(r.hole, 1, 18)]],
+  hole_awards: [
+    ['hole_awards_game_id_check', (r) => r.game_id == null || (typeof r.game_id === 'string' && /^[a-z0-9-]{1,32}$/.test(r.game_id))],
+    ['hole_awards_hole_check', (r) => between(r.hole, 1, 18)],
+  ],
+}
+/** `a is distinct from b`, with a missing column read as null. */
+const distinct = (a: unknown, b: unknown) => (a ?? null) !== (b ?? null)
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
@@ -278,6 +324,13 @@ function splitList(list: string): string[] {
   const out: string[] = []
   for (const m of list.matchAll(/"((?:[^"\\]|\\.)*)"|([^,]+)/g)) out.push(m[1] !== undefined ? m[1].replace(/\\(.)/g, '$1') : m[2]!)
   return out
+}
+
+/** The columns a `select` names, when it names plain columns only (no `*`, no embedding). */
+function selectedColumns(params: URLSearchParams): string[] | null {
+  const select = params.get('select')
+  if (!select || !/^[a-z_][a-z0-9_]*(,[a-z_][a-z0-9_]*)*$/.test(select)) return null
+  return select.split(',')
 }
 
 /** A read as the URL spells it. Filter values arrive as text and compare as text; anything else is an error message. */
@@ -333,14 +386,35 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   let clock = 0
   const stamp = () => new Date(Date.UTC(2027, 3, 9, 16, 0, ++clock)).toISOString()
 
-  /** A new row as the database stores it: the key it generates and the columns' defaults. */
+  /**
+   * A new row as the database stores it: the key it generates, the columns'
+   * defaults, and the insert triggers (0010 `scores_clean_insert`: a player's
+   * hole never carries a reason or the discrepancy flags).
+   */
   function withDefaults(table: string, row: Row): Row {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
     const id = keys.length === 1 && keys[0] === 'id' && row.id == null ? { id: `${table}-${++serial}` } : {}
-    if (table === 'scores') return { ...id, disputed: false, previous: null, reason: null, ...row, updated_at: stamp() }
+    if (table === 'scores') return { ...id, picked_up: false, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
     if (table === 'snake_tiebreaks' || table === 'hole_awards') return { ...id, created_at: stamp(), ...row }
     if (table === 'card_signatures') return { ...id, signed_at: stamp(), ...row }
     return { ...id, ...row }
+  }
+
+  /**
+   * A hole another request already stored, changed (0010 `scores_detect_dispute`,
+   * 0002 `scores_touch`): for anyone but the Comité's RPCs the reason goes and
+   * the flags stay as they were; another phone changing the values is a
+   * discrepancy, and the old values are kept with it.
+   */
+  function scoreUpdated(old: Row, next: Row): Row {
+    const row: Row = { ...next, reason: null, disputed: old.disputed, previous: old.previous ?? null }
+    const changed = distinct(row.strokes, old.strokes) || distinct(row.putts, old.putts) || row.picked_up !== old.picked_up
+    if (changed && row.entered_by != null && distinct(row.entered_by, old.entered_by) && (old.entered_by != null || old.reason != null)) {
+      row.disputed = true
+      row.previous = { strokes: old.strokes ?? null, putts: old.putts ?? null, picked_up: old.picked_up, entered_by: old.entered_by ?? null, updated_at: old.updated_at ?? null }
+    }
+    row.updated_at = stamp()
+    return row
   }
 
   function user(uid: string) {
@@ -374,20 +448,128 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return t.until <= Date.now() ? 'lapsed' : t.uid
   }
 
-  /** The group a player plays in, in a round. */
-  function groupOf(roundId: unknown, playerId: unknown): unknown {
-    const groups = (server.tables.groups ?? []).filter((g) => g.round_id === roundId)
-    return groups.find((g) => (server.tables.group_members ?? []).some((m) => m.group_id === g.id && m.player_id === playerId))?.id
+  const rowsOf = (table: string): Row[] => server.tables[table] ?? []
+  /**
+   * `my_player_id(tid)` (0013): the player confirmed-linked to the caller's
+   * profile there, else the caller's PIN claim. A user holds one claim
+   * (`device_sessions` is keyed by the user), so it counts in one tournament.
+   */
+  function myPlayer(uid: string, tid: unknown): unknown {
+    if (tid == null) return undefined
+    const linked = rowsOf('players').find((p) => p.tournament_id === tid && p.profile_id === uid && p.profile_status === 'confirmed')
+    return linked ? linked.id : rowsOf('device_sessions').find((d) => d.auth_user_id === uid && d.tournament_id === tid)?.player_id
   }
-  /** §7: the writer holds a player of this row's group, in a live round. */
-  function mayWrite(table: string, row: Row, as: string): boolean {
-    if (!PHONE_TABLES.has(table)) return false
-    const round = (server.tables.rounds ?? []).find((r) => r.id === row.round_id)
-    if (!round || round.status !== 'live') return false
-    const mine: unknown[] = server.auth.claims.filter((c) => c.uid === as).map((c) => groupOf(round.id, c.playerId)).filter((g) => g != null)
-    if (table === 'scores') return mine.includes(groupOf(round.id, row.player_id))
-    if (table === 'card_signatures') return mine.length > 0
-    return mine.includes(row.group_id)
+  /** `is_tournament_organizer(tid)` (0021, platform admins aside): on the tournament's Comité, or holding a player the Comité made admin. */
+  function organizes(uid: string, tid: unknown): boolean {
+    if (tid == null) return false
+    if (rowsOf('tournament_organizers').some((o) => o.tournament_id === tid && o.auth_user_id === uid)) return true
+    const me = myPlayer(uid, tid)
+    return me != null && rowsOf('players').some((p) => p.id === me && p.is_admin === true)
+  }
+  const roundTournament = (rid: unknown) => rowsOf('rounds').find((r) => r.id === rid)?.tournament_id
+  const inGroup = (gid: unknown, pid: unknown) => pid != null && rowsOf('group_members').some((m) => m.group_id === gid && m.player_id === pid)
+  const groupOfRound = (gid: unknown, rid: unknown) => rowsOf('groups').some((g) => g.id === gid && g.round_id === rid)
+  /** `shares_group(rid, pid)`: the caller's player and `pid` play in one group of the round. */
+  function sharesGroup(uid: string, rid: unknown, pid: unknown): boolean {
+    const me = myPlayer(uid, roundTournament(rid))
+    return me != null && rowsOf('groups').some((g) => g.round_id === rid && inGroup(g.id, me) && inGroup(g.id, pid))
+  }
+  const roundIsLive = (rid: unknown) => rowsOf('rounds').some((r) => r.id === rid && r.status === 'live')
+  /** `card_is_signed(rid, pid)`: the card of the player's pair is signed for the round. */
+  const cardIsSigned = (rid: unknown, pid: unknown) =>
+    rowsOf('card_signatures').some((s) => s.round_id === rid && rowsOf('pairs').some((p) => p.id === s.pair_id && (p.player1_id === pid || p.player2_id === pid)))
+  /** The tournament a row belongs to, by the path its read policy takes. */
+  function tenantOf(table: string, row: Row): unknown {
+    if (table === 'tournaments') return row.id
+    if ('tournament_id' in row) return row.tournament_id
+    if ('round_id' in row) return roundTournament(row.round_id)
+    if ('group_id' in row) return roundTournament(rowsOf('groups').find((g) => g.id === row.group_id)?.round_id)
+    if ('lot_id' in row) return rowsOf('calcutta_lots').find((l) => l.id === row.lot_id)?.tournament_id
+    return undefined
+  }
+  /**
+   * The read policies (0003, 0011, 0020): a member of a tournament reads all
+   * of it; any session reads the course library; a session reads its own PIN
+   * claim and Comité seats. The publishable key alone reads none of these.
+   */
+  function mayRead(table: string, row: Row, uid: string): boolean {
+    if (uid === 'anon') return false
+    if (table === 'courses' || table === 'tees' || table === 'holes') return true
+    if (table === 'device_sessions' || table === 'tournament_organizers') return row.auth_user_id === uid
+    const tid = tenantOf(table, row)
+    return organizes(uid, tid) || myPlayer(uid, tid) != null
+  }
+
+  /** The write policies of the phone tables, as the migrations state them. */
+  interface WriteRule {
+    /** INSERT's WITH CHECK, and UPDATE's: the row as it would be stored. */
+    check(uid: string, row: Row): boolean
+    /** UPDATE's USING: an existing row the caller may change. Always false where the table has no UPDATE policy. */
+    using(uid: string, row: Row): boolean
+    /** DELETE's USING. */
+    deletes(uid: string, row: Row): boolean
+  }
+  /** The group's own rows (0013): the Comité, or a player of the row's group. */
+  const groupRow = (uid: string, r: Row) => organizes(uid, roundTournament(r.round_id)) || inGroup(r.group_id, myPlayer(uid, roundTournament(r.round_id)))
+  /** 0003 `scores_write` (for all): the Comité, or a phone of the player's group while the round is live and his card unsigned. */
+  const scoreRule = (uid: string, r: Row) =>
+    organizes(uid, roundTournament(r.round_id)) || (sharesGroup(uid, r.round_id, r.player_id) && roundIsLive(r.round_id) && !cardIsSigned(r.round_id, r.player_id))
+  const RULES: Record<string, WriteRule> = {
+    scores: { check: scoreRule, using: scoreRule, deletes: scoreRule },
+    // 0013 `snake_tiebreaks_write`: a player of the group answers, for the group's own round, naming one of the group, as himself.
+    snake_tiebreaks: {
+      check(uid, r) {
+        const tid = roundTournament(r.round_id)
+        const me = myPlayer(uid, tid)
+        return organizes(uid, tid) || (groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.last_holed_player_id) && me != null && r.decided_by === me)
+      },
+      using: groupRow,
+      deletes: groupRow,
+    },
+    // 0013 `hole_awards_write`: the same for a hole's winners; the Comité names a winner of the tournament.
+    hole_awards: {
+      check(uid, r) {
+        const tid = roundTournament(r.round_id)
+        const me = myPlayer(uid, tid)
+        const winnerHere = rowsOf('players').some((p) => p.id === r.player_id && p.tournament_id === tid)
+        return (organizes(uid, tid) && winnerHere) || (groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.player_id) && me != null && r.decided_by === me)
+      },
+      using: groupRow,
+      deletes: groupRow,
+    },
+    // 0013 `card_signatures_insert`: in a live round, as himself, the card of a pair of his group that is not his own.
+    // 0003 `card_signatures_delete`: the Comité. No UPDATE policy: a signature never changes.
+    card_signatures: {
+      check(uid, r) {
+        const tid = roundTournament(r.round_id)
+        if (organizes(uid, tid)) return true
+        const me = myPlayer(uid, tid)
+        const pair = rowsOf('pairs').find((p) => p.id === r.pair_id && p.tournament_id === tid)
+        return (
+          !!pair &&
+          me != null &&
+          roundIsLive(r.round_id) &&
+          r.signed_by === me &&
+          sharesGroup(uid, r.round_id, pair.player1_id) &&
+          sharesGroup(uid, r.round_id, pair.player2_id) &&
+          me !== pair.player1_id &&
+          me !== pair.player2_id
+        )
+      },
+      using: () => false,
+      deletes: (uid, r) => organizes(uid, roundTournament(r.round_id)),
+    },
+  }
+  // Not modelled: signing a card clears none of its discrepancies. 0008's
+  // `card_signature_settles` updates the scores through 0010's dispute
+  // trigger, which keeps the old flags for anyone but the Comité (NEW-01).
+
+  /** The first NOT NULL column or check the row breaks, as PostgREST answers it. */
+  function constraintError(table: string, row: Row): Response | null {
+    const empty = (NOT_NULL[table] ?? []).find((c) => row[c] == null)
+    if (empty) return json(400, { code: '23502', details: null, hint: null, message: `null value in column "${empty}" of relation "${table}" violates not-null constraint` })
+    const broken = (CHECKS[table] ?? []).find(([, holds]) => !holds(row))
+    return broken ? json(400, { code: '23514', details: null, hint: null, message: `new row for relation "${table}" violates check constraint "${broken[0]}"` }) : null
   }
 
   function unsupported(req: Exchange, why: string): never {
@@ -395,38 +577,71 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     throw new TypeError('Failed to fetch')
   }
 
+  /**
+   * A write, as PostgREST runs it: one statement, so every row is written or
+   * none is. In the order Postgres checks them: the columns' privileges; per
+   * row the insert triggers, the INSERT policy, NOT NULL and the checks, then
+   * the unique keys. An upsert that meets an existing row (on its
+   * `on_conflict` key, else the primary key) skips it, or updates it through
+   * the existing row's UPDATE policy, the update triggers and the policy again.
+   */
   function write(req: Exchange, headers: Headers): Response {
     const table = req.target
-    const rows = server.tables[table]
-    if (!rows) return restError({ message: `Could not find the table 'public.${table}' in the schema cache`, code: 'PGRST205' })
+    const rule = RULES[table]
+    if (!rule) return unsupported(req, `${table} is not a table a phone writes`)
+    const caller = req.as
+    const refused = (message: string) => json(caller === 'anon' ? 401 : 403, { code: '42501', details: null, hint: null, message })
+    const policy = (usingClause = false) => refused(`new row violates row-level security policy${usingClause ? ' (USING expression)' : ''} for table "${table}"`)
+    const rows = rowsOf(table)
     if (req.method === 'DELETE') {
       const spec = readFromUrl(table, req.params, headers)
       if (typeof spec === 'string') return unsupported(req, spec)
-      // Row-level security hides the rows a caller may not touch: they stay, and nothing says so.
-      server.tables[table] = rows.filter((r) => !(spec.filters.every((f) => f.test(r)) && mayWrite(table, r, req.as)))
+      // Row-level security hides the rows a caller may not delete: they stay, and nothing says so.
+      server.tables[table] = rows.filter((r) => !(spec.filters.every((f) => f.test(r)) && mayRead(table, r, caller) && rule.deletes(caller, r)))
       return new Response(null, { status: 204 })
     }
     if (req.method !== 'POST') return unsupported(req, 'only GET, POST and DELETE are served')
     const incoming = (Array.isArray(req.body) ? req.body : [req.body]) as Row[]
-    // One statement: every row passes, or none is written.
-    if (!incoming.every((row) => mayWrite(table, row, req.as))) {
-      return json(req.as === 'anon' ? 401 : 403, { code: '42501', details: null, hint: null, message: `new row violates row-level security policy for table "${table}"` })
+    const resolution = /resolution=(merge|ignore)-duplicates/.exec(headers.get('prefer') ?? '')?.[1]
+    const columns = [...new Set(incoming.flatMap((r) => Object.keys(r)))]
+    // 0010 revoked `scores` from sessions but for the card's own columns (the publishable key's grants were left whole).
+    if (table === 'scores' && caller !== 'anon' && columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))) {
+      return refused(`permission denied for table ${table}`)
     }
-    const onConflict = req.params.get('on_conflict')?.split(',')
-    const key: readonly string[] = onConflict ?? SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
-    const ignore = (headers.get('prefer') ?? '').includes('resolution=ignore-duplicates')
-    const at = (row: Row) => (key.length ? rows.findIndex((r) => key.every((c) => r[c] === row[c])) : -1)
-    if (!onConflict && incoming.some((row) => at(row) >= 0)) {
-      return json(409, { code: '23505', details: null, hint: null, message: `duplicate key value violates unique constraint "${table}_pkey"` })
+    const keys = UNIQUE_KEYS[table]!
+    const target = resolution ? (req.params.get('on_conflict')?.split(',') ?? keys[0]!.columns) : null
+    if (target && !keys.some((k) => k.columns.length === target.length && k.columns.every((c) => target.includes(c)))) {
+      return json(400, { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' })
     }
-    for (const row of incoming) {
-      const i = at(row)
-      if (i >= 0 && ignore) continue
-      const stored = i >= 0 ? { ...rows[i], ...row, ...(table === 'scores' ? { updated_at: stamp() } : {}) } : withDefaults(table, row)
-      if (i >= 0) rows[i] = stored
-      else rows.push(stored)
-      server.writes.push({ table, row: { ...stored }, by: req.as })
+    const next = rows.map((r) => ({ ...r }))
+    const stored: Row[] = []
+    const meets = (cols: string[], row: Row) => next.findIndex((r) => cols.every((c) => r[c] != null && r[c] === row[c]))
+    for (const proposed of incoming) {
+      const row = withDefaults(table, proposed)
+      if (!rule.check(caller, row)) return policy()
+      const bad = constraintError(table, row)
+      if (bad) return bad
+      const at = target ? meets(target, row) : -1
+      if (at < 0) {
+        const taken = keys.find((k) => meets(k.columns, row) >= 0)
+        if (taken) return json(409, { code: '23505', details: null, hint: null, message: `duplicate key value violates unique constraint "${taken.name}"` })
+        next.push(row)
+        stored.push(row)
+        continue
+      }
+      if (resolution === 'ignore') continue
+      const old = next[at]!
+      if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
+      const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
+      const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
+      if (!rule.check(caller, updated)) return policy()
+      const badUpdate = constraintError(table, updated)
+      if (badUpdate) return badUpdate
+      next[at] = updated
+      stored.push(updated)
     }
+    server.tables[table] = next
+    for (const row of stored) server.writes.push({ table, row: { ...row }, by: caller })
     return new Response(null, { status: 201 })
   }
 
@@ -441,8 +656,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (!pin) return json(200, { ok: false, reason: 'no_pin' })
       if (pin !== args.p_pin) return json(200, { ok: false, reason: 'wrong_pin', attemptsLeft: 4 })
       const tid = player.tournament_id
-      const field = new Set((server.tables.players ?? []).filter((p) => p.tournament_id === tid).map((p) => p.id))
-      server.auth.claims = [...server.auth.claims.filter((c) => !(c.uid === as && field.has(c.playerId))), { uid: as, playerId: String(player.id) }]
+      // One claim per user (device_sessions' key): claiming here ends the claim it held anywhere else.
+      server.tables.device_sessions = [...rowsOf('device_sessions').filter((d) => d.auth_user_id !== as), { auth_user_id: as, player_id: player.id, tournament_id: tid }]
       return json(200, { ok: true, playerId: player.id, tournamentId: tid })
     }
     if (name === 'my_membership') {
@@ -497,14 +712,17 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (req.method !== 'GET') return write(req, headers)
     const spec = readFromUrl(req.target, req.params, headers)
     if (typeof spec === 'string') return unsupported(req, spec)
-    const result = read(server, spec)
+    const result = read(server, spec, (r) => mayRead(spec.table, r, req.as))
     const gate = spec.table === 'tournaments' ? gates.shift() : undefined
     if (gate) {
       gate.markReceived()
       // A held answer that fails is the signal dropping while it was on its way.
       if (await Promise.race([gate.answer, aborted])) throw new TypeError('Failed to fetch')
     }
-    return result.error ? restError(result.error) : json(200, result.data)
+    if (result.error) return restError(result.error)
+    const cols = selectedColumns(req.params)
+    const pick = (r: Row) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : r)
+    return json(200, Array.isArray(result.data) ? result.data.map(pick) : pick(result.data as Row))
   }
 
   const server: FakeSupabase = {
@@ -562,7 +780,6 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     reachable: () => true,
     auth: {
       users: [],
-      claims: [],
       pins: {},
       lifetime: 3600,
       lapse(uid) {
@@ -570,8 +787,12 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         for (const [t, owner] of refresh) if (owner === uid) refresh.delete(t)
       },
       playerOf(uid, tournamentId) {
-        const field = new Set((server.tables.players ?? []).filter((p) => p.tournament_id === tournamentId).map((p) => p.id))
-        return server.auth.claims.find((c) => c.uid === uid && field.has(c.playerId))?.playerId ?? null
+        const player = myPlayer(uid, tournamentId)
+        return player == null ? null : String(player)
+      },
+      sessionFor(uid) {
+        if (!server.auth.users.includes(uid)) server.auth.users.push(uid)
+        return session(uid).access_token
       },
     },
 
@@ -623,7 +844,10 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     },
     reset(next) {
       if (next) initial = structuredClone(next)
+      const claims = server.tables.device_sessions
       server.tables = structuredClone(initial)
+      // The phones that entered stay in: their PIN claims are the server's, not the test's tables.
+      if (claims && !server.tables.device_sessions) server.tables.device_sessions = claims
       server.requests = []
       server.rpcCalls = []
       server.rpcResult = { data: null, error: null }

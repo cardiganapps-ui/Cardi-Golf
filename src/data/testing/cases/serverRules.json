@@ -1,0 +1,2026 @@
+{
+  "about": "What the database lets a phone read and write, and what it changes on the way in, as requests over PostgREST. Run against the real migrations by scripts/server-rules.mjs (the db job) and against the test server by src/data/testing/serverRules.test.ts: both must answer every case as written here (QA-06). Ids are names; on the database every uuid column gets md5(name).",
+  "world": {
+    "users": [
+      "uid-p1",
+      "uid-p3",
+      "uid-pz",
+      "uid-q1",
+      "uid-org",
+      "uid-x"
+    ],
+    "tables": {
+      "tournaments": [
+        {
+          "id": "t1",
+          "slug": "ensayo",
+          "name": "Ensayo",
+          "join_code": "ENSAYO"
+        },
+        {
+          "id": "t2",
+          "slug": "otro",
+          "name": "Otro torneo",
+          "join_code": "OTRAZZ"
+        }
+      ],
+      "players": [
+        {
+          "id": "p1",
+          "tournament_id": "t1",
+          "full_name": "Uno",
+          "display_name": "Uno",
+          "is_admin": false
+        },
+        {
+          "id": "p2",
+          "tournament_id": "t1",
+          "full_name": "Dos",
+          "display_name": "Dos",
+          "is_admin": false
+        },
+        {
+          "id": "p3",
+          "tournament_id": "t1",
+          "full_name": "Tres",
+          "display_name": "Tres",
+          "is_admin": false
+        },
+        {
+          "id": "p4",
+          "tournament_id": "t1",
+          "full_name": "Cuatro",
+          "display_name": "Cuatro",
+          "is_admin": false
+        },
+        {
+          "id": "p5",
+          "tournament_id": "t1",
+          "full_name": "Cinco",
+          "display_name": "Cinco",
+          "is_admin": false
+        },
+        {
+          "id": "pz",
+          "tournament_id": "t1",
+          "full_name": "Zeta del Comité",
+          "display_name": "Zeta",
+          "is_admin": true
+        },
+        {
+          "id": "q1",
+          "tournament_id": "t2",
+          "full_name": "Otro Uno",
+          "display_name": "Otro Uno",
+          "is_admin": false
+        },
+        {
+          "id": "q2",
+          "tournament_id": "t2",
+          "full_name": "Otro Dos",
+          "display_name": "Otro Dos",
+          "is_admin": false
+        }
+      ],
+      "courses": [
+        {
+          "id": "c1",
+          "name": "Campo de prueba"
+        }
+      ],
+      "rounds": [
+        {
+          "id": "r1",
+          "tournament_id": "t1",
+          "number": 1,
+          "status": "live"
+        },
+        {
+          "id": "r2",
+          "tournament_id": "t1",
+          "number": 2,
+          "status": "finished"
+        },
+        {
+          "id": "r9",
+          "tournament_id": "t2",
+          "number": 1,
+          "status": "live"
+        }
+      ],
+      "groups": [
+        {
+          "id": "g1",
+          "round_id": "r1",
+          "number": 1
+        },
+        {
+          "id": "g5",
+          "round_id": "r1",
+          "number": 2
+        },
+        {
+          "id": "g2",
+          "round_id": "r2",
+          "number": 1
+        },
+        {
+          "id": "g9",
+          "round_id": "r9",
+          "number": 1
+        }
+      ],
+      "group_members": [
+        {
+          "group_id": "g1",
+          "player_id": "p1"
+        },
+        {
+          "group_id": "g1",
+          "player_id": "p2"
+        },
+        {
+          "group_id": "g1",
+          "player_id": "p3"
+        },
+        {
+          "group_id": "g1",
+          "player_id": "p4"
+        },
+        {
+          "group_id": "g5",
+          "player_id": "p5"
+        },
+        {
+          "group_id": "g2",
+          "player_id": "p1"
+        },
+        {
+          "group_id": "g2",
+          "player_id": "p2"
+        },
+        {
+          "group_id": "g2",
+          "player_id": "p3"
+        },
+        {
+          "group_id": "g2",
+          "player_id": "p4"
+        },
+        {
+          "group_id": "g9",
+          "player_id": "q1"
+        },
+        {
+          "group_id": "g9",
+          "player_id": "q2"
+        }
+      ],
+      "pairs": [
+        {
+          "id": "pa",
+          "tournament_id": "t1",
+          "player1_id": "p1",
+          "player2_id": "p2"
+        },
+        {
+          "id": "pb",
+          "tournament_id": "t1",
+          "player1_id": "p3",
+          "player2_id": "p4"
+        }
+      ],
+      "tournament_organizers": [
+        {
+          "tournament_id": "t1",
+          "auth_user_id": "uid-org",
+          "role": "owner"
+        }
+      ],
+      "device_sessions": [
+        {
+          "auth_user_id": "uid-p1",
+          "player_id": "p1",
+          "tournament_id": "t1"
+        },
+        {
+          "auth_user_id": "uid-p3",
+          "player_id": "p3",
+          "tournament_id": "t1"
+        },
+        {
+          "auth_user_id": "uid-pz",
+          "player_id": "pz",
+          "tournament_id": "t1"
+        },
+        {
+          "auth_user_id": "uid-q1",
+          "player_id": "q1",
+          "tournament_id": "t2"
+        }
+      ],
+      "scores": [
+        {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p2"
+        },
+        {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1"
+        },
+        {
+          "round_id": "r1",
+          "player_id": "p3",
+          "hole": 2,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p3"
+        },
+        {
+          "round_id": "r9",
+          "player_id": "q1",
+          "hole": 1,
+          "strokes": 3,
+          "putts": 1,
+          "picked_up": false,
+          "entered_by": "q1"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "name": "scores: a phone saves its own player's new hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 5
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "entered_by": "p1",
+              "disputed": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: a phone saves a group-mate's hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p4",
+          "hole": 6,
+          "strokes": 6,
+          "putts": 3,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 6
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "putts": 3,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: a player of another group of the same round is not this phone's to write",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p5",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p5"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "scores: with the publishable key alone (no session) nothing is written",
+      "as": "anon",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a session that holds no player writes nothing",
+      "as": "uid-x",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a player of another tournament writes nothing here",
+      "as": "uid-q1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "q1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a round that is not live takes no hole from a phone",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r2",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a signed card is locked to the group",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p1"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p3",
+          "hole": 2,
+          "strokes": 7,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 2
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: the other pair's card being signed does not lock this player's",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p1"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 9,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: an organizer writes any hole, even of a finished round (no reason asked: REL-09)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r2",
+          "player_id": "p3",
+          "hole": 4,
+          "strokes": 6,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": null,
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r2",
+            "player_id": "p3",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: a player the Comité made admin writes like an organizer",
+      "as": "uid-pz",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p5",
+          "hole": 2,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "pz",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: another phone's value replaced is a discrepancy, with the old values kept",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1,
+          "strokes": 6,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "entered_by": "p1",
+              "disputed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: the same phone correcting its own hole is no discrepancy",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 3
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "disputed": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: the same values sent by another phone are no discrepancy",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "entered_by": "p1",
+              "disputed": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: a plain insert of a hole the server has is a duplicate (one row per hole)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23505"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 3
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: an upsert without its conflict columns meets the hole's key, and is a duplicate",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23505"
+      }
+    },
+    {
+      "name": "scores: 16 strokes is refused by the table's check",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 16,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "scores: more putts than strokes is refused by the table's check",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 3,
+          "putts": 4,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "scores: a pick-up with no strokes is a hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": null,
+          "putts": null,
+          "picked_up": true,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": null,
+              "picked_up": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: no strokes and no pick-up is refused by the table's check",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": null,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "scores: the discrepancy flag is not a phone's to send",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z",
+          "disputed": false
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a Comité reason is not a phone's to send",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z",
+          "reason": "corrección"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "scores: a group-mate's hole deleted by a phone of the group goes",
+      "as": "uid-p1",
+      "request": {
+        "method": "DELETE",
+        "table": "scores",
+        "eq": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "scores: a delete from another tournament's phone touches nothing, and says nothing",
+      "as": "uid-q1",
+      "request": {
+        "method": "DELETE",
+        "table": "scores",
+        "eq": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "order: the row-level rule is checked before the table's checks (no session, 16 strokes)",
+      "as": "anon",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 16,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "order: the table's checks come before its keys (a plain insert of a hole the server has, with 16 strokes)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 16,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "order: an upsert's new row must pass the insert rule even when it meets an existing row (own pair's card, already signed)",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pa",
+            "signed_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pa",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pa"
+          },
+          "rows": [
+            {
+              "signed_by": "p3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: an upsert naming columns that are no unique key is refused",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "42P10"
+      }
+    },
+    {
+      "name": "snake: the group's answer to «¿Quién embocó al último?»",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 7,
+          "last_holed_player_id": "p2",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "snake_tiebreaks",
+          "where": {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "last_holed_player_id": "p2",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "snake: a changed answer replaces the group's earlier one",
+      "as": "uid-p1",
+      "given": {
+        "snake_tiebreaks": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "last_holed_player_id": "p2",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 7,
+          "last_holed_player_id": "p4",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "snake_tiebreaks",
+          "where": {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "last_holed_player_id": "p4",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "snake: the answer must say it is this phone's player who decided",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 7,
+          "last_holed_player_id": "p2",
+          "decided_by": "p2"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "snake: the last to hole out must be of the group",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 7,
+          "last_holed_player_id": "p5",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "snake: another group's answer is not this phone's",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g5",
+          "hole": 7,
+          "last_holed_player_id": "p5",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "snake: a finished round still takes the group's answer (the rule asks no live round)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r2",
+          "group_id": "g2",
+          "hole": 7,
+          "last_holed_player_id": "p2",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "snake: a group of another round, named with this round, is refused",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g2",
+          "hole": 7,
+          "last_holed_player_id": "p2",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "snake: with the publishable key alone, refused",
+      "as": "anon",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 7,
+          "last_holed_player_id": "p2",
+          "decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "snake: an organizer answers for any group",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 8,
+          "last_holed_player_id": "p3",
+          "decided_by": null
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "awards: the group names a hole's winner",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5,
+            "game_id": "closest"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "awards: a winner from outside the group is refused",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p5",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "awards: the award must say it is this phone's player who decided",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "awards: two winners in one request: one refused, neither written",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          },
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p5",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "awards: a finished round still takes the group's winner (the rule asks no live round)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r2",
+            "group_id": "g2",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "awards: a winner already named is a duplicate: the outbox deletes the old winners first",
+      "as": "uid-p1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 409,
+        "code": "23505"
+      }
+    },
+    {
+      "name": "awards: the group's old winners deleted by a phone of the group go",
+      "as": "uid-p1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "table": "hole_awards",
+        "eq": {
+          "round_id": "r1",
+          "game_id": "closest",
+          "hole": 5,
+          "group_id": "g1"
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "awards: a delete from another tournament's phone touches nothing",
+      "as": "uid-q1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "table": "hole_awards",
+        "eq": {
+          "round_id": "r1",
+          "game_id": "closest",
+          "hole": 5,
+          "group_id": "g1"
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5
+          },
+          "rows": [
+            {
+              "player_id": "p3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "signatures: a phone signs the other pair's card",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pb"
+          },
+          "rows": [
+            {
+              "signed_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "signatures: a pair does not sign its own card",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pa",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "signatures: the signature must be this phone's player's",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p2"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "signatures: a round that is not live takes no signature from a phone",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r2",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "signatures: a card the other phone already signed keeps that signature",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pb"
+          },
+          "rows": [
+            {
+              "signed_by": "p2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "signatures: a merge over a signature is refused: no phone may change one",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pb"
+          },
+          "rows": [
+            {
+              "signed_by": "p2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "signatures: a session that holds no player signs nothing",
+      "as": "uid-x",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "signatures: signing a card leaves its discrepancies flagged (NEW-01: the settle trigger runs through the dispute trigger, which keeps the old flags)",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "POST",
+          "table": "scores",
+          "onConflict": "round_id,player_id,hole",
+          "prefer": "resolution=merge-duplicates",
+          "body": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 2,
+            "strokes": 6,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 2
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "disputed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reads: the publishable key alone reads no score",
+      "as": "anon",
+      "request": {
+        "method": "GET",
+        "table": "scores",
+        "select": "round_id,player_id,hole"
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads: a phone reads its own tournament's scores, and only those",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "scores",
+        "select": "round_id,player_id,hole"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 3
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads: a session that holds no player reads no tournament",
+      "as": "uid-x",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads: a phone sees its own tournament, not the other",
+      "as": "uid-q1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads: an organizer reads the tournament's players",
+      "as": "uid-org",
+      "request": {
+        "method": "GET",
+        "table": "players",
+        "select": "id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "p1"
+          },
+          {
+            "id": "p2"
+          },
+          {
+            "id": "p3"
+          },
+          {
+            "id": "p4"
+          },
+          {
+            "id": "p5"
+          },
+          {
+            "id": "pz"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads: group members, through the group's round",
+      "as": "uid-q1",
+      "request": {
+        "method": "GET",
+        "table": "group_members",
+        "select": "group_id,player_id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "group_id": "g9",
+            "player_id": "q1"
+          },
+          {
+            "group_id": "g9",
+            "player_id": "q2"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads: any session reads the courses; the publishable key alone does not",
+      "as": "uid-x",
+      "request": {
+        "method": "GET",
+        "table": "courses",
+        "select": "id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "c1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads: courses with the publishable key alone",
+      "as": "anon",
+      "request": {
+        "method": "GET",
+        "table": "courses",
+        "select": "id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads: a phone reads its own PIN claim only",
+      "as": "uid-p3",
+      "request": {
+        "method": "GET",
+        "table": "device_sessions",
+        "select": "auth_user_id,player_id"
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "auth_user_id": "uid-p3",
+            "player_id": "p3"
+          }
+        ]
+      }
+    }
+  ]
+}

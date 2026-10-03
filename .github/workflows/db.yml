@@ -3,6 +3,7 @@ name: Database
 # The database suite (W12, DB-09, scripts/db-test.sh): every migration replayed
 # from zero on Postgres with Supabase's stubs, the way scripts/db.mjs applies
 # it to production; db.mjs's checksums; the SQL tests on the two-tenant seed;
+# the test server's rules against the real ones (scripts/server-rules.mjs);
 # Supabase's advisors held at the baseline. Runs on pull requests that are
 # ready for review and touch the database or its scripts, on main, and nightly.
 # Drafts skip it (Actions minutes are budgeted once the repository is private).
@@ -15,6 +16,8 @@ on:
       - 'scripts/db-test.sh'
       - 'scripts/db-lints.mjs'
       - 'scripts/lib/**'
+      - 'scripts/server-rules.mjs'
+      - 'src/data/testing/cases/**'
       - '.github/workflows/db.yml'
   push:
     branches: [main]
@@ -24,6 +27,8 @@ on:
       - 'scripts/db-test.sh'
       - 'scripts/db-lints.mjs'
       - 'scripts/lib/**'
+      - 'scripts/server-rules.mjs'
+      - 'src/data/testing/cases/**'
       - '.github/workflows/db.yml'
   schedule:
     - cron: '23 8 * * *'

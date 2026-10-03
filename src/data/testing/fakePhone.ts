@@ -14,7 +14,7 @@
  * Every test then fails if the app sent anything the fake does not serve
  * (another host, an endpoint it doesn't know, a Realtime socket).
  */
-import { afterEach, expect, vi } from 'vitest'
+import { afterAll, afterEach, expect, vi } from 'vitest'
 import { makeSnapshot } from '../../engine/testing/fixtures'
 import type { Row } from '../mappers'
 import type { AwardPayload, ScorePayload, TiebreakPayload } from '../outbox'
@@ -33,11 +33,18 @@ export const OUTBOX_CHANNEL = 'cardi-golf-outbox'
 /**
  * One live round of one foursome, as the server holds it: tournament t1
  * («ensayo»), round r1, players p1–p4 in group g1 starting on hole 1, on a
- * par-72 card. The engine's fixture written out by testing/rows.ts.
+ * par-72 card. They are two pairs, pa (p1, p2) and pb (p3, p4), and each
+ * signs the other's card (§9.3). The engine's fixture written out by
+ * testing/rows.ts.
  */
 export function tournamentRows(): Record<string, Row[]> {
   const group = { id: 'g1', roundId: 'r1', number: 1, teeTime: null, startHole: 1, playerIds: ['p1', 'p2', 'p3', 'p4'] }
-  return snapshotToRows(makeSnapshot({ players: 4, rounds: 1, groups: [group] }))
+  const snapshot = makeSnapshot({ players: 4, rounds: 1, groups: [group] })
+  snapshot.pairs = [
+    { id: 'pa', name: null, player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
+    { id: 'pb', name: null, player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+  ]
+  return snapshotToRows(snapshot)
 }
 
 /** A hole of one player as the Tarjeta saves it. */
@@ -119,6 +126,9 @@ export class FakeBrowser {
   /** The channels the open page created (the outbox's, auth-js's): closing the page closes them. */
   private channels: BroadcastChannel[] = []
 
+  /** What `navigator.onLine` was before the phone took it over. */
+  private onLine: PropertyDescriptor | undefined
+
   install() {
     const pageChannels = this.channels
     class PageChannel extends BroadcastChannel {
@@ -130,7 +140,14 @@ export class FakeBrowser {
     vi.stubGlobal('BroadcastChannel', PageChannel)
     vi.stubGlobal('localStorage', this.localStorage)
     this.stubPage()
+    this.onLine = Object.getOwnPropertyDescriptor(globalThis.navigator, 'onLine')
     Object.defineProperty(globalThis.navigator, 'onLine', { configurable: true, get: () => this.online })
+  }
+  /** Everything `install` replaced goes back, and the page's channels close. */
+  uninstall() {
+    for (const c of this.channels.splice(0)) c.close()
+    if (this.onLine) Object.defineProperty(globalThis.navigator, 'onLine', this.onLine)
+    else delete (globalThis.navigator as { onLine?: boolean }).onLine
   }
   /**
    * The page is closed and loaded again: the listeners and channels the old
@@ -202,6 +219,12 @@ export function installFakePhone(): { server: FakeSupabase; phone: FakeBrowser }
   phone.install()
   afterEach(() => {
     expect(server.unexpected, 'requests the fake server does not serve').toEqual([])
+  })
+  // Vitest gives each file its own globals, but a file should not lean on that.
+  afterAll(() => {
+    phone.uninstall()
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
   return { server, phone }
 }
