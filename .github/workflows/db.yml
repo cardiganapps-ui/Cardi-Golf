@@ -1,0 +1,63 @@
+name: Database
+
+# The database suite (W12, DB-09, scripts/db-test.sh): every migration replayed
+# from zero on Postgres with Supabase's stubs, the way scripts/db.mjs applies
+# it to production; db.mjs's checksums; the SQL tests on the two-tenant seed;
+# Supabase's advisors held at the baseline. Runs on pull requests that are
+# ready for review and touch the database or its scripts, on main, and nightly.
+# Drafts skip it (Actions minutes are budgeted once the repository is private).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'supabase/**'
+      - 'scripts/db.mjs'
+      - 'scripts/db-test.sh'
+      - 'scripts/db-lints.mjs'
+      - 'scripts/lib/**'
+      - '.github/workflows/db.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'scripts/db.mjs'
+      - 'scripts/db-test.sh'
+      - 'scripts/db-lints.mjs'
+      - 'scripts/lib/**'
+      - '.github/workflows/db.yml'
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: db-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  db:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # The runner's own Postgres (16 on ubuntu-24.04), with the two stub
+      # extensions the migrations need (pg_net, supabase_vault: recorded, never sent).
+      - name: Postgres with Supabase's stubs
+        run: |
+          set -euo pipefail
+          v=$(ls /usr/lib/postgresql | sort -V | tail -1)
+          echo "Postgres $v"
+          sudo cp supabase/tests/harness/ext/* "/usr/share/postgresql/$v/extension/"
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -X -q -c "alter user postgres password 'postgres'"
+          psql -X -Atc 'select version()'
+      - name: Replay, checksums, SQL tests, advisors
+        run: bash scripts/db-test.sh
