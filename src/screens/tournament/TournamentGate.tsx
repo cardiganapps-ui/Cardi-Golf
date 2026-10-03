@@ -99,7 +99,11 @@ export function TournamentGate() {
   useLayoutEffect(() => {
     phaseNow.current = phase
   }, [phase])
-  /** The sign-outs asked for before this link opened: one asked for while it is open ends the retries (below). */
+  /**
+   * The sign-outs asked for before this gate opened: one asked for while it is
+   * open ends its retries (below), whatever link it shows by then. A sign-out
+   * takes the phone home, so a gate opened afterwards counts from there.
+   */
   const signOutsAtOpen = useRef(signOutsAsked())
 
   /**
@@ -122,7 +126,6 @@ export function TournamentGate() {
     settled.current = false
     recheck.current = false
     openSlug.current = slug
-    signOutsAtOpen.current = signOutsAsked()
     // Another link: what the gate knew was about the one before.
     setPhase((p) => (p.kind === 'loading' ? p : { kind: 'loading' }))
     void enterFromCache()
@@ -262,9 +265,9 @@ export function TournamentGate() {
   // again every 20 s for as long as the app stayed open changed nothing.
   useEffect(() => {
     const retry = () => {
-      // Its person is signing out on purpose (asked while this link was open):
+      // Its person is signing out on purpose (asked while this gate was open):
       // the phone is on its way home, and asking again once the session is
-      // gone would sign it in anonymously behind them. A link opened after a
+      // gone would sign it in anonymously behind them. A gate opened after a
       // sign-out asks as usual.
       if (signOutsAsked() !== signOutsAtOpen.current && signedOutOnPurpose()) return
       const p = phaseNow.current

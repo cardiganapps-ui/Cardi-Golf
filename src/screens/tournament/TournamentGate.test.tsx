@@ -244,6 +244,7 @@ describe('saved boards that no longer belong here', () => {
   })
 
   it('a player who leaves takes the saved boards with him', async () => {
+    server.myDeviceClaim.mockClear()
     await saveOnPhone('Guardado en el teléfono')
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
@@ -256,6 +257,8 @@ describe('saved boards that no longer belong here', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cambiar de jugador' }))
     })
     expect(server.releaseDevice).toHaveBeenCalled()
+    // Here by its PIN, the claim is this tournament's: nothing to ask the server first.
+    expect(server.myDeviceClaim).not.toHaveBeenCalled()
     expect(await readCached(slug)).toBeNull()
   })
 })
