@@ -13,6 +13,8 @@ import type { ModuleId } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
 import { BracketBoard } from './BracketBoard'
 import { fieldShape, individualPrizeAmounts } from '../../engine/settings/prizeCheck'
+import { figureKind } from '../../engine/formats'
+import { dayFigureText } from '../../lib/figureText'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
 import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
@@ -58,7 +60,8 @@ export function GamesScreen() {
     }
     if (id === 'individual' && m.individual) {
       const r = m.individual.rows[0]
-      if (r && r.thru > 0) leader = t.games.leader(name(r.playerId), t.games.pointsFigure(r.total))
+      // The board's leader in the board's own figure: a team by its name, strokes against par, match points (STRAT-03).
+      if (r && r.thru > 0) leader = t.games.leader(r.entrant.isTeam ? r.entrant.name : name(r.playerId), t.common.figure(r.figure.text, r.figure.value, figureKind(settings)))
       const first = individualPrizeAmounts(settings, fieldShape(snapshot, settings))[0] ?? 0
       stake = { text: t.games.firstPrize(formatMoney(first)), amount: first }
     } else if (id === 'pairs' && m.pairs) {
@@ -151,24 +154,26 @@ export function GamesScreen() {
           {current === 'individual' && state.modules.individual && (
             <div className={styles.section}>
               <Board>
-                <BoardHead figureLabel={t.live.points} dense={state.modules.individual.rows.length > 20} />
+                {/* The format's own column and figure, as En vivo shows them (STRAT-03): «Puntos» and «34» only where points count. */}
+                <BoardHead figureLabel={state.modules.individual.figureLabel} dense={state.modules.individual.rows.length > 20} />
                 {state.modules.individual.rows.map((r) => (
                   <LeaderRow
                     key={r.playerId}
                     pos={r.label}
-                    name={name(r.playerId)}
+                    name={r.entrant.isTeam ? r.entrant.name : name(r.playerId)}
                     sub={
                       <span className={styles.sub}>
                         {/* perRound became Figure[] with the format seam; it prints
                             as "[object Object]" if you interpolate it whole. */}
-                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${p.text}`).join(', ')}</span>
+                        <span>{r.perRound.map((p, i) => `${t.round.day(i + 1)} ${dayFigureText(p)}`).join(', ')}</span>
                         {state.modules.individual!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.individual!.prizes[r.playerId]!.amount)}</span>}
                       </span>
                     }
-                    thru={thruOf(r.playerId)}
-                    figure={String(r.total)}
+                    thru={r.entrant.isTeam ? undefined : thruOf(r.playerId)}
+                    figure={r.figure.text}
+                    tone={r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'}
                     dense={state.modules.individual!.rows.length > 20}
-                    onClick={() => setOpen(r.playerId)}
+                    onClick={() => setOpen(r.entrant.playerIds[0] ?? r.playerId)}
                   />
                 ))}
               </Board>
@@ -180,7 +185,7 @@ export function GamesScreen() {
                       <div key={r.playerId} className={styles.rowLine}>
                         <span className={styles.rowText}>
                           <span>
-                            {r.label} {name(r.playerId)}
+                            {r.label} {r.entrant.isTeam ? r.entrant.name : name(r.playerId)}
                           </span>
                         </span>
                         <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} />

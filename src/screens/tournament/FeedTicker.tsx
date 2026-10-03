@@ -9,19 +9,7 @@ import styles from './FeedTicker.module.css'
 import type { ReactNode } from 'react'
 import { IconBird, IconFlag, IconRing, IconSnake } from '../../components/icons'
 import { ease } from '../../design/motion'
-
-function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
-  switch (e.kind) {
-    case 'birdie':
-      return e.points >= 4 ? t.feed.eagle(nameOf(e.playerId), e.hole, e.points) : t.feed.birdie(nameOf(e.playerId), e.hole, e.points, e.gross)
-    case 'leadChange':
-      return t.feed.leadChange(nameOf(e.playerId), e.total)
-    case 'snakePass':
-      return t.feed.snakePass(nameOf(e.playerId), e.hole)
-    case 'honoreeHole':
-      return t.feed.honoreeHole(nameOf(e.playerId), e.hole, e.points)
-  }
-}
+import { feedText } from '../../lib/figureText'
 
 const ICON: Record<FeedEvent['kind'], ReactNode> = { birdie: <IconBird size={18} />, leadChange: <IconFlag size={18} />, snakePass: <IconSnake size={18} />, honoreeHole: <IconRing size={18} /> }
 

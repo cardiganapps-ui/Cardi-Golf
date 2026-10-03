@@ -15,6 +15,9 @@ import { useTournamentProfiles } from '../../data/profiles'
 import { useTournamentCtx } from './TournamentGate'
 import { formatMoney } from '../../lib/money'
 import type { Explanation } from '../../engine/types'
+import { figureKind, mainScoring, strokesWhy, type Figure } from '../../engine/formats'
+import type { PlayerRound } from '../../engine/core/types'
+import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
 
 export function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
@@ -60,7 +63,23 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const owned = auction?.lots.filter((l) => l.status === 'sold' && l.owners.some((o) => o.ownerId === p.id)) ?? []
   const person = state.money.people[p.id]
   const nameOf = (id: string) => snapshot.players.find((x) => x.id === id)?.displayName ?? '?'
-  const row = state.modules.individual?.rows.find((r) => r.playerId === p.id)
+  // The board's row for this player: his own, or his team's in a team format.
+  const row = state.modules.individual?.rows.find((r) => r.entrant.playerIds.includes(p.id))
+  const kind = figureKind(settings)
+  const scoring = mainScoring(settings)
+  /** Points rows and points explanations only where something counts points (STRAT-03). */
+  const showPoints = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
+  /** In a team format the row is the team's; this sheet is his own card. */
+  const team = row?.entrant.isTeam ? row.entrant : null
+  /**
+   * A day's figure as the board writes it, with its unit; a match's day is its
+   * result with its side («ganó 3&2»); a team player's day is his own card.
+   */
+  const dayFigure = (f: Figure | undefined, pr: PlayerRound) => {
+    if (team) return ownDayText(pr, scoring) ?? '—'
+    if (scoring === 'points') return t.common.figure(String(pr.points), pr.points, 'points')
+    return !f || f.empty ? '—' : kind === 'match' ? dayFigureText(f) : t.common.figure(f.text, f.value, kind)
+  }
   const hc = state.core.handicaps[p.id]
   const totals = state.core.totals[p.id]
   const putts = state.modules.fewestPutts?.rows.find((r) => r.playerId === p.id)
@@ -74,7 +93,14 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           <div className={styles.headText}>
             <span className={styles.headLine}>
               {p.tier && <span className="tierBadge">{p.tier}</span>}
-              {row && totals ? <span>{t.player.position(row.label, row.total, t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18))}</span> : null}
+              {row && totals ? (
+                <span>
+                  {(team ? (f: string, thru: string) => t.player.positionTeam(row.label, team.name, f, thru) : (f: string, thru: string) => t.player.position(row.label, f, thru))(
+                    t.common.figure(row.figure.text, row.figure.value, kind),
+                    t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18),
+                  )}
+                </span>
+              ) : null}
             </span>
           </div>
           {profile && (
@@ -96,21 +122,21 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           </p>
         </section>
 
-        {rounds.map(({ round, pr }) =>
+        {rounds.map(({ round, pr }, idx) =>
           pr ? (
             <section key={round.id} className={styles.section}>
               <div className={styles.sectionHead}>
-                <h3>{t.player.round(round.number, pr.points)}</h3>
+                <h3>{t.player.round(round.number, dayFigure(row?.perRound[idx], pr))}</h3>
                 <span className="help">{t.player.grossPutts(pr.gross, pr.putts)}</span>
               </div>
               <ScorecardGrid
                 holes={pr.holes.map<GridHole>((h) => ({ n: h.hole, par: h.par, si: h.strokeIndex, gross: h.played ? h.gross : null, pickedUp: h.played && h.pickedUp, pts: h.played ? h.points : undefined, putts: h.played ? h.putts : null }))}
                 playerLabel={p.displayName}
-                showPoints
+                showPoints={showPoints}
                 showPutts
                 onHole={(n) => {
                   const h = pr.holes[n - 1]
-                  if (h) setWhy({ title: t.player.whyHole(n), why: h.why })
+                  if (h) setWhy({ title: t.player.whyHole(n), why: scoring === 'points' ? h.why : strokesWhy(h, scoring === 'net') })
                 }}
               />
             </section>
