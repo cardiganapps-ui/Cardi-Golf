@@ -109,5 +109,14 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     environment: 'node',
     passWithNoTests: false,
+    // QA-06: the outbox holds the only copy of a hole saved with no signal. `npm test` measures it
+    // and fails below what its tests cover today. What stays uncovered is defensive: a kind of write
+    // this build does not know, and the optional calls a browser may lack.
+    coverage: {
+      provider: 'v8',
+      include: ['src/data/outbox.ts'],
+      reporter: ['text'],
+      thresholds: { 'src/data/outbox.ts': { statements: 99, branches: 88, functions: 100, lines: 99 } },
+    },
   },
 })
