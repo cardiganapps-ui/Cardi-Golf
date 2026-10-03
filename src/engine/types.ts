@@ -125,6 +125,8 @@ export interface Pair {
 }
 
 export interface Score {
+  /** The row's id where it came from the server (a fetch or a live change): a deleted score names only this. */
+  id?: Id
   roundId: Id
   playerId: Id
   hole: number

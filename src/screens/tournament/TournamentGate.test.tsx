@@ -284,3 +284,25 @@ describe('the store never puts the phone\'s copy over the server\'s', () => {
     expect(useTournament.getState().source).toBe('server')
   })
 })
+
+describe('leaving the tournament', () => {
+  it('stops its live channel and the checks against the server: the store is unsubscribed when the gate goes', async () => {
+    const unsubscribe = vi.fn()
+    const real = useTournament.getState().unsubscribe
+    useTournament.setState({ unsubscribe })
+    try {
+      server.ensureSession.mockResolvedValue({})
+      server.lookupTournament.mockResolvedValue(fx.lookup)
+      server.myMembership.mockResolvedValue(member)
+      serverLoads('En vivo del servidor')
+      const view = open()
+      expect(await screen.findByText('En vivo del servidor: server')).toBeTruthy()
+      expect(unsubscribe).not.toHaveBeenCalled()
+      // Home, a sign-out, another link: the gate unmounts.
+      view.unmount()
+      expect(unsubscribe).toHaveBeenCalledTimes(1)
+    } finally {
+      useTournament.setState({ unsubscribe: real })
+    }
+  })
+})

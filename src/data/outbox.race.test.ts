@@ -10,7 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+  liveSeq: () => 0,
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, reload: async () => undefined }) },
 }))
 
 const { _outboxTest, flush, useOutbox } = await import('./outbox')

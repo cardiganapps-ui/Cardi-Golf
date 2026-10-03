@@ -13,7 +13,9 @@ import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
-import { registerOverlay, useTournament } from './tournamentStore'
+import { liveSeq, registerOverlay, useTournament } from './tournamentStore'
+import type { LiveChange } from './realtimeApply'
+import type { Row } from './mappers'
 
 /**
  * `seq` identifies this version of the write: a newer write to the same key
@@ -295,6 +297,8 @@ async function loadQueue() {
   lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
   rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
   publish()
+  // Boards already up (the phone's copy, shown before the queue was read) get the queued writes now.
+  useTournament.getState().refresh()
 }
 
 /** Remove `item` from Dexie only if the stored version is still the one we pushed. */
@@ -351,38 +355,40 @@ export async function discardRejected(key: string) {
   publish()
 }
 
-/** Apply pending writes on top of a freshly fetched snapshot. */
+/** Apply pending writes on top of the server's rows, for the screens (the store keeps its own rows apart). */
 export function overlayPending(s: Snapshot): void {
-  for (const it of queue) {
-    if (it.tournamentId !== s.tournament.id) continue
-    if (it.kind === 'score') {
-      const p = it.payload
-      const row: Score = {
-        roundId: p.round_id,
-        playerId: p.player_id,
-        hole: p.hole,
-        strokes: p.strokes,
-        putts: p.putts,
-        pickedUp: p.picked_up,
-        enteredBy: p.entered_by,
-        updatedAt: p.client_ts,
-      }
-      const i = s.scores.findIndex((x) => x.roundId === row.roundId && x.playerId === row.playerId && x.hole === row.hole)
-      if (i >= 0) s.scores[i] = row
-      else s.scores.push(row)
-    } else if (it.kind === 'tiebreak') {
-      const p = it.payload
-      s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
-      s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
-    } else if (it.kind === 'award') {
-      const p = it.payload
-      s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))
-      for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
-    } else if (it.kind === 'signature') {
-      const p = it.payload
-      if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
-        s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date().toISOString() })
-      }
+  for (const it of queue) if (it.tournamentId === s.tournament.id) overlayItem(s, it)
+}
+
+/** One write as the snapshot reads with it: on the screens' copy while it waits, on the server's rows once it is taken. */
+function overlayItem(s: Snapshot, it: OutboxItem): void {
+  if (it.kind === 'score') {
+    const p = it.payload
+    const row: Score = {
+      roundId: p.round_id,
+      playerId: p.player_id,
+      hole: p.hole,
+      strokes: p.strokes,
+      putts: p.putts,
+      pickedUp: p.picked_up,
+      enteredBy: p.entered_by,
+      updatedAt: p.client_ts,
+    }
+    const i = s.scores.findIndex((x) => x.roundId === row.roundId && x.playerId === row.playerId && x.hole === row.hole)
+    if (i >= 0) s.scores[i] = row
+    else s.scores.push(row)
+  } else if (it.kind === 'tiebreak') {
+    const p = it.payload
+    s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
+    s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
+  } else if (it.kind === 'award') {
+    const p = it.payload
+    s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))
+    for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
+  } else if (it.kind === 'signature') {
+    const p = it.payload
+    if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
+      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date().toISOString() })
     }
   }
 }
@@ -419,7 +425,7 @@ async function enqueue(newItem: NewItem) {
   publish()
   announce()
   // Optimistic: recompute right away with the overlay.
-  useTournament.getState().patch(overlayPending)
+  useTournament.getState().refresh()
   void flush()
 }
 
@@ -457,10 +463,21 @@ function announce() {
     // A closed channel: the other tabs reload on their next start.
   }
 }
+/** A write the server took, as it stored it: the other tabs show it before their own echo comes. */
+function announceLanded(tournamentId: string, changes: LiveChange[]) {
+  try {
+    channel?.postMessage({ landed: { tournamentId, changes } })
+  } catch {
+    // A closed channel: the other tabs get the echo.
+  }
+}
 function listen() {
   if (typeof BroadcastChannel === 'undefined' || channel) return
   channel = new BroadcastChannel(CHANNEL)
-  channel.onmessage = () => {
+  channel.onmessage = (e: MessageEvent) => {
+    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[] } } | null)?.landed
+    // Its echo may be in already: the whole log is checked (since 0).
+    if (landed) return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0)
     void loadQueue().then(() => void flush())
   }
 }
@@ -485,9 +502,9 @@ export function enqueueSignature(tournamentId: string, payload: SignaturePayload
 }
 
 /** Replaceable for tests. */
-let pushImpl: (item: OutboxItem) => Promise<void> = push
+let pushImpl: (item: OutboxItem) => Promise<LiveChange[] | void> = push
 export const _outboxTest = {
-  setPush(fn: (item: OutboxItem) => Promise<void>) {
+  setPush(fn: (item: OutboxItem) => Promise<LiveChange[] | void>) {
     pushImpl = fn
   },
   /** Replace the Web Locks manager (null: none). */
@@ -537,34 +554,53 @@ async function sessionToken(sb: SupabaseClient): Promise<string> {
   return token
 }
 
-async function push(item: OutboxItem): Promise<void> {
+/** Rows the server says it stored, as the live changes they are (`select()` after a write: what the database holds now). */
+const stored = (table: string, rows: Row[] | null): LiveChange[] => (rows ?? []).map((row) => ({ table, eventType: 'UPDATE', new: row, old: {} }))
+
+/**
+ * Send one write. What comes back is what the server stored (each request
+ * asks for its rows back), so the store can put exactly that on the boards
+ * once the write is taken (REL-11): not this phone's version of it, which
+ * the server's triggers may have changed (a discrepancy flagged, the id and
+ * time it gave the row).
+ */
+async function push(item: OutboxItem): Promise<LiveChange[]> {
   const sb = supabase()
   // Every request of this push carries the token checked here, whatever the session does meanwhile.
   const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'score') {
-    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).setHeader('Authorization', auth)
+    const { data, error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).select().setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
-  } else if (item.kind === 'tiebreak') {
-    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).setHeader('Authorization', auth)
-    if (error) throw new Error(error.message)
-  } else if (item.kind === 'award') {
-    const p = item.payload
-    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).setHeader('Authorization', auth)
-    if (del.error) throw new Error(del.error.message)
-    if (p.player_ids.length) {
-      const { error } = await sb
-        .from('hole_awards')
-        .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
-        .setHeader('Authorization', auth)
-      if (error) throw new Error(error.message)
-    }
-  } else if (item.kind === 'signature') {
-    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).setHeader('Authorization', auth)
-    if (error) throw new Error(error.message)
-  } else {
-    // Never reached: the flush skips kinds this build does not know.
-    throw new Error(`unknown outbox kind ${(item as { kind: string }).kind}`)
+    return stored('scores', data)
   }
+  if (item.kind === 'tiebreak') {
+    const { data, error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).select().setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return stored('snake_tiebreaks', data)
+  }
+  if (item.kind === 'award') {
+    const p = item.payload
+    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).select().setHeader('Authorization', auth)
+    if (del.error) throw new Error(del.error.message)
+    // The winners it took away, by the key a delete names; then the ones it put in.
+    const gone: LiveChange[] = (del.data ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id } }))
+    if (!p.player_ids.length) return gone
+    const { data, error } = await sb
+      .from('hole_awards')
+      .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+      .select()
+      .setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return [...gone, ...stored('hole_awards', data)]
+  }
+  if (item.kind === 'signature') {
+    // A card the other phone signed first comes back empty: its signature is the one that stands.
+    const { data, error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).select().setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return stored('card_signatures', data)
+  }
+  // Never reached: the flush skips kinds this build does not know.
+  throw new Error(`unknown outbox kind ${(item as { kind: string }).kind}`)
 }
 
 /** Errors the server will keep rejecting (RLS, constraint): drop the item instead of retrying forever. */
@@ -641,20 +677,28 @@ async function runFlush(): Promise<boolean> {
       const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
       if (!item) break
       tried.add(item.seq)
+      // The channel's changes from now on may be this write's echo.
+      const since = liveSeq()
       try {
-        await pushImpl(item)
+        const rows = (await pushImpl(item)) ?? []
         if (isCurrent(item)) {
           queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
           await deleteStored(item)
           announce()
         }
+        // Taken: the server's rows hold what it stored, unless its echo is in
+        // already (whatever came after the echo is newer, and is in too). A
+        // newer version still queued shows over it until it goes.
+        useTournament.getState().landChanges(item.tournamentId, rows, since)
+        if (rows.length) announceLanded(item.tournamentId, rows)
         publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         if (isPermanent(msg)) {
           await reject(item, describeSyncError(msg))
           publish({ lastError: describeSyncError(msg) })
-          // The optimistic value was wrong: fall back to the server's truth.
+          // The optimistic value was wrong: the server's rows at once, then its truth.
+          useTournament.getState().refresh()
           void useTournament.getState().reload()
         } else {
           failed = true

@@ -1857,11 +1857,17 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 92,
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts",
+        "src/data/tournamentStore.land.test.ts",
+        "src/data/tournamentStore.heal.test.ts",
+        "src/data/tournamentStore.property.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "A change during play costs no request on any phone: applied from its event, another tournament's left alone, a delete resolved by its key or id, a row of a day or lot not loaded yet held until its day or lot comes (5,000 at most, two minutes). Left: a visible phone with a live channel checks it against the server once every five minutes (12 fetches an hour, about 264 requests; none while one is on its way, and after a failure the wait doubles to 30 minutes), and unlocking the phone can still fetch twice (on being shown, then when the channel comes back). Both go once changes carry a sequence (PLAN §5.2)."
     },
     {
       "id": "PERF-08",
@@ -2601,10 +2607,17 @@
       "phase": 2,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 92,
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts",
+        "src/data/tournamentStore.overlay.test.ts",
+        "src/data/tournamentStore.land.test.ts",
+        "src/data/outbox.push.test.ts",
+        "src/data/tournamentStore.property.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Receiving side done in #92: a saved hole reaches the other phones in the time Realtime takes to deliver it plus one recompute, with no fetch. This phone's own writes land as the server stored them (each push asks for its rows back), unless the channel already brought their echo, after which anything newer is in too; a fetch on its way never takes them back, and the app's other tabs land them too. Left before it is fixed: the outbox sends a foursome's four rows as four requests (220–1,440 ms apart on 4G in the verifier's run), so the other phones see them land one by one and recompute four times; one request per hole is the next change (after QA-06's tests land). Then the p95 under 2 s is measured on the e2e-stack job and in the field (telemetry, STRAT-02)."
     },
     {
       "id": "REL-13",
