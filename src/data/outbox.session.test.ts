@@ -65,7 +65,9 @@ const srv = vi.hoisted(() => {
 vi.mock('../lib/supabase', () => ({ supabase: () => srv.client, supabaseConfigured: true }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+  liveSeq: () => 0,
+  liveChangesSince: () => [],
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, land: () => undefined, reload: async () => undefined }) },
 }))
 
 const { _outboxTest, describeSyncError, flush, useOutbox } = await import('./outbox')

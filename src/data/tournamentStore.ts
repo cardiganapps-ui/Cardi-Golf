@@ -5,6 +5,13 @@
  * signature, a payment, a bid) is applied from the event itself
  * (`realtimeApply.ts`, REL-11, PERF-07); any other change reloads the
  * tournament.
+ *
+ * Two snapshots are kept. `base` is the server's rows only: what was fetched,
+ * with the live changes applied on it, and what the phone keeps. `snapshot`
+ * is what the screens read: `base` with this phone's unsent writes on top
+ * (the outbox overlay), rebuilt on every compute and never written back, so
+ * a hole that never reached the server cannot pass for the server's, nor hide
+ * what the server said after it (another phone's later value, a discrepancy).
  */
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
@@ -17,8 +24,8 @@ import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { REALTIME_TABLES } from './realtimeTables'
-import { APPLIED_TABLES, applyChange, type LiveChange } from './realtimeApply'
-import { saveSnapshot } from './snapshotCache'
+import { APPLIED_TABLES, applyChange, inLiveOrder, type LiveChange } from './realtimeApply'
+import { onCacheCleared, saveSnapshot } from './snapshotCache'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import {
   mapBid,
@@ -44,7 +51,10 @@ import {
 } from './mappers'
 
 export interface TournamentData {
+  /** What the screens read: the server's rows with this phone's unsent writes on top. */
   snapshot: Snapshot
+  /** The server's rows only: what live changes apply to, and what the phone keeps. */
+  base: Snapshot
   settings: TournamentSettings
   settingsError: string | null
   state: TournamentState
@@ -87,8 +97,16 @@ interface StoreState {
   seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
   subscribe(): void
   unsubscribe(): void
-  /** Optimistic local patch: apply a change to the snapshot and recompute immediately. */
+  /** Optimistic local patch of a write the server took: apply it to the server's rows and recompute. */
   patch(fn: (s: Snapshot) => void): void
+  /** Recompute from the server's rows with the outbox as it is now (a write queued, sent or refused). */
+  refresh(): void
+  /**
+   * A write the outbox sent was taken. With `fn`, the server's rows take it
+   * now (no live change answered for that key since it was sent: its own
+   * event is still on its way); without, the live change already did.
+   */
+  land(tournamentId: string, fn: ((s: Snapshot) => void) | null): void
 }
 
 let channel: RealtimeChannel | null = null
@@ -115,10 +133,59 @@ let changeSeq = 0
 const changeLog: Array<{ seq: number; at: number; change: LiveChange }> = []
 const LOG_MS = 2 * 60_000
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+/**
+ * Changes of a round or lot this phone has not loaded: another tournament's
+ * (an account in two of them hears both), or a day or lot just created here,
+ * whose own change brings it. Kept this long, and placed as soon as their day
+ * or lot is on the phone, instead of a reload for each one.
+ */
+let parked: Array<{ at: number; change: LiveChange }> = []
+const PARK_MS = 2 * 60_000
+const PARK_MAX = 500
+function park(change: LiveChange, at: number) {
+  parked.push({ at, change })
+  if (parked.length > PARK_MAX) parked = parked.slice(-PARK_MAX)
+}
+/** The parked changes still worth trying, oldest first; the list is emptied (what still waits is parked again). */
+function takeParked(now: number) {
+  const out = parked.filter((p) => p.at >= now - PARK_MS)
+  parked = []
+  return out
+}
 
 function receive(change: LiveChange) {
   pendingChanges.push(change)
   applyTimer ??= setTimeout(flushChanges, APPLY_MS)
+}
+
+/**
+ * Apply changes to `s` (a copy of the server's rows): log what landed, and
+ * the deletes of rows it does not hold (a reload that read the row before
+ * the delete must lose it too); park what waits for its day or lot.
+ * Returns how many applied and whether one needs a reload.
+ */
+function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number; change: LiveChange }>, now: number) {
+  let applied = 0
+  let reload = false
+  for (const { at, change } of changes) {
+    const r = applyChange(s, tournamentId, change)
+    if (r === 'applied') applied++
+    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE')) changeLog.push({ seq: ++changeSeq, at: now, change })
+    else if (r === 'unknown') park(change, at)
+    else if (r === 'reload') reload = true
+  }
+  while (changeLog.length && (changeLog.length > 1000 || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
+  return { applied, reload }
+}
+
+/** Keep the server's rows on the phone a moment after the last change (a burst saves once). */
+function saveSoon(id: string) {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    saveTimer = null
+    const cur = useTournament.getState()
+    if (cur.tournamentId === id && cur.keepOnPhone && cur.data) void saveSnapshot(id, cur.data.base)
+  }, 1500)
 }
 
 function flushChanges() {
@@ -129,37 +196,39 @@ function flushChanges() {
   const d = st.data
   const id = st.tournamentId
   if (!d || !id) return scheduleReload()
-  const next = structuredClone(d.snapshot)
-  let applied = 0
-  let reload = false
+  const next = structuredClone(d.base)
   const now = Date.now()
-  for (const change of batch) {
-    const r = applyChange(next, id, change)
-    if (r === 'applied') {
-      applied++
-      changeLog.push({ seq: ++changeSeq, at: now, change })
-    } else if (r === 'reload') reload = true
-  }
-  while (changeLog.length && (changeLog.length > 1000 || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
+  // What waited for its day or lot goes first, in the order it came: a lot just sold places its bids.
+  const { applied, reload } = applyAll(next, id, [...takeParked(now), ...batch.map((change) => ({ at: now, change }))], now)
   if (applied) {
     // The players are untouched, so their key stays; the boards are as fresh as the server's last change.
     useTournament.setState({ data: compute(next, d.playersKey), ...(st.source === 'server' ? { updatedAt: now } : {}) })
-    if (st.keepOnPhone) {
-      if (saveTimer) clearTimeout(saveTimer)
-      saveTimer = setTimeout(() => {
-        saveTimer = null
-        const cur = useTournament.getState()
-        if (cur.tournamentId === id && cur.data) void saveSnapshot(id, cur.data.snapshot)
-      }, 1500)
-    }
+    if (st.keepOnPhone) saveSoon(id)
   }
   if (reload) scheduleReload()
 }
 
-/** The changes applied since a reload started, on what it brought. */
-function replayChanges(snapshot: Snapshot, tournamentId: string, since: number) {
+/**
+ * What a fetch brought, caught up: the changes applied since it started
+ * (it may have read their tables before them; they are keyed, so applying
+ * one twice changes nothing), then whatever waited for a day or lot it brings.
+ */
+function catchUp(snapshot: Snapshot, tournamentId: string, since: number) {
   for (const { seq, change } of changeLog) if (seq > since) applyChange(snapshot, tournamentId, change)
+  const now = Date.now()
+  applyAll(snapshot, tournamentId, takeParked(now), now)
 }
+
+/** The live changes logged after `seq`: the outbox asks whether the server already answered for a write it sent. */
+export function liveSeq(): number {
+  return changeSeq
+}
+export function liveChangesSince(seq: number): LiveChange[] {
+  return changeLog.filter((x) => x.seq > seq).map((x) => x.change)
+}
+
+/** When the boards last came from a fetch: a long quiet stretch on a live channel is checked against the server (`HEAL_MS`). */
+let lastFetchAt = 0
 /** Monotonic id so a slow older fetch never overwrites a newer snapshot. */
 let fetchSeq = 0
 let listenersOn = false
@@ -199,7 +268,11 @@ const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? has
 
 function compute(raw: Snapshot, playersKey = playersKeyOf(raw)): TournamentData {
   // A snapshot cached by an older build has no instance-game tables.
-  const snapshot: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [] }
+  const base: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [] }
+  // The overlays write into lists of their own: the server's rows stay the server's.
+  const snapshot: Snapshot = overlays.length
+    ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards!] }
+    : base
   for (const fn of overlays) fn(snapshot)
   let settings: TournamentSettings
   let settingsError: string | null = null
@@ -210,7 +283,7 @@ function compute(raw: Snapshot, playersKey = playersKeyOf(raw)): TournamentData 
     // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
     settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
   }
-  return { snapshot, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
+  return { snapshot, base, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
 }
 
 /** The exact pipeline the app runs on every snapshot; also feeds the design fixtures (`src/dev`). */
@@ -292,11 +365,20 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     gameResults: gameResults.map(mapGameResult),
   }
   fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => String(a.id).localeCompare(String(b.id))))))
-  return snapshot
+  // In the order live changes insert in, whatever order the database's collation gave.
+  return inLiveOrder(snapshot)
 }
 
 /** While live updates are down, reload this often so the boards keep moving. */
 const POLL_MS = 15_000
+/**
+ * While they are up, check the boards against the server after this long
+ * without a fetch: a change Realtime lost, or one this phone could not place,
+ * would otherwise stay until the next structural change or reconnect (the TV
+ * is never hidden). Until changes carry a sequence (PLAN §5.2), this is the net.
+ */
+export const HEAL_MS = 90_000
+let healTimer: ReturnType<typeof setInterval> | null = null
 /** An errored channel never recovers by itself: rebuild it, backing off to this. */
 const RETRY_MIN_MS = 30_000
 const RETRY_MAX_MS = 5 * 60_000
@@ -327,14 +409,28 @@ export const useTournament = create<StoreState>((set, get) => ({
     }
     set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
+    // The gate loads again on every resolve (back from Home, the PIN, a new session) while the channel stays live.
+    const since = changeSeq
     try {
       const snapshot = await fetchSnapshot(tournamentId)
-      if (seq !== fetchSeq || get().tournamentId !== tournamentId) return
+      if (get().tournamentId !== tournamentId) return
+      if (seq !== fetchSeq) {
+        // A newer fetch of this tournament brings the boards (a reload a live change asked for); this load still owes the channel.
+        if (get().data) set({ loading: false })
+        get().subscribe()
+        return
+      }
+      // A live change that landed while this was on its way may be newer than what it read.
+      catchUp(snapshot, tournamentId, since)
+      lastFetchAt = Date.now()
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
     } catch (e) {
-      if (seq !== fetchSeq) return
+      if (seq !== fetchSeq) {
+        if (get().tournamentId === tournamentId && get().data) set({ loading: false })
+        return
+      }
       set({ loading: false, error: humanError(e) })
     }
   },
@@ -349,8 +445,9 @@ export const useTournament = create<StoreState>((set, get) => ({
       const snapshot = await fetchSnapshot(id)
       if (seq !== fetchSeq || get().tournamentId !== id) return
       // A live change that landed while this was on its way may be newer than what it read.
-      replayChanges(snapshot, id, since)
-      set({ data: compute(snapshot), updatedAt: Date.now(), error: null, source: 'server' })
+      catchUp(snapshot, id, since)
+      lastFetchAt = Date.now()
+      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
     } catch (e) {
       if (seq !== fetchSeq) return
@@ -375,6 +472,8 @@ export const useTournament = create<StoreState>((set, get) => ({
     let ch = sb.channel(`tournament:${id}`, { config: { postgres_changes_options: { wait: true } } })
     for (const table of REALTIME_TABLES) {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, (payload: { eventType?: LiveChange['eventType']; new?: Record<string, unknown>; old?: Record<string, unknown>; errors?: unknown }) => {
+        // A channel that was left still delivers until the server takes the leave: its tournament is not on screen.
+        if (channel !== ch) return
         // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
         const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
         if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
@@ -409,6 +508,11 @@ export const useTournament = create<StoreState>((set, get) => ({
     })
     let wasLive = false
     channel = ch
+    healTimer ??= setInterval(() => {
+      const st = get()
+      if (st.realtime !== 'live' || !st.data || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return
+      if (Date.now() - lastFetchAt >= HEAL_MS) void st.reload()
+    }, HEAL_MS / 6)
     ch.subscribe((status) => {
       if (channel !== ch) return
       const live = status === 'SUBSCRIBED'
@@ -432,10 +536,17 @@ export const useTournament = create<StoreState>((set, get) => ({
   unsubscribe() {
     stopDegraded()
     retryDelay = RETRY_MIN_MS
-    // Changes still waiting belong to the channel being left.
+    if (healTimer) clearInterval(healTimer)
+    healTimer = null
+    // Changes still waiting, logged or parked belong to the channel being left,
+    // and so does a save still to come (the phone may just have forgotten it).
     if (applyTimer) clearTimeout(applyTimer)
     applyTimer = null
     pendingChanges = []
+    changeLog.length = 0
+    parked = []
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = null
     if (channel) {
       // Forget the channel first: removeChannel reports CLOSED synchronously.
       const ch = channel
@@ -447,11 +558,35 @@ export const useTournament = create<StoreState>((set, get) => ({
   patch(fn) {
     const d = get().data
     if (!d) return
-    const snapshot = structuredClone(d.snapshot)
+    const snapshot = structuredClone(d.base)
     fn(snapshot)
     // `updatedAt` stays: nothing new came from the server (REL-04). A patch
     // that leaves the players alone (a score, a mark) keeps their key.
-    const same = JSON.stringify(snapshot.players) === JSON.stringify(d.snapshot.players)
+    const same = JSON.stringify(snapshot.players) === JSON.stringify(d.base.players)
     set({ data: compute(snapshot, same ? d.playersKey : undefined) })
   },
+  refresh() {
+    const d = get().data
+    if (d) set({ data: compute(d.base, d.playersKey) })
+  },
+  land(tournamentId, fn) {
+    const st = get()
+    const d = st.data
+    if (st.tournamentId !== tournamentId || !d) return
+    if (!fn) return st.refresh()
+    const next = structuredClone(d.base)
+    fn(next)
+    set({ data: compute(next, d.playersKey) })
+    if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
+  },
 }))
+
+// The phone forgot a tournament («Salir», a sign-out, a link to nothing): nothing
+// of it is written back by a change that lands afterwards, until it is opened again.
+onCacheCleared((tournamentId) => {
+  const st = useTournament.getState()
+  if (tournamentId !== null && tournamentId !== st.tournamentId) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = null
+  useTournament.setState({ keepOnPhone: false })
+})

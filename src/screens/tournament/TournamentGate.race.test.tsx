@@ -44,7 +44,7 @@ vi.mock('../../data/api', () => ({
   myMembership: server.myMembership,
   releaseDevice: server.releaseDevice,
 }))
-vi.mock('../../data/snapshotCache', () => ({ ...phone, saveSnapshot: vi.fn(async () => undefined) }))
+vi.mock('../../data/snapshotCache', () => ({ ...phone, saveSnapshot: vi.fn(async () => undefined), onCacheCleared: () => undefined }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
 vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn() }))
 vi.mock('./EnterScreen', () => ({

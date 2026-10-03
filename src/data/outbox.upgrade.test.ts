@@ -10,7 +10,9 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+  liveSeq: () => 0,
+  liveChangesSince: () => [],
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, land: () => undefined, reload: async () => undefined }) },
 }))
 
 const legacy = (hole: number, createdAt: number) => ({

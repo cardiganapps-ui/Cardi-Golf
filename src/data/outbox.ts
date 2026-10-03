@@ -13,7 +13,8 @@ import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
-import { registerOverlay, useTournament } from './tournamentStore'
+import { liveChangesSince, liveSeq, registerOverlay, useTournament } from './tournamentStore'
+import { changeTouches, type LiveChange } from './realtimeApply'
 
 /**
  * `seq` identifies this version of the write: a newer write to the same key
@@ -295,6 +296,8 @@ async function loadQueue() {
   lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
   rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
   publish()
+  // Boards already up (the phone's copy, shown before the queue was read) get the queued writes now.
+  useTournament.getState().refresh()
 }
 
 /** Remove `item` from Dexie only if the stored version is still the one we pushed. */
@@ -351,40 +354,60 @@ export async function discardRejected(key: string) {
   publish()
 }
 
-/** Apply pending writes on top of a freshly fetched snapshot. */
+/** Apply pending writes on top of the server's rows, for the screens (the store keeps its own rows apart). */
 export function overlayPending(s: Snapshot): void {
-  for (const it of queue) {
-    if (it.tournamentId !== s.tournament.id) continue
-    if (it.kind === 'score') {
-      const p = it.payload
-      const row: Score = {
-        roundId: p.round_id,
-        playerId: p.player_id,
-        hole: p.hole,
-        strokes: p.strokes,
-        putts: p.putts,
-        pickedUp: p.picked_up,
-        enteredBy: p.entered_by,
-        updatedAt: p.client_ts,
-      }
-      const i = s.scores.findIndex((x) => x.roundId === row.roundId && x.playerId === row.playerId && x.hole === row.hole)
-      if (i >= 0) s.scores[i] = row
-      else s.scores.push(row)
-    } else if (it.kind === 'tiebreak') {
-      const p = it.payload
-      s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
-      s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
-    } else if (it.kind === 'award') {
-      const p = it.payload
-      s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))
-      for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
-    } else if (it.kind === 'signature') {
-      const p = it.payload
-      if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
-        s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date().toISOString() })
-      }
+  for (const it of queue) if (it.tournamentId === s.tournament.id) overlayItem(s, it)
+}
+
+/** One write as the snapshot reads with it: on the screens' copy while it waits, on the server's rows once it is taken. */
+function overlayItem(s: Snapshot, it: OutboxItem): void {
+  if (it.kind === 'score') {
+    const p = it.payload
+    const row: Score = {
+      roundId: p.round_id,
+      playerId: p.player_id,
+      hole: p.hole,
+      strokes: p.strokes,
+      putts: p.putts,
+      pickedUp: p.picked_up,
+      enteredBy: p.entered_by,
+      updatedAt: p.client_ts,
+    }
+    const i = s.scores.findIndex((x) => x.roundId === row.roundId && x.playerId === row.playerId && x.hole === row.hole)
+    if (i >= 0) s.scores[i] = row
+    else s.scores.push(row)
+  } else if (it.kind === 'tiebreak') {
+    const p = it.payload
+    s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
+    s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
+  } else if (it.kind === 'award') {
+    const p = it.payload
+    s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))
+    for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
+  } else if (it.kind === 'signature') {
+    const p = it.payload
+    if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
+      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date().toISOString() })
     }
   }
+}
+
+/** Whether a live change is the server's word on this write's key (its own echo, or a later write). */
+function answers(c: LiveChange, it: OutboxItem): boolean {
+  if (it.kind === 'score') {
+    const p = it.payload
+    return changeTouches(c, 'scores', (r) => r.round_id === p.round_id && r.player_id === p.player_id && r.hole === p.hole)
+  }
+  if (it.kind === 'tiebreak') {
+    const p = it.payload
+    return changeTouches(c, 'snake_tiebreaks', (r) => r.round_id === p.round_id && r.group_id === p.group_id && r.hole === p.hole)
+  }
+  if (it.kind === 'award') {
+    const p = it.payload
+    return changeTouches(c, 'hole_awards', (r) => r.round_id === p.round_id && r.game_id === p.game_id && r.hole === p.hole)
+  }
+  const p = it.payload
+  return changeTouches(c, 'card_signatures', (r) => r.round_id === p.round_id && r.pair_id === p.pair_id)
 }
 
 /** The phone could not keep the write (quota, storage pressure, private mode): the hole is not saved anywhere. */
@@ -419,7 +442,7 @@ async function enqueue(newItem: NewItem) {
   publish()
   announce()
   // Optimistic: recompute right away with the overlay.
-  useTournament.getState().patch(overlayPending)
+  useTournament.getState().refresh()
   void flush()
 }
 
@@ -641,12 +664,18 @@ async function runFlush(): Promise<boolean> {
       const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
       if (!item) break
       tried.add(item.seq)
+      // What the server says about this key from now on is newer than what the boards hold.
+      const since = liveSeq()
       try {
         await pushImpl(item)
         if (isCurrent(item)) {
           queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
           await deleteStored(item)
           announce()
+          // Taken: the server's rows take it now, unless the server already said
+          // something about that key since it went (its own echo, or a later write).
+          const answered = liveChangesSince(since).some((c) => answers(c, item))
+          useTournament.getState().land(item.tournamentId, answered ? null : (s) => overlayItem(s, item))
         }
         publish({ lastError: null })
       } catch (e) {
@@ -654,7 +683,8 @@ async function runFlush(): Promise<boolean> {
         if (isPermanent(msg)) {
           await reject(item, describeSyncError(msg))
           publish({ lastError: describeSyncError(msg) })
-          // The optimistic value was wrong: fall back to the server's truth.
+          // The optimistic value was wrong: the server's rows at once, then its truth.
+          useTournament.getState().refresh()
           void useTournament.getState().reload()
         } else {
           failed = true

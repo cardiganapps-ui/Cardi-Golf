@@ -29,7 +29,9 @@ vi.mock('./auth', () => ({
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+  liveSeq: () => 0,
+  liveChangesSince: () => [],
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, land: () => undefined, reload: async () => undefined }) },
 }))
 
 const { _outboxTest, adoptQueuedWrites, flush, hasUnsentWrites, queuedFor, unsentWrites, useOutbox } = await import('./outbox')

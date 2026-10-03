@@ -204,8 +204,8 @@ export function asStored(s: Snapshot): Snapshot {
     roundTees: by(s.roundTees, (x) => [x.roundId, x.playerId]),
     pairs: by(s.pairs, (p) => [p.id]),
     teams: by(by(s.teams, (x) => [x.id]), (x) => [x.number]).map((x) => ({ ...x, playerIds: by(x.playerIds, (id) => [id]) })),
-    // `scoreRowId` keeps the snapshot's order; `disputed` and `previous` have column defaults.
-    scores: s.scores.map((x) => ({ ...x, disputed: x.disputed ?? false, previous: x.previous ?? null })),
+    // `scoreRowId` keeps the snapshot's order and is the id a fetch brings; `disputed` and `previous` have column defaults.
+    scores: s.scores.map((x, i) => ({ ...x, id: scoreRowId(i), disputed: x.disputed ?? false, previous: x.previous ?? null })),
     snakeTiebreaks: by(s.snakeTiebreaks, (x) => [x.roundId, x.groupId, x.hole]),
     cardSignatures: by(s.cardSignatures, (x) => [x.roundId, x.pairId]),
     handicapOverrides: by(s.handicapOverrides, (x) => [x.roundId, x.playerId]),
