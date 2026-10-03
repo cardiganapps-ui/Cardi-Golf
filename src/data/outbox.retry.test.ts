@@ -4,7 +4,8 @@
  * 30 s, with nobody touching the phone. A request that never answers is given
  * up after 12 s by the client's timeout (REL-14) and retried, and the holes
  * behind it follow. A write the server refuses for good lands in «rechazados»
- * once and is never sent again; an expired session is not a refusal.
+ * once and is never sent again; an expired session is not a refusal. A hole
+ * kept with no signal goes out when the app comes back to the front.
  *
  * The clock is fake for setTimeout only: IndexedDB (fake-indexeddb) and the
  * app's real Supabase client, entered as p1 with the PIN, keep running on
@@ -17,7 +18,6 @@ import { enterAs, holeScore, installFakePhone, isWrite, settle, turn, until } fr
 const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueScore, startOutbox, useOutbox } = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
-const { REQUEST_TIMEOUT_MS } = await import('../lib/fetchWithTimeout')
 const { t } = await import('../i18n/es-MX')
 
 const sent = (hole: number) => server.writeRequests().filter((r) => (r.body as { hole: number }).hole === hole).length
@@ -81,8 +81,9 @@ describe('retries', () => {
     await enqueueScore('t1', holeScore('p2', 15, 5))
     await until(() => server.writeRequests().length === 1, 'the first push to go out')
 
-    // Connected, nothing answers: the queue waits on it, but not for ever.
-    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS - 1)
+    // Connected, nothing answers: the queue waits on it, but not for ever. The 12 s itself (not the
+    // constant, whatever it says): a deadline of minutes would hold every hole behind it that long.
+    await vi.advanceTimersByTimeAsync(12_000 - 1)
     for (let i = 0; i < 50; i++) await turn()
     expect(server.writeRequests()).toHaveLength(1)
     expect(useOutbox.getState()).toMatchObject({ pending: 2, syncing: true })
@@ -153,6 +154,19 @@ describe('retries', () => {
     await vi.advanceTimersByTimeAsync(2000)
     await settle(useOutbox)
     expect(server.score('p1', 11)).toMatchObject({ strokes: 6 })
+    expect(useOutbox.getState()).toMatchObject({ pending: 0, rejected: [] })
+  })
+
+  it('sends a kept hole when the player comes back to the app with signal, though no `online` event came', async () => {
+    phone.goOffline()
+    await enqueueScore('t1', holeScore('p1', 13, 5))
+    await settle(useOutbox)
+    expect(sent(13)).toBe(0)
+    // The signal came back while the phone was in a pocket: the page heard no `online` event, and no retry is armed.
+    phone.online = true
+    phone.show()
+    await until(() => server.score('p1', 13) !== undefined, 'the hole to go out when the app comes to the front')
+    await settle(useOutbox)
     expect(useOutbox.getState()).toMatchObject({ pending: 0, rejected: [] })
   })
 })

@@ -11,6 +11,7 @@
  * in (fake) IndexedDB, and the session auth-js keeps in localStorage. The app
  * opens the way AppShell and the tournament gate open it, and its real
  * Supabase client talks to the fake server (src/data/testing/fakePhone.ts).
+ * The opening order matters: the last test is the gate's own (NEW-02).
  */
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -270,5 +271,43 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     phone.goOnline()
     await until(() => after.outbox.useOutbox.getState().pending === 0, 'the hole to go out')
     expect(server.writes.map((w) => [w.row.player_id, w.row.hole, w.by])).toEqual([['p2', 2, fresh]])
+  })
+
+  it('refused by the server, it is still in «rechazados» after a restart: that list is the only copy of the hole', async () => {
+    const first = await restart()
+    await open(first)
+    await enterAs('p1')
+    first.store.useTournament.setState({ tournamentId: 't1' })
+    // The Comité moved p4 to another group while this phone still had him: the server refuses his hole for good.
+    server.tables.group_members = server.tables.group_members!.filter((m) => m.player_id !== 'p4')
+    await first.outbox.enqueueScore('t1', holeScore('p4', 9, 4))
+    await until(() => first.outbox.useOutbox.getState().rejected.length === 1, 'the refusal')
+    await settle(first.outbox.useOutbox)
+
+    const after = await restart()
+    await open(after)
+    after.store.useTournament.setState({ tournamentId: 't1' })
+    after.outbox.refreshOutboxCounters()
+    expect(after.outbox.useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p4:9' })])
+    expect(server.writeRequests()).toHaveLength(1)
+  })
+
+  // NEW-02, fixed by #92. In the app the gate's effect runs before AppShell's (a child's effects run first), so the
+  // boards the phone kept go up before the outbox has read its queue, and nothing lays the queue over them after.
+  it.fails('shows on the boards the gate puts up before the outbox has read its queue (the order the app opens in)', async () => {
+    const first = await restart()
+    await open(first)
+    await enterAs('p1')
+    await keepOnPhone(first)
+    phone.goOffline()
+    await first.outbox.enqueueScore('t1', holeScore('p1', 7, 5))
+    await first.outbox.enqueueTiebreak('t1', snakeAnswer(7, 'p2'))
+
+    const after = await restart()
+    await openFromPhone(after)
+    await Promise.all([after.auth.useAuth.getState().init(), after.outbox.startOutbox()])
+    expect(after.outbox._outboxTest.queue()).toHaveLength(2)
+    expect(shown(after, 'p1', 7)).toEqual({ strokes: 5, gross: 5 })
+    expect(after.store.useTournament.getState().data!.snapshot.snakeTiebreaks).toEqual([expect.objectContaining({ hole: 7, lastHoledPlayerId: 'p2' })])
   })
 })
