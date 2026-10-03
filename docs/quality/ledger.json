@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-02",
+  "updated": "2026-10-03",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -2225,10 +2225,16 @@
         "src/data/outbox.overlay.test.ts",
         "src/data/outbox.retry.test.ts",
         "src/data/outbox.replace.test.ts",
-        "src/data/outbox.reauth.test.ts"
+        "src/data/outbox.reauth.test.ts",
+        "src/data/outbox.group.test.ts",
+        "src/data/outbox.tabs.test.ts",
+        "src/data/outbox.storage.test.ts",
+        "src/data/testing/serverRules.test.ts",
+        "scripts/server-rules.mjs",
+        "vite.config.ts"
       ],
       "verifiedBy": null,
-      "residual": "loadQueue() publishes the counters but never re-applies the overlay. After a restart the gate's enterFromCache (a child effect, so it starts before AppShell's startOutbox; both read IndexedDB) can put the saved boards up before the queue is loaded, and the queued holes are then missing from them until the next compute: the gate re-reading the copy once its lookup fails offline (a moment, or the 8 s session timeout with an expired token), a server reload, or the next save. The same when another tab's change reloads the queue. Reproduced with the real modules; outbox.offline.test.ts pins the queue-first order. Fix, not made here (outbox.ts): end loadQueue() with useTournament.getState().patch(overlayPending)."
+      "residual": "The app's own opening order (the gate puts the kept boards up before AppShell's outbox reads its queue) is NEW-02, fixed by #92: outbox.offline.test.ts holds it as it.fails until #92 flips it. Of the first verifier's 56 outbox mutants, one non-equivalent survives: V47, a write queued in the few microtasks at the very end of a pass (V18 is equivalent). npm test gates outbox.ts at its coverage today (statements 99, branches 88, functions 100, lines 99, vite.config.ts); the uncovered branches are defensive (a kind of write this build does not know, optional browser calls), so 100% branches is not the target. The fake server's rules are pinned against the real migrations by src/data/testing/cases/serverRules.json (scripts/server-rules.mjs in the db job); platform admins are not modelled."
     },
     {
       "id": "QA-07",
@@ -4153,6 +4159,84 @@
       "tests": [],
       "verifiedBy": null,
       "residual": null
+    }
+  ],
+  "foundAbout": "Defects found while closing the review's findings (verifiers, new tests), not in the review: the same row shape, ids NEW-nn, and foundBy for where they came from. They count toward the gates like the review's own.",
+  "found": [
+    {
+      "id": "NEW-01",
+      "severity": "P2",
+      "area": "Data layer and database",
+      "workstream": "W12",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "Signing a card leaves its discrepancies open: 0008's card_signature_settles updates the scores through 0010's scores_detect_dispute, which keeps the old flags for anyone but the Comité, so the Comité sees «discrepancias» on signed cards",
+      "foundBy": "PR #93: cases/serverRules.json, run against the migrations by scripts/server-rules.mjs",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Fix: a migration in which the settle marks its own update (the Comité's mark, cardi.comite) around it, and the case flips."
+    },
+    {
+      "id": "NEW-02",
+      "severity": "P2",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W1",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "After a restart the boards can miss the queued holes: the gate puts the kept boards up before AppShell's outbox has read its queue, and loadQueue never lays the queue over them",
+      "foundBy": "PR #93's first verifier (probe P1a)",
+      "status": "open",
+      "pr": 92,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Fixed in #92 (loadQueue ends with refresh()); outbox.offline.test.ts holds the repro as it.fails until then."
+    },
+    {
+      "id": "NEW-03",
+      "severity": "P3",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W1",
+      "phase": 3,
+      "tripSafe": false,
+      "title": "A phone holds one PIN claim: claiming a player in a second tournament ends the first claim (device_sessions is keyed by the user), and the first tournament's queued holes are refused",
+      "foundBy": "PR #93's first verifier",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Not a trip risk (one tournament). The fake server models one claim per user, as the database does."
+    },
+    {
+      "id": "NEW-04",
+      "severity": "P3",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W1",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "The end-of-pass re-flush can spin on microtasks if a pass ever skips a write it could push (latent: no pass does today)",
+      "foundBy": "PR #93's first verifier (mutant V48 froze the suite)",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Hardening for outbox v2: go again only when the queue changed during the pass."
+    },
+    {
+      "id": "NEW-05",
+      "severity": "P3",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W1",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "A different player adopting held writes gets snake answers, awards and signatures refused: they keep the first player's decided_by / signed_by, which the rules require to be the writer's own",
+      "foundBy": "PR #93's first verifier",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Adoption should re-stamp decided_by / signed_by, or ask before adopting another player's writes."
     }
   ]
 }

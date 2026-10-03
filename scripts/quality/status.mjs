@@ -41,6 +41,11 @@ for (const [w, name] of Object.entries(ledger.workstreams)) {
   console.log(`  ${pad(w, 4)} ${pad(name, 70)} ${count(all, (r) => !closed(r))}/${all.length}`)
 }
 
+const found = ledger.found ?? []
+const foundOpen = found.filter((r) => !closed(r))
+console.log(`\nFound since the review: ${found.length} (${foundOpen.length} open: ${SEV.map((s) => `${s} ${count(foundOpen, (r) => r.severity === s)}`).join(' · ')})`)
+for (const r of foundOpen) console.log(`  ${pad(r.id, 9)} ${r.severity} ${pad(r.workstream, 4)} ${r.pr ? `#${r.pr} ` : ''}${r.title.slice(0, 96)}`)
+
 if (process.argv.includes('--open')) {
   for (const p of [0, 1, 2, 3]) {
     const list = open.filter((r) => r.phase === p)
