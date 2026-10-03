@@ -1017,10 +1017,10 @@
       "phase": 1,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
+      "pr": 94,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Done (#94): the db job replays every migration from zero on Postgres 16 with Supabase's stubs, through db.mjs as production gets them, runs the SQL tests and holds the advisors at a baseline, on ready PRs, main and nightly. Left: a staging project the release applies to first, an on-demand backup before production, and migrations applied by the pipeline instead of by hand (they need the GitHub Actions secrets and Diego's yes to the staging project, docs/handoff.md); a reverse path for risky migrations; production runs Postgres 15/17 where CI runs 16."
     },
     {
       "id": "DB-12",
@@ -1087,10 +1087,10 @@
       "phase": 3,
       "tripSafe": false,
       "status": "open",
-      "pr": null,
+      "pr": 94,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Held, not yet lowered: the db job fails on any advisor finding over supabase/tests/harness/lint-baseline.json (405 findings in 9 lints at 0025). Bringing it to zero or to documented exceptions is Phase 3 (set-based RLS removes most of auth_rls_initplan and multiple_permissive_policies)."
     },
     {
       "id": "DB-17",
@@ -1100,11 +1100,14 @@
       "workstream": "W12",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 94,
+      "tests": [
+        "scripts/db-test.sh",
+        ".github/workflows/db.yml"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migrations are not made re-runnable; instead they cannot be re-run: migrate refuses a file edited or removed after it ran (sha256 in public._migrations), file refuses anything under supabase/migrations, and the RUNBOOK says no migrations from Calcutta night to the settlement."
     },
     {
       "id": "DB-19",
@@ -1156,9 +1159,12 @@
       "workstream": "W12",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 94,
+      "tests": [
+        "scripts/db-test.sh",
+        ".github/workflows/db.yml"
+      ],
       "verifiedBy": null,
       "residual": null
     },

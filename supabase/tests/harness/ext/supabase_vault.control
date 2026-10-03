@@ -1,0 +1,7 @@
+# supabase_vault STUB for the Polo review harness (not the real extension).
+# Secrets are stored in PLAINTEXT; decrypted_secrets simply echoes them.
+comment = 'Supabase Vault Extension (Polo harness stub: plaintext)'
+default_version = '0.3.1'
+relocatable = false
+schema = vault
+superuser = true
