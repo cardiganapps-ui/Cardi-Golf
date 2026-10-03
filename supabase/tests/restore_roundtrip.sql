@@ -8,11 +8,9 @@
 -- table allows it), the backup is restored as the Comité, and each table is
 -- compared whole.
 --
--- Runs on the local Postgres harness (docs/review/2026-09-30/evidence/harness)
--- with the migration chain applied and the two-tenant seed; rolled back:
---   $S/pg/bootstrap.sh <db> --seed
---   psql -h 127.0.0.1 -p 5433 -U postgres -X -v ON_ERROR_STOP=1 -d <db> -f supabase/tests/restore_roundtrip.sql
--- It prints «restore round trip: ok» or stops at the first table that differs.
+-- The db job runs it (scripts/db-test.sh, supabase/tests/harness) on a copy
+-- of the migrated database with the two-tenant seed; rolled back. It prints
+-- «restore round trip: ok» or stops at the first table that differs.
 \set ON_ERROR_STOP 1
 \set QUIET 1
 \pset tuples_only on

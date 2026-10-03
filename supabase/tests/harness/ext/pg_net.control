@@ -1,0 +1,6 @@
+# pg_net STUB for the Polo review harness (not the real extension).
+# Requests are queued and recorded in net.harness_requests; nothing is ever sent.
+comment = 'Async HTTP (Polo harness stub: requests are recorded, never sent)'
+default_version = '0.14.0'
+relocatable = false
+superuser = true
