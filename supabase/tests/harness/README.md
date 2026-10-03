@@ -15,6 +15,13 @@ tournament (DB-09). Ported from the 2026-09-30 review's harness
 | `splinter.sql` | Supabase's advisors (the dashboard's «Advisors»), into a temp table `_lint`. |
 | `lint-baseline.json` | The advisors' findings per lint at the last accepted chain. The job fails on any lint over it; when one goes down, lower it (`POLO_LINT_WRITE=1`). |
 
+The job also sends every request in `src/data/testing/cases/serverRules.json`
+to a copy of the migrated database with no seed (`scripts/server-rules.mjs`):
+the case file brings its own world, and its Vitest twin
+(`src/data/testing/serverRules.test.ts`) sends the same requests to the
+in-memory server under the outbox's tests. Both must answer each case as
+written. `--print` shows what the database answered, case by case.
+
 Each `supabase/tests/*.sql` runs on its own copy of the migrated database with
 the seed, as `postgres`, and fails on the first error (`ON_ERROR_STOP`). Write
 a test the way `restore_roundtrip.sql` is written: read ids from

@@ -69,6 +69,21 @@ describe('the phone keeps the write first (REL-18)', () => {
     await vi.waitFor(() => expect(useOutbox.getState().persistent).toBe(true))
     expect(persist).toHaveBeenCalledTimes(1)
   })
+
+  it('a browser that refuses to answer is not counted as keeping the storage, and the hole is kept all the same', async () => {
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+    const persist = vi.fn(async () => {
+      throw new DOMException('The request is not allowed', 'NotAllowedError')
+    })
+    Object.defineProperty(globalThis.navigator, 'storage', { value: { persist }, configurable: true })
+    useOutbox.setState({ persistent: true })
+    await _outboxTest.enqueue(score(7))
+    await vi.waitFor(() => expect(useOutbox.getState().persistent).toBe(false))
+    expect(persist).toHaveBeenCalledTimes(1)
+    expect((await _outboxTest.stored()).map((x) => x.key)).toEqual(['score:r1:p1:7'])
+  })
 })
 
 describe('one tab pushes at a time (REL-18)', () => {

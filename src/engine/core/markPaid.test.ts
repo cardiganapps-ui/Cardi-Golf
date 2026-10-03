@@ -176,5 +176,6 @@ describe('what Dinero shows before the reload is what the server will hold', () 
       expect(b.snap.calcuttaBuybacks, `step ${step}`).toEqual(a.snap.calcuttaBuybacks)
     }
     expect(b.money()).toEqual(a.money())
-  })
+    // Hundreds of recomputes of a 12-player tournament: give it room on a loaded machine (and under the coverage `npm test` measures).
+  }, 20_000)
 })
