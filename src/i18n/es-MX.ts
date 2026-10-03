@@ -47,6 +47,15 @@ export function handicapText(n: number): string {
   return n < 0 ? `+${-n}` : String(n)
 }
 
+/** What the phone may not do yet while a tournament's writes are still on it (account.ts). */
+export type UnsentAction = 'signOut' | 'switch' | 'enter'
+const UNSENT_ACTION: Record<UnsentAction, string> = {
+  signOut: 'cerrar sesión',
+  switch: 'cambiar de cuenta',
+  // A PIN in another tournament: the phone keeps one PIN at a time.
+  enter: 'entrar a otro torneo',
+}
+
 export const t = {
   app: {
     name: 'Polo',
@@ -729,14 +738,14 @@ export const t = {
     google: 'Continuar con Google',
     or: 'o con tu correo',
     /**
-     * Why the phone may not sign out or change account yet: what was entered in
-     * a tournament is still on the phone. `name` null: a tournament the phone
-     * has no name for.
+     * Why the phone may not sign out, change account or enter another
+     * tournament with a PIN yet: what was entered in a tournament is still on
+     * the phone. `name` null: a tournament the phone has no name for.
      */
-    unsentSignal: (name: string | null, action: 'signOut' | 'switch') =>
-      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
-    unsentPin: (name: string | null, action: 'signOut' | 'switch') =>
-      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${action === 'signOut' ? 'cerrar sesión' : 'cambiar de cuenta'}.`,
+    unsentSignal: (name: string | null, action: UnsentAction) =>
+      `Lo capturado en ${name ?? 'un torneo'} aún no se sube. Abre ${name ?? 'el torneo'} con señal y espera a que diga «Sincronizado» antes de ${UNSENT_ACTION[action]}.`,
+    unsentPin: (name: string | null, action: UnsentAction) =>
+      `Lo capturado en ${name ?? 'un torneo'} espera tu PIN. Abre ${name ?? 'el torneo'}, entra con tu PIN y se sube solo; luego ya puedes ${UNSENT_ACTION[action]}.`,
     tooFast: 'Espera un minuto antes de pedir otro código.',
     badEmail: 'Revisa el correo.',
     googleTaken: 'Esa cuenta de Google ya tiene perfil.',
@@ -747,8 +756,18 @@ export const t = {
     linkTaken: 'Ese jugador ya está en el perfil de otra persona. Pídele al Comité que lo revise.',
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
-    /** Signing out needs the server to end the session (no signal and an expired token): nothing was cleared. */
-    signOutNeedsSignal: 'Para cerrar sesión hace falta señal. Sigues dentro y lo guardado en el teléfono sigue aquí.',
+    /** The sign-out button while it waits for the server (up to 15 s on lie-fi). */
+    signingOut: 'Cerrando sesión…',
+    /**
+     * auth-js kept the session: it could not confirm it with the server to end
+     * it (no signal and an expired token, or the signal just back inside its
+     * 60 s retry cooldown, when no request is even sent). Nothing was cleared.
+     */
+    signOutUnconfirmed: 'No se pudo confirmar tu sesión con el servidor, así que sigue abierta y lo guardado en el teléfono sigue aquí. Intenta de nuevo en un minuto.',
+    /** The server has not answered yet (lie-fi, an expired token still refreshing): the session may still end, and then the phone says so. */
+    signOutPending: 'El servidor no ha respondido: por ahora sigues dentro. Si la sesión se cierra, se borra lo guardado en el teléfono y te avisamos.',
+    /** The session ended after the phone had said it was still there: what it kept of the person is gone now too. */
+    signedOutLate: 'Ya se cerró tu sesión y se borró lo guardado en el teléfono.',
     enterProfile: 'Entrar a mi perfil',
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },
@@ -1188,6 +1207,8 @@ export const t = {
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
     alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
     notFound: 'Ese torneo no existe. Revisa el enlace o el código.',
+    /** «no existe», when this phone still had writes of that tournament: they can never go out now. */
+    goneUnsent: 'Lo que este teléfono tenía sin subir de ese torneo ya no se puede subir.',
     noPlayersHint: 'El Comité los carga en un momento. Mientras, ve preparando el swing.',
     noPlayers: 'El Comité todavía no ha cargado jugadores.',
     enterAs: (name: string) => `Entrar como ${name}`,
@@ -1218,6 +1239,8 @@ export const t = {
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
+    /** A write of a tournament that was deleted: it can never go out (its link leads nowhere). */
+    errGone: 'El torneo ya no existe.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
     /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
     errSession: 'Confirmando tu sesión… Se reintenta solo.',

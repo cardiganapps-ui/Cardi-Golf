@@ -8,6 +8,7 @@ import { useAuth } from '../data/auth'
 import { startOutbox } from '../data/outbox'
 import { useMyProfile } from '../data/profiles'
 import { useAppFlags, usePlatform } from '../data/platform'
+import { LateSignOutHome } from './LateSignOut'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -40,6 +41,7 @@ export function AppShell() {
       <OfflineBanner />
       <MaintenanceBanner />
       <UpdateBar />
+      <LateSignOutHome />
       <main className={`${styles.main} ${wide ? styles.mainWide : ''} ${platform ? styles.mainPlatform : ''} ${tabbed ? styles.mainTabbed : ''}`}>
         <Outlet />
       </main>

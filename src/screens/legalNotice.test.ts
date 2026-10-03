@@ -324,7 +324,9 @@ describe('what the notice left out (P3-6)', () => {
     expect(source('src/data/tournamentStore.ts')).toContain('void saveSnapshot(tournamentId, snapshot)')
     // Who clears it (PR #87): «Cambiar de jugador» this tournament's, a sign-out every one, a link that no longer exists its own.
     expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/const leave = useCallback\(async \(\) => \{[\s\S]*?await clearCached\(tournamentId\)/)
-    expect(source('src/data/account.ts')).toMatch(/export async function signOutSafely\(\)[\s\S]*?await clearAllCached\(\)/)
+    // A sign-out every one, also when the session ends only after the phone said it was still there (both paths forget).
+    expect(source('src/data/account.ts')).toMatch(/async function forgetSignedOut\(\) \{[^}]*await clearAllCached\(\)/)
+    expect(source('src/data/account.ts')).toMatch(/export async function signOutSafely\(\)[\s\S]*?await forgetSignedOut\(\)[\s\S]*?await forgetSignedOut\(\)/)
     expect(source('src/screens/tournament/TournamentGate.tsx')).toContain('void clearCachedSlug(slug)')
     // What has not gone out is not part of that copy: sign-out and «Cambiar de jugador» wait for it.
     expect(source('src/data/snapshotCache.ts')).not.toMatch(/from '\.\/outbox'/)
