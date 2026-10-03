@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import { getFixture } from '../dev/fixtures'
 import type { Snapshot } from '../engine/types'
-import { applyChange, changeTouches, inLiveOrder, type LiveChange } from './realtimeApply'
+import { applyChange, canonicalTime, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
@@ -23,7 +23,7 @@ describe('scores', () => {
     const before = s.scores.length
     const i = 3
     const target = s.scores[i]!
-    const r = applyChange(s, T(s), upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes: 9, putts: 3, picked_up: false, updated_at: '2027-04-09T10:00:00Z', disputed: false }))
+    const r = applyChange(s, T(s), upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes: 9, putts: 3, picked_up: false, updated_at: '2027-04-12T10:00:00Z', disputed: false }))
     expect(r).toBe('applied')
     expect(s.scores).toHaveLength(before)
     expect(s.scores[i]).toMatchObject({ roundId: target.roundId, playerId: target.playerId, hole: target.hole, strokes: 9, putts: 3 })
@@ -209,11 +209,54 @@ describe('the same lists whichever way the rows came', () => {
     expect(s.payments.map((x) => x.id)).toEqual([...s.payments.map((x) => x.id)].sort())
   })
 
-  it('changeTouches names a change by its table and its key, a delete by what it carries', () => {
-    const isHole = (r: Record<string, unknown>) => r.round_id === 'r1' && r.player_id === 'p1' && r.hole === 4
-    expect(changeTouches(upd('scores', { round_id: 'r1', player_id: 'p1', hole: 4 }), 'scores', isHole)).toBe(true)
-    expect(changeTouches(upd('scores', { round_id: 'r1', player_id: 'p1', hole: 5 }), 'scores', isHole)).toBe(false)
-    expect(changeTouches(upd('payments', { round_id: 'r1', player_id: 'p1', hole: 4 }), 'scores', isHole)).toBe(false)
-    expect(changeTouches(del('scores', { round_id: 'r1', player_id: 'p1', hole: 4 }), 'scores', isHole)).toBe(true)
+  it('sameChange knows a write’s echo: same table, same row, every value the server stored', () => {
+    const row = { id: 's1', round_id: 'r1', player_id: 'p1', hole: 4, strokes: 5, putts: 2, updated_at: '2027-04-09T12:00:01.5+00:00', previous: { strokes: 4 } }
+    // The channel and PostgREST may write the same instant differently.
+    expect(sameChange(upd('scores', { ...row, updated_at: '2027-04-09 12:00:01.500000+00' }), upd('scores', row))).toBe(true)
+    expect(sameChange(ins('scores', row), upd('scores', row))).toBe(true)
+    expect(sameChange(upd('scores', { ...row, strokes: 6 }), upd('scores', row))).toBe(false)
+    expect(sameChange(upd('scores', { ...row, previous: { strokes: 3 } }), upd('scores', row))).toBe(false)
+    expect(sameChange(upd('payments', row), upd('scores', row))).toBe(false)
+    // A delete is its key; an upsert is never a delete's echo.
+    const key = { round_id: 'r1', game_id: 'cerca', hole: 3, player_id: 'p2' }
+    expect(sameChange(del('hole_awards', key), del('hole_awards', key))).toBe(true)
+    expect(sameChange(del('hole_awards', { ...key, player_id: 'p3' }), del('hole_awards', key))).toBe(false)
+    expect(sameChange(ins('hole_awards', key), del('hole_awards', key))).toBe(false)
+    expect(sameChange(upd('scores', row), upd('scores', {}))).toBe(false)
+  })
+
+  it('canonicalTime writes one instant one way, and its forms sort in time', () => {
+    expect(canonicalTime('2027-04-09 12:00:01+00')).toBe('2027-04-09T12:00:01.000000+00:00')
+    expect(canonicalTime('2027-04-09T12:00:01.25Z')).toBe('2027-04-09T12:00:01.250000+00:00')
+    expect(canonicalTime('2027-04-09T12:00:01.123456+0000')).toBe('2027-04-09T12:00:01.123456+00:00')
+    expect(canonicalTime('not a time')).toBe('not a time')
+    expect(canonicalTime(null)).toBeNull()
+    expect(canonicalTime('2027-04-09T12:00:01.9+00:00')! < canonicalTime('2027-04-09 12:00:02+00')!).toBe(true)
+  })
+
+  it('a score the server stamped earlier than the one held is not applied over it', () => {
+    const s = fx()
+    const target = s.scores[2]!
+    const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: false })
+    expect(applyChange(s, T(s), at('2027-04-12T12:00:05+00:00', 7))).toBe('applied')
+    // A write this phone landed, replayed after a fetch that read the later one.
+    expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4))).toBe('ignored')
+    const held = () => s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)
+    expect(held()).toMatchObject({ strokes: 7 })
+    expect(applyChange(s, T(s), at('2027-04-12T12:00:06+00:00', 8))).toBe('applied')
+    expect(held()).toMatchObject({ strokes: 8 })
+  })
+
+  it('a payment Dinero laid with a local id is the row the server made for that flow, not a second one', () => {
+    const s = fx()
+    const tid = T(s)
+    s.payments = [...s.payments, { id: 'local:entry|pX|', kind: 'entry', fromPlayerId: 'pX', toPlayerId: null, amount: 2500, paid: true, note: null }]
+    const before = s.payments.length
+    expect(applyChange(s, tid, ins('payments', { id: 'f0000000-0000-0000-0000-000000000001', tournament_id: tid, kind: 'entry', from_player_id: 'pX', to_player_id: null, amount: 2500, paid: true, note: null }))).toBe('applied')
+    expect(s.payments).toHaveLength(before)
+    expect(s.payments.filter((x) => x.fromPlayerId === 'pX').map((x) => x.id)).toEqual(['f0000000-0000-0000-0000-000000000001'])
+    // Another flow of the same player is its own row.
+    expect(applyChange(s, tid, ins('payments', { id: 'f0000000-0000-0000-0000-000000000002', tournament_id: tid, kind: 'calcutta', from_player_id: 'pX', to_player_id: null, amount: 750, paid: false, note: null }))).toBe('applied')
+    expect(s.payments).toHaveLength(before + 1)
   })
 })

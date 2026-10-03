@@ -56,7 +56,8 @@ type Emit = (table: string, payload: Record<string, unknown>) => void
 function makeOps(s: Snapshot, TID: string, r: () => number, emit: Emit) {
   const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(r() * xs.length)]!
   const int = (lo: number, hi: number) => lo + Math.floor(r() * (hi - lo + 1))
-  let clock = Date.parse('2027-04-09T12:00:00Z')
+  // The server's clock runs past every row it holds (scores_touch stamps each write now()).
+  let clock = Math.max(Date.parse('2027-04-09T12:00:00Z'), ...s.scores.map((x) => Date.parse(x.updatedAt ?? '') || 0)) + 1000
   const ts = () => new Date((clock += int(1, 5000))).toISOString().replace('Z', '+00:00')
   let n = 0
   const nid = (p: string) => `${p}-${++n}-${Math.floor(r() * 1e9)}`

@@ -11,8 +11,7 @@ vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: fa
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
-  liveChangesSince: () => [],
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, land: () => undefined, reload: async () => undefined }) },
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, reload: async () => undefined }) },
 }))
 
 const legacy = (hole: number, createdAt: number) => ({

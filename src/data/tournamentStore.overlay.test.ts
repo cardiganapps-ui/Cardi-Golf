@@ -11,6 +11,7 @@ import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getFixture } from '../dev/fixtures'
+import type { Snapshot } from '../engine/types'
 import { fakeSupabase, type FakeSupabase } from './testing/fakeSupabase'
 import { snapshotToRows } from './testing/rows'
 
@@ -18,7 +19,7 @@ let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { useTournament, registerOverlay } = await import('./tournamentStore')
-const { _outboxTest, overlayPending, enqueueScore } = await import('./outbox')
+const { _outboxTest, overlayPending, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 useAuth.setState({ user: { id: 'uid-A' } as never })
 registerOverlay(overlayPending)
@@ -40,6 +41,14 @@ const shown = () => store().data!.snapshot.scores.find(key)
 const inBase = () => store().data!.base.scores.find(key)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const save = (strokes: number) => enqueueScore(TID, { round_id: round.id, player_id: P, hole: HOLE, strokes, putts: 2, picked_up: false, entered_by: A, client_ts: '2027-04-09T12:00:00.000Z' })
+/** The boards as the phone keeps them (what opens with no signal). */
+async function keptCopy() {
+  const db = new Dexie('cardi-golf-cache')
+  db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })
+  const kept = (await db.table('snapshots').get(TID)) as { snapshot: { scores: Array<{ id?: string; roundId: string; playerId: string; hole: number; strokes: number | null }> } }
+  db.close()
+  return kept.snapshot
+}
 
 /** The server's row for P's hole: upsert by (round, player, hole), as the table's unique key does. */
 function serverWrite(fields: Record<string, unknown>) {
@@ -53,18 +62,27 @@ function serverWrite(fields: Record<string, unknown>) {
   return structuredClone(row)
 }
 
-/** A push that waits for `release`, with `inFlight` once it started; `fail` makes it a refusal. */
+/** Pushes still waiting at the end of a test: failed then, so none holds the outbox's lock into the next (Node 24 has Web Locks). */
+const waiting: Array<() => void> = []
+/**
+ * A push that waits for `release`, with `inFlight` once it started. Released
+ * with the rows the server stored (what the push gets back), or refused with
+ * `fail`.
+ */
 function gatedPush(fail?: string) {
-  let release!: () => void
+  let release!: (rows: Array<Record<string, unknown>>) => void
+  let lose!: () => void
   let started!: () => void
-  const gate = new Promise<void>((r) => (release = r))
+  const gate = new Promise<Array<Record<string, unknown>>>((ok, no) => ((release = ok), (lose = () => no(new Error('TypeError: Failed to fetch')))))
   const inFlight = new Promise<void>((r) => (started = r))
+  waiting.push(lose)
   _outboxTest.setPush(async () => {
     started()
-    await gate
+    const rows = await gate
     if (fail) throw new Error(fail)
+    return rows.map((row) => ({ table: 'scores', eventType: 'UPDATE' as const, new: row, old: {} }))
   })
-  return { release: () => release(), inFlight }
+  return { release: (rows: Array<Record<string, unknown>> = []) => release(rows), inFlight }
 }
 
 beforeEach(async () => {
@@ -75,7 +93,9 @@ beforeEach(async () => {
   channel().status!('SUBSCRIBED')
   await vi.waitFor(() => expect(reads()).toBe(2))
 })
-afterEach(() => {
+afterEach(async () => {
+  for (const lose of waiting.splice(0)) lose()
+  await vi.waitFor(() => expect(useOutbox.getState().syncing).toBe(false))
   store().unsubscribe()
   useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
 })
@@ -87,17 +107,18 @@ describe('another phone saves the same hole while this one’s save is out', () 
     await inFlight
     expect(shown()).toMatchObject({ strokes: 5 })
     // This phone's write lands on the server; its own event comes back.
-    emit('scores', { eventType: 'UPDATE', new: serverWrite({ strokes: 5, putts: 2, entered_by: A, updated_at: '2027-04-09T12:00:01.000000+00:00' }), old: {} })
+    const ours = serverWrite({ strokes: 5, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:01.000000+00:00' })
+    emit('scores', { eventType: 'UPDATE', new: ours, old: {} })
     // Another phone's write lands after it (the server's final value), flagged.
     emit('scores', {
       eventType: 'UPDATE',
-      new: serverWrite({ strokes: 7, putts: 2, entered_by: B, updated_at: '2027-04-09T12:00:02.000000+00:00', disputed: true, previous: { strokes: 5, putts: 2, picked_up: false, entered_by: A } }),
+      new: serverWrite({ strokes: 7, putts: 2, entered_by: B, updated_at: '2027-04-09T18:00:02.000000+00:00', disputed: true, previous: { strokes: 5, putts: 2, picked_up: false, entered_by: A } }),
       old: {},
     })
     await sleep(60)
     // While this phone's write is out, its own value shows.
     expect(shown()).toMatchObject({ strokes: 5 })
-    release()
+    release([ours])
     await saving
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
     await sleep(100)
@@ -105,18 +126,15 @@ describe('another phone saves the same hole while this one’s save is out', () 
   })
 
   it('its own echo coming back before the answer: the discrepancy the server flagged shows once it is taken', async () => {
-    serverWrite({ strokes: 6, putts: 2, entered_by: B, updated_at: '2027-04-09T11:59:00.000000+00:00' })
+    serverWrite({ strokes: 6, putts: 2, entered_by: B, updated_at: '2027-04-09T17:59:00.000000+00:00' })
     await store().reload()
     const { release, inFlight } = gatedPush()
     const saving = save(5)
     await inFlight
-    emit('scores', {
-      eventType: 'UPDATE',
-      new: serverWrite({ strokes: 5, putts: 2, entered_by: A, updated_at: '2027-04-09T12:00:01.000000+00:00', disputed: true, previous: { strokes: 6, putts: 2, picked_up: false, entered_by: B } }),
-      old: {},
-    })
+    const ours = serverWrite({ strokes: 5, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:01.000000+00:00', disputed: true, previous: { strokes: 6, putts: 2, picked_up: false, entered_by: B } })
+    emit('scores', { eventType: 'UPDATE', new: ours, old: {} })
     await sleep(60)
-    release()
+    release([ours])
     await saving
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
     await sleep(100)
@@ -131,16 +149,29 @@ describe('a write taken before its echo is back', () => {
     const { release, inFlight } = gatedPush()
     const saving = save(8)
     await inFlight
-    release()
+    release([serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' })])
     await saving
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
     // Taken, and no event yet: the server's rows hold it now.
     expect(before).not.toBe(8)
     expect(shown()).toMatchObject({ strokes: 8 })
     expect(inBase()).toMatchObject({ strokes: 8 })
-    emit('scores', { eventType: 'UPDATE', new: serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T12:00:03.000000+00:00' }), old: {} })
+    // With the id and time the server gave it, before its echo comes.
+    expect(inBase()).toMatchObject({ id: 'srv-row', strokes: 8, updatedAt: '2027-04-09T18:00:03.000000+00:00' })
+    emit('scores', { eventType: 'UPDATE', new: serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' }), old: {} })
     await sleep(80)
-    expect(inBase()).toMatchObject({ id: 'srv-row', strokes: 8, updatedAt: '2027-04-09T12:00:03.000000+00:00' })
+    expect(inBase()).toMatchObject({ id: 'srv-row', strokes: 8, updatedAt: '2027-04-09T18:00:03.000000+00:00' })
+  })
+
+  it('and keeps it on the phone’s copy, without waiting for its echo', async () => {
+    const { release, inFlight } = gatedPush()
+    const saving = save(8)
+    await inFlight
+    release([serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' })])
+    await saving
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    await sleep(1700)
+    expect((await keptCopy()).scores.find(key)).toMatchObject({ id: 'srv-row', strokes: 8 })
   })
 })
 
@@ -153,15 +184,24 @@ describe('what is not the server’s stays off the server’s rows', () => {
     // A change elsewhere saves the boards on the phone.
     emit('payments', { eventType: 'UPDATE', new: structuredClone(server.tables.payments![0]!), old: {} })
     await sleep(1700)
-    const db = new Dexie('cardi-golf-cache')
-    db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })
-    const kept = (await db.table('snapshots').get(TID)) as { snapshot: { scores: Array<{ roundId: string; playerId: string; hole: number; strokes: number | null }> } }
-    db.close()
-    expect(kept.snapshot.scores.find(key)?.strokes ?? null).not.toBe(9)
+    expect((await keptCopy()).scores.find(key)?.strokes ?? null).not.toBe(9)
     // And a full reload lays it over what it brings, still unsent.
     await store().reload()
     expect(shown()).toMatchObject({ strokes: 9 })
     expect(inBase()?.strokes ?? null).not.toBe(9)
+  })
+
+  it('a card signature and a snake answer waiting to go out show on the boards, and neither is in the server’s rows', async () => {
+    gatedPush()
+    const base = () => store().data!.base
+    const pair = fx.snapshot.pairs.find((p) => (p.player1Id === P || p.player2Id === P) && !base().cardSignatures.some((c) => c.roundId === round.id && c.pairId === p.id))!
+    const hole = [...Array(18).keys()].map((i) => i + 1).find((h) => !base().snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === h))!
+    const signed = (s: Snapshot) => s.cardSignatures.some((c) => c.roundId === round.id && c.pairId === pair.id)
+    const answered = (s: Snapshot) => s.snakeTiebreaks.some((x) => x.roundId === round.id && x.groupId === group.id && x.hole === hole)
+    void enqueueSignature(TID, { round_id: round.id, pair_id: pair.id, signed_by: A })
+    void enqueueTiebreak(TID, { round_id: round.id, group_id: group.id, hole, last_holed_player_id: P, decided_by: A })
+    await vi.waitFor(() => expect([signed(store().data!.snapshot), answered(store().data!.snapshot)]).toEqual([true, true]))
+    expect([signed(base()), answered(base())]).toEqual([false, false])
   })
 
   it('a write the server took, patched in while a hole waits to go out, does not carry the hole into the server’s rows', async () => {
@@ -194,7 +234,7 @@ describe('what is not the server’s stays off the server’s rows', () => {
 
 describe('the queue read after the boards went up (a restart)', () => {
   it('its holes show on the boards the phone opened with', async () => {
-    _outboxTest.setPush(() => new Promise(() => undefined))
+    gatedPush()
     await _outboxTest.enqueue({ key: `score:${round.id}:${P}:${HOLE}`, kind: 'score', tournamentId: TID, payload: { round_id: round.id, player_id: P, hole: HOLE, strokes: 10, putts: 3, picked_up: false, entered_by: A, client_ts: '2027-04-09T12:00:00.000Z' }, attempts: 0, createdAt: Date.now() } as never)
     // The app restarts: the queue is only in IndexedDB, and the boards go up from the phone's copy first.
     const copy = structuredClone(store().data!.base)

@@ -24,7 +24,7 @@ import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { REALTIME_TABLES } from './realtimeTables'
-import { APPLIED_TABLES, applyChange, inLiveOrder, type LiveChange } from './realtimeApply'
+import { APPLIED_TABLES, applyChange, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 import { onCacheCleared, saveSnapshot } from './snapshotCache'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import {
@@ -102,11 +102,13 @@ interface StoreState {
   /** Recompute from the server's rows with the outbox as it is now (a write queued, sent or refused). */
   refresh(): void
   /**
-   * A write the outbox sent was taken. With `fn`, the server's rows take it
-   * now (no live change answered for that key since it was sent: its own
-   * event is still on its way); without, the live change already did.
+   * A write of this phone the server took, as the server stored it (the rows
+   * the push got back): applied to the server's rows like a live change,
+   * except the ones the channel already brought since `since` (their echo:
+   * anything after it is newer). Logged like a live change, so a fetch on its
+   * way does not take it back.
    */
-  land(tournamentId: string, fn: ((s: Snapshot) => void) | null): void
+  landChanges(tournamentId: string, changes: LiveChange[], since: number): void
 }
 
 let channel: RealtimeChannel | null = null
@@ -132,6 +134,8 @@ let applyTimer: ReturnType<typeof setTimeout> | null = null
 let changeSeq = 0
 const changeLog: Array<{ seq: number; at: number; change: LiveChange }> = []
 const LOG_MS = 2 * 60_000
+/** A ceiling on the log, far above a burst (a tournament deleted or restored elsewhere sends every one of its deletes to every phone). */
+const LOG_MAX = 10_000
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 /**
  * Changes of a round or lot this phone has not loaded: another tournament's
@@ -141,10 +145,18 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
  */
 let parked: Array<{ at: number; change: LiveChange }> = []
 const PARK_MS = 2 * 60_000
-const PARK_MAX = 500
+/** Far above what another tournament's traffic brings in PARK_MS (an account in two live tournaments hears both). */
+const PARK_MAX = 5_000
 function park(change: LiveChange, at: number) {
   parked.push({ at, change })
   if (parked.length > PARK_MAX) parked = parked.slice(-PARK_MAX)
+}
+/** A delete forgets what was parked for its row: placed later, the row would come back (round-1 repro G). */
+function unpark(key: LiveChange) {
+  const k = key.old
+  const names = Object.keys(k)
+  if (!names.length) return
+  parked = parked.filter(({ change }) => change.table !== key.table || !names.every((n) => change.new[n] === k[n]))
 }
 /** The parked changes still worth trying, oldest first; the list is emptied (what still waits is parked again). */
 function takeParked(now: number) {
@@ -170,11 +182,13 @@ function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number
   for (const { at, change } of changes) {
     const r = applyChange(s, tournamentId, change)
     if (r === 'applied') applied++
-    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE')) changeLog.push({ seq: ++changeSeq, at: now, change })
+    if (change.eventType === 'DELETE') unpark(change)
+    // A delete of a row the boards do not hold matters only to a fetch on its way, which may have read the row before it.
+    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE' && fetching > 0)) changeLog.push({ seq: ++changeSeq, at: now, change })
     else if (r === 'unknown') park(change, at)
     else if (r === 'reload') reload = true
   }
-  while (changeLog.length && (changeLog.length > 1000 || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
+  while (changeLog.length && (changeLog.length > LOG_MAX || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
   return { applied, reload }
 }
 
@@ -226,9 +240,16 @@ export function liveSeq(): number {
 export function liveChangesSince(seq: number): LiveChange[] {
   return changeLog.filter((x) => x.seq > seq).map((x) => x.change)
 }
+/** For tests: how much the log and the parked list hold, and the fetches on their way. */
+export const _liveTest = { logSize: () => changeLog.length, parkedSize: () => parked.length, fetching: () => fetching, LOG_MAX, PARK_MAX }
 
 /** When the boards last came from a fetch: a long quiet stretch on a live channel is checked against the server (`HEAL_MS`). */
 let lastFetchAt = 0
+/** Fetches on their way: the heal waits for them, and a delete is logged only for them. */
+let fetching = 0
+/** When the heal last asked, and how long it waits after a fetch that failed (doubling to HEAL_MAX_MS). */
+let healAskedAt = 0
+let healWait = 0
 /** Monotonic id so a slow older fetch never overwrites a newer snapshot. */
 let fetchSeq = 0
 let listenersOn = false
@@ -375,9 +396,12 @@ const POLL_MS = 15_000
  * While they are up, check the boards against the server after this long
  * without a fetch: a change Realtime lost, or one this phone could not place,
  * would otherwise stay until the next structural change or reconnect (the TV
- * is never hidden). Until changes carry a sequence (PLAN §5.2), this is the net.
+ * is never hidden). Until changes carry a sequence (PLAN §5.2), this is the
+ * net: one fetch in five minutes per visible phone, none while one is on its
+ * way, and after a fetch that failed the wait doubles (to 30 minutes).
  */
-export const HEAL_MS = 90_000
+export const HEAL_MS = 5 * 60_000
+const HEAL_MAX_MS = 30 * 60_000
 let healTimer: ReturnType<typeof setInterval> | null = null
 /** An errored channel never recovers by itself: rebuild it, backing off to this. */
 const RETRY_MIN_MS = 30_000
@@ -411,8 +435,9 @@ export const useTournament = create<StoreState>((set, get) => ({
     const seq = ++fetchSeq
     // The gate loads again on every resolve (back from Home, the PIN, a new session) while the channel stays live.
     const since = changeSeq
+    fetching++
     try {
-      const snapshot = await fetchSnapshot(tournamentId)
+      const snapshot = await fetchSnapshot(tournamentId).finally(() => fetching--)
       if (get().tournamentId !== tournamentId) return
       if (seq !== fetchSeq) {
         // A newer fetch of this tournament brings the boards (a reload a live change asked for); this load still owes the channel.
@@ -423,6 +448,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, tournamentId, since)
       lastFetchAt = Date.now()
+      healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       get().subscribe()
@@ -441,15 +467,19 @@ export const useTournament = create<StoreState>((set, get) => ({
     if (!id || id.startsWith('fixture:')) return
     const seq = ++fetchSeq
     const since = changeSeq
+    fetching++
     try {
-      const snapshot = await fetchSnapshot(id)
+      const snapshot = await fetchSnapshot(id).finally(() => fetching--)
       if (seq !== fetchSeq || get().tournamentId !== id) return
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, id, since)
       lastFetchAt = Date.now()
+      healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
     } catch (e) {
+      // The heal waits longer after each fetch that failed (a released device, a deleted tournament, a server down).
+      healWait = Math.min(Math.max(healWait * 2, HEAL_MS * 2), HEAL_MAX_MS)
       if (seq !== fetchSeq) return
       set({ error: humanError(e) })
     }
@@ -510,9 +540,15 @@ export const useTournament = create<StoreState>((set, get) => ({
     channel = ch
     healTimer ??= setInterval(() => {
       const st = get()
-      if (st.realtime !== 'live' || !st.data || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return
-      if (Date.now() - lastFetchAt >= HEAL_MS) void st.reload()
-    }, HEAL_MS / 6)
+      if (st.realtime !== 'live' || !st.data || fetching > 0 || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return
+      const now = Date.now()
+      // A clock set back counts as time gone by: the check comes, instead of waiting for the clock to catch up.
+      const quiet = now - lastFetchAt
+      const waited = now - healAskedAt
+      if ((quiet >= 0 && quiet < HEAL_MS) || (healWait > 0 && waited >= 0 && waited < healWait)) return
+      healAskedAt = now
+      void st.reload()
+    }, HEAL_MS / 20)
     ch.subscribe((status) => {
       if (channel !== ch) return
       const live = status === 'SUBSCRIBED'
@@ -569,15 +605,20 @@ export const useTournament = create<StoreState>((set, get) => ({
     const d = get().data
     if (d) set({ data: compute(d.base, d.playersKey) })
   },
-  land(tournamentId, fn) {
+  landChanges(tournamentId, changes, since) {
     const st = get()
     const d = st.data
     if (st.tournamentId !== tournamentId || !d) return
-    if (!fn) return st.refresh()
+    // Events come in commit order: once a row's echo is in, what came after it is newer, and is in too.
+    const heard = liveChangesSince(since)
+    const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
+    if (!fresh.length) return st.refresh()
     const next = structuredClone(d.base)
-    fn(next)
+    const now = Date.now()
+    const { reload } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change })), now)
     set({ data: compute(next, d.playersKey) })
     if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
+    if (reload) scheduleReload()
   },
 }))
 

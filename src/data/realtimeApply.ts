@@ -88,6 +88,8 @@ interface Spec<T> {
   /** The order a fetch returns the table in (`SNAPSHOT_KEYS`), on the snapshot's own fields. */
   order(a: T, b: T): number
   map(row: Row): T
+  /** Whether the row held is newer than the one coming (a write this phone landed, replayed after a fetch that read a later one). */
+  stale?(held: T, coming: T): boolean
 }
 const spec = <T>(x: Spec<T>) => x as unknown as Spec<unknown>
 
@@ -104,6 +106,20 @@ function byFields<T>(...fields: Array<(x: T) => string | number | null | undefin
   }
 }
 
+/**
+ * A timestamp as the database wrote it, in one form whatever carried it: the
+ * live channel and PostgREST both write ISO 8601, but a space for the T, a
+ * short offset or a shorter fraction must not make two equal times differ.
+ * Times of one database share its offset, so the forms also sort in time.
+ */
+export function canonicalTime(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)?$/.exec(v)
+  if (!m) return v
+  const tz = !m[4] || m[4] === 'Z' ? '+00:00' : m[4].length === 3 ? `${m[4]}:00` : m[4].includes(':') ? m[4] : `${m[4].slice(0, 3)}:${m[4].slice(3)}`
+  return `${m[1]}T${m[2]}.${(m[3] ?? '').padEnd(6, '0').slice(0, 6)}${tz}`
+}
+
 const SPECS: Record<AppliedTable, Spec<unknown>> = {
   scores: spec({
     scope: 'round',
@@ -114,6 +130,12 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     deletes: (x, k) => x.id != null && x.id === k.id,
     order: byFields((x) => x.id),
     map: mapScore,
+    // The server stamps every write of a hole (scores_touch): an earlier stamp is older news.
+    stale: (held, coming) => {
+      const a = canonicalTime(held.updatedAt)
+      const b = canonicalTime(coming.updatedAt)
+      return !!a && !!b && a > b
+    },
   }),
   snake_tiebreaks: spec({
     scope: 'round',
@@ -155,7 +177,15 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     order: byFields((x) => x.roundId, (x) => x.playerId),
     map: mapRoundTee,
   }),
-  payments: spec({ scope: 'tournament', get: (s) => s.payments, set: (s, l) => (s.payments = l), same: (x, r) => x.id === r.id, order: byFields((x) => x.id), map: mapPayment }),
+  payments: spec({
+    scope: 'tournament',
+    get: (s) => s.payments,
+    set: (s, l) => (s.payments = l),
+    // One row per flow (payments_flow_key, nulls not distinct): a mark Dinero laid with a local id is the row the server made.
+    same: (x, r) => x.id === r.id || (r.kind !== undefined && x.kind === r.kind && (x.fromPlayerId ?? null) === (r.from_player_id ?? null) && (x.toPlayerId ?? null) === (r.to_player_id ?? null)),
+    order: byFields((x) => x.id),
+    map: mapPayment,
+  }),
   calcutta_lots: spec({ scope: 'tournament', get: (s) => s.calcuttaLots, set: (s, l) => (s.calcuttaLots = l), same: (x, r) => x.id === r.id, order: byFields((x) => x.id), map: mapLot }),
   calcutta_bids: spec({ scope: 'lot', get: (s) => s.calcuttaBids, set: (s, l) => (s.calcuttaBids = l), same: (x, r) => x.id === r.id, order: byFields((x) => x.id), map: mapBid }),
   calcutta_buybacks: spec({ scope: 'lot', get: (s) => s.calcuttaBuybacks, set: (s, l) => (s.calcuttaBuybacks = l), same: (x, r) => x.lotId === r.lot_id, order: byFields((x) => x.lotId), map: mapBuyback }),
@@ -194,10 +224,23 @@ function owner(s: Snapshot, tournamentId: string, scope: Scope, row: Row): true 
   return s.calcuttaLots.some((l) => l.id === row.lot_id) ? true : undefined
 }
 
-/** Whether a change is about a row this predicate picks: for the outbox, which asks whether the server answered for a write it sent. */
-export function changeTouches(c: LiveChange, table: string, match: (row: Row) => boolean): boolean {
-  if (c.table !== table) return false
-  return match((c.eventType === 'DELETE' ? c.old : c.new) ?? {})
+const sameValue = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true
+  if (typeof a === 'string' && typeof b === 'string') return canonicalTime(a) === canonicalTime(b)
+  return a != null && b != null && typeof a === 'object' && JSON.stringify(a) === JSON.stringify(b)
+}
+/**
+ * Whether the channel's change `heard` is the server's own record of
+ * `stored`: the same table, the same row, every value `stored` names equal (a
+ * write's echo). For a write this phone made, what the push got back is
+ * `stored`.
+ */
+export function sameChange(heard: LiveChange, stored: LiveChange): boolean {
+  if (heard.table !== stored.table || (heard.eventType === 'DELETE') !== (stored.eventType === 'DELETE')) return false
+  const x = (heard.eventType === 'DELETE' ? heard.old : heard.new) ?? {}
+  const y = (stored.eventType === 'DELETE' ? stored.old : stored.new) ?? {}
+  const keys = Object.keys(y)
+  return keys.length > 0 && keys.every((k) => sameValue(x[k], y[k]))
 }
 
 /**
@@ -226,6 +269,7 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange): A
   if (where === undefined) return 'unknown'
   const mapped = sp.map(row)
   const at = list.findIndex((x) => sp.same(x, row))
+  if (at >= 0 && sp.stale?.(list[at], mapped)) return 'ignored'
   if (at >= 0 && sp.order(list[at], mapped) === 0) {
     // An update keeps its place.
     sp.set(s, [...list.slice(0, at), mapped, ...list.slice(at + 1)])

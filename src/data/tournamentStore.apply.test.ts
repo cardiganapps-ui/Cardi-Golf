@@ -18,7 +18,7 @@ let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { useTournament, HEAL_MS } = await import('./tournamentStore')
-const { clearCached } = await import('./snapshotCache')
+const { clearAllCached, clearCached } = await import('./snapshotCache')
 
 const fx = getFixture('full12-live')!
 const TID = fx.snapshot.tournament.id
@@ -364,6 +364,20 @@ describe('leaving a tournament', () => {
     emit('payments', { eventType: 'UPDATE', new: { ...pay }, old: {} })
     await sleep(100)
     await clearCached(TID)
+    await sleep(1700)
+    const db = new Dexie('cardi-golf-cache')
+    db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })
+    const back = await db.table('snapshots').get(TID)
+    db.close()
+    expect(back).toBeUndefined()
+  })
+
+  it('nor after a sign-out, which forgets every tournament on the phone', async () => {
+    const pay = server.tables.payments![0]!
+    pay.paid = !pay.paid
+    emit('payments', { eventType: 'UPDATE', new: { ...pay }, old: {} })
+    await sleep(100)
+    await clearAllCached()
     await sleep(1700)
     const db = new Dexie('cardi-golf-cache')
     db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })

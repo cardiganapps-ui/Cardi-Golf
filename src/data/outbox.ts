@@ -13,8 +13,9 @@ import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
-import { liveChangesSince, liveSeq, registerOverlay, useTournament } from './tournamentStore'
-import { changeTouches, type LiveChange } from './realtimeApply'
+import { liveSeq, registerOverlay, useTournament } from './tournamentStore'
+import type { LiveChange } from './realtimeApply'
+import type { Row } from './mappers'
 
 /**
  * `seq` identifies this version of the write: a newer write to the same key
@@ -392,24 +393,6 @@ function overlayItem(s: Snapshot, it: OutboxItem): void {
   }
 }
 
-/** Whether a live change is the server's word on this write's key (its own echo, or a later write). */
-function answers(c: LiveChange, it: OutboxItem): boolean {
-  if (it.kind === 'score') {
-    const p = it.payload
-    return changeTouches(c, 'scores', (r) => r.round_id === p.round_id && r.player_id === p.player_id && r.hole === p.hole)
-  }
-  if (it.kind === 'tiebreak') {
-    const p = it.payload
-    return changeTouches(c, 'snake_tiebreaks', (r) => r.round_id === p.round_id && r.group_id === p.group_id && r.hole === p.hole)
-  }
-  if (it.kind === 'award') {
-    const p = it.payload
-    return changeTouches(c, 'hole_awards', (r) => r.round_id === p.round_id && r.game_id === p.game_id && r.hole === p.hole)
-  }
-  const p = it.payload
-  return changeTouches(c, 'card_signatures', (r) => r.round_id === p.round_id && r.pair_id === p.pair_id)
-}
-
 /** The phone could not keep the write (quota, storage pressure, private mode): the hole is not saved anywhere. */
 export class OutboxStorageError extends UserError {
   constructor() {
@@ -480,10 +463,21 @@ function announce() {
     // A closed channel: the other tabs reload on their next start.
   }
 }
+/** A write the server took, as it stored it: the other tabs show it before their own echo comes. */
+function announceLanded(tournamentId: string, changes: LiveChange[]) {
+  try {
+    channel?.postMessage({ landed: { tournamentId, changes } })
+  } catch {
+    // A closed channel: the other tabs get the echo.
+  }
+}
 function listen() {
   if (typeof BroadcastChannel === 'undefined' || channel) return
   channel = new BroadcastChannel(CHANNEL)
-  channel.onmessage = () => {
+  channel.onmessage = (e: MessageEvent) => {
+    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[] } } | null)?.landed
+    // Its echo may be in already: the whole log is checked (since 0).
+    if (landed) return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0)
     void loadQueue().then(() => void flush())
   }
 }
@@ -508,9 +502,9 @@ export function enqueueSignature(tournamentId: string, payload: SignaturePayload
 }
 
 /** Replaceable for tests. */
-let pushImpl: (item: OutboxItem) => Promise<void> = push
+let pushImpl: (item: OutboxItem) => Promise<LiveChange[] | void> = push
 export const _outboxTest = {
-  setPush(fn: (item: OutboxItem) => Promise<void>) {
+  setPush(fn: (item: OutboxItem) => Promise<LiveChange[] | void>) {
     pushImpl = fn
   },
   /** Replace the Web Locks manager (null: none). */
@@ -560,34 +554,53 @@ async function sessionToken(sb: SupabaseClient): Promise<string> {
   return token
 }
 
-async function push(item: OutboxItem): Promise<void> {
+/** Rows the server says it stored, as the live changes they are (`select()` after a write: what the database holds now). */
+const stored = (table: string, rows: Row[] | null): LiveChange[] => (rows ?? []).map((row) => ({ table, eventType: 'UPDATE', new: row, old: {} }))
+
+/**
+ * Send one write. What comes back is what the server stored (each request
+ * asks for its rows back), so the store can put exactly that on the boards
+ * once the write is taken (REL-11): not this phone's version of it, which
+ * the server's triggers may have changed (a discrepancy flagged, the id and
+ * time it gave the row).
+ */
+async function push(item: OutboxItem): Promise<LiveChange[]> {
   const sb = supabase()
   // Every request of this push carries the token checked here, whatever the session does meanwhile.
   const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'score') {
-    const { error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).setHeader('Authorization', auth)
+    const { data, error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).select().setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
-  } else if (item.kind === 'tiebreak') {
-    const { error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).setHeader('Authorization', auth)
-    if (error) throw new Error(error.message)
-  } else if (item.kind === 'award') {
-    const p = item.payload
-    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).setHeader('Authorization', auth)
-    if (del.error) throw new Error(del.error.message)
-    if (p.player_ids.length) {
-      const { error } = await sb
-        .from('hole_awards')
-        .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
-        .setHeader('Authorization', auth)
-      if (error) throw new Error(error.message)
-    }
-  } else if (item.kind === 'signature') {
-    const { error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).setHeader('Authorization', auth)
-    if (error) throw new Error(error.message)
-  } else {
-    // Never reached: the flush skips kinds this build does not know.
-    throw new Error(`unknown outbox kind ${(item as { kind: string }).kind}`)
+    return stored('scores', data)
   }
+  if (item.kind === 'tiebreak') {
+    const { data, error } = await sb.from('snake_tiebreaks').upsert(item.payload, { onConflict: 'round_id,group_id,hole' }).select().setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return stored('snake_tiebreaks', data)
+  }
+  if (item.kind === 'award') {
+    const p = item.payload
+    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).select().setHeader('Authorization', auth)
+    if (del.error) throw new Error(del.error.message)
+    // The winners it took away, by the key a delete names; then the ones it put in.
+    const gone: LiveChange[] = (del.data ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id } }))
+    if (!p.player_ids.length) return gone
+    const { data, error } = await sb
+      .from('hole_awards')
+      .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
+      .select()
+      .setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return [...gone, ...stored('hole_awards', data)]
+  }
+  if (item.kind === 'signature') {
+    // A card the other phone signed first comes back empty: its signature is the one that stands.
+    const { data, error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).select().setHeader('Authorization', auth)
+    if (error) throw new Error(error.message)
+    return stored('card_signatures', data)
+  }
+  // Never reached: the flush skips kinds this build does not know.
+  throw new Error(`unknown outbox kind ${(item as { kind: string }).kind}`)
 }
 
 /** Errors the server will keep rejecting (RLS, constraint): drop the item instead of retrying forever. */
@@ -664,19 +677,20 @@ async function runFlush(): Promise<boolean> {
       const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
       if (!item) break
       tried.add(item.seq)
-      // What the server says about this key from now on is newer than what the boards hold.
+      // The channel's changes from now on may be this write's echo.
       const since = liveSeq()
       try {
-        await pushImpl(item)
+        const rows = (await pushImpl(item)) ?? []
         if (isCurrent(item)) {
           queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
           await deleteStored(item)
           announce()
-          // Taken: the server's rows take it now, unless the server already said
-          // something about that key since it went (its own echo, or a later write).
-          const answered = liveChangesSince(since).some((c) => answers(c, item))
-          useTournament.getState().land(item.tournamentId, answered ? null : (s) => overlayItem(s, item))
         }
+        // Taken: the server's rows hold what it stored, unless its echo is in
+        // already (whatever came after the echo is newer, and is in too). A
+        // newer version still queued shows over it until it goes.
+        useTournament.getState().landChanges(item.tournamentId, rows, since)
+        if (rows.length) announceLanded(item.tournamentId, rows)
         publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
