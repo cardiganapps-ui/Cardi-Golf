@@ -132,7 +132,8 @@ export const individualModule: GameModule<IndividualState> = {
       const neighbour = ranked[i - 1]
       let countbackWhy: Explanation | null = null
       if (neighbour && rankValue(neighbour.item) === rankValue(r.item)) {
-        countbackWhy = explainCountback(ctx, standings, neighbour.item, r.item, nameOf, r.tied, format.higherIsBetter(ctx.settings))
+        // Tied with the row above only when they share its place: a T2 row below a 1st won on countback is «Desempate».
+        countbackWhy = explainCountback(ctx, standings, neighbour.item, r.item, nameOf, neighbour.position === r.position, format.higherIsBetter(ctx.settings))
       }
       return {
         playerId: r.item,
@@ -219,8 +220,23 @@ function explainCountback(
   const empty = { pointsByHole: new Map<number, number>(), holes: 18 }
   const cb = countback(standings.countback[aboveId] ?? empty, standings.countback[id] ?? empty)
   const figure = (n: number) => (up ? withTrueMinus(n) : toParText(-n))
+  const title = tied ? `Empate con ${nameOf(aboveId)}` : `Desempate con ${nameOf(aboveId)}`
+  if (ctx.settings.modules.individual.format === 'matchPlay') {
+    // Match play's countback is the last day's match, holes up (the Reglamento says so), not the last holes' scores.
+    const a = standings.countback[aboveId]?.pointsByHole.get(1) ?? 0
+    const b = standings.countback[id]?.pointsByHole.get(1) ?? 0
+    const ups = (n: number) => (n > 0 ? `${n} arriba` : n < 0 ? `${-n} abajo` : 'empatado')
+    return {
+      title,
+      steps: [
+        `Iguales en puntos de partido`,
+        `Día ${lastN}, cómo terminó su partido: ${nameOf(aboveId)} ${ups(a)}${t.common.versus}${nameOf(id)} ${ups(b)}`,
+        ...(a === b ? ['Iguales: se reparten los premios de los lugares que ocupan.'] : []),
+      ],
+    }
+  }
   const why: Explanation = {
-    title: tied ? `Empate con ${nameOf(aboveId)}` : `Desempate con ${nameOf(aboveId)}`,
+    title,
     steps: cb.steps.map((s) => `Día ${lastN}, ${s.label}: ${nameOf(aboveId)} ${figure(s.a)}${t.common.versus}${nameOf(id)} ${figure(s.b)}`),
   }
   if (cb.result === 0) why.steps.push(`Iguales hasta el hoyo ${lastHole}: se reparten los premios.`)

@@ -15,7 +15,7 @@ import { useTournamentProfiles } from '../../data/profiles'
 import { useTournamentCtx } from './TournamentGate'
 import { formatMoney } from '../../lib/money'
 import type { Explanation } from '../../engine/types'
-import { figureKind, mainScoring, strokesWhy, type Figure } from '../../engine/formats'
+import { figureKind, holeStrokes, mainScoring, strokesWhy, type Figure } from '../../engine/formats'
 import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
@@ -56,7 +56,8 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   }, [rounds])
   if (!data || !p) return null
   const { snapshot, state, settings } = data
-  const pair = snapshot.pairs.find((x) => x.player1Id === p.id || x.player2Id === p.id)
+  // The pairs game's pair, under its label; a team format's pairs are teams, named in the header.
+  const pair = settings.modules.pairs.enabled ? snapshot.pairs.find((x) => x.player1Id === p.id || x.player2Id === p.id) : undefined
   const partner = pair ? snapshot.players.find((x) => x.id === (pair.player1Id === p.id ? pair.player2Id : pair.player1Id)) : null
   const auction = state.modules.auction
   const myLot = auction?.lots.find((l) => l.playerId === p.id && l.status === 'sold')
@@ -73,10 +74,11 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const team = row?.entrant.isTeam ? row.entrant : null
   /**
    * A day's figure as the board writes it, with its unit; a match's day is its
-   * result with its side («ganó 3&2»); a team player's day is his own card.
+   * result with its side («ganó 3&2», a fourball side's too); a team player's
+   * day in a strokes or points team event is his own card.
    */
   const dayFigure = (f: Figure | undefined, pr: PlayerRound) => {
-    if (team) return ownDayText(pr, scoring) ?? '—'
+    if (team && kind !== 'match') return ownDayText(pr, scoring) ?? '—'
     if (scoring === 'points') return t.common.figure(String(pr.points), pr.points, 'points')
     return !f || f.empty ? '—' : kind === 'match' ? dayFigureText(f) : t.common.figure(f.text, f.value, kind)
   }
@@ -130,7 +132,17 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
                 <span className="help">{t.player.grossPutts(pr.gross, pr.putts)}</span>
               </div>
               <ScorecardGrid
-                holes={pr.holes.map<GridHole>((h) => ({ n: h.hole, par: h.par, si: h.strokeIndex, gross: h.played ? h.gross : null, pickedUp: h.played && h.pickedUp, pts: h.played ? h.points : undefined, putts: h.played ? h.putts : null }))}
+                holes={pr.holes.map<GridHole>((h) => ({
+                  n: h.hole,
+                  par: h.par,
+                  si: h.strokeIndex,
+                  gross: h.played ? h.gross : null,
+                  pickedUp: h.played && h.pickedUp,
+                  // Where the event counts strokes, a pick-up counts as net double bogey in the total too (STRAT-03).
+                  counted: scoring !== 'points' && h.played ? holeStrokes(h, false) : undefined,
+                  pts: h.played ? h.points : undefined,
+                  putts: h.played ? h.putts : null,
+                }))}
                 playerLabel={p.displayName}
                 showPoints={showPoints}
                 showPutts

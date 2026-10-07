@@ -8,7 +8,7 @@ import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'
-import { figureKind, mainScoring } from '../engine/formats'
+import { figureKind, mainScoring, type Figure } from '../engine/formats'
 import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
@@ -80,6 +80,12 @@ function Card({ what }: { what: ShareKind }) {
   )
   if (what.kind === 'leaderboard') {
     const rows = state.modules.individual?.rows ?? []
+    // Days add up only in points («36 + 38»); strokes and matches list the days they played («−11, +5», «ganó 6&5»).
+    const points = figureKind(settings) === 'points'
+    const daysText = (days: Figure[]) => {
+      const played = days.filter((f) => !f.empty).map(dayFigureText)
+      return points ? t.common.plusList(played) : played.join(', ')
+    }
     return (
       <>
         {header(`${settings.modules.individual.label}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
@@ -91,7 +97,7 @@ function Card({ what }: { what: ShareKind }) {
               <div key={r.playerId} className={styles.row}>
                 <span className={styles.pos}>{r.label}</span>
                 <span className={styles.name}>{r.entrant.isTeam ? r.entrant.name : nameOf(r.playerId)}</span>
-                <span className={styles.small}>{t.common.plusList(r.perRound.map(dayFigureText))}</span>
+                <span className={styles.small}>{daysText(r.perRound)}</span>
                 <span className={styles.big}>{r.figure.text}</span>
                 <span className={styles.cash}>{cash > 0 ? formatMoney(cash) : ''}</span>
               </div>
@@ -116,8 +122,8 @@ function Card({ what }: { what: ShareKind }) {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
           const day = row?.perRound[i]
-          // His own card: a team's day is the team's, his is his own score (STRAT-03).
-          const dayFigure = row?.entrant.isTeam
+          // His own card: in a team's strokes or points event his day is his own score; a match's day, a fourball side's too, is its result (STRAT-03).
+          const dayFigure = row?.entrant.isTeam && kind !== 'match'
             ? ownDayText(pr, scoring)
             : scoring === 'points'
               ? t.common.figure(String(pr.points), pr.points, 'points')

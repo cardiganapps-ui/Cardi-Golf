@@ -61,3 +61,12 @@ export function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
       return e.scoring === 'points' ? t.feed.honoreeHole(nameOf(e.playerId), e.hole, e.points) : t.feed.honoreeToPar(nameOf(e.playerId), e.hole, e.toPar, e.scoring === 'net')
   }
 }
+
+/**
+ * A feed event's key in a list. The close's lead change sits on the last hole
+ * too, beside any save there, so it keys apart: two children with one key
+ * made React drop or repeat a line of the ticker.
+ */
+export function feedKey(e: FeedEvent): string {
+  return `${e.kind}-${e.roundNumber}-${e.hole}-${e.playerId}${e.kind === 'leadChange' && e.close ? '-close' : ''}`
+}

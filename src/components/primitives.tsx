@@ -210,6 +210,12 @@ export interface GridHole {
   si: number
   gross: number | null
   pickedUp?: boolean
+  /**
+   * The gross strokes the hole counts in an event that counts strokes: a
+   * pick-up capped at net double bogey. Absent, a pick-up has no strokes, so
+   * the nine and the round show no gross total (it would leave the hole out).
+   */
+  counted?: number | null
   pts?: number
   putts?: number | null
 }
@@ -218,7 +224,9 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
   const front = holes.filter((h) => h.n <= 9)
   const back = holes.filter((h) => h.n > 9)
   const sum = (hs: GridHole[], f: (h: GridHole) => number | null | undefined) => hs.reduce((a, h) => a + (f(h) ?? 0), 0)
-  const played = (hs: GridHole[]) => hs.every((h) => h.gross != null || h.pickedUp)
+  // A hole's strokes toward the gross total; a pick-up counts only where the event says what it costs.
+  const strokes = (h: GridHole) => (h.counted !== undefined ? h.counted : h.pickedUp ? null : h.gross)
+  const grossTotal = (hs: GridHole[]) => (hs.every((h) => strokes(h) != null) ? sum(hs, strokes) : null)
   const mark = (h: GridHole) =>
     h.gross != null || h.pickedUp ? (
       onHole ? (
@@ -262,7 +270,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
           {hs.map((h) => (
             <td key={h.n}>{mark(h)}</td>
           ))}
-          <td className={`${s.gridTotal} ${s.fig}`}>{played(hs) ? sum(hs, (h) => h.gross) : ''}</td>
+          <td className={`${s.gridTotal} ${s.fig}`}>{grossTotal(hs) ?? ''}</td>
         </tr>
         {showPutts && (
           <tr className={s.gridMeta}>
@@ -292,7 +300,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
       {back.length > 0 && (
         <div className={s.gridTotals}>
           <span>
-            {t.common.total}: {played(holes) ? sum(holes, (h) => h.gross) : '–'} {t.player.gross.toLowerCase()}
+            {t.common.total}: {grossTotal(holes) ?? '–'} {t.player.gross.toLowerCase()}
           </span>
           {showPutts && (
             <span>

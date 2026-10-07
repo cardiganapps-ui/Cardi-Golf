@@ -102,6 +102,13 @@ export function LiveScreen() {
   const honoree = snapshot.players.find((p) => p.isHonoree)
   const honoreeRow = honoree ? rows.find((r) => r.entrant.playerIds.includes(honoree.id)) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
+  // «hoy» beside the board's total: his team's day in a team event (its total is the team's), else his own points.
+  const honoreeToday = (() => {
+    if (!honoree || !honoreeRow) return null
+    if (!honoreeRow.entrant.isTeam) return roundState?.[honoree.id]?.points ?? null
+    const day = round ? honoreeRow.perRound[state.core.roundIds.indexOf(round.id)] : undefined
+    return day && !day.empty ? day.value : null
+  })()
   // Play order matters: a group off the 10th is "on the 3rd" after hole 18 and holes 1–2.
   const groupOf = (pid: string) => (round ? snapshot.groups.find((g) => g.roundId === round.id && g.playerIds.includes(pid)) : undefined)
   const leadHole = (() => {
@@ -213,7 +220,7 @@ export function LiveScreen() {
             </span>
             <span className={styles.spotlightLine}>
               {scoring === 'points'
-                ? t.live.spotlight(honoreeRow.label, honoreeRow.total, roundState?.[honoree.id]?.points ?? null, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)
+                ? t.live.spotlight(honoreeRow.label, honoreeRow.total, honoreeToday, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)
                 : spotlightFigure(honoreeRow, lastHole(honoree.id))}
             </span>
           </span>

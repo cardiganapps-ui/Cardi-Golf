@@ -41,6 +41,8 @@ export type FeedEvent =
       /** The leader's total as the board writes it: «34» points, «−3» against par. */
       figure: string
       scoring: MainScoring
+      /** The board's last word at the close (`computeTournament`), not a save's. */
+      close?: true
     }
   | { kind: 'snakePass'; at: string | null; roundNumber: number; hole: number; playerId: Id; groupNumber: number }
   | {
@@ -114,11 +116,13 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
       } else if (v === bestValue) tie = true
     }
     // Points: nobody leads on zero. Strokes: a lead needs at least two cards.
+    // A tie in between changes nothing: the leader who retakes the lead alone
+    // was announced already (STRAT-03), so only a new name is a change.
     const real = points ? bestValue > 0 : totals.size > 1
     if (best && !tie && real && best !== leader) {
       leader = best
       events.push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, figure: points ? String(bestValue) : toParText(bestValue), scoring })
-    } else if (tie) leader = null
+    }
   }
 
   if (snake) {
