@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-02",
+  "updated": "2026-10-07",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -2617,7 +2617,7 @@
         "src/data/tournamentStore.property.test.ts"
       ],
       "verifiedBy": null,
-      "residual": "Receiving side done in #92: a saved hole reaches the other phones in the time Realtime takes to deliver it plus one recompute, with no fetch. This phone's own writes land as the server stored them (each push asks for its rows back), unless the channel already brought their echo, after which anything newer is in too; a fetch on its way never takes them back, and the app's other tabs land them too. Left before it is fixed: the outbox sends a foursome's four rows as four requests (220–1,440 ms apart on 4G in the verifier's run), so the other phones see them land one by one and recompute four times; one request per hole is the next change (after QA-06's tests land). Then the p95 under 2 s is measured on the e2e-stack job and in the field (telemetry, STRAT-02)."
+      "residual": "Receiving side done in #92: a saved hole reaches the other phones in the time Realtime takes to deliver it plus one recompute, with no fetch. This phone's own writes land as the server stored them (each push asks for its rows back), unless the channel already brought their echo, after which anything newer is in too. A landed row never replaces one held with a later stamp; a fetch that landed while the push was out may have read past it, so nothing lands and one more fetch shows the server; a fetch on its way never takes a landed row back. The app's other tabs land them too, under the same rules. Left before it is fixed: the outbox sends a foursome's four rows as four requests (220–1,440 ms apart on 4G in the verifier's run), so the other phones see them land one by one and recompute four times; one request per hole is the next change (after QA-06's tests land). Then the p95 under 2 s is measured on the e2e-stack job and in the field (telemetry, STRAT-02)."
     },
     {
       "id": "REL-13",

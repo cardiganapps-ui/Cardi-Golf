@@ -301,6 +301,29 @@ describe('a fetch on its way when a change lands', () => {
 })
 
 describe('leaving a tournament', () => {
+  it('a load still on its way when the tournament is left lands, and opens no channel (G1)', async () => {
+    store().unsubscribe()
+    const before = server.channels.length
+    const slow = server.hold()
+    const loading = store().load(TID)
+    await slow.received
+    // The gate goes (back to Mi Polo) while its load is out.
+    store().unsubscribe()
+    slow.release()
+    await loading
+    expect(server.channels.length).toBe(before)
+    expect(store().realtime).toBe('off')
+  })
+
+  it('a reload asked for just before leaving never goes out', async () => {
+    const n = reads()
+    // A structural change asks for a reload, 150 ms later.
+    emit('rounds', { eventType: 'UPDATE', new: { ...server.tables.rounds![0] }, old: {} })
+    store().unsubscribe()
+    await sleep(400)
+    expect(reads()).toBe(n)
+  })
+
   it('a change that waited for its day is forgotten with the channel: coming back, it never takes back what the fetch brings', async () => {
     vi.useFakeTimers()
     const playerId = group.playerIds[0]!

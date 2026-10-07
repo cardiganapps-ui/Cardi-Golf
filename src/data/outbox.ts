@@ -464,9 +464,9 @@ function announce() {
   }
 }
 /** A write the server took, as it stored it: the other tabs show it before their own echo comes. */
-function announceLanded(tournamentId: string, changes: LiveChange[]) {
+function announceLanded(tournamentId: string, changes: LiveChange[], sentAt: number) {
   try {
-    channel?.postMessage({ landed: { tournamentId, changes } })
+    channel?.postMessage({ landed: { tournamentId, changes, sentAt } })
   } catch {
     // A closed channel: the other tabs get the echo.
   }
@@ -475,9 +475,9 @@ function listen() {
   if (typeof BroadcastChannel === 'undefined' || channel) return
   channel = new BroadcastChannel(CHANNEL)
   channel.onmessage = (e: MessageEvent) => {
-    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[] } } | null)?.landed
-    // Its echo may be in already: the whole log is checked (since 0).
-    if (landed) return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0)
+    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[]; sentAt?: number } } | null)?.landed
+    // Its echo may be in already: the whole log is checked (since 0). The tabs share the phone's clock.
+    if (landed) return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, landed.sentAt ?? 0)
     void loadQueue().then(() => void flush())
   }
 }
@@ -677,8 +677,9 @@ async function runFlush(): Promise<boolean> {
       const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
       if (!item) break
       tried.add(item.seq)
-      // The channel's changes from now on may be this write's echo.
+      // The channel's changes from now on may be this write's echo, and a fetch that lands from now on may have read it.
       const since = liveSeq()
+      const sentAt = Date.now()
       try {
         const rows = (await pushImpl(item)) ?? []
         if (isCurrent(item)) {
@@ -689,8 +690,10 @@ async function runFlush(): Promise<boolean> {
         // Taken: the server's rows hold what it stored, unless its echo is in
         // already (whatever came after the echo is newer, and is in too). A
         // newer version still queued shows over it until it goes.
-        useTournament.getState().landChanges(item.tournamentId, rows, since)
-        if (rows.length) announceLanded(item.tournamentId, rows)
+        useTournament.getState().landChanges(item.tournamentId, rows, since, sentAt)
+        if (rows.length) announceLanded(item.tournamentId, rows, sentAt)
+        // A card the other pair's phone signed first comes back empty: its signature stands, and a fetch shows it before its echo does.
+        else if (item.kind === 'signature') void useTournament.getState().reload()
         publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)

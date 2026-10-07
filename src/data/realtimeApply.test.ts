@@ -225,6 +225,14 @@ describe('the same lists whichever way the rows came', () => {
     expect(sameChange(upd('scores', row), upd('scores', {}))).toBe(false)
   })
 
+  it('sameChange reads jsonb whatever order its keys come in: PostgREST and the Realtime server may list them differently (R4)', () => {
+    const previous = { strokes: 4, putts: 2, picked_up: false, entered_by: 'p2', updated_at: '2027-04-09T12:00:00+00:00' }
+    const row = { id: 's1', round_id: 'r1', player_id: 'p1', hole: 4, strokes: 5, disputed: true, previous }
+    const shuffled = { updated_at: previous.updated_at, entered_by: 'p2', picked_up: false, putts: 2, strokes: 4 }
+    expect(sameChange(upd('scores', { ...row, previous: shuffled }), upd('scores', row))).toBe(true)
+    expect(sameChange(upd('scores', { ...row, previous: { ...shuffled, putts: 3 } }), upd('scores', row))).toBe(false)
+  })
+
   it('canonicalTime writes one instant one way, and its forms sort in time', () => {
     expect(canonicalTime('2027-04-09 12:00:01+00')).toBe('2027-04-09T12:00:01.000000+00:00')
     expect(canonicalTime('2027-04-09T12:00:01.25Z')).toBe('2027-04-09T12:00:01.250000+00:00')
@@ -234,17 +242,27 @@ describe('the same lists whichever way the rows came', () => {
     expect(canonicalTime('2027-04-09T12:00:01.9+00:00')! < canonicalTime('2027-04-09 12:00:02+00')!).toBe(true)
   })
 
-  it('a score the server stamped earlier than the one held is not applied over it', () => {
+  it('a score this phone’s own write brought back, stamped earlier than the one held, is not applied over it', () => {
     const s = fx()
     const target = s.scores[2]!
     const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: false })
     expect(applyChange(s, T(s), at('2027-04-12T12:00:05+00:00', 7))).toBe('applied')
-    // A write this phone landed, replayed after a fetch that read the later one.
-    expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4))).toBe('ignored')
+    // A write this phone landed, its answer after a fetch that read the later one.
+    expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4), { landed: true })).toBe('ignored')
     const held = () => s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)
     expect(held()).toMatchObject({ strokes: 7 })
-    expect(applyChange(s, T(s), at('2027-04-12T12:00:06+00:00', 8))).toBe('applied')
+    expect(applyChange(s, T(s), at('2027-04-12T12:00:06+00:00', 8), { landed: true })).toBe('applied')
     expect(held()).toMatchObject({ strokes: 8 })
+  })
+
+  it('the channel’s changes apply in the order they come, whatever their stamps: a write that waited on the row’s lock commits last with the earlier stamp (R1)', () => {
+    const s = fx()
+    const target = s.scores[2]!
+    const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: true })
+    // B's transaction began later and committed first; A's began first, waited on B's lock, and committed last.
+    expect(applyChange(s, T(s), at('2027-10-03T10:48:28.840158+00:00', 4))).toBe('applied')
+    expect(applyChange(s, T(s), at('2027-10-03T10:48:28.534263+00:00', 7))).toBe('applied')
+    expect(s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)).toMatchObject({ strokes: 7 })
   })
 
   it('a payment Dinero laid with a local id is the row the server made for that flow, not a second one', () => {

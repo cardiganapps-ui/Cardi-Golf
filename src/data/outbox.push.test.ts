@@ -16,6 +16,8 @@ const srv = vi.hoisted(() => {
     /** The requests that asked for their rows back. */
     selected: [] as string[],
     landed: [] as Array<{ tournamentId: string; changes: unknown[]; since: number }>,
+    /** Fetches the outbox asked the store for. */
+    reloads: 0,
     client: null as unknown,
   }
   function request(table: string, method: string) {
@@ -53,7 +55,7 @@ vi.mock('./tournamentStore', () => ({
       tournamentId: 't1',
       patch: () => undefined,
       refresh: () => undefined,
-      reload: async () => undefined,
+      reload: async () => void srv.reloads++,
       landChanges: (tournamentId: string, changes: unknown[], since: number) => srv.landed.push({ tournamentId, changes, since }),
     }),
   },
@@ -71,6 +73,7 @@ beforeEach(() => {
   srv.answers.clear()
   srv.selected = []
   srv.landed = []
+  srv.reloads = 0
   useAuth.setState({ user: { id: 'uid-phone' } as never, session: { access_token: 'tok' } as never })
 })
 
@@ -122,13 +125,14 @@ describe('a push hands the store the rows the server stored', () => {
     ])
   })
 
-  it('a card the other pair signed first comes back empty: the write is taken, and nothing lands over its signature', async () => {
+  it('a card the other pair signed first comes back empty: the write is taken, nothing lands over its signature, and a fetch shows that signature', async () => {
     await _outboxTest.enqueue(item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }))
     await flush()
     expect(srv.selected).toEqual(['card_signatures:upsert'])
     expect(srv.landed.map((l) => l.changes)).toEqual([[]])
     expect(_outboxTest.queue()).toEqual([])
     expect(useOutbox.getState().rejected).toEqual([])
+    expect(srv.reloads).toBe(1)
   })
 
   it('the app’s other tabs hear what landed, and nothing when nothing did', async () => {
@@ -143,7 +147,8 @@ describe('a push hands the store the rows the server stored', () => {
       srv.answers.set('scores:upsert', [row])
       await _outboxTest.enqueue(item('score', 'score:r1:p1:3', { round_id: 'r1', player_id: 'p1', hole: 3, strokes: 5, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' }))
       await flush()
-      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }] } }]))
+      // With when the push went out: a fetch the other tab landed after that may have read past it.
+      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], sentAt: expect.any(Number) } }]))
     } finally {
       tab.close()
     }

@@ -88,7 +88,13 @@ interface Spec<T> {
   /** The order a fetch returns the table in (`SNAPSHOT_KEYS`), on the snapshot's own fields. */
   order(a: T, b: T): number
   map(row: Row): T
-  /** Whether the row held is newer than the one coming (a write this phone landed, replayed after a fetch that read a later one). */
+  /**
+   * Whether the row held is newer than one this phone's own write brought
+   * back: its answer can come after a later write was heard or fetched. Never
+   * asked of the channel's changes, which come in commit order: a stamp is
+   * when its transaction began, so a write that waited on the row's lock
+   * commits last with the earlier stamp (#92's third verifier, R1).
+   */
   stale?(held: T, coming: T): boolean
 }
 const spec = <T>(x: Spec<T>) => x as unknown as Spec<unknown>
@@ -224,10 +230,13 @@ function owner(s: Snapshot, tournamentId: string, scope: Scope, row: Row): true 
   return s.calcuttaLots.some((l) => l.id === row.lot_id) ? true : undefined
 }
 
+/** JSON with every object's keys in one order: jsonb from PostgREST and the same value from the Realtime server may list them differently. */
+const canonicalJson = (v: unknown): string =>
+  JSON.stringify(v, (_k, x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x))
 const sameValue = (a: unknown, b: unknown): boolean => {
   if (a === b) return true
   if (typeof a === 'string' && typeof b === 'string') return canonicalTime(a) === canonicalTime(b)
-  return a != null && b != null && typeof a === 'object' && JSON.stringify(a) === JSON.stringify(b)
+  return a != null && b != null && typeof a === 'object' && typeof b === 'object' && canonicalJson(a) === canonicalJson(b)
 }
 /**
  * Whether the channel's change `heard` is the server's own record of
@@ -245,9 +254,11 @@ export function sameChange(heard: LiveChange, stored: LiveChange): boolean {
 
 /**
  * Apply one change to `s`. The table's array is replaced, never mutated, so a
- * snapshot the screen is showing does not move under it.
+ * snapshot the screen is showing does not move under it. `landed`: the row
+ * this phone's own write brought back, which yields to a newer one held
+ * (`stale`); the channel's changes apply in the order they come.
  */
-export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange): ApplyResult {
+export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, opts: { landed?: boolean } = {}): ApplyResult {
   const sp = SPECS[c.table as AppliedTable]
   if (!sp) return 'reload'
   const list = sp.get(s)
@@ -269,7 +280,7 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange): A
   if (where === undefined) return 'unknown'
   const mapped = sp.map(row)
   const at = list.findIndex((x) => sp.same(x, row))
-  if (at >= 0 && sp.stale?.(list[at], mapped)) return 'ignored'
+  if (opts.landed && at >= 0 && sp.stale?.(list[at], mapped)) return 'ignored'
   if (at >= 0 && sp.order(list[at], mapped) === 0) {
     // An update keeps its place.
     sp.set(s, [...list.slice(0, at), mapped, ...list.slice(at + 1)])
