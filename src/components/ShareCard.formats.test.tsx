@@ -62,10 +62,11 @@ afterEach(() => cleanup())
 
 describe('the leaderboard card (STRAT-03)', () => {
   it('a match day says whose it was', () => {
-    // match8, group 1 (off the 1st tee): Fabián beat Elías 4&3.
+    // match8, group 1 (off the 1st tee): Fabián beat Elías 4&3. Off the 10th, Matías beat Leonel 4&2 (10 to 18,
+    // then 1 to 7): both winners are 4 up, so they tie for 1st and halve 1st and 2nd, (60% + 40%) of $4,800.
     const card = shareCard('match8', { kind: 'leaderboard' })
-    expect(row(card, 'Fabián')).toEqual(['T2', 'Fabián', 'ganó 4&3', '1', '$960'])
-    expect(row(card, 'Elías')).toEqual(['T6', 'Elías', 'perdió 4&3', '0', ''])
+    expect(row(card, 'Fabián')).toEqual(['T1', 'Fabián', 'ganó 4&3', '1', '$2,400'])
+    expect(row(card, 'Elías')).toEqual(['T7', 'Elías', 'perdió 4&3', '0', ''])
   })
 
   it('stroke days are listed, not added: «−11, +1»', () => {
@@ -104,9 +105,10 @@ describe("a player's round card (STRAT-03)", () => {
   })
 
   it("under fourball the day is his side's match, not his own strokes", () => {
-    // Los Compadres (Elías, Fabián) beat Las Palmas 4&3; Elías's own card was +3 net.
+    // Los Compadres (Elías, Fabián) beat Las Palmas 4&3; Elías's own card was +3 net. Tres Marías won 2&1 off the
+    // 10th, so Los Compadres are 1st alone.
     const card = shareCard('team8', { kind: 'player', playerId: 'p1' }, (s) => playAs(s, 'matchPlay', { matchMode: 'fourball', scoring: 'net' }))
-    expect(card.getByText(/^Elías Fuentes, /).textContent).toBe('Elías Fuentes, empatado en 1.º con Los Compadres, 1 punto')
+    expect(card.getByText(/^Elías Fuentes, /).textContent).toBe('Elías Fuentes, 1.º con Los Compadres, 1 punto')
     expect(dayLine(card)).toBe('Día 1, hándicap de juego 4, ganó 4&3, 33 putts')
   })
 })

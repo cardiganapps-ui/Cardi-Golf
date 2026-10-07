@@ -71,15 +71,14 @@ describe('Juegos under match play (STRAT-03)', () => {
 
 describe('a match off the 10th tee (a bug older than STRAT-03)', () => {
   /*
-   * BUG at 252bf7b, there since the formats came in (#49): the main event's
-   * match play counts holes 1 to 18 in number order (playMatches in
-   * src/engine/formats/matchPlay.ts), not in the group's play order as La
-   * Víbora and the side games' matches do (playOrder(startHole)). A match off
-   * the 10th that is over on the 1st, 10 up with 8 to play, and then played
-   * out for the side games reads «ganó 2 arriba». In match8 and bracket8 every
-   * match off the 10th shows a margin its play order does not (8&6 for 4&2).
+   * Until #91 the main event's match play counted holes 1 to 18 in number
+   * order (playMatches in src/engine/formats/matchPlay.ts), not in the group's
+   * play order as La Víbora and the side games' matches do
+   * (playOrder(startHole)). A match off the 10th that is over on the 1st, 10 up
+   * with 8 to play, and then played out for the side games read «ganó 2
+   * arriba», and the countback, which takes the margin, ranked on it.
    */
-  it.fails('is decided in its play order: 10 to 18, then 1 to 9', () => {
+  it('is decided in its play order: 10 to 18, then 1 to 9', () => {
     // Gross, Gael H. against Hugo I. off the 10th: Gael H. wins the 10th to the 18th and the 1st, Hugo I. the 2nd to the 9th.
     matchBoard((s) => {
       gross(s)

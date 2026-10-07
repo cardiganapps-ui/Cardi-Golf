@@ -80,9 +80,10 @@ describe('the player sheet in each format (STRAT-03)', () => {
 
   it("under fourball a player's day is his side's match, not his own strokes", () => {
     const fourball = (s: Snapshot) => playAs(s, 'matchPlay', { matchMode: 'fourball', scoring: 'net' })
-    // Los Compadres (Elías, Fabián) beat Las Palmas (Gael H., Hugo I.) 4&3; Elías's own card was +3 net.
+    // Los Compadres (Elías, Fabián) beat Las Palmas (Gael H., Hugo I.) 4&3; Elías's own card was +3 net. Tres
+    // Marías won 2&1 off the 10th, so Los Compadres are 1st alone.
     const d = sheet('team8', 'p1', fourball)
-    expect(headLine(d)).toBe('empatado en 1.º con Los Compadres, 1 punto, por el F')
+    expect(headLine(d)).toBe('1.º con Los Compadres, 1 punto, por el F')
     expect(days(d)).toEqual(['Día 1: ganó 4&3'])
     cleanup()
     expect(days(sheet('team8', 'p3', fourball))).toEqual(['Día 1: perdió 4&3'])

@@ -9,6 +9,7 @@
  *
  * The standings rank on match points: a win is 1, a half is ½, a loss is 0.
  */
+import { playOrder } from '../core/playOrder'
 import type { CountbackInput } from '../core/ranking'
 import type { TournamentSettings } from '../settings/schema'
 import type { Explanation, Id } from '../types'
@@ -97,7 +98,8 @@ export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: b
       let up = 0
       let played = 0
       let decidedAt: number | null = null
-      for (let hole = 1; hole <= holes; hole++) {
+      // In the order the group plays them: off the 10th, a match can be over on the 1st.
+      for (const hole of playOrder(group.startHole, holes)) {
         const sa = sideHole(ctx, roundId, a, hole, net)
         const sb = sideHole(ctx, roundId, b, hole, net)
         if (sa == null || sb == null) continue

@@ -167,6 +167,27 @@ describe('match play', () => {
     expect(rows[0]!.figure.value).toBe(1)
   })
 
+  it('plays a group off the 10th in its own order, so its margin and the countback are the ones it played', () => {
+    // Group 1 starts on the 10th. p1 wins the 10th to the 18th and then the 1st: ten holes in a row, so after the
+    // 1st he is 10 up with 8 to play and the match is over, 10&8. (Read 1 to 18, p2's wins on the 2nd to the 9th
+    // would come first and it would end «2 arriba».) Group 2 starts on the 1st: p3 wins the first five holes and
+    // halves the rest, 5 up with 4 to play after the 14th, 5&4. Both winners have one point; the countback takes
+    // the margin, 10 against 5, so p1 is first.
+    const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }) })
+    snap.groups = [makeGroup('r1', 1, ['p1', 'p2'], 10), makeGroup('r1', 2, ['p3', 'p4'])]
+    const front = (inside: number, outside: number) => Array.from({ length: 18 }, (_, i) => (i >= 1 && i <= 8 ? inside : outside))
+    play(snap, 'r1', 'p1', front(1, 0))
+    play(snap, 'r1', 'p2', front(0, 1))
+    play(snap, 'r1', 'p3', allPars())
+    play(snap, 'r1', 'p4', [1, 1, 1, 1, 1, ...Array<number>(13).fill(0)])
+
+    const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
+    expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p3', 'p4', 'p2'])
+    expect(rows[0]!.perRound[0]!.text).toBe('10&8')
+    expect(rows[1]!.perRound[0]!.text).toBe('5&4')
+  })
+
   it('says so when a group is not a match instead of scoring it wrong', () => {
     const players = [1, 2, 3].map((i) => makePlayer(i, { baseHcp: 0 }))
     const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles' }) })

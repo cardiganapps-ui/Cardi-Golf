@@ -2958,10 +2958,23 @@
         "src/engine/core/formatParity.test.ts",
         "src/engine/formats/formats.test.ts",
         "src/lib/figureText.test.ts",
-        "e2e/fixtures/formats.spec.ts"
+        "e2e/fixtures/formats.spec.ts",
+        "src/engine/core/strokeFigures.test.ts",
+        "src/engine/profile/results.test.ts",
+        "src/engine/formats/bracket.test.ts",
+        "src/screens/tournament/PlayerSheet.formats.test.tsx",
+        "src/screens/tournament/LiveScreen.formats.test.tsx",
+        "src/screens/tournament/ScorecardScreen.formats.test.tsx",
+        "src/screens/tournament/GamesScreen.formats.test.tsx",
+        "src/screens/tournament/TvScreen.formats.test.tsx",
+        "src/screens/tournament/StatsScreen.formats.test.tsx",
+        "src/screens/tournament/CeremonyScreen.formats.test.tsx",
+        "src/components/ShareCard.formats.test.tsx",
+        "src/screens/admin/AdminScores.formats.test.tsx",
+        "src/screens/admin/AdminData.formats.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "Match and team play show no player race in Estadísticas (a race of teams or matches is not built yet). The day-2 cut is still computed on Stableford points in every format, and the Reglamento says so. A tournament created before labels.trophy names no trophy at the ceremony until the Comité types one (Comité › Reglas)."
+      "residual": "Match and team play show no player race in Estadísticas (a race of teams or matches is not built yet). The day-2 cut is still computed on Stableford points in every format, and the Reglamento says so. A tournament created before labels.trophy names no trophy at the ceremony until the Comité types one (Comité › Reglas). Published results (Mi Polo, crews) still read a Stableford shape: a stroke or match event shows no figure there, a team event's field counts players, and a crew splits a team's place; that needs a migration and is tracked once #93's list of found defects lands. Fixed here too, older than STRAT-03: the main event's match play counted holes 1 to 18 in number order, so a match off the 10th showed a margin its play order didn't, and the countback ranked on it."
     },
     {
       "id": "STRAT-05",
