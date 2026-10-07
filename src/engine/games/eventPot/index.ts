@@ -7,7 +7,7 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
-import { directUnits, fmt, payUnits } from '../payout'
+import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { moneyByPlayer, namer, plural, rankLabel, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'eventPot'>
@@ -55,7 +55,11 @@ export const eventPotGame: GameImpl<EventPotState, Cfg> = {
     const name = namer(ctx)
     const unit = NAMES[ctx.config.options.event]
     if (ctx.config.money.source === 'direct') return directUnits(ctx, units, ctx.config.options.event === 'threePutt' ? 'penalty' : 'reward', unit, name)
-    return payUnits(ctx, units, unit, name)
+    const paid = payUnits(ctx, units, unit, name)
+    return paid.length ? paid : refundUnwon(ctx, `un ${unit[0]}`)
+  },
+  warnings(state, ctx) {
+    return Object.values(state.counts).some((c) => c > 0) ? [] : unwonWarning(ctx, `un ${NAMES[ctx.config.options.event][0]}`)
   },
   board(state, ctx) {
     const unit = NAMES[ctx.config.options.event]
