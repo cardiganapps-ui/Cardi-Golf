@@ -27,7 +27,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
    - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.
    - Sirve para probar cada migración antes de producción, para que las vistas previas no toquen datos reales, y como respaldo en caliente si Supabase falla en el viaje.
-5. [ ] **Tres decisiones** (contesta en el chat):
+5. [ ] **Cuatro decisiones** (contesta en el chat):
    - **a. Dos teléfonos capturan distinto el mismo hoyo.**
      - Hoy gana el último, sin avisar.
      - Propongo que gane el primero que llegó y que al segundo le pregunte «Diego ya capturó a Justo: 6. ¿Usar 6 o tu 5?».
@@ -39,6 +39,11 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 
      Lo que decidiste no comprar (GitHub Pro, Supabase Pro, abogado, búsqueda de marca) cuenta como decisión tuya, no como hallazgo.
    - **c. ¿Hay algo que prefieras esconder en vez de pulir para abril?** Por ejemplo, match play o el formato por equipos. Lo que se esconda queda fuera de la revisión de marzo.
+   - **d. Un jugador que nunca se subastó en la Calcutta** (MONEY-11).
+     - Pasa si en la cena se salta un lote, o si alguien entra al torneo después de la subasta.
+     - Antes cobraba premios de la Calcutta sin haber puesto nada en el bote.
+     - Ya lo cambié así: un lote sin vender no cobra. Los lugares de la Calcutta se cuentan entre los lotes vendidos, y el Comité ve un aviso con su nombre.
+     - La otra opción: contarlo como suyo al precio de salida ($250). Esa cantidad se suma al bote y él la debe. ¿Prefieres esa?
 6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.
