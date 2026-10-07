@@ -14,6 +14,7 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 - [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde. Desde que el torneo sale de preparación, la app vuelve a revisarlo con los jugadores y rondas reales: si alguien no llega o se agrega un día, En vivo, Dinero y el Comité avisan "faltan $…" hasta que se ajusten los premios.
 - [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.
 - [ ] **Máximo de filas en 1,000 o más.** Supabase › Project Settings › Data API › Max rows (de fábrica es 1,000; Claude lo revisa con la API de administración). La app y los respaldos piden las tablas en páginas de 1,000 y toman una página más corta como la última: con un tope menor, cargarían solo la primera página, sin avisar.
+- [ ] **Sin cambios a la base de datos durante el torneo.** De la noche de la Calcutta a la liquidación no se aplica ninguna migración (`node scripts/db.mjs migrate`): lo que haga falta espera al domingo. Antes de aplicar una, el job «Database» de GitHub la probó desde cero (`scripts/db-test.sh`).
 - [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
 - [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
 

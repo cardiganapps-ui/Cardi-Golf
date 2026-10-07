@@ -104,6 +104,31 @@ describe('skins', () => {
     expect(s.units.p1).toBe(5) // holes 1–4 carry into hole 5
   })
 
+  it('a side pot with no skin won goes back to who paid it once the round is over (MONEY-10)', () => {
+    const snap = setup([skins(money({ source: 'side', buyIn: 100 }))])
+    card(snap, 'r1', 'p1')
+    card(snap, 'r1', 'p2')
+    card(snap, 'r1', 'p3')
+    // While the round is on, the carried skins can still be won.
+    expect(run(snap).prizes).toEqual([])
+    finish(snap)
+    const st = run(snap)
+    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 100, 'Skins, entrada devuelta']))
+    expect(st.money.banker.balanced).toBe(true)
+    expect(st.flags.warnings.filter((w) => w.startsWith('Skins'))).toEqual([])
+  })
+
+  it('a pot from the inscriptions with no skin won stays unassigned, and the Comité is told how much (MONEY-10)', () => {
+    const snap = setup([skins(money({ source: 'main', amount: 300 }))])
+    card(snap, 'r1', 'p1')
+    card(snap, 'r1', 'p2')
+    card(snap, 'r1', 'p3')
+    finish(snap)
+    const st = run(snap)
+    expect(st.prizes).toEqual([])
+    expect(st.flags.warnings.filter((w) => w.startsWith('Skins'))).toEqual(['Skins: nadie ganó un skin; $300 quedan sin asignar. El Comité decide.'])
+  })
+
   it('9-hole round: nine skins at most, all resolved', () => {
     const snap = setup([skins(money({ source: 'none' }))], { holes: 9 })
     card(snap, 'r1', 'p1', { 9: -1 }, { holes: 9 })
@@ -165,6 +190,27 @@ describe('event pots', () => {
     finish(snap)
     const st = run(snap)
     expect(Object.fromEntries(st.prizes.map((p) => [p.playerId, p.amount]))).toEqual({ p1: 200, p2: 100 })
+  })
+
+  it('a pot nobody won: from the inscriptions it stays unassigned with a warning; a side pot goes back to who paid it (MONEY-10)', () => {
+    const eagles = (m: GameMoney): GameConfig => ({ id: 'aguilas', type: 'eventPot', label: 'Águilas', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'eagle', basis: 'gross' }, money: m })
+    const main = setup([eagles(money({ source: 'main', amount: 300 }))])
+    card(main, 'r1', 'p1', { 1: -1 }) // a birdie is not an eagle
+    card(main, 'r1', 'p2')
+    card(main, 'r1', 'p3')
+    expect(run(main).flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual([])
+    finish(main)
+    let st = run(main)
+    expect(st.prizes).toEqual([])
+    expect(st.flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual(['Águilas: nadie ganó un águila; $300 quedan sin asignar. El Comité decide.'])
+
+    const side = setup([eagles(money({ source: 'side', buyIn: 50 }))])
+    for (const id of ['p1', 'p2', 'p3']) card(side, 'r1', id)
+    finish(side)
+    st = run(side)
+    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3'].map((id) => [id, 50, 'Águilas, entrada devuelta']))
+    expect(st.money.banker.balanced).toBe(true)
+    expect(st.flags.warnings.filter((w) => w.startsWith('Águilas'))).toEqual([])
   })
 
   it('three-putts are fines: $5 to each other player per three-putt', () => {
