@@ -614,7 +614,7 @@
       }
     },
     {
-      "name": "scores: another phone's value replaced is a discrepancy, with the old values kept",
+      "name": "scores: another phone's value replaced is a discrepancy (the old values it keeps: outbox.group.test.ts)",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -3564,6 +3564,702 @@
       },
       "expect": {
         "status": 201
+      }
+    },
+    {
+      "name": "scores: a client time on 30 February is out of range, and nothing is written (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-02-30T12:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time at hour 25 is out of range (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T25:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: strokes past the integer range are refused as out of range, before any check (22003)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 3000000000,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22003"
+      }
+    },
+    {
+      "name": "card_signatures: an explicit null signed_at is not replaced by its default (23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "p1",
+          "signed_at": null
+        }
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pb"
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "snake_tiebreaks: an explicit null created_at is not replaced by its default (23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 4,
+          "last_holed_player_id": "p2",
+          "decided_by": "p1",
+          "created_at": null
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "hole_awards: an explicit null created_at is not replaced by its default (23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1",
+            "created_at": null
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "hole_awards: the whole body is cast before any row meets the policy: a fraction in the second row answers first (22P02)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p5",
+            "decided_by": "p1"
+          },
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5.5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "scores: the whole body is cast before any row meets the checks: a bad time in the second row answers first (22007)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": [
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7,
+            "strokes": 16,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 8,
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "bad"
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "code": "22007"
+      }
+    },
+    {
+      "name": "scores: in a list of holes a key one row leaves out is null, not its default (supabase-js sends `columns`; 23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": [
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7,
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 8,
+            "strokes": 5,
+            "putts": 2,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 8
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "scores: picked_up sent as the number 1 is read as true",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": 1,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: entered_by sent as a number is not a uuid (22P02)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": 5,
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "card_signatures: the same signature twice in one body with ignore-duplicates writes it once",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": [
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p1"
+          },
+          {
+            "round_id": "r1",
+            "pair_id": "pb",
+            "signed_by": "p1"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r1",
+            "pair_id": "pb"
+          },
+          "rows": [
+            {
+              "signed_by": "p1"
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "order: an unknown column answers before a bad on_conflict and a bad type (PGRST204)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 5.5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z",
+          "note": "x"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "PGRST204"
+      }
+    },
+    {
+      "name": "hole_awards: a player of another group and a fraction for the hole: the cast answers before the policy (22P02)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p5",
+          "hole": 5.5,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "scores: the foreign keys hold on the update path too: entered_by of a deleted player over an existing hole (23503)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "pgone",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23503"
+      }
+    },
+    {
+      "name": "snake_tiebreaks: the Comité answers with decided_by a deleted player (23503)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "snake_tiebreaks",
+        "onConflict": "round_id,group_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "group_id": "g1",
+          "hole": 4,
+          "last_holed_player_id": "p2",
+          "decided_by": "pgone"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23503"
+      }
+    },
+    {
+      "name": "claim_player: a pending profile link does not stop claiming another player",
+      "as": "uid-link2",
+      "pins": [
+        "p5"
+      ],
+      "given": {
+        "profiles": [
+          {
+            "id": "uid-link2",
+            "handle": "uidlink2",
+            "display_name": "Link2"
+          }
+        ],
+        "players": [
+          {
+            "id": "pl2",
+            "tournament_id": "t1",
+            "full_name": "Pendiente",
+            "display_name": "Pendiente",
+            "is_admin": false,
+            "profile_id": "uid-link2",
+            "profile_status": "pending"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "claim_player",
+        "args": {
+          "p_player_id": "p5",
+          "p_pin": "1234"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "ok": true,
+            "playerId": "p5",
+            "tournamentId": "t1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "my_membership: a confirmed profile link is a member via profile",
+      "as": "uid-link",
+      "given": {
+        "profiles": [
+          {
+            "id": "uid-link",
+            "handle": "uidlink",
+            "display_name": "Link"
+          }
+        ],
+        "players": [
+          {
+            "id": "pl",
+            "tournament_id": "t1",
+            "full_name": "Ligado",
+            "display_name": "Ligado",
+            "is_admin": false,
+            "profile_id": "uid-link",
+            "profile_status": "confirmed"
+          }
+        ],
+        "group_members": [
+          {
+            "group_id": "g1",
+            "player_id": "pl"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "my_membership",
+        "args": {
+          "tid": "t1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "via": "profile",
+            "role": "member",
+            "isAdmin": false,
+            "playerId": "pl",
+            "protected": false,
+            "isOrganizer": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "my_membership: a confirmed link that also holds a Comité seat is its admin",
+      "as": "uid-link",
+      "given": {
+        "profiles": [
+          {
+            "id": "uid-link",
+            "handle": "uidlink",
+            "display_name": "Link"
+          }
+        ],
+        "players": [
+          {
+            "id": "pl",
+            "tournament_id": "t1",
+            "full_name": "Ligado",
+            "display_name": "Ligado",
+            "is_admin": false,
+            "profile_id": "uid-link",
+            "profile_status": "confirmed"
+          }
+        ],
+        "group_members": [
+          {
+            "group_id": "g1",
+            "player_id": "pl"
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t1",
+            "auth_user_id": "uid-link",
+            "role": "admin"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "my_membership",
+        "args": {
+          "tid": "t1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "via": "profile",
+            "role": "admin",
+            "isAdmin": true,
+            "playerId": "pl",
+            "protected": false,
+            "isOrganizer": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "card_signatures: the Comité signs with signed_by a deleted player (23503)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,pair_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pb",
+          "signed_by": "pgone"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23503"
+      }
+    },
+    {
+      "name": "claim_player: a wrong PIN from an account confirmed as another player answers already_linked",
+      "as": "uid-link",
+      "pins": [
+        "p1"
+      ],
+      "given": {
+        "profiles": [
+          {
+            "id": "uid-link",
+            "handle": "uidlink",
+            "display_name": "Link"
+          }
+        ],
+        "players": [
+          {
+            "id": "pl",
+            "tournament_id": "t1",
+            "full_name": "Ligado",
+            "display_name": "Ligado",
+            "is_admin": false,
+            "profile_id": "uid-link",
+            "profile_status": "confirmed"
+          }
+        ],
+        "group_members": [
+          {
+            "group_id": "g1",
+            "player_id": "pl"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "claim_player",
+        "args": {
+          "p_player_id": "p1",
+          "p_pin": "0000"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "ok": false,
+            "reason": "already_linked",
+            "playerId": "pl"
+          }
+        ]
       }
     }
   ]

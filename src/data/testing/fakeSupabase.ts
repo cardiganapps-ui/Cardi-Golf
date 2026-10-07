@@ -16,13 +16,27 @@
  *   judge theirs: the publishable key is `anon`, a live token is its user, a
  *   lapsed or unknown one is a 401. Reads and the phone's writes meet the
  *   database's own rules, ported from the migrations: the row-level security
- *   of every policy, the column types as Postgres casts them, the foreign and
- *   unique keys, column grants and checks, the discrepancy trigger, and the
- *   order the database meets them in (a column PostgREST doesn't know, the
- *   ON CONFLICT target, the grants, then row by row); `claim_player` and
- *   `my_membership` answer as theirs do. The requests in
- *   cases/serverRules.json pin them against the real migrations too (see
- *   serverRules.test.ts).
+ *   of every policy, the column types as Postgres casts them (an integer's
+ *   range, a time's fields), the defaults (never over a null sent), NOT NULL,
+ *   the foreign and unique keys, column grants and checks, the discrepancy
+ *   trigger, and the order the database meets them in: a column PostgREST
+ *   doesn't know, the ON CONFLICT target, the grants, the whole body cast,
+ *   then row by row, the foreign keys last. The requests in
+ *   cases/serverRules.json pin all of it against the real migrations (see
+ *   serverRules.test.ts), on what a phone sends.
+ *
+ *   Not modelled, so a test must not lean on it (PR #93's third verifier
+ *   compared 181 requests; none of these is on a phone's path):
+ *   - inputs Postgres reads that the fake refuses: time words («now»),
+ *     RFC 2822 times, zone names, hex or underscored integers, prefixes of a
+ *     boolean word; and the order of the casts inside one row;
+ *   - `claim_player`: the lockout after five wrong PINs and the attempts
+ *     left (the fake always says 4), a PIN sent as a number; an unknown
+ *     function or argument is not a 404;
+ *   - reads: an unknown filter or select column is not a 42703; an owner
+ *     sees only his own seat in `tournament_organizers`; `profiles` and the
+ *     tables no test seeds read empty or 404; the audit triggers write
+ *     nothing to `audit_log`.
  *
  * Both ways answer the way PostgREST does, which is what the tests lean on:
  * - rows come back in the order asked for, and never more than `maxRows` in
@@ -295,9 +309,9 @@ const SCORE_INSERT = new Set(['id', 'round_id', 'player_id', 'hole', 'strokes', 
 const SCORE_UPDATE = new Set(['round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
 const NOT_NULL: Record<string, string[]> = {
   scores: ['round_id', 'player_id', 'hole', 'picked_up'],
-  snake_tiebreaks: ['round_id', 'group_id', 'hole', 'last_holed_player_id'],
-  card_signatures: ['round_id', 'pair_id'],
-  hole_awards: ['round_id', 'hole', 'game_id', 'player_id'],
+  snake_tiebreaks: ['round_id', 'group_id', 'hole', 'last_holed_player_id', 'created_at'],
+  card_signatures: ['round_id', 'pair_id', 'signed_at'],
+  hole_awards: ['round_id', 'hole', 'game_id', 'player_id', 'created_at'],
 }
 const between = (v: unknown, lo: number, hi: number) => v == null || (typeof v === 'number' && v >= lo && v <= hi)
 /** Each table's checks, in the order Postgres runs them (by name). A check holds when it is not false. */
@@ -350,7 +364,16 @@ const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: 
 }
 const BOOL_TEXT: Record<string, boolean> = { t: true, true: true, y: true, yes: true, on: true, '1': true, f: false, false: false, n: false, no: false, off: false, '0': false }
 /** A timestamp as Postgres reads one off the wire (ISO 8601, a space for the T). */
-const TIMESTAMP = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/i
+const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/i
+/** Whether a timestamp's fields are in range: 30 February or hour 25 is 22008, not a time. */
+function timeInRange(m: RegExpExecArray): boolean {
+  const [y, mo, d, h = 0, mi = 0, sec = 0] = m.slice(1).map((x) => (x === undefined ? undefined : Number(x))) as number[]
+  const days = new Date(Date.UTC(y!, mo!, 0)).getUTCDate()
+  if (mo! < 1 || mo! > 12 || d! < 1 || d! > days) return false
+  if (h === 24) return mi === 0 && sec === 0
+  return h! <= 23 && mi! <= 59 && sec! <= 60
+}
+const INT4 = [-2147483648, 2147483647] as const
 /**
  * The body's values cast to their columns, as json_populate_recordset does
  * before any policy sees the row: an integer from a whole number or its text,
@@ -367,15 +390,20 @@ function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
     }
     const text = typeof v === 'string' ? v : JSON.stringify(v)
     if (type === 'int') {
-      if (typeof v === 'number' && Number.isInteger(v)) out[column] = v
-      else if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) out[column] = Number(v)
+      let n: number
+      if (typeof v === 'number' && Number.isInteger(v)) n = v
+      else if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) n = Number(v)
       else return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
+      if (n < INT4[0] || n > INT4[1]) return { error: { code: '22003', message: `value "${text.trim()}" is out of range for type integer` } }
+      out[column] = n
     } else if (type === 'bool') {
       const b = typeof v === 'boolean' ? v : BOOL_TEXT[text.trim().toLowerCase()]
       if (b === undefined) return { error: { code: '22P02', message: `invalid input syntax for type boolean: "${text}"` } }
       out[column] = b
     } else if (type === 'timestamptz') {
-      if (typeof v !== 'string' || !TIMESTAMP.test(v.trim())) return { error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` } }
+      const m = typeof v === 'string' ? TIMESTAMP.exec(v.trim()) : null
+      if (!m) return { error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` } }
+      if (!timeInRange(m)) return { error: { code: '22008', message: `date/time field value out of range: "${text}"` } }
       out[column] = v
     } else if (type === 'uuid') {
       if (typeof v !== 'string') return { error: { code: '22P02', message: `invalid input syntax for type uuid: "${text}"` } }
@@ -692,16 +720,24 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (table === 'scores' && caller !== 'anon' && columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))) {
       return refused(`permission denied for table ${table}`)
     }
+    // The body is cast to the columns' types whole (json_populate_recordset) before any row meets a
+    // policy. With `columns` (supabase-js sends it for a list of rows) a key a row leaves out is null, not
+    // the column's default.
+    const listed = req.params.get('columns')?.split(',').map((c) => c.replace(/"/g, '').trim())
+    const typedRows: Row[] = []
+    for (const sent of incoming) {
+      const full = listed ? { ...Object.fromEntries(listed.map((c) => [c, null])), ...sent } : sent
+      const typed = cast(table, full)
+      if ('error' in typed) return restError(typed.error)
+      typedRows.push(typed.row)
+    }
     const next = rows.map((r) => ({ ...r }))
     const stored: Row[] = []
     /** Rows of `next` this statement wrote: DO UPDATE may not reach one of them again (21000). */
     const written = new Set<Row>()
     const meets = (cols: string[], row: Row) => next.findIndex((r) => cols.every((c) => r[c] != null && r[c] === row[c]))
-    for (const sent of incoming) {
-      // Then row by row: the body cast to the columns' types, the defaults and insert triggers, the policy, the checks, the keys.
-      const typed = cast(table, sent)
-      if ('error' in typed) return restError(typed.error)
-      const proposed = typed.row
+    for (const proposed of typedRows) {
+      // Then row by row: the defaults and insert triggers, the policy, the checks, the keys.
       const row = withDefaults(table, proposed)
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)

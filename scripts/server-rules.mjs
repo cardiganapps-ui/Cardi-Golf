@@ -122,7 +122,8 @@ function requestSql(req) {
   }
   if (req.method === 'DELETE') return `delete from public.${t} where ${whereSql(t, req.eq ?? {})}`
   const body = (Array.isArray(req.body) ? req.body : [req.body]).map((r) => toDb(t, r))
-  const cols = Object.keys(body[0])
+  // Every row's keys, as supabase-js's `columns` names them: a key one row leaves out is null in it.
+  const cols = [...new Set(body.flatMap((r) => Object.keys(r)))]
   const list = cols.join(', ')
   let sql = `insert into public.${t} (${list}) select ${list} from json_populate_recordset(null::public.${t}, ${jsonLiteral(body)})`
   const resolution = /resolution=(merge|ignore)-duplicates/.exec(req.prefer ?? '')?.[1]

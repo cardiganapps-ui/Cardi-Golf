@@ -51,6 +51,8 @@ function send(server: FakeSupabase, token: string, req: Request): Promise<Respon
   const headers0: Record<string, string> = { apikey: server.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
   if (req.method === 'RPC') return server.fetch(`${server.url}/rest/v1/rpc/${req.fn}`, { method: 'POST', headers: headers0, body: JSON.stringify(req.args ?? {}) })
   const url = new URL(`${server.url}/rest/v1/${req.table}`)
+  // supabase-js names the columns of a list of rows (postgrest-js `insert`/`upsert`): PostgREST then reads a key a row leaves out as null.
+  if (Array.isArray(req.body)) url.searchParams.set('columns', [...new Set((req.body as Row[]).flatMap((r) => Object.keys(r)))].map((c) => `"${c}"`).join(','))
   if (req.onConflict) url.searchParams.set('on_conflict', req.onConflict)
   if (req.select) url.searchParams.set('select', req.select)
   for (const [column, value] of Object.entries(req.eq ?? {})) url.searchParams.set(column, `eq.${String(value)}`)
