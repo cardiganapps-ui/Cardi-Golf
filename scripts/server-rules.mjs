@@ -56,6 +56,21 @@ function uuid(name) {
   return id
 }
 const isUuid = (table, column) => uuidColumns.get(table.includes('.') ? table : `public.${table}`)?.has(column) ?? false
+// Each table's columns, as PostgREST's schema cache knows them: a body naming another is refused before the database sees it.
+const tableColumns = new Map()
+for (const line of psql(`select table_name || ' ' || column_name from information_schema.columns where table_schema = 'public'`).split('\n')) {
+  const [table, column] = line.split(' ')
+  if (!tableColumns.has(table)) tableColumns.set(table, new Set())
+  tableColumns.get(table).add(column)
+}
+/** PGRST204, PostgREST's own answer to a body with a column the table doesn't have. */
+function unknownColumn(req) {
+  if (req.method !== 'POST') return null
+  const known = tableColumns.get(req.table) ?? new Set()
+  const sent = [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
+  const col = sent.find((c) => !known.has(c))
+  return col ? `PGRST204 Could not find the '${col}' column of '${req.table}' in the schema cache` : null
+}
 function toDb(table, row) {
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [ident(k), typeof v === 'string' && isUuid(table, k) ? uuid(v) : v]))
 }
@@ -93,8 +108,13 @@ function whereSql(table, where) {
  *   primary key) DO UPDATE SET every column sent; with ignore-duplicates
  *   DO NOTHING.
  * - DELETE: the eq filters as a WHERE.
+ * - RPC: the function called with the arguments named, its answer kept to be read.
  */
 function requestSql(req) {
+  if (req.method === 'RPC') {
+    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${typeof v === 'string' && (/_id$/.test(k) || k === 'tid') ? `'${uuid(v)}'::uuid` : `${jsonLiteral([v])} ->> 0`}`).join(', ')
+    return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
+  }
   const t = ident(req.table)
   if (req.method === 'GET') {
     const cols = req.select.split(',').map(ident).join(', ')
@@ -127,14 +147,19 @@ function primaryKey(table) {
   return keys.get(table)
 }
 
-/** PostgREST's HTTP status for a SQLSTATE (its documented table, the codes these cases meet). */
+/** PostgREST's HTTP status for a SQLSTATE (its documented table), and for its own PGRST204. */
 function statusOf(state, anon) {
   if (state === '00000') return null
+  if (state === 'PGRST204') return 400
   if (state === '42501') return anon ? 401 : 403
   if (state === '23503' || state === '23505') return 409
+  if (state === '25006') return 405
+  if (state === 'P0001') return 400
   if (/^(08|53)/.test(state)) return 503
+  if (/^(0L|0P|28)/.test(state)) return 403
   if (state === '42883' || state === '42P01') return 404
-  if (/^(09|25|2D|38|39|3B|40|55|57|58|F0|HV|XX)/.test(state) || state === '42P17') return 500
+  // 21000 is a 400 only for pg-safeupdate's «UPDATE requires a WHERE clause», which these requests never meet.
+  if (/^(09|21|25|2D|38|39|3B|40|54|55|57|58|F0|HV|P0|XX)/.test(state) || state === '42P17') return 500
   return 400
 }
 
@@ -146,12 +171,17 @@ function runCase(c) {
   sql += `insert into auth.users (id, is_anonymous, raw_app_meta_data, raw_user_meta_data) select id, is_anonymous, raw_app_meta_data, raw_user_meta_data from json_populate_recordset(null::auth.users, ${jsonLiteral(users)});\n`
   for (const [table, rows] of Object.entries(spec.world.tables)) sql += insertRows(table, rows)
   for (const [table, rows] of Object.entries(c.given ?? {})) sql += insertRows(table, rows)
+  // The players whose PIN the case's phone knows: 1234, as claim_player checks it.
+  for (const p of c.pins ?? []) sql += `insert into public.player_pins (player_id, pin_hash) values ('${uuid(p)}', extensions.crypt('1234', extensions.gen_salt('bf')));\n`
   sql += `set local role ${anon ? 'anon' : 'authenticated'};\n`
   sql += `set local request.jwt.claims to '${JSON.stringify(claims)}';\n`
   // Earlier requests of the same phone: each must go through.
   for (const step of c.before ?? []) sql += `do $before$\nbegin\n  ${requestSql(step)};\nend\n$before$;\n`
   sql += `select set_config('polo.result', '[]', true) is null;\n`
-  sql += `do $request$\nbegin\n  ${requestSql(c.request)};\n  perform set_config('polo.outcome', '00000', true);\nexception when others then\n  perform set_config('polo.outcome', sqlstate || ' ' || sqlerrm, true);\nend\n$request$;\n`
+  const refused = unknownColumn(c.request)
+  sql += refused
+    ? `select set_config('polo.outcome', ${jsonLiteral([refused])} ->> 0, true) is null;\n`
+    : `do $request$\nbegin\n  ${requestSql(c.request)};\n  perform set_config('polo.outcome', '00000', true);\nexception when others then\n  perform set_config('polo.outcome', sqlstate || ' ' || sqlerrm, true);\nend\n$request$;\n`
   sql += 'reset role;\n'
   const checks = (c.then ?? []).map((t) => {
     const cols = [...new Set(t.rows.flatMap((r) => Object.keys(r)))].map(ident)
@@ -166,7 +196,7 @@ function runCase(c) {
 }
 
 /** The status a request answered with when it went through. */
-const okStatus = { GET: 200, POST: 201, DELETE: 204 }
+const okStatus = { GET: 200, POST: 201, DELETE: 204, RPC: 200 }
 
 const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
 let failed = 0
@@ -191,7 +221,7 @@ for (const c of spec.cases) {
     if (JSON.stringify(sortRows(actual)) !== JSON.stringify(sortRows(expected))) problems.push(`${t.table} where ${JSON.stringify(t.where ?? {})}: ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
   })
   if (print) {
-    console.log(`${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(c.request.method === 'GET' ? got.read : got.after)}`)
+    console.log(`${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(['GET', 'RPC'].includes(c.request.method) ? got.read : got.after)}`)
   } else if (problems.length) {
     failed++
     console.log(`  ✗ ${c.name}\n      ${problems.join('\n      ')}`)

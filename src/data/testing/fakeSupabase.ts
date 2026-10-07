@@ -16,8 +16,11 @@
  *   judge theirs: the publishable key is `anon`, a live token is its user, a
  *   lapsed or unknown one is a 401. Reads and the phone's writes meet the
  *   database's own rules, ported from the migrations: the row-level security
- *   of every policy, one PIN claim per user (`claim_player`), the unique keys,
- *   column grants and checks, and the discrepancy trigger. The requests in
+ *   of every policy, the column types as Postgres casts them, the foreign and
+ *   unique keys, column grants and checks, the discrepancy trigger, and the
+ *   order the database meets them in (a column PostgREST doesn't know, the
+ *   ON CONFLICT target, the grants, then row by row); `claim_player` and
+ *   `my_membership` answer as theirs do. The requests in
  *   cases/serverRules.json pin them against the real migrations too (see
  *   serverRules.test.ts).
  *
@@ -312,6 +315,76 @@ const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
     ['hole_awards_hole_check', (r) => between(r.hole, 1, 18)],
   ],
 }
+/** Each phone table's columns and their types (information_schema): what PostgREST's schema cache knows, and what Postgres casts the body to. */
+type ColumnType = 'uuid' | 'int' | 'bool' | 'timestamptz' | 'text' | 'jsonb'
+const COLUMNS: Record<string, Record<string, ColumnType>> = {
+  scores: { id: 'uuid', round_id: 'uuid', player_id: 'uuid', hole: 'int', strokes: 'int', putts: 'int', picked_up: 'bool', entered_by: 'uuid', client_ts: 'timestamptz', updated_at: 'timestamptz', disputed: 'bool', previous: 'jsonb', reason: 'text' },
+  snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
+  card_signatures: { round_id: 'uuid', pair_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz' },
+  hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
+}
+/** Each phone table's foreign keys, as the migrations name them. Ids here are names, so a uuid's shape is not checked; that it exists is. */
+const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: string }>> = {
+  scores: [
+    { name: 'scores_round_id_fkey', column: 'round_id', table: 'rounds' },
+    { name: 'scores_player_id_fkey', column: 'player_id', table: 'players' },
+    { name: 'scores_entered_by_fkey', column: 'entered_by', table: 'players' },
+  ],
+  snake_tiebreaks: [
+    { name: 'snake_tiebreaks_round_id_fkey', column: 'round_id', table: 'rounds' },
+    { name: 'snake_tiebreaks_group_id_fkey', column: 'group_id', table: 'groups' },
+    { name: 'snake_tiebreaks_last_holed_player_id_fkey', column: 'last_holed_player_id', table: 'players' },
+    { name: 'snake_tiebreaks_decided_by_fkey', column: 'decided_by', table: 'players' },
+  ],
+  card_signatures: [
+    { name: 'card_signatures_round_id_fkey', column: 'round_id', table: 'rounds' },
+    { name: 'card_signatures_pair_id_fkey', column: 'pair_id', table: 'pairs' },
+    { name: 'card_signatures_signed_by_fkey', column: 'signed_by', table: 'players' },
+  ],
+  hole_awards: [
+    { name: 'hole_awards_round_id_fkey', column: 'round_id', table: 'rounds' },
+    { name: 'hole_awards_group_id_fkey', column: 'group_id', table: 'groups' },
+    { name: 'hole_awards_player_id_fkey', column: 'player_id', table: 'players' },
+    { name: 'hole_awards_decided_by_fkey', column: 'decided_by', table: 'players' },
+  ],
+}
+const BOOL_TEXT: Record<string, boolean> = { t: true, true: true, y: true, yes: true, on: true, '1': true, f: false, false: false, n: false, no: false, off: false, '0': false }
+/** A timestamp as Postgres reads one off the wire (ISO 8601, a space for the T). */
+const TIMESTAMP = /^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/i
+/**
+ * The body's values cast to their columns, as json_populate_recordset does
+ * before any policy sees the row: an integer from a whole number or its text,
+ * a boolean from its words; a time that is not one, a fraction for an
+ * integer, are 22007 / 22P02.
+ */
+function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
+  const out: Row = {}
+  for (const [column, v] of Object.entries(row)) {
+    const type = COLUMNS[table]?.[column]
+    if (v == null || !type || type === 'jsonb') {
+      out[column] = v ?? null
+      continue
+    }
+    const text = typeof v === 'string' ? v : JSON.stringify(v)
+    if (type === 'int') {
+      if (typeof v === 'number' && Number.isInteger(v)) out[column] = v
+      else if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) out[column] = Number(v)
+      else return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
+    } else if (type === 'bool') {
+      const b = typeof v === 'boolean' ? v : BOOL_TEXT[text.trim().toLowerCase()]
+      if (b === undefined) return { error: { code: '22P02', message: `invalid input syntax for type boolean: "${text}"` } }
+      out[column] = b
+    } else if (type === 'timestamptz') {
+      if (typeof v !== 'string' || !TIMESTAMP.test(v.trim())) return { error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` } }
+      out[column] = v
+    } else if (type === 'uuid') {
+      if (typeof v !== 'string') return { error: { code: '22P02', message: `invalid input syntax for type uuid: "${text}"` } }
+      out[column] = v
+    } else out[column] = typeof v === 'string' ? v : text
+  }
+  return { row: out }
+}
+
 /** `a is distinct from b`, with a missing column read as null. */
 const distinct = (a: unknown, b: unknown) => (a ?? null) !== (b ?? null)
 
@@ -496,6 +569,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (uid === 'anon') return false
     if (table === 'courses' || table === 'tees' || table === 'holes') return true
     if (table === 'device_sessions' || table === 'tournament_organizers') return row.auth_user_id === uid
+    // 0004 `audit_log_read`: the Comité's history, not the players'.
+    if (table === 'audit_log') return organizes(uid, row.tournament_id)
     const tid = tenantOf(table, row)
     return organizes(uid, tid) || myPlayer(uid, tid) != null
   }
@@ -604,19 +679,29 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const incoming = (Array.isArray(req.body) ? req.body : [req.body]) as Row[]
     const resolution = /resolution=(merge|ignore)-duplicates/.exec(headers.get('prefer') ?? '')?.[1]
     const columns = [...new Set(incoming.flatMap((r) => Object.keys(r)))]
-    // 0010 revoked `scores` from sessions but for the card's own columns (the publishable key's grants were left whole).
-    if (table === 'scores' && caller !== 'anon' && columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))) {
-      return refused(`permission denied for table ${table}`)
-    }
+    // In the order they are met. PostgREST refuses a column its schema cache doesn't know before the database sees the request.
+    const unknown = columns.find((c) => !(c in (COLUMNS[table] ?? {})))
+    if (unknown) return json(400, { code: 'PGRST204', details: null, hint: null, message: `Could not find the '${unknown}' column of '${table}' in the schema cache` })
+    // Planning: the ON CONFLICT target must be a unique key.
     const keys = UNIQUE_KEYS[table]!
     const target = resolution ? (req.params.get('on_conflict')?.split(',') ?? keys[0]!.columns) : null
     if (target && !keys.some((k) => k.columns.length === target.length && k.columns.every((c) => target.includes(c)))) {
       return json(400, { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' })
     }
+    // Then the columns' privileges: 0010 revoked `scores` from sessions but for the card's own columns (the publishable key's grants were left whole).
+    if (table === 'scores' && caller !== 'anon' && columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))) {
+      return refused(`permission denied for table ${table}`)
+    }
     const next = rows.map((r) => ({ ...r }))
     const stored: Row[] = []
+    /** Rows of `next` this statement wrote: DO UPDATE may not reach one of them again (21000). */
+    const written = new Set<Row>()
     const meets = (cols: string[], row: Row) => next.findIndex((r) => cols.every((c) => r[c] != null && r[c] === row[c]))
-    for (const proposed of incoming) {
+    for (const sent of incoming) {
+      // Then row by row: the body cast to the columns' types, the defaults and insert triggers, the policy, the checks, the keys.
+      const typed = cast(table, sent)
+      if ('error' in typed) return restError(typed.error)
+      const proposed = typed.row
       const row = withDefaults(table, proposed)
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)
@@ -627,10 +712,14 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         if (taken) return json(409, { code: '23505', details: null, hint: null, message: `duplicate key value violates unique constraint "${taken.name}"` })
         next.push(row)
         stored.push(row)
+        written.add(row)
         continue
       }
       if (resolution === 'ignore') continue
       const old = next[at]!
+      if (written.has(old)) {
+        return json(500, { code: '21000', details: null, hint: 'Ensure that no rows proposed for insertion within the same command have duplicate constrained values.', message: 'ON CONFLICT DO UPDATE command cannot affect row a second time' })
+      }
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
       const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
@@ -639,6 +728,12 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (badUpdate) return badUpdate
       next[at] = updated
       stored.push(updated)
+      written.add(updated)
+    }
+    // At the statement's end, the foreign keys (checked by the table's owner: no policy hides the row they point to).
+    for (const row of stored) {
+      const broken = (FOREIGN_KEYS[table] ?? []).find((fk) => row[fk.column] != null && !rowsOf(fk.table).some((r) => r.id === row[fk.column]))
+      if (broken) return json(409, { code: '23503', details: null, hint: null, message: `insert or update on table "${table}" violates foreign key constraint "${broken.name}"` })
     }
     server.tables[table] = next
     for (const row of stored) server.writes.push({ table, row: { ...row }, by: caller })
@@ -652,6 +747,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function claim_player' })
       const player = (server.tables.players ?? []).find((p) => p.id === args.p_player_id)
       if (!player) return json(200, { ok: false, reason: 'not_found' })
+      // An account confirmed as another player of the tournament plays as him (0014).
+      const linked = rowsOf('players').find((p) => p.tournament_id === player.tournament_id && p.profile_id === as && p.profile_status === 'confirmed')
+      if (linked && linked.id !== player.id) return json(200, { ok: false, reason: 'already_linked', playerId: linked.id })
       const pin = server.auth.pins[String(player.id)]
       if (!pin) return json(200, { ok: false, reason: 'no_pin' })
       if (pin !== args.p_pin) return json(200, { ok: false, reason: 'wrong_pin', attemptsLeft: 4 })
@@ -661,8 +759,21 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       return json(200, { ok: true, playerId: player.id, tournamentId: tid })
     }
     if (name === 'my_membership') {
-      const playerId = server.auth.playerOf(as, String(args.tid))
-      return json(200, { playerId, role: playerId ? 'member' : 'none', isOrganizer: false, isAdmin: false, via: playerId ? 'device' : null })
+      // 0021's answer, platform admins aside: the Comité seat's role, else a member by player; admin by seat or by the Comité's flag on the player.
+      const tid = String(args.tid)
+      const playerId = (myPlayer(as, tid) as string | undefined) ?? null
+      const seat = rowsOf('tournament_organizers').find((o) => o.tournament_id === tid && o.auth_user_id === as)
+      const byProfile = rowsOf('players').some((p) => p.tournament_id === tid && p.profile_id === as && p.profile_status === 'confirmed')
+      const adminPlayer = playerId != null && rowsOf('players').some((p) => p.id === playerId && p.is_admin === true)
+      const t = rowsOf('tournaments').find((x) => x.id === tid)
+      return json(200, {
+        playerId,
+        role: seat?.role ?? (playerId != null ? 'member' : 'none'),
+        isOrganizer: !!seat,
+        isAdmin: !!seat || adminPlayer,
+        via: byProfile ? 'profile' : playerId != null ? 'device' : null,
+        protected: t ? (t.is_protected ?? false) : null,
+      })
     }
     const { data, error } = server.rpcResult
     return error ? restError(error) : json(200, data)

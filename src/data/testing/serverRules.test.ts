@@ -13,8 +13,11 @@ import spec from './cases/serverRules.json'
 import { fakeSupabase, type FakeSupabase } from './fakeSupabase'
 
 interface Request {
-  method: 'GET' | 'POST' | 'DELETE'
-  table: string
+  method: 'GET' | 'POST' | 'DELETE' | 'RPC'
+  table?: string
+  /** An RPC's function and its arguments. */
+  fn?: string
+  args?: Record<string, unknown>
   onConflict?: string
   prefer?: string
   eq?: Record<string, unknown>
@@ -25,6 +28,8 @@ interface Case {
   name: string
   as: string
   given?: Record<string, Row[]>
+  /** Players whose PIN (1234) the case's phone knows. */
+  pins?: string[]
   before?: Request[]
   request: Request
   expect: { status: number; code?: string; rows?: Row[] }
@@ -36,12 +41,15 @@ function world(c: Case): { server: FakeSupabase; token: string } {
   const server = fakeSupabase({})
   for (const [table, rows] of Object.entries(spec.world.tables as Record<string, Row[]>)) server.seed(table, rows)
   for (const [table, rows] of Object.entries(c.given ?? {})) server.seed(table, rows)
+  for (const p of c.pins ?? []) server.auth.pins[p] = '1234'
   const token = c.as === 'anon' ? server.anonKey : server.auth.sessionFor(c.as)
   return { server, token }
 }
 
 /** The request as supabase-js sends it. */
 function send(server: FakeSupabase, token: string, req: Request): Promise<Response> {
+  const headers0: Record<string, string> = { apikey: server.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  if (req.method === 'RPC') return server.fetch(`${server.url}/rest/v1/rpc/${req.fn}`, { method: 'POST', headers: headers0, body: JSON.stringify(req.args ?? {}) })
   const url = new URL(`${server.url}/rest/v1/${req.table}`)
   if (req.onConflict) url.searchParams.set('on_conflict', req.onConflict)
   if (req.select) url.searchParams.set('select', req.select)
@@ -62,8 +70,9 @@ describe('the test server answers each request as the database does (cases/serve
     for (const step of c.before ?? []) expect((await send(server, token, step)).ok, `before: ${step.method} ${step.table}`).toBe(true)
     const res = await send(server, token, c.request)
     const body = res.status === 204 || res.status === 201 ? null : await res.json()
-    expect({ status: res.status, code: body?.code }).toEqual({ status: c.expect.status, code: c.expect.code ?? (res.ok ? undefined : body?.code) })
-    if (c.expect.rows) expect(bag(body as Row[])).toEqual(bag(c.expect.rows))
+    expect({ status: res.status, code: res.ok ? undefined : body?.code }).toEqual({ status: c.expect.status, code: c.expect.code ?? (res.ok ? undefined : body?.code) })
+    // An RPC answers its function's value: the database side reads it as a one-row list.
+    if (c.expect.rows) expect(bag(c.request.method === 'RPC' ? [body as Row] : (body as Row[]))).toEqual(bag(c.expect.rows))
     for (const t of c.then ?? []) {
       const columns = [...new Set(t.rows.flatMap((r) => Object.keys(r)))]
       const where = Object.entries(t.where ?? {})

@@ -49,7 +49,8 @@ export function tournamentRows(): Record<string, Row[]> {
 
 /** A hole of one player as the Tarjeta saves it. */
 export function holeScore(player: string, hole: number, strokes: number, round = 'r1'): ScorePayload {
-  return { round_id: round, player_id: player, hole, strokes, putts: 2, picked_up: false, entered_by: 'p1', client_ts: `phone:${player}:${hole}:${strokes}` }
+  // A time, as the phone stamps it: the column is a timestamptz, and the database refuses anything else (22007).
+  return { round_id: round, player_id: player, hole, strokes, putts: 2, picked_up: false, entered_by: 'p1', client_ts: new Date(Date.UTC(2027, 3, 9, 12, hole, strokes)).toISOString() }
 }
 /** The group's answer to «¿Quién embocó al último?» on a hole. */
 export function snakeAnswer(hole: number, lastHoled: string): TiebreakPayload {

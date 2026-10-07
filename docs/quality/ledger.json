@@ -2229,12 +2229,14 @@
         "src/data/outbox.group.test.ts",
         "src/data/outbox.tabs.test.ts",
         "src/data/outbox.storage.test.ts",
+        "src/data/outbox.errors.test.ts",
+        "src/data/outbox.update.test.ts",
         "src/data/testing/serverRules.test.ts",
         "scripts/server-rules.mjs",
         "vite.config.ts"
       ],
       "verifiedBy": null,
-      "residual": "The app's own opening order (the gate puts the kept boards up before AppShell's outbox reads its queue) is NEW-02, fixed by #92: outbox.offline.test.ts holds it as it.fails until #92 flips it. Of the first verifier's 56 outbox mutants, one non-equivalent survives: V47, a write queued in the few microtasks at the very end of a pass (V18 is equivalent). npm test gates outbox.ts at its coverage today (statements 99, branches 88, functions 100, lines 99, vite.config.ts); the uncovered branches are defensive (a kind of write this build does not know, optional browser calls), so 100% branches is not the target. The fake server's rules are pinned against the real migrations by src/data/testing/cases/serverRules.json (scripts/server-rules.mjs in the db job); platform admins are not modelled."
+      "residual": "The app's own opening order (the gate puts the kept boards up before AppShell's outbox reads its queue) is NEW-02, fixed by #92: outbox.offline.test.ts holds it as it.fails until #92 flips it. The fake server's rules are pinned against the real migrations by the 113 requests of src/data/testing/cases/serverRules.json (scripts/server-rules.mjs in the db job): the policies, column types as Postgres casts them, foreign keys, unique keys, grants, checks, the order the database meets them in, the dispute trigger, claim_player and my_membership. Not modelled: platform admins, PIN lockouts, and the foreign keys other tables hold on a deleted row. npm test gates outbox.ts at statements 99, branches 91, functions 100, lines 99 (vite.config.ts): the one statement left is the push of a kind this build does not know, which the flush never sends; branch coverage moves a little between runs. Second verifier's mutants: 58 of 65 rules broken in the fake now fail a case; the other 7 are equivalent for what a phone sends (F15b, F27, F39b, F42b, F42c, F45, F46). 28 of 35 outbox mutants are killed; left: N06 (an award's delete across groups, which the rules refuse a player), N04 and N22 (what a queued signature or score shows before it goes), N12 (waiting for the lock instead of trying again), and N23 to N25 (equivalent)."
     },
     {
       "id": "QA-07",
@@ -4176,7 +4178,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": "Fix: a migration in which the settle marks its own update (the Comité's mark, cardi.comite) around it, and the case flips."
+      "residual": "Confirmed in SQL by #93's second verifier: after a correction and the signature, the hole still reads disputed; signing settles it only with scores_dispute disabled or cardi.comite set. 0010 dropped 0008/0009's explicit-resolution branch. Fix: a migration (0026) in which card_signature_settles sets cardi.comite to '1', local to the transaction, around its UPDATE (or restores the explicit-resolution branch); the case in cases/serverRules.json flips with it."
     },
     {
       "id": "NEW-02",
@@ -4237,6 +4239,21 @@
       "tests": [],
       "verifiedBy": null,
       "residual": "Adoption should re-stamp decided_by / signed_by, or ask before adopting another player's writes."
+    },
+    {
+      "id": "NEW-06",
+      "severity": "P3",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W1",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "A hole refused because its card was signed or its round closed never says so: the server answers the push with the generic row-level-security message, so describeSyncError's errSigned and errNotLive never fire for a push, and the player reads the generic refusal",
+      "foundBy": "PR #93's second verifier",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Comes with save_hole's structured statuses (PLAN §5.1), or a check of the round and the card before the push."
     }
   ]
 }
