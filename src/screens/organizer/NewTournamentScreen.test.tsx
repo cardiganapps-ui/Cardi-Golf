@@ -98,3 +98,32 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(screen.getByRole('link', { name: W.goAdmin })).toBeTruthy()
   })
 })
+
+describe('Nuevo torneo: a prize nobody can win (MONEY-09)', () => {
+  /** Money on (50/30/20 of $500 each), for this many players, up to the review step. */
+  function review(players: string) {
+    render(
+      <MemoryRouter>
+        <NewTournamentScreen />
+      </MemoryRouter>,
+    )
+    fireEvent.change(screen.getByPlaceholderText(W.namePlaceholder), { target: { value: 'Mano a mano' } })
+    fireEvent.click(screen.getByRole('button', { name: t.common.next }))
+    fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(W.money) }))
+    fireEvent.change(screen.getByLabelText(W.players), { target: { value: players } })
+    fireEvent.click(screen.getByRole('button', { name: t.common.next }))
+    return screen.getByRole('button', { name: W.create }) as HTMLButtonElement
+  }
+
+  it('three places for two players: the pool balances, but the 3rd has nobody, so it cannot be created', () => {
+    const create = review('2')
+    expect(create.disabled).toBe(true)
+    expect(screen.getByText(W.fixToCreate)).toBeTruthy()
+  })
+
+  it('the same split for three players can', () => {
+    const create = review('3')
+    expect(create.disabled).toBe(false)
+    expect(screen.queryByText(W.fixToCreate)).toBeNull()
+  })
+})

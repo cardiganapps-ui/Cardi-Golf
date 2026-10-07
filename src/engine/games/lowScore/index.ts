@@ -9,12 +9,12 @@
  * played so far, so players on different holes line up fairly.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
-import { flattenRanks, rankBy, type RankGroup } from '../../core/ranking'
+import { flattenRanks, rankBy, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { BoardSection, GameContext, GameImpl } from '../game'
-import { fmt, payPlaces } from '../payout'
+import { fmt, payPlaces, placeAmounts } from '../payout'
 import { moneyByPlayer, namer, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'lowScore'>
@@ -97,6 +97,17 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
       const day = tb.roundId ? `Día ${roundNumberOf(ctx, tb.roundId)}, ` : ''
       const label = (id: Id) => `${ctx.config.label}, ${day}${ordinal(tb.rows.find((r) => r.playerId === id)?.label ?? '')}`
       return payPlaces({ ...ctx, final: tb.final }, tb.groups, name, label, pot)
+    })
+  },
+  warnings(state, ctx) {
+    // Once the tournament is over: a place with a prize that no entrant with a card filled (MONEY-09).
+    const n = state.tables.length
+    if (!ctx.tournamentFinal || ctx.pot <= 0 || !n) return []
+    const base = Math.floor(ctx.pot / n)
+    return state.tables.flatMap((tb, i) => {
+      const pot = base + (i === 0 ? ctx.pot - base * n : 0)
+      const day = tb.roundId ? `, Día ${roundNumberOf(ctx, tb.roundId)}` : ''
+      return unfilledWarning(`${ctx.config.label}${day}`, unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)), tb.rows.length, ['jugador', 'jugadores'])
     })
   },
   board(state, ctx) {
