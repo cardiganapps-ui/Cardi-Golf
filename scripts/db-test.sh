@@ -8,7 +8,8 @@
 #      ran is refused; a ledger without checksums (production before DB-17)
 #      gets them, and nothing is applied twice.
 #   3. The harness self-test and every supabase/tests/*.sql, each on its own
-#      copy of the migrated database with the two-tenant seed.
+#      copy of the migrated database with the two-tenant seed; then every
+#      supabase/tests/race_*.sh, which runs two sessions at once.
 #   4. Supabase's advisors (splinter): no finding over the baseline in
 #      supabase/tests/harness/lint-baseline.json (DB-16 holds the line).
 # Needs a superuser connection through the PG* variables, and the stub
@@ -81,6 +82,16 @@ fresh "${P}_seeded" "$P"
 for t in "$H/selftest.sql" "$root"/supabase/tests/*.sql; do
   fresh "${P}_t" "${P}_seeded"
   if ! "${PSQL[@]}" -d "${P}_t" -f "$t" >"$work/out" 2>&1; then
+    tail -30 "$work/out"
+    echo "  ✗ $(basename "$t")"
+    exit 1
+  fi
+  echo "  ✓ $(basename "$t")"
+done
+
+step "3b. Races: two sessions at once, on the migrated database (supabase/tests/race_*.sh)"
+for t in "$root"/supabase/tests/race_*.sh; do
+  if ! bash "$t" "${P}_race" "$P" "$root" >"$work/out" 2>&1; then
     tail -30 "$work/out"
     echo "  ✗ $(basename "$t")"
     exit 1

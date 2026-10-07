@@ -414,7 +414,9 @@ The settlement nets to zero across all people (banker included)
 - `groups`: `id`, `round_id`, `number`, `tee_time`, `start_hole` (1 | 10).
 - `group_members`: `group_id`, `player_id`.
 - `round_tees`: `round_id`, `player_id`, `tee_id`. Unique on (`round_id`, `player_id`). Which tee each player plays that day (§13b-D). (When the pairs module is on, a group is normally two pairs; the engine validates that, the schema doesn't require it.)
-- `scores`: `id`, `round_id`, `player_id`, `hole`, `strokes` (nullable), `putts` (nullable), `picked_up`, `entered_by`, `client_ts`, `updated_at`. Unique on (`round_id`, `player_id`, `hole`).
+- `scores`: `id`, `round_id`, `player_id`, `hole`, `strokes` (nullable), `putts` (nullable), `picked_up`, `entered_by`, `client_ts`, `updated_at`, `version` (bumped on every change), `device_id`, `mutation_id`. Unique on (`round_id`, `player_id`, `hole`). A direct write from the app records the session's own player as `entered_by`, whatever the body says (`scores_00_writer`, SEC-02).
+- `save_hole(p)` (2026-10-07, migration 0026; not yet used by the app): a group's hole in one statement. Each entry names the fields the phone set and the values it saw them hold; a field someone else changed meanwhile isn't overwritten, and the answer says `conflict` with the server's row. Entries the server refuses (round not live, card signed, not in the group, invalid) answer `rejected` and, with conflicts, go to `rejected_writes`. A mutation sent twice answers what it answered the first time (`score_mutations`, no client access). The app switches to it in outbox v2 (PLAN §5.1); until then phones write each score directly, as before.
+- `rejected_writes`: `tournament_id`, `round_id`, `hole`, `player_id`, `writer_player_id`, `auth_user_id`, `device_id`, `mutation_id`, `payload`, `reason` (`round_not_live` | `card_signed` | `not_in_group` | `invalid` | `conflict`), `status` (`open` | `applied` | `dismissed`). Written only by `save_hole`; the Comité reads its tournament's, a phone its own (REL-08).
 - `snake_tiebreaks`: `round_id`, `group_id`, `hole`, `last_holed_player_id`, `decided_by`, `created_at`. Unique on (`round_id`, `group_id`, `hole`).
 - `card_signatures`: `round_id`, `pair_id` (whose card was signed), `signed_by`, `signed_at`.
 - `handicap_overrides`: `round_id`, `player_id`, `playing_hcp`, `reason`, `by`, `at`.
@@ -502,7 +504,7 @@ The settlement nets to zero across all people (banker included)
 ### Permissions (RLS)
 - **Tenant boundary is the tournament.** Every policy starts from `tournament_id`: a device linked to one tournament reads nothing from another. `my_player_id(tournament_id)` and `is_tournament_organizer(tournament_id)` are the two helpers.
 - **Read:** any linked device can read everything in its tournament except `pin_hash`. Hide it with a view or column privileges.
-- **Write scores:** allowed when the writer is in the same group for that round, the round is `live`, and the card isn't signed yet. Admins can always write, but must give a reason once a card is signed.
+- **Write scores:** allowed when the round is `live`, the card isn't signed yet, and the writer is in the same group for that round or of the Comité (0026: the Comité's direct writes no longer bypass the round and the card, REL-09). A correction after that goes through `admin_save_score`, with a reason once the card is signed. A phone's snake answer and contest winners need a live round too; the Comité's own decisions on them don't.
 - **Organizer/admin-only:** tournament setup, players, pairs, groups, overrides, the auction console, and payments. Organizers (`tournament_organizers`) and players with `is_admin` both count.
 - **Spectator link** (optional, section 18): read-only boards without money, through a public view and a share token.
 - The service role key never reaches the client.

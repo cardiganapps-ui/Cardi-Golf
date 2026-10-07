@@ -24,6 +24,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   groups: 'id',
   group_members: 'group_id,player_id',
   scores: 'id',
+  score_mutations: 'mutation_id',
+  rejected_writes: 'id',
   snake_tiebreaks: 'round_id,group_id,hole',
   card_signatures: 'round_id,pair_id',
   handicap_overrides: 'round_id,player_id',

@@ -2526,9 +2526,11 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/save_hole.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Server half in migration 0026 (save_hole), proven on the local harness (supabase/tests/save_hole.sql): a group's hole in one statement; each entry names the fields the phone set and the values it saw them hold, and a field another phone changed meanwhile is not overwritten (the answer is `conflict`, with the server's row). Production gets it with SUPABASE_PAT (docs/handoff.md); the app switches to it in outbox v2, after #92 and #93. Until both, phones write only the players they touched (#12's mitigation)."
     },
     {
       "id": "REL-06",
@@ -2570,10 +2572,11 @@
       "pr": 89,
       "tests": [
         "src/components/RejectedWrites.test.tsx",
-        "src/screens/admin/AdminRounds.test.tsx"
+        "src/screens/admin/AdminRounds.test.tsx",
+        "supabase/tests/save_hole.sql"
       ],
       "verifiedBy": null,
-      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and both «Terminar ronda» and «Terminar y publicar» ask every phone that captured to have nothing left to send. Also for that migration: snake tiebreaks and hole awards have no live-round check on the server (0013_identity.sql:231-275), so one queued offline is still accepted after «Terminar» while the same hole's scores are refused. A phone only reports once Polo is open with signal (no background sync on iOS). «Names the wrong day» was an Ensayo artifact (verifier V9); the simulator now moves current_round_id as «Iniciar» does. The re-check at 29435c4 confirmed the client half and found «El día volvió a estar en juego» with a dead «Volver a mandar» on a day that never closed (the player moved to another group): a player's phone now offers a resend only for what it could write now (the day live, the card unsigned, its player in that group that day), says «Ya no juegas en ese grupo» otherwise, and words the hint per state, so a mixed list keeps «Mandar al Comité». Its two surviving mutants (R8, a putts-only difference; R15, the no-rounds Tarjeta) are killed. Awaiting re-verification."
+      "residual": "The server half waits for save_hole (W1, §5.1), which needs the migration secrets: refused writes uploaded to an inbox the Comité sees, and a device heartbeat so «Terminar ronda» can name the phone that still holds holes. Until then the player hands the values over with «Mandar al Comité», and both «Terminar ronda» and «Terminar y publicar» ask every phone that captured to have nothing left to send. Also for that migration: snake tiebreaks and hole awards have no live-round check on the server (0013_identity.sql:231-275), so one queued offline is still accepted after «Terminar» while the same hole's scores are refused. A phone only reports once Polo is open with signal (no background sync on iOS). «Names the wrong day» was an Ensayo artifact (verifier V9); the simulator now moves current_round_id as «Iniciar» does. The re-check at 29435c4 confirmed the client half and found «El día volvió a estar en juego» with a dead «Volver a mandar» on a day that never closed (the player moved to another group): a player's phone now offers a resend only for what it could write now (the day live, the card unsigned, its player in that group that day), says «Ya no juegas en ese grupo» otherwise, and words the hint per state, so a mixed list keeps «Mandar al Comité». Its two surviving mutants (R8, a putts-only difference; R15, the no-rounds Tarjeta) are killed. Awaiting re-verification. Migration 0026 (local harness, waiting for SUPABASE_PAT) adds the server half's table: save_hole keeps every refusal and conflict in rejected_writes, which the Comité reads; and a phone's snake answer and contest winners now need a live round (the Comité's decisions don't)."
     },
     {
       "id": "REL-09",
@@ -2585,9 +2588,11 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/save_hole.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed in migration 0026: direct writes to scores, the Comité's included, only while the round is live and the card unsigned; a correction after that goes through admin_save_score with a reason (supabase/tests/save_hole.sql, step 12). Production keeps the old policy until 0026 is applied (SUPABASE_PAT); status moves to fixed then."
     },
     {
       "id": "REL-10",
@@ -2789,9 +2794,11 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/save_hole.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed in migration 0026: a direct write from the app records the session's own player as entered_by, whatever the body says (scores_00_writer), and save_hole sets it itself (supabase/tests/save_hole.sql, step 10). Production keeps client-asserted provenance until 0026 is applied (SUPABASE_PAT)."
     },
     {
       "id": "SEC-03",
@@ -3441,9 +3448,11 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/save_hole.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Part in migration 0026: every score records the device and the mutation that last wrote it (save_hole). Historial does not show the device yet; that comes with the save_hole client."
     },
     {
       "id": "UX-01",
