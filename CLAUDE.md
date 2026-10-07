@@ -275,7 +275,8 @@ The engine asserts this sum when it loads settings, and the admin shows an error
   - Placings come from the final individual Stableford ranking, including countback.
   - Ties at a slot boundary: the tied players split the combined slots evenly.
   - Each slot's money is split among the player's owners by ownership percentage.
-  - Round to whole pesos, and give any rounding remainder to the champion's owners so the payout totals the pot exactly.
+  - Round to whole pesos, and give any rounding remainder to the champion's owners so the payout totals the pot exactly. A slot nobody can fill stays unassigned in whole pesos (floor), so payouts plus unassigned equal the pot to the peso (MONEY-08).
+  - A lot never auctioned (still pending or open once the tournament is live) cashes nothing: the slots' places count among the sold lots, and the Comité sees a warning naming the player (MONEY-11, 2026-10-07; the other reading, self-owned at the opening bid, is Diego's call in the handoff).
 - **Payment deadline:** everything is paid before bed on Calcutta night ("se paga antes de dormir").
 
 ### 5.10 Governance
@@ -428,6 +429,7 @@ The settlement nets to zero across all people (banker included)
 - `hole_awards`: `round_id`, `group_id`, `hole`, `game_id`, `player_id`, `decided_by`. Hole-contest winners.
 - `game_results`: `tournament_id`, `game_id`, `player_id`, `share`. The Comité's result for a custom bet.
 - `payments.kind` also takes `side` (buy-in to a side pot, player → bank) and `bet` (direct bet, player → player).
+- A pot nobody wins (skins, birdie or eagle pot, hole contest; MONEY-10): once the game is final, a side pot goes back to its entrants, the buy-in each («<juego>, entrada devuelta»; a contest waits while a hole is in dispute), and a pot from the inscriptions stays unassigned with a warning that names the amount. `refundUnwon` / `unwonWarning` in `src/engine/games/payout.ts`.
 - `restore_tournament` brings the three back (0011 added them, 0020 lost them, 0025 restores them again; DB-02). `src/data/backup.restore.test.ts` fails when the function's latest definition misses a table `backup.ts` exports, and `supabase/tests/restore_roundtrip.sql` changes every table after a backup and compares each one after the restore (local Postgres harness). 0025 also audits the team draw tables and adds them to the Realtime publication; the client does not listen to them yet: adding `teams` and `team_members` to `src/data/realtimeTables.ts` is a separate change that ships only after 0025 is applied in production (REL-01), so until then a team draw reaches other phones at their next reload.
 
 **Profiles and identity** (2026-09-28, migration 0013)

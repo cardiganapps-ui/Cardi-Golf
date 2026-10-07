@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-03",
+  "updated": "2026-10-07",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -1284,9 +1284,11 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 96,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1312,11 +1314,14 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 96,
+      "tests": [
+        "src/engine/games/games.test.ts",
+        "src/engine/games/capture.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Dinero has no «Por asignar» list yet: a pot from the inscriptions that nobody won shows as a warning on En vivo and in the Comité, with the amount. The per-peso list and its actions (award, refund, house) come with MONEY-05."
     },
     {
       "id": "MONEY-11",
@@ -1326,11 +1331,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 96,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Built as \"an unsold lot does not cash; places count among sold lots, with a warning naming the player\". The other reading of §5.9 (self-owned at the opening bid, added to the pot and owed) is Diego's call: docs/handoff.md, Plan A+ item 5d."
     },
     {
       "id": "MONEY-12",
