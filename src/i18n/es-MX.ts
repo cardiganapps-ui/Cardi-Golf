@@ -650,7 +650,7 @@ export const t = {
       nextSteps: 'Ya existe. Ahora, en el Comité: los jugadores con su PIN, el campo, la fecha y los grupos. «Para empezar» te dice qué falta.',
       shareLater: 'Código para invitar',
       goAdmin: 'Ir al Comité',
-      fixToCreate: 'Ajusta el dinero para que cuadre y poder crear el torneo.',
+      fixToCreate: 'Ajusta el dinero para crear el torneo: debe cuadrar, y cada premio debe tener quién lo gane.',
     },
   },
   setup: {
@@ -715,6 +715,7 @@ export const t = {
       ok: 'Cuadra',
       off: (diff: string) => `Faltan ${diff}`,
       over: (diff: string) => `Sobran ${diff}`,
+      unreachable: 'Hay premios que nadie gana',
     },
   },
   account: {
@@ -1730,6 +1731,7 @@ export const t = {
       published: (n: number) => `Resultados publicados en ${n === 1 ? '1 perfil' : `los perfiles de ${n} jugadores`}.`,
       publishFailed: 'No se publicaron los resultados:',
       unbalancedNearSave: 'La bolsa no cuadra: ajusta los premios antes de guardar.',
+      unreachableNearSave: 'Hay premios que nadie puede ganar: ajústalos antes de guardar.',
       brand: 'Marca',
       name: 'Nombre',
       tagline: 'Lema',
@@ -1787,6 +1789,7 @@ export const t = {
       balance: 'Cuadre de la bolsa',
       balanced: 'Cuadra',
       notBalanced: (diff: string) => `No cuadra por ${diff}`,
+      unreachableTitle: 'Premios que nadie puede ganar: quita esos lugares o cambia el reparto.',
       sidePots: 'Botes aparte',
       bets: 'Apuestas directas',
       invalid: 'Hay un error en la configuración:',

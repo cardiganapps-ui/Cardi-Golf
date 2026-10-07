@@ -250,6 +250,8 @@ The printed rules sheet the group received says the same thing. If you find a co
 
 The engine asserts this sum when it loads settings, and the admin shows an error if the settings don't balance.
 
+Balanced is not enough (MONEY-09, 2026-10-07): every place with a prize needs someone who can take it. Individual places can't outnumber the format's entrants (players, or teams under a team format or fourball: drawn ones, else half the field). Pair places can't outnumber the pairs, and a low score's places can't outnumber its entrants. Otherwise the wizard and the Comité refuse to create or save (`checkPrizePool().ok`). Once play starts, a place the field can no longer fill is a warning. An entrant with no result (never played, or a fourball side with no match) takes no paid place. Once final, each game names the places nobody filled and their pesos, which stay with the bank until the Comité decides.
+
 ### 5.9 La Calcutta (separate pot)
 - **When:** the dinner the night before Day 1.
 - **Lots:** every player is auctioned once, in an order drawn from a hat.
