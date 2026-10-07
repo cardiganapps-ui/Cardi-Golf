@@ -22,7 +22,7 @@ import { snapshotToRows } from './testing/rows'
 let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
-const { useTournament, registerOverlay, _liveTest } = await import('./tournamentStore')
+const { useTournament, registerOverlay, liveClock, _liveTest } = await import('./tournamentStore')
 const { _outboxTest, overlayPending, enqueueScore, enqueueAward, enqueueTiebreak, startOutbox, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 const { applyPaidWrites } = await import('../engine/core/money')
@@ -282,7 +282,7 @@ describe('a score this phone saved, once the server took it', () => {
     expect(shown()).toMatchObject({ strokes: 7, disputed: true })
   })
 
-  it('a fetch that landed while the write was out read the server around it: nothing lands, and one more fetch shows what the server holds (L4, R3)', async () => {
+  it('a fetch that landed while the write was out read the server around it: the write lands under the stamp guard, which keeps the later 7, and one more fetch confirms what the server holds (L4, R3)', async () => {
     void save(5)
     const p = await control!.nth(1)
     // The server took this phone's 5, then B's 7; a reload reads 7 and lands; neither event comes (the channel dropped).
@@ -325,6 +325,136 @@ describe('a score this phone saved, once the server took it', () => {
     expect(shown()).toMatchObject({ strokes: 8 })
     await vi.waitFor(() => expect(reads()).toBe(n + 1))
     expect(_liveTest.refetchAsked()).toBe(false)
+  })
+
+  it('a fetch that landed while the push was out read before the write: the hole shows at once, on the boards and in the copy, and stays when the one more fetch fails (N1)', async () => {
+    void save(5)
+    const p = await control!.nth(1)
+    // A reload lands while the push is out: it read the server before the write.
+    await store().reload()
+    const five = serverWrite({ strokes: 5, entered_by: A, updated_at: '2027-04-09T18:00:01+00:00' })
+    // No signal for the one more fetch, and the echo never comes.
+    server.down = { message: 'TypeError: Failed to fetch' }
+    try {
+      const n = reads()
+      p.land(upserted('scores', [five]))
+      await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+      expect(shown()).toMatchObject({ strokes: 5 })
+      expect(inBase()).toMatchObject({ strokes: 5 })
+      // The one more fetch goes once the flush ends, and fails: the hole stays.
+      await vi.waitFor(() => expect(reads()).toBeGreaterThan(n))
+      await sleep(30)
+      expect(shown()).toMatchObject({ strokes: 5 })
+      expect(inBase()).toMatchObject({ strokes: 5 })
+    } finally {
+      server.down = null
+    }
+  })
+
+  it('a flush whose landings overlap fetches asks its one more fetch once, when it ends (N8)', async () => {
+    const holes = [13, 14, 15]
+    for (const h of holes) void enqueueScore(TID, { round_id: R, player_id: P, hole: h, strokes: 5, putts: 2, picked_up: false, entered_by: A, client_ts: new Date().toISOString() })
+    const answer = (h: number) => {
+      const rows = server.tables.scores!
+      const row = { id: `srv-${h}`, round_id: R, player_id: P, hole: h, strokes: 5, putts: 2, picked_up: false, entered_by: A, client_ts: null, updated_at: `2027-04-09T18:00:${10 + h}+00:00`, disputed: false, previous: null, reason: null }
+      rows.splice(0, rows.length, ...rows.filter((r) => !(r.round_id === R && r.player_id === P && r.hole === h)), row)
+      return upserted('scores', [row])
+    }
+    const n = reads()
+    for (const [i, h] of holes.entries()) {
+      const p = await control!.nth(i + 1)
+      // A fetch lands while each push is out, and the pushes take their time on 4G.
+      await store().reload()
+      if (i === 0) expect(_liveTest.fetchAfterPushesAsked()).toBe(false)
+      p.land(answer(h))
+      if (i < holes.length - 1) {
+        await control!.nth(i + 2)
+        await sleep(200)
+      }
+    }
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    // Its own three, and one more for the whole flush.
+    await vi.waitFor(() => expect(reads()).toBe(n + holes.length + 1))
+    await sleep(250)
+    expect(reads()).toBe(n + holes.length + 1)
+    for (const h of holes) expect(store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === h)).toMatchObject({ strokes: 5 })
+  })
+
+  it('two fetches out and a write lands during both: the newer lands first, and the older’s landing still sends the one more fetch (N2)', async () => {
+    const older = slowReload()
+    await older.atLastWave
+    void save(8)
+    const p = await control!.nth(1)
+    p.land(upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    expect(_liveTest.refetchAsked()).toBe(true)
+    // The newer fetch lands while the older is still out: nothing to ask yet.
+    await store().reload()
+    expect(_liveTest.refetchAsked()).toBe(true)
+    const n = reads()
+    await older.finish()
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+    expect(_liveTest.refetchAsked()).toBe(false)
+  })
+
+  it('the guard keeps a row stamped later than the landed one, and one more fetch says which stands (N4)', async () => {
+    void save(5)
+    const p = await control!.nth(1)
+    // Another phone's 7 is on the boards (its echo came) with a later stamp; this phone's 5 waited on the row's lock,
+    // committed last with the earlier stamp, and its echo is lost.
+    emit('scores', { eventType: 'UPDATE', new: serverWrite({ strokes: 7, entered_by: B, updated_at: '2027-04-09T18:00:02+00:00' }), old: {} })
+    await vi.waitFor(() => expect(inBase()).toMatchObject({ strokes: 7 }))
+    const five = serverWrite({ strokes: 5, entered_by: A, updated_at: '2027-04-09T18:00:01+00:00' })
+    const n = reads()
+    p.land(upserted('scores', [five]))
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 5 }))
+  })
+
+  it('an answer that comes later than the change log keeps (2 min after its push) lands and asks one more fetch (N5)', async () => {
+    void save(5)
+    const p = await control!.nth(1)
+    const five = serverWrite({ strokes: 5, entered_by: A, updated_at: '2027-04-09T18:00:01+00:00' })
+    // No fetch landed since the push went out; its answer comes three minutes later.
+    const later = performance.now() + 3 * 60_000
+    const clock = vi.spyOn(performance, 'now').mockReturnValue(later)
+    try {
+      const n = reads()
+      p.land(upserted('scores', [five]))
+      await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+      expect(shown()).toMatchObject({ strokes: 5 })
+      await vi.waitFor(() => expect(reads()).toBe(n + 1))
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  it('a tournament left is fetched by nothing: another tab’s write that lands after it asks no fetch (N9)', async () => {
+    await startOutbox()
+    const sentAt = liveClock()
+    await store().reload()
+    store().unsubscribe()
+    const n = reads()
+    // The other tab's push went out before this tab's last fetch: on an open tournament that is one more fetch.
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [serverWrite({ strokes: 5, entered_by: A, updated_at: '2027-04-09T18:00:01+00:00' })]), age: liveClock() - sentAt } })
+    other.close()
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 5 }))
+    await sleep(300)
+    expect(reads()).toBe(n)
+  })
+
+  it('a tournament left is fetched by nothing, a push answer that comes after it included (N9)', async () => {
+    void save(5)
+    const p = await control!.nth(1)
+    await store().reload()
+    store().unsubscribe()
+    expect(_liveTest.isOpen()).toBe(false)
+    const n = reads()
+    p.land(upserted('scores', [serverWrite({ strokes: 5, entered_by: A, updated_at: '2027-04-09T18:00:01+00:00' })]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    await sleep(300)
+    expect(reads()).toBe(n)
   })
 })
 
@@ -409,7 +539,7 @@ describe('a hole contest’s winners (the push deletes the group’s winners for
     expect(winners(G2)).toEqual(['p6'])
   })
 
-  it('a late answer after a reconnect: the fetch read the group mate’s later winner, and this push’s older one does not come back over it (R3a)', async () => {
+  it('a late answer after a reconnect: the fetch read the group mate’s later winner; this push’s older one shows only until the one more fetch brings the mate’s back (R3a)', async () => {
     void award(['p1'])
     const p = await control!.nth(1)
     // The server took p1, then the group mate's phone replaced it with p2; the channel was down for both.
@@ -467,7 +597,7 @@ describe('a snake answer changed', () => {
     expect(shown()).toBe(b)
   })
 
-  it('a late answer after a reconnect: the fetch read the group mate’s changed answer, and this push’s older one does not come back over it (R3b)', async () => {
+  it('a late answer after a reconnect: the fetch read the group mate’s changed answer; this push’s older one shows only until the one more fetch brings the mate’s back (R3b)', async () => {
     const fx = (await open('full12-live'))!
     const TID = fx.snapshot.tournament.id
     const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
@@ -484,6 +614,107 @@ describe('a snake answer changed', () => {
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
     await sleep(250)
     expect(shown()).toBe(b)
+  })
+
+  it('the phone’s clock set back while the answer is out: the reconnect fetch still counts as after it, and one more fetch brings the mate’s answer back (N6)', async () => {
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
+    const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
+    const [a, b] = g.playerIds as [string, string]
+    const HOLE = 17
+    const shown = () => store().data!.snapshot.snakeTiebreaks.find((x) => x.roundId === round.id && x.groupId === g.id && x.hole === HOLE)?.lastHoledPlayerId
+    void enqueueTiebreak(TID, { round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: a, decided_by: a })
+    const p = await control!.nth(1)
+    const ours = { round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: a, decided_by: a, created_at: '2027-04-09T18:00:00+00:00' }
+    server.tables.snake_tiebreaks = [...server.tables.snake_tiebreaks!.filter((x) => !(x.round_id === round.id && x.group_id === g.id && x.hole === HOLE)), { ...ours, last_holed_player_id: b, decided_by: b }]
+    // The phone's clock goes back two minutes (a time zone change, a sync) while the answer is out, and a reconnect fetch lands.
+    const wall = vi.spyOn(Date, 'now').mockReturnValue(Date.now() - 2 * 60_000)
+    try {
+      await store().reload()
+    } finally {
+      wall.mockRestore()
+    }
+    p.land(upserted('snake_tiebreaks', [ours]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    await sleep(250)
+    expect(shown()).toBe(b)
+  })
+
+  it('the phone’s clock set forward while the answer is out: the log still holds the echoes, so the mate’s later answer shows, not this one’s again (N6b)', async () => {
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
+    const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
+    const [a, b] = g.playerIds as [string, string]
+    const HOLE = 17
+    const shown = () => store().data!.snapshot.snakeTiebreaks.find((x) => x.roundId === round.id && x.groupId === g.id && x.hole === HOLE)?.lastHoledPlayerId
+    void enqueueTiebreak(TID, { round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: a, decided_by: a })
+    const p = await control!.nth(1)
+    const ours = { round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: a, decided_by: a, created_at: '2027-04-09T18:00:00+00:00' }
+    emit('snake_tiebreaks', { eventType: 'INSERT', new: structuredClone(ours), old: {} })
+    emit('snake_tiebreaks', { eventType: 'UPDATE', new: { ...ours, last_holed_player_id: b, decided_by: b }, old: {} })
+    await sleep(60)
+    // The clock jumps three minutes ahead, and a change heard then ages the log: by the wall clock both echoes would go.
+    const row = server.tables.scores!.find((r) => r.round_id === round.id)!
+    const wall = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 3 * 60_000)
+    try {
+      emit('scores', { eventType: 'UPDATE', new: { ...structuredClone(row), strokes: 9, updated_at: '2027-04-09T18:00:09+00:00' }, old: {} })
+      await vi.waitFor(() => expect(store().data!.snapshot.scores.find((x) => x.id === row.id)?.strokes).toBe(9))
+    } finally {
+      wall.mockRestore()
+    }
+    p.land(upserted('snake_tiebreaks', [ours]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    await sleep(250)
+    expect(shown()).toBe(b)
+  })
+})
+
+describe('a write to a day this phone has not loaded (parked until the day comes)', () => {
+  const day = (TID: string, courseId: string | null) => ({ id: 'r3-new', tournament_id: TID, number: 3, date: '2027-04-11', course_id: courseId, holes: 18, status: 'live' })
+  async function setup() {
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const P = fx.snapshot.groups.find((g) => g.roundId === 'r2')!.playerIds[0]!
+    server.tables.rounds!.push(day(TID, fx.snapshot.rounds[0]!.courseId))
+    const shown = () => store().data!.snapshot.scores.find((x) => x.roundId === 'r3-new' && x.playerId === P && x.hole === 1)
+    const save = (strokes: number) => enqueueScore(TID, { round_id: 'r3-new', player_id: P, hole: 1, strokes, putts: 2, picked_up: false, entered_by: P, client_ts: new Date().toISOString() })
+    const srow = (strokes: number, stamp: string, by: string) => ({ id: 'r3-s1', round_id: 'r3-new', player_id: P, hole: 1, strokes, putts: 2, picked_up: false, entered_by: by, client_ts: null, updated_at: stamp, disputed: false, previous: null, reason: null })
+    return { TID, shown, save, srow }
+  }
+
+  it('a landed row parked: the fetch that brings the day read another phone’s later write, and the later one shows (LF1)', async () => {
+    const { TID, shown, save, srow } = await setup()
+    void save(5)
+    const p = await control!.nth(1)
+    p.land(upserted('scores', [srow(5, '2027-04-11T09:00:01+00:00', 'p1')]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    expect(_liveTest.parkedSize()).toBeGreaterThan(0)
+    server.tables.scores!.push(srow(7, '2027-04-11T09:00:02+00:00', 'p4'))
+    emit('rounds', { eventType: 'INSERT', new: day(TID, 'x'), old: {} })
+    await vi.waitFor(() => expect(store().data!.snapshot.rounds.some((r) => r.id === 'r3-new')).toBe(true))
+    await sleep(200)
+    expect(shown()?.strokes).toBe(7)
+  })
+
+  it('its echo parked first counts as heard: the other phone’s write committed after it (the earlier stamp) is what shows when the day comes (N7, LF2)', async () => {
+    const { TID, shown, save, srow } = await setup()
+    void save(5)
+    const p = await control!.nth(1)
+    const mine = srow(5, '2027-04-11T09:00:02+00:00', 'p1')
+    // In commit order: this write, then the other phone's 9, which began first and waited on the row's lock.
+    const theirs = srow(9, '2027-04-11T09:00:01.5+00:00', 'p4')
+    emit('scores', { eventType: 'INSERT', new: structuredClone(mine), old: {} })
+    emit('scores', { eventType: 'UPDATE', new: structuredClone(theirs), old: {} })
+    await sleep(60)
+    p.land(upserted('scores', [mine]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    server.tables.scores!.push(theirs)
+    emit('rounds', { eventType: 'INSERT', new: day(TID, 'x'), old: {} })
+    await vi.waitFor(() => expect(store().data!.snapshot.rounds.some((r) => r.id === 'r3-new')).toBe(true))
+    await sleep(200)
+    expect(shown()?.strokes).toBe(9)
   })
 })
 
@@ -649,7 +880,7 @@ describe('another tab of the app on this phone', () => {
     const row = { id: 'srv-x1', round_id: R, player_id: P, hole: 16, strokes: 9, putts: 2, picked_up: false, entered_by: P, client_ts: null, updated_at: '2027-04-09T18:00:01+00:00', disputed: false, previous: null, reason: null }
     // The tab that pushed says what the server stored, on the outbox's channel.
     const other = new BroadcastChannel('cardi-golf-outbox')
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]), sentAt: Date.now() } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]), age: 0 } })
     other.close()
     await vi.waitFor(() => expect(shown()).toMatchObject({ id: 'srv-x1', strokes: 9 }))
   })
@@ -664,14 +895,16 @@ describe('another tab of the app on this phone', () => {
     const HOLE = 17
     const answer = () => store().data!.snapshot.snakeTiebreaks.find((x) => x.roundId === round.id && x.groupId === g.id && x.hole === HOLE)?.lastHoledPlayerId
     const theirs = { round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: a, decided_by: a, created_at: '2027-04-09T18:00:00+00:00' }
+    // The other tab's push went out before the server committed it, so before its echo came.
+    const sentAt = liveClock()
     emit('snake_tiebreaks', { eventType: 'INSERT', new: structuredClone(theirs), old: {} })
     emit('snake_tiebreaks', { eventType: 'UPDATE', new: { ...theirs, last_holed_player_id: b, decided_by: b }, old: {} })
     await vi.waitFor(() => expect(answer()).toBe(b))
     // The tab that pushed says what the server stored for it; then a later write of its, to know the first was read.
     const later = { id: 'srv-x2', round_id: round.id, player_id: a, hole: 16, strokes: 9, putts: 2, picked_up: false, entered_by: a, client_ts: null, updated_at: '2027-04-09T18:00:05+00:00', disputed: false, previous: null, reason: null }
     const other = new BroadcastChannel('cardi-golf-outbox')
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('snake_tiebreaks', [theirs]), sentAt: Date.now() } })
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [later]), sentAt: Date.now() } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('snake_tiebreaks', [theirs]), age: liveClock() - sentAt } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [later]), age: 0 } })
     other.close()
     await vi.waitFor(() => expect(store().data!.snapshot.scores.some((s) => s.id === 'srv-x2')).toBe(true))
     expect(answer()).toBe(b)
@@ -684,7 +917,7 @@ describe('another tab of the app on this phone', () => {
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
     const shown = () => store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === 16)
-    const sentAt = Date.now()
+    const sentAt = liveClock()
     // The other tab's 5 was stamped :02; another phone's 7, whose write waited on the row, committed after it stamped :01.
     const five = { id: 'srv-x3', round_id: R, player_id: P, hole: 16, strokes: 5, putts: 2, picked_up: false, entered_by: P, client_ts: null, updated_at: '2027-04-09T18:00:02+00:00', disputed: false, previous: null, reason: null }
     const rows = server.tables.scores!
@@ -697,9 +930,78 @@ describe('another tab of the app on this phone', () => {
     expect(shown()).toMatchObject({ strokes: 7 })
     const n = reads()
     const other = new BroadcastChannel('cardi-golf-outbox')
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), sentAt } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: liveClock() - sentAt } })
     other.close()
     await vi.waitFor(() => expect(reads()).toBe(n + 1))
     expect(shown()).toMatchObject({ strokes: 7, disputed: true })
+  })
+
+  it('an earlier identical row is not its write’s echo: a → b → a from the other tab, after this tab heard a’s and b’s echoes, shows a (N3)', async () => {
+    await startOutbox()
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
+    const g = fx.snapshot.groups.find((x) => x.roundId === round.id)!
+    const [a, b] = g.playerIds as [string, string]
+    const HOLE = 17
+    const answer = () => store().data!.snapshot.snakeTiebreaks.find((x) => x.roundId === round.id && x.groupId === g.id && x.hole === HOLE)?.lastHoledPlayerId
+    // The same decider's rows: the upsert keeps created_at, so a and a again are byte-identical.
+    const ans = (who: string) => ({ round_id: round.id, group_id: g.id, hole: HOLE, last_holed_player_id: who, decided_by: a, created_at: '2027-04-09T18:00:00+00:00' })
+    emit('snake_tiebreaks', { eventType: 'INSERT', new: ans(a), old: {} })
+    emit('snake_tiebreaks', { eventType: 'UPDATE', new: ans(b), old: {} })
+    await vi.waitFor(() => expect(answer()).toBe(b))
+    await sleep(5)
+    // The third write, a again, went out just now; its echo has not come.
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('snake_tiebreaks', [ans(a)]), age: 0 } })
+    other.close()
+    await vi.waitFor(() => expect(answer()).toBe(a))
+  })
+
+  /** Hole 16 of the live round's first player, as the server stored the other tab's write. */
+  async function stored(strokes: number) {
+    await startOutbox()
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
+    const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
+    const row = { id: 'srv-x4', round_id: R, player_id: P, hole: 16, strokes, putts: 2, picked_up: false, entered_by: P, client_ts: null, updated_at: '2027-04-09T18:00:03+00:00', disputed: false, previous: null, reason: null }
+    const rows = server.tables.scores!
+    const held = rows.find((r) => r.round_id === R && r.player_id === P && r.hole === 16)
+    if (held) Object.assign(held, row)
+    else rows.push(structuredClone(row))
+    const shown = () => store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === 16)
+    return { TID, row, shown }
+  }
+
+  it('its write whose push went out longer ago than the log keeps lands, and one more fetch follows (X4)', async () => {
+    const { TID, row, shown } = await stored(9)
+    const n = reads()
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]), age: _liveTest.LOG_MS + 1000 } })
+    other.close()
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 9 }))
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+  })
+
+  it('a message that does not say how long ago its push went out lands, and one more fetch follows (X5)', async () => {
+    const { TID, row, shown } = await stored(8)
+    const n = reads()
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]) } })
+    other.close()
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 8 }))
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+  })
+
+  it('a quick message lands with no fetch: its push went out after this tab’s last fetch (X6)', async () => {
+    const { TID, row, shown } = await stored(7)
+    const n = reads()
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]), age: 0 } })
+    other.close()
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 7 }))
+    await sleep(300)
+    expect(reads()).toBe(n)
   })
 })

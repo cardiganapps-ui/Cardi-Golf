@@ -55,7 +55,8 @@ export interface LiveChange {
  * phone has not loaded ('unknown': kept for a while, in case it is a day just
  * created here); or not placeable at all (the caller reloads).
  */
-export type ApplyResult = 'applied' | 'ignored' | 'unknown' | 'reload'
+/** `stale`: a row this phone's write brought back, refused because the boards hold one stamped later (the store asks a fetch). */
+export type ApplyResult = 'applied' | 'ignored' | 'unknown' | 'reload' | 'stale'
 
 /** The tables applied in place: the ones that change hole by hole and sale by sale. */
 export const APPLIED_TABLES = [
@@ -280,7 +281,7 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, op
   if (where === undefined) return 'unknown'
   const mapped = sp.map(row)
   const at = list.findIndex((x) => sp.same(x, row))
-  if (opts.landed && at >= 0 && sp.stale?.(list[at], mapped)) return 'ignored'
+  if (opts.landed && at >= 0 && sp.stale?.(list[at], mapped)) return 'stale'
   if (at >= 0 && sp.order(list[at], mapped) === 0) {
     // An update keeps its place.
     sp.set(s, [...list.slice(0, at), mapped, ...list.slice(at + 1)])

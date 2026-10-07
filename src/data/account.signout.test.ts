@@ -51,7 +51,8 @@ vi.mock('../lib/supabase', () => ({
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
-  useTournament: { getState: () => ({ tournamentId: 't-open', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, reload: async () => undefined }) },
+  liveClock: () => Date.now(),
+  useTournament: { getState: () => ({ tournamentId: 't-open', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
 }))
 
 const { continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely } = await import('./account')

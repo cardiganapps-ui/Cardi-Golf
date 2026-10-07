@@ -15,9 +15,13 @@ const srv = vi.hoisted(() => {
     answers: new Map<string, Row[]>(),
     /** The requests that asked for their rows back. */
     selected: [] as string[],
-    landed: [] as Array<{ tournamentId: string; changes: unknown[]; since: number }>,
+    landed: [] as Array<{ tournamentId: string; changes: unknown[]; since: number; opts?: unknown }>,
+    /** Flushes the store heard end. */
+    pushesDone: 0,
     /** Fetches the outbox asked the store for. */
     reloads: 0,
+    /** How long the server takes to answer, in ms. */
+    delay: 0,
     client: null as unknown,
   }
   function request(table: string, method: string) {
@@ -31,7 +35,8 @@ const srv = vi.hoisted(() => {
       },
       then<A, B>(ok?: (v: { data: Row[] | null; error: null }) => A, bad?: (e: unknown) => B) {
         if (asked) state.selected.push(`${table}:${method}`)
-        return Promise.resolve({ data: asked ? structuredClone(state.answers.get(`${table}:${method}`) ?? []) : null, error: null }).then(ok, bad)
+        const answer = { data: asked ? structuredClone(state.answers.get(`${table}:${method}`) ?? []) : null, error: null }
+        return new Promise<typeof answer>((r) => setTimeout(() => r(answer), state.delay)).then(ok, bad)
       },
     }
     return req
@@ -50,13 +55,15 @@ vi.mock('../lib/supabase', () => ({ supabase: () => srv.client, supabaseConfigur
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 7,
+  liveClock: () => Date.now(),
   useTournament: {
     getState: () => ({
       tournamentId: 't1',
       patch: () => undefined,
       refresh: () => undefined,
       reload: async () => void srv.reloads++,
-      landChanges: (tournamentId: string, changes: unknown[], since: number) => srv.landed.push({ tournamentId, changes, since }),
+      landChanges: (tournamentId: string, changes: unknown[], since: number, _sentAt: number, opts?: unknown) => srv.landed.push({ tournamentId, changes, since, opts }),
+      pushesDone: () => void srv.pushesDone++,
     }),
   },
 }))
@@ -74,6 +81,8 @@ beforeEach(() => {
   srv.selected = []
   srv.landed = []
   srv.reloads = 0
+  srv.pushesDone = 0
+  srv.delay = 0
   useAuth.setState({ user: { id: 'uid-phone' } as never, session: { access_token: 'tok' } as never })
 })
 
@@ -84,9 +93,11 @@ describe('a push hands the store the rows the server stored', () => {
     await _outboxTest.enqueue(item('score', 'score:r1:p1:12', { round_id: 'r1', player_id: 'p1', hole: 12, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' }))
     await flush()
     expect(srv.selected).toEqual(['scores:upsert'])
-    // Since: the channel's position when the push went out, so an echo heard meanwhile is known.
-    expect(srv.landed).toEqual([{ tournamentId: 't1', since: 7, changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }] }])
+    // Since: the channel's position when the push went out, so an echo heard meanwhile is known. A landing during a
+    // flush asks its one more fetch of the flush's end, which the store hears once.
+    expect(srv.landed).toEqual([{ tournamentId: 't1', since: 7, changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], opts: { flushing: true, fetch: false } }])
     expect(_outboxTest.queue()).toEqual([])
+    expect(srv.pushesDone).toBe(1)
   })
 
   it('a snake answer: the row as stored', async () => {
@@ -129,10 +140,12 @@ describe('a push hands the store the rows the server stored', () => {
     await _outboxTest.enqueue(item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }))
     await flush()
     expect(srv.selected).toEqual(['card_signatures:upsert'])
-    expect(srv.landed.map((l) => l.changes)).toEqual([[]])
+    expect(srv.landed.map((l) => [l.changes, l.opts])).toEqual([[[], { flushing: true, fetch: true }]])
     expect(_outboxTest.queue()).toEqual([])
     expect(useOutbox.getState().rejected).toEqual([])
-    expect(srv.reloads).toBe(1)
+    // The fetch is the store's, once the flush ends.
+    expect(srv.reloads).toBe(0)
+    expect(srv.pushesDone).toBe(1)
   })
 
   it('the app’s other tabs hear what landed, and nothing when nothing did', async () => {
@@ -145,10 +158,16 @@ describe('a push hands the store the rows the server stored', () => {
       await flush()
       const row = { id: 's-2', round_id: 'r1', player_id: 'p1', hole: 3, strokes: 5, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x', updated_at: '2027-04-09T18:00:01+00:00', disputed: false, previous: null, reason: null }
       srv.answers.set('scores:upsert', [row])
+      // The server takes a moment: the other tabs hear how long the push was out.
+      srv.delay = 60
       await _outboxTest.enqueue(item('score', 'score:r1:p1:3', { round_id: 'r1', player_id: 'p1', hole: 3, strokes: 5, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' }))
       await flush()
-      // With when the push went out: a fetch the other tab landed after that may have read past it.
-      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], sentAt: expect.any(Number) } }]))
+      // With how long ago the push went out (each tab's clock has its own origin): a fetch the other tab landed since
+      // may have read past it.
+      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], age: expect.any(Number) } }]))
+      const { age } = (heard.find((m) => (m as { landed?: unknown }).landed) as { landed: { age: number } }).landed
+      expect(age).toBeGreaterThanOrEqual(50)
+      expect(age).toBeLessThan(5_000)
     } finally {
       tab.close()
     }

@@ -248,7 +248,7 @@ describe('the same lists whichever way the rows came', () => {
     const at = (stamp: string, strokes: number) => upd('scores', { id: target.id, round_id: target.roundId, player_id: target.playerId, hole: target.hole, strokes, putts: 2, picked_up: false, updated_at: stamp, disputed: false })
     expect(applyChange(s, T(s), at('2027-04-12T12:00:05+00:00', 7))).toBe('applied')
     // A write this phone landed, its answer after a fetch that read the later one.
-    expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4), { landed: true })).toBe('ignored')
+    expect(applyChange(s, T(s), at('2027-04-12 12:00:04.999+00', 4), { landed: true })).toBe('stale')
     const held = () => s.scores.find((x) => x.roundId === target.roundId && x.playerId === target.playerId && x.hole === target.hole)
     expect(held()).toMatchObject({ strokes: 7 })
     expect(applyChange(s, T(s), at('2027-04-12T12:00:06+00:00', 8), { landed: true })).toBe('applied')

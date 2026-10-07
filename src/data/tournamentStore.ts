@@ -111,7 +111,9 @@ interface StoreState {
    * the server at an unknown point around the write: then nothing lands and
    * one more fetch says what the server holds.
    */
-  landChanges(tournamentId: string, changes: LiveChange[], since: number, sentAt: number): void
+  landChanges(tournamentId: string, changes: LiveChange[], since: number, sentAt: number, opts?: { flushing?: boolean; fetch?: boolean }): void
+  /** The outbox's flush ended: the one more fetch its landings asked for goes now, once. */
+  pushesDone(): void
 }
 
 let channel: RealtimeChannel | null = null
@@ -135,8 +137,13 @@ let applyTimer: ReturnType<typeof setTimeout> | null = null
  * keyed, so applying one twice changes nothing).
  */
 let changeSeq = 0
-/** `landed`: a row this phone's own write brought back, which yields to a newer one (realtimeApply `stale`). */
-const changeLog: Array<{ seq: number; at: number; change: LiveChange; landed?: boolean }> = []
+/**
+ * `t`: when it was applied, on `liveClock`, which also ages the log: a clock
+ * set forward would otherwise drop what a fetch or a push still asks about.
+ * `landed`: a row this phone's own write brought back, which yields to a
+ * newer one (realtimeApply `stale`).
+ */
+const changeLog: Array<{ seq: number; t: number; change: LiveChange; landed?: boolean }> = []
 const LOG_MS = 2 * 60_000
 /** A ceiling on the log, far above a burst (a tournament deleted or restored elsewhere sends every one of its deletes to every phone). */
 const LOG_MAX = 10_000
@@ -147,12 +154,12 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null
  * whose own change brings it. Kept this long, and placed as soon as their day
  * or lot is on the phone, instead of a reload for each one.
  */
-let parked: Array<{ at: number; change: LiveChange; landed?: boolean }> = []
+let parked: Array<{ at: number; t: number; change: LiveChange; landed?: boolean }> = []
 const PARK_MS = 2 * 60_000
 /** Far above what another tournament's traffic brings in PARK_MS (an account in two live tournaments hears both). */
 const PARK_MAX = 5_000
-function park(change: LiveChange, at: number, landed?: boolean) {
-  parked.push({ at, change, ...(landed ? { landed } : {}) })
+function park(change: LiveChange, at: number, landed?: boolean, t = liveClock()) {
+  parked.push({ at, t, change, ...(landed ? { landed } : {}) })
   if (parked.length > PARK_MAX) parked = parked.slice(-PARK_MAX)
 }
 /** A delete forgets what was parked for its row: placed later, the row would come back (round-1 repro G). */
@@ -180,20 +187,23 @@ function receive(change: LiveChange) {
  * the delete must lose it too); park what waits for its day or lot.
  * Returns how many applied and whether one needs a reload.
  */
-function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number; change: LiveChange; landed?: boolean }>, now: number) {
+function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number; t?: number; change: LiveChange; landed?: boolean }>) {
   let applied = 0
   let reload = false
-  for (const { at, change, landed } of changes) {
+  let stale = 0
+  const t = liveClock()
+  for (const { at, t: first, change, landed } of changes) {
     const r = applyChange(s, tournamentId, change, { landed })
     if (r === 'applied') applied++
     if (change.eventType === 'DELETE') unpark(change)
     // A delete of a row the boards do not hold matters only to a fetch on its way, which may have read the row before it.
-    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE' && fetching > 0)) changeLog.push({ seq: ++changeSeq, at: now, change, ...(landed ? { landed } : {}) })
-    else if (r === 'unknown') park(change, at, landed)
+    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE' && fetching > 0)) changeLog.push({ seq: ++changeSeq, t, change, ...(landed ? { landed } : {}) })
+    else if (r === 'unknown') park(change, at, landed, first)
     else if (r === 'reload') reload = true
+    else if (r === 'stale') stale++
   }
-  while (changeLog.length && (changeLog.length > LOG_MAX || changeLog[0]!.at < now - LOG_MS)) changeLog.shift()
-  return { applied, reload }
+  while (changeLog.length && (changeLog.length > LOG_MAX || changeLog[0]!.t < t - LOG_MS)) changeLog.shift()
+  return { applied, reload, stale }
 }
 
 /** Keep the server's rows on the phone a moment after the last change (a burst saves once). */
@@ -217,7 +227,7 @@ function flushChanges() {
   const next = structuredClone(d.base)
   const now = Date.now()
   // What waited for its day or lot goes first, in the order it came: a lot just sold places its bids.
-  const { applied, reload } = applyAll(next, id, [...takeParked(now), ...batch.map((change) => ({ at: now, change }))], now)
+  const { applied, reload } = applyAll(next, id, [...takeParked(now), ...batch.map((change) => ({ at: now, change }))])
   if (applied) {
     // The players are untouched, so their key stays; the boards are as fresh as the server's last change.
     useTournament.setState({ data: compute(next, d.playersKey), ...(st.source === 'server' ? { updatedAt: now } : {}) })
@@ -233,22 +243,35 @@ function flushChanges() {
  */
 function catchUp(snapshot: Snapshot, tournamentId: string, since: number) {
   for (const { seq, change, landed } of changeLog) if (seq > since) applyChange(snapshot, tournamentId, change, { landed })
-  const now = Date.now()
-  applyAll(snapshot, tournamentId, takeParked(now), now)
+  applyAll(snapshot, tournamentId, takeParked(Date.now()))
 }
 
 /** The live changes logged after `seq`: the outbox asks whether the server already answered for a write it sent. */
 export function liveSeq(): number {
   return changeSeq
 }
-export function liveChangesSince(seq: number): LiveChange[] {
-  return changeLog.filter((x) => x.seq > seq).map((x) => x.change)
+/**
+ * A clock that never goes back, for when a push went out against when a
+ * fetch landed: a phone's clock set back mid-push would otherwise make a
+ * fetch that read before the write look later than it (#92's fourth
+ * verifier, N6). Each tab counts from its own origin, and a sleep or a clock
+ * change between two tabs' openings sets their readings apart, so another
+ * tab says how long ago its push went out, never when (outbox `listen`).
+ */
+export function liveClock(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.timeOrigin + performance.now() : Date.now()
 }
 /** For tests: how much the log and the parked list hold, and the fetches on their way. */
-export const _liveTest = { logSize: () => changeLog.length, parkedSize: () => parked.length, fetching: () => fetching, refetchAsked: () => refetch, LOG_MAX, PARK_MAX }
+export const _liveTest = { logSize: () => changeLog.length, parkedSize: () => parked.length, fetching: () => fetching, refetchAsked: () => refetch, fetchAfterPushesAsked: () => fetchAfterPushes, isOpen: () => open, LOG_MAX, PARK_MAX, LOG_MS }
 
 /** When the boards last came from a fetch: a long quiet stretch on a live channel is checked against the server (`HEAL_MS`). */
 let lastFetchAt = 0
+/** The same, on `liveClock`: a fetch that landed after a push went out may have read past it. */
+let lastFetchMono = 0
+/** The one more fetch the outbox's landings asked for, sent once its flush ends (a reconnect's 36 rows cost one). */
+let fetchAfterPushes = false
+/** The gate is on the tournament: a tournament left is fetched by nothing, not an unlock, a reconnect or a late answer (N9). */
+let open = false
 /** Fetches on their way: the heal waits for them, and a delete is logged only for them. */
 let fetching = 0
 /** A write landed while a fetch was on its way, which may have read a later change than it: one more fetch once it lands. */
@@ -272,7 +295,7 @@ function ensureListeners() {
   if (listenersOn || typeof window === 'undefined') return
   listenersOn = true
   const kick = () => {
-    if (useTournament.getState().tournamentId && !useTournament.getState().tournamentId!.startsWith('fixture:')) void useTournament.getState().reload()
+    if (open && useTournament.getState().tournamentId && !useTournament.getState().tournamentId!.startsWith('fixture:')) void useTournament.getState().reload()
   }
   window.addEventListener('online', kick)
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && kick())
@@ -445,6 +468,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       get().unsubscribe()
       set({ tournamentId, data: null, error: null, source: null })
     }
+    open = true
     const leavesAtStart = leaves
     set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
@@ -455,14 +479,16 @@ export const useTournament = create<StoreState>((set, get) => ({
       const snapshot = await fetchSnapshot(tournamentId).finally(() => fetching--)
       if (get().tournamentId !== tournamentId) return
       if (seq !== fetchSeq) {
-        // A newer fetch of this tournament brings the boards (a reload a live change asked for); this load still owes the channel.
+        // A newer fetch of this tournament brings the boards (a reload a live change asked for); this load still owes the channel,
+        // and the one more fetch a write asked for while both were out (#92's fourth verifier, N2).
         if (get().data) set({ loading: false })
         if (leaves === leavesAtStart) get().subscribe()
-        return
+        return afterFetch()
       }
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, tournamentId, since)
       lastFetchAt = Date.now()
+      lastFetchMono = liveClock()
       healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
@@ -471,9 +497,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     } catch (e) {
       if (seq !== fetchSeq) {
         if (get().tournamentId === tournamentId && get().data) set({ loading: false })
-        return
+        return afterFetch()
       }
       set({ loading: false, error: humanError(e) })
+      afterFetch()
     }
   },
   async reload() {
@@ -486,10 +513,13 @@ export const useTournament = create<StoreState>((set, get) => ({
     fetching++
     try {
       const snapshot = await fetchSnapshot(id).finally(() => fetching--)
-      if (seq !== fetchSeq || get().tournamentId !== id) return
+      if (get().tournamentId !== id) return
+      // Superseded: the newer fetch brings the boards, and the one more fetch asked for while both were out still goes (N2).
+      if (seq !== fetchSeq) return afterFetch()
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, id, since)
       lastFetchAt = Date.now()
+      lastFetchMono = liveClock()
       healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
@@ -497,8 +527,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     } catch (e) {
       // The heal waits longer after each fetch that failed (a released device, a deleted tournament, a server down).
       healWait = Math.min(Math.max(healWait * 2, HEAL_MS * 2), HEAL_MAX_MS)
-      if (seq !== fetchSeq) return
+      if (seq !== fetchSeq) return afterFetch()
       set({ error: humanError(e) })
+      // A failed fetch read nothing: the one more fetch a landing asked for still goes, once (V22).
+      afterFetch()
     }
   },
   seed(tournamentId, snapshot, savedAt) {
@@ -511,6 +543,7 @@ export const useTournament = create<StoreState>((set, get) => ({
   subscribe() {
     const id = get().tournamentId
     if (!id || channel) return
+    open = true
     set({ realtime: 'connecting' })
     const sb = supabase()
     // `wait`: the server confirms every postgres_changes binding before the join
@@ -588,7 +621,9 @@ export const useTournament = create<StoreState>((set, get) => ({
   },
   unsubscribe() {
     leaves++
+    open = false
     refetch = false
+    fetchAfterPushes = false
     stopDegraded()
     retryDelay = RETRY_MIN_MS
     if (healTimer) clearInterval(healTimer)
@@ -626,28 +661,46 @@ export const useTournament = create<StoreState>((set, get) => ({
     const d = get().data
     if (d) set({ data: compute(d.base, d.playersKey) })
   },
-  landChanges(tournamentId, changes, since, sentAt) {
+  landChanges(tournamentId, changes, since, sentAt, opts = {}) {
     const st = get()
     const d = st.data
     if (st.tournamentId !== tournamentId || !d) return
-    // A fetch landed while the write was out: what it read may hold the write, a later change, or neither,
-    // and a table with no stamp can't say which. One more fetch, read after the write, does (#92's third verifier, R3).
-    if (lastFetchAt >= sentAt) {
-      st.refresh()
-      return scheduleReload()
+    // One more fetch, read after this write: now, or once the outbox's flush ends (a reconnect's rows ask it once).
+    // A tournament left fetches nothing (N9).
+    const askFetch = () => {
+      if (!open) return
+      if (opts.flushing) fetchAfterPushes = true
+      else scheduleReload()
     }
-    // Events come in commit order: once a row's echo is in, what came after it is newer, and is in too.
-    const heard = liveChangesSince(since)
+    // A fetch that landed while the write was out may have read before it, after it, or after a later change, and a
+    // table with no stamp can't say which; so may an answer older than the change log, whose echo and what came after
+    // have left it. The write lands all the same, so the hole the phone saved never leaves its boards or its copy
+    // (#92's fourth verifier, N1), and one more fetch says which (R3, N5).
+    const overlap = lastFetchMono >= sentAt || liveClock() - sentAt > LOG_MS
+    // Events come in commit order: once a row's echo is in, what came after it is newer, and is in too. Only what came
+    // since the push went out counts: an identical earlier row is not this write's echo (N3). Parked echoes count (N7).
+    const heard = [...changeLog.filter((x) => x.seq > since && x.t >= sentAt).map((x) => x.change), ...parked.filter((p) => !p.landed && p.t >= sentAt).map((p) => p.change)]
     const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
-    if (!fresh.length) return st.refresh()
-    // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
-    if (fetching > 0) refetch = true
-    const next = structuredClone(d.base)
-    const now = Date.now()
-    const { reload } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })), now)
-    set({ data: compute(next, d.playersKey) })
-    if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
-    if (reload) scheduleReload()
+    if (fresh.length) {
+      // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
+      if (fetching > 0) refetch = true
+      const next = structuredClone(d.base)
+      const now = Date.now()
+      const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))
+      set({ data: compute(next, d.playersKey) })
+      if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
+      if (reload) scheduleReload()
+      // The boards hold the row stamped later, and kept it. A write that waited on the row's lock commits last with
+      // the earlier stamp, so a fetch says which stands (N4).
+      if (stale) askFetch()
+    } else st.refresh()
+    if (overlap || opts.fetch) askFetch()
+  },
+  pushesDone() {
+    // Only a landing on an open tournament asks it, and leaving forgets it.
+    if (!fetchAfterPushes) return
+    fetchAfterPushes = false
+    scheduleReload()
   },
 }))
 
