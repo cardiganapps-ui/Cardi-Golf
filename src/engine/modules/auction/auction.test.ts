@@ -392,3 +392,57 @@ describe('La Calcutta: buybacks other than 50% (QA-03)', () => {
     expect(a.balanced).toBe(true)
   })
 })
+
+describe('La Calcutta closes to the peso and pays only lots that were sold (MONEY-08, MONEY-11)', () => {
+  const POINTS: Record<string, number> = { p1: 80, p2: 60, p3: 58, p4: 72, p5: 62, p6: 56, p7: 70, p8: 64, p9: 55, p10: 68, p11: 61, p12: 50 }
+  function played(edit: (snap: Snapshot) => void, points: Record<string, number> = POINTS): TournamentState {
+    const snap = makeFirstTournament()
+    sellAll(snap)
+    edit(snap)
+    scoreEveryone(snap, (pid) => points[pid]!)
+    return computeTournament(snap, S)
+  }
+  const paid = (st: TournamentState) => Object.values(st.modules.auction!.payouts).reduce((s, p) => s + p.amount, 0)
+
+  it('an unfilled slot on an odd pot stays in the bank in whole pesos: $612 of the Cuchara’s $612.50, and payouts plus the bank make the pot exactly', () => {
+    // Pot $12,250. The D players p10 and p11 finish 1st and 2nd, so last-place p12 is the best D left and cashes Mejor D: the Cuchara has nobody.
+    const st = played((snap) => void (snap.calcuttaLots[11]!.price = 1250), { ...POINTS, p10: 90, p11: 85 })
+    const a = st.modules.auction!
+    expect(a.pot).toBe(12250)
+    const cuchara = a.slots.find((s) => s.label === 'La Cuchara de Palo')!
+    expect([cuchara.unfilled, cuchara.amount, a.unfilled]).toEqual([true, 612, 612])
+    expect(paid(st) + a.unfilled).toBe(12250)
+    expect(a.balanced).toBe(true)
+    expect(st.flags.warnings).toContain('La Calcutta: $612 sin asignar (La Cuchara de Palo). El Comité decide.')
+  })
+
+  it('the leader’s lot was never sold: he cashes nothing, the champion’s slot goes to the best finisher whose lot was, and the board says so', () => {
+    const st = played((snap) => {
+      const lot = snap.calcuttaLots[0]!
+      Object.assign(lot, { status: 'pending', price: null, ownerId: null, soldAt: null })
+    })
+    const a = st.modules.auction!
+    // Eleven lots at $1,000: p1's never went in the pot.
+    expect(a.pot).toBe(11000)
+    expect(a.slots.map((s) => [s.label, s.playerIds])).toEqual([
+      ['Campeón', ['p4']],
+      ['Subcampeón', ['p7']],
+      ['Mejor C', ['p8']],
+      ['Mejor D', ['p10']],
+      ['La Cuchara de Palo', ['p12']],
+    ])
+    expect(a.payouts.p1).toBeUndefined()
+    expect(a.slots[0]!.why.steps[0]).toBe('J4 termina 2.º, 1.º entre los lotes vendidos: 55% del pozo')
+    expect(paid(st)).toBe(11000)
+    expect(a.balanced).toBe(true)
+    expect(st.flags.warnings).toContain('La Calcutta: 1 lote sin vender (J1): no cobra la Calcutta.')
+  })
+
+  it('a lot still unsold while the auction runs is no warning: lots wait their turn', () => {
+    const snap = makeFirstTournament()
+    sellAll(snap)
+    Object.assign(snap.calcuttaLots[11]!, { status: 'pending', price: null, ownerId: null, soldAt: null })
+    snap.tournament.status = 'auction'
+    expect(computeTournament(snap, S).flags.warnings.filter((w) => w.includes('sin vender'))).toEqual([])
+  })
+})
