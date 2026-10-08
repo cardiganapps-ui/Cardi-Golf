@@ -4394,10 +4394,11 @@
       "pr": 100,
       "tests": [
         "src/screens/tournament/ScorecardScreen.test.tsx",
-        "src/data/outbox.offline.test.ts"
+        "src/data/outbox.offline.test.ts",
+        "src/screens/tournament/ScorecardScreen.coldOpen.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "The boards half was closed by #92 (loadQueue ends with refresh(); NEW-02's test in outbox.offline.test.ts). The Tarjeta's drafts already take a newer value into every untouched player (REL-05). This PR makes the card follow the first open hole until the player chooses one (a swipe, the grid, a save) or touches a player, so it no longer sits on a hole already played."
+      "residual": "The boards half was closed by #92 (loadQueue ends with refresh(); NEW-02's test in outbox.offline.test.ts), and an untouched player's draft takes the queued value (REL-05). This PR, after its verifier: the outbox says when its queue has been read (`queueRead`, after the boards are recomputed, even if the read failed); until then «Guardar» is disabled, so no tap can write defaults over a queued hole and no sheet opens on one. A card opened before the read moves once, when it lands, to the first open hole, unless the player chose a hole, touched a player or has a sheet open; a card opened after it never moves on its own, so another phone's save lands on the hole on screen. A kept draft (PWA-05) read before the queue is held, not deleted. Left (P3): a player touched before the read keeps what was on screen, and «Guardar» writes that over his queued value."
     }
   ]
 }

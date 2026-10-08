@@ -229,6 +229,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** What the server has for each player on the open hole; changes when a save lands, from this phone or another. */
   const serverKey = players.map((p) => `${p.id}:${serverOf(p.id)}`).join('|')
   const holeKey = `${round.id}|${group.id}|${hole}`
+  /** Kept drafts of this hole read before the phone's queue was, whose baseline couldn't be checked yet (NEW-11). */
+  const heldKept = useRef<KeptDraft['players']>({})
   const shownHole = useRef('')
   useEffect(() => {
     const { players, holeInfo, drafts: current, holeSpoken, editableFor } = latest.current
@@ -256,9 +258,16 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       initialDrafts.current = JSON.stringify(next)
       // What was typed here and not saved yet comes back, unless the server has moved on for that player or the card can't be edited.
       const kept = readKept(holeKey)
+      heldKept.current = {}
       for (const p of players) {
         const k = kept?.players[p.id]
-        if (!k || k.server !== serverNow(p.id) || !editableFor(p.id)) continue
+        if (!k || !editableFor(p.id)) continue
+        if (k.server !== serverNow(p.id)) {
+          // Before the phone's queue is read the server's value may be missing a hole the queue holds: the
+          // kept draft is held, not dropped, until the hole is opened again with the queue read (NEW-11).
+          if (!useOutbox.getState().queueRead) heldKept.current[p.id] = k
+          continue
+        }
         next[p.id] = k.draft
         touched.current.add(p.id)
         baselines.current.set(p.id, k.server)
@@ -299,6 +308,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   useEffect(() => {
     if (!shownHole.current) return
     const keep: KeptDraft['players'] = {}
+    for (const [pid, k] of Object.entries(heldKept.current)) if (!touched.current.has(pid)) keep[pid] = k
     for (const pid of touched.current) if (drafts[pid]) keep[pid] = { draft: drafts[pid]!, server: baselines.current.get(pid) ?? serverOf(pid) }
     writeKept(shownHole.current, keep)
   }, [drafts]) // eslint-disable-line react-hooks/exhaustive-deps -- written when the drafts change, with the server values of that moment
@@ -354,12 +364,18 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     chose.current = true
     setHole(order[i]!)
   }
-  // Opened before the phone's queued holes were read (the copy shows first), the card sat on a hole already
-  // played, its defaults over what was typed (NEW-11). Until the player chooses, it follows the first open hole.
+  // Opened before the phone had read its queued holes (the copy shows first), the card sat on a hole this
+  // phone had already played offline, as unplayed (NEW-11). Once the queue is read it moves to the first open
+  // hole, once, unless the player chose a hole or touched a player. A card opened after that never moves on
+  // its own: another phone's save lands on the hole on screen, where this one sees it.
+  const queueRead = useOutbox((s) => s.queueRead)
+  const followQueue = useRef(!useOutbox.getState().queueRead)
   useEffect(() => {
-    if (chose.current || order.includes(asked) || touched.current.size > 0 || hole === firstOpen) return
+    if (!followQueue.current || !queueRead) return
+    followQueue.current = false
+    if (chose.current || order.includes(asked) || touched.current.size > 0 || sheetOpen || busy || hole === firstOpen) return
     setHole(firstOpen)
-  }, [firstOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- follows the first open hole, read as it is now
+  }, [queueRead]) // eslint-disable-line react-hooks/exhaustive-deps -- once, when the queue has been read
 
   const pairsOn = settings.modules.pairs.enabled
   const myPair = me.playerId ? snapshot.pairs.find((p) => p.player1Id === me.playerId || p.player2Id === me.playerId) : null
@@ -401,6 +417,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   async function save(force = false) {
     if (!canEdit || busy) return
+    // The holes kept on the phone are not read yet: the hole on screen may be one of them, shown unplayed (NEW-11).
+    if (!useOutbox.getState().queueRead) return
     if (!force) {
       // A second tap right after the hole changed is the first tap again, not a save of this hole.
       if (performance.now() - settledAt.current < SETTLE_MS) return
@@ -836,7 +854,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           })}
 
           <div className={styles.saveBar}>
-            <button className="btn btn--primary btn--block" type="button" disabled={busy || !canEdit} onClick={() => void save()}>
+            <button className="btn btn--primary btn--block" type="button" disabled={busy || !canEdit || !queueRead} onClick={() => void save()}>
               {busy ? t.common.saving : idx === order.length - 1 ? S.saveLast : S.save}
             </button>
             {canEdit ? (

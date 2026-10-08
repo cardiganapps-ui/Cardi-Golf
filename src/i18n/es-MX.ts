@@ -7,12 +7,12 @@
  * índice de golpe (SI) vs índice (WHS), bolsa (entries) vs pozo (Calcutta),
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
-/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
 /** A figure shown as a dash: a card with nothing yet. */
 function blankFigure(figure: string): boolean {
   return figure === '–' || figure === '—' || figure === '-'
 }
 
+/** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
   const n = label.replace(/^T/, '')

@@ -158,8 +158,10 @@ interface OutboxState {
   pendingHoles: number
   /** The browser promised not to evict this site's storage; null until asked (REL-18). */
   persistent: boolean | null
+  /** The queue has been read from the phone, and the boards recomputed with it (NEW-11). */
+  queueRead: boolean
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null, queueRead: false }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
@@ -341,14 +343,19 @@ export function refreshOutboxCounters() {
 }
 
 async function loadQueue() {
-  const d = getDb()
-  const stored = d ? await d.items.toArray() : []
-  queue = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 })).sort((a, b) => a.seq - b.seq)
-  lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
-  rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
-  publish()
-  // Boards already up (the phone's copy, shown before the queue was read) get the queued writes now.
-  useTournament.getState().refresh()
+  try {
+    const d = getDb()
+    const stored = d ? await d.items.toArray() : []
+    queue = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 })).sort((a, b) => a.seq - b.seq)
+    lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
+    rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
+  } finally {
+    // Boards already up (the phone's copy, shown before the queue was read) get the queued writes now,
+    // before the queue is said read: the Tarjeta waits for it to save, and a card opened before then moves
+    // to the first open hole once (NEW-11). Said read even when the read failed, or the card would never save.
+    useTournament.getState().refresh()
+    publish({ queueRead: true })
+  }
 }
 
 /** Remove `item` from Dexie only if the stored version is still the one we pushed. */
@@ -601,7 +608,7 @@ export const _outboxTest = {
     blocked = false
     persistAsked = false
     useOutbox.setState({ persistent: null })
-    useOutbox.setState({ blocked: false })
+    useOutbox.setState({ blocked: false, queueRead: false })
     if (timer) clearTimeout(timer)
     timer = null
     publish({ lastError: null, syncing: false })
