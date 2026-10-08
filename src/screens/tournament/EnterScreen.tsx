@@ -6,6 +6,7 @@ import { EventName } from '../../components/primitives'
 import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
 import { useAuth } from '../../data/auth'
+import { refuseClaimWithUnsent } from '../../data/account'
 import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
@@ -46,6 +47,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
     setBusy(true)
     setError(null)
     try {
+      // The phone keeps one PIN: entering here makes it nobody in another tournament, whose writes still on it would be refused.
+      await refuseClaimWithUnsent(lookup.id)
       const r = await claimPlayer(selected.id, nextPin)
       if (r.ok) {
         if (account && !selected.hasProfile) setAskSave(selected)

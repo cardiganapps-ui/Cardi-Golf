@@ -5,6 +5,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { Field } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
+import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
 import { LegalConsent } from '../../components/LegalLinks'
 import { humanError, UserError } from '../../lib/humanError'
@@ -46,6 +47,8 @@ export function OrganizerLoginScreen() {
   function submit(e: FormEvent) {
     e.preventDefault()
     void run(async () => {
+      // Signing in makes this phone another account: not while it holds writes that would then wait for a PIN.
+      await refuseWithUnsent('switch')
       if (mode === 'in') {
         await signInWithPassword(email.trim(), password)
         navigate('/organizer', { replace: true })
@@ -76,6 +79,8 @@ export function OrganizerLoginScreen() {
           onSubmit={(e) => {
             e.preventDefault()
             void run(async () => {
+              // The code is what switches the phone: anything saved since the email went out counts too.
+              await refuseWithUnsent('switch')
               try {
                 await verifyEmailCode(email.trim(), code, awaiting)
               } catch {
@@ -163,6 +168,7 @@ export function OrganizerLoginScreen() {
                 type="button"
                 onClick={() =>
                   void run(async () => {
+                    await refuseWithUnsent('switch')
                     await signInWithMagicLink(email.trim())
                     setAwaiting('email')
                   })

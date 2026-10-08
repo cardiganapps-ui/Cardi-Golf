@@ -71,6 +71,26 @@ vi.mock('./tournamentStore', () => ({
 const { _outboxTest, describeSyncError, flush, useOutbox } = await import('./outbox')
 const { useAuth } = await import('./auth')
 const { t } = await import('../i18n/es-MX')
+const { fetchWithTimeout } = await import('../lib/fetchWithTimeout')
+
+/** The server answers one of the app's other requests (the signal is back): any answer through the app's fetch. */
+async function serverAnswers() {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })))
+  try {
+    await fetchWithTimeout('https://example.supabase.co/rest/v1/tournaments')
+  } finally {
+    vi.unstubAllGlobals()
+  }
+}
+/** The app's latest request is lost (lie-fi, no route): nothing gets through. */
+async function requestsLost() {
+  vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+  try {
+    await fetchWithTimeout('https://example.supabase.co/rest/v1/tournaments').catch(() => undefined)
+  } finally {
+    vi.unstubAllGlobals()
+  }
+}
 
 const score = (hole: number) => ({
   key: `score:r1:p1:${hole}`,
@@ -107,6 +127,8 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
   it('signal back inside the refresh cooldown: nothing goes out as anon, nothing is rejected, and it all goes out once the session is back', async () => {
     // The token lapsed in a dead zone; auth-js keeps the user, but has no session to send with.
     srv.session = null
+    // The signal is back: the server answers the app's other requests.
+    await serverAnswers()
     await _outboxTest.enqueue(score(12))
     await _outboxTest.enqueue(award(12))
     await flush()
@@ -142,6 +164,9 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
   })
 
   it('the auth server down: getSession stalls, the write waits, and the Tarjeta says the session, not the network', async () => {
+    // The rest of the server answers (after some requests were lost): what the write waits for is the session.
+    await requestsLost()
+    await serverAnswers()
     vi.useFakeTimers()
     try {
       srv.stall = true
@@ -153,6 +178,48 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
       expect(useOutbox.getState().rejected).toEqual([])
       expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:16'])
       expect(useOutbox.getState().lastError).toBe(t.sync.errSession)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  /**
+   * Once the token expired, any failed or stalled session read said
+   * «Confirmando tu sesión…», on lie-fi and with no route at all too (the
+   * verifier of #87, round 3: from 8 s, and for 40 s after the network was
+   * back). With nothing answering, what the write waits for is the network.
+   */
+  it('nothing answers (lie-fi) once the token expired: the session read stalls, and the Tarjeta says the network, not the session', async () => {
+    // The app's requests are lost (the server answered before the phone went into lie-fi).
+    await serverAnswers()
+    await requestsLost()
+    vi.useFakeTimers()
+    try {
+      srv.stall = true
+      await _outboxTest.enqueue(score(17))
+      const done = flush()
+      await vi.advanceTimersByTimeAsync(9000)
+      await done
+      expect(srv.sent).toEqual([])
+      expect(useOutbox.getState().rejected).toEqual([])
+      expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:17'])
+      expect(useOutbox.getState().lastError).toBe(t.sync.errNetwork)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('every request failing at once (no route, the phone believes it has signal): the network too', async () => {
+    await requestsLost()
+    vi.useFakeTimers()
+    try {
+      // The refresh failed at once: auth-js has no session to give.
+      srv.session = null
+      await _outboxTest.enqueue(score(18))
+      await flush()
+      expect(srv.sent).toEqual([])
+      expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:18'])
+      expect(useOutbox.getState().lastError).toBe(t.sync.errNetwork)
     } finally {
       vi.useRealTimers()
     }
