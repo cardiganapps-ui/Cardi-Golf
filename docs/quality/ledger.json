@@ -943,14 +943,14 @@
       "workstream": "W12",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
+      "status": "verified",
       "pr": 90,
       "tests": [
         "src/data/backup.restore.test.ts",
         "supabase/tests/restore_roundtrip.sql"
       ],
-      "verifiedBy": null,
-      "residual": "Migration 0025 restores the three side-game tables and is proven on the local harness (the round trip fails on 0020 and passes on 0025, and re-running the file is harmless). Production keeps 0020's function until 0025 is applied, which needs SUPABASE_PAT (docs/handoff.md); the RUNBOOK says to check side games by hand after a restore until then. Status moves to fixed when it is applied."
+      "verifiedBy": "Production 2026-10-08: 0000 and 0025 applied by scripts/db.mjs migrate after a full JSON backup; restore_tournament restores game_entries, hole_awards and game_results; teams and team_members are in supabase_realtime; scripts/rls-test.mjs and scripts/platform-test.mjs pass against production.",
+      "residual": "Migration 0025 restores the three side-game tables and is proven on the local harness (the round trip fails on 0020 and passes on 0025, and re-running the file is harmless). Applied to production on 2026-10-08."
     },
     {
       "id": "DB-03",
