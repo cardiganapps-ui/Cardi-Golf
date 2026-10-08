@@ -21,8 +21,6 @@ on:
       - 'e2e/stack/**'
       - 'playwright.stack.config.ts'
       - '.github/workflows/e2e-stack.yml'
-  push:
-    branches: [claude/e2e-stack]
   schedule:
     - cron: '41 7 * * *'
   workflow_dispatch:
@@ -62,8 +60,8 @@ jobs:
         run: |
           set -euo pipefail
           for _ in $(seq 1 360); do [ -f "$RUNNER_TEMP/supabase-start.exit" ] && break; sleep 2; done
-          cat "$RUNNER_TEMP/supabase-start.log"
-          [ "$(cat "$RUNNER_TEMP/supabase-start.exit" 2>/dev/null)" = 0 ] || { echo "supabase start failed or timed out"; exit 1; }
+          # Its log lists the stack's (default, local) keys: shown only when the start failed.
+          [ "$(cat "$RUNNER_TEMP/supabase-start.exit" 2>/dev/null)" = 0 ] || { cat "$RUNNER_TEMP/supabase-start.log"; echo "::error::supabase start failed or timed out"; exit 1; }
           # Only the three values the suite needs leave this step; the stack's other keys stay in it.
           supabase status -o env 2>/dev/null | grep -E '^(API_URL|PUBLISHABLE_KEY|ANON_KEY|DB_URL)=' > "$RUNNER_TEMP/stack.env"
           set -a; . "$RUNNER_TEMP/stack.env"; set +a

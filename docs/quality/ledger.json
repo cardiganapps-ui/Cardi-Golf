@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-07",
+  "updated": "2026-10-08",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -2313,7 +2313,9 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "e2e/stack/smoke.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2383,7 +2385,10 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "e2e/stack/live.spec.ts",
+        "e2e/stack/offline.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2630,7 +2635,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "e2e-stack (PR #99, run 37731252400, 2026-10-08): a hole saved on one phone showed on the other at p95 976 ms over 22 saves (min 560, p50 781, max 1037 ms; 18 holes of 4 rows + 4 one-row corrections), on a local Supabase stack on the CI runner with no network throttling. 4G is not measured: the < 2 s target on 4G stays open."
     },
     {
       "id": "REL-13",
