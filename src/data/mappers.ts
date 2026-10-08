@@ -132,6 +132,7 @@ export const mapTeam = (r: Row, members: Row[]): Team => ({
 })
 
 export const mapScore = (r: Row): Score => ({
+  id: r.id ?? undefined,
   roundId: r.round_id,
   playerId: r.player_id,
   hole: r.hole,

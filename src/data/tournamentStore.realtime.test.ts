@@ -44,7 +44,7 @@ const fakeClient = {
 }
 
 vi.mock('../lib/supabase', () => ({ supabase: () => fakeClient, supabaseConfigured: true }))
-vi.mock('./snapshotCache', () => ({ saveSnapshot: async () => undefined }))
+vi.mock('./snapshotCache', () => ({ saveSnapshot: async () => undefined, onCacheCleared: () => undefined }))
 
 const { useTournament } = await import('./tournamentStore')
 const { REALTIME_TABLES } = await import('./realtimeTables')

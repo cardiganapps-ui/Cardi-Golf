@@ -121,6 +121,12 @@ export function TournamentGate() {
     return true
   }, [slug])
 
+  // Leaving the tournament (home, a sign-out, a link to nothing): its live
+  // channel and the checks against the server stop with it, until a gate opens
+  // it again. A store left subscribed fetched the whole tournament every few
+  // minutes from Mi Polo, and every 15 s once the phone was signed out.
+  useEffect(() => () => useTournament.getState().unsubscribe(), [])
+
   // The saved boards first, before the session is even confirmed.
   useEffect(() => {
     settled.current = false
