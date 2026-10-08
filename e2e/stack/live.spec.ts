@@ -14,6 +14,7 @@ import { t } from '../../src/i18n/es-MX'
 import { ROUND, SLUGS, type HoleEntry } from './field'
 import {
   boardAfter,
+  boardRows,
   cardShows,
   expect,
   expectLive,
@@ -62,7 +63,27 @@ test('two phones, one card: every hole saved on one shows on the other within 2 
   async function measure(what: Sample['what'], hole: number, shown: Shown) {
     await watchFor(beto.page, shown)
     await saveHole(ana.page, hole)
-    const ms = Math.round((await shownAt(beto.page)) - (await savedAt(ana.page)))
+    let at: number
+    try {
+      at = await shownAt(beto.page)
+    } catch (e) {
+      // Say what Beto's phone showed instead, what the server holds and what each phone's header says: a
+      // failure here is read through the check's annotations only (CI logs can't be fetched from the session).
+      const header = async (p: Phone) => (await p.page.locator('header').innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 160)
+      const rows = 'board' in shown ? await boardRows(beto.page) : []
+      const server = serverScores(SLUGS.twoPhones).filter((s) => s.hole === hole)
+      const detail = [
+        `${what} hole ${hole}: Beto's phone never showed it`,
+        `expected: ${JSON.stringify('board' in shown ? shown.board : shown.card)}`,
+        `Beto's board: ${JSON.stringify(rows)}`,
+        `server hole ${hole}: ${JSON.stringify(server)}`,
+        `Ana's header: ${await header(ana)} | Beto's header: ${await header(beto)}`,
+        `page errors: ${JSON.stringify([...ana.errors, ...beto.errors])}`,
+      ].join('\n')
+      console.log(`::error::${detail.replace(/\n/g, '%0A')}`)
+      throw new Error(detail, { cause: e })
+    }
+    const ms = Math.round(at - (await savedAt(ana.page)))
     samples.push({ what, hole, ms })
     console.log(`[e2e-stack] ${what} hole ${hole}: saved on Ana's phone → shown on Beto's in ${ms} ms`)
   }
