@@ -172,7 +172,7 @@ describe('a push hands the store the rows the server stored', () => {
       await flush()
       // With how long ago the push went out (each tab's clock has its own origin): a fetch the other tab landed since
       // may have read past it.
-      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], age: expect.any(Number) } }]))
+      await vi.waitFor(() => expect(heard.filter((m) => (m as { landed?: unknown }).landed)).toEqual([{ landed: { tournamentId: 't1', changes: [{ table: 'scores', eventType: 'UPDATE', new: row, old: {} }], age: expect.any(Number), postedAt: expect.any(Number) } }]))
       const { age } = (heard.find((m) => (m as { landed?: unknown }).landed) as { landed: { age: number } }).landed
       expect(age).toBeGreaterThanOrEqual(50)
       expect(age).toBeLessThan(5_000)

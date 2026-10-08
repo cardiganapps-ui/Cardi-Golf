@@ -473,9 +473,7 @@ describe('a score this phone saved, once the server took it', () => {
     expect(reads()).toBe(n)
   })
 
-  // Fails today: when the server refuses a write for good, the outbox reloads the store whether or not its tournament is
-  // open, so a refusal that comes after the gate went fetches the tournament left once. Make it `it` once it can't.
-  it.fails('a tournament left is fetched by nothing, a write the server refuses after it included (N9)', async () => {
+  it('a tournament left is fetched by nothing, a write the server refuses after it included (N9)', async () => {
     void save(5)
     const p = await control!.nth(1)
     store().unsubscribe()
@@ -486,9 +484,7 @@ describe('a score this phone saved, once the server took it', () => {
     expect(reads()).toBe(n)
   })
 
-  // Fails today: an answer that lands after the gate went, while a fetch is out, still asks the one more fetch (`refetch`
-  // is set whether or not the tournament is open), and that fetch's landing sends it. Make it `it` once it can't.
-  it.fails('a tournament left is fetched by nothing, a push answer that lands after it while a fetch is out included (N9)', async () => {
+  it('a tournament left is fetched by nothing, a push answer that lands after it while a fetch is out included (N9)', async () => {
     void save(5)
     const p = await control!.nth(1)
     const reload = slowReload()
@@ -1090,7 +1086,8 @@ describe('another tab of the app on this phone', () => {
     const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
     const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
     const shown = () => store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === 16)
-    const sentAt = liveClock()
+    // The other tab's push went out a moment before this tab's fetch (100 ms: the fetch's lead never hangs on a few).
+    const sentAt = liveClock() - 100
     // The other tab's 5 was stamped :02; another phone's 7, whose write waited on the row, committed after it stamped :01.
     const five = { id: 'srv-x3', round_id: R, player_id: P, hole: 16, strokes: 5, putts: 2, picked_up: false, entered_by: P, client_ts: null, updated_at: '2027-04-09T18:00:02+00:00', disputed: false, previous: null, reason: null }
     const rows = server.tables.scores!
@@ -1103,7 +1100,7 @@ describe('another tab of the app on this phone', () => {
     expect(shown()).toMatchObject({ strokes: 7 })
     const n = reads()
     const other = new BroadcastChannel('cardi-golf-outbox')
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: liveClock() - sentAt } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: liveClock() - sentAt, postedAt: Date.now() } })
     other.close()
     await vi.waitFor(() => expect(reads()).toBe(n + 1))
     expect(shown()).toMatchObject({ strokes: 7, disputed: true })
@@ -1196,12 +1193,9 @@ describe('another tab of the app on this phone', () => {
     expect(reads()).toBe(n + 1)
   })
 
-  // Fails today: this tab works out when the push went out from the age the message gives, on receipt, so a message that
-  // waits behind this tab's own work reads as sent that much later. A fetch that landed in between then counts as before
-  // the push, and the one more fetch is skipped: the 5 stays over the server's 7 until the heal. X3 itself has only the
-  // few milliseconds its fetch takes, and fails whenever the message takes longer to arrive. Make it `it` once the
-  // overlap check allows for that wait.
-  it.fails('its write sent before this tab’s last fetch, heard while this tab is busy, still asks one more fetch (X3b)', async () => {
+  // A message that waits behind this tab's own work would read as sent that much later, and a fetch that landed in
+  // between as before the push: the message says when it was posted, and the wait is taken off.
+  it('its write sent before this tab’s last fetch, heard while this tab is busy, still asks one more fetch (X3b)', async () => {
     await startOutbox()
     const fx = (await open('full12-live'))!
     const TID = fx.snapshot.tournament.id
@@ -1218,7 +1212,7 @@ describe('another tab of the app on this phone', () => {
     else rows.push(seven)
     await store().reload()
     const other = new BroadcastChannel('cardi-golf-outbox')
-    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: liveClock() - sentAt } })
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: liveClock() - sentAt, postedAt: Date.now() } })
     other.close()
     // This tab is busy for a second when the message comes (the boards it just fetched, rendering on a slow phone).
     const until = Date.now() + 1000

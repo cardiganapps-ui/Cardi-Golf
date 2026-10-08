@@ -508,6 +508,8 @@ export const useTournament = create<StoreState>((set, get) => ({
     // A design fixture (`src/dev`) has no server: its snapshot is the truth,
     // and a fetch would only replace it with nothing after a write.
     if (!id || id.startsWith('fixture:')) return
+    // A tournament left is fetched by nothing, a refused write's answer included (N9).
+    if (!open) return
     const seq = ++fetchSeq
     const since = changeSeq
     fetching++
@@ -683,7 +685,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
     if (fresh.length) {
       // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
-      if (fetching > 0) refetch = true
+      if (fetching > 0 && open) refetch = true
       const next = structuredClone(d.base)
       const now = Date.now()
       const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))

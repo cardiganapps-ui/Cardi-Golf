@@ -470,7 +470,7 @@ function announce() {
  */
 function announceLanded(tournamentId: string, changes: LiveChange[], sentAt: number) {
   try {
-    channel?.postMessage({ landed: { tournamentId, changes, age: liveClock() - sentAt } })
+    channel?.postMessage({ landed: { tournamentId, changes, age: liveClock() - sentAt, postedAt: Date.now() } })
   } catch {
     // A closed channel: the other tabs get the echo.
   }
@@ -479,12 +479,15 @@ function listen() {
   if (typeof BroadcastChannel === 'undefined' || channel) return
   channel = new BroadcastChannel(CHANNEL)
   channel.onmessage = (e: MessageEvent) => {
-    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[]; age?: number } } | null)?.landed
+    const landed = (e.data as { landed?: { tournamentId: string; changes: LiveChange[]; age?: number; postedAt?: number } } | null)?.landed
     // Its echo may be in already: the log is checked from when the push went out, on this tab's clock. A message
     // that doesn't say counts the whole log, and its landing asks one more fetch (older than the log).
     if (landed) {
       const age = landed.age
-      const sentAt = typeof age === 'number' && Number.isFinite(age) ? liveClock() - Math.max(0, age) : 0
+      // The message may have waited behind this tab's own work: the wall clock, which the tabs share at any one moment,
+      // says how long (X3b). Read later, the push would look later than a fetch that landed meanwhile.
+      const waited = typeof landed.postedAt === 'number' && Number.isFinite(landed.postedAt) ? Math.max(0, Date.now() - landed.postedAt) : 0
+      const sentAt = typeof age === 'number' && Number.isFinite(age) ? liveClock() - Math.max(0, age) - waited : 0
       return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, sentAt)
     }
     void loadQueue().then(() => void flush())
