@@ -55,7 +55,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # The browser download once stalled until the job's timeout, before any test ran: cache it, and give
+      # each attempt four minutes, three attempts.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium
+        run: |
+          for attempt in 1 2 3; do
+            timeout 240 npx playwright install --with-deps chromium && exit 0
+            echo "::warning::Chromium install attempt $attempt failed or stalled"
+          done
+          exit 1
       - name: Wait for the stack, read its URL, key and database
         run: |
           set -euo pipefail
