@@ -41,6 +41,8 @@ export type FeedEvent =
       /** The leader's total as the board writes it: «34» points, «−3» against par. */
       figure: string
       scoring: MainScoring
+      /** Whose save made the change (absent on the close's): the key of the line, which a sync must not change. */
+      by?: Id
       /** The board's last word at the close (`computeTournament`), not a save's. */
       close?: true
     }
@@ -121,7 +123,7 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     const real = points ? bestValue > 0 : totals.size > 1
     if (best && !tie && real && best !== leader) {
       leader = best
-      events.push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, figure: points ? String(bestValue) : toParText(bestValue), scoring })
+      events.push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, by: s.playerId, figure: points ? String(bestValue) : toParText(bestValue), scoring })
     }
   }
 

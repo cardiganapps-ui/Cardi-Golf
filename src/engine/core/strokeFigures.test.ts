@@ -123,7 +123,14 @@ describe('lead changes in the feed (round 3)', () => {
   it('a leader who takes the lead again on the same hole is another line, with its own key', () => {
     // Two lead changes to p1 on the 5th: the first his own save, the second after someone else's bogey there.
     const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', figure: '−2', scoring: 'gross' as const })
-    expect(feedKey(lead('2027-04-09T18:00:01+00:00'))).not.toBe(feedKey(lead('2027-04-09T18:05:00+00:00')))
+    expect(feedKey({ ...lead('2027-04-09T18:00:01+00:00'), by: 'p1' })).not.toBe(feedKey({ ...lead('2027-04-09T18:05:00+00:00'), by: 'p3' }))
+  })
+
+  it('a line keeps its key when its save syncs: the phone’s time becomes the server’s (#91 round 5)', () => {
+    const birdie = (at: string) => ({ kind: 'birdie' as const, at, roundNumber: 1, hole: 10, playerId: 'p1', points: 3, gross: true, under: 1, scoring: 'gross' as const })
+    expect(feedKey(birdie('2027-04-09T18:00:01.123Z'))).toBe(feedKey(birdie('2027-04-09T18:00:01.456789+00:00')))
+    const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', by: 'p1', figure: '−2', scoring: 'gross' as const })
+    expect(feedKey(lead('2027-04-09T18:00:01.123Z'))).toBe(feedKey(lead('2027-04-09T18:00:01.456789+00:00')))
   })
 })
 

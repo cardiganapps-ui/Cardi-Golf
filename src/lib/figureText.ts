@@ -68,6 +68,8 @@ export function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
  * made React drop or repeat a line of the ticker.
  */
 export function feedKey(e: FeedEvent): string {
-  // With the save that caused it: a leader who takes the lead again on the same hole, after someone else's bogey, is another line.
-  return `${e.kind}-${e.roundNumber}-${e.hole}-${e.playerId}-${e.at ?? ''}${e.kind === 'leadChange' && e.close ? '-close' : ''}`
+  // Never the save's time: a pending save shows the phone's clock and the synced row the server's, and a new key remounts the line.
+  // A lead change keys on whose save made it: a leader who takes the lead again on the same hole, after someone else's bogey, is another line.
+  const lead = e.kind === 'leadChange' ? (e.close ? 'close' : (e.by ?? '')) : ''
+  return `${e.kind}-${e.roundNumber}-${e.hole}-${e.playerId}-${lead}`
 }

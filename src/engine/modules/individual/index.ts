@@ -236,10 +236,18 @@ function explainCountback(
     // The last day as it stands: not played yet, under way, or over.
     const dayA = standings.perRound[aboveId]?.[lastRoundId]
     const dayB = standings.perRound[id]?.[lastRoundId]
+    const notPlayed = (d: typeof dayA) => !d || d.empty
+    const over = lastRound?.status === 'finished'
+    // Each side on its own when they differ: one match over or not started is not the other's «empatado».
+    const side = (d: typeof dayA, n: number) => (notPlayed(d) ? (over ? 'no jugó' : 'no ha salido') : `${d!.result ? 'terminó' : 'va'} ${ups(n)}`)
     const match =
-      (!dayA || dayA.empty) && (!dayB || dayB.empty)
-        ? `Día ${lastN}: todavía no juegan su partido`
-        : `Día ${lastN}, ${dayA?.result && dayB?.result ? 'cómo terminó' : 'cómo va'} su partido: ${nameOf(aboveId)} ${ups(a)}${t.common.versus}${nameOf(id)} ${ups(b)}`
+      notPlayed(dayA) && notPlayed(dayB)
+        ? over
+          ? `Día ${lastN}: ninguno jugó partido ese día`
+          : `Día ${lastN}: todavía no juegan su partido`
+        : !notPlayed(dayA) && !notPlayed(dayB) && !!dayA!.result === !!dayB!.result
+          ? `Día ${lastN}, ${dayA!.result ? 'cómo terminó' : 'cómo va'} su partido: ${nameOf(aboveId)} ${ups(a)}${t.common.versus}${nameOf(id)} ${ups(b)}`
+          : `Día ${lastN}: ${nameOf(aboveId)} ${side(dayA, a)}${t.common.versus}${nameOf(id)} ${side(dayB, b)}`
     return {
       title,
       steps: [`Iguales en puntos de partido`, match, ...(a === b ? ['Iguales: se reparten los premios de los lugares que ocupan.'] : [])],

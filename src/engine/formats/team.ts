@@ -119,7 +119,7 @@ export const teamFormat: MainFormat = {
       totals[e.id] = played === 0 ? { value: 0, text: '—', empty: true } : points ? { value: total, text: String(total) } : toParFigure(total, par)
       // Over the last round's own holes: a nine breaks its ties on 5–9, 7–9 and 9, as the other formats do.
       const lastLength = ctx.snapshot.rounds.find((r) => r.id === lastRound)?.holes ?? 18
-      countback[e.id] = lastHoles.length ? countbackFrom(lastHoles, lastLength, points) : emptyCountback()
+      countback[e.id] = lastHoles.length ? countbackFrom(lastHoles, lastLength, points) : emptyCountback(lastLength)
     }
 
     return { entrants, totals, perRound, thru, countback, warnings }

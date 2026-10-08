@@ -141,4 +141,19 @@ describe('the sheet and Estadísticas count alike (#91 round 3, P3-d)', () => {
     expect([stat('Pares'), stat('Bogeys'), stat('Doble o peor')]).toEqual([st.pars, st.bogeys, st.doubleOrWorse])
     expect(d.queryByText('Pares netos')).toBeNull()
   })
+
+  it('every count on the sheet is its own: birdies gross and net, doubles, pick-ups', () => {
+    // stroke8's p2 under gross with a pick-up on the 4th: 8 gross birdies, 11 net, 4 doubles, 1 pick-up.
+    const edit = (s: Snapshot) => {
+      playAs(s, 'strokePlay', { scoring: 'gross' })
+      pickUp(s, 'p2', 4)
+    }
+    const snap = structuredClone(getFixture('stroke8')!.snapshot)
+    edit(snap)
+    const st = dataFromSnapshot(snap).state.stats.players['p2']!
+    const d = sheet('stroke8', 'p2', edit)
+    const stat = (label: string) => Number(d.getByText(label, { exact: true }).previousElementSibling!.textContent)
+    expect([stat('Birdies gross'), stat('Birdies netos'), stat('Doble o peor'), stat('Levantó')]).toEqual([st.grossBirdies, st.netBirdies, st.doubleOrWorse, st.pickUps])
+    expect(new Set([st.grossBirdies, st.netBirdies, st.doubleOrWorse, st.pickUps]).size).toBe(4)
+  })
 })

@@ -90,6 +90,10 @@ describe("En vivo: the honoree's card in each format (STRAT-03)", () => {
     const gael = screen.getByRole('button', { name: /^6\.º, Gael H\., / }).textContent
     expect(gael).toContain('1 abajo')
     expect(gael).not.toContain('1 arriba')
+    // And the winner's cell keeps his «1 arriba».
+    const julian = screen.getByRole('button', { name: /, Julián, / }).textContent
+    expect(julian).toContain('1 arriba')
+    expect(julian).not.toContain('abajo')
   })
 
   it("team Stableford: «hoy» is the team's day, beside the team's total", () => {

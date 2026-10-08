@@ -2990,7 +2990,9 @@
         "src/screens/tournament/CeremonyScreen.formats.test.tsx",
         "src/components/ShareCard.formats.test.tsx",
         "src/screens/admin/AdminScores.formats.test.tsx",
-        "src/screens/admin/AdminData.formats.test.tsx"
+        "src/screens/admin/AdminData.formats.test.tsx",
+        "src/engine/modules/individual/countbackWhy.test.ts",
+        "src/engine/modules/individual/countbackLines.test.ts"
       ],
       "verifiedBy": null,
       "residual": "Match and team play show no player race in Estadísticas (a race of teams or matches is not built yet). The day-2 cut is still computed on Stableford points in every format, and the Reglamento says so. A tournament created before labels.trophy names no trophy at the ceremony until the Comité types one (Comité › Reglas). Published results by format are NEW-09 (a migration); the smaller display leftovers are NEW-10. Fixed here too: NEW-07 (a nine's team tie) and NEW-08 (match play's hole order)."
@@ -4298,10 +4300,11 @@
       "status": "fixed",
       "pr": 91,
       "tests": [
-        "src/engine/formats/formats.test.ts"
+        "src/engine/formats/formats.test.ts",
+        "src/engine/modules/individual/countbackLines.test.ts"
       ],
       "verifiedBy": null,
-      "residual": "Older than STRAT-03 (#49). team.ts passes the last round's own hole count, as stableford.ts and strokePlay.ts do; formats.test.ts works a nine by hand (level teams, separated on 5–9)."
+      "residual": "Older than STRAT-03 (#49). team.ts passes the last round's own hole count, as stableford.ts and strokePlay.ts do; formats.test.ts works a nine by hand (level teams, separated on 5–9). Round 5: a team with no holes yet on the last round gets an empty countback of that round's length too (emptyCountback(lastLength)), so a team that hasn't teed off on a nine no longer reads 10–18."
     },
     {
       "id": "NEW-08",
