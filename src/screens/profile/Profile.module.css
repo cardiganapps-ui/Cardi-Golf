@@ -14,6 +14,10 @@
   justify-content: space-between;
   gap: var(--s3);
 }
+/* Mi Polo's bar is as tall as its icons before they come (while the profile loads), so nothing under it moves when they do. */
+.topBarSteady {
+  min-height: var(--tap);
+}
 .brand {
   text-decoration: none;
   color: inherit;

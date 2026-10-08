@@ -144,7 +144,7 @@ describe('copy written for people passes through', () => {
   })
 
   it("the client's own copy: UserError, a 22023 from api.ts, a route's line", () => {
-    expect(humanError(new UserError(t.account.signOutNeedsSignal))).toBe(t.account.signOutNeedsSignal)
+    expect(humanError(new UserError(t.account.signOutUnconfirmed))).toBe(t.account.signOutUnconfirmed)
     expect(humanError(new ApiError('Ese tee lo juega alguien en una ronda; cámbialo primero', '22023'))).toBe('Ese tee lo juega alguien en una ronda; cámbialo primero')
     expect(humanError(new RouteError('Muchas búsquedas seguidas; espera un minuto.', 429, null))).toBe('Muchas búsquedas seguidas; espera un minuto.')
   })
