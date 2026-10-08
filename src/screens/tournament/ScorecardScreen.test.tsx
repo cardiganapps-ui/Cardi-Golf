@@ -102,6 +102,8 @@ const written = () => outbox.scores.map((r) => `${r.player_id}@${r.hole}=${r.str
 
 beforeEach(() => {
   localStorage.clear()
+  // The phone's queue has been read (AppShell's startOutbox); NEW-11's cases open before it.
+  useOutbox.setState({ queueRead: true })
   outbox.scores = []
   clock = 10_000
   vi.spyOn(performance, 'now').mockImplementation(() => clock)
@@ -449,6 +451,75 @@ describe('Tarjeta: a Comité correction on a signed card with a snake tie (the v
     } finally {
       window.history.replaceState(null, '', '/')
     }
+  })
+})
+
+describe('Tarjeta: opened before the phone read its queued holes (NEW-11)', () => {
+  /** p1–p4 through hole 9, as the phone's copy has them; hole 10 for all four waits in the outbox. */
+  const queuedTen = (s: Snapshot) => {
+    for (const pid of ['p1', 'p2', 'p3', 'p4']) {
+      s.scores = s.scores.filter((x) => !(x.roundId === 'r1' && x.playerId === pid && x.hole >= 10))
+    }
+  }
+  const withTen = (s: Snapshot) => {
+    queuedTen(s)
+    for (const pid of ['p1', 'p2', 'p3', 'p4']) s.scores.push({ roundId: 'r1', playerId: pid, hole: 10, strokes: 7, putts: 3, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+  }
+  /** The outbox reads its queue: the boards recompute with it, then it says so (outbox.ts, loadQueue). */
+  const queueIsRead = () =>
+    act(() => {
+      withTen(snap)
+      load(snap)
+      useOutbox.setState({ queueRead: true })
+    })
+  beforeEach(() => useOutbox.setState({ queueRead: false }))
+  afterEach(() => useOutbox.setState({ queueRead: false }))
+
+  it('moves to the first open hole once the queued holes show, and never writes defaults over them', async () => {
+    mount(queuedTen)
+    expect(holeOnScreen()).toBe(10)
+    queueIsRead()
+    expect(holeOnScreen()).toBe(11)
+    await tapSave(20_000)
+    expect(written().filter((r) => r.includes('@10='))).toEqual([])
+  })
+
+  it('before the queue is read, «Guardar» waits: a tap writes nothing over holes the phone may hold', async () => {
+    mount(queuedTen)
+    expect((saveButton() as HTMLButtonElement).disabled).toBe(true)
+    await tapSave(20_000)
+    expect(written()).toEqual([])
+    queueIsRead()
+    expect((saveButton() as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('a hole the player chose stays put when the queued holes show', () => {
+    mount(queuedTen)
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
+    expect(holeOnScreen()).toBe(9)
+    queueIsRead()
+    expect(holeOnScreen()).toBe(9)
+  })
+
+  it('a player touched on the open hole keeps it: the card does not move under his finger', () => {
+    mount(queuedTen)
+    fireEvent.click(strokesUp('p1'))
+    queueIsRead()
+    expect(holeOnScreen()).toBe(10)
+    // Untouched players take the queued values (REL-05); the touched one keeps what was typed.
+    expect(strokesOf('p2')).toBe(7)
+  })
+
+  it('opened after the queue was read, the card stays on its hole when another phone saves it: the values land where it looks', () => {
+    useOutbox.setState({ queueRead: true })
+    mount(queuedTen)
+    expect(holeOnScreen()).toBe(10)
+    act(() => {
+      withTen(snap)
+      load(snap)
+    })
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p2')).toBe(7)
   })
 })
 
