@@ -715,9 +715,12 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "src/screens/tournament/UnassignedMoney.test.tsx",
+        "src/engine/core/unassigned.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1240,11 +1243,19 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "src/engine/core/unassigned.test.ts",
+        "src/engine/close.test.ts",
+        "src/screens/tournament/UnassignedMoney.test.tsx",
+        "src/screens/admin/CloseGate.test.tsx",
+        "supabase/tests/money_adjustments.sql",
+        "supabase/tests/restore_roundtrip.sql",
+        "src/data/testing/cases/serverRules.json"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migration 0027 must be applied before the client deploys (the channel names the table). The «Cerrar torneo» gate is client-side; the server does not yet refuse Terminado or a publish. Amounts are checked by the engine, not the server: a concurrent over-assignment is flagged and never paid, and must be voided."
     },
     {
       "id": "MONEY-06",
