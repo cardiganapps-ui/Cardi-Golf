@@ -53,6 +53,25 @@ describe('outbox and the minimum build', () => {
     expect(pushed).toEqual(['score:r1:p1:1', 'score:r1:p1:2'])
     expect(await _outboxTest.stored()).toEqual([])
   })
+
+  it('a block that comes while a pass is out stops it before the next push, and the rest go once it lifts', async () => {
+    const pushed: string[] = []
+    setOutboxBlocked(true)
+    await _outboxTest.enqueue(score(1))
+    await _outboxTest.enqueue(score(2))
+    _outboxTest.setPush(async (item) => {
+      pushed.push(item.key)
+      // The app learns of a newer build (on resume, or its periodic check) while this push is out.
+      if (pushed.length === 1) setOutboxBlocked(true)
+    })
+    setOutboxBlocked(false)
+    await vi.waitFor(() => expect(pushed).toHaveLength(1))
+    await vi.waitFor(() => expect(useOutbox.getState().syncing).toBe(false))
+    expect(pushed).toEqual(['score:r1:p1:1'])
+    expect(_outboxTest.queue().map((x) => x.key)).toEqual(['score:r1:p1:2'])
+    setOutboxBlocked(false)
+    await vi.waitFor(() => expect(pushed).toEqual(['score:r1:p1:1', 'score:r1:p1:2']))
+  })
 })
 
 describe('outbox opened by an older build', () => {
