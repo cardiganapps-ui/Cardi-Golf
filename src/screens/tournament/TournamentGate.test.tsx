@@ -24,22 +24,27 @@ const server = vi.hoisted(() => ({
   lookupTournament: vi.fn(),
   myMembership: vi.fn(),
   releaseDevice: vi.fn(async () => undefined),
+  /** Where this device's one PIN claim is (profiles' `myDeviceClaim`). */
+  myDeviceClaim: vi.fn(async (): Promise<{ playerId: string; tournamentId: string } | null> => null),
 }))
 vi.mock('../../data/auth', () => ({
   ensureSession: server.ensureSession,
+  signedOutOnPurpose: () => false,
+  signOutsAsked: () => 0,
   useAuth: (sel: (s: { ready: boolean }) => unknown) => sel({ ready: true }),
 }))
+vi.mock('../../data/profiles', () => ({ myDeviceClaim: server.myDeviceClaim }))
 vi.mock('../../data/api', () => ({
   lookupTournament: server.lookupTournament,
   myMembership: server.myMembership,
   releaseDevice: server.releaseDevice,
 }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn() }))
+vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0) }))
 vi.mock('./EnterScreen', () => ({ EnterScreen: () => <p>Entrar</p> }))
 
 import { getFixture } from '../../dev/fixtures'
-import { adoptQueuedWrites } from '../../data/outbox'
+import { adoptQueuedWrites, rejectGoneTournament } from '../../data/outbox'
 import { t } from '../../i18n/es-MX'
 import { clearCached, readCached, saveEntry, saveSnapshot } from '../../data/snapshotCache'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -188,7 +193,58 @@ describe('saved boards that no longer belong here', () => {
     await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
   })
 
+  it('and its writes, which can never go out now, leave the queue (they kept the phone from signing out), saying so', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(null)
+    vi.mocked(rejectGoneTournament).mockResolvedValueOnce(2)
+    open()
+    expect(await screen.findByText(t.enter.goneUnsent, { exact: false })).toBeTruthy()
+    expect(rejectGoneTournament).toHaveBeenCalledWith(slug, id)
+  })
+
+  it('a join code that stopped working says «no existe» but moves nothing it cannot tie to the code', async () => {
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(null)
+    vi.mocked(rejectGoneTournament).mockClear()
+    open('ABC123')
+    expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
+    await vi.waitFor(() => expect(rejectGoneTournament).toHaveBeenCalledWith('ABC123', null))
+    expect(screen.queryByText(t.enter.goneUnsent, { exact: false })).toBeNull()
+  })
+
+  /**
+   * «No soy yo» on an account here by its profile: release_device drops the
+   * device's one PIN claim wherever it is, so it released another
+   * tournament's (the phone was nobody there, and its holes still on the
+   * phone were refused). Only this tournament's claim goes.
+   */
+  it('«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one\'s (as before when the server can\'t say where it is)', async () => {
+    for (const [claimIn, released] of [['t-otro', false], [id, true], [null, true]] as const) {
+      server.releaseDevice.mockClear()
+      if (claimIn) server.myDeviceClaim.mockResolvedValue({ playerId: 'p-otro', tournamentId: claimIn })
+      else server.myDeviceClaim.mockRejectedValue(new Error('TypeError: Failed to fetch'))
+      await saveOnPhone('Guardado en el teléfono')
+      server.ensureSession.mockResolvedValue({})
+      server.lookupTournament.mockResolvedValue(fx.lookup)
+      server.myMembership.mockResolvedValue({ ...member, via: 'profile' })
+      serverLoads('En vivo del servidor')
+      open()
+      await screen.findByText('En vivo del servidor: server')
+      server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: false, via: null })
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Cambiar de jugador' }))
+      })
+      expect(await screen.findByText('Entrar')).toBeTruthy()
+      expect(server.releaseDevice.mock.calls.length, `claim in ${claimIn}`).toBe(released ? 1 : 0)
+      // This tournament's boards go either way: they belong to the player who left.
+      expect(await readCached(slug)).toBeNull()
+      cleanup()
+    }
+  })
+
   it('a player who leaves takes the saved boards with him', async () => {
+    server.myDeviceClaim.mockClear()
     await saveOnPhone('Guardado en el teléfono')
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
@@ -201,6 +257,8 @@ describe('saved boards that no longer belong here', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cambiar de jugador' }))
     })
     expect(server.releaseDevice).toHaveBeenCalled()
+    // Here by its PIN, the claim is this tournament's: nothing to ask the server first.
+    expect(server.myDeviceClaim).not.toHaveBeenCalled()
     expect(await readCached(slug)).toBeNull()
   })
 })

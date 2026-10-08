@@ -5,12 +5,20 @@
 import type { Session, User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { supabase, supabaseConfigured } from '../lib/supabase'
+import { REQUEST_TIMEOUT_MS } from '../lib/fetchWithTimeout'
 import { withTimeout } from '../lib/timeout'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 
 /** How long startup waits for the stored session before showing a way out. */
 export const SESSION_TIMEOUT_MS = 8000
+/**
+ * How long a sign-out waits for auth-js: past its own logout request's
+ * deadline. With a valid token auth-js ends the session even when that request
+ * fails, so on lie-fi the session went at 12 s, 4 s after a sign-out that gave
+ * up at 8 s had said «Sigues dentro».
+ */
+export const SIGN_OUT_TIMEOUT_MS = REQUEST_TIMEOUT_MS + 3000
 
 interface AuthState {
   ready: boolean
@@ -44,9 +52,13 @@ export const useAuth = create<AuthState>((set) => ({
     // Listen FIRST: if getSession below gives up but the refresh finishes a
     // moment later, the session still lands and the error clears itself.
     unsubscribe?.()
-    const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
-      // A new session ends a sign-out the person asked for.
-      if (session) signingOut = false
+    const { data: sub } = sb.auth.onAuthStateChange((evt, session) => {
+      // Only a real sign-in ends a sign-out the person asked for: a new
+      // session (a tournament link opened afterwards, another account). Not a
+      // token refresh, nor auth-js confirming the account it is signing out:
+      // a refresh that landed mid-sign-out ended it, and the gate started an
+      // anonymous user behind the person.
+      if (evt === 'SIGNED_IN' && session && session.user?.id !== leaving) signingOut = false
       set({ ...fromSession(session), ready: true, bootError: null })
     })
     unsubscribe = () => sub.subscription.unsubscribe()
@@ -175,8 +187,44 @@ export async function updatePassword(password: string) {
   if (error) throw error
 }
 
-/** The person asked to sign out (until the next session): the identity going away is no lost session. */
+/** The person asked to sign out (until the next real sign-in): the identity going away is no lost session. */
 let signingOut = false
+/** Whom auth-js is still signing out: a session of theirs meanwhile (a refresh, a confirmation) is no new sign-in. */
+let leaving: string | null = null
+/** Each sign-out's number: an older one's late answer leaves a newer one's flag and outcome alone. */
+let signOutSeq = 0
+/** auth-js is still working on the latest sign-out (its refresh retrying, its logout unanswered). */
+let ending = false
+
+/** Whether the sign-out the person asked for is still running: a `false` from signOut() may yet turn into a sign-out. */
+export function signOutRunning(): boolean {
+  return ending
+}
+
+/** How many sign-outs this tab has asked for: a screen that was open when one started knows its person is leaving. */
+export function signOutsAsked(): number {
+  return signOutSeq
+}
+
+/** For tests: no sign-out asked for, and none still running (a later answer of one changes nothing). */
+export const _authTest = {
+  resetSignOut() {
+    signingOut = false
+    leaving = null
+    ending = false
+    signOutSeq++
+  },
+}
+
+/** The user of the session stored on this device, if any (the auth store may not have it yet). */
+function storedUid(): string | null {
+  try {
+    const raw = localStorage.getItem('cardi-golf-auth')
+    return raw ? ((JSON.parse(raw) as { user?: { id?: string } }).user?.id ?? null) : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Whether this device has no session because its person signed out on
@@ -190,20 +238,60 @@ export function signedOutOnPurpose(): boolean {
 }
 
 /**
- * Signs this device out. True once the stored session is gone; false when it
- * is still there. With no signal and an expired token auth-js cannot load the
- * session to end it, returns an error and keeps it: that used to read as
+ * Signs this device out. True once the stored session is gone; false while
+ * it is still there. With no signal and an expired token auth-js cannot load
+ * the session to end it, returns an error and keeps it: that used to read as
  * done, and the caller wiped the boards saved on the phone of a person who
  * was still signed in.
+ *
+ * It waits past auth-js's own logout request (SIGN_OUT_TIMEOUT_MS), so lie-fi
+ * and a slow server get the real outcome. auth-js can still end the session
+ * after that (an expired token whose refresh is still retrying): the flag
+ * stays up until auth-js is done, so the gate never starts an anonymous user
+ * for it, and `whenLate` does what the caller did not get to do (clear what
+ * the phone kept of that person, and say so).
  */
-export async function signOut(): Promise<boolean> {
+export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean> {
+  const seq = ++signOutSeq
+  // Before auth-js starts: it announces the session going away (and may refresh it first) inside its own signOut.
   signingOut = true
-  try {
-    await withTimeout(supabase().auth.signOut(), SESSION_TIMEOUT_MS, 'sesión')
-  } catch {
-    // Judged by what is left on the device, below.
-  }
-  const gone = !hasStoredSession()
-  if (!gone) signingOut = false
-  return gone
+  leaving = useAuth.getState().user?.id ?? storedUid()
+  ending = true
+  return new Promise<boolean>((resolve) => {
+    /** What the caller was told, once it was: the session gone, or still there. */
+    let told: boolean | null = null
+    const tell = (gone: boolean) => {
+      told = gone
+      resolve(gone)
+    }
+    const timer = setTimeout(() => tell(!hasStoredSession()), SIGN_OUT_TIMEOUT_MS)
+    const settle = async () => {
+      clearTimeout(timer)
+      const gone = !hasStoredSession()
+      // The caller stopped waiting and said the session was still there.
+      const late = told === false
+      if (told === null) tell(gone)
+      // A newer sign-out owns the flag and what comes after.
+      if (seq !== signOutSeq) return
+      // auth-js is done: from here on any session is a new sign-in, the same account's too.
+      leaving = null
+      ending = false
+      if (!gone) signingOut = false
+      else if (late) {
+        try {
+          await whenLate?.()
+        } catch {
+          // Best effort, like the cleanup it stands for.
+        }
+      }
+    }
+    let call: Promise<unknown>
+    try {
+      call = supabase().auth.signOut()
+    } catch (e) {
+      call = Promise.reject(e)
+    }
+    // Judged by what is left on the device, either way.
+    void call.then(settle, settle)
+  })
 }

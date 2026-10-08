@@ -68,10 +68,17 @@ export function MoreScreen() {
     }
   }
 
+  /** Waiting for the server to end the session: on lie-fi that takes until auth-js's own deadline. */
+  const [signingOut, setSigningOut] = useState(false)
   async function logout() {
-    const r = await signOutSafely()
-    if (r.done) navigate('/')
-    else toast(r.reason)
+    setSigningOut(true)
+    try {
+      const r = await signOutSafely()
+      if (r.done) navigate('/')
+      else toast(r.reason)
+    } finally {
+      setSigningOut(false)
+    }
   }
   const player = data?.snapshot.players.find((p) => p.id === me.playerId)
   const link = `${window.location.origin}/t/${slug}`
@@ -161,8 +168,8 @@ export function MoreScreen() {
             <Link className="btn btn--ghost" to="/organizer/reset">
               {t.auth.changePassword}
             </Link>
-            <button className="btn btn--ghost" type="button" onClick={() => void logout()}>
-              {t.common.logout}
+            <button className="btn btn--ghost" type="button" disabled={signingOut} onClick={() => void logout()}>
+              {signingOut ? t.account.signingOut : t.common.logout}
             </button>
           </>
         )}

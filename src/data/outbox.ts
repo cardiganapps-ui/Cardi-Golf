@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
+import { serverAnswering } from '../lib/fetchWithTimeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { liveClock, liveSeq, registerOverlay, useTournament } from './tournamentStore'
@@ -38,6 +39,14 @@ interface ItemBase {
    */
   actingUid?: string | null
   lastError?: string
+  /**
+   * The tournament's name and slug when the write was queued. The refusal to
+   * sign out or change account names the tournament from it once the boards
+   * saved on the phone are gone (Entrar and «no existe» clear them), and a
+   * link that leads nowhere finds its writes by the slug.
+   */
+  tournamentName?: string
+  slug?: string
 }
 export type OutboxItem =
   | (ItemBase & { kind: 'score'; payload: ScorePayload })
@@ -268,13 +277,54 @@ export function queuedFor(tournamentId: string): { holes: number; heldHoles: num
  * so counting them kept a person signed in for good. They stay on the phone,
  * for that build to send after the PIN.
  */
-export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin' } | null {
+export function unsentWrites(): { tournamentId: string; waitsFor: 'signal' | 'pin'; name: string | null } | null {
   const mine = queue.filter((x) => !isForeign(x))
   const first = mine[0]
   if (!first) return null
   const uid = currentUid()
   const pin = mine.some((x) => x.tournamentId === first.tournamentId && !!x.actingUid && x.actingUid !== uid)
-  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal' }
+  return { tournamentId: first.tournamentId, waitsFor: pin ? 'pin' : 'signal', name: queuedName(mine, first.tournamentId) }
+}
+/** The name a tournament had when the newest of its writes was queued: the boards saved on the phone may be gone. */
+function queuedName(list: OutboxItem[], tournamentId: string): string | null {
+  return list.filter((x) => x.tournamentId === tournamentId && !!x.tournamentName).at(-1)?.tournamentName ?? null
+}
+
+/**
+ * What still has to go out before this device enters `entering` with a PIN.
+ * A device holds one PIN claim (claim_player replaces it), so entering one
+ * tournament makes it nobody in the one before: that one's writes still on
+ * the phone then went out and were refused for good. They count until they
+ * are sent: the ones written as this phone, and the ones saved before its
+ * session was confirmed (they go out once that tournament confirms the
+ * player). Not the ones held for a PIN (they wait for the PIN in their own
+ * tournament either way), nor the tournament being entered's own: its PIN is
+ * what sends them. Writes a newer build queued stay for it.
+ */
+export function unsentBeforeClaim(entering: string): { tournamentId: string; name: string | null } | null {
+  const uid = currentUid()
+  const mine = queue.filter((x) => !isForeign(x) && x.tournamentId !== entering && !(x.actingUid && x.actingUid !== uid))
+  const first = mine[0]
+  return first ? { tournamentId: first.tournamentId, name: queuedName(queue, first.tournamentId) } : null
+}
+
+/**
+ * The tournament at `slug` no longer exists (its link leads nowhere: it was
+ * deleted). Its writes can never go out, and the held ones waited for a PIN
+ * that could never come, which kept the phone from signing out or changing
+ * account for good. They move to the rejected list saying why, like any write
+ * the server refuses for good: by the tournament's id (from the boards the
+ * phone kept under that slug) or by the slug saved on the write. Writes a
+ * newer build queued stay for it. Returns how many moved.
+ */
+export async function rejectGoneTournament(slug: string, tournamentId: string | null): Promise<number> {
+  const gone = queue.filter((x) => !isForeign(x) && ((!!tournamentId && x.tournamentId === tournamentId) || x.slug === slug))
+  for (const it of gone) await reject(it, t.sync.errGone)
+  if (gone.length) {
+    publish()
+    announce()
+  }
+  return gone.length
 }
 /** Anything still to push, for any tournament: signing out waits for it. */
 export function hasUnsentWrites(): boolean {
@@ -317,10 +367,18 @@ async function deleteStored(item: OutboxItem) {
  * as the session took to come back (48 s inside auth-js's cooldown).
  */
 const NO_SESSION_YET = 'no session to push with yet'
+/**
+ * No session to push with, and the app's requests are lost too (lie-fi, no
+ * route): the network, not the session. Once the token had expired, any
+ * failed or stalled session read said «Confirmando tu sesión…», on lie-fi
+ * from 8 s and with no route at all from 6 s.
+ */
+const NO_SESSION_NO_SERVER = 'no session to push with, and no answer from the server'
 
 /** Map a raw server/network message to the copy the chip shows. Exported for the screens. */
 export function describeSyncError(msg: string): string {
   if (msg === NO_SESSION_YET) return t.sync.errSession
+  if (msg === NO_SESSION_NO_SERVER) return t.sync.errNetwork
   if (/signed|firmad/i.test(msg)) return t.sync.errSigned
   if (/not live|is_live|en juego/i.test(msg)) return t.sync.errNotLive
   if (isPermanent(msg)) return t.sync.errDenied
@@ -404,7 +462,16 @@ export class OutboxStorageError extends UserError {
 async function enqueue(newItem: NewItem) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
-  const item = { ...newItem, seq: nextSeq(), actingUid: newItem.actingUid ?? currentUid() } as OutboxItem
+  // Writes are queued from the tournament open on screen: its name and slug go with them.
+  const open = useTournament.getState()
+  const tour = open.tournamentId === newItem.tournamentId ? open.data?.snapshot.tournament : undefined
+  const item = {
+    ...newItem,
+    seq: nextSeq(),
+    actingUid: newItem.actingUid ?? currentUid(),
+    tournamentName: newItem.tournamentName ?? tour?.name,
+    slug: newItem.slug ?? tour?.slug,
+  } as OutboxItem
   void askPersistence()
   // The phone's storage first, memory second (REL-18): a write that IndexedDB
   // refused must not look saved in this tab and vanish when it closes. Never
@@ -561,11 +628,12 @@ export const _outboxTest = {
  * session is back (the auth store's change below, the backoff, `online`).
  */
 async function sessionToken(sb: SupabaseClient): Promise<string> {
-  // A getSession that stalls or fails (the refresh hanging on lie-fi, the
-  // auth server down) is the session not confirmed yet too, not the network.
+  // A getSession that stalls or fails (the refresh hanging, the auth server
+  // down) is the session not confirmed yet too, while the app's requests get
+  // answers. While they are lost it is the network.
   const { data } = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS, 'sesión').catch(() => ({ data: { session: null } }))
   const token = data.session?.access_token
-  if (!token) throw new Error(NO_SESSION_YET)
+  if (!token) throw new Error(serverAnswering() ? NO_SESSION_YET : NO_SESSION_NO_SERVER)
   return token
 }
 

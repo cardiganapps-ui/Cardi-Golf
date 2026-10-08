@@ -2693,7 +2693,7 @@
         "src/screens/HomeScreen.account.test.tsx"
       ],
       "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): CONFIRMED-FIXED at 733e3d4 in Chromium against a fake Supabase (7 network conditions, account and anonymous phones)",
-      "residual": null
+      "residual": "P3 from PR #87's third verification, fixed on branch claude/signout-edges with a test that fails without it (not merged or re-verified yet): when the profile loaded, «Hola, …» took the «Tu último torneo» card's spot, so a tap meant for the boards opened the profile, and an account not linked to that tournament lost it from Mi Polo."
     },
     {
       "id": "REL-16",
@@ -2713,10 +2713,16 @@
         "src/screens/tournament/TournamentGate.race.test.tsx",
         "src/screens/tournament/ScorecardScreen.test.tsx",
         "src/data/auth.signout.test.ts",
-        "src/screens/tournament/MoreScreen.test.tsx"
+        "src/screens/tournament/MoreScreen.test.tsx",
+        "src/data/outbox.gone.test.ts",
+        "src/data/account.signout.test.ts",
+        "src/screens/organizer/OrganizerLoginScreen.test.tsx",
+        "src/app/LateSignOut.test.tsx",
+        "src/lib/fetchWithTimeout.test.ts",
+        "src/screens/tournament/EnterScreen.test.tsx"
       ],
       "verifiedBy": "Independent verifier, PR #87 round 3 (2026-10-02): the session-lapse matrix O1–O8 (no identity yet, dead stored session, lapse in a dead zone inside the refresh cooldown, sign-out mid-round, auth server down 150 s) refused 0 writes at 733e3d4",
-      "residual": "P3 follow-ups from that run: a sign-out on lie-fi or during a token refresh can still leave an orphan anonymous user; held writes of a deleted tournament block sign-out; «Confirmando tu sesión…» also shows for plain network failures once the token expired."
+      "residual": "P3 follow-ups from PR #87's third verification, fixed on branch claude/signout-edges with tests that fail without them (not merged or re-verified yet): a sign-out on lie-fi or a slow logout said «Sigues dentro» and then signed out, and a token refresh mid-sign-out ended the deliberate flag, both leaving an orphan anonymous user and the previous person's boards; held writes of a deleted tournament blocked sign-out and account switches for good; «Confirmando tu sesión…» showed for plain network failures once the token expired; «Organizar un torneo» switched accounts with a hole still on the phone. Found while finishing them and fixed the same way on that branch: a PIN in another tournament moved the device's one claim, and the first tournament's queued holes were refused for good (4 of 4 with a fake Supabase); «No soy yo» released another tournament's PIN claim, with the same result; /entrar's code with no session to convert, the code step itself and Google's sign-in skipped the unsent check; a gate retry right after a deliberate sign-out could start an anonymous user. Still true after the fix: a deleted tournament's writes leave the queue when its link is opened (the refusal says to open it), not on their own; a held write queued by an older build (it carries no slug) whose saved boards were already gone can't be tied to the link, so it still holds the phone; Entrar's PIN check also counts another tournament's writes that an account sends by its profile link (they would not be stranded; opening that tournament with signal sends them); and an email link (sign-in, sign-up or password reset) opened in the phone's browser takes its session on load, before anything can refuse it."
     },
     {
       "id": "REL-17",
