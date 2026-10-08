@@ -450,3 +450,46 @@ describe('Tarjeta: a Comité correction on a signed card with a snake tie (the v
     }
   })
 })
+
+describe('Tarjeta: opened before the phone read its queued holes (NEW-11)', () => {
+  /** p1–p4 through hole 9, as the phone's copy has them; hole 10 for all four waits in the outbox. */
+  const queuedTen = (s: Snapshot) => {
+    for (const pid of ['p1', 'p2', 'p3', 'p4']) {
+      s.scores = s.scores.filter((x) => !(x.roundId === 'r1' && x.playerId === pid && x.hole >= 10))
+    }
+  }
+  const withTen = (s: Snapshot) => {
+    queuedTen(s)
+    for (const pid of ['p1', 'p2', 'p3', 'p4']) s.scores.push({ roundId: 'r1', playerId: pid, hole: 10, strokes: 7, putts: 3, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+  }
+
+  it('moves to the first open hole once the queued holes show, and never writes defaults over them', async () => {
+    mount(queuedTen)
+    expect(holeOnScreen()).toBe(10)
+    // The queue is read: hole 10 is played for all four, as typed offline.
+    withTen(snap)
+    act(() => load(snap))
+    expect(holeOnScreen()).toBe(11)
+    await tapSave(20_000)
+    expect(written().filter((r) => r.includes('@10='))).toEqual([])
+  })
+
+  it('a hole the player chose stays put when the queued holes show', () => {
+    mount(queuedTen)
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
+    expect(holeOnScreen()).toBe(9)
+    withTen(snap)
+    act(() => load(snap))
+    expect(holeOnScreen()).toBe(9)
+  })
+
+  it('a player touched on the open hole keeps it: the card does not move under his finger', () => {
+    mount(queuedTen)
+    fireEvent.click(strokesUp('p1'))
+    withTen(snap)
+    act(() => load(snap))
+    expect(holeOnScreen()).toBe(10)
+    // Untouched players take the queued values (REL-05); the touched one keeps what was typed.
+    expect(strokesOf('p2')).toBe(7)
+  })
+})

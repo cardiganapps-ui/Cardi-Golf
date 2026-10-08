@@ -4375,6 +4375,24 @@
       "tests": [],
       "verifiedBy": null,
       "residual": "All older than #91 except the tied close. Display only; no money."
+    },
+    {
+      "id": "NEW-11",
+      "severity": "P1",
+      "area": "Reliability, offline and realtime",
+      "workstream": "W4",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "Opened from the phone's copy before the outbox read its queue, the boards and the Tarjeta showed holes saved offline as unplayed, and the card opened on the first of them: «Guardar» there wrote par and 2 putts for all four over what was typed",
+      "foundBy": "PR #99's e2e-stack run (session spec, one run in two)",
+      "status": "fixed",
+      "pr": 100,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/outbox.offline.test.ts"
+      ],
+      "verifiedBy": null,
+      "residual": "The boards half was closed by #92 (loadQueue ends with refresh(); NEW-02's test in outbox.offline.test.ts). The Tarjeta's drafts already take a newer value into every untouched player (REL-05). This PR makes the card follow the first open hole until the player chooses one (a swipe, the grid, a save) or touches a player, so it no longer sits on a hole already played."
     }
   ]
 }

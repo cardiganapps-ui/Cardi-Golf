@@ -155,6 +155,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const firstOpen = order.find((h) => players.some((p) => !roundState[p.id]?.holes[h - 1]?.played)) ?? order[order.length - 1]!
   const asked = Number(new URLSearchParams(window.location.search).get('hoyo'))
   const [hole, setHole] = useState<number>(order.includes(asked) ? asked : firstOpen)
+  /** The player chose a hole (a swipe, the grid, a save): the card stops following the first open one. */
+  const chose = useRef(false)
   const [view, setView] = useState<'hole' | 'grid'>('hole')
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [tiebreak, setTiebreak] = useState<{ candidates: string[] } | null>(null)
@@ -349,8 +351,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const idx = order.indexOf(hole)
   const goto = (i: number) => {
     if (i < 0 || i >= order.length) return
+    chose.current = true
     setHole(order[i]!)
   }
+  // Opened before the phone's queued holes were read (the copy shows first), the card sat on a hole already
+  // played, its defaults over what was typed (NEW-11). Until the player chooses, it follows the first open hole.
+  useEffect(() => {
+    if (chose.current || order.includes(asked) || touched.current.size > 0 || hole === firstOpen) return
+    setHole(firstOpen)
+  }, [firstOpen]) // eslint-disable-line react-hooks/exhaustive-deps -- follows the first open hole, read as it is now
 
   const pairsOn = settings.modules.pairs.enabled
   const myPair = me.playerId ? snapshot.pairs.find((p) => p.player1Id === me.playerId || p.player2Id === me.playerId) : null
@@ -579,6 +588,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           type="button"
           className={`${styles.holeBtn} ${h === hole ? styles.holeCurrent : ''}`}
           onClick={() => {
+            chose.current = true
             setHole(h)
             setView('hole')
           }}

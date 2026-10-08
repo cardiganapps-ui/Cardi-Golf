@@ -8,6 +8,11 @@
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
 /** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
+/** A figure shown as a dash: a card with nothing yet. */
+function blankFigure(figure: string): boolean {
+  return figure === '–' || figure === '—' || figure === '-'
+}
+
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
   const n = label.replace(/^T/, '')
@@ -1345,7 +1350,8 @@ export const t = {
     spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
     /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6»; a match won on the 18th is «1 arriba» for the winner and «1 abajo» for the loser. */
     matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text.replace(/ arriba$/, ' abajo')}` : text),
-    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', figure === '–' ? '' : figure].filter(Boolean).join(', '),
+    // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
+    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today && !blankFigure(today) ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', blankFigure(figure) ? '' : figure].filter(Boolean).join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
   },
   card: {
