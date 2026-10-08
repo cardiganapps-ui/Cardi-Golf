@@ -659,7 +659,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   const scoreRule = (uid: string, r: Row) =>
     roundIsLive(r.round_id) && !cardIsSigned(r.round_id, r.player_id) && (sharesGroup(uid, r.round_id, r.player_id) || organizes(uid, roundTournament(r.round_id)))
   const RULES: Record<string, WriteRule> = {
-    scores: { check: scoreRule, using: scoreRule, deletes: scoreRule },
+    // 0026 `scores_delete`: deleting a hole is the Comité's.
+    scores: { check: scoreRule, using: scoreRule, deletes: (uid, r) => organizes(uid, roundTournament(r.round_id)) },
     // 0026 `snake_tiebreaks_write`: a player of the group answers, in a live round of the group's, naming one of the group, as himself.
     snake_tiebreaks: {
       check(uid, r) {

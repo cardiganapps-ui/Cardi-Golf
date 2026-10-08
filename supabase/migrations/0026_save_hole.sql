@@ -55,7 +55,11 @@ create trigger scores_version before update on public.scores
 -- as its owner (save_hole, admin_save_score, the restore) says who wrote the
 -- row itself. Not security definer, so current_user is the writer's role. It
 -- runs before the dispute check (row triggers fire by name), which compares
--- this writer with the one before.
+-- this writer with the one before. The device and mutation are save_hole's:
+-- a direct write names neither, so the row never keeps those of a save it
+-- replaced. Who the account was is in the audit log (actor_auth_user_id, by
+-- audit_row, with the row as written), not on the row: every member reads
+-- the scores, over Realtime too, and an account id is not theirs to see.
 create or replace function public.scores_writer()
 returns trigger
 language plpgsql
@@ -64,6 +68,8 @@ as $$
 begin
   if current_user in ('authenticated', 'anon') then
     new.entered_by := public.my_player_id(public.round_tournament_id(new.round_id));
+    new.device_id := null;
+    new.mutation_id := null;
   end if;
   return new;
 end;
@@ -75,6 +81,8 @@ create trigger scores_00_writer before insert or update on public.scores
 -- ---------------------------------------------------------------------------
 -- 3. Direct writes: live round, unsigned card, for everyone (REL-09)
 -- ---------------------------------------------------------------------------
+-- An admin player's Tarjeta writes a finished round or a signed card through
+-- admin_save_score (ScorecardScreen), as Comité › Tarjetas does.
 -- Not security definer: it only puts together the definer helpers the
 -- policies already use.
 create or replace function public.score_writable(rid uuid, pid uuid)
@@ -95,17 +103,23 @@ create policy scores_insert on public.scores for insert to authenticated
 create policy scores_update on public.scores for update to authenticated
   using (public.score_writable(round_id, player_id))
   with check (public.score_writable(round_id, player_id));
+-- Deleting a hole is the Comité's: no phone deletes one (the app never has;
+-- the simulator resets with the service key).
 create policy scores_delete on public.scores for delete to authenticated
-  using (public.score_writable(round_id, player_id));
+  using (public.is_tournament_organizer(public.round_tournament_id(round_id)));
 
 -- ---------------------------------------------------------------------------
 -- 4. save_hole
 -- ---------------------------------------------------------------------------
 -- What a mutation answered, so a retry gets the same answer and writes
--- nothing again. Only save_hole reads and writes it.
+-- nothing again. Only save_hole reads and writes it. The account, round and
+-- hole it was for: the same id from another account, or for another hole,
+-- is refused, never answered with this one's rows.
 create table if not exists public.score_mutations (
   mutation_id uuid primary key,
   tournament_id uuid not null references public.tournaments (id) on delete cascade,
+  round_id uuid not null,
+  hole integer not null,
   auth_user_id uuid not null,
   result jsonb not null,
   created_at timestamptz not null default now()
@@ -152,13 +166,19 @@ grant select on public.rejected_writes to authenticated;
  * A group's hole, from the phone that saw it (PLAN §5.1). `p`:
  *   { round_id, hole, mutation_id, device_id?,
  *     entries: [{ player_id, fields: {strokes?, putts?, picked_up?}, base?: {…} }] }
- * `fields` holds only what the phone set; `base` the values it saw those
- * fields hold (absent or null for no row). An entry with no `base` is written
- * blind, as a direct write is. Answers
+ * At most 8 entries and 16 KB: more is no hole of a group (22023).
+ * `fields` holds only what the phone set; `base` the values it saw the fields
+ * it writes hold (absent or null for no row). A pick-up writes the strokes
+ * too (none), and a number of strokes the pick-up (false) unless `fields`
+ * says otherwise: both are checked against `base` like the fields sent, a
+ * key missing from it read as no strokes, no putts, not picked up. An entry
+ * with no `base` is written blind, as a direct write is. Answers
  *   { status: ok | partial | conflict | rejected | not_member,
  *     rows: [the rows as stored], conflicts: [{player_id, fields, server}],
  *     rejected: [{player_id, reason}], unchanged: [player_id] }
- * and, for a mutation already answered, that answer with replayed: true.
+ * and, for a mutation already answered, that answer with replayed: true;
+ * the same mutation from another account, or for another hole, is refused
+ * (22023).
  */
 create or replace function public.save_hole(p jsonb)
 returns jsonb
@@ -172,15 +192,17 @@ declare
   dev uuid;
   tid uuid;
   me uuid;
-  prior jsonb;
+  prior public.score_mutations;
   e jsonb;
   pid uuid;
-  seen uuid[] := '{}';
+  dup boolean;
   fields jsonb;
   base jsonb;
   cur jsonb;
   nxt jsonb;
   k text;
+  cv jsonb;
+  bv jsonb;
   clash text[];
   st numeric;
   pt numeric;
@@ -193,6 +215,11 @@ declare
   status text;
   result jsonb;
 begin
+  -- A group is 2 to 4 players and a hole three numbers each: a call far past
+  -- that is no phone's hole, and is not read entry by entry.
+  if octet_length(p::text) > 16384 then
+    raise exception 'El hoyo que llegó trae demasiados datos; vuelve a guardarlo' using errcode = '22023';
+  end if;
   begin
     rid := (p ->> 'round_id')::uuid;
     h := (p ->> 'hole')::integer;
@@ -204,6 +231,9 @@ begin
   if rid is null or h is null or mid is null or jsonb_typeof(p -> 'entries') is distinct from 'array' then
     raise exception 'Al hoyo que llegó le faltan datos; vuelve a guardarlo' using errcode = '22023';
   end if;
+  if jsonb_array_length(p -> 'entries') > 8 then
+    raise exception 'Un hoyo se guarda con 8 jugadores a lo más' using errcode = '22023';
+  end if;
   if h < 1 or h > 18 then
     raise exception 'Ese hoyo no existe: van del 1 al 18' using errcode = '22023';
   end if;
@@ -214,22 +244,39 @@ begin
   end if;
 
   -- The same mutation twice (a retry while the first was still out) waits for
-  -- the first, then answers what it answered.
+  -- the first, then answers what it answered: to the same account, for the
+  -- same hole only.
   perform pg_advisory_xact_lock(hashtextextended('save_hole:' || mid::text, 0));
-  select m.result into prior from public.score_mutations m where m.mutation_id = mid;
+  select m.* into prior from public.score_mutations m where m.mutation_id = mid;
   if found then
-    return prior || jsonb_build_object('replayed', true);
+    if prior.auth_user_id is distinct from auth.uid() or prior.tournament_id is distinct from tid
+       or prior.round_id is distinct from rid or prior.hole is distinct from h then
+      raise exception 'Ese guardado ya llegó antes con otros datos; vuelve a guardarlo' using errcode = '22023';
+    end if;
+    return prior.result || jsonb_build_object('replayed', true);
   end if;
   -- One save of this hole at a time: two phones that both saw it empty would
   -- otherwise both write it, since a row lock can't hold a row not there yet.
+  -- admin_save_score and resolve_score_dispute take the same lock.
   perform pg_advisory_xact_lock(hashtextextended('save_hole:' || rid::text || ':' || h::text, 0));
+  -- The rows there are, locked at once and in one order, so another writer
+  -- of the same rows in that order waits instead of deadlocking.
+  perform 1 from public.scores s
+  where s.round_id = rid and s.hole = h
+    and s.player_id in (select public.try_uuid(x ->> 'player_id') from jsonb_array_elements(p -> 'entries') x)
+  order by s.player_id
+  for update;
 
-  for e in select * from jsonb_array_elements(p -> 'entries') loop
-    begin
-      pid := (e ->> 'player_id')::uuid;
-    exception when others then
-      pid := null;
-    end;
+  -- Each entry with its player, and whether an earlier entry named him.
+  for e, pid, dup in
+    select x.value, x.pid, x.n > 1
+    from (
+      select t.value, t.ord, public.try_uuid(t.value ->> 'player_id') as pid,
+             row_number() over (partition by public.try_uuid(t.value ->> 'player_id') order by t.ord) as n
+      from jsonb_array_elements(p -> 'entries') with ordinality as t(value, ord)
+    ) x
+    order by x.ord
+  loop
     fields := coalesce(e -> 'fields', '{}');
     base := e -> 'base';
     if base = 'null'::jsonb then
@@ -237,7 +284,8 @@ begin
     end if;
     reason := null;
     cur := null;
-    if pid is null or pid = any (seen) or public.player_tournament_id(pid) is distinct from tid
+    clash := '{}';
+    if pid is null or dup or public.player_tournament_id(pid) is distinct from tid
        or jsonb_typeof(fields) <> 'object' or (base is not null and jsonb_typeof(base) <> 'object')
        or exists (select 1 from jsonb_object_keys(fields) f where f not in ('strokes', 'putts', 'picked_up')) then
       reason := 'invalid';
@@ -248,11 +296,12 @@ begin
     elsif public.card_is_signed(rid, pid) then
       reason := 'card_signed';
     end if;
-    if pid is not null then
-      seen := seen || pid;
-    end if;
 
     if reason is null then
+      -- A number of strokes is a hole played: not picked up, unless the phone says so.
+      if jsonb_typeof(fields -> 'strokes') = 'number' and not fields ? 'picked_up' then
+        fields := fields || '{"picked_up": false}'::jsonb;
+      end if;
       select to_jsonb(s) into cur from public.scores s where s.round_id = rid and s.player_id = pid and s.hole = h for update;
       -- The row it would be: what is there, with the fields the phone set.
       nxt := jsonb_build_object(
@@ -279,23 +328,22 @@ begin
     end if;
 
     if reason is null and base is not null then
-      -- A field someone else changed since the phone saw it, to another value
-      -- than this one, is not this phone's to overwrite.
-      clash := '{}';
-      -- A pick-up also clears the strokes: they must be the ones it saw.
-      for k in select jsonb_object_keys(fields) union select 'strokes' where nxt -> 'picked_up' = 'true'::jsonb and base ? 'strokes' loop
-        if coalesce(cur -> k, 'null'::jsonb) is distinct from coalesce(base -> k, 'null'::jsonb)
-           and coalesce(cur -> k, 'null'::jsonb) is distinct from (nxt -> k) then
+      -- A field it writes that someone else changed since the phone saw it, to
+      -- another value than this one, is not this phone's to overwrite. A
+      -- pick-up writes the strokes too.
+      for k in select jsonb_object_keys(fields) union select 'strokes' where nxt -> 'picked_up' = 'true'::jsonb loop
+        cv := coalesce(nullif(cur -> k, 'null'::jsonb), case when k = 'picked_up' then 'false' else 'null' end::jsonb);
+        bv := coalesce(nullif(base -> k, 'null'::jsonb), case when k = 'picked_up' then 'false' else 'null' end::jsonb);
+        if cv is distinct from bv and cv is distinct from (nxt -> k) then
           clash := clash || k;
         end if;
       end loop;
-    else
-      clash := '{}';
     end if;
 
+    -- Kept for the Comité: once per player per mutation (his first entry; a repeat is only refused).
     if reason is not null then
       rejected := rejected || jsonb_build_array(jsonb_build_object('player_id', pid, 'reason', reason));
-      if pid is not null and public.player_tournament_id(pid) = tid then
+      if pid is not null and not dup and public.player_tournament_id(pid) = tid then
         insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, device_id, mutation_id, payload, reason)
         values (tid, rid, h, pid, me, auth.uid(), dev, mid, e, reason);
       end if;
@@ -333,12 +381,82 @@ begin
     else 'rejected'
   end;
   result := jsonb_build_object('status', status, 'rows', rows_out, 'conflicts', conflicts, 'rejected', rejected, 'unchanged', unchanged);
-  insert into public.score_mutations (mutation_id, tournament_id, auth_user_id, result) values (mid, tid, auth.uid(), result);
+  insert into public.score_mutations (mutation_id, tournament_id, round_id, hole, auth_user_id, result) values (mid, tid, rid, h, auth.uid(), result);
   return result;
 end;
 $$;
 revoke execute on function public.save_hole(jsonb) from public, anon;
 grant execute on function public.save_hole(jsonb) to authenticated;
+
+-- The Comité's two writes of a hole take save_hole's lock on it, so a phone
+-- that saw the hole before a correction is asked, not let through: as in
+-- 0013, with the lock.
+create or replace function public.admin_save_score(p_round_id uuid, p_player_id uuid, p_hole integer, p_strokes integer, p_putts integer, p_picked_up boolean, p_reason text default null)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  tid uuid;
+  r text;
+begin
+  tid := public.round_tournament_id(p_round_id);
+  if tid is null or not public.is_tournament_organizer(tid) then
+    raise exception 'Solo el Comité puede corregir tarjetas' using errcode = '42501';
+  end if;
+  if public.player_tournament_id(p_player_id) is distinct from tid then
+    raise exception 'Ese jugador no es de este torneo' using errcode = '22023';
+  end if;
+  r := nullif(btrim(coalesce(p_reason, '')), '');
+  if public.card_is_signed(p_round_id, p_player_id) and (r is null or length(r) < 3) then
+    raise exception 'La tarjeta está firmada: la corrección necesita razón' using errcode = '22023';
+  end if;
+  if not p_picked_up and (p_strokes is null or p_strokes < 1 or p_strokes > 15) then
+    raise exception 'Los golpes van de 1 a 15' using errcode = '22023';
+  end if;
+  if p_putts is not null and (p_putts < 0 or p_putts > 15 or (not p_picked_up and p_putts > p_strokes)) then
+    raise exception 'Los putts no pueden ser más que los golpes' using errcode = '22023';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('save_hole:' || p_round_id::text || ':' || p_hole::text, 0));
+  perform set_config('cardi.comite', '1', true);
+  insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up, entered_by, client_ts, reason, disputed, previous)
+  values (p_round_id, p_player_id, p_hole, case when p_picked_up then null else p_strokes end, p_putts, p_picked_up, public.my_player_id(tid), now(), coalesce(r, 'Corrección del Comité'), false, null)
+  on conflict (round_id, player_id, hole) do update
+    set strokes = excluded.strokes, putts = excluded.putts, picked_up = excluded.picked_up, entered_by = excluded.entered_by,
+        client_ts = excluded.client_ts, reason = excluded.reason, disputed = false, previous = null;
+end;
+$$;
+
+create or replace function public.resolve_score_dispute(p_round_id uuid, p_player_id uuid, p_hole integer, p_keep boolean default true)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  tid uuid;
+  s public.scores;
+begin
+  tid := public.round_tournament_id(p_round_id);
+  if tid is null or not public.is_tournament_organizer(tid) then
+    raise exception 'Solo el Comité puede resolver discrepancias' using errcode = '42501';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('save_hole:' || p_round_id::text || ':' || p_hole::text, 0));
+  select * into s from public.scores where round_id = p_round_id and player_id = p_player_id and hole = p_hole for update;
+  if s.id is null then
+    raise exception 'Ese hoyo no tiene captura' using errcode = '22023';
+  end if;
+  perform set_config('cardi.comite', '1', true);
+  if p_keep or s.previous is null then
+    update public.scores set disputed = false, previous = null, reason = 'Discrepancia: se conserva el valor actual' where id = s.id;
+  else
+    update public.scores
+    set strokes = (s.previous ->> 'strokes')::int, putts = (s.previous ->> 'putts')::int, picked_up = coalesce((s.previous ->> 'picked_up')::boolean, false),
+        entered_by = public.my_player_id(tid), client_ts = now(), disputed = false, previous = null,
+        reason = 'Discrepancia: se restaura el valor anterior'
+    where id = s.id;
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 5. Signing a card settles its discrepancies (NEW-01)

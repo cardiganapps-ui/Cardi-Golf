@@ -938,8 +938,39 @@
       }
     },
     {
-      "name": "scores: a group-mate's hole deleted by a phone of the group goes",
+      "name": "scores: a group-mate's hole deleted by a phone of the group stays: deleting a hole is the Comité's (0026)",
       "as": "uid-p1",
+      "request": {
+        "method": "DELETE",
+        "table": "scores",
+        "eq": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: the Comité deletes a hole, and it goes",
+      "as": "uid-org",
       "request": {
         "method": "DELETE",
         "table": "scores",

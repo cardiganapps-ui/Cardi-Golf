@@ -2542,10 +2542,11 @@
       "status": "open",
       "pr": null,
       "tests": [
-        "supabase/tests/save_hole.sql"
+        "supabase/tests/save_hole.sql",
+        "supabase/tests/race_save_hole.sh"
       ],
       "verifiedBy": null,
-      "residual": "Server half in migration 0026 (save_hole), proven on the local harness (supabase/tests/save_hole.sql): a group's hole in one statement; each entry names the fields the phone set and the values it saw them hold, and a field another phone changed meanwhile is not overwritten (the answer is `conflict`, with the server's row). Production gets it with SUPABASE_PAT (docs/handoff.md); the app switches to it in outbox v2, after #92 and #93. Until both, phones write only the players they touched (#12's mitigation)."
+      "residual": "Server half in migration 0026 (save_hole), proven on the local harness (supabase/tests/save_hole.sql): a group's hole in one statement; each entry names the fields the phone set and the values it saw them hold, and a field another phone changed meanwhile is not overwritten (the answer is `conflict`, with the server's row). Production gets it with SUPABASE_PAT (docs/handoff.md); the app switches to it in outbox v2, after #92 and #93. Until both, phones write only the players they touched (#12's mitigation). Round 2 (#98's verifier): a phone's strokes are no longer dropped as «unchanged» under a pick-up another phone saved meanwhile, nor a stale pick-up's «no strokes» written over strokes another phone changed: a number of strokes writes «not picked up» and a pick-up «no strokes», each checked against what the phone saw, so either is a `conflict` kept in rejected_writes (save_hole.sql, 7d). A call is capped at 8 entries and 16 KB, with one rejected_writes row per player per call. admin_save_score and resolve_score_dispute take save_hole's lock on the hole, and save_hole locks the hole's rows at once in player order (race_save_hole.sh: six two-session cases). Residuals: an old build's direct insert of an empty hole, racing a save_hole of it, is last write wins, flagged as a discrepancy (only save_hole and the Comité take the hole's lock; taking it in the direct-write trigger would deadlock against an old build's multi-row upsert); a card signed while a save of it is in flight takes that save (signing doesn't lock the card's holes); score_mutations rows don't expire yet (one small row per save; the cleanup comes with outbox v2); save_hole takes holes 1 to 18 on a 9-hole round too, as direct writes do."
     },
     {
       "id": "REL-06",
@@ -2607,7 +2608,7 @@
         "supabase/tests/save_hole.sql"
       ],
       "verifiedBy": null,
-      "residual": "Fixed in migration 0026: direct writes to scores, the Comité's included, only while the round is live and the card unsigned; a correction after that goes through admin_save_score with a reason (supabase/tests/save_hole.sql, step 12). Production keeps the old policy until 0026 is applied (SUPABASE_PAT); status moves to fixed then."
+      "residual": "Fixed in migration 0026: direct writes to scores, the Comité's included, only while the round is live and the card unsigned; a correction after that goes through admin_save_score with a reason (supabase/tests/save_hole.sql, step 12). Production keeps the old policy until 0026 is applied (SUPABASE_PAT); status moves to fixed then. Round 2: deleting a score is the Comité's alone (scores_delete; save_hole.sql, 10b)."
     },
     {
       "id": "REL-10",
@@ -2819,7 +2820,7 @@
         "supabase/tests/save_hole.sql"
       ],
       "verifiedBy": null,
-      "residual": "Fixed in migration 0026: a direct write from the app records the session's own player as entered_by, whatever the body says (scores_00_writer), and save_hole sets it itself (supabase/tests/save_hole.sql, step 10). Production keeps client-asserted provenance until 0026 is applied (SUPABASE_PAT)."
+      "residual": "Fixed in migration 0026: a direct write from the app records the session's own player as entered_by, whatever the body says (scores_00_writer), and save_hole sets it itself (supabase/tests/save_hole.sql, step 10). Production keeps client-asserted provenance until 0026 is applied (SUPABASE_PAT). Round 2: a direct write also clears the device and mutation of the save it replaced, so the row never names a phone that didn't write it; a mutation id sent again from another account, tournament, round or hole is refused (22023) instead of answering with the first one's rows (save_hole.sql, 4b). The account behind each write is recorded by audit_row (audit_log.actor_auth_user_id, with the row as written) and per mutation in score_mutations; not on the scores row, which every member reads over Realtime: a residual by choice."
     },
     {
       "id": "SEC-03",
