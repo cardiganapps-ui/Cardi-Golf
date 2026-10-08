@@ -103,6 +103,15 @@ describe('the heal', () => {
     }
   })
 
+  it('counts a load of the open tournament (the gate resolving again) as a fetch: the next check is five minutes after it (K-V12b)', async () => {
+    await ready()
+    await vi.advanceTimersByTimeAsync(4 * MIN)
+    await store().load(TID)
+    const at = await fetchTimes(6 * 60)
+    expect(at).toHaveLength(1)
+    expect(at[0]).toBeGreaterThanOrEqual(300)
+  })
+
   it('a fetch that works again ends the longer wait', async () => {
     await ready()
     server.down = { message: 'no', code: 'PGRST116' }

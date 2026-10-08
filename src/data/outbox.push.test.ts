@@ -136,6 +136,14 @@ describe('a push hands the store the rows the server stored', () => {
     ])
   })
 
+  it('a contest answered «nobody» where nobody was named comes back empty: nothing lands, and no fetch is asked (K-V24)', async () => {
+    await _outboxTest.enqueue(award([]))
+    await flush()
+    expect(srv.selected).toEqual(['hole_awards:delete'])
+    // Only a card signed first by the other pair asks a fetch of an empty answer.
+    expect(srv.landed.map((l) => [l.changes, l.opts])).toEqual([[[], { flushing: true, fetch: false }]])
+  })
+
   it('a card the other pair signed first comes back empty: the write is taken, nothing lands over its signature, and a fetch shows that signature', async () => {
     await _outboxTest.enqueue(item('signature', 'signature:r1:pair1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }))
     await flush()

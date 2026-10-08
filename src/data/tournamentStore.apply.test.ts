@@ -315,6 +315,21 @@ describe('leaving a tournament', () => {
     expect(store().realtime).toBe('off')
   })
 
+  it('…nor when a fetch of the tournament left overtook that load, which then lands superseded (K-V10)', async () => {
+    store().unsubscribe()
+    const before = server.channels.length
+    const slow = server.hold()
+    const loading = store().load(TID)
+    await slow.received
+    store().unsubscribe()
+    // Something still fetches the tournament left (a screen's reload after its action, the outbox's after a write refused).
+    await store().reload()
+    slow.release()
+    await loading
+    expect(server.channels.length).toBe(before)
+    expect(store().realtime).toBe('off')
+  })
+
   it('a reload asked for just before leaving never goes out', async () => {
     const n = reads()
     // A structural change asks for a reload, 150 ms later.
