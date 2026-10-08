@@ -270,8 +270,10 @@ let lastFetchAt = 0
 let lastFetchMono = 0
 /** The one more fetch the outbox's landings asked for, sent once its flush ends (a reconnect's 36 rows cost one). */
 let fetchAfterPushes = false
-/** The gate is on the tournament: a tournament left is fetched by nothing, not an unlock, a reconnect or a late answer (N9). */
+/** The gate is on the tournament: only then do an unlock or a reconnect fetch it. */
 let open = false
+/** The gate left the tournament: nothing fetches it any more, not a late answer, a refused write or another tab (N9). */
+let left = false
 /** Fetches on their way: the heal waits for them, and a delete is logged only for them. */
 let fetching = 0
 /** A write landed while a fetch was on its way, which may have read a later change than it: one more fetch once it lands. */
@@ -469,6 +471,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       set({ tournamentId, data: null, error: null, source: null })
     }
     open = true
+    left = false
     const leavesAtStart = leaves
     set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
@@ -509,7 +512,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     // and a fetch would only replace it with nothing after a write.
     if (!id || id.startsWith('fixture:')) return
     // A tournament left is fetched by nothing, a refused write's answer included (N9).
-    if (!open) return
+    if (left) return
     const seq = ++fetchSeq
     const since = changeSeq
     fetching++
@@ -546,6 +549,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     const id = get().tournamentId
     if (!id || channel) return
     open = true
+    left = false
     set({ realtime: 'connecting' })
     const sb = supabase()
     // `wait`: the server confirms every postgres_changes binding before the join
@@ -624,6 +628,7 @@ export const useTournament = create<StoreState>((set, get) => ({
   unsubscribe() {
     leaves++
     open = false
+    left = true
     refetch = false
     fetchAfterPushes = false
     stopDegraded()
@@ -670,7 +675,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     // One more fetch, read after this write: now, or once the outbox's flush ends (a reconnect's rows ask it once).
     // A tournament left fetches nothing (N9).
     const askFetch = () => {
-      if (!open) return
+      if (left) return
       if (opts.flushing) fetchAfterPushes = true
       else scheduleReload()
     }
@@ -685,7 +690,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
     if (fresh.length) {
       // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
-      if (fetching > 0 && open) refetch = true
+      if (fetching > 0 && !left) refetch = true
       const next = structuredClone(d.base)
       const now = Date.now()
       const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))

@@ -4214,11 +4214,13 @@
       "tripSafe": true,
       "title": "After a restart the boards can miss the queued holes: the gate puts the kept boards up before AppShell's outbox has read its queue, and loadQueue never lays the queue over them",
       "foundBy": "PR #93's first verifier (probe P1a)",
-      "status": "open",
+      "status": "fixed",
       "pr": 92,
-      "tests": [],
+      "tests": [
+        "src/data/outbox.offline.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": "Fixed in #92 (loadQueue ends with refresh()); outbox.offline.test.ts holds the repro as it.fails until then."
+      "residual": "Fixed in #92: loadQueue ends with refresh(), so the queue is laid over boards that went up before it was read. outbox.offline.test.ts held the repro as it.fails; it passes now."
     },
     {
       "id": "NEW-03",
