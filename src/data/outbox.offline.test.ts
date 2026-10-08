@@ -265,7 +265,7 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     await open(after)
     expect(after.outbox._outboxTest.queue().map((x) => [x.key, x.actingUid])).toEqual([['score:r1:p2:2', fresh]])
     expect(after.outbox.useOutbox.getState()).toMatchObject({ pending: 1, held: 0 })
-    expect(after.outbox.unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal' })
+    expect(after.outbox.unsentWrites()).toEqual({ tournamentId: 't1', waitsFor: 'signal', name: 'Ensayo' })
 
     // Signal: it goes out by itself, as the player.
     phone.goOnline()
