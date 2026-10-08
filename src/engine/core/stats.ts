@@ -2,16 +2,29 @@
  * Stats and awards (§12): display only, no money. Pure derivation from the
  * core state plus the snake and auction module states when they are on.
  * Award ids are generic; the fun names live in the i18n copy.
+ *
+ * The figures follow what the main event counts (STRAT-03). Under Stableford
+ * a hole is worth its points, and more is better. Under strokes a hole is its
+ * score against par (net or gross, a pick-up as net double bogey, as the
+ * board counts it), and less is better: the race, the best and worst hole,
+ * the hardest hole, the moment, the day-to-day gain and the consistency all
+ * read that figure. The birdie, par and bogey counts stay on net scores
+ * whatever the format: they are labelled that way.
  */
 import type { Id, Snapshot } from '../types'
 import type { CoreState, HoleResult } from './types'
 import type { SnakeState } from '../modules/snake'
 import type { AuctionState } from '../modules/auction'
+import { holeStrokes } from '../formats/strokePlay'
+import type { MainScoring } from '../formats'
 
 export interface PlayerStats {
   playerId: Id
   pointsPerRound: number[]
   pointsByPar: Record<3 | 4 | 5, number>
+  /** The hole figure (points, or strokes against par) summed per round and by par: what the screen shows. */
+  valuePerRound: number[]
+  valueByPar: Record<3 | 4 | 5, number>
   holesPlayed: number
   grossBirdies: number
   netBirdies: number
@@ -24,14 +37,19 @@ export interface PlayerStats {
   onePutts: number
   threePutts: number
   snakeHoles: number
-  bestHole: { roundNumber: number; hole: number; points: number; strokeIndex: number } | null
-  worstHole: { roundNumber: number; hole: number; points: number; strokeIndex: number } | null
+  /** `value` is the hole figure: points, or strokes against par. */
+  bestHole: { roundNumber: number; hole: number; points: number; value: number; strokeIndex: number } | null
+  worstHole: { roundNumber: number; hole: number; points: number; value: number; strokeIndex: number } | null
   /** Longest run of consecutive scoring holes (points > 0), in play order. */
   longestStreak: number
-  /** Population variance of points per hole. */
+  /** Population variance of the hole figure. */
   variance: number | null
-  /** Cumulative points hole by hole across rounds (for the race chart). */
+  /** The hole figure, cumulative hole by hole across rounds (for the race chart). */
   race: number[]
+  /** Stableford points, cumulative hole by hole: the pairs game counts points whatever the main event does. */
+  pointsRace: number[]
+  /** Per round in order: whether every hole of it was played (a day-to-day comparison needs both days whole). */
+  roundComplete: boolean[]
 }
 
 export interface HoleStat {
@@ -39,6 +57,8 @@ export interface HoleStat {
   par: number
   strokeIndex: number
   avgPoints: number
+  /** Average hole figure: points, or strokes against par. */
+  avg: number
   played: number
 }
 
@@ -57,31 +77,40 @@ export interface Award {
   /** Winners (several when tied). */
   playerIds: Id[]
   value: number
-  /** How to show the value ("count", "points", "pct", "variance"). */
-  unit: 'count' | 'points' | 'pct' | 'variance'
+  /** How to show the value ("count", "points", "strokes" fewer, "pct", "variance"). */
+  unit: 'count' | 'points' | 'strokes' | 'pct' | 'variance'
 }
 
 export interface StatsState {
+  /** What the figures count: Stableford points (more is better) or strokes against par (less is better). */
+  scoring: MainScoring
   players: Record<Id, PlayerStats>
   rounds: RoundStats[]
   awards: Award[]
-  cursedHole: { roundNumber: number; hole: number; avgPoints: number } | null
-  moment: { playerId: Id; roundNumber: number; hole: number; points: number; strokeIndex: number } | null
+  cursedHole: { roundNumber: number; hole: number; avgPoints: number; avg: number } | null
+  moment: { playerId: Id; roundNumber: number; hole: number; points: number; value: number; strokeIndex: number } | null
 }
 
 function playedHoles(holes: HoleResult[]) {
   return holes.filter((h) => h.played)
 }
 
-export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?: SnakeState; auction?: AuctionState }): StatsState {
+export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?: SnakeState; auction?: AuctionState }, scoring: MainScoring = 'points'): StatsState {
   const players: Record<Id, PlayerStats> = {}
-  const allMoments: Array<{ playerId: Id; roundNumber: number; hole: number; points: number; strokeIndex: number }> = []
+  const allMoments: Array<{ playerId: Id; roundNumber: number; hole: number; points: number; value: number; strokeIndex: number }> = []
+  const points = scoring === 'points'
+  /** A played hole's figure: its points, or its strokes against par. */
+  const valueOf = (h: HoleResult) => (points ? h.points : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par)
+  /** `a` is a better hole figure than `b`. */
+  const better = (a: number, b: number) => (points ? a > b : a < b)
 
   for (const p of snapshot.players) {
     const st: PlayerStats = {
       playerId: p.id,
       pointsPerRound: [],
       pointsByPar: { 3: 0, 4: 0, 5: 0 },
+      valuePerRound: [],
+      valueByPar: { 3: 0, 4: 0, 5: 0 },
       holesPlayed: 0,
       grossBirdies: 0,
       netBirdies: 0,
@@ -99,47 +128,62 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
       longestStreak: 0,
       variance: null,
       race: [],
+      pointsRace: [],
+      roundComplete: [],
     }
     let puttHoles = 0
     let streak = 0
-    const pointsList: number[] = []
+    const valueList: number[] = []
     let cum = 0
+    let cumPoints = 0
     for (const rid of core.roundIds) {
       const pr = core.rounds[rid]?.[p.id]
       if (!pr) continue
       st.pointsPerRound.push(pr.points)
+      st.roundComplete.push(pr.holes.length > 0 && pr.holes.every((h) => h.played))
+      let roundValue = 0
       for (const h of pr.holes) {
         if (!h.played) continue
+        const v = valueOf(h)
         st.holesPlayed++
-        pointsList.push(h.points)
-        cum += h.points
+        valueList.push(v)
+        cum += v
+        cumPoints += h.points
+        roundValue += v
         st.race.push(cum)
+        st.pointsRace.push(cumPoints)
         const par = (h.par === 3 || h.par === 5 ? h.par : 4) as 3 | 4 | 5
         st.pointsByPar[par] += h.points
+        st.valueByPar[par] += v
         if (h.pickedUp) st.pickUps++
         else if (h.gross != null && h.gross <= h.par - 1) st.grossBirdies++
+        // «Birdies netos» says what it counts. Pars, bogeys, doubles and the streak are
+        // read on the score the event counts: net points, or the net or gross score.
         if (h.points >= 3) st.netBirdies++
-        else if (h.points === 2) st.pars++
-        else if (h.points === 1) st.bogeys++
-        else if (!h.pickedUp) st.doubleOrWorse++
+        const level = points ? 2 - h.points : v
+        if (level === 0) st.pars++
+        else if (level === 1) st.bogeys++
+        else if (level >= 2 && !h.pickedUp) st.doubleOrWorse++
         if (h.putts != null) {
           st.putts += h.putts
           puttHoles++
           if (h.putts === 1) st.onePutts++
           if (h.putts >= 3) st.threePutts++
         }
-        streak = h.points > 0 ? streak + 1 : 0
+        // A scoring hole: some points, or no worse than bogey on the counted score.
+        streak = (points ? h.points > 0 : v <= 1) ? streak + 1 : 0
         st.longestStreak = Math.max(st.longestStreak, streak)
-        const m = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, strokeIndex: h.strokeIndex }
-        if (!st.bestHole || m.points > st.bestHole.points || (m.points === st.bestHole.points && m.strokeIndex < st.bestHole.strokeIndex)) st.bestHole = m
-        if (!st.worstHole || m.points < st.worstHole.points || (m.points === st.worstHole.points && m.strokeIndex > st.worstHole.strokeIndex)) st.worstHole = m
+        const m = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, value: v, strokeIndex: h.strokeIndex }
+        if (!st.bestHole || better(m.value, st.bestHole.value) || (m.value === st.bestHole.value && m.strokeIndex < st.bestHole.strokeIndex)) st.bestHole = m
+        if (!st.worstHole || better(st.worstHole.value, m.value) || (m.value === st.worstHole.value && m.strokeIndex > st.worstHole.strokeIndex)) st.worstHole = m
         allMoments.push({ playerId: p.id, ...m })
       }
+      st.valuePerRound.push(roundValue)
     }
     if (puttHoles > 0) st.puttsPerHole = Math.round((st.putts / puttHoles) * 100) / 100
-    if (pointsList.length > 0) {
-      const mean = pointsList.reduce((a, b) => a + b, 0) / pointsList.length
-      st.variance = Math.round((pointsList.reduce((a, b) => a + (b - mean) ** 2, 0) / pointsList.length) * 1000) / 1000
+    if (valueList.length > 0) {
+      const mean = valueList.reduce((a, b) => a + b, 0) / valueList.length
+      st.variance = Math.round((valueList.reduce((a, b) => a + (b - mean) ** 2, 0) / valueList.length) * 1000) / 1000
     }
     players[p.id] = st
   }
@@ -149,19 +193,21 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   for (const rid of core.roundIds) {
     const round = snapshot.rounds.find((r) => r.id === rid)
     if (!round) continue
-    const acc = new Map<number, { par: number; strokeIndex: number; sum: number; n: number }>()
+    const acc = new Map<number, { par: number; strokeIndex: number; sum: number; value: number; n: number }>()
     for (const pr of Object.values(core.rounds[rid] ?? {})) {
       for (const h of playedHoles(pr.holes)) {
-        const a = acc.get(h.hole) ?? { par: h.par, strokeIndex: h.strokeIndex, sum: 0, n: 0 }
+        const a = acc.get(h.hole) ?? { par: h.par, strokeIndex: h.strokeIndex, sum: 0, value: 0, n: 0 }
         a.sum += h.points
+        a.value += valueOf(h)
         a.n++
         acc.set(h.hole, a)
       }
     }
     const holes: HoleStat[] = [...acc.entries()]
-      .map(([hole, a]) => ({ hole, par: a.par, strokeIndex: a.strokeIndex, avgPoints: Math.round((a.sum / a.n) * 100) / 100, played: a.n }))
+      .map(([hole, a]) => ({ hole, par: a.par, strokeIndex: a.strokeIndex, avgPoints: Math.round((a.sum / a.n) * 100) / 100, avg: Math.round((a.value / a.n) * 100) / 100, played: a.n }))
       .sort((a, b) => a.hole - b.hole)
-    const ranked = [...holes].sort((a, b) => a.avgPoints - b.avgPoints || a.hole - b.hole)
+    // Hardest first: fewest points, or most strokes against par.
+    const ranked = [...holes].sort((a, b) => (points ? a.avg - b.avg : b.avg - a.avg) || a.hole - b.hole)
     rounds.push({ roundId: rid, roundNumber: round.number, holes, hardest: ranked[0] ?? null, easiest: ranked.at(-1) ?? null })
   }
 
@@ -178,8 +224,11 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   top('mostBirdies', 'count', (s) => s.grossBirdies)
   top('mostOnePutts', 'count', (s) => s.onePutts)
   top('mostThreePutts', 'count', (s) => s.threePutts)
-  top('biggestGain', 'points', (s) => (s.pointsPerRound.length >= 2 ? s.pointsPerRound[1]! - s.pointsPerRound[0]! : null), {
-    ok: (s) => s.holesPlayed >= 2 * 9,
+  // Points gained from day 1 to day 2, or strokes saved against par: only for a
+  // player who played both days whole. Under strokes an unplayed day reads 0,
+  // which is a gain on any day-1 card over par (a knocked-out player won it).
+  top('biggestGain', points ? 'points' : 'strokes', (s) => (s.valuePerRound.length >= 2 ? (points ? 1 : -1) * (s.valuePerRound[1]! - s.valuePerRound[0]!) : null), {
+    ok: (s) => s.holesPlayed >= 2 * 9 && s.roundComplete[0] === true && s.roundComplete[1] === true,
   })
   top('mostConsistent', 'variance', (s) => s.variance, { min: true, ok: (s) => s.holesPlayed >= 9 })
   if (mods.snake) top('snakeGold', 'count', (s) => s.snakeHoles)
@@ -198,11 +247,13 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
   for (const r of rounds) {
     for (const h of r.holes) {
       if (h.played < 2) continue
-      if (!cursedHole || h.avgPoints < cursedHole.avgPoints) cursedHole = { roundNumber: r.roundNumber, hole: h.hole, avgPoints: h.avgPoints }
+      if (!cursedHole || better(cursedHole.avg, h.avg)) cursedHole = { roundNumber: r.roundNumber, hole: h.hole, avgPoints: h.avgPoints, avg: h.avg }
     }
   }
-  // Moment of the tournament: most points on one hole; ties go to the harder stroke index.
-  const moment = allMoments.length ? allMoments.reduce((a, b) => (b.points > a.points || (b.points === a.points && b.strokeIndex < a.strokeIndex) ? b : a)) : null
+  // Moment of the tournament: the best hole figure; ties go to the harder stroke index.
+  const moment = allMoments.length ? allMoments.reduce((a, b) => (better(b.value, a.value) || (b.value === a.value && b.strokeIndex < a.strokeIndex) ? b : a)) : null
+  // A moment is a good hole: some points, or under par.
+  const memorable = moment && (points ? moment.value > 0 : moment.value < 0)
 
-  return { players, rounds, awards, cursedHole, moment: moment && moment.points > 0 ? moment : null }
+  return { scoring, players, rounds, awards, cursedHole, moment: memorable ? moment : null }
 }

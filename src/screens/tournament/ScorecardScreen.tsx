@@ -20,6 +20,8 @@ import { RejectedWrites } from '../../components/RejectedWrites'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
+import { holeStrokes, mainScoring } from '../../engine/formats'
+import type { HoleResult } from '../../engine/core/types'
 import type { Group, Round } from '../../engine/types'
 import { motion } from 'motion/react'
 import { easeSlow } from '../../design/motion'
@@ -143,6 +145,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const order = useMemo(() => playOrder(group.startHole, round.holes), [group.startHole, round.holes])
   const roundState = state.core.rounds[round.id] ?? {}
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
+  const scoring = mainScoring(settings)
+  /** Whether anything this tournament plays counts Stableford points (STRAT-03). */
+  const pointsCount = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
+  const net = scoring !== 'gross'
 
   // Start on the first hole the group has not completed — or on the one the
   // En vivo shortcut asked for, so that tap lands where it said it would.
@@ -186,10 +192,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
   const holeSpoken = S.holeSpoken(hole, par, lead?.strokeIndex, lead?.yards)
-  /** The points badge's words for a draft, shared by the badge and the announcement. */
+  /**
+   * The badge's words for a draft, shared by the badge and the announcement.
+   * Points where something counts them (Stableford, or a points game beside
+   * the main event); otherwise the hole on the score the event counts:
+   * «birdie neto», «par», «levantó» (STRAT-03). `good`: worth the highlight.
+   */
   const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
     const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
-    return { pts, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
+    if (pointsCount) return { pts, good: pts >= 3, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
+    const toPar = d.pickedUp ? null : (net ? d.strokes - h.strokesReceived : d.strokes) - h.par
+    return { pts, good: toPar != null && toPar <= -1, text: t.feed.scoreName(toPar, net) }
   }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
@@ -550,6 +563,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const front = order.filter((h) => h <= 9).sort((a, b) => a - b)
   const back = order.filter((h) => h > 9).sort((a, b) => a - b)
   const sumPts = (pid: string, holes: number[]) => holes.reduce((a, h) => a + (roundState[pid]?.holes[h - 1]?.played ? roundState[pid]!.holes[h - 1]!.points : 0), 0)
+  /** Under net strokes the small figure is the net score; under gross the mark already says it all. */
+  const cellFigure = (hi: HoleResult) => (pointsCount ? hi.points : net ? holeStrokes(hi, true) : null)
+  const sumNet = (pid: string, holes: number[]) => {
+    const hs = holes.map((h) => roundState[pid]?.holes[h - 1]).filter((h): h is HoleResult => !!h?.played)
+    return hs.length === holes.length ? hs.reduce((a, h) => a + (holeStrokes(h, true) ?? 0), 0) : null
+  }
   const sumGross = (pid: string, holes: number[]) => {
     const hs = holes.map((h) => roundState[pid]?.holes[h - 1]).filter((h) => h?.played && !h.pickedUp && h.gross != null)
     return hs.length === holes.length ? hs.reduce((a, h) => a + h!.gross!, 0) : null
@@ -584,7 +603,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             <span className={styles.cell}>
               <ScoreMark value={hi.pickedUp ? 'L' : hi.gross!} kind={markFor(hi.gross, hi.par, hi.pickedUp)} />
               <span className={styles.cellPts}>
-                {hi.points}
+                {cellFigure(hi)}
                 {hi.disputed && (
                   <span className={styles.disputedMark} aria-label={S.disputed}>
                     <IconAlert size={12} />
@@ -601,7 +620,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     <tr className={total ? styles.total : styles.subtotal}>
       <td>
         {label}
-        <span className={styles.subCaption}>{S.ptsGrossCaption}</span>
+        <span className={styles.subCaption}>{pointsCount ? S.ptsGrossCaption : net ? S.netGrossCaption : S.grossCaption}</span>
       </td>
       <td className={styles.gridMeta}>{holes.reduce((a, h) => a + (roundState[players[0]!.id]?.holes[h - 1]?.par ?? 0), 0) || ''}</td>
       <td />
@@ -610,7 +629,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         return (
           <td key={p.id}>
             <span className={styles.cell}>
-              <span>{sumPts(p.id, holes)}</span>
+              <span>{pointsCount ? sumPts(p.id, holes) : net ? (sumNet(p.id, holes) ?? '–') : ''}</span>
               <span className={styles.cellPts}>{g ?? ''}</span>
             </span>
           </td>
@@ -743,7 +762,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               const d = drafts[p.id]
               const h = holeInfo(p.id)
               if (!d || !h) return null
-              const { pts, text: ptsLine } = ptsText(h, d)
+              const { good, text: ptsLine } = ptsText(h, d)
               const locked = signed(p.id) && !me.isAdmin
               const init = initialDraft(p.id)
               const untouched = !h.played && !!init && init.strokes === d.strokes && init.putts === d.putts && init.pickedUp === d.pickedUp
@@ -765,7 +784,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                         </span>
                       )}
                     </span>
-                    <span className={`${styles.pts} ${untouched ? styles.ptsMuted : pts >= 3 ? styles.ptsHigh : ''}`}>
+                    <span className={`${styles.pts} ${untouched ? styles.ptsMuted : good ? styles.ptsHigh : ''}`}>
                       {ptsLine}
                       {h.par !== par ? `, ${S.parHere(h.par)}` : ''}
                     </span>

@@ -17,6 +17,7 @@ import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
 import { easeFast, easeSlow } from '../../design/motion'
+import { dayFigureText } from '../../lib/figureText'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 
@@ -96,19 +97,25 @@ export function TvScreen() {
                 turn={turn}
                 items={indivRows}
                 render={(r) => {
-                    const pr = round ? state.core.rounds[round.id]?.[r.playerId] : undefined
+                    // A team's row is the team; the figures are the format's own (STRAT-03): today's and the total, never Stableford points under strokes.
+                    const team = r.entrant.isTeam
+                    const members = r.entrant.playerIds
+                    const thru = round ? Math.min(...members.map((id) => state.core.rounds[round.id]?.[id]?.thru ?? 0)) : 0
+                    const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
+                    const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
+                    const label = team ? r.entrant.name : name(r.playerId)
                     return (
                       <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId}>
                         <span className={styles.pos}>{r.label}</span>
-                        <Avatar name={name(r.playerId)} url={byId.get(r.playerId)?.avatarUrl} honoree={byId.get(r.playerId)?.isHonoree} />
+                        <Avatar name={label} url={team ? undefined : byId.get(r.playerId)?.avatarUrl} honoree={members.some((id) => byId.get(id)?.isHonoree)} />
                         <span className={styles.name}>
                           <span>
-                            {name(r.playerId)}
-                            {byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
+                            {label}
+                            {!team && byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
                           </span>
                         </span>
-                        <span className={styles.small}>{pr && round ? `${t.live.thru} ${t.round.thru(pr.thru, round.holes)}, ${pr.points}` : ''}</span>
-                        <span className={styles.big}>{r.total}</span>
+                        <span className={styles.small}>{round && thru > 0 ? [`${t.live.thru} ${t.round.thru(thru, round.holes)}`, today && !today.empty ? dayFigureText(today) : null].filter(Boolean).join(', ') : ''}</span>
+                        <span className={styles.big}>{r.figure.text}</span>
                       </div>
                     )
                 }}

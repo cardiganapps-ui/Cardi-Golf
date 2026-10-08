@@ -9,6 +9,7 @@
  *
  * The standings rank on match points: a win is 1, a half is ½, a loss is 0.
  */
+import { playOrder } from '../core/playOrder'
 import type { CountbackInput } from '../core/ranking'
 import type { TournamentSettings } from '../settings/schema'
 import type { Explanation, Id } from '../types'
@@ -97,7 +98,8 @@ export function playMatches(ctx: FormatContext, entrants: Entrant[], fourball: b
       let up = 0
       let played = 0
       let decidedAt: number | null = null
-      for (let hole = 1; hole <= holes; hole++) {
+      // In the order the group plays them: off the 10th, a match can be over on the 1st.
+      for (const hole of playOrder(group.startHole, holes)) {
         const sa = sideHole(ctx, roundId, a, hole, net)
         const sb = sideHole(ctx, roundId, b, hole, net)
         if (sa == null || sb == null) continue
@@ -178,7 +180,10 @@ export const matchPlayFormat: MainFormat = {
       const byRound: Record<string, Figure> = {}
       for (const rid of ctx.core.roundIds) {
         const r = mine.find((x) => x.roundId === rid)
-        byRound[rid] = r && r.played > 0 ? { value: r.points ?? 0, text: r.text, tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined } : { value: 0, text: '—', empty: true }
+        byRound[rid] =
+          r && r.played > 0
+            ? { value: r.points ?? 0, text: r.text, tone: r.up > 0 ? 'under' : r.up < 0 ? 'over' : undefined, ...(r.done ? { result: r.up > 0 ? ('won' as const) : r.up < 0 ? ('lost' as const) : ('halved' as const) } : {}) }
+            : { value: 0, text: '—', empty: true }
       }
       perRound[e.id] = byRound
 

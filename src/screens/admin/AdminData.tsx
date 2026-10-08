@@ -53,13 +53,17 @@ export function AdminData() {
     )
     downloadText(`${slug}-tarjetas-${stamp}.csv`, scores, 'text/csv')
     const rows = state.modules.individual?.rows ?? []
+    // One line per player: in a team format the row is the team's, so each member gets its place and figures, and his own money (STRAT-03).
+    const byTeam = rows.some((r) => r.entrant.isTeam)
     const standings = toCsv(
-      ['pos', 'jugador', 'categoria', ...state.core.roundIds.map((_, i) => `dia${i + 1}`), 'total', 'premios', 'pago', 'recibe', 'neto'],
-      rows.map((r) => {
-        const p = snapshot.players.find((x) => x.id === r.playerId)
-        const m = state.money.people[r.playerId]
-        return [r.label, p?.fullName ?? r.playerId, p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
-      }),
+      ['pos', 'jugador', ...(byTeam ? ['equipo'] : []), 'categoria', ...state.core.roundIds.map((_, i) => `dia${i + 1}`), 'total', 'premios', 'pago', 'recibe', 'neto'],
+      rows.flatMap((r) =>
+        r.entrant.playerIds.map((id) => {
+          const p = snapshot.players.find((x) => x.id === id)
+          const m = state.money.people[id]
+          return [r.label, p?.fullName ?? id, ...(byTeam ? [r.entrant.name] : []), p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
+        }),
+      ),
     )
     downloadText(`${slug}-resultados-${stamp}.csv`, standings, 'text/csv')
   }

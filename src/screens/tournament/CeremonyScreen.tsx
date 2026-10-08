@@ -1,7 +1,7 @@
 /**
  * Ceremonia (§9.10): reveals one at a time, each with drama, in the order of
  * the brief: last place, fewest putts, snake totals, best round per day,
- * pairs, 4th–2nd, the champion (confetti + the Putter), Calcutta payouts,
+ * pairs, 4th–2nd, the champion (confetti + the tournament's trophy), Calcutta payouts,
  * money summary. Only the enabled modules appear.
  *
  * It plays on the TV at the dinner, so it is sized for the room the way the
@@ -28,6 +28,8 @@ import { celebrationColors } from '../../lib/tokens'
 import { REVEAL, ease, easeFast, easeSlow } from '../../design/motion'
 import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
+import { figureKind, toParText, type Figure } from '../../engine/formats'
+import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -195,9 +197,26 @@ export function CeremonyScreen() {
     const m = state.modules
     // A short last word (an initial, «Hugo I.») stays on its name's line.
     const nameOf = (id: string) => keepInitial(snapshot.players.find((p) => p.id === id)?.displayName ?? '?')
+    /**
+     * The main event speaks its own figure and names its own entrants
+     * (STRAT-03): a team by its name with its members' faces, strokes as the
+     * board writes them against par («−11 neto»), match points with their
+     * halves. Before, a stroke-play champion won with «61 puntos» and a team
+     * champion was «?».
+     */
+    const kind = figureKind(settings)
+    const mainFig = (f: Figure) =>
+      kind === 'points' || kind === 'match' ? fig(f.value, C.withPoints) : fig(f.rank ?? f.value, (n) => t.common.figure(toParText(n), n, kind))
+    const entrants = new Map((m.individual?.rows ?? []).map((r) => [r.playerId, r.entrant]))
+    const entrantLine = (id: string) => {
+      const e = entrants.get(id)
+      return e?.isTeam ? keepInitial(e.name) : nameOf(id)
+    }
+    const facesOf = (ids: string[]) => ids.flatMap((id) => entrants.get(id)?.playerIds ?? [id])
     const out: Step[] = []
-    if (m.individual && m.individual.lastPlace.length) {
-      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: m.individual.lastPlace, line: andList(m.individual.lastPlace.map(nameOf)) }] })
+    // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
+    if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
+      out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) }] })
     }
     if (m.fewestPutts) {
       const ids = Object.keys(m.fewestPutts.prizes)
@@ -264,11 +283,11 @@ export function CeremonyScreen() {
       for (let place = places; place >= 2; place--) {
         const rows = m.individual.rows.filter((r) => r.position === place)
         if (!rows.length) continue
-        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: [fig(r.total, C.withPoints), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
+        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
       }
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
-        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [r.playerId], line: nameOf(r.playerId), sub: [fig(r.total, C.withPoints), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
+        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
       }
     }
     if (m.auction && m.auction.soldCount > 0) {
@@ -470,7 +489,8 @@ export function CeremonyScreen() {
                               )}
                               {step.champion && (
                                 <motion.span className={styles.trophy} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...easeSlow, delay: at(from + REVEAL.trophy) }}>
-                                  {C.champion}. {C.trophy}
+                                  {/* The trophy is the tournament's own (labels.trophy); none named, none claimed. */}
+                                  {data?.settings.labels.trophy ? `${C.champion}. ${C.trophy(data.settings.labels.trophy)}` : `${C.champion}.`}
                                 </motion.span>
                               )}
                             </motion.div>
