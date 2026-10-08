@@ -1,0 +1,96 @@
+name: Stack
+
+# The stack suite (QA-17, playwright.stack.config.ts, e2e/stack/): the real app
+# against a real local Supabase (`supabase start`: Postgres with every
+# migration, Auth, PostgREST, Realtime), in Chromium, two browser contexts as
+# two phones. It proves the live-scoring path end to end: a hole saved on one
+# phone shows on the other within 2 s, holes saved with no signal arrive when it
+# returns, and a lapsed session keeps its queued holes and its player (REL-16).
+# Runs on pull requests that are ready for review and touch the sync path, the
+# database or the suite, nightly on main, and by hand. Drafts skip it (Actions
+# minutes are budgeted once the repository is private).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'src/data/**'
+      - 'src/lib/**'
+      - 'src/screens/tournament/Scorecard*'
+      - 'supabase/**'
+      - 'api/**'
+      - 'e2e/stack/**'
+      - 'playwright.stack.config.ts'
+      - '.github/workflows/e2e-stack.yml'
+  push:
+    branches: [claude/e2e-stack]
+  schedule:
+    - cron: '41 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SUPABASE_TELEMETRY_DISABLED: '1'
+  DO_NOT_TRACK: '1'
+
+jobs:
+  e2e-stack:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      # Pulling the images takes a while: it runs alongside npm ci and the browser install.
+      # Kept: db, auth, rest, realtime and the gateway. Storage's schema is migrated
+      # ([storage] enabled), its server is left off.
+      - name: Start the local stack (in the background)
+        run: |
+          ( supabase start -x studio,postgres-meta,imgproxy,storage-api,edge-runtime,logflare,vector,mailpit,supavisor \
+              > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo $? > "$RUNNER_TEMP/supabase-start.exit" ) &
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Wait for the stack, read its URL, key and database
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 360); do [ -f "$RUNNER_TEMP/supabase-start.exit" ] && break; sleep 2; done
+          cat "$RUNNER_TEMP/supabase-start.log"
+          [ "$(cat "$RUNNER_TEMP/supabase-start.exit" 2>/dev/null)" = 0 ] || { echo "supabase start failed or timed out"; exit 1; }
+          # Only the three values the suite needs leave this step; the stack's other keys stay in it.
+          supabase status -o env 2>/dev/null | grep -E '^(API_URL|PUBLISHABLE_KEY|ANON_KEY|DB_URL)=' > "$RUNNER_TEMP/stack.env"
+          set -a; . "$RUNNER_TEMP/stack.env"; set +a
+          key=${PUBLISHABLE_KEY:-${ANON_KEY:-}}
+          [ -n "${API_URL:-}" ] && [ -n "$key" ] && [ -n "${DB_URL:-}" ] || { echo "supabase status gave no API URL, key or database URL"; exit 1; }
+          {
+            echo "VITE_SUPABASE_URL=$API_URL"
+            echo "VITE_SUPABASE_ANON_KEY=$key"
+            echo "E2E_DB_URL=$DB_URL"
+          } >> "$GITHUB_ENV"
+          echo "API $API_URL, database at ${DB_URL##*@}, key: $([ -n "${PUBLISHABLE_KEY:-}" ] && echo publishable || echo legacy anon)"
+      - name: Stack suite
+        run: npx playwright test -c playwright.stack.config.ts
+      - name: Measured times
+        if: always()
+        run: cat test-results-stack/metrics/*.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - name: Stack logs
+        if: failure()
+        run: |
+          for c in $(docker ps -a --format '{{.Names}}' | grep '^supabase_'); do
+            echo "::group::$c"; docker logs --tail 300 "$c" 2>&1; echo "::endgroup::"
+          done
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-stack
+          path: |
+            playwright-report-stack
+            test-results-stack
+          retention-days: 7
