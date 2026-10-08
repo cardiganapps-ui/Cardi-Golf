@@ -37,6 +37,8 @@
  *     offset, hex or underscored integers, prefixes of a boolean word; and
  *     the order of the casts inside one row;
  *   - the shape of a uuid: ids here are names, so any text is one;
+ *   - 0026's save_hole RPC and the score columns it writes (version, device_id,
+ *     mutation_id): no phone calls it yet;
  *   - how a time reads back: the fake keeps the text it was sent (and
  *     stamps its own in ISO form), where PostgREST answers in Postgres's
  *     (`+00:00`); no case compares a time;
@@ -651,30 +653,30 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     /** DELETE's USING. */
     deletes(uid: string, row: Row): boolean
   }
-  /** The group's own rows (0013): the Comité, or a player of the row's group. */
-  const groupRow = (uid: string, r: Row) => organizes(uid, roundTournament(r.round_id)) || inGroup(r.group_id, myPlayer(uid, roundTournament(r.round_id)))
-  /** 0003 `scores_write` (for all): the Comité, or a phone of the player's group while the round is live and his card unsigned. */
+  /** The group's own rows (0026): the Comité, or a player of the row's group while the round is live. */
+  const groupRow = (uid: string, r: Row) => organizes(uid, roundTournament(r.round_id)) || (roundIsLive(r.round_id) && inGroup(r.group_id, myPlayer(uid, roundTournament(r.round_id))))
+  /** 0026 `score_writable`: while the round is live and the player's card unsigned, a phone of his group or the Comité (REL-09). */
   const scoreRule = (uid: string, r: Row) =>
-    organizes(uid, roundTournament(r.round_id)) || (sharesGroup(uid, r.round_id, r.player_id) && roundIsLive(r.round_id) && !cardIsSigned(r.round_id, r.player_id))
+    roundIsLive(r.round_id) && !cardIsSigned(r.round_id, r.player_id) && (sharesGroup(uid, r.round_id, r.player_id) || organizes(uid, roundTournament(r.round_id)))
   const RULES: Record<string, WriteRule> = {
     scores: { check: scoreRule, using: scoreRule, deletes: scoreRule },
-    // 0013 `snake_tiebreaks_write`: a player of the group answers, for the group's own round, naming one of the group, as himself.
+    // 0026 `snake_tiebreaks_write`: a player of the group answers, in a live round of the group's, naming one of the group, as himself.
     snake_tiebreaks: {
       check(uid, r) {
         const tid = roundTournament(r.round_id)
         const me = myPlayer(uid, tid)
-        return organizes(uid, tid) || (groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.last_holed_player_id) && me != null && r.decided_by === me)
+        return organizes(uid, tid) || (roundIsLive(r.round_id) && groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.last_holed_player_id) && me != null && r.decided_by === me)
       },
       using: groupRow,
       deletes: groupRow,
     },
-    // 0013 `hole_awards_write`: the same for a hole's winners; the Comité names a winner of the tournament.
+    // 0026 `hole_awards_write`: the same for a hole's winners; the Comité names a winner of the tournament, after the round too.
     hole_awards: {
       check(uid, r) {
         const tid = roundTournament(r.round_id)
         const me = myPlayer(uid, tid)
         const winnerHere = rowsOf('players').some((p) => p.id === r.player_id && p.tournament_id === tid)
-        return (organizes(uid, tid) && winnerHere) || (groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.player_id) && me != null && r.decided_by === me)
+        return (organizes(uid, tid) && winnerHere) || (roundIsLive(r.round_id) && groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.player_id) && me != null && r.decided_by === me)
       },
       using: groupRow,
       deletes: groupRow,
@@ -702,9 +704,6 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       deletes: (uid, r) => organizes(uid, roundTournament(r.round_id)),
     },
   }
-  // Not modelled: signing a card clears none of its discrepancies. 0008's
-  // `card_signature_settles` updates the scores through 0010's dispute
-  // trigger, which keeps the old flags for anyone but the Comité (NEW-01).
 
   /** The first NOT NULL column or check the row breaks, as PostgREST answers it. */
   function constraintError(table: string, row: Row): Response | null {
@@ -780,6 +779,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     for (const proposed of typedRows) {
       // Then row by row: the defaults and insert triggers, the policy, the checks, the keys.
       const row = withDefaults(table, proposed)
+      // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02).
+      if (table === 'scores') row.entered_by = myPlayer(caller, roundTournament(row.round_id)) ?? null
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)
       if (bad) return bad
@@ -799,6 +800,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       }
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
+      if (table === 'scores') merged.entered_by = myPlayer(caller, roundTournament(merged.round_id)) ?? null
       const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
       if (!rule.check(caller, updated)) return policy()
       const badUpdate = constraintError(table, updated)
@@ -813,6 +815,17 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (broken) return json(409, { code: '23503', details: null, hint: null, message: `insert or update on table "${table}" violates foreign key constraint "${broken.name}"` })
     }
     server.tables[table] = next
+    // 0026 `card_signature_settles`: a card signed settles its pair's discrepancies in the round (NEW-01).
+    if (table === 'card_signatures') {
+      for (const sig of stored) {
+        const pair = rowsOf('pairs').find((p) => p.id === sig.pair_id)
+        for (const sc of rowsOf('scores')) {
+          if (pair && sc.round_id === sig.round_id && (sc.player_id === pair.player1_id || sc.player_id === pair.player2_id) && sc.disputed) {
+            Object.assign(sc, { disputed: false, previous: null, updated_at: stamp() })
+          }
+        }
+      }
+    }
     for (const row of stored) server.writes.push({ table, row: { ...row }, by: caller })
     return new Response(null, { status: 201 })
   }

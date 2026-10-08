@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-07",
+  "updated": "2026-10-08",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -4196,10 +4196,13 @@
       "title": "Signing a card leaves its discrepancies open: 0008's card_signature_settles updates the scores through 0010's scores_detect_dispute, which keeps the old flags for anyone but the Comité, so the Comité sees «discrepancias» on signed cards",
       "foundBy": "PR #93: cases/serverRules.json, run against the migrations by scripts/server-rules.mjs",
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 98,
+      "tests": [
+        "src/data/testing/cases/serverRules.json",
+        "supabase/tests/save_hole.sql"
+      ],
       "verifiedBy": null,
-      "residual": "Confirmed in SQL by #93's second verifier: after a correction and the signature, the hole still reads disputed; signing settles it only with scores_dispute disabled or cardi.comite set. 0010 dropped 0008/0009's explicit-resolution branch. Fix: a migration (0026) in which card_signature_settles sets cardi.comite to '1', local to the transaction, around its UPDATE (or restores the explicit-resolution branch); the case in cases/serverRules.json flips with it."
+      "residual": "Fixed in migration 0026 (#98): card_signature_settles speaks as the Comité for its own update, so signing settles the pair's discrepancies; save_hole.sql and the case file (signatures, X27) pin it on Postgres and on the fake. Production keeps 0008's behaviour until 0026 is applied (SUPABASE_PAT); status moves to fixed then."
     },
     {
       "id": "NEW-02",
