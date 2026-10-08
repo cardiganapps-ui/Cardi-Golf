@@ -114,6 +114,52 @@ export interface PrizeShare<T> {
 }
 
 /**
+ * The groups without the entrants who have no result, places renumbered
+ * (MONEY-09): one who never played a hole takes no paid place. The board
+ * still lists them, last.
+ */
+export function onlyWithResult<T>(groups: RankGroup<T>[], has: (t: T) => boolean): RankGroup<T>[] {
+  const out: RankGroup<T>[] = []
+  let position = 1
+  for (const g of groups) {
+    const members = g.members.filter(has)
+    if (!members.length) continue
+    out.push({ position, members })
+    position += members.length
+  }
+  return out
+}
+
+const pesos = (n: number) => `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+
+/**
+ * Once a game is over, the warning for its places with a prize that nobody
+ * filled (MONEY-09): `count` entrants had a result, in `unit` (singular,
+ * plural). The money stays with the bank until the Comité decides.
+ */
+export function unfilledWarning(label: string, unfilled: { places: number[]; amount: number }, count: number, unit: [string, string]): string[] {
+  const n = unfilled.places.length
+  if (!n) return []
+  const which = t.common.andList(unfilled.places.map((p) => ordinal(String(p))))
+  const what = n === 1 ? `el ${which} lugar no lo gana nadie` : `los lugares ${which} no los gana nadie`
+  const why = count === 0 ? 'nadie tiene resultado' : `${count} ${count === 1 ? unit[0] : unit[1]} con resultado`
+  return [`${label}: ${what} (${why}): ${pesos(unfilled.amount)} sin asignar. El Comité decide.`]
+}
+
+/** The places with a prize that `groups` leave empty, and their pesos (MONEY-09). */
+export function unfilledPlaces(groups: RankGroup<unknown>[], prizes: number[]): { places: number[]; amount: number } {
+  const filled = groups.reduce((n, g) => n + g.members.length, 0)
+  const places: number[] = []
+  let amount = 0
+  prizes.forEach((p, i) => {
+    if (i < filled || p <= 0) return
+    places.push(i + 1)
+    amount += p
+  })
+  return { places, amount }
+}
+
+/**
  * Pay `prizes` (index 0 = 1st place) to ranked groups. A tie shares the sum
  * of the prizes for the places it occupies, split evenly in whole pesos;
  * any remainder pesos go one each to the first members in group order.

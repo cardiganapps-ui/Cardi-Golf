@@ -37,3 +37,7 @@
   font-size: var(--fs-sm);
   color: var(--under);
 }
+.unreachable {
+  padding-top: var(--s2);
+  font-weight: 600;
+}

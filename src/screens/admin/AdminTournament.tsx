@@ -105,14 +105,17 @@ export function AdminTournament() {
   const parsed = useMemo(() => safeParseSettings(checked), [checked])
   // Players, real group sizes and each side pot's entrants; the planned field size until the roster exists.
   const field = useMemo(() => ({ ...fieldShape(data!.snapshot, checked), players, groupSizes }), [data, checked, players, groupSizes])
-  const balanced = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field).balanced : false), [parsed, field])
+  const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
+  const balanced = check?.balanced ?? false
+  // Balanced, and every paid place has someone who can take it (MONEY-09).
+  const savable = check?.ok ?? false
 
   async function save() {
     // Parse what is on screen right now: `parsed` is deferred and can be a
     // keystroke behind, and a save must never write a stale settings object.
     const fresh = safeParseSettings(settings)
     if (!fresh.success) return
-    if (!checkPrizePool(fresh.data, { ...fieldShape(data!.snapshot, settings), players, groupSizes }).balanced) return
+    if (!checkPrizePool(fresh.data, { ...fieldShape(data!.snapshot, settings), players, groupSizes }).ok) return
     setBusy(true)
     try {
       await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: fresh.data })
@@ -356,7 +359,8 @@ export function AdminTournament() {
         <div className={a.sticky}>
           {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
           {dirty && parsed.success && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
-          <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !balanced} onClick={() => void save()}>
+          {dirty && parsed.success && balanced && !savable && <span className={a.error}>{A.unreachableNearSave}</span>}
+          <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !savable} onClick={() => void save()}>
             {busy ? t.common.saving : t.common.save}
           </button>
         </div>

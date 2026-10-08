@@ -174,8 +174,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         <div className={styles.form}>
           <ReviewCard name={name} tagline={tagline} settings={settings} players={players} />
           {error && <p className="error">{error}</p>}
-          {(!parsed.success || !check?.balanced) && <p className="help">{W.fixToCreate}</p>}
-          {nav(2, null, busy ? W.creating : W.create, busy || !parsed.success || !check?.balanced, () => void create())}
+          {(!parsed.success || !check?.ok) && <p className="help">{W.fixToCreate}</p>}
+          {nav(2, null, busy ? W.creating : W.create, busy || !parsed.success || !check?.ok, () => void create())}
         </div>
       )}
 
