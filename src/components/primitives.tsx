@@ -114,6 +114,10 @@ export interface LeaderRowProps {
   name: string
   sub?: ReactNode
   today?: string
+  /** Colour of the day's figure, for a figure that has a side (a match won or lost). */
+  todayTone?: Tone
+  /** How a screen reader says the day's figure, when the text alone does not («ganó 8&6»). */
+  todaySpoken?: string
   thru?: string
   figure: string
   tone?: Tone
@@ -137,10 +141,10 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     </div>
   )
 }
-export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
+export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
   const subLine = [sub, owners].filter(Boolean)
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, today, thru)}>
+    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru)}>
       {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
       <span className={s.name}>
@@ -163,7 +167,7 @@ export function LeaderRow({ pos, name, sub, today, thru, figure, tone = 'even', 
         * were ringed and the mark stopped meaning anything. It stays on the
         * Tarjeta, where the figure it rings is a hole score.
         */}
-      <span className={`${s.fig} ${s.today}`}>{today ?? ''}</span>
+      <span className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>{today ?? ''}</span>
       <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
       <span className={`${s.fig} ${s.figure} ${s[tone]}`}>{figure}</span>
     </button>
@@ -206,6 +210,12 @@ export interface GridHole {
   si: number
   gross: number | null
   pickedUp?: boolean
+  /**
+   * The gross strokes the hole counts in an event that counts strokes: a
+   * pick-up capped at net double bogey. Absent, a pick-up has no strokes, so
+   * the nine and the round show no gross total (it would leave the hole out).
+   */
+  counted?: number | null
   pts?: number
   putts?: number | null
 }
@@ -214,7 +224,9 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
   const front = holes.filter((h) => h.n <= 9)
   const back = holes.filter((h) => h.n > 9)
   const sum = (hs: GridHole[], f: (h: GridHole) => number | null | undefined) => hs.reduce((a, h) => a + (f(h) ?? 0), 0)
-  const played = (hs: GridHole[]) => hs.every((h) => h.gross != null || h.pickedUp)
+  // A hole's strokes toward the gross total; a pick-up counts only where the event says what it costs.
+  const strokes = (h: GridHole) => (h.counted !== undefined ? h.counted : h.pickedUp ? null : h.gross)
+  const grossTotal = (hs: GridHole[]) => (hs.every((h) => strokes(h) != null) ? sum(hs, strokes) : null)
   const mark = (h: GridHole) =>
     h.gross != null || h.pickedUp ? (
       onHole ? (
@@ -258,7 +270,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
           {hs.map((h) => (
             <td key={h.n}>{mark(h)}</td>
           ))}
-          <td className={`${s.gridTotal} ${s.fig}`}>{played(hs) ? sum(hs, (h) => h.gross) : ''}</td>
+          <td className={`${s.gridTotal} ${s.fig}`}>{grossTotal(hs) ?? ''}</td>
         </tr>
         {showPutts && (
           <tr className={s.gridMeta}>
@@ -288,7 +300,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
       {back.length > 0 && (
         <div className={s.gridTotals}>
           <span>
-            {t.common.total}: {played(holes) ? sum(holes, (h) => h.gross) : '–'} {t.player.gross.toLowerCase()}
+            {t.common.total}: {grossTotal(holes) ?? '–'} {t.player.gross.toLowerCase()}
           </span>
           {showPutts && (
             <span>

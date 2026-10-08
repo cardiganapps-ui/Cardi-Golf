@@ -8,6 +8,7 @@ import { fieldShape } from '../../engine/settings/prizeCheck'
 import { formatMoney } from '../../lib/money'
 import { describeGame } from '../../engine/games/describe'
 import { moduleRules } from '../../engine/settings/describeModule'
+import { mainScoring } from '../../engine/formats'
 import styles from './RulesScreen.module.css'
 
 const R = t.rules
@@ -27,7 +28,7 @@ export function RulesScreen() {
     {
       id: 'handicaps',
       title: R.sections.handicaps,
-      lines: R.handicaps(Math.round(settings.handicap.allowance * 100), settings.handicap.cap, settings.day2Cut),
+      lines: R.handicaps(Math.round(settings.handicap.allowance * 100), settings.handicap.cap, settings.day2Cut, { rounds: settings.rounds, points: mainScoring(settings) === 'points' }),
       on: true,
     },
     { id: 'individual', title: m.individual.label, lines: rules('individual'), on: m.individual.enabled },

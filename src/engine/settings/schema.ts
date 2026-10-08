@@ -178,6 +178,12 @@ const TournamentSettingsBase = z.object({
   labels: z.object({
     lastPlace: label,
     honoree: label,
+    /**
+     * What the champion takes home, named at the ceremony («el Putter» for
+     * the first tournament). Empty: no trophy line. It was hard-coded copy,
+     * so every tournament's champion «se lleva el Putter» (STRAT-03).
+     */
+    trophy: z.string().trim().max(40).default(''),
   }),
   /** The main pot: what every player pays to enter. */
   entryFee: money,

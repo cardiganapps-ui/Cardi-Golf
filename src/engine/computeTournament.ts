@@ -24,6 +24,7 @@ import type { GameContext, GameResultState } from './games/game'
 import { gamePot } from './games/payout'
 import type { GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
+import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
 
 /** "$27,500": the engine stays locale-free. */
@@ -141,8 +142,19 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   }
 
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
-  const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction })
-  const feed = computeFeed(snapshot, core, modules.snake)
+  const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
+  const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
+  // At the close the board can name a leader the saved scores never did: an
+  // incomplete card ranks after the complete ones (MONEY-02), a countback
+  // breaks a tie. The feed's last word is then the board's, not the replay's.
+  if (tournamentFinal && ranksPlayersByTotal(settings) && modules.individual) {
+    const top = modules.individual.rows.filter((r) => r.position === 1)
+    const lastLead = feed.find((e) => e.kind === 'leadChange')
+    if (top.length === 1 && lastLead && lastLead.playerId !== top[0]!.playerId) {
+      const last = snapshot.rounds.filter((r) => core.roundIds.includes(r.id)).at(-1)
+      feed.unshift({ kind: 'leadChange', at: feed[0]?.at ?? null, roundNumber: last?.number ?? 1, hole: last?.holes ?? 18, playerId: top[0]!.playerId, figure: top[0]!.figure.text, scoring: mainScoring(settings), close: true })
+    }
+  }
 
   const incompleteRounds: StatusFlags['incompleteRounds'] = []
   for (const rid of core.roundIds) {
