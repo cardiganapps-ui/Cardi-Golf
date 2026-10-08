@@ -521,11 +521,19 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     setSavedNote(null)
     const u = undo.current
     if (note.canUndo && u && u.hole === note.hole) {
-      undo.current = null
-      void writeHole(u.drafts, u.hole).then(() => {
-        showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true })
-        setSaid(S.restoredHole(u.hole))
-      })
+      // The Comité's path (a closed day, a signed card) can fail: no signal, a refusal. The undo stays offered
+      // until it lands, and says why it didn't (#98's second verifier).
+      void writeHole(u.drafts, u.hole).then(
+        () => {
+          if (undo.current === u) undo.current = null
+          showSaved({ hole: u.hole, idx: note.idx, canUndo: false, restored: true })
+          setSaid(S.restoredHole(u.hole))
+        },
+        (e: unknown) => {
+          toast(humanError(e))
+          if (undo.current === u) showSaved(note)
+        },
+      )
     }
     setView('hole')
     goto(note.idx)

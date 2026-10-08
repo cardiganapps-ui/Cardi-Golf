@@ -167,12 +167,15 @@ grant select on public.rejected_writes to authenticated;
  *   { round_id, hole, mutation_id, device_id?,
  *     entries: [{ player_id, fields: {strokes?, putts?, picked_up?}, base?: {…} }] }
  * At most 8 entries and 16 KB: more is no hole of a group (22023).
- * `fields` holds only what the phone set; `base` the values it saw the fields
- * it writes hold (absent or null for no row). A pick-up writes the strokes
- * too (none), and a number of strokes the pick-up (false) unless `fields`
- * says otherwise: both are checked against `base` like the fields sent, a
- * key missing from it read as no strokes, no putts, not picked up. An entry
- * with no `base` is written blind, as a direct write is. Answers
+ * `fields` holds only what the phone set; `base` the row it saw: send the
+ * whole row (strokes, putts, picked_up), `{}` or JSON null when it saw none.
+ * A pick-up writes the strokes too (none), and a number of strokes the
+ * pick-up (false) unless `fields` says otherwise: both are checked against
+ * `base` like the fields sent, a key missing from it read as no strokes, no
+ * putts, not picked up (so a base naming only the fields sent can ask about
+ * a pick-up it did see). An entry with no `base` key at all is written
+ * blind, as a direct write is: a client must never drop the key by
+ * serializing `base: undefined`. Answers
  *   { status: ok | partial | conflict | rejected | not_member,
  *     rows: [the rows as stored], conflicts: [{player_id, fields, server}],
  *     rejected: [{player_id, reason}], unchanged: [player_id] }

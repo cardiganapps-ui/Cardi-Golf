@@ -35,6 +35,7 @@ vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 import { toast } from '../../components/ui'
+import { adminSaveScore } from '../../data/api'
 import { useAuth } from '../../data/auth'
 import { enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -472,6 +473,39 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     } finally {
       window.history.replaceState(null, '', '/')
     }
+  })
+
+  it('an undo that the server refuses says why and stays offered; the corrected value is not left silently', async () => {
+    admin.saves = []
+    window.history.replaceState(null, '', '/?hoyo=18')
+    try {
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isAdmin: true })
+      await correctFirstAndSave()
+      expect(admin.saves).toHaveLength(1)
+      vi.mocked(adminSaveScore).mockRejectedValueOnce(new Error('Failed to fetch'))
+      vi.mocked(toast).mockClear()
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: t.common.undo }))
+      })
+      expect(toast).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('button', { name: t.common.undo })).toBeTruthy()
+      // Tapped again with signal, it lands.
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: t.common.undo }))
+      })
+      expect(admin.saves).toHaveLength(2)
+      expect(screen.getAllByText(S.restoredHole(18)).length).toBeGreaterThan(0)
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
+  it('a round not started yet: admin_save_score too, never the outbox', async () => {
+    admin.saves = []
+    mount((s) => void (s.rounds = s.rounds.map((r) => ({ ...r, status: 'scheduled' as const }))), { isAdmin: true })
+    await correctFirstAndSave()
+    expect(admin.saves.length).toBeGreaterThan(0)
+    expect(outbox.scores).toEqual([])
   })
 
   it('a live round with the card unsigned: the outbox, as any phone of the group', async () => {

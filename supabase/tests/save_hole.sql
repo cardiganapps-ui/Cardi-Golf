@@ -287,6 +287,28 @@ reset role;
 select harness.check(:'out'::jsonb ->> 'status' = 'ok' and (pg_temp.score(:'beto', 17)).picked_up and (pg_temp.score(:'beto', 17)).strokes is null,
   'a pick-up over the 5 it saw, its base silent on «picked up»: taken (a played hole is not picked up)');
 
+-- 7e. The base modes, and one player once (#98's second verifier: w01, w02, w03)
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+-- No base at all: written blind, as the phone says, over the pick-up; never dropped.
+select public.save_hole(pg_temp.hole(:'r1', 17, gen_random_uuid(), jsonb_build_array(pg_temp.entry(:'beto', '{"strokes":4}'))))::text as out \gset
+reset role;
+select harness.check(:'out'::jsonb ->> 'status' = 'ok' and (pg_temp.score(:'beto', 17)).strokes = 4 and not (pg_temp.score(:'beto', 17)).picked_up,
+  'strokes with no base over a pick-up: written blind (4, not picked up), never dropped');
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+-- A null base: the phone saw no row. There is one: asked.
+select public.save_hole(pg_temp.hole(:'r1', 17, gen_random_uuid(), jsonb_build_array(jsonb_build_object('player_id', :'beto', 'fields', '{"strokes":6}'::jsonb, 'base', 'null'::jsonb))))::text as out \gset
+-- The same player twice, the second spelled in capitals: the first entry counts, the second is refused.
+select public.save_hole(pg_temp.hole(:'r1', 16, gen_random_uuid(), jsonb_build_array(
+  pg_temp.entry(:'ana', '{"strokes":5,"putts":2}', '{}'),
+  jsonb_build_object('player_id', upper(:'ana'), 'fields', '{"strokes":9,"putts":2}'::jsonb, 'base', '{}'::jsonb))))::text as out2 \gset
+reset role;
+select harness.check(:'out'::jsonb ->> 'status' = 'conflict' and (pg_temp.score(:'beto', 17)).strokes = 4,
+  'a null base (saw no row) over a stored hole: conflict, the 4 stands');
+select harness.check((pg_temp.score(:'ana', 16)).strokes = 5 and :'out2'::jsonb #>> '{rejected,0,reason}' = 'invalid',
+  'one player twice in a call, however his id is spelled: the first entry is written, the repeat refused');
+
 -- 8. Picking up clears the strokes; values out of rule are refused
 select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
 set local role authenticated;
@@ -417,8 +439,16 @@ select harness.check((pg_temp.score(:'beto', 1)).disputed, 'Beto''s 1st is in di
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 insert into public.pairs (tournament_id, name, player1_id, player2_id) values (:'t_a', 'Ana y Beto', :'ana', :'beto') returning id as pair \gset
+reset role;
+-- A discrepancy of Beto's on another day: the signature of day 1 leaves it (w07).
+insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up, entered_by) values (:'r2', :'beto', 1, 5, 2, false, :'ana');
+update public.scores set strokes = 6, entered_by = :'beto' where round_id = :'r2' and player_id = :'beto' and hole = 1;
+select harness.check((select disputed from public.scores where round_id = :'r2' and player_id = :'beto' and hole = 1), 'Beto''s 1st of day 2 is in discrepancy too');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
 insert into public.card_signatures (round_id, pair_id, signed_by) values (:'r1', :'pair', :'caro');
 reset role;
+select harness.check((select disputed from public.scores where round_id = :'r2' and player_id = :'beto' and hole = 1), 'signing day 1 settles only day 1: day 2''s discrepancy stays');
 select harness.check(not (pg_temp.score(:'beto', 1)).disputed and (pg_temp.score(:'beto', 1)).previous is null, 'signing the card settles it');
 select harness.check(coalesce(current_setting('cardi.comite', true), '') = '', 'and leaves the Comité''s switch as it found it, for the rest of the transaction');
 select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
@@ -433,6 +463,25 @@ set local role authenticated;
 update public.scores set strokes = 8 where round_id = :'r1' and player_id = :'beto' and hole = 6;
 reset role;
 select harness.check((pg_temp.score(:'beto', 6)).strokes = 4, 'nor the Comité''s: a signed card takes a correction through admin_save_score, with its reason');
+select set_config('harness.carla', :'carla', true) \g /dev/null
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+do $$ begin
+  perform public.admin_save_score(current_setting('harness.r1')::uuid, current_setting('harness.beto')::uuid, 6, 8, 2, false, '  ');
+  perform set_config('harness.out', 'taken', true);
+exception when others then
+  perform set_config('harness.out', sqlstate || ' ' || sqlerrm, true);
+end $$;
+do $$ begin
+  perform public.admin_save_score(current_setting('harness.r1')::uuid, current_setting('harness.carla')::uuid, 6, 8, 2, false, 'Otro torneo');
+  perform set_config('harness.out2', 'taken', true);
+exception when others then
+  perform set_config('harness.out2', sqlstate || ' ' || sqlerrm, true);
+end $$;
+reset role;
+select harness.check(current_setting('harness.out') like '22023 %' and (pg_temp.score(:'beto', 6)).strokes = 4, 'admin_save_score on a signed card with a blank reason: refused (22023), the 4 stands (w20)');
+select harness.check(current_setting('harness.out2') like '22023 %' and not exists (select 1 from public.scores where round_id = :'r1' and player_id = :'carla'),
+  'admin_save_score for a player of another tournament: refused (22023), nothing written (w21)');
 
 -- 12. A finished round: the Comité corrects only through admin_save_score (REL-09)
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
