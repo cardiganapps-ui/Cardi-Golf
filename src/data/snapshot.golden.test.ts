@@ -111,6 +111,11 @@ function everyTable(): Snapshot {
     { gameId: 'tacos', playerId: 'p8', share: 1 },
     { gameId: 'tacos', playerId: 'p3', share: 0.5 },
   ]
+  // The Comité's assignments of unassigned money (0027), one of them voided.
+  s.moneyAdjustments = [
+    { id: 'adj1', sourceKey: 'bestRound', kind: 'award', toPlayerId: 'p2', amount: 600, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
+    { id: 'adj2', sourceKey: 'calcutta', kind: 'house', toPlayerId: null, amount: 100, reason: 'Para la cena', createdAt: '2027-04-11T20:05:00+00:00', createdBy: 'org', voidedAt: '2027-04-11T20:06:00+00:00', voidReason: 'Error' },
+  ]
   return s
 }
 

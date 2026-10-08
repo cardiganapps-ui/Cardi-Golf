@@ -9,12 +9,18 @@
  * statement per person (`people`) is gross; the settlement (`viaBank`,
  * `peerToPeer`) runs only on what is still due, so money paid on Calcutta
  * night is never asked for again on Sunday (MONEY-01).
+ *
+ * Money the rules leave unassigned is listed in `unassigned.ts`; what the
+ * Comité assigns from it comes in as prizes (`moduleId: 'adjustment'`), so
+ * every screen that reads the flows reads it, and what it leaves to the
+ * house stays with the banker beside the house cut (`toHouse`).
  */
 import type { TournamentSettings } from '../settings/schema'
 import type { Id, PaymentKind, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
+import { NO_UNASSIGNED, type UnassignedState } from './unassigned'
 
 /** null = the banker. */
 export interface Flow {
@@ -103,7 +109,9 @@ export interface MoneyState {
     pays: number
     /** Kept out of the main pot for the house (`settings.houseCut`). */
     houseCut: number
-    /** receives − pays − houseCut; 0 when everything balances. */
+    /** Unassigned money the Comité left to the house (MONEY-05); the banker holds it, like the house cut. */
+    toHouse: number
+    /** receives − pays − houseCut − toHouse; 0 when everything balances. */
     difference: number
     balanced: boolean
   }
@@ -113,6 +121,8 @@ export interface MoneyState {
   viaBank: Transfer[]
   /** Optional: minimized peer-to-peer transfers on what is still due, the bank's cash held by the banker. */
   peerToPeer: Transfer[]
+  /** «Por asignar»: what the rules leave to the Comité, and its decisions (MONEY-05). Set by computeTournament. */
+  unassigned: UnassignedState
 }
 
 /** The payment kinds the settlement reads; `other` is a note, not a debt. */
@@ -126,6 +136,8 @@ export function computeMoney(
   auction: AuctionState | undefined,
   tournamentFinal: boolean,
   games: Record<string, GameResultState> = {},
+  /** Unassigned money the Comité's assignments leave to the house. */
+  toHouse = 0,
 ): MoneyState {
   const flows: Flow[] = []
   const payments = snapshot.payments
@@ -289,10 +301,11 @@ export function computeMoney(
   const bankerPays = flows.filter((f) => f.from === null).reduce((s, f) => s + f.amount, 0)
   const bankerId = snapshot.tournament.bankerPlayerId
   const houseCut = settings.entryFee > 0 && players.length > 0 ? settings.houseCut : 0
-  const difference = bankerReceives - bankerPays - houseCut
+  const difference = bankerReceives - bankerPays - houseCut - toHouse
   // The banker is a person too: the bank's surplus/deficit lands on him in the
-  // net sum; the house cut is money spent on the group, so it closes the sum.
-  netSum += difference + houseCut
+  // net sum; the house cut (and what the Comité gave the house) is money spent
+  // on the group, so it closes the sum.
+  netSum += difference + houseCut + toHouse
   const balanced = difference === 0
 
   // Settlement "vía banco", on what is still due: each person squares up
@@ -348,10 +361,11 @@ export function computeMoney(
     flows,
     accounts,
     people,
-    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, difference, balanced },
+    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, toHouse, difference, balanced },
     netSum: Math.round(netSum),
     viaBank,
     peerToPeer: tournamentFinal || balanced ? minimizeTransfers(positions) : [],
+    unassigned: NO_UNASSIGNED,
   }
 }
 

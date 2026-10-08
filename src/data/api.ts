@@ -562,6 +562,40 @@ export async function setPaymentPaid(tournamentId: string, p: PaymentInput) {
 }
 
 // ---------------------------------------------------------------------------
+// Money the rules leave to the Comité (0027, MONEY-05). Online only, like
+// adminSaveScore: the Comité decides at the console, and a decision is never
+// queued in the outbox to land later on numbers that moved.
+// ---------------------------------------------------------------------------
+export interface AssignEntry {
+  kind: 'award' | 'refund' | 'house'
+  /** null only for the house. */
+  to_player_id: string | null
+  amount: number
+}
+
+/** One assignment of an unassigned bucket: every line in one call, with one reason. */
+export async function assignUnassigned(tournamentId: string, sourceKey: string, entries: AssignEntry[], reason: string) {
+  await rpc('assign_unassigned', {
+    p_tournament_id: tournamentId,
+    p_source_key: sourceKey,
+    p_entries: entries.map((e) => (e.kind === 'house' ? { kind: e.kind, amount: e.amount } : e)),
+    p_reason: reason,
+  })
+}
+
+/** Voids the assignment a row belongs to (every row its call wrote); the money goes back to its bucket. */
+export async function voidAdjustment(id: string, reason: string) {
+  await rpc('void_adjustment', { p_id: id, p_reason: reason })
+}
+
+/** Writes the server refused or found in conflict that nobody has dealt with yet (0026; the Comité reads its tournament's). */
+export async function openRejectedWrites(tournamentId: string): Promise<number> {
+  const { count, error } = await supabase().from('rejected_writes').select('id', { count: 'exact', head: true }).eq('tournament_id', tournamentId).eq('status', 'open')
+  if (error) throw ApiError.from(error)
+  return count ?? 0
+}
+
+// ---------------------------------------------------------------------------
 // Instance games: entrants (game_entries), hole awards, custom-bet results
 // ---------------------------------------------------------------------------
 export async function setGameEntry(tournamentId: string, gameId: string, playerId: string, on: boolean) {

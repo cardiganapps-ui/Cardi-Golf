@@ -278,3 +278,37 @@ describe('the same lists whichever way the rows came', () => {
     expect(s.payments).toHaveLength(before + 1)
   })
 })
+
+describe('money_adjustments (0027, MONEY-05)', () => {
+  const row = (s: Snapshot, over: Record<string, unknown> = {}) => ({
+    id: 'adj-b',
+    tournament_id: T(s),
+    source_key: 'bestRound',
+    kind: 'award',
+    to_player_id: s.players[0]!.id,
+    amount: 1200,
+    reason: 'Día 2 cancelado',
+    created_by: 'org',
+    created_at: '2027-04-11T20:00:00+00:00',
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
+    ...over,
+  })
+
+  it('an assignment lands by its id, in a fetch’s order; its void replaces it in place; another tournament’s is left alone', () => {
+    const s = fx()
+    s.moneyAdjustments = []
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-c' })))).toBe('applied')
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s)))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => x.id)).toEqual(['adj-b', 'adj-c'])
+    expect(s.moneyAdjustments[0]).toMatchObject({ sourceKey: 'bestRound', kind: 'award', amount: 1200, voidedAt: null })
+    expect(applyChange(s, T(s), upd('money_adjustments', row(s, { voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' })))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => [x.id, x.voidReason])).toEqual([
+      ['adj-b', 'Error'],
+      ['adj-c', null],
+    ])
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-x', tournament_id: 'otro' })))).toBe('ignored')
+    expect(s.moneyAdjustments).toHaveLength(2)
+  })
+})

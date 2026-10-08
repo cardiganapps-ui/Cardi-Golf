@@ -51,6 +51,7 @@ create function pg_temp.state(t uuid) returns jsonb language sql stable as $$
     'calcutta_bids', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.calcutta_bids x where lot_id in (select id from ls)),
     'calcutta_buybacks', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.calcutta_buybacks x where lot_id in (select id from ls)),
     'payments', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.payments x where tournament_id = t),
+    'money_adjustments', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.money_adjustments x where tournament_id = t),
     'game_entries', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.game_entries x where tournament_id = t),
     'game_results', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.game_results x where tournament_id = t)
   )
@@ -70,6 +71,7 @@ create function pg_temp.backup(t uuid) returns jsonb language sql stable as $$
     'teams', coalesce((select jsonb_agg(to_jsonb(x)) from public.teams x where tournament_id = t), '[]'),
     'calcutta_lots', coalesce((select jsonb_agg(to_jsonb(x)) from public.calcutta_lots x where tournament_id = t), '[]'),
     'payments', coalesce((select jsonb_agg(to_jsonb(x)) from public.payments x where tournament_id = t), '[]'),
+    'money_adjustments', coalesce((select jsonb_agg(to_jsonb(x)) from public.money_adjustments x where tournament_id = t), '[]'),
     'game_entries', coalesce((select jsonb_agg(to_jsonb(x)) from public.game_entries x where tournament_id = t), '[]'),
     'game_results', coalesce((select jsonb_agg(to_jsonb(x)) from public.game_results x where tournament_id = t), '[]'),
     'groups', coalesce((select jsonb_agg(to_jsonb(x)) from public.groups x where round_id in (select id from rs)), '[]'),
@@ -107,6 +109,9 @@ $$;
 \set y1 '''c0000000-0000-4000-8000-000000000101'''
 \set y2 '''c0000000-0000-4000-8000-000000000102'''
 \set y3 '''c0000000-0000-4000-8000-000000000103'''
+\set m1 '''c0000000-0000-4000-8000-000000000201'''
+\set m2 '''c0000000-0000-4000-8000-000000000202'''
+\set m3 '''c0000000-0000-4000-8000-000000000203'''
 
 insert into public.courses (id, name, source) values (:course, 'Campo Restore', 'manual');
 insert into public.tees (id, course_id, name, color, rating, slope, par_total) values (:tee, :course, 'Azules', 'azul', 71.2, 128, 72);
@@ -135,6 +140,8 @@ insert into public.calcutta_bids (id, lot_id, bidder_id, amount) values (:f3, :f
 insert into public.calcutta_buybacks (lot_id, pct, amount, paid) values (:f1, 25, 188, false);
 insert into public.payments (id, tournament_id, from_player_id, to_player_id, amount, kind, paid, note)
 values (:y1, :'t_a', :'p1', null, 2500, 'entry', true, null), (:y2, :'t_a', :'p2', null, 750, 'calcutta', false, 'lote 1');
+insert into public.money_adjustments (id, tournament_id, source_key, kind, to_player_id, amount, reason, created_by)
+values (:m1, :'t_a', 'bestRound', 'award', :p4, 1200, 'Día 2 cancelado', :'org_a'), (:m2, :'t_a', 'calcutta', 'house', null, 300, 'Para la cena', :'org_a');
 insert into public.game_entries (tournament_id, game_id, player_id) values (:'t_a', 'skins', :'p1'), (:'t_a', 'skins', :'p2'), (:'t_a', 'skins', :p3);
 insert into public.game_results (tournament_id, game_id, player_id, share) values (:'t_a', 'tacos', :'p1', 1);
 insert into public.hole_awards (round_id, group_id, hole, game_id, player_id, decided_by) values (:'r1', :'g1', 3, 'ctp', :'p1', :'p2'), (:'r1', :g2, 12, 'ctp', :p3, :p4);
@@ -172,6 +179,8 @@ delete from public.calcutta_bids where id = :f4;
 update public.calcutta_buybacks set paid = true where lot_id = :f1;
 update public.payments set paid = true where id = :y2;
 insert into public.payments (id, tournament_id, from_player_id, to_player_id, amount, kind, paid) values (:y3, :'t_a', :p3, null, 500, 'calcutta', true);
+update public.money_adjustments set voided_at = now(), voided_by = :'org_a', void_reason = 'Anulada después' where id = :m2;
+insert into public.money_adjustments (id, tournament_id, source_key, kind, to_player_id, amount, reason) values (:m3, :'t_a', 'snake', 'refund', :'p1', 150, 'Añadida después');
 delete from public.game_entries where tournament_id = :'t_a' and player_id = :p3;
 insert into public.game_entries (tournament_id, game_id, player_id) values (:'t_a', 'birdies', :'p2');
 delete from public.game_results where tournament_id = :'t_a' and game_id = 'tacos';
@@ -202,7 +211,9 @@ create temp table bad on commit drop as
   union all select 'game_results with a player of B', jsonb_set(b, '{tables,game_results,0,player_id}', to_jsonb(:'pb1'::text)) from bk
   union all select 'hole_awards in a round of B', jsonb_set(b, '{tables,hole_awards,0,round_id}', to_jsonb(:'rb1'::text)) from bk
   union all select 'hole_awards in a group of B', jsonb_set(b, '{tables,hole_awards,0,group_id}', to_jsonb(:'gb1'::text)) from bk
-  union all select 'hole_awards with a player of B', jsonb_set(b, '{tables,hole_awards,0,player_id}', to_jsonb(:'pb1'::text)) from bk;
+  union all select 'hole_awards with a player of B', jsonb_set(b, '{tables,hole_awards,0,player_id}', to_jsonb(:'pb1'::text)) from bk
+  union all select 'money_adjustments of tournament B', jsonb_set(b, '{tables,money_adjustments,0,tournament_id}', to_jsonb(:'t_b'::text)) from bk
+  union all select 'money_adjustments to a player of B', jsonb_set(b, '{tables,money_adjustments,0,to_player_id}', to_jsonb(:'pb1'::text)) from bk;
 create temp table outcome (what text, state text) on commit drop;
 grant select on bad to authenticated;
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
@@ -229,7 +240,7 @@ begin
   end loop;
 end $$;
 select coalesce(string_agg(what || ' (' || state || ')', ', ' order by what), '') as let_in from outcome where state <> '22023' \gset
-select harness.check((select count(*) from outcome) = 7 and :'let_in' = '', 'backups aimed at another tournament were not refused: ' || :'let_in') \g /dev/null
+select harness.check((select count(*) from outcome) = 9 and :'let_in' = '', 'backups aimed at another tournament were not refused: ' || :'let_in') \g /dev/null
 select coalesce(string_agg(k, ', ' order by k), '') as moved from jsonb_each((select s from before_a)) e(k, v) where v is distinct from (pg_temp.state(:'t_a') -> k) \gset
 select harness.check(:'moved' = '', 'a refused restore changed tournament A: ' || :'moved') \g /dev/null
 select harness.check((select s from before_b) = pg_temp.state(:'t_b'), 'a refused restore changed the other tournament') \g /dev/null

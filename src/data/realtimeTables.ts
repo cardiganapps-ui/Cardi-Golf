@@ -25,6 +25,7 @@ export const REALTIME_TABLES = [
   'calcutta_bids',
   'calcutta_buybacks',
   'payments',
+  'money_adjustments',
   'game_entries',
   'hole_awards',
   'game_results',

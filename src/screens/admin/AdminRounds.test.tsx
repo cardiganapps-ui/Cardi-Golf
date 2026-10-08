@@ -10,6 +10,8 @@ import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 
+// The close gate (MONEY-05) asks the server for refused writes nobody reviewed: none here.
+vi.mock('../../data/api', async (original) => ({ ...(await original<typeof import('../../data/api')>()), openRejectedWrites: vi.fn(async () => 0) }))
 vi.mock('./useCourses', async () => {
   const { getFixture } = await import('../../dev/fixtures')
   return { useCourses: () => ({ courses: getFixture('full12-live')!.snapshot.courses, loading: false, reload: async () => undefined }) }
@@ -68,8 +70,8 @@ it('…also when Tarjetas has nothing pending: that is when a phone\'s unsent ho
   expect(dialog.textContent).toContain(R.phonesBeforeFinish)
 })
 
-it('«Terminar y publicar» on a Ronda rápida asks the same', () => {
+it('«Terminar y publicar» on a Ronda rápida asks the same', async () => {
   mount(<QuickFinish />, 'minimal4-live', (s) => void (s.tournament.quick = true), { playerId: 'p1', isOrganizer: true, isAdmin: true })
   fireEvent.click(screen.getByRole('button', { name: t.quick.finishTitle }))
-  expect(screen.getByRole('dialog', { name: t.quick.finishTitle }).textContent).toContain(R.phonesBeforeFinish)
+  expect((await screen.findByRole('dialog', { name: t.quick.finishTitle })).textContent).toContain(R.phonesBeforeFinish)
 })

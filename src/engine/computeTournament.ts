@@ -9,6 +9,7 @@ import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
+import { applyAdjustments, bucketLabel, unassignedBuckets } from './core/unassigned'
 import { computeStats, type StatsState } from './core/stats'
 import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type AnyModule } from './modules'
@@ -141,7 +142,6 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     if (impl.warnings) gameWarnings.push(...impl.warnings(state, gctx))
   }
 
-  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
   const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
   // At the close the board can name a leader the saved scores never did: an
@@ -212,6 +212,29 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     for (const u of pool.unreachable) poolWarnings.push(`${u.label}: ${u.detail}, ${peso(u.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`)
   }
 
+  // «Por asignar» (MONEY-05): once play is over, what the rules leave with
+  // the bank, by pot, and the Comité's assignments of it. What they give a
+  // player is a prize like any other, so every money screen reads it.
+  const closing = tournamentFinal || (core.roundIds.length > 0 && snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled'))
+  const buckets = unassignedBuckets({
+    snapshot,
+    settings,
+    prizes,
+    pool,
+    auction: modules.auction,
+    snake: modules.snake,
+    games,
+    warnings: [...(modules.individual?.warnings ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
+    closing,
+  })
+  const unassigned = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], closing, (key) => bucketLabel(key, settings))
+  prizes.push(...unassigned.awards)
+  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games, unassigned.toHouse)
+  money.unassigned = unassigned
+  // What is left in the bank and what the list says must be the same pesos.
+  const unassignedWarnings = [...unassigned.warnings]
+  if (closing && money.banker.difference > 0 && money.banker.difference !== unassigned.total) unassignedWarnings.push(t.unassigned.mismatch(peso(money.banker.difference), peso(unassigned.total)))
+
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.
   const bracket = settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
@@ -233,7 +256,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       discrepancies,
       missingModules,
       missingGames,
-      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
     },

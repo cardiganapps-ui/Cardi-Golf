@@ -5,8 +5,8 @@
 import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/ui'
-import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { finishQuickRound } from '../../data/quick'
+import { useCloseGate } from '../../components/CloseGate'
+import { finishQuickRound, finishQuickRounds } from '../../data/quick'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
 import { humanError } from '../../lib/humanError'
@@ -16,8 +16,9 @@ const Q = t.quick
 export function QuickFinish() {
   const data = useTournament((s) => s.data)
   const { me, tournamentId } = useTournamentCtx()
-  const [ask, setAsk] = useState(false)
   const [busy, setBusy] = useState(false)
+  // «Cerrar torneo» (MONEY-05): the round closes only once nothing is left open; the check reads it as finished.
+  const closeGate = useCloseGate(tournamentId)
   if (!data) return null
   const { snapshot, state } = data
   if (!snapshot.tournament.quick || !me.isOrganizer || snapshot.tournament.status !== 'live') return null
@@ -33,7 +34,6 @@ export function QuickFinish() {
     try {
       const r = await finishQuickRound(tournamentId)
       toast(Q.finished(r.players))
-      setAsk(false)
     } catch (e) {
       toast(humanError(e))
     } finally {
@@ -45,18 +45,27 @@ export function QuickFinish() {
     <div className="card stack">
       <strong>{Q.finishTitle}</strong>
       <p className="help">{missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishHint}` : Q.finishHint}</p>
-      <button className={missing.size > 0 ? 'btn btn--secondary' : 'btn btn--primary'} type="button" disabled={busy} onClick={() => setAsk(true)}>
+      <button
+        className={missing.size > 0 ? 'btn btn--secondary' : 'btn btn--primary'}
+        type="button"
+        disabled={busy || closeGate.checking}
+        onClick={() =>
+          void closeGate.guard(
+            {
+              finishLiveRounds: true,
+              alwaysConfirm: true,
+              title: Q.finishTitle,
+              body: `${missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishConfirm}` : Q.finishConfirm} ${t.admin.rounds.phonesBeforeFinish}`,
+              confirmLabel: Q.finishTitle,
+              moneyFirst: () => finishQuickRounds(tournamentId),
+            },
+            finish,
+          )
+        }
+      >
         {Q.finishTitle}
       </button>
-      <ConfirmSheet
-        open={ask}
-        title={Q.finishTitle}
-        body={`${missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishConfirm}` : Q.finishConfirm} ${t.admin.rounds.phonesBeforeFinish}`}
-        busy={busy}
-        confirmLabel={Q.finishTitle}
-        onConfirm={() => void finish()}
-        onClose={() => setAsk(false)}
-      />
+      {closeGate.sheet}
     </div>
   )
 }

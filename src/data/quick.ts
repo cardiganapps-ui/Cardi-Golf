@@ -46,6 +46,15 @@ export async function roundRivalries(tournamentId: string): Promise<RoundRivalry
   return (data ?? []) as RoundRivalry[]
 }
 
+/** Only the live rounds finished: what is «por asignar» then shows in Dinero, for the Comité to decide before publishing (MONEY-05). */
+export async function finishQuickRounds(tournamentId: string): Promise<void> {
+  const store = useTournament.getState()
+  const snap = store.data?.snapshot
+  if (!snap || snap.tournament.id !== tournamentId) throw new UserError(t.errors.notLoaded)
+  for (const r of snap.rounds.filter((x) => x.status === 'live')) await setRoundStatus(r.id, 'finished')
+  await store.reload()
+}
+
 /** "Terminar y publicar": every live round finished, the tournament finished, results on the profiles. */
 export async function finishQuickRound(tournamentId: string): Promise<{ players: number }> {
   const store = useTournament.getState()

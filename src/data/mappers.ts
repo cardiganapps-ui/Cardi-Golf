@@ -15,6 +15,7 @@ import type {
   HoleAward,
   Pair,
   Team,
+  MoneyAdjustment,
   Payment,
   Player,
   Round,
@@ -213,4 +214,17 @@ export const mapPayment = (r: Row): Payment => ({
   kind: r.kind,
   paid: !!r.paid,
   note: r.note ?? null,
+})
+
+export const mapMoneyAdjustment = (r: Row): MoneyAdjustment => ({
+  id: r.id,
+  sourceKey: r.source_key,
+  kind: r.kind,
+  toPlayerId: r.to_player_id ?? null,
+  amount: Number(r.amount),
+  reason: r.reason,
+  createdAt: r.created_at,
+  createdBy: r.created_by ?? null,
+  voidedAt: r.voided_at ?? null,
+  voidReason: r.void_reason ?? null,
 })

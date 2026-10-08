@@ -25,6 +25,7 @@ import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
 import styles from './MoneyScreen.module.css'
+import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
 
 const M = t.moneyScreen
@@ -59,7 +60,9 @@ export function MoneyScreen() {
       const key = pr.gameId ?? pr.moduleId
       const gameLabel = pr.gameId
         ? (settings.games.find((g) => g.id === pr.gameId)?.label ?? pr.gameId)
-        : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(', ')[0] ?? pr.moduleId)
+        : pr.moduleId === 'adjustment'
+          ? M.byComite
+          : (settings.modules[pr.moduleId as keyof typeof settings.modules]?.label ?? pr.label.split(', ')[0] ?? pr.moduleId)
       const g = groups.get(key) ?? { label: gameLabel, total: 0, final: true, lines: [] }
       g.total += pr.amount
       g.final = g.final && pr.final
@@ -269,8 +272,12 @@ export function MoneyScreen() {
 
   /** Vía banco, once final, an admin marks lines paid: the list gets a slot for the button. */
   const markable = me.isAdmin && settle === 'bank' && state.tournamentFinal
-  const verdict = money.banker.balanced ? M.bankOk : M.bankPending(formatMoney(money.banker.difference))
-  const verdictClass = money.banker.balanced ? '' : state.tournamentFinal ? styles.bankVerdictOff : styles.bankVerdictOpen
+  // Once play is over, money still in the bank is «Por asignar», listed below
+  // with where it comes from (COPY-09); red only for a bank that does not
+  // square with that list.
+  const u = money.unassigned
+  const verdict = u.closing && u.total > 0 ? t.unassigned.total(formatMoney(u.total)) : money.banker.balanced ? M.bankOk : u.closing ? M.bankOff(formatSignedMoney(money.banker.difference)) : M.bankPending(formatMoney(money.banker.difference))
+  const verdictClass = money.banker.balanced && u.total === 0 ? '' : u.closing && (u.total === 0 || u.total !== money.banker.difference) ? styles.bankVerdictOff : styles.bankVerdictOpen
 
   return (
     <div className={styles.screen}>
@@ -311,8 +318,11 @@ export function MoneyScreen() {
           </span>
         )}
         {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
-        {!state.tournamentFinal && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
+        {!u.closing && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
+        {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
       </section>
+
+      <UnassignedMoney />
 
       {mode === 'live' && (
         <div className={styles.people}>
