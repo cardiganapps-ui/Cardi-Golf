@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   tiers: [],
   rounds: 1,
   groupSize: 4,
-  labels: { lastPlace: 'Último lugar', honoree: 'Homenajeado' },
+  labels: { lastPlace: 'Último lugar', honoree: 'Homenajeado', trophy: '' },
   entryFee: 0,
   houseCut: 0,
   // Full handicap and no anti-sandbag cut: the 80% allowance and the 36/2/4
@@ -80,7 +80,7 @@ export const FIRST_TOURNAMENT_SETTINGS: TournamentSettings = {
   tiers: ['A', 'B', 'C', 'D'],
   rounds: 2,
   groupSize: 4,
-  labels: { lastPlace: 'La Cuchara de Palo', honoree: 'El novio' },
+  labels: { lastPlace: 'La Cuchara de Palo', honoree: 'El novio', trophy: 'el Putter' },
   entryFee: 2500,
   houseCut: 0,
   handicap: { allowance: 0.8, cap: 54, rounding: 'halfUp', perRoundSlope: false, estimateWeights: [0.45, 0.4, 0.15] },

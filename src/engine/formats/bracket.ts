@@ -138,6 +138,13 @@ export function bracketState(ctx: FormatContext): BracketState {
       return { sides: [a, b] as [Entrant, Entrant], winner, text: played.text, pending: false }
     })
     rounds.push({ roundId, number: i + 1, name: roundName(matches.length), matches })
+    // Matches the groups played that the bracket does not list (a one-day event drawn its own way): they
+    // count on the board, not here, and the bracket says so instead of a column of «—» (STRAT-03).
+    if (roundId) {
+      const listed = new Set(pairings.flatMap(([a, b]) => (b ? [`${a.id}|${b.id}`, `${b.id}|${a.id}`] : [])))
+      const off = Math.ceil(results.filter((r) => r.roundId === roundId && r.played > 0 && !listed.has(`${r.sideId}|${r.opponentId}`)).length / 2)
+      if (off > 0) warnings.push(`Día ${i + 1}: ${off === 1 ? 'un partido de los grupos no es' : `${off} partidos de los grupos no son`} del cuadro (${roundName(matches.length)}). ${off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`)
+    }
 
     if (matches.length === 1) {
       champion = matches[0]!.winner

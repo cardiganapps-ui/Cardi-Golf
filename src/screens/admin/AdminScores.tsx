@@ -12,6 +12,8 @@ import { RejectedWrites } from '../../components/RejectedWrites'
 import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
+import { mainScoring } from '../../engine/formats'
+import { ownDayText } from '../../lib/figureText'
 import styles from './AdminScores.module.css'
 import a from './Admin.module.css'
 import { NumberField } from '../../components/NumberField'
@@ -24,7 +26,10 @@ export function AdminScores() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { me } = useTournamentCtx()
-  const { snapshot, state } = data
+  const { snapshot, state, settings } = data
+  // The card in the event's own figure (STRAT-03): points only where something counts them.
+  const scoring = mainScoring(settings)
+  const showPoints = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
   const [roundId, setRoundId] = useState<string>(snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
   const [playerId, setPlayerId] = useState<string>(snapshot.players[0]?.id ?? '')
@@ -255,9 +260,7 @@ export function AdminScores() {
                   <span className={styles.summaryText}>
                     <Avatar name={name(playerId)} url={byId.get(playerId)?.avatarUrl} />
                     <span className={a.rowText}>
-                      <span className={a.rowTitle}>
-                        {pr.points} pts
-                      </span>
+                      <span className={a.rowTitle}>{ownDayText(pr, scoring) ?? '—'}</span>
                       <span className={a.rowSub}>
                         {t.live.thru} {pr.thru}, {t.live.playingHcp} {pr.playingHcp}
                         {signed ? `, ${SC.signedLine}` : `, ${t.card.cardUnsigned.toLowerCase()}`}
@@ -281,7 +284,7 @@ export function AdminScores() {
                       <span className={styles.holeNum}>{h.hole}</span>
                       <span className={styles.holeGross}>{h.played ? (h.pickedUp ? 'L' : h.gross) : '–'}</span>
                       {/* Points and putts on two lines: «putts», never «p», does not fit one line six tiles across. */}
-                      <span className={styles.holeSub}>{h.played ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}</span>
+                      <span className={styles.holeSub}>{h.played && showPoints ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}</span>
                       {h.played && h.putts != null && <span className={styles.holeSub}>{t.games.puttsFigure(h.putts)}</span>}
                     </button>
                   ))}

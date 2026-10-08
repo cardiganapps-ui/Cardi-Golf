@@ -8,6 +8,8 @@ import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'
+import { figureKind, mainScoring, type Figure } from '../engine/formats'
+import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import styles from './ShareCard.module.css'
 
@@ -47,7 +49,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
-          <div ref={ref} className={styles.card}>
+          <div ref={ref} className={styles.card} data-share-card={what.kind}>
             <Card what={what} />
           </div>
         </div>
@@ -78,17 +80,24 @@ function Card({ what }: { what: ShareKind }) {
   )
   if (what.kind === 'leaderboard') {
     const rows = state.modules.individual?.rows ?? []
+    // Days add up only in points («36 + 38»); strokes and matches list the days they played («−11, +5», «ganó 6&5»).
+    const points = figureKind(settings) === 'points'
+    const daysText = (days: Figure[]) => {
+      const played = days.filter((f) => !f.empty).map(dayFigureText)
+      return points ? t.common.plusList(played) : played.join(', ')
+    }
     return (
       <>
         {header(`${settings.modules.individual.label}: ${state.tournamentFinal ? t.common.final : t.money.ifEndedNow}`)}
         <Rows>
           {rows.map((r) => {
-            const cash = state.prizes.filter((p) => p.playerId === r.playerId).reduce((a, p) => a + p.amount, 0)
+            // A team's row is the team: its name, and what its members win together.
+            const cash = state.prizes.filter((p) => r.entrant.playerIds.includes(p.playerId)).reduce((a, p) => a + p.amount, 0)
             return (
               <div key={r.playerId} className={styles.row}>
                 <span className={styles.pos}>{r.label}</span>
-                <span className={styles.name}>{nameOf(r.playerId)}</span>
-                <span className={styles.small}>{t.common.plusList(r.perRound.map((f) => f.text))}</span>
+                <span className={styles.name}>{r.entrant.isTeam ? r.entrant.name : nameOf(r.playerId)}</span>
+                <span className={styles.small}>{daysText(r.perRound)}</span>
                 <span className={styles.big}>{r.figure.text}</span>
                 <span className={styles.cash}>{cash > 0 ? formatMoney(cash) : ''}</span>
               </div>
@@ -102,26 +111,44 @@ function Card({ what }: { what: ShareKind }) {
   if (what.kind === 'player') {
     const p = byId.get(what.playerId)
     if (!p) return null
-    const row = state.modules.individual?.rows.find((r) => r.playerId === p.id)
+    // His own row, or his team's; the figure in the event's own unit (STRAT-03).
+    const row = state.modules.individual?.rows.find((r) => r.entrant.playerIds.includes(p.id))
+    const kind = figureKind(settings)
+    const scoring = mainScoring(settings)
     return (
       <>
-        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}, ${row.total} pts` : ''}`)}
+        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${row.entrant.name}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
+          const day = row?.perRound[i]
+          // His own card: in a team's strokes or points event his day is his own score; a match's day, a fourball side's too, is its result (STRAT-03).
+          const dayFigure = row?.entrant.isTeam && kind !== 'match'
+            ? ownDayText(pr, scoring)
+            : scoring === 'points'
+              ? t.common.figure(String(pr.points), pr.points, 'points')
+              : !day || day.empty
+                ? null
+                : kind === 'match'
+                  ? dayFigureText(day)
+                  : t.common.figure(day.text, day.value, kind)
           return (
             <div key={rid} className={styles.round}>
               <div className={styles.roundTitle}>
-                {t.round.day(i + 1)}, {t.live.playingHcp.toLowerCase()} {pr.playingHcp}, {pr.points} pts, {pr.putts} putts
+                {[t.round.day(i + 1), `${t.live.playingHcp.toLowerCase()} ${pr.playingHcp}`, dayFigure, `${pr.putts} putts`].filter(Boolean).join(', ')}
               </div>
               <div className={styles.holes}>
-                {pr.holes.map((h) => (
-                  <div key={h.hole} className={`${styles.hole} ${h.points >= 3 ? styles.birdie : h.points === 0 && h.played ? styles.zero : ''}`}>
-                    <span className={styles.holeNum}>{h.hole}</span>
-                    <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
-                    <span className={styles.holePts}>{h.played ? h.points : ''}</span>
-                  </div>
-                ))}
+                {pr.holes.map((h) => {
+                  // Under strokes a hole is marked on the score the event counts, and shows no points.
+                  const mark = holeMark(h, scoring)
+                  return (
+                    <div key={h.hole} className={`${styles.hole} ${mark === 'good' ? styles.birdie : mark === 'bad' ? styles.zero : ''}`}>
+                      <span className={styles.holeNum}>{h.hole}</span>
+                      <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
+                      <span className={styles.holePts}>{h.played && scoring === 'points' ? h.points : ''}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )

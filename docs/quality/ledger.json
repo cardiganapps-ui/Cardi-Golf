@@ -2981,11 +2981,32 @@
       "workstream": "W6",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 91,
+      "tests": [
+        "src/engine/core/feed.test.ts",
+        "src/engine/core/formatParity.test.ts",
+        "src/engine/formats/formats.test.ts",
+        "src/lib/figureText.test.ts",
+        "e2e/fixtures/formats.spec.ts",
+        "src/engine/core/strokeFigures.test.ts",
+        "src/engine/profile/results.test.ts",
+        "src/engine/formats/bracket.test.ts",
+        "src/screens/tournament/PlayerSheet.formats.test.tsx",
+        "src/screens/tournament/LiveScreen.formats.test.tsx",
+        "src/screens/tournament/ScorecardScreen.formats.test.tsx",
+        "src/screens/tournament/GamesScreen.formats.test.tsx",
+        "src/screens/tournament/TvScreen.formats.test.tsx",
+        "src/screens/tournament/StatsScreen.formats.test.tsx",
+        "src/screens/tournament/CeremonyScreen.formats.test.tsx",
+        "src/components/ShareCard.formats.test.tsx",
+        "src/screens/admin/AdminScores.formats.test.tsx",
+        "src/screens/admin/AdminData.formats.test.tsx",
+        "src/engine/modules/individual/countbackWhy.test.ts",
+        "src/engine/modules/individual/countbackLines.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Match and team play show no player race in Estadísticas (a race of teams or matches is not built yet). The day-2 cut is still computed on Stableford points in every format, and the Reglamento says so. A tournament created before labels.trophy names no trophy at the ceremony until the Comité types one (Comité › Reglas). Published results by format are NEW-09 (a migration); the smaller display leftovers are NEW-10. Fixed here too: NEW-07 (a nine's team tie) and NEW-08 (match play's hole order)."
     },
     {
       "id": "STRAT-05",
@@ -4277,6 +4298,72 @@
       "tests": [],
       "verifiedBy": null,
       "residual": "Comes with save_hole's structured statuses (PLAN §5.1), or a check of the round and the card before the push."
+    },
+    {
+      "id": "NEW-07",
+      "severity": "P1",
+      "area": "Correctness of rules and money",
+      "workstream": "W3",
+      "phase": 1,
+      "tripSafe": false,
+      "title": "A 9-hole team event never broke a tie on its last holes: team.ts read the countback over 18 holes, so a tie that holes 5–9 break was shared and the wrong team was paid",
+      "foundBy": "PR #91's third verifier (team9 probe)",
+      "status": "fixed",
+      "pr": 91,
+      "tests": [
+        "src/engine/formats/formats.test.ts",
+        "src/engine/modules/individual/countbackLines.test.ts"
+      ],
+      "verifiedBy": null,
+      "residual": "Older than STRAT-03 (#49). team.ts passes the last round's own hole count, as stableford.ts and strokePlay.ts do; formats.test.ts works a nine by hand (level teams, separated on 5–9). Round 5: a team with no holes yet on the last round gets an empty countback of that round's length too (emptyCountback(lastLength)), so a team that hasn't teed off on a nine no longer reads 10–18."
+    },
+    {
+      "id": "NEW-08",
+      "severity": "P2",
+      "area": "Correctness of rules and money",
+      "workstream": "W6",
+      "phase": 2,
+      "tripSafe": false,
+      "title": "The main event's match play counted holes 1 to 18 in number order: a match off the 10th showed a margin its play order didn't, and tied match points were ranked on it",
+      "foundBy": "PR #91's UI tests (GamesScreen.formats.test.tsx, it.fails)",
+      "status": "fixed",
+      "pr": 91,
+      "tests": [
+        "src/engine/formats/formats.test.ts",
+        "src/screens/tournament/GamesScreen.formats.test.tsx"
+      ],
+      "verifiedBy": null,
+      "residual": "Older than STRAT-03 (#49). playMatches walks playOrder(startHole). match8: Matías's 4&2 had read 8&6 and put him 1st alone; he and Fabián now tie and halve 1st and 2nd ($2,400 each). Confirmed by hand by #91's third verifier."
+    },
+    {
+      "id": "NEW-09",
+      "severity": "P2",
+      "area": "Data layer and database",
+      "workstream": "W6",
+      "phase": 2,
+      "tripSafe": false,
+      "title": "Published results don't count a team event's entrants: field counts players, every member gets the team's rank, so crews split a team's place (22.5 points for a pair's 1st) and Mi Polo reads «2.º de 8» for the last of 2 teams",
+      "foundBy": "PR #91's third verifier (publish_tournament_results on PG16)",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "Needs a migration: tournament_results carries an entrant key, and field and crew ties count distinct entrants. Stroke and match events also publish no figure yet. Applied with SUPABASE_PAT."
+    },
+    {
+      "id": "NEW-10",
+      "severity": "P3",
+      "area": "Product coherence and strategy",
+      "workstream": "W6",
+      "phase": 3,
+      "tripSafe": false,
+      "title": "Formats' smaller display leftovers: at a tied close the feed's last «Cambio de líder» can name a player off the top; «Hoyo N» on En vivo and TV is holes played, not the hole; the stats streak and race walk hole numbers; the Juegos overview names one of tied leaders; the Reglamento names the 10–18 windows for 9-hole events; «Salida por el 10» on a 9-hole card; a bracket shown for a one-day match event",
+      "foundBy": "PR #91's third verifier (P3-c, P3-f)",
+      "status": "open",
+      "pr": null,
+      "tests": [],
+      "verifiedBy": null,
+      "residual": "All older than #91 except the tied close. Display only; no money."
     }
   ]
 }
