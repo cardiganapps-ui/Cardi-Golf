@@ -119,6 +119,12 @@ describe('lead changes in the feed (round 3)', () => {
     const keys = state.feed.map(feedKey)
     expect(new Set(keys).size).toBe(keys.length)
   })
+
+  it('a leader who takes the lead again on the same hole is another line, with its own key', () => {
+    // Two lead changes to p1 on the 5th: the first his own save, the second after someone else's bogey there.
+    const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', figure: '−2', scoring: 'gross' as const })
+    expect(feedKey(lead('2027-04-09T18:00:01+00:00'))).not.toBe(feedKey(lead('2027-04-09T18:05:00+00:00')))
+  })
 })
 
 describe('stats under gross stroke play (stats.ts)', () => {

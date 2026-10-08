@@ -31,29 +31,12 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
     () => (data && p ? data.state.core.roundIds.map((rid) => ({ round: data.snapshot.rounds.find((r) => r.id === rid)!, pr: data.state.core.rounds[rid]?.[p.id] })) : []),
     [data, p],
   )
+  // The engine's own counts, so the sheet and Estadísticas agree: on the score the event counts (net points, or the
+  // net or gross score).
   const stats = useMemo(() => {
-    let birdies = 0
-    let netBirdies = 0
-    let pars = 0
-    let bogeys = 0
-    let worse = 0
-    let pickups = 0
-    for (const { pr } of rounds) {
-      for (const h of pr?.holes ?? []) {
-        if (!h.played) continue
-        if (h.pickedUp) {
-          pickups++
-          continue
-        }
-        if (h.gross != null && h.gross - h.par <= -1) birdies++
-        if (h.points >= 3) netBirdies++
-        else if (h.points === 2) pars++
-        else if (h.points === 1) bogeys++
-        else worse++
-      }
-    }
-    return { birdies, netBirdies, pars, bogeys, worse, pickups }
-  }, [rounds])
+    const s = playerId ? data?.state.stats.players[playerId] : undefined
+    return { birdies: s?.grossBirdies ?? 0, netBirdies: s?.netBirdies ?? 0, pars: s?.pars ?? 0, bogeys: s?.bogeys ?? 0, worse: s?.doubleOrWorse ?? 0, pickups: s?.pickUps ?? 0 }
+  }, [data, playerId])
   if (!data || !p) return null
   const { snapshot, state, settings } = data
   // The pairs game's pair, under its label; a team format's pairs are teams, named in the header.
@@ -216,8 +199,8 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
           <div className={styles.stats}>
             <Stat label={t.player.birdies} v={stats.birdies} />
             <Stat label={t.player.netBirdies} v={stats.netBirdies} />
-            <Stat label={t.player.pars} v={stats.pars} />
-            <Stat label={t.player.bogeys} v={stats.bogeys} />
+            <Stat label={scoring === 'gross' ? t.stats.pars : t.player.pars} v={stats.pars} />
+            <Stat label={scoring === 'gross' ? t.stats.bogeys : t.player.bogeys} v={stats.bogeys} />
             <Stat label={t.player.worse} v={stats.worse} />
             <Stat label={t.player.pickups} v={stats.pickups} />
             {putts && <Stat label={t.player.puttsAvg} v={putts.average} />}

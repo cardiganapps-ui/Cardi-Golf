@@ -235,6 +235,27 @@ describe('team formats', () => {
     expect(state.modules.individual!.rows[0]!.figure.value).toBe(37)
   })
 
+  it('breaks a tie over a nine on its own last holes, 5–9 and on, not on 10–18', () => {
+    // One 9-hole round, gross best ball. Team A birdies the 1st and bogeys the 9th, team B the other way round:
+    // both are level (E). Over holes 5–9 B is −1 and A +1, so B is first, as stroke play would rank them.
+    const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }) })
+    snap.rounds = snap.rounds.map((r) => ({ ...r, holes: 9 }))
+    snap.pairs = [
+      { id: 'A', name: 'Equipo A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
+      { id: 'B', name: 'Equipo B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+    ]
+    play(snap, 'r1', 'p1', [-1, 0, 0, 0, 0, 0, 0, 0, 1])
+    play(snap, 'r1', 'p2', Array<number>(9).fill(2))
+    play(snap, 'r1', 'p3', [1, 0, 0, 0, 0, 0, 0, 0, -1])
+    play(snap, 'r1', 'p4', Array<number>(9).fill(2))
+
+    const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
+    expect(rows.map((r) => r.figure.text)).toEqual(['E', 'E'])
+    expect(rows.map((r) => [r.entrant.name, r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
+    expect(rows[1]!.countbackWhy!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
+  })
+
   it('asks for a draw instead of showing an empty board', () => {
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
     const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team') })

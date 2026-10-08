@@ -226,13 +226,16 @@ function explainCountback(
     const a = standings.countback[aboveId]?.pointsByHole.get(1) ?? 0
     const b = standings.countback[id]?.pointsByHole.get(1) ?? 0
     const ups = (n: number) => (n > 0 ? `${n} arriba` : n < 0 ? `${-n} abajo` : 'empatado')
+    // The last day as it stands: not played yet, under way, or over.
+    const dayA = standings.perRound[aboveId]?.[lastRoundId]
+    const dayB = standings.perRound[id]?.[lastRoundId]
+    const match =
+      (!dayA || dayA.empty) && (!dayB || dayB.empty)
+        ? `Día ${lastN}: todavía no juegan su partido`
+        : `Día ${lastN}, ${dayA?.result && dayB?.result ? 'cómo terminó' : 'cómo va'} su partido: ${nameOf(aboveId)} ${ups(a)}${t.common.versus}${nameOf(id)} ${ups(b)}`
     return {
       title,
-      steps: [
-        `Iguales en puntos de partido`,
-        `Día ${lastN}, cómo terminó su partido: ${nameOf(aboveId)} ${ups(a)}${t.common.versus}${nameOf(id)} ${ups(b)}`,
-        ...(a === b ? ['Iguales: se reparten los premios de los lugares que ocupan.'] : []),
-      ],
+      steps: [`Iguales en puntos de partido`, match, ...(a === b ? ['Iguales: se reparten los premios de los lugares que ocupan.'] : [])],
     }
   }
   const why: Explanation = {

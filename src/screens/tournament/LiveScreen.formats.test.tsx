@@ -86,6 +86,10 @@ describe("En vivo: the honoree's card in each format (STRAT-03)", () => {
     // His row on the board says it the same way, and so does the winner's.
     expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe('6.º, Gael H., hoy perdió 1 abajo, hoyo F, 0')
     expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe('3.º, Julián, hoy ganó 1 arriba, hoyo F, 1')
+    // And the day cell you see says it too: his «1 abajo», not the match's «1 arriba».
+    const gael = screen.getByRole('button', { name: /^6\.º, Gael H\., / }).textContent
+    expect(gael).toContain('1 abajo')
+    expect(gael).not.toContain('1 arriba')
   })
 
   it("team Stableford: «hoy» is the team's day, beside the team's total", () => {

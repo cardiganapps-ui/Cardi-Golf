@@ -129,3 +129,16 @@ describe('the player sheet in each format (STRAT-03)', () => {
     expect(grossTotals(d, 'Fabián')).toEqual({ nines: ['', '33'], total: 'Total: – gross' })
   })
 })
+
+describe('the sheet and Estadísticas count alike (#91 round 3, P3-d)', () => {
+  it('under gross, «Pares», «Bogeys» and «Doble o peor» are the engine’s counts, on the gross score', () => {
+    const gross = (s: Snapshot) => playAs(s, 'strokePlay', { scoring: 'gross' })
+    const snap = structuredClone(getFixture('stroke8')!.snapshot)
+    gross(snap)
+    const st = dataFromSnapshot(snap).state.stats.players['p2']!
+    const d = sheet('stroke8', 'p2', gross)
+    const stat = (label: string) => Number(d.getByText(label, { exact: true }).previousElementSibling!.textContent)
+    expect([stat('Pares'), stat('Bogeys'), stat('Doble o peor')]).toEqual([st.pars, st.bogeys, st.doubleOrWorse])
+    expect(d.queryByText('Pares netos')).toBeNull()
+  })
+})

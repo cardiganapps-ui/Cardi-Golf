@@ -275,6 +275,8 @@ export function LiveScreen() {
                 today = day && !day.empty ? day.text : undefined
                 // A match result reads the same for both sides: its colour and spoken form say who won it.
                 if (day?.result) {
+                  // The side that lost a match that went the distance is «1 abajo», on screen as when spoken.
+                  if (day.result === 'lost') today = day.text.replace(/ arriba$/, ' abajo')
                   todayTone = day.result === 'won' ? 'under' : day.result === 'lost' ? 'over' : 'even'
                   todaySpoken = t.live.matchDay(day.result, day.text)
                 }
