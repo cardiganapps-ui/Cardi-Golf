@@ -138,7 +138,8 @@ export async function typeHole(page: Page, hole: number, entry: HoleEntry) {
 /** Taps the save button; returns once the phone says the hole is saved (on the phone: the outbox has it). */
 export async function saveHole(page: Page, hole: number) {
   await page.getByRole('button', { name: hole === 18 ? t.card.saveLast : t.card.save, exact: true }).click()
-  await expect(page.getByText(t.card.savedHole(hole), { exact: true })).toBeVisible()
+  // The save bar's note. (On the last hole the card's live region says the same words, to a screen reader only.)
+  await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^${t.card.savedHole(hole)}$`) })).toBeVisible()
 }
 
 /** When the phone last tapped «Guardar…», on its own clock (ms since the epoch). */

@@ -33,7 +33,8 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   outputDir: 'test-results-stack',
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never', outputFolder: 'playwright-report-stack' }]] : 'list',
+  // In CI, `github` turns every failure into an annotation on the check run: readable through the API without the logs.
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never', outputFolder: 'playwright-report-stack' }]] : 'list',
   use: {
     ...PHONE,
     launchOptions: { executablePath: chromium },
