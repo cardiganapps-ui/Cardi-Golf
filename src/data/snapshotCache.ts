@@ -135,13 +135,16 @@ export async function clearAllCached(): Promise<void> {
 /**
  * A link that leads nowhere now (the tournament was deleted): forget what was
  * saved under that very slug. A join code that stopped working may just have
- * been replaced by a new one, so a code alone forgets nothing.
+ * been replaced by a new one, so a code alone forgets nothing. Returns the
+ * tournament those boards were of, if any: its unsent writes go too (outbox).
  */
-export async function clearCachedSlug(slug: string): Promise<void> {
+export async function clearCachedSlug(slug: string): Promise<string | null> {
   try {
     const entry = await getDb()?.entries.get(slug)
-    if (entry) await clearCached(entry.tournamentId)
+    if (!entry) return null
+    await clearCached(entry.tournamentId)
+    return entry.tournamentId
   } catch {
-    /* ignore */
+    return null
   }
 }

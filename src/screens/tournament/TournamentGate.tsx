@@ -18,11 +18,12 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
-import { ensureSession, signedOutOnPurpose, useAuth } from '../../data/auth'
+import { ensureSession, signedOutOnPurpose, signOutsAsked, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
+import { myDeviceClaim } from '../../data/profiles'
 import { setLastTournament } from '../../data/session'
 import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
-import { adoptQueuedWrites, refreshOutboxCounters } from '../../data/outbox'
+import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { EnterScreen } from './EnterScreen'
@@ -67,7 +68,8 @@ const CACHE_RETRY_MS = 20_000
 /** After an ask that failed with signal, the next one comes this soon, doubling up to CACHE_RETRY_MS. */
 const RETRY_SOON_MS = 2_000
 
-type Phase = { kind: 'loading' } | { kind: 'notFound' } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
+/** `dropped`: writes this phone still had for the tournament that is gone, moved to the rejected list. */
+type Phase = { kind: 'loading' } | { kind: 'notFound'; dropped: number } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
 
 export function TournamentGate() {
   const { slug = '' } = useParams()
@@ -97,6 +99,12 @@ export function TournamentGate() {
   useLayoutEffect(() => {
     phaseNow.current = phase
   }, [phase])
+  /**
+   * The sign-outs asked for before this gate opened: one asked for while it is
+   * open ends its retries (below), whatever link it shows by then. A sign-out
+   * takes the phone home, so a gate opened afterwards counts from there.
+   */
+  const signOutsAtOpen = useRef(signOutsAsked())
 
   /**
    * Show the boards this phone saved for the link (§8): at once on open, and
@@ -155,9 +163,18 @@ export function TournamentGate() {
         settled.current = true
         recheck.current = false
         failures.current = 0
-        // The link leads nowhere now (the tournament was deleted): what was saved under it goes too.
+        // The link leads nowhere now (the tournament was deleted): what was
+        // saved under it goes too, and its writes, which can never go out now,
+        // move to the rejected list (held ones kept the phone from signing out
+        // or changing account for good).
         void clearCachedSlug(slug)
-        setPhase({ kind: 'notFound' })
+          .then(async (tid) => {
+            const dropped = await rejectGoneTournament(slug, tid)
+            if (dropped && !stale()) setPhase((p) => (p.kind === 'notFound' ? { kind: 'notFound', dropped } : p))
+          })
+          // The phone's storage refused: the writes stay queued, and the next «no existe» tries again.
+          .catch(() => undefined)
+        setPhase({ kind: 'notFound', dropped: 0 })
         return
       }
       const m = await myMembership(lookup.id)
@@ -248,6 +265,11 @@ export function TournamentGate() {
   // again every 20 s for as long as the app stayed open changed nothing.
   useEffect(() => {
     const retry = () => {
+      // Its person is signing out on purpose (asked while this gate was open):
+      // the phone is on its way home, and asking again once the session is
+      // gone would sign it in anonymously behind them. A gate opened after a
+      // sign-out asks as usual.
+      if (signOutsAsked() !== signOutsAtOpen.current && signedOutOnPurpose()) return
       const p = phaseNow.current
       const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || useTournament.getState().source !== 'server'))
       if (asking.current > 0 || !waiting) return
@@ -278,13 +300,20 @@ export function TournamentGate() {
   }, [phase, data])
 
   const tournamentId = phase.kind === 'in' ? phase.lookup.id : null
+  const via = phase.kind === 'in' ? phase.me.via : null
   const leave = useCallback(async () => {
-    await releaseDevice()
+    // release_device drops this device's one PIN claim, wherever it is. Here
+    // by the profile («No soy yo»), that claim may be another tournament's:
+    // the phone was then nobody there, and its holes still on the phone were
+    // refused. Only this tournament's claim goes; when the server can't say
+    // where it is (no signal, an old saved entry), as before.
+    const claim = via === 'device' ? undefined : await myDeviceClaim().catch(() => undefined)
+    if (claim === undefined || claim?.tournamentId === tournamentId) await releaseDevice()
     setLastTournament(null)
     // The boards this phone saved belong to the player who just left.
     if (tournamentId) await clearCached(tournamentId)
     await resolve()
-  }, [resolve, tournamentId])
+  }, [resolve, tournamentId, via])
 
   if (phase.kind === 'loading') {
     return (
@@ -300,7 +329,7 @@ export function TournamentGate() {
         <Wordmark />
         <EmptyState
           title={t.enter.notFound}
-          body={t.errors.notFoundHint}
+          body={phase.dropped ? `${t.enter.goneUnsent} ${t.errors.notFoundHint}` : t.errors.notFoundHint}
           action={
             <Link className="btn btn--secondary" to="/">
               {t.errors.backHome}

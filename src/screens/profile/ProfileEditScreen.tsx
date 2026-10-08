@@ -51,6 +51,8 @@ export function ProfileEditScreen() {
   const [form, setForm] = useState<Form | null>(null)
   const [busy, setBusy] = useState(false)
   const [handleError, setHandleError] = useState<string | null>(null)
+  /** Waiting for the server to end the session: on lie-fi that takes until auth-js's own deadline. */
+  const [signingOut, setSigningOut] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -114,9 +116,14 @@ export function ProfileEditScreen() {
   }
 
   async function leave() {
-    const r = await signOutSafely()
-    if (r.done) navigate('/', { replace: true })
-    else toast(r.reason)
+    setSigningOut(true)
+    try {
+      const r = await signOutSafely()
+      if (r.done) navigate('/', { replace: true })
+      else toast(r.reason)
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -212,8 +219,8 @@ export function ProfileEditScreen() {
         <Link className="btn btn--ghost" to={`/p/${profile.handle}`}>
           {P.viewProfile}
         </Link>
-        <button className="btn btn--ghost" type="button" onClick={() => void leave()}>
-          {t.account.signOut}
+        <button className="btn btn--ghost" type="button" disabled={signingOut} onClick={() => void leave()}>
+          {signingOut ? t.account.signingOut : t.account.signOut}
         </button>
       </div>
     </div>
