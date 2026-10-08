@@ -450,3 +450,35 @@ describe('Tarjeta: a Comité correction on a signed card with a snake tie (the v
     }
   })
 })
+
+describe('Tarjeta: an admin player writes where a phone may not through the Comité path (0026, REL-09)', () => {
+  /** Puts the first player's strokes on the open hole up one, and saves. */
+  async function correctFirstAndSave() {
+    const strokes = screen.getAllByRole('group', { name: new RegExp(`^${S.strokesOf('.+')}$`) })[0]!
+    fireEvent.click(screen.getByRole('button', { name: `${strokes.getAttribute('aria-label')}: ${t.common.stepUp}` }))
+    await tapSave(11_000)
+  }
+
+  it('a finished round, no card signed: admin_save_score, with no reason asked, and nothing through the outbox', async () => {
+    admin.saves = []
+    window.history.replaceState(null, '', '/?hoyo=18')
+    try {
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isAdmin: true })
+      await correctFirstAndSave()
+      expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
+      expect(admin.saves).toHaveLength(1)
+      expect(admin.saves[0]).toMatchObject({ row: { round_id: 'r2', hole: 18 }, reason: null })
+      expect(outbox.scores).toEqual([])
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+
+  it('a live round with the card unsigned: the outbox, as any phone of the group', async () => {
+    admin.saves = []
+    mount(undefined, { isAdmin: true })
+    await correctFirstAndSave()
+    expect(admin.saves).toEqual([])
+    expect(outbox.scores.length).toBeGreaterThan(0)
+  })
+})

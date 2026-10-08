@@ -2605,10 +2605,11 @@
       "status": "open",
       "pr": null,
       "tests": [
-        "supabase/tests/save_hole.sql"
+        "supabase/tests/save_hole.sql",
+        "src/screens/tournament/ScorecardScreen.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "Fixed in migration 0026: direct writes to scores, the Comité's included, only while the round is live and the card unsigned; a correction after that goes through admin_save_score with a reason (supabase/tests/save_hole.sql, step 12). Production keeps the old policy until 0026 is applied (SUPABASE_PAT); status moves to fixed then. Round 2: deleting a score is the Comité's alone (scores_delete; save_hole.sql, 10b)."
+      "residual": "Fixed in migration 0026: direct writes to scores, the Comité's included, only while the round is live and the card unsigned; a correction after that goes through admin_save_score with a reason (supabase/tests/save_hole.sql, step 12). Production keeps the old policy until 0026 is applied (SUPABASE_PAT); status moves to fixed then. Round 2: an admin player's Tarjeta sends a hole of a closed round or a signed card through admin_save_score (the signed card with its reason), as Comité › Tarjetas does, instead of the direct write 0026 refuses (ScorecardScreen.test.tsx); deleting a score is the Comité's alone (scores_delete). The simulator refuses a closed day instead of writing into it. Residual: an admin player's snake answer or contest winner queued offline is still taken after «Terminar» (the Comité may decide those after the round, and an admin player is the Comité)."
     },
     {
       "id": "REL-10",

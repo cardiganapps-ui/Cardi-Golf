@@ -420,7 +420,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       const d = values[p.id]
       if (!d) continue
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
-      if (needsReason && signed(p.id)) await adminSaveScore(payload, reason.trim())
+      // A Comité correction where a phone's write is refused (a round not live, a signed card, 0026): the server RPC, as Comité › Tarjetas does.
+      if (me.isAdmin && (round.status !== 'live' || signed(p.id))) await adminSaveScore(payload, reason.trim() || null)
       else await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
     }
     for (const c of contests) {
