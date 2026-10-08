@@ -109,5 +109,15 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     environment: 'node',
     passWithNoTests: false,
+    // QA-06: the outbox holds the only copy of a hole saved with no signal. `npm test` measures it
+    // and fails below what its tests cover today. The one statement left is the push of a kind this
+    // build does not know, which the flush never sends. Branch coverage moves a little between runs
+    // (the lock and the backoff take timing-dependent paths), so its bar sits a point under the lowest.
+    coverage: {
+      provider: 'v8',
+      include: ['src/data/outbox.ts'],
+      reporter: ['text'],
+      thresholds: { 'src/data/outbox.ts': { statements: 99, branches: 91, functions: 100, lines: 99 } },
+    },
   },
 })
