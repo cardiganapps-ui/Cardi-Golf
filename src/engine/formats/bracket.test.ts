@@ -126,6 +126,22 @@ describe('bracket over a played tournament', () => {
     expect(st.warnings.some((w) => w.includes('2 rondas') && w.includes('tiene 1'))).toBe(true)
   })
 
+  it('matches the groups played that the bracket does not list are named, not shown as «—» (STRAT-03)', () => {
+    // One day, 4 players drawn 1v2 and 3v4: the bracket's semifinals are 1v4 and 2v3.
+    const one = matchSettings(1)
+    const snap = makeSnapshot({ players: 4, rounds: 1, settings: one })
+    snap.players = snap.players.map((p, i) => ({ ...p, baseHcp: [4, 8, 12, 16][i]! }))
+    snap.groups = [makeGroup('r1', 1, ['p1', 'p2'], 1), makeGroup('r1', 2, ['p3', 'p4'], 1)]
+    fillRound(snap, 'r1', 5)
+    snap.rounds[0]!.status = 'finished'
+    const st = bracketState(ctxOf(snap, one))
+    expect(st.rounds[0]!.matches.every((m) => m.pending)).toBe(true)
+    expect(st.warnings).toContain('Día 1: 2 partidos de los grupos no son del cuadro (Semifinal). Cuentan en la tabla; el cuadro avanza solo con sus partidos.')
+    // Drawn as the bracket says, nothing to add.
+    const ok = semisPlayed()
+    expect(bracketState(ctxOf(ok, settings)).warnings.filter((w) => w.includes('no son del cuadro') || w.includes('no es del cuadro'))).toEqual([])
+  })
+
   it('a field too small for a bracket says so', () => {
     const snap = makeSnapshot({ players: 1, rounds: 1, settings })
     const st = bracketState(ctxOf(snap, settings))

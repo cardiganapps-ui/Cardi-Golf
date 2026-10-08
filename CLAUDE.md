@@ -901,7 +901,7 @@ Settings object shape. These are the **first tournament's** values; the platform
   },
   "tiers": ["A", "B", "C", "D"],
   "rounds": 2,
-  "labels": { "lastPlace": "La Cuchara de Palo", "honoree": "El novio" },
+  "labels": { "lastPlace": "La Cuchara de Palo", "honoree": "El novio", "trophy": "el Putter" },
   "entryFee": 2500,
   "handicap": { "allowance": 0.8, "cap": 54, "rounding": "halfUp" },
   "day2Cut": { "threshold": 36, "pointsPerStroke": 2, "maxStrokes": 4 },

@@ -359,7 +359,7 @@ function longnames(): Fixture {
 
 
 /** A format that is not Stableford: one tournament per new format. */
-function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name: string; slug: string; label: string; description: string; options?: Record<string, string>; teams?: boolean; teamsOf?: number; groupSize?: number }): Fixture {
+function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name: string; slug: string; label: string; description: string; options?: Record<string, string>; teams?: boolean; teamsOf?: number; groupSize?: number; honoree?: number }): Fixture {
   const settings: TournamentSettings = {
     ...DEFAULT_SETTINGS,
     rounds: 1,
@@ -376,7 +376,7 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
     },
   }
   const players = withNames(
-    Array.from({ length: 8 }, (_, i) => makePlayer(i + 1, { baseHcp: [4, 9, 12, 15, 18, 21, 24, 28][i]!, isAdmin: i === 0 })),
+    Array.from({ length: 8 }, (_, i) => makePlayer(i + 1, { baseHcp: [4, 9, 12, 15, 18, 21, 24, 28][i]!, isAdmin: i === 0, isHonoree: i === opts.honoree })),
     NAMES.slice(4),
   )
   const snap = makeSnapshot({ players, rounds: 1, settings })
@@ -444,7 +444,7 @@ const BUILDERS: Record<string, () => Fixture> = {
   'full12-finished': () => full12(true),
   pairs8,
   friends8,
-  'stroke8': () => formatFixture('strokePlay', { name: 'Copa del Club', slug: 'stroke8', label: 'Golpes', description: 'Stroke play neto a una vuelta: gana quien menos golpes haga', options: { scoring: 'net' } }),
+  'stroke8': () => formatFixture('strokePlay', { name: 'Copa del Club', slug: 'stroke8', label: 'Golpes', description: 'Stroke play neto a una vuelta: gana quien menos golpes haga', options: { scoring: 'net' }, honoree: 3 }),
   'match8': () => formatFixture('matchPlay', { name: 'Duelos de Primavera', slug: 'match8', label: 'Match play', description: 'Uno contra uno: cuatro partidos, se gana por hoyos', options: { matchMode: 'singles', scoring: 'net' }, groupSize: 2 }),
   'team8': () => formatFixture('team', { name: 'Scramble de la Casa', slug: 'team8', label: 'Por equipos', description: 'Cuatro equipos jugando la mejor bola', options: { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'net' }, teams: true }),
   /**

@@ -125,6 +125,9 @@ describe('match play', () => {
     // Both sides read the match's own score; the points column says who won it.
     expect(rows[1]!.perRound[0]!.text).toBe('3&2')
     expect(rows[1]!.figure.value).toBe(0)
+    // And each side's day says whose it was, and is coloured that way (STRAT-03).
+    expect(rows[0]!.perRound[0]).toMatchObject({ result: 'won', tone: 'under' })
+    expect(rows[1]!.perRound[0]).toMatchObject({ result: 'lost', tone: 'over' })
   })
 
   it('halves a match and splits the point', () => {
@@ -138,6 +141,7 @@ describe('match play', () => {
     expect(rows.map((r) => r.perRound[0]!.text)).toEqual(['Empate', 'Empate'])
     expect(rows.map((r) => r.figure.value)).toEqual([0.5, 0.5])
     expect(rows.map((r) => r.figure.text)).toEqual(['½', '½'])
+    expect(rows.map((r) => r.perRound[0]!.result)).toEqual(['halved', 'halved'])
   })
 
   it('plays fourball off the better ball of each pair', () => {
@@ -161,6 +165,27 @@ describe('match play', () => {
     expect(rows[0]!.entrant.name).toBe('Pareja A')
     expect(rows[0]!.perRound[0]!.text).toBe('1 arriba')
     expect(rows[0]!.figure.value).toBe(1)
+  })
+
+  it('plays a group off the 10th in its own order, so its margin and the countback are the ones it played', () => {
+    // Group 1 starts on the 10th. p1 wins the 10th to the 18th and then the 1st: ten holes in a row, so after the
+    // 1st he is 10 up with 8 to play and the match is over, 10&8. (Read 1 to 18, p2's wins on the 2nd to the 9th
+    // would come first and it would end «2 arriba».) Group 2 starts on the 1st: p3 wins the first five holes and
+    // halves the rest, 5 up with 4 to play after the 14th, 5&4. Both winners have one point; the countback takes
+    // the margin, 10 against 5, so p1 is first.
+    const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }) })
+    snap.groups = [makeGroup('r1', 1, ['p1', 'p2'], 10), makeGroup('r1', 2, ['p3', 'p4'])]
+    const front = (inside: number, outside: number) => Array.from({ length: 18 }, (_, i) => (i >= 1 && i <= 8 ? inside : outside))
+    play(snap, 'r1', 'p1', front(1, 0))
+    play(snap, 'r1', 'p2', front(0, 1))
+    play(snap, 'r1', 'p3', allPars())
+    play(snap, 'r1', 'p4', [1, 1, 1, 1, 1, ...Array<number>(13).fill(0)])
+
+    const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
+    expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p3', 'p4', 'p2'])
+    expect(rows[0]!.perRound[0]!.text).toBe('10&8')
+    expect(rows[1]!.perRound[0]!.text).toBe('5&4')
   })
 
   it('says so when a group is not a match instead of scoring it wrong', () => {
@@ -208,6 +233,27 @@ describe('team formats', () => {
     const state = computeTournament(snap, cfgOf(snap))
     expect(state.modules.individual!.figureLabel).toBe('Puntos')
     expect(state.modules.individual!.rows[0]!.figure.value).toBe(37)
+  })
+
+  it('breaks a tie over a nine on its own last holes, 5–9 and on, not on 10–18', () => {
+    // One 9-hole round, gross best ball. Team A birdies the 1st and bogeys the 9th, team B the other way round:
+    // both are level (E). Over holes 5–9 B is −1 and A +1, so B is first, as stroke play would rank them.
+    const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
+    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }) })
+    snap.rounds = snap.rounds.map((r) => ({ ...r, holes: 9 }))
+    snap.pairs = [
+      { id: 'A', name: 'Equipo A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
+      { id: 'B', name: 'Equipo B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+    ]
+    play(snap, 'r1', 'p1', [-1, 0, 0, 0, 0, 0, 0, 0, 1])
+    play(snap, 'r1', 'p2', Array<number>(9).fill(2))
+    play(snap, 'r1', 'p3', [1, 0, 0, 0, 0, 0, 0, 0, -1])
+    play(snap, 'r1', 'p4', Array<number>(9).fill(2))
+
+    const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
+    expect(rows.map((r) => r.figure.text)).toEqual(['E', 'E'])
+    expect(rows.map((r) => [r.entrant.name, r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
+    expect(rows[1]!.countbackWhy!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
   })
 
   it('asks for a draw instead of showing an empty board', () => {

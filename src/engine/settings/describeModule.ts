@@ -11,6 +11,7 @@
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { formatFor } from '../formats'
+import { DEFAULT_SETTINGS } from './presets'
 import type { ModuleId } from './schema'
 import type { TournamentSettings } from './schema'
 import { individualPrizeAmounts, snakePotPerGroup, type FieldShape } from './prizeCheck'
@@ -24,8 +25,10 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
     case 'individual':
       return R.individual(
         individualPrizeAmounts(settings, field).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))),
-        settings.labels.lastPlace,
+        // The platform's generic label is no trophy: only a name the organizer gave it is.
+        settings.labels.lastPlace.trim() && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace ? settings.labels.lastPlace : null,
         formatFor(settings).describe(settings).steps,
+        settings.modules.individual.format === 'matchPlay',
       )
     case 'bestRound':
       return R.bestRound(formatMoney(settings.prizes.bestRoundPerDay))

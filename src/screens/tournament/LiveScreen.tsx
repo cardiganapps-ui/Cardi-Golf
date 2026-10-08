@@ -21,6 +21,7 @@ import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
 import { QuickFinish } from './QuickFinish'
 import { useActiveRound } from './useMyGroup'
+import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
 import { ease } from '../../design/motion'
 
@@ -101,6 +102,13 @@ export function LiveScreen() {
   const honoree = snapshot.players.find((p) => p.isHonoree)
   const honoreeRow = honoree ? rows.find((r) => r.entrant.playerIds.includes(honoree.id)) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
+  // «hoy» beside the board's total: his team's day in a team event (its total is the team's), else his own points.
+  const honoreeToday = (() => {
+    if (!honoree || !honoreeRow) return null
+    if (!honoreeRow.entrant.isTeam) return roundState?.[honoree.id]?.points ?? null
+    const day = round ? honoreeRow.perRound[state.core.roundIds.indexOf(round.id)] : undefined
+    return day && !day.empty ? day.value : null
+  })()
   // Play order matters: a group off the 10th is "on the 3rd" after hole 18 and holes 1–2.
   const groupOf = (pid: string) => (round ? snapshot.groups.find((g) => g.roundId === round.id && g.playerIds.includes(pid)) : undefined)
   const leadHole = (() => {
@@ -150,6 +158,14 @@ export function LiveScreen() {
   const canToggleGross = hasHandicaps && board?.formatId === 'stableford'
   const grossView = canToggleGross && view === 'gross'
   const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
+  // The honoree's card speaks the event's figure (STRAT-03): «+5 neto», «hoy ganó 3&2», «hoyo 7: bogey neto».
+  const scoring = mainScoring(settings)
+  const spotlightFigure = (row: (typeof rows)[number], h: ReturnType<typeof lastHole>) => {
+    const day = roundIdx >= 0 ? row.perRound[roundIdx] : undefined
+    const today = !day || day.empty ? null : day.result ? t.live.matchDay(day.result, day.text) : day.text
+    const last = h ? t.feed.scoreName(h.pickedUp ? null : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par, scoring === 'net') : null
+    return t.live.spotlightFigure(row.label, t.common.figure(row.figure.text, row.figure.value, figureKind(settings)), today, h?.hole ?? null, last)
+  }
 
   // Gross view: same players, sorted by strokes to par over the holes played. Display only.
   const grossRows = grossView ? [...rows].map((r) => ({ r, d: grossToPar(state, r.playerId) })).sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity)) : null
@@ -202,7 +218,11 @@ export function LiveScreen() {
             <span className={styles.spotlightName}>
               {settings.labels.honoree}: {honoree.displayName}
             </span>
-            <span className={styles.spotlightLine}>{t.live.spotlight(honoreeRow.label, honoreeRow.total, roundState?.[honoree.id]?.points ?? null, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)}</span>
+            <span className={styles.spotlightLine}>
+              {scoring === 'points'
+                ? t.live.spotlight(honoreeRow.label, honoreeRow.total, honoreeToday, lastHole(honoree.id)?.hole ?? null, lastHole(honoree.id)?.points ?? null)
+                : spotlightFigure(honoreeRow, lastHole(honoree.id))}
+            </span>
           </span>
         </button>
       )}
@@ -239,6 +259,8 @@ export function LiveScreen() {
               let figure: string
               let tone: Tone = 'even'
               let today: string | undefined
+              let todayTone: Tone | undefined
+              let todaySpoken: string | undefined
               if (grossView) {
                 const d = grossToPar(state, p.id)
                 const tp = d == null ? null : toPar(d)
@@ -251,6 +273,13 @@ export function LiveScreen() {
                 tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
                 const day = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
                 today = day && !day.empty ? day.text : undefined
+                // A match result reads the same for both sides: its colour and spoken form say who won it.
+                if (day?.result) {
+                  // The side that lost a match that went the distance is «1 abajo», on screen as when spoken.
+                  if (day.result === 'lost') today = day.text.replace(/ arriba$/, ' abajo')
+                  todayTone = day.result === 'won' ? 'under' : day.result === 'lost' ? 'over' : 'even'
+                  todaySpoken = t.live.matchDay(day.result, day.text)
+                }
               }
               // A team's "thru" is where its slowest member is.
               const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
@@ -280,6 +309,8 @@ export function LiveScreen() {
                     owners={byTeam ? undefined : owners.get(p.id)}
                     honoree={!!honoree && members.includes(honoree.id)}
                     today={today}
+                    todayTone={todayTone}
+                    todaySpoken={todaySpoken}
                     thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
                     figure={figure}
                     tone={tone}

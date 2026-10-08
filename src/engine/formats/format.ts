@@ -52,6 +52,11 @@ export interface Figure {
   tone?: 'under' | 'over'
   /** No card yet: the board shows a dash instead of a zero. */
   empty?: boolean
+  /**
+   * A decided match, from this side: «8&6» reads the same for both sides, so
+   * the board needs to know who won it (STRAT-03).
+   */
+  result?: 'won' | 'lost' | 'halved'
 }
 
 export interface FormatContext {
