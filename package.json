@@ -21,7 +21,9 @@
     "rehearse:auction": "node scripts/rehearse-auction.mjs",
     "shots": "node scripts/design-shots.mjs",
     "build:fixtures": "VITE_DESIGN_ROUTES=1 vite build --outDir dist-fixtures",
-    "e2e:fixtures": "playwright test"
+    "e2e:fixtures": "playwright test",
+    "build:stack": "vite build --outDir dist-stack",
+    "e2e:stack": "playwright test -c playwright.stack.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

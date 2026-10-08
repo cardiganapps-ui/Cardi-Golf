@@ -1,0 +1,85 @@
+# The local Supabase stack: what the e2e-stack job runs (.github/workflows/e2e-stack.yml),
+# and what anyone with Docker can run to play the stack suite on their machine:
+#   supabase start -x studio,postgres-meta,imgproxy,storage-api,edge-runtime,logflare,vector,mailpit,supavisor
+#   (then the steps at the top of playwright.stack.config.ts)
+# Local only: this project is never linked or pushed to the hosted one. The
+# hosted project's auth settings live in scripts/auth-config.mjs, not here.
+# Reference: https://supabase.com/docs/guides/local-development/cli/config
+project_id = "cardi-golf"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+health_timeout = "2m"
+# New hosted projects run Postgres 17. If the project ever reports another
+# major version (`show server_version`), change it here to match.
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+# supabase/migrations/*.sql, in order, on a fresh database at every start.
+enabled = true
+
+[db.seed]
+# The stack suite seeds its own throwaway tournaments before every run
+# (e2e/stack/seed.sql, from e2e/stack/global-setup.ts).
+enabled = false
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = false
+
+[local_smtp]
+enabled = false
+
+[storage]
+# On so the fresh database gets the storage schema, which the migrations
+# write policies for (0003, 0012, 0013). The job still leaves the storage
+# server itself off (-x storage-api): the suite uploads nothing.
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:4330"
+additional_redirect_urls = ["http://127.0.0.1:4330", "http://localhost:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+# Players join a tournament with an anonymous session and a PIN (CLAUDE.md §7).
+enable_anonymous_sign_ins = true
+enable_manual_linking = true
+minimum_password_length = 8
+
+[auth.rate_limit]
+# Every browser context of a run is a new anonymous user, all from 127.0.0.1.
+anonymous_users = 1000
+token_refresh = 1000
+sign_in_sign_ups = 300
+token_verifications = 300
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Autoconfirm, so a test organizer signs in without a mailbox. (The hosted
+# project confirms every account with a 6-digit code.)
+enable_confirmations = false
+otp_length = 6
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
