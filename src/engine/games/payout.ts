@@ -89,6 +89,24 @@ export function payUnits(ctx: GameContext, units: Map<Id, number>, unitName: [st
 }
 
 /**
+ * A side pot nobody won goes back to who paid it (MONEY-10): once the game is
+ * over, each entrant gets the buy-in back. Kept with the bank it was money
+ * nobody could claim. A pot funded from the inscriptions stays unassigned
+ * instead, with a warning (`unwonWarning`): the Comité decides.
+ */
+export function refundUnwon(ctx: GameContext, what: string): PrizeAward[] {
+  if (!ctx.final || ctx.config.money.source !== 'side' || ctx.pot <= 0) return []
+  const buyIn = ctx.config.money.buyIn
+  return ctx.entrants.map((id) => award(ctx, id, buyIn, { title: fmt(buyIn), steps: [`Nadie ganó ${what}: se devuelve a cada quien su entrada, ${fmt(buyIn)}`] }, `${ctx.config.label}, entrada devuelta`))
+}
+
+/** The warning for a pot from the inscriptions that nobody won, once the game is over. */
+export function unwonWarning(ctx: GameContext, what: string): string[] {
+  if (!ctx.final || ctx.config.money.source !== 'main' || ctx.pot <= 0) return []
+  return [`${ctx.config.label}: nadie ganó ${what}; ${fmt(ctx.pot)} quedan sin asignar. El Comité decide.`]
+}
+
+/**
  * Direct bets per unit: every other entrant pays `stake` to the winner of a
  * unit (`reward`), or the player pays every other entrant (`penalty`).
  * Returns one award per (payer, winner) pair, already netted.

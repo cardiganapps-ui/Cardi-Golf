@@ -171,9 +171,14 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const auctionWarnings: string[] = []
   if (modules.auction) {
     const unfilled = modules.auction.slots.filter((s) => s.unfilled)
-    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: $${modules.auction.unfilled} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: ${peso(modules.auction.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
     const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
-    if (tournamentFinal && unsold.length && modules.auction.soldCount > 0) auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender.`)
+    const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
+    if (playing && unsold.length && modules.auction.soldCount > 0) {
+      const names = t.common.andList(unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))
+      auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender (${names}): no cobra${unsold.length === 1 ? '' : 'n'} la Calcutta.`)
+    }
   }
 
   // The money plan against the real tournament (MONEY-06): settings are
@@ -188,6 +193,11 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
         ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité, sección Torneo.`
         : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
     )
+  }
+  // A place the field can no longer fill (MONEY-09). Once final, each game
+  // says which places went unfilled, those included, so this one stops.
+  if (pastSetup && !tournamentFinal) {
+    for (const u of pool.unreachable) poolWarnings.push(`${u.label}: ${u.detail}, ${peso(u.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`)
   }
 
   // The bracket is only meaningful under match play, and costs nothing to
@@ -211,7 +221,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       discrepancies,
       missingModules,
       missingGames,
-      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...auctionWarnings, ...gameWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
     },

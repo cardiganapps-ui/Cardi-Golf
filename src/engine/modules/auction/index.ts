@@ -3,7 +3,9 @@
  * final individual ranking. Each player cashes at most one slot (the highest),
  * tier slots pass down, ties at a slot split the combined slots, each slot's
  * money goes to the player's owners by ownership percentage, whole pesos,
- * rounding remainder to the champion's owners.
+ * rounding remainder to the champion's owners. A player whose lot was never
+ * sold is not in the Calcutta: the slots go to the next finishers whose lots
+ * were (MONEY-11).
  */
 import { ordinal, t } from '../../../i18n/es-MX'
 import type { AuctionPayoutSlot } from '../../settings/schema'
@@ -48,7 +50,7 @@ export interface SlotResult {
    * among each team's players. Absent: even between `playerIds`.
    */
   weights?: Record<Id, number>
-  /** Nobody qualifies (no player of that tier, or every candidate already cashed a higher slot): the money stays with the banker until the Comité decides. */
+  /** Nobody qualifies (no player of that tier, or every candidate already cashed a higher slot): the money stays with the banker until the Comité decides, in whole pesos (MONEY-08). */
   unfilled: boolean
   why: Explanation
 }
@@ -157,7 +159,7 @@ export function assignSlots(
    * default one per member. `entrants`: each entrant's players, so a tie
    * between teams splits per team.
    */
-  groups: Array<{ position: number; members: Id[]; places?: number; entrants?: Id[][] }>,
+  groups: Array<{ position: number; members: Id[]; places?: number; entrants?: Id[][]; finish?: number }>,
 ): SlotResult[] {
   const { settings, snapshot } = ctx
   const tierOf = new Map(snapshot.players.map((p) => [p.id, p.tier]))
@@ -192,11 +194,11 @@ export function assignSlots(
       const steps =
         places === 1
           ? [
-              `${t.common.andList(members.map(nameOf))} ${members.length === 1 ? 'termina' : 'terminan'} ${ordinal(String(g!.position))}: ${pct(share)} del pozo`,
+              `${t.common.andList(members.map(nameOf))} ${members.length === 1 ? 'termina' : 'terminan'} ${finishText(g!)}: ${pct(share)} del pozo`,
               ...(members.length > 1 ? [`Un equipo: ${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`] : []),
             ]
           : [
-              `Empate a ${places} en el ${ordinal(String(g!.position))}: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
+              `Empate a ${places} en el ${finishText(g!)}: ${covered.map((c) => pct(c.share)).join(' + ')} = ${pct(share)}`,
               uneven
                 ? `${pct(share)} ÷ ${teams.length} equipos = ${pct(share / teams.length)} por equipo, repartido entre sus jugadores`
                 : `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
@@ -214,7 +216,7 @@ export function assignSlots(
         continue
       }
       const members = g.members.filter((m) => tierOf.get(m) === slot.tier && !cashed.has(m))
-      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${t.common.andList(members.map(nameOf))} (${ordinal(String(g.position))})`]
+      const steps = [`Mejor de la categoría ${slot.tier} que no cobra otro lugar: ${t.common.andList(members.map(nameOf))} (${ordinal(String(g.finish ?? g.position))})`]
       if (members.length > 1) steps.push(`Empate: se reparte entre ${members.length}`)
       results.push({ slot, label, share: slot.share, playerIds: members, amount: money(pot * slot.share), unfilled: false, why: { title: label, steps } })
       for (const m of members) cashed.add(m)
@@ -237,14 +239,39 @@ export function assignSlots(
   return results
 }
 
+/** Where a group finished: its place on the leaderboard, and among the lots sold when a player ahead of it is not in the Calcutta. */
+function finishText(g: { position: number; finish?: number }): string {
+  const at = ordinal(String(g.finish ?? g.position))
+  return g.finish != null && g.finish !== g.position ? `${at}, ${ordinal(String(g.position))} entre los lotes vendidos` : at
+}
+
+/**
+ * The ranking as the Calcutta sees it (MONEY-11): only players whose lot was
+ * sold. A player whose lot never was put no money in, so he cashes nothing,
+ * and whoever finished behind him moves up. `finish` keeps the leaderboard's
+ * place for the explanation.
+ */
+export function inCalcutta(groups: Array<{ position: number; members: Id[]; entrants?: Id[][] }>, sold: ReadonlySet<Id>) {
+  const out: Array<{ position: number; members: Id[]; places: number; entrants: Id[][]; finish: number }> = []
+  let position = 1
+  for (const g of groups) {
+    const entrants = (g.entrants ?? g.members.map((m) => [m])).map((e) => e.filter((m) => sold.has(m))).filter((e) => e.length)
+    if (!entrants.length) continue
+    out.push({ position, members: entrants.flat(), places: entrants.length, entrants, finish: g.position })
+    position += entrants.length
+  }
+  return out
+}
+
 /** Percentages in explanations: whole numbers when they are, else one decimal. */
 function pct(share: number): string {
   const v = share * 100
   return `${Number.isInteger(Math.round(v * 10) / 10) ? Math.round(v) : (Math.round(v * 10) / 10).toFixed(1)}%`
 }
 
+/** Whole pesos (MONEY-08): the centavos of an unfilled slot go with the rounding, so payouts and what stays in the bank add up to the pot. */
 function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: string): SlotResult {
-  return { slot, label, share, playerIds: [], amount: money(pot * share), unfilled: true, why: { title: label, steps: [reason, 'Se queda en el banco hasta que el Comité decida'] } }
+  return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: label, steps: [reason, 'Se queda en el banco hasta que el Comité decida'] } }
 }
 
 /** Distribute slot money to owners in whole pesos; remainder to the champion's owners. */
@@ -291,7 +318,7 @@ export const auctionModule: GameModule<AuctionState> = {
     const pot = sold.reduce((s, l) => s + l.price, 0)
     const holdings = ownerHoldings(lots, ctx)
     const anyScores = Object.values(ctx.core.totals).some((t) => t.thru > 0)
-    const groups = anyScores || ctx.tournamentFinal ? rankIndividual(ctx) : []
+    const groups = anyScores || ctx.tournamentFinal ? inCalcutta(rankIndividual(ctx), new Set(sold.map((l) => l.playerId))) : []
     const slots = pot > 0 && groups.length ? assignSlots(ctx, pot, groups) : []
     const payouts = payoutsToOwners(lots, slots, pot)
     const paidOut = Object.values(payouts).reduce((s, p) => s + p.amount, 0)

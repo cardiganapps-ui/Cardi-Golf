@@ -46,10 +46,11 @@ Everything the project is waiting on a human for lives in `docs/handoff.md`. Tha
 - `.claude/settings.json` has a `PreToolUse` hook (`scripts/prepush-guard.sh`) that runs preflight before every `git push` and **blocks the push** if it fails.
 - CI (`.github/workflows/ci.yml`, job `check`) runs the same script.
 - A second workflow (`.github/workflows/e2e.yml`, job `e2e-fixtures`, 2026-10-01) runs the fixture browser suite (`npm run e2e:fixtures`, `e2e/fixtures/`): the real screens on the `/t/_/<fixture>` routes in Chromium with no network. Every main screen at 375 and 393 px (TV and Ceremonia at room sizes) must have no uncaught error, no horizontal scroll and no serious or critical axe violation, and the flows the 2026-09-30 review found broken are replayed at human speed. It runs on ready (non-draft) PRs that touch the app, and on main; a red `e2e-fixtures` blocks a merge like a red `check`.
-- A third workflow (`.github/workflows/db.yml`, job `db`, 2026-10-03) proves every migration before it reaches production (`scripts/db-test.sh`, harness in `supabase/tests/harness/`). On Postgres 16 with Supabase's stubs it replays the whole chain from zero twice, by a plain psql loop and by `scripts/db.mjs migrate`, exactly as production gets it. It checks that `db.mjs` refuses a migration edited or removed after it ran and one run again by hand (`file`), since `_migrations` keeps each file's sha256. It runs every `supabase/tests/*.sql` on the two-tenant seed, and holds Supabase's advisors at `lint-baseline.json`. It runs on ready PRs that touch the database or its scripts, on main and nightly; a red `db` blocks a merge. `node scripts/db.mjs check` says what `migrate` would apply, without changing anything.
+- A third workflow (`.github/workflows/db.yml`, job `db`, 2026-10-03) proves every migration before it reaches production (`scripts/db-test.sh`, harness in `supabase/tests/harness/`). On Postgres 16 with Supabase's stubs it replays the whole chain from zero twice, by a plain psql loop and by `scripts/db.mjs migrate`, exactly as production gets it. It checks that `db.mjs` refuses a migration edited or removed after it ran and one run again by hand (`file`), since `_migrations` keeps each file's sha256. It runs every `supabase/tests/*.sql` on the two-tenant seed, sends every request in `src/data/testing/cases/serverRules.json` to the migrations (`scripts/server-rules.mjs`), and holds Supabase's advisors at `lint-baseline.json`. The same cases run in Vitest against the in-memory server the outbox's tests use (`src/data/testing/serverRules.test.ts`), so that server's rules are the database's: when a migration changes a rule the phone meets, change the case, then the fake (QA-06, 2026-10-03). It runs on ready PRs that touch the database or its scripts, on main and nightly; a red `db` blocks a merge. `node scripts/db.mjs check` says what `migrate` would apply, without changing anything.
 - The hook also refuses any push to `main` and runs the preflight in the tree being pushed (`cd <dir> && git push`, `git -C <dir> push`), so a worktree's push is checked against itself (QA-10, 2026-10-01). A second PreToolUse hook (`scripts/mcp-main-guard.py`) refuses the GitHub MCP write tools (`push_files`, `create_or_update_file`, `delete_file`) on `main`. A SessionStart hook sets `core.hooksPath .githooks`, whose `pre-push` refuses `main` and runs the preflight for any git client. A worktree that symlinks `node_modules` is safe: `.gitignore` ignores `node_modules` as a file too.
 - Don't weaken or bypass either one. If the hook blocks you, fix the code.
 - Never judge a check by output piped through `tail` or `grep`, because a pipe swallows the exit code.
+- `npm test` measures `src/data/outbox.ts`'s coverage and fails below the thresholds in `vite.config.ts` (QA-06): raise them when a test covers more, never lower them to pass.
 - When M0 adds `package.json`, define exactly those four scripts, plus `"preflight": "bash scripts/preflight.sh"`.
 
 ### 0.4 Shipping loop: branch → PR → watch → green → merge
@@ -250,6 +251,8 @@ The printed rules sheet the group received says the same thing. If you find a co
 
 The engine asserts this sum when it loads settings, and the admin shows an error if the settings don't balance.
 
+Balanced is not enough (MONEY-09, 2026-10-07): every place with a prize needs someone who can take it. Individual places can't outnumber the format's entrants (players, or teams under a team format or fourball: drawn ones, else half the field). Pair places can't outnumber the pairs, and a low score's places can't outnumber its entrants. Otherwise the wizard and the Comité refuse to create or save (`checkPrizePool().ok`). Once play starts, a place the field can no longer fill is a warning. An entrant with no result (never played, or a fourball side with no match) takes no paid place. Once final, each game names the places nobody filled and their pesos, which stay with the bank until the Comité decides.
+
 ### 5.9 La Calcutta (separate pot)
 - **When:** the dinner the night before Day 1.
 - **Lots:** every player is auctioned once, in an order drawn from a hat.
@@ -274,7 +277,8 @@ The engine asserts this sum when it loads settings, and the admin shows an error
   - Placings come from the final individual Stableford ranking, including countback.
   - Ties at a slot boundary: the tied players split the combined slots evenly.
   - Each slot's money is split among the player's owners by ownership percentage.
-  - Round to whole pesos, and give any rounding remainder to the champion's owners so the payout totals the pot exactly.
+  - Round to whole pesos, and give any rounding remainder to the champion's owners so the payout totals the pot exactly. A slot nobody can fill stays unassigned in whole pesos (floor), so payouts plus unassigned equal the pot to the peso (MONEY-08).
+  - A lot never auctioned (still pending or open once the tournament is live) cashes nothing: the slots' places count among the sold lots, and the Comité sees a warning naming the player (MONEY-11, 2026-10-07; the other reading, self-owned at the opening bid, is Diego's call in the handoff).
 - **Payment deadline:** everything is paid before bed on Calcutta night ("se paga antes de dormir").
 
 ### 5.10 Governance
@@ -427,6 +431,7 @@ The settlement nets to zero across all people (banker included)
 - `hole_awards`: `round_id`, `group_id`, `hole`, `game_id`, `player_id`, `decided_by`. Hole-contest winners.
 - `game_results`: `tournament_id`, `game_id`, `player_id`, `share`. The Comité's result for a custom bet.
 - `payments.kind` also takes `side` (buy-in to a side pot, player → bank) and `bet` (direct bet, player → player).
+- A pot nobody wins (skins, birdie or eagle pot, hole contest; MONEY-10): once the game is final, a side pot goes back to its entrants, the buy-in each («<juego>, entrada devuelta»; a contest waits while a hole is in dispute), and a pot from the inscriptions stays unassigned with a warning that names the amount. `refundUnwon` / `unwonWarning` in `src/engine/games/payout.ts`.
 - `restore_tournament` brings the three back (0011 added them, 0020 lost them, 0025 restores them again; DB-02). `src/data/backup.restore.test.ts` fails when the function's latest definition misses a table `backup.ts` exports, and `supabase/tests/restore_roundtrip.sql` changes every table after a backup and compares each one after the restore (local Postgres harness). 0025 also audits the team draw tables and adds them to the Realtime publication; the client does not listen to them yet: adding `teams` and `team_members` to `src/data/realtimeTables.ts` is a separate change that ships only after 0025 is applied in production (REL-01), so until then a team draw reaches other phones at their next reload.
 
 **Profiles and identity** (2026-09-28, migration 0013)

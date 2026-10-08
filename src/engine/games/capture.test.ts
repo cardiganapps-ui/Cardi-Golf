@@ -75,6 +75,53 @@ describe('hole contests', () => {
   })
 })
 
+describe('a contest nobody won (MONEY-10)', () => {
+  const over = (snap: Snapshot) => {
+    snap.rounds.forEach((r) => (r.status = 'finished'))
+    snap.tournament.status = 'finished'
+  }
+
+  it('a side pot goes back to who paid it once the round is over: $100 to each of the four', () => {
+    const snap = setup([ctp(money({ source: 'side', buyIn: 100 }))])
+    // While the round is on, a par 3 can still be won.
+    expect(run(snap).prizes).toEqual([])
+    over(snap)
+    const st = run(snap)
+    expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']))
+    expect(st.prizes[0]!.why.steps).toEqual(['Nadie ganó un hoyo: se devuelve a cada quien su entrada, $100'])
+    expect(st.money.banker.balanced).toBe(true)
+    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual([])
+  })
+
+  it('not while a hole is in dispute: the Comité decides it first', () => {
+    const snap = setup([ctp(money({ source: 'side', buyIn: 100 }))])
+    snap.holeAwards = [award(3, 'p1', 'g1'), award(3, 'p3', 'g2')]
+    over(snap)
+    const st = run(snap)
+    expect(st.prizes).toEqual([])
+    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual(['Más cerca: un hoyo en disputa (3). El Comité decide.'])
+  })
+
+  it('a pot from the inscriptions stays unassigned, and the Comité is told how much', () => {
+    const g: GameConfig = { ...ctp(money({ source: 'main', amount: 400 })), label: 'Drive' }
+    const snap = setup([g])
+    expect(run(snap).flags.warnings.filter((w) => w.startsWith('Drive'))).toEqual([])
+    over(snap)
+    const st = run(snap)
+    expect(st.prizes).toEqual([])
+    expect(st.flags.warnings.filter((w) => w.startsWith('Drive'))).toEqual(['Drive: nadie ganó un hoyo; $400 quedan sin asignar. El Comité decide.'])
+  })
+
+  it('direct bets nobody won move no money and need nothing', () => {
+    const snap = setup([ctp(money({ source: 'direct', stake: 20 }))])
+    over(snap)
+    const st = run(snap)
+    expect(st.prizes).toEqual([])
+    expect(st.money.flows.filter((f) => f.kind === 'bet')).toEqual([])
+    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual([])
+  })
+})
+
 describe('apuesta libre', () => {
   const custom = (m: GameMoney): GameConfig => ({ id: 'tacos', type: 'custom', label: 'El que coma más tacos', enabled: true, rounds: 'all', entrants: 'all', options: { description: 'En la cena del sábado' }, money: m })
 

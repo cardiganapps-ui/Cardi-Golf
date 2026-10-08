@@ -5,7 +5,7 @@
  * generates the next round's groups from the standings.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
-import { flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
+import { flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 
@@ -30,6 +30,8 @@ export interface PairsState {
   unpaired: Id[]
   /** Groups that are not one pair of each kind (§18.5: keep the order, warn). */
   groupWarnings: Array<{ roundId: Id; groupId: Id; message: string }>
+  /** Once final, the places with a prize no pair with a result filled (MONEY-09). */
+  warnings: string[]
   final: boolean
 }
 
@@ -123,7 +125,12 @@ export const pairsModule: GameModule<PairsState> = {
     })
     const prizes: PairsState['prizes'] = {}
     const anyScores = Object.values(core.totals).some((t) => t.thru > 0)
-    for (const s of anyScores || ctx.tournamentFinal ? splitPrizes(groups, settings.prizes.pairs, nameOfPair) : []) {
+    // A pair neither of whom played a hole takes no paid place (MONEY-09).
+    const paid = onlyWithResult(groups, (id) => {
+      const p = byId.get(id)!
+      return (core.totals[p.player1Id]?.thru ?? 0) + (core.totals[p.player2Id]?.thru ?? 0) > 0
+    })
+    for (const s of anyScores || ctx.tournamentFinal ? splitPrizes(paid, settings.prizes.pairs, nameOfPair) : []) {
       const p = byId.get(s.item)!
       const each = Math.floor(s.amount / 2)
       const odd = s.amount - each * 2
@@ -140,7 +147,8 @@ export const pairsModule: GameModule<PairsState> = {
         if (!c.ok) groupWarnings.push({ roundId: g.roundId, groupId: g.id, message: c.message })
       }
     }
-    return { rows, groups, prizes, unpaired, groupWarnings, final: ctx.tournamentFinal }
+    const warnings = ctx.tournamentFinal ? unfilledWarning(settings.modules.pairs.label, unfilledPlaces(paid, settings.prizes.pairs), paid.reduce((n, g) => n + g.members.length, 0), ['pareja', 'parejas']) : []
+    return { rows, groups, prizes, unpaired, groupWarnings, warnings, final: ctx.tournamentFinal }
   },
   prizes(state, ctx) {
     const label = ctx.settings.modules.pairs.label

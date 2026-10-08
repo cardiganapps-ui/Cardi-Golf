@@ -10,7 +10,7 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
-import { directUnits, fmt, payUnits } from '../payout'
+import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { holeOf, holeScore, moneyByPlayer, namer, plural, rankLabel, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'skins'>
@@ -77,7 +77,8 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
     const units = new Map(Object.entries(state.units))
     const name = namer(ctx)
     if (ctx.config.money.source === 'direct') return directUnits(ctx, units, 'reward', ['skin', 'skins'], name)
-    return payUnits(ctx, units, ['skin', 'skins'], name)
+    const paid = payUnits(ctx, units, ['skin', 'skins'], name)
+    return paid.length ? paid : refundUnwon(ctx, 'un skin')
   },
   board(state, ctx) {
     const money = moneyByPlayer(skinsGame.prizes(state, ctx))
@@ -106,8 +107,7 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
     return { sections: [{ rows: standings }, { title: 'Hoyo por hoyo', rows: log }], notes }
   },
   warnings(state, ctx) {
-    if (!ctx.final || !state.unclaimed || ctx.config.money.source === 'direct' || ctx.pot <= 0) return []
-    return Object.values(state.units).some((u) => u > 0) ? [] : [`${ctx.config.label}: nadie ganó un skin; el bote de ${fmt(ctx.pot)} queda sin asignar. El Comité decide.`]
+    return Object.values(state.units).some((u) => u > 0) ? [] : unwonWarning(ctx, 'un skin')
   },
 }
 
