@@ -719,7 +719,8 @@
       "pr": 104,
       "tests": [
         "src/screens/tournament/UnassignedMoney.test.tsx",
-        "src/engine/core/unassigned.test.ts"
+        "src/engine/core/unassigned.test.ts",
+        "src/engine/close.test.ts"
       ],
       "verifiedBy": null,
       "residual": null
@@ -1247,15 +1248,18 @@
       "pr": 104,
       "tests": [
         "src/engine/core/unassigned.test.ts",
+        "src/engine/core/unassigned.verify.test.ts",
         "src/engine/close.test.ts",
         "src/screens/tournament/UnassignedMoney.test.tsx",
+        "src/screens/tournament/CeremonyScreen.snake.test.tsx",
         "src/screens/admin/CloseGate.test.tsx",
+        "src/data/realtimeTables.test.ts",
         "supabase/tests/money_adjustments.sql",
         "supabase/tests/restore_roundtrip.sql",
         "src/data/testing/cases/serverRules.json"
       ],
       "verifiedBy": null,
-      "residual": "Migration 0027 must be applied before the client deploys (the channel names the table). The «Cerrar torneo» gate is client-side; the server does not yet refuse Terminado or a publish. Amounts are checked by the engine, not the server: a concurrent over-assignment is flagged and never paid, and must be voided."
+      "residual": "The «Cerrar torneo» gate is client-side: old bundles, a direct tournaments update, the publish RPC and a restore of a finished backup bypass it. Amounts are checked by the engine, not the server: two Comité phones deciding the same line at the same moment both land, the later one is flagged «de más», never paid, and must be voided (the sheet re-reads its line before sending, so only a true race gets there). money_adjustments is off the live channel until 0027 is on production: other phones see a decision on their next fetch (at most five minutes). Once play is over the engine treats the tournament as final, so with every day rained out and nobody's score the Calcutta pays its slots to all sold lots tied (as Terminado always did); whether it should pay at all then is open. Open rejected_writes only warn until the REL-08 inbox exists."
     },
     {
       "id": "MONEY-06",
@@ -4424,6 +4428,23 @@
       ],
       "verifiedBy": null,
       "residual": "The boards half was closed by #92 (loadQueue ends with refresh(); NEW-02's test in outbox.offline.test.ts), and an untouched player's draft takes the queued value (REL-05). This PR, after its verifier: the outbox says when its queue has been read (`queueRead`, after the boards are recomputed, even if the read failed); until then «Guardar» is disabled, so no tap can write defaults over a queued hole and no sheet opens on one. A card opened before the read moves once, when it lands, to the first open hole, unless the player chose a hole, touched a player or has a sheet open; a card opened after it never moves on its own, so another phone's save lands on the hole on screen. A kept draft (PWA-05) read before the queue is held, not deleted. Left (P3): a player touched before the read keeps what was on screen, and «Guardar» writes that over his queued value."
+    },
+    {
+      "id": "NEW-12",
+      "severity": "P1",
+      "area": "Security and privacy",
+      "workstream": "W11",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "restore_tournament wrote into another tournament: players and rounds were upserted by id with no check of whose they were, so an organizer of A who knew B's ids could restore a backup of A that renamed B's players, changed their handicaps, cancelled B's round and put scores and groups in it",
+      "foundBy": "PR #104's round-1 verifier (restore probe 70/71 on the harness; pre-existing since 0010, carried by 0027's redefinition)",
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "supabase/tests/restore_roundtrip.sql"
+      ],
+      "verifiedBy": null,
+      "residual": "Checked by id before anything is written: players, rounds, pairs, teams, lots, payments and assignments by their tournament, groups and scores by their round's, bids by their lot's. Courses and tees stay shared across tournaments by design."
     }
   ]
 }
