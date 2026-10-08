@@ -8,9 +8,10 @@
 #      ran is refused; a ledger without checksums (production before DB-17)
 #      gets them, and nothing is applied twice.
 #   3. The harness self-test and every supabase/tests/*.sql, each on its own
-#      copy of the migrated database with the two-tenant seed; and the test
+#      copy of the migrated database with the two-tenant seed; the test
 #      server's rules against the real ones (scripts/server-rules.mjs: every
-#      request in src/data/testing/cases/serverRules.json, QA-06).
+#      request in src/data/testing/cases/serverRules.json, QA-06); then every
+#      supabase/tests/race_*.sh, which runs two sessions at once.
 #   4. Supabase's advisors (splinter): no finding over the baseline in
 #      supabase/tests/harness/lint-baseline.json (DB-16 holds the line).
 # Needs a superuser connection through the PG* variables, and the stub
@@ -92,6 +93,16 @@ done
 # The case file brings its own world: a copy with no seed.
 fresh "${P}_t" "$P"
 PGDATABASE="${P}_t" node "$root/scripts/server-rules.mjs" || exit 1
+
+step "3b. Races: two sessions at once, on the migrated database (supabase/tests/race_*.sh)"
+for t in "$root"/supabase/tests/race_*.sh; do
+  if ! bash "$t" "${P}_race" "$P" "$root" >"$work/out" 2>&1; then
+    tail -30 "$work/out"
+    echo "  ✗ $(basename "$t")"
+    exit 1
+  fi
+  echo "  ✓ $(basename "$t")"
+done
 
 step "4. Supabase's advisors (splinter), held at the baseline"
 "${PSQL[@]}" -d "$P" -At -F ',' -c 'begin' -f "$H/splinter.sql" -c "select name, level, count(*) from _lint group by 1, 2 order by 1, 2" -c 'rollback' >"$work/lints.csv"

@@ -59,7 +59,7 @@ Sigue capturando: la app guarda en el teléfono; arriba dice "Sin señal" y abaj
 ## 5. Si la app se cae
 
 1. Usa las **tarjetas de papel** (sección 0). Golpes arriba, putts abajo, marca los 3 putts para la víbora.
-2. Al terminar, el admin captura todo desde Comité › **Tarjetas** (jugador por jugador) o desde Tarjeta eligiendo el grupo.
+2. Al terminar, el admin captura todo desde Comité › **Tarjetas** (jugador por jugador) o desde Tarjeta eligiendo el grupo. Con la ronda ya terminada o la tarjeta firmada, cada hoyo va directo al servidor como corrección del Comité: hazlo con señal (si la tarjeta está firmada, te pide la razón).
 3. Si Supabase está pausado: dashboard de Supabase → proyecto Cardi-Golf → "Restore". Tarda 1–2 minutos.
 4. Si Vercel está caído: el último respaldo JSON (sección 8) tiene todo; la liquidación se puede hacer a mano con el CSV de resultados.
 

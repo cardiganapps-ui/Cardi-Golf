@@ -137,12 +137,15 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
       expect(server.score('p2', 6)).toMatchObject({ strokes: 4 })
     })
 
-    it('a foreign key: a hole entered by a player the Comité has since taken out of the tournament (23503)', async () => {
-      // p4 entered p2's hole on this phone before handing it over; then the Comité removed him.
-      server.tables.players = server.tables.players!.filter((p) => p.id !== 'p4')
-      server.tables.group_members = server.tables.group_members!.filter((m) => m.player_id !== 'p4')
+    it('a foreign key (23503)', async () => {
+      // Since 0026 the server names a hole's writer itself, so no body a phone sends reaches a foreign key: the
+      // answer is the one PostgREST gives for one, and the outbox must still read it as a refusal (X04).
+      server.decide = (req) =>
+        isWrite(req) && (req.body as { hole: number }).hole === 7
+          ? { status: 409, body: { code: '23503', details: null, hint: null, message: 'insert or update on table "scores" violates foreign key constraint "scores_entered_by_fkey"' } }
+          : 'answer'
       await savedThenSent(
-        () => enqueueScore('t1', { ...holeScore('p2', 7, 5), entered_by: 'p4' }),
+        () => enqueueScore('t1', holeScore('p2', 7, 5)),
         () => enqueueScore('t1', holeScore('p2', 6, 4)),
       )
       expect(rejected()).toEqual(['score:r1:p2:7'])

@@ -553,7 +553,7 @@
       }
     },
     {
-      "name": "scores: an organizer writes any hole, even of a finished round (no reason asked: REL-09)",
+      "name": "scores: the Comité's direct write to a finished round is refused; its correction goes through admin_save_score with a reason (0026, REL-09)",
       "as": "uid-org",
       "request": {
         "method": "POST",
@@ -572,23 +572,9 @@
         }
       },
       "expect": {
-        "status": 201
-      },
-      "then": [
-        {
-          "table": "scores",
-          "where": {
-            "round_id": "r2",
-            "player_id": "p3",
-            "hole": 4
-          },
-          "rows": [
-            {
-              "strokes": 6
-            }
-          ]
-        }
-      ]
+        "status": 403,
+        "code": "42501"
+      }
     },
     {
       "name": "scores: a player the Comité made admin writes like an organizer",
@@ -952,8 +938,39 @@
       }
     },
     {
-      "name": "scores: a group-mate's hole deleted by a phone of the group goes",
+      "name": "scores: a group-mate's hole deleted by a phone of the group stays: deleting a hole is the Comité's (0026)",
       "as": "uid-p1",
+      "request": {
+        "method": "DELETE",
+        "table": "scores",
+        "eq": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "hole": 1
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "scores: the Comité deletes a hole, and it goes",
+      "as": "uid-org",
       "request": {
         "method": "DELETE",
         "table": "scores",
@@ -1268,7 +1285,7 @@
       }
     },
     {
-      "name": "snake: a finished round still takes the group's answer (the rule asks no live round)",
+      "name": "snake: a finished round takes no phone's answer (0026); the Comité's still",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -1284,7 +1301,8 @@
         }
       },
       "expect": {
-        "status": 201
+        "status": 403,
+        "code": "42501"
       }
     },
     {
@@ -1471,7 +1489,7 @@
       ]
     },
     {
-      "name": "awards: a finished round still takes the group's winner (the rule asks no live round)",
+      "name": "awards: a finished round takes no phone's winner (0026); the Comité's still",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -1488,7 +1506,8 @@
         ]
       },
       "expect": {
-        "status": 201
+        "status": 403,
+        "code": "42501"
       }
     },
     {
@@ -1799,7 +1818,7 @@
       }
     },
     {
-      "name": "signatures: signing a card leaves its discrepancies flagged (NEW-01: the settle trigger runs through the dispute trigger, which keeps the old flags)",
+      "name": "signatures: signing a card settles its discrepancies (0026, NEW-01)",
       "as": "uid-p1",
       "before": [
         {
@@ -1844,7 +1863,7 @@
           "rows": [
             {
               "strokes": 6,
-              "disputed": true
+              "disputed": false
             }
           ]
         }
@@ -2159,7 +2178,7 @@
       }
     },
     {
-      "name": "X04 FK: a phone writes a group-mate hole with entered_by of a deleted player",
+      "name": "X04 a phone's hole claiming a deleted player as its writer: taken, as the session's own player (0026, SEC-02)",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -2178,9 +2197,24 @@
         }
       },
       "expect": {
-        "status": 409,
-        "code": "23503"
-      }
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 8
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "X04b FK: the Comité answers the snake naming a deleted player",
@@ -3167,7 +3201,7 @@
       ]
     },
     {
-      "name": "X27 a phone signs a card while a hole of its own pair is disputed: its own scores",
+      "name": "X27 a phone signs a card while a hole of its pair is disputed: the signature settles it (0026, NEW-01)",
       "as": "uid-p1",
       "before": [
         {
@@ -3212,7 +3246,7 @@
           "rows": [
             {
               "strokes": 6,
-              "disputed": true,
+              "disputed": false,
               "entered_by": "p1"
             }
           ]
@@ -3996,7 +4030,7 @@
       }
     },
     {
-      "name": "scores: the foreign keys hold on the update path too: entered_by of a deleted player over an existing hole (23503)",
+      "name": "scores: a correction claiming a deleted player as its writer is recorded as the session's player (0026, SEC-02)",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -4015,9 +4049,24 @@
         }
       },
       "expect": {
-        "status": 409,
-        "code": "23503"
-      }
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "snake_tiebreaks: the Comité answers with decided_by a deleted player (23503)",
@@ -4818,7 +4867,7 @@
           "putts": 2,
           "picked_up": false,
           "entered_by": "p1",
-          "client_ts": "2027-04-09T12:00:00Z\u00a0"
+          "client_ts": "2027-04-09T12:00:00Z "
         }
       },
       "then": [
@@ -4848,7 +4897,7 @@
         "body": {
           "round_id": "r1",
           "player_id": "p1",
-          "hole": "7\u00a0",
+          "hole": "7 ",
           "strokes": 5,
           "putts": 2,
           "picked_up": false,
@@ -4889,7 +4938,7 @@
           "hole": 7,
           "strokes": 5,
           "putts": 2,
-          "picked_up": "true\u00a0",
+          "picked_up": "true ",
           "entered_by": "p1",
           "client_ts": "2027-04-09T12:00:00.000Z"
         }
