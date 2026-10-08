@@ -1868,11 +1868,17 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 92,
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts",
+        "src/data/tournamentStore.land.test.ts",
+        "src/data/tournamentStore.heal.test.ts",
+        "src/data/tournamentStore.property.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "A change during play costs no request on any phone: applied from its event, another tournament's left alone, a delete resolved by its key or id, a row of a day or lot not loaded yet held until its day or lot comes (5,000 at most, two minutes). Left: a visible phone with a live channel checks it against the server once every five minutes (12 fetches an hour, about 264 requests; none while one is on its way, and after a failure the wait doubles to 30 minutes), and unlocking the phone can still fetch twice (on being shown, then when the channel comes back). Both go once changes carry a sequence (PLAN §5.2)."
     },
     {
       "id": "PERF-08",
@@ -2313,7 +2319,9 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "e2e/stack/smoke.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2383,7 +2391,10 @@
       "tripSafe": true,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "e2e/stack/live.spec.ts",
+        "e2e/stack/offline.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2634,10 +2645,18 @@
       "phase": 2,
       "tripSafe": true,
       "status": "open",
-      "pr": null,
-      "tests": [],
+      "pr": 92,
+      "tests": [
+        "src/data/realtimeApply.test.ts",
+        "src/data/tournamentStore.apply.test.ts",
+        "src/data/tournamentStore.overlay.test.ts",
+        "src/data/tournamentStore.land.test.ts",
+        "src/data/outbox.push.test.ts",
+        "src/data/tournamentStore.property.test.ts",
+        "src/data/tournamentStore.seed.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Receiving side done in #92: a saved hole reaches the other phones in the time Realtime takes to deliver it plus one recompute, with no fetch. This phone's own writes land as the server stored them (each push asks for its rows back), unless the channel brought their echo since the push went out, after which anything newer is in too. A landed row never replaces one held with a later stamp. When a fetch landed while the push was out, or the answer is older than the change log, the write lands all the same (a taken write never leaves the boards) and one more fetch, asked once per flush, shows the server; a fetch on its way never takes a landed row back, and one superseded or failed keeps the ask. Those times run on a clock a phone's clock change doesn't move. The app's other tabs land them too, told how long ago the push went out. Left before it is fixed: the outbox sends a foursome's four rows as four requests (220–1,440 ms apart on 4G in the verifier's run), so the other phones see them land one by one and recompute four times; one request per hole is the next change (after QA-06's tests land). Then the p95 under 2 s is measured on the e2e-stack job and in the field (telemetry, STRAT-02). Round 6 (#92's fifth verifier): a flush asks one fetch at its end however many fetches it overlaps (a 36-row flush with late echoes: 17 fetches → 2); a store entered from the phone's copy fetches before the gate's load (seed clears `left`); another tab's message posted «in the future» counts as not saying. Left as P3: an a→b→a by this phone whose earlier echoes arrive after the third push went out still counts them as its echo (T3, T4) until that write's own echo or the heal; a stampless answer that lands after a reconnect fetch read a mate's later one shows until the heal if the follow-up fetch fails (E1); a write of tournament A answered while B is open never reaches A's copy (E4). e2e-stack (PR #99, run 37731252400, 2026-10-08): a hole saved on one phone showed on the other at p95 976 ms over 22 saves (min 560, p50 781, max 1037 ms; 18 holes of 4 rows + 4 one-row corrections), on a local Supabase stack on the CI runner with no network throttling. 4G is not measured: the < 2 s target on 4G stays open."
     },
     {
       "id": "REL-13",
@@ -4242,11 +4261,13 @@
       "tripSafe": true,
       "title": "After a restart the boards can miss the queued holes: the gate puts the kept boards up before AppShell's outbox has read its queue, and loadQueue never lays the queue over them",
       "foundBy": "PR #93's first verifier (probe P1a)",
-      "status": "open",
+      "status": "fixed",
       "pr": 92,
-      "tests": [],
+      "tests": [
+        "src/data/outbox.offline.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": "Fixed in #92 (loadQueue ends with refresh()); outbox.offline.test.ts holds the repro as it.fails until then."
+      "residual": "Fixed in #92: loadQueue ends with refresh(), so the queue is laid over boards that went up before it was read. outbox.offline.test.ts held the repro as it.fails; it passes now."
     },
     {
       "id": "NEW-03",

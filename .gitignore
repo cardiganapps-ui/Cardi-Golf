@@ -14,3 +14,7 @@ test-results/
 dist-fixtures
 test-results
 playwright-report
+dist-stack
+test-results-stack
+playwright-report-stack
+supabase/.temp/

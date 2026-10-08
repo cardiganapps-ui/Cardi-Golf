@@ -14,5 +14,5 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force"
   },
-  "include": ["playwright.config.ts", "e2e/fixtures/**/*.ts"]
+  "include": ["playwright.config.ts", "playwright.stack.config.ts", "e2e/fixtures/**/*.ts", "e2e/stack/**/*.ts"]
 }

@@ -311,11 +311,12 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
     expect(mapRoundTee({ round_id: ROUND, player_id: ANA, tee_id: ROJAS })).toEqual({ roundId: ROUND, playerId: ANA, teeId: ROJAS })
   })
 
-  it('scores: a pick-up with no strokes or putts, a disputed hole with the values it replaced', () => {
+  it('scores: a pick-up with no strokes or putts, a disputed hole with the values it replaced; each keeps its id (a delete names only that)', () => {
     expect(SCORES.map(mapScore)).toEqual([
-      { roundId: ROUND, playerId: ANA, hole: 1, strokes: 5, putts: 2, pickedUp: false, enteredBy: BETO, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
-      { roundId: ROUND, playerId: ANA, hole: 5, strokes: null, putts: null, pickedUp: true, enteredBy: BETO, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
+      { id: id(201), roundId: ROUND, playerId: ANA, hole: 1, strokes: 5, putts: 2, pickedUp: false, enteredBy: BETO, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
+      { id: id(202), roundId: ROUND, playerId: ANA, hole: 5, strokes: null, putts: null, pickedUp: true, enteredBy: BETO, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
       {
+        id: id(203),
         roundId: ROUND,
         playerId: BETO,
         hole: 1,
@@ -327,7 +328,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
         disputed: true,
         previous: SCORES[2]!.previous,
       },
-      { roundId: ROUND, playerId: CHUY, hole: 1, strokes: 6, putts: 3, pickedUp: false, enteredBy: ANA, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
+      { id: id(204), roundId: ROUND, playerId: CHUY, hole: 1, strokes: 6, putts: 3, pickedUp: false, enteredBy: ANA, updatedAt: '2027-04-10T16:42:07.123456+00:00', disputed: false, previous: null },
     ])
   })
 
