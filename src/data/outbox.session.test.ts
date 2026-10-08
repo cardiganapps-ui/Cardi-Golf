@@ -41,6 +41,8 @@ const srv = vi.hoisted(() => {
         return req
       },
       eq: () => req,
+      // The push asks for the stored rows back; this server sends none.
+      select: () => req,
       then<A, B>(ok?: (v: { data: null; error: { message: string } | null }) => A, bad?: (e: unknown) => B) {
         return (async () => {
           const auth = headers.get('authorization') ?? `Bearer ${(await getSession()).data.session?.access_token ?? 'anon-key'}`
@@ -65,7 +67,9 @@ const srv = vi.hoisted(() => {
 vi.mock('../lib/supabase', () => ({ supabase: () => srv.client, supabaseConfigured: true }))
 vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, reload: async () => undefined }) },
+  liveSeq: () => 0,
+  liveClock: () => Date.now(),
+  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
 }))
 
 const { _outboxTest, describeSyncError, flush, useOutbox } = await import('./outbox')

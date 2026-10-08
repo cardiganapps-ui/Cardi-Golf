@@ -35,6 +35,14 @@ class CacheDb extends Dexie {
   }
 }
 let db: CacheDb | null = null
+/** Told when the phone forgets a tournament (`null`: all of them), so nothing still on its way writes it back. */
+const clearedListeners: Array<(tournamentId: string | null) => void> = []
+export function onCacheCleared(fn: (tournamentId: string | null) => void) {
+  clearedListeners.push(fn)
+}
+function cleared(tournamentId: string | null) {
+  for (const fn of clearedListeners) fn(tournamentId)
+}
 function getDb(): CacheDb | null {
   if (typeof indexedDB === 'undefined') return null
   if (!db) db = new CacheDb()
@@ -108,6 +116,7 @@ export async function cachedTournamentName(tournamentId: string): Promise<string
 }
 /** Forget what this phone saved for a tournament: its entries, under any key, and its boards. */
 export async function clearCached(tournamentId: string): Promise<void> {
+  cleared(tournamentId)
   try {
     const d = getDb()
     if (!d) return
@@ -121,6 +130,7 @@ export async function clearCached(tournamentId: string): Promise<void> {
 }
 /** Sign-out: the next person on the phone sees nothing of this one's tournaments. */
 export async function clearAllCached(): Promise<void> {
+  cleared(null)
   try {
     const d = getDb()
     if (!d) return

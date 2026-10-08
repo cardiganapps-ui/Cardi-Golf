@@ -15,8 +15,8 @@ vi.mock('./auth', () => ({
 }))
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 /** The tournament open on screen, as the store has it. */
-const open = vi.hoisted(() => ({ state: { tournamentId: null as string | null, data: null as unknown, patch: () => undefined, reload: async () => undefined } }))
-vi.mock('./tournamentStore', () => ({ registerOverlay: () => undefined, useTournament: { getState: () => open.state } }))
+const open = vi.hoisted(() => ({ state: { tournamentId: null as string | null, data: null as unknown, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined } }))
+vi.mock('./tournamentStore', () => ({ registerOverlay: () => undefined, liveClock: () => performance.now(), liveSeq: () => 0, useTournament: { getState: () => open.state } }))
 
 const { _outboxTest, enqueueScore, flush, rejectGoneTournament, unsentWrites, useOutbox } = await import('./outbox')
 const { t } = await import('../i18n/es-MX')

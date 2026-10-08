@@ -292,9 +292,9 @@ describe('a hole saved with no signal', { timeout: 20_000 }, () => {
     expect(server.writeRequests()).toHaveLength(1)
   })
 
-  // NEW-02, fixed by #92. In the app the gate's effect runs before AppShell's (a child's effects run first), so the
-  // boards the phone kept go up before the outbox has read its queue, and nothing lays the queue over them after.
-  it.fails('shows on the boards the gate puts up before the outbox has read its queue (the order the app opens in)', async () => {
+  // NEW-02 (fixed in #92: loadQueue ends with refresh()). In the app the gate's effect runs before AppShell's (a
+  // child's effects run first), so the boards the phone kept go up before the outbox has read its queue.
+  it('shows on the boards the gate puts up before the outbox has read its queue (the order the app opens in)', async () => {
     const first = await restart()
     await open(first)
     await enterAs('p1')

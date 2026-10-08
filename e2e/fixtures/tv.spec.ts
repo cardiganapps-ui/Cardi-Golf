@@ -89,8 +89,9 @@ for (const [w, h] of ROOMS) {
     await page.setViewportSize({ width: w, height: h })
     await page.goto('/t/_/auction12/tv', { waitUntil: 'networkidle' })
     const rows = page.locator('[data-sold-at]')
+    // The board mounts after the page is idle: read the rows once they are all there.
+    await expect(rows).toHaveCount(9)
     const times = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-sold-at') ?? ''))
-    expect(times.length).toBe(9)
     expect(times[0]).toBe([...times].sort().at(-1))
     const box = (await rows.first().boundingBox())!
     expect(box.y + box.height).toBeLessThanOrEqual(h)
