@@ -9,7 +9,7 @@ import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
-import { applyAdjustments, bucketLabel, unassignedBuckets } from './core/unassigned'
+import { applyAdjustments, bucketLabel, heldMoney, unassignedBuckets } from './core/unassigned'
 import { computeStats, type StatsState } from './core/stats'
 import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type AnyModule } from './modules'
@@ -90,12 +90,16 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const core = computeCore(snapshot, settings)
   const roundFinal: Record<Id, boolean> = {}
   for (const r of snapshot.rounds) roundFinal[r.id] = r.status === 'finished'
-  // Final when the Comité says so, or when every planned round exists and is
-  // finished: finishing day 1 of a two-day event whose day 2 is not created
-  // yet must not finalize it (MONEY-06).
-  const tournamentFinal =
-    snapshot.tournament.status === 'finished' ||
-    (core.roundIds.length > 0 && core.roundIds.length >= settings.rounds && core.roundIds.every((rid) => roundFinal[rid]))
+  // Play is over when every planned day exists and is finished or cancelled:
+  // finishing day 1 of a two-day event whose day 2 is not created yet is not
+  // (MONEY-06). Whatever the tournament's status, so Dinero and the «Cerrar
+  // torneo» gate (which reads the tournament as Terminado) compute the same
+  // prizes and the same «por asignar» (round 2 of PR 104: every day rained out,
+  // a day not created yet).
+  const playOver = snapshot.rounds.length > 0 && snapshot.rounds.length >= settings.rounds && snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled')
+  // Final when the Comité says so, or once play is over: a cancelled day's
+  // prizes are «por asignar» from then on, and the rest is what Terminado pays.
+  const tournamentFinal = snapshot.tournament.status === 'finished' || playOver
   const ctx: ModuleContext = { snapshot, settings, core, tournamentFinal, roundFinal }
   const impls = { ...ALL_MODULES, ...opts.modules }
 
@@ -215,7 +219,10 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // «Por asignar» (MONEY-05): once play is over, what the rules leave with
   // the bank, by pot, and the Comité's assignments of it. What they give a
   // player is a prize like any other, so every money screen reads it.
-  const closing = tournamentFinal || (core.roundIds.length > 0 && snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled'))
+  // Listed once play is over (`playOver`, above), whatever the status: Dinero
+  // and the «Cerrar torneo» gate read this same flag, so the gate never blocks
+  // on a list Dinero does not show.
+  const closing = playOver
   const buckets = unassignedBuckets({
     snapshot,
     settings,
@@ -227,13 +234,14 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     warnings: [...(modules.individual?.warnings ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
     closing,
   })
-  const unassigned = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], closing, (key) => bucketLabel(key, settings))
+  const unassigned = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], closing, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing }))
   prizes.push(...unassigned.awards)
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games, unassigned.toHouse)
   money.unassigned = unassigned
   // What is left in the bank and what the list says must be the same pesos.
   const unassignedWarnings = [...unassigned.warnings]
-  if (closing && money.banker.difference > 0 && money.banker.difference !== unassigned.total) unassignedWarnings.push(t.unassigned.mismatch(peso(money.banker.difference), peso(unassigned.total)))
+  const listed = unassigned.total + unassigned.heldTotal
+  if (closing && money.banker.difference > 0 && money.banker.difference !== listed) unassignedWarnings.push(t.unassigned.mismatch(peso(money.banker.difference), peso(listed)))
 
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.

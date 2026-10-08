@@ -5633,6 +5633,68 @@
       }
     },
     {
+      "name": "money_adjustments: a key that is no line «por asignar» is refused (the snake money a tiebreak holds included)",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "assign_unassigned",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_source_key": "snake:r1:g1",
+          "p_entries": [
+            {
+              "kind": "house",
+              "amount": 100
+            }
+          ],
+          "p_reason": "Día 2 cancelado"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "money_adjustments",
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "money_adjustments: one call adds up to $10,000,000 at most",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "assign_unassigned",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_source_key": "bestRound",
+          "p_entries": [
+            {
+              "kind": "house",
+              "amount": 6000000
+            },
+            {
+              "kind": "house",
+              "amount": 6000000
+            }
+          ],
+          "p_reason": "Día 2 cancelado"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "money_adjustments",
+          "rows": []
+        }
+      ]
+    },
+    {
       "name": "money_adjustments: not even the Comité writes the table directly",
       "as": "uid-org",
       "request": {
@@ -5671,6 +5733,7 @@
             "to_player_id": "p1",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5682,6 +5745,7 @@
             "to_player_id": "p2",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5692,6 +5756,7 @@
             "kind": "house",
             "amount": 120,
             "reason": "Para la cena",
+            "call_id": "call2",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:05:00+00:00"
           }
@@ -5740,6 +5805,107 @@
       ]
     },
     {
+      "name": "money_adjustments: a void leaves another call alone, even on the same line, by the same account, at the same moment",
+      "as": "uid-org",
+      "given": {
+        "money_adjustments": [
+          {
+            "id": "ma1",
+            "tournament_id": "t1",
+            "source_key": "snake",
+            "kind": "refund",
+            "to_player_id": "p1",
+            "amount": 300,
+            "reason": "Víbora sin respuesta",
+            "call_id": "call1",
+            "created_by": "uid-org",
+            "created_at": "2027-04-11T20:00:00+00:00"
+          },
+          {
+            "id": "ma2",
+            "tournament_id": "t1",
+            "source_key": "snake",
+            "kind": "refund",
+            "to_player_id": "p2",
+            "amount": 300,
+            "reason": "Víbora sin respuesta",
+            "call_id": "call1",
+            "created_by": "uid-org",
+            "created_at": "2027-04-11T20:00:00+00:00"
+          },
+          {
+            "id": "ma3",
+            "tournament_id": "t1",
+            "source_key": "calcutta",
+            "kind": "house",
+            "amount": 120,
+            "reason": "Para la cena",
+            "call_id": "call2",
+            "created_by": "uid-org",
+            "created_at": "2027-04-11T20:05:00+00:00"
+          },
+          {
+            "id": "ma4",
+            "tournament_id": "t1",
+            "source_key": "snake",
+            "kind": "refund",
+            "to_player_id": "p2",
+            "amount": 150,
+            "reason": "Otra decisión",
+            "call_id": "call3",
+            "created_by": "uid-org",
+            "created_at": "2027-04-11T20:00:00+00:00"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "void_adjustment",
+        "args": {
+          "p_id": "ma1",
+          "p_reason": "Ya contestaron el desempate"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "voided": 2
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "money_adjustments",
+          "where": {
+            "tournament_id": "t1"
+          },
+          "rows": [
+            {
+              "id": "ma1",
+              "voided_by": "uid-org",
+              "void_reason": "Ya contestaron el desempate"
+            },
+            {
+              "id": "ma2",
+              "voided_by": "uid-org",
+              "void_reason": "Ya contestaron el desempate"
+            },
+            {
+              "id": "ma3",
+              "voided_by": null,
+              "void_reason": null
+            },
+            {
+              "id": "ma4",
+              "voided_by": null,
+              "void_reason": null
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "money_adjustments: a player cannot void",
       "as": "uid-p1",
       "given": {
@@ -5752,6 +5918,7 @@
             "to_player_id": "p1",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5763,6 +5930,7 @@
             "to_player_id": "p2",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5773,6 +5941,7 @@
             "kind": "house",
             "amount": 120,
             "reason": "Para la cena",
+            "call_id": "call2",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:05:00+00:00"
           }
@@ -5817,6 +5986,7 @@
             "to_player_id": "p1",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5828,6 +5998,7 @@
             "to_player_id": "p2",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5838,6 +6009,7 @@
             "kind": "house",
             "amount": 120,
             "reason": "Para la cena",
+            "call_id": "call2",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:05:00+00:00"
           }
@@ -5869,6 +6041,7 @@
             "to_player_id": "p1",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5880,6 +6053,7 @@
             "to_player_id": "p2",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5890,6 +6064,7 @@
             "kind": "house",
             "amount": 120,
             "reason": "Para la cena",
+            "call_id": "call2",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:05:00+00:00"
           }
@@ -5937,6 +6112,7 @@
             "to_player_id": "p1",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5948,6 +6124,7 @@
             "to_player_id": "p2",
             "amount": 300,
             "reason": "Víbora sin respuesta",
+            "call_id": "call1",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:00:00+00:00"
           },
@@ -5958,6 +6135,7 @@
             "kind": "house",
             "amount": 120,
             "reason": "Para la cena",
+            "call_id": "call2",
             "created_by": "uid-org",
             "created_at": "2027-04-11T20:05:00+00:00"
           }

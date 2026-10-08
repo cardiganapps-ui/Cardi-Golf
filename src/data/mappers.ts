@@ -224,6 +224,8 @@ export const mapMoneyAdjustment = (r: Row): MoneyAdjustment => ({
   amount: Number(r.amount),
   reason: r.reason,
   createdAt: r.created_at,
+  // A row has its call's id (0027); none would only be a row no call wrote: it is a call of its own.
+  callId: r.call_id ?? r.id,
   createdBy: r.created_by ?? null,
   voidedAt: r.voided_at ?? null,
   voidReason: r.void_reason ?? null,

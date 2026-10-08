@@ -275,9 +275,20 @@ export function MoneyScreen() {
   // Once play is over, money still in the bank is «Por asignar», listed below
   // with where it comes from (COPY-09); red only for a bank that does not
   // square with that list.
+  // Snake money an unanswered tiebreak holds is listed too, apart: the snake pays it once answered.
   const u = money.unassigned
-  const verdict = u.closing && u.total > 0 ? t.unassigned.total(formatMoney(u.total)) : money.banker.balanced ? M.bankOk : u.closing ? M.bankOff(formatSignedMoney(money.banker.difference)) : M.bankPending(formatMoney(money.banker.difference))
-  const verdictClass = money.banker.balanced && u.total === 0 ? '' : u.closing && (u.total === 0 || u.total !== money.banker.difference) ? styles.bankVerdictOff : styles.bankVerdictOpen
+  const listed = u.total + u.heldTotal
+  const verdict =
+    u.closing && u.total > 0
+      ? t.unassigned.total(formatMoney(u.total))
+      : u.closing && u.heldTotal > 0
+        ? t.unassigned.heldTotal(formatMoney(u.heldTotal))
+        : money.banker.balanced
+          ? M.bankOk
+          : u.closing
+            ? M.bankOff(formatSignedMoney(money.banker.difference))
+            : M.bankPending(formatMoney(money.banker.difference))
+  const verdictClass = money.banker.balanced && listed === 0 ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictOpen
 
   return (
     <div className={styles.screen}>
@@ -320,6 +331,7 @@ export function MoneyScreen() {
         {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
         {!u.closing && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
         {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
+        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal))}</span>}
       </section>
 
       <UnassignedMoney />

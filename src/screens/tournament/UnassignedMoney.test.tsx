@@ -77,8 +77,25 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
       expect(list().getAllByText(formatMoney(b.remaining)).length).toBeGreaterThan(0)
     }
     expect(list().getAllByText(U.decides)).toHaveLength(u.buckets.length)
-    expect(list().getAllByRole('button', { name: t.money.howCalculated })).toHaveLength(u.buckets.length)
+    // Snake money a tiebreak holds is listed too, with what to answer and no «Decidir».
+    expect(u.held.length).toBeGreaterThan(0)
+    for (const h of u.held) {
+      expect(list().getByText(h.label)).toBeTruthy()
+      expect(list().getAllByText(h.note).length).toBeGreaterThan(0)
+    }
+    expect(list().getAllByRole('button', { name: t.money.howCalculated })).toHaveLength(u.buckets.length + u.held.length)
     expect(list().queryByRole('button', { name: new RegExp(`^${U.decide}`) })).toBeNull()
+  })
+
+  it('while a day is open again, what the Comité already decided still shows, marked as waiting', () => {
+    mount(false, (s) => {
+      const d2 = [...s.rounds].sort((a, b) => a.number - b.number)[1]!
+      d2.status = 'live'
+      s.moneyAdjustments = [{ id: 'adj-w', callId: 'call-w', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Antes de reabrir', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+    })
+    expect(list().getByText(U.waitingIntro)).toBeTruthy()
+    expect(list().getByText('Antes de reabrir')).toBeTruthy()
+    expect(list().getByText(U.statusWaiting)).toBeTruthy()
   })
 
   it('nothing is listed while a day is still to play', () => {
@@ -143,9 +160,26 @@ describe('the Comité decides each line (MONEY-05)', () => {
     expect(sheet.getAllByText(U.tooMuch(formatMoney(best.remaining))).length).toBeGreaterThan(0)
   })
 
+  it('a line another Comité phone assigned meanwhile: the sheet reads it again before sending, and sends nothing', async () => {
+    const data = mount(true)
+    const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining)}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(sheet.getByRole('radio', { name: U.house }))
+    fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
+    // The other phone's $100 on the same line reaches this one on the fetch the sheet makes before sending.
+    const other = structuredClone(data.snapshot)
+    other.moneyAdjustments = [{ id: 'adj-o', callId: 'call-o', sourceKey: 'bestRound', kind: 'award', toPlayerId: other.players[0]!.id, amount: 100, reason: 'Otro teléfono', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org2', voidedAt: null, voidReason: null }]
+    act(() => useTournament.setState({ reload: vi.fn(async () => void useTournament.setState({ data: dataFromSnapshot(other) })) }))
+    fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
+    await settle()
+    expect(api.assigned).toEqual([])
+    expect(sheet.getByText(U.stale)).toBeTruthy()
+  })
+
   it('a decision already taken is listed with its reason, and «Anular» voids it with a reason', async () => {
     mount(true, (s) => {
-      s.moneyAdjustments = [{ id: 'adj-1', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Mejor ronda del día 1', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+      s.moneyAdjustments = [{ id: 'adj-1', callId: 'call-adj-1', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Mejor ronda del día 1', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
     })
     expect(list().getByText(U.applied)).toBeTruthy()
     expect(list().getByText('Mejor ronda del día 1')).toBeTruthy()

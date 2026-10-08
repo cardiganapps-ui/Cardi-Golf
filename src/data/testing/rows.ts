@@ -192,6 +192,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       to_player_id: x.toPlayerId,
       amount: x.amount,
       reason: x.reason,
+      call_id: x.callId,
       created_by: x.createdBy,
       created_at: x.createdAt,
       voided_at: x.voidedAt,

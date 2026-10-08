@@ -6,6 +6,16 @@
  * someone, refund it pro rata to who paid it, or leave it to the house, with
  * a reason) and «Anular» on what it already decided. Online only: a decision
  * goes straight to the server (`assign_unassigned`), never through the outbox.
+ *
+ * Snake money an unanswered tiebreak holds is listed apart, with no
+ * «Decidir»: the snake pays it once someone answers. While a day is open, the
+ * Comité's earlier decisions still show, marked as waiting.
+ *
+ * The sheet reads its line from the live state by key, and before it sends it
+ * fetches the tournament again and checks the line still holds what it
+ * assigns: another Comité phone may have assigned it meanwhile, and the
+ * assignments table reaches other phones on their next fetch (it is kept off
+ * the live channel until 0027 is on production, REL-01).
  */
 import { useEffect, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
@@ -17,7 +27,7 @@ import { Field, Input, Segmented } from '../../components/primitives'
 import { toast } from '../../components/ui'
 import { assignUnassigned, voidAdjustment, type AssignEntry } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
-import { proRata, type Assignment, type UnassignedBucket } from '../../engine/core/unassigned'
+import { proRata, type Assignment } from '../../engine/core/unassigned'
 import type { Player } from '../../engine/types'
 import { humanError } from '../../lib/humanError'
 import { formatMoney } from '../../lib/money'
@@ -30,12 +40,12 @@ export function UnassignedMoney() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { me, tournamentId } = useTournamentCtx()
-  const [deciding, setDeciding] = useState<UnassignedBucket | null>(null)
+  const [deciding, setDeciding] = useState<string | null>(null)
   const [voiding, setVoiding] = useState<Assignment | null>(null)
   const { snapshot, state } = data
   const u = state.money.unassigned
   const players = useMemo(() => [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder), [snapshot.players])
-  if (!u.closing || (u.buckets.length === 0 && u.assignments.length === 0)) return null
+  if (u.buckets.length === 0 && u.held.length === 0 && u.assignments.length === 0) return null
   const name = (id: string | null) => (id ? (players.find((p) => p.id === id)?.displayName ?? '?') : U.toHouse)
   const who = (a: Assignment) => t.common.andList(a.rows.map((r) => (a.rows.length > 1 ? `${name(r.toPlayerId)} ${formatMoney(r.amount)}` : name(r.toPlayerId))))
   const statusNote = (a: Assignment) => (a.status === 'over' ? U.statusOver : a.status === 'orphan' ? U.statusOrphan : a.status === 'waiting' ? U.statusWaiting : null)
@@ -43,7 +53,7 @@ export function UnassignedMoney() {
   return (
     <section className={styles.section} aria-label={U.heading}>
       <h3>{U.heading}</h3>
-      <span className="help">{U.intro}</span>
+      <span className="help">{u.closing ? U.intro : U.waitingIntro}</span>
       {u.buckets.length > 0 && (
         <div className={styles.transfers}>
           {u.buckets.map((b) => (
@@ -56,11 +66,25 @@ export function UnassignedMoney() {
               <span className={styles.amount}>{formatMoney(b.remaining)}</span>
               {me.isAdmin && (
                 <span className={styles.action}>
-                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setDeciding(b)} aria-label={`${U.decide}: ${b.label}, ${formatMoney(b.remaining)}`}>
+                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${b.label}, ${formatMoney(b.remaining)}`}>
                     {U.decide}
                   </button>
                 </span>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+      {u.held.length > 0 && (
+        <div className={styles.transfers}>
+          {u.held.map((h) => (
+            <div key={h.key} className={styles.transfer} data-held>
+              <span className={styles.transferText}>
+                <strong>{h.label}</strong>
+                <span className={styles.transferKind}>{h.note}</span>
+                <HowCalculated why={h.why} />
+              </span>
+              <span className={styles.amount}>{formatMoney(h.amount)}</span>
             </div>
           ))}
         </div>
@@ -98,7 +122,7 @@ export function UnassignedMoney() {
           </div>
         </>
       )}
-      {me.isAdmin && <AssignSheet bucket={deciding} players={players} tournamentId={tournamentId} onClose={() => setDeciding(null)} onDone={reload} />}
+      {me.isAdmin && <AssignSheet bucketKey={deciding} players={players} tournamentId={tournamentId} onClose={() => setDeciding(null)} onDone={reload} />}
       {me.isAdmin && (
         <ReasonSheet
           open={!!voiding}
@@ -121,7 +145,9 @@ export function UnassignedMoney() {
 type Mode = 'give' | 'refund' | 'house'
 
 /** One decision on one line: to whom and how much, with a reason. Never more than the line holds. */
-function AssignSheet({ bucket, players, tournamentId, onClose, onDone }: { bucket: UnassignedBucket | null; players: Player[]; tournamentId: string; onClose: () => void; onDone: () => Promise<unknown> }) {
+function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bucketKey: string | null; players: Player[]; tournamentId: string; onClose: () => void; onDone: () => Promise<unknown> }) {
+  // The line as the boards hold it now, not as it was when the sheet opened.
+  const bucket = useTournament((s) => (bucketKey ? (s.data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey) ?? null) : null))
   const remaining = bucket?.remaining ?? 0
   const [mode, setMode] = useState<Mode>('give')
   const [amounts, setAmounts] = useState<Record<string, number>>({})
@@ -135,7 +161,9 @@ function AssignSheet({ bucket, players, tournamentId, onClose, onDone }: { bucke
     setHouse(remaining)
     setReason('')
     setError(null)
-  }, [bucket?.key, remaining])
+    // Only when another line opens: a line that changes under the sheet is caught on «Asignar» (`U.stale`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucketKey])
   const refund = useMemo(() => (bucket?.contributors?.length ? proRata(remaining, bucket.contributors) : []), [bucket, remaining])
   const nameOf = (id: string) => players.find((p) => p.id === id)?.displayName ?? '?'
 
@@ -150,14 +178,20 @@ function AssignSheet({ bucket, players, tournamentId, onClose, onDone }: { bucke
   const sum = entries.reduce((s, e) => s + e.amount, 0)
 
   async function confirm() {
-    if (!bucket) return
+    if (!bucketKey) return
+    if (!bucket) return setError(U.gone)
     if (!entries.length) return setError(U.nothing)
     if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining)))
     if (reason.trim().length < 3) return setError(U.reasonShort)
     setBusy(true)
     setError(null)
     try {
-      await assignUnassigned(tournamentId, bucket.key, entries, reason.trim())
+      // What another Comité phone assigned meanwhile reaches this one on a fetch: read the line again first.
+      await onDone()
+      const now = useTournament.getState().data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey)
+      if (!now) return setError(U.gone)
+      if (now.remaining !== remaining || sum > now.remaining) return setError(U.stale)
+      await assignUnassigned(tournamentId, bucketKey, entries, reason.trim())
       await onDone()
       toast(U.assigned)
       onClose()
@@ -169,7 +203,7 @@ function AssignSheet({ bucket, players, tournamentId, onClose, onDone }: { bucke
   }
 
   return (
-    <ConfirmSheet open={!!bucket} title={bucket ? U.decideTitle(bucket.label) : ''} body={U.available(formatMoney(remaining))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
+    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(bucket.label) : ''} body={U.available(formatMoney(remaining))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
       <Segmented
         value={mode}
         label={U.decide}

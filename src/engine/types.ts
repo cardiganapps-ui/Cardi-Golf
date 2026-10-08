@@ -214,7 +214,9 @@ export interface MoneyAdjustment {
   amount: number
   reason: string
   createdAt: string
-  /** The account that wrote it; with `createdAt` and `sourceKey`, which call wrote it (one assignment). */
+  /** The call that wrote it: one assignment, paid or flagged whole, voided whole. */
+  callId: Id
+  /** The account that wrote it. */
   createdBy: string | null
   voidedAt: string | null
   voidReason: string | null

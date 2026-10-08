@@ -8,9 +8,14 @@
 --
 -- money_adjustments holds the Comité's decisions: each row gives part of one
 -- unassigned bucket (`source_key`, the engine's stable id for it) to a player
--- (`award`, `refund`) or to the house (`house`), with a reason. Rows are never
--- edited or deleted by the app: a wrong one is voided (`void_adjustment`),
--- with a reason, and the money goes back to the bucket.
+-- (`award`, `refund`) or to the house (`house`), with a reason. The rows one
+-- call writes share a `call_id`: that call is one decision, paid or flagged
+-- whole by the engine and voided whole by `void_adjustment`. Rows are never
+-- edited or deleted by the app: a wrong call is voided, with a reason, and the
+-- money goes back to the bucket.
+--
+-- Snake money an unanswered tiebreak holds is no bucket (the snake pays it
+-- once someone answers), so its keys are not valid here.
 --
 -- The server cannot know a bucket's amount (the engine computes it from the
 -- whole tournament), so the client and the engine check amounts: an
@@ -20,10 +25,17 @@
 --
 --   1. The table: members read it, nobody writes it directly.
 --   2. assign_unassigned(tournament, source_key, entries, reason): one
---      assignment, every row in one statement; void_adjustment(id, reason)
---      voids the assignment the row belongs to (every row its call wrote).
---   3. Audited like the other money tables, and published to Realtime.
---   4. restore_tournament carries it (0025's body plus this table).
+--      assignment, every row in one statement under one call_id, at most 200
+--      lines and $10,000,000 in all; void_adjustment(id, reason) voids the
+--      call the row belongs to, and no other.
+--   3. Audited like the other money tables, and published to Realtime. The
+--      app does not listen to it yet: a channel naming a table production
+--      has not published fails whole (REL-01), so the bundle that listens
+--      ships after this migration is applied. Until then a phone sees the
+--      Comité's decisions on its next fetch.
+--   4. restore_tournament carries it (0025's body plus this table), and now
+--      refuses a backup with ids of another tournament's rows (NEW-12): those
+--      were upserted by id into the other tournament since 0010.
 
 -- ---------------------------------------------------------------------------
 -- 1. The table
@@ -31,11 +43,14 @@
 create table if not exists public.money_adjustments (
   id uuid primary key default gen_random_uuid(),
   tournament_id uuid not null references public.tournaments (id) on delete cascade,
-  source_key text not null check (char_length(source_key) between 1 and 120),
+  -- A module's line (`bestRound`), `pool`, `calcutta`, or a game's (`game:skins`).
+  source_key text not null check (source_key ~ '^([A-Za-z]{1,40}|game:[a-z0-9-]{1,32})$'),
   kind text not null check (kind in ('award', 'refund', 'house')),
   to_player_id uuid references public.players (id) on delete cascade,
-  amount integer not null check (amount > 0),
+  amount integer not null check (amount > 0 and amount <= 10000000),
   reason text not null check (char_length(btrim(reason)) between 3 and 500),
+  -- The call that wrote the row: one decision (a refund to twelve is twelve rows, one call).
+  call_id uuid not null default gen_random_uuid(),
   created_by uuid,
   created_at timestamptz not null default now(),
   voided_at timestamptz,
@@ -71,6 +86,8 @@ declare
   pid uuid;
   why text := btrim(coalesce(p_reason, ''));
   src text := btrim(coalesce(p_source_key, ''));
+  v_call uuid := gen_random_uuid();
+  sum_amount bigint := 0;
   n int;
 begin
   if p_tournament_id is null or not public.is_tournament_organizer(p_tournament_id) then
@@ -82,8 +99,11 @@ begin
   if char_length(why) > 500 then
     raise exception 'El motivo es muy largo: 500 letras como máximo' using errcode = '22023';
   end if;
-  if src = '' or char_length(src) > 120 then
+  if src = '' then
     raise exception 'Falta de qué dinero sale la asignación' using errcode = '22023';
+  end if;
+  if src !~ '^([A-Za-z]{1,40}|game:[a-z0-9-]{1,32})$' then
+    raise exception 'Ese dinero no es una línea por asignar' using errcode = '22023';
   end if;
   if jsonb_typeof(p_entries) is distinct from 'array' or jsonb_array_length(p_entries) = 0 then
     raise exception 'No hay nada que asignar' using errcode = '22023';
@@ -100,11 +120,15 @@ begin
     if k is null or k not in ('award', 'refund', 'house') then
       raise exception 'Cada línea se da a un jugador, se devuelve o va a la casa' using errcode = '22023';
     end if;
-    -- Whole pesos, above zero.
-    if jsonb_typeof(e -> 'amount') is distinct from 'number' or (e ->> 'amount')::numeric <> trunc((e ->> 'amount')::numeric)
-       or (e ->> 'amount')::numeric <= 0 or (e ->> 'amount')::numeric > 100000000 then
-      raise exception 'Cada cantidad es un número entero de pesos, mayor que cero' using errcode = '22023';
+    -- Whole pesos, above zero, written as an integer (1.0 or 1e3 is refused here, not by a cast).
+    if jsonb_typeof(e -> 'amount') is distinct from 'number' or coalesce((e ->> 'amount') !~ '^[1-9][0-9]{0,7}$', true) then
+      raise exception 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo' using errcode = '22023';
     end if;
+    -- Only now is the text known to be digits: cast it.
+    if (e ->> 'amount')::int > 10000000 then
+      raise exception 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo' using errcode = '22023';
+    end if;
+    sum_amount := sum_amount + (e ->> 'amount')::int;
     if k = 'house' then
       if e ? 'to_player_id' and jsonb_typeof(e -> 'to_player_id') <> 'null' then
         raise exception 'Lo que va a la casa no lleva jugador' using errcode = '22023';
@@ -116,11 +140,14 @@ begin
       end if;
     end if;
   end loop;
+  if sum_amount > 10000000 then
+    raise exception 'Una asignación suma $10,000,000 como máximo' using errcode = '22023';
+  end if;
 
-  insert into public.money_adjustments (tournament_id, source_key, kind, to_player_id, amount, reason, created_by)
+  insert into public.money_adjustments (tournament_id, source_key, kind, to_player_id, amount, reason, call_id, created_by)
   select p_tournament_id, src, x ->> 'kind',
          case when x ->> 'kind' = 'house' then null else (x ->> 'to_player_id')::uuid end,
-         (x ->> 'amount')::int, why, auth.uid()
+         (x ->> 'amount')::int, why, v_call, auth.uid()
   from jsonb_array_elements(p_entries) x;
   get diagnostics n = row_count;
   return jsonb_build_object('assigned', n);
@@ -130,7 +157,9 @@ revoke execute on function public.assign_unassigned(uuid, text, jsonb, text) fro
 grant execute on function public.assign_unassigned(uuid, text, jsonb, text) to authenticated;
 
 -- One call is one assignment (a refund to six players is six rows): voiding
--- any of its rows voids all of them, so a bucket never comes back half.
+-- any of its rows voids all of them, so a bucket never comes back half, and
+-- only them: another call on the same line, by the same account, in the same
+-- second or transaction, stays.
 create or replace function public.void_adjustment(p_id uuid, p_reason text)
 returns jsonb
 language plpgsql volatile security definer
@@ -157,8 +186,7 @@ begin
   end if;
   update public.money_adjustments
   set voided_at = now(), voided_by = auth.uid(), void_reason = why
-  where tournament_id = r.tournament_id and source_key = r.source_key and created_at = r.created_at
-    and created_by is not distinct from r.created_by and voided_at is null;
+  where call_id = r.call_id and tournament_id = r.tournament_id and voided_at is null;
   get diagnostics n = row_count;
   return jsonb_build_object('voided', n);
 end;
@@ -246,13 +274,31 @@ begin
      or exists (select 1 from r_game_results where tournament_id is distinct from p_tournament_id) then
     raise exception 'El respaldo tiene filas de otro torneo' using errcode = '22023';
   end if;
+  -- Ids (NEW-12): a row the backup names is never a row another tournament
+  -- already has, directly or through its round or lot. Since 0010 players and
+  -- rounds were upserted by id, so a backup listing another tournament's ids
+  -- rewrote them there (its names, its handicaps, its round's status), and its
+  -- scores and groups landed in that round. Checked before anything is written.
+  if exists (select 1 from r_players x join public.players y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_rounds x join public.rounds y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_pairs x join public.pairs y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_teams x join public.teams y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_calcutta_lots x join public.calcutta_lots y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_payments x join public.payments y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_money_adjustments x join public.money_adjustments y on y.id = x.id where y.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_groups x join public.groups y on y.id = x.id join public.rounds r on r.id = y.round_id where r.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_scores x join public.scores y on y.id = x.id join public.rounds r on r.id = y.round_id where r.tournament_id <> p_tournament_id)
+     or exists (select 1 from r_calcutta_bids x join public.calcutta_bids y on y.id = x.id join public.calcutta_lots l on l.id = y.lot_id where l.tournament_id <> p_tournament_id) then
+    raise exception 'El respaldo trae filas que son de otro torneo; no se restauró nada' using errcode = '22023';
+  end if;
   if exists (select 1 from r_players where id is null) or exists (select 1 from r_rounds where id is null)
      or exists (select 1 from r_pairs where id is null) or exists (select 1 from r_groups where id is null)
      or exists (select 1 from r_teams where id is null)
      or exists (select 1 from r_calcutta_lots where id is null) then
     raise exception 'El respaldo está incompleto (filas sin id)' using errcode = '22023';
   end if;
-  -- References: everything points at rows the backup also carries.
+  -- References: everything points at rows the backup also carries (and, by the
+  -- check above, those are this tournament's or new).
   if exists (select 1 from r_groups g where not exists (select 1 from r_rounds r where r.id = g.round_id))
      or exists (select 1 from r_group_members m where not exists (select 1 from r_groups g where g.id = m.group_id) or not exists (select 1 from r_players p where p.id = m.player_id))
      or exists (select 1 from r_round_tees x where not exists (select 1 from r_rounds r where r.id = x.round_id) or not exists (select 1 from r_players p where p.id = x.player_id))
@@ -343,8 +389,8 @@ begin
   insert into public.calcutta_buybacks (lot_id, pct, amount, paid) select lot_id, pct, amount, coalesce(paid, false) from r_calcutta_buybacks on conflict do nothing;
   insert into public.payments (id, tournament_id, from_player_id, to_player_id, amount, kind, paid, note, created_at)
   select coalesce(id, gen_random_uuid()), p_tournament_id, from_player_id, to_player_id, amount, kind, coalesce(paid, false), note, coalesce(created_at, now()) from r_payments;
-  insert into public.money_adjustments (id, tournament_id, source_key, kind, to_player_id, amount, reason, created_by, created_at, voided_at, voided_by, void_reason)
-  select coalesce(id, gen_random_uuid()), p_tournament_id, source_key, kind, to_player_id, amount, reason, created_by, coalesce(created_at, now()), voided_at, voided_by, void_reason from r_money_adjustments;
+  insert into public.money_adjustments (id, tournament_id, source_key, kind, to_player_id, amount, reason, call_id, created_by, created_at, voided_at, voided_by, void_reason)
+  select coalesce(id, gen_random_uuid()), p_tournament_id, source_key, kind, to_player_id, amount, reason, coalesce(call_id, gen_random_uuid()), created_by, coalesce(created_at, now()), voided_at, voided_by, void_reason from r_money_adjustments;
   insert into public.game_entries (tournament_id, game_id, player_id, created_at)
   select p_tournament_id, game_id, player_id, coalesce(created_at, now()) from r_game_entries on conflict do nothing;
   insert into public.game_results (tournament_id, game_id, player_id, share, created_at)

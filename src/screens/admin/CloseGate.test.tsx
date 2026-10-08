@@ -3,9 +3,10 @@
  * «Cerrar torneo» (MONEY-05) in the Comité: Datos › «Publicar resultados»
  * waits until nothing is left open. On `full12-finished` (marked Terminado
  * before this gate existed) the snake's money is held by unanswered
- * tiebreaks, it sits «por asignar», and cards are unsigned: publishing is
- * refused with the list of what to settle and where; a refused write nobody
- * reviewed adds to it. Nothing is published.
+ * tiebreaks and cards are unsigned: publishing is refused with the list of
+ * what to settle and where. The held money is not «por asignar»: answering is
+ * the way out. A refused write nobody can clear yet is a warning beside the
+ * list, not on it. Nothing is published.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -53,7 +54,7 @@ describe('«Publicar resultados» waits for the close (MONEY-05)', () => {
     expect(sheet.getByText(C.blocked)).toBeTruthy()
     const items = sheet.getAllByRole('listitem').map((li) => li.textContent)
     expect(items.some((x) => x?.includes('desempate'))).toBe(true)
-    expect(items.some((x) => x?.endsWith('por asignar: el Comité decide en Dinero, Liquidación.'))).toBe(true)
+    expect(items.some((x) => x?.endsWith('por asignar: el Comité decide en Dinero, Liquidación.'))).toBe(false)
     expect(items.some((x) => x?.includes('sin firmar'))).toBe(true)
     expect(sheet.queryByRole('button', { name: t.admin.data.publishButton })).toBeNull()
     fireEvent.click(sheet.getByRole('button', { name: C.understood }))
@@ -61,12 +62,13 @@ describe('«Publicar resultados» waits for the close (MONEY-05)', () => {
     expect(server.published).toBe(0)
   })
 
-  it('a refused write nobody reviewed is one more item', async () => {
+  it('a refused write nobody can clear yet is a warning, not one more item', async () => {
     server.rejected = 2
     mount()
     fireEvent.click(screen.getByRole('button', { name: t.admin.data.publishButton }))
     const sheet = within(await screen.findByRole('dialog', { name: C.title }))
     expect(sheet.getByText(C.rejectedWrites(2))).toBeTruthy()
+    expect(sheet.getAllByRole('listitem').map((li) => li.textContent)).not.toContain(C.rejectedWrites(2))
     expect(server.published).toBe(0)
   })
 })

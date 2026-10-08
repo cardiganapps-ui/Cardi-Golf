@@ -1,9 +1,11 @@
 /**
  * «Cerrar torneo» (MONEY-05): Terminado and publishing wait for what would
- * otherwise freeze wrong: an open day, an unanswered tiebreak, an unsold lot,
- * money «por asignar», an assignment that cannot be paid, an unsigned card
- * of a finished round, a refused write nobody saw. What people still owe is
- * a warning only: collecting after the trip is normal.
+ * otherwise freeze wrong: a day not created or still open, an unanswered
+ * tiebreak, money «por asignar», an assignment that cannot be paid, an
+ * unsigned card of a finished round. What people still owe, a lot never
+ * auctioned and a refused write nobody can clear yet are warnings only. The
+ * gate reads the same «play is over» flag as Dinero, so it never blocks on a
+ * list Dinero does not show.
  */
 import { describe, expect, it } from 'vitest'
 import { closeCheck } from './close'
@@ -50,33 +52,36 @@ describe('«Cerrar torneo»', () => {
     let c = closeCheck(snap, S, { openRejected: 0 })
     expect(c.blockers).toEqual([{ kind: 'unassigned', text: '$3,000 por asignar: el Comité decide en Dinero, Liquidación.' }])
     snap.moneyAdjustments = [
-      { id: 'a1', sourceKey: 'bestRound', kind: 'house', toPlayerId: null, amount: 1200, reason: 'Para la cena', createdAt: '2027-04-12T09:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
-      { id: 'a2', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1900, reason: 'Se pasó', createdAt: '2027-04-12T09:01:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
+      { id: 'a1', callId: 'call-a1', sourceKey: 'bestRound', kind: 'house', toPlayerId: null, amount: 1200, reason: 'Para la cena', createdAt: '2027-04-12T09:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
+      { id: 'a2', callId: 'call-a2', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1900, reason: 'Se pasó', createdAt: '2027-04-12T09:01:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
     ]
     // The snake's $1,800 cannot take $1,900: still unassigned, and the assignment flagged.
     c = closeCheck(snap, S, { openRejected: 0 })
     expect(c.blockers.map((b) => b.kind)).toEqual(['unassigned', 'badAssignments'])
     expect(c.blockers[1]!.text).toBe('Una asignación no se puede pagar: anúlalas en Dinero, Liquidación.')
     snap.moneyAdjustments[1] = { ...snap.moneyAdjustments[1]!, voidedAt: '2027-04-12T09:02:00+00:00', voidReason: 'Error' }
-    snap.moneyAdjustments.push({ id: 'a3', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1800, reason: 'Ahora sí', createdAt: '2027-04-12T09:03:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null })
+    snap.moneyAdjustments.push({ id: 'a3', callId: 'call-a3', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1800, reason: 'Ahora sí', createdAt: '2027-04-12T09:03:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null })
     expect(closeCheck(snap, S, { openRejected: 0 }).ok).toBe(true)
   })
 
   it('an unanswered snake tiebreak blocks (and holds its group’s money)', () => {
     const snap = clean()
     for (const s of snap.scores) if (s.roundId === 'r2' && s.hole === 18 && (s.playerId === 'p1' || s.playerId === 'p10')) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
-    expect(kinds(snap)).toEqual(['tiebreaks', 'unassigned'])
+    // Its group's money waits for the answer: not «por asignar», so the tiebreak is the only thing to do.
+    expect(kinds(snap)).toEqual(['tiebreaks'])
     expect(closeCheck(snap, S, { openRejected: 0 }).blockers[0]!.text).toBe('Un desempate de la víbora sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.')
     snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p1' })
     expect(kinds(snap)).toEqual([])
   })
 
-  it('a lot never auctioned blocks, by name', () => {
+  it('a lot never auctioned warns, by name, and does not block: it cashes nothing (MONEY-11)', () => {
     const snap = clean()
     snap.players.forEach((p, i) => snap.calcuttaLots.push({ id: `lot${i}`, playerId: p.id, lotNumber: i + 1, status: i === 0 ? 'pending' : 'sold', price: i === 0 ? null : 500, ownerId: i === 0 ? null : p.id, soldAt: null }))
     for (const p of snap.players.slice(1)) snap.payments.push({ id: `cal-${p.id}`, kind: 'calcutta', fromPlayerId: p.id, toPlayerId: null, amount: 500, paid: true, note: null })
     const c = closeCheck(snap, S, { openRejected: 0 })
-    expect(c.blockers.find((b) => b.kind === 'unsoldLots')!.text).toBe('Lotes de la Calcutta sin vender: J1. Véndelos en Comité, sección Calcutta.')
+    expect(c.warnings).toContain('Lotes de la Calcutta sin vender: J1. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.')
+    // Whatever slot it leaves empty is the Calcutta's «por asignar», decided in Dinero like any other.
+    expect(c.blockers.map((b) => b.kind).filter((k) => k !== 'unassigned')).toEqual([])
   })
 
   it('an unsigned card of a finished round blocks', () => {
@@ -85,8 +90,36 @@ describe('«Cerrar torneo»', () => {
     expect(kinds(snap)).toEqual(['unsignedCards'])
   })
 
-  it('a refused write nobody reviewed blocks', () => {
-    expect(kinds(clean(), { openRejected: 2 })).toEqual(['rejectedWrites'])
+  it('a refused write nobody can clear yet warns, and does not hold the close', () => {
+    const c = closeCheck(clean(), S, { openRejected: 2 })
+    expect(c.ok).toBe(true)
+    expect(c.warnings).toEqual(['2 cambios de tarjeta que el servidor rechazó siguen sin revisar. No impide cerrar: revisa esos hoyos en Comité, sección Tarjetas, y corrige lo que haga falta.'])
+    expect(c.warnings.join(' ')).not.toContain('Admin de Polo')
+  })
+
+  it('every day rained out: Dinero lists the money the gate blocks on, and once assigned it closes', () => {
+    const settings: TournamentSettings = { ...structuredClone(DEFAULT_SETTINGS), rounds: 1, entryFee: 1000, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [2500, 1500] } }
+    const snap = makeSnapshot({ settings, players: 4, rounds: 1 })
+    snap.rounds[0]!.status = 'cancelled'
+    const dinero = computeTournament(snap, settings).money.unassigned
+    expect(dinero.closing).toBe(true)
+    expect(dinero.buckets.map((b) => [b.key, b.remaining])).toEqual([['individual', 4000]])
+    expect(kinds(snap, {}, settings)).toEqual(['unassigned'])
+    snap.moneyAdjustments = [{ id: 'x1', callId: 'cx', sourceKey: 'individual', kind: 'house', toPlayerId: null, amount: 4000, reason: 'Llovió', createdAt: '2027-04-12T09:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+    expect(closeCheck(snap, settings, { openRejected: 0 }).ok).toBe(true)
+  })
+
+  it('a day not created yet: nothing is «por asignar» in Dinero or in the gate, and the gate says to create it', () => {
+    const snap = clean()
+    snap.rounds = [snap.rounds[0]!]
+    snap.groups = snap.groups.filter((g) => g.roundId === 'r1')
+    snap.scores = snap.scores.filter((x) => x.roundId === 'r1')
+    snap.cardSignatures = snap.cardSignatures.filter((x) => x.roundId === 'r1')
+    expect(computeTournament(snap, S).money.unassigned.closing).toBe(false)
+    const c = closeCheck(snap, S, { openRejected: 0 })
+    expect(c.blockers).toEqual([
+      { kind: 'missingRounds', text: 'El día 2 no está creado: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.' },
+    ])
   })
 
   it('what people still owe is a warning, never a blocker', () => {
@@ -110,7 +143,8 @@ describe('«Cerrar torneo»', () => {
     for (const p of snap.players) snap.payments.push({ id: `pay-${p.id}`, kind: 'entry', fromPlayerId: p.id, toPlayerId: null, amount: 100, paid: true, note: null })
     // Live, nothing is listed yet; the check reads it as it will be once closed.
     expect(computeTournament(snap, settings).money.unassigned.buckets).toEqual([])
-    expect(kinds(snap, {}, settings)).toEqual(['openRounds', 'unassigned'])
+    // Without finishing it, play is not over: the open day blocks, and nothing is «por asignar» yet (as in Dinero).
+    expect(kinds(snap, {}, settings)).toEqual(['openRounds'])
     expect(kinds(snap, { finishLiveRounds: true }, settings)).toEqual(['unassigned'])
   })
 })

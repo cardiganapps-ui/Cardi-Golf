@@ -30,6 +30,7 @@ import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
+import { fromLine } from '../../engine/core/unassigned'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -227,7 +228,8 @@ export function CeremonyScreen() {
     }
     if (m.snake) {
       const totals = new Map<string, number>()
-      for (const p of state.prizes) if (p.moduleId === 'snake') totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+      // The snake's own prizes and what the Comité gave or gave back from its line (a cancelled day, MONEY-05).
+      for (const p of state.prizes) if (fromLine(p, 'snake')) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
       const rows = [...totals].sort((a, b) => b[1] - a[1])
       if (rows.length) {
         const gold = state.stats.awards.find((a) => a.id === 'snakeGold')

@@ -20,11 +20,12 @@ const run = (snap: Snapshot, settings = snap.tournament.settings as TournamentSe
 const money = (over: Partial<GameMoney>): GameMoney => ({ source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100], ...over })
 
 let serial = 0
-/** One call: every row shares the moment and the account, as the server writes them. */
-function call(sourceKey: string, rows: Array<Pick<MoneyAdjustment, 'kind' | 'toPlayerId' | 'amount'>>, reason = 'El Comité lo decidió'): MoneyAdjustment[] {
+/** One call: every row shares the call's id, the moment and the account, as the server writes them. */
+function call(sourceKey: string, rows: Array<Pick<MoneyAdjustment, 'kind' | 'toPlayerId' | 'amount'>>, reason = 'El Comité lo decidió', createdAt?: string): MoneyAdjustment[] {
   serial++
-  const createdAt = `2027-04-12T09:${String(serial % 60).padStart(2, '0')}:00+00:00`
-  return rows.map((r, i) => ({ id: `call${String(serial).padStart(4, '0')}-${i}`, sourceKey, reason, createdAt, createdBy: 'org', voidedAt: null, voidReason: null, ...r }))
+  const at = createdAt ?? `2027-04-12T09:${String(serial % 60).padStart(2, '0')}:00+00:00`
+  const callId = `call${String(serial).padStart(4, '0')}`
+  return rows.map((r, i) => ({ id: `${callId}-${i}`, callId, sourceKey, reason, createdAt: at, createdBy: 'org', voidedAt: null, voidReason: null, ...r }))
 }
 
 /** Every putt a two-putt: no snake, no tiebreak. */
@@ -38,6 +39,13 @@ function cancelledDay2(): Snapshot {
   snap.rounds[0]!.status = 'finished'
   snap.rounds[1]!.status = 'cancelled'
   return snap
+}
+
+/** Every snake tiebreak answered (the first candidate holed out last); an answer can bring the group's next tie up. */
+function answerAll(snap: Snapshot, settings: TournamentSettings) {
+  for (let pending = computeTournament(snap, settings).flags.pendingSnakeTiebreaks; pending.length; pending = computeTournament(snap, settings).flags.pendingSnakeTiebreaks) {
+    for (const p of pending) snap.snakeTiebreaks.push({ roundId: p.roundId, groupId: p.groupId, hole: p.hole, lastHoledPlayerId: p.candidates[0]! })
+  }
 }
 
 const keyed = (st: TournamentState) => Object.fromEntries(st.money.unassigned.buckets.map((b) => [b.key, b.remaining]))
@@ -72,7 +80,8 @@ function expectBalanced(st: TournamentState) {
 describe('a cancelled day: its prizes are «por asignar», by pot, with what happened', () => {
   it('best round and the snake of day 2 are listed, and they are what the bank holds', () => {
     const st = run(cancelledDay2())
-    expect(st.tournamentFinal).toBe(false)
+    // Play is over (day 1 finished, day 2 cancelled): what Terminado would pay is final, and the rest is listed.
+    expect(st.tournamentFinal).toBe(true)
     expect(st.money.unassigned.closing).toBe(true)
     expect(keyed(st)).toEqual({ bestRound: 1200, snake: 1800 })
     expect(st.money.unassigned.total).toBe(3000)
@@ -114,6 +123,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     const snap = cancelledDay2()
     const st0 = run(snap)
     const snake = st0.money.unassigned.buckets.find((b) => b.key === 'snake')!
+    expect(snake.why.steps).toContain('Día 2 cancelado: su premio no se jugó')
     const shares = proRata(snake.remaining, snake.contributors!)
     expect(shares.map((s) => s.amount)).toEqual(Array(12).fill(150))
     snap.moneyAdjustments = call('snake', shares.map((s) => ({ kind: 'refund', toPlayerId: s.playerId, amount: s.amount })), 'Día 2 cancelado: se devuelve')
@@ -160,7 +170,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     expect(st.money.banker.difference).toBe(2000)
   })
 
-  it('«Asignación sin pozo»: once the tiebreak is answered the snake pays its group, and a refund of that money is not paid twice', () => {
+  it('snake money an unanswered tiebreak holds is no bucket: it is listed apart, says to answer, and is never the Comité’s to assign', () => {
     const snap = makeFirstTournament()
     fillRound(snap, 'r1', 3)
     fillRound(snap, 'r2', 4)
@@ -170,17 +180,60 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     for (const s of snap.scores) if (s.roundId === 'r2' && s.hole === 18 && (s.playerId === 'p1' || s.playerId === 'p10')) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
     let st = run(snap)
     expect(st.flags.pendingSnakeTiebreaks).toHaveLength(1)
-    expect(keyed(st)).toEqual({ snake: 600 })
-    expect(st.money.unassigned.buckets[0]!.why.steps).toContain('Día 2, grupo 1: falta decir quién embocó al último en el hoyo 18')
+    expect(keyed(st)).toEqual({})
+    expect(st.money.unassigned.total).toBe(0)
+    expect(st.money.unassigned.held).toEqual([
+      {
+        key: 'snake:r2:r2g1',
+        label: 'La Víbora, día 2, grupo 1',
+        amount: 600,
+        note: 'Responde el desempate del hoyo 18 («¿Quién embocó al último?») en Comité, sección Tarjetas.',
+        why: { title: '$600 esperan un desempate', steps: ['Día 2, grupo 1: falta decir quién embocó al último en el hoyo 18', 'En cuanto se responda, la víbora reparte los $600 de ese grupo. No es dinero por asignar.'] },
+      },
+    ])
+    // The bank holds it, and the list says so: no mismatch.
+    expect(st.money.banker.difference).toBe(600)
+    expect(st.flags.warnings.filter((w) => w.startsWith('El banco tiene'))).toEqual([])
+    // An award on the snake's line finds no money there: flagged, never paid.
     snap.moneyAdjustments = call('snake', [{ kind: 'award', toPlayerId: 'p4', amount: 600 }])
-    expect(run(snap).money.banker.balanced).toBe(true)
-    snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p10' })
     st = run(snap)
-    expect(st.money.unassigned.buckets).toEqual([])
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['orphan'])
     expect(st.flags.warnings).toContain('Asignación sin pozo en La Víbora: hay $600 asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.')
     expect(st.prizes.some((p) => p.moduleId === 'adjustment')).toBe(false)
+    // Answered: the snake pays its group, and nothing is held or paid twice.
+    snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p10' })
+    st = run(snap)
+    expect(st.money.unassigned.held).toEqual([])
+    expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['orphan'])
+    expect(st.prizes.some((p) => p.moduleId === 'adjustment')).toBe(false)
     expect(st.money.banker.balanced).toBe(true)
+  })
+
+  it('calls are applied in the order they were written, not by their ids', () => {
+    const snap = cancelledDay2()
+    const first = call('bestRound', [{ kind: 'award', toPlayerId: 'p2', amount: 1200 }], 'Primero', '2027-04-12T09:00:00+00:00')
+    const later = call('bestRound', [{ kind: 'award', toPlayerId: 'p3', amount: 1200 }], 'Después', '2027-04-12T09:05:00+00:00')
+    // The later call's ids sort first.
+    for (const r of later) Object.assign(r, { id: `0-${r.id}`, callId: `0-${r.callId}` })
+    snap.moneyAdjustments = [...later, ...first]
+    const st = run(snap)
+    expect(st.money.unassigned.assignments.map((a) => [a.reason, a.status])).toEqual([
+      ['Primero', 'applied'],
+      ['Después', 'over'],
+    ])
+    expect(st.prizes.filter((p) => p.moduleId === 'adjustment').map((p) => p.playerId)).toEqual(['p2'])
+  })
+
+  it('two calls written at the same moment by the same account are two decisions', () => {
+    const snap = cancelledDay2()
+    const at = '2027-04-12T09:00:00+00:00'
+    snap.moneyAdjustments = [...call('bestRound', [{ kind: 'award', toPlayerId: 'p2', amount: 1000 }], 'Uno', at), ...call('bestRound', [{ kind: 'award', toPlayerId: 'p3', amount: 1000 }], 'Otro', at)]
+    const st = run(snap)
+    // One fits, the other is over what is left: never merged into a $2,000 call that pays nothing.
+    expect(st.money.unassigned.assignments.map((a) => [a.total, a.status])).toEqual([
+      [1000, 'applied'],
+      [1000, 'over'],
+    ])
   })
 
   it('while play goes on an assignment waits, and nothing is paid', () => {
@@ -205,6 +258,8 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
       if (p.tier !== 'D') snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: 1000 + 250 * (i % 3), ownerId: p.id, soldAt: '' })
       else snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'pending', price: null, ownerId: null, soldAt: null })
     })
+    // One of them open on the block, its player the high bidder at the opening bid: still nobody's money.
+    Object.assign(snap.calcuttaLots.find((l) => l.status === 'pending')!, { status: 'open', price: 250, ownerId: snap.calcuttaLots.find((l) => l.status === 'pending')!.playerId })
     const st = run(snap)
     const a = st.modules.auction!
     expect(a.unfilled).toBeGreaterThan(0)
@@ -254,6 +309,19 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     expect(b.potId).toBe('ctp')
     expect(b.contributors).toEqual(['p1', 'p2', 'p3', 'p4'].map((playerId) => ({ playerId, amount: 100 })))
     expect(b.why.steps).toContain('Más cerca: un hoyo en disputa (3).')
+  })
+
+  it('a side pot that is fully won leaves no bucket', () => {
+    const low: GameConfig = { id: 'low', type: 'lowScore', label: 'Low neto', enabled: true, rounds: 'all', entrants: 'all', options: { basis: 'net', scope: 'overall' }, money: money({ source: 'side', buyIn: 100 }) }
+    const snap = makeSnapshot({ settings: { ...DEFAULT_SETTINGS, rounds: 1, games: [low] }, players: Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: 0 })), rounds: [makeRound(1)] })
+    // Distinct scores: p1 wins the whole $400.
+    for (let i = 1; i <= 4; i++) for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', `p${i}`, h, PARS[h - 1]! + (h < i ? 1 : 0)))
+    snap.rounds[0]!.status = 'finished'
+    const st = run(snap)
+    expect(st.games.low!.pot).toBe(400)
+    expect(st.prizes.filter((p) => p.gameId === 'low').reduce((s, p) => s + p.amount, 0)).toBe(400)
+    expect(keyed(st)).toEqual({})
+    expect(st.money.unassigned.total).toBe(0)
   })
 
   it('a place beyond the field: «individual»', () => {
@@ -344,13 +412,13 @@ describe('property: assigning every bucket in full empties «Por asignar» and b
       },
     ],
     [
-      'unanswered snake tiebreaks over two days',
+      'a cancelled day with an unanswered snake tiebreak, answered after the rest is assigned',
       () => {
         const snap = makeFirstTournament()
         fillRound(snap, 'r1', 7)
-        fillRound(snap, 'r2', 8)
-        for (const s of snap.scores) if (s.hole === 9 && ['p1', 'p10', 'p2', 'p11'].includes(s.playerId)) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
-        snap.rounds.forEach((r) => (r.status = 'finished'))
+        for (const s of snap.scores) if (s.hole === 9 && ['p1', 'p10'].includes(s.playerId)) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
+        snap.rounds[0]!.status = 'finished'
+        snap.rounds[1]!.status = 'cancelled'
         snap.tournament.status = 'finished'
         return snap
       },
@@ -361,8 +429,10 @@ describe('property: assigning every bucket in full empties «Por asignar» and b
     const settings = S
     const st = run(snap, settings)
     expect(st.money.unassigned.buckets.length).toBeGreaterThan(0)
-    expect(st.money.unassigned.total).toBe(st.money.banker.difference)
+    expect(st.money.unassigned.total + st.money.unassigned.heldTotal).toBe(st.money.banker.difference)
     snap.moneyAdjustments = assignAll(st, snap.players[0]!.id)
+    // Held money is the snake's: answering is what pays it (an answer may bring the group's next tie up).
+    answerAll(snap, settings)
     const after = run(snap, settings)
     expect(after.money.unassigned.assignments.every((a) => a.status === 'applied')).toBe(true)
     expect(after.flags.warnings.filter((w) => w.startsWith('Asignación'))).toEqual([])

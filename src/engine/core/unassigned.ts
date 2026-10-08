@@ -11,9 +11,15 @@
  * key is the line's id, so it stays the same whatever moved inside it: a
  * cancelled day, a place nobody fills, a pot nobody won, a tiebreak nobody
  * answered all land in the bucket of the pot that holds their money, named
- * in its explanation. When the cause goes away (the tiebreak is answered),
- * the bucket shrinks or goes, and an assignment it no longer covers is
- * flagged instead of paid.
+ * in its explanation. When the cause goes away (a score corrected fills a
+ * place), the bucket shrinks or goes, and an assignment it no longer covers
+ * is flagged instead of paid.
+ *
+ * Snake money held by an unanswered tiebreak is not a bucket: it belongs to
+ * that group's survivors as soon as someone answers «¿Quién embocó al
+ * último?», and the gate blocks until then. It is listed apart (`held`), with
+ * that answer as the only way out, so the Comité never assigns money the
+ * snake will pay itself (round 2 of PR 104: two causes on one key paid twice).
  *
  * Each assignment (the rows one call wrote) is checked against what its
  * bucket still holds, oldest first: one that fits is paid (a prize to each
@@ -55,10 +61,23 @@ export interface UnassignedBucket {
   contributors?: Contributor[]
 }
 
+/** Money the rules will pay as soon as someone answers a question: not the Comité's to assign. */
+export interface HeldMoney {
+  /** `snake:<round>:<group>`. */
+  key: string
+  label: string
+  amount: number
+  /** What to answer, and where. */
+  note: string
+  why: Explanation
+}
+
 /** The rows one call wrote: one decision. */
 export interface Assignment {
   /** The id of its first row: what «Anular» sends (the server voids the whole call). */
   id: Id
+  /** The call that wrote it (`money_adjustments.call_id`). */
+  callId: Id
   sourceKey: string
   /** The bucket's label, or the key when the bucket is gone. */
   label: string
@@ -76,6 +95,10 @@ export interface UnassignedState {
   buckets: UnassignedBucket[]
   /** Σ remaining: what is still «por asignar». */
   total: number
+  /** Snake money an unanswered tiebreak holds: paid by the snake once answered, never assigned. */
+  held: HeldMoney[]
+  /** Σ held. */
+  heldTotal: number
   /** Every assignment not voided, oldest first. */
   assignments: Assignment[]
   /** The prizes the assignments that fit pay (bank → player). */
@@ -86,7 +109,7 @@ export interface UnassignedState {
   warnings: string[]
 }
 
-export const NO_UNASSIGNED: UnassignedState = { closing: false, buckets: [], total: 0, assignments: [], awards: [], toHouse: 0, warnings: [] }
+export const NO_UNASSIGNED: UnassignedState = { closing: false, buckets: [], total: 0, held: [], heldTotal: 0, assignments: [], awards: [], toHouse: 0, warnings: [] }
 
 export interface UnassignedInput {
   snapshot: Snapshot
@@ -102,6 +125,11 @@ export interface UnassignedInput {
   closing: boolean
 }
 
+/** A prize of a module's line: the module's own, or the Comité's assignment from that line's «por asignar». */
+export function fromLine(pr: PrizeAward, moduleId: string): boolean {
+  return pr.moduleId === moduleId || (pr.moduleId === 'adjustment' && pr.sourceKey === moduleId)
+}
+
 /** The pot line a prize is paid from; null for a direct bet (no bank). */
 function lineOf(pr: PrizeAward): string | null {
   if (pr.payerId) return null
@@ -110,8 +138,23 @@ function lineOf(pr: PrizeAward): string | null {
   return pr.moduleId
 }
 
+/** Snake money an unanswered tiebreak holds, by group: once play is over only. */
+export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'closing'>): HeldMoney[] {
+  if (!input.closing || !input.snake) return []
+  const label = input.settings.modules.snake.label
+  return input.snake.groups
+    .filter((g) => g.pendingHole != null && g.pot > 0)
+    .map((g) => ({
+      key: `snake:${g.roundId}:${g.groupId}`,
+      label: U.heldLabel(label, g.roundNumber, g.groupNumber),
+      amount: g.pot,
+      note: U.heldNote(g.pendingHole!),
+      why: { title: U.heldTitle(fmt(g.pot)), steps: [U.pendingTiebreak(g.roundNumber, g.groupNumber, g.pendingHole!), U.heldWhy(fmt(g.pot))] },
+    }))
+}
+
 export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
-  const { snapshot, settings, prizes, pool, auction, snake, games, warnings } = input
+  const { snapshot, settings, prizes, pool, auction, games, warnings } = input
   if (!input.closing) return []
   const paid = new Map<string, number>()
   for (const pr of prizes) {
@@ -120,8 +163,8 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   }
   const players = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder)
   const entries: Contributor[] | undefined = settings.entryFee > 0 ? players.map((p) => ({ playerId: p.id, amount: settings.entryFee })) : undefined
-  const roundNo = new Map(snapshot.rounds.map((r) => [r.id, r.number]))
-  const groupNo = new Map(snapshot.groups.map((g) => [g.id, g.number]))
+  // The snake's groups waiting on a tiebreak: their money is the snake's, not a bucket.
+  const held = heldMoney(input).reduce((s, h) => s + h.amount, 0)
   // Days whose money the line budgets but nobody played.
   const lostDays = () => {
     const out: string[] = []
@@ -134,13 +177,13 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   }
 
   const out: UnassignedBucket[] = []
-  const add = (key: string, label: string, potId: string, budget: number, notes: string[], contributors?: Contributor[]) => {
+  const add = (key: string, label: string, potId: string, budget: number, notes: string[], contributors?: Contributor[], waiting = 0) => {
     const given = paid.get(key) ?? 0
-    const amount = budget - given
+    const amount = budget - given - waiting
     if (amount <= 0) return
     // The engine's own word on it («Skins: nadie ganó un skin…»), without its «El Comité decide», said once below.
     const own = warnings.filter((w) => w.startsWith(`${label}:`)).map((w) => w.replace(/\s*El Comité decide\.$/, ''))
-    const steps = [U.budget(label, fmt(budget)), U.paid(fmt(given)), ...notes, ...own, U.left(fmt(amount)), U.decides]
+    const steps = [U.budget(label, fmt(budget)), U.paid(fmt(given)), ...(waiting > 0 ? [U.heldApart(fmt(waiting))] : []), ...notes, ...own, U.left(fmt(amount)), U.decides]
     out.push({ key, label, potId, amount, assigned: 0, remaining: amount, why: { title: U.title(fmt(amount)), steps }, contributors })
   }
 
@@ -149,10 +192,7 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
     if (line.moduleId === 'house') continue
     const notes: string[] = []
     if (line.moduleId === 'bestRound' || line.moduleId === 'snake') notes.push(...lostDays())
-    if (line.moduleId === 'snake') {
-      for (const p of snake?.pending ?? []) notes.push(U.pendingTiebreak(roundNo.get(p.roundId) ?? 0, groupNo.get(p.groupId) ?? 0, p.hole))
-    }
-    add(line.moduleId, line.label, 'main', line.amount, notes, entries)
+    add(line.moduleId, line.label, 'main', line.amount, notes, entries, line.moduleId === 'snake' ? held : 0)
   }
   // Entries no prize claims (the prize check warns while play goes on).
   if (pool.difference > 0) {
@@ -211,18 +251,26 @@ export function bucketLabel(key: string, settings: TournamentSettings): string {
   return settings.modules[key as keyof TournamentSettings['modules']]?.label ?? key
 }
 
+const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0)
+
 /**
- * The Comité's assignments against the buckets: each call is one decision,
- * oldest first; one that fits is paid, one that does not is flagged and
+ * The Comité's assignments against the buckets: each call (`callId`) is one
+ * decision, oldest first (by when it was written, then by its id, never by a
+ * row's id alone); one that fits is paid, one that does not is flagged and
  * moves nothing. Updates the buckets' `assigned` and `remaining`.
  */
-export function applyAdjustments(buckets: UnassignedBucket[], adjustments: readonly MoneyAdjustment[], closing: boolean, labelOf: (key: string) => string = (k) => k): UnassignedState {
+export function applyAdjustments(
+  buckets: UnassignedBucket[],
+  adjustments: readonly MoneyAdjustment[],
+  closing: boolean,
+  labelOf: (key: string) => string = (k) => k,
+  held: HeldMoney[] = [],
+): UnassignedState {
   const calls = new Map<string, MoneyAdjustment[]>()
-  for (const a of [...adjustments].filter((x) => !x.voidedAt).sort((x, y) => (x.createdAt < y.createdAt ? -1 : x.createdAt > y.createdAt ? 1 : x.id < y.id ? -1 : x.id > y.id ? 1 : 0))) {
-    const k = `${a.sourceKey}|${a.createdAt}|${a.createdBy ?? ''}`
-    const list = calls.get(k) ?? []
+  for (const a of [...adjustments].filter((x) => !x.voidedAt).sort((x, y) => cmp(x.createdAt, y.createdAt) || cmp(x.callId, y.callId) || cmp(x.id, y.id))) {
+    const list = calls.get(a.callId) ?? []
     list.push(a)
-    calls.set(k, list)
+    calls.set(a.callId, list)
   }
   const byKey = new Map(buckets.map((b) => [b.key, b]))
   const assignments: Assignment[] = []
@@ -233,7 +281,7 @@ export function applyAdjustments(buckets: UnassignedBucket[], adjustments: reado
     const first = rows[0]!
     const bucket = byKey.get(first.sourceKey)
     const total = rows.reduce((s, r) => s + r.amount, 0)
-    const base = { id: first.id, sourceKey: first.sourceKey, label: bucket?.label ?? labelOf(first.sourceKey), rows, total, reason: first.reason, createdAt: first.createdAt }
+    const base = { id: first.id, callId: first.callId, sourceKey: first.sourceKey, label: bucket?.label ?? labelOf(first.sourceKey), rows, total, reason: first.reason, createdAt: first.createdAt }
     if (!closing) {
       assignments.push({ ...base, status: 'waiting' })
       continue
@@ -270,5 +318,5 @@ export function applyAdjustments(buckets: UnassignedBucket[], adjustments: reado
     }
   }
   const listed = buckets.filter((b) => b.remaining > 0)
-  return { closing, buckets: listed, total: listed.reduce((s, b) => s + b.remaining, 0), assignments, awards, toHouse, warnings }
+  return { closing, buckets: listed, total: listed.reduce((s, b) => s + b.remaining, 0), held, heldTotal: held.reduce((s, h) => s + h.amount, 0), assignments, awards, toHouse, warnings }
 }

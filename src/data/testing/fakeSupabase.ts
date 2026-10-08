@@ -895,7 +895,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       const at = stamp()
       let voided = 0
       for (const r of rows) {
-        if (r.tournament_id !== row.tournament_id || r.source_key !== row.source_key || r.created_at !== row.created_at || (r.created_by ?? null) !== (row.created_by ?? null) || r.voided_at != null) continue
+        // Its call, and no other: the same line, account and moment are another decision.
+        if (r.tournament_id !== row.tournament_id || (r.call_id ?? r.id) !== (row.call_id ?? row.id) || r.voided_at != null) continue
         Object.assign(r, { voided_at: at, voided_by: as, void_reason: String(args.p_reason).trim() })
         voided++
       }
@@ -906,7 +907,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const bad = reasonError(args.p_reason)
     if (bad) return fail('22023', bad)
     const source = typeof args.p_source_key === 'string' ? args.p_source_key.trim() : ''
-    if (!source || source.length > 120) return fail('22023', 'Falta de qué dinero sale la asignación')
+    if (!source) return fail('22023', 'Falta de qué dinero sale la asignación')
+    if (!/^([A-Za-z]{1,40}|game:[a-z0-9-]{1,32})$/.test(source)) return fail('22023', 'Ese dinero no es una línea por asignar')
     const entries = args.p_entries
     if (!Array.isArray(entries) || entries.length === 0) return fail('22023', 'No hay nada que asignar')
     if (entries.length > 200) return fail('22023', 'Demasiadas líneas en una sola asignación')
@@ -914,16 +916,18 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (!e || typeof e !== 'object' || Array.isArray(e)) return fail('22023', 'Cada línea de la asignación lleva tipo, jugador y cantidad')
       const { kind, amount, to_player_id: to } = e as Row
       if (kind !== 'award' && kind !== 'refund' && kind !== 'house') return fail('22023', 'Cada línea se da a un jugador, se devuelve o va a la casa')
-      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0 || amount > 100_000_000) return fail('22023', 'Cada cantidad es un número entero de pesos, mayor que cero')
+      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0 || amount > 10_000_000) return fail('22023', 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo')
       if (kind === 'house') {
         if (to != null) return fail('22023', 'Lo que va a la casa no lleva jugador')
       } else if (!rowsOf('players').some((p) => p.id === to && p.tournament_id === tid)) return fail('22023', 'Ese jugador no es de este torneo')
     }
+    if ((entries as Row[]).reduce((s, e) => s + (e.amount as number), 0) > 10_000_000) return fail('22023', 'Una asignación suma $10,000,000 como máximo')
     const at = stamp()
     const reason = String(args.p_reason).trim()
+    const call = `money_adjustments-call-${++serial}`
     for (const e of entries as Row[]) {
       const to = e.kind === 'house' ? null : e.to_player_id
-      rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
+      rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
     }
     return json(200, { assigned: entries.length })
   }
