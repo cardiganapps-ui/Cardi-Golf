@@ -311,20 +311,22 @@ describe('a score this phone saved, once the server took it', () => {
     expect(shown()).toMatchObject({ strokes: 7, disputed: true })
   })
 
-  it('a write that lands while a fetch is on its way shows at once, and one more fetch follows that one (R3)', async () => {
+  it('a write that lands while a fetch is on its way shows at once, and one more fetch, at the flush’s end, supersedes that one (R3, N8)', async () => {
     const reload = slowReload()
     await reload.atLastWave
+    const n = reads()
     void save(8)
     const p = await control!.nth(1)
     p.land(upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]))
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
     expect(shown()).toMatchObject({ strokes: 8 })
-    expect(_liveTest.refetchAsked()).toBe(true)
-    const n = reads()
+    // Asked of the flush, not chained to the fetch out: one per flush, whatever it overlaps (#92's fifth verifier, N8).
+    expect(_liveTest.refetchAsked()).toBe(false)
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
     await reload.finish()
     expect(shown()).toMatchObject({ strokes: 8 })
-    await vi.waitFor(() => expect(reads()).toBe(n + 1))
-    expect(_liveTest.refetchAsked()).toBe(false)
+    await sleep(300)
+    expect(reads()).toBe(n + 1)
   })
 
   it('a fetch that landed while the push was out read before the write: the hole shows at once, on the boards and in the copy, and stays when the one more fetch fails (N1)', async () => {
@@ -380,13 +382,12 @@ describe('a score this phone saved, once the server took it', () => {
     for (const h of holes) expect(store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === h)).toMatchObject({ strokes: 5 })
   })
 
-  it('two fetches out and a write lands during both: the newer lands first, and the older’s landing still sends the one more fetch (N2)', async () => {
+  it('two fetches out and another tab’s write lands during both: the newer lands first, and the older’s landing still sends the one more fetch (N2)', async () => {
     const older = slowReload()
     await older.atLastWave
-    void save(8)
-    const p = await control!.nth(1)
-    p.land(upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]))
-    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    // Not a flush of this tab's: the one more fetch is chained to the fetches out.
+    store().landChanges(store().tournamentId!, upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]), 0, liveClock())
+    expect(shown()).toMatchObject({ strokes: 8 })
     expect(_liveTest.refetchAsked()).toBe(true)
     // The newer fetch lands while the older is still out: nothing to ask yet.
     await store().reload()
@@ -395,6 +396,22 @@ describe('a score this phone saved, once the server took it', () => {
     await older.finish()
     await vi.waitFor(() => expect(reads()).toBe(n + 1))
     expect(_liveTest.refetchAsked()).toBe(false)
+  })
+
+  it('a flush that overlaps fetch after fetch asks one fetch at its end, not one per fetch (N8)', async () => {
+    const older = slowReload()
+    await older.atLastWave
+    const n = reads()
+    void save(8)
+    const p = await control!.nth(1)
+    p.land(upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]))
+    await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    expect(_liveTest.refetchAsked()).toBe(false)
+    await older.finish()
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+    await sleep(300)
+    expect(reads()).toBe(n + 1)
+    expect(shown()).toMatchObject({ strokes: 8 })
   })
 
   it('the guard keeps a row stamped later than the landed one, and one more fetch says which stands (N4)', async () => {
@@ -464,7 +481,6 @@ describe('a score this phone saved, once the server took it', () => {
     const p = await control!.nth(1)
     p.land(upserted('scores', [serverWrite({ strokes: 8, entered_by: A, updated_at: '2027-04-09T18:00:05+00:00' })]))
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
-    expect(_liveTest.refetchAsked()).toBe(true)
     // Home while the fetch is out: the one more fetch the write asked for goes with the tournament.
     store().unsubscribe()
     const n = reads()
@@ -1126,6 +1142,31 @@ describe('another tab of the app on this phone', () => {
     other.postMessage({ landed: { tournamentId: TID, changes: upserted('snake_tiebreaks', [ans(a)]), age: 0 } })
     other.close()
     await vi.waitFor(() => expect(answer()).toBe(a))
+  })
+
+  it('a message posted «in the future» (the wall clock went back while it waited) counts as not saying: one more fetch, the later row stands (#92 round 6, E2c)', async () => {
+    await startOutbox()
+    const fx = (await open('full12-live'))!
+    const TID = fx.snapshot.tournament.id
+    const R = fx.snapshot.rounds.find((r) => r.status === 'live')!.id
+    const P = fx.snapshot.groups.find((g) => g.roundId === R)!.playerIds[0]!
+    const shown = () => store().data!.snapshot.scores.find((x) => x.roundId === R && x.playerId === P && x.hole === 16)
+    const five = { id: 'srv-x7', round_id: R, player_id: P, hole: 16, strokes: 5, putts: 2, picked_up: false, entered_by: P, client_ts: null, updated_at: '2027-04-09T18:00:02+00:00', disputed: false, previous: null, reason: null }
+    const rows = server.tables.scores!
+    const held = rows.find((r) => r.round_id === R && r.player_id === P && r.hole === 16)
+    const seven = { ...five, strokes: 7, updated_at: '2027-04-09T18:00:01+00:00', disputed: true }
+    if (held) Object.assign(held, seven)
+    else rows.push(seven)
+    // This tab fetched while the message waited, and read the 7 that committed after the other tab's 5.
+    await store().reload()
+    expect(shown()).toMatchObject({ strokes: 7 })
+    await sleep(120)
+    const n = reads()
+    const other = new BroadcastChannel('cardi-golf-outbox')
+    other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [five]), age: 50, postedAt: Date.now() + 10_000 } })
+    other.close()
+    await vi.waitFor(() => expect(reads()).toBe(n + 1))
+    expect(shown()).toMatchObject({ strokes: 7, disputed: true })
   })
 
   /** Hole 16 of the live round's first player, as the server stored the other tab's write. */

@@ -542,6 +542,8 @@ export const useTournament = create<StoreState>((set, get) => ({
     // Never over the live boards: a cache read that lands after the server's answer is older than it.
     if (get().tournamentId === tournamentId && get().source === 'server') return
     if (get().tournamentId !== tournamentId) get().unsubscribe()
+    // Entering it from the copy: the reloads a cold open needs are this tournament's, not a left one's.
+    left = false
     // A copy on the phone is of a tournament the phone keeps.
     set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
   },
@@ -690,7 +692,11 @@ export const useTournament = create<StoreState>((set, get) => ({
     const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
     if (fresh.length) {
       // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
-      if (fetching > 0 && !left) refetch = true
+      // In a flush, the one fetch at its end reads after it: one per overlapped fetch chained 17 for 36 rows (N8).
+      if (fetching > 0 && !left) {
+        if (opts.flushing) fetchAfterPushes = true
+        else refetch = true
+      }
       const next = structuredClone(d.base)
       const now = Date.now()
       const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))

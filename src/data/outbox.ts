@@ -486,8 +486,11 @@ function listen() {
       const age = landed.age
       // The message may have waited behind this tab's own work: the wall clock, which the tabs share at any one moment,
       // says how long (X3b). Read later, the push would look later than a fetch that landed meanwhile.
-      const waited = typeof landed.postedAt === 'number' && Number.isFinite(landed.postedAt) ? Math.max(0, Date.now() - landed.postedAt) : 0
-      const sentAt = typeof age === 'number' && Number.isFinite(age) ? liveClock() - Math.max(0, age) - waited : 0
+      const posted = typeof landed.postedAt === 'number' && Number.isFinite(landed.postedAt) ? landed.postedAt : null
+      // Posted «in the future»: the wall clock went back while it waited, so its wait is unknown. Counted as not saying.
+      const known = typeof age === 'number' && Number.isFinite(age) && (posted == null || posted <= Date.now())
+      const waited = posted == null ? 0 : Math.max(0, Date.now() - posted)
+      const sentAt = known ? liveClock() - Math.max(0, age) - waited : 0
       return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, sentAt)
     }
     void loadQueue().then(() => void flush())
