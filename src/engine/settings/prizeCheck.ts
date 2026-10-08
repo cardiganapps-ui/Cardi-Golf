@@ -7,8 +7,13 @@
  * is left, so the main pot balances by construction (unless it goes negative).
  *
  * Side pots (`money.source = 'side'`) are buy-in × entrants and pay out
- * exactly what they collect, so they always balance; they are listed so the
- * organizer sees every peso. Direct bets never touch the bank.
+ * what they collect; they are listed so the organizer sees every peso.
+ * Direct bets never touch the bank.
+ *
+ * Balanced is not enough (MONEY-09): a place nobody can occupy (a 4th prize
+ * with three players, a 2nd pair prize with one pair, a low score paying
+ * three places to two entrants) leaves its money with the bank. Those are
+ * `unreachable`, and `ok` needs both.
  */
 import { t } from '../../i18n/es-MX'
 import type { TournamentSettings } from './schema'
@@ -40,6 +45,21 @@ export interface BetLine {
   detail: string
 }
 
+/** Paid places beyond who can fill them (MONEY-09). */
+export interface UnreachableLine {
+  /** `individual`, `pairs`, or `game:<id>`. */
+  id: string
+  label: string
+  /** Places with a prize. */
+  places: number
+  /** Entrants who can occupy one: players, teams or pairs. */
+  reachable: number
+  /** The pesos of the places past the last entrant. */
+  amount: number
+  /** e.g. "4 lugares con premio y 3 jugadores". */
+  detail: string
+}
+
 export interface PrizeCheck {
   entryPot: number
   lines: PrizeLine[]
@@ -47,6 +67,10 @@ export interface PrizeCheck {
   /** entryPot − prizesTotal; 0 when balanced. */
   difference: number
   balanced: boolean
+  /** Places nobody can occupy, main pot and side pots alike. */
+  unreachable: UnreachableLine[]
+  /** Balanced, and every paid place can be won: what creating or saving needs. */
+  ok: boolean
   /** Side pots: each pays exactly what its entrants put in. */
   sidePots: SidePotLine[]
   /** Direct bets between players (no pot). */
@@ -62,6 +86,10 @@ export interface FieldShape {
   groupSizes?: number[][]
   /** Entrants per game id for games with a list; defaults to every player. */
   entrants?: Record<string, number>
+  /** Teams drawn for a team format (teams, else the pairs); until then, at most one per two players. */
+  teams?: number
+  /** Pairs drawn for the pairs game; until then, one per two players. */
+  pairs?: number
   /**
    * Rounds that exist and are not cancelled. A round added beyond the plan
    * pays its best round and snake too, so the check counts whichever is more
@@ -175,7 +203,65 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
   }
   const prizesTotal = lines.reduce((s, l) => s + l.amount, 0)
   const difference = entryPot - prizesTotal
-  return { entryPot, lines, prizesTotal, difference, balanced: difference === 0, sidePots, bets }
+  const unreachable = unreachablePlaces(settings, field, lines, rounds)
+  const balanced = difference === 0
+  return { entryPot, lines, prizesTotal, difference, balanced, unreachable, ok: balanced && unreachable.length === 0, sidePots, bets }
+}
+
+/** The pesos of `amounts` past the first `reachable` places. */
+function beyond(amounts: number[], reachable: number): number {
+  return amounts.slice(Math.max(0, reachable)).reduce((s, x) => s + x, 0)
+}
+
+/** How many entrants the main standings rank: players, or teams in a team format. */
+export function mainEntrants(settings: TournamentSettings, field: FieldShape): { count: number; unit: [string, string] } {
+  const ind = settings.modules.individual
+  const teams = ind.format === 'team' || (ind.format === 'matchPlay' && ind.formatOptions.matchMode === 'fourball')
+  if (!teams) return { count: field.players, unit: ['jugador', 'jugadores'] }
+  // Before the draw a team has two players at least, so half the field is the most there can be.
+  return { count: field.teams ?? Math.floor(field.players / 2), unit: ['equipo', 'equipos'] }
+}
+
+function placesText(places: number, reachable: number, unit: [string, string]): string {
+  return `${places} ${places === 1 ? 'lugar' : 'lugares'} con premio y ${reachable === 1 ? `1 ${unit[0]}` : `${reachable} ${unit[1]}`}`
+}
+
+/**
+ * Places with a prize that more places than entrants leave empty (MONEY-09).
+ * Only games that pay by place can have one: the individual standings, the
+ * pairs game, and low score. With no players yet there is nothing to check.
+ */
+function unreachablePlaces(settings: TournamentSettings, field: FieldShape, lines: PrizeLine[], rounds: number): UnreachableLine[] {
+  if (field.players <= 0) return []
+  const out: UnreachableLine[] = []
+  const { modules, prizes } = settings
+  const paid = (amounts: number[]) => amounts.filter((x) => x > 0).length
+  if (modules.individual.enabled) {
+    const { count, unit } = mainEntrants(settings, field)
+    const total = lines.find((l) => l.moduleId === 'individual')?.amount ?? 0
+    const amounts = prizes.stablefordMode === 'percent' ? percentPlaces(total, prizes.stableford) : prizes.stableford
+    const places = paid(amounts)
+    if (places > count) out.push({ id: 'individual', label: modules.individual.label, places, reachable: count, amount: beyond(amounts, count), detail: placesText(places, count, unit) })
+  }
+  if (modules.pairs.enabled) {
+    const count = field.pairs ?? Math.floor(field.players / 2)
+    const places = paid(prizes.pairs)
+    if (places > count) out.push({ id: 'pairs', label: modules.pairs.label, places, reachable: count, amount: beyond(prizes.pairs, count), detail: placesText(places, count, ['pareja', 'parejas']) })
+  }
+  for (const g of settings.games) {
+    if (!g.enabled || g.type !== 'lowScore' || (g.money.source !== 'main' && g.money.source !== 'side')) continue
+    const n = g.entrants === 'list' ? (field.entrants?.[g.id] ?? 0) : field.players
+    const places = g.money.split.filter((p) => p > 0).length
+    if (places <= n) continue
+    // The pot as the game splits it: per day, the first day takes the odd pesos.
+    const pot = g.money.source === 'main' ? g.money.amount : g.money.buyIn * n
+    const days = g.options.scope === 'perRound' ? Math.max(1, rounds) : 1
+    const base = Math.floor(pot / days)
+    let amount = 0
+    for (let d = 0; d < days; d++) amount += beyond(percentPlaces(base + (d === 0 ? pot - base * days : 0), g.money.split), n)
+    out.push({ id: `game:${g.id}`, label: g.label, places, reachable: n, amount, detail: placesText(places, n, ['jugador', 'jugadores']) })
+  }
+  return out
 }
 
 /** Whole-peso amounts for percent places: floor each, remainder to 1st. */
@@ -237,5 +323,8 @@ export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): Fi
   for (const g of settings.games) {
     if (g.entrants === 'list') entrants[g.id] = (snapshot.gameEntries ?? []).filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
   }
-  return { players: snapshot.players.length, groupSizes, entrants, rounds: groupSizes.length }
+  // Drawn teams and pairs, once there are any (a team format falls back to the pairs, as its standings do).
+  const pairs = snapshot.pairs.length || undefined
+  const teams = snapshot.teams.length || pairs
+  return { players: snapshot.players.length, groupSizes, entrants, rounds: groupSizes.length, teams, pairs }
 }

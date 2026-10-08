@@ -1300,11 +1300,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 97,
+      "tests": [
+        "src/engine/settings/places.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "src/screens/admin/PrizeSummary.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Places nobody fills stay with the bank, named with their pesos once final; the Comité decides. Their per-peso list and actions (award, refund, house) come with MONEY-05."
     },
     {
       "id": "MONEY-10",
