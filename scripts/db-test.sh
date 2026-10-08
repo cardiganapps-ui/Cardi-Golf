@@ -8,7 +8,9 @@
 #      ran is refused; a ledger without checksums (production before DB-17)
 #      gets them, and nothing is applied twice.
 #   3. The harness self-test and every supabase/tests/*.sql, each on its own
-#      copy of the migrated database with the two-tenant seed; then every
+#      copy of the migrated database with the two-tenant seed; the test
+#      server's rules against the real ones (scripts/server-rules.mjs: every
+#      request in src/data/testing/cases/serverRules.json, QA-06); then every
 #      supabase/tests/race_*.sh, which runs two sessions at once.
 #   4. Supabase's advisors (splinter): no finding over the baseline in
 #      supabase/tests/harness/lint-baseline.json (DB-16 holds the line).
@@ -76,7 +78,7 @@ if grep -q 'applying' "$work/out"; then cat "$work/out"; echo "  ✗ a ledger wi
 [ "$("${PSQL[@]}" -d "${P}_legacy" -Atc "select count(*) from public._migrations where checksum is null")" -eq 0 ] || { echo "  ✗ checksums not filled in"; exit 1; }
 echo "  ✓ a ledger from before checksums gets them, and nothing is applied again"
 
-step "3. SQL tests, each on its own copy with the two-tenant seed"
+step "3. SQL tests, each on its own copy with the two-tenant seed; the test server's rules, on a copy of their own"
 fresh "${P}_seeded" "$P"
 "${PSQL[@]}" -d "${P}_seeded" -f "$H/seed-two-tenants.sql" >/dev/null
 for t in "$H/selftest.sql" "$root"/supabase/tests/*.sql; do
@@ -88,6 +90,9 @@ for t in "$H/selftest.sql" "$root"/supabase/tests/*.sql; do
   fi
   echo "  ✓ $(basename "$t")"
 done
+# The case file brings its own world: a copy with no seed.
+fresh "${P}_t" "$P"
+PGDATABASE="${P}_t" node "$root/scripts/server-rules.mjs" || exit 1
 
 step "3b. Races: two sessions at once, on the migrated database (supabase/tests/race_*.sh)"
 for t in "$root"/supabase/tests/race_*.sh; do

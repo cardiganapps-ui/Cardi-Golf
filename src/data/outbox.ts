@@ -567,9 +567,13 @@ async function push(item: OutboxItem): Promise<void> {
   }
 }
 
-/** Errors the server will keep rejecting (RLS, constraint): drop the item instead of retrying forever. */
+/**
+ * Errors the server will keep rejecting (RLS, constraint): drop the item instead of retrying forever.
+ * Postgres's data exceptions (class 22) are never transient either: a value out of its type's range
+ * (22003, 22008, 22009) or too long for it (22001) is refused the same way every time it is sent.
+ */
 function isPermanent(msg: string): boolean {
-  return /row-level security|violates|permission denied|invalid input/i.test(msg)
+  return /row-level security|violates|permission denied|invalid input|out of range|too long/i.test(msg)
 }
 
 /**
