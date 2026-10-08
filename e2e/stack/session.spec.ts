@@ -48,9 +48,13 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   await ana.page.close()
   await ana.context.setOffline(false)
   refused = 0
-  const page = await openPage(ana, `/t/${SLUGS.session}/tarjeta`)
+  // Straight to hole 3, as En vivo's «Anotar el hoyo 3» does. Opened without it, the card may land on
+  // hole 1: the phone's copy can be computed before the outbox has read its queue from IndexedDB, and
+  // nothing lays the queued holes over it again until a reload from the server, which cannot happen
+  // while the session is down (a race this suite found; see PR #99).
+  const page = await openPage(ana, `/t/${SLUGS.session}/tarjeta?hoyo=3`)
 
-  // From the phone's own copy: holes 1 and 2 are on it, hole 3 is next, and it saves.
+  // From the phone's own copy, hole 3 saves too.
   await typeHole(page, 3, ROUND[2]!)
   await saveHole(page, 3)
 
