@@ -8,7 +8,7 @@
  * and split the prizes.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
-import { countback, flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
+import { countback, flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { formatFor, toParText, withTrueMinus, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -150,22 +150,29 @@ export const individualModule: GameModule<IndividualState> = {
     })
 
     // No money until a hole has been played: an all-tied field on Calcutta
-    // night is not a twelve-way split.
+    // night is not a twelve-way split. An entrant with no result (never
+    // played, a fourball side with no match) takes no paid place (MONEY-09).
     const anyScores = Object.values(standings.thru).some((t) => t > 0)
-    const prizeShares = anyScores || ctx.tournamentFinal ? splitPrizes(groups, individualPrizeAmounts(ctx.settings, fieldShape(ctx.snapshot, ctx.settings)), nameOf) : []
+    const paid = onlyWithResult(groups, (id) => !standings.totals[id]?.empty)
+    const amounts = individualPrizeAmounts(ctx.settings, fieldShape(ctx.snapshot, ctx.settings))
+    const prizeShares = anyScores || ctx.tournamentFinal ? splitPrizes(paid, amounts, nameOf) : []
     const prizes: IndividualState['prizes'] = {}
     for (const s of prizeShares) prizes[s.item] = { amount: s.amount, why: s.why }
+    const byTeam = standings.entrants.some((e) => e.isTeam)
+    const unfilled = ctx.tournamentFinal
+      ? unfilledWarning(ctx.settings.modules.individual.label, unfilledPlaces(paid, amounts), paid.reduce((n, g) => n + g.members.length, 0), byTeam ? ['equipo', 'equipos'] : ['jugador', 'jugadores'])
+      : []
 
     return {
       formatId: format.id,
       figureLabel: format.figureLabel(ctx.settings),
-      byTeam: standings.entrants.some((e) => e.isTeam),
+      byTeam,
       rows,
       groups,
       lastPlace: anyScores || ctx.tournamentFinal ? (groups.at(-1)?.members ?? []) : [],
       prizes,
       final: ctx.tournamentFinal,
-      warnings: [...standings.warnings, ...incompleteWarning(standings.entrants.filter((e) => incomplete(e.id)).map((e) => `${e.name} (${standings.thru[e.id] ?? 0} de ${expectedHoles})`))],
+      warnings: [...standings.warnings, ...incompleteWarning(standings.entrants.filter((e) => incomplete(e.id)).map((e) => `${e.name} (${standings.thru[e.id] ?? 0} de ${expectedHoles})`)), ...unfilled],
     }
   },
 

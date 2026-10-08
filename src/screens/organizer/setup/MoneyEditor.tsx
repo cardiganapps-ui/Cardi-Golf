@@ -186,7 +186,15 @@ export function MoneyBar({ value, field }: { value: TournamentSettings; field: F
         {U.bar.pots}
         <strong>{formatMoney(pots, cur)}</strong>
       </span>
-      {!check ? <span className={styles.barOff}>{t.admin.tournament.invalid}</span> : diff === 0 ? <span className={styles.barOk}>{U.bar.ok}</span> : <span className={styles.barOff}>{diff > 0 ? U.bar.over(formatMoney(diff, cur)) : U.bar.off(formatMoney(-diff, cur))}</span>}
+      {!check ? (
+        <span className={styles.barOff}>{t.admin.tournament.invalid}</span>
+      ) : diff !== 0 ? (
+        <span className={styles.barOff}>{diff > 0 ? U.bar.over(formatMoney(diff, cur)) : U.bar.off(formatMoney(-diff, cur))}</span>
+      ) : check.unreachable.length ? (
+        <span className={styles.barOff}>{U.bar.unreachable}</span>
+      ) : (
+        <span className={styles.barOk}>{U.bar.ok}</span>
+      )}
     </div>
   )
 }
