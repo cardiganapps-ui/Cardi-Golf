@@ -55,6 +55,15 @@ if (!round) {
   console.error('No round to simulate')
   process.exit(1)
 }
+// A closed day takes no hole from a phone (0026, REL-09), and the simulator writes what the Tarjeta writes.
+// Its scores are the day's results: --reset would delete them behind the Comité's back.
+if (round.status === 'finished' || round.status === 'cancelled') {
+  console.error(
+    `Day ${round.number} is ${round.status}: no phone can write a hole into it, so the simulator won't either${reset ? ', and --reset would delete the scores its results stand on' : ''}. ` +
+      'Reopen it first in Comité › Rondas («Reabrir»), then run this again.',
+  )
+  process.exit(1)
+}
 const players = must(await sb.from('players').select('id, display_name, base_hcp, default_tee_id').eq('tournament_id', t.id), 'players')
 const groups = must(await sb.from('groups').select('id, number, start_hole, group_members(player_id)').eq('round_id', round.id).order('number'), 'groups')
 if (!groups.length) {

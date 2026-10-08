@@ -1,11 +1,11 @@
 {
   "anon_security_definer_function_executable (WARN)": 86,
   "auth_rls_initplan (WARN)": 16,
-  "authenticated_security_definer_function_executable (WARN)": 128,
+  "authenticated_security_definer_function_executable (WARN)": 129,
   "function_search_path_mutable (WARN)": 5,
-  "multiple_permissive_policies (WARN)": 92,
+  "multiple_permissive_policies (WARN)": 88,
   "public_bucket_allows_listing (WARN)": 1,
   "rls_enabled_no_policy (INFO)": 9,
   "unindexed_foreign_keys (INFO)": 48,
-  "unused_index (INFO)": 20
+  "unused_index (INFO)": 25
 }
