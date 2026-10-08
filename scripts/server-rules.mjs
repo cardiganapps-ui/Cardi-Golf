@@ -63,12 +63,16 @@ for (const line of psql(`select table_name || ' ' || column_name from informatio
   if (!tableColumns.has(table)) tableColumns.set(table, new Set())
   tableColumns.get(table).add(column)
 }
-/** PGRST204, PostgREST's own answer to a body with a column the table doesn't have. */
+/**
+ * The columns a POST writes: its `columns` when the case gives them (PostgREST reads only those keys of
+ * the body), else every key of the body's rows, as supabase-js names them for a list.
+ */
+const columnsOf = (req) => req.columns ?? [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
+/** PGRST204, PostgREST's own answer to a column the table doesn't have. */
 function unknownColumn(req) {
   if (req.method !== 'POST') return null
   const known = tableColumns.get(req.table) ?? new Set()
-  const sent = [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
-  const col = sent.find((c) => !known.has(c))
+  const col = columnsOf(req).find((c) => !known.has(c))
   return col ? `PGRST204 Could not find the '${col}' column of '${req.table}' in the schema cache` : null
 }
 function toDb(table, row) {
@@ -103,10 +107,10 @@ function whereSql(table, where) {
 /**
  * The statement PostgREST builds for a request (src/data/testing/fakeSupabase.ts
  * parses the same request off the wire):
- * - POST: INSERT of the body's columns from json_populate_recordset; with
- *   `Prefer: resolution=merge-duplicates` ON CONFLICT (on_conflict, or the
- *   primary key) DO UPDATE SET every column sent; with ignore-duplicates
- *   DO NOTHING.
+ * - POST: INSERT of the columns written (`columnsOf`) from
+ *   json_populate_recordset; with `Prefer: resolution=merge-duplicates`
+ *   ON CONFLICT (on_conflict, or the primary key) DO UPDATE SET each of them;
+ *   with ignore-duplicates DO NOTHING.
  * - DELETE: the eq filters as a WHERE.
  * - RPC: the function called with the arguments named, its answer kept to be read.
  */
@@ -122,8 +126,8 @@ function requestSql(req) {
   }
   if (req.method === 'DELETE') return `delete from public.${t} where ${whereSql(t, req.eq ?? {})}`
   const body = (Array.isArray(req.body) ? req.body : [req.body]).map((r) => toDb(t, r))
-  // Every row's keys, as supabase-js's `columns` names them: a key one row leaves out is null in it.
-  const cols = [...new Set(body.flatMap((r) => Object.keys(r)))]
+  // Every row's keys, as supabase-js's `columns` names them (or the case's own): a key one row leaves out is null in it.
+  const cols = columnsOf(req).map(ident)
   const list = cols.join(', ')
   let sql = `insert into public.${t} (${list}) select ${list} from json_populate_recordset(null::public.${t}, ${jsonLiteral(body)})`
   const resolution = /resolution=(merge|ignore)-duplicates/.exec(req.prefer ?? '')?.[1]

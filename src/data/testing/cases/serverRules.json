@@ -1,5 +1,5 @@
 {
-  "about": "What the database lets a phone read and write, and what it changes on the way in, as requests over PostgREST. Run against the real migrations by scripts/server-rules.mjs (the db job) and against the test server by src/data/testing/serverRules.test.ts: both must answer every case as written here (QA-06). Ids are names; on the database every uuid column gets md5(name).",
+  "about": "What the database lets a phone read and write, and what it changes on the way in, as requests over PostgREST. Run against the real migrations by scripts/server-rules.mjs (the db job) and against the test server by src/data/testing/serverRules.test.ts: both must answer every case as written here (QA-06). Ids are names; on the database every uuid column gets md5(name). A list of rows is sent with supabase-js's `columns` (every key of its rows); a request's own `columns` is sent instead, as written.",
   "world": {
     "users": [
       "uid-p1",
@@ -3972,7 +3972,7 @@
       }
     },
     {
-      "name": "hole_awards: a player of another group and a fraction for the hole: the cast answers before the policy (22P02)",
+      "name": "scores: a player of another group and a fraction for the hole: the cast answers before the policy (22P02)",
       "as": "uid-p1",
       "request": {
         "method": "POST",
@@ -4260,6 +4260,1080 @@
             "playerId": "pl"
           }
         ]
+      }
+    },
+    {
+      "name": "scores: a client time of 24:00:00 is midnight, and taken",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T24:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: a client time with a leap second, 23:59:60, is taken",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T23:59:60Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: a client time at 24:01:00 is past the end of the day (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T24:01:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time at minute 60 is out of range (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:60:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time at second 61 is out of range (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:30:61Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time at 23:59:60.5 is past the end of the day: the fraction counts (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T23:59:60.5Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time at 23:59:60.0000005 is 24:00: the fraction is rounded to the microsecond, half of one to the even one",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T23:59:60.0000005Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: a client time in month 13 is out of range (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-13-01T12:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time in year 0 is out of range: there is no year 0 (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "0000-01-01T00:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: a client time in year 1 is taken",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "0001-01-01T00:00:00Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: a client time 16 hours off UTC is out of range (22009)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00+16:00"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22009"
+      }
+    },
+    {
+      "name": "scores: a client time with an offset of 60 minutes is out of range (22009)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00+05:60"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22009"
+      }
+    },
+    {
+      "name": "scores: a client time 15:59 behind UTC is taken",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00-15:59"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: past the end of the day and 16 hours off UTC, the time of day answers first (22008)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T25:00:00+16:00"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22008"
+      }
+    },
+    {
+      "name": "scores: 30 February and 16 hours off UTC, the offset answers before the date (22009)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-02-30T12:00:00+16:00"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22009"
+      }
+    },
+    {
+      "name": "scores: a client time with a no-break space after it is no time (22007): only plain spaces are skipped",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00Z\u00a0"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22007"
+      }
+    },
+    {
+      "name": "scores: a hole number with a no-break space after it is no integer (22P02)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": "7\u00a0",
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "scores: picked_up \"true\" with a no-break space after it is no boolean (22P02)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": "true\u00a0",
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "scores: a hole \" 2147483647 \" in text is an integer at the top of the range, and the check refuses it (23514)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": " 2147483647 ",
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "scores: a hole \"-2147483649\" in text is below the integer range (22003)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": "-2147483649",
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22003"
+      }
+    },
+    {
+      "name": "scores: strokes of 1e21 is no integer literal (22P02), not a number out of range",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 1e+21,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22P02"
+      }
+    },
+    {
+      "name": "hole_awards: a created_at 16 hours off UTC, in the list the outbox inserts, is out of range (22009)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1",
+            "created_at": "2027-04-09T12:00:00+16:00"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "22009"
+      }
+    },
+    {
+      "name": "scores: an id sent as null is not replaced by its default (23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z",
+          "id": null
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "scores: in a list where one row names an id and another leaves it out, it is null in that row (23502)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "body": [
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7,
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z",
+            "id": "snew"
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 8,
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "scores: in a list whose first row leaves out picked_up, it is null there (23502): `columns` names every row's keys, not the first's",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": [
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 8,
+            "strokes": 5,
+            "putts": 2,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          },
+          {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 9,
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "p1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1"
+          },
+          "rows": [
+            {
+              "hole": 3
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "scores: a key of the body that `columns` leaves out is not written",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        },
+        "columns": [
+          "round_id",
+          "player_id",
+          "hole",
+          "strokes",
+          "picked_up",
+          "entered_by",
+          "client_ts"
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "putts": null
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "scores: `columns` naming a column the table lacks is refused before the database sees it (PGRST204)",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 7,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        },
+        "columns": [
+          "round_id",
+          "player_id",
+          "hole",
+          "strokes",
+          "putts",
+          "picked_up",
+          "entered_by",
+          "client_ts",
+          "bogus"
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ],
+      "expect": {
+        "status": 400,
+        "code": "PGRST204"
+      }
+    },
+    {
+      "name": "scores: an upsert whose `columns` names putts, from one row that leaves it out, sets putts null over the hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p1",
+          "hole": 3,
+          "strokes": 6,
+          "picked_up": false,
+          "entered_by": "p1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        },
+        "columns": [
+          "round_id",
+          "player_id",
+          "hole",
+          "strokes",
+          "putts",
+          "picked_up",
+          "entered_by",
+          "client_ts"
+        ]
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 3
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "putts": null,
+              "entered_by": "p1",
+              "picked_up": false
+            }
+          ]
+        }
+      ],
+      "expect": {
+        "status": 201
       }
     }
   ]

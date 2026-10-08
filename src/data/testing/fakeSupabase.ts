@@ -16,20 +16,40 @@
  *   judge theirs: the publishable key is `anon`, a live token is its user, a
  *   lapsed or unknown one is a 401. Reads and the phone's writes meet the
  *   database's own rules, ported from the migrations: the row-level security
- *   of every policy, the column types as Postgres casts them (an integer's
- *   range, a time's fields), the defaults (never over a null sent), NOT NULL,
- *   the foreign and unique keys, column grants and checks, the discrepancy
- *   trigger, and the order the database meets them in: a column PostgREST
- *   doesn't know, the ON CONFLICT target, the grants, the whole body cast,
- *   then row by row, the foreign keys last. The requests in
- *   cases/serverRules.json pin all of it against the real migrations (see
- *   serverRules.test.ts), on what a phone sends.
+ *   of every policy, the column types as Postgres casts them (an integer
+ *   literal and its range, a boolean's words, a time's fields in the order
+ *   Postgres checks them: the time of day to the microsecond, the offset,
+ *   the date; only C's spaces around a value), the defaults (never over a
+ *   null sent, the generated key included), NOT NULL, the foreign and unique
+ *   keys, column grants and checks, the discrepancy trigger, and the order
+ *   the database meets them in: a column PostgREST doesn't know (of
+ *   `columns` when it is sent, which PostgREST then reads alone, else of the
+ *   body), the ON CONFLICT target, the grants, the whole body cast, then row
+ *   by row, the foreign keys last. The requests in cases/serverRules.json pin
+ *   all of it against the real migrations (see serverRules.test.ts), on what
+ *   a phone sends.
  *
- *   Not modelled, so a test must not lean on it (PR #93's third verifier
- *   compared 181 requests; none of these is on a phone's path):
- *   - inputs Postgres reads that the fake refuses: time words («now»),
- *     RFC 2822 times, zone names, hex or underscored integers, prefixes of a
- *     boolean word; and the order of the casts inside one row;
+ *   Not modelled, so a test must not lean on it (PR #93's third and fourth
+ *   verifiers compared 301 requests; none of these is on a phone's path):
+ *   - inputs Postgres reads that the fake refuses, among them time words
+ *     («now»), RFC 2822 times, zone names, a one-digit month or day, an
+ *     offset with seconds or written short (+5, +053), a space before the
+ *     offset, hex or underscored integers, prefixes of a boolean word; and
+ *     the order of the casts inside one row;
+ *   - the shape of a uuid: ids here are names, so any text is one;
+ *   - how a time reads back: the fake keeps the text it was sent (and
+ *     stamps its own in ISO form), where PostgREST answers in Postgres's
+ *     (`+00:00`); no case compares a time;
+ *   - a filter value its column's type can't read: PostgREST answers 400
+ *     (22P02), while the fake, like scripts/server-rules.mjs, compares an
+ *     `eq.` or `in.` filter as text and finds no row;
+ *   - a list of rows sent without `columns` whose keys differ (PostgREST
+ *     refuses it, PGRST102; supabase-js always sends `columns` for a list);
+ *   - platform admins (`is_platform_admin`), and the insert trigger that
+ *     leaves a new tournament unprotected (a test may seed a protected one);
+ *     and what a deleted row takes with it: the database cascades to (or
+ *     nulls) the rows that point to it, the fake leaves them, so a test that
+ *     deletes a row removes them;
  *   - `claim_player`: the lockout after five wrong PINs and the attempts
  *     left (the fake always says 4), a PIN sent as a number; an unknown
  *     function or argument is not a 404;
@@ -179,7 +199,7 @@ export interface FakeSupabase {
   /** False while the phone has no signal: no request gets out at all. */
   reachable: () => boolean
   auth: FakeAuth
-  /** Rows the server already holds (another phone wrote them): stored as the database stores a new row (its defaults and insert triggers), outside the logs and the rules. */
+  /** Rows the server already holds (another phone wrote them): stored as the database stores a new row (its defaults, and the insert triggers of the tables a phone writes), outside the logs and the rules. */
   seed(table: string, rows: Row[]): void
   /** Back to these tables (or the ones it started with), with empty logs and a network that answers. Users, tokens and PIN claims stay. */
   reset(tables?: Record<string, Row[]>): void
@@ -307,8 +327,9 @@ const UNIQUE_KEYS: Record<string, Array<{ name: string; columns: string[] }>> = 
 /** What a session may insert and update in `scores` (0010): the flags and the Comité's reason are not a phone's to send. */
 const SCORE_INSERT = new Set(['id', 'round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
 const SCORE_UPDATE = new Set(['round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
+/** Each table's NOT NULL columns in the table's order, the order Postgres checks them in (a primary key is one). */
 const NOT_NULL: Record<string, string[]> = {
-  scores: ['round_id', 'player_id', 'hole', 'picked_up'],
+  scores: ['id', 'round_id', 'player_id', 'hole', 'picked_up'],
   snake_tiebreaks: ['round_id', 'group_id', 'hole', 'last_holed_player_id', 'created_at'],
   card_signatures: ['round_id', 'pair_id', 'signed_at'],
   hole_awards: ['round_id', 'hole', 'game_id', 'player_id', 'created_at'],
@@ -363,22 +384,38 @@ const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: 
   ],
 }
 const BOOL_TEXT: Record<string, boolean> = { t: true, true: true, y: true, yes: true, on: true, '1': true, f: false, false: false, n: false, no: false, off: false, '0': false }
-/** A timestamp as Postgres reads one off the wire (ISO 8601, a space for the T). */
-const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/i
-/** Whether a timestamp's fields are in range: 30 February or hour 25 is 22008, not a time. */
-function timeInRange(m: RegExpExecArray): boolean {
-  const [y, mo, d, h = 0, mi = 0, sec = 0] = m.slice(1).map((x) => (x === undefined ? undefined : Number(x))) as number[]
-  const days = new Date(Date.UTC(y!, mo!, 0)).getUTCDate()
-  if (mo! < 1 || mo! > 12 || d! < 1 || d! > days) return false
-  if (h === 24) return mi === 0 && sec === 0
-  return h! <= 23 && mi! <= 59 && sec! <= 60
+/** The spaces Postgres's input functions skip around a value (C's isspace): a no-break or an em space is not one, and fails the cast. */
+const trimC = (s: string) => s.replace(/^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g, '')
+/** An integer as int4in reads one: digits after an optional sign. A JSON number is read from its text, so `1e+21` or `5.5` is none (22P02). */
+const INTEGER = /^[\t\n\v\f\r ]*[+-]?\d+[\t\n\v\f\r ]*$/
+/** A timestamp as Postgres reads one off the wire (ISO 8601, a space for the T): the date, the time of day and its fraction, the offset. */
+const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?)?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?$/i
+/**
+ * What is out of range in a timestamp's fields, in the order Postgres meets
+ * them. The time of day first (`time_overflows`): an hour up to 24, a minute
+ * up to 59, a second up to 60 (a leap second), and the whole no later than
+ * 24:00:00, its fraction rounded to the microsecond as C's rint rounds it (a
+ * tie to the even one, so half a microsecond is none). Then the offset: 15
+ * hours and 59 minutes at most (22009). Then the date: there is no year 0,
+ * and 30 February is no day.
+ */
+function timeError(m: RegExpExecArray): '22008' | '22009' | null {
+  const n = (i: number) => Number(m[i] ?? 0)
+  const day = (n(4) * 60 + n(5)) * 60 + n(6)
+  if (n(4) > 24 || n(5) > 59 || n(6) > 60 || day > 86_400 || (day === 86_400 && Number(`0${m[7] ?? ''}`) * 1e6 > 0.5)) return '22008'
+  if (m[8] && (n(9) > 15 || n(10) > 59)) return '22009'
+  const y = n(1)
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][n(2) - 1] ?? 0
+  return y < 1 || n(3) < 1 || n(3) > days ? '22008' : null
 }
 const INT4 = [-2147483648, 2147483647] as const
 /**
  * The body's values cast to their columns, as json_populate_recordset does
- * before any policy sees the row: an integer from a whole number or its text,
- * a boolean from its words; a time that is not one, a fraction for an
- * integer, are 22007 / 22P02.
+ * before any policy sees the row: an integer from its literal, a boolean from
+ * its words; a time that is not one, a fraction or an exponent for an
+ * integer, are 22007 / 22P02; an integer or a time's field out of its range
+ * is 22003 / 22008 / 22009.
  */
 function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
   const out: Row = {}
@@ -388,22 +425,22 @@ function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
       out[column] = v ?? null
       continue
     }
+    // The value as the body spells it: Postgres reads a JSON number from its text too.
     const text = typeof v === 'string' ? v : JSON.stringify(v)
     if (type === 'int') {
-      let n: number
-      if (typeof v === 'number' && Number.isInteger(v)) n = v
-      else if (typeof v === 'string' && /^\s*[+-]?\d+\s*$/.test(v)) n = Number(v)
-      else return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
-      if (n < INT4[0] || n > INT4[1]) return { error: { code: '22003', message: `value "${text.trim()}" is out of range for type integer` } }
+      if (!INTEGER.test(text)) return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
+      const n = Number(text)
+      if (n < INT4[0] || n > INT4[1]) return { error: { code: '22003', message: `value "${text}" is out of range for type integer` } }
       out[column] = n
     } else if (type === 'bool') {
-      const b = typeof v === 'boolean' ? v : BOOL_TEXT[text.trim().toLowerCase()]
+      const b = typeof v === 'boolean' ? v : BOOL_TEXT[trimC(text).toLowerCase()]
       if (b === undefined) return { error: { code: '22P02', message: `invalid input syntax for type boolean: "${text}"` } }
       out[column] = b
     } else if (type === 'timestamptz') {
-      const m = typeof v === 'string' ? TIMESTAMP.exec(v.trim()) : null
+      const m = typeof v === 'string' ? TIMESTAMP.exec(trimC(v)) : null
       if (!m) return { error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` } }
-      if (!timeInRange(m)) return { error: { code: '22008', message: `date/time field value out of range: "${text}"` } }
+      const code = timeError(m)
+      if (code) return { error: { code, message: `${code === '22009' ? 'time zone displacement' : 'date/time field value'} out of range: "${text}"` } }
       out[column] = v
     } else if (type === 'uuid') {
       if (typeof v !== 'string') return { error: { code: '22P02', message: `invalid input syntax for type uuid: "${text}"` } }
@@ -490,7 +527,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   /**
    * A new row as the database stores it: the key it generates, the columns'
    * defaults, and the insert triggers (0010 `scores_clean_insert`: a player's
-   * hole never carries a reason or the discrepancy flags).
+   * hole never carries a reason or the discrepancy flags). The row's own
+   * values go over the defaults, a null sent too (the key's included: NOT
+   * NULL refuses it); the triggers go over the row.
    */
   function withDefaults(table: string, row: Row): Row {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
@@ -706,7 +745,10 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (req.method !== 'POST') return unsupported(req, 'only GET, POST and DELETE are served')
     const incoming = (Array.isArray(req.body) ? req.body : [req.body]) as Row[]
     const resolution = /resolution=(merge|ignore)-duplicates/.exec(headers.get('prefer') ?? '')?.[1]
-    const columns = [...new Set(incoming.flatMap((r) => Object.keys(r)))]
+    // The columns written: PostgREST's `columns` when it is sent (supabase-js names every key of a list's
+    // rows), and then only those keys of the body are read; else the body's keys.
+    const listed = req.params.get('columns')?.split(',').map((c) => c.replace(/"/g, '').trim())
+    const columns = listed ?? [...new Set(incoming.flatMap((r) => Object.keys(r)))]
     // In the order they are met. PostgREST refuses a column its schema cache doesn't know before the database sees the request.
     const unknown = columns.find((c) => !(c in (COLUMNS[table] ?? {})))
     if (unknown) return json(400, { code: 'PGRST204', details: null, hint: null, message: `Could not find the '${unknown}' column of '${table}' in the schema cache` })
@@ -721,12 +763,11 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       return refused(`permission denied for table ${table}`)
     }
     // The body is cast to the columns' types whole (json_populate_recordset) before any row meets a
-    // policy. With `columns` (supabase-js sends it for a list of rows) a key a row leaves out is null, not
-    // the column's default.
-    const listed = req.params.get('columns')?.split(',').map((c) => c.replace(/"/g, '').trim())
+    // policy. With `columns`, a listed key a row leaves out is null in it, not the column's default (an
+    // upsert sets it so over the row it meets), and a key it doesn't list is not written.
     const typedRows: Row[] = []
     for (const sent of incoming) {
-      const full = listed ? { ...Object.fromEntries(listed.map((c) => [c, null])), ...sent } : sent
+      const full = listed ? Object.fromEntries(listed.map((c) => [c, Object.hasOwn(sent, c) ? sent[c] : null])) : sent
       const typed = cast(table, full)
       if ('error' in typed) return restError(typed.error)
       typedRows.push(typed.row)
