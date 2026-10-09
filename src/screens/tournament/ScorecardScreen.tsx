@@ -5,7 +5,7 @@
  * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -214,9 +214,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
-  // changes or the server's values for it do, never on a keystroke.
+  // changes or the server's values for it do, never on a keystroke. A layout effect,
+  // like that one, and declared before it, so it runs first.
   const latest = useRef({ players, holeInfo, drafts, holeSpoken, editableFor, rowOf })
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = { players, holeInfo, drafts, holeSpoken, editableFor, rowOf }
   })
   /** What the server had for each player when he was first touched or restored on this hole: the kept draft's baseline. */
@@ -240,7 +241,14 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** Kept drafts of this hole read before the phone's queue was, whose baseline couldn't be checked yet (NEW-11). */
   const heldKept = useRef<KeptDraft['players']>({})
   const shownHole = useRef('')
-  useEffect(() => {
+  // A layout effect, on its own merits: its update renders before the browser gets the page back,
+  // so no task and no frame ever shows a new hole's heading over the last hole's figures. As a
+  // passive effect its update ran at default priority, tasks later (one to three painted frames in
+  // Chromium): the stack suite (PRs 104 and 105) read a stepper in between, saw the value it meant
+  // to set, tapped nothing, and the correction was never written; a player's tap there counted from
+  // the last hole's figure, so it saved that figure ±1 as the new hole's. (The picks reset below, a
+  // layout effect too, happens to flush this one with it in React 19; don't lean on that.)
+  useLayoutEffect(() => {
     const { players, holeInfo, drafts: current, holeSpoken, editableFor, rowOf } = latest.current
     const serverNow = (pid: string) => {
       const h = holeInfo(pid)
@@ -307,7 +315,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     for (const p of players) {
       const v = saved(p)
       const d = current[p.id]
-      if (!v || touched.current.has(p.id) || (d && d.strokes === v.strokes && d.putts === v.putts && d.pickedUp === v.pickedUp)) continue
+      // A player the Comité put in the group while this hole was open has no draft yet: he gets what a new hole
+      // would give him, or «Guardar hoyo» would read a draft that isn't there and save nobody.
+      if (!d) {
+        const fresh = v ?? { strokes: holeInfo(p.id)?.par ?? 4, putts: 2, pickedUp: false }
+        next = { ...(next ?? current), [p.id]: fresh }
+        baseline[p.id] = fresh
+        continue
+      }
+      if (!v || touched.current.has(p.id) || (d.strokes === v.strokes && d.putts === v.putts && d.pickedUp === v.pickedUp)) continue
       next = { ...(next ?? current), [p.id]: v }
       baseline[p.id] = v
     }
@@ -346,7 +362,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   )
   const savedPicks = (gameId: string) => snapshot.holeAwards.filter((a) => a.roundId === round.id && a.gameId === gameId && a.hole === hole && a.groupId === group.id).map((a) => a.playerId)
   const [picks, setPicks] = useState<Record<string, string[] | undefined>>({})
-  useEffect(() => setPicks({}), [hole, round.id, group.id])
+  // With the hole, in the same task (as the drafts above): the last hole's picks never stand on this one.
+  useLayoutEffect(() => setPicks({}), [hole, round.id, group.id])
   const pickOf = (gameId: string) => picks[gameId] ?? savedPicks(gameId)
   const togglePick = (c: (typeof contests)[number], pid: string | null) =>
     setPicks((cur) => {

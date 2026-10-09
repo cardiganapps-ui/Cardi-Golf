@@ -680,3 +680,80 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     expect(outbox.scores.length).toBeGreaterThan(0)
   })
 })
+
+describe('Tarjeta: a hole opened shows its own values in the same task as its heading (e2e-stack, #104 and #105)', () => {
+  /**
+   * The stack suite's correction of hole 10 never left Ana's phone: Playwright
+   * saw «Hoyo 10» and read Beto's stepper in the next task, and it still showed
+   * hole 2's 5 (the hole the card was on). That was the value wanted, so nothing
+   * was tapped, nothing was touched, and «Guardar hoyo» wrote nothing. The new
+   * hole's values came from a passive effect, whose own update React runs at
+   * default priority, tasks later (one to three painted frames in Chromium):
+   * until then the new heading stood over the last hole's figures, and a tap
+   * there was lost. Interactions are tasks, so
+   * the check is what the screen shows once the click's task and its microtasks
+   * are done, outside act (which would flush everything first).
+   */
+  it('from the grid: no task ever sees the new hole under the last one\'s figures', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    // A hole whose saved strokes for p1 differ from what the card shows now.
+    const shown = strokesOf('p1')
+    const target = snap.scores.find((x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown)!
+    fireEvent.click(screen.getByRole('button', { name: S.grid, exact: true } as never))
+    const actEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    const was = actEnv.IS_REACT_ACT_ENVIRONMENT
+    actEnv.IS_REACT_ACT_ENVIRONMENT = false
+    try {
+      screen.getByRole('button', { name: String(target.hole), exact: true } as never).click()
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+      expect(holeOnScreen()).toBe(target.hole)
+      expect(strokesOf('p1')).toBe(target.strokes)
+    } finally {
+      actEnv.IS_REACT_ACT_ENVIRONMENT = was
+      await act(async () => undefined)
+    }
+  })
+
+  // Worse than a lost tap: on main «más» there counted from the last hole's figure, and the save wrote that ±1 as
+  // this hole's score (PR 107's verifier).
+  it('a tap right after the grid opens a hole counts from that hole\'s own figure, and that is what the save writes', async () => {
+    mount()
+    const shown = strokesOf('p1')
+    const target = snap.scores.find((x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown && x.strokes < 14)!
+    fireEvent.click(screen.getByRole('button', { name: S.grid, exact: true } as never))
+    const actEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    const was = actEnv.IS_REACT_ACT_ENVIRONMENT
+    actEnv.IS_REACT_ACT_ENVIRONMENT = false
+    try {
+      screen.getByRole('button', { name: String(target.hole), exact: true } as never).click()
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+      // The finger's next tap, before any other task: «más» on p1.
+      strokesUp('p1').click()
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+    } finally {
+      actEnv.IS_REACT_ACT_ENVIRONMENT = was
+      await act(async () => undefined)
+    }
+    expect(holeOnScreen()).toBe(target.hole)
+    expect(strokesOf('p1')).toBe((target.strokes as number) + 1)
+    await tapSave(20_000)
+    const p1 = written().filter((r) => r.startsWith(`p1@${target.hole}=`))
+    expect(p1).toEqual([`p1@${target.hole}=${(target.strokes as number) + 1}/${Math.min(target.putts as number, (target.strokes as number) + 1)}`])
+  })
+})
+
+describe('Tarjeta: a player the Comité adds to the group while a hole is open (PR 107\'s verifier)', () => {
+  it('gets a draft on the open hole, and «Guardar hoyo» saves him with the others instead of throwing', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    const p4 = snap.players.find((p) => p.id === 'p4')!
+    snap.players.push({ ...p4, id: 'p5', displayName: 'Quinto', fullName: 'Quinto Jugador' })
+    const g = snap.groups.find((x) => x.playerIds.includes('p1'))!
+    g.playerIds = [...g.playerIds, 'p5']
+    act(() => load(snap))
+    expect(strokesOf('p5')).toBeGreaterThan(0)
+    await tapSave(20_000)
+    expect(written().some((r) => r.startsWith('p5@10='))).toBe(true)
+  })
+})
