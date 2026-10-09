@@ -1271,6 +1271,8 @@ export const t = {
     errNotMember: 'Este teléfono ya no está como jugador del torneo. Entra con tu PIN y se sube solo.',
     /** A write of a tournament that was deleted: it can never go out (its link leads nowhere). */
     errGone: 'El torneo ya no existe.',
+    /** A hole of a day (round) the Comité deleted: it can never go out. */
+    errRoundGone: 'Ese día del torneo ya no existe.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
     /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
     errSession: 'Confirmando tu sesión… Se reintenta solo.',

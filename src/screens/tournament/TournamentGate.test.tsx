@@ -15,7 +15,7 @@
  * (fake-indexeddb).
  */
 import 'fake-indexeddb/auto'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,11 +40,11 @@ vi.mock('../../data/api', () => ({
   releaseDevice: server.releaseDevice,
 }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0) }))
+vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0), rejectGoneRounds: vi.fn(async () => 0) }))
 vi.mock('./EnterScreen', () => ({ EnterScreen: () => <p>Entrar</p> }))
 
 import { getFixture } from '../../dev/fixtures'
-import { adoptQueuedWrites, rejectGoneTournament } from '../../data/outbox'
+import { adoptQueuedWrites, rejectGoneRounds, rejectGoneTournament } from '../../data/outbox'
 import { t } from '../../i18n/es-MX'
 import { clearCached, readCached, saveEntry, saveSnapshot } from '../../data/snapshotCache'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -112,6 +112,7 @@ beforeEach(async () => {
   server.lookupTournament.mockReset()
   server.myMembership.mockReset()
   vi.mocked(adoptQueuedWrites).mockClear()
+  vi.mocked(rejectGoneRounds).mockClear()
 })
 afterEach(() => cleanup())
 
@@ -267,6 +268,7 @@ describe('writes this phone queued wait for the server to confirm the player (RE
   it('the gate hands them over once it does: a player, or the Comité', async () => {
     for (const who of [member, { playerId: null, isOrganizer: true, isAdmin: true, via: null }]) {
       vi.mocked(adoptQueuedWrites).mockClear()
+      vi.mocked(rejectGoneRounds).mockClear()
       server.ensureSession.mockResolvedValue({})
       server.lookupTournament.mockResolvedValue(fx.lookup)
       server.myMembership.mockResolvedValue(who)
@@ -274,6 +276,8 @@ describe('writes this phone queued wait for the server to confirm the player (RE
       open()
       await screen.findByText('En vivo del servidor: server')
       expect(adoptQueuedWrites).toHaveBeenCalledWith(id)
+      // The server's boards are in: a hole of a day the Comité deleted goes to the rejected list (V2).
+      await waitFor(() => expect(rejectGoneRounds).toHaveBeenCalledWith(id))
       cleanup()
     }
   })
@@ -286,6 +290,7 @@ describe('writes this phone queued wait for the server to confirm the player (RE
     open()
     await screen.findByText('En vivo del servidor: server')
     expect(adoptQueuedWrites).not.toHaveBeenCalled()
+    expect(rejectGoneRounds).not.toHaveBeenCalled()
     expect(load).toHaveBeenCalledWith(id, { keepOnPhone: false })
     expect(await readCached(slug)).toBeNull()
   })

@@ -118,7 +118,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/data/outbox.ts'],
       reporter: ['text'],
-      thresholds: { 'src/data/outbox.ts': { statements: 99.5, branches: 92, functions: 100, lines: 99.5 } },
+      thresholds: { 'src/data/outbox.ts': { statements: 99.5, branches: 93, functions: 100, lines: 99.5 } },
     },
   },
 })

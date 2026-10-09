@@ -937,7 +937,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         const f = fields as Row
         const found = scoreRow(pid)
         cur = found ? structuredClone(found) : null
-        const pickOr = (k: string, fallback: unknown) => ((k in f ? f[k] : cur?.[k]) ?? fallback)
+        // A key the phone sent is taken as sent, a JSON null included (`fields -> k` is jsonb null, which coalesce keeps,
+        // so `picked_up: null` is invalid there too); only a key it left out falls back to the row, then the default.
+        const pickOr = (k: string, fallback: unknown) => (k in f ? f[k] : (cur?.[k] ?? fallback))
         nxt = { strokes: pickOr('strokes', null), putts: pickOr('putts', null), picked_up: pickOr('picked_up', false) }
         if (nxt.picked_up === true) nxt.strokes = null
         const whole = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi

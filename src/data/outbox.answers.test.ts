@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const landed = vi.hoisted(() => ({ calls: [] as Array<{ changes: unknown[]; opts: { fetch?: boolean } | undefined }> }))
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 vi.mock('./tournamentStore', () => ({
+  serverReadSince: () => null,
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),

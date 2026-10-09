@@ -53,6 +53,7 @@ const srv = vi.hoisted(() => {
 })
 vi.mock('../lib/supabase', () => ({ supabase: () => srv.client, supabaseConfigured: true }))
 vi.mock('./tournamentStore', () => ({
+  serverReadSince: () => null,
   registerOverlay: () => undefined,
   liveSeq: () => 7,
   liveClock: () => Date.now(),

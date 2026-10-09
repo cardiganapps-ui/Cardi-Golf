@@ -189,6 +189,24 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     expect(entry('p3')).toEqual({ player_id: 'p3', fields: { strokes: par + 1, putts: 2 }, base: {}, auto: false, dflt: { strokes: par, putts: 2, picked_up: false } })
   })
 
+  it('each player\'s default is par for his own tee: an untouched par 5 from the forward tees is that, not the lead player\'s par 4', async () => {
+    // p4 plays the forward tees, where hole 10 is a par 5 (the others' is a 4).
+    mount((s) => {
+      const course = s.courses.find((c) => c.id === 'course1')!
+      const back = course.tees.find((x) => x.id === 'tee1')!
+      course.tees.push({ ...structuredClone(back), id: 'tee2', name: 'Rojas', holes: back.holes.map((h) => (h.number === 10 ? { ...h, par: 5 } : { ...h })) })
+      s.players = s.players.map((p) => (p.id === 'p4' ? { ...p, defaultTeeId: 'tee2' } : p))
+    })
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(4)
+    expect(strokesOf('p4')).toBe(5)
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    // What another phone's untouched save of each would be, the value this phone may go over without asking.
+    expect(entry('p1')!.dflt).toEqual({ strokes: 4, putts: 2, picked_up: false })
+    expect(entry('p4')).toMatchObject({ fields: { strokes: 5, putts: 2 }, auto: true, dflt: { strokes: 5, putts: 2, picked_up: false } })
+  })
+
   it('a pick-up sends the pick-up and the strokes it clears, over the row seen', async () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: S.prev }))
@@ -380,6 +398,24 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
     expect(screen.queryByText(S.restoredDraft)).toBeNull()
     await tapSave(11_000)
     expect(written().filter((r) => r.startsWith('p3@'))).toEqual([])
+  })
+
+  it('a restored draft that gave way to a newer save, touched again, goes over the row it now shows: not the one it was restored on', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    // Opened on the cached snapshot (p3 has nothing on hole 10 there): the draft comes back, over that.
+    mount()
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    // The other phone's 8 arrives: the draft gives way.
+    remoteSave('p3', 10, 8, 3)
+    expect(strokesOf('p3')).toBe(8)
+    // The player corrects the 8 he now sees to a 9.
+    fireEvent.click(strokesUp('p3'))
+    await tapSave(11_000)
+    const p3 = outbox.holes[0]!.entries.find((e) => e.player_id === 'p3')
+    // Over the 8 (the server takes it), never over the empty row the draft was restored on (a false «ya capturó»).
+    expect(p3).toMatchObject({ fields: { strokes: 9 }, base: { strokes: 8, putts: 3, picked_up: false } })
   })
 
   it('a baseline is taken once: a save that lands after p3 was typed here keeps that draft from coming back over it', () => {

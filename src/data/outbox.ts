@@ -22,7 +22,7 @@ import { withTimeout } from '../lib/timeout'
 import { serverAnswering } from '../lib/fetchWithTimeout'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
-import { liveClock, liveSeq, registerOverlay, useTournament } from './tournamentStore'
+import { liveClock, liveSeq, registerOverlay, serverReadSince, useTournament } from './tournamentStore'
 import type { LiveChange } from './realtimeApply'
 import type { Row } from './mappers'
 
@@ -291,6 +291,20 @@ function isForeign(item: OutboxItem): boolean {
 function canPush(item: OutboxItem): boolean {
   return !isHeld(item) && !isForeign(item)
 }
+/**
+ * May go out now: and a hole never overtakes an older capture of the same
+ * hole that waits (held for the PIN, or saved before the session was
+ * confirmed). It was typed over that one: sent first, it would meet the older
+ * value as someone else's, and the older one, sent after it, would go over
+ * the correction (V1).
+ */
+function sendable(x: OutboxItem): boolean {
+  if (!canPush(x)) return false
+  if (x.kind !== 'hole') return true
+  return !queue.some(
+    (y) => y !== x && y.kind === 'hole' && y.seq < x.seq && !canPush(y) && y.tournamentId === x.tournamentId && y.payload.round_id === x.payload.round_id && y.payload.hole === x.payload.hole,
+  )
+}
 
 /**
  * The server asked for a newer build (`app_flags.minBuild`): nothing is
@@ -329,6 +343,8 @@ function isHeld(item: OutboxItem): boolean {
 export async function adoptQueuedWrites(tournamentId: string) {
   const uid = currentUid()
   if (!uid) return
+  // A hole of a round that is gone would only be held again, for a PIN that can never send it.
+  await rejectGoneRounds(tournamentId)
   const held = queue.filter((x) => x.tournamentId === tournamentId && isHeld(x))
   if (held.length) {
     // A hole already sent goes again under a new mutation id: the server keeps a mutation's answer for the
@@ -416,6 +432,28 @@ export function unsentBeforeClaim(entering: string): { tournamentId: string; nam
 export async function rejectGoneTournament(slug: string, tournamentId: string | null): Promise<number> {
   const gone = queue.filter((x) => !isForeign(x) && ((!!tournamentId && x.tournamentId === tournamentId) || x.slug === slug))
   for (const it of gone) await reject(it, t.sync.errGone)
+  if (gone.length) {
+    publish()
+    announce()
+  }
+  return gone.length
+}
+/**
+ * Holes of rounds the Comité deleted. `save_hole` answers `not_member` for a
+ * round that does not exist, which held the hole for a PIN that could never
+ * send it, and kept the phone from signing out or changing account for good
+ * (V2). Once the boards came from the server, as a confirmed member reads it,
+ * a hole whose round is not among their rounds moves to the rejected list,
+ * unless it was queued after that fetch set out (a round created since, which
+ * the fetch could not have seen). Returns how many moved.
+ */
+export async function rejectGoneRounds(tournamentId: string): Promise<number> {
+  const since = serverReadSince(tournamentId)
+  const rounds = useTournament.getState().data?.base.rounds
+  if (since == null || !rounds) return 0
+  const known = new Set(rounds.map((r) => r.id))
+  const gone = queue.filter((x) => x.kind === 'hole' && x.tournamentId === tournamentId && !known.has(x.payload.round_id) && x.seq / 1000 < since)
+  for (const it of gone) await reject(it, t.sync.errRoundGone)
   if (gone.length) {
     publish()
     announce()
@@ -526,9 +564,13 @@ function refusalText(reason: string): string {
 function rowFields(row: Row): HoleFields {
   return { strokes: (row.strokes as number | null) ?? null, putts: (row.putts as number | null) ?? null, picked_up: row.picked_up === true }
 }
-/** The row holds exactly what the Tarjeta saves for a player nobody touched. */
+/**
+ * The row holds exactly what the Tarjeta saves for a player nobody touched,
+ * and a phone put it there: a Comité correction (it carries its reason) is a
+ * claim, whatever its value.
+ */
 function isDefault(row: Row, dflt: HoleFields | undefined): boolean {
-  if (!dflt) return false
+  if (!dflt || row.reason != null) return false
   const r = rowFields(row)
   const d = baseRow(dflt)
   return r.strokes === d.strokes && r.putts === d.putts && r.picked_up === d.picked_up
@@ -1046,7 +1088,9 @@ async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: L
  * Put the entries of a hole the server did not take under the newer capture
  * of the same hole that still waits to go out (unsent: nothing has seen it
  * yet): its fields over theirs, and their base, the row the phone saw before
- * either. Decided in IndexedDB's transaction, against a flush in another tab.
+ * either. Only a capture made after this one (typed over it) that this phone
+ * may send now: an older one, or one held for the PIN, is not the player's
+ * latest word, and its fields would go over his correction (V1). Decided in IndexedDB's transaction, against a flush in another tab.
  * Returns the players no waiting capture took.
  */
 async function rebaseOnNewer(item: HoleItem, entries: HoleEntry[]): Promise<Set<string>> {
@@ -1054,7 +1098,7 @@ async function rebaseOnNewer(item: HoleItem, entries: HoleEntry[]): Promise<Set<
   const p = item.payload
   const target = queue.find(
     (x): x is HoleItem =>
-      x.key !== item.key && x.kind === 'hole' && !x.sent && x.tournamentId === item.tournamentId && x.payload.round_id === p.round_id && x.payload.hole === p.hole && x.payload.entries.some((y) => left.has(y.player_id)),
+      x.key !== item.key && x.kind === 'hole' && !x.sent && x.seq > item.seq && canPush(x) && x.tournamentId === item.tournamentId && x.payload.round_id === p.round_id && x.payload.hole === p.hole && x.payload.entries.some((y) => left.has(y.player_id)),
   )
   if (!target) return left
   const rebase = (t: HoleItem): HoleItem => ({
@@ -1136,7 +1180,7 @@ export function flush(): Promise<void> {
       if (running === run) running = null
       settle()
       // Something was queued at the very end of the pass: go again. Held writes wait.
-      if (!failed && !timer && queue.some(canPush)) void flush()
+      if (!failed && !timer && queue.some(sendable)) void flush()
     })
   return run
 }
@@ -1176,7 +1220,7 @@ async function runFlush(): Promise<boolean> {
     const tried = new Set<number>()
     for (;;) {
       if (blocked) break
-      const item = queue.find((x) => !tried.has(x.seq) && canPush(x))
+      const item = queue.find((x) => !tried.has(x.seq) && sendable(x))
       if (!item) break
       tried.add(item.seq)
       // The channel's changes from now on may be this write's echo, and a fetch that lands from now on may have read it.
