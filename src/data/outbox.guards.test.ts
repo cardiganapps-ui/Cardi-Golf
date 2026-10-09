@@ -37,7 +37,8 @@ const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') => enqueueHo
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms))
 /**
  * Calls `rejectGoneRounds` with signal (no `online` event, so no flush), and
- * says how many rounds reads it sent: a guard that holds asks nothing.
+ * says how many reads it sent (the tournament with its rounds, or either one):
+ * a guard that holds asks nothing.
  */
 async function looks(tid: string): Promise<{ moved: number; asked: number }> {
   const before = server.wire.length
@@ -47,7 +48,7 @@ async function looks(tid: string): Promise<{ moved: number; asked: number }> {
   phone.online = true
   try {
     const moved = await rejectGoneRounds(tid)
-    return { moved, asked: server.wire.slice(before).filter((r) => r.target === 'rounds').length }
+    return { moved, asked: server.wire.slice(before).filter((r) => r.method === 'GET' && (r.target === 'rounds' || r.target === 'tournaments')).length }
   } finally {
     server.reachable = reachable
     phone.online = online

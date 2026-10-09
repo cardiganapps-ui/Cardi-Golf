@@ -1925,6 +1925,135 @@
       }
     },
     {
+      "name": "reads (outbox, a gone round): a member reads the tournament and, embedded, those of the rounds asked about it has",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1",
+            "r-gone",
+            "r9"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t1",
+            "rounds": [
+              {
+                "id": "r1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a round that is not there (deleted) is absent while the tournament reads",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r-gone"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t1",
+            "rounds": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a released device reads nothing, the tournament included",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "release_device",
+          "args": {}
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1",
+            "r-gone"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a session that holds no player reads nothing",
+      "as": "uid-x",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): the rounds unhinted are ambiguous (rounds.tournament_id, tournaments.current_round_id): 300",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1"
+          ]
+        }
+      },
+      "expect": {
+        "status": 300,
+        "code": "PGRST201"
+      }
+    },
+    {
       "name": "reads: a phone sees its own tournament, not the other",
       "as": "uid-q1",
       "request": {

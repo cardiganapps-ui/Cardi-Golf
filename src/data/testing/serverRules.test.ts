@@ -21,6 +21,8 @@ interface Request {
   onConflict?: string
   prefer?: string
   eq?: Record<string, unknown>
+  /** `in.(…)` filters, as postgrest-js's `in` sends them; `<embed>.<column>` filters an embedded resource. */
+  in?: Record<string, unknown[]>
   select?: string
   body?: unknown
   /** PostgREST's `columns`, sent as written: otherwise what supabase-js sends (every key of a list's rows, none for one row). */
@@ -60,6 +62,7 @@ function send(server: FakeSupabase, token: string, req: Request): Promise<Respon
   if (req.onConflict) url.searchParams.set('on_conflict', req.onConflict)
   if (req.select) url.searchParams.set('select', req.select)
   for (const [column, value] of Object.entries(req.eq ?? {})) url.searchParams.set(column, `eq.${String(value)}`)
+  for (const [column, values] of Object.entries(req.in ?? {})) url.searchParams.set(column, `in.(${values.map(String).join(',')})`)
   const headers: Record<string, string> = { apikey: server.anonKey, Authorization: `Bearer ${token}` }
   if (req.prefer) headers.Prefer = req.prefer
   if (req.body !== undefined) headers['Content-Type'] = 'application/json'

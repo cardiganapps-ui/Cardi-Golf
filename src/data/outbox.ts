@@ -458,10 +458,14 @@ export async function rejectGoneTournament(slug: string, tournamentId: string | 
  * separate reads, and a device released between the two (the Comité's «No
  * soy yo», another tab's «Cambiar de jugador») gets the tournament and, under
  * RLS, no rounds at all (NEW-1). So the server is asked again, now, with the
- * session: a round is gone only if it is still missing while the tournament
- * itself reads, in a request sent after the rounds'. Any doubt (an error, no
- * session, no answer) rejects nothing, and neither does a hole in flight or
- * one replaced meanwhile.
+ * session, in one request: the tournament with, embedded, which of these
+ * rounds it still has. One statement reads the device's membership once, so
+ * it can't read the rounds as a stranger and the tournament as a member (or
+ * the other way round) when the device is released or claimed again
+ * meanwhile. A round is gone only if it is absent from that list while the
+ * tournament row reads. Any doubt (an error, no row, no session, no answer)
+ * rejects nothing, and neither does a hole in flight or one replaced
+ * meanwhile.
  */
 export async function rejectGoneRounds(tournamentId: string): Promise<number> {
   const since = serverReadSince(tournamentId)
@@ -477,13 +481,20 @@ export async function rejectGoneRounds(tournamentId: string): Promise<number> {
     const sb = supabase()
     const auth = `Bearer ${await sessionToken(sb)}`
     const ids = [...new Set(candidates.map((x) => x.payload.round_id))]
-    // One try each (no client retries): adopting waits for this look, and a doubt rejects nothing anyway.
-    const r = await sb.from('rounds').select('id').in('id', ids).setHeader('Authorization', auth).retry(false)
-    if (r.error || !Array.isArray(r.data)) return 0
-    // Sent after the rounds' answer: a device that lost the tournament in between reads nothing here.
-    const tr = await sb.from('tournaments').select('id').eq('id', tournamentId).setHeader('Authorization', auth).retry(false).single()
-    if (tr.error || !tr.data) return 0
-    still = new Set((r.data as Array<{ id: string }>).map((x) => x.id))
+    // `rounds` and `tournaments` are joined two ways (rounds.tournament_id, tournaments.current_round_id): the
+    // hint names the one that lists a tournament's rounds. One try (no client retries): adopting waits for this
+    // look, and a doubt rejects nothing anyway.
+    const r = await sb
+      .from('tournaments')
+      .select('id, rounds!rounds_tournament_id_fkey(id)')
+      .eq('id', tournamentId)
+      .in('rounds.id', ids)
+      .setHeader('Authorization', auth)
+      .retry(false)
+      .single()
+    const row = r.data as { id?: unknown; rounds?: unknown } | null
+    if (r.error || !row || row.id !== tournamentId || !Array.isArray(row.rounds)) return 0
+    still = new Set((row.rounds as Array<{ id: string }>).map((x) => x.id))
   } catch {
     return 0
   }

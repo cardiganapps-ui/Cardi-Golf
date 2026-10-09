@@ -128,13 +128,13 @@ describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
       // The PIN claims outlive server.reset(): the next tests need this phone back in.
       server.tables.device_sessions = claims
     }
-    // It did ask: the rounds (empty, as for a gone round) and then the tournament, which read nothing.
-    expect(server.wire.slice(before).map((r) => r.target)).toEqual(['rounds', 'tournaments'])
+    // It did ask, in one request (round 4): the tournament with its rounds embedded, which read nothing.
+    expect(server.wire.slice(before).map((r) => r.target)).toEqual(['tournaments'])
     expect(useOutbox.getState().pending).toBe(1)
     expect(roundGone()).toEqual([])
   })
 
-  it('no answer to the second look rejects nothing', async () => {
+  it('no answer to the look rejects nothing', async () => {
     phone.goOffline()
     await saveHole(5, [{ player_id: 'p1', fields: played(5), base: {} }])
     await tick(5)
@@ -150,7 +150,8 @@ describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
     const started = Date.now()
     expect(await rejectGoneRounds('t1')).toBe(0)
     expect(Date.now() - started).toBeLessThan(1000)
-    expect(server.wire.slice(asked).filter((r) => r.target === 'rounds')).toHaveLength(1)
+    expect(server.wire.slice(asked).filter((r) => r.target === 'tournaments')).toHaveLength(1)
+    expect(server.wire.slice(asked).filter((r) => r.target === 'rounds')).toHaveLength(0)
     expect(useOutbox.getState().pending).toBe(1)
     expect(roundGone()).toEqual([])
   })
@@ -214,7 +215,7 @@ describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
     await reloadWithoutFlushing()
     let merged = false
     server.decide = async (req): Promise<Outcome> => {
-      if (req.target === 'rounds' && req.method === 'GET' && !merged) {
+      if (req.target === 'tournaments' && req.method === 'GET' && !merged) {
         merged = true
         // The player corrects the hole while the gate asks: merged into the same item, a newer version. Saved
         // with the phone offline, so it waits on the phone and is not on its way (the in-flight guard stays out).

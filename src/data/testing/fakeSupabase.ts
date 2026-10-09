@@ -71,7 +71,12 @@
  *   400 for an empty table too, so the keys of tables that may be empty are
  *   checked against the migrations (snapshotTables.test.ts, backupKeys.test.ts);
  * - each read sees the table as it was when the request was made, even if
- *   its answer is held back (`hold`) to arrive after a later one.
+ *   its answer is held back (`hold`) to arrive after a later one;
+ * - a to-many resource a read embeds (the ones in EMBEDS: a tournament's
+ *   rounds, by the hinted relationship) is read with its parent, at once and
+ *   as the same caller, filtered by the URL's `<embed>.<column>` filters;
+ *   unhinted where two relationships join the tables, it is PostgREST's 300
+ *   (PGRST201). serverRules.json pins the request on the migrations.
  *
  * The rows themselves are whatever the test serves: testing/rows.ts writes
  * numeric columns as text, which PostgREST does not (see there).
@@ -234,7 +239,41 @@ interface ReadSpec {
   order: Array<{ column: string; ascending: boolean }>
   range: [number, number] | null
   single: boolean
+  /** The columns its `select` names (over the network door): null for every column. */
+  columns?: string[] | null
+  /** The to-many resources its `select` embeds, each with the filters the URL puts on it. */
+  embeds?: Embed[]
+  /** An embed PostgREST can't place (more than one relationship): it answers 300, PGRST201. */
+  ambiguous?: string
 }
+
+/**
+ * A to-many resource a read embeds (`rounds!rounds_tournament_id_fkey(id)`)
+ * and the filters the URL puts on it (`rounds.id=in.(…)`). PostgREST reads it
+ * in the same statement as its parent, as the caller (so under the same
+ * row-level security, read once), and an embedded filter narrows the list
+ * without dropping the parent: a tournament none of whose rounds match reads
+ * with an empty list.
+ */
+interface Embed {
+  /** The name the select gives it, and the key it comes back under. */
+  name: string
+  table: string
+  /** The child's column that points at the parent's `id`. */
+  column: string
+  columns: string[]
+  filters: Filter[]
+}
+/**
+ * The embeds the app sends, by parent and the select's name with its hint.
+ * `tournaments` and `rounds` are joined two ways (rounds.tournament_id, and
+ * tournaments.current_round_id, 0001): unhinted, PostgREST refuses the embed
+ * as ambiguous, so the fake does too.
+ */
+const EMBEDS: Record<string, { table: string; column: string }> = {
+  'tournaments/rounds!rounds_tournament_id_fkey': { table: 'rounds', column: 'tournament_id' },
+}
+const AMBIGUOUS_EMBEDS = new Set(['tournaments/rounds'])
 
 /** What the server answers to a read, read now. Over the network, `visible` is the row-level security the caller meets. */
 function read(server: FakeSupabase, q: ReadSpec, visible?: (r: Row) => boolean): Result {
@@ -493,20 +532,61 @@ function selectedColumns(params: URLSearchParams): string[] | null {
   return select.split(',')
 }
 
+/**
+ * A `select` that embeds (`id,rounds!rounds_tournament_id_fkey(id)`): its own
+ * plain columns, and each embed the fake knows (EMBEDS) with its plain
+ * columns. Anything else is an error message.
+ */
+function selectWithEmbeds(table: string, select: string): Pick<ReadSpec, 'columns' | 'embeds' | 'ambiguous'> | string {
+  const columns: string[] = []
+  const embeds: Embed[] = []
+  let ambiguous: string | undefined
+  for (const item of select.match(/[^,(]+(\([^()]*\))?/g) ?? []) {
+    if (/^[a-z_][a-z0-9_]*$/.test(item)) {
+      columns.push(item)
+      continue
+    }
+    const m = /^([a-z_][a-z0-9_]*)(![a-z0-9_]+)?\(([a-z_][a-z0-9_]*(?:,[a-z_][a-z0-9_]*)*)\)$/.exec(item)
+    if (!m) return `unsupported select item ${item}`
+    const key = `${table}/${m[1]}${m[2] ?? ''}`
+    if (AMBIGUOUS_EMBEDS.has(key)) ambiguous ??= m[1]
+    const known = EMBEDS[key]
+    if (!known && !AMBIGUOUS_EMBEDS.has(key)) return `unsupported embed ${key}`
+    if (known) embeds.push({ name: m[1]!, table: known.table, column: known.column, columns: m[3]!.split(','), filters: [] })
+  }
+  return { columns, embeds, ambiguous }
+}
+
+/** One `eq.` or `in.(…)` filter on a column, compared as text. */
+function filterOf(label: string, column: string, filter: string): Filter | null {
+  if (filter.startsWith('eq.')) {
+    const v = filter.slice(3)
+    return { label: `${label}=eq.${v}`, test: (r) => r[column] != null && String(r[column]) === v }
+  }
+  if (filter.startsWith('in.(') && filter.endsWith(')')) {
+    const values = splitList(filter.slice(4, -1))
+    return { label: `${label}=in.(${values.length})`, test: (r) => r[column] != null && values.includes(String(r[column])) }
+  }
+  return null
+}
+
 /** A read as the URL spells it. Filter values arrive as text and compare as text; anything else is an error message. */
 function readFromUrl(table: string, params: URLSearchParams, headers: Headers): ReadSpec | string {
+  const select = params.get('select')
+  const shape = select?.includes('(') ? selectWithEmbeds(table, select) : { columns: selectedColumns(params) }
+  if (typeof shape === 'string') return shape
+  // PostgREST places the embeds before it reads a filter: an ambiguous one is refused whatever else the URL says.
+  if ('ambiguous' in shape && shape.ambiguous) return { table, filters: [], order: [], range: null, single: false, ambiguous: shape.ambiguous }
   const filters: Filter[] = []
   for (const [column, filter] of params) {
     if (NOT_FILTERS.has(column)) continue
-    if (filter.startsWith('eq.')) {
-      const v = filter.slice(3)
-      filters.push({ label: `${column}=eq.${v}`, test: (r) => r[column] != null && String(r[column]) === v })
-    } else if (filter.startsWith('in.(') && filter.endsWith(')')) {
-      const values = splitList(filter.slice(4, -1))
-      filters.push({ label: `${column}=in.(${values.length})`, test: (r) => r[column] != null && values.includes(String(r[column])) })
-    } else {
-      return `unsupported filter ${column}=${filter}`
-    }
+    // `rounds.id=in.(…)`: a filter on an embedded resource.
+    const dot = column.indexOf('.')
+    const embed = dot < 0 ? undefined : shape.embeds?.find((e) => e.name === column.slice(0, dot))
+    if (dot >= 0 && !embed) return `unsupported filter ${column}=${filter}`
+    const f = filterOf(column, embed ? column.slice(dot + 1) : column, filter)
+    if (!f) return `unsupported filter ${column}=${filter}`
+    ;(embed ? embed.filters : filters).push(f)
   }
   const order = (params.get('order') ?? '')
     .split(',')
@@ -519,7 +599,7 @@ function readFromUrl(table: string, params: URLSearchParams, headers: Headers): 
   const limit = params.get('limit')
   const from = Number(offset ?? 0)
   const range: [number, number] | null = offset == null && limit == null ? null : [from, limit == null ? Number.MAX_SAFE_INTEGER : from + Number(limit) - 1]
-  return { table, filters, order, range, single: (headers.get('accept') ?? '').includes('vnd.pgrst.object') }
+  return { table, filters, order, range, single: (headers.get('accept') ?? '').includes('vnd.pgrst.object'), ...shape }
 }
 
 /** A PostgREST error body, at the status PostgREST gives its code. */
@@ -1037,6 +1117,11 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       })
     }
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
+    if (name === 'release_device') {
+      // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
+      server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)
+      return new Response(null, { status: 204 })
+    }
     const { data, error } = server.rpcResult
     return error ? restError(error) : json(200, data)
   }
@@ -1144,7 +1229,22 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (req.method !== 'GET') return write(req, headers)
     const spec = readFromUrl(req.target, req.params, headers)
     if (typeof spec === 'string') return unsupported(req, spec)
+    if (spec.ambiguous) {
+      return json(300, { code: 'PGRST201', details: null, hint: null, message: `Could not embed because more than one relationship was found for '${spec.table}' and '${spec.ambiguous}'` })
+    }
     const result = read(server, spec, (r) => mayRead(spec.table, r, req.as))
+    // The embeds, in the same statement as their parents: read now, under the same caller, before any hold.
+    const cols = spec.columns ?? null
+    const pick = (r: Row): Row => {
+      const out: Row = cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : r
+      for (const e of spec.embeds ?? []) {
+        out[e.name] = rowsOf(e.table)
+          .filter((c) => c[e.column] === r.id && mayRead(e.table, c, req.as) && e.filters.every((f) => f.test(c)))
+          .map((c) => Object.fromEntries(e.columns.map((k) => [k, structuredClone(c[k] ?? null)])))
+      }
+      return out
+    }
+    const shaped = result.error ? null : Array.isArray(result.data) ? result.data.map(pick) : pick(result.data as Row)
     const gate = spec.table === 'tournaments' ? gates.shift() : undefined
     if (gate) {
       gate.markReceived()
@@ -1152,9 +1252,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (await Promise.race([gate.answer, aborted])) throw new TypeError('Failed to fetch')
     }
     if (result.error) return restError(result.error)
-    const cols = selectedColumns(req.params)
-    const pick = (r: Row) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : r)
-    return json(200, Array.isArray(result.data) ? result.data.map(pick) : pick(result.data as Row))
+    return json(200, shaped)
   }
 
   const server: FakeSupabase = {
