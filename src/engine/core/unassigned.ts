@@ -89,9 +89,22 @@ export interface Assignment {
   status: 'applied' | 'over' | 'orphan' | 'waiting'
 }
 
+/** The planned days that keep play from being over: still open (scheduled or live), or never created. */
+export interface OpenDays {
+  open: number[]
+  missing: number[]
+}
+
 export interface UnassignedState {
-  /** Play is over (every round finished or cancelled, or the tournament final): buckets are listed only then. */
+  /** Play is over (every planned day exists and is finished or cancelled): buckets are listed only then. */
   closing: boolean
+  /**
+   * Terminado while a planned day is still open or was never created (an
+   * older bundle, a direct update, a restored backup): the Comité's earlier
+   * decisions keep applying, nothing new is listed, and Dinero says which
+   * day to finish or cancel. Null otherwise.
+   */
+  openDays: OpenDays | null
   buckets: UnassignedBucket[]
   /** Σ remaining: what is still «por asignar». */
   total: number
@@ -109,7 +122,7 @@ export interface UnassignedState {
   warnings: string[]
 }
 
-export const NO_UNASSIGNED: UnassignedState = { closing: false, buckets: [], total: 0, held: [], heldTotal: 0, assignments: [], awards: [], toHouse: 0, warnings: [] }
+export const NO_UNASSIGNED: UnassignedState = { closing: false, openDays: null, buckets: [], total: 0, held: [], heldTotal: 0, assignments: [], awards: [], toHouse: 0, warnings: [] }
 
 export interface UnassignedInput {
   snapshot: Snapshot
@@ -318,5 +331,18 @@ export function applyAdjustments(
     }
   }
   const listed = buckets.filter((b) => b.remaining > 0)
-  return { closing, buckets: listed, total: listed.reduce((s, b) => s + b.remaining, 0), held, heldTotal: held.reduce((s, h) => s + h.amount, 0), assignments, awards, toHouse, warnings }
+  return { closing, openDays: null, buckets: listed, total: listed.reduce((s, b) => s + b.remaining, 0), held, heldTotal: held.reduce((s, h) => s + h.amount, 0), assignments, awards, toHouse, warnings }
+}
+
+/** The planned days still open or never created (none: play is over, when at least one day exists). */
+export function openDays(rounds: ReadonlyArray<{ number: number; status: string }>, planned: number): OpenDays {
+  const made = new Set(rounds.map((r) => r.number))
+  const missing: number[] = []
+  // Days the settings plan that nobody created, as many as the count falls short.
+  for (let n = 1; n <= planned && rounds.length + missing.length < planned; n++) if (!made.has(n)) missing.push(n)
+  const open = rounds
+    .filter((r) => r.status === 'live' || r.status === 'scheduled')
+    .map((r) => r.number)
+    .sort((a, b) => a - b)
+  return { open, missing }
 }

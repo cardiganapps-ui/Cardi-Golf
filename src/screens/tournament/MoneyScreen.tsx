@@ -278,8 +278,10 @@ export function MoneyScreen() {
   // Snake money an unanswered tiebreak holds is listed too, apart: the snake pays it once answered.
   const u = money.unassigned
   const listed = u.total + u.heldTotal
-  const verdict =
-    u.closing && u.total > 0
+  // Terminado while a day is still open or missing: no list, so no bare total either; the notice says which day.
+  const verdict = u.openDays
+    ? t.unassigned.finalOpenVerdict
+    : u.closing && u.total > 0
       ? t.unassigned.total(formatMoney(u.total))
       : u.closing && u.heldTotal > 0
         ? t.unassigned.heldTotal(formatMoney(u.heldTotal))
@@ -288,7 +290,7 @@ export function MoneyScreen() {
           : u.closing
             ? M.bankOff(formatSignedMoney(money.banker.difference))
             : M.bankPending(formatMoney(money.banker.difference))
-  const verdictClass = money.banker.balanced && listed === 0 ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictOpen
+  const verdictClass = money.banker.balanced && listed === 0 && !u.openDays ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictOpen
 
   return (
     <div className={styles.screen}>
@@ -329,7 +331,12 @@ export function MoneyScreen() {
           </span>
         )}
         {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
-        {!u.closing && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
+        {u.openDays && (
+          <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
+            {t.unassigned.finalOpen(u.openDays.open, u.openDays.missing)}
+          </span>
+        )}
+        {!u.closing && !u.openDays && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
         {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
         {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal))}</span>}
       </section>

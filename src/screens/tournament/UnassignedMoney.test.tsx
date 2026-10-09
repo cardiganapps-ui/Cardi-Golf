@@ -22,7 +22,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { MoneyScreen } from './MoneyScreen'
 import { TournamentContext } from './TournamentGate'
 
@@ -96,6 +96,39 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
     expect(list().getByText(U.waitingIntro)).toBeTruthy()
     expect(list().getByText('Antes de reabrir')).toBeTruthy()
     expect(list().getByText(U.statusWaiting)).toBeTruthy()
+  })
+
+  it('when only snake money a tiebreak holds is left, the verdict says it waits for the answer, not «por asignar» nor a bank that does not square', () => {
+    const data = mount(false, (s) => {
+      // Every line the Comité can decide, decided (to the house): only the held money stays in the bank.
+      const before = dataFromSnapshot(structuredClone(s)).state.money.unassigned
+      s.moneyAdjustments = before.buckets.map((b, i) => ({ id: `h${i}`, callId: `h${i}`, sourceKey: b.key, kind: 'house' as const, toPlayerId: null, amount: b.remaining, reason: 'Para la cena', createdAt: `2027-04-11T20:${String(i).padStart(2, '0')}:00+00:00`, createdBy: 'org', voidedAt: null, voidReason: null }))
+    })
+    const u = data.state.money.unassigned
+    expect([u.closing, u.total]).toEqual([true, 0])
+    expect(u.heldTotal).toBeGreaterThan(0)
+    expect(data.state.money.banker.difference).toBe(u.heldTotal)
+    expect(screen.getByText(U.heldTotal(formatMoney(u.heldTotal)))).toBeTruthy()
+    expect(screen.queryByText(t.moneyScreen.bankOff(formatSignedMoney(u.heldTotal)))).toBeNull()
+    expect(screen.queryByText(U.total(formatMoney(0)))).toBeNull()
+  })
+
+  it('Terminado with day 2 still open (an older app, a restored backup): a notice names the day, no bare total, and what the Comité decided still counts', () => {
+    const data = mount(false, (s) => {
+      const d2 = [...s.rounds].sort((a, b) => a.number - b.number)[1]!
+      d2.status = 'scheduled'
+      s.tournament.status = 'finished'
+      s.moneyAdjustments = [{ id: 'adj-f', callId: 'call-f', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+    })
+    const { money } = data.state
+    expect(money.unassigned.openDays).toEqual({ open: [2], missing: [] })
+    expect(money.banker.difference).toBeGreaterThan(0)
+    expect(screen.getByText(U.finalOpenVerdict)).toBeTruthy()
+    expect(screen.getAllByText(U.finalOpen([2], [])).length).toBeGreaterThan(0)
+    expect(screen.queryByText(t.moneyScreen.bankPending(formatMoney(money.banker.difference)))).toBeNull()
+    expect(screen.queryByText(t.moneyScreen.provisional)).toBeNull()
+    expect(list().getByText('Día 2 cancelado')).toBeTruthy()
+    expect(list().queryByText(U.statusWaiting)).toBeNull()
   })
 
   it('nothing is listed while a day is still to play', () => {

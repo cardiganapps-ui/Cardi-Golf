@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { getFixture } from '../dev/fixtures'
 import type { Snapshot } from '../engine/types'
 import { applyChange, canonicalTime, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
+import { applyAdjustments } from '../engine/core/unassigned'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
@@ -310,5 +311,19 @@ describe('money_adjustments (0027, MONEY-05)', () => {
     ])
     expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-x', tournament_id: 'otro' })))).toBe('ignored')
     expect(s.moneyAdjustments).toHaveLength(2)
+  })
+
+  it('the rows of one call arrive one event each and still form one assignment (its `call_id`)', () => {
+    const s = fx()
+    s.moneyAdjustments = []
+    const refund = (id: string, player: number) => row(s, { id, call_id: 'call-r', source_key: 'snake', kind: 'refund', to_player_id: s.players[player]!.id, amount: 150 })
+    expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r2', 1)))).toBe('applied')
+    expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r1', 0)))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => [x.id, x.callId])).toEqual([
+      ['adj-r1', 'call-r'],
+      ['adj-r2', 'call-r'],
+    ])
+    const { assignments } = applyAdjustments([], s.moneyAdjustments, false)
+    expect(assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])).toEqual([['call-r', ['adj-r1', 'adj-r2'], 300]])
   })
 })

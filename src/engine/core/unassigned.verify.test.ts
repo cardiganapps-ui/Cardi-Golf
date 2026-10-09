@@ -344,3 +344,142 @@ describe('V4: one line, two causes', () => {
     expect(st.money.banker.difference).toBe(st.money.unassigned.total)
   })
 })
+
+// Round 3 of PR 104: the verifier's N1, N2 and N7.
+
+/** Day 2 cancelled, its best round given to p5, and every account marked paid (MONEY-01), as the banker would on Sunday. */
+function settledAfterRain() {
+  const snap = cancelledDay2()
+  const b = run(snap, S).money.unassigned.buckets.find((x) => x.key === 'bestRound')!
+  snap.moneyAdjustments = call('bestRound', [{ kind: 'award', toPlayerId: 'p5', amount: b.remaining }])
+  for (const a of run(snap, S).money.accounts) if (a.due > 0) snap.payments.push({ id: `pay-${a.kind}-${a.from}-${a.to}`, kind: a.kind, fromPlayerId: a.from, toPlayerId: a.to, amount: a.owed, paid: true, note: null })
+  const paid = run(snap, S)
+  expect(paid.money.accounts.filter((a) => a.due !== 0)).toEqual([])
+  expect(paid.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
+  return { snap, paid }
+}
+
+describe('N1: Terminado while a planned day is open or was never created (an older app, a direct update, a restored backup)', () => {
+  it('day 2 back to scheduled: nothing new is listed, the day is named, and what was paid stays paid (nobody owes it back)', () => {
+    const { snap, paid } = settledAfterRain()
+    snap.rounds[1]!.status = 'scheduled'
+    snap.tournament.status = 'finished'
+    const st = run(snap, S)
+    conserved(st)
+    // Final, as the Comité marked it (MONEY-06): the modules pay what was played...
+    expect(st.tournamentFinal).toBe(true)
+    // ...but play is not over, so no list, no «por asignar», and Dinero says which day to close.
+    expect(st.money.unassigned.closing).toBe(false)
+    expect(st.money.unassigned.openDays).toEqual({ open: [2], missing: [] })
+    expect([st.money.unassigned.buckets, st.money.unassigned.total, st.money.unassigned.held]).toEqual([[], 0, []])
+    // The decision taken while day 2 was cancelled still counts, so the money is the same as when it was paid.
+    expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
+    expect(st.prizes).toEqual(paid.prizes)
+    expect(st.money.people).toEqual(paid.money.people)
+    expect(st.money.accounts.filter((a) => a.due !== 0)).toEqual([])
+    expect(st.money.viaBank).toEqual([])
+    // The gate names the day (and day 1's cards, unsigned in this fixture); money waits until play is over, as in Dinero.
+    expect(closeCheck(snap, S, { openRejected: 0 }).blockers.map((b) => b.kind)).toEqual(['openRounds', 'unsignedCards'])
+  })
+
+  it('day 2 never created: the same, with the missing day named', () => {
+    const { snap, paid } = settledAfterRain()
+    snap.rounds = snap.rounds.filter((r) => r.id === 'r1')
+    snap.groups = snap.groups.filter((g) => g.roundId === 'r1')
+    snap.tournament.status = 'finished'
+    const st = run(snap, S)
+    conserved(st)
+    expect([st.tournamentFinal, st.money.unassigned.closing]).toEqual([true, false])
+    expect(st.money.unassigned.openDays).toEqual({ open: [], missing: [2] })
+    expect(st.money.unassigned.total).toBe(0)
+    expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
+    expect(st.money.people).toEqual(paid.money.people)
+    expect(st.money.accounts.filter((a) => a.due !== 0)).toEqual([])
+    expect(closeCheck(snap, S, { openRejected: 0 }).blockers.map((b) => b.kind)).toEqual(['missingRounds', 'unsignedCards'])
+  })
+
+  it('not Terminado, a day open: nothing is final, decisions wait, and no day is named (the notice is only for Terminado)', () => {
+    const { snap } = settledAfterRain()
+    snap.rounds[1]!.status = 'live'
+    const st = run(snap, S)
+    expect([st.tournamentFinal, st.money.unassigned.closing, st.money.unassigned.openDays]).toEqual([false, false, null])
+    expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['waiting'])
+  })
+
+  it('once play is over the list is back and the notice gone', () => {
+    const { snap } = settledAfterRain()
+    snap.tournament.status = 'finished'
+    const st = run(snap, S)
+    expect([st.money.unassigned.closing, st.money.unassigned.openDays]).toEqual([true, null])
+    expect(st.money.unassigned.buckets.map((b) => b.key)).toContain('snake')
+  })
+})
+
+/** Every lot sold, owner the next player, at these prices in turn. */
+function sellAll(snap: Snapshot, prices: number[]) {
+  snap.players.forEach((p, i) => {
+    const owner = snap.players[(i + 1) % snap.players.length]!.id
+    snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: prices[i % prices.length]!, ownerId: owner, soldAt: '2027-04-08T22:00:00Z' })
+  })
+}
+
+describe('N2: every day rained out, nobody has a result', () => {
+  it('the Calcutta fills no slot (no result, no place: MONEY-09), the whole pot is «por asignar», and «Devolver» returns each buyer exactly what he paid', () => {
+    const snap = makeFirstTournament()
+    sellAll(snap, [250, 500, 750, 3000])
+    snap.rounds.forEach((r) => (r.status = 'cancelled'))
+    const st = run(snap, S)
+    conserved(st)
+    const auction = st.modules.auction!
+    expect(auction.pot).toBe(13500)
+    expect(auction.slots).toEqual([])
+    expect(st.prizes.filter((p) => p.potId === 'calcutta' || p.moduleId === 'individual')).toEqual([])
+    expect(st.flags.warnings).toContain(`${S.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: $13,500 sin asignar. El Comité decide.`)
+    const bucket = st.money.unassigned.buckets.find((b) => b.key === 'calcutta')!
+    expect(bucket.remaining).toBe(13500)
+    const paidIn = new Map<string, number>()
+    for (const l of snap.calcuttaLots) paidIn.set(l.ownerId!, (paidIn.get(l.ownerId!) ?? 0) + l.price!)
+    const refund = proRata(bucket.remaining, bucket.contributors!)
+    expect(new Map(refund.map((r) => [r.playerId, r.amount]))).toEqual(paidIn)
+    // Sent as one call: each buyer gets his price back, and nothing is left on the Calcutta's line.
+    snap.moneyAdjustments = call('calcutta', refund.map((r) => ({ kind: 'refund' as const, toPlayerId: r.playerId, amount: r.amount })))
+    const after = run(snap, S)
+    conserved(after)
+    expect(after.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
+    expect(after.money.unassigned.buckets.find((b) => b.key === 'calcutta')).toBeUndefined()
+    const back = new Map<string, number>()
+    for (const p of after.prizes) if (p.potId === 'calcutta') back.set(p.playerId, (back.get(p.playerId) ?? 0) + p.amount)
+    expect(back).toEqual(paidIn)
+  })
+})
+
+describe('N7: a sold lot whose player never played, in a played tournament', () => {
+  it('cashes no Calcutta slot, La Cuchara included: the last finisher with a result takes it', () => {
+    const snap = makeFirstTournament()
+    const played = snap.players.filter((p) => p.id !== 'p12').map((p) => p.id)
+    fillRound(snap, 'r1', 1, { playerIds: played })
+    fillRound(snap, 'r2', 2, { playerIds: played })
+    twoPutts(snap)
+    snap.rounds.forEach((r) => (r.status = 'finished'))
+    sellAll(snap, [1000])
+    const st = run(snap, S)
+    conserved(st)
+    const slots = st.modules.auction!.slots
+    expect(slots.flatMap((s) => s.playerIds)).not.toContain('p12')
+    // The main event agrees: no place, no prize for him.
+    expect(st.prizes.filter((p) => p.moduleId === 'individual' && p.playerId === 'p12')).toEqual([])
+    // The last finisher with a result is p11, the last D, who cashes the higher «Mejor D»: La Cuchara goes to nobody,
+    // and its 5% waits for the Comité (before, p12 took it without playing a hole).
+    const withResult = st.modules.individual!.rows.filter((r) => !r.figure.empty)
+    expect(withResult.at(-1)!.playerId).toBe('p11')
+    expect(slots.map((s) => [s.label, s.playerIds, s.unfilled])).toEqual([
+      ['Campeón', ['p4'], false],
+      ['Subcampeón', ['p10'], false],
+      ['Mejor C', ['p9'], false],
+      ['Mejor D', ['p11'], false],
+      [S.labels.lastPlace, [], true],
+    ])
+    expect(st.prizes.filter((p) => p.potId === 'calcutta').reduce((s, p) => s + p.amount, 0)).toBe(11400)
+    expect(st.money.unassigned.buckets.find((b) => b.key === 'calcutta')!.remaining).toBe(600)
+  })
+})

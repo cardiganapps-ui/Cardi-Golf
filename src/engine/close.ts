@@ -15,6 +15,7 @@ import { computeTournament } from './computeTournament'
 import type { TournamentSettings } from './settings/schema'
 import type { Snapshot } from './types'
 import { fmt } from './games/payout'
+import { openDays } from './core/unassigned'
 
 const C = t.closeGate
 
@@ -49,12 +50,9 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   const state = computeTournament(closed, settings)
   const blockers: CloseBlocker[] = []
   const warnings: string[] = []
-  // Days the settings plan but nobody created: play is not over until they are played or cancelled.
-  const made = new Set(closed.rounds.map((r) => r.number))
-  const missing: number[] = []
-  for (let n = 1; n <= settings.rounds && closed.rounds.length + missing.length < settings.rounds; n++) if (!made.has(n)) missing.push(n)
+  // Days the settings plan but nobody created, and days still open: play is not over until they are played or cancelled.
+  const { missing, open } = openDays(closed.rounds, settings.rounds)
   if (missing.length) blockers.push({ kind: 'missingRounds', text: C.missingRounds(missing) })
-  const open = closed.rounds.filter((r) => r.status === 'live' || r.status === 'scheduled').map((r) => r.number)
   if (open.length) blockers.push({ kind: 'openRounds', text: C.openRounds(open) })
   const pending = state.flags.pendingSnakeTiebreaks.length
   if (pending) blockers.push({ kind: 'tiebreaks', text: C.tiebreaks(pending) })
@@ -62,10 +60,13 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
     const unsold = closed.calcuttaLots.filter((l) => l.status !== 'sold')
     if (unsold.length) warnings.push(C.unsoldLots(t.common.andList(unsold.map((l) => closed.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))))
   }
+  // Money only once play is over, as Dinero lists it: before, the day to finish or cancel is what blocks.
   const u = state.money.unassigned
-  if (u.total > 0) blockers.push({ kind: 'unassigned', text: C.unassigned(fmt(u.total)) })
-  const bad = u.assignments.filter((a) => a.status === 'over' || a.status === 'orphan').length
-  if (bad) blockers.push({ kind: 'badAssignments', text: C.badAssignments(bad) })
+  if (u.closing) {
+    if (u.total > 0) blockers.push({ kind: 'unassigned', text: C.unassigned(fmt(u.total)) })
+    const bad = u.assignments.filter((a) => a.status === 'over' || a.status === 'orphan').length
+    if (bad) blockers.push({ kind: 'badAssignments', text: C.badAssignments(bad) })
+  }
   const finished = new Set(closed.rounds.filter((r) => r.status === 'finished').map((r) => r.id))
   const unsigned = state.flags.unsignedCards.filter((c) => finished.has(c.roundId)).length
   if (unsigned) blockers.push({ kind: 'unsignedCards', text: C.unsignedCards(unsigned) })

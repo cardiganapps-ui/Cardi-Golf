@@ -59,3 +59,57 @@ describe('the Ceremonia’s snake totals', () => {
     expect(rows).toBe(snap.players.length)
   })
 })
+
+describe('the Ceremonia shows what the Comité gave from the other lines too (round 3)', () => {
+  it('best round, fewest putts and the placings each get a step with the Comité’s awards from their line', () => {
+    const fx = getFixture('full12-live')!
+    const snap = structuredClone(fx.snapshot)
+    // Both days rained out: every line's money is the Comité's to decide.
+    for (const r of snap.rounds) r.status = 'cancelled'
+    snap.scores = []
+    const settings = snap.tournament.settings as TournamentSettings
+    const before = dataFromSnapshot(snap).state.money.unassigned.buckets
+    // A part of each line to someone (the Comité gives a consolation, say).
+    const lines: Array<[string, string, number]> = [
+      ['bestRound', 'p3', 1200],
+      ['individual', 'p7', 5000],
+      ['fewestPutts', 'p5', 1000],
+    ]
+    snap.moneyAdjustments = lines.map(([key, to, amount], i) => {
+      expect(before.find((x) => x.key === key)!.remaining).toBeGreaterThanOrEqual(amount)
+      return { id: `a${i}`, callId: `c${i}`, sourceKey: key, kind: 'award' as const, toPlayerId: to, amount, reason: 'Decidido', createdAt: `2027-04-11T20:0${i}:00+00:00`, createdBy: 'org', voidedAt: null, voidReason: null }
+    })
+    const data = dataFromSnapshot(snap)
+    expect(data.state.money.unassigned.assignments.every((a) => a.status === 'applied')).toBe(true)
+    useTournament.setState({ tournamentId: 'fixture:full12-live', data, loading: false, error: null, realtime: 'off' })
+    render(
+      <MemoryRouter>
+        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+          <CeremonyScreen />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: C.start }))
+    const seen: string[] = []
+    const counts: Record<string, number> = {}
+    for (let i = 0; i < 60; i++) {
+      const region = screen.getByRole('region')
+      const title = region.getAttribute('aria-label') ?? ''
+      if (!seen.includes(title)) {
+        seen.push(title)
+        // Revealed, its list has one row per person the Comité paid from that line (happy-dom lays out no page, but counts them).
+        fireEvent.click(screen.getByRole('button', { name: C.next }))
+        const text = screen.getByRole('region').textContent ?? ''
+        const line = snap.moneyAdjustments.find((a) => title === C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label))
+        if (line) counts[line.sourceKey] = Number(/de (\d+)$/.exec(text.slice(text.lastIndexOf(title)))?.[1])
+      }
+      const next = screen.queryByRole('button', { name: C.next })
+      if (!next) break
+      fireEvent.click(next)
+    }
+    for (const a of snap.moneyAdjustments) expect(seen).toContain(C.steps.byComite((settings.modules as Record<string, { label: string }>)[a.sourceKey]!.label))
+    expect(counts).toEqual({ fewestPutts: 1, bestRound: 1, individual: 1 })
+    // The placings' step comes before the champion's, who closes the night.
+    expect(seen.indexOf(C.steps.byComite(settings.modules.individual.label))).toBeLessThan(seen.indexOf(C.steps.place(1)))
+  })
+})

@@ -167,6 +167,46 @@ describe('golden: rows → snapshot → state (QA-07)', () => {
   })
 })
 
+describe('golden: the Comité’s decisions (MONEY-05)', () => {
+  it('a database without 0027 still opens the tournament: the decisions read as none (PGRST205), and only that table', async () => {
+    // Belt and braces: 0027 reaches production before this bundle does, but a phone must never lose its boards to it.
+    const s = everyTable()
+    const rows = snapshotToRows(s) as Partial<Record<SnapshotTable, unknown[]>>
+    delete rows.money_adjustments
+    server = fakeSupabase(rows as Record<string, never[]>)
+    await useTournament.getState().load(s.tournament.id)
+    const { data, error } = useTournament.getState()
+    expect(error).toBeNull()
+    expect(data!.snapshot.moneyAdjustments).toEqual([])
+    expect(data!.snapshot).toEqual({ ...asStored(s), moneyAdjustments: [] })
+  })
+
+  it('any other failure reading the decisions still fails the fetch (no silent «nothing decided»)', async () => {
+    const s = everyTable()
+    const rows = snapshotToRows(s)
+    // A row with no id: ordering by the key answers 42703, as a broken table would.
+    server = fakeSupabase({ ...rows, money_adjustments: [{ tournament_id: s.tournament.id }] })
+    await useTournament.getState().load(s.tournament.id)
+    expect(useTournament.getState().error).not.toBeNull()
+  })
+
+  it('two rows written by one call load back as one assignment, through the backup and the store', async () => {
+    // A refund to two players is one call (`call_id`): one decision, paid or flagged whole, voided whole.
+    const s = everyTable()
+    const call = { callId: 'call-refund', sourceKey: 'snake', kind: 'refund' as const, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:10:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }
+    s.moneyAdjustments = [...s.moneyAdjustments!, { ...call, id: 'adj3', toPlayerId: 'p3', amount: 150 }, { ...call, id: 'adj4', toPlayerId: 'p4', amount: 150 }]
+    await loadThroughBackup(s)
+    const { data, error } = useTournament.getState()
+    expect(error).toBeNull()
+    expect(data!.snapshot.moneyAdjustments).toEqual(asStored(s).moneyAdjustments)
+    const calls = data!.state.money.unassigned.assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])
+    expect(calls).toEqual([
+      ['call-adj1', ['adj1'], 600],
+      ['call-refund', ['adj3', 'adj4'], 300],
+    ])
+  })
+})
+
 describe('golden: the first tournament’s shape (QA-07)', () => {
   /** cabos() through the backup and the store, with what the app shows for it and the engine's own result. */
   async function loadCabos() {

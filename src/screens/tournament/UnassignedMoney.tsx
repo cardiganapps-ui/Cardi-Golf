@@ -9,7 +9,9 @@
  *
  * Snake money an unanswered tiebreak holds is listed apart, with no
  * «Decidir»: the snake pays it once someone answers. While a day is open, the
- * Comité's earlier decisions still show, marked as waiting.
+ * Comité's earlier decisions still show, marked as waiting; on a tournament
+ * marked Terminado with a day still open or missing they still count, and
+ * the intro names the day to finish or cancel.
  *
  * The sheet reads its line from the live state by key, and before it sends it
  * fetches the tournament again and checks the line still holds what it
@@ -53,7 +55,7 @@ export function UnassignedMoney() {
   return (
     <section className={styles.section} aria-label={U.heading}>
       <h3>{U.heading}</h3>
-      <span className="help">{u.closing ? U.intro : U.waitingIntro}</span>
+      <span className="help">{u.closing ? U.intro : u.openDays ? U.finalOpen(u.openDays.open, u.openDays.missing) : U.waitingIntro}</span>
       {u.buckets.length > 0 && (
         <div className={styles.transfers}>
           {u.buckets.map((b) => (

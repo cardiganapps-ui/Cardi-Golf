@@ -255,7 +255,9 @@ create temp table bad on commit drop as
   union all select 'calcutta_bids listing a bid of B', pg_temp.plus(b, 'calcutta_bids', jsonb_build_object('id', :b_bid, 'lot_id', :f1, 'bidder_id', :'p2', 'amount', 250)) from bk
   union all select 'payments listing a payment of B', pg_temp.plus(b, 'payments', jsonb_build_object('id', :b_pay, 'tournament_id', :'t_a', 'from_player_id', :'p1', 'amount', 1, 'kind', 'other')) from bk
   union all select 'money_adjustments listing an assignment of B', pg_temp.plus(b, 'money_adjustments', jsonb_build_object('id', :b_adj, 'tournament_id', :'t_a', 'source_key', 'pool', 'kind', 'house', 'amount', 1, 'reason', 'Mía ahora')) from bk
-  union all select 'scores listing a score of B', pg_temp.plus(b, 'scores', jsonb_build_object('id', :b_score, 'round_id', :'r1', 'player_id', :'p1', 'hole', 18, 'strokes', 4, 'putts', 2)) from bk;
+  union all select 'scores listing a score of B', pg_temp.plus(b, 'scores', jsonb_build_object('id', :b_score, 'round_id', :'r1', 'player_id', :'p1', 'hole', 18, 'strokes', 4, 'putts', 2)) from bk
+  -- Not another tournament's, but edited all the same: an assignment with no call would come back as a call of its own (round 3 of PR 104).
+  union all select 'money_adjustments without their call_id', jsonb_set(b, '{tables,money_adjustments}', (select jsonb_agg(x - 'call_id') from jsonb_array_elements(b -> 'tables' -> 'money_adjustments') x)) from bk;
 create temp table outcome (what text, state text) on commit drop;
 grant select on bad to authenticated;
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
@@ -282,8 +284,8 @@ begin
   end loop;
 end $$;
 select coalesce(string_agg(what || ' (' || state || ')', ', ' order by what), '') as let_in from outcome where state <> '22023' \gset
-select harness.check((select count(*) from outcome) = 20 and :'let_in' = '', 'backups aimed at another tournament were not refused: ' || :'let_in') \g /dev/null
-select harness.check((select count(*) from outcome where state = '22023') = 20, 'every refusal is the human one (22023)') \g /dev/null
+select harness.check((select count(*) from outcome) = 21 and :'let_in' = '', 'tampered backups were not refused: ' || :'let_in') \g /dev/null
+select harness.check((select count(*) from outcome where state = '22023') = 21, 'every refusal is the human one (22023)') \g /dev/null
 select coalesce(string_agg(k, ', ' order by k), '') as moved from jsonb_each((select s from before_a)) e(k, v) where v is distinct from (pg_temp.state(:'t_a') -> k) \gset
 select harness.check(:'moved' = '', 'a refused restore changed tournament A: ' || :'moved') \g /dev/null
 select harness.check((select s from before_b) = pg_temp.state(:'t_b'), 'a refused restore changed the other tournament') \g /dev/null

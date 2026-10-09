@@ -2232,6 +2232,19 @@ export const t = {
     statusOrphan: 'No se paga: ahí ya no queda dinero por asignar. Anúlala.',
     statusWaiting: 'Se aplica cuando terminen todas las rondas.',
     waitingIntro: 'Hay una ronda abierta: estas decisiones del Comité se aplican cuando terminen todas.',
+    // Terminado while a planned day is open or was never created (an older app, a restored backup): nothing new is listed.
+    finalOpenVerdict: 'Falta cerrar un día',
+    finalOpen: (open: number[], missing: number[]) => {
+      const what: string[] = []
+      if (open.length) what.push(open.length === 1 ? `el día ${open[0]} sigue abierto` : `los días ${andList(open.map(String))} siguen abiertos`)
+      if (missing.length) what.push(missing.length === 1 ? `el día ${missing[0]} no existe` : `los días ${andList(missing.map(String))} no existen`)
+      const fix = missing.length
+        ? 'termina o cancela cada día en Comité, sección Rondas (crea el que falte, o baja el número de rondas en Comité, sección Torneo)'
+        : open.length === 1
+          ? 'termínalo o cancélalo en Comité, sección Rondas'
+          : 'termínalos o cancélalos en Comité, sección Rondas'
+      return `El torneo está Terminado, pero ${andList(what)}: ${fix} para repartir lo pendiente. Lo que el Comité ya decidió sigue contando.`
+    },
     stale: 'Mientras decidías, cambió lo que hay en esta línea. Revisa la cantidad y vuelve a asignar.',
     gone: 'Esta línea ya no tiene dinero por asignar.',
     rowWhat: (label: string, amount: string, reason: string) => `${label}, ${amount}: ${reason}`,
@@ -2445,6 +2458,8 @@ export const t = {
       fewestPutts: (label: string) => label,
       snake: (label: string) => `${label}: totales`,
       bestRound: (label: string, day: number) => `${label}, día ${day}`,
+      // What the Comité gave or gave back from a line's «por asignar» (MONEY-05).
+      byComite: (label: string) => `${label}: lo que asignó el Comité`,
       pairs: (label: string) => label,
       place: (n: number) => (n === 1 ? 'El campeón' : `${ordinal(String(n))} lugar`),
       auction: (label: string) => `${label}: pagos`,

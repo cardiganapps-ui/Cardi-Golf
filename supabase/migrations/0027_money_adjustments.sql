@@ -120,7 +120,8 @@ begin
     if k is null or k not in ('award', 'refund', 'house') then
       raise exception 'Cada línea se da a un jugador, se devuelve o va a la casa' using errcode = '22023';
     end if;
-    -- Whole pesos, above zero, written as an integer (1.0 or 1e3 is refused here, not by a cast).
+    -- Whole pesos, above zero, written as an integer: 1.0 is refused here, not by a cast. A JSON
+    -- exponent is the plain number to jsonb (1e2 is stored as 100), so it is accepted as that number.
     if jsonb_typeof(e -> 'amount') is distinct from 'number' or coalesce((e ->> 'amount') !~ '^[1-9][0-9]{0,7}$', true) then
       raise exception 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo' using errcode = '22023';
     end if;
@@ -297,6 +298,12 @@ begin
      or exists (select 1 from r_calcutta_lots where id is null) then
     raise exception 'El respaldo está incompleto (filas sin id)' using errcode = '22023';
   end if;
+  -- One call is one decision (paid, flagged and voided whole): a row with no
+  -- call would come back as a call of its own, splitting a refund. The export
+  -- always carries it, so a backup without it was edited: refused.
+  if exists (select 1 from r_money_adjustments where call_id is null) then
+    raise exception 'El respaldo trae decisiones del Comité incompletas; no se restauró nada' using errcode = '22023';
+  end if;
   -- References: everything points at rows the backup also carries (and, by the
   -- check above, those are this tournament's or new).
   if exists (select 1 from r_groups g where not exists (select 1 from r_rounds r where r.id = g.round_id))
@@ -390,7 +397,7 @@ begin
   insert into public.payments (id, tournament_id, from_player_id, to_player_id, amount, kind, paid, note, created_at)
   select coalesce(id, gen_random_uuid()), p_tournament_id, from_player_id, to_player_id, amount, kind, coalesce(paid, false), note, coalesce(created_at, now()) from r_payments;
   insert into public.money_adjustments (id, tournament_id, source_key, kind, to_player_id, amount, reason, call_id, created_by, created_at, voided_at, voided_by, void_reason)
-  select coalesce(id, gen_random_uuid()), p_tournament_id, source_key, kind, to_player_id, amount, reason, coalesce(call_id, gen_random_uuid()), created_by, coalesce(created_at, now()), voided_at, voided_by, void_reason from r_money_adjustments;
+  select coalesce(id, gen_random_uuid()), p_tournament_id, source_key, kind, to_player_id, amount, reason, call_id, created_by, coalesce(created_at, now()), voided_at, voided_by, void_reason from r_money_adjustments;
   insert into public.game_entries (tournament_id, game_id, player_id, created_at)
   select p_tournament_id, game_id, player_id, coalesce(created_at, now()) from r_game_entries on conflict do nothing;
   insert into public.game_results (tournament_id, game_id, player_id, share, created_at)

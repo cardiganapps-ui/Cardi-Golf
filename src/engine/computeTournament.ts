@@ -9,7 +9,7 @@ import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
-import { applyAdjustments, bucketLabel, heldMoney, unassignedBuckets } from './core/unassigned'
+import { applyAdjustments, bucketLabel, heldMoney, openDays, unassignedBuckets } from './core/unassigned'
 import { computeStats, type StatsState } from './core/stats'
 import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type AnyModule } from './modules'
@@ -188,6 +188,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   if (modules.auction) {
     const unfilled = modules.auction.slots.filter((s) => s.unfilled)
     if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: ${peso(modules.auction.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
+    if (tournamentFinal && modules.auction.pot > 0 && modules.auction.slots.length === 0) auctionWarnings.push(`${settings.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${peso(modules.auction.pot)} sin asignar. El Comité decide.`)
     // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
     const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
     const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
@@ -223,6 +225,13 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // and the «Cerrar torneo» gate read this same flag, so the gate never blocks
   // on a list Dinero does not show.
   const closing = playOver
+  // The Comité's decisions are checked and paid whenever the modules pay as
+  // final, so Terminado with a day still open or never created (an older
+  // bundle, a direct update, a restored backup) pays the same decisions it
+  // paid when that day was cancelled: what was handed over is never asked
+  // back. Nothing is listed then (`closing` stays false): Dinero names the day
+  // to finish or cancel instead (round 3 of PR 104, N1).
+  const settled = tournamentFinal
   const buckets = unassignedBuckets({
     snapshot,
     settings,
@@ -232,9 +241,10 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     snake: modules.snake,
     games,
     warnings: [...(modules.individual?.warnings ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
-    closing,
+    closing: settled,
   })
-  const unassigned = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], closing, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing }))
+  const applied = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], settled, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing: settled }))
+  const unassigned = closing || !settled ? applied : { ...applied, closing: false, openDays: openDays(snapshot.rounds, settings.rounds), buckets: [], total: 0, held: [], heldTotal: 0 }
   prizes.push(...unassigned.awards)
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games, unassigned.toHouse)
   money.unassigned = unassigned

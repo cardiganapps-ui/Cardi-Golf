@@ -186,5 +186,12 @@ select harness.check((select count(*) from public.money_adjustments where tourna
 -- 7. Nothing of A's reached B
 select harness.check((select count(*) from public.money_adjustments where tournament_id = :'t_b') = 0, 'tournament B holds no assignment of A''s');
 
+-- 8. A JSON exponent is the plain number to jsonb (1e2 is stored as 100): accepted as that many pesos.
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select public.assign_unassigned(:'t_a', 'pool', jsonb_build_array('{"kind": "house", "amount": 1e2}'::jsonb), 'Exponente')::text as expo \gset
+reset role;
+select harness.check((select amount from public.money_adjustments where tournament_id = :'t_a' and reason = 'Exponente') = 100, '1e2 is accepted as $100: ' || :'expo');
+
 select 'money_adjustments: ok';
 rollback;
