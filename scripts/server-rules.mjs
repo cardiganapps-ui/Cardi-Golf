@@ -78,8 +78,19 @@ function unknownColumn(req) {
 function toDb(table, row) {
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [ident(k), typeof v === 'string' && isUuid(table, k) ? uuid(v) : v]))
 }
-function fromDb(row) {
-  return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, typeof v === 'string' && names.has(v) ? names.get(v) : v]))
+/** Every uuid the script wrote for a name, back to the name, however deep (an RPC's jsonb answer holds rows). */
+function fromDb(value) {
+  if (typeof value === 'string') return names.has(value) ? names.get(value) : value
+  if (Array.isArray(value)) return value.map(fromDb)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromDb(v)]))
+  return value
+}
+/** A jsonb argument's names as uuids: a string under a key that names an id (`round_id`, `player_id`, `mutation_id`…). */
+function idsToDb(value, key = '') {
+  if (typeof value === 'string') return /_id$/.test(key) ? uuid(value) : value
+  if (Array.isArray(value)) return value.map((v) => idsToDb(v, key))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, idsToDb(v, k)]))
+  return value
 }
 /** A JSON literal SQL can read, whatever the text holds. */
 function jsonLiteral(value) {
@@ -116,7 +127,10 @@ function whereSql(table, where) {
  */
 function requestSql(req) {
   if (req.method === 'RPC') {
-    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${typeof v === 'string' && (/_id$/.test(k) || k === 'tid') ? `'${uuid(v)}'::uuid` : `${jsonLiteral([v])} ->> 0`}`).join(', ')
+    // An object is a jsonb argument (save_hole's `p`), its ids as uuids.
+    const arg = (k, v) =>
+      v && typeof v === 'object' ? `${jsonLiteral(idsToDb(v))}::jsonb` : typeof v === 'string' && (/_id$/.test(k) || k === 'tid') ? `'${uuid(v)}'::uuid` : `${jsonLiteral([v])} ->> 0`
+    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${arg(k, v)}`).join(', ')
     return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
   }
   const t = ident(req.table)
@@ -204,6 +218,24 @@ function runCase(c) {
 const okStatus = { GET: 200, POST: 201, DELETE: 204, RPC: 200 }
 
 const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
+/**
+ * `expect.answer`: an RPC's answer holds at least what the case writes. An object, the keys it names; a list, as
+ * many items, each matching a different one in any order (the database's order of a set is none); else equal.
+ */
+function holds(actual, want) {
+  if (Array.isArray(want)) {
+    if (!Array.isArray(actual) || actual.length !== want.length) return false
+    const free = actual.map(() => true)
+    return want.every((w) => {
+      const i = actual.findIndex((a, j) => free[j] && holds(a, w))
+      if (i < 0) return false
+      free[i] = false
+      return true
+    })
+  }
+  if (want && typeof want === 'object') return !!actual && typeof actual === 'object' && !Array.isArray(actual) && Object.entries(want).every(([k, v]) => holds(actual[k] ?? null, v))
+  return actual === want
+}
 let failed = 0
 for (const c of spec.cases) {
   let got
@@ -220,6 +252,7 @@ for (const c of spec.cases) {
   if (want.status !== status) problems.push(`status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`)
   else if (want.code && want.code !== got.state) problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
   if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows))) problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
+  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
   ;(c.then ?? []).forEach((t, i) => {
     const expected = t.rows.map((r) => Object.fromEntries(Object.entries(r)))
     const actual = got.after[i].map((r) => (Object.keys(r).length === 1 && 'present' in r ? {} : r))

@@ -83,11 +83,12 @@ describe('outbox opened by an older build', () => {
     newer.version(1).stores({ items: 'key, tournamentId, createdAt' })
     newer.version(2).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
     newer.version(3).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
-    newer.version(4).stores({ items: 'key, tournamentId, createdAt, mutationId', rejected: 'key, tournamentId, at', mutations: 'id' })
+    newer.version(4).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at', conflicts: 'key, tournamentId, at' })
+    newer.version(5).stores({ items: 'key, tournamentId, createdAt, mutationId', rejected: 'key, tournamentId, at', conflicts: 'key, tournamentId, at', mutations: 'id' })
     await newer.open()
     await newer.table('items').bulkPut([
       { ...score(7), seq: 1, actingUid: 'uid-a' },
-      { key: 'hole:r1:g1:8', kind: 'hole', tournamentId: 't1', payload: { round_id: 'r1', hole: 8, entries: [] }, attempts: 0, createdAt: 2, seq: 2, actingUid: 'uid-a', mutationId: 'm1' },
+      { key: 'photo:r1:g1:8', kind: 'photo', tournamentId: 't1', payload: { round_id: 'r1', hole: 8, url: 'x' }, attempts: 0, createdAt: 2, seq: 2, actingUid: 'uid-a', mutationId: 'm1' },
     ])
     newer.close()
 
@@ -98,6 +99,6 @@ describe('outbox opened by an older build', () => {
     await flush()
     expect(pushed).toEqual(['score:r1:p1:7'])
     expect(useOutbox.getState().rejected).toEqual([])
-    expect((await _outboxTest.stored()).map((x) => x.key)).toEqual(['hole:r1:g1:8'])
+    expect((await _outboxTest.stored()).map((x) => x.key)).toEqual(['photo:r1:g1:8'])
   })
 })

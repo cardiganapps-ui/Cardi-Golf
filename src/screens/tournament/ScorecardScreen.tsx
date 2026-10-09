@@ -14,9 +14,10 @@ import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
 import { hasStoredSession, useAuth } from '../../data/auth'
 import { roundRivalries, type RoundRivalry } from '../../data/quick'
-import { enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox } from '../../data/outbox'
+import { baseRow, enqueueAward, enqueueHole, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox, type HoleEntry, type HoleFields } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
 import { RejectedWrites } from '../../components/RejectedWrites'
+import { HoleConflicts } from '../../components/HoleConflicts'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
@@ -191,6 +192,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const uid = useId()
 
   const holeInfo = (pid: string) => roundState[pid]?.holes[hole - 1]
+  /** The row the boards hold for one player on a hole (`{}`: none), as a save names what it saw. */
+  const rowOf = (pid: string, h = hole): HoleFields => {
+    const s = snapshot.scores.find((x) => x.roundId === round.id && x.playerId === pid && x.hole === h)
+    return s ? { strokes: s.strokes, putts: s.putts, picked_up: s.pickedUp } : {}
+  }
   const lead = holeInfo(players[0]!.id)
   const par = lead?.par ?? 4
   const holeSpoken = S.holeSpoken(hole, par, lead?.strokeIndex, lead?.yards)
@@ -209,12 +215,14 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
   // changes or the server's values for it do, never on a keystroke.
-  const latest = useRef({ players, holeInfo, drafts, holeSpoken, editableFor })
+  const latest = useRef({ players, holeInfo, drafts, holeSpoken, editableFor, rowOf })
   useEffect(() => {
-    latest.current = { players, holeInfo, drafts, holeSpoken, editableFor }
+    latest.current = { players, holeInfo, drafts, holeSpoken, editableFor, rowOf }
   })
   /** What the server had for each player when he was first touched or restored on this hole: the kept draft's baseline. */
   const baselines = useRef(new Map<string, string>())
+  /** The same, as the row the save sends as what it saw (REL-05): the server overwrites nothing changed since. */
+  const bases = useRef(new Map<string, HoleFields>())
   /** Players whose kept draft was restored and not touched since: newer server values replace it. */
   const restored = useRef(new Set<string>())
   /** Players whose restored value is on screen, touched or not: «falta guardarlo» shows until the hole is saved. */
@@ -233,7 +241,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const heldKept = useRef<KeptDraft['players']>({})
   const shownHole = useRef('')
   useEffect(() => {
-    const { players, holeInfo, drafts: current, holeSpoken, editableFor } = latest.current
+    const { players, holeInfo, drafts: current, holeSpoken, editableFor, rowOf } = latest.current
     const serverNow = (pid: string) => {
       const h = holeInfo(pid)
       return h?.played ? `${h.gross}:${h.putts}:${h.pickedUp}` : '-'
@@ -250,6 +258,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       shownHole.current = holeKey
       touched.current = new Set()
       baselines.current = new Map()
+      bases.current = new Map()
       restored.current = new Set()
       restoredShown.current = new Set()
       settledAt.current = performance.now()
@@ -271,6 +280,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         next[p.id] = k.draft
         touched.current.add(p.id)
         baselines.current.set(p.id, k.server)
+        // Restored only when the server still holds what it had then: that is what this draft was typed over.
+        bases.current.set(p.id, rowOf(p.id))
         restored.current.add(p.id)
         restoredShown.current.add(p.id)
       }
@@ -290,6 +301,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       restoredShown.current.delete(pid)
       touched.current.delete(pid)
       baselines.current.delete(pid)
+      bases.current.delete(pid)
     }
     setRestoredCount(restoredShown.current.size)
     for (const p of players) {
@@ -346,6 +358,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const setDraft = (pid: string, patch: Partial<Draft>) => {
     // Its baseline is what the server has now, the first time; a restored draft touched again is a live edit.
     if (!baselines.current.has(pid)) baselines.current.set(pid, serverOf(pid))
+    // Before the phone's queue is read the boards may lack a hole it holds (NEW-11): what it saw is taken at the save instead.
+    if (!bases.current.has(pid) && useOutbox.getState().queueRead) bases.current.set(pid, rowOf(pid))
     // Touched again, it is a live edit; the note stays until the hole is saved.
     restored.current.delete(pid)
     touched.current.add(pid)
@@ -454,16 +468,36 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     await commit()
   }
 
-  /** Writes the players in `values` and nobody else: a player left out keeps what the server has. */
-  async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string) {
+  /**
+   * Writes the players in `values` and nobody else: a player left out keeps what the server has. A group's own
+   * phone sends the hole as one save (REL-05): per player only the fields that differ from the row it saw
+   * (`seen`, else the boards' row now), so a value another phone saved meanwhile is never overwritten; the
+   * server asks instead. `auto`: players written with untouched defaults (an all-par hole).
+   */
+  async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string, seen?: Map<string, HoleFields>, auto?: Set<string>) {
+    // save_hole is the group's: the Comité writing another group's card keeps its direct write (0026 allows it while the day is live).
+    const ofGroup = !!me.playerId && group.playerIds.includes(me.playerId)
+    const entries: HoleEntry[] = []
     for (const p of players) {
       const d = values[p.id]
       if (!d) continue
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
       // A Comité correction where a phone's write is refused (a round not live, a signed card, 0026): the server RPC, as Comité › Tarjetas does.
       if (me.isAdmin && (round.status !== 'live' || signed(p.id))) await adminSaveScore(payload, reason.trim() || null)
-      else await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
+      else if (!ofGroup) await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
+      else {
+        const base = seen?.get(p.id) ?? rowOf(p.id, holeNumber)
+        const was = baseRow(base)
+        const fields: HoleFields = {}
+        if (payload.strokes !== was.strokes) fields.strokes = payload.strokes
+        if (payload.putts !== was.putts) fields.putts = payload.putts
+        if (payload.picked_up !== was.picked_up) fields.picked_up = payload.picked_up
+        // What this phone would have saved for him untouched: another phone's save of exactly that is no one's claim.
+        const dflt = { strokes: roundState[p.id]?.holes[holeNumber - 1]?.par ?? par, putts: 2, picked_up: false }
+        entries.push({ player_id: p.id, fields, base, auto: !!auto?.has(p.id), dflt })
+      }
     }
+    if (entries.length) await enqueueHole(tournamentId, { round_id: round.id, hole: holeNumber, entered_by: me.playerId, entries })
     for (const c of contests) {
       const chosen = picks[c.id]
       if (chosen && holeNumber === hole) await enqueueAward(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, game_id: c.id, player_ids: chosen, decided_by: me.playerId })
@@ -499,7 +533,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         wasPlayed[p.id] = !!h?.played
         before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
       }
-      await writeHole(writes, hole, lastHoled)
+      await writeHole(
+        writes,
+        hole,
+        lastHoled,
+        new Map(bases.current),
+        new Set(Object.keys(writes).filter((id) => !touched.current.has(id))),
+      )
       // Saved (in the outbox): nothing left to keep for this hole, and the save is the hole's new
       // starting point. The last hole stays on screen after its save: a correction made there is
       // kept against the save, and a later save writes only what was touched after it.
@@ -509,6 +549,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       setRestoredCount(0)
       touched.current = new Set()
       baselines.current = new Map()
+      bases.current = new Map()
       initialDrafts.current = JSON.stringify(drafts)
       useOutbox.setState({ editing: false })
       undo.current = { hole: savedHole, drafts: before, wasPlayed }
@@ -729,6 +770,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
+          <HoleConflicts roundId={round.id} playerIds={group.playerIds} myPlayerId={me.playerId} />
           <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
           {pairsOn && complete && (
             <div>
@@ -793,6 +835,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           </header>
 
           {restoredCount > 0 && <p className={styles.restoredNote}>{S.restoredDraft}</p>}
+          <HoleConflicts roundId={round.id} playerIds={group.playerIds} myPlayerId={me.playerId} />
           <div className={styles.players}>
             {players.map((p) => {
               const d = drafts[p.id]

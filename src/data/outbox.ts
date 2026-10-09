@@ -3,6 +3,14 @@
  * push to Supabase with retry/backoff. Survives reloads and airplane mode.
  * The store overlays pending items on every fetched snapshot so an
  * optimistic score never flickers away while it is in flight.
+ *
+ * Outbox v2 (REL-05): a group's hole goes out as one `save_hole` call (0026),
+ * with only the fields the phone set and, per player, the row it saw. The
+ * server never overwrites a value someone else saved meanwhile: it answers
+ * `conflict`, the server's row lands, and the Tarjeta asks. Each call carries
+ * a mutation id made when it was queued, so a retry after a lost answer is
+ * answered again, never applied twice. Holes queued by older builds (`score`
+ * items, one player each) still go out as the direct writes they were.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Dexie, { type EntityTable } from 'dexie'
@@ -47,14 +55,87 @@ interface ItemBase {
    */
   tournamentName?: string
   slug?: string
+  /**
+   * A hole whose call went out at least once: the server may hold it. It is
+   * never merged into again (a newer write queues behind it), and a retry
+   * sends it unchanged, under its mutation id.
+   */
+  sent?: boolean
 }
 export type OutboxItem =
+  | (ItemBase & { kind: 'hole'; payload: HolePayload })
   | (ItemBase & { kind: 'score'; payload: ScorePayload })
   | (ItemBase & { kind: 'tiebreak'; payload: TiebreakPayload })
   | (ItemBase & { kind: 'signature'; payload: SignaturePayload })
   | (ItemBase & { kind: 'award'; payload: AwardPayload })
 /** What callers hand to `enqueue`: the outbox stamps the version. */
 type NewItem = OutboxItem extends infer I ? (I extends OutboxItem ? Omit<I, 'seq'> & { seq?: number } : never) : never
+
+/** What a phone sets on one player's hole: only the fields it changed (REL-05). */
+export interface HoleFields {
+  strokes?: number | null
+  putts?: number | null
+  picked_up?: boolean
+}
+/** One player's part of a hole. */
+export interface HoleEntry {
+  player_id: string
+  fields: HoleFields
+  /**
+   * The whole row the phone saw when the player was touched (`{}`: none). The
+   * server overwrites nothing someone else changed since. Never left out: an
+   * entry without it is written blind (0026).
+   */
+  base: HoleFields
+  /** A default nobody touched (an all-par hole): a conflict on it takes the server's value without asking. */
+  auto?: boolean
+  /**
+   * What the Tarjeta saves for a player nobody touched on this hole (par for
+   * his tee, 2 putts). A value someone else saved that is exactly this is a
+   * phone's untouched default, no one's claim: this phone's value goes over
+   * it (the server flags the discrepancy) instead of asking. Not sent.
+   */
+  dflt?: HoleFields
+}
+/** A group's hole for `save_hole`, as queued. */
+export interface HolePayload {
+  round_id: string
+  hole: number
+  /** Made when the hole was queued, kept across retries and reloads: a retry is answered, never applied twice. */
+  mutation_id: string
+  entries: HoleEntry[]
+  /** For the boards while it waits; the server names the writer itself. */
+  entered_by: string | null
+  client_ts: string
+}
+/** `save_hole`'s answer (0026). */
+export interface HoleAnswer {
+  status: 'ok' | 'partial' | 'conflict' | 'rejected' | 'not_member'
+  rows?: Row[]
+  conflicts?: Array<{ player_id: string; fields: string[]; server: Row | null }>
+  rejected?: Array<{ player_id: string | null; reason: string }>
+  unchanged?: string[]
+  replayed?: boolean
+}
+/**
+ * A hole someone else saved first: the server kept theirs (now on the
+ * boards), and this phone's value waits for the player to choose.
+ */
+export interface ConflictItem {
+  key: string
+  tournamentId: string
+  round_id: string
+  hole: number
+  player_id: string
+  /** What this phone set, over what it saw. */
+  fields: HoleFields
+  base: HoleFields
+  /** The fields someone else had changed (the server's answer). */
+  clash: string[]
+  /** The row that stands on the server (null: there is none any more). */
+  server: Row | null
+  at: number
+}
 
 export interface ScorePayload {
   round_id: string
@@ -101,6 +182,7 @@ export interface RejectedItem {
 class OutboxDb extends Dexie {
   items!: EntityTable<OutboxItem, 'key'>
   rejected!: EntityTable<RejectedItem, 'key'>
+  conflicts!: EntityTable<ConflictItem, 'key'>
   constructor() {
     super('cardi-golf-outbox')
     this.version(1).stores({ items: 'key, tournamentId, createdAt' })
@@ -116,6 +198,9 @@ class OutboxDb extends Dexie {
             it.seq ??= (it.createdAt ?? 0) * 1000
           }),
       )
+    // v4 (outbox v2): the holes someone else saved first, for the player to settle. A `hole` item lives in `items`
+    // like any other: an older build reads it as a newer build's write, and leaves it on the phone untouched.
+    this.version(4).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at', conflicts: 'key, tournamentId, at' })
   }
 }
 
@@ -160,12 +245,15 @@ interface OutboxState {
   persistent: boolean | null
   /** The queue has been read from the phone, and the boards recomputed with it (NEW-11). */
   queueRead: boolean
+  /** Holes someone else saved first, for the open tournament: the player keeps theirs or sends his again. */
+  conflicts: ConflictItem[]
 }
-export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null, queueRead: false }))
+export const useOutbox = create<OutboxState>(() => ({ pending: 0, held: 0, heldHoles: 0, syncing: false, lastError: null, rejected: [], editing: false, foreign: 0, blocked: false, pendingHoles: 0, persistent: null, queueRead: false, conflicts: [] }))
 
 /** In-memory mirror of the queue for the snapshot overlay (kept in sync with Dexie). */
 let queue: OutboxItem[] = []
 let rejectedAll: RejectedItem[] = []
+let conflictsAll: ConflictItem[] = []
 /** The flush in progress, if any. */
 let running: Promise<void> | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -185,12 +273,13 @@ function publish(extra: Partial<OutboxState> = {}) {
     heldHoles: holesIn(held),
     foreign: queue.filter(isForeign).length,
     rejected: rejectedAll.filter((x) => x.tournamentId === tid),
+    conflicts: conflictsAll.filter((x) => x.tournamentId === tid),
     ...extra,
   })
 }
 
 /** What this build knows how to send. A newer build may queue other kinds. */
-const KNOWN_KINDS: ReadonlySet<string> = new Set(['score', 'tiebreak', 'award', 'signature'])
+const KNOWN_KINDS: ReadonlySet<string> = new Set(['hole', 'score', 'tiebreak', 'award', 'signature'])
 /**
  * Queued by a newer build (the app was rolled back, or this tab is older):
  * left untouched, never pushed or rejected here, for that build to send.
@@ -242,7 +331,12 @@ export async function adoptQueuedWrites(tournamentId: string) {
   if (!uid) return
   const held = queue.filter((x) => x.tournamentId === tournamentId && isHeld(x))
   if (held.length) {
-    const adopted = new Map(held.map((x) => [`${x.key}#${x.seq}`, { ...x, actingUid: uid }]))
+    // A hole already sent goes again under a new mutation id: the server keeps a mutation's answer for the
+    // account that sent it, and refuses the id from another. Sending its values again is safe either way: what
+    // it saw is checked, and values the server already holds are taken as they are.
+    const adopted = new Map(
+      held.map((x) => [`${x.key}#${x.seq}`, (x.kind === 'hole' && x.sent ? { ...x, actingUid: uid, payload: { ...x.payload, mutation_id: newMutationId() } } : { ...x, actingUid: uid }) as OutboxItem]),
+    )
     queue = queue.map((x) => adopted.get(`${x.key}#${x.seq}`) ?? x)
     const d = getDb()
     if (d) {
@@ -334,7 +428,7 @@ export function hasUnsentWrites(): boolean {
 }
 /** Distinct holes among queued score writes. */
 function holesIn(list: OutboxItem[]): number {
-  return new Set(list.filter((x) => x.kind === 'score').map((x) => `${(x.payload as ScorePayload).round_id}:${(x.payload as ScorePayload).hole}`)).size
+  return new Set(list.filter((x) => x.kind === 'score' || x.kind === 'hole').map((x) => `${(x.payload as ScorePayload | HolePayload).round_id}:${(x.payload as ScorePayload | HolePayload).hole}`)).size
 }
 
 /** Call when the open tournament changes so the counters follow it. */
@@ -349,6 +443,7 @@ async function loadQueue() {
     queue = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 })).sort((a, b) => a.seq - b.seq)
     lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
     rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
+    conflictsAll = d ? await d.conflicts.orderBy('at').toArray() : []
   } finally {
     // Boards already up (the phone's copy, shown before the queue was read) get the queued writes now,
     // before the queue is said read: the Tarjeta waits for it to save, and a card opened before then moves
@@ -396,12 +491,61 @@ async function reject(item: OutboxItem, message: string) {
   // A newer write to the same key replaced this one while it was in flight:
   // that write still goes out, so this refusal no longer matters.
   if (!isCurrent(item)) return
-  const r: RejectedItem = { key: item.key, kind: item.kind, tournamentId: item.tournamentId, payload: item.payload, message, at: Date.now() }
-  rejectedAll = [...rejectedAll.filter((x) => x.key !== r.key), r]
   queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
   await deleteStored(item)
+  if (item.kind === 'hole') await keepRejected(item.payload.entries.map((e) => holeRefusal(item, e, message)))
+  else await keepRejected([{ key: item.key, kind: item.kind, tournamentId: item.tournamentId, payload: item.payload, message, at: Date.now() }] as RejectedItem[])
+}
+async function keepRejected(list: RejectedItem[]) {
+  if (!list.length) return
+  rejectedAll = [...rejectedAll.filter((x) => !list.some((r) => r.key === x.key)), ...list]
   const d = getDb()
-  if (d) await d.rejected.put(r)
+  if (d) await d.rejected.bulkPut(list)
+}
+/**
+ * One player of a refused hole, as the rejected list keeps a hole: the whole
+ * row this phone meant (its fields over what it saw), under the key a
+ * direct write of it has. «Reenviar» sends it the way the Comité's own
+ * captures go.
+ */
+function holeRefusal(item: OutboxItem & { kind: 'hole' }, e: HoleEntry, message: string): RejectedItem {
+  const p = item.payload
+  const v = applyFields(baseRow(e.base), e.fields)
+  const payload: ScorePayload = { round_id: p.round_id, player_id: e.player_id, hole: p.hole, strokes: v.strokes, putts: v.putts, picked_up: v.picked_up, entered_by: p.entered_by, client_ts: p.client_ts }
+  return { key: `score:${p.round_id}:${e.player_id}:${p.hole}`, kind: 'score', tournamentId: item.tournamentId, payload, message, at: Date.now() }
+}
+/** Why the server refused one player of a hole, as the chip and the rejected list say it. */
+function refusalText(reason: string): string {
+  if (reason === 'card_signed') return t.sync.errSigned
+  if (reason === 'round_not_live') return t.sync.errNotLive
+  if (reason === 'not_in_group') return t.sync.errNotInGroup
+  return t.sync.errInvalid
+}
+
+/** A score row as a base (what a phone saw): its three values. */
+function rowFields(row: Row): HoleFields {
+  return { strokes: (row.strokes as number | null) ?? null, putts: (row.putts as number | null) ?? null, picked_up: row.picked_up === true }
+}
+/** The row holds exactly what the Tarjeta saves for a player nobody touched. */
+function isDefault(row: Row, dflt: HoleFields | undefined): boolean {
+  if (!dflt) return false
+  const r = rowFields(row)
+  const d = baseRow(dflt)
+  return r.strokes === d.strokes && r.putts === d.putts && r.picked_up === d.picked_up
+}
+/** A score row's values, read as 0026 reads a base: a key it leaves out is no strokes, no putts, not picked up. */
+export function baseRow(base: HoleFields): { strokes: number | null; putts: number | null; picked_up: boolean } {
+  return { strokes: base.strokes ?? null, putts: base.putts ?? null, picked_up: base.picked_up ?? false }
+}
+/** The row a hole's fields make over the row they were set on: a pick-up has no strokes, a number of strokes is no pick-up (0026). */
+export function applyFields(row: { strokes: number | null; putts: number | null; picked_up: boolean }, f: HoleFields): { strokes: number | null; putts: number | null; picked_up: boolean } {
+  const next = { ...row }
+  if (f.strokes !== undefined) next.strokes = f.strokes
+  if (f.putts !== undefined) next.putts = f.putts
+  if (f.picked_up !== undefined) next.picked_up = f.picked_up
+  else if (typeof f.strokes === 'number') next.picked_up = false
+  if (next.picked_up) next.strokes = null
+  return next
 }
 
 /** Put a rejected write back in the queue (the Comité, whose write is allowed, or after the round reopened). */
@@ -420,6 +564,29 @@ export async function discardRejected(key: string) {
   publish()
 }
 
+async function dropConflicts(keys: string[]) {
+  if (!keys.some((k) => conflictsAll.some((c) => c.key === k))) return
+  conflictsAll = conflictsAll.filter((c) => !keys.includes(c.key))
+  const d = getDb()
+  if (d) await d.conflicts.bulkDelete(keys)
+}
+const conflictKey = (roundId: string, playerId: string, hole: number) => `conflict:${roundId}:${playerId}:${hole}`
+/** Keep the value someone else saved: the conflict goes, the server's row stays. */
+export async function keepTheirs(key: string) {
+  await dropConflicts([key])
+  publish()
+}
+/**
+ * Send this phone's value again, over the row that stands now (a new
+ * mutation, whose base is the server's row): the player saw it and chose his.
+ */
+export async function sendMineAgain(key: string, enteredBy: string | null) {
+  const c = conflictsAll.find((x) => x.key === key)
+  if (!c) return
+  const base: HoleFields = c.server ? rowFields(c.server) : {}
+  await enqueueHole(c.tournamentId, { round_id: c.round_id, hole: c.hole, entered_by: enteredBy, entries: [{ player_id: c.player_id, fields: c.fields, base }] })
+}
+
 /** Apply pending writes on top of the server's rows, for the screens (the store keeps its own rows apart). */
 export function overlayPending(s: Snapshot): void {
   for (const it of queue) if (it.tournamentId === s.tournament.id) overlayItem(s, it)
@@ -427,7 +594,18 @@ export function overlayPending(s: Snapshot): void {
 
 /** One write as the snapshot reads with it: on the screens' copy while it waits, on the server's rows once it is taken. */
 function overlayItem(s: Snapshot, it: OutboxItem): void {
-  if (it.kind === 'score') {
+  if (it.kind === 'hole') {
+    const p = it.payload
+    for (const e of p.entries) {
+      const i = s.scores.findIndex((x) => x.roundId === p.round_id && x.playerId === e.player_id && x.hole === p.hole)
+      const cur = i >= 0 ? s.scores[i]! : null
+      // Over what the boards hold now (another phone may have set a field this one left alone), else over what it saw.
+      const v = applyFields(cur ? { strokes: cur.strokes, putts: cur.putts, picked_up: cur.pickedUp } : baseRow(e.base), e.fields)
+      const row: Score = { ...cur, roundId: p.round_id, playerId: e.player_id, hole: p.hole, strokes: v.strokes, putts: v.putts, pickedUp: v.picked_up, enteredBy: p.entered_by, updatedAt: p.client_ts }
+      if (i >= 0) s.scores[i] = row
+      else s.scores.push(row)
+    }
+  } else if (it.kind === 'score') {
     const p = it.payload
     const row: Score = {
       roundId: p.round_id,
@@ -499,6 +677,83 @@ async function enqueue(newItem: NewItem) {
   publish()
   announce()
   // Optimistic: recompute right away with the overlay.
+  useTournament.getState().refresh()
+  void flush()
+}
+
+/** A mutation's id: random, made once when the hole is queued. */
+function newMutationId(): string {
+  const c = globalThis.crypto
+  if (typeof c?.randomUUID === 'function') return c.randomUUID()
+  // iOS before 15.4 has no randomUUID: a version 4 uuid from random bytes.
+  const b = c.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6]! & 0x0f) | 0x40
+  b[8] = (b[8]! & 0x3f) | 0x80
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
+
+type HoleItem = OutboxItem & { kind: 'hole' }
+/** The newer write's fields over the older one's, player by player; what each player saw stays the older one's (REL-05). */
+function mergeHoles(into: HoleItem, newer: HoleItem): HoleItem {
+  const entries = into.payload.entries.map((e) => {
+    const n = newer.payload.entries.find((x) => x.player_id === e.player_id)
+    return n ? { ...e, fields: { ...e.fields, ...n.fields }, auto: !!e.auto && !!n.auto } : e
+  })
+  for (const n of newer.payload.entries) if (!entries.some((e) => e.player_id === n.player_id)) entries.push(n)
+  return { ...into, seq: newer.seq, payload: { ...into.payload, entries, entered_by: newer.payload.entered_by, client_ts: newer.payload.client_ts } }
+}
+
+/**
+ * Queue a group's hole: one `save_hole` call, with only the players and
+ * fields the phone set, each over the row it saw (REL-05). A hole of the same
+ * round still waiting to go out takes these fields over its own (field by
+ * field); one already sent is never touched, and this one queues behind it
+ * (ARCH-01). The merge is decided in IndexedDB's transaction, against what a
+ * flush in another tab marked sent.
+ */
+export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }) {
+  const entries = input.entries.filter((e) => Object.keys(e.fields).length > 0).map((e) => ({ ...e, base: e.base ?? {} }))
+  if (!entries.length) return
+  const open = useTournament.getState()
+  const tour = open.tournamentId === tournamentId ? open.data?.snapshot.tournament : undefined
+  const mutationId = newMutationId()
+  const fresh: HoleItem = {
+    key: `hole:${input.round_id}:${input.hole}:${mutationId}`,
+    kind: 'hole',
+    tournamentId,
+    payload: { round_id: input.round_id, hole: input.hole, mutation_id: mutationId, entries, entered_by: input.entered_by, client_ts: new Date().toISOString() },
+    attempts: 0,
+    createdAt: Date.now(),
+    seq: nextSeq(),
+    actingUid: currentUid(),
+    tournamentName: tour?.name,
+    slug: tour?.slug,
+  }
+  const mergeable = (x: OutboxItem): x is HoleItem =>
+    x.kind === 'hole' && !x.sent && x.tournamentId === tournamentId && x.payload.round_id === input.round_id && x.payload.hole === input.hole && (x.actingUid ?? null) === (fresh.actingUid ?? null)
+  void askPersistence()
+  let item: HoleItem = fresh
+  const d = getDb()
+  if (d) {
+    try {
+      await d.transaction('rw', d.items, async () => {
+        const into = (await d.items.where('tournamentId').equals(tournamentId).toArray()).filter(mergeable).sort((a, b) => a.seq - b.seq).at(-1)
+        item = into ? mergeHoles(into, fresh) : fresh
+        await d.items.put(item)
+      })
+    } catch {
+      throw new OutboxStorageError()
+    }
+  } else {
+    const into = queue.filter(mergeable).at(-1)
+    item = into ? mergeHoles(into, fresh) : fresh
+  }
+  queue = [...queue.filter((x) => x.key !== item.key), item]
+  // Captured again: what the phone asked about these players on this hole is settled.
+  await dropConflicts(entries.map((e) => conflictKey(input.round_id, e.player_id, input.hole)))
+  publish()
+  announce()
   useTournament.getState().refresh()
   void flush()
 }
@@ -591,9 +846,9 @@ export function enqueueSignature(tournamentId: string, payload: SignaturePayload
 }
 
 /** Replaceable for tests. */
-let pushImpl: (item: OutboxItem) => Promise<LiveChange[] | void> = push
+let pushImpl: (item: OutboxItem) => Promise<LiveChange[] | HoleAnswer | void> = push
 export const _outboxTest = {
-  setPush(fn: (item: OutboxItem) => Promise<LiveChange[] | void>) {
+  setPush(fn: (item: OutboxItem) => Promise<LiveChange[] | HoleAnswer | void>) {
     pushImpl = fn
   },
   /** Replace the Web Locks manager (null: none). */
@@ -604,6 +859,7 @@ export const _outboxTest = {
   reset() {
     queue = []
     rejectedAll = []
+    conflictsAll = []
     running = null
     blocked = false
     persistAsked = false
@@ -620,7 +876,7 @@ export const _outboxTest = {
   stored: async () => (getDb() ? await getDb()!.items.toArray() : []),
   async clearStored() {
     const d = getDb()
-    if (d) await Promise.all([d.items.clear(), d.rejected.clear()])
+    if (d) await Promise.all([d.items.clear(), d.rejected.clear(), d.conflicts.clear()])
   },
 }
 
@@ -654,10 +910,28 @@ const stored = (table: string, rows: Row[] | null): LiveChange[] => (rows ?? [])
  * the server's triggers may have changed (a discrepancy flagged, the id and
  * time it gave the row).
  */
-async function push(item: OutboxItem): Promise<LiveChange[]> {
+/** A refusal that carries Postgres's code, read before its text (`isPermanent`). */
+class ServerRefusal extends Error {
+  readonly code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.code = code
+  }
+}
+
+async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   const sb = supabase()
   // Every request of this push carries the token checked here, whatever the session does meanwhile.
   const auth = `Bearer ${await sessionToken(sb)}`
+  if (item.kind === 'hole') {
+    const p = item.payload
+    // Every entry names its base: a key left out is a blind write on the server (0026).
+    const call = { round_id: p.round_id, hole: p.hole, mutation_id: p.mutation_id, entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {} })) }
+    const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
+    if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
+    if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
+    return data as HoleAnswer
+  }
   if (item.kind === 'score') {
     const { data, error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).select().setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
@@ -701,6 +975,140 @@ async function push(item: OutboxItem): Promise<LiveChange[]> {
 function isPermanent(msg: string): boolean {
   return /row-level security|violates|permission denied|invalid input|out of range|too long/i.test(msg)
 }
+/**
+ * The same, by the error itself: `save_hole` refuses a call it can't read (22023: too many entries, a mutation
+ * id used for another hole or by another account) in Spanish, with the code, and the code is what says it is
+ * for good. A data exception (class 22) and a refused privilege (42501) are; anything else (the network, a
+ * timeout, a lapsed token, the server down) is retried.
+ */
+function isPermanentError(e: unknown): boolean {
+  if (e instanceof ServerRefusal && (/^22/.test(e.code) || e.code === '42501')) return true
+  return isPermanent(e instanceof Error ? e.message : String(e))
+}
+/** A refused hole's message: a call `save_hole` could not read is invalid, whatever its text says. */
+function refusalOf(e: unknown): string {
+  if (e instanceof ServerRefusal && e.code === '22023') return t.sync.errInvalid
+  return describeSyncError(e instanceof Error ? e.message : String(e))
+}
+
+/**
+ * A hole's answer, entry by entry (0026): what was stored lands as the
+ * server's rows; a conflict lands the row that stands and waits for the
+ * player (a default nobody touched takes it without asking); a refusal goes
+ * to the rejected list with its reason. Returns the rows to land, and
+ * whether a fetch must say the rest (a conflict over a row that is gone).
+ */
+async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: LiveChange[]; fetch: boolean; refused: string | null }> {
+  const p = item.payload
+  const entry = (pid: string | null) => p.entries.find((e) => e.player_id === pid)
+  const changes = stored('scores', ans.rows ?? [])
+  // A replayed answer is the first one, which may be older than the hole is now: one more fetch says what stands.
+  let fetch = !!ans.replayed
+  const contested: Array<{ e: HoleEntry; c: NonNullable<HoleAnswer['conflicts']>[number] }> = []
+  for (const c of ans.conflicts ?? []) {
+    if (c.server) changes.push({ table: 'scores', eventType: 'UPDATE', new: c.server, old: {} })
+    else fetch = true
+    const e = entry(c.player_id)
+    if (e && !e.auto) contested.push({ e, c })
+  }
+  // A newer capture of the same players on this hole still waits to go out: it takes what this one set under its
+  // own fields, and what this one saw, and meets the row that stands itself (as if the two had been one save).
+  const left = await rebaseOnNewer(item, contested.map((x) => x.e))
+  const asked: ConflictItem[] = []
+  const again: HoleEntry[] = []
+  for (const { e, c } of contested) {
+    if (!left.has(e.player_id)) continue
+    // The two phones of a group often save one hole at once, each the pair it keeps; the first one's untouched
+    // defaults for the other pair are no value to defend. This phone's goes over them, as the row now stands.
+    if (c.server && isDefault(c.server, e.dflt)) again.push({ ...e, base: rowFields(c.server) })
+    else asked.push({ key: conflictKey(p.round_id, e.player_id, p.hole), tournamentId: item.tournamentId, round_id: p.round_id, hole: p.hole, player_id: e.player_id, fields: e.fields, base: e.base, clash: c.fields, server: c.server, at: Date.now() })
+  }
+  const refusals = (ans.rejected ?? []).flatMap((r) => {
+    const e = entry(r.player_id)
+    return e ? [holeRefusal(item, e, refusalText(r.reason))] : []
+  })
+  if (isCurrent(item)) {
+    queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
+    await deleteStored(item)
+  }
+  await keepRejected(refusals)
+  if (again.length) await enqueueHole(item.tournamentId, { round_id: p.round_id, hole: p.hole, entered_by: p.entered_by, entries: again })
+  if (asked.length) {
+    conflictsAll = [...conflictsAll.filter((x) => !asked.some((a) => a.key === x.key)), ...asked]
+    const d = getDb()
+    if (d) await d.conflicts.bulkPut(asked)
+  }
+  announce()
+  return { changes, fetch, refused: refusals[0]?.message ?? null }
+}
+
+/**
+ * Put the entries of a hole the server did not take under the newer capture
+ * of the same hole that still waits to go out (unsent: nothing has seen it
+ * yet): its fields over theirs, and their base, the row the phone saw before
+ * either. Decided in IndexedDB's transaction, against a flush in another tab.
+ * Returns the players no waiting capture took.
+ */
+async function rebaseOnNewer(item: HoleItem, entries: HoleEntry[]): Promise<Set<string>> {
+  const left = new Set(entries.map((e) => e.player_id))
+  const p = item.payload
+  const target = queue.find(
+    (x): x is HoleItem =>
+      x.key !== item.key && x.kind === 'hole' && !x.sent && x.tournamentId === item.tournamentId && x.payload.round_id === p.round_id && x.payload.hole === p.hole && x.payload.entries.some((y) => left.has(y.player_id)),
+  )
+  if (!target) return left
+  const rebase = (t: HoleItem): HoleItem => ({
+    ...t,
+    payload: {
+      ...t.payload,
+      entries: t.payload.entries.map((y) => {
+        const e = entries.find((z) => z.player_id === y.player_id)
+        return e ? { ...y, fields: { ...e.fields, ...y.fields }, base: e.base, auto: !!e.auto && !!y.auto } : y
+      }),
+    },
+  })
+  let done: HoleItem | null = null
+  const d = getDb()
+  if (d) {
+    await d.transaction('rw', d.items, async () => {
+      const cur = await d.items.get(target.key)
+      if (cur?.kind !== 'hole' || cur.sent) return
+      const next = rebase(cur)
+      done = next
+      await d.items.put(next)
+    })
+  } else done = rebase(target)
+  const taken = done as HoleItem | null
+  if (!taken) return left
+  queue = queue.map((x) => (x.key === taken.key ? taken : x))
+  for (const y of taken.payload.entries) left.delete(y.player_id)
+  return left
+}
+
+/**
+ * Mark a hole sent before its call goes out, in IndexedDB, against the
+ * version stored there (another tab may have merged a newer write into it):
+ * from now on nothing merges into it. Missing from IndexedDB (another tab
+ * settled it, or the storage was cleared), the call goes out anyway: its
+ * mutation id makes a second one harmless.
+ */
+async function markSent(item: OutboxItem): Promise<OutboxItem> {
+  if (item.kind !== 'hole' || item.sent) return item
+  let sending: OutboxItem = { ...item, sent: true }
+  const d = getDb()
+  if (d) {
+    await d.transaction('rw', d.items, async () => {
+      const cur = await d.items.get(item.key)
+      if (!cur) return
+      sending = { ...cur, sent: true }
+      await d.items.put(sending)
+    })
+  }
+  queue = queue.map((x) => (x.key === sending.key ? sending : x))
+  return sending
+}
+/** The device is no player of the tournament any more (`not_member`): the hole waits for the PIN, as a lapsed session's do (REL-16). */
+const NOT_MEMBER = 'not-member'
 
 /**
  * Push everything queued, oldest first. A permanent rejection moves the item
@@ -774,32 +1182,51 @@ async function runFlush(): Promise<boolean> {
       // The channel's changes from now on may be this write's echo, and a fetch that lands from now on may have read it.
       const since = liveSeq()
       const sentAt = liveClock()
+      let sending = item
       try {
-        const rows = (await pushImpl(item)) ?? []
-        if (isCurrent(item)) {
-          queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
-          await deleteStored(item)
+        sending = await markSent(item)
+        tried.add(sending.seq)
+        const answer = (await pushImpl(sending)) ?? []
+        if (sending.kind === 'hole' && !Array.isArray(answer)) {
+          if (answer.status === 'not_member') {
+            // Not refused for good: the PIN (or the profile link) brings the device back, and then it goes (adoptQueuedWrites).
+            if (isCurrent(sending)) await holdForPin(sending)
+            publish({ lastError: t.sync.errNotMember })
+            continue
+          }
+          const { changes, fetch, refused } = await settleHole(sending, answer)
+          useTournament.getState().landChanges(sending.tournamentId, changes, since, sentAt, { flushing: true, fetch })
+          if (changes.length) announceLanded(sending.tournamentId, changes, sentAt)
+          publish({ lastError: refused })
+          if (refused) void useTournament.getState().reload()
+          continue
+        }
+        const rows = Array.isArray(answer) ? answer : []
+        if (isCurrent(sending)) {
+          queue = queue.filter((x) => !(x.key === sending.key && x.seq === sending.seq))
+          await deleteStored(sending)
           announce()
         }
         // Taken: the server's rows hold what it stored, unless its echo is in
         // already (whatever came after the echo is newer, and is in too). A
         // newer version still queued shows over it until it goes.
         // A card the other pair's phone signed first comes back empty: its signature stands, and a fetch shows it before its echo does.
-        useTournament.getState().landChanges(item.tournamentId, rows, since, sentAt, { flushing: true, fetch: item.kind === 'signature' && !rows.length })
-        if (rows.length) announceLanded(item.tournamentId, rows, sentAt)
+        useTournament.getState().landChanges(sending.tournamentId, rows, since, sentAt, { flushing: true, fetch: sending.kind === 'signature' && !rows.length })
+        if (rows.length) announceLanded(sending.tournamentId, rows, sentAt)
         publish({ lastError: null })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
-        if (isPermanent(msg)) {
-          await reject(item, describeSyncError(msg))
-          publish({ lastError: describeSyncError(msg) })
+        if (isPermanentError(e)) {
+          const why = sending.kind === 'hole' ? refusalOf(e) : describeSyncError(msg)
+          await reject(sending, why)
+          publish({ lastError: why })
           // The optimistic value was wrong: the server's rows at once, then its truth.
           useTournament.getState().refresh()
           void useTournament.getState().reload()
         } else {
           failed = true
-          if (isCurrent(item)) {
-            const next = { ...item, attempts: item.attempts + 1, lastError: msg }
+          if (isCurrent(sending)) {
+            const next = { ...sending, attempts: sending.attempts + 1, lastError: msg }
             queue = queue.map((x) => (x.key === next.key && x.seq === next.seq ? next : x))
             if (d) {
               await d.transaction('rw', d.items, async () => {
@@ -809,7 +1236,7 @@ async function runFlush(): Promise<boolean> {
             }
           }
           publish({ lastError: describeSyncError(msg) })
-          schedule(Math.min(30000, 1000 * 2 ** Math.min(item.attempts + 1, 5)))
+          schedule(Math.min(30000, 1000 * 2 ** Math.min(sending.attempts + 1, 5)))
           break
         }
       }
@@ -820,6 +1247,20 @@ async function runFlush(): Promise<boolean> {
     useTournament.getState().pushesDone()
   }
   return failed
+}
+
+/** Held until the player is back on this device (`adoptQueuedWrites`), like a write queued under another identity. */
+async function holdForPin(item: OutboxItem) {
+  const held = { ...item, actingUid: NOT_MEMBER } as OutboxItem
+  queue = queue.map((x) => (x.key === held.key && x.seq === held.seq ? held : x))
+  const d = getDb()
+  if (d) {
+    await d.transaction('rw', d.items, async () => {
+      const cur = await d.items.get(held.key)
+      if (cur && (cur.seq ?? cur.createdAt * 1000) === held.seq) await d.items.put(held)
+    })
+  }
+  announce()
 }
 
 function schedule(ms: number) {

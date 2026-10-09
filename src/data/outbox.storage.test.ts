@@ -19,7 +19,7 @@ vi.mock('./tournamentStore', () => ({
   useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
 }))
 
-const { _outboxTest, flush, startOutbox, useOutbox, OutboxStorageError } = await import('./outbox')
+const { _outboxTest, enqueueHole, flush, startOutbox, useOutbox, OutboxStorageError } = await import('./outbox')
 const { t } = await import('../i18n/es-MX')
 
 const score = (hole: number, player = 'p1') => ({
@@ -46,6 +46,16 @@ describe('the phone keeps the write first (REL-18)', () => {
     vi.spyOn(_outboxTest.db()!.items, 'put').mockRejectedValue(new DOMException('quota', 'QuotaExceededError'))
     await expect(_outboxTest.enqueue(score(1))).rejects.toBeInstanceOf(OutboxStorageError)
     await expect(_outboxTest.enqueue(score(2))).rejects.toThrow(t.sync.storeFailed)
+    expect(_outboxTest.queue()).toEqual([])
+    expect(useOutbox.getState().pending).toBe(0)
+  })
+
+  it('a hole IndexedDB refuses is reported and not shown as saved (outbox v2)', async () => {
+    _outboxTest.setPush(async () => {
+      throw new Error('TypeError: Failed to fetch')
+    })
+    vi.spyOn(_outboxTest.db()!.items, 'put').mockRejectedValue(new DOMException('quota', 'QuotaExceededError'))
+    await expect(enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p1', fields: { strokes: 5 }, base: {} }] })).rejects.toBeInstanceOf(OutboxStorageError)
     expect(_outboxTest.queue()).toEqual([])
     expect(useOutbox.getState().pending).toBe(0)
   })

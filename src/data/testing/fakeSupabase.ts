@@ -21,7 +21,9 @@
  *   Postgres checks them: the time of day to the microsecond, the offset,
  *   the date; only C's spaces around a value), the defaults (never over a
  *   null sent, the generated key included), NOT NULL, the foreign and unique
- *   keys, column grants and checks, the discrepancy trigger, and the order
+ *   keys, column grants and checks, the discrepancy and version triggers,
+ *   save_hole (0026: its answers, conflicts, refusals kept in
+ *   rejected_writes, and replays by mutation id), and the order
  *   the database meets them in: a column PostgREST doesn't know (of
  *   `columns` when it is sent, which PostgREST then reads alone, else of the
  *   body), the ON CONFLICT target, the grants, the whole body cast, then row
@@ -37,8 +39,9 @@
  *     offset, hex or underscored integers, prefixes of a boolean word; and
  *     the order of the casts inside one row;
  *   - the shape of a uuid: ids here are names, so any text is one;
- *   - 0026's save_hole RPC and the score columns it writes (version, device_id,
- *     mutation_id): no phone calls it yet;
+ *   - save_hole (0026): the text a call is measured by for its 16 KB is
+ *     JSON's, not jsonb's (a few spaces apart); the audit triggers write
+ *     nothing; two calls never run at once here, so its locks are moot;
  *   - how a time reads back: the fake keeps the text it was sent (and
  *     stamps its own in ISO form), where PostgREST answers in Postgres's
  *     (`+00:00`); no case compares a time;
@@ -355,7 +358,24 @@ const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
 /** Each phone table's columns and their types (information_schema): what PostgREST's schema cache knows, and what Postgres casts the body to. */
 type ColumnType = 'uuid' | 'int' | 'bool' | 'timestamptz' | 'text' | 'jsonb'
 const COLUMNS: Record<string, Record<string, ColumnType>> = {
-  scores: { id: 'uuid', round_id: 'uuid', player_id: 'uuid', hole: 'int', strokes: 'int', putts: 'int', picked_up: 'bool', entered_by: 'uuid', client_ts: 'timestamptz', updated_at: 'timestamptz', disputed: 'bool', previous: 'jsonb', reason: 'text' },
+  scores: {
+    id: 'uuid',
+    round_id: 'uuid',
+    player_id: 'uuid',
+    hole: 'int',
+    strokes: 'int',
+    putts: 'int',
+    picked_up: 'bool',
+    entered_by: 'uuid',
+    client_ts: 'timestamptz',
+    updated_at: 'timestamptz',
+    disputed: 'bool',
+    previous: 'jsonb',
+    reason: 'text',
+    version: 'int',
+    device_id: 'uuid',
+    mutation_id: 'uuid',
+  },
   snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
   card_signatures: { round_id: 'uuid', pair_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz' },
   hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
@@ -536,7 +556,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   function withDefaults(table: string, row: Row): Row {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
     const id = keys.length === 1 && keys[0] === 'id' && row.id == null ? { id: `${table}-${++serial}` } : {}
-    if (table === 'scores') return { ...id, picked_up: false, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
+    if (table === 'scores') return { ...id, picked_up: false, version: 1, device_id: null, mutation_id: null, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
     if (table === 'snake_tiebreaks' || table === 'hole_awards') return { ...id, created_at: stamp(), ...row }
     if (table === 'card_signatures') return { ...id, signed_at: stamp(), ...row }
     return { ...id, ...row }
@@ -556,6 +576,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       row.previous = { strokes: old.strokes ?? null, putts: old.putts ?? null, picked_up: old.picked_up, entered_by: old.entered_by ?? null, updated_at: old.updated_at ?? null }
     }
     row.updated_at = stamp()
+    // 0026 `scores_version`: every change of a hole bumps it.
+    row.version = Number(old.version ?? 1) + 1
     return row
   }
 
@@ -640,6 +662,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (table === 'device_sessions' || table === 'tournament_organizers') return row.auth_user_id === uid
     // 0004 `audit_log_read`: the Comité's history, not the players'.
     if (table === 'audit_log') return organizes(uid, row.tournament_id)
+    // 0026: what save_hole did not take, for the Comité and its writer; what a mutation answered, for nobody.
+    if (table === 'rejected_writes') return organizes(uid, row.tournament_id) || row.auth_user_id === uid
+    if (table === 'score_mutations') return false
     const tid = tenantOf(table, row)
     return organizes(uid, tid) || myPlayer(uid, tid) != null
   }
@@ -780,8 +805,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     for (const proposed of typedRows) {
       // Then row by row: the defaults and insert triggers, the policy, the checks, the keys.
       const row = withDefaults(table, proposed)
-      // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02).
-      if (table === 'scores') row.entered_by = myPlayer(caller, roundTournament(row.round_id)) ?? null
+      // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02), and a direct write names no device or mutation.
+      if (table === 'scores') Object.assign(row, { entered_by: myPlayer(caller, roundTournament(row.round_id)) ?? null, device_id: null, mutation_id: null })
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)
       if (bad) return bad
@@ -801,7 +826,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       }
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
-      if (table === 'scores') merged.entered_by = myPlayer(caller, roundTournament(merged.round_id)) ?? null
+      if (table === 'scores') Object.assign(merged, { entered_by: myPlayer(caller, roundTournament(merged.round_id)) ?? null, device_id: null, mutation_id: null })
       const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
       if (!rule.check(caller, updated)) return policy()
       const badUpdate = constraintError(table, updated)
@@ -831,9 +856,150 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return new Response(null, { status: 201 })
   }
 
+  /**
+   * 0026 `save_hole(p)`, as the migration writes it, step by step: the call
+   * read whole (22023 for one it can't), the caller's player, a mutation
+   * already answered, then entry by entry the refusals, the row it would
+   * become, the values the phone saw against the row there, and one write for
+   * the hole. See the function's own comment for the contract.
+   */
+  function saveHole(p: unknown, as: string): Response {
+    const invalidCall = (message: string) => json(400, { code: '22023', details: null, hint: null, message })
+    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function save_hole' })
+    const call = (p ?? null) as Record<string, unknown> | null
+    if (new TextEncoder().encode(JSON.stringify(p ?? null)).length > 16384) return invalidCall('El hoyo que llegó trae demasiados datos; vuelve a guardarlo')
+    const text = (v: unknown) => (v == null ? null : typeof v === 'string' ? v : JSON.stringify(v))
+    const obj = call && typeof call === 'object' && !Array.isArray(call) ? call : null
+    const rid = text(obj?.round_id)
+    const holeText = text(obj?.hole)
+    const mid = text(obj?.mutation_id)
+    const dev = text(obj?.device_id) || null
+    if (holeText != null && !INTEGER.test(holeText)) return invalidCall('El hoyo que llegó no se entiende; vuelve a guardarlo')
+    const h = holeText == null ? null : Number(holeText)
+    const entries = obj?.entries
+    if (rid == null || h == null || mid == null || !Array.isArray(entries)) return invalidCall('Al hoyo que llegó le faltan datos; vuelve a guardarlo')
+    if (entries.length > 8) return invalidCall('Un hoyo se guarda con 8 jugadores a lo más')
+    if (h < 1 || h > 18) return invalidCall('Ese hoyo no existe: van del 1 al 18')
+    const tid = roundTournament(rid)
+    const me = tid == null ? undefined : myPlayer(as, tid)
+    if (me == null) return json(200, { status: 'not_member' })
+    const prior = rowsOf('score_mutations').find((m) => m.mutation_id === mid)
+    if (prior) {
+      if (prior.auth_user_id !== as || prior.tournament_id !== tid || prior.round_id !== rid || prior.hole !== h) return invalidCall('Ese guardado ya llegó antes con otros datos; vuelve a guardarlo')
+      return json(200, { ...(prior.result as Row), replayed: true })
+    }
+    const playerTournament = (pid: unknown) => rowsOf('players').find((x) => x.id === pid)?.tournament_id
+    const scoreRow = (pid: unknown) => rowsOf('scores').find((r) => r.round_id === rid && r.player_id === pid && r.hole === h)
+    const writes: Array<{ pid: unknown; nxt: Row }> = []
+    const rowsOut: Row[] = []
+    const conflicts: Row[] = []
+    const rejected: Row[] = []
+    const unchanged: unknown[] = []
+    const seen = new Set<unknown>()
+    const keep = (e: unknown, pid: unknown, reason: string) =>
+      (server.tables.rejected_writes ??= []).push({
+        id: `rejected_writes-${++serial}`,
+        tournament_id: tid,
+        round_id: rid,
+        hole: h,
+        player_id: pid,
+        writer_player_id: me,
+        auth_user_id: as,
+        device_id: dev,
+        mutation_id: mid,
+        payload: structuredClone(e),
+        reason,
+        status: 'open',
+        created_at: stamp(),
+      })
+    const isObject = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v)
+    for (const e of entries) {
+      const entry = isObject(e) ? e : {}
+      // try_uuid: ids here are names, so any text is one.
+      const pid = typeof entry.player_id === 'string' ? entry.player_id : null
+      const dup = pid != null && seen.has(pid)
+      if (pid != null) seen.add(pid)
+      let fields: unknown = 'fields' in entry ? entry.fields : {}
+      let base: unknown = 'base' in entry ? entry.base : undefined
+      if (base === null) base = {}
+      let reason: string | null = null
+      let cur: Row | null = null
+      let nxt: Row = {}
+      const clash: string[] = []
+      if (pid == null || dup || playerTournament(pid) !== tid || !isObject(fields) || (base !== undefined && !isObject(base)) || Object.keys(fields).some((f) => !['strokes', 'putts', 'picked_up'].includes(f))) {
+        reason = 'invalid'
+      } else if (!roundIsLive(rid)) reason = 'round_not_live'
+      else if (!sharesGroup(as, rid, pid)) reason = 'not_in_group'
+      else if (cardIsSigned(rid, pid)) reason = 'card_signed'
+      if (reason == null && isObject(fields)) {
+        // A number of strokes is a hole played: not picked up, unless the phone says so.
+        if (typeof fields.strokes === 'number' && !('picked_up' in fields)) fields = { ...fields, picked_up: false }
+        const f = fields as Row
+        const found = scoreRow(pid)
+        cur = found ? structuredClone(found) : null
+        const pickOr = (k: string, fallback: unknown) => ((k in f ? f[k] : cur?.[k]) ?? fallback)
+        nxt = { strokes: pickOr('strokes', null), putts: pickOr('putts', null), picked_up: pickOr('picked_up', false) }
+        if (nxt.picked_up === true) nxt.strokes = null
+        const whole = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi
+        const st = nxt.strokes
+        const pt = nxt.putts
+        if (
+          typeof nxt.picked_up !== 'boolean' ||
+          !(st === null || typeof st === 'number') ||
+          !(pt === null || typeof pt === 'number') ||
+          (st !== null && !whole(st, 1, 15)) ||
+          (pt !== null && (!whole(pt, 0, 15) || (st !== null && (pt as number) > (st as number)))) ||
+          (nxt.picked_up === false && st === null)
+        ) {
+          reason = 'invalid'
+        }
+      }
+      if (reason == null && isObject(base)) {
+        const f = fields as Row
+        const keys = new Set([...Object.keys(f), ...(nxt.picked_up === true ? ['strokes'] : [])])
+        const dflt = (k: string) => (k === 'picked_up' ? false : null)
+        for (const k of keys) {
+          const cv = cur?.[k] ?? dflt(k)
+          const bv = base[k] ?? dflt(k)
+          if (cv !== bv && cv !== nxt[k]) clash.push(k)
+        }
+      }
+      if (reason != null) {
+        rejected.push({ player_id: pid, reason })
+        if (pid != null && !dup && playerTournament(pid) === tid) keep(e, pid, reason)
+      } else if (clash.length) {
+        conflicts.push({ player_id: pid, fields: clash, server: cur })
+        keep({ ...entry, server: cur }, pid, 'conflict')
+      } else if (cur && (cur.strokes ?? null) === nxt.strokes && (cur.putts ?? null) === nxt.putts && cur.picked_up === nxt.picked_up) {
+        unchanged.push(pid)
+        rowsOut.push(cur)
+      } else writes.push({ pid, nxt })
+    }
+    // One statement for the hole, through the update triggers (the discrepancy, the version).
+    for (const { pid, nxt } of writes) {
+      const values = { strokes: nxt.strokes, putts: nxt.putts, picked_up: nxt.picked_up, entered_by: me, client_ts: stamp(), device_id: dev, mutation_id: mid }
+      const old = scoreRow(pid)
+      let row: Row
+      if (old) {
+        row = scoreUpdated(old, { ...old, ...values })
+        server.tables.scores = rowsOf('scores').map((r) => (r === old ? row : r))
+      } else {
+        row = withDefaults('scores', { round_id: rid, player_id: pid, hole: h, ...values })
+        ;(server.tables.scores ??= []).push(row)
+      }
+      server.writes.push({ table: 'scores', row: { ...row }, by: as })
+      rowsOut.push(structuredClone(row))
+    }
+    const status = !rejected.length && !conflicts.length ? 'ok' : writes.length || unchanged.length ? 'partial' : conflicts.length ? 'conflict' : 'rejected'
+    const result = { status, rows: rowsOut, conflicts, rejected, unchanged }
+    ;(server.tables.score_mutations ??= []).push({ mutation_id: mid, tournament_id: tid, round_id: rid, hole: h, auth_user_id: as, result: structuredClone(result), created_at: stamp() })
+    return json(200, result)
+  }
+
   /** The functions a phone calls on its way in; any other answers `rpcResult`. */
   function rpc(name: string, args: Record<string, unknown>, as: string): Response {
     server.rpcCalls.push({ name, args: structuredClone(args) })
+    if (name === 'save_hole') return saveHole(args.p, as)
     if (name === 'claim_player') {
       if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function claim_player' })
       const player = (server.tables.players ?? []).find((p) => p.id === args.p_player_id)
