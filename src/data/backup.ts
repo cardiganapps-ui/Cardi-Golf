@@ -20,7 +20,7 @@ export interface Backup {
 }
 
 /** Tables keyed by how they hang off the tournament. */
-const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'teams', 'calcutta_lots', 'payments', 'game_entries', 'game_results'] as const
+const BY_TOURNAMENT = ['players', 'rounds', 'pairs', 'teams', 'calcutta_lots', 'payments', 'money_adjustments', 'game_entries', 'game_results'] as const
 const BY_ROUND = ['groups', 'round_tees', 'scores', 'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'hole_awards'] as const
 const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
 /**

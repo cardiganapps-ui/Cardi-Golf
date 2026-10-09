@@ -30,6 +30,7 @@ import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
+import { fromLine } from '../../engine/core/unassigned'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -214,6 +215,18 @@ export function CeremonyScreen() {
     }
     const facesOf = (ids: string[]) => ids.flatMap((id) => entrants.get(id)?.playerIds ?? [id])
     const out: Step[] = []
+    /**
+     * What the Comité gave or gave back from a line's «por asignar»
+     * (MONEY-05), by person: the night's totals are the money Dinero pays. A
+     * step of its own after the line's, since a decision is per line, not per
+     * day or place (the snake's totals count it in).
+     */
+    const comiteStep = (line: string, label: string, icon: ReactNode) => {
+      const totals = new Map<string, number>()
+      for (const p of state.prizes) if (p.moduleId === 'adjustment' && p.sourceKey === line) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+      const rows = [...totals].sort((a, b) => b[1] - a[1])
+      if (rows.length) out.push({ id: `comite-${line}`, title: C.steps.byComite(label), icon, winners: [], list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt) })) })
+    }
     // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
     if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
       out.push({ id: 'last', title: settings.labels.lastPlace, icon: <IconSpoon size={64} />, winners: [{ playerIds: facesOf(m.individual.lastPlace), line: andList(m.individual.lastPlace.map(entrantLine)) }] })
@@ -224,10 +237,12 @@ export function CeremonyScreen() {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
         out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: row ? [fig(row.putts, t.games.puttsFigure), fig(m.fewestPutts.prizes[ids[0]!]!.amount, formatMoney)] : undefined }] })
       }
+      comiteStep('fewestPutts', settings.modules.fewestPutts.label, <IconTarget size={64} />)
     }
     if (m.snake) {
       const totals = new Map<string, number>()
-      for (const p of state.prizes) if (p.moduleId === 'snake') totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
+      // The snake's own prizes and what the Comité gave or gave back from its line (a cancelled day, MONEY-05).
+      for (const p of state.prizes) if (fromLine(p, 'snake')) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
       const rows = [...totals].sort((a, b) => b[1] - a[1])
       if (rows.length) {
         const gold = state.stats.awards.find((a) => a.id === 'snakeGold')
@@ -247,6 +262,7 @@ export function CeremonyScreen() {
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
         out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? [fig(pts, C.withPoints), fig(day.winners[ids[0]!]!.amount, formatMoney)] : undefined }] })
       }
+      comiteStep('bestRound', settings.modules.bestRound.label, <IconFlame size={64} />)
     }
     // Instance games: who took money from each (pots and bets alike).
     for (const g of Object.values(state.games)) {
@@ -285,6 +301,8 @@ export function CeremonyScreen() {
         if (!rows.length) continue
         out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
       }
+      // Places nobody filled, given by the Comité: before the champion, who closes the night.
+      comiteStep('individual', settings.modules.individual.label, <IconMedal size={64} />)
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
         out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })

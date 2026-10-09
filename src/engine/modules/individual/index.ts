@@ -106,14 +106,23 @@ function incompleteWarning(names: string[]): string[] {
  * `places` is how many finishing places the group fills: one per entrant. A
  * two-player team alone in 1st fills 1st only, so 2nd goes to the next team
  * (MONEY-20); before, its two members read as a tie across 1st and 2nd.
+ *
+ * Only entrants with a result, as the main event pays (MONEY-09): one who
+ * never played a hole takes no place, so he cashes no Calcutta slot either,
+ * La Cuchara included, and with nobody's result the Calcutta fills none
+ * (round 3 of PR 104). `position` stays the leaderboard's place.
  */
 export function rankIndividual(ctx: ModuleContext): Array<RankGroup<Id> & { places: number; entrants: Id[][] }> {
   const { standings, groups } = rankStandings(ctx)
   const members = new Map(standings.entrants.map((e) => [e.id, e.playerIds]))
-  return groups.map((g) => {
-    const entrants = g.members.map((id) => members.get(id) ?? [id])
-    return { position: g.position, places: g.members.length, entrants, members: entrants.flat() }
-  })
+  const out: Array<RankGroup<Id> & { places: number; entrants: Id[][] }> = []
+  for (const g of groups) {
+    const withResult = g.members.filter((id) => !standings.totals[id]?.empty)
+    if (!withResult.length) continue
+    const entrants = withResult.map((id) => members.get(id) ?? [id])
+    out.push({ position: g.position, places: withResult.length, entrants, members: entrants.flat() })
+  }
+  return out
 }
 
 export const individualModule: GameModule<IndividualState> = {

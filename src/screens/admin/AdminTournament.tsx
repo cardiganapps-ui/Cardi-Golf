@@ -17,6 +17,7 @@ import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteTournament, rotateJoinCode, setTournamentProtected, updateTournament, uploadAsset } from '../../data/api'
 import { ReasonSheet } from '../../components/ReasonSheet'
+import { useCloseGate } from '../../components/CloseGate'
 import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
@@ -163,7 +164,13 @@ export function AdminTournament() {
       setQuick(false)
     }
   }
+  /** «Cerrar torneo» (MONEY-05): Terminado waits until nothing is left open. */
+  const closeGate = useCloseGate(tournamentId)
   async function setStatus(status: (typeof STATUSES)[number]) {
+    if (status === 'finished' && tr.status !== 'finished') return closeGate.guard({ confirmLabel: t.status.finished }, () => applyStatus(status))
+    return applyStatus(status)
+  }
+  async function applyStatus(status: (typeof STATUSES)[number]) {
     await quickUpdate({ status }, (s) => (s.tournament.status = status))
     // Finished: the results go to the players' profiles (finish, points, awards, private net).
     if (status !== 'finished' || useTournament.getState().data?.snapshot.tournament.status !== 'finished') return
@@ -300,11 +307,12 @@ export function AdminTournament() {
         </div>
         <div className="segmented" role="tablist" aria-busy={quick}>
           {STATUSES.map((s) => (
-            <button key={s} type="button" role="tab" aria-selected={tr.status === s} disabled={quick} onClick={() => void setStatus(s)}>
+            <button key={s} type="button" role="tab" aria-selected={tr.status === s} disabled={quick || closeGate.checking} onClick={() => void setStatus(s)}>
               {t.status[s]}
             </button>
           ))}
         </div>
+        {closeGate.sheet}
         <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />
         <CrewField tournamentId={tournamentId} />
         <Field label={A.banker}>

@@ -9,6 +9,7 @@ import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
+import { applyAdjustments, bucketLabel, heldMoney, openDays, unassignedBuckets } from './core/unassigned'
 import { computeStats, type StatsState } from './core/stats'
 import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type AnyModule } from './modules'
@@ -89,12 +90,16 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const core = computeCore(snapshot, settings)
   const roundFinal: Record<Id, boolean> = {}
   for (const r of snapshot.rounds) roundFinal[r.id] = r.status === 'finished'
-  // Final when the Comité says so, or when every planned round exists and is
-  // finished: finishing day 1 of a two-day event whose day 2 is not created
-  // yet must not finalize it (MONEY-06).
-  const tournamentFinal =
-    snapshot.tournament.status === 'finished' ||
-    (core.roundIds.length > 0 && core.roundIds.length >= settings.rounds && core.roundIds.every((rid) => roundFinal[rid]))
+  // Play is over when every planned day exists and is finished or cancelled:
+  // finishing day 1 of a two-day event whose day 2 is not created yet is not
+  // (MONEY-06). Whatever the tournament's status, so Dinero and the «Cerrar
+  // torneo» gate (which reads the tournament as Terminado) compute the same
+  // prizes and the same «por asignar» (round 2 of PR 104: every day rained out,
+  // a day not created yet).
+  const playOver = snapshot.rounds.length > 0 && snapshot.rounds.length >= settings.rounds && snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled')
+  // Final when the Comité says so, or once play is over: a cancelled day's
+  // prizes are «por asignar» from then on, and the rest is what Terminado pays.
+  const tournamentFinal = snapshot.tournament.status === 'finished' || playOver
   const ctx: ModuleContext = { snapshot, settings, core, tournamentFinal, roundFinal }
   const impls = { ...ALL_MODULES, ...opts.modules }
 
@@ -141,7 +146,6 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     if (impl.warnings) gameWarnings.push(...impl.warnings(state, gctx))
   }
 
-  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games)
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
   const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
   // At the close the board can name a leader the saved scores never did: an
@@ -184,6 +188,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   if (modules.auction) {
     const unfilled = modules.auction.slots.filter((s) => s.unfilled)
     if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: ${peso(modules.auction.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
+    if (tournamentFinal && modules.auction.pot > 0 && modules.auction.slots.length === 0) auctionWarnings.push(`${settings.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${peso(modules.auction.pot)} sin asignar. El Comité decide.`)
     // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
     const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
     const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
@@ -212,6 +218,41 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     for (const u of pool.unreachable) poolWarnings.push(`${u.label}: ${u.detail}, ${peso(u.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`)
   }
 
+  // «Por asignar» (MONEY-05): once play is over, what the rules leave with
+  // the bank, by pot, and the Comité's assignments of it. What they give a
+  // player is a prize like any other, so every money screen reads it.
+  // Listed once play is over (`playOver`, above), whatever the status: Dinero
+  // and the «Cerrar torneo» gate read this same flag, so the gate never blocks
+  // on a list Dinero does not show.
+  const closing = playOver
+  // The Comité's decisions are checked and paid whenever the modules pay as
+  // final, so Terminado with a day still open or never created (an older
+  // bundle, a direct update, a restored backup) pays the same decisions it
+  // paid when that day was cancelled: what was handed over is never asked
+  // back. Nothing is listed then (`closing` stays false): Dinero names the day
+  // to finish or cancel instead (round 3 of PR 104, N1).
+  const settled = tournamentFinal
+  const buckets = unassignedBuckets({
+    snapshot,
+    settings,
+    prizes,
+    pool,
+    auction: modules.auction,
+    snake: modules.snake,
+    games,
+    warnings: [...(modules.individual?.warnings ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
+    closing: settled,
+  })
+  const applied = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], settled, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing: settled }))
+  const unassigned = closing || !settled ? applied : { ...applied, closing: false, openDays: openDays(snapshot.rounds, settings.rounds), buckets: [], total: 0, held: [], heldTotal: 0 }
+  prizes.push(...unassigned.awards)
+  const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games, unassigned.toHouse)
+  money.unassigned = unassigned
+  // What is left in the bank and what the list says must be the same pesos.
+  const unassignedWarnings = [...unassigned.warnings]
+  const listed = unassigned.total + unassigned.heldTotal
+  if (closing && money.banker.difference > 0 && money.banker.difference !== listed) unassignedWarnings.push(t.unassigned.mismatch(peso(money.banker.difference), peso(listed)))
+
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.
   const bracket = settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
@@ -233,7 +274,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       discrepancies,
       missingModules,
       missingGames,
-      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
     },

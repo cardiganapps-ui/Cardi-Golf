@@ -1207,6 +1207,8 @@ describe('another tab of the app on this phone', () => {
 
   it('a quick message lands with no fetch: its push went out after this tab’s last fetch (X6)', async () => {
     const { TID, row, shown } = await stored(7)
+    // The push goes out a moment after this tab's last fetch landed, not within the wall clock's slack of it.
+    await sleep(20)
     const n = reads()
     const other = new BroadcastChannel('cardi-golf-outbox')
     other.postMessage({ landed: { tournamentId: TID, changes: upserted('scores', [row]), age: 0 } })
@@ -1260,7 +1262,8 @@ describe('another tab of the app on this phone', () => {
     while (Date.now() < until) {
       // The message waits.
     }
-    await sleep(400)
-    expect(shown()).toMatchObject({ strokes: 7, disputed: true })
+    // The one more fetch brings the 7 back. Waited for, not slept on: under a loaded test run the fetch can take
+    // longer than any fixed sleep, and without it the 5 stays forever, so a missing fetch still fails here.
+    await vi.waitFor(() => expect(shown()).toMatchObject({ strokes: 7, disputed: true }), { timeout: 3000 })
   })
 })

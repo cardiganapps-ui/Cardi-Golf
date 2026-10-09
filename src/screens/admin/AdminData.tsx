@@ -12,6 +12,7 @@ import { duplicateTournament } from '../../data/api'
 import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '../../data/backup'
 import { useTournament } from '../../data/tournamentStore'
 import { publishFromStore } from '../../data/publish'
+import { useCloseGate } from '../../components/CloseGate'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { humanError } from '../../lib/humanError'
 
@@ -26,6 +27,7 @@ export function AdminData() {
   const [dupName, setDupName] = useState(`${data.snapshot.tournament.name} ${t.common.copySuffix}`)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null)
+  const closeGate = useCloseGate(tournamentId)
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
 
   const run = async (fn: () => Promise<void>) => {
@@ -105,17 +107,21 @@ export function AdminData() {
           <button
             className="btn btn--secondary"
             type="button"
-            disabled={busy || !finished}
+            disabled={busy || !finished || closeGate.checking}
             onClick={() =>
-              void run(async () => {
-                const r = await publishFromStore(tournamentId)
-                toast(t.admin.tournament.published(r.players))
-              })
+              // «Cerrar torneo» (MONEY-05): results are published only once nothing is left open.
+              void closeGate.guard({ confirmLabel: D.publishButton }, () =>
+                run(async () => {
+                  const r = await publishFromStore(tournamentId)
+                  toast(t.admin.tournament.published(r.players))
+                }),
+              )
             }
           >
             {D.publishButton}
           </button>
         </div>
+        {closeGate.sheet}
       </section>
       <section className="card stack">
         <span className="label">{D.export}</span>

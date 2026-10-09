@@ -21,6 +21,7 @@ export const SNAPSHOT_KEYS = {
   calcutta_bids: ['id'],
   calcutta_buybacks: ['lot_id'],
   payments: ['id'],
+  money_adjustments: ['id'],
   game_entries: ['tournament_id', 'game_id', 'player_id'],
   game_results: ['tournament_id', 'game_id', 'player_id'],
   groups: ['id'],
