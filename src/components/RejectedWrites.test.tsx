@@ -166,6 +166,24 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
   })
 })
 
+describe('a hole save_hole refused and kept for the Comité (REL-08, 0026)', () => {
+  it('a player\'s phone says it went to the Comité\'s list', () => {
+    mount('list', { edit: finishDay2, rejected: [{ ...hole11, atServer: true }] })
+    expect(list().getByText(IB.leftForComite(11))).toBeTruthy()
+    expect(list().getByText(IB.reasonClosed(2))).toBeTruthy()
+  })
+
+  it('a capture refused before the server kept it does not claim the Comité has it', () => {
+    mount('list', { edit: finishDay2 })
+    expect(list().queryByText(IB.leftForComite(11))).toBeNull()
+  })
+
+  it('on a Comité device the line is not said: it is the Comité', () => {
+    mount('list', { edit: finishDay2, isAdmin: true, rejected: [{ ...hole11, atServer: true }] })
+    expect(list().queryByText(IB.leftForComite(11))).toBeNull()
+  })
+})
+
 describe('the refused list says what stands in the way now, and who can send it again', () => {
   it('a signed card: the reason says so, and a player can\'t resend', () => {
     mount('list', { edit: signCamilo })

@@ -19,6 +19,7 @@ vi.mock('./useCourses', async () => {
 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
+import { useRejectedInbox } from '../../data/rejectedInbox'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { QuickFinish } from '../tournament/QuickFinish'
@@ -27,7 +28,10 @@ import { AdminRounds } from './AdminRounds'
 
 const R = t.admin.rounds
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  useRejectedInbox.setState({ tournamentId: null, items: [], status: 'idle', error: null, fixture: false })
+})
 
 function mount(ui: ReactElement, name = 'full12-live', edit?: (s: Snapshot) => void, me?: { playerId: string | null; isOrganizer: boolean; isAdmin: boolean }) {
   const fx = getFixture(name)!
@@ -74,4 +78,23 @@ it('«Terminar y publicar» on a Ronda rápida asks the same', async () => {
   mount(<QuickFinish />, 'minimal4-live', (s) => void (s.tournament.quick = true), { playerId: 'p1', isOrganizer: true, isAdmin: true })
   fireEvent.click(screen.getByRole('button', { name: t.quick.finishTitle }))
   expect((await screen.findByRole('dialog', { name: t.quick.finishTitle })).textContent).toContain(R.phonesBeforeFinish)
+})
+
+it('«Terminar ronda» warns about the day\'s holes the server kept for the Comité, and still lets it finish (REL-08)', () => {
+  // The fixture's inbox, as the store holds a fixture's: one hole of day 1 and four of day 2.
+  const fx = getFixture('full12-live')!
+  useRejectedInbox.setState({ tournamentId: fx.snapshot.tournament.id, items: structuredClone(fx.inbox!), status: 'ready', error: null, fixture: true })
+  mount(<AdminRounds />)
+  expect(screen.getByText(R.inboxCount(1))).toBeTruthy()
+  expect(screen.getByText(R.inboxCount(4))).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: R.finish }))
+  const dialog = screen.getByRole('dialog', { name: R.finish })
+  expect(dialog.textContent).toContain(R.inboxBeforeFinish(4))
+  expect((screen.getAllByRole('button', { name: R.finish }).at(-1) as HTMLButtonElement).disabled).toBe(false)
+})
+
+it('…and says nothing of it when the day has none', () => {
+  mount(<AdminRounds />)
+  fireEvent.click(screen.getByRole('button', { name: R.finish }))
+  expect(screen.getByRole('dialog', { name: R.finish }).textContent).not.toContain('Pendientes de revisar')
 })

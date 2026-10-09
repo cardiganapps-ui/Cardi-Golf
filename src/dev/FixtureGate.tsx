@@ -7,6 +7,7 @@
 import { useEffect, useMemo } from 'react'
 import { Link, Outlet, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTournament } from '../data/tournamentStore'
+import { useRejectedInbox } from '../data/rejectedInbox'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
 import { EnterScreen } from '../screens/tournament/EnterScreen'
@@ -25,6 +26,8 @@ export function FixtureGate() {
     if (!fixture) return
     useTournament.getState().unsubscribe()
     useTournament.setState({ tournamentId: `fixture:${fixture.name}`, data: dataFromSnapshot(structuredClone(fixture.snapshot)), loading: false, error: null, realtime: 'off' })
+    // The Comité's inbox is read from the server; a fixture's is what it says.
+    useRejectedInbox.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.inbox ?? []), status: 'ready', error: null, fixture: true })
   }, [fixture])
 
   if (!fixture) return <FixtureIndex />

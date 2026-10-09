@@ -5,8 +5,8 @@
  * before this gate existed) the snake's money is held by unanswered
  * tiebreaks and cards are unsigned: publishing is refused with the list of
  * what to settle and where. The held money is not «por asignar»: answering is
- * the way out. A refused write nobody can clear yet is a warning beside the
- * list, not on it. Nothing is published.
+ * the way out. A hole the server kept for the Comité is on the list too
+ * (REL-08: «Pendientes de revisar» resolves it). Nothing is published.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -62,13 +62,14 @@ describe('«Publicar resultados» waits for the close (MONEY-05)', () => {
     expect(server.published).toBe(0)
   })
 
-  it('a refused write nobody can clear yet is a warning, not one more item', async () => {
+  it('a hole the server kept for the Comité is one more item: the results wait until it is resolved (REL-08)', async () => {
     server.rejected = 2
     mount()
     fireEvent.click(screen.getByRole('button', { name: t.admin.data.publishButton }))
     const sheet = within(await screen.findByRole('dialog', { name: C.title }))
-    expect(sheet.getByText(C.rejectedWrites(2))).toBeTruthy()
-    expect(sheet.getAllByRole('listitem').map((li) => li.textContent)).not.toContain(C.rejectedWrites(2))
+    expect(sheet.getAllByRole('listitem').map((li) => li.textContent)).toContain(C.rejectedWrites(2))
+    expect(sheet.queryByRole('button', { name: t.admin.data.publishButton })).toBeNull()
+    fireEvent.click(sheet.getByRole('button', { name: C.understood }))
     expect(server.published).toBe(0)
   })
 })

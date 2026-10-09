@@ -1,7 +1,9 @@
 /**
  * Tarjetas (§13): first the inbox, every flag the engine raises across all
  * rounds (snake tiebreaks, discrepancies, unsigned cards, unfinished cards);
- * then any player's card, hole by hole, editable with a reason once signed.
+ * then the holes the server kept for the Comité («Pendientes de revisar»,
+ * REL-08); then any player's card, hole by hole, editable with a reason once
+ * signed.
  */
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
@@ -9,6 +11,7 @@ import { Avatar, Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
+import { RejectedInbox } from './RejectedInbox'
 import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -227,6 +230,8 @@ export function AdminScores() {
           </div>
         )}
       </section>
+
+      <RejectedInbox />
 
       <RejectedWrites canResend />
 

@@ -384,8 +384,10 @@ describe('what the server did not take', () => {
     await settle(useOutbox)
     expect(server.score('p1', 4)).toMatchObject({ strokes: 5 })
     expect(server.score('p3', 4)).toBeUndefined()
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned })])
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned, atServer: true })])
     expect(onBoards('p3', 4)).toBeUndefined()
+    // REL-08: kept on the server too, for the Comité's «Pendientes de revisar»; the phone's line says so.
+    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p3', hole: 4, reason: 'card_signed', status: 'open' })])
   })
 
   it('a phone that holds no player any more: the hole waits for the PIN, and goes once the player is back', async () => {

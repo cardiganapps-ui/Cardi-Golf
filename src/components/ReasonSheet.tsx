@@ -18,6 +18,7 @@ export function ReasonSheet({
   body,
   confirmLabel,
   danger,
+  initialReason = '',
   onConfirm,
   onClose,
 }: {
@@ -26,6 +27,8 @@ export function ReasonSheet({
   body?: string
   confirmLabel: string
   danger?: boolean
+  /** What the field holds when it opens (a reason the screen can suggest). */
+  initialReason?: string
   onConfirm: (reason: string) => Promise<void>
   onClose: () => void
 }) {
@@ -34,10 +37,10 @@ export function ReasonSheet({
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     if (open) {
-      setReason('')
+      setReason(initialReason)
       setError(null)
     }
-  }, [open])
+  }, [open, initialReason])
   const ok = reason.trim().length >= MIN
   async function confirm() {
     if (!ok) {

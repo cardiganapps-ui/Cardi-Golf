@@ -1117,6 +1117,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       })
     }
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
+    if (name === 'resolve_rejected_write') return resolveRejected(args, as)
     if (name === 'release_device') {
       // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
       server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)
@@ -1183,6 +1184,52 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
     }
     return json(200, { assigned: entries.length })
+  }
+
+  /**
+   * 0028 `resolve_rejected_write(p_id, p_action, p_reason)`, in the order it
+   * checks: the Comité (and nothing about a row it may not resolve), the
+   * action, an open row, the reason; then, to apply, the payload's fields
+   * over the score as it stands, written as admin_save_score writes it.
+   */
+  function resolveRejected(args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    if (as === 'anon') return fail('42501', 'permission denied for function resolve_rejected_write')
+    const w = rowsOf('rejected_writes').find((r) => r.id === args.p_id)
+    if (!w || !organizes(as, w.tournament_id)) return fail('42501', 'Solo el Comité puede resolver una captura rechazada')
+    if (args.p_action !== 'apply' && args.p_action !== 'dismiss') return fail('22023', 'Una captura rechazada se aplica o se descarta')
+    if (w.status !== 'open') return fail('22023', 'Esa captura ya estaba resuelta')
+    const why = typeof args.p_reason === 'string' ? args.p_reason.trim() : ''
+    if (why.length < 3) return fail('22023', 'Escribe el motivo, al menos 3 letras')
+    if (why.length > 200) return fail('22023', 'El motivo es muy largo: 200 letras como máximo')
+    if (args.p_action === 'apply') {
+      const f = (w.payload as Row | null)?.fields as Row | undefined
+      const known = ['strokes', 'putts', 'picked_up']
+      if (!f || typeof f !== 'object' || Array.isArray(f) || Object.keys(f).some((k) => !known.includes(k)) || !Object.keys(f).length) return fail('22023', 'Esa captura no trae golpes ni putts que aplicar; descártala')
+      const numOrNull = (v: unknown) => v === null || typeof v === 'number'
+      if (('strokes' in f && !numOrNull(f.strokes)) || ('putts' in f && !numOrNull(f.putts)) || ('picked_up' in f && typeof f.picked_up !== 'boolean')) return fail('22023', 'Los valores de esa captura no se entienden; descártala')
+      const old = rowsOf('scores').find((r) => r.round_id === w.round_id && r.player_id === w.player_id && r.hole === w.hole)
+      let st = ('strokes' in f ? f.strokes : (old?.strokes ?? null)) as number | null
+      const pt = ('putts' in f ? f.putts : (old?.putts ?? null)) as number | null
+      const picked = 'picked_up' in f ? (f.picked_up as boolean) : typeof f.strokes === 'number' ? false : old?.picked_up === true
+      if (picked) st = null
+      if (!picked && (st === null || !Number.isInteger(st) || st < 1 || st > 15)) return fail('22023', 'Con esa captura el hoyo no queda con golpes de 1 a 15; descártala o corrige el hoyo en Tarjetas')
+      if (pt !== null && (!Number.isInteger(pt) || pt < 0 || pt > 15 || (st !== null && pt > st))) return fail('22023', 'Con esa captura los putts quedan fuera de rango; descártala o corrige el hoyo en Tarjetas')
+      // admin_save_score: the Comité's player as the writer, the reason on the row, no discrepancy (the Comité's switch).
+      const values = { strokes: st, putts: pt, picked_up: picked, entered_by: myPlayer(as, w.tournament_id) ?? null, client_ts: stamp(), reason: why, disputed: false, previous: null }
+      let row: Row
+      if (old) {
+        row = { ...old, ...values, updated_at: stamp(), version: Number(old.version ?? 1) + 1 }
+        server.tables.scores = rowsOf('scores').map((r) => (r === old ? row : r))
+      } else {
+        row = { ...withDefaults('scores', { round_id: w.round_id, player_id: w.player_id, hole: w.hole }), ...values }
+        ;(server.tables.scores ??= []).push(row)
+      }
+      server.writes.push({ table: 'scores', row: { ...row }, by: as })
+    }
+    const status = args.p_action === 'apply' ? 'applied' : 'dismissed'
+    Object.assign(w, { status, resolved_by: as, resolved_at: stamp(), resolution_note: why })
+    return json(200, { id: w.id, status })
   }
 
   /** GoTrue, as far as a player's phone uses it: anonymous sign-in, refresh, sign-out. A string: not served. */

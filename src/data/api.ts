@@ -595,6 +595,15 @@ export async function openRejectedWrites(tournamentId: string): Promise<number> 
   return count ?? 0
 }
 
+/**
+ * The Comité's answer to one of them (0028, REL-08): `apply` writes the
+ * fields the phone set over the hole as it stands (as admin_save_score
+ * does, the reason on the score); `dismiss` leaves the card. Online only.
+ */
+export async function resolveRejectedWrite(id: string, action: 'apply' | 'dismiss', reason: string) {
+  await rpc('resolve_rejected_write', { p_id: id, p_action: action, p_reason: reason })
+}
+
 // ---------------------------------------------------------------------------
 // Instance games: entrants (game_entries), hole awards, custom-bet results
 // ---------------------------------------------------------------------------

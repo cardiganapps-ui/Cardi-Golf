@@ -90,11 +90,13 @@ describe('«Cerrar torneo»', () => {
     expect(kinds(snap)).toEqual(['unsignedCards'])
   })
 
-  it('a refused write nobody can clear yet warns, and does not hold the close', () => {
+  it('a hole the server kept for the Comité holds the close until «Pendientes de revisar» resolves it (REL-08)', () => {
     const c = closeCheck(clean(), S, { openRejected: 2 })
-    expect(c.ok).toBe(true)
-    expect(c.warnings).toEqual(['2 cambios de tarjeta que el servidor rechazó siguen sin revisar. No impide cerrar: revisa esos hoyos en Comité, sección Tarjetas, y corrige lo que haga falta.'])
-    expect(c.warnings.join(' ')).not.toContain('Admin de Polo')
+    expect(c.ok).toBe(false)
+    expect(c.blockers).toEqual([{ kind: 'rejectedWrites', text: '2 hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos en Comité, sección Tarjetas, «Pendientes de revisar».' }])
+    expect(c.warnings).toEqual([])
+    expect(closeCheck(clean(), S, { openRejected: 1 }).blockers[0]!.text).toBe('Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar».')
+    expect(closeCheck(clean(), S, { openRejected: 0 }).ok).toBe(true)
   })
 
   it('every day rained out: Dinero lists the money the gate blocks on, and once assigned it closes', () => {

@@ -19,7 +19,10 @@
  * comes back, a phone reads the Comité's decisions on its next fetch (the
  * Comité's own phone fetches after each one, every phone at least every five
  * minutes, `HEAL_MS`), and its row changes are already applied by id
- * (`realtimeApply.ts`) for when it does.
+ * (`realtimeApply.ts`) for when it does. `rejected_writes` (published by
+ * 0028) waits the same way: the Comité's «Pendientes de revisar» reads it
+ * when the screen opens and after each answer (`rejectedInbox.ts`), and a
+ * bundle after 0028 is on production may listen to it.
  */
 export const REALTIME_TABLES = [
   'tournaments',

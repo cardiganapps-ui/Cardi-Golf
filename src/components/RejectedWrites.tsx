@@ -12,6 +12,8 @@
  * once it is confirmed. A player's phone may resend only what it could write
  * now (the day live, the card unsigned, and its player in that group that
  * day), against what the card holds now; the hint says which lines go where.
+ * A hole save_hole refused is on the server too (0026): its line says it
+ * went to the Comité's «Pendientes de revisar».
  */
 import { useId, useState } from 'react'
 import { t } from '../i18n/es-MX'
@@ -128,6 +130,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
             <span className={styles.text}>
               <span>{describe(r)}</span>
               <span className={styles.reason}>{reason(r)}</span>
+              {!canResend && r.atServer && <span className={styles.reason}>{IB.leftForComite((r.payload as ScorePayload).hole)}</span>}
               {resendable(r) && onCard(r) && <span className={styles.reason}>{onCard(r)}</span>}
             </span>
             <span className={styles.actions}>

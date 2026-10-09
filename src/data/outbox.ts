@@ -177,6 +177,8 @@ export interface RejectedItem {
   payload: OutboxItem['payload']
   message: string
   at: number
+  /** save_hole refused it and kept it in rejected_writes: the Comité sees it in «Pendientes de revisar» (REL-08). */
+  atServer?: boolean
 }
 
 class OutboxDb extends Dexie {
@@ -598,11 +600,11 @@ async function keepRejected(list: RejectedItem[]) {
  * direct write of it has. «Reenviar» sends it the way the Comité's own
  * captures go.
  */
-function holeRefusal(item: OutboxItem & { kind: 'hole' }, e: HoleEntry, message: string): RejectedItem {
+function holeRefusal(item: OutboxItem & { kind: 'hole' }, e: HoleEntry, message: string, atServer = false): RejectedItem {
   const p = item.payload
   const v = applyFields(baseRow(e.base), e.fields)
   const payload: ScorePayload = { round_id: p.round_id, player_id: e.player_id, hole: p.hole, strokes: v.strokes, putts: v.putts, picked_up: v.picked_up, entered_by: p.entered_by, client_ts: p.client_ts }
-  return { key: `score:${p.round_id}:${e.player_id}:${p.hole}`, kind: 'score', tournamentId: item.tournamentId, payload, message, at: Date.now() }
+  return { key: `score:${p.round_id}:${e.player_id}:${p.hole}`, kind: 'score', tournamentId: item.tournamentId, payload, message, at: Date.now(), ...(atServer ? { atServer } : {}) }
 }
 /** Why the server refused one player of a hole, as the chip and the rejected list say it. */
 function refusalText(reason: string): string {
@@ -1131,7 +1133,8 @@ async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: L
   }
   const refusals = (ans.rejected ?? []).flatMap((r) => {
     const e = entry(r.player_id)
-    return e ? [holeRefusal(item, e, refusalText(r.reason))] : []
+    // The answer's refusals are the ones save_hole kept for the Comité (0026).
+    return e ? [holeRefusal(item, e, refusalText(r.reason), true)] : []
   })
   if (isCurrent(item)) {
     queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))
