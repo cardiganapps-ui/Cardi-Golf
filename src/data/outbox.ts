@@ -529,6 +529,8 @@ async function askPersistence() {
  * version after a newer one.
  */
 const CHANNEL = 'cardi-golf-outbox'
+/** How short a wait read off the whole-millisecond wall clock can come out (X3b). */
+const WALL_CLOCK_SLACK_MS = 2
 let channel: BroadcastChannel | null = null
 function announce() {
   try {
@@ -564,7 +566,9 @@ function listen() {
       // Posted «in the future»: the wall clock went back while it waited, so its wait is unknown. Counted as not saying.
       const known = typeof age === 'number' && Number.isFinite(age) && (posted == null || posted <= Date.now())
       const waited = posted == null ? 0 : Math.max(0, Date.now() - posted)
-      const sentAt = known ? liveClock() - Math.max(0, age) - waited : 0
+      // The wall clock counts whole milliseconds, so the wait read from it can come out short by up to two: taken off too,
+      // so a push that went out just before a fetch landed never reads as after it. One more fetch is the cheap side.
+      const sentAt = known ? liveClock() - Math.max(0, age) - waited - WALL_CLOCK_SLACK_MS : 0
       return useTournament.getState().landChanges(landed.tournamentId, landed.changes, 0, sentAt)
     }
     void loadQueue().then(() => void flush())
