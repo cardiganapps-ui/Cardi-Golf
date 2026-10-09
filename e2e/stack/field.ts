@@ -17,6 +17,8 @@ export const SLUGS = {
   twoPhones: 'e2e-dos-telefonos',
   offline: 'e2e-sin-senal',
   session: 'e2e-sesion',
+  sameCard: 'e2e-misma-tarjeta',
+  conflict: 'e2e-conflicto',
 } as const
 
 export interface FieldPlayer {

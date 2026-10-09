@@ -23,7 +23,7 @@ import { lookupTournament, myMembership, releaseDevice, type LookupResult } from
 import { myDeviceClaim } from '../../data/profiles'
 import { setLastTournament } from '../../data/session'
 import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/snapshotCache'
-import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneTournament } from '../../data/outbox'
+import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneRounds, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { EnterScreen } from './EnterScreen'
@@ -210,6 +210,9 @@ export function TournamentGate() {
         }
         await load(lookup.id, { keepOnPhone: !platform })
         if (stale()) return
+        // The boards as a confirmed member reads them: a hole of a day the Comité deleted can never go out (V2).
+        // Not waited for: it asks the server again before it rejects anything (NEW-1), and publishes what it moved.
+        if ((m.playerId || m.isOrganizer) && useTournament.getState().source === 'server') void rejectGoneRounds(lookup.id).catch(() => 0)
         refreshOutboxCounters()
         // The boards came: the asking is over. They didn't: ask again soon.
         if (useTournament.getState().source === 'server') failures.current = 0

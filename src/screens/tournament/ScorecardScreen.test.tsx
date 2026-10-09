@@ -14,12 +14,17 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const outbox = vi.hoisted(() => ({ scores: [] as Array<Record<string, unknown>> }))
+const outbox = vi.hoisted(() => ({ scores: [] as Array<Record<string, unknown>>, holes: [] as Array<{ round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }> }))
 vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
   return {
     ...real,
     enqueueScore: vi.fn(async (_tid: string, row: Record<string, unknown>) => void outbox.scores.push(row)),
+    // A group's hole (REL-05): recorded as the call, and each player as the row it makes over what the phone saw.
+    enqueueHole: vi.fn(async (_tid: string, h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => {
+      outbox.holes.push(structuredClone(h))
+      for (const e of h.entries) outbox.scores.push({ round_id: h.round_id, player_id: e.player_id, hole: h.hole, ...real.applyFields(real.baseRow(e.base), e.fields) })
+    }),
     enqueueAward: vi.fn(async () => undefined),
     enqueueTiebreak: vi.fn(async () => undefined),
     enqueueSignature: vi.fn(async () => undefined),
@@ -105,6 +110,7 @@ beforeEach(() => {
   // The phone's queue has been read (AppShell's startOutbox); NEW-11's cases open before it.
   useOutbox.setState({ queueRead: true })
   outbox.scores = []
+  outbox.holes = []
   clock = 10_000
   vi.spyOn(performance, 'now').mockImplementation(() => clock)
   vi.mocked(toast).mockClear()
@@ -141,6 +147,75 @@ describe('Tarjeta: a save writes only what this phone means (REL-05)', () => {
     fireEvent.click(strokesUp('p1'))
     remoteSave('p1', 10, 9, 2)
     expect(strokesOf('p1')).toBe(before + 1)
+  })
+})
+
+describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05, outbox v2)', () => {
+  const entry = (pid: string) => outbox.holes[0]!.entries.find((e) => e.player_id === pid)
+  it('one call for the hole: the player touched and the defaults of the unplayed, each over the row it saw', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    const par = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    expect(outbox.holes).toHaveLength(1)
+    expect(outbox.holes[0]!.hole).toBe(10)
+    // p2 already saved by the other phone: not in the call at all.
+    expect(outbox.holes[0]!.entries.map((e) => e.player_id).sort()).toEqual(['p1', 'p3', 'p4'])
+    expect(entry('p1')).toEqual({ player_id: 'p1', fields: { strokes: par + 1, putts: 2 }, base: {}, auto: false, dflt: { strokes: par, putts: 2, picked_up: false } })
+    // An untouched default: a conflict on it takes the other phone's value without asking.
+    expect(entry('p4')).toMatchObject({ fields: { strokes: par, putts: 2 }, base: {}, auto: true })
+  })
+
+  it('a correction sends only the field changed, over the row the phone saw', async () => {
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: S.prev }))
+    expect(holeOnScreen()).toBe(9)
+    const saved = snap.scores.find((x) => x.playerId === 'p1' && x.hole === 9 && x.roundId === 'r1')!
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    expect(outbox.holes).toHaveLength(1)
+    expect(outbox.holes[0]!.entries).toEqual([
+      { player_id: 'p1', fields: { strokes: saved.strokes! + 1 }, base: { strokes: saved.strokes, putts: saved.putts, picked_up: false }, auto: false, dflt: expect.objectContaining({ putts: 2, picked_up: false }) },
+    ])
+  })
+
+  it('what the phone saw is taken at the first touch: a save from the other phone after it is no base of this one (the server asks)', async () => {
+    mount()
+    const par = strokesOf('p3')
+    fireEvent.click(strokesUp('p3'))
+    remoteSave('p3', 10, 7, 3)
+    await tapSave(11_000)
+    expect(entry('p3')).toEqual({ player_id: 'p3', fields: { strokes: par + 1, putts: 2 }, base: {}, auto: false, dflt: { strokes: par, putts: 2, picked_up: false } })
+  })
+
+  it('each player\'s default is par for his own tee: an untouched par 5 from the forward tees is that, not the lead player\'s par 4', async () => {
+    // p4 plays the forward tees, where hole 10 is a par 5 (the others' is a 4).
+    mount((s) => {
+      const course = s.courses.find((c) => c.id === 'course1')!
+      const back = course.tees.find((x) => x.id === 'tee1')!
+      course.tees.push({ ...structuredClone(back), id: 'tee2', name: 'Rojas', holes: back.holes.map((h) => (h.number === 10 ? { ...h, par: 5 } : { ...h })) })
+      s.players = s.players.map((p) => (p.id === 'p4' ? { ...p, defaultTeeId: 'tee2' } : p))
+    })
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(4)
+    expect(strokesOf('p4')).toBe(5)
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    // What another phone's untouched save of each would be, the value this phone may go over without asking.
+    expect(entry('p1')!.dflt).toEqual({ strokes: 4, putts: 2, picked_up: false })
+    expect(entry('p4')).toMatchObject({ fields: { strokes: 5, putts: 2 }, auto: true, dflt: { strokes: 5, putts: 2, picked_up: false } })
+  })
+
+  it('a pick-up sends the pick-up and the strokes it clears, over the row seen', async () => {
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: S.prev }))
+    const saved = snap.scores.find((x) => x.playerId === 'p3' && x.hole === 9 && x.roundId === 'r1')!
+    fireEvent.click(screen.getByRole('button', { name: S.pickedUpOf(nameOf('p3')) }))
+    await tapSave(11_000)
+    expect(outbox.holes[0]!.entries).toEqual([
+      { player_id: 'p3', fields: { strokes: null, picked_up: true }, base: { strokes: saved.strokes, putts: saved.putts, picked_up: false }, auto: false, dflt: expect.objectContaining({ putts: 2 }) },
+    ])
   })
 })
 
@@ -323,6 +398,24 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
     expect(screen.queryByText(S.restoredDraft)).toBeNull()
     await tapSave(11_000)
     expect(written().filter((r) => r.startsWith('p3@'))).toEqual([])
+  })
+
+  it('a restored draft that gave way to a newer save, touched again, goes over the row it now shows: not the one it was restored on', async () => {
+    const first = mount()
+    fireEvent.click(strokesUp('p3'))
+    first.unmount()
+    // Opened on the cached snapshot (p3 has nothing on hole 10 there): the draft comes back, over that.
+    mount()
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    // The other phone's 8 arrives: the draft gives way.
+    remoteSave('p3', 10, 8, 3)
+    expect(strokesOf('p3')).toBe(8)
+    // The player corrects the 8 he now sees to a 9.
+    fireEvent.click(strokesUp('p3'))
+    await tapSave(11_000)
+    const p3 = outbox.holes[0]!.entries.find((e) => e.player_id === 'p3')
+    // Over the 8 (the server takes it), never over the empty row the draft was restored on (a false «ya capturó»).
+    expect(p3).toMatchObject({ fields: { strokes: 9 }, base: { strokes: 8, putts: 3, picked_up: false } })
   })
 
   it('a baseline is taken once: a save that lands after p3 was typed here keeps that draft from coming back over it', () => {

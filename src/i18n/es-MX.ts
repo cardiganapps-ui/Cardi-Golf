@@ -1263,8 +1263,16 @@ export const t = {
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
+    /** save_hole: the player is not in this phone's group that day. */
+    errNotInGroup: 'Ese jugador no está en tu grupo; el Comité tiene que capturarlo.',
+    /** save_hole: values the server can't take (out of range, putts over strokes), or a call it can't read. */
+    errInvalid: 'El servidor no aceptó esos valores; revisa el hoyo y captúralo otra vez.',
+    /** save_hole: this device holds no player of the tournament any more; the PIN brings it back. */
+    errNotMember: 'Este teléfono ya no está como jugador del torneo. Entra con tu PIN y se sube solo.',
     /** A write of a tournament that was deleted: it can never go out (its link leads nowhere). */
     errGone: 'El torneo ya no existe.',
+    /** A hole of a day (round) the Comité deleted: it can never go out. */
+    errRoundGone: 'Ese día del torneo ya no existe.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
     /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
     errSession: 'Confirmando tu sesión… Se reintenta solo.',
@@ -1387,6 +1395,22 @@ export const t = {
     /** The hole header as it is read out, and announced when the hole changes. */
     /** A half-entered hole that came back after leaving the card (PWA-05). */
     restoredDraft: 'Lo que llevabas capturado en este hoyo sigue aquí. Falta guardarlo.',
+    /**
+     * A hole someone else saved first (REL-05): the server kept theirs, and
+     * this phone's value waits for the player to choose. `who`: who entered
+     * theirs (null: unknown); `self`: the player entered his own.
+     */
+    conflictTitle: 'Alguien más capturó primero',
+    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean) =>
+      `Hoyo ${hole}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
+    /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
+    conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
+      const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
+      return puttsOnly ? p : `${pickedUp ? 'levantó' : `${strokes ?? '–'}`}${withPutts ? ` con ${p}` : ''}`
+    },
+    keepMine: 'Guardar el mío',
+    keepTheirs: 'Dejar el suyo',
+    conflictAction: (action: string, hole: number, player: string) => `${action}: hoyo ${hole}, ${player}`,
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',

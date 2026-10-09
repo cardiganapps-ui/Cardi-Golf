@@ -1925,6 +1925,135 @@
       }
     },
     {
+      "name": "reads (outbox, a gone round): a member reads the tournament and, embedded, those of the rounds asked about it has",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1",
+            "r-gone",
+            "r9"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t1",
+            "rounds": [
+              {
+                "id": "r1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a round that is not there (deleted) is absent while the tournament reads",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r-gone"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t1",
+            "rounds": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a released device reads nothing, the tournament included",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "release_device",
+          "args": {}
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1",
+            "r-gone"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): a session that holds no player reads nothing",
+      "as": "uid-x",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds!rounds_tournament_id_fkey(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1"
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      }
+    },
+    {
+      "name": "reads (outbox, a gone round): the rounds unhinted are ambiguous (rounds.tournament_id, tournaments.current_round_id): 300",
+      "as": "uid-p1",
+      "request": {
+        "method": "GET",
+        "table": "tournaments",
+        "select": "id,rounds(id)",
+        "eq": {
+          "id": "t1"
+        },
+        "in": {
+          "rounds.id": [
+            "r1"
+          ]
+        }
+      },
+      "expect": {
+        "status": 300,
+        "code": "PGRST201"
+      }
+    },
+    {
       "name": "reads: a phone sees its own tournament, not the other",
       "as": "uid-q1",
       "request": {
@@ -5383,6 +5512,2270 @@
       ],
       "expect": {
         "status": 201
+      }
+    },
+    {
+      "name": "save_hole: a phone saves its group's hole in one call, the players it names and no other",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 1
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p1",
+              "strokes": 5,
+              "putts": 2,
+              "picked_up": false,
+              "entered_by": "p1",
+              "mutation_id": "m1",
+              "version": 1
+            },
+            {
+              "player_id": "p2",
+              "strokes": 4,
+              "putts": 1,
+              "entered_by": "p1"
+            }
+          ],
+          "conflicts": [],
+          "rejected": [],
+          "unchanged": []
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "putts": 2,
+              "picked_up": false,
+              "entered_by": "p1",
+              "mutation_id": "m1",
+              "version": 1,
+              "disputed": false
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "hole": 4,
+            "player_id": "p3"
+          },
+          "rows": []
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a value someone else saved after the phone saw the hole is not overwritten: conflict, with the server's row (REL-05)",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "rows": [],
+          "conflicts": [
+            {
+              "player_id": "p2",
+              "fields": [
+                "strokes"
+              ],
+              "server": {
+                "strokes": 4,
+                "putts": 2,
+                "entered_by": "p2"
+              }
+            }
+          ],
+          "rejected": []
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "entered_by": "p2",
+              "version": 1
+            }
+          ]
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "writer_player_id": "p1",
+              "reason": "conflict",
+              "status": "open",
+              "mutation_id": "m1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a phone that saw the row there replaces it, and the other phone's value is a discrepancy",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p2",
+              "strokes": 6,
+              "putts": 2,
+              "entered_by": "p1",
+              "disputed": true,
+              "version": 2
+            }
+          ],
+          "conflicts": []
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "putts": 2,
+              "entered_by": "p1",
+              "disputed": true,
+              "version": 2,
+              "mutation_id": "m1"
+            }
+          ]
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a field the phone did not set stays as the other phone left it: two phones, two fields, both land",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 6,
+            "strokes": 4,
+            "putts": 3,
+            "picked_up": false,
+            "entered_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 6,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 5
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p2",
+              "strokes": 5,
+              "putts": 3,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 6
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "putts": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: the same values the server already holds are taken as they are: unchanged, nothing written",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p2",
+              "strokes": 4,
+              "version": 1,
+              "entered_by": "p2"
+            }
+          ],
+          "unchanged": [
+            "p2"
+          ],
+          "conflicts": []
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "entered_by": "p2",
+              "version": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a pick-up over strokes the phone never saw is a conflict on the strokes it would clear",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "picked_up": true
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "conflicts": [
+            {
+              "player_id": "p2",
+              "fields": [
+                "strokes"
+              ],
+              "server": {
+                "strokes": 4
+              }
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: strokes over a pick-up the phone never saw are a conflict on the pick-up they would undo",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 5,
+            "strokes": null,
+            "putts": null,
+            "picked_up": true,
+            "entered_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 5,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "conflicts": [
+            {
+              "player_id": "p2",
+              "fields": [
+                "picked_up"
+              ],
+              "server": {
+                "strokes": null,
+                "picked_up": true
+              }
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 5
+          },
+          "rows": [
+            {
+              "strokes": null,
+              "picked_up": true,
+              "entered_by": "p2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: strokes over a pick-up the phone saw (a base naming only that field) replace it",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 5,
+            "strokes": null,
+            "putts": null,
+            "picked_up": true,
+            "entered_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 5,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                },
+                "base": {
+                  "picked_up": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p2",
+              "strokes": 6,
+              "picked_up": false
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 5
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a base of JSON null is a phone that saw no row",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                },
+                "base": null
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "conflicts": [
+            {
+              "player_id": "p2",
+              "fields": [
+                "strokes"
+              ]
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: an entry with no base key at all is written blind, as a direct write is (the app always sends one)",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 1,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 6
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p2",
+              "strokes": 6,
+              "disputed": true
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a signed card takes no hole: refused, and kept for the Comité",
+      "as": "uid-p1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r1",
+            "pair_id": "pa",
+            "signed_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p3",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "partial",
+          "rows": [
+            {
+              "player_id": "p3",
+              "strokes": 5
+            }
+          ],
+          "rejected": [
+            {
+              "player_id": "p2",
+              "reason": "card_signed"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 5
+            }
+          ]
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "writer_player_id": "p1",
+              "reason": "card_signed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a player of another group is not this phone's to write",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p5",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rows": [],
+          "rejected": [
+            {
+              "player_id": "p5",
+              "reason": "not_in_group"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p5",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": [
+            {
+              "player_id": "p5",
+              "reason": "not_in_group"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: the Comité's admin player outside the group gets no bypass: not in the group (REL-09)",
+      "as": "uid-pz",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p2",
+              "reason": "not_in_group"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 4
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a round that is not live takes no hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r2",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p2",
+              "reason": "round_not_live"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r2",
+            "player_id": "p2",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r2"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "reason": "round_not_live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: values out of range, putts over strokes, a field it does not know, the same player twice: each invalid",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 16
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 3,
+                  "putts": 4
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p3",
+                "fields": {
+                  "strokes": 4,
+                  "reason": "x"
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p4",
+                "fields": {
+                  "strokes": "5"
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p4",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rows": [],
+          "rejected": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p2",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p3",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p4",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p4",
+              "reason": "invalid"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p2",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p3",
+              "reason": "invalid"
+            },
+            {
+              "player_id": "p4",
+              "reason": "invalid"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: no strokes and no pick-up is no hole: invalid",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p2",
+              "reason": "invalid"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 4
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a mutation sent twice answers what it answered, and writes nothing again",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "save_hole",
+          "args": {
+            "p": {
+              "round_id": "r1",
+              "hole": 4,
+              "mutation_id": "m1",
+              "entries": [
+                {
+                  "player_id": "p1",
+                  "fields": {
+                    "strokes": 5,
+                    "putts": 2
+                  },
+                  "base": {}
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "replayed": true,
+          "rows": [
+            {
+              "player_id": "p1",
+              "strokes": 5,
+              "version": 1
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "version": 1,
+              "mutation_id": "m1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a replay answers the first answer even after the hole changed: the later save is not taken back",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "save_hole",
+          "args": {
+            "p": {
+              "round_id": "r1",
+              "hole": 4,
+              "mutation_id": "m1",
+              "entries": [
+                {
+                  "player_id": "p1",
+                  "fields": {
+                    "strokes": 5,
+                    "putts": 2
+                  },
+                  "base": {}
+                }
+              ]
+            }
+          }
+        },
+        {
+          "method": "RPC",
+          "fn": "save_hole",
+          "args": {
+            "p": {
+              "round_id": "r1",
+              "hole": 4,
+              "mutation_id": "m2",
+              "entries": [
+                {
+                  "player_id": "p1",
+                  "fields": {
+                    "strokes": 7
+                  },
+                  "base": {
+                    "strokes": 5,
+                    "putts": 2,
+                    "picked_up": false
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "replayed": true,
+          "rows": [
+            {
+              "player_id": "p1",
+              "strokes": 5
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 7,
+              "mutation_id": "m2",
+              "version": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a mutation id another account already used is refused (22023), never answered with its rows",
+      "as": "uid-p1",
+      "given": {
+        "score_mutations": [
+          {
+            "mutation_id": "m1",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 4,
+            "auth_user_id": "uid-p3",
+            "result": {
+              "status": "ok",
+              "rows": [],
+              "conflicts": [],
+              "rejected": [],
+              "unchanged": []
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a mutation id used for another hole is refused (22023)",
+      "as": "uid-p1",
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "save_hole",
+          "args": {
+            "p": {
+              "round_id": "r1",
+              "hole": 4,
+              "mutation_id": "m1",
+              "entries": [
+                {
+                  "player_id": "p1",
+                  "fields": {
+                    "strokes": 5,
+                    "putts": 2
+                  },
+                  "base": {}
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 5,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 5
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: more than 8 entries is no group's hole (22023)",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: hole 19 does not exist (22023)",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 19,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      }
+    },
+    {
+      "name": "save_hole: a call with no mutation id is refused (22023)",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "entries": []
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      }
+    },
+    {
+      "name": "save_hole: a session that holds no player is not a member: nothing written, nothing kept",
+      "as": "uid-x",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "not_member"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": []
+        },
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: an organizer with no player of the tournament is not a member: the Comité corrects through admin_save_score",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "not_member"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 4
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: the publishable key alone may not call it",
+      "as": "anon",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "save_hole: a player of another tournament is invalid here, and kept nowhere",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 4,
+            "mutation_id": "m1",
+            "entries": [
+              {
+                "player_id": "q1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "q1",
+              "reason": "invalid"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: picked_up null in fields with strokes on a new hole",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 6,
+            "mutation_id": "mx1",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "picked_up": null
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 6
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "save_hole: picked_up null alone over an existing row the phone saw",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 3,
+            "mutation_id": "mx2",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "picked_up": null
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "save_hole: a pick-up over another phone's pick-up with other putts is a conflict on the putts",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 7,
+            "strokes": null,
+            "putts": 0,
+            "picked_up": true,
+            "entered_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 7,
+            "mutation_id": "mx3",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "picked_up": true,
+                  "putts": 1
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "conflicts": [
+            {
+              "player_id": "p2",
+              "fields": [
+                "putts"
+              ]
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "putts": 0,
+              "picked_up": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: strokes from one phone and putts from another that add up to an impossible hole are refused",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 9,
+            "strokes": 4,
+            "putts": 3,
+            "picked_up": false,
+            "entered_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 9,
+            "mutation_id": "mx4",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "strokes": 2
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p2",
+              "reason": "invalid"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "round_id": "r1",
+            "hole": 9
+          },
+          "rows": [
+            {
+              "reason": "invalid"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: the dflt re-send (base = server row) over another player's par-2 replaces it, flagged",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 8,
+            "strokes": 4,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "pz"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 8,
+            "mutation_id": "mx5",
+            "entries": [
+              {
+                "player_id": "p3",
+                "fields": {
+                  "strokes": 6,
+                  "putts": 2
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p3",
+              "strokes": 6,
+              "disputed": true
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 8
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "disputed": true,
+              "entered_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a pick-up the phone saw, the same pick-up again: unchanged",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 10,
+            "strokes": null,
+            "putts": null,
+            "picked_up": true,
+            "entered_by": "p2"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 10,
+            "mutation_id": "mx6",
+            "entries": [
+              {
+                "player_id": "p2",
+                "fields": {
+                  "picked_up": true
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "unchanged": [
+            "p2"
+          ]
+        }
+      }
+    },
+    {
+      "name": "save_hole: explicit null strokes with picked_up false over a row is invalid",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 3,
+            "mutation_id": "mx7",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": null,
+                  "picked_up": false
+                },
+                "base": {
+                  "strokes": 4,
+                  "putts": 2,
+                  "picked_up": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "save_hole: putts given as null on a new hole with strokes is stored without putts",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 11,
+            "mutation_id": "mx8",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "strokes": 5,
+                  "putts": null
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "ok",
+          "rows": [
+            {
+              "player_id": "p1",
+              "strokes": 5,
+              "putts": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "save_hole: an auto default (base {}) over another phone's typed row is a conflict on every field it changes",
+      "as": "uid-p1",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 12,
+            "strokes": 6,
+            "putts": 3,
+            "picked_up": false,
+            "entered_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 12,
+            "mutation_id": "mx9",
+            "entries": [
+              {
+                "player_id": "p4",
+                "fields": {
+                  "strokes": 4,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "conflict",
+          "conflicts": [
+            {
+              "player_id": "p4",
+              "fields": [
+                "strokes",
+                "putts"
+              ]
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 12
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "putts": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_hole: a fields picked_up string 'true' is invalid",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r1",
+            "hole": 13,
+            "mutation_id": "mx10",
+            "entries": [
+              {
+                "player_id": "p1",
+                "fields": {
+                  "picked_up": "true"
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "rejected",
+          "rejected": [
+            {
+              "player_id": "p1",
+              "reason": "invalid"
+            }
+          ]
+        }
       }
     },
     {

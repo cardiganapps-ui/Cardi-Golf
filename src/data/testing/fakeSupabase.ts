@@ -21,7 +21,9 @@
  *   Postgres checks them: the time of day to the microsecond, the offset,
  *   the date; only C's spaces around a value), the defaults (never over a
  *   null sent, the generated key included), NOT NULL, the foreign and unique
- *   keys, column grants and checks, the discrepancy trigger, and the order
+ *   keys, column grants and checks, the discrepancy and version triggers,
+ *   save_hole (0026: its answers, conflicts, refusals kept in
+ *   rejected_writes, and replays by mutation id), and the order
  *   the database meets them in: a column PostgREST doesn't know (of
  *   `columns` when it is sent, which PostgREST then reads alone, else of the
  *   body), the ON CONFLICT target, the grants, the whole body cast, then row
@@ -37,8 +39,9 @@
  *     offset, hex or underscored integers, prefixes of a boolean word; and
  *     the order of the casts inside one row;
  *   - the shape of a uuid: ids here are names, so any text is one;
- *   - 0026's save_hole RPC and the score columns it writes (version, device_id,
- *     mutation_id): no phone calls it yet;
+ *   - save_hole (0026): the text a call is measured by for its 16 KB is
+ *     JSON's, not jsonb's (a few spaces apart); the audit triggers write
+ *     nothing; two calls never run at once here, so its locks are moot;
  *   - how a time reads back: the fake keeps the text it was sent (and
  *     stamps its own in ISO form), where PostgREST answers in Postgres's
  *     (`+00:00`); no case compares a time;
@@ -68,7 +71,12 @@
  *   400 for an empty table too, so the keys of tables that may be empty are
  *   checked against the migrations (snapshotTables.test.ts, backupKeys.test.ts);
  * - each read sees the table as it was when the request was made, even if
- *   its answer is held back (`hold`) to arrive after a later one.
+ *   its answer is held back (`hold`) to arrive after a later one;
+ * - a to-many resource a read embeds (the ones in EMBEDS: a tournament's
+ *   rounds, by the hinted relationship) is read with its parent, at once and
+ *   as the same caller, filtered by the URL's `<embed>.<column>` filters;
+ *   unhinted where two relationships join the tables, it is PostgREST's 300
+ *   (PGRST201). serverRules.json pins the request on the migrations.
  *
  * The rows themselves are whatever the test serves: testing/rows.ts writes
  * numeric columns as text, which PostgREST does not (see there).
@@ -231,7 +239,41 @@ interface ReadSpec {
   order: Array<{ column: string; ascending: boolean }>
   range: [number, number] | null
   single: boolean
+  /** The columns its `select` names (over the network door): null for every column. */
+  columns?: string[] | null
+  /** The to-many resources its `select` embeds, each with the filters the URL puts on it. */
+  embeds?: Embed[]
+  /** An embed PostgREST can't place (more than one relationship): it answers 300, PGRST201. */
+  ambiguous?: string
 }
+
+/**
+ * A to-many resource a read embeds (`rounds!rounds_tournament_id_fkey(id)`)
+ * and the filters the URL puts on it (`rounds.id=in.(…)`). PostgREST reads it
+ * in the same statement as its parent, as the caller (so under the same
+ * row-level security, read once), and an embedded filter narrows the list
+ * without dropping the parent: a tournament none of whose rounds match reads
+ * with an empty list.
+ */
+interface Embed {
+  /** The name the select gives it, and the key it comes back under. */
+  name: string
+  table: string
+  /** The child's column that points at the parent's `id`. */
+  column: string
+  columns: string[]
+  filters: Filter[]
+}
+/**
+ * The embeds the app sends, by parent and the select's name with its hint.
+ * `tournaments` and `rounds` are joined two ways (rounds.tournament_id, and
+ * tournaments.current_round_id, 0001): unhinted, PostgREST refuses the embed
+ * as ambiguous, so the fake does too.
+ */
+const EMBEDS: Record<string, { table: string; column: string }> = {
+  'tournaments/rounds!rounds_tournament_id_fkey': { table: 'rounds', column: 'tournament_id' },
+}
+const AMBIGUOUS_EMBEDS = new Set(['tournaments/rounds'])
 
 /** What the server answers to a read, read now. Over the network, `visible` is the row-level security the caller meets. */
 function read(server: FakeSupabase, q: ReadSpec, visible?: (r: Row) => boolean): Result {
@@ -355,7 +397,24 @@ const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
 /** Each phone table's columns and their types (information_schema): what PostgREST's schema cache knows, and what Postgres casts the body to. */
 type ColumnType = 'uuid' | 'int' | 'bool' | 'timestamptz' | 'text' | 'jsonb'
 const COLUMNS: Record<string, Record<string, ColumnType>> = {
-  scores: { id: 'uuid', round_id: 'uuid', player_id: 'uuid', hole: 'int', strokes: 'int', putts: 'int', picked_up: 'bool', entered_by: 'uuid', client_ts: 'timestamptz', updated_at: 'timestamptz', disputed: 'bool', previous: 'jsonb', reason: 'text' },
+  scores: {
+    id: 'uuid',
+    round_id: 'uuid',
+    player_id: 'uuid',
+    hole: 'int',
+    strokes: 'int',
+    putts: 'int',
+    picked_up: 'bool',
+    entered_by: 'uuid',
+    client_ts: 'timestamptz',
+    updated_at: 'timestamptz',
+    disputed: 'bool',
+    previous: 'jsonb',
+    reason: 'text',
+    version: 'int',
+    device_id: 'uuid',
+    mutation_id: 'uuid',
+  },
   snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
   card_signatures: { round_id: 'uuid', pair_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz' },
   hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
@@ -473,20 +532,61 @@ function selectedColumns(params: URLSearchParams): string[] | null {
   return select.split(',')
 }
 
+/**
+ * A `select` that embeds (`id,rounds!rounds_tournament_id_fkey(id)`): its own
+ * plain columns, and each embed the fake knows (EMBEDS) with its plain
+ * columns. Anything else is an error message.
+ */
+function selectWithEmbeds(table: string, select: string): Pick<ReadSpec, 'columns' | 'embeds' | 'ambiguous'> | string {
+  const columns: string[] = []
+  const embeds: Embed[] = []
+  let ambiguous: string | undefined
+  for (const item of select.match(/[^,(]+(\([^()]*\))?/g) ?? []) {
+    if (/^[a-z_][a-z0-9_]*$/.test(item)) {
+      columns.push(item)
+      continue
+    }
+    const m = /^([a-z_][a-z0-9_]*)(![a-z0-9_]+)?\(([a-z_][a-z0-9_]*(?:,[a-z_][a-z0-9_]*)*)\)$/.exec(item)
+    if (!m) return `unsupported select item ${item}`
+    const key = `${table}/${m[1]}${m[2] ?? ''}`
+    if (AMBIGUOUS_EMBEDS.has(key)) ambiguous ??= m[1]
+    const known = EMBEDS[key]
+    if (!known && !AMBIGUOUS_EMBEDS.has(key)) return `unsupported embed ${key}`
+    if (known) embeds.push({ name: m[1]!, table: known.table, column: known.column, columns: m[3]!.split(','), filters: [] })
+  }
+  return { columns, embeds, ambiguous }
+}
+
+/** One `eq.` or `in.(…)` filter on a column, compared as text. */
+function filterOf(label: string, column: string, filter: string): Filter | null {
+  if (filter.startsWith('eq.')) {
+    const v = filter.slice(3)
+    return { label: `${label}=eq.${v}`, test: (r) => r[column] != null && String(r[column]) === v }
+  }
+  if (filter.startsWith('in.(') && filter.endsWith(')')) {
+    const values = splitList(filter.slice(4, -1))
+    return { label: `${label}=in.(${values.length})`, test: (r) => r[column] != null && values.includes(String(r[column])) }
+  }
+  return null
+}
+
 /** A read as the URL spells it. Filter values arrive as text and compare as text; anything else is an error message. */
 function readFromUrl(table: string, params: URLSearchParams, headers: Headers): ReadSpec | string {
+  const select = params.get('select')
+  const shape = select?.includes('(') ? selectWithEmbeds(table, select) : { columns: selectedColumns(params) }
+  if (typeof shape === 'string') return shape
+  // PostgREST places the embeds before it reads a filter: an ambiguous one is refused whatever else the URL says.
+  if ('ambiguous' in shape && shape.ambiguous) return { table, filters: [], order: [], range: null, single: false, ambiguous: shape.ambiguous }
   const filters: Filter[] = []
   for (const [column, filter] of params) {
     if (NOT_FILTERS.has(column)) continue
-    if (filter.startsWith('eq.')) {
-      const v = filter.slice(3)
-      filters.push({ label: `${column}=eq.${v}`, test: (r) => r[column] != null && String(r[column]) === v })
-    } else if (filter.startsWith('in.(') && filter.endsWith(')')) {
-      const values = splitList(filter.slice(4, -1))
-      filters.push({ label: `${column}=in.(${values.length})`, test: (r) => r[column] != null && values.includes(String(r[column])) })
-    } else {
-      return `unsupported filter ${column}=${filter}`
-    }
+    // `rounds.id=in.(…)`: a filter on an embedded resource.
+    const dot = column.indexOf('.')
+    const embed = dot < 0 ? undefined : shape.embeds?.find((e) => e.name === column.slice(0, dot))
+    if (dot >= 0 && !embed) return `unsupported filter ${column}=${filter}`
+    const f = filterOf(column, embed ? column.slice(dot + 1) : column, filter)
+    if (!f) return `unsupported filter ${column}=${filter}`
+    ;(embed ? embed.filters : filters).push(f)
   }
   const order = (params.get('order') ?? '')
     .split(',')
@@ -499,7 +599,7 @@ function readFromUrl(table: string, params: URLSearchParams, headers: Headers): 
   const limit = params.get('limit')
   const from = Number(offset ?? 0)
   const range: [number, number] | null = offset == null && limit == null ? null : [from, limit == null ? Number.MAX_SAFE_INTEGER : from + Number(limit) - 1]
-  return { table, filters, order, range, single: (headers.get('accept') ?? '').includes('vnd.pgrst.object') }
+  return { table, filters, order, range, single: (headers.get('accept') ?? '').includes('vnd.pgrst.object'), ...shape }
 }
 
 /** A PostgREST error body, at the status PostgREST gives its code. */
@@ -536,7 +636,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   function withDefaults(table: string, row: Row): Row {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
     const id = keys.length === 1 && keys[0] === 'id' && row.id == null ? { id: `${table}-${++serial}` } : {}
-    if (table === 'scores') return { ...id, picked_up: false, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
+    if (table === 'scores') return { ...id, picked_up: false, version: 1, device_id: null, mutation_id: null, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
     if (table === 'snake_tiebreaks' || table === 'hole_awards') return { ...id, created_at: stamp(), ...row }
     if (table === 'card_signatures') return { ...id, signed_at: stamp(), ...row }
     return { ...id, ...row }
@@ -556,6 +656,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       row.previous = { strokes: old.strokes ?? null, putts: old.putts ?? null, picked_up: old.picked_up, entered_by: old.entered_by ?? null, updated_at: old.updated_at ?? null }
     }
     row.updated_at = stamp()
+    // 0026 `scores_version`: every change of a hole bumps it.
+    row.version = Number(old.version ?? 1) + 1
     return row
   }
 
@@ -640,6 +742,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (table === 'device_sessions' || table === 'tournament_organizers') return row.auth_user_id === uid
     // 0004 `audit_log_read`: the Comité's history, not the players'.
     if (table === 'audit_log') return organizes(uid, row.tournament_id)
+    // 0026: what save_hole did not take, for the Comité and its writer; what a mutation answered, for nobody.
+    if (table === 'rejected_writes') return organizes(uid, row.tournament_id) || row.auth_user_id === uid
+    if (table === 'score_mutations') return false
     const tid = tenantOf(table, row)
     return organizes(uid, tid) || myPlayer(uid, tid) != null
   }
@@ -782,8 +887,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     for (const proposed of typedRows) {
       // Then row by row: the defaults and insert triggers, the policy, the checks, the keys.
       const row = withDefaults(table, proposed)
-      // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02).
-      if (table === 'scores') row.entered_by = myPlayer(caller, roundTournament(row.round_id)) ?? null
+      // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02), and a direct write names no device or mutation.
+      if (table === 'scores') Object.assign(row, { entered_by: myPlayer(caller, roundTournament(row.round_id)) ?? null, device_id: null, mutation_id: null })
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)
       if (bad) return bad
@@ -803,7 +908,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       }
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
-      if (table === 'scores') merged.entered_by = myPlayer(caller, roundTournament(merged.round_id)) ?? null
+      if (table === 'scores') Object.assign(merged, { entered_by: myPlayer(caller, roundTournament(merged.round_id)) ?? null, device_id: null, mutation_id: null })
       const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
       if (!rule.check(caller, updated)) return policy()
       const badUpdate = constraintError(table, updated)
@@ -833,9 +938,152 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return new Response(null, { status: 201 })
   }
 
+  /**
+   * 0026 `save_hole(p)`, as the migration writes it, step by step: the call
+   * read whole (22023 for one it can't), the caller's player, a mutation
+   * already answered, then entry by entry the refusals, the row it would
+   * become, the values the phone saw against the row there, and one write for
+   * the hole. See the function's own comment for the contract.
+   */
+  function saveHole(p: unknown, as: string): Response {
+    const invalidCall = (message: string) => json(400, { code: '22023', details: null, hint: null, message })
+    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function save_hole' })
+    const call = (p ?? null) as Record<string, unknown> | null
+    if (new TextEncoder().encode(JSON.stringify(p ?? null)).length > 16384) return invalidCall('El hoyo que llegó trae demasiados datos; vuelve a guardarlo')
+    const text = (v: unknown) => (v == null ? null : typeof v === 'string' ? v : JSON.stringify(v))
+    const obj = call && typeof call === 'object' && !Array.isArray(call) ? call : null
+    const rid = text(obj?.round_id)
+    const holeText = text(obj?.hole)
+    const mid = text(obj?.mutation_id)
+    const dev = text(obj?.device_id) || null
+    if (holeText != null && !INTEGER.test(holeText)) return invalidCall('El hoyo que llegó no se entiende; vuelve a guardarlo')
+    const h = holeText == null ? null : Number(holeText)
+    const entries = obj?.entries
+    if (rid == null || h == null || mid == null || !Array.isArray(entries)) return invalidCall('Al hoyo que llegó le faltan datos; vuelve a guardarlo')
+    if (entries.length > 8) return invalidCall('Un hoyo se guarda con 8 jugadores a lo más')
+    if (h < 1 || h > 18) return invalidCall('Ese hoyo no existe: van del 1 al 18')
+    const tid = roundTournament(rid)
+    const me = tid == null ? undefined : myPlayer(as, tid)
+    if (me == null) return json(200, { status: 'not_member' })
+    const prior = rowsOf('score_mutations').find((m) => m.mutation_id === mid)
+    if (prior) {
+      if (prior.auth_user_id !== as || prior.tournament_id !== tid || prior.round_id !== rid || prior.hole !== h) return invalidCall('Ese guardado ya llegó antes con otros datos; vuelve a guardarlo')
+      return json(200, { ...(prior.result as Row), replayed: true })
+    }
+    const playerTournament = (pid: unknown) => rowsOf('players').find((x) => x.id === pid)?.tournament_id
+    const scoreRow = (pid: unknown) => rowsOf('scores').find((r) => r.round_id === rid && r.player_id === pid && r.hole === h)
+    const writes: Array<{ pid: unknown; nxt: Row }> = []
+    const rowsOut: Row[] = []
+    const conflicts: Row[] = []
+    const rejected: Row[] = []
+    const unchanged: unknown[] = []
+    const seen = new Set<unknown>()
+    const keep = (e: unknown, pid: unknown, reason: string) =>
+      (server.tables.rejected_writes ??= []).push({
+        id: `rejected_writes-${++serial}`,
+        tournament_id: tid,
+        round_id: rid,
+        hole: h,
+        player_id: pid,
+        writer_player_id: me,
+        auth_user_id: as,
+        device_id: dev,
+        mutation_id: mid,
+        payload: structuredClone(e),
+        reason,
+        status: 'open',
+        created_at: stamp(),
+      })
+    const isObject = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v)
+    for (const e of entries) {
+      const entry = isObject(e) ? e : {}
+      // try_uuid: ids here are names, so any text is one.
+      const pid = typeof entry.player_id === 'string' ? entry.player_id : null
+      const dup = pid != null && seen.has(pid)
+      if (pid != null) seen.add(pid)
+      let fields: unknown = 'fields' in entry ? entry.fields : {}
+      let base: unknown = 'base' in entry ? entry.base : undefined
+      if (base === null) base = {}
+      let reason: string | null = null
+      let cur: Row | null = null
+      let nxt: Row = {}
+      const clash: string[] = []
+      if (pid == null || dup || playerTournament(pid) !== tid || !isObject(fields) || (base !== undefined && !isObject(base)) || Object.keys(fields).some((f) => !['strokes', 'putts', 'picked_up'].includes(f))) {
+        reason = 'invalid'
+      } else if (!roundIsLive(rid)) reason = 'round_not_live'
+      else if (!sharesGroup(as, rid, pid)) reason = 'not_in_group'
+      else if (cardIsSigned(rid, pid)) reason = 'card_signed'
+      if (reason == null && isObject(fields)) {
+        // A number of strokes is a hole played: not picked up, unless the phone says so.
+        if (typeof fields.strokes === 'number' && !('picked_up' in fields)) fields = { ...fields, picked_up: false }
+        const f = fields as Row
+        const found = scoreRow(pid)
+        cur = found ? structuredClone(found) : null
+        // A key the phone sent is taken as sent, a JSON null included (`fields -> k` is jsonb null, which coalesce keeps,
+        // so `picked_up: null` is invalid there too); only a key it left out falls back to the row, then the default.
+        const pickOr = (k: string, fallback: unknown) => (k in f ? f[k] : (cur?.[k] ?? fallback))
+        nxt = { strokes: pickOr('strokes', null), putts: pickOr('putts', null), picked_up: pickOr('picked_up', false) }
+        if (nxt.picked_up === true) nxt.strokes = null
+        const whole = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi
+        const st = nxt.strokes
+        const pt = nxt.putts
+        if (
+          typeof nxt.picked_up !== 'boolean' ||
+          !(st === null || typeof st === 'number') ||
+          !(pt === null || typeof pt === 'number') ||
+          (st !== null && !whole(st, 1, 15)) ||
+          (pt !== null && (!whole(pt, 0, 15) || (st !== null && (pt as number) > (st as number)))) ||
+          (nxt.picked_up === false && st === null)
+        ) {
+          reason = 'invalid'
+        }
+      }
+      if (reason == null && isObject(base)) {
+        const f = fields as Row
+        const keys = new Set([...Object.keys(f), ...(nxt.picked_up === true ? ['strokes'] : [])])
+        const dflt = (k: string) => (k === 'picked_up' ? false : null)
+        for (const k of keys) {
+          const cv = cur?.[k] ?? dflt(k)
+          const bv = base[k] ?? dflt(k)
+          if (cv !== bv && cv !== nxt[k]) clash.push(k)
+        }
+      }
+      if (reason != null) {
+        rejected.push({ player_id: pid, reason })
+        if (pid != null && !dup && playerTournament(pid) === tid) keep(e, pid, reason)
+      } else if (clash.length) {
+        conflicts.push({ player_id: pid, fields: clash, server: cur })
+        keep({ ...entry, server: cur }, pid, 'conflict')
+      } else if (cur && (cur.strokes ?? null) === nxt.strokes && (cur.putts ?? null) === nxt.putts && cur.picked_up === nxt.picked_up) {
+        unchanged.push(pid)
+        rowsOut.push(cur)
+      } else writes.push({ pid, nxt })
+    }
+    // One statement for the hole, through the update triggers (the discrepancy, the version).
+    for (const { pid, nxt } of writes) {
+      const values = { strokes: nxt.strokes, putts: nxt.putts, picked_up: nxt.picked_up, entered_by: me, client_ts: stamp(), device_id: dev, mutation_id: mid }
+      const old = scoreRow(pid)
+      let row: Row
+      if (old) {
+        row = scoreUpdated(old, { ...old, ...values })
+        server.tables.scores = rowsOf('scores').map((r) => (r === old ? row : r))
+      } else {
+        row = withDefaults('scores', { round_id: rid, player_id: pid, hole: h, ...values })
+        ;(server.tables.scores ??= []).push(row)
+      }
+      server.writes.push({ table: 'scores', row: { ...row }, by: as })
+      rowsOut.push(structuredClone(row))
+    }
+    const status = !rejected.length && !conflicts.length ? 'ok' : writes.length || unchanged.length ? 'partial' : conflicts.length ? 'conflict' : 'rejected'
+    const result = { status, rows: rowsOut, conflicts, rejected, unchanged }
+    ;(server.tables.score_mutations ??= []).push({ mutation_id: mid, tournament_id: tid, round_id: rid, hole: h, auth_user_id: as, result: structuredClone(result), created_at: stamp() })
+    return json(200, result)
+  }
+
   /** The functions a phone calls on its way in; any other answers `rpcResult`. */
   function rpc(name: string, args: Record<string, unknown>, as: string): Response {
     server.rpcCalls.push({ name, args: structuredClone(args) })
+    if (name === 'save_hole') return saveHole(args.p, as)
     if (name === 'claim_player') {
       if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function claim_player' })
       const player = (server.tables.players ?? []).find((p) => p.id === args.p_player_id)
@@ -869,6 +1117,11 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       })
     }
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
+    if (name === 'release_device') {
+      // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
+      server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)
+      return new Response(null, { status: 204 })
+    }
     const { data, error } = server.rpcResult
     return error ? restError(error) : json(200, data)
   }
@@ -976,7 +1229,22 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (req.method !== 'GET') return write(req, headers)
     const spec = readFromUrl(req.target, req.params, headers)
     if (typeof spec === 'string') return unsupported(req, spec)
+    if (spec.ambiguous) {
+      return json(300, { code: 'PGRST201', details: null, hint: null, message: `Could not embed because more than one relationship was found for '${spec.table}' and '${spec.ambiguous}'` })
+    }
     const result = read(server, spec, (r) => mayRead(spec.table, r, req.as))
+    // The embeds, in the same statement as their parents: read now, under the same caller, before any hold.
+    const cols = spec.columns ?? null
+    const pick = (r: Row): Row => {
+      const out: Row = cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : r
+      for (const e of spec.embeds ?? []) {
+        out[e.name] = rowsOf(e.table)
+          .filter((c) => c[e.column] === r.id && mayRead(e.table, c, req.as) && e.filters.every((f) => f.test(c)))
+          .map((c) => Object.fromEntries(e.columns.map((k) => [k, structuredClone(c[k] ?? null)])))
+      }
+      return out
+    }
+    const shaped = result.error ? null : Array.isArray(result.data) ? result.data.map(pick) : pick(result.data as Row)
     const gate = spec.table === 'tournaments' ? gates.shift() : undefined
     if (gate) {
       gate.markReceived()
@@ -984,9 +1252,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (await Promise.race([gate.answer, aborted])) throw new TypeError('Failed to fetch')
     }
     if (result.error) return restError(result.error)
-    const cols = selectedColumns(req.params)
-    const pick = (r: Row) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : r)
-    return json(200, Array.isArray(result.data) ? result.data.map(pick) : pick(result.data as Row))
+    return json(200, shaped)
   }
 
   const server: FakeSupabase = {
