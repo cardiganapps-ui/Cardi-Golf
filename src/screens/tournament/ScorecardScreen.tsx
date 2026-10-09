@@ -5,7 +5,7 @@
  * outbox, so it works without signal.
  */
 import confetti from 'canvas-confetti'
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -208,9 +208,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
 
   // Latest players, hole data and drafts for the effect below: it runs when the hole
-  // changes or the server's values for it do, never on a keystroke.
+  // changes or the server's values for it do, never on a keystroke. A layout effect,
+  // like that one, and declared before it, so it runs first.
   const latest = useRef({ players, holeInfo, drafts, holeSpoken, editableFor })
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = { players, holeInfo, drafts, holeSpoken, editableFor }
   })
   /** What the server had for each player when he was first touched or restored on this hole: the kept draft's baseline. */
@@ -232,7 +233,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   /** Kept drafts of this hole read before the phone's queue was, whose baseline couldn't be checked yet (NEW-11). */
   const heldKept = useRef<KeptDraft['players']>({})
   const shownHole = useRef('')
-  useEffect(() => {
+  // A layout effect: its update renders before the browser gets the page back, so no task and no
+  // frame ever shows a new hole's heading over the last hole's figures. As a passive effect its
+  // update ran at default priority, tasks later (one to three painted frames in Chromium): the stack
+  // suite (PRs 104 and 105) read a stepper in between, saw the value it meant to set, tapped nothing,
+  // and the correction was never written; a player's tap there was lost the same way.
+  useLayoutEffect(() => {
     const { players, holeInfo, drafts: current, holeSpoken, editableFor } = latest.current
     const serverNow = (pid: string) => {
       const h = holeInfo(pid)
@@ -334,7 +340,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   )
   const savedPicks = (gameId: string) => snapshot.holeAwards.filter((a) => a.roundId === round.id && a.gameId === gameId && a.hole === hole && a.groupId === group.id).map((a) => a.playerId)
   const [picks, setPicks] = useState<Record<string, string[] | undefined>>({})
-  useEffect(() => setPicks({}), [hole, round.id, group.id])
+  // With the hole, in the same task (as the drafts above): the last hole's picks never stand on this one.
+  useLayoutEffect(() => setPicks({}), [hole, round.id, group.id])
   const pickOf = (gameId: string) => picks[gameId] ?? savedPicks(gameId)
   const togglePick = (c: (typeof contests)[number], pid: string | null) =>
     setPicks((cur) => {

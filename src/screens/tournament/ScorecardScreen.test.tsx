@@ -587,3 +587,38 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     expect(outbox.scores.length).toBeGreaterThan(0)
   })
 })
+
+describe('Tarjeta: a hole opened shows its own values in the same task as its heading (e2e-stack, #104 and #105)', () => {
+  /**
+   * The stack suite's correction of hole 10 never left Ana's phone: Playwright
+   * saw «Hoyo 10» and read Beto's stepper in the next task, and it still showed
+   * hole 2's 5 (the hole the card was on). That was the value wanted, so nothing
+   * was tapped, nothing was touched, and «Guardar hoyo» wrote nothing. The new
+   * hole's values came from a passive effect, whose own update React runs at
+   * default priority, tasks later (one to three painted frames in Chromium):
+   * until then the new heading stood over the last hole's figures, and a tap
+   * there was lost. Interactions are tasks, so
+   * the check is what the screen shows once the click's task and its microtasks
+   * are done, outside act (which would flush everything first).
+   */
+  it('from the grid: no task ever sees the new hole under the last one\'s figures', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    // A hole whose saved strokes for p1 differ from what the card shows now.
+    const shown = strokesOf('p1')
+    const target = snap.scores.find((x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown)!
+    fireEvent.click(screen.getByRole('button', { name: S.grid, exact: true } as never))
+    const actEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    const was = actEnv.IS_REACT_ACT_ENVIRONMENT
+    actEnv.IS_REACT_ACT_ENVIRONMENT = false
+    try {
+      screen.getByRole('button', { name: String(target.hole), exact: true } as never).click()
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+      expect(holeOnScreen()).toBe(target.hole)
+      expect(strokesOf('p1')).toBe(target.strokes)
+    } finally {
+      actEnv.IS_REACT_ACT_ENVIRONMENT = was
+      await act(async () => undefined)
+    }
+  })
+})
