@@ -30,7 +30,9 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 5. [ ] **Cuatro decisiones** (contesta en el chat):
    - **a. Dos teléfonos capturan distinto el mismo hoyo.**
      - Hoy gana el último, sin avisar.
-     - Propongo que gane el primero que llegó y que al segundo le pregunte «Diego ya capturó a Justo: 6. ¿Usar 6 o tu 5?».
+     - Propongo que gane el primero que llegó y que al segundo le pregunte. Ya está hecho así en la PR #106 (sin juntar todavía): el segundo teléfono ve «Hoyo 7: Diego ya capturó a Justo: 6. No se guardó lo tuyo: 5.», con «Guardar el mío» o «Dejar el suyo».
+     - Una excepción: si lo que llegó primero es justo par con 2 putts (lo que la Tarjeta guarda para alguien que nadie tocó), lo del segundo teléfono va encima sin preguntar y queda marcado como discrepancia. Así, cuando cada pareja lleva la tarjeta de la otra y las dos guardan el mismo hoyo a la vez, nadie tiene que contestar nada.
+     - Dime si estás de acuerdo. Si prefieres otra cosa, la cambio antes de juntar la PR.
      - Esto cambia la regla del brief (§8).
    - **b. La rúbrica del A+.** La revisión ciega es del 1 al 5 de marzo; pasa con:
      - cero P0 y P1 abiertos;
