@@ -465,6 +465,31 @@ describe('N2: every day rained out, nobody has a result', () => {
     for (const p of after.prizes) if (p.potId === 'calcutta') back.set(p.playerId, (back.get(p.playerId) ?? 0) + p.amount)
     expect(back).toEqual(paidIn)
   })
+
+  it('with a buyback, «Devolver» returns each share to whoever paid it: the player his buyback, the owner the rest', () => {
+    const snap = makeFirstTournament()
+    sellAll(snap, [1000])
+    // p1's lot is owned by p2; p1 buys back half of himself for $500, paid to p2.
+    snap.calcuttaBuybacks.push({ lotId: 'lot1', pct: 50, amount: 500, paid: true })
+    snap.rounds.forEach((r) => (r.status = 'cancelled'))
+    const st = run(snap, S)
+    conserved(st)
+    const bucket = st.money.unassigned.buckets.find((b) => b.key === 'calcutta')!
+    expect(bucket.remaining).toBe(12000)
+    const owed = new Map(bucket.contributors!.map((c) => [c.playerId, c.amount]))
+    // p1 owns p12's lot ($1,000) and bought back half of himself ($500); p2 paid $1,000 for p1's lot and got $500 back.
+    expect(owed.get('p1')).toBe(1500)
+    expect(owed.get('p2')).toBe(500)
+    expect([...owed.values()].reduce((s, v) => s + v, 0)).toBe(12000)
+    snap.moneyAdjustments = call('calcutta', proRata(bucket.remaining, bucket.contributors!).map((r) => ({ kind: 'refund' as const, toPlayerId: r.playerId, amount: r.amount })))
+    const after = run(snap, S)
+    conserved(after)
+    // Everyone's Calcutta flows net to zero: what each paid in (bank and buyback) comes back to him.
+    const calcuttaNet = (pid: string) => after.money.flows
+      .filter((f) => f.potId === 'calcutta' || f.kind === 'buyback' || f.kind === 'calcutta')
+      .reduce((s, f) => s + (f.to === pid ? f.amount : 0) - (f.from === pid ? f.amount : 0), 0)
+    for (const p of snap.players) expect([p.id, calcuttaNet(p.id)]).toEqual([p.id, 0])
+  })
 })
 
 describe('N7: a sold lot whose player never played, in a played tournament', () => {

@@ -226,10 +226,11 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
     const buyIn = g.config.money.buyIn
     add(`game:${g.config.id}`, g.config.label, g.config.id, g.pot, [], g.entrants.map((playerId) => ({ playerId, amount: buyIn })))
   }
-  // The Calcutta pot: what the owners paid for their lots.
+  // The Calcutta pot: what each owner paid for his share. After a buyback the player paid
+  // his part (to the owner, who paid the bank the whole price), so he is a contributor too.
   if (auction && auction.pot > 0) {
     const owners = new Map<Id, number>()
-    for (const lot of auction.lots) if (lot.status === 'sold' && lot.ownerId) owners.set(lot.ownerId, (owners.get(lot.ownerId) ?? 0) + lot.price)
+    for (const lot of auction.lots) if (lot.status === 'sold') for (const o of lot.owners) owners.set(o.ownerId, (owners.get(o.ownerId) ?? 0) + o.paid)
     const order = new Map(players.map((p, i) => [p.id, i]))
     const contributors = [...owners].map(([playerId, amount]) => ({ playerId, amount })).sort((a, b) => (order.get(a.playerId) ?? 0) - (order.get(b.playerId) ?? 0))
     add('calcutta', settings.modules.auction.label, 'calcutta', auction.pot, [], contributors)
