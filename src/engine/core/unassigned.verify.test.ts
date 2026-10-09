@@ -406,6 +406,20 @@ describe('N1: Terminado while a planned day is open or was never created (an old
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['waiting'])
   })
 
+  it('day 2 reopened and played: the gate names the open day, never a decision Dinero still shows as waiting', () => {
+    const { snap } = settledAfterRain()
+    snap.rounds[1]!.status = 'live'
+    fillRound(snap, 'r2', 9)
+    twoPutts(snap)
+    // Dinero: not final, the decision waits.
+    expect(run(snap, S).money.unassigned.assignments.map((a) => a.status)).toEqual(['waiting'])
+    // Read as Terminado (the gate's view), day 2's best round is paid now, so that decision no longer fits...
+    const closed = run({ ...snap, tournament: { ...snap.tournament, status: 'finished' } }, S)
+    expect(closed.money.unassigned.assignments.map((a) => a.status)).not.toEqual(['applied'])
+    // ...but play is not over: the day to finish is what blocks, not «una asignación no se puede pagar».
+    expect(closeCheck(snap, S, { openRejected: 0 }).blockers.map((b) => b.kind)).toEqual(['openRounds', 'unsignedCards'])
+  })
+
   it('once play is over the list is back and the notice gone', () => {
     const { snap } = settledAfterRain()
     snap.tournament.status = 'finished'
