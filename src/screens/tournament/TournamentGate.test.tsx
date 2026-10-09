@@ -282,15 +282,30 @@ describe('writes this phone queued wait for the server to confirm the player (RE
     }
   })
 
-  it('never for the Polo admin visiting, who is nobody\'s player here; nor is the tournament kept on his phone', async () => {
+  // my_membership (0021) gives the Polo admin who is no participant isOrganizer = isAdmin = platform_can_write(tid):
+  // false on a Protegido tournament he has not unlocked, true anywhere else.
+  it('never for the Polo admin visiting a Protegido tournament he has not unlocked; nor is it kept on his phone', async () => {
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
-    server.myMembership.mockResolvedValue({ playerId: null, isOrganizer: false, isAdmin: true, via: 'platform' })
+    server.myMembership.mockResolvedValue({ playerId: null, role: 'platform', isOrganizer: false, isAdmin: false, via: 'platform', protected: true, unlockedUntil: null })
     const load = serverLoads('En vivo del servidor')
     open()
     await screen.findByText('En vivo del servidor: server')
     expect(adoptQueuedWrites).not.toHaveBeenCalled()
     expect(rejectGoneRounds).not.toHaveBeenCalled()
+    expect(load).toHaveBeenCalledWith(id, { keepOnPhone: false })
+    expect(await readCached(slug)).toBeNull()
+  })
+
+  it('for the Polo admin with Comité rights (platform_can_write) as for the Comité, but the tournament is not kept on his phone', async () => {
+    server.ensureSession.mockResolvedValue({})
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue({ playerId: null, role: 'platform', isOrganizer: true, isAdmin: true, via: 'platform', protected: false, unlockedUntil: null })
+    const load = serverLoads('En vivo del servidor')
+    open()
+    await screen.findByText('En vivo del servidor: server')
+    expect(adoptQueuedWrites).toHaveBeenCalledWith(id)
+    await waitFor(() => expect(rejectGoneRounds).toHaveBeenCalledWith(id))
     expect(load).toHaveBeenCalledWith(id, { keepOnPhone: false })
     expect(await readCached(slug)).toBeNull()
   })

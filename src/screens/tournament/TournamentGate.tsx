@@ -211,8 +211,8 @@ export function TournamentGate() {
         await load(lookup.id, { keepOnPhone: !platform })
         if (stale()) return
         // The boards as a confirmed member reads them: a hole of a day the Comité deleted can never go out (V2).
-        if ((m.playerId || m.isOrganizer) && useTournament.getState().source === 'server') await rejectGoneRounds(lookup.id).catch(() => 0)
-        if (stale()) return
+        // Not waited for: it asks the server again before it rejects anything (NEW-1), and publishes what it moved.
+        if ((m.playerId || m.isOrganizer) && useTournament.getState().source === 'server') void rejectGoneRounds(lookup.id).catch(() => 0)
         refreshOutboxCounters()
         // The boards came: the asking is over. They didn't: ask again soon.
         if (useTournament.getState().source === 'server') failures.current = 0

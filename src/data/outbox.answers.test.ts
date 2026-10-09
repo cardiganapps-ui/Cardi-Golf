@@ -179,14 +179,15 @@ describe('with no IndexedDB, the queue in memory', () => {
 })
 
 describe('«Guardar el mío»', () => {
-  it('over a row that is gone, it goes as a phone that saw none; a conflict already settled does nothing', async () => {
+  it('over a row that is gone, it goes as a phone that saw none, with the whole hole it saw; a conflict already settled does nothing', async () => {
     answering(() => ({ status: 'conflict', rows: [], conflicts: [{ player_id: 'p2', fields: ['strokes'], server: null }], rejected: [], unchanged: [] }))
     await hole(4, [{ player_id: 'p2', fields: { strokes: 5 }, base: { strokes: 4, putts: 2, picked_up: false } }])
     await flush()
     const [c] = useOutbox.getState().conflicts
     setOutboxBlocked(true)
     await sendMineAgain(c!.key, 'p1')
-    expect(_outboxTest.queue().map((x) => x.kind === 'hole' && x.payload.entries)).toEqual([[{ player_id: 'p2', fields: { strokes: 5 }, base: {} }]])
+    // The putts only its base carried go too: the row they were on is gone (round 3).
+    expect(_outboxTest.queue().map((x) => x.kind === 'hole' && x.payload.entries)).toEqual([[{ player_id: 'p2', fields: { strokes: 5, putts: 2, picked_up: false }, base: {} }]])
     expect(useOutbox.getState().conflicts).toEqual([])
     await sendMineAgain(c!.key, 'p1')
     expect(_outboxTest.queue()).toHaveLength(1)

@@ -256,6 +256,8 @@ let rejectedAll: RejectedItem[] = []
 let conflictsAll: ConflictItem[] = []
 /** The flush in progress, if any. */
 let running: Promise<void> | null = null
+/** Keys of the writes this tab's flush is pushing right now: the server may be storing them. */
+const inFlight = new Set<string>()
 let timer: ReturnType<typeof setTimeout> | null = null
 
 function activeTournamentId(): string | null {
@@ -296,14 +298,19 @@ function canPush(item: OutboxItem): boolean {
  * hole that waits (held for the PIN, or saved before the session was
  * confirmed). It was typed over that one: sent first, it would meet the older
  * value as someone else's, and the older one, sent after it, would go over
- * the correction (V1).
+ * the correction (V1). An older build's capture of one of its players on that
+ * hole (a `score` item) that waits holds it back the same way (NEW-4).
  */
 function sendable(x: OutboxItem): boolean {
   if (!canPush(x)) return false
   if (x.kind !== 'hole') return true
-  return !queue.some(
-    (y) => y !== x && y.kind === 'hole' && y.seq < x.seq && !canPush(y) && y.tournamentId === x.tournamentId && y.payload.round_id === x.payload.round_id && y.payload.hole === x.payload.hole,
-  )
+  const p = x.payload
+  return !queue.some((y) => {
+    if (y === x || y.seq >= x.seq || canPush(y) || y.tournamentId !== x.tournamentId) return false
+    if (y.kind === 'hole') return y.payload.round_id === p.round_id && y.payload.hole === p.hole
+    if (y.kind === 'score') return y.payload.round_id === p.round_id && y.payload.hole === p.hole && p.entries.some((e) => e.player_id === y.payload.player_id)
+    return false
+  })
 }
 
 /**
@@ -446,19 +453,53 @@ export async function rejectGoneTournament(slug: string, tournamentId: string | 
  * a hole whose round is not among their rounds moves to the rejected list,
  * unless it was queued after that fetch set out (a round created since, which
  * the fetch could not have seen). Returns how many moved.
+ *
+ * The boards alone never decide it: their rounds and their tournament are
+ * separate reads, and a device released between the two (the Comité's «No
+ * soy yo», another tab's «Cambiar de jugador») gets the tournament and, under
+ * RLS, no rounds at all (NEW-1). So the server is asked again, now, with the
+ * session: a round is gone only if it is still missing while the tournament
+ * itself reads, in a request sent after the rounds'. Any doubt (an error, no
+ * session, no answer) rejects nothing, and neither does a hole in flight or
+ * one replaced meanwhile.
  */
 export async function rejectGoneRounds(tournamentId: string): Promise<number> {
   const since = serverReadSince(tournamentId)
   const rounds = useTournament.getState().data?.base.rounds
   if (since == null || !rounds) return 0
   const known = new Set(rounds.map((r) => r.id))
-  const gone = queue.filter((x) => x.kind === 'hole' && x.tournamentId === tournamentId && !known.has(x.payload.round_id) && x.seq / 1000 < since)
-  for (const it of gone) await reject(it, t.sync.errRoundGone)
-  if (gone.length) {
+  const candidates = queue.filter((x): x is HoleItem => x.kind === 'hole' && x.tournamentId === tournamentId && !known.has(x.payload.round_id) && x.seq / 1000 < since)
+  if (!candidates.length) return 0
+  // No signal: nothing to ask, so nothing is decided (the next adopt or load looks again).
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 0
+  let still: Set<string>
+  try {
+    const sb = supabase()
+    const auth = `Bearer ${await sessionToken(sb)}`
+    const ids = [...new Set(candidates.map((x) => x.payload.round_id))]
+    // One try each (no client retries): adopting waits for this look, and a doubt rejects nothing anyway.
+    const r = await sb.from('rounds').select('id').in('id', ids).setHeader('Authorization', auth).retry(false)
+    if (r.error || !Array.isArray(r.data)) return 0
+    // Sent after the rounds' answer: a device that lost the tournament in between reads nothing here.
+    const tr = await sb.from('tournaments').select('id').eq('id', tournamentId).setHeader('Authorization', auth).retry(false).single()
+    if (tr.error || !tr.data) return 0
+    still = new Set((r.data as Array<{ id: string }>).map((x) => x.id))
+  } catch {
+    return 0
+  }
+  // Still the version that was read, and not on its way to the server (the flush may have taken it meanwhile).
+  const free = (x: HoleItem) => isCurrent(x) && !inFlight.has(x.key)
+  let moved = 0
+  for (const it of candidates) {
+    if (still.has(it.payload.round_id) || !free(it)) continue
+    await reject(it, t.sync.errRoundGone)
+    moved++
+  }
+  if (moved) {
     publish()
     announce()
   }
-  return gone.length
+  return moved
 }
 /** Anything still to push, for any tournament: signing out waits for it. */
 export function hasUnsentWrites(): boolean {
@@ -567,10 +608,13 @@ function rowFields(row: Row): HoleFields {
 /**
  * The row holds exactly what the Tarjeta saves for a player nobody touched,
  * and a phone put it there: a Comité correction (it carries its reason) is a
- * claim, whatever its value.
+ * claim, whatever its value, and so is a row nobody's player wrote (the
+ * Comité's own direct write, by an organizer who plays nobody or the Polo
+ * admin, leaves `entered_by` null and no reason: NEW-2). A phone's untouched
+ * default always names the player whose phone saved it.
  */
 function isDefault(row: Row, dflt: HoleFields | undefined): boolean {
-  if (!dflt || row.reason != null) return false
+  if (!dflt || row.reason != null || row.entered_by == null) return false
   const r = rowFields(row)
   const d = baseRow(dflt)
   return r.strokes === d.strokes && r.putts === d.putts && r.picked_up === d.picked_up
@@ -621,12 +665,16 @@ export async function keepTheirs(key: string) {
 /**
  * Send this phone's value again, over the row that stands now (a new
  * mutation, whose base is the server's row): the player saw it and chose his.
+ * With no row standing any more (deleted), the whole hole the player saw goes
+ * as his: its fields over what it saw, every field, so a value only the base
+ * carried (his putts) is not lost with the row.
  */
 export async function sendMineAgain(key: string, enteredBy: string | null) {
   const c = conflictsAll.find((x) => x.key === key)
   if (!c) return
   const base: HoleFields = c.server ? rowFields(c.server) : {}
-  await enqueueHole(c.tournamentId, { round_id: c.round_id, hole: c.hole, entered_by: enteredBy, entries: [{ player_id: c.player_id, fields: c.fields, base }] })
+  const fields: HoleFields = c.server ? c.fields : applyFields(baseRow(c.base), c.fields)
+  await enqueueHole(c.tournamentId, { round_id: c.round_id, hole: c.hole, entered_by: enteredBy, entries: [{ player_id: c.player_id, fields, base }] })
 }
 
 /** Apply pending writes on top of the server's rows, for the screens (the store keeps its own rows apart). */
@@ -903,6 +951,7 @@ export const _outboxTest = {
     rejectedAll = []
     conflictsAll = []
     running = null
+    inFlight.clear()
     blocked = false
     persistAsked = false
     useOutbox.setState({ persistent: null })
@@ -1227,6 +1276,7 @@ async function runFlush(): Promise<boolean> {
       const since = liveSeq()
       const sentAt = liveClock()
       let sending = item
+      inFlight.add(item.key)
       try {
         sending = await markSent(item)
         tried.add(sending.seq)
@@ -1283,6 +1333,8 @@ async function runFlush(): Promise<boolean> {
           schedule(Math.min(30000, 1000 * 2 ** Math.min(sending.attempts + 1, 5)))
           break
         }
+      } finally {
+        inFlight.delete(item.key)
       }
     }
   } finally {
