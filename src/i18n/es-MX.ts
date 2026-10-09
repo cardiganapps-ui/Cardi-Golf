@@ -1716,15 +1716,19 @@ export const t = {
       sendCopied: 'Copiado: pégalo en el chat del Comité.',
       /** The first line of what «Mandar al Comité» sends; one line per capture follows. */
       sendHeader: (tournament: string, who: string | null) => (who ? `${tournament}: esto no se subió desde el teléfono de ${who}.` : `${tournament}: esto no se subió desde este teléfono.`),
-      /** A hole save_hole refused and kept for the Comité (0026): the Comité sees it in «Pendientes de revisar». */
-      leftForComite: (hole: number) => `Tu hoyo ${hole} quedó para el Comité: ya lo ve en su lista de pendientes.`,
+      /**
+       * A hole save_hole refused and kept for the Comité (0026, 0028): the Comité sees it in «Pendientes de revisar».
+       * `who` null: the phone's own player's.
+       */
+      leftForComite: (hole: number, who: string | null) =>
+        who ? `El hoyo ${hole} de ${who} quedó para el Comité: ya lo ve en su lista de pendientes.` : `Tu hoyo ${hole} quedó para el Comité: ya lo ve en su lista de pendientes.`,
     },
     /** «Pendientes de revisar»: holes the server kept for the Comité (REL-08, 0028). */
     serverInbox: {
       title: 'Pendientes de revisar',
-      hint: 'Hoyos que el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o chocaron con lo que otro teléfono ya había guardado. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial.',
+      hint: 'Hoyos que alguien capturó y el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o con valores imposibles. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial. Cuando dos teléfonos guardan el mismo hoyo, lo resuelve el teléfono, no esta lista.',
       none: 'Nada por revisar: el servidor tomó todo lo que mandaron los teléfonos.',
-      unavailable: 'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo.',
+      unavailable: 'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo; no detiene el cierre del torneo.',
       retry: 'Volver a cargar',
       /** «Beto, día 1, hoyo 14». */
       where: (name: string, where: string) => `${name}, ${where}`,
@@ -1735,10 +1739,7 @@ export const t = {
         card_signed: 'La tarjeta ya estaba firmada.',
         not_in_group: 'Ese teléfono no jugaba en su grupo.',
         invalid: 'Los valores no eran válidos.',
-        conflict: 'Otro teléfono ya había guardado otro valor.',
       } as Record<string, string>,
-      /** A conflict: what stood on the server when the phone's value met it. */
-      conflictWith: (value: string) => `Otro teléfono ya había guardado ${value}.`,
       now: (value: string) => `En la tarjeta ahora: ${value}.`,
       nowEmpty: 'En la tarjeta ahora: sin captura.',
       wouldBe: (value: string) => `Si se aplica: ${value}.`,
@@ -2335,6 +2336,8 @@ export const t = {
     badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
     unsignedCards: (n: number) => `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
     rejectedWrites: (n: number) => `${n === 1 ? 'Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo' : `${n} hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos`} en Comité, sección Tarjetas, «Pendientes de revisar».`,
+    /** The server has no «Pendientes de revisar» yet (0028 not applied): nothing there can hold the close. */
+    rejectedUnavailable: 'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
     owed: (people: number, amount: string) => `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
   },
   feed: {

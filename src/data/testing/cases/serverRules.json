@@ -8579,7 +8579,8 @@
         "args": {
           "p_id": "w1",
           "p_action": "apply",
-          "p_reason": "  Lo confirmó en papel  "
+          "p_reason": "  Lo confirmó en papel  ",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -8624,7 +8625,7 @@
       ]
     },
     {
-      "name": "rejected_writes: applying a conflict writes only the fields the phone set, over the hole as it stands; the payload's ids are not read (0028)",
+      "name": "rejected_writes: a conflict is never applied by the Comité: refused, the hole as it stands (0028)",
       "as": "uid-org",
       "given": {
         "rejected_writes": [
@@ -8659,16 +8660,32 @@
         "args": {
           "p_id": "w2",
           "p_action": "apply",
-          "p_reason": "Dos confirma 6"
+          "p_reason": "Dos confirma 6",
+          "p_expect": {
+            "strokes": 4,
+            "putts": 2,
+            "picked_up": false
+          }
         }
       },
       "expect": {
-        "status": 200,
-        "answer": {
-          "status": "applied"
-        }
+        "status": 400,
+        "code": "22023"
       },
       "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w2"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
         {
           "table": "scores",
           "where": {
@@ -8678,21 +8695,11 @@
           },
           "rows": [
             {
-              "strokes": 6,
+              "strokes": 4,
               "putts": 2,
-              "picked_up": false,
-              "reason": "Dos confirma 6"
+              "picked_up": false
             }
           ]
-        },
-        {
-          "table": "scores",
-          "where": {
-            "round_id": "r1",
-            "player_id": "p1",
-            "hole": 9
-          },
-          "rows": []
         }
       ]
     },
@@ -8795,7 +8802,8 @@
         "args": {
           "p_id": "w4",
           "p_action": "apply",
-          "p_reason": "Era mío"
+          "p_reason": "Era mío",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -9031,7 +9039,8 @@
         "args": {
           "p_id": "w8",
           "p_action": "apply",
-          "p_reason": "   "
+          "p_reason": "   ",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -9106,7 +9115,8 @@
         "args": {
           "p_id": "w9",
           "p_action": "apply",
-          "p_reason": "Segunda vez"
+          "p_reason": "Segunda vez",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -9176,7 +9186,12 @@
         "args": {
           "p_id": "w10",
           "p_action": "apply",
-          "p_reason": "Levantó, firmada después"
+          "p_reason": "Levantó, firmada después",
+          "p_expect": {
+            "strokes": 4,
+            "putts": 2,
+            "picked_up": false
+          }
         }
       },
       "expect": {
@@ -9234,7 +9249,8 @@
         "args": {
           "p_id": "w11",
           "p_action": "apply",
-          "p_reason": "Jugó con el grupo 1"
+          "p_reason": "Jugó con el grupo 1",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -9291,7 +9307,8 @@
         "args": {
           "p_id": "w12",
           "p_action": "apply",
-          "p_reason": "Probar"
+          "p_reason": "Probar",
+          "p_expect": {}
         }
       },
       "expect": {
@@ -9322,6 +9339,1066 @@
           "rows": []
         }
       ]
+    },
+    {
+      "name": "rejected_writes: applying writes only the fields the phone set, over the hole as the Comité saw it; the payload's ids are not read (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w13",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "player_id": "p1",
+              "hole": 9,
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w13",
+          "p_action": "apply",
+          "p_reason": "Dos confirma 6",
+          "p_expect": {
+            "strokes": 4,
+            "putts": 2,
+            "picked_up": false
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "applied"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "putts": 2,
+              "picked_up": false,
+              "reason": "Dos confirma 6"
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p1",
+            "hole": 9
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: the hole changed since the Comité looked (a phone saved 3/3 after the preview of 5/2): refused, the 3/3 stands (0028)",
+      "as": "uid-org",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 4,
+            "strokes": 3,
+            "putts": 3,
+            "picked_up": false,
+            "entered_by": "p3"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w14",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 4,
+            "player_id": "p3",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "putts": 1
+              }
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w14",
+          "p_action": "apply",
+          "p_reason": "Según la vista",
+          "p_expect": {
+            "strokes": 5,
+            "putts": 2,
+            "picked_up": false
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w14"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p3",
+            "hole": 4
+          },
+          "rows": [
+            {
+              "strokes": 3,
+              "putts": 3,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: an empty hole seen, a score there now: refused (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w15",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "putts": 1
+              }
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w15",
+          "p_action": "apply",
+          "p_reason": "Según la vista",
+          "p_expect": {}
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w15"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "putts": 2,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: applying without saying what the card showed is refused (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w16",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w16",
+          "p_action": "apply",
+          "p_reason": "Dos confirma 6"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w16"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4,
+              "putts": 2,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: an untouched default (auto) is nobody's capture: never applied (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w17",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 5,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w17",
+          "p_action": "apply",
+          "p_reason": "Era el par",
+          "p_expect": {}
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w17"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 5
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: nothing is applied to a cancelled day (0028)",
+      "as": "uid-org",
+      "given": {
+        "rounds": [
+          {
+            "id": "r3",
+            "tournament_id": "t1",
+            "number": 3,
+            "status": "cancelled"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w18",
+            "tournament_id": "t1",
+            "round_id": "r3",
+            "hole": 2,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 5
+              }
+            },
+            "reason": "round_not_live",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w18",
+          "p_action": "apply",
+          "p_reason": "Llovió",
+          "p_expect": {}
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w18"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r3",
+            "player_id": "p2",
+            "hole": 2
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: a row of a cancelled day can still be dismissed (0028)",
+      "as": "uid-org",
+      "given": {
+        "rounds": [
+          {
+            "id": "r3",
+            "tournament_id": "t1",
+            "number": 3,
+            "status": "cancelled"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w19",
+            "tournament_id": "t1",
+            "round_id": "r3",
+            "hole": 2,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 5
+              }
+            },
+            "reason": "round_not_live",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w19",
+          "p_action": "dismiss",
+          "p_reason": "Llovió"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "dismissed"
+        }
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w19"
+          },
+          "rows": [
+            {
+              "status": "dismissed",
+              "resolved_by": "uid-org",
+              "resolution_note": "Llovió"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: a reason of three tabs is blank: refused (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w20",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w20",
+          "p_action": "dismiss",
+          "p_reason": "\t\t\t"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w20"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: two golfers are two characters, too short a reason (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w21",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w21",
+          "p_action": "dismiss",
+          "p_reason": "🏌🏌"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w21"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: a reason is trimmed of tabs and newlines as well as spaces (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w22",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w22",
+          "p_action": "dismiss",
+          "p_reason": "\n\t Lo vio el Comité \t\n"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "dismissed"
+        }
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w22"
+          },
+          "rows": [
+            {
+              "status": "dismissed",
+              "resolved_by": "uid-org",
+              "resolution_note": "Lo vio el Comité"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: a no-break space is not whitespace to the database: kept, and counted (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w25",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w25",
+          "p_action": "dismiss",
+          "p_reason": " ab"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "dismissed"
+        }
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w25"
+          },
+          "rows": [
+            {
+              "status": "dismissed",
+              "resolved_by": "uid-org",
+              "resolution_note": " ab"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: strokes with a field the table does not have beside them: refused, nothing written (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w23",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 6,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "gross": 1
+              }
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w23",
+          "p_action": "apply",
+          "p_reason": "Probar",
+          "p_expect": {}
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023"
+      },
+      "then": [
+        {
+          "table": "rejected_writes",
+          "where": {
+            "id": "w23"
+          },
+          "rows": [
+            {
+              "status": "open",
+              "resolved_by": null,
+              "resolution_note": null
+            }
+          ]
+        },
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p2",
+            "hole": 6
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "rejected_writes: strokes over a pick-up are a hole played, the putts that stood kept (0028)",
+      "as": "uid-org",
+      "given": {
+        "scores": [
+          {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 7,
+            "strokes": null,
+            "putts": 1,
+            "picked_up": true,
+            "entered_by": "p4"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w24",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 7,
+            "player_id": "p4",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 5
+              }
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "resolve_rejected_write",
+        "args": {
+          "p_id": "w24",
+          "p_action": "apply",
+          "p_reason": "Sí lo terminó",
+          "p_expect": {
+            "strokes": null,
+            "putts": 1,
+            "picked_up": true
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "applied"
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r1",
+            "player_id": "p4",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "strokes": 5,
+              "putts": 1,
+              "picked_up": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rejected_inbox: the Comité reads the refusals a person typed, not the conflicts or the untouched defaults, oldest first (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w30",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:02:00Z"
+          },
+          {
+            "id": "w31",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {},
+              "server": {
+                "strokes": 4
+              }
+            },
+            "reason": "conflict",
+            "status": "open",
+            "created_at": "2027-04-09T15:00:00Z"
+          },
+          {
+            "id": "w32",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:00:00Z"
+          },
+          {
+            "id": "w33",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "card_signed",
+            "status": "open",
+            "created_at": "2027-04-09T15:01:00Z"
+          },
+          {
+            "id": "w34",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "invalid",
+            "status": "dismissed",
+            "created_at": "2027-04-09T15:00:00Z"
+          },
+          {
+            "id": "w35",
+            "tournament_id": "t2",
+            "round_id": "r9",
+            "hole": 1,
+            "player_id": "q1",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "invalid",
+            "status": "open",
+            "created_at": "2027-04-09T15:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "rejected_inbox",
+        "args": {
+          "p_tournament_id": "t1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": [
+          {
+            "id": "w33",
+            "reason": "card_signed",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1"
+          },
+          {
+            "id": "w30",
+            "reason": "round_not_live"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rejected_inbox: a player of the tournament may not read it (0028)",
+      "as": "uid-p1",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w36",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "rejected_inbox",
+        "args": {
+          "p_tournament_id": "t1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "rejected_inbox: the publishable key alone may not call it (0028)",
+      "as": "anon",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w37",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 1,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "rejected_inbox",
+        "args": {
+          "p_tournament_id": "t1"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
     }
   ]
 }

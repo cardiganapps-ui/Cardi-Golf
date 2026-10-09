@@ -1,21 +1,24 @@
 /**
  * The Comité's inbox of holes the server did not take (REL-08): save_hole
  * (0026) keeps every refusal and every conflict in `rejected_writes`, with
- * what the phone sent; the Comité applies one or dismisses it with a reason
- * (`resolve_rejected_write`, 0028).
+ * what the phone sent. The Comité is asked only about a refusal of a value a
+ * person typed (`rejected_inbox`, 0028): a conflict is the phone's to settle
+ * (it sends its value again over an untouched default, or the player picks
+ * «Dejar el suyo» or «Guardar el mío»), and the par and 2 putts the Tarjeta
+ * fills in for a player nobody touched (`auto`) are nobody's capture. The
+ * Comité applies one, against the hole it saw, or dismisses it, with a
+ * reason (`resolve_rejected_write`, 0028).
  *
  * Read on demand, not over the channel: the Comité's screens fetch the open
- * rows when they open and after each answer. A database without the table
- * (or a column this reads) says so (`unavailable`) instead of failing the
- * screen, as the snapshot does for money_adjustments.
+ * rows when they open and after each answer. A database without the inbox
+ * yet says so (`unavailable`) instead of failing the screen, and nothing
+ * waits on it.
  */
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
-import { resolveRejectedWrite } from './api'
+import { rejectedInboxRows, resolveRejectedWrite, type SeenHole } from './api'
 import type { Row } from './mappers'
-import { fetchAll } from './paged'
 
-export type RejectedReason = 'round_not_live' | 'card_signed' | 'not_in_group' | 'invalid' | 'conflict'
+export type RejectedReason = 'round_not_live' | 'card_signed' | 'not_in_group' | 'invalid'
 
 /** One open row: what a phone sent for one player's hole, and why the server kept it. */
 export interface InboxItem {
@@ -30,8 +33,6 @@ export interface InboxItem {
   fields: unknown
   /** The row the phone saw (`payload.base`); undefined when it sent none. */
   base: unknown
-  /** A conflict's row on the server when it met it. */
-  server: Row | null
   createdAt: string
 }
 
@@ -41,10 +42,6 @@ export interface HoleValue {
   putts: number | null
   pickedUp: boolean
 }
-
-const COLUMNS = 'id,round_id,hole,player_id,writer_player_id,reason,payload,created_at'
-/** The table (PGRST205, 42P01) or a column (42703) this reads is not on the database yet. */
-const MISSING = new Set(['PGRST205', '42P01', '42703'])
 
 function toItem(r: Row): InboxItem {
   const payload = (r.payload && typeof r.payload === 'object' ? r.payload : {}) as Row
@@ -57,20 +54,14 @@ function toItem(r: Row): InboxItem {
     reason: r.reason as RejectedReason,
     fields: payload.fields,
     base: 'base' in payload ? payload.base : undefined,
-    server: payload.server && typeof payload.server === 'object' ? (payload.server as Row) : null,
     createdAt: String(r.created_at ?? ''),
   }
 }
 
-/** The tournament's open rows, oldest first; null when the database has no inbox yet. */
+/** The holes the Comité decides, oldest first; null when the database has no inbox yet. */
 export async function listOpenRejected(tournamentId: string): Promise<InboxItem[] | null> {
-  try {
-    const rows = await fetchAll<Row>((from, to) => supabase().from('rejected_writes').select(COLUMNS).eq('tournament_id', tournamentId).eq('status', 'open').order('created_at').order('id').range(from, to))
-    return rows.map(toItem)
-  } catch (e) {
-    if (MISSING.has((e as { code?: string } | null)?.code ?? '')) return null
-    throw e
-  }
+  const rows = await rejectedInboxRows(tournamentId)
+  return rows ? rows.map(toItem) : null
 }
 
 const KEYS = ['strokes', 'putts', 'picked_up']
@@ -104,6 +95,15 @@ export function sentValue(item: InboxItem, current: HoleValue | null): HoleValue
 
 export const sameValue = (a: HoleValue | null, b: HoleValue | null) => !!a && !!b && a.strokes === b.strokes && a.putts === b.putts && a.pickedUp === b.pickedUp
 
+/** The hole as the Comité's screen shows it, as `resolve_rejected_write` checks it: its three values, `{}` for none. */
+export const seenHole = (current: HoleValue | null): SeenHole => (current ? { strokes: current.strokes, putts: current.putts, picked_up: current.pickedUp } : {})
+
+const refusal = (e: unknown, text: RegExp) => (e as { code?: unknown } | null)?.code === '22023' && text.test(e instanceof Error ? e.message : '')
+/** The server's refusal of an apply whose hole changed since the Comité looked (0028): the boards are read again. */
+export const isStaleHole = (e: unknown) => refusal(e, /^El hoyo cambió/)
+/** Another Comité phone answered it first (0028): for a bulk dismissal, that one is done. */
+export const isAlreadyResolved = (e: unknown) => refusal(e, /^Esa captura ya estaba resuelta/)
+
 interface InboxState {
   tournamentId: string | null
   items: InboxItem[]
@@ -134,17 +134,48 @@ export async function loadRejectedInbox(tournamentId: string): Promise<void> {
   }
 }
 
+/** The rows the server answered for leave the list at once (the read after says the rest). */
+function drop(tournamentId: string, ids: string[]) {
+  const s = useRejectedInbox.getState()
+  if (s.tournamentId === tournamentId && ids.length) useRejectedInbox.setState({ items: s.items.filter((x) => !ids.includes(x.id)) })
+}
+
 /**
  * Apply or dismiss one row, then read the list again. A row the server took
  * leaves the list at once; one it refused stays (and an answer from another
- * Comité phone first shows as it is, after the read).
+ * Comité phone first shows as it is, after the read). To apply, `seen` is
+ * the hole as the screen showed it.
  */
-export async function resolveInboxItem(tournamentId: string, id: string, action: 'apply' | 'dismiss', reason: string): Promise<void> {
+export async function resolveInboxItem(tournamentId: string, id: string, action: 'apply' | 'dismiss', reason: string, seen?: SeenHole): Promise<void> {
   try {
-    await resolveRejectedWrite(id, action, reason)
-    const s = useRejectedInbox.getState()
-    if (s.tournamentId === tournamentId) useRejectedInbox.setState({ items: s.items.filter((x) => x.id !== id) })
+    await resolveRejectedWrite(id, action, reason, seen)
+    drop(tournamentId, [id])
   } finally {
     await loadRejectedInbox(tournamentId)
   }
+}
+
+/**
+ * Dismiss each row with one reason, the list read once at the end. A row
+ * another Comité phone resolved meanwhile is done too. Answers how many went
+ * and the first refusal of the rest (null: all of them went).
+ */
+export async function dismissInboxItems(tournamentId: string, ids: string[], reason: string): Promise<{ done: number; failed: unknown }> {
+  let failed: unknown = null
+  const done: string[] = []
+  try {
+    for (const id of ids) {
+      try {
+        await resolveRejectedWrite(id, 'dismiss', reason)
+        done.push(id)
+      } catch (e) {
+        if (isAlreadyResolved(e)) done.push(id)
+        else failed ??= e
+      }
+    }
+  } finally {
+    drop(tournamentId, done)
+    await loadRejectedInbox(tournamentId)
+  }
+  return { done: done.length, failed }
 }

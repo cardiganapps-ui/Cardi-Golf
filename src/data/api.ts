@@ -588,20 +588,50 @@ export async function voidAdjustment(id: string, reason: string) {
   await rpc('void_adjustment', { p_id: id, p_reason: reason })
 }
 
-/** Writes the server refused or found in conflict that nobody has dealt with yet (0026; the Comité reads its tournament's). */
-export async function openRejectedWrites(tournamentId: string): Promise<number> {
-  const { count, error } = await supabase().from('rejected_writes').select('id', { count: 'exact', head: true }).eq('tournament_id', tournamentId).eq('status', 'open')
-  if (error) throw ApiError.from(error)
-  return count ?? 0
+/** The function or table this reads is not on the database yet (0028 not applied): PGRST202, 42883; PGRST205, 42P01. */
+const INBOX_MISSING = new Set(['PGRST202', '42883', 'PGRST205', '42P01'])
+
+/**
+ * The holes the Comité decides (0028 `rejected_inbox`, REL-08): the
+ * tournament's open `rejected_writes` that are a refusal of a value a person
+ * typed. Never a conflict (the phone that met it settles it) nor an entry
+ * the phone sent as an untouched default (`auto`): the server leaves them
+ * out, and so does this, for a server that would not. Oldest first. Null
+ * when the database has no inbox yet, so nothing may wait on it.
+ */
+export async function rejectedInboxRows(tournamentId: string): Promise<Row[] | null> {
+  const { data, error } = await supabase().rpc('rejected_inbox', { p_tournament_id: tournamentId })
+  if (error) {
+    if (INBOX_MISSING.has(error.code ?? '')) return null
+    throw ApiError.from(error)
+  }
+  return (Array.isArray(data) ? (data as Row[]) : []).filter(rejectedForComite)
+}
+/** A row is the Comité's to decide: not a conflict, not an untouched default (0028). */
+export function rejectedForComite(r: Row): boolean {
+  const payload = r.payload && typeof r.payload === 'object' ? (r.payload as Row) : {}
+  return r.reason !== 'conflict' && payload.auto !== true
+}
+/** How many holes wait for the Comité; null when the database has no inbox yet («Cerrar torneo» does not wait on it then). */
+export async function openRejectedWrites(tournamentId: string): Promise<number | null> {
+  const rows = await rejectedInboxRows(tournamentId)
+  return rows ? rows.length : null
 }
 
+/** The hole as the Comité saw it before applying (0028 `p_expect`): its three values, `{}` for an empty hole. */
+export interface SeenHole {
+  strokes?: number | null
+  putts?: number | null
+  picked_up?: boolean
+}
 /**
  * The Comité's answer to one of them (0028, REL-08): `apply` writes the
  * fields the phone set over the hole as it stands (as admin_save_score
- * does, the reason on the score); `dismiss` leaves the card. Online only.
+ * does, the reason on the score), and only if the hole is still `seen`
+ * (else 22023, «El hoyo cambió…»); `dismiss` leaves the card. Online only.
  */
-export async function resolveRejectedWrite(id: string, action: 'apply' | 'dismiss', reason: string) {
-  await rpc('resolve_rejected_write', { p_id: id, p_action: action, p_reason: reason })
+export async function resolveRejectedWrite(id: string, action: 'apply' | 'dismiss', reason: string, seen?: SeenHole) {
+  await rpc('resolve_rejected_write', { p_id: id, p_action: action, p_reason: reason, ...(action === 'apply' ? { p_expect: seen ?? null } : {}) })
 }
 
 // ---------------------------------------------------------------------------

@@ -180,16 +180,18 @@ function auction12(): Fixture {
 }
 
 /**
- * What save_hole kept for the Comité on day 2 in juego: a hole sent after
- * day 1 closed, a conflict with another phone, two the card already matches
- * (a phone that sent them again), and putts over a hole nobody played.
+ * What the Comité is asked about on day 2 in juego (0028 `rejected_inbox`:
+ * refusals of a value a person typed; a conflict or an untouched default
+ * never reaches it): a hole sent after day 1 closed, one sent onto a signed
+ * card, two the card already matches (the phone sent them again once it
+ * could), and putts over a hole nobody played.
  */
 function inboxOf(snap: Snapshot): InboxItem[] {
   const seen = (rid: string, pid: string, hole: number) => {
     const s = snap.scores.find((x) => x.roundId === rid && x.playerId === pid && x.hole === hole)
     return s ? { strokes: s.strokes, putts: s.putts, picked_up: s.pickedUp } : {}
   }
-  const item = (n: number, roundId: string, hole: number, playerId: string, writerPlayerId: string, reason: InboxItem['reason'], fields: Record<string, unknown>, extra: Partial<InboxItem> = {}): InboxItem => ({
+  const item = (n: number, roundId: string, hole: number, playerId: string, writerPlayerId: string, reason: InboxItem['reason'], fields: Record<string, unknown>): InboxItem => ({
     id: `fx-rw-${n}`,
     roundId,
     hole,
@@ -198,14 +200,12 @@ function inboxOf(snap: Snapshot): InboxItem[] {
     reason,
     fields,
     base: {},
-    server: null,
     createdAt: `2027-04-10T16:0${n}:00Z`,
-    ...extra,
   })
   return [
     item(1, 'r1', 16, 'p2', 'p1', 'round_not_live', { strokes: 9, putts: 3, picked_up: false }),
-    item(2, 'r2', 4, 'p4', 'p1', 'conflict', { strokes: 3 }, { server: { ...seen('r2', 'p4', 4), entered_by: 'p10' } }),
-    item(3, 'r2', 2, 'p5', 'p8', 'conflict', seen('r2', 'p5', 2), { server: seen('r2', 'p5', 2) }),
+    item(2, 'r2', 4, 'p4', 'p1', 'card_signed', { strokes: 3 }),
+    item(3, 'r2', 2, 'p5', 'p8', 'not_in_group', seen('r2', 'p5', 2)),
     item(4, 'r2', 3, 'p6', 'p9', 'not_in_group', seen('r2', 'p6', 3)),
     item(5, 'r2', 18, 'p1', 'p4', 'invalid', { putts: 3 }),
   ]

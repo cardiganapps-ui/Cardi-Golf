@@ -87,7 +87,11 @@ export interface HoleEntry {
    * entry without it is written blind (0026).
    */
   base: HoleFields
-  /** A default nobody touched (an all-par hole): a conflict on it takes the server's value without asking. */
+  /**
+   * A default nobody touched (an all-par hole): a conflict on it takes the
+   * server's value without asking. Sent with the entry: save_hole keeps it in
+   * what it records, and the Comité's inbox leaves it out (0028).
+   */
   auto?: boolean
   /**
    * What the Tarjeta saves for a player nobody touched on this hole (par for
@@ -177,7 +181,7 @@ export interface RejectedItem {
   payload: OutboxItem['payload']
   message: string
   at: number
-  /** save_hole refused it and kept it in rejected_writes: the Comité sees it in «Pendientes de revisar» (REL-08). */
+  /** save_hole refused a value a person typed and kept it: the Comité sees it in «Pendientes de revisar» (REL-08, 0028). */
   atServer?: boolean
 }
 
@@ -1033,8 +1037,14 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'hole') {
     const p = item.payload
-    // Every entry names its base: a key left out is a blind write on the server (0026).
-    const call = { round_id: p.round_id, hole: p.hole, mutation_id: p.mutation_id, entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {} })) }
+    // Every entry names its base: a key left out is a blind write on the server (0026). An untouched default says so
+    // (`auto`): save_hole keeps the entry as sent, and the Comité is never asked about a value nobody typed (0028).
+    const call = {
+      round_id: p.round_id,
+      hole: p.hole,
+      mutation_id: p.mutation_id,
+      entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {}, ...(e.auto ? { auto: true } : {}) })),
+    }
     const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
     if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
@@ -1133,8 +1143,8 @@ async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: L
   }
   const refusals = (ans.rejected ?? []).flatMap((r) => {
     const e = entry(r.player_id)
-    // The answer's refusals are the ones save_hole kept for the Comité (0026).
-    return e ? [holeRefusal(item, e, refusalText(r.reason), true)] : []
+    // The answer's refusals are the ones save_hole kept (0026); the Comité is asked about those a person typed (0028).
+    return e ? [holeRefusal(item, e, refusalText(r.reason), !e.auto)] : []
   })
   if (isCurrent(item)) {
     queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))

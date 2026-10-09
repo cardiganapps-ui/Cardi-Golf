@@ -9,6 +9,7 @@ import { t } from '../i18n/es-MX'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Field, Input } from './primitives'
 import { humanError } from '../lib/humanError'
+import { reasonLength, trimReason } from '../lib/reason'
 
 const MIN = 3
 
@@ -41,7 +42,9 @@ export function ReasonSheet({
       setError(null)
     }
   }, [open, initialReason])
-  const ok = reason.trim().length >= MIN
+  // As the server reads it: trimmed of every whitespace, counted in characters (two golfers are two, not four).
+  const why = trimReason(reason)
+  const ok = reasonLength(why) >= MIN
   async function confirm() {
     if (!ok) {
       setError(t.platform.reasonPlaceholder)
@@ -49,7 +52,7 @@ export function ReasonSheet({
     }
     setBusy(true)
     try {
-      await onConfirm(reason.trim())
+      await onConfirm(why)
       onClose()
     } catch (e) {
       setError(humanError(e))

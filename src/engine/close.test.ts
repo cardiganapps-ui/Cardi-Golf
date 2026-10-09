@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './settings/presets'
 import type { TournamentSettings } from './settings/schema'
 import { fillRound, makeFirstTournament, makePlayer, makeRound, makeSnapshot, PAR_72, score } from './testing/fixtures'
 import type { Snapshot } from './types'
+import { t } from '../i18n/es-MX'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 const PARS = PAR_72.map(([p]) => p)
@@ -97,6 +98,13 @@ describe('«Cerrar torneo»', () => {
     expect(c.warnings).toEqual([])
     expect(closeCheck(clean(), S, { openRejected: 1 }).blockers[0]!.text).toBe('Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar».')
     expect(closeCheck(clean(), S, { openRejected: 0 }).ok).toBe(true)
+  })
+
+  it('a server without «Pendientes de revisar» yet (0028 not applied) does not hold the close: it says the list is not there', () => {
+    const c = closeCheck(clean(), S, { openRejected: null })
+    expect(c.ok).toBe(true)
+    expect(c.blockers).toEqual([])
+    expect(c.warnings).toEqual([t.closeGate.rejectedUnavailable])
   })
 
   it('every day rained out: Dinero lists the money the gate blocks on, and once assigned it closes', () => {

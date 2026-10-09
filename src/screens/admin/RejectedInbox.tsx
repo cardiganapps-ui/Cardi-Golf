@@ -1,11 +1,15 @@
 /**
- * «Pendientes de revisar» (REL-08): the holes the server kept for the
- * Comité instead of taking them (save_hole, 0026). Each row says whose hole,
- * what the phone sent and from whose phone, why the server did not take it,
- * what the card holds now and what applying it would leave. «Aplicar» and
- * «Descartar» both ask for a reason (resolve_rejected_write, 0028). A row the
- * card already matches (a phone that sent its value again, the Comité that
- * typed it in) only needs dismissing, and those go together in one tap.
+ * «Pendientes de revisar» (REL-08): the holes the server refused and kept
+ * for the Comité (save_hole, 0026) that a person typed (rejected_inbox,
+ * 0028: never a conflict, which the phone settles, nor an untouched
+ * default). Each row says whose hole, what the phone sent and from whose
+ * phone, why the server did not take it, what the card holds on the server
+ * now and what applying it would leave. «Aplicar» and «Descartar» both ask
+ * for a reason (resolve_rejected_write, 0028); «Aplicar» sends the hole as
+ * the row showed it, and a hole that changed since is refused and read
+ * again. A row the card already matches (the phone sent it again once the
+ * day reopened, the Comité typed it in) only needs dismissing, and those go
+ * together in one tap: the ones that match when the reason is confirmed.
  *
  * Online only, like every Comité correction. Read when the screen opens and
  * after each answer; another Comité phone's answers show on the next read.
@@ -14,8 +18,7 @@ import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/ui'
 import { ReasonSheet } from '../../components/ReasonSheet'
-import { resolveRejectedWrite } from '../../data/api'
-import { appliedValue, loadRejectedInbox, resolveInboxItem, sameValue, sentValue, useRejectedInbox, type HoleValue, type InboxItem } from '../../data/rejectedInbox'
+import { appliedValue, dismissInboxItems, isStaleHole, loadRejectedInbox, resolveInboxItem, sameValue, seenHole, sentValue, useRejectedInbox, type HoleValue, type InboxItem } from '../../data/rejectedInbox'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError, UserError } from '../../lib/humanError'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -24,7 +27,7 @@ import a from './Admin.module.css'
 const SI = t.admin.serverInbox
 const IB = t.admin.inbox
 
-type Ask = { kind: 'apply' | 'dismiss'; item: InboxItem } | { kind: 'matching'; items: InboxItem[] } | null
+type Ask = { kind: 'apply' | 'dismiss'; item: InboxItem } | { kind: 'matching' } | null
 
 export function RejectedInbox() {
   const { tournamentId } = useTournamentCtx()
@@ -32,7 +35,9 @@ export function RejectedInbox() {
   const reload = useTournament((s) => s.reload)
   const inbox = useRejectedInbox()
   const [ask, setAsk] = useState<Ask>(null)
-  const { snapshot } = data
+  // The players and days as the screens show them; the hole as the server holds it (`base`, without this phone's own
+  // pending writes), which is what an apply is checked against.
+  const { snapshot, base } = data
 
   useEffect(() => {
     void loadRejectedInbox(tournamentId)
@@ -49,35 +54,35 @@ export function RejectedInbox() {
   const value = (v: HoleValue) => IB.scoreValue(v.strokes, v.putts, v.pickedUp)
   // A few rows against the day's scores: read on each render, like the engine's own flags.
   const rows = items.map((it) => {
-    const s = snapshot.scores.find((x) => x.roundId === it.roundId && x.playerId === it.playerId && x.hole === it.hole)
+    const s = base.scores.find((x) => x.roundId === it.roundId && x.playerId === it.playerId && x.hole === it.hole)
     const current: HoleValue | null = s ? { strokes: s.strokes, putts: s.putts, pickedUp: s.pickedUp } : null
     const applied = appliedValue(it.fields, current)
     return { it, current, applied, sent: sentValue(it, current), matches: sameValue(applied, current) }
   })
   const matching = rows.filter((r) => r.matches).map((r) => r.it)
 
-  /** One row: applied, the boards read the hole again. */
-  async function resolve(item: InboxItem, action: 'apply' | 'dismiss', reason: string) {
-    await resolveInboxItem(tournamentId, item.id, action, reason)
+  /**
+   * One row. Applied, the boards read the hole again; a hole that changed
+   * since the row showed it is refused, and the boards are read again too, so
+   * the row shows what stands now before anyone applies it.
+   */
+  async function resolve(item: InboxItem, action: 'apply' | 'dismiss', reason: string, current: HoleValue | null) {
+    try {
+      await resolveInboxItem(tournamentId, item.id, action, reason, action === 'apply' ? seenHole(current) : undefined)
+    } catch (e) {
+      if (isStaleHole(e)) await reload()
+      throw e
+    }
     if (action === 'apply') await reload()
     toast(action === 'apply' ? SI.applied : SI.dismissed)
   }
-  /** Each matching row dismissed with one reason; the list is read once at the end. */
+  /** The rows that match the card when the reason is confirmed, each dismissed with it; one another phone resolved is done. */
   async function dismissAll(list: InboxItem[], reason: string) {
-    let done = 0
-    let failed: unknown = null
-    try {
-      for (const it of list) {
-        try {
-          await resolveRejectedWrite(it.id, 'dismiss', reason)
-          done++
-        } catch (e) {
-          failed ??= e
-        }
-      }
-    } finally {
-      await loadRejectedInbox(tournamentId)
-    }
+    const { done, failed } = await dismissInboxItems(
+      tournamentId,
+      list.map((x) => x.id),
+      reason,
+    )
     if (failed) throw done ? new UserError(SI.partly(done, list.length)) : failed
     toast(SI.dismissed)
   }
@@ -101,7 +106,7 @@ export function RejectedInbox() {
       )}
       {inbox.status === 'ready' && items.length === 0 && <span className={a.help}>{SI.none}</span>}
       {matching.length > 1 && (
-        <button className="btn btn--secondary btn--sm" type="button" onClick={() => setAsk({ kind: 'matching', items: matching })}>
+        <button className="btn btn--secondary btn--sm" type="button" onClick={() => setAsk({ kind: 'matching' })}>
           {SI.dismissMatching(matching.length)}
         </button>
       )}
@@ -115,8 +120,7 @@ export function RejectedInbox() {
                   {where(it)}
                 </span>
                 <span className={a.inboxSub}>
-                  {sent ? SI.sent(value(sent), name(it.writerPlayerId)) : SI.sentUnreadable}{' '}
-                  {it.reason === 'conflict' && it.server ? SI.conflictWith(IB.scoreValue((it.server.strokes as number | null) ?? null, (it.server.putts as number | null) ?? null, it.server.picked_up === true)) : (SI.why[it.reason] ?? SI.why.invalid)}
+                  {sent ? SI.sent(value(sent), name(it.writerPlayerId)) : SI.sentUnreadable} {SI.why[it.reason] ?? SI.why.invalid}
                 </span>
                 <span className={a.inboxSub}>
                   {current ? SI.now(value(current)) : SI.nowEmpty} {matches ? SI.matches : applied ? SI.wouldBe(value(applied)) : SI.cannotApply}
@@ -141,7 +145,7 @@ export function RejectedInbox() {
         title={ask?.kind === 'apply' ? SI.applyTitle : ask?.kind === 'dismiss' ? SI.dismissTitle : SI.dismissMatchingTitle}
         body={
           ask?.kind === 'matching'
-            ? SI.dismissMatchingBody(ask.items.length)
+            ? SI.dismissMatchingBody(matching.length)
             : ask && askRow
               ? ask.kind === 'apply' && askRow.applied
                 ? SI.applyBody(where(ask.item), value(askRow.applied))
@@ -152,8 +156,9 @@ export function RejectedInbox() {
         initialReason={ask?.kind === 'matching' || (askRow?.matches && ask?.kind === 'dismiss') ? SI.matchingReason : ''}
         onConfirm={async (reason) => {
           if (!ask) return
-          if (ask.kind === 'matching') await dismissAll(ask.items, reason)
-          else await resolve(ask.item, ask.kind, reason)
+          // The rows as they are now: one another phone resolved since the sheet opened is not sent again.
+          if (ask.kind === 'matching') await dismissAll(matching, reason)
+          else await resolve(ask.item, ask.kind, reason, askRow?.current ?? null)
         }}
         onClose={() => setAsk(null)}
       />

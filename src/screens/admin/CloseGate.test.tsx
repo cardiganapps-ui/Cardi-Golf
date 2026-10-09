@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const server = vi.hoisted(() => ({ rejected: 0, published: 0 }))
+const server = vi.hoisted(() => ({ rejected: 0 as number | null, published: 0 }))
 vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), openRejectedWrites: vi.fn(async () => server.rejected) }))
 vi.mock('../../data/publish', () => ({ publishFromStore: vi.fn(async () => void server.published++) }))
 
@@ -71,5 +71,15 @@ describe('«Publicar resultados» waits for the close (MONEY-05)', () => {
     expect(sheet.queryByRole('button', { name: t.admin.data.publishButton })).toBeNull()
     fireEvent.click(sheet.getByRole('button', { name: C.understood }))
     expect(server.published).toBe(0)
+  })
+
+  it('a server without «Pendientes de revisar» yet (0028 not applied): the list is not on it, the sheet says so beside the rest', async () => {
+    server.rejected = null
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: t.admin.data.publishButton }))
+    const sheet = within(await screen.findByRole('dialog', { name: C.title }))
+    expect(sheet.getByText(C.rejectedUnavailable)).toBeTruthy()
+    expect(sheet.getAllByRole('listitem').map((li) => li.textContent)).not.toContain(C.rejectedUnavailable)
+    expect(sheet.getAllByRole('listitem').some((li) => li.textContent?.includes('sin revisar'))).toBe(false)
   })
 })

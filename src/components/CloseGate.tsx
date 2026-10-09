@@ -2,8 +2,10 @@
  * «Cerrar torneo» (MONEY-05): before Terminado, publishing the results, or a
  * Ronda rápida's «Terminar y publicar», the Comité sees what is still open
  * and cannot go on until it is settled (`closeCheck`). What people still owe
- * is shown, not blocking. The check reads the open refused writes from the
- * server (0026), so it needs signal, like the action it guards.
+ * is shown, not blocking. The check reads the holes waiting in «Pendientes
+ * de revisar» from the server (0028 `rejected_inbox`), so it needs signal,
+ * like the action it guards; a server without that list yet does not hold
+ * the close on it (the sheet says the list is not available).
  *
  * Client-side only: the server does not refuse Terminado or a publish on its
  * own yet (a residual of the PR that brought this).

@@ -84,6 +84,7 @@
 import type { Row } from '../mappers'
 import { SNAPSHOT_KEYS } from '../snapshotTables'
 import { compareValues } from './rows'
+import { reasonLength, trimReason } from '../../lib/reason'
 
 /** Supabase's default max-rows for PostgREST: the server's cap, not the client's page size. */
 export const SERVER_MAX_ROWS = 1000
@@ -1118,6 +1119,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     }
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
     if (name === 'resolve_rejected_write') return resolveRejected(args, as)
+    if (name === 'rejected_inbox') return rejectedInbox(args, as)
     if (name === 'release_device') {
       // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
       server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)
@@ -1186,11 +1188,29 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return json(200, { assigned: entries.length })
   }
 
+  /** 0028: a row is the Comité's to decide when it is a refusal (not a conflict) of a value a person typed (not `auto`). */
+  const forComite = (w: Row) => w.reason !== 'conflict' && (w.payload as Row | null)?.auto !== true
+
+  /** 0028 `rejected_inbox(p_tournament_id)`: the Comité's open rows a person's value waits in, oldest first. */
+  function rejectedInbox(args: Record<string, unknown>, as: string): Response {
+    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function rejected_inbox' })
+    const tid = args.p_tournament_id
+    if (tid == null || !organizes(as, tid)) return json(403, { code: '42501', details: null, hint: null, message: 'Solo el Comité ve los pendientes de revisar' })
+    const rows = rowsOf('rejected_writes')
+      .filter((w) => w.tournament_id === tid && w.status === 'open' && forComite(w))
+      .sort((a, b) => compareValues(a.created_at, b.created_at) || compareValues(a.id, b.id))
+      .map((w) => ({ id: w.id, round_id: w.round_id, hole: w.hole, player_id: w.player_id, writer_player_id: w.writer_player_id ?? null, reason: w.reason, payload: structuredClone(w.payload), created_at: w.created_at ?? null }))
+    return json(200, rows)
+  }
+
   /**
-   * 0028 `resolve_rejected_write(p_id, p_action, p_reason)`, in the order it
-   * checks: the Comité (and nothing about a row it may not resolve), the
-   * action, an open row, the reason; then, to apply, the payload's fields
-   * over the score as it stands, written as admin_save_score writes it.
+   * 0028 `resolve_rejected_write(p_id, p_action, p_reason, p_expect)`, in the
+   * order it checks: the Comité (and nothing about a row it may not
+   * resolve), the action, an open row, the reason (trimmed of whitespace,
+   * counted in characters); then, to apply, a row that is the Comité's (not
+   * a conflict, not an untouched default), a day not cancelled, the
+   * payload's fields, what the Comité saw against the hole as it stands, and
+   * the fields over it, written as admin_save_score writes it.
    */
   function resolveRejected(args: Record<string, unknown>, as: string): Response {
     const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
@@ -1199,16 +1219,25 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (!w || !organizes(as, w.tournament_id)) return fail('42501', 'Solo el Comité puede resolver una captura rechazada')
     if (args.p_action !== 'apply' && args.p_action !== 'dismiss') return fail('22023', 'Una captura rechazada se aplica o se descarta')
     if (w.status !== 'open') return fail('22023', 'Esa captura ya estaba resuelta')
-    const why = typeof args.p_reason === 'string' ? args.p_reason.trim() : ''
-    if (why.length < 3) return fail('22023', 'Escribe el motivo, al menos 3 letras')
-    if (why.length > 200) return fail('22023', 'El motivo es muy largo: 200 letras como máximo')
+    const why = trimReason(typeof args.p_reason === 'string' ? args.p_reason : '')
+    if (reasonLength(why) < 3) return fail('22023', 'Escribe el motivo, al menos 3 letras')
+    if (reasonLength(why) > 200) return fail('22023', 'El motivo es muy largo: 200 letras como máximo')
     if (args.p_action === 'apply') {
+      if (w.reason === 'conflict') return fail('22023', 'Ese choque lo resolvió el teléfono que lo mandó; descártalo')
+      if (!forComite(w)) return fail('22023', 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo')
+      if (rowsOf('rounds').find((r) => r.id === w.round_id)?.status === 'cancelled') return fail('22023', 'Ese día está cancelado: no se le aplica nada; descártala o reabre el día')
       const f = (w.payload as Row | null)?.fields as Row | undefined
       const known = ['strokes', 'putts', 'picked_up']
       if (!f || typeof f !== 'object' || Array.isArray(f) || Object.keys(f).some((k) => !known.includes(k)) || !Object.keys(f).length) return fail('22023', 'Esa captura no trae golpes ni putts que aplicar; descártala')
       const numOrNull = (v: unknown) => v === null || typeof v === 'number'
       if (('strokes' in f && !numOrNull(f.strokes)) || ('putts' in f && !numOrNull(f.putts)) || ('picked_up' in f && typeof f.picked_up !== 'boolean')) return fail('22023', 'Los valores de esa captura no se entienden; descártala')
+      const expect = args.p_expect
+      if (!expect || typeof expect !== 'object' || Array.isArray(expect)) return fail('22023', 'Falta lo que viste en la tarjeta; vuelve a abrir la lista')
       const old = rowsOf('scores').find((r) => r.round_id === w.round_id && r.player_id === w.player_id && r.hole === w.hole)
+      // What the Comité saw and what stands, read the same way: a key left out, or no row, is no strokes, no putts, not picked up.
+      const seen = expect as Row
+      const same = (k: string, dflt: unknown) => (seen[k] ?? dflt) === (old?.[k] ?? dflt)
+      if (!same('strokes', null) || !same('putts', null) || !same('picked_up', false)) return fail('22023', 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo')
       let st = ('strokes' in f ? f.strokes : (old?.strokes ?? null)) as number | null
       const pt = ('putts' in f ? f.putts : (old?.putts ?? null)) as number | null
       const picked = 'picked_up' in f ? (f.picked_up as boolean) : typeof f.strokes === 'number' ? false : old?.picked_up === true
