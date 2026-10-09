@@ -111,6 +111,11 @@ function everyTable(): Snapshot {
     { gameId: 'tacos', playerId: 'p8', share: 1 },
     { gameId: 'tacos', playerId: 'p3', share: 0.5 },
   ]
+  // The Comité's assignments of unassigned money (0027), one of them voided.
+  s.moneyAdjustments = [
+    { id: 'adj1', callId: 'call-adj1', sourceKey: 'bestRound', kind: 'award', toPlayerId: 'p2', amount: 600, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
+    { id: 'adj2', callId: 'call-adj2', sourceKey: 'calcutta', kind: 'house', toPlayerId: null, amount: 100, reason: 'Para la cena', createdAt: '2027-04-11T20:05:00+00:00', createdBy: 'org', voidedAt: '2027-04-11T20:06:00+00:00', voidReason: 'Error' },
+  ]
   return s
 }
 
@@ -159,6 +164,46 @@ describe('golden: rows → snapshot → state (QA-07)', () => {
     const paged = server.requests.filter((r) => r.range)
     expect(new Set(paged.map((r) => r.table))).toEqual(PAGED_TABLES)
     for (const r of paged) expect(r.order, r.table).toEqual([...SNAPSHOT_KEYS[r.table as SnapshotTable]])
+  })
+})
+
+describe('golden: the Comité’s decisions (MONEY-05)', () => {
+  it('a database without 0027 still opens the tournament: the decisions read as none (PGRST205), and only that table', async () => {
+    // Belt and braces: 0027 reaches production before this bundle does, but a phone must never lose its boards to it.
+    const s = everyTable()
+    const rows = snapshotToRows(s) as Partial<Record<SnapshotTable, unknown[]>>
+    delete rows.money_adjustments
+    server = fakeSupabase(rows as Record<string, never[]>)
+    await useTournament.getState().load(s.tournament.id)
+    const { data, error } = useTournament.getState()
+    expect(error).toBeNull()
+    expect(data!.snapshot.moneyAdjustments).toEqual([])
+    expect(data!.snapshot).toEqual({ ...asStored(s), moneyAdjustments: [] })
+  })
+
+  it('any other failure reading the decisions still fails the fetch (no silent «nothing decided»)', async () => {
+    const s = everyTable()
+    const rows = snapshotToRows(s)
+    // A row with no id: ordering by the key answers 42703, as a broken table would.
+    server = fakeSupabase({ ...rows, money_adjustments: [{ tournament_id: s.tournament.id }] })
+    await useTournament.getState().load(s.tournament.id)
+    expect(useTournament.getState().error).not.toBeNull()
+  })
+
+  it('two rows written by one call load back as one assignment, through the backup and the store', async () => {
+    // A refund to two players is one call (`call_id`): one decision, paid or flagged whole, voided whole.
+    const s = everyTable()
+    const call = { callId: 'call-refund', sourceKey: 'snake', kind: 'refund' as const, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:10:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }
+    s.moneyAdjustments = [...s.moneyAdjustments!, { ...call, id: 'adj3', toPlayerId: 'p3', amount: 150 }, { ...call, id: 'adj4', toPlayerId: 'p4', amount: 150 }]
+    await loadThroughBackup(s)
+    const { data, error } = useTournament.getState()
+    expect(error).toBeNull()
+    expect(data!.snapshot.moneyAdjustments).toEqual(asStored(s).moneyAdjustments)
+    const calls = data!.state.money.unassigned.assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])
+    expect(calls).toEqual([
+      ['call-adj1', ['adj1'], 600],
+      ['call-refund', ['adj3', 'adj4'], 300],
+    ])
   })
 })
 

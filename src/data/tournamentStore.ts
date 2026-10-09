@@ -41,6 +41,7 @@ import {
   mapGameEntry,
   mapHoleAward,
   mapGameResult,
+  mapMoneyAdjustment,
   mapPlayer,
   mapRound,
   mapRoundTee,
@@ -268,6 +269,21 @@ export const _liveTest = { logSize: () => changeLog.length, parkedSize: () => pa
 let lastFetchAt = 0
 /** The same, on `liveClock`: a fetch that landed after a push went out may have read past it. */
 let lastFetchMono = 0
+/**
+ * When the fetch whose rows the boards hold now set out, on the wall clock
+ * (which the app's tabs share, and which the outbox's `seq` is made from):
+ * everything it read is the server as it stood at that moment or later.
+ */
+let baseReadAt = 0
+/**
+ * The boards of `tournamentId` came from the server (not the phone's copy):
+ * when the fetch that brought them set out. Null when they did not. A round
+ * missing from them was deleted, unless a write for it was queued after this.
+ */
+export function serverReadSince(tournamentId: string): number | null {
+  const st = useTournament.getState()
+  return st.tournamentId === tournamentId && st.source === 'server' && st.data ? baseReadAt : null
+}
 /** The one more fetch the outbox's landings asked for, sent once its flush ends (a reconnect's 36 rows cost one). */
 let fetchAfterPushes = false
 /** The gate is on the tournament: only then do an unlock or a reconnect fetch it. */
@@ -328,7 +344,7 @@ const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? has
 
 function compute(raw: Snapshot, playersKey = playersKeyOf(raw)): TournamentData {
   // A snapshot cached by an older build has no instance-game tables.
-  const base: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [] }
+  const base: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [], moneyAdjustments: raw.moneyAdjustments ?? [] }
   // The overlays write into lists of their own: the server's rows stay the server's.
   const snapshot: Snapshot = overlays.length
     ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards!] }
@@ -364,7 +380,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
       : Promise.resolve([] as T[])
   const q = <T = Row>(table: SnapshotTable) => inList<T>(table, 'tournament_id', [tournamentId])
 
-  const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults] = await Promise.all([
+  const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults, adjustments] = await Promise.all([
     sb.from('tournaments').select('*').eq('id', tournamentId).single(),
     q('players'),
     q('rounds'),
@@ -374,6 +390,11 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     q('payments'),
     inList('game_entries', 'tournament_id', [tournamentId]),
     inList('game_results', 'tournament_id', [tournamentId]),
+    // A database without 0027 has no such table yet: nothing assigned, rather than a tournament that won't open.
+    q('money_adjustments').catch((e: unknown) => {
+      if ((e as { code?: string } | null)?.code === 'PGRST205') return [] as Row[]
+      throw e
+    }),
   ])
   if (tRes.error) throw tRes.error
   const roundIds = rounds.map((r) => r.id)
@@ -423,6 +444,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     gameEntries: gameEntries.map(mapGameEntry),
     holeAwards: holeAwards.map(mapHoleAward),
     gameResults: gameResults.map(mapGameResult),
+    moneyAdjustments: adjustments.map(mapMoneyAdjustment),
   }
   fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => String(a.id).localeCompare(String(b.id))))))
   // In the order live changes insert in, whatever order the database's collation gave.
@@ -475,6 +497,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     const leavesAtStart = leaves
     set({ loading: true, keepOnPhone: opts?.keepOnPhone ?? true })
     const seq = ++fetchSeq
+    const readAt = Date.now()
     // The gate loads again on every resolve (back from Home, the PIN, a new session) while the channel stays live.
     const since = changeSeq
     fetching++
@@ -492,6 +515,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       catchUp(snapshot, tournamentId, since)
       lastFetchAt = Date.now()
       lastFetchMono = liveClock()
+      baseReadAt = readAt
       healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
@@ -514,6 +538,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     // A tournament left is fetched by nothing, a refused write's answer included (N9).
     if (left) return
     const seq = ++fetchSeq
+    const readAt = Date.now()
     const since = changeSeq
     fetching++
     try {
@@ -525,6 +550,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       catchUp(snapshot, id, since)
       lastFetchAt = Date.now()
       lastFetchMono = liveClock()
+      baseReadAt = readAt
       healWait = 0
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)

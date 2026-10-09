@@ -23,7 +23,8 @@ export interface ModuleContext {
 
 /** A single prize a module awards (live "si terminara ahora" or final). */
 export interface PrizeAward {
-  moduleId: ModuleId | GameType
+  /** `adjustment`: the Comité's assignment of unassigned money (MONEY-05). */
+  moduleId: ModuleId | GameType | 'adjustment'
   /**
    * Which pot pays it: `main` (the entries), `calcutta`, or a game id for a
    * side pot. Omitted = `main`.
@@ -40,6 +41,9 @@ export interface PrizeAward {
   /** True once the underlying round(s) are finished, false while provisional. */
   final: boolean
   why: Explanation
+  /** An assignment's row (`money_adjustments.id`), and the bucket it came from. */
+  adjustmentId?: Id
+  sourceKey?: string
 }
 
 export interface GameModule<State> {

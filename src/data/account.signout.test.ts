@@ -58,6 +58,7 @@ vi.mock('../lib/supabase', () => ({
   }),
 }))
 vi.mock('./tournamentStore', () => ({
+  serverReadSince: () => null,
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),

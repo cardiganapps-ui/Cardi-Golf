@@ -8,6 +8,18 @@
  *
  * `teams` and `team_members` (0020) are not published yet; they come back
  * here with the migration that publishes them.
+ *
+ * A table only the newest migration publishes waits for the next change.
+ * Releases apply the migration first (0027 reaches production before the
+ * bundle that reads it), but the channel is the one read that must never
+ * fail: if a bundle ever reached phones first, a channel naming a table
+ * production has not published would fail whole (REL-01), and a table
+ * missing from the backup fails it loudly instead. `money_adjustments`
+ * (0027) waits for that reason; until it
+ * comes back, a phone reads the Comité's decisions on its next fetch (the
+ * Comité's own phone fetches after each one, every phone at least every five
+ * minutes, `HEAL_MS`), and its row changes are already applied by id
+ * (`realtimeApply.ts`) for when it does.
  */
 export const REALTIME_TABLES = [
   'tournaments',

@@ -1263,8 +1263,16 @@ export const t = {
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
+    /** save_hole: the player is not in this phone's group that day. */
+    errNotInGroup: 'Ese jugador no está en tu grupo; el Comité tiene que capturarlo.',
+    /** save_hole: values the server can't take (out of range, putts over strokes), or a call it can't read. */
+    errInvalid: 'El servidor no aceptó esos valores; revisa el hoyo y captúralo otra vez.',
+    /** save_hole: this device holds no player of the tournament any more; the PIN brings it back. */
+    errNotMember: 'Este teléfono ya no está como jugador del torneo. Entra con tu PIN y se sube solo.',
     /** A write of a tournament that was deleted: it can never go out (its link leads nowhere). */
     errGone: 'El torneo ya no existe.',
+    /** A hole of a day (round) the Comité deleted: it can never go out. */
+    errRoundGone: 'Ese día del torneo ya no existe.',
     errNetwork: 'Sin conexión con el servidor. Se reintenta solo.',
     /** A write waits for the phone's session to be confirmed (after a lapse, or inside auth's cooldown). */
     errSession: 'Confirmando tu sesión… Se reintenta solo.',
@@ -1387,6 +1395,22 @@ export const t = {
     /** The hole header as it is read out, and announced when the hole changes. */
     /** A half-entered hole that came back after leaving the card (PWA-05). */
     restoredDraft: 'Lo que llevabas capturado en este hoyo sigue aquí. Falta guardarlo.',
+    /**
+     * A hole someone else saved first (REL-05): the server kept theirs, and
+     * this phone's value waits for the player to choose. `who`: who entered
+     * theirs (null: unknown); `self`: the player entered his own.
+     */
+    conflictTitle: 'Alguien más capturó primero',
+    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean) =>
+      `Hoyo ${hole}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
+    /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
+    conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
+      const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
+      return puttsOnly ? p : `${pickedUp ? 'levantó' : `${strokes ?? '–'}`}${withPutts ? ` con ${p}` : ''}`
+    },
+    keepMine: 'Guardar el mío',
+    keepTheirs: 'Dejar el suyo',
+    conflictAction: (action: string, hole: number, player: string) => `${action}: hoyo ${hole}, ${player}`,
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
@@ -2144,7 +2168,11 @@ export const t = {
     bankIn: 'Entró al banco',
     bankOut: 'Sale del banco',
     bankOk: 'Cuadra al peso',
-    bankPending: (diff: string) => `Por asignar: ${diff}`,
+    /** While play goes on: prizes not decided yet. Once it is over, «Por asignar» is a list (t.unassigned). */
+    bankPending: (diff: string) => `Por repartir: ${diff}`,
+    /** Over, nothing listed, and the bank still does not square: a real mismatch. */
+    bankOff: (diff: string) => `No cuadra: ${diff}`,
+    byComite: 'Asignado por el Comité',
     pays: (from: string, to: string, amount: string) => `${from} paga a ${to}: ${amount}`,
     paysTo: 'paga a',
     markPaid: 'Marcar pagado',
@@ -2166,6 +2194,102 @@ export const t = {
     nothingOwed: 'Nadie debe nada.',
     noBanker: 'Falta definir al banquero en Comité, sección Torneo.',
     provisional: 'Provisional: hay premios abiertos.',
+  },
+  /** Money the rules leave to the Comité, and its decisions (MONEY-05, COPY-09). */
+  unassigned: {
+    // What the engine writes: the buckets, their explanations, the assignments.
+    poolLabel: 'Inscripciones sin premio',
+    budget: (label: string, amount: string) => `${label} reparte ${amount}`,
+    paid: (amount: string) => `Ya se repartió ${amount}`,
+    left: (amount: string) => `Quedan ${amount} sin asignar`,
+    poolSurplus: (entries: string, prizes: string) => `Las inscripciones suman ${entries} y los premios ${prizes}`,
+    cancelledRound: (n: number) => `Día ${n} cancelado: su premio no se jugó`,
+    unplayedRound: (n: number) => `Día ${n} no se jugó`,
+    pendingTiebreak: (day: number, group: number, hole: number) => `Día ${day}, grupo ${group}: falta decir quién embocó al último en el hoyo ${hole}`,
+    // Snake money an unanswered tiebreak holds: the snake pays it once answered; the Comité does not assign it.
+    heldLabel: (label: string, day: number, group: number) => `${label}, día ${day}, grupo ${group}`,
+    heldTitle: (amount: string) => `${amount} esperan un desempate`,
+    heldWhy: (amount: string) => `En cuanto se responda, la víbora reparte los ${amount} de ese grupo. No es dinero por asignar.`,
+    heldNote: (hole: number) => `Responde el desempate del hoyo ${hole} («¿Quién embocó al último?») en Comité, sección Tarjetas.`,
+    heldApart: (amount: string) => `${amount} esperan un desempate y se reparten al responderlo`,
+    heldTotal: (amount: string) => `Esperando un desempate: ${amount}`,
+    heldExtra: (amount: string) => `Además, ${amount} esperan un desempate de la víbora.`,
+    title: (amount: string) => `${amount} sin asignar`,
+    decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para la casa.',
+    awardLabel: (label: string) => `${label}, asignado por el Comité`,
+    refundLabel: (label: string) => `${label}, devolución`,
+    adjustmentWhy: (label: string, amount: string, reason: string) => [`${label}: ${amount} sin asignar`, `El Comité decidió: ${reason}`],
+    over: (label: string, assigned: string, left: string) => `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
+    orphan: (label: string, assigned: string) => `Asignación sin pozo en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
+    mismatch: (bank: string, listed: string) => `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
+    // Dinero: the list everyone sees, and the Comité's actions.
+    heading: 'Por asignar',
+    intro: 'Dinero que el reglamento deja al Comité. Hasta que decida, se queda en el banco.',
+    total: (amount: string) => `Por asignar: ${amount}`,
+    totalHint: 'El Comité decide qué hacer con cada línea de abajo.',
+    decide: 'Decidir',
+    decideTitle: (label: string) => `${label}: qué hacer con este dinero`,
+    available: (amount: string) => `Hay ${amount} por asignar.`,
+    give: 'Dar a…',
+    giveHint: 'Escoge a quién y cuánto. Lo que no asignes se queda por asignar.',
+    refund: 'Devolver',
+    refundHint: 'Se devuelve a quienes pusieron el dinero, en proporción a lo que pusieron.',
+    refundNone: 'No se sabe quién puso este dinero: dalo a alguien o déjalo para la casa.',
+    house: 'A la casa',
+    houseHint: 'Se queda con el banquero para gastos del grupo, como la parte de la casa.',
+    amountFor: (name: string) => `Cantidad para ${name}`,
+    assigning: (amount: string, left: string) => `Asignas ${amount}; quedan ${left} por asignar.`,
+    tooMuch: (left: string) => `Es más de lo que hay: quedan ${left}.`,
+    nothing: 'Escribe al menos una cantidad.',
+    reason: 'Motivo',
+    reasonHint: 'Queda en el historial y lo ven todos.',
+    reasonShort: 'Escribe el motivo, al menos 3 letras.',
+    confirm: 'Asignar',
+    assigned: 'Asignado.',
+    applied: 'Lo que ya decidió el Comité',
+    toHouse: 'A la casa',
+    void: 'Anular',
+    voidTitle: 'Anular esta asignación',
+    voidBody: 'El dinero vuelve a quedar por asignar. Queda en el historial con el motivo.',
+    voided: 'Asignación anulada.',
+    statusOver: 'No se paga: es más de lo que queda. Anúlala y vuelve a asignar.',
+    statusOrphan: 'No se paga: ahí ya no queda dinero por asignar. Anúlala.',
+    statusWaiting: 'Se aplica cuando terminen todas las rondas.',
+    waitingIntro: 'Hay una ronda abierta: estas decisiones del Comité se aplican cuando terminen todas.',
+    // Terminado while a planned day is open or was never created (an older app, a restored backup): nothing new is listed.
+    finalOpenVerdict: 'Falta cerrar un día',
+    finalOpen: (open: number[], missing: number[]) => {
+      const what: string[] = []
+      if (open.length) what.push(open.length === 1 ? `el día ${open[0]} sigue abierto` : `los días ${andList(open.map(String))} siguen abiertos`)
+      if (missing.length) what.push(missing.length === 1 ? `el día ${missing[0]} no existe` : `los días ${andList(missing.map(String))} no existen`)
+      const fix = missing.length
+        ? 'termina o cancela cada día en Comité, sección Rondas (crea el que falte, o baja el número de rondas en Comité, sección Torneo)'
+        : open.length === 1
+          ? 'termínalo o cancélalo en Comité, sección Rondas'
+          : 'termínalos o cancélalos en Comité, sección Rondas'
+      return `El torneo está Terminado, pero ${andList(what)}: ${fix} para repartir lo pendiente. Lo que el Comité ya decidió sigue contando.`
+    },
+    stale: 'Mientras decidías, cambió lo que hay en esta línea. Revisa la cantidad y vuelve a asignar.',
+    gone: 'Esta línea ya no tiene dinero por asignar.',
+    rowWhat: (label: string, amount: string, reason: string) => `${label}, ${amount}: ${reason}`,
+  },
+  /** «Cerrar torneo»: what blocks Terminado and publishing (MONEY-05). */
+  closeGate: {
+    title: 'Antes de cerrar el torneo',
+    blocked: 'Falta resolver esto:',
+    ok: 'Todo listo para cerrar.',
+    understood: 'Entendido',
+    moneyFirst: 'Terminar la ronda y decidir en Dinero',
+    moneyFirstHint: 'La ronda se cierra y en Dinero aparece lo que queda por asignar. Cuando el Comité decida, vuelve aquí para publicar.',
+    missingRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} no está creado` : `Los días ${andList(days.map(String))} no están creados`}: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.`,
+    openRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} sigue abierto` : `Los días ${andList(days.map(String))} siguen abiertos`}: termínalo o cancélalo en Comité, sección Rondas.`,
+    tiebreaks: (n: number) => `${n === 1 ? 'Un desempate de la víbora' : `${n} desempates de la víbora`} sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.`,
+    unsoldLots: (names: string) => `Lotes de la Calcutta sin vender: ${names}. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.`,
+    unassigned: (amount: string) => `${amount} por asignar: el Comité decide en Dinero, Liquidación.`,
+    badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
+    unsignedCards: (n: number) => `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
+    rejectedWrites: (n: number) => `${n === 1 ? 'Un cambio de tarjeta que el servidor rechazó sigue' : `${n} cambios de tarjeta que el servidor rechazó siguen`} sin revisar. No impide cerrar: revisa esos hoyos en Comité, sección Tarjetas, y corrige lo que haga falta.`,
+    owed: (people: number, amount: string) => `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
   },
   feed: {
     title: 'Lo último',
@@ -2358,6 +2482,8 @@ export const t = {
       fewestPutts: (label: string) => label,
       snake: (label: string) => `${label}: totales`,
       bestRound: (label: string, day: number) => `${label}, día ${day}`,
+      // What the Comité gave or gave back from a line's «por asignar» (MONEY-05).
+      byComite: (label: string) => `${label}: lo que asignó el Comité`,
       pairs: (label: string) => label,
       place: (n: number) => (n === 1 ? 'El campeón' : `${ordinal(String(n))} lugar`),
       auction: (label: string) => `${label}: pagos`,

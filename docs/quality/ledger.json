@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-08",
+  "updated": "2026-10-09",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -715,9 +715,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "src/screens/tournament/UnassignedMoney.test.tsx",
+        "src/engine/core/unassigned.test.ts",
+        "src/engine/close.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1240,11 +1244,25 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "src/engine/core/unassigned.test.ts",
+        "src/engine/core/unassigned.verify.test.ts",
+        "src/engine/close.test.ts",
+        "src/screens/tournament/UnassignedMoney.test.tsx",
+        "src/screens/tournament/CeremonyScreen.snake.test.tsx",
+        "src/screens/admin/CloseGate.test.tsx",
+        "src/data/realtimeTables.test.ts",
+        "src/data/realtimeApply.test.ts",
+        "src/data/snapshot.golden.test.ts",
+        "src/lib/backupCron.test.ts",
+        "supabase/tests/money_adjustments.sql",
+        "supabase/tests/restore_roundtrip.sql",
+        "src/data/testing/cases/serverRules.json"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The «Cerrar torneo» gate is client-side: old bundles, a direct tournaments update, the publish RPC and a restore of a finished backup bypass it. Amounts are checked by the engine, not the server: two Comité phones deciding the same line at the same moment both land, the later one is flagged «de más», never paid, and must be voided (the sheet re-reads its line before sending, so only a true race gets there). money_adjustments is off the live channel until 0027 is on production: other phones see a decision on their next fetch (at most five minutes). Release order: 0027 is applied to production before this bundle merges (the nightly backup and the in-app export read the table and fail loudly without it; only the tournament's fetch tolerates its absence). Round 3: a sold player with no result cashes no Calcutta slot (every day rained out: the whole pot is «Por asignar» and the refund returns each price), and Terminado with a day still open or missing keeps the Comité's decisions paid and names the day in Dinero instead of a bare «Por repartir». Open rejected_writes only warn until the REL-08 inbox exists."
     },
     {
       "id": "MONEY-06",
@@ -2550,14 +2568,18 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 106,
       "tests": [
         "supabase/tests/save_hole.sql",
-        "supabase/tests/race_save_hole.sh"
+        "supabase/tests/race_save_hole.sh",
+        "src/data/outbox.hole.test.ts",
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/data/testing/serverRules.test.ts",
+        "e2e/stack/samecard.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": "Server half in migration 0026 (save_hole), proven on the local harness (supabase/tests/save_hole.sql): a group's hole in one statement; each entry names the fields the phone set and the values it saw them hold, and a field another phone changed meanwhile is not overwritten (the answer is `conflict`, with the server's row). 0026 is on production since 2026-10-08; the app switches to it in outbox v2, after #92 and #93. Until both, phones write only the players they touched (#12's mitigation). Round 2 (#98's verifier): a phone's strokes are no longer dropped as «unchanged» under a pick-up another phone saved meanwhile, nor a stale pick-up's «no strokes» written over strokes another phone changed: a number of strokes writes «not picked up» and a pick-up «no strokes», each checked against what the phone saw, so either is a `conflict` kept in rejected_writes (save_hole.sql, 7d). A call is capped at 8 entries and 16 KB, with one rejected_writes row per player per call. admin_save_score and resolve_score_dispute take save_hole's lock on the hole, and save_hole locks the hole's rows at once in player order (race_save_hole.sh: six two-session cases). Residuals: an old build's direct insert of an empty hole, racing a save_hole of it, is last write wins, flagged as a discrepancy (only save_hole and the Comité take the hole's lock; taking it in the direct-write trigger would deadlock against an old build's multi-row upsert); a card signed while a save of it is in flight takes that save (signing doesn't lock the card's holes); score_mutations rows don't expire yet (one small row per save; the cleanup comes with outbox v2); save_hole takes holes 1 to 18 on a 9-hole round too, as direct writes do. Round 3 (#98's second verifier): two deadlocks remain, each ending with Postgres aborting one transaction (40P01), which the outbox retries: an old build writing two rows of a hole in other than player order against save_hole (today's outbox sends one row per request, so the app can't make it), and a card's signature settling its discrepancies while an old build's update and a save_hole hold rows of the pair. Both go once the contract revokes direct writes."
+      "residual": "Server half in migration 0026 (save_hole), proven on the local harness (supabase/tests/save_hole.sql): a group's hole in one statement; each entry names the fields the phone set and the values it saw them hold, and a field another phone changed meanwhile is not overwritten (the answer is `conflict`, with the server's row). 0026 is on production since 2026-10-08; the app switches to it in outbox v2, after #92 and #93. Until both, phones write only the players they touched (#12's mitigation). Round 2 (#98's verifier): a phone's strokes are no longer dropped as «unchanged» under a pick-up another phone saved meanwhile, nor a stale pick-up's «no strokes» written over strokes another phone changed: a number of strokes writes «not picked up» and a pick-up «no strokes», each checked against what the phone saw, so either is a `conflict` kept in rejected_writes (save_hole.sql, 7d). A call is capped at 8 entries and 16 KB, with one rejected_writes row per player per call. admin_save_score and resolve_score_dispute take save_hole's lock on the hole, and save_hole locks the hole's rows at once in player order (race_save_hole.sh: six two-session cases). Residuals: an old build's direct insert of an empty hole, racing a save_hole of it, is last write wins, flagged as a discrepancy (only save_hole and the Comité take the hole's lock; taking it in the direct-write trigger would deadlock against an old build's multi-row upsert); a card signed while a save of it is in flight takes that save (signing doesn't lock the card's holes); score_mutations rows don't expire yet (one small row per save; the cleanup comes with outbox v2); save_hole takes holes 1 to 18 on a 9-hole round too, as direct writes do. Round 3 (#98's second verifier): two deadlocks remain, each ending with Postgres aborting one transaction (40P01), which the outbox retries: an old build writing two rows of a hole in other than player order against save_hole (today's outbox sends one row per request, so the app can't make it), and a card's signature settling its discrepancies while an old build's update and a save_hole hold rows of the pair. Both go once the contract revokes direct writes. Round 4 (outbox v2, #106): the Tarjeta saves a group's hole as one save_hole call, with per player only the fields that differ from the row it saw when he was first touched, and only the players touched plus the unplayed ones an all-par save fills (`auto`); a mutation id made at enqueue makes a retry an answer, never a second write; an item is marked sent in IndexedDB before it goes out and is never merged into after (outbox.hole.test.ts). A conflict lands the server's row and asks on the Tarjeta («Guardar el mío» / «Dejar el suyo»); a conflict against exactly the hole's untouched default (par, 2 putts) goes over it, flagged as a discrepancy, so two phones each keeping the other pair both land (outbox.hole.test.ts, e2e/stack/samecard.spec.ts). The case file's 27 save_hole cases run on the migrations and on the in-memory server. Residuals: an explicit par-and-2 typed on one phone can be replaced by another phone's typed value in a race (flagged, as it can't be told from an untouched default); old bundles and the Comité outside the group still write directly (last write wins, flagged) until the contract; score_mutations rows still don't expire."
     },
     {
       "id": "REL-06",
@@ -2567,11 +2589,14 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 106,
+      "tests": [
+        "src/data/outbox.hole.test.ts",
+        "src/data/testing/serverRules.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Outbox v2 (#106): a hole saved through save_hole never overwrites a value another phone saved after this one saw the hole: the first committed value stays and the second phone is asked (PLAN Amendment 1, item 12), and the losing value is kept in rejected_writes with the server's row. Residuals: direct writes (old bundles until the contract, the Comité outside the group) are still last arrival wins, flagged as a discrepancy with one `previous`; a conflict against exactly an untouched default (par, 2 putts) is gone over, flagged (tarjeta cruzada)."
     },
     {
       "id": "REL-07",
@@ -2581,11 +2606,14 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 106,
+      "tests": [
+        "src/data/outbox.hole.test.ts",
+        "src/data/outbox.answers.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Outbox v2 (#106): save_hole answers with the rows as stored, and with the server's row on a conflict; both land on the boards at once, in place of the phone's optimistic value, and a conflict waits on the Tarjeta instead of «Sincronizado» hiding it. A replayed answer (a retry after a lost one) also asks one more fetch, since the hole may have moved on."
     },
     {
       "id": "REL-08",
@@ -3515,7 +3543,7 @@
         "supabase/tests/save_hole.sql"
       ],
       "verifiedBy": null,
-      "residual": "Part in migration 0026: every score records the device and the mutation that last wrote it (save_hole). Historial does not show the device yet; that comes with the save_hole client."
+      "residual": "Part in migration 0026: every score records the device and the mutation that last wrote it (save_hole). Historial does not show the device yet; that comes with the save_hole client. Outbox v2 (#106) sends no device id yet: the rows save_hole writes name the mutation, and the device column stays empty until the phone keeps an install id."
     },
     {
       "id": "UX-01",
@@ -4413,6 +4441,23 @@
       ],
       "verifiedBy": null,
       "residual": "The boards half was closed by #92 (loadQueue ends with refresh(); NEW-02's test in outbox.offline.test.ts), and an untouched player's draft takes the queued value (REL-05). This PR, after its verifier: the outbox says when its queue has been read (`queueRead`, after the boards are recomputed, even if the read failed); until then «Guardar» is disabled, so no tap can write defaults over a queued hole and no sheet opens on one. A card opened before the read moves once, when it lands, to the first open hole, unless the player chose a hole, touched a player or has a sheet open; a card opened after it never moves on its own, so another phone's save lands on the hole on screen. A kept draft (PWA-05) read before the queue is held, not deleted. Left (P3): a player touched before the read keeps what was on screen, and «Guardar» writes that over his queued value."
+    },
+    {
+      "id": "NEW-12",
+      "severity": "P1",
+      "area": "Security and privacy",
+      "workstream": "W11",
+      "phase": 1,
+      "tripSafe": true,
+      "title": "restore_tournament wrote into another tournament: players and rounds were upserted by id with no check of whose they were, so an organizer of A who knew B's ids could restore a backup of A that renamed B's players, changed their handicaps, cancelled B's round and put scores and groups in it",
+      "foundBy": "PR #104's round-1 verifier (restore probe 70/71 on the harness; pre-existing since 0010, carried by 0027's redefinition)",
+      "status": "fixed",
+      "pr": 104,
+      "tests": [
+        "supabase/tests/restore_roundtrip.sql"
+      ],
+      "verifiedBy": null,
+      "residual": "Checked by id before anything is written: players, rounds, pairs, teams, lots, payments and assignments by their tournament, groups and scores by their round's, bids by their lot's. Courses and tees stay shared across tournaments by design."
     }
   ]
 }

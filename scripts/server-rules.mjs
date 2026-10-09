@@ -78,8 +78,19 @@ function unknownColumn(req) {
 function toDb(table, row) {
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [ident(k), typeof v === 'string' && isUuid(table, k) ? uuid(v) : v]))
 }
-function fromDb(row) {
-  return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, typeof v === 'string' && names.has(v) ? names.get(v) : v]))
+/** Every uuid the script wrote for a name, back to the name, however deep (an RPC's jsonb answer holds rows). */
+function fromDb(value) {
+  if (typeof value === 'string') return names.has(value) ? names.get(value) : value
+  if (Array.isArray(value)) return value.map(fromDb)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromDb(v)]))
+  return value
+}
+/** A jsonb argument's names as uuids: a string under a key that names an id (`round_id`, `player_id`, `mutation_id`…). */
+function idsToDb(value, key = '') {
+  if (typeof value === 'string') return /_id$/.test(key) ? uuid(value) : value
+  if (Array.isArray(value)) return value.map((v) => idsToDb(v, key))
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, idsToDb(v, k)]))
+  return value
 }
 /** A JSON literal SQL can read, whatever the text holds. */
 function jsonLiteral(value) {
@@ -104,6 +115,73 @@ function whereSql(table, where) {
   return parts.length ? parts.join(' and ') : 'true'
 }
 
+/** `in.(…)` on a column, as text against the list (a name in a uuid column is its uuid), as PostgREST casts each value. */
+function inSql(table, column, values, alias = '') {
+  const db = values.map((v) => (typeof v === 'string' && isUuid(table, column) ? uuid(v) : v))
+  return `${alias}${ident(column)}::text in (select jsonb_array_elements_text(${jsonLiteral(db)}::jsonb))`
+}
+
+/**
+ * A GET's `select` as PostgREST reads it: plain columns, and to-many embeds
+ * `name(cols)` or `name!<foreign key>(cols)` (src/data/outbox.ts's look at gone rounds).
+ */
+function parseSelect(select) {
+  const columns = []
+  const embeds = []
+  for (const item of select.match(/[^,(]+(\([^()]*\))?/g) ?? []) {
+    const m = /^([a-z_][a-z0-9_]*)(?:!([a-z0-9_]+))?\(([^()]*)\)$/.exec(item)
+    if (m) embeds.push({ name: ident(m[1]), hint: m[2] ? ident(m[2]) : null, columns: m[3].split(',').map(ident) })
+    else columns.push(ident(item))
+  }
+  return { columns, embeds }
+}
+
+/**
+ * The relationship PostgREST embeds by, from the schema: the foreign keys
+ * between the two tables, either way, narrowed to the hint's constraint when
+ * there is one. None is PostgREST's PGRST200, more than one its PGRST201
+ * (`tournaments` and `rounds` are joined two ways). Only a to-many embed
+ * (the child's key points at the parent) is run here.
+ */
+function relationship(parent, embed) {
+  const fks = psql(`select c.conname || ' ' || c.conrelid::regclass::text || ' ' || a.attname || ' ' || fa.attname
+      from pg_constraint c
+      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+      join pg_attribute fa on fa.attrelid = c.confrelid and fa.attnum = c.confkey[1]
+      where c.contype = 'f'
+        and ((c.conrelid = 'public.${parent}'::regclass and c.confrelid = 'public.${embed.name}'::regclass)
+          or (c.conrelid = 'public.${embed.name}'::regclass and c.confrelid = 'public.${parent}'::regclass))`)
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [name, child, column, key] = line.split(' ')
+      return { name, child: child.replace(/^public\./, ''), column, key }
+    })
+    .filter((fk) => !embed.hint || fk.name === embed.hint)
+  if (!fks.length) return { refused: `PGRST200 Could not find a relationship between '${parent}' and '${embed.name}' in the schema cache` }
+  if (fks.length > 1) return { refused: `PGRST201 Could not embed because more than one relationship was found for '${parent}' and '${embed.name}'` }
+  const [fk] = fks
+  if (fk.child !== embed.name) throw new Error(`only a to-many embed is run here: ${parent} → ${embed.name}`)
+  return { column: ident(fk.column), key: ident(fk.key) }
+}
+/** What PostgREST refuses before the database sees the request: a column it doesn't know, an embed it can't place. */
+function refusedBeforeDb(req) {
+  const column = unknownColumn(req)
+  if (column || req.method !== 'GET' || !req.select.includes('(')) return column
+  for (const e of parseSelect(req.select).embeds) {
+    const rel = relationship(ident(req.table), e)
+    if (rel.refused) return rel.refused
+  }
+  return null
+}
+
+/** An RPC argument as SQL: a uuid for an id, jsonb for an object or a list (its ids mapped, at any depth: `idsToDb`), else text. */
+function argSql(k, v) {
+  if (v !== null && typeof v === 'object') return `(${jsonLiteral(idsToDb(v))})::jsonb`
+  if (typeof v === 'string' && (/_id$/.test(k) || k === 'tid')) return `'${uuid(v)}'::uuid`
+  return `${jsonLiteral([v])} ->> 0`
+}
+
 /**
  * The statement PostgREST builds for a request (src/data/testing/fakeSupabase.ts
  * parses the same request off the wire):
@@ -116,13 +194,24 @@ function whereSql(table, where) {
  */
 function requestSql(req) {
   if (req.method === 'RPC') {
-    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${typeof v === 'string' && (/_id$/.test(k) || k === 'tid') ? `'${uuid(v)}'::uuid` : `${jsonLiteral([v])} ->> 0`}`).join(', ')
+    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${argSql(k, v)}`).join(', ')
     return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
   }
   const t = ident(req.table)
   if (req.method === 'GET') {
-    const cols = req.select.split(',').map(ident).join(', ')
-    return `perform set_config('polo.result', (select coalesce(json_agg(q), '[]'::json)::text from (select ${cols} from public.${t} where ${whereSql(t, req.eq ?? {})}) q), true)`
+    // As PostgREST builds it: each embed a json_agg subquery of the same statement, as the same caller, its
+    // own filters (`<embed>.<column>`) inside it, an empty list when nothing matches (the parent stays).
+    const { columns, embeds } = parseSelect(req.select)
+    const filters = Object.entries(req.in ?? {})
+    const items = columns.map((c) => `p.${c}`)
+    for (const e of embeds) {
+      const rel = relationship(t, e)
+      const own = filters.filter(([k]) => k.startsWith(`${e.name}.`)).map(([k, v]) => inSql(e.name, k.slice(e.name.length + 1), v, 'c.'))
+      const where = [`c.${rel.column} = p.${rel.key}`, ...own].join(' and ')
+      items.push(`coalesce((select json_agg(x) from (select ${e.columns.map((c) => `c.${c}`).join(', ')} from public.${e.name} c where ${where}) x), '[]'::json) as ${e.name}`)
+    }
+    const where = [whereSql(t, req.eq ?? {}), ...filters.filter(([k]) => !k.includes('.')).map(([k, v]) => inSql(t, k, v, 'p.'))].join(' and ')
+    return `perform set_config('polo.result', (select coalesce(json_agg(q), '[]'::json)::text from (select ${items.join(', ')} from public.${t} p where ${where}) q), true)`
   }
   if (req.method === 'DELETE') return `delete from public.${t} where ${whereSql(t, req.eq ?? {})}`
   const body = (Array.isArray(req.body) ? req.body : [req.body]).map((r) => toDb(t, r))
@@ -155,7 +244,8 @@ function primaryKey(table) {
 /** PostgREST's HTTP status for a SQLSTATE (its documented table), and for its own PGRST204. */
 function statusOf(state, anon) {
   if (state === '00000') return null
-  if (state === 'PGRST204') return 400
+  if (state === 'PGRST204' || state === 'PGRST200') return 400
+  if (state === 'PGRST201') return 300
   if (state === '42501') return anon ? 401 : 403
   if (state === '23503' || state === '23505') return 409
   if (state === '25006') return 405
@@ -183,7 +273,7 @@ function runCase(c) {
   // Earlier requests of the same phone: each must go through.
   for (const step of c.before ?? []) sql += `do $before$\nbegin\n  ${requestSql(step)};\nend\n$before$;\n`
   sql += `select set_config('polo.result', '[]', true) is null;\n`
-  const refused = unknownColumn(c.request)
+  const refused = refusedBeforeDb(c.request)
   sql += refused
     ? `select set_config('polo.outcome', ${jsonLiteral([refused])} ->> 0, true) is null;\n`
     : `do $request$\nbegin\n  ${requestSql(c.request)};\n  perform set_config('polo.outcome', '00000', true);\nexception when others then\n  perform set_config('polo.outcome', sqlstate || ' ' || sqlerrm, true);\nend\n$request$;\n`
@@ -204,6 +294,24 @@ function runCase(c) {
 const okStatus = { GET: 200, POST: 201, DELETE: 204, RPC: 200 }
 
 const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
+/**
+ * `expect.answer`: an RPC's answer holds at least what the case writes. An object, the keys it names; a list, as
+ * many items, each matching a different one in any order (the database's order of a set is none); else equal.
+ */
+function holds(actual, want) {
+  if (Array.isArray(want)) {
+    if (!Array.isArray(actual) || actual.length !== want.length) return false
+    const free = actual.map(() => true)
+    return want.every((w) => {
+      const i = actual.findIndex((a, j) => free[j] && holds(a, w))
+      if (i < 0) return false
+      free[i] = false
+      return true
+    })
+  }
+  if (want && typeof want === 'object') return !!actual && typeof actual === 'object' && !Array.isArray(actual) && Object.entries(want).every(([k, v]) => holds(actual[k] ?? null, v))
+  return actual === want
+}
 let failed = 0
 for (const c of spec.cases) {
   let got
@@ -220,6 +328,7 @@ for (const c of spec.cases) {
   if (want.status !== status) problems.push(`status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`)
   else if (want.code && want.code !== got.state) problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
   if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows))) problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
+  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
   ;(c.then ?? []).forEach((t, i) => {
     const expected = t.rows.map((r) => Object.fromEntries(Object.entries(r)))
     const actual = got.after[i].map((r) => (Object.keys(r).length === 1 && 'present' in r ? {} : r))

@@ -184,6 +184,21 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
     hole_awards: s.holeAwards.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, game_id: x.gameId, player_id: x.playerId, decided_by: null, created_at: CREATED })),
     // numeric with no scale as Postgres prints it, 1 → "1" and 0.5 → "0.5" (PostgREST would send 1 and 0.5).
     game_results: s.gameResults.map((x) => ({ tournament_id: tid, game_id: x.gameId, player_id: x.playerId, share: String(x.share), created_at: CREATED })),
+    money_adjustments: (s.moneyAdjustments ?? []).map((x) => ({
+      id: x.id,
+      tournament_id: tid,
+      source_key: x.sourceKey,
+      kind: x.kind,
+      to_player_id: x.toPlayerId,
+      amount: x.amount,
+      reason: x.reason,
+      call_id: x.callId,
+      created_by: x.createdBy,
+      created_at: x.createdAt,
+      voided_at: x.voidedAt,
+      voided_by: null,
+      void_reason: x.voidReason,
+    })),
   }
   // Through JSON, as the wire carries it (with the numeric columns as text, above).
   return JSON.parse(JSON.stringify(rows)) as Record<SnapshotTable, Row[]>
@@ -216,5 +231,6 @@ export function asStored(s: Snapshot): Snapshot {
     gameEntries: by(s.gameEntries, (x) => [x.gameId, x.playerId]),
     holeAwards: by(s.holeAwards, (x) => [x.roundId, x.gameId, x.hole, x.playerId]),
     gameResults: by(s.gameResults, (x) => [x.gameId, x.playerId]),
+    moneyAdjustments: by(s.moneyAdjustments ?? [], (x) => [x.id]),
   }
 }

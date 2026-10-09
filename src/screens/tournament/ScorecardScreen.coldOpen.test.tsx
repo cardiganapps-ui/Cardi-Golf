@@ -20,7 +20,7 @@ vi.mock('../../data/api', async (importOriginal) => ({
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
-import { _outboxTest, enqueueScore, startOutbox } from '../../data/outbox'
+import { _outboxTest, applyFields, baseRow, enqueueScore, startOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
@@ -73,15 +73,16 @@ async function tapSave(at: number) {
     for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r))
   })
 }
-/** What the queue holds for a hole now: player → strokes/putts/pickup. */
+/** What the queue holds for a hole now: player → strokes/putts/pickup, each write over the one before it. */
 function queuedAt(hole: number): Record<string, string> {
-  const out: Record<string, string> = {}
+  const rows: Record<string, { strokes: number | null; putts: number | null; picked_up: boolean }> = {}
   for (const it of _outboxTest.queue()) {
-    if (it.kind !== 'score') continue
-    const p = it.payload as { player_id: string; hole: number; strokes: number | null; putts: number | null; picked_up: boolean }
-    if (p.hole === hole) out[p.player_id] = `${p.strokes}/${p.putts}${p.picked_up ? '/L' : ''}`
+    if (it.kind === 'score' && it.payload.hole === hole) rows[it.payload.player_id] = it.payload
+    if (it.kind === 'hole' && it.payload.hole === hole) {
+      for (const e of it.payload.entries) rows[e.player_id] = applyFields(rows[e.player_id] ?? baseRow(e.base), e.fields)
+    }
   }
-  return out
+  return Object.fromEntries(Object.entries(rows).map(([pid, p]) => [pid, `${p.strokes}/${p.putts}${p.picked_up ? '/L' : ''}`]))
 }
 /** The phone restarts: the queue in memory is gone, IndexedDB keeps it. */
 function coldRestart() {
