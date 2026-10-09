@@ -200,6 +200,28 @@ export interface Payment {
   note: string | null
 }
 
+/**
+ * The Comité's decision on money the rules leave unassigned (0027,
+ * MONEY-05): part of one bucket (`sourceKey`, the engine's id for it) given
+ * to a player (`award`, `refund`) or to the house. A voided row moves nothing.
+ */
+export interface MoneyAdjustment {
+  id: Id
+  sourceKey: string
+  kind: 'award' | 'refund' | 'house'
+  /** null only for the house. */
+  toPlayerId: Id | null
+  amount: number
+  reason: string
+  createdAt: string
+  /** The call that wrote it: one assignment, paid or flagged whole, voided whole. */
+  callId: Id
+  /** The account that wrote it. */
+  createdBy: string | null
+  voidedAt: string | null
+  voidReason: string | null
+}
+
 /** A player in a game whose `entrants` is `list` (`settings.games`). */
 export interface GameEntry {
   gameId: string
@@ -253,6 +275,8 @@ export interface Snapshot {
   gameEntries: GameEntry[]
   holeAwards: HoleAward[]
   gameResults: GameResult[]
+  /** The Comité's assignments of unassigned money; absent in a snapshot cached by an older build. */
+  moneyAdjustments?: MoneyAdjustment[]
 }
 
 /**

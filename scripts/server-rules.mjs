@@ -104,6 +104,19 @@ function whereSql(table, where) {
   return parts.length ? parts.join(' and ') : 'true'
 }
 
+/** Ids inside a jsonb argument: every `*_id` key holding a name becomes md5(name), at any depth. */
+function idsInJson(v) {
+  if (Array.isArray(v)) return v.map(idsInJson)
+  if (v === null || typeof v !== 'object') return v
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' && /_id$/.test(k) ? uuid(x) : idsInJson(x)]))
+}
+/** An RPC argument as SQL: a uuid for an id, jsonb for an object or a list (its ids mapped), else text. */
+function argSql(k, v) {
+  if (v !== null && typeof v === 'object') return `(${jsonLiteral(idsInJson(v))})::jsonb`
+  if (typeof v === 'string' && (/_id$/.test(k) || k === 'tid')) return `'${uuid(v)}'::uuid`
+  return `${jsonLiteral([v])} ->> 0`
+}
+
 /**
  * The statement PostgREST builds for a request (src/data/testing/fakeSupabase.ts
  * parses the same request off the wire):
@@ -116,7 +129,7 @@ function whereSql(table, where) {
  */
 function requestSql(req) {
   if (req.method === 'RPC') {
-    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${typeof v === 'string' && (/_id$/.test(k) || k === 'tid') ? `'${uuid(v)}'::uuid` : `${jsonLiteral([v])} ->> 0`}`).join(', ')
+    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${argSql(k, v)}`).join(', ')
     return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
   }
   const t = ident(req.table)

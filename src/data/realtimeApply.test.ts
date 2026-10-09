@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { getFixture } from '../dev/fixtures'
 import type { Snapshot } from '../engine/types'
 import { applyChange, canonicalTime, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
+import { applyAdjustments } from '../engine/core/unassigned'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
 const T = (s: Snapshot) => s.tournament.id
@@ -276,5 +277,53 @@ describe('the same lists whichever way the rows came', () => {
     // Another flow of the same player is its own row.
     expect(applyChange(s, tid, ins('payments', { id: 'f0000000-0000-0000-0000-000000000002', tournament_id: tid, kind: 'calcutta', from_player_id: 'pX', to_player_id: null, amount: 750, paid: false, note: null }))).toBe('applied')
     expect(s.payments).toHaveLength(before + 1)
+  })
+})
+
+describe('money_adjustments (0027, MONEY-05)', () => {
+  const row = (s: Snapshot, over: Record<string, unknown> = {}) => ({
+    id: 'adj-b',
+    tournament_id: T(s),
+    source_key: 'bestRound',
+    kind: 'award',
+    to_player_id: s.players[0]!.id,
+    amount: 1200,
+    reason: 'Día 2 cancelado',
+    created_by: 'org',
+    created_at: '2027-04-11T20:00:00+00:00',
+    voided_at: null,
+    voided_by: null,
+    void_reason: null,
+    ...over,
+  })
+
+  it('an assignment lands by its id, in a fetch’s order; its void replaces it in place; another tournament’s is left alone', () => {
+    const s = fx()
+    s.moneyAdjustments = []
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-c' })))).toBe('applied')
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s)))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => x.id)).toEqual(['adj-b', 'adj-c'])
+    expect(s.moneyAdjustments[0]).toMatchObject({ sourceKey: 'bestRound', kind: 'award', amount: 1200, voidedAt: null })
+    expect(applyChange(s, T(s), upd('money_adjustments', row(s, { voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' })))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => [x.id, x.voidReason])).toEqual([
+      ['adj-b', 'Error'],
+      ['adj-c', null],
+    ])
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-x', tournament_id: 'otro' })))).toBe('ignored')
+    expect(s.moneyAdjustments).toHaveLength(2)
+  })
+
+  it('the rows of one call arrive one event each and still form one assignment (its `call_id`)', () => {
+    const s = fx()
+    s.moneyAdjustments = []
+    const refund = (id: string, player: number) => row(s, { id, call_id: 'call-r', source_key: 'snake', kind: 'refund', to_player_id: s.players[player]!.id, amount: 150 })
+    expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r2', 1)))).toBe('applied')
+    expect(applyChange(s, T(s), ins('money_adjustments', refund('adj-r1', 0)))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => [x.id, x.callId])).toEqual([
+      ['adj-r1', 'call-r'],
+      ['adj-r2', 'call-r'],
+    ])
+    const { assignments } = applyAdjustments([], s.moneyAdjustments, false)
+    expect(assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])).toEqual([['call-r', ['adj-r1', 'adj-r2'], 300]])
   })
 })
