@@ -1254,12 +1254,15 @@
         "src/screens/tournament/CeremonyScreen.snake.test.tsx",
         "src/screens/admin/CloseGate.test.tsx",
         "src/data/realtimeTables.test.ts",
+        "src/data/realtimeApply.test.ts",
+        "src/data/snapshot.golden.test.ts",
+        "src/lib/backupCron.test.ts",
         "supabase/tests/money_adjustments.sql",
         "supabase/tests/restore_roundtrip.sql",
         "src/data/testing/cases/serverRules.json"
       ],
       "verifiedBy": null,
-      "residual": "The «Cerrar torneo» gate is client-side: old bundles, a direct tournaments update, the publish RPC and a restore of a finished backup bypass it. Amounts are checked by the engine, not the server: two Comité phones deciding the same line at the same moment both land, the later one is flagged «de más», never paid, and must be voided (the sheet re-reads its line before sending, so only a true race gets there). money_adjustments is off the live channel until 0027 is on production: other phones see a decision on their next fetch (at most five minutes). Once play is over the engine treats the tournament as final, so with every day rained out and nobody's score the Calcutta pays its slots to all sold lots tied (as Terminado always did); whether it should pay at all then is open. Open rejected_writes only warn until the REL-08 inbox exists."
+      "residual": "The «Cerrar torneo» gate is client-side: old bundles, a direct tournaments update, the publish RPC and a restore of a finished backup bypass it. Amounts are checked by the engine, not the server: two Comité phones deciding the same line at the same moment both land, the later one is flagged «de más», never paid, and must be voided (the sheet re-reads its line before sending, so only a true race gets there). money_adjustments is off the live channel until 0027 is on production: other phones see a decision on their next fetch (at most five minutes). Release order: 0027 is applied to production before this bundle merges (the nightly backup and the in-app export read the table and fail loudly without it; only the tournament's fetch tolerates its absence). Round 3: a sold player with no result cashes no Calcutta slot (every day rained out: the whole pot is «Por asignar» and the refund returns each price), and Terminado with a day still open or missing keeps the Comité's decisions paid and names the day in Dinero instead of a bare «Por repartir». Open rejected_writes only warn until the REL-08 inbox exists."
     },
     {
       "id": "MONEY-06",
