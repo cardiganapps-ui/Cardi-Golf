@@ -54,9 +54,13 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install Chromium
         run: |
+          # Its output reaches only the job log; a failure also says why as an annotation, readable through the API.
           for attempt in 1 2 3; do
-            timeout 240 npx playwright install --with-deps chromium && exit 0
-            echo "::warning::Chromium install attempt $attempt failed or stalled"
+            timeout 300 npx playwright install --with-deps chromium > "$RUNNER_TEMP/pw-install.log" 2>&1 && exit 0
+            code=$?
+            why=$(tail -n 8 "$RUNNER_TEMP/pw-install.log" | tr '\n' ' ' | cut -c1-900)
+            echo "::warning::Chromium install attempt $attempt failed (exit $code): $why"
+            sleep $((attempt * 20))
           done
           exit 1
       - run: npx playwright test
