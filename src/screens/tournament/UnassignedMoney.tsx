@@ -15,9 +15,9 @@
  *
  * The sheet reads its line from the live state by key, and before it sends it
  * fetches the tournament again and checks the line still holds what it
- * assigns: another Comité phone may have assigned it meanwhile, and the
- * assignments table reaches other phones on their next fetch (it is kept off
- * the live channel until 0027 is on production, REL-01).
+ * assigns: another Comité phone may have assigned it meanwhile, and a
+ * decision another phone just sent may still be on its way over the live
+ * channel.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
