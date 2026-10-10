@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
 /**
  * REL-05: a hole someone else saved first is said in words on the Tarjeta,
- * whose value stands and what this phone had, with the two ways out.
+ * whose value stands and what this phone had, with the two ways out. Every
+ * question this phone holds for the tournament, whatever day or group
+ * (REL-08: the Comité's list never shows a conflict, so a question hidden
+ * here was lost from everyone's sight).
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -22,7 +25,7 @@ const S = t.card
 const fx = getFixture('minimal4-live')!
 const name = (id: string) => fx.snapshot.players.find((p) => p.id === id)!.displayName
 const conflict = (over: Partial<ConflictItem>): ConflictItem => ({
-  key: `conflict:r1:${over.player_id ?? 'p3'}:${over.hole ?? 12}`,
+  key: `conflict:${over.round_id ?? 'r1'}:${over.player_id ?? 'p3'}:${over.hole ?? 12}`,
   tournamentId: fx.snapshot.tournament.id,
   round_id: 'r1',
   hole: 12,
@@ -36,7 +39,10 @@ const conflict = (over: Partial<ConflictItem>): ConflictItem => ({
 })
 
 beforeEach(() => {
-  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null })
+  const snapshot = structuredClone(fx.snapshot)
+  // A second day, finished: a question left on it is still this phone's to answer.
+  snapshot.rounds.push({ ...snapshot.rounds[0]!, id: 'r2', number: 2, status: 'finished' })
+  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(snapshot), loading: false, error: null })
 })
 afterEach(() => {
   cleanup()
@@ -52,11 +58,9 @@ describe('HoleConflicts', () => {
         conflict({ hole: 14, player_id: 'p4', clash: ['putts'], fields: { putts: 3 }, base: { strokes: 5, putts: 2, picked_up: false }, server: { strokes: 5, putts: 1, picked_up: false, entered_by: 'p4' } }),
         conflict({}),
         conflict({ hole: 13, player_id: 'p1', clash: ['strokes', 'putts'], fields: { picked_up: true }, base: {}, server: { strokes: 7, putts: 1, picked_up: false, entered_by: 'unknown' } }),
-        // Another round's, and a player of another group: not this card's.
-        conflict({ round_id: 'r2' }),
       ],
     })
-    render(<HoleConflicts roundId="r1" playerIds={['p1', 'p2', 'p3', 'p4']} myPlayerId="p1" />)
+    render(<HoleConflicts roundId="r1" myPlayerId="p1" />)
     expect(screen.getByText(S.conflictTitle)).toBeTruthy()
     const lines = screen.getAllByText(/^Hoyo \d+:/).map((el) => el.textContent)
     expect(lines).toEqual([
@@ -64,20 +68,38 @@ describe('HoleConflicts', () => {
       S.conflictLine(13, null, name('p1'), '7 con 1 putt', 'levantó con 0 putts', false),
       S.conflictLine(14, name('p4'), name('p4'), '1 putt', '3 putts', true),
     ])
+    // The day on screen is live: nothing to say about where «Guardar el mío» goes.
+    expect(screen.queryByText(S.conflictClosedHint)).toBeNull()
+  })
+
+  it('every one of the tournament’s, whatever the day or the group: another day’s names its day, and a closed day says where «Guardar el mío» goes', () => {
+    useOutbox.setState({ conflicts: [conflict({ round_id: 'r2', hole: 3 }), conflict({ player_id: 'p9', hole: 5 })] })
+    render(<HoleConflicts roundId="r1" myPlayerId="p1" />)
+    expect(screen.getByText(S.conflictLine(3, name('p2'), name('p3'), '6', '5', false, 2))).toBeTruthy()
+    // A player of another group (one this phone's boards do not name): still asked.
+    expect(screen.getByText(S.conflictLine(5, name('p2'), '?', '6', '5', false))).toBeTruthy()
+    expect(screen.getByText(S.conflictClosedHint)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: S.conflictAction(S.keepMine, 3, name('p3'), 2) }))
+    expect(sendMineAgain).toHaveBeenCalledWith('conflict:r2:p3:3', 'p1')
+  })
+
+  it('with no day on screen, each line names its day', () => {
+    useOutbox.setState({ conflicts: [conflict({})] })
+    render(<HoleConflicts roundId={null} myPlayerId="p1" />)
+    expect(screen.getByText(S.conflictLine(12, name('p2'), name('p3'), '6', '5', false, 1))).toBeTruthy()
   })
 
   it('«Guardar el mío» sends it again as this phone’s player; «Dejar el suyo» keeps theirs', () => {
     useOutbox.setState({ conflicts: [conflict({})] })
-    render(<HoleConflicts roundId="r1" playerIds={['p1', 'p2', 'p3', 'p4']} myPlayerId="p1" />)
+    render(<HoleConflicts roundId="r1" myPlayerId="p1" />)
     fireEvent.click(screen.getByRole('button', { name: S.conflictAction(S.keepMine, 12, name('p3')) }))
     expect(sendMineAgain).toHaveBeenCalledWith('conflict:r1:p3:12', 'p1')
     fireEvent.click(screen.getByRole('button', { name: S.conflictAction(S.keepTheirs, 12, name('p3')) }))
     expect(keepTheirs).toHaveBeenCalledWith('conflict:r1:p3:12')
   })
 
-  it('shows nothing without a conflict on this card', () => {
-    useOutbox.setState({ conflicts: [conflict({ player_id: 'p9' })] })
-    const { container } = render(<HoleConflicts roundId="r1" playerIds={['p1', 'p2', 'p3', 'p4']} myPlayerId="p1" />)
+  it('shows nothing without a conflict', () => {
+    const { container } = render(<HoleConflicts roundId="r1" myPlayerId="p1" />)
     expect(container.innerHTML).toBe('')
   })
 })

@@ -181,8 +181,8 @@ function auction12(): Fixture {
 
 /**
  * What the Comité is asked about on day 2 in juego (0028 `rejected_inbox`:
- * refusals of a value a person typed; a conflict or an untouched default
- * never reaches it): a hole sent after day 1 closed, one sent onto a signed
+ * refusals of a value a person typed; a conflict never reaches it, nor an
+ * untouched default over a score): a hole sent after day 1 closed, one sent onto a signed
  * card, two the card already matches (the phone sent them again once it
  * could), and putts over a hole nobody played.
  */
@@ -200,6 +200,7 @@ function inboxOf(snap: Snapshot): InboxItem[] {
     reason,
     fields,
     base: {},
+    auto: false,
     createdAt: `2027-04-10T16:0${n}:00Z`,
   })
   return [

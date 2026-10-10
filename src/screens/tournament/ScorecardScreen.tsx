@@ -57,6 +57,7 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={t.live.noRounds} body="" />
+        <HoleConflicts roundId={null} myPlayerId={me.playerId} />
         <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
@@ -66,6 +67,8 @@ export function ScorecardScreen() {
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
         <EmptyState title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)} body="" />
+        {/* A question about a hole another phone saved first outlives the day: «Guardar el mío» then goes to the Comité (REL-08). */}
+        <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
         {/* Holes this phone couldn't send before the day closed: the only place a player sees them (REL-08). */}
         <RejectedWrites canResend={false} playerId={me.playerId} />
       </div>
@@ -95,6 +98,7 @@ export function ScorecardScreen() {
             )}
           </>
         )}
+        <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
         <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
       </div>
     )
@@ -446,7 +450,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     return weird
   }
 
-  async function save(force = false) {
+  /** `confirmedPar`: the player answered «Sí, todos par»: those pars are his capture, not untouched defaults (REL-08). */
+  async function save(force = false, confirmedPar = false) {
     if (!canEdit || busy) return
     // The holes kept on the phone are not read yet: the hole on screen may be one of them, shown unplayed (NEW-11).
     if (!useOutbox.getState().queueRead) return
@@ -482,7 +487,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       setTiebreak({ candidates })
       return
     }
-    await commit()
+    await commit(undefined, confirmedPar)
   }
 
   /**
@@ -524,7 +529,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     }
   }
 
-  async function commit(lastHoled?: string) {
+  async function commit(lastHoled?: string, confirmedPar = false) {
     setBusy(true)
     setAskReason(false)
     const savedHole = hole
@@ -555,7 +560,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         hole,
         lastHoled,
         new Map(bases.current),
-        new Set(Object.keys(writes).filter((id) => !touched.current.has(id))),
+        // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
+        new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id))),
       )
       // Saved (in the outbox): nothing left to keep for this hole, and the save is the hole's new
       // starting point. The last hole stays on screen after its save: a correction made there is
@@ -787,7 +793,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             {players.some((p) => missing(p.id).length > 0) && <span className="help">{S.missingHoles}</span>}
             {players.some((p) => roundState[p.id]?.holes.some((h) => h.disputed)) && <span className="help">{S.disputedHint}</span>}
           </div>
-          <HoleConflicts roundId={round.id} playerIds={group.playerIds} myPlayerId={me.playerId} />
+          <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
           <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
           {pairsOn && complete && (
             <div>
@@ -852,7 +858,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           </header>
 
           {restoredCount > 0 && <p className={styles.restoredNote}>{S.restoredDraft}</p>}
-          <HoleConflicts roundId={round.id} playerIds={group.playerIds} myPlayerId={me.playerId} />
+          <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
           <div className={styles.players}>
             {players.map((p) => {
               const d = drafts[p.id]
@@ -957,7 +963,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             <button className="btn btn--secondary" type="button" onClick={() => setConfirmDefaults(false)}>
               {S.allDefaultsBack}
             </button>
-            <button className="btn btn--primary grow" type="button" onClick={() => void save(true)}>
+            <button className="btn btn--primary grow" type="button" onClick={() => void save(true, true)}>
               {S.allDefaultsConfirm}
             </button>
           </div>

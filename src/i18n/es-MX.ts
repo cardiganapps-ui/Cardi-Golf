@@ -1398,11 +1398,13 @@ export const t = {
     /**
      * A hole someone else saved first (REL-05): the server kept theirs, and
      * this phone's value waits for the player to choose. `who`: who entered
-     * theirs (null: unknown); `self`: the player entered his own.
+     * theirs (null: unknown); `self`: the player entered his own; `day`: the
+     * day, when it is not the one on screen (the question stays on every
+     * state of the Tarjeta until it is answered, a closed day included).
      */
     conflictTitle: 'Alguien más capturó primero',
-    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean) =>
-      `Hoyo ${hole}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
+    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean, day: number | null = null) =>
+      `${day === null ? `Hoyo ${hole}` : `Día ${day}, hoyo ${hole}`}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
     /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
     conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
       const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
@@ -1410,7 +1412,9 @@ export const t = {
     },
     keepMine: 'Guardar el mío',
     keepTheirs: 'Dejar el suyo',
-    conflictAction: (action: string, hole: number, player: string) => `${action}: hoyo ${hole}, ${player}`,
+    conflictAction: (action: string, hole: number, player: string, day: number | null = null) => `${action}: ${day === null ? '' : `día ${day}, `}hoyo ${hole}, ${player}`,
+    /** Under the question on a day that is no longer live: what «Guardar el mío» does then. */
+    conflictClosedHint: 'Ese día ya no está en juego: «Guardar el mío» lo manda al Comité, que lo revisa en sus pendientes.',
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
@@ -1726,7 +1730,7 @@ export const t = {
     /** «Pendientes de revisar»: holes the server kept for the Comité (REL-08, 0028). */
     serverInbox: {
       title: 'Pendientes de revisar',
-      hint: 'Hoyos que alguien capturó y el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o con valores imposibles. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial. Cuando dos teléfonos guardan el mismo hoyo, lo resuelve el teléfono, no esta lista.',
+      hint: 'Hoyos que el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o con valores imposibles; también el par que la Tarjeta pone sola, cuando es lo único que llegó para un hoyo vacío. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial. Cuando dos teléfonos guardan el mismo hoyo, el que llegó después pregunta en su Tarjeta «Guardar el mío» o «Dejar el suyo», aunque el día ya esté cerrado, hasta que alguien conteste en ese teléfono; si guarda el suyo con el día cerrado, llega aquí.',
       none: 'Nada por revisar: el servidor tomó todo lo que mandaron los teléfonos.',
       unavailable: 'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo; no detiene el cierre del torneo.',
       retry: 'Volver a cargar',
@@ -1734,6 +1738,8 @@ export const t = {
       where: (name: string, where: string) => `${name}, ${where}`,
       sent: (value: string, who: string | null) => (who ? `Mandó ${value}, desde el teléfono de ${who}.` : `Mandó ${value}.`),
       sentUnreadable: 'Lo que mandó no se entiende.',
+      /** An untouched default (`auto`), listed because nothing else was sent for that empty hole. */
+      untouched: 'Era el par que la Tarjeta pone sola, sin que nadie lo cambiara; es lo único que llegó para ese hoyo.',
       why: {
         round_not_live: 'El día no estaba en juego.',
         card_signed: 'La tarjeta ya estaba firmada.',

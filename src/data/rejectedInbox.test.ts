@@ -49,9 +49,10 @@ beforeEach(() => {
     kept('w1'),
     kept('w3', { status: 'applied' }),
     kept('w4', { tournament_id: 't9' }),
-    // A conflict the phone settled itself, and an untouched default the server refused: the Comité is asked about neither (0028).
+    // A conflict the phone asks about, and an untouched default the server refused over the score that stands: the
+    // Comité is asked about neither (0028).
     kept('w5', { reason: 'conflict', payload: { player_id: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, base: {}, server: { strokes: 5 } } }),
-    kept('w6', { hole: 8, reason: 'round_not_live', payload: { player_id: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, base: {}, auto: true } }),
+    kept('w6', { reason: 'round_not_live', payload: { player_id: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, base: {}, auto: true } }),
   ]
   useRejectedInbox.setState({ tournamentId: null, items: [], status: 'idle', error: null, fixture: false })
 })
@@ -67,9 +68,19 @@ describe('the list', () => {
     expect(server.wire.filter((r) => r.target === 'rpc/rejected_inbox').map((r) => r.body)).toEqual([{ p_tournament_id: 't1' }])
   })
 
-  it('never a conflict or an untouched default, even from a server that listed them', async () => {
+  it('never a conflict, even from a server that listed one; which untouched defaults to list is the server\'s to say (it sees every score)', async () => {
     server.decide = (req) => (req.target === 'rpc/rejected_inbox' ? { status: 200, body: server.tables.rejected_writes!.filter((r) => r.tournament_id === 't1' && r.status === 'open') } : 'answer')
-    expect((await listOpenRejected('t1'))?.map((x) => x.id).sort()).toEqual(['w1', 'w2'])
+    expect((await listOpenRejected('t1'))?.map((x) => x.id).sort()).toEqual(['w1', 'w2', 'w6'])
+  })
+
+  it('an untouched default refused on an empty hole is listed, said to be one; over the score that stands it is not', async () => {
+    server.tables.rejected_writes!.push(kept('w7', { hole: 9, reason: 'round_not_live', payload: { player_id: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, base: {}, auto: true } }))
+    const items = await listOpenRejected('t1')
+    expect(items?.map((x) => [x.id, x.auto])).toEqual([
+      ['w1', false],
+      ['w2', false],
+      ['w7', true],
+    ])
   })
 
   it('a database without the inbox yet: «unavailable», not a broken screen (PGRST202, 42883)', async () => {
@@ -168,17 +179,38 @@ describe('applying and dismissing', () => {
     await loadRejectedInbox('t1')
     let down = true
     server.decide = (req) => (down && req.target === 'rpc/resolve_rejected_write' && (req.body as Row).p_id === 'w2' ? { status: 503, body: { code: 'XX000', details: null, hint: null, message: 'upstream' } } : 'answer')
-    const first = await dismissInboxItems('t1', ['w1', 'w2'], 'La tarjeta ya tiene ese valor')
+    const first = await dismissInboxItems(
+      't1',
+      [
+        { id: 'w1', seen: { strokes: 5, putts: 2, picked_up: false } },
+        { id: 'w2', seen: {} },
+      ],
+      'La tarjeta ya tiene ese valor',
+    )
     expect(first.done).toBe(1)
     expect(first.failed).toBeTruthy()
     expect(ids()).toEqual(['w2'])
     // Meanwhile another Comité phone dismissed w2; the retry is for the rows as they are now.
     down = false
     row('w2').status = 'dismissed'
-    const again = await dismissInboxItems('t1', ['w2'], 'La tarjeta ya tiene ese valor')
+    const again = await dismissInboxItems('t1', [{ id: 'w2', seen: {} }], 'La tarjeta ya tiene ese valor')
     expect(again).toEqual({ done: 1, failed: null })
     expect(ids()).toEqual([])
     expect(row('w1')).toMatchObject({ status: 'dismissed', resolution_note: 'La tarjeta ya tiene ese valor' })
+  })
+
+  it('«Descartar los que ya coinciden» says the hole each row matched: one whose hole changed since is refused and stays (N4)', async () => {
+    await loadRejectedInbox('t1')
+    // The card showed 5/2 for w1; another phone then saved 5/1.
+    server.tables.scores = server.tables.scores!.map((r) => (r.player_id === 'p2' && r.hole === 5 ? { ...r, putts: 1 } : r))
+    const res = await dismissInboxItems('t1', [{ id: 'w1', seen: { strokes: 5, putts: 2, picked_up: false } }], 'La tarjeta ya tiene ese valor')
+    expect(server.wire.filter((r) => r.target === 'rpc/resolve_rejected_write').map((r) => r.body)).toEqual([
+      { p_id: 'w1', p_action: 'dismiss', p_reason: 'La tarjeta ya tiene ese valor', p_expect: { strokes: 5, putts: 2, picked_up: false } },
+    ])
+    expect(res.done).toBe(0)
+    expect(isStaleHole(res.failed)).toBe(true)
+    expect(row('w1').status).toBe('open')
+    expect(ids()).toEqual(['w1', 'w2'])
   })
 
   it('a phone that is not the Comité may not resolve one', async () => {
@@ -209,7 +241,7 @@ describe('what applying would leave (as 0028 writes it)', () => {
     expect(appliedValue(null, cur)).toBeNull()
   })
   it('what the phone meant is its fields over the row it saw', () => {
-    const item = { id: 'w', roundId: 'r1', hole: 5, playerId: 'p2', writerPlayerId: null, reason: 'not_in_group' as const, fields: { strokes: 6 }, base: { strokes: 4, putts: 3, picked_up: false }, createdAt: '' }
+    const item = { id: 'w', roundId: 'r1', hole: 5, playerId: 'p2', writerPlayerId: null, reason: 'not_in_group' as const, fields: { strokes: 6 }, base: { strokes: 4, putts: 3, picked_up: false }, auto: false, createdAt: '' }
     expect(sentValue(item, cur)).toEqual({ strokes: 6, putts: 3, pickedUp: false })
     expect(sentValue({ ...item, base: undefined }, cur)).toEqual({ strokes: 6, putts: 2, pickedUp: false })
   })

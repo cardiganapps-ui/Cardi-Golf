@@ -1,13 +1,14 @@
 /**
  * The Comité's inbox of holes the server did not take (REL-08): save_hole
  * (0026) keeps every refusal and every conflict in `rejected_writes`, with
- * what the phone sent. The Comité is asked only about a refusal of a value a
- * person typed (`rejected_inbox`, 0028): a conflict is the phone's to settle
- * (it sends its value again over an untouched default, or the player picks
- * «Dejar el suyo» or «Guardar el mío»), and the par and 2 putts the Tarjeta
- * fills in for a player nobody touched (`auto`) are nobody's capture. The
- * Comité applies one, against the hole it saw, or dismisses it, with a
- * reason (`resolve_rejected_write`, 0028).
+ * what the phone sent. The Comité is asked about a refusal of a value a
+ * person typed, and about the par and 2 putts the Tarjeta fills in for a
+ * player nobody touched (`auto`) only when that is the one value sent for an
+ * empty hole (`rejected_inbox`, 0028). A conflict is the phone's: it asks the
+ * player («Dejar el suyo» or «Guardar el mío», on every state of its
+ * Tarjeta), or sends its value again over an untouched default. The Comité
+ * applies one, against the hole it saw, or dismisses it, with a reason
+ * (`resolve_rejected_write`, 0028).
  *
  * Read on demand, not over the channel: the Comité's screens fetch the open
  * rows when they open and after each answer. A database without the inbox
@@ -33,6 +34,8 @@ export interface InboxItem {
   fields: unknown
   /** The row the phone saw (`payload.base`); undefined when it sent none. */
   base: unknown
+  /** The Tarjeta's untouched default (par and 2 putts), not a value anyone typed: listed only on an empty hole. */
+  auto: boolean
   createdAt: string
 }
 
@@ -54,6 +57,7 @@ function toItem(r: Row): InboxItem {
     reason: r.reason as RejectedReason,
     fields: payload.fields,
     base: 'base' in payload ? payload.base : undefined,
+    auto: payload.auto === true,
     createdAt: String(r.created_at ?? ''),
   }
 }
@@ -156,17 +160,19 @@ export async function resolveInboxItem(tournamentId: string, id: string, action:
 }
 
 /**
- * Dismiss each row with one reason, the list read once at the end. A row
+ * Dismiss each row with one reason, the list read once at the end. Each says
+ * the hole as the screen showed it (`seen`): one whose hole changed since is
+ * refused by the server (it no longer matches, 22023) and stays. A row
  * another Comité phone resolved meanwhile is done too. Answers how many went
  * and the first refusal of the rest (null: all of them went).
  */
-export async function dismissInboxItems(tournamentId: string, ids: string[], reason: string): Promise<{ done: number; failed: unknown }> {
+export async function dismissInboxItems(tournamentId: string, rows: Array<{ id: string; seen: SeenHole }>, reason: string): Promise<{ done: number; failed: unknown }> {
   let failed: unknown = null
   const done: string[] = []
   try {
-    for (const id of ids) {
+    for (const { id, seen } of rows) {
       try {
-        await resolveRejectedWrite(id, 'dismiss', reason)
+        await resolveRejectedWrite(id, 'dismiss', reason, seen)
         done.push(id)
       } catch (e) {
         if (isAlreadyResolved(e)) done.push(id)

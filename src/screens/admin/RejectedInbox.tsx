@@ -1,15 +1,18 @@
 /**
  * «Pendientes de revisar» (REL-08): the holes the server refused and kept
- * for the Comité (save_hole, 0026) that a person typed (rejected_inbox,
- * 0028: never a conflict, which the phone settles, nor an untouched
- * default). Each row says whose hole, what the phone sent and from whose
+ * for the Comité (save_hole, 0026) that a person typed, or that only the
+ * Tarjeta's untouched par was sent for (rejected_inbox, 0028: never a
+ * conflict, which the phone asks about, nor a default over a score that
+ * stands). Each row says whose hole, what the phone sent and from whose
  * phone, why the server did not take it, what the card holds on the server
  * now and what applying it would leave. «Aplicar» and «Descartar» both ask
  * for a reason (resolve_rejected_write, 0028); «Aplicar» sends the hole as
  * the row showed it, and a hole that changed since is refused and read
  * again. A row the card already matches (the phone sent it again once the
  * day reopened, the Comité typed it in) only needs dismissing, and those go
- * together in one tap: the ones that match when the reason is confirmed.
+ * together in one tap: the ones that match when the reason is confirmed,
+ * each with the hole it matched, so the server refuses one whose hole
+ * changed since (and the boards are read again).
  *
  * Online only, like every Comité correction. Read when the screen opens and
  * after each answer; another Comité phone's answers show on the next read.
@@ -59,7 +62,7 @@ export function RejectedInbox() {
     const applied = appliedValue(it.fields, current)
     return { it, current, applied, sent: sentValue(it, current), matches: sameValue(applied, current) }
   })
-  const matching = rows.filter((r) => r.matches).map((r) => r.it)
+  const matching = rows.filter((r) => r.matches)
 
   /**
    * One row. Applied, the boards read the hole again; a hole that changed
@@ -76,13 +79,17 @@ export function RejectedInbox() {
     if (action === 'apply') await reload()
     toast(action === 'apply' ? SI.applied : SI.dismissed)
   }
-  /** The rows that match the card when the reason is confirmed, each dismissed with it; one another phone resolved is done. */
-  async function dismissAll(list: InboxItem[], reason: string) {
+  /**
+   * The rows that match the card when the reason is confirmed, each dismissed with it and the hole it matched; one
+   * another phone resolved is done; one whose hole changed since is refused, and the boards are read again.
+   */
+  async function dismissAll(list: typeof matching, reason: string) {
     const { done, failed } = await dismissInboxItems(
       tournamentId,
-      list.map((x) => x.id),
+      list.map((x) => ({ id: x.it.id, seen: seenHole(x.current) })),
       reason,
     )
+    if (failed && isStaleHole(failed)) await reload()
     if (failed) throw done ? new UserError(SI.partly(done, list.length)) : failed
     toast(SI.dismissed)
   }
@@ -121,6 +128,7 @@ export function RejectedInbox() {
                 </span>
                 <span className={a.inboxSub}>
                   {sent ? SI.sent(value(sent), name(it.writerPlayerId)) : SI.sentUnreadable} {SI.why[it.reason] ?? SI.why.invalid}
+                  {it.auto ? ` ${SI.untouched}` : ''}
                 </span>
                 <span className={a.inboxSub}>
                   {current ? SI.now(value(current)) : SI.nowEmpty} {matches ? SI.matches : applied ? SI.wouldBe(value(applied)) : SI.cannotApply}

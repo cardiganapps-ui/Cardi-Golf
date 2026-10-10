@@ -594,10 +594,12 @@ const INBOX_MISSING = new Set(['PGRST202', '42883', 'PGRST205', '42P01'])
 /**
  * The holes the Comité decides (0028 `rejected_inbox`, REL-08): the
  * tournament's open `rejected_writes` that are a refusal of a value a person
- * typed. Never a conflict (the phone that met it settles it) nor an entry
- * the phone sent as an untouched default (`auto`): the server leaves them
- * out, and so does this, for a server that would not. Oldest first. Null
- * when the database has no inbox yet, so nothing may wait on it.
+ * typed, or of an untouched default (`auto`) on a hole nothing else covers
+ * (no score, no typed refusal of it open). Never a conflict (the phone that
+ * met it asks the player): the server leaves conflicts out, and so does this.
+ * Which defaults are listed only the server can say (it sees every score).
+ * Oldest first. Null when the database has no inbox yet, so nothing may wait
+ * on it.
  */
 export async function rejectedInboxRows(tournamentId: string): Promise<Row[] | null> {
   const { data, error } = await supabase().rpc('rejected_inbox', { p_tournament_id: tournamentId })
@@ -607,10 +609,9 @@ export async function rejectedInboxRows(tournamentId: string): Promise<Row[] | n
   }
   return (Array.isArray(data) ? (data as Row[]) : []).filter(rejectedForComite)
 }
-/** A row is the Comité's to decide: not a conflict, not an untouched default (0028). */
+/** A row the Comité may be asked about: never a conflict (0028). */
 export function rejectedForComite(r: Row): boolean {
-  const payload = r.payload && typeof r.payload === 'object' ? (r.payload as Row) : {}
-  return r.reason !== 'conflict' && payload.auto !== true
+  return r.reason !== 'conflict'
 }
 /** How many holes wait for the Comité; null when the database has no inbox yet («Cerrar torneo» does not wait on it then). */
 export async function openRejectedWrites(tournamentId: string): Promise<number | null> {
@@ -628,10 +629,12 @@ export interface SeenHole {
  * The Comité's answer to one of them (0028, REL-08): `apply` writes the
  * fields the phone set over the hole as it stands (as admin_save_score
  * does, the reason on the score), and only if the hole is still `seen`
- * (else 22023, «El hoyo cambió…»); `dismiss` leaves the card. Online only.
+ * (else 22023, «El hoyo cambió…»); `dismiss` leaves the card, and with
+ * `seen` («ya coinciden») is refused the same way when the hole changed
+ * since. Online only.
  */
 export async function resolveRejectedWrite(id: string, action: 'apply' | 'dismiss', reason: string, seen?: SeenHole) {
-  await rpc('resolve_rejected_write', { p_id: id, p_action: action, p_reason: reason, ...(action === 'apply' ? { p_expect: seen ?? null } : {}) })
+  await rpc('resolve_rejected_write', { p_id: id, p_action: action, p_reason: reason, ...(action === 'apply' ? { p_expect: seen ?? null } : seen ? { p_expect: seen } : {}) })
 }
 
 // ---------------------------------------------------------------------------

@@ -1,15 +1,15 @@
 /**
  * A reason as the database reads it (resolve_rejected_write, 0028): trimmed
- * of whitespace at both ends, every kind the database's `\s` matches (tabs
- * and newlines, not only spaces), and counted in characters, not in UTF-16
- * units (two golfers are two characters, not four).
+ * at both ends of every whitespace (tabs and newlines, not only spaces) and
+ * of the no-break and zero-width spaces, and counted in characters, not in
+ * UTF-16 units (two golfers are two characters, not four).
  *
- * The set is what Postgres's `\s` matches under the server's UTF-8 locale
- * (glibc's iswspace): the ASCII ones, the Unicode spaces, the line and
- * paragraph separators, but not the no-break spaces (U+00A0, U+2007,
- * U+202F) nor U+FEFF, which JavaScript's own `\s` would take too.
+ * The set is spelled out the same way in the migration, not left to `\s`:
+ * Postgres's `\s` follows the server's locale and leaves the no-break spaces
+ * (U+00A0, U+2007, U+202F) and U+FEFF out, so a reason of three of them would
+ * have counted as three letters there.
  */
-const SPACE = '[\\t\\n\\v\\f\\r \\u1680\\u2000-\\u2006\\u2008-\\u200a\\u2028\\u2029\\u205f\\u3000]'
+const SPACE = '[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u180e\\u2000-\\u200b\\u2028\\u2029\\u202f\\u205f\\u2060\\u3000\\ufeff]'
 const ENDS = new RegExp(`^${SPACE}+|${SPACE}+$`, 'g')
 
 export const trimReason = (s: string): string => s.replace(ENDS, '')

@@ -15,6 +15,13 @@
 #      lock it reads the 5 and writes over the 7.)
 #   3. Two Comité phones on one row, «Aplicar» and «Descartar»: the second
 #      waits for the first and is refused; the row says what the first did.
+#   4. An old build's direct insert open on an empty hole (no hole lock, and no
+#      row yet for the apply to lock), and the Comité applying with the hole
+#      seen empty: the apply's write meets the phone's row, changes nothing
+#      and is refused; the phone's 5/2 stands. (With the check apart from the
+#      write, the write landed over the 5/2 and the putts were lost.)
+#   5. The same with an untouched default refused on that empty hole (the one
+#      value sent for it, which the inbox lists): refused the same way.
 #   bash race_resolve_rejected.sh <scratch db> <migrated template db> <repo root>
 # db-test.sh runs it on the migrated database (step 3b); PG* says where.
 set -euo pipefail
@@ -40,9 +47,9 @@ select public.claim_player('$BETO', '1234'); commit;
 SQL
 
 fresh() { "${P[@]}" -d postgres -c "drop database if exists $DB with (force)" -c "create database $DB template ${DB}_s" >/dev/null; }
-# A row of the inbox for Ana's hole $1, with the fields $2: its id.
+# A row of the inbox for Ana's hole $1, with the fields $2 (and the rest of the payload $3): its id.
 kept() { "${P[@]}" -d "$DB" -c "insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
-  values ('$T_A', '$R1', $1, '$ANA', '$BETO', '$DEV_B', jsonb_build_object('fields', '$2'::jsonb), 'not_in_group') returning id" | head -1; }
+  values ('$T_A', '$R1', $1, '$ANA', '$BETO', '$DEV_B', jsonb_build_object('fields', '$2'::jsonb) || '${3:-{\}}'::jsonb, 'not_in_group') returning id" | head -1; }
 # One transaction as a user of the app (role authenticated, that user's claims),
 # held open $2 seconds before its commit. Prints each «out:» line and any error.
 as_user() {
@@ -103,3 +110,26 @@ as_user "$ORG_A" 0 "$(resolve "$W" dismiss 'Descartar otro' null)" >"$out/b"
 wait
 check "«Aplicar» open, «Descartar» on the same row (first, second, stored, row)" \
   "out:applied out:22023:Esa captura ya estaba resuelta 4/2 applied Aplicar uno" "$(cat "$out/a") $(cat "$out/b") $(stored 8) $(row "$W")"
+
+# 4. An old build's direct insert open on an empty hole; the Comité applies, having seen it empty
+fresh
+W=$(kept 9 '{"strokes":6}')
+insert="insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up, entered_by, client_ts) values ('$R1', '$ANA', 9, 5, 2, false, '$BETO', now())"
+as_user "$DEV_B" 3 "$insert" >"$out/a" &
+sleep 1
+as_user "$ORG_A" 0 "$(resolve "$W" apply 'Ana confirma 6' "'{}'::jsonb")" >"$out/b"
+wait
+check "an old build's insert open on an empty hole, an apply that saw it empty (apply, stored, row)" \
+  "out:22023:El hoyo cambió mientras lo revisabas; vuelve a mirarlo 5/2 open" "$(cat "$out/a")$(cat "$out/b") $(stored 9) $(row "$W")"
+
+# 5. The same, the row an untouched default refused on that empty hole
+fresh
+W=$(kept 10 '{"strokes":4,"putts":2,"picked_up":false}' '{"base":{},"auto":true}')
+listed=$("${P[@]}" -d "$DB" -c "begin" -c "select set_config('request.jwt.claims', harness.claims('$ORG_A'), true) is null" -c "set local role authenticated" \
+  -c "select public.rejected_inbox('$T_A') @> jsonb_build_array(jsonb_build_object('id', '$W'))" -c "rollback" | tail -1)
+as_user "$DEV_B" 3 "${insert/, 9, 5, 2,/, 10, 5, 2,}" >"$out/a" &
+sleep 1
+as_user "$ORG_A" 0 "$(resolve "$W" apply 'Todos par' "'{}'::jsonb")" >"$out/b"
+wait
+check "an old build's insert open, an apply of the listed default on the empty hole (listed, apply, stored, row)" \
+  "t out:22023:El hoyo cambió mientras lo revisabas; vuelve a mirarlo 5/2 open" "$listed $(cat "$out/a")$(cat "$out/b") $(stored 10) $(row "$W")"

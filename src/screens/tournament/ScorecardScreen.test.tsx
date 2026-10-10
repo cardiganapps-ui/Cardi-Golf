@@ -243,6 +243,13 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
       fireEvent.click(within(sheet).getByRole('button', { name: S.allDefaultsConfirm }))
     })
     expect(written().filter((r) => r.includes('@12='))).toHaveLength(4)
+    // «Sí, todos par» is the player confirming the four pars: his capture, sent without `auto`, so a refusal of it
+    // (the day closed, a card signed) reaches the Comité like any typed value (REL-08, N2).
+    const h12 = outbox.holes.find((h) => h.hole === 12)!
+    expect(h12.entries).toHaveLength(4)
+    expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
+    // The hole before, saved with one tap and no question, kept its untouched defaults as such.
+    expect(outbox.holes.find((h) => h.hole === 10)!.entries.filter((e) => e.auto).length).toBeGreaterThan(0)
   })
 
   it('a hole played normally, long after the last save, needs no question', async () => {

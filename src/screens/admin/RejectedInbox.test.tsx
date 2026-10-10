@@ -66,6 +66,11 @@ const sheet = () => within(screen.getByRole('dialog'))
 const type = (text: string) => fireEvent.change(sheet().getByRole('textbox'), { target: { value: text } })
 const confirm = (label: string) => act(async () => fireEvent.click(sheet().getByRole('button', { name: label })))
 const ids = () => useRejectedInbox.getState().items.map((x) => x.id)
+/** A hole of the fixture as the screen shows it, and sends as what it saw. */
+const seenOf = (roundId: string, playerId: string, hole: number) => {
+  const x = getFixture('full12-live')!.snapshot.scores.find((y) => y.roundId === roundId && y.playerId === playerId && y.hole === hole)!
+  return { strokes: x.strokes, putts: x.putts, picked_up: x.pickedUp }
+}
 
 describe('«Pendientes de revisar»', () => {
   it('says whose hole, what was sent and from whose phone, why, what the card holds and what applying leaves', () => {
@@ -74,6 +79,21 @@ describe('«Pendientes de revisar»', () => {
     expect(text).toContain(SI.why.round_not_live)
     expect(text).toContain(SI.now('4 golpes, 2 putts'))
     expect(text).toContain(SI.wouldBe('9 golpes, 3 putts'))
+  })
+
+  it('an untouched default on an empty hole says it was the Tarjeta\'s par, and can be applied as the hole is, empty', async () => {
+    cleanup()
+    const fx = getFixture('full12-live')!
+    const item = { ...structuredClone(fx.inbox![0]!), id: 'fx-rw-auto', roundId: 'r2', hole: 17, playerId: 'p2', fields: { strokes: 4, putts: 2, picked_up: false }, auto: true }
+    useRejectedInbox.setState({ items: [item], status: 'ready', fixture: true })
+    renderInbox()
+    const text = box().getByText('Bruno, día 2, hoyo 17').closest('div')!.textContent
+    expect(text).toContain(SI.untouched)
+    expect(text).toContain(SI.nowEmpty)
+    fireEvent.click(box().getByRole('button', { name: `${SI.apply}: Bruno, día 2, hoyo 17` }))
+    type('Todos hicieron par')
+    await confirm(SI.apply)
+    expect(server.calls).toEqual([['fx-rw-auto', 'apply', 'Todos hicieron par', {}]])
   })
 
   it('a capture sent onto a signed card says so, and what applying its strokes would leave', () => {
@@ -136,10 +156,21 @@ describe('«Pendientes de revisar»', () => {
     fireEvent.click(box().getByRole('button', { name: SI.dismissMatching(2) }))
     expect((sheet().getByRole('textbox') as HTMLInputElement).value).toBe(SI.matchingReason)
     await confirm(SI.dismiss)
+    // Each with the hole it matched: the server refuses one whose hole changed since (N4).
     expect(server.calls).toEqual([
-      ['fx-rw-3', 'dismiss', SI.matchingReason],
-      ['fx-rw-4', 'dismiss', SI.matchingReason],
+      ['fx-rw-3', 'dismiss', SI.matchingReason, seenOf('r2', 'p5', 2)],
+      ['fx-rw-4', 'dismiss', SI.matchingReason, seenOf('r2', 'p6', 3)],
     ])
+  })
+
+  it('a hole that changed since it matched: the server refuses that dismissal, the boards are read again, the row stays (N4)', async () => {
+    server.failFor['fx-rw-4'] = new ApiError('El hoyo cambió mientras lo revisabas; vuelve a mirarlo', '22023')
+    fireEvent.click(box().getByRole('button', { name: SI.dismissMatching(2) }))
+    await confirm(SI.dismiss)
+    expect(sheet().getByText(SI.partly(1, 2))).toBeTruthy()
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(ids()).toContain('fx-rw-4')
+    expect(ids()).not.toContain('fx-rw-3')
   })
   it('a hole that changed since the row showed it: refused in the server\'s words, the boards read again, nothing left as applied', async () => {
     server.fail = new ApiError('El hoyo cambió mientras lo revisabas; vuelve a mirarlo', '22023')
@@ -163,11 +194,16 @@ describe('«Pendientes de revisar»', () => {
     expect(server.calls).toEqual([['fx-rw-1', 'dismiss', 'Se equivocó de día']])
   })
 
-  it('…and sends it as the server keeps it: a no-break space is no whitespace there, so it stays and counts', async () => {
+  it('…and the no-break and zero-width spaces are trimmed too, as the server trims them: three of them are blank, two letters inside them too short', async () => {
     fireEvent.click(box().getByRole('button', { name: `${SI.dismiss}: Bruno, día 1, hoyo 16` }))
-    type('\u00a0ab')
+    type('\u00a0\u00a0\u00a0')
     await confirm(SI.dismiss)
-    expect(server.calls).toEqual([['fx-rw-1', 'dismiss', '\u00a0ab']])
+    type('\u00a0ab\u200b')
+    await confirm(SI.dismiss)
+    expect(server.calls).toEqual([])
+    type('\u00a0Se equivocó\u202f')
+    await confirm(SI.dismiss)
+    expect(server.calls).toEqual([['fx-rw-1', 'dismiss', 'Se equivocó']])
   })
 
   it('«Descartar los que ya coinciden» that fails partway says so; the retry sends only what still matches, and one another phone resolved counts as done', async () => {
@@ -181,7 +217,7 @@ describe('«Pendientes de revisar»', () => {
     server.failFor['fx-rw-4'] = new ApiError('Esa captura ya estaba resuelta', '22023')
     server.calls.length = 0
     await confirm(SI.dismiss)
-    expect(server.calls).toEqual([['fx-rw-4', 'dismiss', SI.matchingReason]])
+    expect(server.calls).toEqual([['fx-rw-4', 'dismiss', SI.matchingReason, seenOf('r2', 'p6', 3)]])
     expect(ids()).not.toContain('fx-rw-4')
     expect(screen.queryByRole('dialog')).toBeNull()
   })

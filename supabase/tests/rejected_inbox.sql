@@ -139,6 +139,8 @@ select pg_temp.try_resolve(:'w_closed', 'borrar', 'Motivo válido') as e4 \gset
 select pg_temp.try_resolve(:'w_closed', 'dismiss', E'\t\t\t') as e5 \gset
 select pg_temp.try_resolve(:'w_closed', 'dismiss', E'\n ab \t') as e6 \gset
 select pg_temp.try_resolve(:'w_closed', 'dismiss', '🏌🏌') as e7 \gset
+select pg_temp.try_resolve(:'w_closed', 'dismiss', E'\u00a0\u00a0\u00a0') as e9 \gset
+select pg_temp.try_resolve(:'w_closed', 'dismiss', E'\u00a0ab\u202f\u200b\ufeff') as e10 \gset
 select pg_temp.try_resolve(:'w_closed', 'apply', repeat('🏌', 200), '{}') as e8 \gset
 reset role;
 select harness.check(:'e1' like '22023 Escribe el motivo%' and :'e2' like '22023 Escribe el motivo%', 'a blank or missing reason: 22023');
@@ -146,6 +148,8 @@ select harness.check(:'e3' like '22023 El motivo es muy largo%', 'a reason over 
 select harness.check(:'e4' like '22023 Una captura rechazada se aplica o se descarta%', 'an action other than apply or dismiss: 22023');
 select harness.check(:'e5' like '22023 Escribe el motivo%' and :'e6' like '22023 Escribe el motivo%', 'three tabs, or two letters inside newlines and tabs: 22023 (every whitespace is trimmed, not only spaces)');
 select harness.check(:'e7' like '22023 Escribe el motivo%', 'two golfers are two characters, not four: 22023');
+select harness.check(:'e9' like '22023 Escribe el motivo%', 'three no-break spaces are blank: 22023');
+select harness.check(:'e10' like '22023 Escribe el motivo%', 'two letters inside no-break, narrow and zero-width spaces: 22023 (trimmed too)');
 select harness.check(:'e8' like 'ok %', 'two hundred golfers are two hundred characters: taken');
 select harness.check(pg_temp.status(:'w_closed') = 'applied' and (pg_temp.score(:'ana', 1)).strokes = 4, 'that one applied it; none of the refused ones wrote anything');
 -- The rest of the file needs a row like it, still open: the same capture again, with the day closed.
@@ -236,7 +240,9 @@ select harness.check(:'listed' = '', 'and the Comité is asked nothing: the inbo
 select harness.check(:'out' like '22023 %' and (pg_temp.score(:'ana', 3)).strokes = 6 and (pg_temp.score(:'ana', 3)).putts = 3,
   'applying the default anyway: 22023, Ana''s real 6/3 stands');
 
--- 8. An untouched default the server refused (the day closed): nobody's capture, not listed, not applied
+-- 8. An untouched default the server refused on an empty hole (the day closed, then the hole saved with all four at
+--    par): the only value anyone sent for that hole, so the Comité's to decide, beside the typed one; applied as the
+--    hole was seen, empty
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 update public.rounds set status = 'finished' where id = :'r1';
@@ -247,15 +253,66 @@ select public.save_hole(pg_temp.hole(:'r1', 12, jsonb_build_array(
   jsonb_build_object('player_id', :'ana', 'fields', '{"strokes":7,"putts":2,"picked_up":false}'::jsonb, 'base', '{}'::jsonb),
   jsonb_build_object('player_id', :'beto', 'fields', '{"strokes":4,"putts":2,"picked_up":false}'::jsonb, 'base', '{}'::jsonb, 'auto', true)))) \g /dev/null
 reset role;
+select id as w_typed from public.rejected_writes where round_id = :'r1' and hole = 12 and player_id = :'ana' \gset
+select id as w_auto from public.rejected_writes where round_id = :'r1' and hole = 12 and player_id = :'beto' \gset
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 update public.rounds set status = 'live' where id = :'r1';
 select pg_temp.inbox(:'t_a') as listed \gset
-select pg_temp.try_resolve((select id from public.rejected_writes where round_id = :'r1' and hole = 12 and player_id = :'beto'), 'apply', 'Era el par', '{}') as out \gset
+select pg_temp.try_resolve(:'w_auto', 'apply', 'Todos hicieron par', '{"strokes":4,"putts":2}') as not_seen \gset
 reset role;
-select id as w_typed from public.rejected_writes where round_id = :'r1' and hole = 12 and player_id = :'ana' \gset
-select harness.check(:'listed' = :'w_typed', 'the inbox lists Ana''s typed 7, not Beto''s untouched par');
-select harness.check(:'out' like '22023 Nadie capturó ese valor%' and pg_temp.score(:'beto', 12) is null, 'applying the par: 22023, nothing written');
+select harness.check((select payload -> 'auto' = 'true'::jsonb from public.rejected_writes where id = :'w_auto')
+  and string_to_array(:'listed', ',') @> array[:'w_typed', :'w_auto'] and cardinality(string_to_array(:'listed', ',')) = 2,
+  'the inbox lists Ana''s typed 7 and Beto''s untouched par: his hole is empty, nobody sent anything else for it');
+select harness.check(:'not_seen' like '22023 El hoyo cambió%' and pg_temp.score(:'beto', 12) is null, 'applied as if the hole held the par: 22023, nothing written');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_resolve(:'w_auto', 'apply', 'Todos hicieron par', '{}') as out \gset
+reset role;
+select harness.check(:'out' like 'ok %' and (pg_temp.score(:'beto', 12)).strokes = 4 and (pg_temp.score(:'beto', 12)).putts = 2
+  and (pg_temp.score(:'beto', 12)).reason = 'Todos hicieron par' and pg_temp.status(:'w_auto') = 'applied', 'applied as the hole was seen, empty: Beto''s 12th is 4 with 2 putts, the reason on the score');
+
+-- 8b. The same default sent again once a score stands: never listed, never applied (A9 holds)
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+update public.rounds set status = 'finished' where id = :'r1';
+reset role;
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select public.save_hole(pg_temp.hole(:'r1', 12, jsonb_build_array(
+  jsonb_build_object('player_id', :'beto', 'fields', '{"strokes":5,"putts":2,"picked_up":false}'::jsonb, 'base', '{}'::jsonb, 'auto', true)))) \g /dev/null
+reset role;
+select id as w_auto2 from public.rejected_writes where round_id = :'r1' and hole = 12 and player_id = :'beto' and status = 'open' \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+update public.rounds set status = 'live' where id = :'r1';
+select pg_temp.inbox(:'t_a') as listed \gset
+select pg_temp.try_resolve(:'w_auto2', 'apply', 'Era el par', pg_temp.seen(:'r1', :'beto', 12)) as out \gset
+reset role;
+select harness.check(not (string_to_array(:'listed', ',') @> array[:'w_auto2']), 'an untouched default over the score that stands is not listed');
+select harness.check(:'out' like '22023 Nadie capturó ese valor%' and (pg_temp.score(:'beto', 12)).strokes = 4 and pg_temp.status(:'w_auto2') = 'open',
+  'applying it: 22023, Beto''s 4 stands');
+
+-- 8c. Beside a typed capture of the same empty hole: the typed one is listed, the default is not
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason) values
+  (:'t_a', :'r1', 18, :'ana', :'beto', :'dev_b', '{"fields":{"strokes":6,"putts":2},"base":{}}'::jsonb, 'not_in_group'),
+  (:'t_a', :'r1', 18, :'ana', :'ana', :'dev_a', '{"fields":{"strokes":4,"putts":2,"picked_up":false},"base":{},"auto":true}'::jsonb, 'round_not_live');
+select id as w18_typed from public.rejected_writes where round_id = :'r1' and hole = 18 and player_id = :'ana' and reason = 'not_in_group' \gset
+select id as w18_auto from public.rejected_writes where round_id = :'r1' and hole = 18 and player_id = :'ana' and reason = 'round_not_live' \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.inbox(:'t_a') as listed \gset
+select pg_temp.try_resolve(:'w18_auto', 'apply', 'Era el par', '{}') as out \gset
+reset role;
+select harness.check(string_to_array(:'listed', ',') @> array[:'w18_typed'] and not (string_to_array(:'listed', ',') @> array[:'w18_auto']),
+  'the typed 6 is listed; the default beside it is not');
+select harness.check(:'out' like '22023 Nadie capturó ese valor%' and pg_temp.score(:'ana', 18) is null, 'applying the default: 22023, nothing written');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_resolve(:'w18_typed', 'dismiss', 'Lo mandó otro grupo') \g /dev/null
+select pg_temp.inbox(:'t_a') as listed \gset
+reset role;
+select harness.check(string_to_array(:'listed', ',') @> array[:'w18_auto'], 'once the typed one is dismissed, the default is the only value sent for the hole: listed');
 
 -- 9. A stale preview (A8): the phone saves 5/2, the Comité sees it, the phone saves 3/3, the Comité applies putts 1
 insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
@@ -411,7 +468,104 @@ reset role;
 select harness.check(:'listed' not like '42501%' and :'listed' like '%' || (select id from public.rejected_writes where hole = 6 and round_id = :'r1')::text || '%', 'Ana, made admin, reads the inbox');
 select harness.check(:'out' like 'ok %' and (select status from public.rejected_writes where hole = 6 and round_id = :'r1') = 'dismissed', 'and dismisses one');
 
--- 18. Published to Realtime, for the bundle that listens to it
+-- 18. Oldest first: two rows sent a minute apart are listed in that order, before the rest (sent in this transaction)
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason, created_at)
+values (:'t_a', :'r1', 16, :'beto', :'beto', :'dev_b', '{"fields":{"strokes":5}}'::jsonb, 'card_signed', now() - interval '1 minute')
+returning id as w_newer \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason, created_at)
+values (:'t_a', :'r1', 17, :'beto', :'beto', :'dev_b', '{"fields":{"strokes":6}}'::jsonb, 'card_signed', now() - interval '2 minutes')
+returning id as w_older \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.inbox(:'t_a') as listed \gset
+reset role;
+select harness.check((string_to_array(:'listed', ','))[1] = :'w_older' and (string_to_array(:'listed', ','))[2] = :'w_newer'
+  and cardinality(string_to_array(:'listed', ',')) > 2, 'the inbox is oldest first: the row sent two minutes ago, then the one sent a minute ago, then the rest');
+
+-- 19. «Descartar los que ya coinciden» says what the card showed: a hole that changed since is refused, the row open
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'r1', 13, :'beto', :'ana', :'dev_a', '{"fields":{"strokes":7,"putts":3},"base":{}}'::jsonb, 'not_in_group') returning id as w_match \gset
+select pg_temp.seen(:'r1', :'beto', 13) as matched \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select public.admin_save_score(:'r1', :'beto', 13, 6, 3, false, 'Eran 6') \g /dev/null
+select pg_temp.try_resolve(:'w_match', 'dismiss', 'La tarjeta ya tiene ese valor', :'matched') as stale \gset
+select pg_temp.try_resolve(:'w_match', 'dismiss', 'La tarjeta ya tiene ese valor', '"nada"') as bad \gset
+reset role;
+select harness.check(:'matched'::jsonb = '{"strokes":7,"putts":3,"picked_up":false}' and :'stale' like '22023 El hoyo cambió mientras lo revisabas%' and pg_temp.status(:'w_match') = 'open',
+  'the card matched 7/3, then became 6/3: dismissing as «ya coincide» is refused (22023), the row open');
+select harness.check(:'bad' like '22023 Falta lo que viste%', 'a dismissal that says something other than a hole: 22023');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_resolve(:'w_match', 'dismiss', 'Revisado otra vez', pg_temp.seen(:'r1', :'beto', 13)) as out \gset
+reset role;
+select harness.check(:'out' like 'ok %' and pg_temp.status(:'w_match') = 'dismissed' and (pg_temp.score(:'beto', 13)).strokes = 6, 'with the card as it is now: dismissed, the 6 stands');
+
+-- 20. An apply writes what admin_save_score writes: the same row and the same audit, inserted or updated, by an admin player
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select public.admin_save_score(:'r1', :'beto', 15, 6, 2, false, 'Base') \g /dev/null
+select public.admin_save_score(:'r1', :'beto', 16, 6, 2, false, 'Base') \g /dev/null
+reset role;
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason) values
+  (:'t_a', :'r1', 13, :'ana', :'beto', :'dev_b', '{"fields":{"strokes":5,"putts":2,"picked_up":false},"base":{}}'::jsonb, 'not_in_group'),
+  (:'t_a', :'r1', 15, :'beto', :'beto', :'dev_b', '{"fields":{"putts":1},"base":{"strokes":6,"putts":2,"picked_up":false}}'::jsonb, 'card_signed');
+select max(id) as audit1 from public.audit_log \gset
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_resolve((select id from public.rejected_writes where round_id = :'r1' and hole = 13 and player_id = :'ana'), 'apply', 'Mismo motivo', '{}') as ins \gset
+select public.admin_save_score(:'r1', :'ana', 14, 5, 2, false, 'Mismo motivo') \g /dev/null
+select pg_temp.try_resolve((select id from public.rejected_writes where round_id = :'r1' and hole = 15 and player_id = :'beto' and status = 'open'), 'apply', 'Mismo motivo', pg_temp.seen(:'r1', :'beto', 15)) as upd \gset
+select public.admin_save_score(:'r1', :'beto', 16, 6, 1, false, 'Mismo motivo') \g /dev/null
+reset role;
+create function pg_temp.row_of(p uuid, h int) returns jsonb language sql as $$
+  select to_jsonb(s) - 'id' - 'hole' - 'client_ts' - 'updated_at' from public.scores s where s.round_id = (select id from harness.seed where key = 'round_a1') and s.player_id = p and s.hole = h
+$$;
+create function pg_temp.audit_of(p uuid, h int, since bigint) returns jsonb language sql as $$
+  select jsonb_agg(jsonb_build_object('action', a.action, 'by', a.actor_auth_user_id, 'player', a.actor_player_id, 'reason', a.reason, 'platform', a.actor_platform,
+    'before', a.before - 'id' - 'hole' - 'client_ts' - 'updated_at', 'after', a.after - 'id' - 'hole' - 'client_ts' - 'updated_at') order by a.id)
+  from public.audit_log a where a.id > since and a.table_name = 'scores' and a.after ->> 'player_id' = p::text and (a.after ->> 'hole')::int = h
+$$;
+select harness.check(:'ins' like 'ok %' and :'upd' like 'ok %', 'both applied');
+select harness.check(pg_temp.row_of(:'ana', 13) = pg_temp.row_of(:'ana', 14) and (pg_temp.score(:'ana', 13)).entered_by = :'ana' and (pg_temp.score(:'ana', 13)).reason = 'Mismo motivo',
+  'on an empty hole: the row admin_save_score writes (Ana, the admin player, as the writer, the reason, no discrepancy, version 1)');
+select harness.check(pg_temp.audit_of(:'ana', 13, :audit1) = pg_temp.audit_of(:'ana', 14, :audit1) and jsonb_array_length(pg_temp.audit_of(:'ana', 13, :audit1)) = 1,
+  'and the audit admin_save_score leaves: one INSERT, by Ana''s device, with the reason');
+select harness.check(pg_temp.row_of(:'beto', 15) = pg_temp.row_of(:'beto', 16) and (pg_temp.score(:'beto', 15)).putts = 1 and (pg_temp.score(:'beto', 15)).version = 2,
+  'over a score: the row admin_save_score leaves (6 strokes, 1 putt, version 2)');
+select harness.check(pg_temp.audit_of(:'beto', 15, :audit1) = pg_temp.audit_of(:'beto', 16, :audit1) and jsonb_array_length(pg_temp.audit_of(:'beto', 15, :audit1)) = 1,
+  'and the same UPDATE in the audit');
+
+-- 21. On a finished day the results follow the applied hole, as they follow admin_save_score (the day gets a card first)
+insert into public.courses (name) values ('Campo de prueba') returning id as course \gset
+insert into public.tees (course_id, name, rating, slope, par_total) values (:'course', 'Blancas', 72.0, 113, 72) returning id as tee \gset
+insert into public.holes (tee_id, number, par, stroke_index) select :'tee', n, 4, n from generate_series(1, 18) n;
+update public.rounds set course_id = :'course' where id = :'r1';
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+update public.rounds set status = 'finished' where id = :'r1';
+reset role;
+select thru as thru0, coalesce(putts, 0) as putts0 from public.round_results where round_id = :'r1' and player_id = :'ana' \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'r1', 4, :'ana', :'ana', :'dev_a', '{"fields":{"strokes":5,"putts":2},"base":{}}'::jsonb, 'round_not_live') returning id as w_fin \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_resolve(:'w_fin', 'apply', 'Llegó tarde', '{}') as out \gset
+reset role;
+select harness.check(:'out' like 'ok %' and (select thru = :thru0 + 1 and putts = :putts0 + 2 from public.round_results where round_id = :'r1' and player_id = :'ana'),
+  'Ana''s results for the day count the applied 4th: one hole more, two putts more');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select public.admin_save_score(:'r1', :'ana', 5, 4, 1, false, 'Llegó tarde') \g /dev/null
+reset role;
+select harness.check((select thru = :thru0 + 2 and putts = :putts0 + 3 from public.round_results where round_id = :'r1' and player_id = :'ana'),
+  'as they count admin_save_score''s 5th');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+update public.rounds set status = 'live' where id = :'r1';
+reset role;
+
+-- 22. Published to Realtime, for the bundle that listens to it
 select harness.check(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rejected_writes')
   or not exists (select 1 from pg_publication where pubname = 'supabase_realtime'), 'rejected_writes is in the realtime publication');
 

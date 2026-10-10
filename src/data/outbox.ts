@@ -90,7 +90,9 @@ export interface HoleEntry {
   /**
    * A default nobody touched (an all-par hole): a conflict on it takes the
    * server's value without asking. Sent with the entry: save_hole keeps it in
-   * what it records, and the Comité's inbox leaves it out (0028).
+   * what it records, and the Comité's inbox lists a refused one only on a
+   * hole nothing else covers (0028). Not set when the player confirmed the
+   * pars («Sí, todos par»): those are his capture.
    */
   auto?: boolean
   /**
@@ -1038,7 +1040,7 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   if (item.kind === 'hole') {
     const p = item.payload
     // Every entry names its base: a key left out is a blind write on the server (0026). An untouched default says so
-    // (`auto`): save_hole keeps the entry as sent, and the Comité is never asked about a value nobody typed (0028).
+    // (`auto`): save_hole keeps the entry as sent, and the Comité is asked about one only on a hole nothing else covers (0028).
     const call = {
       round_id: p.round_id,
       hole: p.hole,
@@ -1143,8 +1145,10 @@ async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: L
   }
   const refusals = (ans.rejected ?? []).flatMap((r) => {
     const e = entry(r.player_id)
-    // The answer's refusals are the ones save_hole kept (0026); the Comité is asked about those a person typed (0028).
-    return e ? [holeRefusal(item, e, refusalText(r.reason), !e.auto)] : []
+    // The answer's refusals are the ones save_hole kept (0026); the Comité is asked about those a person typed, and
+    // about an untouched default on a hole this phone saw empty: the one value sent for it, unless something else
+    // landed there since (0028).
+    return e ? [holeRefusal(item, e, refusalText(r.reason), !e.auto || Object.keys(e.base ?? {}).length === 0)] : []
   })
   if (isCurrent(item)) {
     queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))

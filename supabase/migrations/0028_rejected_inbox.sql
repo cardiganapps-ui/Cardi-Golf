@@ -6,20 +6,26 @@
 -- retype the hole in Tarjetas by hand.
 --
 --   1. rejected_inbox(tid): the rows that are the Comité's to decide. A
---      conflict is not: the phone that met it settles it itself (it sends its
---      value again over an untouched default, or the player picks «Dejar el
---      suyo» or «Guardar el mío»), so a conflict row stays open as the record
---      of what happened and is never listed. Nor is an entry the phone marked
---      `auto`: the par and 2 putts the Tarjeta fills in for a player nobody
---      touched is nobody's capture. What is left are refusals of a value a
---      person typed (round not live, card signed, not in the group, invalid).
+--      conflict is not: the phone that met it asks the player («Dejar el
+--      suyo» or «Guardar el mío», in every state of its Tarjeta, a closed day
+--      included), or sends its value again over an untouched default; a
+--      conflict row stays open as the record of what happened and is never
+--      listed. An entry the phone marked `auto` (the par and 2 putts the
+--      Tarjeta fills in for a player nobody touched) is listed only when
+--      nothing else covers that hole: no score for that player and hole, and
+--      no typed refusal of it open beside it. Over a real score it is nobody's
+--      capture. Everything else is a refusal of a value a person typed (round
+--      not live, card signed, not in the group, invalid).
 --   2. resolve_rejected_write(id, action, reason, expect): the Comité applies
 --      one of those rows (the fields the phone set, over the hole as it is
---      now, through admin_save_score: its lock, its rules, the reason on the
---      score and in the audit log) or dismisses it, always with a reason. To
---      apply, the Comité says what it saw on the card (`expect`); a hole that
---      changed since is refused, so a preview never writes over a newer
---      score. Only an open row: a second call is refused and writes nothing.
+--      now, as admin_save_score writes a correction: its lock, its rules, the
+--      reason on the score and in the audit log) or dismisses it, always with
+--      a reason. To apply, the Comité says what it saw on the card
+--      (`expect`), and the check and the write are one statement, so a
+--      preview never writes over a newer score, even one a writer that takes
+--      no lock inserted meanwhile. A dismissal may say it too («ya
+--      coinciden»), and is then refused the same way. Only an open row: a
+--      second call is refused and writes nothing.
 --   3. A resolution is audited, its reason as the audit's reason (audit_row
 --      would put the refusal code there, the table's own `reason`).
 --   4. Published to Realtime. The app does not listen to it yet: a channel
@@ -33,8 +39,8 @@
 --
 -- Expand only: the columns it writes (resolved_by, resolved_at,
 -- resolution_note) came with the table in 0026, so old bundles see nothing
--- new, and no row is changed by the migration itself (the conflicts already
--- on production stay open, as the record, and are not listed).
+-- new, and no row is changed by the migration itself (production held no
+-- rejected_writes row when this was written, 2026-10-09).
 -- rejected_writes is not part of a tournament's backup (it is the server's
 -- record of what it refused, not a fact of the tournament; the nightly backup
 -- copies it with the rest of the database), so restore_tournament is
@@ -43,9 +49,44 @@
 -- ---------------------------------------------------------------------------
 -- 1. The rows the Comité decides
 -- ---------------------------------------------------------------------------
+/** A refusal (not a conflict) of a value a person typed (not `auto`). */
+create or replace function public.rejected_write_for_comite(p_reason text, p_payload jsonb)
+returns boolean
+language sql immutable
+set search_path = public
+as $$
+  select p_reason is distinct from 'conflict' and (p_payload -> 'auto') is distinct from 'true'::jsonb
+$$;
+revoke execute on function public.rejected_write_for_comite(text, jsonb) from public, anon;
+grant execute on function public.rejected_write_for_comite(text, jsonb) to authenticated;
+
 /**
- * The tournament's open rows a person's value is waiting in, oldest first:
- * not a conflict, not an untouched default (`payload.auto`). Each
+ * An open row is the Comité's to decide: a refusal of a value a person
+ * typed; or a refusal of an untouched default (`auto`) when nothing else
+ * covers that hole: no score for that player and hole, and no typed refusal
+ * of it open beside it. An untouched default refused on an empty hole is the
+ * only value anyone sent for it (a phone saved the hole after the day
+ * closed), so it is the Comité's too; over a real score it never is. A
+ * conflict never: the phone that met it asks the player.
+ */
+create or replace function public.rejected_write_listed(w public.rejected_writes)
+returns boolean
+language sql stable
+set search_path = public
+as $$
+  select w.status = 'open' and w.reason is distinct from 'conflict'
+    and (public.rejected_write_for_comite(w.reason, w.payload)
+      or (not exists (select 1 from public.scores s where s.round_id = w.round_id and s.player_id = w.player_id and s.hole = w.hole)
+        and not exists (select 1 from public.rejected_writes o
+          where o.id <> w.id and o.status = 'open' and o.round_id = w.round_id and o.player_id = w.player_id and o.hole = w.hole
+            and public.rejected_write_for_comite(o.reason, o.payload))))
+$$;
+revoke execute on function public.rejected_write_listed(public.rejected_writes) from public, anon;
+grant execute on function public.rejected_write_listed(public.rejected_writes) to authenticated;
+
+/**
+ * The tournament's open rows the Comité decides (`rejected_write_listed`),
+ * oldest first. Each
  *   { id, round_id, hole, player_id, writer_player_id, reason, payload, created_at }
  * Anyone outside the Comité: 42501. Security invoker: the table's own policy
  * (the Comité reads its tournament's) still holds.
@@ -64,21 +105,10 @@ begin
       'id', w.id, 'round_id', w.round_id, 'hole', w.hole, 'player_id', w.player_id, 'writer_player_id', w.writer_player_id,
       'reason', w.reason, 'payload', w.payload, 'created_at', w.created_at) order by w.created_at, w.id)
     from public.rejected_writes w
-    where w.tournament_id = p_tournament_id and w.status = 'open' and public.rejected_write_for_comite(w.reason, w.payload)
+    where w.tournament_id = p_tournament_id and w.status = 'open' and public.rejected_write_listed(w)
   ), '[]'::jsonb);
 end;
 $$;
-
-/** A row is the Comité's to decide: a refusal (not a conflict) of a value a person typed (not `auto`). */
-create or replace function public.rejected_write_for_comite(p_reason text, p_payload jsonb)
-returns boolean
-language sql immutable
-set search_path = public
-as $$
-  select p_reason is distinct from 'conflict' and (p_payload -> 'auto') is distinct from 'true'::jsonb
-$$;
-revoke execute on function public.rejected_write_for_comite(text, jsonb) from public, anon;
-grant execute on function public.rejected_write_for_comite(text, jsonb) to authenticated;
 revoke execute on function public.rejected_inbox(uuid) from public, anon;
 grant execute on function public.rejected_inbox(uuid) to authenticated;
 
@@ -90,14 +120,18 @@ grant execute on function public.rejected_inbox(uuid) to authenticated;
  * picked_up: only those the phone set) for the row's own round, player and
  * hole, over the score that stands now, as save_hole would have (a number of
  * strokes is not a pick-up, a pick-up has no strokes). The payload's ids are
- * never read. `p_expect` is the hole as the Comité saw it before applying
- * ({strokes, putts, picked_up}, `{}` for an empty hole; a key left out reads
- * as no strokes, no putts, not picked up): required to apply, and a hole
- * that differs under the lock is refused (22023), nothing written. Only a
- * row rejected_inbox lists can be applied (not a conflict, not an untouched
- * default), and not into a cancelled day. 'dismiss' writes nothing to the
- * scores and needs no `p_expect`. The reason is trimmed of whitespace at
- * both ends and counted in characters. Answers
+ * never read. `p_expect` is the hole as the Comité saw it ({strokes, putts,
+ * picked_up}, `{}` for an empty hole; a key left out reads as no strokes, no
+ * putts, not picked up): required to apply, and a hole that differs is
+ * refused (22023), nothing written. Only a row rejected_inbox lists (never a
+ * conflict, nor an untouched default over a score), and not into a
+ * cancelled day. The check and the write are one statement: a writer that
+ * takes no hole lock (an old build's direct insert) and lands meanwhile is
+ * met by the write itself, which then changes nothing and is refused.
+ * 'dismiss' writes nothing to the scores; with `p_expect` (the Comité's
+ * «ya coinciden»), a hole that differs from it is refused the same way.
+ * The reason is trimmed at both ends of whitespace and the no-break and
+ * zero-width spaces, and counted in characters. Answers
  *   { id, status: applied | dismissed }
  * Someone outside the Comité learns nothing, not even whether the row
  * exists (42501).
@@ -109,7 +143,9 @@ set search_path = public
 as $$
 declare
   w public.rejected_writes;
-  why text := regexp_replace(coalesce(p_reason, ''), '^\s+|\s+$', '', 'g');
+  -- Spelled out, not `\s`: the same set whatever the server's locale, and the same as src/lib/reason.ts.
+  why text := regexp_replace(coalesce(p_reason, ''),
+    '^[\t\n\v\f\r \u0085  ᠎ -​    ⁠　﻿]+|[\t\n\v\f\r \u0085  ᠎ -​    ⁠　﻿]+$', '', 'g');
   f jsonb;
   cur public.scores;
   seen jsonb;
@@ -117,6 +153,9 @@ declare
   st numeric;
   pt numeric;
   picked boolean;
+  tid uuid;
+  r text;
+  n integer;
   done text;
 begin
   -- Locked: two Comité phones resolving the same row at once, the second waits and is refused.
@@ -138,14 +177,11 @@ begin
   end if;
 
   if p_action = 'apply' then
-    -- A conflict, or a default nobody touched, is the phone's to settle: never written over the card from here.
+    -- A conflict is the phone's to settle: never written over the card from here.
     if w.reason = 'conflict' then
       raise exception 'Ese choque lo resolvió el teléfono que lo mandó; descártalo' using errcode = '22023';
     end if;
-    if not public.rejected_write_for_comite(w.reason, w.payload) then
-      raise exception 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo' using errcode = '22023';
-    end if;
-    if (select r.status from public.rounds r where r.id = w.round_id) = 'cancelled' then
+    if (select r0.status from public.rounds r0 where r0.id = w.round_id) = 'cancelled' then
       raise exception 'Ese día está cancelado: no se le aplica nada; descártala o reabre el día' using errcode = '22023';
     end if;
     f := w.payload -> 'fields';
@@ -159,14 +195,21 @@ begin
        or (f ? 'picked_up' and jsonb_typeof(f -> 'picked_up') <> 'boolean') then
       raise exception 'Los valores de esa captura no se entienden; descártala' using errcode = '22023';
     end if;
+  end if;
+
+  if p_action = 'apply' or p_expect is not null then
     if jsonb_typeof(p_expect) is distinct from 'object' then
       raise exception 'Falta lo que viste en la tarjeta; vuelve a abrir la lista' using errcode = '22023';
     end if;
-    -- save_hole's lock on the hole (admin_save_score takes it again, which is the same lock), then the row as it is now:
-    -- a phone's save of this hole waits for this, or this for it, and a writer that takes no lock (an old build's
-    -- direct write) is waited for on the row.
+    -- save_hole's lock on the hole (admin_save_score and resolve_score_dispute take it too), then the row as it is
+    -- now: a phone's save of this hole waits for this, or this for it, and a writer that takes no lock (an old
+    -- build's direct update) is waited for on the row.
     perform pg_advisory_xact_lock(hashtextextended('save_hole:' || w.round_id::text || ':' || w.hole::text, 0));
     select * into cur from public.scores s where s.round_id = w.round_id and s.player_id = w.player_id and s.hole = w.hole for update;
+    -- An untouched default over a score that stands, or beside a typed capture of the same hole: not the Comité's.
+    if p_action = 'apply' and not public.rejected_write_listed(w) then
+      raise exception 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo' using errcode = '22023';
+    end if;
     -- What the Comité saw, and what stands, read the same way (a key left out, or no row: no strokes, no putts, not picked up).
     seen := jsonb_build_object(
       'strokes', coalesce(nullif(p_expect -> 'strokes', 'null'::jsonb), 'null'::jsonb),
@@ -179,6 +222,9 @@ begin
     if seen is distinct from now_on then
       raise exception 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo' using errcode = '22023';
     end if;
+  end if;
+
+  if p_action = 'apply' then
     st := case when f ? 'strokes' then (case when jsonb_typeof(f -> 'strokes') = 'number' then (f ->> 'strokes')::numeric end) else cur.strokes end;
     pt := case when f ? 'putts' then (case when jsonb_typeof(f -> 'putts') = 'number' then (f ->> 'putts')::numeric end) else cur.putts end;
     picked := case
@@ -195,8 +241,33 @@ begin
     if pt is not null and (pt <> trunc(pt) or pt < 0 or pt > 15 or (st is not null and pt > st)) then
       raise exception 'Con esa captura los putts quedan fuera de rango; descártala o corrige el hoyo en Tarjetas' using errcode = '22023';
     end if;
-    -- The Comité's own correction: its checks (the tournament, a signed card's reason), the reason on the score, the audit.
-    perform public.admin_save_score(w.round_id, w.player_id, w.hole, st::integer, pt::integer, picked, why);
+    -- The Comité's own correction, as admin_save_score (0026) makes it: its checks (the tournament, a signed card's
+    -- reason), the Comité's switch, its row (the Comité's player as the writer, the reason on the score, no
+    -- discrepancy), its audit and results triggers. In one statement with the check: a row that landed since the
+    -- read above without the hole's lock (a direct insert, which the read could not lock) is met by the upsert,
+    -- which then changes nothing unless it still is what the Comité saw.
+    tid := public.round_tournament_id(w.round_id);
+    if tid is distinct from w.tournament_id or public.player_tournament_id(w.player_id) is distinct from tid then
+      raise exception 'Ese jugador no es de este torneo' using errcode = '22023';
+    end if;
+    r := nullif(btrim(why), '');
+    if public.card_is_signed(w.round_id, w.player_id) and (r is null or length(r) < 3) then
+      raise exception 'La tarjeta está firmada: la corrección necesita razón' using errcode = '22023';
+    end if;
+    perform set_config('cardi.comite', '1', true);
+    insert into public.scores as s (round_id, player_id, hole, strokes, putts, picked_up, entered_by, client_ts, reason, disputed, previous)
+    values (w.round_id, w.player_id, w.hole, case when picked then null else st::integer end, pt::integer, picked, public.my_player_id(tid), now(), coalesce(r, 'Corrección del Comité'), false, null)
+    on conflict (round_id, player_id, hole) do update
+      set strokes = excluded.strokes, putts = excluded.putts, picked_up = excluded.picked_up, entered_by = excluded.entered_by,
+          client_ts = excluded.client_ts, reason = excluded.reason, disputed = false, previous = null
+      where jsonb_build_object(
+        'strokes', coalesce(to_jsonb(s.strokes), 'null'::jsonb),
+        'putts', coalesce(to_jsonb(s.putts), 'null'::jsonb),
+        'picked_up', coalesce(to_jsonb(s.picked_up), 'false'::jsonb)) is not distinct from seen;
+    get diagnostics n = row_count;
+    if n = 0 then
+      raise exception 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo' using errcode = '22023';
+    end if;
     done := 'applied';
   else
     done := 'dismissed';
