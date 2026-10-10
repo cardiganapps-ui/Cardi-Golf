@@ -1034,11 +1034,17 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "fixed",
+      "pr": 111,
+      "tests": [
+        "supabase/tests/tenant_write_matrix.sql",
+        "supabase/tests/tenant_ids.sql",
+        "supabase/tests/upgrade_0030.sh",
+        "src/data/realtimeApply.test.ts",
+        "src/lib/embedHints.test.ts"
+      ],
+      "verifiedBy": "Independent verifier (PR #111): 28,459 reads and writes over 14 identities × 2 states, cloned 0029 vs 0030, 0 differences; its one P1 (PGRST201 embeds in simulate.mjs and rls-test.mjs) fixed in 04c9c79 with src/lib/embedHints.test.ts, and rls-test passed on production after 0030",
+      "residual": "Migration 0030 (PR #111; on production 2026-10-10 17:26 UTC by db.mjs migrate, with no round being played, after a 52-table backup; 0 null tenant ids on all 11 tables, no audit row written; rls-test and platform-test green against production): tournament_id on the 11 round-, group- and lot-scoped tables, backfilled with their user triggers off (no audit row, result, version or updated_at moved), filled by a BEFORE trigger from the parent, NOT NULL and held to the parent by a composite key; my_tournament_ids() and set-based reads on 23 tournament tables; every FOR ALL write policy split by command with its own expressions (tees and holes too). Harness, the full fetchSnapshot as a PIN-claimed player: 12 players 266 ms → 7.5 ms, 60 players 2,219 ms → 10.6 ms (23,749 helper calls → 16); organizer at 60: 562 → 13.7 ms. Same access: tenant_write_matrix.sql answers 6,120 reads and writes (ten identities, three round states) as main did, and reads row for row; upgrade_0030.sh compares policies as stored, triggers, grants and every row before and after, a re-run, and the way back (harness/revert_0030.sql). Residuals: the player columns of the child tables are not held to the same tournament by a key (policies and RPCs check them); the client still filters child tables by round_id; Realtime is still postgres_changes (DB-05, Broadcast) and the snapshot is still ~22 requests (REL-10); the backfill sends one UPDATE event per child row through Realtime when applied."
     },
     {
       "id": "DB-13",
@@ -2923,11 +2929,14 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
-      "residual": null
+      "status": "fixed",
+      "pr": 111,
+      "tests": [
+        "supabase/tests/tenant_ids.sql",
+        "supabase/tests/tenant_write_matrix.sql"
+      ],
+      "verifiedBy": "With DB-12: independent verifier, 0 access differences 0029 → 0030",
+      "residual": "Closed with DB-12 (PR #111, migration 0030, on production 2026-10-10): the per-row security-definer cost of every tournament read is gone (one my_tournament_ids() call per statement; FOR ALL policies no longer OR'd into SELECT, so can_edit_course no longer runs per row of a course read). A member's whole 60-player snapshot costs ~11 ms of database time on the harness instead of ~2.2 s. The private report's own repro was not available to re-run here; no per-request row budget beyond PostgREST's 1,000-row page was added."
     },
     {
       "id": "SEC-06",

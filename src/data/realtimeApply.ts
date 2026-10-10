@@ -235,9 +235,17 @@ export function inLiveOrder(s: Snapshot): Snapshot {
   return s
 }
 
-/** Whether an inserted or updated row is this tournament's: yes, another's (`null`), or of a round or lot not loaded here (`undefined`). */
+/**
+ * Whether an inserted or updated row is this tournament's: yes, another's
+ * (`null`), or of a round or lot not loaded here (`undefined`). Since 0030
+ * a round's and a lot's rows carry their tournament too (DB-12): one that
+ * names another is left alone at once instead of waiting with the parked
+ * changes. A row without it (a server before 0030) is placed by its round or
+ * lot, as before.
+ */
 function owner(s: Snapshot, tournamentId: string, scope: Scope, row: Row): true | null | undefined {
   if (scope === 'tournament') return row.tournament_id === tournamentId ? true : null
+  if (typeof row.tournament_id === 'string' && row.tournament_id !== tournamentId) return null
   if (scope === 'round') return s.rounds.some((r) => r.id === row.round_id) ? true : undefined
   return s.calcuttaLots.some((l) => l.id === row.lot_id) ? true : undefined
 }

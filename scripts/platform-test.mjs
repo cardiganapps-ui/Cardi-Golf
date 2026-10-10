@@ -13,7 +13,7 @@
 // Needs VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY,
 // SUPABASE_PAT and SUPABASE_PROJECT_REF (.env.local).
 import { createClient } from '@supabase/supabase-js'
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { loadEnv } from './lib/env.mjs'
 import { query } from './lib/mgmt.mjs'
@@ -398,10 +398,12 @@ try {
   check((onlyComite ?? []).length > 0 && onlyComite.every((x) => x.source === 'comite'), 'filters by source and search')
   const { data: entry } = await P.sb.rpc('platform_audit_entry', { p_source: 'comite', p_id: comiteRow?.id })
   check(!!entry && ('after' in entry || 'before' in entry) && !JSON.stringify(entry).includes('pin_hash'), 'an entry opens in full, nothing secret in it')
+  // The newest file in the repo: production runs every one before this suite does.
+  const latestMigration = (await readdir(path.join(root, 'supabase', 'migrations'))).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort().at(-1)
   const { data: run } = await service.from('backup_runs').insert({ ok: true, key: `backups/test-${rand}.json.gz`, bytes: 1234, tables: 3, rows: 99 }).select('id').single()
   const { data: health, error: healthErr } = await P.sb.rpc('platform_health')
   await service.from('backup_runs').delete().eq('id', run.id)
-  check(!healthErr && health.backup.last?.key === `backups/test-${rand}.json.gz` && health.push.configured === true && /^002[4-9]/.test(health.database.lastMigration?.name ?? '') && typeof health.people.blocked === 'number', 'platform_health: last backup (the cron can write it), push configured, last migration', healthErr?.message ?? health)
+  check(!healthErr && health.backup.last?.key === `backups/test-${rand}.json.gz` && health.push.configured === true && health.database.lastMigration?.name === latestMigration && typeof health.people.blocked === 'number', 'platform_health: last backup (the cron can write it), push configured, last migration', healthErr?.message ?? health)
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++

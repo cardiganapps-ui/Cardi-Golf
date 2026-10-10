@@ -91,7 +91,7 @@ Sigue capturando: la app guarda en el teléfono; arriba dice "Sin señal" y abaj
 
 ## 8. Respaldo
 
-Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "Descargar CSV". Guarda los archivos en el teléfono y en Drive. Restaurar: mismo lugar, "Restaurar desde JSON…" (solo acepta respaldos de ese mismo torneo y reemplaza todo). **Mientras no se aplique la migración 0025** (espera las llaves, ver `docs/handoff.md`), restaurar no regresa los juegos de apuestas: quién entró a cada bolsa, los ganadores de los concursos por hoyo y los resultados de las apuestas se quedan como estaban; revísalos a mano en Comité › Juegos después de restaurar.
+Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "Descargar CSV". Guarda los archivos en el teléfono y en Drive. Restaurar: mismo lugar, "Restaurar desde JSON…" (solo acepta respaldos de ese mismo torneo y reemplaza todo). Un respaldo bajado antes de la migración 0030 se restaura igual que uno nuevo. **Mientras no se aplique la migración 0025** (espera las llaves, ver `docs/handoff.md`), restaurar no regresa los juegos de apuestas: quién entró a cada bolsa, los ganadores de los concursos por hoyo y los resultados de las apuestas se quedan como estaban; revísalos a mano en Comité › Juegos después de restaurar.
 
 ## 9. Ensayo y simulador
 

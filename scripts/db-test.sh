@@ -11,7 +11,9 @@
 #      copy of the migrated database with the two-tenant seed; the test
 #      server's rules against the real ones (scripts/server-rules.mjs: every
 #      request in src/data/testing/cases/serverRules.json, QA-06); then every
-#      supabase/tests/race_*.sh, which runs two sessions at once.
+#      supabase/tests/race_*.sh, which runs two sessions at once; then every
+#      supabase/tests/upgrade_*.sh, which applies a migration to a database at
+#      the one before it, already holding tournaments, and compares.
 #   4. Supabase's advisors (splinter): no finding over the baseline in
 #      supabase/tests/harness/lint-baseline.json (DB-16 holds the line).
 # Needs a superuser connection through the PG* variables, and the stub
@@ -101,6 +103,17 @@ for t in "$root"/supabase/tests/race_*.sh; do
     echo "  ✗ $(basename "$t")"
     exit 1
   fi
+  echo "  ✓ $(basename "$t")"
+done
+
+step "3c. Upgrades: a migration on a database that already holds tournaments (supabase/tests/upgrade_*.sh)"
+for t in "$root"/supabase/tests/upgrade_*.sh; do
+  if ! bash "$t" "${P}_up" "$root" >"$work/out" 2>&1; then
+    tail -30 "$work/out"
+    echo "  ✗ $(basename "$t")"
+    exit 1
+  fi
+  sed 's/^/  /' "$work/out"
   echo "  ✓ $(basename "$t")"
 done
 

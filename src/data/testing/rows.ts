@@ -124,9 +124,9 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
     ),
     holes: s.courses.flatMap((c) => c.tees.flatMap((tee) => tee.holes.map((h) => ({ tee_id: tee.id, number: h.number, par: h.par, stroke_index: h.strokeIndex, yards: h.yards })))),
     rounds: s.rounds.map((r) => ({ id: r.id, tournament_id: tid, number: r.number, date: r.date, course_id: r.courseId, holes: r.holes, status: r.status })),
-    groups: s.groups.map((g) => ({ id: g.id, round_id: g.roundId, number: g.number, tee_time: g.teeTime, start_hole: g.startHole })),
-    group_members: s.groups.flatMap((g) => g.playerIds.map((player_id) => ({ group_id: g.id, player_id }))),
-    round_tees: s.roundTees.map((x) => ({ round_id: x.roundId, player_id: x.playerId, tee_id: x.teeId })),
+    groups: s.groups.map((g) => ({ id: g.id, tournament_id: tid, round_id: g.roundId, number: g.number, tee_time: g.teeTime, start_hole: g.startHole })),
+    group_members: s.groups.flatMap((g) => g.playerIds.map((player_id) => ({ group_id: g.id, player_id, tournament_id: tid }))),
+    round_tees: s.roundTees.map((x) => ({ round_id: x.roundId, player_id: x.playerId, tee_id: x.teeId, tournament_id: tid })),
     pairs: s.pairs.map((p) => ({
       id: p.id,
       tournament_id: tid,
@@ -153,10 +153,11 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       disputed: x.disputed ?? false,
       previous: x.previous ?? null,
       reason: null,
+      tournament_id: tid,
     })),
-    snake_tiebreaks: s.snakeTiebreaks.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, last_holed_player_id: x.lastHoledPlayerId, decided_by: null, created_at: CREATED })),
-    card_signatures: s.cardSignatures.map((x) => ({ round_id: x.roundId, pair_id: x.pairId, signed_by: x.signedBy, signed_at: x.signedAt })),
-    handicap_overrides: s.handicapOverrides.map((x) => ({ round_id: x.roundId, player_id: x.playerId, playing_hcp: x.playingHcp, reason: x.reason, by: x.by, at: x.at })),
+    snake_tiebreaks: s.snakeTiebreaks.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, last_holed_player_id: x.lastHoledPlayerId, decided_by: null, created_at: CREATED, tournament_id: tid })),
+    card_signatures: s.cardSignatures.map((x) => ({ round_id: x.roundId, pair_id: x.pairId, signed_by: x.signedBy, signed_at: x.signedAt, tournament_id: tid })),
+    handicap_overrides: s.handicapOverrides.map((x) => ({ round_id: x.roundId, player_id: x.playerId, playing_hcp: x.playingHcp, reason: x.reason, by: x.by, at: x.at, tournament_id: tid })),
     calcutta_lots: s.calcuttaLots.map((l) => ({
       id: l.id,
       tournament_id: tid,
@@ -167,8 +168,8 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       owner_id: l.ownerId,
       sold_at: l.soldAt,
     })),
-    calcutta_bids: s.calcuttaBids.map((b) => ({ id: b.id, lot_id: b.lotId, bidder_id: b.bidderId, amount: b.amount, created_at: b.createdAt })),
-    calcutta_buybacks: s.calcuttaBuybacks.map((b) => ({ lot_id: b.lotId, pct: b.pct, amount: b.amount, paid: b.paid })),
+    calcutta_bids: s.calcuttaBids.map((b) => ({ id: b.id, lot_id: b.lotId, bidder_id: b.bidderId, amount: b.amount, created_at: b.createdAt, tournament_id: tid })),
+    calcutta_buybacks: s.calcuttaBuybacks.map((b) => ({ lot_id: b.lotId, pct: b.pct, amount: b.amount, paid: b.paid, tournament_id: tid })),
     payments: s.payments.map((p) => ({
       id: p.id,
       tournament_id: tid,
@@ -181,7 +182,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       created_at: CREATED,
     })),
     game_entries: s.gameEntries.map((x) => ({ tournament_id: tid, game_id: x.gameId, player_id: x.playerId, created_at: CREATED })),
-    hole_awards: s.holeAwards.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, game_id: x.gameId, player_id: x.playerId, decided_by: null, created_at: CREATED })),
+    hole_awards: s.holeAwards.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, game_id: x.gameId, player_id: x.playerId, decided_by: null, created_at: CREATED, tournament_id: tid })),
     // numeric with no scale as Postgres prints it, 1 → "1" and 0.5 → "0.5" (PostgREST would send 1 and 0.5).
     game_results: s.gameResults.map((x) => ({ tournament_id: tid, game_id: x.gameId, player_id: x.playerId, share: String(x.share), created_at: CREATED })),
     money_adjustments: (s.moneyAdjustments ?? []).map((x) => ({
