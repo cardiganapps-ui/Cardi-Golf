@@ -7,11 +7,10 @@
  * (REL-01). `realtimeTables.test.ts` checks this list against the migrations
  * up to `ON_PRODUCTION`.
  *
- * `teams` and `team_members` (0020) are published by 0025 and come here in a
- * change of their own (REL-01).
- *
  * Most of them reach the boards: the rows of `APPLIED_TABLES`
- * (`realtimeApply.ts`) by key, the rest by a reload. `INBOX_TABLES` are not
+ * (`realtimeApply.ts`) by key, the rest (`RELOADED_TABLES`) by a reload, but
+ * only for a change that concerns this tournament (`concernsBoards`: a delete
+ * reaches every phone listening, DB-05). `INBOX_TABLES` are not
  * part of the tournament's snapshot: a change reads the Comité's
  * «Pendientes de revisar» again (`rejectedInbox.ts`), and never touches the
  * boards.
@@ -37,6 +36,8 @@ export const REALTIME_TABLES = [
   'hole_awards',
   'game_results',
   'rejected_writes',
+  'teams',
+  'team_members',
 ] as const
 
 /** On the channel, but not in the snapshot: their changes go to the Comité's inbox store, never to the boards. */
@@ -53,5 +54,7 @@ export const INBOX_TABLES = ['rejected_writes'] as const
  *
  * 0028 (2026-10-10): `money_adjustments` (0027) and `rejected_writes` (0028)
  * read back from production's publication.
+ * 0030 (2026-10-10): `db.mjs migrate` ran through 0030, and `teams` and
+ * `team_members` (published by 0025) read back from production's publication.
  */
-export const ON_PRODUCTION = '0028'
+export const ON_PRODUCTION = '0030'

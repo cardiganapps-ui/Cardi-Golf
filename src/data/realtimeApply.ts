@@ -314,3 +314,50 @@ export function applyChange(s: Snapshot, tournamentId: string, c: LiveChange, op
   sp.set(s, [...rest.slice(0, i), mapped, ...rest.slice(i)])
   return 'applied'
 }
+
+/** The tables the channel hears that reload instead of being applied: their rows need joins the event does not carry. */
+export const RELOADED_TABLES = ['tournaments', 'players', 'pairs', 'rounds', 'groups', 'group_members', 'teams', 'team_members'] as const
+
+/** Whether the snapshot holds the row this key names (a member: of the group or team it names). */
+function holds(s: Snapshot, tournamentId: string, table: string, key: Row): boolean | undefined {
+  const id = key.id
+  switch (table) {
+    case 'tournaments': return id === undefined ? undefined : id === tournamentId
+    case 'players': return id === undefined ? undefined : s.players.some((x) => x.id === id)
+    case 'rounds': return id === undefined ? undefined : s.rounds.some((x) => x.id === id)
+    case 'pairs': return id === undefined ? undefined : s.pairs.some((x) => x.id === id)
+    case 'groups': return id === undefined ? undefined : s.groups.some((x) => x.id === id)
+    case 'teams': return id === undefined ? undefined : (s.teams ?? []).some((x) => x.id === id)
+    case 'group_members':
+      return key.group_id === undefined || key.player_id === undefined ? undefined : s.groups.some((g) => g.id === key.group_id && g.playerIds.includes(key.player_id))
+    case 'team_members':
+      return key.team_id === undefined || key.player_id === undefined ? undefined : (s.teams ?? []).some((t) => t.id === key.team_id && t.playerIds.includes(key.player_id))
+    default: return undefined
+  }
+}
+
+/**
+ * Whether a change to one of the reloaded tables concerns these boards, so it
+ * is worth a reload. Inserts and updates come filtered by what this user may
+ * read, so an account in two tournaments hears both: one naming another
+ * tournament (every one of these tables but `team_members` carries
+ * `tournament_id`) is left alone. A delete names only its key and comes to
+ * every phone listening to the table, whatever tournament it was in (DB-05):
+ * a team draw deletes its members and writes them again, so without this each
+ * draw anywhere reloaded every phone on the platform. It reloads only when
+ * the key is a row the snapshot holds, or while a fetch is on its way (the
+ * row may be one it is bringing). Anything it can't place reloads.
+ */
+export function concernsBoards(s: Snapshot | null | undefined, tournamentId: string, c: Pick<LiveChange, 'table' | 'eventType' | 'new' | 'old'>, fetchOut: boolean): boolean {
+  if (!s) return true
+  if (c.eventType === 'DELETE') {
+    const key = c.old
+    if (!key || !Object.keys(key).length) return true
+    return fetchOut || holds(s, tournamentId, c.table, key) !== false
+  }
+  const row = c.new
+  if (!row || !Object.keys(row).length) return true
+  if (c.table === 'tournaments') return row.id === undefined || row.id === tournamentId
+  if (row.tournament_id == null) return true
+  return row.tournament_id === tournamentId
+}

@@ -142,6 +142,37 @@ describe('a hole saved on another phone', () => {
   })
 })
 
+describe('a team draw (teams and team_members, published by 0025)', () => {
+  it("one saved here reaches the boards: its rows arrive one event each and the tournament reloads once", async () => {
+    vi.useFakeTimers()
+    const before = reads()
+    const [a, b] = fx.snapshot.players
+    const team = { id: 'team-live', tournament_id: TID, number: 1, name: 'Los de arriba', drawn_at: '2027-04-08T22:00:00Z' }
+    ;(server.tables.teams ??= []).push(team)
+    ;(server.tables.team_members ??= []).push({ team_id: team.id, player_id: a!.id }, { team_id: team.id, player_id: b!.id })
+    emit('teams', { eventType: 'INSERT', new: team, old: {} })
+    emit('team_members', { eventType: 'INSERT', new: { team_id: team.id, player_id: a!.id }, old: {} })
+    emit('team_members', { eventType: 'INSERT', new: { team_id: team.id, player_id: b!.id }, old: {} })
+    await vi.advanceTimersByTimeAsync(200)
+    expect(reads()).toBe(before + 1)
+    expect(store().data!.snapshot.teams.find((x) => x.id === team.id)?.playerIds).toEqual([a!.id, b!.id])
+  })
+
+  it('one drawn in another tournament costs nothing: its deletes reach every phone (DB-05), its inserts name the other tournament', async () => {
+    vi.useFakeTimers()
+    const before = requests()
+    const shown = store().data
+    emit('team_members', { eventType: 'DELETE', new: {}, old: { team_id: 'elsewhere-team', player_id: 'elsewhere-player' } })
+    emit('teams', { eventType: 'DELETE', new: {}, old: { id: 'elsewhere-team' } })
+    emit('teams', { eventType: 'INSERT', new: { id: 'elsewhere-team-2', tournament_id: 'other', number: 1 }, old: {} })
+    emit('players', { eventType: 'DELETE', new: {}, old: { id: 'elsewhere-player' } })
+    emit('groups', { eventType: 'UPDATE', new: { id: 'elsewhere-group', tournament_id: 'other', round_id: 'other-round', number: 1 }, old: {} })
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(requests()).toBe(before)
+    expect(store().data).toBe(shown)
+  })
+})
+
 describe('a day or lot this phone has not loaded', () => {
   it('its score waits instead of reloading, and lands with the day when the day’s own change brings it', async () => {
     vi.useFakeTimers()

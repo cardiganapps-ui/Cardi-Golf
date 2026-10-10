@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest'
 import { getFixture } from '../dev/fixtures'
 import type { Snapshot } from '../engine/types'
-import { applyChange, canonicalTime, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
+import { applyChange, canonicalTime, concernsBoards, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 import { applyAdjustments } from '../engine/core/unassigned'
 
 const fx = () => structuredClone(getFixture('full12-live')!.snapshot)
@@ -207,6 +207,70 @@ describe('tables that are not applied in place', () => {
     const s = fx()
     expect(applyChange(s, T(s), upd('payments', {}))).toBe('reload')
     expect(applyChange(s, T(s), del('payments', {}))).toBe('reload')
+  })
+})
+
+describe('the structural tables reload only for a change that concerns these boards (DB-05)', () => {
+  const OTHER = 'ffffffff-0000-4000-8000-000000000000'
+  const withTeam = () => {
+    const s = fx()
+    s.teams = [{ id: 'team-1', name: 'Los de arriba', number: 1, playerIds: [s.players[0]!.id, s.players[1]!.id], drawnAt: null }]
+    return s
+  }
+
+  it("an insert or update of this tournament's players, rounds, pairs, groups or teams reloads; another tournament's does not", () => {
+    const s = withTeam()
+    for (const table of ['players', 'rounds', 'pairs', 'groups', 'group_members', 'teams']) {
+      expect(concernsBoards(s, T(s), ins(table, { id: 'x', tournament_id: T(s) }), false), table).toBe(true)
+      expect(concernsBoards(s, T(s), upd(table, { id: 'x', tournament_id: OTHER }), false), table).toBe(false)
+    }
+    expect(concernsBoards(s, T(s), upd('tournaments', { id: T(s) }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), upd('tournaments', { id: OTHER }), false)).toBe(false)
+  })
+
+  it('a team member carries no tournament: its insert reloads (the server sends only tournaments this account is in)', () => {
+    const s = withTeam()
+    expect(concernsBoards(s, T(s), ins('team_members', { team_id: 'team-9', player_id: s.players[2]!.id }), false)).toBe(true)
+  })
+
+  it("a team draw elsewhere deletes its members: a key these boards don't hold reloads nothing; one they hold does", () => {
+    const s = withTeam()
+    const [a, , c] = s.players
+    expect(concernsBoards(s, T(s), del('team_members', { team_id: 'team-9', player_id: a!.id }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('team_members', { team_id: 'team-1', player_id: c!.id }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('team_members', { team_id: 'team-1', player_id: a!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('teams', { id: 'team-9' }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('teams', { id: 'team-1' }), false)).toBe(true)
+  })
+
+  it('so does a player, round, pair, group or member deleted in another tournament', () => {
+    const s = withTeam()
+    const g = s.groups[0]!
+    expect(concernsBoards(s, T(s), del('players', { id: 'nobody' }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('players', { id: s.players[0]!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('rounds', { id: 'nope' }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('rounds', { id: s.rounds[0]!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('groups', { id: 'nope' }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('groups', { id: g.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('group_members', { group_id: 'nope', player_id: g.playerIds[0] }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('group_members', { group_id: g.id, player_id: g.playerIds[0] }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('tournaments', { id: OTHER }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('tournaments', { id: T(s) }), false)).toBe(true)
+  })
+
+  it('while a fetch is on its way every delete reloads: the row may be one it is bringing', () => {
+    const s = withTeam()
+    expect(concernsBoards(s, T(s), del('team_members', { team_id: 'team-9', player_id: 'p' }), true)).toBe(true)
+    expect(concernsBoards(s, T(s), del('players', { id: 'nobody' }), true)).toBe(true)
+  })
+
+  it('anything it cannot place reloads: no boards yet, a key or row missing, a row with no tournament', () => {
+    const s = withTeam()
+    expect(concernsBoards(null, T(s), del('players', { id: 'nobody' }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('players', {}), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('team_members', { team_id: 'team-9' }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), ins('players', {}), false)).toBe(true)
+    expect(concernsBoards(s, T(s), ins('players', { id: 'x' }), false)).toBe(true)
   })
 })
 
