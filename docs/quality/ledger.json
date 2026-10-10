@@ -996,7 +996,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Open: postgres_changes still sends every delete's key to every phone listening to the table, whatever its tournament; the fix is Broadcast from the database on a private per-tournament topic (PLAN §5.2). Mitigated on the phone (claude/realtime-teams, with teams and team_members on the channel): an applied table's delete changes only a row the snapshot holds (realtimeApply.ts), and a structural one reloads only when its key is held or a fetch is on its way (concernsBoards), so another tournament's deletes cost nothing; it does not stop the keys arriving."
     },
     {
       "id": "DB-07",

@@ -9,7 +9,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { APPLIED_TABLES } from './realtimeApply'
+import { APPLIED_TABLES, RELOADED_TABLES } from './realtimeApply'
 import { INBOX_TABLES, ON_PRODUCTION, REALTIME_TABLES } from './realtimeTables'
 import { SNAPSHOT_KEYS } from './snapshotTables'
 
@@ -72,6 +72,15 @@ describe('realtime tables', () => {
     expect(publishedThrough('0028').has('rejected_writes')).toBe(true)
   })
 
+  it('the team draw is heard once 0025 is on production, never before (REL-01)', () => {
+    expect(publishedThrough('0024').has('teams')).toBe(false)
+    expect(publishedThrough('0024').has('team_members')).toBe(false)
+    expect(publishedThrough('0025').has('teams')).toBe(true)
+    expect(publishedThrough('0025').has('team_members')).toBe(true)
+    expect(REALTIME_TABLES).toContain('teams')
+    expect(REALTIME_TABLES).toContain('team_members')
+  })
+
   it('the inbox tables are on the channel and never applied to the boards', () => {
     for (const t of INBOX_TABLES) {
       expect(REALTIME_TABLES).toContain(t)
@@ -87,8 +96,7 @@ describe('realtime tables', () => {
 
   it('listens to every table the boards and the inbox need: each one applied by row, each structural one that reloads, each inbox one, and nothing else', () => {
     // The tables whose change reloads the snapshot (their rows need joins the event does not carry).
-    // `teams` and `team_members` join this list in a change of their own (REL-01).
-    const structural = ['tournaments', 'players', 'pairs', 'rounds', 'groups', 'group_members']
+    const structural: readonly string[] = RELOADED_TABLES
     const expected = new Set<string>([...APPLIED_TABLES, ...structural, ...INBOX_TABLES])
     expect(expected.size, 'a table is in two of the lists').toBe(APPLIED_TABLES.length + structural.length + INBOX_TABLES.length)
     const listened = new Set<string>(REALTIME_TABLES)
