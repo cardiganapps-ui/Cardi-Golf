@@ -65,7 +65,7 @@ if (round.status === 'finished' || round.status === 'cancelled') {
   process.exit(1)
 }
 const players = must(await sb.from('players').select('id, display_name, base_hcp, default_tee_id').eq('tournament_id', t.id), 'players')
-const groups = must(await sb.from('groups').select('id, number, start_hole, group_members(player_id)').eq('round_id', round.id).order('number'), 'groups')
+const groups = must(await sb.from('groups').select('id, number, start_hole, group_members!group_members_group_id_fkey(player_id)').eq('round_id', round.id).order('number'), 'groups')
 if (!groups.length) {
   console.error('The round has no groups yet: build them in Comité › Grupos first.')
   process.exit(1)

@@ -680,7 +680,7 @@ try {
   )
   const guest = qPlayers?.[2]
   check(qPlayers?.[1]?.profile_id === S.id && qPlayers[1].profile_status === 'pending' && guest?.profile_id === null && guest.handicap_source === 'index' && Number(guest.handicap_index) === 10.4 && qPlayers.every((p) => p.default_tee_id === rtee.id), 'the friend is pending, the guest plays off the index typed, everyone on the chosen tee', qPlayers)
-  const { data: qGroups } = await U.sb.from('group_members').select('player_id, groups!inner(round_id)').eq('groups.round_id', qt?.current_round_id)
+  const { data: qGroups } = await U.sb.from('group_members').select('player_id, groups!group_members_group_id_fkey!inner(round_id)').eq('groups.round_id', qt?.current_round_id)
   check((qGroups ?? []).length === 3, 'one group with the three of them')
   const sInvites = (await inbox(S)).filter((n) => n.kind === 'round_invite')
   check(sInvites.length === 1 && sInvites[0].data.slug, 'the friend hears about the round')
