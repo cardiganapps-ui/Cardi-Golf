@@ -4,11 +4,14 @@
  * it will be once closed (Terminado; a Ronda rápida also finishes its live
  * rounds). It reads the same «play is over» flag as Dinero
  * (`money.unassigned.closing`), so it never blocks on a list Dinero does not
- * show. Three things only warn: what people still owe (collecting after the
- * trip is normal), lots never auctioned (they cash nothing, MONEY-11; whether
- * they should count as self-owned is Diego's open question, so the gate
- * forces no sale), and writes the server refused (nobody can clear them
- * until the REL-08 inbox exists, so they must not hold the close forever).
+ * show. Two things only warn: what people still owe (collecting after the
+ * trip is normal) and lots never auctioned (they cash nothing, MONEY-11;
+ * whether they should count as self-owned is Diego's open question, so the
+ * gate forces no sale). Holes the server refused and kept for the Comité
+ * block: each one may be a score that moves money, and «Pendientes de
+ * revisar» (REL-08) applies or dismisses it. Conflicts a phone settles itself
+ * and untouched defaults never reach that list, so they never block; and a
+ * database without the list yet (0028 not applied) only warns.
  */
 import { t } from '../i18n/es-MX'
 import { computeTournament } from './computeTournament'
@@ -19,7 +22,7 @@ import { openDays } from './core/unassigned'
 
 const C = t.closeGate
 
-export type CloseBlockerKind = 'missingRounds' | 'openRounds' | 'tiebreaks' | 'unassigned' | 'badAssignments' | 'unsignedCards'
+export type CloseBlockerKind = 'missingRounds' | 'openRounds' | 'tiebreaks' | 'unassigned' | 'badAssignments' | 'unsignedCards' | 'rejectedWrites'
 
 export interface CloseBlocker {
   kind: CloseBlockerKind
@@ -29,7 +32,7 @@ export interface CloseBlocker {
 
 export interface CloseCheck {
   blockers: CloseBlocker[]
-  /** Not blocking: people who still owe, lots never auctioned, refused writes still open. */
+  /** Not blocking: people who still owe, lots never auctioned, «Pendientes de revisar» not on the server yet. */
   warnings: string[]
   ok: boolean
 }
@@ -37,8 +40,13 @@ export interface CloseCheck {
 export interface CloseOptions {
   /** A Ronda rápida's «Terminar y publicar» finishes its live rounds first. */
   finishLiveRounds?: boolean
-  /** Writes the server refused or found in conflict, still open (0026 `rejected_writes`). */
-  openRejected: number
+  /**
+   * Holes the server refused that wait for the Comité in «Pendientes de
+   * revisar» (0028 `rejected_inbox`: no conflicts, no untouched defaults).
+   * Null when the database has no inbox yet: nothing could clear them, so
+   * the close only says the list is not there.
+   */
+  openRejected: number | null
 }
 
 export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opts: CloseOptions): CloseCheck {
@@ -70,7 +78,9 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   const finished = new Set(closed.rounds.filter((r) => r.status === 'finished').map((r) => r.id))
   const unsigned = state.flags.unsignedCards.filter((c) => finished.has(c.roundId)).length
   if (unsigned) blockers.push({ kind: 'unsignedCards', text: C.unsignedCards(unsigned) })
-  if (opts.openRejected > 0) warnings.push(C.rejectedWrites(opts.openRejected))
+  // A hole the server kept for the Comité may be a score that changes the money: applied or dismissed before closing.
+  if (opts.openRejected === null) warnings.push(C.rejectedUnavailable)
+  else if (opts.openRejected > 0) blockers.push({ kind: 'rejectedWrites', text: C.rejectedWrites(opts.openRejected) })
 
   const owed = state.money.accounts.filter((a) => a.due > 0 && a.from !== null)
   if (owed.length) {

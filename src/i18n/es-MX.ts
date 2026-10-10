@@ -1398,11 +1398,14 @@ export const t = {
     /**
      * A hole someone else saved first (REL-05): the server kept theirs, and
      * this phone's value waits for the player to choose. `who`: who entered
-     * theirs (null: unknown); `self`: the player entered his own.
+     * theirs (null: unknown); `self`: the player entered his own; `day`: the
+     * day, when it is not the one on screen (the question stays on every
+     * state of the Tarjeta until it is answered, a closed day included);
+     * 'gone': a day the Comité deleted since, which has no number to name.
      */
     conflictTitle: 'Alguien más capturó primero',
-    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean) =>
-      `Hoyo ${hole}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
+    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean, day: number | 'gone' | null = null) =>
+      `${day === null ? `Hoyo ${hole}` : day === 'gone' ? `Hoyo ${hole} (día borrado)` : `Día ${day}, hoyo ${hole}`}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
     /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
     conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
       const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
@@ -1410,7 +1413,10 @@ export const t = {
     },
     keepMine: 'Guardar el mío',
     keepTheirs: 'Dejar el suyo',
-    conflictAction: (action: string, hole: number, player: string) => `${action}: hoyo ${hole}, ${player}`,
+    conflictAction: (action: string, hole: number, player: string, day: number | 'gone' | null = null) =>
+      `${action}: ${day === null || day === 'gone' ? '' : `día ${day}, `}hoyo ${hole}${day === 'gone' ? ' (día borrado)' : ''}, ${player}`,
+    /** Under the question on a day that is no longer live: what «Guardar el mío» does then. */
+    conflictClosedHint: 'Ese día ya no está en juego: «Guardar el mío» lo manda al Comité, que lo revisa en sus pendientes.',
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
@@ -1716,6 +1722,51 @@ export const t = {
       sendCopied: 'Copiado: pégalo en el chat del Comité.',
       /** The first line of what «Mandar al Comité» sends; one line per capture follows. */
       sendHeader: (tournament: string, who: string | null) => (who ? `${tournament}: esto no se subió desde el teléfono de ${who}.` : `${tournament}: esto no se subió desde este teléfono.`),
+      /**
+       * A hole save_hole refused and kept for the Comité (0026, 0028): the Comité sees it in «Pendientes de revisar».
+       * `who` null: the phone's own player's.
+       */
+      leftForComite: (hole: number, who: string | null) =>
+        who ? `El hoyo ${hole} de ${who} quedó para el Comité: ya lo ve en su lista de pendientes.` : `Tu hoyo ${hole} quedó para el Comité: ya lo ve en su lista de pendientes.`,
+    },
+    /** «Pendientes de revisar»: holes the server kept for the Comité (REL-08, 0028). */
+    serverInbox: {
+      title: 'Pendientes de revisar',
+      hint: 'Hoyos que el servidor no tomó: llegaron con el día cerrado o la tarjeta firmada, de un teléfono fuera del grupo, o con valores imposibles; también el par que la Tarjeta pone sola, cuando es lo único que llegó para un hoyo vacío. Aplica lo que mandó el teléfono o descártalo; las dos cosas piden motivo y quedan en el Historial. Cuando dos teléfonos guardan el mismo hoyo, el que llegó después pregunta en su Tarjeta «Guardar el mío» o «Dejar el suyo», aunque el día ya esté cerrado, hasta que alguien conteste en ese teléfono; si guarda el suyo con el día cerrado, llega aquí.',
+      none: 'Nada por revisar: el servidor tomó todo lo que mandaron los teléfonos.',
+      unavailable: 'Esta lista llega con la próxima actualización del servidor. Mientras, revisa las tarjetas abajo; no detiene el cierre del torneo.',
+      retry: 'Volver a cargar',
+      /** «Beto, día 1, hoyo 14». */
+      where: (name: string, where: string) => `${name}, ${where}`,
+      sent: (value: string, who: string | null) => (who ? `Mandó ${value}, desde el teléfono de ${who}.` : `Mandó ${value}.`),
+      sentUnreadable: 'Lo que mandó no se entiende.',
+      /** An untouched default (`auto`), listed because nothing else was sent for that empty hole. */
+      untouched: 'Era el par que la Tarjeta pone sola, sin que nadie lo cambiara; es lo único que llegó para ese hoyo.',
+      why: {
+        round_not_live: 'El día no estaba en juego.',
+        card_signed: 'La tarjeta ya estaba firmada.',
+        not_in_group: 'Ese teléfono no jugaba en su grupo.',
+        invalid: 'Los valores no eran válidos.',
+      } as Record<string, string>,
+      now: (value: string) => `En la tarjeta ahora: ${value}.`,
+      nowEmpty: 'En la tarjeta ahora: sin captura.',
+      wouldBe: (value: string) => `Si se aplica: ${value}.`,
+      matches: 'La tarjeta ya tiene este valor: puedes descartarlo.',
+      cannotApply: 'Esto no se puede aplicar: descártalo y, si hace falta, corrige el hoyo en la tarjeta de abajo.',
+      apply: 'Aplicar',
+      dismiss: 'Descartar',
+      applyTitle: 'Aplicar lo que mandó el teléfono',
+      applyBody: (where: string, value: string) => `${where} queda en ${value}. El motivo se guarda con la corrección.`,
+      dismissTitle: 'Descartar lo que mandó el teléfono',
+      dismissBody: (where: string) => `${where}: la tarjeta no cambia. El motivo queda en el Historial.`,
+      dismissMatching: (n: number) => `Descartar los que ya coinciden (${n})`,
+      dismissMatchingTitle: 'Descartar los que ya coinciden',
+      dismissMatchingBody: (n: number) => `${n === 1 ? 'Un hoyo ya tiene' : `${n} hoyos ya tienen`} en la tarjeta lo que mandó el teléfono. Se descartan con el mismo motivo; la tarjeta no cambia.`,
+      matchingReason: 'La tarjeta ya tiene ese valor',
+      applied: 'Aplicado.',
+      dismissed: 'Descartado.',
+      /** Some of a bulk dismissal went and some did not. */
+      partly: (done: number, total: number) => `Se descartaron ${done} de ${total}. Revisa los que quedan.`,
     },
     groups: {
       fromStandings: 'Generar por tabla de parejas',
@@ -2031,6 +2082,10 @@ export const t = {
       cancelConfirm: (n: number) => `¿Cancelar el día ${n}? Deja de contar para los premios. Se puede reabrir.`,
       deleteConfirm: (n: number) => `¿Borrar el día ${n} con todas sus tarjetas? No se puede deshacer.`,
       pendingBeforeFinish: (n: number) => `Hay ${n} pendiente${n === 1 ? '' : 's'} en Tarjetas. Puedes terminar de todos modos.`,
+      /** Holes of this day the server did not take, still to apply or dismiss (REL-08): a warning, not a lock. */
+      inboxBeforeFinish: (n: number) => `${n === 1 ? 'Un hoyo de este día que el servidor no tomó sigue' : `${n} hoyos de este día que el servidor no tomó siguen`} en «Pendientes de revisar» (Tarjetas). Puedes terminar y resolverlos después.`,
+      /** On the day's block. */
+      inboxCount: (n: number) => (n === 1 ? 'Un hoyo por revisar en Tarjetas' : `${n} hoyos por revisar en Tarjetas`),
       /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
       phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
       noDate: 'Sin fecha',
@@ -2288,7 +2343,9 @@ export const t = {
     unassigned: (amount: string) => `${amount} por asignar: el Comité decide en Dinero, Liquidación.`,
     badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
     unsignedCards: (n: number) => `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
-    rejectedWrites: (n: number) => `${n === 1 ? 'Un cambio de tarjeta que el servidor rechazó sigue' : `${n} cambios de tarjeta que el servidor rechazó siguen`} sin revisar. No impide cerrar: revisa esos hoyos en Comité, sección Tarjetas, y corrige lo que haga falta.`,
+    rejectedWrites: (n: number) => `${n === 1 ? 'Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo' : `${n} hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos`} en Comité, sección Tarjetas, «Pendientes de revisar».`,
+    /** The server has no «Pendientes de revisar» yet (0028 not applied): nothing there can hold the close. */
+    rejectedUnavailable: 'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
     owed: (people: number, amount: string) => `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
   },
   feed: {

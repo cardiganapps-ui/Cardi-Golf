@@ -166,6 +166,32 @@ describe('a player whose holes were refused when the day closed (REL-08)', () =>
   })
 })
 
+describe('a hole save_hole refused and kept for the Comité (REL-08, 0026)', () => {
+  it('a player\'s phone says his own hole went to the Comité\'s list', () => {
+    mount('list', { edit: finishDay2, rejected: [{ ...hole11, atServer: true }] })
+    expect(list().getByText(IB.leftForComite(11, null))).toBeTruthy()
+    expect(IB.leftForComite(11, null)).toMatch(/^Tu hoyo 11 quedó para el Comité/)
+    expect(list().getByText(IB.reasonClosed(2))).toBeTruthy()
+  })
+
+  it('another player\'s hole (the phone keeps the other pair\'s card) is named as his, not «tu hoyo»', () => {
+    mount('list', { edit: finishDay2, rejected: [{ ...hole11, atServer: true }], me: 'p1' })
+    expect(list().getByText(IB.leftForComite(11, 'Camilo'))).toBeTruthy()
+    expect(IB.leftForComite(11, 'Camilo')).toMatch(/^El hoyo 11 de Camilo quedó para el Comité/)
+    expect(list().queryByText(/^Tu hoyo/)).toBeNull()
+  })
+
+  it('a capture refused before the server kept it (or an untouched default it kept) does not claim the Comité has it', () => {
+    mount('list', { edit: finishDay2 })
+    expect(list().queryByText(/quedó para el Comité/)).toBeNull()
+  })
+
+  it('on a Comité device the line is not said: it is the Comité', () => {
+    mount('list', { edit: finishDay2, isAdmin: true, rejected: [{ ...hole11, atServer: true }] })
+    expect(list().queryByText(/quedó para el Comité/)).toBeNull()
+  })
+})
+
 describe('the refused list says what stands in the way now, and who can send it again', () => {
   it('a signed card: the reason says so, and a player can\'t resend', () => {
     mount('list', { edit: signCamilo })

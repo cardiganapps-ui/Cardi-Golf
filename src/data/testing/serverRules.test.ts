@@ -36,8 +36,8 @@ interface Case {
   pins?: string[]
   before?: Request[]
   request: Request
-  /** `answer`: an RPC's answer holds at least this (scripts/server-rules.mjs `holds`). */
-  expect: { status: number; code?: string; rows?: Row[]; answer?: unknown }
+  /** `answer`: an RPC's answer holds at least this (scripts/server-rules.mjs `holds`); `ordered`: a list's items in this order. */
+  expect: { status: number; code?: string; rows?: Row[]; answer?: unknown; ordered?: boolean }
   then?: Array<{ table: string; where?: Record<string, unknown>; rows: Row[] }>
 }
 
@@ -72,10 +72,11 @@ function send(server: FakeSupabase, token: string, req: Request): Promise<Respon
 /** Rows as a multiset, compared on the columns the case names. */
 const bag = (rows: Row[]) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k] ?? null]))).sort()
 const pick = (row: Row, columns: string[]) => Object.fromEntries(columns.map((c) => [c, row[c] ?? null]))
-/** At least what the case writes: an object's named keys; a list's items each matching a different one, in any order; else equal. */
-function holds(actual: unknown, want: unknown): boolean {
+/** At least what the case writes: an object's named keys; a list's items each matching a different one, in any order (or in this one, `ordered`); else equal. */
+function holds(actual: unknown, want: unknown, ordered = false): boolean {
   if (Array.isArray(want)) {
     if (!Array.isArray(actual) || actual.length !== want.length) return false
+    if (ordered) return want.every((w, i) => holds(actual[i], w))
     const free = actual.map(() => true)
     return want.every((w) => {
       const i = actual.findIndex((a, j) => free[j] && holds(a, w))
@@ -97,7 +98,7 @@ describe('the test server answers each request as the database does (cases/serve
     expect({ status: res.status, code: res.ok ? undefined : body?.code }).toEqual({ status: c.expect.status, code: c.expect.code ?? (res.ok ? undefined : body?.code) })
     // An RPC answers its function's value: the database side reads it as a one-row list.
     if (c.expect.rows) expect(bag(c.request.method === 'RPC' ? [body as Row] : (body as Row[]))).toEqual(bag(c.expect.rows))
-    if (c.expect.answer !== undefined) expect(holds(body, c.expect.answer), `answered ${JSON.stringify(body)}`).toBe(true)
+    if (c.expect.answer !== undefined) expect(holds(body, c.expect.answer, !!c.expect.ordered), `answered ${JSON.stringify(body)}`).toBe(true)
     for (const t of c.then ?? []) {
       const columns = [...new Set(t.rows.flatMap((r) => Object.keys(r)))]
       const where = Object.entries(t.where ?? {})

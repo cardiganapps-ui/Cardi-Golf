@@ -3,13 +3,14 @@
  * the one action that matters first, the rest quiet; finishing, cancelling
  * and deleting ask once and show busy.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Field, Sheet, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
+import { loadRejectedInbox, useRejectedInbox } from '../../data/rejectedInbox'
 import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useCourses } from './useCourses'
@@ -42,6 +43,12 @@ export function AdminRounds() {
   const [busy, setBusy] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [ask, setAsk] = useState<Ask>(null)
+  // The holes the server kept for the Comité (REL-08): «Terminar ronda» warns while its day has some open.
+  const inbox = useRejectedInbox()
+  useEffect(() => {
+    void loadRejectedInbox(tournamentId)
+  }, [tournamentId])
+  const inboxFor = (rid: string) => (inbox.tournamentId === tournamentId ? inbox.items.filter((x) => x.roundId === rid).length : 0)
 
   async function save() {
     if (!editing) return
@@ -107,7 +114,7 @@ export function AdminRounds() {
 
   const askBody = ask
     ? ask.kind === 'finish'
-      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''} ${R.phonesBeforeFinish}`
+      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}${inboxFor(ask.round.id) ? ` ${R.inboxBeforeFinish(inboxFor(ask.round.id))}` : ''} ${R.phonesBeforeFinish}`
       : ask.kind === 'cancel'
         ? R.cancelConfirm(ask.round.number)
         : ask.kind === 'start'
@@ -144,6 +151,7 @@ export function AdminRounds() {
               <span className={`chip ${r.status === 'live' ? 'chip--teal' : r.status === 'cancelled' ? 'chip--coral' : ''}`}>{t.roundStatus[r.status]}</span>
             </div>
             {incomplete && <span className={a.warn}>{t.admin.inbox.incomplete(incomplete.players.length)}</span>}
+            {inboxFor(r.id) > 0 && <span className={a.warn}>{R.inboxCount(inboxFor(r.id))}</span>}
             <div className={a.chipRow} style={undefined}>
               {r.status === 'scheduled' && (
                 <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => askStart(r)}>
@@ -151,7 +159,15 @@ export function AdminRounds() {
                 </button>
               )}
               {r.status === 'live' && (
-                <button className="btn btn--primary btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'finish', round: r })}>
+                <button
+                  className="btn btn--primary btn--sm"
+                  type="button"
+                  disabled={rb}
+                  onClick={() => {
+                    setAsk({ kind: 'finish', round: r })
+                    void loadRejectedInbox(tournamentId)
+                  }}
+                >
                   {R.finish}
                 </button>
               )}

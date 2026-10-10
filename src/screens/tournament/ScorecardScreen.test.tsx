@@ -243,6 +243,44 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
       fireEvent.click(within(sheet).getByRole('button', { name: S.allDefaultsConfirm }))
     })
     expect(written().filter((r) => r.includes('@12='))).toHaveLength(4)
+    // «Sí, todos par» is the player confirming the four pars: his capture, sent without `auto`, so a refusal of it
+    // (the day closed, a card signed) reaches the Comité like any typed value (REL-08, N2).
+    const h12 = outbox.holes.find((h) => h.hole === 12)!
+    expect(h12.entries).toHaveLength(4)
+    expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
+    // The hole before, saved with one tap and no question, kept its untouched defaults as such.
+    expect(outbox.holes.find((h) => h.hole === 10)!.entries.filter((e) => e.auto).length).toBeGreaterThan(0)
+  })
+
+  it('«Sí, todos par» holds through the snake question: with a threshold of 2 the four pars are a tie, and the answer sends them without `auto`', async () => {
+    vi.mocked(enqueueTiebreak).mockClear()
+    mount((s) => {
+      const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
+      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+    })
+    await tapSave(11_000) // hole 10: p1, p3 and p4 at 2 putts, a tie
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    })
+    await tapSave(20_000) // hole 11 (p2 had it already): the same tie
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    })
+    expect(holeOnScreen()).toBe(12)
+    await tapSave(21_000)
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole('dialog', { name: S.allDefaultsTitle(12) })).getByRole('button', { name: S.allDefaultsConfirm }))
+    })
+    // The four at 2 putts: who holed out last? Nothing saved until the answer.
+    const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
+    expect(outbox.holes.some((h) => h.hole === 12)).toBe(false)
+    await act(async () => {
+      fireEvent.click(within(ask).getByRole('button', { name: nameOf('p4') }))
+    })
+    const h12 = outbox.holes.find((h) => h.hole === 12)!
+    expect(h12.entries).toHaveLength(4)
+    expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
+    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }))
   })
 
   it('a hole played normally, long after the last save, needs no question', async () => {

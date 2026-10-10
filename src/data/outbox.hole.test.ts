@@ -21,6 +21,7 @@ const { _outboxTest, adoptQueuedWrites, enqueueHole, keepTheirs, sendMineAgain, 
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 const { t } = await import('../i18n/es-MX')
+const { closeCheck } = await import('../engine/close')
 
 /** The user this phone is, holding p1 by the PIN. */
 let me = ''
@@ -67,6 +68,40 @@ async function otherPhoneSaves(hole: number, entries: Array<{ player_id: string;
       body: JSON.stringify({ p: { round_id: 'r1', hole, mutation_id: mutation, entries } }),
     })
     return (await res.json()) as { status: string }
+  } finally {
+    server.reachable = reachable
+  }
+}
+
+/** What the Comité's «Pendientes de revisar» lists after it (0028 `rejected_inbox`), read as the Comité with its own session. */
+async function comiteInbox(): Promise<Row[]> {
+  server.tables.tournament_organizers = [{ tournament_id: 't1', auth_user_id: 'comite', role: 'owner' }]
+  const reachable = server.reachable
+  server.reachable = () => true
+  try {
+    const res = await server.fetch(`${server.url}/rest/v1/rpc/rejected_inbox`, {
+      method: 'POST',
+      headers: { apikey: server.anonKey, Authorization: `Bearer ${server.auth.sessionFor('comite')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_tournament_id: 't1' }),
+    })
+    return (await res.json()) as Row[]
+  } finally {
+    server.reachable = reachable
+  }
+}
+
+/** The Comité's answer to one row (0028 `resolve_rejected_write`), with its own session. */
+async function comiteResolve(id: string, action: 'apply' | 'dismiss', reason: string, expect?: Row): Promise<Row> {
+  server.tables.tournament_organizers = [{ tournament_id: 't1', auth_user_id: 'comite', role: 'owner' }]
+  const reachable = server.reachable
+  server.reachable = () => true
+  try {
+    const res = await server.fetch(`${server.url}/rest/v1/rpc/resolve_rejected_write`, {
+      method: 'POST',
+      headers: { apikey: server.anonKey, Authorization: `Bearer ${server.auth.sessionFor('comite')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_id: id, p_action: action, p_reason: reason, ...(expect ? { p_expect: expect } : {}) }),
+    })
+    return (await res.json()) as Row
   } finally {
     server.reachable = reachable
   }
@@ -140,10 +175,24 @@ describe('two phones on one card (REL-05)', () => {
     // The first call met the defaults; the second went over them, as the rows then stood.
     const sent = calls().map((r) => (r.body as { p: { entries: Array<{ player_id: string; base: Row }> } }).p.entries)
     expect(sent).toHaveLength(2)
+    // The untouched defaults go out saying so; the typed values do not (0028).
+    expect(sent[0]).toEqual([
+      { player_id: 'p1', fields: { strokes: 4, putts: 2 }, base: {}, auto: true },
+      { player_id: 'p2', fields: { strokes: 4, putts: 2 }, base: {}, auto: true },
+      { player_id: 'p3', fields: { strokes: 7, putts: 3 }, base: {} },
+      { player_id: 'p4', fields: { strokes: 5, putts: 2 }, base: {} },
+    ])
     expect(sent[1]).toEqual([
       { player_id: 'p3', fields: { strokes: 7, putts: 3 }, base: dflt },
       { player_id: 'p4', fields: { strokes: 5, putts: 2 }, base: dflt },
     ])
+    // REL-08: the server kept the four conflicts as its record, and the Comité is asked about none of them: the phone
+    // settled each one itself. Nothing holds «Cerrar torneo».
+    expect(server.tables.rejected_writes?.filter((r) => r.reason === 'conflict' && r.status === 'open')).toHaveLength(4)
+    const inbox = await comiteInbox()
+    expect(inbox).toEqual([])
+    const d = useTournament.getState().data!
+    expect(closeCheck(d.snapshot, d.settings, { finishLiveRounds: true, openRejected: inbox.length }).blockers.map((b) => b.kind)).not.toContain('rejectedWrites')
   })
 
   it('a value the other phone typed (not par and 2 putts) is never gone over: this phone is asked', async () => {
@@ -384,8 +433,72 @@ describe('what the server did not take', () => {
     await settle(useOutbox)
     expect(server.score('p1', 4)).toMatchObject({ strokes: 5 })
     expect(server.score('p3', 4)).toBeUndefined()
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned })])
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p3:4', message: t.sync.errSigned, atServer: true })])
     expect(onBoards('p3', 4)).toBeUndefined()
+    // REL-08: kept on the server too, for the Comité's «Pendientes de revisar»; the phone's line says so.
+    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p3', hole: 4, reason: 'card_signed', status: 'open' })])
+    // A value a person typed: the Comité is asked about it.
+    expect((await comiteInbox()).map((r) => [r.player_id, r.reason])).toEqual([['p3', 'card_signed']])
+  })
+
+  it('an untouched default the server refused on an empty hole is the one value sent for it: kept with its flag, and the Comité is asked (N2)', async () => {
+    server.seed('card_signatures', [{ round_id: 'r1', pair_id: 'pb', signed_by: 'p1' }])
+    await saveHole(5, [
+      { player_id: 'p1', fields: played(5), base: {} },
+      { player_id: 'p4', fields: played(4), base: {}, auto: true },
+    ])
+    await until(() => useOutbox.getState().pending === 0, 'the hole')
+    await settle(useOutbox)
+    expect(server.score('p1', 5)).toMatchObject({ strokes: 5 })
+    expect(server.tables.rejected_writes).toEqual([expect.objectContaining({ player_id: 'p4', hole: 5, reason: 'card_signed', payload: expect.objectContaining({ auto: true }) })])
+    // p4's 5th is empty: nobody sent anything else for it, so the Comité decides it, and the phone says so.
+    const inbox = await comiteInbox()
+    expect(inbox.map((r) => [r.player_id, r.hole, r.reason, (r.payload as Row).auto])).toEqual([['p4', 5, 'card_signed', true]])
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p4:5', atServer: true })])
+    // Applied as the hole was seen, empty.
+    expect(await comiteResolve(String(inbox[0]!.id), 'apply', 'Firmada antes del par', {})).toMatchObject({ status: 'applied' })
+    expect(server.score('p4', 5)).toMatchObject({ strokes: 4, putts: 2, reason: 'Firmada antes del par' })
+  })
+
+  it('a conflict left unanswered when the day closes: «Guardar el mío» on the closed day is refused as a typed value, and reaches the Comité (N1)', async () => {
+    // The other phone typed Dos's 9th as 6; this one, which saw it empty, typed 5.
+    await otherPhoneSaves(9, [{ player_id: 'p2', fields: played(6), base: {} }])
+    await saveHole(9, [{ player_id: 'p2', fields: played(5), base: {} }])
+    await until(() => useOutbox.getState().conflicts.length === 1, 'the question')
+    // The Comité finishes the day before anyone answers: the conflict row is never listed.
+    server.tables.rounds = server.tables.rounds!.map((r) => (r.id === 'r1' ? { ...r, status: 'finished' } : r))
+    expect(await comiteInbox()).toEqual([])
+    await sendMineAgain(useOutbox.getState().conflicts[0]!.key, 'p1')
+    await until(() => useOutbox.getState().pending === 0, 'the second save')
+    await settle(useOutbox)
+    // Refused (the day is closed), the 6 stands, and the phone's line says where the 5 went.
+    expect(server.score('p2', 9)).toMatchObject({ strokes: 6, entered_by: 'p3' })
+    expect(useOutbox.getState().conflicts).toEqual([])
+    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p2:9', message: t.sync.errNotLive, atServer: true })])
+    // The Comité's «Pendientes de revisar» has it, as typed: the 5 the player chose over the 6 he saw.
+    const inbox = await comiteInbox()
+    expect(inbox).toEqual([
+      expect.objectContaining({ player_id: 'p2', hole: 9, reason: 'round_not_live', payload: expect.objectContaining({ fields: { strokes: 5, putts: 2 }, base: { strokes: 6, putts: 2, picked_up: false } }) }),
+    ])
+    expect((inbox[0]!.payload as Row).auto).toBeUndefined()
+    // And can apply it, against the 6 it saw.
+    expect(await comiteResolve(String(inbox[0]!.id), 'apply', 'El jugador eligió el suyo', { strokes: 6, putts: 2, picked_up: false })).toMatchObject({ status: 'applied' })
+    expect(server.score('p2', 9)).toMatchObject({ strokes: 5, putts: 2, reason: 'El jugador eligió el suyo' })
+  })
+
+  it('a defaults-only hole corrected offline before it went out is a typed capture: the merged entry goes without `auto`, and its refusal reaches the Comité', async () => {
+    phone.goOffline()
+    // Saved with all four untouched (par, 2 putts), then Dos corrected to 6 before the signal came back.
+    await saveHole(10, [{ player_id: 'p2', fields: played(4), base: {}, auto: true }])
+    await saveHole(10, [{ player_id: 'p2', fields: { strokes: 6 }, base: {} }])
+    // Meanwhile the day closed.
+    server.tables.rounds = server.tables.rounds!.map((r) => (r.id === 'r1' ? { ...r, status: 'finished' } : r))
+    phone.goOnline()
+    await until(() => useOutbox.getState().pending === 0, 'the hole to go out')
+    await settle(useOutbox)
+    const sent = calls().map((r) => (r.body as { p: { entries: Array<Record<string, unknown>> } }).p.entries)
+    expect(sent).toEqual([[{ player_id: 'p2', fields: { strokes: 6, putts: 2 }, base: {} }]])
+    expect((await comiteInbox()).map((r) => [r.player_id, r.hole, (r.payload as Row).auto ?? null])).toEqual([['p2', 10, null]])
   })
 
   it('a phone that holds no player any more: the hole waits for the PIN, and goes once the player is back', async () => {

@@ -12,6 +12,9 @@
  * once it is confirmed. A player's phone may resend only what it could write
  * now (the day live, the card unsigned, and its player in that group that
  * day), against what the card holds now; the hint says which lines go where.
+ * A hole save_hole refused is on the server too (0026): when a person typed
+ * it, its line says it went to the Comité's «Pendientes de revisar», naming
+ * whose hole it is (0028).
  */
 import { useId, useState } from 'react'
 import { t } from '../i18n/es-MX'
@@ -96,6 +99,8 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     const named = 'player_ids' in p ? p.player_ids : [p.last_holed_player_id]
     return !!group && named.every((id) => group.playerIds.includes(id))
   }
+  /** Whose hole went to the Comité: usually another player's (the phone keeps the other pair's card), else this phone's own. */
+  const leftForComite = (p: ScorePayload) => IB.leftForComite(p.hole, p.player_id === playerId ? null : name(p.player_id))
   /** A Comité device always can; a player's phone, what it could write now. */
   const resendable = (r: RejectedItem) => canResend || writable(r)
   /** What the card holds now for a refused hole, when it differs: a resend would replace it. */
@@ -128,6 +133,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
             <span className={styles.text}>
               <span>{describe(r)}</span>
               <span className={styles.reason}>{reason(r)}</span>
+              {!canResend && r.atServer && <span className={styles.reason}>{leftForComite(r.payload as ScorePayload)}</span>}
               {resendable(r) && onCard(r) && <span className={styles.reason}>{onCard(r)}</span>}
             </span>
             <span className={styles.actions}>

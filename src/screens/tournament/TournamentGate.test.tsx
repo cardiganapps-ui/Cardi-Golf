@@ -154,22 +154,45 @@ describe('recovering when the signal comes back (REL-02)', () => {
     server.lookupTournament.mockResolvedValue(fx.lookup)
     server.myMembership.mockResolvedValue(member)
     // When the signal comes back the session, lookup and membership work, but the first snapshot doesn't arrive.
-    const load = serverLoads('En vivo del servidor', 1)
+    // It is held until the test lets it fail: while it is out no other ask can start over it, so the count below is exact.
+    let failFirst: () => void = () => undefined
+    const firstFails = new Promise<void>((done) => (failFirst = done))
+    const served = serverLoads('En vivo del servidor')
+    const load = vi.fn(async (tid: string) => {
+      if (load.mock.calls.length === 1) {
+        await firstFails
+        useTournament.setState({ error: 'Sin conexión con el servidor.' })
+        return
+      }
+      await served(tid)
+    })
+    useTournament.setState({ load })
     open()
     expect(await screen.findByText('Guardado en el teléfono: cache')).toBeTruthy()
-    await act(async () => {
-      window.dispatchEvent(new Event('online'))
-    })
-    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1))
+    // An `online` that comes while the first ask (the one with no signal) is still out is ignored by design: there is
+    // one ask at a time. On a loaded machine that ask can still be out here, so the signal «comes back» until an ask starts.
+    await vi.waitFor(
+      async () => {
+        await act(async () => {
+          window.dispatchEvent(new Event('online'))
+        })
+        expect(load).toHaveBeenCalledTimes(1)
+      },
+      { timeout: 5000 },
+    )
     expect(screen.getByText('Guardado en el teléfono: cache')).toBeTruthy()
+    await act(async () => failFirst())
     // The next chances (the app shown again, the timer) keep trying until the server's boards are up.
     // It used to stop here: the session was back, so the old boards stayed until the app was killed.
-    await vi.waitFor(async () => {
-      await act(async () => {
-        window.dispatchEvent(new Event('online'))
-      })
-      expect(screen.getByText('En vivo del servidor: server')).toBeTruthy()
-    })
+    await vi.waitFor(
+      async () => {
+        await act(async () => {
+          window.dispatchEvent(new Event('online'))
+        })
+        expect(screen.getByText('En vivo del servidor: server')).toBeTruthy()
+      },
+      { timeout: 5000 },
+    )
     expect(load).toHaveBeenCalledTimes(2)
   })
 })

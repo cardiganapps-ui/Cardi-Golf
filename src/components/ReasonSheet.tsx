@@ -9,6 +9,7 @@ import { t } from '../i18n/es-MX'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Field, Input } from './primitives'
 import { humanError } from '../lib/humanError'
+import { reasonLength, trimReason } from '../lib/reason'
 
 const MIN = 3
 
@@ -18,6 +19,7 @@ export function ReasonSheet({
   body,
   confirmLabel,
   danger,
+  initialReason = '',
   onConfirm,
   onClose,
 }: {
@@ -26,6 +28,8 @@ export function ReasonSheet({
   body?: string
   confirmLabel: string
   danger?: boolean
+  /** What the field holds when it opens (a reason the screen can suggest). */
+  initialReason?: string
   onConfirm: (reason: string) => Promise<void>
   onClose: () => void
 }) {
@@ -34,11 +38,13 @@ export function ReasonSheet({
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     if (open) {
-      setReason('')
+      setReason(initialReason)
       setError(null)
     }
-  }, [open])
-  const ok = reason.trim().length >= MIN
+  }, [open, initialReason])
+  // As the server reads it: trimmed of every whitespace, counted in characters (two golfers are two, not four).
+  const why = trimReason(reason)
+  const ok = reasonLength(why) >= MIN
   async function confirm() {
     if (!ok) {
       setError(t.platform.reasonPlaceholder)
@@ -46,7 +52,7 @@ export function ReasonSheet({
     }
     setBusy(true)
     try {
-      await onConfirm(reason.trim())
+      await onConfirm(why)
       onClose()
     } catch (e) {
       setError(humanError(e))

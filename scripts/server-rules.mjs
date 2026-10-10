@@ -296,11 +296,13 @@ const okStatus = { GET: 200, POST: 201, DELETE: 204, RPC: 200 }
 const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
 /**
  * `expect.answer`: an RPC's answer holds at least what the case writes. An object, the keys it names; a list, as
- * many items, each matching a different one in any order (the database's order of a set is none); else equal.
+ * many items, each matching a different one in any order (the database's order of a set is none), or in the order
+ * written when the case says `ordered` (a function that promises one, as rejected_inbox's oldest first); else equal.
  */
-function holds(actual, want) {
+function holds(actual, want, ordered = false) {
   if (Array.isArray(want)) {
     if (!Array.isArray(actual) || actual.length !== want.length) return false
+    if (ordered) return want.every((w, i) => holds(actual[i], w))
     const free = actual.map(() => true)
     return want.every((w) => {
       const i = actual.findIndex((a, j) => free[j] && holds(a, w))
@@ -328,7 +330,7 @@ for (const c of spec.cases) {
   if (want.status !== status) problems.push(`status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`)
   else if (want.code && want.code !== got.state) problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
   if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows))) problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
-  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
+  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer, !!want.ordered))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
   ;(c.then ?? []).forEach((t, i) => {
     const expected = t.rows.map((r) => Object.fromEntries(Object.entries(r)))
     const actual = got.after[i].map((r) => (Object.keys(r).length === 1 && 'present' in r ? {} : r))

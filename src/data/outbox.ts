@@ -87,7 +87,13 @@ export interface HoleEntry {
    * entry without it is written blind (0026).
    */
   base: HoleFields
-  /** A default nobody touched (an all-par hole): a conflict on it takes the server's value without asking. */
+  /**
+   * A default nobody touched (an all-par hole): a conflict on it takes the
+   * server's value without asking. Sent with the entry: save_hole keeps it in
+   * what it records, and the Comité's inbox lists a refused one only on a
+   * hole nothing else covers (0028). Not set when the player confirmed the
+   * pars («Sí, todos par»): those are his capture.
+   */
   auto?: boolean
   /**
    * What the Tarjeta saves for a player nobody touched on this hole (par for
@@ -177,6 +183,8 @@ export interface RejectedItem {
   payload: OutboxItem['payload']
   message: string
   at: number
+  /** save_hole refused a value a person typed and kept it: the Comité sees it in «Pendientes de revisar» (REL-08, 0028). */
+  atServer?: boolean
 }
 
 class OutboxDb extends Dexie {
@@ -598,11 +606,11 @@ async function keepRejected(list: RejectedItem[]) {
  * direct write of it has. «Reenviar» sends it the way the Comité's own
  * captures go.
  */
-function holeRefusal(item: OutboxItem & { kind: 'hole' }, e: HoleEntry, message: string): RejectedItem {
+function holeRefusal(item: OutboxItem & { kind: 'hole' }, e: HoleEntry, message: string, atServer = false): RejectedItem {
   const p = item.payload
   const v = applyFields(baseRow(e.base), e.fields)
   const payload: ScorePayload = { round_id: p.round_id, player_id: e.player_id, hole: p.hole, strokes: v.strokes, putts: v.putts, picked_up: v.picked_up, entered_by: p.entered_by, client_ts: p.client_ts }
-  return { key: `score:${p.round_id}:${e.player_id}:${p.hole}`, kind: 'score', tournamentId: item.tournamentId, payload, message, at: Date.now() }
+  return { key: `score:${p.round_id}:${e.player_id}:${p.hole}`, kind: 'score', tournamentId: item.tournamentId, payload, message, at: Date.now(), ...(atServer ? { atServer } : {}) }
 }
 /** Why the server refused one player of a hole, as the chip and the rejected list say it. */
 function refusalText(reason: string): string {
@@ -1031,8 +1039,14 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   const auth = `Bearer ${await sessionToken(sb)}`
   if (item.kind === 'hole') {
     const p = item.payload
-    // Every entry names its base: a key left out is a blind write on the server (0026).
-    const call = { round_id: p.round_id, hole: p.hole, mutation_id: p.mutation_id, entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {} })) }
+    // Every entry names its base: a key left out is a blind write on the server (0026). An untouched default says so
+    // (`auto`): save_hole keeps the entry as sent, and the Comité is asked about one only on a hole nothing else covers (0028).
+    const call = {
+      round_id: p.round_id,
+      hole: p.hole,
+      mutation_id: p.mutation_id,
+      entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {}, ...(e.auto ? { auto: true } : {}) })),
+    }
     const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
     if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
@@ -1131,7 +1145,10 @@ async function settleHole(item: HoleItem, ans: HoleAnswer): Promise<{ changes: L
   }
   const refusals = (ans.rejected ?? []).flatMap((r) => {
     const e = entry(r.player_id)
-    return e ? [holeRefusal(item, e, refusalText(r.reason))] : []
+    // The answer's refusals are the ones save_hole kept (0026); the Comité is asked about those a person typed, and
+    // about an untouched default on a hole this phone saw empty: the one value sent for it, unless something else
+    // landed there since (0028).
+    return e ? [holeRefusal(item, e, refusalText(r.reason), !e.auto || Object.keys(e.base ?? {}).length === 0)] : []
   })
   if (isCurrent(item)) {
     queue = queue.filter((x) => !(x.key === item.key && x.seq === item.seq))

@@ -84,6 +84,7 @@
 import type { Row } from '../mappers'
 import { SNAPSHOT_KEYS } from '../snapshotTables'
 import { compareValues } from './rows'
+import { reasonLength, trimReason } from '../../lib/reason'
 
 /** Supabase's default max-rows for PostgREST: the server's cap, not the client's page size. */
 export const SERVER_MAX_ROWS = 1000
@@ -1117,6 +1118,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       })
     }
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
+    if (name === 'resolve_rejected_write') return resolveRejected(args, as)
+    if (name === 'rejected_inbox') return rejectedInbox(args, as)
     if (name === 'release_device') {
       // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
       server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)
@@ -1183,6 +1186,98 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
     }
     return json(200, { assigned: entries.length })
+  }
+
+  /** 0028 `rejected_write_for_comite`: a refusal (not a conflict) of a value a person typed (not `auto`). */
+  const typed = (w: Row) => w.reason !== 'conflict' && (w.payload as Row | null)?.auto !== true
+  /**
+   * 0028 `rejected_write_listed`: an open row the Comité decides. A typed
+   * refusal; or an untouched default (`auto`) when nothing else covers that
+   * hole: no score for the player and hole, and no typed refusal of it open
+   * beside it. Never a conflict.
+   */
+  const listed = (w: Row) =>
+    w.status === 'open' &&
+    w.reason !== 'conflict' &&
+    (typed(w) ||
+      (!rowsOf('scores').some((s) => s.round_id === w.round_id && s.player_id === w.player_id && s.hole === w.hole) &&
+        !rowsOf('rejected_writes').some((o) => o !== w && o.status === 'open' && o.round_id === w.round_id && o.player_id === w.player_id && o.hole === w.hole && typed(o))))
+
+  /** 0028 `rejected_inbox(p_tournament_id)`: the Comité's open rows to decide, oldest first. */
+  function rejectedInbox(args: Record<string, unknown>, as: string): Response {
+    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function rejected_inbox' })
+    const tid = args.p_tournament_id
+    if (tid == null || !organizes(as, tid)) return json(403, { code: '42501', details: null, hint: null, message: 'Solo el Comité ve los pendientes de revisar' })
+    const rows = rowsOf('rejected_writes')
+      .filter((w) => w.tournament_id === tid && w.status === 'open' && listed(w))
+      .sort((a, b) => compareValues(a.created_at, b.created_at) || compareValues(a.id, b.id))
+      .map((w) => ({ id: w.id, round_id: w.round_id, hole: w.hole, player_id: w.player_id, writer_player_id: w.writer_player_id ?? null, reason: w.reason, payload: structuredClone(w.payload), created_at: w.created_at ?? null }))
+    return json(200, rows)
+  }
+
+  /**
+   * 0028 `resolve_rejected_write(p_id, p_action, p_reason, p_expect)`, in the
+   * order it checks: the Comité (and nothing about a row it may not
+   * resolve), the action, an open row, the reason (trimmed, counted in
+   * characters); then, to apply, not a conflict, a day not cancelled, the
+   * payload's fields; then, to apply or for a dismissal that says what it
+   * saw, `p_expect` itself, a row the inbox lists (to apply), and what the
+   * Comité saw against the hole as it stands; then the fields over it,
+   * written as admin_save_score writes it.
+   */
+  function resolveRejected(args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    if (as === 'anon') return fail('42501', 'permission denied for function resolve_rejected_write')
+    const w = rowsOf('rejected_writes').find((r) => r.id === args.p_id)
+    if (!w || !organizes(as, w.tournament_id)) return fail('42501', 'Solo el Comité puede resolver una captura rechazada')
+    const apply = args.p_action === 'apply'
+    if (!apply && args.p_action !== 'dismiss') return fail('22023', 'Una captura rechazada se aplica o se descarta')
+    if (w.status !== 'open') return fail('22023', 'Esa captura ya estaba resuelta')
+    const why = trimReason(typeof args.p_reason === 'string' ? args.p_reason : '')
+    if (reasonLength(why) < 3) return fail('22023', 'Escribe el motivo, al menos 3 letras')
+    if (reasonLength(why) > 200) return fail('22023', 'El motivo es muy largo: 200 letras como máximo')
+    const f = (w.payload as Row | null)?.fields as Row | undefined
+    if (apply) {
+      if (w.reason === 'conflict') return fail('22023', 'Ese choque lo resolvió el teléfono que lo mandó; descártalo')
+      if (rowsOf('rounds').find((r) => r.id === w.round_id)?.status === 'cancelled') return fail('22023', 'Ese día está cancelado: no se le aplica nada; descártala o reabre el día')
+      const known = ['strokes', 'putts', 'picked_up']
+      if (!f || typeof f !== 'object' || Array.isArray(f) || Object.keys(f).some((k) => !known.includes(k)) || !Object.keys(f).length) return fail('22023', 'Esa captura no trae golpes ni putts que aplicar; descártala')
+      const numOrNull = (v: unknown) => v === null || typeof v === 'number'
+      if (('strokes' in f && !numOrNull(f.strokes)) || ('putts' in f && !numOrNull(f.putts)) || ('picked_up' in f && typeof f.picked_up !== 'boolean')) return fail('22023', 'Los valores de esa captura no se entienden; descártala')
+    }
+    const old = rowsOf('scores').find((r) => r.round_id === w.round_id && r.player_id === w.player_id && r.hole === w.hole)
+    // A dismissal says what it saw only when it sends p_expect (null, as PostgREST passes it, is not sent).
+    if (apply || args.p_expect != null) {
+      const expect = args.p_expect
+      if (!expect || typeof expect !== 'object' || Array.isArray(expect)) return fail('22023', 'Falta lo que viste en la tarjeta; vuelve a abrir la lista')
+      if (apply && !listed(w)) return fail('22023', 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo')
+      // What the Comité saw and what stands, read the same way: a key left out, or no row, is no strokes, no putts, not picked up.
+      const seen = expect as Row
+      const same = (k: string, dflt: unknown) => (seen[k] ?? dflt) === (old?.[k] ?? dflt)
+      if (!same('strokes', null) || !same('putts', null) || !same('picked_up', false)) return fail('22023', 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo')
+    }
+    if (apply && f) {
+      let st = ('strokes' in f ? f.strokes : (old?.strokes ?? null)) as number | null
+      const pt = ('putts' in f ? f.putts : (old?.putts ?? null)) as number | null
+      const picked = 'picked_up' in f ? (f.picked_up as boolean) : typeof f.strokes === 'number' ? false : old?.picked_up === true
+      if (picked) st = null
+      if (!picked && (st === null || !Number.isInteger(st) || st < 1 || st > 15)) return fail('22023', 'Con esa captura el hoyo no queda con golpes de 1 a 15; descártala o corrige el hoyo en Tarjetas')
+      if (pt !== null && (!Number.isInteger(pt) || pt < 0 || pt > 15 || (st !== null && pt > st))) return fail('22023', 'Con esa captura los putts quedan fuera de rango; descártala o corrige el hoyo en Tarjetas')
+      // admin_save_score's row: the Comité's player as the writer, the reason on the row, no discrepancy (the Comité's switch).
+      const values = { strokes: st, putts: pt, picked_up: picked, entered_by: myPlayer(as, w.tournament_id) ?? null, client_ts: stamp(), reason: why, disputed: false, previous: null }
+      let row: Row
+      if (old) {
+        row = { ...old, ...values, updated_at: stamp(), version: Number(old.version ?? 1) + 1 }
+        server.tables.scores = rowsOf('scores').map((r) => (r === old ? row : r))
+      } else {
+        row = { ...withDefaults('scores', { round_id: w.round_id, player_id: w.player_id, hole: w.hole }), ...values }
+        ;(server.tables.scores ??= []).push(row)
+      }
+      server.writes.push({ table: 'scores', row: { ...row }, by: as })
+    }
+    const status = apply ? 'applied' : 'dismissed'
+    Object.assign(w, { status, resolved_by: as, resolved_at: stamp(), resolution_note: why })
+    return json(200, { id: w.id, status })
   }
 
   /** GoTrue, as far as a player's phone uses it: anonymous sign-in, refresh, sign-out. A string: not served. */
