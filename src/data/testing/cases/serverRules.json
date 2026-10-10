@@ -17,13 +17,15 @@
           "id": "t1",
           "slug": "ensayo",
           "name": "Ensayo",
-          "join_code": "ENSAYO"
+          "join_code": "ENSAYO",
+          "status": "setup"
         },
         {
           "id": "t2",
           "slug": "otro",
           "name": "Otro torneo",
-          "join_code": "OTRAZZ"
+          "join_code": "OTRAZZ",
+          "status": "setup"
         }
       ],
       "players": [
@@ -11543,6 +11545,985 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "close gate: Terminado while a planned day is still live is refused, in Spanish, and the status stays (0029, MONEY-05)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "live"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se puede marcar Terminado. El día 2 sigue abierto: termínalo o cancélalo en Comité, sección Rondas."
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: a day the settings plan and nobody created holds Terminado (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se puede marcar Terminado. El día 2 no está creado: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo."
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: every planned day finished or cancelled and nothing kept: Terminado goes through (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "cancelled"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t3"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "finished"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: a hole a person typed that the server kept holds Terminado until the Comité resolves it (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "finished"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w31",
+            "tournament_id": "t3",
+            "round_id": "r31",
+            "hole": 4,
+            "player_id": "p31",
+            "writer_player_id": "p31",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "player_id": "p31",
+              "fields": {
+                "strokes": 5,
+                "putts": 2
+              },
+              "base": {}
+            },
+            "reason": "round_not_live",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se puede marcar Terminado. Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar»."
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: a conflict kept is the phone's, not the Comité's: it holds nothing (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "finished"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w31",
+            "tournament_id": "t3",
+            "round_id": "r31",
+            "hole": 4,
+            "player_id": "p31",
+            "writer_player_id": "p31",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "player_id": "p31",
+              "fields": {
+                "strokes": 5,
+                "putts": 2
+              },
+              "base": {},
+              "server": {
+                "strokes": 4,
+                "putts": 2
+              }
+            },
+            "reason": "conflict",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t3"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "finished"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: everything at once, one sentence each, in the phone's order (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 4
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "live"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "scheduled"
+          },
+          {
+            "id": "r34",
+            "tournament_id": "t3",
+            "number": 4,
+            "status": "finished"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w31",
+            "tournament_id": "t3",
+            "round_id": "r31",
+            "hole": 4,
+            "player_id": "p31",
+            "writer_player_id": "p31",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "player_id": "p31",
+              "fields": {
+                "strokes": 5,
+                "putts": 2
+              },
+              "base": {}
+            },
+            "reason": "card_signed",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se puede marcar Terminado. El día 3 no está creado: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo. Los días 1 y 2 siguen abiertos: termínalo o cancélalo en Comité, sección Rondas. Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar»."
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: leaving Terminado is free, a day open or not (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "finished",
+            "settings": {}
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "live"
+          }
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t3"
+        },
+        "select": "id",
+        "body": {
+          "status": "live"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": [
+          {
+            "id": "t3"
+          }
+        ]
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "status": "live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: an admin player meets it like the Comité (0029)",
+      "as": "uid-pz",
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t1"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se puede marcar Terminado. El día 1 sigue abierto: termínalo o cancélalo en Comité, sección Rondas."
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t1"
+          },
+          "rows": [
+            {
+              "status": "setup"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: a player's phone still changes no tournament: nothing updated, nothing refused (0029)",
+      "as": "uid-p1",
+      "request": {
+        "method": "PATCH",
+        "table": "tournaments",
+        "eq": {
+          "id": "t1"
+        },
+        "select": "id",
+        "body": {
+          "status": "finished"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "rows": []
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t1"
+          },
+          "rows": [
+            {
+              "status": "setup"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "close gate: publishing a Terminado tournament with a day reopened is refused (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "finished",
+            "settings": {}
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "live"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "publish_tournament_results",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_rows": [],
+          "p_currency": "MXN"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se pueden publicar los resultados. El día 1 sigue abierto: termínalo o cancélalo en Comité, sección Rondas."
+      }
+    },
+    {
+      "name": "close gate: publishing waits for a hole kept for the Comité too (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "finished",
+            "settings": {}
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          }
+        ],
+        "rejected_writes": [
+          {
+            "id": "w31",
+            "tournament_id": "t3",
+            "round_id": "r31",
+            "hole": 4,
+            "player_id": "p31",
+            "writer_player_id": "p31",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "player_id": "p31",
+              "fields": {
+                "strokes": 5,
+                "putts": 2
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "publish_tournament_results",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_rows": [],
+          "p_currency": "MXN"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Todavía no se pueden publicar los resultados. Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar»."
+      }
+    },
+    {
+      "name": "close gate: a settled Terminado tournament publishes (0029)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "finished",
+            "settings": {}
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "cancelled"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "publish_tournament_results",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_rows": [],
+          "p_currency": "MXN"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "players": 0,
+          "field": 0
+        }
+      }
+    },
+    {
+      "name": "close gate: a tournament not Terminado is not published, as before (0015)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "live",
+            "settings": {
+              "rounds": 2
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          },
+          {
+            "id": "r32",
+            "tournament_id": "t3",
+            "number": 2,
+            "status": "finished"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "publish_tournament_results",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_rows": [],
+          "p_currency": "MXN"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "El torneo todavía no termina"
+      }
+    },
+    {
+      "name": "close gate: a player publishes nothing, as before (0015)",
+      "as": "uid-p1",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "cierre",
+            "name": "Cierre",
+            "join_code": "CIERRE",
+            "status": "finished",
+            "settings": {}
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ],
+        "players": [
+          {
+            "id": "p31",
+            "tournament_id": "t3",
+            "full_name": "Treinta y uno",
+            "display_name": "Treinta y uno",
+            "is_admin": false
+          }
+        ],
+        "rounds": [
+          {
+            "id": "r31",
+            "tournament_id": "t3",
+            "number": 1,
+            "status": "finished"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "publish_tournament_results",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_rows": [],
+          "p_currency": "MXN"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo el Comité publica resultados"
       }
     }
   ]

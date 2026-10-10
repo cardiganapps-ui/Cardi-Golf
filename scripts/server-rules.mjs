@@ -70,7 +70,7 @@ for (const line of psql(`select table_name || ' ' || column_name from informatio
 const columnsOf = (req) => req.columns ?? [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
 /** PGRST204, PostgREST's own answer to a column the table doesn't have. */
 function unknownColumn(req) {
-  if (req.method !== 'POST') return null
+  if (req.method !== 'POST' && req.method !== 'PATCH') return null
   const known = tableColumns.get(req.table) ?? new Set()
   const col = columnsOf(req).find((c) => !known.has(c))
   return col ? `PGRST204 Could not find the '${col}' column of '${req.table}' in the schema cache` : null
@@ -190,6 +190,8 @@ function argSql(k, v) {
  *   ON CONFLICT (on_conflict, or the primary key) DO UPDATE SET each of them;
  *   with ignore-duplicates DO NOTHING.
  * - DELETE: the eq filters as a WHERE.
+ * - PATCH: UPDATE of the body's columns where the eq filters hold, and with
+ *   a `select` the rows it changed (RETURNING), as `.update(…).select(…)`.
  * - RPC: the function called with the arguments named, its answer kept to be read.
  */
 function requestSql(req) {
@@ -214,6 +216,16 @@ function requestSql(req) {
     return `perform set_config('polo.result', (select coalesce(json_agg(q), '[]'::json)::text from (select ${items.join(', ')} from public.${t} p where ${where}) q), true)`
   }
   if (req.method === 'DELETE') return `delete from public.${t} where ${whereSql(t, req.eq ?? {})}`
+  if (req.method === 'PATCH') {
+    // UPDATE of the body's columns where the eq filters hold, as the caller (its UPDATE policy hides the rest);
+    // with a `select`, the rows it changed come back (supabase-js's `.update(…).select(…)`).
+    const body = toDb(t, req.body)
+    const cols = Object.keys(body).map(ident)
+    const update = `update public.${t} set (${cols.join(', ')}) = (select ${cols.join(', ')} from json_populate_record(null::public.${t}, ${jsonLiteral(body)})) where ${whereSql(t, req.eq ?? {})}`
+    if (!req.select) return update
+    const returning = parseSelect(req.select).columns.join(', ')
+    return `declare _rows json;\n  begin\n    with u as (${update} returning ${returning}) select coalesce(json_agg(u), '[]'::json) into _rows from u;\n    perform set_config('polo.result', _rows::text, true);\n  end`
+  }
   const body = (Array.isArray(req.body) ? req.body : [req.body]).map((r) => toDb(t, r))
   // Every row's keys, as supabase-js's `columns` names them (or the case's own): a key one row leaves out is null in it.
   const cols = columnsOf(req).map(ident)
@@ -290,8 +302,8 @@ function runCase(c) {
   return { state, message: message.join(' '), status: statusOf(state, anon), read: out.read.map(fromDb), after: out.after.map((rows) => rows.map(fromDb)) }
 }
 
-/** The status a request answered with when it went through. */
-const okStatus = { GET: 200, POST: 201, DELETE: 204, RPC: 200 }
+/** The status a request answered with when it went through: a PATCH answers its rows (200) only when it asks for them. */
+const okStatus = (req) => ({ GET: 200, POST: 201, DELETE: 204, RPC: 200, PATCH: req.select ? 200 : 204 })[req.method]
 
 const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
 /**
@@ -326,9 +338,11 @@ for (const c of spec.cases) {
   }
   const want = c.expect
   const problems = []
-  const status = got.status ?? okStatus[c.request.method]
+  const status = got.status ?? okStatus(c.request)
   if (want.status !== status) problems.push(`status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`)
   else if (want.code && want.code !== got.state) problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
+  // The refusal as people read it, when the case pins it (a sentence of our own raises).
+  if (want.message !== undefined && want.message !== got.message) problems.push(`message «${got.message}», expected «${want.message}»`)
   if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows))) problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
   if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer, !!want.ordered))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
   ;(c.then ?? []).forEach((t, i) => {
@@ -337,7 +351,7 @@ for (const c of spec.cases) {
     if (JSON.stringify(sortRows(actual)) !== JSON.stringify(sortRows(expected))) problems.push(`${t.table} where ${JSON.stringify(t.where ?? {})}: ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
   })
   if (print) {
-    console.log(`${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(['GET', 'RPC'].includes(c.request.method) ? got.read : got.after)}`)
+    console.log(`${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(['GET', 'RPC', 'PATCH'].includes(c.request.method) ? got.read : got.after)}`)
   } else if (problems.length) {
     failed++
     console.log(`  ✗ ${c.name}\n      ${problems.join('\n      ')}`)

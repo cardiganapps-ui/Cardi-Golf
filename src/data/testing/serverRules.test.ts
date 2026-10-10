@@ -13,7 +13,7 @@ import spec from './cases/serverRules.json'
 import { fakeSupabase, type FakeSupabase } from './fakeSupabase'
 
 interface Request {
-  method: 'GET' | 'POST' | 'DELETE' | 'RPC'
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'RPC'
   table?: string
   /** An RPC's function and its arguments. */
   fn?: string
@@ -36,8 +36,11 @@ interface Case {
   pins?: string[]
   before?: Request[]
   request: Request
-  /** `answer`: an RPC's answer holds at least this (scripts/server-rules.mjs `holds`); `ordered`: a list's items in this order. */
-  expect: { status: number; code?: string; rows?: Row[]; answer?: unknown; ordered?: boolean }
+  /**
+   * `answer`: an RPC's answer holds at least this (scripts/server-rules.mjs `holds`); `ordered`: a list's items in this
+   * order; `message`: the refusal's text, as people read it (a sentence of our own raises).
+   */
+  expect: { status: number; code?: string; message?: string; rows?: Row[]; answer?: unknown; ordered?: boolean }
   then?: Array<{ table: string; where?: Record<string, unknown>; rows: Row[] }>
 }
 
@@ -96,6 +99,7 @@ describe('the test server answers each request as the database does (cases/serve
     const res = await send(server, token, c.request)
     const body = res.status === 204 || res.status === 201 ? null : await res.json()
     expect({ status: res.status, code: res.ok ? undefined : body?.code }).toEqual({ status: c.expect.status, code: c.expect.code ?? (res.ok ? undefined : body?.code) })
+    if (c.expect.message !== undefined) expect(body?.message).toBe(c.expect.message)
     // An RPC answers its function's value: the database side reads it as a one-row list.
     if (c.expect.rows) expect(bag(c.request.method === 'RPC' ? [body as Row] : (body as Row[]))).toEqual(bag(c.expect.rows))
     if (c.expect.answer !== undefined) expect(holds(body, c.expect.answer, !!c.expect.ordered), `answered ${JSON.stringify(body)}`).toBe(true)

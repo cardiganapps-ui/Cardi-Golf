@@ -55,6 +55,10 @@
  *     and what a deleted row takes with it: the database cascades to (or
  *     nulls) the rows that point to it, the fake leaves them, so a test that
  *     deletes a row removes them;
+ *   - tournaments: only a PATCH of the status is served (0003's
+ *     `tournaments_update`, 0029's close gate), with no audit and no
+ *     results withdrawn on leaving Terminado; `publish_tournament_results`
+ *     answers its counts after its checks and keeps no results;
  *   - `claim_player`: the lockout after five wrong PINs and the attempts
  *     left (the fake always says 4), a PIN sent as a number; an unknown
  *     function or argument is not a 404;
@@ -85,6 +89,7 @@ import type { Row } from '../mappers'
 import { SNAPSHOT_KEYS } from '../snapshotTables'
 import { compareValues } from './rows'
 import { reasonLength, trimReason } from '../../lib/reason'
+import { t } from '../../i18n/es-MX'
 
 /** Supabase's default max-rows for PostgREST: the server's cap, not the client's page size. */
 export const SERVER_MAX_ROWS = 1000
@@ -839,6 +844,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const refused = (message: string) => json(caller === 'anon' ? 401 : 403, { code: '42501', details: null, hint: null, message })
     // 0027: nobody writes the Comité's assignments but its two functions.
     if (table === 'money_adjustments') return refused(`permission denied for table ${table}`)
+    // The Comité's status change (0003 `tournaments_update`, 0029's close gate): the only tournament write served.
+    if (req.method === 'PATCH') return table === 'tournaments' ? patchTournament(req, headers) : unsupported(req, `PATCH ${table} is not served`)
     const rule = RULES[table]
     if (!rule) return unsupported(req, `${table} is not a table a phone writes`)
     const policy = (usingClause = false) => refused(`new row violates row-level security policy${usingClause ? ' (USING expression)' : ''} for table "${table}"`)
@@ -937,6 +944,88 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     }
     for (const row of stored) server.writes.push({ table, row: { ...row }, by: caller })
     return new Response(null, { status: 201 })
+  }
+
+  /**
+   * 0029 `close_blockers(tid)`: what the server checks before Terminado and a
+   * publish, in the phone's order. Planned days are `settings.rounds` when it
+   * is a whole number from 1 to 10; the days missing are the lowest numbers
+   * nobody created, as many as the count falls short; the open ones are live
+   * or scheduled; the kept holes are the ones the inbox lists.
+   */
+  function closeBlockers(tid: unknown): Array<{ kind: 'missingRounds' | 'openRounds'; days: number[] } | { kind: 'rejectedWrites'; count: number }> {
+    const tr = rowsOf('tournaments').find((x) => x.id === tid)
+    if (!tr) return []
+    const raw = (tr.settings as Row | null | undefined)?.rounds
+    const planned = typeof raw === 'number' && Number.isInteger(raw) && raw >= 1 && raw <= 10 ? raw : 0
+    const rounds = rowsOf('rounds').filter((r) => r.tournament_id === tid)
+    const out: ReturnType<typeof closeBlockers> = []
+    if (rounds.length < planned) {
+      const made = new Set(rounds.map((r) => Number(r.number)))
+      const missing: number[] = []
+      for (let d = 1; d <= planned && missing.length < planned - rounds.length; d++) if (!made.has(d)) missing.push(d)
+      out.push({ kind: 'missingRounds', days: missing })
+    }
+    const open = rounds.filter((r) => r.status === 'live' || r.status === 'scheduled').map((r) => Number(r.number)).sort((a, b) => a - b)
+    if (open.length) out.push({ kind: 'openRounds', days: open })
+    const kept = rowsOf('rejected_writes').filter((w) => w.tournament_id === tid && listed(w)).length
+    if (kept) out.push({ kind: 'rejectedWrites', count: kept })
+    return out
+  }
+  /** 0029 `close_blockers_text`: what was refused, then the phone's own sentence for each item. */
+  function closeRefusal(blockers: ReturnType<typeof closeBlockers>, publish: boolean): string {
+    const C = t.closeGate
+    const parts = blockers.map((b) => (b.kind === 'rejectedWrites' ? C.rejectedWrites(b.count) : b.kind === 'missingRounds' ? C.missingRounds(b.days) : C.openRounds(b.days)))
+    return [publish ? C.serverRefusedPublish : C.serverRefusedFinish, ...parts].join(' ')
+  }
+
+  /**
+   * A PATCH of a tournament's status, as PostgREST runs it under 0003's
+   * `tournaments_update` (the Comité, an admin player): rows the caller may
+   * not update are left as they are, and nothing says so. On the rows it
+   * changes, the check constraint on the status, then 0029's gate: a change into `finished`
+   * while `closeBlockers` lists anything is refused whole (22023, in
+   * Spanish). With a `select`, the rows it changed come back.
+   */
+  function patchTournament(req: Exchange, headers: Headers): Response {
+    const spec = readFromUrl('tournaments', req.params, headers)
+    if (typeof spec === 'string') return unsupported(req, spec)
+    const body = (req.body ?? {}) as Row
+    if (Array.isArray(body) || Object.keys(body).some((k) => k !== 'status')) return unsupported(req, 'only a tournament\'s status is patched here')
+    const caller = req.as
+    const targets = rowsOf('tournaments').filter((r) => spec.filters.every((f) => f.test(r)) && mayRead('tournaments', r, caller) && organizes(caller, r.id))
+    // The check constraint meets only the rows the policy lets the statement change.
+    if (targets.length && !['setup', 'auction', 'live', 'finished'].includes(String(body.status))) {
+      return json(400, { code: '23514', details: null, hint: null, message: 'new row for relation "tournaments" violates check constraint "tournaments_status_check"' })
+    }
+    for (const r of targets) {
+      if (body.status !== 'finished' || r.status === 'finished') continue
+      const blockers = closeBlockers(r.id)
+      if (blockers.length) return json(400, { code: '22023', details: null, hint: null, message: closeRefusal(blockers, false) })
+    }
+    for (const r of targets) r.status = body.status
+    if (!req.params.get('select')) return new Response(null, { status: 204 })
+    const cols = spec.columns ?? null
+    return json(200, targets.map((r) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : { ...r })))
+  }
+
+  /**
+   * 0029 `publish_tournament_results(tid, rows, currency)`, in the order it
+   * checks: the Comité, a tournament Terminado, the close gate, then the rows
+   * (a list, each a player of the tournament). Answers how many rows it
+   * published and how many have a place; the results tables are not kept here.
+   */
+  function publishResults(args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const tr = rowsOf('tournaments').find((x) => x.id === args.p_tournament_id)
+    if (!tr || as === 'anon' || !organizes(as, tr.id)) return fail('42501', 'Solo el Comité publica resultados')
+    if (tr.status !== 'finished') return fail('22023', 'El torneo todavía no termina')
+    const blockers = closeBlockers(tr.id)
+    if (blockers.length) return fail('22023', closeRefusal(blockers, true))
+    const rows = args.p_rows
+    if (!Array.isArray(rows)) return fail('22023', 'Resultados inválidos')
+    if (rows.some((r) => !r || typeof r !== 'object' || !rowsOf('players').some((p) => p.id === (r as Row).playerId && p.tournament_id === tr.id))) return fail('22023', 'Un jugador no es de este torneo')
+    return json(200, { players: rows.length, field: rows.filter((r) => (r as Row).rank != null).length })
   }
 
   /**
@@ -1120,6 +1209,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
     if (name === 'resolve_rejected_write') return resolveRejected(args, as)
     if (name === 'rejected_inbox') return rejectedInbox(args, as)
+    if (name === 'publish_tournament_results') return publishResults(args, as)
     if (name === 'release_device') {
       // 0002: the caller's PIN claim goes (auth.uid() is null for the publishable key: nothing). A void function: 204.
       server.tables.device_sessions = rowsOf('device_sessions').filter((d) => d.auth_user_id !== as)

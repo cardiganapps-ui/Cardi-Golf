@@ -708,7 +708,12 @@ try {
   const { error: wSetCrew } = await W.sb.rpc('set_tournament_crew', { p_tournament_id: qr.id, p_crew_id: crew.id })
   const { error: uSetCrew } = await U.sb.rpc('set_tournament_crew', { p_tournament_id: qr.id, p_crew_id: crew.id })
   check(!!wSetCrew && !uSetCrew, 'only the Comité (and a crew member) puts a tournament in the crew', { uSetCrew: uSetCrew?.message })
-  await U.sb.from('tournaments').update({ status: 'finished' }).eq('id', qr.id)
+  // «Cerrar torneo» (0029): Terminado waits while the round is live; QuickFinish finishes it first.
+  const { error: liveClose } = await U.sb.from('tournaments').update({ status: 'finished' }).eq('id', qr.id).select('id')
+  check(liveClose?.code === '22023' && liveClose.message.startsWith('Todavía no se puede marcar Terminado. El día 1 sigue abierto'), 'the server refuses Terminado while the round is live', liveClose?.message)
+  await U.sb.from('rounds').update({ status: 'finished' }).eq('id', qt.current_round_id)
+  const { error: closeErr } = await U.sb.from('tournaments').update({ status: 'finished' }).eq('id', qr.id).select('id')
+  check(!closeErr, 'its round finished, Terminado goes through', closeErr?.message)
   await U.sb.rpc('publish_tournament_results', {
     p_tournament_id: qr.id,
     p_rows: qPlayers.map((p, i) => ({ playerId: p.id, rank: i + 1, rankLabel: String(i + 1), points: 40 - i, perRound: [40 - i], awards: [], net: null })),

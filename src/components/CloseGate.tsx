@@ -7,8 +7,13 @@
  * like the action it guards; a server without that list yet does not hold
  * the close on it (the sheet says the list is not available).
  *
- * Client-side only: the server does not refuse Terminado or a publish on its
- * own yet (a residual of the PR that brought this).
+ * The first line, not the only one: since 0029 the database refuses
+ * Terminado and a publish on its own while a planned day is missing or open
+ * or a hole waits in «Pendientes de revisar» (`close_blockers`), the part SQL
+ * decides exactly as this check does. The rest (snake tiebreaks, money «por
+ * asignar», unpayable assignments, unsigned cards) needs the engine and is
+ * checked here only. A refusal from the server (a board that was stale, a
+ * second phone) is a Spanish sentence that `humanError` shows as written.
  */
 import { useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
