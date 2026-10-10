@@ -100,6 +100,22 @@ describe("another tournament's rows", () => {
     expect(JSON.stringify(s)).toBe(copy)
   })
 
+  it("a round's or lot's row naming another tournament (0030) is left alone at once, never parked; one naming this one still waits for its day", () => {
+    const s = fx()
+    const copy = JSON.stringify(s)
+    const elsewhere = { round_id: 'elsewhere', tournament_id: 'other' }
+    expect(applyChange(s, T(s), ins('scores', { id: 'n', ...elsewhere, player_id: 'p1', hole: 1, strokes: 4 }))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('snake_tiebreaks', { ...elsewhere, group_id: 'g', hole: 3, last_holed_player_id: 'p1' }))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('round_tees', { ...elsewhere, player_id: 'p1', tee_id: 't' }))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('calcutta_bids', { id: 'b-x', lot_id: 'another-lot', tournament_id: 'other', bidder_id: 'p1', amount: 500 }))).toBe('ignored')
+    expect(applyChange(s, T(s), ins('calcutta_buybacks', { lot_id: 'another-lot', tournament_id: 'other', pct: 25, amount: 125, paid: false }))).toBe('ignored')
+    // Even with a round this phone holds, the row's own tenant decides (the composite key never lets the two disagree).
+    expect(applyChange(s, T(s), upd('scores', { id: 'n', round_id: s.rounds[0]!.id, tournament_id: 'other', player_id: s.players[0]!.id, hole: 1, strokes: 9 }))).toBe('ignored')
+    expect(JSON.stringify(s)).toBe(copy)
+    expect(applyChange(s, T(s), ins('scores', { id: 'n', round_id: 'a-new-day', tournament_id: T(s), player_id: 'p1', hole: 1, strokes: 4 }))).toBe('unknown')
+    expect(applyChange(s, T(s), ins('scores', { id: 'n', round_id: s.rounds[0]!.id, tournament_id: T(s), player_id: s.players[0]!.id, hole: 1, strokes: 9 }))).toBe('applied')
+  })
+
   it('a bid or buyback of a lot this phone has not loaded waits; it is never applied', () => {
     const s = fx()
     const copy = JSON.stringify([s.calcuttaBids, s.calcuttaBuybacks])
