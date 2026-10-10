@@ -42,7 +42,7 @@ DB_TARGET=local PGDATABASE=$DB POLO_MIGRATIONS_DIR=$out/m29 node "$ROOT/scripts/
 
 # Tournaments in it.
 "${P[@]}" -d "$DB" -f "$H/seed-two-tenants.sql" >/dev/null
-bash "$H/perf/seed.sh" "$DB" 12 >/dev/null
+bash "$H/perf/seed.sh" "$DB" 12 >"$out/seed" 2>&1 || { cat "$out/seed"; fail "the 12-player seed"; }
 cat >"$out/fixture.sql" <<SQL
 \set ON_ERROR_STOP 1
 select id as org_a from harness.seed where key = 'org_a' \gset

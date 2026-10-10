@@ -5,7 +5,8 @@
 # Ported from docs/review/2026-09-30/evidence/verify/V4/perf-seed.sh (DB-12, 0030).
 set -euo pipefail
 DB=$1; N=$2
-case "$DB" in polo_ci*|postgres|template*) echo "refusing: $DB"; exit 2;; esac
+# Never the server's own databases. The suite's scratch copies are fine: upgrade_0030.sh seeds its own.
+case "$DB" in postgres|template*) echo "refusing: $DB" >&2; exit 2;; esac
 P="psql -X -q -At -v ON_ERROR_STOP=1 -d $DB"
 ORG=$(cat /proc/sys/kernel/random/uuid); DEV=$(cat /proc/sys/kernel/random/uuid)
 $P -c "insert into auth.users (id, email, email_confirmed_at, is_anonymous, raw_user_meta_data) values ('$ORG', 'perf-$N@polo.test', now(), false, '{\"display_name\":\"Org $N\"}'); insert into auth.users (id, is_anonymous) values ('$DEV', true);"
