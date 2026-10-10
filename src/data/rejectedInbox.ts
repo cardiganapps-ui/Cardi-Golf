@@ -191,6 +191,8 @@ export async function dismissInboxItems(tournamentId: string, rows: Array<{ id: 
 /** A live change waits this long, so the rows of one save_hole call (one per player) read the list once. */
 export const INBOX_RELOAD_MS = 300
 let reloadTimer: ReturnType<typeof setTimeout> | null = null
+/** The list the armed timer reads: a change for another one re-arms it, so neither is lost. */
+let reloadFor: string | null = null
 
 /** A `rejected_writes` change as the channel carries it; null when it came with errors and says nothing usable. */
 export interface InboxChange {
@@ -218,8 +220,14 @@ export function inboxChanged(c: InboxChange | null): void {
     const id = c.old?.id
     if (s.status !== 'loading' && (id == null || !s.items.some((x) => x.id === String(id)))) return
   } else if (c && c.new?.tournament_id !== tid) return
-  reloadTimer ??= setTimeout(() => {
+  // Armed for the list the Comité held before (a change heard just before it moved here): that one
+  // would be skipped when it fires, and this change with it. Re-arm for the list it holds now.
+  if (reloadTimer && reloadFor === tid) return
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadFor = tid
+  reloadTimer = setTimeout(() => {
     reloadTimer = null
+    reloadFor = null
     // The Comité moved to another tournament's list meanwhile: that one is not this change's.
     if (useRejectedInbox.getState().tournamentId === tid) void loadRejectedInbox(tid)
   }, INBOX_RELOAD_MS)

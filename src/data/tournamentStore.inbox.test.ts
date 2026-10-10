@@ -19,7 +19,7 @@ let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { useTournament } = await import('./tournamentStore')
-const { INBOX_RELOAD_MS, useRejectedInbox } = await import('./rejectedInbox')
+const { INBOX_RELOAD_MS, loadRejectedInbox, useRejectedInbox } = await import('./rejectedInbox')
 
 const fx = getFixture('full12-live')!
 const TID = fx.snapshot.tournament.id
@@ -240,5 +240,22 @@ describe('rejected_writes on the channel (0028, REL-08)', () => {
     await vi.advanceTimersByTimeAsync(10_000)
     expect(inboxReads()).toBe(0)
     expect(inbox().tournamentId).toBe('otro')
+  })
+
+  it('a change for the list the Comité left, then one for the list it moved to inside the wait: the second is read, not swallowed by the first’s timer', async () => {
+    vi.useFakeTimers()
+    useRejectedInbox.setState({ tournamentId: 'X', items: [], status: 'ready', error: null, fixture: false })
+    emit('rejected_writes', { eventType: 'INSERT', new: kept('x1', { tournament_id: 'X' }), old: {} })
+    // Within the wait, the Comité opens this tournament's list, and this one's change comes in.
+    server.rpcResult = { data: [], error: null }
+    await loadRejectedInbox(TID)
+    const tidReads = () => server.rpcCalls.filter((c) => c.name === 'rejected_inbox' && c.args?.p_tournament_id === TID).length
+    const opened = tidReads()
+    server.rpcResult = { data: [kept('w2')], error: null }
+    emit('rejected_writes', { eventType: 'INSERT', new: kept('w2'), old: {} })
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(tidReads() - opened).toBe(1)
+    expect(inbox().items.map((x) => x.id)).toEqual(['w2'])
+    expect(server.rpcCalls.filter((c) => c.name === 'rejected_inbox' && c.args?.p_tournament_id === 'X')).toEqual([])
   })
 })

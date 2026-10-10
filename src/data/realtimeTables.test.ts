@@ -85,6 +85,19 @@ describe('realtime tables', () => {
     expect(APPLIED_TABLES.filter((t) => !pub.has(t)), 'publish these in a migration').toEqual([])
   })
 
+  it('listens to every table the boards and the inbox need: each one applied by row, each structural one that reloads, each inbox one, and nothing else', () => {
+    // The tables whose change reloads the snapshot (their rows need joins the event does not carry).
+    // `teams` and `team_members` join this list in a change of their own (REL-01).
+    const structural = ['tournaments', 'players', 'pairs', 'rounds', 'groups', 'group_members']
+    const expected = new Set<string>([...APPLIED_TABLES, ...structural, ...INBOX_TABLES])
+    expect(expected.size, 'a table is in two of the lists').toBe(APPLIED_TABLES.length + structural.length + INBOX_TABLES.length)
+    const listened = new Set<string>(REALTIME_TABLES)
+    expect([...expected].filter((t) => !listened.has(t)), 'dropped from REALTIME_TABLES: no phone hears these change').toEqual([])
+    expect([...listened].filter((t) => !expected.has(t)), 'on the channel, but neither applied, structural nor inbox').toEqual([])
+    // Every structural table is in the snapshot, so its reload brings the change.
+    for (const t of structural) expect(Object.keys(SNAPSHOT_KEYS)).toContain(t)
+  })
+
   it('lists each table once', () => {
     expect(new Set(REALTIME_TABLES).size).toBe(REALTIME_TABLES.length)
   })
