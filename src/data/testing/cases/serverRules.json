@@ -10775,6 +10775,173 @@
       }
     },
     {
+      "name": "rejected_inbox: what hides a default is a typed capture of the same day's hole only; another day's, another default or a conflict do not (0028)",
+      "as": "uid-org",
+      "given": {
+        "rejected_writes": [
+          {
+            "id": "w60",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 10,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:00:00Z"
+          },
+          {
+            "id": "w61",
+            "tournament_id": "t1",
+            "round_id": "r2",
+            "hole": 10,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 6
+              },
+              "base": {}
+            },
+            "reason": "not_in_group",
+            "status": "open",
+            "created_at": "2027-04-09T15:01:00Z"
+          },
+          {
+            "id": "w62",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 11,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:02:00Z"
+          },
+          {
+            "id": "w63",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 11,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:03:00Z"
+          },
+          {
+            "id": "w64",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 12,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 4,
+                "putts": 2,
+                "picked_up": false
+              },
+              "base": {},
+              "auto": true
+            },
+            "reason": "round_not_live",
+            "status": "open",
+            "created_at": "2027-04-09T15:04:00Z"
+          },
+          {
+            "id": "w65",
+            "tournament_id": "t1",
+            "round_id": "r1",
+            "hole": 12,
+            "player_id": "p2",
+            "writer_player_id": "p1",
+            "auth_user_id": "uid-p1",
+            "payload": {
+              "fields": {
+                "strokes": 3
+              },
+              "base": {
+                "strokes": 5
+              },
+              "server": null
+            },
+            "reason": "conflict",
+            "status": "open",
+            "created_at": "2027-04-09T15:05:00Z"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "rejected_inbox",
+        "args": {
+          "p_tournament_id": "t1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "ordered": true,
+        "answer": [
+          {
+            "id": "w60",
+            "reason": "round_not_live",
+            "payload": {
+              "auto": true
+            }
+          },
+          {
+            "id": "w61",
+            "reason": "not_in_group"
+          },
+          {
+            "id": "w62",
+            "reason": "round_not_live"
+          },
+          {
+            "id": "w63",
+            "reason": "round_not_live"
+          },
+          {
+            "id": "w64",
+            "reason": "round_not_live"
+          }
+        ]
+      }
+    },
+    {
       "name": "rejected_writes: «ya coinciden» after the hole changed (the card showed 4/1, it holds 4/2): the dismissal is refused (0028)",
       "as": "uid-org",
       "given": {

@@ -1400,11 +1400,12 @@ export const t = {
      * this phone's value waits for the player to choose. `who`: who entered
      * theirs (null: unknown); `self`: the player entered his own; `day`: the
      * day, when it is not the one on screen (the question stays on every
-     * state of the Tarjeta until it is answered, a closed day included).
+     * state of the Tarjeta until it is answered, a closed day included);
+     * 'gone': a day the Comité deleted since, which has no number to name.
      */
     conflictTitle: 'Alguien más capturó primero',
-    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean, day: number | null = null) =>
-      `${day === null ? `Hoyo ${hole}` : `Día ${day}, hoyo ${hole}`}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
+    conflictLine: (hole: number, who: string | null, player: string, theirs: string, mine: string, self: boolean, day: number | 'gone' | null = null) =>
+      `${day === null ? `Hoyo ${hole}` : day === 'gone' ? `Hoyo ${hole} (día borrado)` : `Día ${day}, hoyo ${hole}`}: ${self ? `${player} ya capturó su hoyo` : who ? `${who} ya capturó a ${player}` : `Alguien más capturó a ${player}`}: ${theirs}. No se guardó lo tuyo: ${mine}.`,
     /** A value in that line: «6», «6 con 3 putts», «levantó», «1 putt». */
     conflictValue: (strokes: number | null, putts: number | null, pickedUp: boolean, withPutts: boolean, puttsOnly: boolean) => {
       const p = `${putts ?? 0} ${putts === 1 ? 'putt' : 'putts'}`
@@ -1412,7 +1413,8 @@ export const t = {
     },
     keepMine: 'Guardar el mío',
     keepTheirs: 'Dejar el suyo',
-    conflictAction: (action: string, hole: number, player: string, day: number | null = null) => `${action}: ${day === null ? '' : `día ${day}, `}hoyo ${hole}, ${player}`,
+    conflictAction: (action: string, hole: number, player: string, day: number | 'gone' | null = null) =>
+      `${action}: ${day === null || day === 'gone' ? '' : `día ${day}, `}hoyo ${hole}${day === 'gone' ? ' (día borrado)' : ''}, ${player}`,
     /** Under the question on a day that is no longer live: what «Guardar el mío» does then. */
     conflictClosedHint: 'Ese día ya no está en juego: «Guardar el mío» lo manda al Comité, que lo revisa en sus pendientes.',
     holeSpoken: (hole: number, par: number, si?: number | null, yards?: number | null) => `Hoyo ${hole}, par ${par}${si ? `, índice de golpe ${si}` : ''}${yards ? `, ${yards} yardas` : ''}`,

@@ -22,6 +22,12 @@
 #      write, the write landed over the 5/2 and the putts were lost.)
 #   5. The same with an untouched default refused on that empty hole (the one
 #      value sent for it, which the inbox lists): refused the same way.
+#   6. The other order: the Comité's apply open on an empty hole (it writes 6
+#      strokes), and a phone's save_hole of that hole, having seen it empty:
+#      the save waits on the apply's lock on the hole, then meets the 6 and
+#      answers conflict; the 6 stands and the row is applied. (Without the
+#      lock the save reads no row, then lands on the 6 once it commits and
+#      writes its 5/2 over it, answering ok.)
 #   bash race_resolve_rejected.sh <scratch db> <migrated template db> <repo root>
 # db-test.sh runs it on the migrated database (step 3b); PG* says where.
 set -euo pipefail
@@ -133,3 +139,13 @@ as_user "$ORG_A" 0 "$(resolve "$W" apply 'Todos par' "'{}'::jsonb")" >"$out/b"
 wait
 check "an old build's insert open, an apply of the listed default on the empty hole (listed, apply, stored, row)" \
   "t out:22023:El hoyo cambió mientras lo revisabas; vuelve a mirarlo 5/2 open" "$listed $(cat "$out/a")$(cat "$out/b") $(stored 10) $(row "$W")"
+
+# 6. The Comité's apply open on an empty hole; a phone saves the hole, having seen it empty
+fresh
+W=$(kept 11 '{"strokes":6}')
+as_user "$ORG_A" 3 "$(resolve "$W" apply 'Ana confirma 6' "'{}'::jsonb")" >"$out/a" &
+sleep 1
+as_user "$DEV_A" 0 "$(save 11 "$ANA" '{"strokes":5,"putts":2,"picked_up":false}' '{}')" >"$out/b"
+wait
+check "an apply open on an empty hole, a phone's save that saw it empty (apply, phone, stored, row)" \
+  "out:applied out:conflict 6/- applied Ana confirma 6" "$(cat "$out/a") $(cat "$out/b") $(stored 11) $(row "$W")"

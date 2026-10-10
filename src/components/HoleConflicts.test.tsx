@@ -89,6 +89,19 @@ describe('HoleConflicts', () => {
     expect(screen.getByText(S.conflictLine(12, name('p2'), name('p3'), '6', '5', false, 1))).toBeTruthy()
   })
 
+  it('a day deleted since says so: «Hoyo N (día borrado)», never a bare «Hoyo N» that reads as the day on screen', () => {
+    useOutbox.setState({ conflicts: [conflict({ round_id: 'r-deleted', hole: 7 })] })
+    render(<HoleConflicts roundId="r1" myPlayerId="p1" />)
+    const line = S.conflictLine(7, name('p2'), name('p3'), '6', '5', false, 'gone')
+    expect(line.startsWith('Hoyo 7 (día borrado): ')).toBe(true)
+    expect(screen.getByText(line)).toBeTruthy()
+    expect(screen.queryByText(S.conflictLine(7, name('p2'), name('p3'), '6', '5', false))).toBeNull()
+    const action = S.conflictAction(S.keepMine, 7, name('p3'), 'gone')
+    expect(action).toBe(`${S.keepMine}: hoyo 7 (día borrado), ${name('p3')}`)
+    fireEvent.click(screen.getByRole('button', { name: action }))
+    expect(sendMineAgain).toHaveBeenCalledWith('conflict:r-deleted:p3:7', 'p1')
+  })
+
   it('«Guardar el mío» sends it again as this phone’s player; «Dejar el suyo» keeps theirs', () => {
     useOutbox.setState({ conflicts: [conflict({})] })
     render(<HoleConflicts roundId="r1" myPlayerId="p1" />)

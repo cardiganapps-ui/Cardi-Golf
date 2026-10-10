@@ -164,7 +164,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const chose = useRef(false)
   const [view, setView] = useState<'hole' | 'grid'>('hole')
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
-  const [tiebreak, setTiebreak] = useState<{ candidates: string[] } | null>(null)
+  // `confirmedPar` rides along: the answer commits the hole, and «Sí, todos par» before it still holds.
+  const [tiebreak, setTiebreak] = useState<{ candidates: string[]; confirmedPar: boolean } | null>(null)
   const [confirmWeird, setConfirmWeird] = useState<string[] | null>(null)
   const [signing, setSigning] = useState<string | null>(null)
   const [askReason, setAskReason] = useState(false)
@@ -484,7 +485,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     const answered = snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole)
     if (candidates.length >= 2 && !answered) {
       setAskReason(false)
-      setTiebreak({ candidates })
+      setTiebreak({ candidates, confirmedPar })
       return
     }
     await commit(undefined, confirmedPar)
@@ -948,7 +949,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           {tiebreak?.candidates.map((id) => {
             const p = players.find((x) => x.id === id)!
             return (
-              <button key={id} type="button" className="btn btn--secondary btn--block" disabled={busy} onClick={() => void commit(id)}>
+              <button key={id} type="button" className="btn btn--secondary btn--block" disabled={busy} onClick={() => void commit(id, tiebreak?.confirmedPar)}>
                 {cardName(p)}
               </button>
             )

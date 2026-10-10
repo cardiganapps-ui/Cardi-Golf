@@ -569,4 +569,31 @@ reset role;
 select harness.check(exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rejected_writes')
   or not exists (select 1 from pg_publication where pubname = 'supabase_realtime'), 'rejected_writes is in the realtime publication');
 
+-- 23. What hides a default on an empty hole is a typed capture of that day's hole, and nothing else:
+--     (a) a typed one for the same player and hole on another day does not, (b) a second default does not
+--     (both are listed), (c) an open conflict of the hole does not. Two days of their own, so nothing above is near.
+insert into public.rounds (tournament_id, number, holes, status) values (:'t_a', 8, 18, 'finished') returning id as rx \gset
+insert into public.rounds (tournament_id, number, holes, status) values (:'t_a', 9, 18, 'finished') returning id as ry \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'rx', 1, :'ana', :'ana', :'dev_a', '{"fields":{"strokes":4,"putts":2,"picked_up":false},"base":{},"auto":true}', 'round_not_live') returning id as d_day \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'ry', 1, :'ana', :'beto', :'dev_b', '{"fields":{"strokes":6},"base":{}}', 'not_in_group') returning id as t_other_day \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'rx', 2, :'ana', :'ana', :'dev_a', '{"fields":{"strokes":4,"putts":2,"picked_up":false},"base":{},"auto":true}', 'round_not_live') returning id as d_two1 \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'rx', 2, :'ana', :'beto', :'dev_b', '{"fields":{"strokes":4,"putts":2,"picked_up":false},"base":{},"auto":true}', 'round_not_live') returning id as d_two2 \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'rx', 3, :'ana', :'ana', :'dev_a', '{"fields":{"strokes":4,"putts":2,"picked_up":false},"base":{},"auto":true}', 'round_not_live') returning id as d_conf \gset
+insert into public.rejected_writes (tournament_id, round_id, hole, player_id, writer_player_id, auth_user_id, payload, reason)
+values (:'t_a', :'rx', 3, :'ana', :'beto', :'dev_b', '{"fields":{"strokes":3},"base":{"strokes":5},"server":null}', 'conflict') returning id as c_conf \gset
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.inbox(:'t_a') as listed \gset
+reset role;
+select harness.check(string_to_array(:'listed', ',') @> array[:'d_day', :'t_other_day'],
+  'a default beside a typed capture of the same player''s hole on another day: both listed');
+select harness.check(string_to_array(:'listed', ',') @> array[:'d_two1', :'d_two2'], 'two defaults for one empty hole: both listed');
+select harness.check(string_to_array(:'listed', ',') @> array[:'d_conf'] and not (string_to_array(:'listed', ',') @> array[:'c_conf']),
+  'a default beside an open conflict of the hole: listed, the conflict not');
+
 rollback;

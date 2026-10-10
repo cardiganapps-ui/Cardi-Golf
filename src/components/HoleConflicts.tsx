@@ -30,7 +30,8 @@ export function HoleConflicts({ roundId, myPlayerId }: { roundId: string | null;
   const titleId = useId()
   if (!items.length || !players) return null
   const round = (id: string) => rounds?.find((r) => r.id === id)
-  const day = (c: ConflictItem) => (c.round_id === roundId ? null : (round(c.round_id)?.number ?? null))
+  // A day deleted since has no number: the line says so instead of passing for the day on screen.
+  const day = (c: ConflictItem) => (c.round_id === roundId ? null : (round(c.round_id)?.number ?? 'gone'))
   const sorted = [...items].sort((a, b) => (round(a.round_id)?.number ?? 0) - (round(b.round_id)?.number ?? 0) || a.hole - b.hole || a.player_id.localeCompare(b.player_id))
   const closed = sorted.some((c) => round(c.round_id)?.status !== 'live')
   const name = (id: unknown) => players.find((p) => p.id === id)?.displayName ?? null
