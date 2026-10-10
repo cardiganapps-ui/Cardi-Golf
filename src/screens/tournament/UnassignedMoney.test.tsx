@@ -210,6 +210,56 @@ describe('the Comité decides each line (MONEY-05)', () => {
     expect(sheet.getByText(U.stale)).toBeTruthy()
   })
 
+  /** Another Comité phone's $100 award on `bestRound`, as the live channel lands it under the open sheet. */
+  const otherPhoneAward = (data: ReturnType<typeof mount>) => {
+    const other = structuredClone(data.snapshot)
+    other.moneyAdjustments = [{ id: 'adj-o', callId: 'call-o', sourceKey: 'bestRound', kind: 'award', toPlayerId: other.players[0]!.id, amount: 100, reason: 'Otro teléfono', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org2', voidedAt: null, voidReason: null }]
+    act(() => useTournament.setState({ data: dataFromSnapshot(other) }))
+  }
+  type Call = [string, string, Array<{ kind: string; to_player_id: string | null; amount: number }>, string]
+
+  it('a refund whose line another phone’s decision changed over the channel while the sheet was open: «Asignar» says so and sends nothing; a second tap sends the new amount', async () => {
+    const data = mount(true)
+    const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
+    expect(best.remaining).toBe(1200)
+    expect(best.contributors?.length).toBeGreaterThan(0)
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining)}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(sheet.getByRole('radio', { name: U.refund }))
+    fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Se devuelve' } })
+    // The other phone's decision lands live (no fetch): the pro-rata split now covers $1,100, not the $1,200 the Comité looked at.
+    otherPhoneAward(data)
+    fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
+    await settle()
+    expect(api.assigned).toEqual([])
+    expect(sheet.getByText(U.stale)).toBeTruthy()
+    // Once the Comité has seen it, a second tap sends the refund of what the line holds now.
+    fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
+    await settle()
+    const [call] = api.assigned as [Call]
+    expect(api.assigned).toHaveLength(1)
+    expect(call[1]).toBe('bestRound')
+    expect(call[2].every((e) => e.kind === 'refund')).toBe(true)
+    expect(call[2].reduce((s, e) => s + e.amount, 0)).toBe(1100)
+  })
+
+  it('«a la casa» of the whole line, changed under the sheet the same way: nothing is sent, then the whole new line', async () => {
+    const data = mount(true)
+    const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
+    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${best.label}, ${formatMoney(best.remaining)}` }))
+    const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(best.label) }))
+    fireEvent.click(sheet.getByRole('radio', { name: U.house }))
+    fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
+    otherPhoneAward(data)
+    fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
+    await settle()
+    expect(api.assigned).toEqual([])
+    expect(sheet.getByText(U.stale)).toBeTruthy()
+    fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
+    await settle()
+    expect(api.assigned).toEqual([[TID, 'bestRound', [{ kind: 'house', to_player_id: null, amount: 1100 }], 'Para la cena']])
+  })
+
   it('a decision already taken is listed with its reason, and «Anular» voids it with a reason', async () => {
     mount(true, (s) => {
       s.moneyAdjustments = [{ id: 'adj-1', callId: 'call-adj-1', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Mejor ronda del día 1', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]

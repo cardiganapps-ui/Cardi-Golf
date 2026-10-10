@@ -13,11 +13,16 @@
  * marked Terminado with a day still open or missing they still count, and
  * the intro names the day to finish or cancel.
  *
- * The sheet reads its line from the live state by key, and before it sends it
- * fetches the tournament again and checks the line still holds what it
- * assigns: another Comité phone may have assigned it meanwhile, and the
- * assignments table reaches other phones on their next fetch (it is kept off
- * the live channel until 0027 is on production, REL-01).
+ * The sheet reads its line from the live state by key, so another Comité
+ * phone's decision can change it under the sheet: a fetch, and since the
+ * channel carries `money_adjustments`, within a second of that phone's
+ * «Asignar». The sheet keeps the amount the line held when it opened
+ * (`opened`) and sends nothing when the line holds anything else, before or
+ * after the fetch it makes first (which brings what may still be on its way
+ * over the channel): a refund split pro rata over the new amount, or a «a la
+ * casa» of the whole line, would otherwise go out re-targeted with no word.
+ * It says so (`U.stale`) and takes the new amount as the one shown, so a
+ * second tap, once the Comité has looked, sends it.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
@@ -154,6 +159,8 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
   const [mode, setMode] = useState<Mode>('give')
   const [amounts, setAmounts] = useState<Record<string, number>>({})
   const [house, setHouse] = useState(remaining)
+  // What the line held when the Comité looked at it: what every mode's amounts were chosen against.
+  const [opened, setOpened] = useState(remaining)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,6 +168,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
     setMode('give')
     setAmounts({})
     setHouse(remaining)
+    setOpened(remaining)
     setReason('')
     setError(null)
     // Only when another line opens: a line that changes under the sheet is caught on «Asignar» (`U.stale`).
@@ -179,20 +187,30 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
           : []
   const sum = entries.reduce((s, e) => s + e.amount, 0)
 
+  /** The line changed since the Comité looked: say so, and take the new amount as the one looked at. */
+  function changed(now: number) {
+    // «A la casa» of the whole line stays the whole line; a number the Comité typed stays as typed.
+    if (house === opened) setHouse(now)
+    setOpened(now)
+    setError(U.stale)
+  }
+
   async function confirm() {
     if (!bucketKey) return
     if (!bucket) return setError(U.gone)
+    // Another phone's decision came over the channel while the sheet was open: its amounts were chosen against another line.
+    if (remaining !== opened) return changed(remaining)
     if (!entries.length) return setError(U.nothing)
     if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining)))
     if (reason.trim().length < 3) return setError(U.reasonShort)
     setBusy(true)
     setError(null)
     try {
-      // What another Comité phone assigned meanwhile reaches this one on a fetch: read the line again first.
+      // A decision another phone just sent may still be on its way over the channel: read the line again first.
       await onDone()
       const now = useTournament.getState().data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey)
       if (!now) return setError(U.gone)
-      if (now.remaining !== remaining || sum > now.remaining) return setError(U.stale)
+      if (now.remaining !== opened) return changed(now.remaining)
       await assignUnassigned(tournamentId, bucketKey, entries, reason.trim())
       await onDone()
       toast(U.assigned)

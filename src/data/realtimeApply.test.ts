@@ -326,4 +326,30 @@ describe('money_adjustments (0027, MONEY-05)', () => {
     const { assignments } = applyAdjustments([], s.moneyAdjustments, false)
     expect(assignments.map((a) => [a.callId, a.rows.map((r) => r.id), a.total])).toEqual([['call-r', ['adj-r1', 'adj-r2'], 300]])
   })
+
+  it('a void of one call voids both of its rows, one event each, and the assignment leaves the money', () => {
+    const s = fx()
+    const two = (over: Record<string, unknown> = {}) => [row(s, { id: 'adj-v1', call_id: 'call-v', source_key: 'snake', kind: 'refund', amount: 150, ...over }), row(s, { id: 'adj-v2', call_id: 'call-v', source_key: 'snake', kind: 'refund', to_player_id: s.players[1]!.id, amount: 150, ...over })]
+    s.moneyAdjustments = []
+    for (const r of two()) expect(applyChange(s, T(s), ins('money_adjustments', r))).toBe('applied')
+    expect(applyAdjustments([], s.moneyAdjustments, false).assignments.map((a) => a.total)).toEqual([300])
+    for (const r of two({ voided_at: '2027-04-11T21:00:00+00:00', voided_by: 'org', void_reason: 'Error' })) expect(applyChange(s, T(s), upd('money_adjustments', r))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => [x.id, x.voidReason])).toEqual([
+      ['adj-v1', 'Error'],
+      ['adj-v2', 'Error'],
+    ])
+    expect(applyAdjustments([], s.moneyAdjustments, false).assignments).toEqual([])
+  })
+
+  it('a delete (a restore) removes the row it names; one this tournament does not hold is left alone (DB-05)', () => {
+    const s = fx()
+    s.moneyAdjustments = []
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s)))).toBe('applied')
+    expect(applyChange(s, T(s), ins('money_adjustments', row(s, { id: 'adj-c' })))).toBe('applied')
+    // Deletes are not filtered by RLS: another tournament's id says nothing here.
+    expect(applyChange(s, T(s), del('money_adjustments', { id: 'adj-otro' }))).toBe('ignored')
+    expect(s.moneyAdjustments.map((x) => x.id)).toEqual(['adj-b', 'adj-c'])
+    expect(applyChange(s, T(s), del('money_adjustments', { id: 'adj-b' }))).toBe('applied')
+    expect(s.moneyAdjustments.map((x) => x.id)).toEqual(['adj-c'])
+  })
 })

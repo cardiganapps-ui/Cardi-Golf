@@ -10,10 +10,12 @@
  * applies one, against the hole it saw, or dismisses it, with a reason
  * (`resolve_rejected_write`, 0028).
  *
- * Read on demand, not over the channel: the Comité's screens fetch the open
- * rows when they open and after each answer. A database without the inbox
- * yet says so (`unavailable`) instead of failing the screen, and nothing
- * waits on it.
+ * Read on demand: the Comité's screens fetch the open rows when they open
+ * and after each answer, and again, coalesced, when the tournament's channel
+ * hears a change of `rejected_writes` (`inboxChanged`), so another phone's
+ * refused hole or another Comité phone's answer shows without a reload. A
+ * database without the inbox yet says so (`unavailable`) instead of failing
+ * the screen, and nothing waits on it.
  */
 import { create } from 'zustand'
 import { rejectedInboxRows, resolveRejectedWrite, type SeenHole } from './api'
@@ -184,4 +186,49 @@ export async function dismissInboxItems(tournamentId: string, rows: Array<{ id: 
     await loadRejectedInbox(tournamentId)
   }
   return { done: done.length, failed }
+}
+
+/** A live change waits this long, so the rows of one save_hole call (one per player) read the list once. */
+export const INBOX_RELOAD_MS = 300
+let reloadTimer: ReturnType<typeof setTimeout> | null = null
+/** The list the armed timer reads: a change for another one re-arms it, so neither is lost. */
+let reloadFor: string | null = null
+
+/** A `rejected_writes` change as the channel carries it; null when it came with errors and says nothing usable. */
+export interface InboxChange {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE'
+  new: Row
+  old: Row
+}
+
+/**
+ * A change of `rejected_writes` heard on the tournament's channel (§8): the
+ * list is read again, coalesced, and nothing is applied to the boards (the
+ * table is not part of the snapshot). Only a phone that holds the list reads
+ * it: the Comité's screens fill it; a player's phone never does, and its own
+ * rows (all RLS sends it) cost it nothing. An insert or update counts only
+ * for the tournament the list holds. A delete names only its id and is not
+ * filtered by RLS (DB-05): it counts only for a row the list holds, or while
+ * the list is being read (the read may have seen the row before it went).
+ */
+export function inboxChanged(c: InboxChange | null): void {
+  const s = useRejectedInbox.getState()
+  const tid = s.tournamentId
+  // A design fixture's list is read by nothing (`loadRejectedInbox`).
+  if (!tid) return
+  if (c?.eventType === 'DELETE') {
+    const id = c.old?.id
+    if (s.status !== 'loading' && (id == null || !s.items.some((x) => x.id === String(id)))) return
+  } else if (c && c.new?.tournament_id !== tid) return
+  // Armed for the list the Comité held before (a change heard just before it moved here): that one
+  // would be skipped when it fires, and this change with it. Re-arm for the list it holds now.
+  if (reloadTimer && reloadFor === tid) return
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadFor = tid
+  reloadTimer = setTimeout(() => {
+    reloadTimer = null
+    reloadFor = null
+    // The Comité moved to another tournament's list meanwhile: that one is not this change's.
+    if (useRejectedInbox.getState().tournamentId === tid) void loadRejectedInbox(tid)
+  }, INBOX_RELOAD_MS)
 }

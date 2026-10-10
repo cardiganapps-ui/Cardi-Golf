@@ -3,8 +3,9 @@
  * tournament, recomputes with the engine on every change, and subscribes to
  * Realtime (§8). A change to a table that moves during play (a score, a
  * signature, a payment, a bid) is applied from the event itself
- * (`realtimeApply.ts`, REL-11, PERF-07); any other change reloads the
- * tournament.
+ * (`realtimeApply.ts`, REL-11, PERF-07); a change of the Comité's inbox
+ * (`rejected_writes`) reads that list again and leaves the boards alone; any
+ * other change reloads the tournament.
  *
  * Two snapshots are kept. `base` is the server's rows only: what was fetched,
  * with the live changes applied on it, and what the phone keeps. `snapshot`
@@ -23,7 +24,8 @@ import type { Snapshot } from '../engine/types'
 import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
-import { REALTIME_TABLES } from './realtimeTables'
+import { INBOX_TABLES, REALTIME_TABLES } from './realtimeTables'
+import { inboxChanged } from './rejectedInbox'
 import { APPLIED_TABLES, applyChange, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 import { onCacheCleared, saveSnapshot } from './snapshotCache'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
@@ -127,6 +129,7 @@ function scheduleReload() {
 }
 
 const APPLIED = new Set<string>(APPLIED_TABLES)
+const INBOX = new Set<string>(INBOX_TABLES)
 /** Live changes wait this long, so a foursome saving a hole (four rows) recomputes once. */
 const APPLY_MS = 40
 let pendingChanges: LiveChange[] = []
@@ -590,6 +593,8 @@ export const useTournament = create<StoreState>((set, get) => ({
         if (channel !== ch) return
         // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
         const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
+        // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
+        if (INBOX.has(table)) return inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row } : null)
         if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
         else scheduleReload()
       })
