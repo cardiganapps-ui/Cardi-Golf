@@ -12,6 +12,10 @@
  * revisar» (REL-08) applies or dismisses it. Conflicts a phone settles itself
  * and untouched defaults never reach that list, so they never block; and a
  * database without the list yet (0028 not applied) only warns.
+ *
+ * The server repeats the part it can decide without the engine (0029
+ * `close_blockers`: missing and open days, the holes in «Pendientes de
+ * revisar»), worded as here, so it never refuses a close this allows.
  */
 import { t } from '../i18n/es-MX'
 import { computeTournament } from './computeTournament'

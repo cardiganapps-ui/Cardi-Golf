@@ -2347,6 +2347,15 @@ export const t = {
     /** The server has no «Pendientes de revisar» yet (0028 not applied): nothing there can hold the close. */
     rejectedUnavailable: 'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
     owed: (people: number, amount: string) => `${people === 1 ? 'Una persona todavía debe' : `${people} personas todavía deben`} ${amount}. No impide cerrar: se puede cobrar después en Dinero.`,
+    /**
+     * The server's own refusal (0029 `close_blockers_text`): this line, then
+     * one sentence per item it checks (missingRounds, openRounds,
+     * rejectedWrites, worded as above). The phone shows it as the server
+     * sends it (humanError); the test server builds it from these lines, and
+     * cases/serverRules.json pins both to the database's text.
+     */
+    serverRefusedFinish: 'Todavía no se puede marcar Terminado.',
+    serverRefusedPublish: 'Todavía no se pueden publicar los resultados.',
   },
   feed: {
     title: 'Lo último',
