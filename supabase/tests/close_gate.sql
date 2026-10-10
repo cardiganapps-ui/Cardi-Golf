@@ -295,4 +295,35 @@ reset role;
 select harness.check(:'first_try' = '22023 ' || :'open1', 'a Ronda rápida with its round live is not Terminado yet: ' || :'first_try');
 select harness.check(:'closed' = '1' and :'published' = '1', 'its round finished first, then Terminado and the results, in QuickFinish''s order');
 
+-- 10. The planned days as the settings may hold them (PR 110's verifier): a whole number written 1.0 or 2.0 is that
+-- number, as on the phone, never a cast error; the missing days are the lowest unused numbers, as many as the count
+-- falls short; a string, or a number outside 1–10 or not whole, plans nothing (the phone can't load those settings).
+create function pg_temp.missing(t uuid) returns text language sql as $$
+  select coalesce((select (b -> 'days')::text from jsonb_array_elements(public.close_blockers(t)) b where b ->> 'kind' = 'missingRounds'), 'none')
+$$;
+-- From here tournament A has day 1 only, finished, whatever the sections above left.
+delete from public.rounds where tournament_id = :'t_a' and id <> :'r1';
+update public.rounds set status = 'finished', number = 1 where id = :'r1';
+update public.tournaments set status = 'live', settings = jsonb_set(settings, '{rounds}', '1.0') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = 'none', '1.0 planned days with day 1 made: nothing missing, no cast error');
+update public.tournaments set settings = jsonb_set(settings, '{rounds}', '2.0') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = '[2]', '2.0 planned days with only day 1 made: day 2 missing, as for 2');
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_status(:'t_a', 'finished') as two_point_oh \gset
+reset role;
+select harness.check(:'two_point_oh' like '22023 Todavía no se puede marcar Terminado. El día 2 no está creado:%', 'and Terminado says so in words, not 22P02: ' || :'two_point_oh');
+-- 3 planned, days 2 and 5 made: one day short, and it is day 1 (not 1 and 3).
+update public.rounds set number = 2 where id = :'r1';
+insert into public.rounds (tournament_id, number, date, course_id, status)
+  select tournament_id, 5, date, course_id, 'finished' from public.rounds where id = :'r1';
+update public.tournaments set settings = jsonb_set(settings, '{rounds}', '3') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = '[1]', '3 planned, days 2 and 5 made: only day 1 is missing: ' || pg_temp.missing(:'t_a'));
+update public.tournaments set settings = jsonb_set(settings, '{rounds}', '"3"') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = 'none', 'planned days as a string plan nothing');
+update public.tournaments set settings = jsonb_set(settings, '{rounds}', '11') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = 'none', 'planned days above 10 plan nothing');
+update public.tournaments set settings = jsonb_set(settings, '{rounds}', '2.5') where id = :'t_a';
+select harness.check(pg_temp.missing(:'t_a') = 'none', 'planned days that are not whole plan nothing');
+
 rollback;

@@ -92,7 +92,8 @@ begin
   if jsonb_typeof(s -> 'rounds') = 'number'
      and (s ->> 'rounds')::numeric = trunc((s ->> 'rounds')::numeric)
      and (s ->> 'rounds')::numeric between 1 and 10 then
-    planned := (s ->> 'rounds')::int;
+    -- Through numeric: a whole number written as 2.0 (a hand edit) is 2 here as on the phone, never a cast error.
+    planned := (s ->> 'rounds')::numeric::int;
   end if;
   select count(*) into made from public.rounds r where r.tournament_id = p_tournament_id;
   -- The lowest numbers nobody created, as many as the count falls short (openDays).
