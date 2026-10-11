@@ -228,9 +228,10 @@ describe('the structural tables reload only for a change that concerns these boa
     expect(concernsBoards(s, T(s), upd('tournaments', { id: OTHER }), false)).toBe(false)
   })
 
-  it('a team member carries no tournament: its insert reloads (the server sends only tournaments this account is in)', () => {
+  it("a team member names its tournament (since 0020): this one's insert reloads, another's does not", () => {
     const s = withTeam()
-    expect(concernsBoards(s, T(s), ins('team_members', { team_id: 'team-9', player_id: s.players[2]!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), ins('team_members', { tournament_id: T(s), team_id: 'team-9', player_id: s.players[2]!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), ins('team_members', { tournament_id: OTHER, team_id: 'team-9', player_id: 'p' }), false)).toBe(false)
   })
 
   it("a team draw elsewhere deletes its members: a key these boards don't hold reloads nothing; one they hold does", () => {
@@ -248,6 +249,8 @@ describe('the structural tables reload only for a change that concerns these boa
     const g = s.groups[0]!
     expect(concernsBoards(s, T(s), del('players', { id: 'nobody' }), false)).toBe(false)
     expect(concernsBoards(s, T(s), del('players', { id: s.players[0]!.id }), false)).toBe(true)
+    expect(concernsBoards(s, T(s), del('pairs', { id: 'nope' }), false)).toBe(false)
+    expect(concernsBoards(s, T(s), del('pairs', { id: s.pairs[0]!.id }), false)).toBe(true)
     expect(concernsBoards(s, T(s), del('rounds', { id: 'nope' }), false)).toBe(false)
     expect(concernsBoards(s, T(s), del('rounds', { id: s.rounds[0]!.id }), false)).toBe(true)
     expect(concernsBoards(s, T(s), del('groups', { id: 'nope' }), false)).toBe(false)

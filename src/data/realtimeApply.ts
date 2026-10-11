@@ -340,13 +340,13 @@ function holds(s: Snapshot, tournamentId: string, table: string, key: Row): bool
  * Whether a change to one of the reloaded tables concerns these boards, so it
  * is worth a reload. Inserts and updates come filtered by what this user may
  * read, so an account in two tournaments hears both: one naming another
- * tournament (every one of these tables but `team_members` carries
- * `tournament_id`) is left alone. A delete names only its key and comes to
+ * tournament (every one of these tables carries `tournament_id`; groups and
+ * their members since 0030) is left alone. A delete names only its key and comes to
  * every phone listening to the table, whatever tournament it was in (DB-05):
  * a team draw deletes its members and writes them again, so without this each
  * draw anywhere reloaded every phone on the platform. It reloads only when
  * the key is a row the snapshot holds, or while a fetch is on its way (the
- * row may be one it is bringing). Anything it can't place reloads.
+ * row may be one it is bringing). Anything it can't place (no tournament on the row, no key) reloads.
  */
 export function concernsBoards(s: Snapshot | null | undefined, tournamentId: string, c: Pick<LiveChange, 'table' | 'eventType' | 'new' | 'old'>, fetchOut: boolean): boolean {
   if (!s) return true

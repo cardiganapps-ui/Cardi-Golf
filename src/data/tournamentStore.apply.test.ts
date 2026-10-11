@@ -173,6 +173,33 @@ describe('a team draw (teams and team_members, published by 0025)', () => {
   })
 })
 
+describe('a structural delete the boards do not hold yet', () => {
+  it('a player deleted while a reload is on its way (which read him) is gone once it settles', async () => {
+    const p = { ...structuredClone(server.tables.players![0]!), id: 'p-late', sort_order: 99 }
+    server.tables.players!.push(p)
+    const slow = server.hold()
+    const reloading = store().reload()
+    await slow.received
+    server.tables.players = server.tables.players!.filter((x) => x.id !== p.id)
+    emit('players', { eventType: 'DELETE', new: {}, old: { id: p.id } })
+    // The reload read him before the delete.
+    server.tables.players!.push(p)
+    slow.release()
+    await reloading
+    server.tables.players = server.tables.players!.filter((x) => x.id !== p.id)
+    await sleep(600)
+    expect(store().data!.snapshot.players.some((x) => x.id === p.id)).toBe(false)
+  })
+
+  it('a payload that comes with errors reloads, whatever key it names', async () => {
+    vi.useFakeTimers()
+    const before = reads()
+    emit('players', { eventType: 'DELETE', new: {}, old: { id: 'nobody' }, errors: ['Error 413'] })
+    await vi.advanceTimersByTimeAsync(200)
+    expect(reads()).toBe(before + 1)
+  })
+})
+
 describe('a day or lot this phone has not loaded', () => {
   it('its score waits instead of reloading, and lands with the day when the day’s own change brings it', async () => {
     vi.useFakeTimers()
