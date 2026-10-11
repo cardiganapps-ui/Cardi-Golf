@@ -26,7 +26,7 @@ import { supabase } from '../lib/supabase'
 import { fetchAll } from './paged'
 import { INBOX_TABLES, REALTIME_TABLES } from './realtimeTables'
 import { inboxChanged } from './rejectedInbox'
-import { APPLIED_TABLES, applyChange, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
+import { APPLIED_TABLES, applyChange, concernsBoards, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 import { onCacheCleared, saveSnapshot } from './snapshotCache'
 import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import {
@@ -596,7 +596,8 @@ export const useTournament = create<StoreState>((set, get) => ({
         // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
         if (INBOX.has(table)) return inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row } : null)
         if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
-        else scheduleReload()
+        // A structural row reloads, unless it is plainly another tournament's (DB-05: a delete reaches every phone).
+        else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row }, fetching > 0)) scheduleReload()
       })
     }
     const degrade = () => {
