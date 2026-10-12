@@ -260,7 +260,11 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     // Whose players: confirmed, or pending and carrying the person's name (a Ronda rápida's, a duplicate's)…
     const ids = latest('person_player_ids')
     expect(ids).toContain("p.profile_status = 'confirmed'")
-    expect(ids).toMatch(/p\.profile_status = 'pending' and lower\(btrim\(p\.full_name\)\) in \(select n from names\)/)
+    expect(ids).toContain("p.profile_status = 'pending' and lower(btrim(p.full_name)) = any (public.person_names(p_user_id))")
+    // Her names are one list for both (0036): the profile's and her confirmed players', full and short.
+    const names = latest('person_names')
+    expect(names).toContain("p.display_name), '') from public.players p where p.profile_id = p_user_id and p.profile_status = 'confirmed'")
+    expect(anon).toContain('names text[] := public.person_names(p_user_id)')
     // …and a copy under the Comité's name that carries the photo loses only the photo.
     // Every other pending copy loses what of it is hers, its history too (0035): her photo, form guide and short name.
     expect(anon).toContain("p.profile_status = 'pending' and not p.id = any (ids)")
