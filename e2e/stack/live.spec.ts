@@ -152,6 +152,8 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   const ms = samples.map((s) => s.ms)
   const stats = { saves: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
   console.log(`[e2e-stack] ${network.label}: save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
+  // A notice on the check run: its annotations can be read through the API, the job's log and summary can't (from the session).
+  console.log(`::notice title=save-to-shown (${network.label})::${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
   keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples }, [
     `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
     '',
