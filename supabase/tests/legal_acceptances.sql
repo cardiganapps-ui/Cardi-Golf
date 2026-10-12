@@ -83,24 +83,33 @@ reset role;
 select harness.check(:'older_later'::jsonb -> 'privacy' ->> 'version' = '2026-10-12.10',
   '«.10» stays the latest after «.9» is accepted later: ' || :'older_later');
 
--- The time is the phone's, when it waited there: never in the future, nor more than eight days back.
-create function pg_temp.try_accept_at(p text, a timestamptz) returns text language plpgsql as $$
+-- The time is when the person accepted, by how long ago the phone says it was: never in the future, at most eight days back.
+create function pg_temp.try_accept_age(p text, age integer, u uuid default null) returns text language plpgsql as $$
 begin
-  return public.accept_legal(p, '2026-10-01', 'pin', a)::text;
+  return public.accept_legal(p, '2026-10-01', 'pin', age, u)::text;
 exception when others then
   return sqlstate;
 end $$;
-grant execute on function pg_temp.try_accept_at(text, timestamptz) to authenticated;
+grant execute on function pg_temp.try_accept_age(text, integer, uuid) to authenticated;
 select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
 set local role authenticated;
-select pg_temp.try_accept_at('2026-10-11', now() - interval '2 days') \g /dev/null
-select pg_temp.try_accept_at('2026-10-10', now() + interval '1 year') \g /dev/null
-select pg_temp.try_accept_at('2026-10-09', now() - interval '1 year') \g /dev/null
+select pg_temp.try_accept_age('2026-10-11', 2 * 24 * 3600) \g /dev/null
+select pg_temp.try_accept_age('2026-10-10', -3600) \g /dev/null
+select pg_temp.try_accept_age('2026-10-09', 365 * 24 * 3600) \g /dev/null
+select pg_temp.try_accept_age('2026-10-08', 0, :'org_a') as other_user \gset
+select pg_temp.try_accept_age('2026-10-07', 0, :'dev_a') as same_user \gset
+select pg_temp.try_accept('9999-12-31', '2026-10-01', 'pin') as future \gset
+select pg_temp.try_accept('2026-02-30', '2026-10-01', 'pin') as not_a_date \gset
 reset role;
 select harness.check((select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-11') between now() - interval '2 days 1 minute' and now() - interval '47 hours'
-  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-10') <= now()
-  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-09') >= now() - interval '8 days',
-  'the phone''s time is kept, clamped to now and the last eight days');
+  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-10') = now()
+  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-09') = now() - interval '8 days',
+  'the time is how long ago the phone says, clamped to now and the last eight days');
+select harness.check(:'other_user' = '42501' and :'same_user' <> '42501'
+  and not exists (select 1 from public.legal_acceptances where version = '2026-10-08'),
+  'an acceptance meant for another user records nothing: ' || :'other_user');
+select harness.check(:'future' = '22023' and :'not_a_date' = '22023' and not exists (select 1 from public.legal_acceptances where version in ('9999-12-31', '2026-02-30')),
+  'a version from the future, or not a real date, is refused: ' || :'future' || ' ' || :'not_a_date');
 
 -- Each person sees only their own.
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null

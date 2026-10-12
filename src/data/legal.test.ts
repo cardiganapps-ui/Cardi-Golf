@@ -27,7 +27,7 @@ function signIn(uid: string | null, anonymous = true) {
   useAuth.setState({ user: uid ? ({ id: uid, is_anonymous: anonymous } as User) : null })
   getSession.mockResolvedValue({ data: { session: uid ? { user: { id: uid, is_anonymous: anonymous } } : null } })
 }
-const sent = (context: string) => ({ p_privacy: cur.privacy, p_terms: cur.terms, p_context: context, p_accepted_at: expect.any(String) })
+const sent = (context: string, user = expect.any(String)) => ({ p_privacy: cur.privacy, p_terms: cur.terms, p_context: context, p_age_seconds: expect.any(Number), p_user: user })
 
 beforeEach(() => {
   rpc.mockReset()
@@ -52,15 +52,35 @@ describe('acceptLegal', () => {
     expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({ seen: { uid: 'u1', privacy: cur.privacy, terms: cur.terms } })
   })
 
-  it('sends the time it was given, not the time the server got it', async () => {
+  it('sends how long ago it was given, and for whom, not the phone\'s clock', async () => {
     rpc.mockRejectedValueOnce(new TypeError('Failed to fetch'))
-    const before = Date.now()
     await acceptLegal('organizer')
-    const at = JSON.parse(localStorage.getItem(KEY)!).pending.at as number
-    expect(at).toBeGreaterThanOrEqual(before)
+    const stored = JSON.parse(localStorage.getItem(KEY)!)
+    stored.pending.at -= 3_600_000
+    localStorage.setItem(KEY, JSON.stringify(stored))
     rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms))
     expect(await flushLegal()).toBe(true)
-    expect(rpc).toHaveBeenLastCalledWith('accept_legal', { ...sent('organizer'), p_accepted_at: new Date(at).toISOString() })
+    const args = rpc.mock.calls.at(-1)![1] as { p_age_seconds: number; p_user: string }
+    expect(args.p_user).toBe('u1')
+    expect(args.p_age_seconds).toBeGreaterThanOrEqual(3600)
+    expect(args.p_age_seconds).toBeLessThan(3610)
+  })
+
+  it('a browser that keeps nothing sends it at once rather than lose it (round 2, P3)', async () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms))
+    expect(await acceptLegal('pin')).toBe(true)
+    expect(rpc).toHaveBeenCalledWith('accept_legal', sent('pin', 'u1'))
+    setItem.mockRestore()
+  })
+
+  it('a waiting acceptance this app did not write is dropped, not retried for ever (round 2, P3)', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ pending: { uid: 'u1', context: 'pin', versions: cur, at: 'mañana' } }))
+    expect(await flushLegal()).toBe(true)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(localStorage.getItem(KEY)).toBeNull()
   })
 
   it('without a session there is nothing to record: every caller acts with one', async () => {

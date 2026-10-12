@@ -17,6 +17,8 @@ import { QUIET_ROUTE, SETTLE_MS, legalAsked, type Changed } from './legalUpdateS
 
 export function LegalUpdate() {
   const uid = useAuth((s) => s.user?.id ?? null)
+  // An anonymous phone that becomes an account in place keeps its uid: it is asked again as the account.
+  const key = useAuth((s) => (s.user ? `${s.user.id}:${s.isAnonymous ? 'anon' : 'account'}` : null))
   const quiet = QUIET_ROUTE.test(useLocation().pathname)
   const [changed, setChanged] = useState<Changed | null>(null)
   const [busy, setBusy] = useState(false)
@@ -27,13 +29,13 @@ export function LegalUpdate() {
   }, [uid])
 
   useEffect(() => {
-    if (!uid || quiet || legalAsked.dismissed === uid) {
+    if (!uid || !key || quiet || legalAsked.dismissed === key) {
       setChanged(null)
       return
     }
     let live = true
     const show = (c: Changed | null) => live && setChanged(c && (c.privacy || c.terms) ? c : null)
-    if (legalAsked.asked?.uid === uid) {
+    if (legalAsked.asked?.key === key) {
       show(legalAsked.asked.changed)
       return () => {
         live = false
@@ -43,7 +45,7 @@ export function LegalUpdate() {
     const timer = setTimeout(() => {
       void legalUpdate().then((c) => {
         // Unknown (no signal, an older server): ask again next time.
-        if (c) legalAsked.asked = { uid, changed: c }
+        if (c) legalAsked.asked = { key, changed: c }
         show(c)
       })
     }, SETTLE_MS)
@@ -51,14 +53,14 @@ export function LegalUpdate() {
       live = false
       clearTimeout(timer)
     }
-  }, [uid, quiet])
+  }, [uid, key, quiet])
 
-  if (!changed || !uid) return null
+  if (!changed || !uid || !key) return null
   const both = changed.privacy && changed.terms
   const first = changed.first === true
   const U = t.legal.update
   const close = () => {
-    legalAsked.dismissed = uid
+    legalAsked.dismissed = key
     setChanged(null)
   }
   return (
@@ -76,7 +78,7 @@ export function LegalUpdate() {
           setBusy(true)
           void acceptLegal('update').finally(() => {
             setBusy(false)
-            legalAsked.asked = { uid, changed: { privacy: false, terms: false } }
+            legalAsked.asked = { key, changed: { privacy: false, terms: false } }
             setChanged(null)
           })
         }}

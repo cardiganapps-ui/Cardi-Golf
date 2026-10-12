@@ -69,12 +69,14 @@ function read(): Stored {
   }
 }
 
-function write(v: Stored) {
+/** False when the browser keeps nothing (private mode, storage full). */
+function write(v: Stored): boolean {
   try {
     if (v.pending || v.seen) localStorage.setItem(KEY, JSON.stringify(v))
     else localStorage.removeItem(KEY)
+    return true
   } catch {
-    /* private mode: the next consent point records it again */
+    return false
   }
 }
 
@@ -98,10 +100,47 @@ let flushing: Promise<boolean> | null = null
  * as soon as the server can take it.
  */
 export async function acceptLegal(context: LegalContext): Promise<boolean> {
+  try {
+    return await accept(context)
+  } catch {
+    // Callers don't wait on it: a record, never a failure of the step it follows.
+    return false
+  }
+}
+
+async function accept(context: LegalContext): Promise<boolean> {
   const me = await signedIn()
   if (!me) return false
-  write({ ...read(), pending: { uid: me.uid, context, versions: currentVersions(), at: Date.now() } })
+  const pending = { uid: me.uid, context, versions: currentVersions(), at: Date.now() }
+  // A browser that keeps nothing: send it now, once, rather than lose it.
+  if (!write({ ...read(), pending })) return send(pending)
   return flushLegal()
+}
+
+/** One call for `p`, under its own user (the server refuses another): what the server holds after it, or why not. */
+async function call(p: NonNullable<Stored['pending']>): Promise<{ mine: MyAcceptances } | { refused: boolean }> {
+  try {
+    const res = await supabase().rpc('accept_legal', {
+      p_privacy: p.versions.privacy,
+      p_terms: p.versions.terms,
+      p_context: p.context,
+      p_age_seconds: Math.max(0, Math.round((Date.now() - p.at) / 1000)),
+      p_user: p.uid,
+    })
+    // Refused for what it is (a malformed version, another user's, no session): sending it again changes nothing.
+    if (res.error) return { refused: res.error.code === '22023' || res.error.code === '42501' }
+    const mine = res.data as MyAcceptances | null
+    // An answer this app can't read: try again later.
+    if (!mine || typeof mine !== 'object') return { refused: false }
+    return { mine }
+  } catch {
+    return { refused: false }
+  }
+}
+
+async function send(p: NonNullable<Stored['pending']>): Promise<boolean> {
+  const r = await call(p)
+  return 'mine' in r
 }
 
 /**
@@ -131,29 +170,19 @@ function dropPending(p: NonNullable<Stored['pending']>, seen?: Stored['seen']) {
 async function sendPending(): Promise<boolean> {
   const p = read().pending
   if (!p) return true
-  if (Date.now() - p.at > PENDING_MS) return dropPending(p)
+  // Too old to send, or not something this app wrote.
+  if (!Number.isFinite(p.at) || typeof p.uid !== 'string' || !p.versions || Date.now() - p.at > PENDING_MS) return dropPending(p)
   const me = await signedIn()
   if (!me) return false
   if (me.uid !== p.uid) return dropPending(p)
-  try {
-    const res = await supabase().rpc('accept_legal', {
-      p_privacy: p.versions.privacy,
-      p_terms: p.versions.terms,
-      p_context: p.context,
-      p_accepted_at: new Date(p.at).toISOString(),
-    })
-    if (res.error) {
-      // Refused for what it is (a malformed version, no session): sending it again changes nothing.
-      if (res.error.code === '22023' || res.error.code === '42501') dropPending(p)
-      return false
-    }
-    // Signed out (or another user) while it was out: what came back is not the phone's to keep.
-    if ((await signedIn())?.uid !== p.uid) return dropPending(p, read().seen)
-    const mine = res.data as MyAcceptances
-    return dropPending(p, { uid: p.uid, privacy: mine.privacy?.version ?? null, terms: mine.terms?.version ?? null })
-  } catch {
+  const r = await call(p)
+  if (!('mine' in r)) {
+    if (r.refused) dropPending(p)
     return false
   }
+  // Signed out (or another user) while it was out: what came back is not the phone's to keep.
+  if ((await signedIn())?.uid !== p.uid) return dropPending(p, read().seen)
+  return dropPending(p, { uid: p.uid, privacy: r.mine.privacy?.version ?? null, terms: r.mine.terms?.version ?? null })
 }
 
 /**
@@ -187,7 +216,8 @@ export async function legalUpdate(): Promise<LegalChange | null> {
   try {
     const res = await supabase().rpc('my_legal_acceptances')
     if (res.error) return null
-    const mine = res.data as MyAcceptances
+    const mine = res.data as MyAcceptances | null
+    if (!mine || typeof mine !== 'object') return null
     const seen = { uid: me.uid, privacy: mine.privacy?.version ?? null, terms: mine.terms?.version ?? null }
     write({ ...read(), seen })
     return judge(seen)

@@ -40,7 +40,7 @@ beforeEach(() => {
   localStorage.clear()
   resetLegalUpdateForTests()
   rpc.mockReset()
-  useAuth.setState({ user: { id: 'u1', is_anonymous: true } as User })
+  useAuth.setState({ user: { id: 'u1', is_anonymous: true } as User, isAnonymous: true })
   getSession.mockResolvedValue({ data: { session: { user: { id: 'u1', is_anonymous: true } } } })
 })
 afterEach(cleanup)
@@ -55,7 +55,7 @@ describe('LegalUpdate', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: t.legal.update.ok }))
     })
-    expect(rpc).toHaveBeenCalledWith('accept_legal', { p_privacy: cur.privacy, p_terms: cur.terms, p_context: 'update', p_accepted_at: expect.any(String) })
+    expect(rpc).toHaveBeenCalledWith('accept_legal', { p_privacy: cur.privacy, p_terms: cur.terms, p_context: 'update', p_age_seconds: expect.any(Number), p_user: 'u1' })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -83,7 +83,7 @@ describe('LegalUpdate', () => {
   })
 
   it('an account with no record yet is shown both documents, once «Entendido» records them', async () => {
-    useAuth.setState({ user: { id: 'acc', is_anonymous: false } as User })
+    useAuth.setState({ user: { id: 'acc', is_anonymous: false } as User, isAnonymous: false })
     getSession.mockResolvedValue({ data: { session: { user: { id: 'acc', is_anonymous: false } } } })
     rpc.mockImplementation(async (name: string) => (name === 'my_legal_acceptances' ? mine(null, null) : mine(cur.privacy, cur.terms)))
     await show('/')
@@ -92,8 +92,20 @@ describe('LegalUpdate', () => {
     expect(screen.getByRole('link', { name: new RegExp(t.legal.terms.title) })).toBeTruthy()
   })
 
+  it('a phone that becomes an account in place (same user) is asked again as the account (round 2, P3)', async () => {
+    rpc.mockResolvedValue(mine(null, null))
+    await show('/')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await act(async () => {
+      useAuth.setState({ user: { id: 'u1', is_anonymous: false } as User, isAnonymous: false })
+      getSession.mockResolvedValue({ data: { session: { user: { id: 'u1', is_anonymous: false } } } })
+      await new Promise((r) => setTimeout(r, 5))
+    })
+    expect(screen.getByRole('dialog', { name: t.legal.update.firstTitle })).toBeTruthy()
+  })
+
   it('never over the Tarjeta, the auction console, a room screen, the documents or the fixtures', async () => {
-    for (const p of ['/t/torneo/admin/calcutta', '/t/torneo/tarjeta', '/t/torneo/tv', '/t/torneo/ceremonia', '/t/torneo/imprimir', '/privacidad', '/terminos', '/t/_/full12-live', '/admin/_/salud'])
+    for (const p of ['/t/torneo/admin/calcutta', '/t/torneo/admin/parejas', '/organizer/reset', '/t/torneo/tarjeta', '/t/torneo/tv', '/t/torneo/ceremonia', '/t/torneo/imprimir', '/privacidad', '/terminos', '/t/_/full12-live', '/admin/_/salud'])
       expect(QUIET_ROUTE.test(p), p).toBe(true)
     for (const p of ['/', '/t/torneo', '/t/torneo/dinero', '/organizer', '/admin']) expect(QUIET_ROUTE.test(p), p).toBe(false)
     rpc.mockResolvedValue(mine('2026-10-01', cur.terms))
