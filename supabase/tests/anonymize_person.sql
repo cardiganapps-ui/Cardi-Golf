@@ -81,7 +81,11 @@ insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up)
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 update public.players set display_name = 'Zoé Z.' where id = :'ana';
+-- A duplicate's copy the Comité named with her confirmed short name (PR 114's fifth verifier): it is her.
+select id as t_copy_d from public.create_tournament('Torneo A, copia D', '{}'::jsonb) \gset
 reset role;
+insert into public.players (tournament_id, full_name, display_name, sort_order, profile_id, profile_status)
+  values (:'t_copy_d', 'Zoé Z.', 'Zoé Z.', 0, :'zoe', 'pending') returning id as copy_d \gset
 select harness.check((select count(*) from public.audit_log where table_name = 'players' and row_id = :'ana' and (before::text || after::text) like '%Zoé Zeta Única%') >= 2,
   'before the deletion, the audit log holds her name');
 
@@ -109,9 +113,9 @@ set local role authenticated;
 select public.platform_delete_preview(:'zoe')::text as preview \gset
 select public.platform_delete_account(:'zoe', 'Zoe.Zeta@polo.test', 'Pidió borrar su cuenta') \g /dev/null
 reset role;
-select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 3 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 7
-  and :'preview'::jsonb -> 'anonymizedIn' = '["Ronda de Bob", "Seed Torneo A", "Torneo A, ensayo"]'::jsonb,
-  'the preview: 7 linked, 3 renamed (hers and the two copies; not the Comité''s name with her photo), and where: ' || :'preview');
+select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 4 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 8
+  and :'preview'::jsonb -> 'anonymizedIn' = '["Ronda de Bob", "Seed Torneo A", "Torneo A, copia D", "Torneo A, ensayo"]'::jsonb,
+  'the preview: 8 linked, 4 renamed (hers and the three copies under her names; not the Comité''s name with her photo), and where: ' || :'preview');
 
 -- Her player stays, without her.
 select harness.check((select full_name = 'Jugador borrado' and display_name = 'Borrado' and avatar_url is null and form_guide is null and profile_id is null
@@ -125,6 +129,8 @@ select harness.check((select bool_and(full_name = 'Jugador borrado' and display_
   from public.players where id in (:'quick_copy', :'dup_copy')), 'the copies of her (a Ronda rápida''s, a duplicate''s) are «Jugador borrado» too');
 select harness.check((select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'zoe' or payload -> 'traits' ->> 'user_id' = :'zoe') = 0
   and (select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'org_a') = 1, 'GoTrue''s audit rows by her and about her go, nobody else''s');
+select harness.check((select full_name = 'Jugador borrado' and display_name = 'Borrado' from public.players where id = :'copy_d'),
+  'a copy named with her confirmed short name is «Jugador borrado» too');
 select harness.check((select full_name = 'Z. Zeta, la del Comité' and display_name = 'Z.' and avatar_url is null and form_guide is null from public.players where id = :'photo_copy'),
   'a copy the Comité renamed keeps that name and loses her photo and her form guide');
 select harness.check((select full_name = 'Renombrado B' and display_name = 'RB' and avatar_url = 'https://example.test/t/comite-b.jpg' and form_guide is null
@@ -160,6 +166,8 @@ select pg_temp.hits('zoe-jugadora.jpg') as photo_hits \gset
 select pg_temp.hits('zoe-perfil.jpg') as profile_photo_hits \gset
 select pg_temp.hits('zoeforma') as form_hits \gset
 select harness.check(:'name_hits' = 'none', 'her name is in no table: ' || :'name_hits');
+select pg_temp.hits('Zoé Z.') as short_name_hits \gset
+select harness.check(:'short_name_hits' = 'none', 'her confirmed short name is in no table: ' || :'short_name_hits');
 select harness.check(:'email_hits' = 'none', 'her email is in no table: ' || :'email_hits');
 select harness.check((select count(*) from auth.audit_log_entries x where x::text ilike '%zoe.zeta@polo.test%') = 0, 'nor in GoTrue''s audit log');
 select pg_temp.hits('zoe.antes@polo.test') as old_email_hits \gset
