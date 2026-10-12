@@ -11,6 +11,8 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { loadRejectedInbox, useRejectedInbox } from '../../data/rejectedInbox'
+import { loadTournamentDevices, useTournamentDevices, withPending } from '../../data/tournamentDevices'
+import { DevicesCard } from './DevicesCard'
 import type { Round } from '../../engine/types'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useCourses } from './useCourses'
@@ -49,6 +51,10 @@ export function AdminRounds() {
     void loadRejectedInbox(tournamentId)
   }, [tournamentId])
   const inboxFor = (rid: string) => (inbox.tournamentId === tournamentId ? inbox.items.filter((x) => x.roundId === rid).length : 0)
+  // Phones that still report holes to send (STRAT-02): «Terminar ronda» names them.
+  const devices = useTournamentDevices()
+  const behind = devices.tournamentId === tournamentId ? withPending(devices.items) : []
+  const behindText = behind.length ? R.devicesBeforeFinish(behind.reduce((n, d) => n + d.pending, 0), behind.map((d) => d.player ?? t.admin.devices.noPlayer)) : ''
 
   async function save() {
     if (!editing) return
@@ -114,7 +120,7 @@ export function AdminRounds() {
 
   const askBody = ask
     ? ask.kind === 'finish'
-      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}${inboxFor(ask.round.id) ? ` ${R.inboxBeforeFinish(inboxFor(ask.round.id))}` : ''} ${R.phonesBeforeFinish}`
+      ? `${R.finishConfirm(ask.round.number)}${pendingFor(ask.round.id) ? ` ${R.pendingBeforeFinish(pendingFor(ask.round.id))}` : ''}${inboxFor(ask.round.id) ? ` ${R.inboxBeforeFinish(inboxFor(ask.round.id))}` : ''}${behindText ? ` ${behindText}` : ''} ${R.phonesBeforeFinish}`
       : ask.kind === 'cancel'
         ? R.cancelConfirm(ask.round.number)
         : ask.kind === 'start'
@@ -166,6 +172,7 @@ export function AdminRounds() {
                   onClick={() => {
                     setAsk({ kind: 'finish', round: r })
                     void loadRejectedInbox(tournamentId)
+                    void loadTournamentDevices(tournamentId)
                   }}
                 >
                   {R.finish}
@@ -196,6 +203,8 @@ export function AdminRounds() {
           </section>
         )
       })}
+
+      {rounds.length > 0 && <DevicesCard tournamentId={tournamentId} />}
 
       <ConfirmSheet
         open={!!ask}
