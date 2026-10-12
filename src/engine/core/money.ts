@@ -16,11 +16,16 @@
  * house stays with the banker beside the house cut (`toHouse`).
  */
 import type { TournamentSettings } from '../settings/schema'
-import type { Id, PaymentKind, Snapshot } from '../types'
+import { t } from '../../i18n/es-MX'
+import type { Explanation, Id, PaymentKind, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
 import { NO_UNASSIGNED, type UnassignedState } from './unassigned'
+import { fmt } from '../games/payout'
+
+const W = t.settleWhy
+const M = t.moneyScreen
 
 /** null = the banker. */
 export interface Flow {
@@ -82,6 +87,19 @@ export interface PersonMoney {
   net: number
 }
 
+/** One part of an amount people pay by (MONEY-07). */
+export interface MoneyPart {
+  label: string
+  /**
+   * Signed from the side that reads it. On a vía-banco line, + is what the
+   * payer owes on it and − what nets against it; in a party's position, + is
+   * what it still receives and − what it still pays.
+   */
+  amount: number
+  /** The flow's whole amount, when part of it was already paid: `amount` is what is left. */
+  of?: number
+}
+
 export interface Transfer {
   from: Id | null
   to: Id | null
@@ -94,6 +112,19 @@ export interface Transfer {
   settles?: Account[]
   /** Every account in the line is final, so it can be marked paid. */
   final?: boolean
+  /** Vía banco only: every flow still due on the accounts it closes, signed from the payer's side. They add up to `amount`. */
+  parts?: MoneyPart[]
+  /** «¿Cómo se calculó?» of the amount: the parts (vía banco), or both parties' positions and the share between them (sin banco). */
+  why: Explanation[]
+}
+
+/** What one party still receives (+) or pays (−) once everything due is settled: sin banco pays these out (MONEY-07). */
+export interface Position {
+  /** null = the bank, standing as itself when no banker holds it. */
+  party: Id | null
+  amount: number
+  /** Signed from the party's side; they add up to `amount`. The banker's include the bank's, in two parts. */
+  parts: MoneyPart[]
 }
 
 export interface MoneyState {
@@ -114,6 +145,8 @@ export interface MoneyState {
     /** receives − pays − houseCut − toHouse; 0 when everything balances. */
     difference: number
     balanced: boolean
+    /** «¿Cómo se calculó?» of the two figures and what is left (MONEY-07). */
+    why: Explanation
   }
   /** Sum of every person's net (banker included as a person): must be 0 when balanced. */
   netSum: number
@@ -121,8 +154,25 @@ export interface MoneyState {
   viaBank: Transfer[]
   /** Optional: minimized peer-to-peer transfers on what is still due, the bank's cash held by the banker. */
   peerToPeer: Transfer[]
+  /** Every party's position on what is still due, with its parts: what sin banco settles. */
+  positions: Position[]
   /** «Por asignar»: what the rules leave to the Comité, and its decisions (MONEY-05). Set by computeTournament. */
   unassigned: UnassignedState
+}
+
+/** A signed amount for an explanation: + what is owed or received, − what nets against it. */
+const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n))
+const partText = (p: MoneyPart) => (p.of ? W.partOf(p.label, signed(p.amount), fmt(p.of)) : W.part(p.label, signed(p.amount)))
+function kindLabel(kind: PaymentKind): string {
+  switch (kind) {
+    case 'entry': return M.entry
+    case 'calcutta': return M.purchases
+    case 'buyback': return M.owesBuyback
+    case 'side': return M.sidePots
+    case 'payout': return M.prizes
+    case 'bet': return M.owesBet
+    default: return kind
+  }
 }
 
 /** The payment kinds the settlement reads; `other` is a note, not a debt. */
@@ -248,6 +298,19 @@ export function computeMoney(
   }
   const accounts: Account[] = [...byKey.values()].filter((a) => a.owed !== 0 || a.paid !== 0).map(({ flows: _flows, ...a }) => a)
 
+  // «¿Cómo se calculó?» of what people pay by (MONEY-07): an account's part of
+  // an amount is each of its flows still due, or what was paid beyond it.
+  const names = new Map(players.map((p) => [p.id, p.displayName]))
+  const nameOf = (id: Id | null) => (id ? (names.get(id) ?? '?') : M.bank)
+  /** `sign` 1: from the account's payer's side (what he owes is +). */
+  const accountParts = (a: Account, sign: 1 | -1): MoneyPart[] => {
+    if (a.due < 0) return [{ label: W.overpaid(kindLabel(a.kind)), amount: sign * a.due }]
+    return byKey
+      .get(accountKey(a.kind, a.from, a.to))!
+      .flows.filter((f) => f.outstanding > 0)
+      .map((f) => ({ label: f.label, amount: sign * f.outstanding, ...(f.outstanding < f.amount ? { of: f.amount } : {}) }))
+  }
+
   // Per person.
   const people: Record<Id, PersonMoney> = {}
   for (const p of players) {
@@ -313,7 +376,12 @@ export function computeMoney(
   // still owes the bank), and the line names the accounts it closes.
   const viaBank: Transfer[] = []
   const open = accounts.filter((a) => a.due !== 0)
-  const line = (from: Id | null, to: Id | null, amount: number, settles: Account[]): Transfer => ({ from, to, amount, settles, final: settles.every((a) => a.final) })
+  const line = (from: Id | null, to: Id | null, amount: number, settles: Account[]): Transfer => {
+    // From the payer's side: what he owes first, then what nets against it.
+    const parts = settles.flatMap((a) => accountParts(a, a.from === from ? 1 : -1)).sort((x, y) => Number(x.amount < 0) - Number(y.amount < 0))
+    const title = amount === 0 ? M.squared(nameOf(from), nameOf(to)) : M.pays(nameOf(from), nameOf(to), fmt(amount))
+    return { from, to, amount, settles, final: settles.every((a) => a.final), parts, why: [{ title, steps: [...parts.map(partText), amount === 0 ? W.nets : W.total(fmt(amount))] }] }
+  }
   for (const p of players) {
     const settles = open.filter((a) => (a.from === p.id && a.to === null) || (a.from === null && a.to === p.id))
     const bal = settles.reduce((s, a) => s + (a.from === null ? a.due : -a.due), 0)
@@ -347,24 +415,77 @@ export function computeMoney(
   // the house cut and anything unassigned. The banker holds the bank, so his
   // position includes it; with no banker the bank appears as itself.
   const positions = new Map<Id | null, number>(players.map((p) => [p.id, 0]))
-  let bankPosition = 0
+  const positionParts = new Map<Id | null, MoneyPart[]>(players.map((p) => [p.id, []]))
+  let bankCollects = 0
+  let bankPays = 0
   for (const a of open) {
-    if (a.from === null) bankPosition -= a.due
-    else if (positions.has(a.from)) positions.set(a.from, positions.get(a.from)! - a.due)
-    if (a.to === null) bankPosition += a.due
-    else if (positions.has(a.to)) positions.set(a.to, positions.get(a.to)! + a.due)
+    if (a.from === null) bankPays += a.due
+    else if (positions.has(a.from)) {
+      positions.set(a.from, positions.get(a.from)! - a.due)
+      positionParts.get(a.from)!.push(...accountParts(a, -1))
+    }
+    if (a.to === null) bankCollects += a.due
+    else if (positions.has(a.to)) {
+      positions.set(a.to, positions.get(a.to)! + a.due)
+      positionParts.get(a.to)!.push(...accountParts(a, 1))
+    }
   }
-  if (bankerId && positions.has(bankerId)) positions.set(bankerId, positions.get(bankerId)! + bankPosition)
-  else positions.set(null, bankPosition)
+  const bankPosition = bankCollects - bankPays
+  const bankParts: MoneyPart[] = [
+    { label: W.bankCollects, amount: bankCollects },
+    { label: W.bankPays, amount: -bankPays },
+  ].filter((x) => x.amount !== 0)
+  const bankParty = bankerId && positions.has(bankerId) ? bankerId : null
+  positions.set(bankParty, (positions.get(bankParty) ?? 0) + bankPosition)
+  positionParts.set(bankParty, [...(positionParts.get(bankParty) ?? []), ...bankParts])
+  const positionList: Position[] = [...positions]
+    .map(([party, amount]) => ({ party, amount, parts: positionParts.get(party) ?? [] }))
+    .filter((x) => x.amount !== 0 || x.parts.length > 0)
+  const positionOf = new Map(positionList.map((x) => [x.party, x]))
+  const positionWhy = (party: Id | null): Explanation => {
+    const x = positionOf.get(party)!
+    return { title: x.amount < 0 ? W.owesTotal(nameOf(party), fmt(-x.amount)) : W.getsTotal(nameOf(party), fmt(x.amount)), steps: x.parts.map(partText) }
+  }
+  // Each minimized transfer, explained by both positions and the share of the payer's debt it carries.
+  const explainP2P = (list: Transfer[]): Transfer[] =>
+    list.map((tr) => ({
+      ...tr,
+      why: [positionWhy(tr.from), positionWhy(tr.to), { title: W.ruleTitle, steps: [W.rule, W.share(nameOf(tr.from), fmt(-positionOf.get(tr.from)!.amount), fmt(tr.amount), nameOf(tr.to))] }],
+    }))
+
+  // The bank's two figures, by what moves them.
+  const bankIn = new Map<string, number>()
+  const bankOut = new Map<string, number>()
+  const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n)
+  const entryCount = flows.filter((f) => f.kind === 'entry').length
+  const lotCount = flows.filter((f) => f.kind === 'calcutta').length
+  for (const f of flows) {
+    if (f.to === null) add(bankIn, f.kind === 'entry' ? W.entries(entryCount, fmt(settings.entryFee)) : f.kind === 'calcutta' ? W.lots(lotCount) : f.label, f.amount)
+    if (f.from === null) add(bankOut, f.potId === 'calcutta' ? W.calcuttaShares : !f.potId || f.potId === 'main' ? W.mainPrizes : (games[f.potId]?.config.label ?? f.label), f.amount)
+  }
+  const bankWhy: Explanation = {
+    title: W.bankTitle,
+    steps: [
+      W.gross,
+      ...[...bankIn].map(([k, n]) => W.bankIn(k, fmt(n))),
+      W.bankInTotal(fmt(bankerReceives)),
+      ...[...bankOut].map(([k, n]) => W.bankOut(k, fmt(n))),
+      W.bankOutTotal(fmt(bankerPays)),
+      ...(houseCut > 0 ? [W.houseCut(fmt(houseCut))] : []),
+      ...(toHouse > 0 ? [W.toHouse(fmt(toHouse))] : []),
+      difference === 0 ? W.squares : difference > 0 ? W.left(fmt(difference)) : W.short(fmt(-difference)),
+    ],
+  }
 
   return {
     flows,
     accounts,
     people,
-    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, toHouse, difference, balanced },
+    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, toHouse, difference, balanced, why: bankWhy },
     netSum: Math.round(netSum),
     viaBank,
-    peerToPeer: tournamentFinal || balanced ? minimizeTransfers(positions) : [],
+    peerToPeer: tournamentFinal || balanced ? explainP2P(minimizeTransfers(positions)) : [],
+    positions: positionList,
     unassigned: NO_UNASSIGNED,
   }
 }
@@ -390,7 +511,7 @@ export function minimizeTransfers(positions: ReadonlyMap<Id | null, number>): Tr
     const d = debtors[i]!
     const c = creditors[j]!
     const amount = Math.min(d.amt, c.amt)
-    if (amount > 0) out.push({ from: d.id, to: c.id, amount })
+    if (amount > 0) out.push({ from: d.id, to: c.id, amount, why: [] })
     d.amt -= amount
     c.amt -= amount
     if (d.amt === 0) i++

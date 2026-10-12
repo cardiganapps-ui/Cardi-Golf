@@ -58,6 +58,11 @@
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
+/* «¿Cómo se calculó?» of the two figures (MONEY-07): under them, at their start. */
+.bankHow {
+  display: flex;
+  justify-content: flex-start;
+}
 
 /* People: ruled rows with the net as the figure. */
 .people {

@@ -1297,11 +1297,14 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 113,
+      "tests": [
+        "src/engine/core/settlementWhy.test.ts",
+        "src/screens/tournament/MoneyScreen.why.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Every vía-banco line carries signed parts (each flow still due, partial and overpaid accounts included) that add up to it, and a why; sin banco transfers explain both parties' positions (MoneyState.positions, each the sum of its parts) and the share of the payer's debt; banker.why breaks the bank's two figures down by kind and pot, house cut and what is left. Dinero: each settlement amount, the bank and each «Por juego» amount open «¿Cómo se calculó?». «Por asignar» was already listed bucket by bucket with its own explanation (MONEY-05). The share text and the share card still carry amounts only."
     },
     {
       "id": "MONEY-08",
