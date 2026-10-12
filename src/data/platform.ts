@@ -209,6 +209,10 @@ export interface DeletePreview {
   orphaned: Array<{ id: string; name: string }>
   organizerOf: number
   linkedPlayers: number
+  /** Of those, the ones the account confirmed as its own: they become «Jugador borrado» (0031, TRUST-03). Absent before 0031. */
+  anonymizedPlayers?: number
+  /** The tournaments those players are in. */
+  anonymizedIn?: string[]
   crewsHanded: string[]
   crewsDeleted: string[]
   friendships: number
