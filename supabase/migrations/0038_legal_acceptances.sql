@@ -13,7 +13,9 @@
 -- writes through accept_legal and reads its own through my_legal_acceptances.
 -- The versions are the app's own («2026-10-12.3»), checked for shape, not
 -- against a list, so a release that bumps a version needs no migration;
--- a user keeps at most 100 rows. Deleting the account deletes its rows.
+-- a user keeps at most 100 rows. The time is the phone's, as the acceptance
+-- may wait there without signal (clamped to the last eight days). Deleting
+-- the account deletes its rows.
 
 create table public.legal_acceptances (
   id bigint generated always as identity primary key,
@@ -47,7 +49,7 @@ $$;
 revoke execute on function public.my_legal_acceptances() from public, anon;
 grant execute on function public.my_legal_acceptances() to authenticated;
 
-create function public.accept_legal(p_privacy text, p_terms text, p_context text)
+create function public.accept_legal(p_privacy text, p_terms text, p_context text, p_accepted_at timestamptz default null)
 returns jsonb
 language plpgsql
 security definer
@@ -55,6 +57,8 @@ set search_path = public, pg_temp
 as $$
 declare
   uid uuid := auth.uid();
+  -- When the person accepted: the phone's time (an acceptance can wait there without signal), never in the future nor more than eight days back.
+  at timestamptz := least(now(), greatest(coalesce(p_accepted_at, now()), now() - interval '8 days'));
   shape constant text := '^[0-9]{4}-[0-9]{2}-[0-9]{2}(\.[0-9]{1,3})?$';
 begin
   if uid is null then
@@ -68,12 +72,12 @@ begin
   end if;
   -- One user's rows, one at a time: the cap below can't be raced past.
   perform pg_advisory_xact_lock(hashtextextended('accept_legal:' || uid::text, 0));
-  if (select count(*) from public.legal_acceptances where auth_user_id = uid) < 100 then
-    insert into public.legal_acceptances (auth_user_id, document, version, context)
-    values (uid, 'privacy', p_privacy, p_context), (uid, 'terms', p_terms, p_context)
+  if (select count(*) from public.legal_acceptances where auth_user_id = uid) <= 98 then
+    insert into public.legal_acceptances (auth_user_id, document, version, context, accepted_at)
+    values (uid, 'privacy', p_privacy, p_context, at), (uid, 'terms', p_terms, p_context, at)
     on conflict (auth_user_id, document, version) do nothing;
   end if;
   return public.my_legal_acceptances();
 end $$;
-revoke execute on function public.accept_legal(text, text, text) from public, anon;
-grant execute on function public.accept_legal(text, text, text) to authenticated;
+revoke execute on function public.accept_legal(text, text, text, timestamptz) from public, anon;
+grant execute on function public.accept_legal(text, text, text, timestamptz) to authenticated;

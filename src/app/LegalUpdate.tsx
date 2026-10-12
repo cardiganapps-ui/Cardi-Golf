@@ -1,9 +1,10 @@
 /**
  * After the notice or the terms change, a person who accepted an older
- * version sees it once (TRUST-05): which document changed, a link to read
- * it, and «Entendido», which records the new version. «Cerrar» leaves it for
- * the next time the app opens. Never over the Tarjeta, the TV, the ceremony
- * or the printable cards, nor on the legal pages themselves.
+ * version sees which (TRUST-05), with a link to read it, and «Entendido»,
+ * which records the new version; so does an account with no record yet (it
+ * signed in from an email link, or before 0038), shown both. «Cerrar» leaves
+ * it for the next time the app opens. Never over the Tarjeta, the auction
+ * console, the room screens, the printable cards or the documents.
  */
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
@@ -12,7 +13,7 @@ import { LegalLink } from '../components/LegalLinks'
 import { useAuth } from '../data/auth'
 import { acceptLegal, flushLegal, legalUpdate } from '../data/legal'
 import { t } from '../i18n/es-MX'
-import { QUIET_ROUTE, legalAsked, type Changed } from './legalUpdateState'
+import { QUIET_ROUTE, SETTLE_MS, legalAsked, type Changed } from './legalUpdateState'
 
 export function LegalUpdate() {
   const uid = useAuth((s) => s.user?.id ?? null)
@@ -20,7 +21,7 @@ export function LegalUpdate() {
   const [changed, setChanged] = useState<Changed | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // An acceptance that waited for a session (an account's code still to be typed, no signal) goes now.
+  // An acceptance that waited for signal goes now (it is dropped if it was another user's).
   useEffect(() => {
     if (uid) void flushLegal()
   }, [uid])
@@ -32,28 +33,37 @@ export function LegalUpdate() {
     }
     let live = true
     const show = (c: Changed | null) => live && setChanged(c && (c.privacy || c.terms) ? c : null)
-    if (legalAsked.asked?.uid === uid) show(legalAsked.asked.changed)
-    else
+    if (legalAsked.asked?.uid === uid) {
+      show(legalAsked.asked.changed)
+      return () => {
+        live = false
+      }
+    }
+    // A moment after the session changes: the sign-in that changed it records its own acceptance first.
+    const timer = setTimeout(() => {
       void legalUpdate().then((c) => {
         // Unknown (no signal, an older server): ask again next time.
         if (c) legalAsked.asked = { uid, changed: c }
         show(c)
       })
+    }, SETTLE_MS)
     return () => {
       live = false
+      clearTimeout(timer)
     }
   }, [uid, quiet])
 
   if (!changed || !uid) return null
   const both = changed.privacy && changed.terms
+  const first = changed.first === true
   const U = t.legal.update
   const close = () => {
     legalAsked.dismissed = uid
     setChanged(null)
   }
   return (
-    <Sheet open onClose={close} title={U.title(changed.privacy, changed.terms)}>
-      <p>{U.body(both)}</p>
+    <Sheet open onClose={close} title={first ? U.firstTitle : U.title(changed.privacy, changed.terms)}>
+      <p>{first ? U.firstBody : U.body(both)}</p>
       <p style={{ display: 'flex', gap: 'var(--s4)', flexWrap: 'wrap' }}>
         {changed.privacy && <LegalLink to="/privacidad">{t.legal.privacy.title}</LegalLink>}
         {changed.terms && <LegalLink to="/terminos">{t.legal.terms.title}</LegalLink>}

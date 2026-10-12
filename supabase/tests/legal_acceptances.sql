@@ -83,6 +83,25 @@ reset role;
 select harness.check(:'older_later'::jsonb -> 'privacy' ->> 'version' = '2026-10-12.10',
   '«.10» stays the latest after «.9» is accepted later: ' || :'older_later');
 
+-- The time is the phone's, when it waited there: never in the future, nor more than eight days back.
+create function pg_temp.try_accept_at(p text, a timestamptz) returns text language plpgsql as $$
+begin
+  return public.accept_legal(p, '2026-10-01', 'pin', a)::text;
+exception when others then
+  return sqlstate;
+end $$;
+grant execute on function pg_temp.try_accept_at(text, timestamptz) to authenticated;
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_accept_at('2026-10-11', now() - interval '2 days') \g /dev/null
+select pg_temp.try_accept_at('2026-10-10', now() + interval '1 year') \g /dev/null
+select pg_temp.try_accept_at('2026-10-09', now() - interval '1 year') \g /dev/null
+reset role;
+select harness.check((select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-11') between now() - interval '2 days 1 minute' and now() - interval '47 hours'
+  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-10') <= now()
+  and (select accepted_at from public.legal_acceptances where auth_user_id = :'dev_a' and version = '2026-10-09') >= now() - interval '8 days',
+  'the phone''s time is kept, clamped to now and the last eight days');
+
 -- Each person sees only their own.
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
@@ -94,13 +113,18 @@ select harness.check(:'org_accept'::jsonb -> 'privacy' ->> 'version' = '2026-10-
 
 -- At most 100 rows per user: past that a call answers what it has and writes nothing.
 insert into public.legal_acceptances (auth_user_id, document, version, context)
-select :'org_a', 'privacy', '2020-01-01.' || g, 'update' from generate_series(1, 98) g;
+select :'org_a', 'privacy', '2020-01-01.' || g, 'update' from generate_series(1, 96) g;
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_accept('2026-10-12.5', '2026-10-02', 'update') as last_two \gset
+reset role;
+select harness.check((select count(*) from public.legal_acceptances where auth_user_id = :'org_a') = 100, 'the last two fit, exactly 100: ' || :'last_two');
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 select pg_temp.try_accept('2026-10-13', '2026-10-13', 'update') as capped \gset
 reset role;
 select harness.check((select count(*) from public.legal_acceptances where auth_user_id = :'org_a') = 100
-  and :'capped'::jsonb -> 'privacy' ->> 'version' = '2026-10-12.4', 'a full user writes nothing more: ' || :'capped');
+  and :'capped'::jsonb -> 'privacy' ->> 'version' = '2026-10-12.5', 'a full user writes nothing more: ' || :'capped');
 
 -- An account that goes takes its rows with it.
 delete from auth.users where id = :'dev_a';
