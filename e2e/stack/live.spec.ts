@@ -9,6 +9,12 @@
  * Holes 1–3 are watched on Beto's Tarjeta (his steppers take the four values),
  * holes 4–18 and the corrections on his En vivo board (four rows, their totals
  * and their «hoyo» exactly as field.ts works them out).
+ *
+ * The round runs twice, each on its own tournament: on the runner's own
+ * network, and with both phones on emulated 4G (REL-11): Chromium's network
+ * throttling through the DevTools protocol, which holds back requests and the
+ * live channel's WebSocket frames alike, at the round trip and bandwidth of a
+ * fair 4G signal on a course (FOUR_G).
  */
 import { t } from '../../src/i18n/es-MX'
 import { ROUND, SLUGS, type HoleEntry } from './field'
@@ -35,8 +41,22 @@ import {
   type Shown,
 } from './phone'
 
-/** §2: «Other phones see a new score in under 2 seconds». */
+/** §2: «Other phones see a new score in under 2 seconds on 4G». */
 const BUDGET_MS = 2000
+
+/**
+ * A fair 4G signal: 150 ms of round trip, 1.6 Mbps down and 750 kbps up
+ * (Lighthouse's «slow 4G» is harsher, 150 ms with 1.6 / 0.75 Mbps applied to
+ * the whole page load; this is the same link held for the round).
+ */
+const FOUR_G = { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
+
+/** Both directions of one phone on `conditions`, requests and WebSocket frames alike. */
+async function throttle(phone: Phone, conditions: typeof FOUR_G) {
+  const cdp = await phone.page.context().newCDPSession(phone.page)
+  await cdp.send('Network.enable')
+  await cdp.send('Network.emulateNetworkConditions', conditions)
+}
 
 interface Sample {
   what: 'tarjeta' | 'board' | 'correction'
@@ -52,10 +72,16 @@ const FIXES = [
   { hole: 5, name: 'Dani', strokes: 3, putts: 2 },
 ]
 
-test('two phones, one card: every hole saved on one shows on the other within 2 s', async ({ join }, testInfo) => {
-  test.setTimeout(300_000)
-  const ana = await join(SLUGS.twoPhones, 'Ana')
-  const beto = await join(SLUGS.twoPhones, 'Beto')
+type Join = (slug: string, name: string) => Promise<Phone>
+
+/** The whole round on `slug`, measured; `network` says which link the phones were on, for the summary. */
+async function playRound(join: Join, outputDir: string, slug: string, network: { label: string; key: string; conditions?: typeof FOUR_G }) {
+  const ana = await join(slug, 'Ana')
+  const beto = await join(slug, 'Beto')
+  if (network.conditions) {
+    await throttle(ana, network.conditions)
+    await throttle(beto, network.conditions)
+  }
   const card = new Map<number, HoleEntry>()
   const samples: Sample[] = []
 
@@ -71,9 +97,9 @@ test('two phones, one card: every hole saved on one shows on the other within 2 
       // failure here is read through the check's annotations only (CI logs can't be fetched from the session).
       const header = async (p: Phone) => (await p.page.locator('header').innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 160)
       const rows = 'board' in shown ? await boardRows(beto.page) : []
-      const server = serverScores(SLUGS.twoPhones).filter((s) => s.hole === hole)
+      const server = serverScores(slug).filter((s) => s.hole === hole)
       const detail = [
-        `${what} hole ${hole}: Beto's phone never showed it`,
+        `${network.label}: ${what} hole ${hole}: Beto's phone never showed it`,
         `expected: ${JSON.stringify('board' in shown ? shown.board : shown.card)}`,
         `Beto's board: ${JSON.stringify(rows)}`,
         `server hole ${hole}: ${JSON.stringify(server)}`,
@@ -85,7 +111,7 @@ test('two phones, one card: every hole saved on one shows on the other within 2 
     }
     const ms = Math.round(at - (await savedAt(ana.page)))
     samples.push({ what, hole, ms })
-    console.log(`[e2e-stack] ${what} hole ${hole}: saved on Ana's phone → shown on Beto's in ${ms} ms`)
+    console.log(`[e2e-stack] ${network.label}: ${what} hole ${hole}: saved on Ana's phone → shown on Beto's in ${ms} ms`)
   }
 
   await openCard(ana.page)
@@ -125,21 +151,31 @@ test('two phones, one card: every hole saved on one shows on the other within 2 
 
   const ms = samples.map((s) => s.ms)
   const stats = { saves: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
-  console.log(`[e2e-stack] save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
-  keepMetrics(testInfo.project.outputDir, 'save-to-shown', { budgetMs: BUDGET_MS, stats, samples }, [
-    '### Save on one phone → shown on the other (e2e-stack)',
+  console.log(`[e2e-stack] ${network.label}: save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
+  keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples }, [
+    `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
     '',
-    `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack, no network throttling.`,
+    `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones throttled to ${network.conditions.latency} ms round trip, 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
     '',
     '| Where | Hole | ms |',
     '|---|---:|---:|',
     ...samples.map((s) => `| ${s.what} | ${s.hole} | ${s.ms} |`),
   ].join('\n'))
 
-  expect(samples.filter((s) => s.ms >= BUDGET_MS), `saves that took ${BUDGET_MS} ms or more to show on the other phone`).toEqual([])
+  expect(samples.filter((s) => s.ms >= BUDGET_MS), `${network.label}: saves that took ${BUDGET_MS} ms or more to show on the other phone`).toEqual([])
   // And the server holds the card as Ana's phone typed it: 72 rows, no discrepancy.
-  expect(serverScores(SLUGS.twoPhones)).toEqual(expectedScores(card, 'Ana'))
+  expect(serverScores(slug)).toEqual(expectedScores(card, 'Ana'))
   assertSamePlayer(ana, beto)
+}
+
+test('two phones, one card: every hole saved on one shows on the other within 2 s', async ({ join }, testInfo) => {
+  test.setTimeout(300_000)
+  await playRound(join, testInfo.project.outputDir, SLUGS.twoPhones, { label: 'runner network', key: 'save-to-shown' })
+})
+
+test('two phones on 4G: every hole saved on one shows on the other within 2 s (REL-11)', async ({ join }, testInfo) => {
+  test.setTimeout(420_000)
+  await playRound(join, testInfo.project.outputDir, SLUGS.fourG, { label: '4G', key: 'save-to-shown-4g', conditions: FOUR_G })
 })
 
 /** Neither phone was signed in again behind the player's back. */
