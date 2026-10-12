@@ -62,11 +62,14 @@ export interface Link {
   uploadThroughput: number
 }
 
-/** In the page: every WebSocket frame, sent or received, `oneWayMs` late, in order. */
+/** In the page: every WebSocket frame, sent or received, `oneWayMs` late, in order; `__e2eSlowFrames` counts them. */
 function slowSockets(oneWayMs: number) {
   const Native = window.WebSocket
+  const w = window as unknown as { __e2eSlowFrames: number }
+  w.__e2eSlowFrames = 0
   class Slow extends Native {
     send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+      w.__e2eSlowFrames++
       setTimeout(() => {
         if (this.readyState === Native.OPEN) Native.prototype.send.call(this, data)
       }, oneWayMs)
@@ -75,10 +78,22 @@ function slowSockets(oneWayMs: number) {
       if (!listener) return
       if (type !== 'message') return super.addEventListener(type, listener, options)
       const call = typeof listener === 'function' ? listener : (e: Event) => listener.handleEvent(e)
-      return super.addEventListener(type, (e) => void setTimeout(() => call.call(this, e), oneWayMs), options)
+      return super.addEventListener(
+        type,
+        (e) => {
+          w.__e2eSlowFrames++
+          setTimeout(() => call.call(this, e), oneWayMs)
+        },
+        options,
+      )
     }
     set onmessage(fn: ((this: WebSocket, e: MessageEvent) => unknown) | null) {
-      super.onmessage = fn ? (e: MessageEvent) => void setTimeout(() => fn.call(this, e), oneWayMs) : null
+      super.onmessage = fn
+        ? (e: MessageEvent) => {
+            w.__e2eSlowFrames++
+            setTimeout(() => fn.call(this, e), oneWayMs)
+          }
+        : null
     }
     get onmessage() {
       return super.onmessage

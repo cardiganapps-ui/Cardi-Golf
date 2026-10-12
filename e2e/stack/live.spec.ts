@@ -155,6 +155,9 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   ].join('\n'))
 
   expect(samples.filter((s) => s.ms >= BUDGET_MS), `${network.label}: saves that took ${BUDGET_MS} ms or more to show on the other phone`).toEqual([])
+  // The live channel really was on the link: its frames went through slowSockets on both phones.
+  if (network.conditions)
+    for (const p of [ana, beto]) expect(await p.page.evaluate(() => (window as unknown as { __e2eSlowFrames?: number }).__e2eSlowFrames ?? 0), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
   // And the server holds the card as Ana's phone typed it: 72 rows, no discrepancy.
   expect(serverScores(slug)).toEqual(expectedScores(card, 'Ana'))
   assertSamePlayer(ana, beto)
