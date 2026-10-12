@@ -90,6 +90,7 @@ const PLATFORM_CALLS = (tid, uid) => [
   ['platform_audit', {}],
   ['platform_audit_entry', { p_source: 'platform', p_id: 1 }],
   ['platform_health', {}],
+  ['platform_telemetry', { p_hours: 24 }],
 ]
 const denied = (e) => !!e && (e.code === '42501' || /permission denied|Solo el admin/.test(e.message ?? ''))
 
@@ -407,6 +408,19 @@ try {
   const { data: health, error: healthErr } = await P.sb.rpc('platform_health')
   await service.from('backup_runs').delete().eq('id', run.id)
   check(!healthErr && health.backup.last?.key === `backups/test-${rand}.json.gz` && health.push.configured === true && health.database.lastMigration?.name === latestMigration && typeof health.people.blocked === 'number', 'platform_health: last backup (the cron can write it), push configured, last migration', healthErr?.message ?? health)
+
+  // Telemetry (0037, STRAT-02): a phone logs and beats; the admin reads it; a Comité reads its own phones only.
+  const phoneId = crypto.randomUUID()
+  const { data: kept, error: logErr } = await dev.rpc('log_client_events', { p_events: [{ deviceId: phoneId, kind: 'funnel', name: 'platform_test', data: { email: 'nadie@polo.test' } }] })
+  const { error: beatErr } = await dev.rpc('heartbeat', { p: { deviceId: phoneId, pending: 2, build: 1 } })
+  check(!logErr && kept === 1 && !beatErr, 'a phone logs an event and a heartbeat', logErr?.message ?? beatErr?.message ?? kept)
+  const { data: tel, error: telErr } = await P.sb.rpc('platform_telemetry', { p_hours: 1 })
+  check(!telErr && tel.funnel.some((f) => f.name === 'platform_test') && tel.devices.seen >= 1 && tel.devices.pending >= 2, 'platform_telemetry: the event and the phone show in Salud', telErr?.message ?? tel)
+  const { data: stored } = await service.from('client_events').select('data').eq('name', 'platform_test').eq('device_id', phoneId).single()
+  check(stored && !('email' in stored.data), 'the email key never reaches the table', stored)
+  const { data: comitePhones, error: cpErr } = await A.sb.rpc('tournament_devices', { p_tournament_id: T.id })
+  const { error: strangerErr } = await N.sb.rpc('tournament_devices', { p_tournament_id: T.id })
+  check(!cpErr && Array.isArray(comitePhones) && denied(strangerErr), 'tournament_devices: the Comité reads its phones, a stranger is refused', cpErr?.message ?? strangerErr)
 } catch (e) {
   console.error('ERROR', e.message ?? e)
   failures++

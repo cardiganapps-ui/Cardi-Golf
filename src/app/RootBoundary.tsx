@@ -5,6 +5,7 @@
  */
 import { Component, type ReactNode } from 'react'
 import { BootProblem } from '../components/BootProblem'
+import { reportError } from '../lib/telemetry'
 
 declare global {
   interface Window {
@@ -22,6 +23,7 @@ export class RootBoundary extends Component<{ children: ReactNode }, { error: Er
   }
   componentDidCatch(error: Error) {
     console.error(error)
+    reportError('root_boundary', error)
   }
   render() {
     return this.state.error ? <BootProblem kind="crash" /> : this.props.children

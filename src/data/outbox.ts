@@ -20,6 +20,7 @@ import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
 import { serverAnswering } from '../lib/fetchWithTimeout'
+import { saveAnswered, setDeviceSnapshot, step } from '../lib/telemetry'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { liveClock, liveSeq, registerOverlay, serverReadSince, useTournament } from './tournamentStore'
@@ -267,6 +268,19 @@ let running: Promise<void> | null = null
 /** Keys of the writes this tab's flush is pushing right now: the server may be storing them. */
 const inFlight = new Set<string>()
 let timer: ReturnType<typeof setTimeout> | null = null
+/** When the server last answered a push from this tab, for the heartbeat. */
+let lastAnswerAt: number | null = null
+
+// The heartbeat says what this phone still has to send, across tournaments (STRAT-02).
+setDeviceSnapshot(() => {
+  const oldest = queue.reduce<number | null>((m, x) => (m == null || x.createdAt < m ? x.createdAt : m), null)
+  return {
+    pending: holesIn(queue),
+    rejected: rejectedAll.length,
+    oldestPendingAt: oldest != null ? new Date(oldest).toISOString() : null,
+    lastSyncAt: lastAnswerAt != null ? new Date(lastAnswerAt).toISOString() : null,
+  }
+})
 
 function activeTournamentId(): string | null {
   return useTournament.getState().tournamentId
@@ -822,6 +836,7 @@ function mergeHoles(into: HoleItem, newer: HoleItem): HoleItem {
  * flush in another tab marked sent.
  */
 export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }) {
+  step('hole_saved')
   const entries = input.entries.filter((e) => Object.keys(e.fields).length > 0).map((e) => ({ ...e, base: e.base ?? {} }))
   if (!entries.length) return
   const open = useTournament.getState()
@@ -955,6 +970,7 @@ export function enqueueAward(tournamentId: string, payload: AwardPayload) {
   return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() })
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
+  step('card_signed')
   return enqueue({ key: `signature:${payload.round_id}:${payload.pair_id}`, kind: 'signature', tournamentId, payload, attempts: 0, createdAt: Date.now() })
 }
 
@@ -1047,9 +1063,13 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
       mutation_id: p.mutation_id,
       entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {}, ...(e.auto ? { auto: true } : {}) })),
     }
+    const sentAt = Date.now()
     const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
     if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
+    lastAnswerAt = Date.now()
+    // How long the server took to answer, a clock sample, and which rows are this phone's own echo (STRAT-02).
+    saveAnswered(sentAt, lastAnswerAt, (data as HoleAnswer).rows, p.entries.map((e) => `${p.round_id}:${e.player_id}:${p.hole}`))
     return data as HoleAnswer
   }
   if (item.kind === 'score') {

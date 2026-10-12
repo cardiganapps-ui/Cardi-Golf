@@ -56,6 +56,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   platform_audit_log: 'id',
   platform_settings: 'key',
   backup_runs: 'id',
+  client_events: 'id',
+  device_status: 'auth_user_id,device_id',
 }
 
 /** R2 object key for a backup taken at `at` (UTC date). */

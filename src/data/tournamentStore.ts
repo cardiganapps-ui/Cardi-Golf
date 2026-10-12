@@ -23,6 +23,7 @@ import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { humanError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
+import { changeArrived, track } from '../lib/telemetry'
 import { fetchAll } from './paged'
 import { INBOX_TABLES, REALTIME_TABLES } from './realtimeTables'
 import { inboxChanged } from './rejectedInbox'
@@ -595,6 +596,8 @@ export const useTournament = create<StoreState>((set, get) => ({
         const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
         // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
         if (INBOX.has(table)) return inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row } : null)
+        // How long another phone's hole took to get here (STRAT-02).
+        if (table === 'scores' && payload?.eventType && payload.eventType !== 'DELETE' && payload.new) changeArrived(payload.new)
         if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
         // A structural row reloads, unless it is plainly another tournament's (DB-05: a delete reaches every phone).
         else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row }, fetching > 0)) scheduleReload()
@@ -602,6 +605,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     }
     const degrade = () => {
       if (channel !== ch) return
+      if (get().realtime !== 'error') track('sync', 'realtime_degraded')
       set({ realtime: 'error' })
       // Live updates are down: poll so the boards keep moving.
       pollTimer ??= setInterval(() => {

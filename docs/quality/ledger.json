@@ -3047,11 +3047,16 @@
       "workstream": "W12",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 116,
+      "tests": [
+        "supabase/tests/telemetry.sql",
+        "src/lib/telemetry.test.ts",
+        "src/screens/platform/PhonesSection.test.tsx",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migration 0037 and src/lib/telemetry.ts (PR #116): errors, save_ack and apply_lag times, web vitals, a few steps and a heartbeat with each phone's build and outbox, to our own tables through two size-capped, rate-limited definer RPCs; Salud › «Teléfonos» shows sync p50/p95 and the share over 2 s, phones by build and holes not sent, vitals, errors by message and build, and the steps. Left: no symbolication (hidden source maps are not uploaded; a stack is minified), no alerting or daily digest when a threshold breaks, the Comité's phone list has an RPC but no screen yet, the north-star metric and funnel targets are not defined (STRAT-09), and apply_lag measures commit to arrival on the channel, not to the board being drawn."
     },
     {
       "id": "STRAT-03",

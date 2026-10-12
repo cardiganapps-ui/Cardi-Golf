@@ -45,11 +45,12 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
-const longDate = (version: string) => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${version}T12:00:00Z`))
+/** A version is its date, with «.2», «.3»… for a second text the same day. */
+const longDate = (version: string) => new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${version.slice(0, 10)}T12:00:00Z`))
 
 const sections = Object.fromEntries(t.legal.privacy.sections)
 const all = t.legal.privacy.sections.map(([, text]) => text).join(' ')
@@ -115,7 +116,7 @@ describe('who sees a tournament\'s money (TRUST-02)', () => {
 describe('what the operator sees and can do (TRUST-17)', () => {
   it('word for word', () => {
     expect(sections['Quién opera Polo']).toBe(
-      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.',
+      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.',
     )
   })
 
@@ -207,7 +208,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-12')
+    expect(t.legal.privacy.version).toBe('2026-10-12.2')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -222,7 +223,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
   const rights = () => sections['Tus derechos']!
 
   it('what goes, and only from the database', () => {
-    expect(rights()).toContain('Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos y los navegadores donde los activaste, y sales de tus crews.')
+    expect(rights()).toContain('Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews.')
     expect(rights()).not.toContain('se van tu perfil')
   })
 
