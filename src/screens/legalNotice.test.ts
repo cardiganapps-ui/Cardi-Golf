@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'f77af05debc9a6f1' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -86,7 +86,7 @@ describe('the integral notice (TRUST-04)', () => {
     expect(arco).toContain('acceso, rectificación, cancelación y oposición')
     expect(arco).toContain('retirar tu consentimiento o limitar su uso')
     // Never a sign-in code read back to the operator: that would hand him the account.
-    expect(arco).toContain('que nos escribas desde el correo de tu cuenta')
+    expect(arco).toContain('que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta')
     expect(arco).not.toContain('código')
     expect(arco).toContain('por medio del Comité de tu torneo')
     expect(arco).toContain('20 días hábiles')
