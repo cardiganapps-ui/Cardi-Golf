@@ -8,6 +8,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, Outlet, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useTournament } from '../data/tournamentStore'
 import { useRejectedInbox } from '../data/rejectedInbox'
+import { useTournamentDevices } from '../data/tournamentDevices'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
 import { EnterScreen } from '../screens/tournament/EnterScreen'
@@ -28,6 +29,8 @@ export function FixtureGate() {
     useTournament.setState({ tournamentId: `fixture:${fixture.name}`, data: dataFromSnapshot(structuredClone(fixture.snapshot)), loading: false, error: null, realtime: 'off' })
     // The Comité's inbox is read from the server; a fixture's is what it says.
     useRejectedInbox.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.inbox ?? []), status: 'ready', error: null, fixture: true })
+    // And its phones (STRAT-02): what their heartbeats would say.
+    useTournamentDevices.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.devices ?? []), status: 'ready', fixture: true })
   }, [fixture])
 
   if (!fixture) return <FixtureIndex />
