@@ -76,8 +76,8 @@ let lastBeat: { pending: number; rejected: number } | null = null
 /** What a heartbeat says at most this often when only a count changed (the server throttles the rest). */
 const BEAT_MIN_MS = 15_000
 const once = new Set<string>()
-/** The JavaScript engine's own errors: their messages name code, never a person. */
-const BUILTIN = new Set(['TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'EvalError', 'URIError', 'AggregateError'])
+/** The JavaScript engine's own errors: their messages name code, never a person. Not SyntaxError: a JSON one quotes its input. */
+const BUILTIN = new Set(['TypeError', 'RangeError', 'ReferenceError', 'EvalError', 'URIError', 'AggregateError'])
 
 type Env = { PROD?: boolean; MODE?: string; VITE_DESIGN_ROUTES?: string }
 /** Telemetry is on in a production build with Supabase configured, off in tests, dev and the fixtures build. */
@@ -296,7 +296,8 @@ export async function flush(): Promise<void> {
       if (error && !/^22/.test(error.code ?? '')) break
       const sent = new Set(batch.map((e) => e.id))
       queue = queue.filter((e) => !sent.has(e.id))
-      save()
+      // Now, not after the debounce: a page killed in the pocket would send the batch again at its next launch.
+      saveNow()
     }
   } catch {
     /* offline or no session: kept for the next flush */
@@ -324,11 +325,14 @@ export async function heartbeat(): Promise<void> {
   try {
     if (!(await signedIn())) return
     const s = snapshot()
-    lastBeatAt = Date.now()
-    lastBeat = { pending: s.pending, rejected: s.rejected }
-    await supabase().rpc('heartbeat', {
+    const { error } = await supabase().rpc('heartbeat', {
       p: { deviceId: getDeviceId(), tournamentId, build: BUILD.id, buildSha: BUILD.sha, platform: platform(), standalone: standalone(), ...s },
     })
+    // Only a beat the server took counts: a failed one leaves the next change free to say it.
+    if (!error) {
+      lastBeatAt = Date.now()
+      lastBeat = { pending: s.pending, rejected: s.rejected }
+    }
   } catch {
     /* next one */
   }

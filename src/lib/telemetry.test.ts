@@ -56,7 +56,9 @@ describe('telemetry', () => {
     tel.reportError('unhandledrejection', new UserError('El hoyo 4 de Justo quedó para el Comité'))
     tel.reportError('unhandledrejection', Object.assign(new Error('Diego no está en el grupo'), { code: '42501' }))
     tel.reportError('unhandledrejection', 'Mateo')
-    expect(tel.queuedEvents().map((e) => e.data?.message)).toEqual(['UserError', 'Error (42501)', 'no es un Error (string)'])
+    // A JSON SyntaxError quotes its input («"Diego Ará"... is not valid JSON»).
+    tel.reportError('unhandledrejection', new SyntaxError('Unexpected token D, "Diego Ará"... is not valid JSON'))
+    expect(tel.queuedEvents().map((e) => e.data?.message)).toEqual(['UserError', 'Error (42501)', 'no es un Error (string)', 'SyntaxError'])
   })
 
   it('counts a step once per tournament when asked', () => {
@@ -205,6 +207,22 @@ describe('telemetry', () => {
       await vi.advanceTimersByTimeAsync(2_000)
       expect(rpc).toHaveBeenCalledTimes(2)
       expect(rpc.mock.calls[1]![1]).toMatchObject({ p: { pending: 0 } })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a heartbeat the server did not take leaves the next change free to send one', async () => {
+    vi.useFakeTimers()
+    try {
+      let pending = 0
+      tel.setDeviceSnapshot(() => ({ pending, rejected: 0, oldestPendingAt: null, lastSyncAt: null }))
+      rpc.mockResolvedValueOnce({ data: null, error: { code: '08006', message: 'connection failure' } })
+      await tel.heartbeat()
+      pending = 0
+      tel.outboxChanged()
+      await vi.advanceTimersByTimeAsync(3_000)
+      expect(rpc).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
     }
