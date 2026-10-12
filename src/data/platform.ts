@@ -352,6 +352,25 @@ export interface Health {
   flags: AppFlags
 }
 
+/** Salud's telemetry (0037, STRAT-02): what the phones reported over the last hours. */
+export interface Telemetry {
+  since: string
+  events: number
+  errors: Array<{ name: string; summary: string; route: string; build: number | null; buildSha: string | null; count: number; devices: number; first_at: string; last_at: string }>
+  sync: Array<{ name: string; count: number; p50: number; p95: number; over2s: number }>
+  syncByTournament: Array<{ tournamentId: string; tournament: string; count: number; p50: number; p95: number }>
+  vitals: Array<{ name: string; count: number; p75: number }>
+  funnel: Array<{ name: string; count: number; people: number }>
+  devices: {
+    seen: number
+    withPending: number
+    pending: number
+    rejected: number
+    oldestPendingAt: string | null
+    builds: Array<{ build: number | null; buildSha: string | null; count: number }>
+  }
+}
+
 export interface PlatformApi {
   overview(): Promise<PlatformOverview>
   daily(days: number): Promise<PlatformDay[]>
@@ -386,6 +405,8 @@ export interface PlatformApi {
   audit(q: { source?: 'all' | 'platform' | 'comite'; before?: string | null; q?: string; limit?: number }): Promise<AuditItem[]>
   auditEntry(source: 'platform' | 'comite', id: number): Promise<AuditDetail | null>
   health(): Promise<Health>
+  /** What the phones reported over the last `hours` (1 to 720). */
+  telemetry(hours: number): Promise<Telemetry>
   setFlag(key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner', value: boolean | string | null, reason: string): Promise<AppFlags>
 }
 
@@ -448,6 +469,7 @@ export const supabasePlatformApi: PlatformApi = {
     rpc<AuditItem[]>('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }),
   auditEntry: (source, id) => rpc<AuditDetail | null>('platform_audit_entry', { p_source: source, p_id: id }),
   health: () => rpc<Health>('platform_health'),
+  telemetry: (hours) => rpc<Telemetry>('platform_telemetry', { p_hours: hours }),
   setFlag: (key, value, reason) => rpc<AppFlags>('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }),
 }
 

@@ -8,7 +8,8 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner, Toggle, toast } from '../../components/ui'
 import { Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
-import { useAppFlags, usePlatformApi, type Health } from '../../data/platform'
+import { useAppFlags, usePlatformApi, type Health, type Telemetry } from '../../data/platform'
+import { PhonesSection, Status } from './PhonesSection'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
@@ -19,14 +20,6 @@ const STALE_MS = 36 * 3600_000
 
 type Pending = { key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner'; value: boolean | string | null; label: string } | null
 
-function Status({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
-  return (
-    <span className={s.healthHead}>
-      <span className={ok == null ? s.dotUnknown : ok ? s.dotOk : s.dotBad} aria-hidden="true" />
-      {children}
-    </span>
-  )
-}
 
 export function HealthScreen() {
   const api = usePlatformApi()
@@ -34,6 +27,7 @@ export function HealthScreen() {
   const [error, setError] = useState<string | null>(null)
   const [banner, setBanner] = useState('')
   const [pending, setPending] = useState<Pending>(null)
+  const [tel, setTel] = useState<Telemetry | null | 'unavailable'>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -44,6 +38,8 @@ export function HealthScreen() {
     } catch (e) {
       setError(humanError(e))
     }
+    // Its own request: a database without 0037 still shows the rest of Salud.
+    api.telemetry(24).then(setTel, () => setTel('unavailable'))
   }, [api])
   useEffect(() => {
     void load()
@@ -104,6 +100,8 @@ export function HealthScreen() {
           <span className={s.help}>{H.locks(h.people.deviceLocks, h.people.playerLocks)}</span>
         </div>
       </div>
+
+      {tel === 'unavailable' ? <p className={s.help}>{H.telemetryUnavailable}</p> : tel ? <PhonesSection tel={tel} /> : null}
 
       <section className={s.section}>
         <div className={s.sectionHead}>

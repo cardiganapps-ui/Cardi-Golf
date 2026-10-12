@@ -45,6 +45,19 @@ for (const [fixture, paths] of Object.entries(PAGES)) {
   }
 }
 
+// Admin de Polo's screens on their in-memory fixture (Salud carries the telemetry, STRAT-02).
+for (const path of ['salud']) {
+  for (const width of PHONES) {
+    test(`admin/${path} at ${width}px`, async ({ page, pageErrors }) => {
+      await page.setViewportSize({ width, height: 852 })
+      await open(page, `/admin/_/${path}`)
+      expect(pageErrors, 'uncaught errors').toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+      expect(await seriousViolations(page)).toEqual([])
+    })
+  }
+}
+
 for (const [path, width, height] of ROOMS) {
   test(`${path} at ${width}×${height}`, async ({ page, pageErrors }) => {
     await page.setViewportSize({ width, height })

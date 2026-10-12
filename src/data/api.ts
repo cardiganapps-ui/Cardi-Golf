@@ -4,6 +4,7 @@
 import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { supabase } from '../lib/supabase'
+import { step } from '../lib/telemetry'
 import { entryChanged } from './entryEvents'
 import { mapTournament, type Row } from './mappers'
 
@@ -47,6 +48,7 @@ export async function createTournament(input: { name: string; tagline?: string; 
       p_tagline: input.tagline ?? null,
     }),
   )
+  step('tournament_created')
   return mapTournament(row as Row)
 }
 
@@ -162,6 +164,7 @@ export type ClaimResult =
 export async function claimPlayer(playerId: string, pin: string): Promise<ClaimResult> {
   const res = await supabase().rpc('claim_player', { p_player_id: playerId, p_pin: pin })
   if (res.error) throw ApiError.from(res.error)
+  step((res.data as ClaimResult | null)?.ok ? 'pin_claimed' : 'pin_refused')
   return res.data as ClaimResult
 }
 

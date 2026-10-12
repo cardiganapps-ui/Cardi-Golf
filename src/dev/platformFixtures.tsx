@@ -258,6 +258,42 @@ const api: PlatformApi = {
       flags: { newAccountsPaused: false, newTournamentsPaused: false, maintenanceBanner: null },
     }
   },
+  async telemetry() {
+    return {
+      since: ago(24),
+      events: 1_284,
+      errors: [
+        { name: 'unhandledrejection', summary: 'TypeError: Load failed', route: '/t/:slug/tarjeta', build: 1791700000, buildSha: 'abc1234', count: 7, devices: 3, first_at: ago(20), last_at: ago(0.5) },
+        { name: 'root_boundary', summary: "TypeError: Cannot read properties of undefined (reading 'holes')", route: '/t/:slug/juegos', build: 1791600000, buildSha: '9f8e7d6', count: 1, devices: 1, first_at: ago(6), last_at: ago(6) },
+      ],
+      sync: [
+        { name: 'apply_lag', count: 412, p50: 740, p95: 1_630, over2s: 9 },
+        { name: 'save_ack', count: 118, p50: 310, p95: 980, over2s: 1 },
+      ],
+      syncByTournament: [{ tournamentId: 'f-nacho', tournament: "Nacho's Bachelor Invitational", count: 412, p50: 740, p95: 1_630 }],
+      vitals: [
+        { name: 'cls', count: 60, p75: 0.04 },
+        { name: 'inp', count: 55, p75: 180 },
+        { name: 'lcp', count: 61, p75: 2_100 },
+      ],
+      funnel: [
+        { name: 'hole_saved', count: 118, people: 6 },
+        { name: 'tournament_open', count: 40, people: 12 },
+        { name: 'pin_claimed', count: 12, people: 12 },
+      ],
+      devices: {
+        seen: 14,
+        withPending: 1,
+        pending: 2,
+        rejected: 0,
+        oldestPendingAt: ago(0.2),
+        builds: [
+          { build: 1791700000, buildSha: 'abc1234', count: 12 },
+          { build: 1791600000, buildSha: '9f8e7d6', count: 2 },
+        ],
+      },
+    }
+  },
   async setFlag(key, value) {
     return {
       newAccountsPaused: key === 'new_accounts_paused' && value === true,

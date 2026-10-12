@@ -4,6 +4,7 @@
  * the results. Also the rivalry strokes for the Tarjeta.
  */
 import { supabase } from '../lib/supabase'
+import { step } from '../lib/telemetry'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import type { TournamentSettings } from '../engine/settings/schema'
@@ -29,6 +30,7 @@ export async function createQuickRound({ crewId, ...input }: QuickRoundInput): P
   const { data, error } = await supabase().rpc('create_quick_round', { p: input })
   if (error) throw ApiError.from(error)
   const created = data as { id: string; slug: string }
+  step('quick_round_created')
   if (crewId) await setTournamentCrew(created.id, crewId)
   return created
 }

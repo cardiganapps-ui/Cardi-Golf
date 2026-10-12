@@ -58,6 +58,16 @@ export const BACKUP_TABLES: Record<string, string> = {
   backup_runs: 'id',
 }
 
+/**
+ * Tables the backup leaves out on purpose, each with why. The privacy notice
+ * says telemetry is gone after 30 days (devices after 90), and the nightly
+ * backups are never deleted, so a backed-up copy would keep it forever.
+ */
+export const NOT_BACKED_UP: Record<string, string> = {
+  client_events: 'telemetry, kept 30 days (STRAT-02)',
+  device_status: 'telemetry, kept 90 days (STRAT-02)',
+}
+
 /** R2 object key for a backup taken at `at` (UTC date). */
 export function backupKey(at: Date): string {
   return `backups/${at.toISOString().slice(0, 10)}.json.gz`

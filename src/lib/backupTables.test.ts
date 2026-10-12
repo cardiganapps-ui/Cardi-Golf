@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { BACKUP_TABLES, backupKey } from './backupTables'
+import { BACKUP_TABLES, NOT_BACKED_UP, backupKey } from './backupTables'
 
 const dir = join(process.cwd(), 'supabase/migrations')
 const sql = readdirSync(dir)
@@ -20,8 +20,12 @@ const created = new Set(blocks.keys())
 
 describe('nightly backup', () => {
   it('covers every table the migrations create', () => {
-    const missing = [...created].filter((t) => !(t in BACKUP_TABLES))
+    const missing = [...created].filter((t) => !(t in BACKUP_TABLES) && !(t in NOT_BACKED_UP))
     expect(missing).toEqual([])
+  })
+
+  it('leaves out only tables some migration creates, never one it also copies', () => {
+    expect(Object.keys(NOT_BACKED_UP).filter((t) => !created.has(t) || t in BACKUP_TABLES)).toEqual([])
   })
 
   it('lists only tables some migration creates', () => {

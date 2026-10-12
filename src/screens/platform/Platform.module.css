@@ -466,6 +466,13 @@ a.row:active {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+.errorLine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  overflow-wrap: anywhere;
+}
+
 .healthCard {
   display: flex;
   flex-direction: column;
