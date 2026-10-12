@@ -119,6 +119,20 @@ let starting: Promise<Session> | null = null
  * One at a time: two callers at once (the gate's retry and the PIN) used to
  * start two anonymous users on a device with none.
  */
+/**
+ * The session this phone already has, never a new one: null when it has
+ * none, so a link opened shows the tournament's faces and the consent line
+ * before any user exists for this browser (TRUST-05); the anonymous user is
+ * started by the step that needs it (the PIN, ensureSession). A stored
+ * session that can't be confirmed now throws, as in ensureSession.
+ */
+export async function sessionIfAny(): Promise<Session | null> {
+  const { data } = await withTimeout(supabase().auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
+  if (data.session) return data.session
+  if (hasStoredSession()) throw new SessionUnavailableError()
+  return null
+}
+
 export function ensureSession(): Promise<Session> {
   starting ??= startSession().finally(() => {
     starting = null

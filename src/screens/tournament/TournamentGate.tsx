@@ -1,7 +1,8 @@
 /**
- * `/t/:slug`: looks the tournament up, ensures a session (anonymous if
- * needed), and either shows Entrar (face grid + PIN) or renders the shell
- * with the tournament store loaded.
+ * `/t/:slug`: looks the tournament up and either shows Entrar (face grid +
+ * PIN) or renders the shell with the tournament store loaded. A browser with
+ * no session is shown Entrar without one: its anonymous user starts with the
+ * PIN, under the consent line (TRUST-05), not on opening the link.
  *
  * Cache first (PERF-08, REL-03, REL-15): a phone that has opened this
  * tournament before shows the boards it saved at once, and the live
@@ -18,7 +19,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { Wordmark } from '../../components/Wordmark'
-import { ensureSession, signedOutOnPurpose, signOutsAsked, useAuth } from '../../data/auth'
+import { sessionIfAny, signedOutOnPurpose, signOutsAsked, useAuth } from '../../data/auth'
 import { lookupTournament, myMembership, releaseDevice, type LookupResult } from '../../data/api'
 import { myDeviceClaim } from '../../data/profiles'
 import { setLastTournament } from '../../data/session'
@@ -161,7 +162,7 @@ export function TournamentGate() {
     }
     asking.current++
     try {
-      await ensureSession()
+      const session = await sessionIfAny()
       if (stale()) return
       const lookup = await lookupTournament(slug)
       if (stale()) return
@@ -181,6 +182,14 @@ export function TournamentGate() {
           // The phone's storage refused: the writes stay queued, and the next «no existe» tries again.
           .catch(() => undefined)
         setPhase({ kind: 'notFound', dropped: 0 })
+        return
+      }
+      // Nobody yet on this browser: the faces, and the PIN starts the session.
+      if (!session) {
+        settled.current = true
+        recheck.current = false
+        failures.current = 0
+        setPhase({ kind: 'enter', lookup })
         return
       }
       const m = await myMembership(lookup.id)

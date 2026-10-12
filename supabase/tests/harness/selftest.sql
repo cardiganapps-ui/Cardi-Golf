@@ -38,13 +38,13 @@ select harness.check(:n = 0 and :nt = 0, 'anon (no session) reads 0 players and 
 select set_config('harness.code', :'code_a', true) \g /dev/null
 set local role anon;
 do $$ begin
-  perform public.lookup_tournament(current_setting('harness.code'));
-  perform set_config('harness.out', 'no error', true);
+  perform set_config('harness.out', coalesce(public.lookup_tournament(current_setting('harness.code')) ->> 'joinCode', 'no code'), true);
 exception when others then
   perform set_config('harness.out', sqlstate, true);
 end $$;
 reset role;
-select harness.check(current_setting('harness.out') = '42501', 'anon cannot call lookup_tournament (42501 Sin sesión)');
+-- Since 0040 (TRUST-05): a link shows its faces before any user exists, never the join code.
+select harness.check(current_setting('harness.out') = 'no code', 'anon gets a tournament''s faces from lookup_tournament, never its join code');
 
 -- 2. an anonymous device with no claim
 select set_config('request.jwt.claims', harness.claims(:'dev_x'), true) \g /dev/null

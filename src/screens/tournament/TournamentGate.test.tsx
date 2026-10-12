@@ -21,6 +21,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const server = vi.hoisted(() => ({
   ensureSession: vi.fn(),
+  /** The session the phone already has (auth's `sessionIfAny`): the stored one, as ensureSession gives it, unless a test says none. */
+  sessionIfAny: vi.fn(),
   lookupTournament: vi.fn(),
   myMembership: vi.fn(),
   releaseDevice: vi.fn(async () => undefined),
@@ -28,6 +30,7 @@ const server = vi.hoisted(() => ({
   myDeviceClaim: vi.fn(async (): Promise<{ playerId: string; tournamentId: string } | null> => null),
 }))
 vi.mock('../../data/auth', () => ({
+  sessionIfAny: () => server.sessionIfAny(),
   ensureSession: server.ensureSession,
   signedOutOnPurpose: () => false,
   signOutsAsked: () => 0,
@@ -109,6 +112,8 @@ beforeEach(async () => {
   await clearCached(id)
   useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
   server.ensureSession.mockReset()
+  server.sessionIfAny.mockReset()
+  server.sessionIfAny.mockImplementation(() => server.ensureSession())
   server.lookupTournament.mockReset()
   server.myMembership.mockReset()
   vi.mocked(adoptQueuedWrites).mockClear()
@@ -194,6 +199,26 @@ describe('recovering when the signal comes back (REL-02)', () => {
       { timeout: 5000 },
     )
     expect(load).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('a browser with no session yet (TRUST-05)', () => {
+  it('sees Entrar from the link, with no user started for it and no membership asked', async () => {
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    open()
+    expect(await screen.findByText('Entrar')).toBeTruthy()
+    expect(server.lookupTournament).toHaveBeenCalledWith(slug)
+    expect(server.ensureSession).not.toHaveBeenCalled()
+    expect(server.myMembership).not.toHaveBeenCalled()
+  })
+
+  it('a link that leads nowhere says «no existe», still with no user started', async () => {
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(null)
+    open()
+    expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
+    expect(server.ensureSession).not.toHaveBeenCalled()
   })
 })
 
