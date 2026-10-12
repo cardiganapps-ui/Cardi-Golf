@@ -10,7 +10,10 @@ import type { User } from '@supabase/supabase-js'
 
 const rpc = vi.fn()
 const getSession = vi.fn()
-vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession } }), authSettings: async () => null }))
+/** This phone's PIN claim (`device_sessions`, RLS: its own row): none unless a test says so. */
+const claim = vi.fn(async () => ({ data: null as { player_id: string } | null, error: null }))
+const from = vi.fn(() => ({ select: () => ({ maybeSingle: claim }) }))
+vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession }, from }), authSettings: async () => null }))
 
 vi.mock('./legalUpdateState', async (orig) => ({ ...(await orig<typeof import('./legalUpdateState')>()), SETTLE_MS: 0 }))
 const { LegalUpdate } = await import('./LegalUpdate')

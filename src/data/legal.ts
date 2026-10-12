@@ -34,8 +34,13 @@ const PENDING_MS = 7 * 24 * 60 * 60 * 1000
 interface Stored {
   /** Accepted on this phone by `uid`, not yet on the server: it goes only under that user. */
   pending?: { uid: string; context: LegalContext; versions: LegalVersions; at: number }
-  /** What the server holds for this user, as last read: spares a request on every open. */
-  seen?: { uid: string; privacy: string | null; terms: string | null }
+  /**
+   * What the server holds for this user, as last read: spares a request on
+   * every open. `claimed`: for an anonymous user with no record, whether it
+   * holds a PIN claim (it entered a tournament: asked) or not (it only
+   * opened a link: not asked).
+   */
+  seen?: { uid: string; privacy: string | null; terms: string | null; claimed?: boolean }
 }
 
 /** Which documents to show again; `first`: an account with no record at all, shown both. */
@@ -185,13 +190,24 @@ async function sendPending(): Promise<boolean> {
   return dropPending(p, { uid: p.uid, privacy: r.mine.privacy?.version ?? null, terms: r.mine.terms?.version ?? null })
 }
 
+/** Whether this phone entered a tournament with a PIN (its claim, if any; RLS shows only its own). */
+async function holdsClaim(): Promise<boolean | null> {
+  try {
+    const { data, error } = await supabase().from('device_sessions').select('player_id').maybeSingle()
+    return error ? null : data != null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Which documents to show this user again: those whose newest accepted
- * version is older than the one the app shows. An account with no record
- * (signed in from an email link, or before 0038) is shown both, once; an
- * anonymous user with none has only opened a link, and its first consent
- * point (the PIN) records it. Null when it can't tell (no session, no signal,
- * a server without 0038).
+ * version is older than the one the app shows. With no record at all, both,
+ * for an account (signed in from an email link, or before 0038) and for a
+ * phone that entered with a PIN (before 0038, or its acceptance never got
+ * through); not for an anonymous user that only opened a link: its first
+ * consent point (the PIN) records it. Null when it can't tell (no session, no
+ * signal, a server without 0038).
  */
 export async function legalUpdate(): Promise<LegalChange | null> {
   const me = await signedIn()
@@ -199,8 +215,8 @@ export async function legalUpdate(): Promise<LegalChange | null> {
   const cur = currentVersions()
   const stored = read()
   const none = { privacy: false, terms: false }
-  const judge = (seen: { privacy: string | null; terms: string | null }): LegalChange => {
-    if (seen.privacy == null && seen.terms == null) return me.anonymous ? none : { privacy: true, terms: true, first: true }
+  const judge = (seen: { privacy: string | null; terms: string | null; claimed?: boolean }): LegalChange => {
+    if (seen.privacy == null && seen.terms == null) return me.anonymous && !seen.claimed ? none : { privacy: true, terms: true, first: true }
     return {
       privacy: seen.privacy == null || compareVersions(seen.privacy, cur.privacy) < 0,
       terms: seen.terms == null || compareVersions(seen.terms, cur.terms) < 0,
@@ -211,14 +227,19 @@ export async function legalUpdate(): Promise<LegalChange | null> {
   // What the server said last time, when it can't have changed: up to date, or an anonymous phone that never accepted.
   if (stored.seen?.uid === me.uid) {
     const up = stored.seen.privacy === cur.privacy && stored.seen.terms === cur.terms
-    if (up || (me.anonymous && stored.seen.privacy == null && stored.seen.terms == null)) return judge(stored.seen)
+    if (up || (me.anonymous && stored.seen.privacy == null && stored.seen.terms == null && stored.seen.claimed === false)) return judge(stored.seen)
   }
   try {
     const res = await supabase().rpc('my_legal_acceptances')
     if (res.error) return null
     const mine = res.data as MyAcceptances | null
     if (!mine || typeof mine !== 'object') return null
-    const seen = { uid: me.uid, privacy: mine.privacy?.version ?? null, terms: mine.terms?.version ?? null }
+    const seen: NonNullable<Stored['seen']> = { uid: me.uid, privacy: mine.privacy?.version ?? null, terms: mine.terms?.version ?? null }
+    if (me.anonymous && seen.privacy == null && seen.terms == null) {
+      const claimed = await holdsClaim()
+      if (claimed == null) return null
+      seen.claimed = claimed
+    }
     write({ ...read(), seen })
     return judge(seen)
   } catch {

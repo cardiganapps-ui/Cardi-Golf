@@ -10,7 +10,10 @@ import type { User } from '@supabase/supabase-js'
 
 const rpc = vi.fn()
 const getSession = vi.fn()
-vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession } }), authSettings: async () => null }))
+/** This phone's PIN claim (`device_sessions`, RLS: its own row): none unless a test says so. */
+const claim = vi.fn(async () => ({ data: null as { player_id: string } | null, error: null }))
+const from = vi.fn(() => ({ select: () => ({ maybeSingle: claim }) }))
+vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession }, from }), authSettings: async () => null }))
 
 const { acceptLegal, compareVersions, currentVersions, flushLegal, forgetLegal, legalUpdate } = await import('./legal')
 const { useAuth } = await import('./auth')
@@ -31,6 +34,7 @@ const sent = (context: string, user = expect.any(String)) => ({ p_privacy: cur.p
 
 beforeEach(() => {
   rpc.mockReset()
+  claim.mockClear()
   localStorage.clear()
   signIn('u1')
 })
@@ -168,6 +172,18 @@ describe('legalUpdate', () => {
     expect(await legalUpdate()).toEqual({ privacy: false, terms: false })
     expect(await legalUpdate()).toEqual({ privacy: false, terms: false })
     expect(rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it('a phone that entered with a PIN and has no record (before 0038, or it never got through) is shown both (round 2, P3)', async () => {
+    rpc.mockResolvedValue(answer(null, null))
+    claim.mockResolvedValueOnce({ data: { player_id: 'p1' }, error: null })
+    expect(await legalUpdate()).toEqual({ privacy: true, terms: true, first: true })
+  })
+
+  it('an anonymous phone whose claim can\'t be read is not judged', async () => {
+    rpc.mockResolvedValue(answer(null, null))
+    claim.mockResolvedValueOnce({ data: null, error: { code: 'PGRST301', message: 'x' } } as never)
+    expect(await legalUpdate()).toBeNull()
   })
 
   it('an account with no record (an email link, or before 0038) is shown both, until it says «Entendido» (PR 121 verifier, P2)', async () => {
