@@ -26,14 +26,14 @@ export function ExplanationSheet({ why, open, onClose, title }: { why: Explanati
 }
 
 /** "¿Cómo se calculó?": a quiet trigger that opens the explanation steps (§2, §6). */
-export function HowCalculated({ why, children, label }: { why: Explanation | Explanation[]; children?: ReactNode; label?: string }) {
+export function HowCalculated({ why, children, label, ariaLabel, title }: { why: Explanation | Explanation[]; children?: ReactNode; label?: string; ariaLabel?: string; title?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className={`btn btn--ghost btn--sm ${styles.trigger}`} onClick={() => setOpen(true)}>
+      <button type="button" className={`btn btn--ghost btn--sm ${styles.trigger}`} onClick={() => setOpen(true)} aria-label={ariaLabel} aria-haspopup="dialog">
         {children ?? (label ?? t.money.howCalculated)}
       </button>
-      <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} />
+      <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} title={title} />
     </>
   )
 }
