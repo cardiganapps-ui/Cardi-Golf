@@ -20,7 +20,7 @@ import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import { withTimeout } from '../lib/timeout'
 import { serverAnswering } from '../lib/fetchWithTimeout'
-import { saveAnswered, setDeviceSnapshot, step } from '../lib/telemetry'
+import { notePushed, outboxChanged, saveAnswered, setDeviceSnapshot, step } from '../lib/telemetry'
 import type { Score, Snapshot } from '../engine/types'
 import { SESSION_TIMEOUT_MS, useAuth } from './auth'
 import { liveClock, liveSeq, registerOverlay, serverReadSince, useTournament } from './tournamentStore'
@@ -271,7 +271,7 @@ let timer: ReturnType<typeof setTimeout> | null = null
 /** When the server last answered a push from this tab, for the heartbeat. */
 let lastAnswerAt: number | null = null
 
-// The heartbeat says what this phone still has to send, across tournaments (STRAT-02).
+// The heartbeat says what this phone still has to send, across tournaments (STRAT-02); a change says so soon.
 setDeviceSnapshot(() => {
   const oldest = queue.reduce<number | null>((m, x) => (m == null || x.createdAt < m ? x.createdAt : m), null)
   return {
@@ -300,6 +300,7 @@ function publish(extra: Partial<OutboxState> = {}) {
     conflicts: conflictsAll.filter((x) => x.tournamentId === tid),
     ...extra,
   })
+  outboxChanged()
 }
 
 /** What this build knows how to send. A newer build may queue other kinds. */
@@ -1063,16 +1064,19 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
       mutation_id: p.mutation_id,
       entries: p.entries.map((e) => ({ player_id: e.player_id, fields: e.fields, base: e.base ?? {}, ...(e.auto ? { auto: true } : {}) })),
     }
+    // Its echoes are this phone's, not another's change (STRAT-02), from before it goes out.
+    notePushed(p.entries.map((e) => `${p.round_id}:${e.player_id}:${p.hole}`))
     const sentAt = Date.now()
     const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
     if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
     lastAnswerAt = Date.now()
-    // How long the server took to answer, a clock sample, and which rows are this phone's own echo (STRAT-02).
-    saveAnswered(sentAt, lastAnswerAt, (data as HoleAnswer).rows, p.entries.map((e) => `${p.round_id}:${e.player_id}:${p.hole}`))
+    // How long the server took to answer, and a clock sample unless the answer is a replay (STRAT-02).
+    saveAnswered(sentAt, lastAnswerAt, (data as HoleAnswer).rows, (data as HoleAnswer).replayed === true)
     return data as HoleAnswer
   }
   if (item.kind === 'score') {
+    notePushed([`${item.payload.round_id}:${item.payload.player_id}:${item.payload.hole}`])
     const { data, error } = await sb.from('scores').upsert(item.payload, { onConflict: 'round_id,player_id,hole' }).select().setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
     return stored('scores', data)

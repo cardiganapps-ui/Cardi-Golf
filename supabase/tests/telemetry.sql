@@ -105,6 +105,26 @@ select pg_temp.try_log(jsonb_build_array(jsonb_build_object('deviceId', :'phone'
 reset role;
 select harness.check((select count(*) from public.client_events where name = 'viejo') = 0, 'events older than 30 days are pruned');
 
+-- A batch with events the server can't read keeps the rest: a newline before an address, a number
+-- past double precision, secrets nested in an object or an array (PR 116's verifier).
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_log(jsonb_build_array(
+  jsonb_build_object('deviceId', :'phone', 'kind', 'error', 'name', 'poison.newline', 'data', jsonb_build_object('message', E'boom\nana@polo.test\t' || chr(1) || 'x@y.io')),
+  '{"deviceId": "00000000-0000-4000-8000-000000000001", "kind": "sync", "name": "poison.huge", "value": 1e400}'::jsonb,
+  jsonb_build_object('deviceId', :'phone', 'kind', 'funnel', 'name', 'poison.nested',
+    'data', jsonb_build_object('ctx', jsonb_build_object('password', 'x', 'pin', '1234', 'note', 'de ana@polo.test'), 'list', jsonb_build_array(jsonb_build_object('token', 't'), 'eyJa.eyJb.c'))),
+  jsonb_build_object('deviceId', :'phone', 'kind', 'funnel', 'name', 'poison.after')
+)) as poison \gset
+reset role;
+select harness.check(:'poison' = '4', 'every event of the batch is kept: ' || :'poison');
+select harness.check((select data ->> 'message' = E'boom\n[correo]\t' || chr(1) || '[correo]' from public.client_events where name = 'poison.newline'),
+  'an address after a newline or a control character is taken out, the rest kept');
+select harness.check((select value is null from public.client_events where name = 'poison.huge'), 'a number past double precision is kept as no value');
+select harness.check((select data = '{"ctx": {"note": "de [correo]"}, "list": [{}, "[token]"]}'::jsonb from public.client_events where name = 'poison.nested'),
+  'secret keys and addresses go at every depth');
+delete from public.client_events where name like 'poison.%';
+
 -- The heartbeat: its tournament and player when it is in it, nothing of another.
 select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
 set local role authenticated;
@@ -122,6 +142,20 @@ select pg_temp.try_beat(jsonb_build_object('deviceId', :'phone', 'tournamentId',
 reset role;
 select harness.check((select tournament_id is null and player_id is null and pending = 0 from public.device_status where device_id = :'phone'),
   'a tournament the phone is not in is not kept; a changed count updates at once');
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_beat(jsonb_build_object('deviceId', :'phone', 'tournamentId', :'t_a', 'pending', 2)) \g /dev/null
+reset role;
+
+-- A browser that keeps inventing device ids keeps five; counts stop at 500.
+select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
+set local role authenticated;
+select pg_temp.try_beat(jsonb_build_object('deviceId', gen_random_uuid(), 'tournamentId', :'t_a', 'pending', 999999)) from generate_series(1, 8) \g /dev/null
+reset role;
+select harness.check((select count(*) from public.device_status where auth_user_id = :'dev_a') = 5
+  and (select max(pending) from public.device_status where auth_user_id = :'dev_a') = 500,
+  'eight invented phones leave the newest five, none above 500 holes');
+delete from public.device_status where auth_user_id = :'dev_a' and device_id <> :'phone';
 select set_config('request.jwt.claims', harness.claims(:'dev_a'), true) \g /dev/null
 set local role authenticated;
 select pg_temp.try_beat(jsonb_build_object('deviceId', :'phone', 'tournamentId', :'t_a', 'pending', 2)) \g /dev/null

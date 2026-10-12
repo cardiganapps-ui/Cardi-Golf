@@ -8,13 +8,15 @@
 -- outbox still holds. Nothing here is a fact of a tournament: the boards never
 -- read it.
 --
--- Written only through two definer RPCs, size-capped and rate-limited, with
--- secret-shaped keys and email addresses taken out on the way in. A
+-- Written only through two definer RPCs, size-capped and rate-limited (600
+-- events an hour and five phones per account), with secret-shaped keys, email
+-- addresses and tokens taken out on the way in, at any depth. A
 -- tournament id is kept only when the phone belongs to that tournament. Kept
 -- 30 days (events) and 90 (devices), pruned by the writes themselves (the
 -- harness has no pg_cron). The platform admin reads it in Salud
 -- (platform_telemetry); a Comité reads its tournament's phones
--- (tournament_devices). Deleting an account deletes its rows (cascade).
+-- (tournament_devices). Deleting an account deletes its rows (cascade). Not
+-- in the nightly backup: what is pruned here is gone.
 
 create table public.client_events (
   id bigint generated always as identity primary key,
@@ -59,20 +61,44 @@ create index device_status_seen on public.device_status (last_seen_at);
 alter table public.device_status enable row level security;
 revoke all on public.device_status from public, anon, authenticated;
 
-/** Internal: a client's diagnostic object without secret-shaped keys, email addresses or tokens. */
+/** Internal: one value of a client's diagnostic object, without secret-shaped keys, email addresses or tokens, at any depth. */
+create or replace function public.telemetry_scrub_value(v jsonb, depth integer default 0)
+returns jsonb
+language plpgsql immutable
+set search_path = public
+as $$
+declare
+  out jsonb;
+begin
+  if v is null then return null; end if;
+  if depth > 4 then return 'null'::jsonb; end if;
+  case jsonb_typeof(v)
+    when 'string' then
+      return to_jsonb(regexp_replace(regexp_replace(v #>> '{}',
+        '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[correo]', 'g'),
+        'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[token]', 'g'));
+    when 'object' then
+      select coalesce(jsonb_object_agg(k, public.telemetry_scrub_value(x, depth + 1)), '{}'::jsonb) into out
+      from jsonb_each(v) e (k, x)
+      where k !~* '(email|correo|mail|pin|token|password|secret|apikey|api_key|authorization|cookie|phone|tel)';
+      return out;
+    when 'array' then
+      select coalesce(jsonb_agg(public.telemetry_scrub_value(x, depth + 1)), '[]'::jsonb) into out from jsonb_array_elements(v) a (x);
+      return out;
+    else
+      return v;
+  end case;
+end;
+$$;
+revoke execute on function public.telemetry_scrub_value(jsonb, integer) from public, anon, authenticated;
+
+/** Internal: a client's diagnostic object, scrubbed (anything but an object reads as {}). */
 create or replace function public.telemetry_scrub(j jsonb)
 returns jsonb
 language sql immutable
 set search_path = public
 as $$
-  select case when j is null or jsonb_typeof(j) <> 'object' then '{}'::jsonb else
-    regexp_replace(
-      regexp_replace(
-        (select coalesce(jsonb_object_agg(k, v), '{}'::jsonb) from jsonb_each(j) e (k, v)
-          where k !~* '(email|correo|mail|pin|token|password|secret|apikey|api_key|authorization|cookie|phone|tel)')::text,
-        '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[correo]', 'g'),
-      'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[token]', 'g')::jsonb
-  end
+  select case when j is null or jsonb_typeof(j) <> 'object' then '{}'::jsonb else public.telemetry_scrub_value(j) end
 $$;
 revoke execute on function public.telemetry_scrub(jsonb) from public, anon, authenticated;
 
@@ -104,41 +130,47 @@ as $$
 declare
   uid uuid := auth.uid();
   recent integer;
-  kept integer;
+  kept integer := 0;
+  e jsonb;
+  tid uuid;
+  dev uuid;
+  d jsonb;
 begin
   if uid is null then raise exception 'Sin sesión' using errcode = '42501'; end if;
   if p_events is null or jsonb_typeof(p_events) <> 'array' or jsonb_array_length(p_events) > 50 then
     raise exception 'Hasta 50 eventos por envío' using errcode = '22023';
   end if;
+  -- One account's batches count one after another, so two at once can't both pass the cap.
+  perform pg_advisory_xact_lock(hashtext('telemetry:' || uid::text));
   select count(*) into recent from public.client_events where auth_user_id = uid and at > now() - interval '1 hour';
-  if recent >= 600 then return 0; end if;
 
-  with raw as (
-    select e, i from jsonb_array_elements(p_events) with ordinality x (e, i) where jsonb_typeof(e) = 'object'
-  ), ok as (
-    select public.try_uuid(e ->> 'deviceId') as device_id,
-           public.try_uuid(e ->> 'tournamentId') as tid,
-           case when e ->> 'build' ~ '^\d{1,12}$' then (e ->> 'build')::bigint end as build,
-           case when e ->> 'buildSha' ~ '^[A-Za-z0-9._-]{1,40}$' then e ->> 'buildSha' end as build_sha,
-           e ->> 'kind' as kind,
-           e ->> 'name' as name,
-           case when jsonb_typeof(e -> 'value') = 'number' and abs((e ->> 'value')::double precision) < 1e12 then (e ->> 'value')::double precision end as value,
-           public.telemetry_scrub(e -> 'data') as data,
-           least(public.telemetry_ts(e ->> 'at'), now()) as client_at,
-           row_number() over (order by i) as n
-    from raw
-  )
-  insert into public.client_events (auth_user_id, device_id, tournament_id, build, build_sha, kind, name, value, data, client_at)
-  select uid, o.device_id,
-         case when o.tid is not null and public.is_tournament_member(o.tid) then o.tid end,
-         o.build, o.build_sha, o.kind, o.name, o.value, o.data, o.client_at
-  from ok o
-  where o.device_id is not null
-    and o.kind in ('error', 'sync', 'vital', 'funnel')
-    and o.name ~ '^[a-z][a-z0-9_.:-]{0,63}$'
-    and octet_length(o.data::text) <= 2048
-    and o.n <= 600 - recent;
-  get diagnostics kept = row_count;
+  for e in select x from jsonb_array_elements(p_events) a (x) loop
+    exit when recent + kept >= 600;
+    -- An event the server can't read is skipped, never the batch.
+    begin
+      if jsonb_typeof(e) <> 'object' then continue; end if;
+      dev := public.try_uuid(e ->> 'deviceId');
+      if dev is null or coalesce(e ->> 'kind', '') not in ('error', 'sync', 'vital', 'funnel')
+         or coalesce(e ->> 'name', '') !~ '^[a-z][a-z0-9_.:-]{0,63}$' then
+        continue;
+      end if;
+      d := public.telemetry_scrub(e -> 'data');
+      if octet_length(d::text) > 2048 then continue; end if;
+      tid := public.try_uuid(e ->> 'tournamentId');
+      if tid is not null and not public.is_tournament_member(tid) then tid := null; end if;
+      insert into public.client_events (auth_user_id, device_id, tournament_id, build, build_sha, kind, name, value, data, client_at)
+      values (uid, dev, tid,
+              case when e ->> 'build' ~ '^\d{1,12}$' then (e ->> 'build')::bigint end,
+              case when e ->> 'buildSha' ~ '^[A-Za-z0-9._-]{1,40}$' then e ->> 'buildSha' end,
+              e ->> 'kind', e ->> 'name',
+              case when jsonb_typeof(e -> 'value') = 'number' and abs((e ->> 'value')::numeric) < 1e12 then (e ->> 'value')::double precision end,
+              d,
+              least(public.telemetry_ts(e ->> 'at'), now()));
+      kept := kept + 1;
+    exception when others then
+      null;
+    end;
+  end loop;
 
   -- Retention: 30 days, a few hundred rows at a time.
   delete from public.client_events
@@ -149,7 +181,7 @@ $$;
 revoke execute on function public.log_client_events(jsonb) from public, anon;
 grant execute on function public.log_client_events(jsonb) to authenticated;
 
-/** A phone's heartbeat: its build and what its outbox holds, at most once every 15 seconds. */
+/** A phone's heartbeat: its build and what its outbox holds (counts up to 500), at most once every 15 seconds unless a count changes; five phones per account. */
 create or replace function public.heartbeat(p jsonb)
 returns void
 language plpgsql volatile security definer
@@ -175,8 +207,8 @@ begin
           case when p ->> 'buildSha' ~ '^[A-Za-z0-9._-]{1,40}$' then p ->> 'buildSha' end,
           case when p ->> 'platform' in ('ios', 'android', 'desktop', 'other') then p ->> 'platform' end,
           case when jsonb_typeof(p -> 'standalone') = 'boolean' then (p ->> 'standalone')::boolean end,
-          case when p ->> 'pending' ~ '^\d{1,6}$' then (p ->> 'pending')::integer else 0 end,
-          case when p ->> 'rejected' ~ '^\d{1,6}$' then (p ->> 'rejected')::integer else 0 end,
+          case when p ->> 'pending' ~ '^\d{1,6}$' then least((p ->> 'pending')::integer, 500) else 0 end,
+          case when p ->> 'rejected' ~ '^\d{1,6}$' then least((p ->> 'rejected')::integer, 500) else 0 end,
           least(public.telemetry_ts(p ->> 'oldestPendingAt'), now()),
           least(public.telemetry_ts(p ->> 'lastSyncAt'), now()))
   on conflict (auth_user_id, device_id) do update
@@ -186,6 +218,11 @@ begin
    where d.last_seen_at < now() - interval '15 seconds'
       or d.pending is distinct from excluded.pending or d.rejected is distinct from excluded.rejected
       or d.tournament_id is distinct from excluded.tournament_id;
+
+  -- At most five phones per account: a browser that keeps inventing device ids replaces its own oldest.
+  delete from public.device_status d
+   where d.auth_user_id = uid
+     and d.device_id not in (select x.device_id from public.device_status x where x.auth_user_id = uid order by x.last_seen_at desc, x.device_id limit 5);
 
   -- Retention: a phone not seen in 90 days goes.
   delete from public.device_status

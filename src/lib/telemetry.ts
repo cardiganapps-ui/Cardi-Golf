@@ -19,9 +19,12 @@
  */
 import { BUILD } from './build'
 import { supabase, supabaseConfigured } from './supabase'
+import { withTimeout } from './timeout'
 
 export type EventKind = 'error' | 'sync' | 'vital' | 'funnel'
 export interface ClientEvent {
+  /** This phone's own id for the event: what was sent is taken off the queue by it. */
+  id: string
   deviceId: string
   tournamentId: string | null
   build: number
@@ -64,11 +67,22 @@ const ownPushes = new Map<string, number>()
 /** This phone's clock minus the server's, in ms, from the best (shortest round trip) sample; null until one. */
 let offset: { ms: number; rtt: number } | null = null
 let snapshot: () => DeviceSnapshot = () => ({ pending: 0, rejected: 0, oldestPendingAt: null, lastSyncAt: null })
+/** Ids of the events this tab queued or restored: another tab's, in storage, are left for it. */
+const handled = new Set<string>()
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+let beatTimer: ReturnType<typeof setTimeout> | null = null
+let lastBeatAt = 0
+let lastBeat: { pending: number; rejected: number } | null = null
+/** What a heartbeat says at most this often when only a count changed (the server throttles the rest). */
+const BEAT_MIN_MS = 15_000
 const once = new Set<string>()
+/** The JavaScript engine's own errors: their messages name code, never a person. */
+const BUILTIN = new Set(['TypeError', 'RangeError', 'SyntaxError', 'ReferenceError', 'EvalError', 'URIError', 'AggregateError'])
 
-/** Telemetry is on in a production build with Supabase configured, off in tests, dev and fixtures. */
-export function telemetryAllowed(env: { PROD?: boolean; MODE?: string } = import.meta.env): boolean {
-  return !!env.PROD && env.MODE !== 'test' && supabaseConfigured
+type Env = { PROD?: boolean; MODE?: string; VITE_DESIGN_ROUTES?: string }
+/** Telemetry is on in a production build with Supabase configured, off in tests, dev and the fixtures build. */
+export function telemetryAllowed(env: Env = import.meta.env): boolean {
+  return !!env.PROD && env.MODE !== 'test' && env.VITE_DESIGN_ROUTES !== '1' && supabaseConfigured
 }
 
 function newId(): string {
@@ -89,20 +103,32 @@ export function getDeviceId(): string {
   return deviceId
 }
 
-function save() {
+function stored(): ClientEvent[] {
   try {
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-MAX_QUEUE)))
+    const kept = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
+    return Array.isArray(kept) ? kept.filter((e) => e && typeof e.name === 'string' && typeof e.id === 'string') : []
+  } catch {
+    return []
+  }
+}
+/** Write this tab's queue, keeping what another tab left there. */
+function saveNow() {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = null
+  try {
+    const others = stored().filter((e) => !handled.has(e.id))
+    localStorage.setItem(QUEUE_KEY, JSON.stringify([...others, ...queue].slice(-MAX_QUEUE)))
   } catch {
     /* storage full or blocked: the events stay in memory */
   }
 }
+/** Off the hot path: a burst of events is one write. */
+function save() {
+  saveTimer ??= setTimeout(saveNow, 1000)
+}
 function restore() {
-  try {
-    const kept = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
-    if (Array.isArray(kept)) queue = kept.filter((e) => e && typeof e.name === 'string').slice(-MAX_QUEUE)
-  } catch {
-    queue = []
-  }
+  queue = stored().slice(-MAX_QUEUE)
+  for (const e of queue) handled.add(e.id)
 }
 
 /** Short and free of anything that names a person: an address or a token becomes a placeholder. */
@@ -118,7 +144,8 @@ export function routeOf(path: string): string {
   return path
     .replace(/^\/t\/[^/]+/, '/t/:slug')
     .replace(/^\/p\/[^/]+/, '/p/:handle')
-    .replace(/^\/c\/(?!unirme)[^/]+/, '/c/:slug')
+    .replace(/^\/c\/unirme\/[^/]+/, '/c/unirme/:code')
+    .replace(/^\/c\/(?!unirme\/)[^/]+/, '/c/:slug')
     .replace(/\b[0-9a-f]{8}-[0-9a-f-]{27}\b/gi, ':id')
     .slice(0, 80)
 }
@@ -126,7 +153,10 @@ export function routeOf(path: string): string {
 /** Record one event. Cheap and synchronous; it goes out with the next batch. */
 export function track(kind: EventKind, name: string, value?: number, data?: ClientEvent['data']) {
   if (!enabled) return
+  const id = newId()
+  handled.add(id)
   queue.push({
+    id,
     deviceId: getDeviceId(),
     tournamentId,
     build: BUILD.id,
@@ -156,7 +186,12 @@ export function step(name: string, opts: { once?: boolean } = {}) {
 export function reportError(name: string, error: unknown) {
   if (!enabled || errorsSent >= MAX_ERRORS) return
   const err = error instanceof Error ? error : null
-  const message = scrub(err ? `${err.name}: ${err.message}` : String(error))
+  // Only the engine's own errors keep their text: any other message may carry a name the app put in it.
+  const message = err
+    ? BUILTIN.has(err.name) || (typeof DOMException !== 'undefined' && err instanceof DOMException)
+      ? scrub(`${err.name}: ${err.message}`)
+      : `${err.name}${typeof (err as { code?: unknown }).code === 'string' ? ` (${scrub(String((err as { code?: unknown }).code), 20)})` : ''}`
+    : `no es un Error (${typeof error})`
   const route = typeof location !== 'undefined' ? routeOf(location.pathname) : ''
   const key = `${name}|${message}|${route}`
   const now = Date.now()
@@ -183,16 +218,23 @@ export function deviceSnapshot(): DeviceSnapshot {
   return snapshot()
 }
 
+/** This phone is about to write these scores (`round:player:hole`): their echoes are not another phone's change. */
+export function notePushed(keys: string[]) {
+  const now = Date.now()
+  for (const k of keys) ownPushes.set(k, now)
+}
+
 /**
  * `save_hole` answered: the round trip, and a clock sample from the rows it
  * stored (their `updated_at` is the server's time between send and answer).
+ * A replayed answer is the first attempt's, stored before this call went out:
+ * no sample.
  */
-export function saveAnswered(sentAt: number, answeredAt: number, rows: Array<Record<string, unknown>> | undefined, keys: string[]) {
-  const now = Date.now()
-  for (const k of keys) ownPushes.set(k, now)
+export function saveAnswered(sentAt: number, answeredAt: number, rows: Array<Record<string, unknown>> | undefined, replayed = false) {
   const rtt = answeredAt - sentAt
   if (!(rtt >= 0)) return
   track('sync', 'save_ack', rtt)
+  if (replayed) return
   const stamp = rows?.map((r) => Date.parse(String(r.updated_at ?? ''))).find((t) => Number.isFinite(t))
   if (stamp != null && (offset == null || rtt < offset.rtt)) offset = { ms: (sentAt + answeredAt) / 2 - stamp, rtt }
 }
@@ -229,12 +271,19 @@ function scheduleFlush(ms = FLUSH_MS) {
   }, ms)
 }
 
+/** A session to send with: nobody signed in (a visitor before Entrar) sends nothing and is asked again later. */
+async function signedIn(): Promise<boolean> {
+  const { data } = await withTimeout(supabase().auth.getSession(), 5000, 'sesión').catch(() => ({ data: { session: null } }))
+  return !!data.session
+}
+
 /** Send what is queued, 50 at a time. Kept for the next try if the network or the session fails. */
 export async function flush(): Promise<void> {
   if (!enabled || flushing || !queue.length) return
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return scheduleFlush()
   flushing = true
   try {
+    if (!(await signedIn())) return
     while (queue.length) {
       const batch = queue.slice(0, BATCH)
       const { error } = await supabase().rpc('log_client_events', { p_events: batch })
@@ -243,9 +292,10 @@ export async function flush(): Promise<void> {
         enabled = false
         break
       }
-      // A refusal of the batch itself (bad shape) would repeat forever: drop it. Anything else waits.
-      if (error && error.code !== '22023') break
-      queue = queue.slice(batch.length)
+      // A refusal of the data itself (class 22) would repeat forever: drop the batch. Anything else waits.
+      if (error && !/^22/.test(error.code ?? '')) break
+      const sent = new Set(batch.map((e) => e.id))
+      queue = queue.filter((e) => !sent.has(e.id))
       save()
     }
   } catch {
@@ -272,7 +322,10 @@ function standalone(): boolean {
 export async function heartbeat(): Promise<void> {
   if (!enabled) return
   try {
+    if (!(await signedIn())) return
     const s = snapshot()
+    lastBeatAt = Date.now()
+    lastBeat = { pending: s.pending, rejected: s.rejected }
     await supabase().rpc('heartbeat', {
       p: { deviceId: getDeviceId(), tournamentId, build: BUILD.id, buildSha: BUILD.sha, platform: platform(), standalone: standalone(), ...s },
     })
@@ -281,8 +334,22 @@ export async function heartbeat(): Promise<void> {
   }
 }
 
+/**
+ * The outbox's counts moved: say so soon (at most every 15 s), so Salud and
+ * the Comité don't show holes a phone has since sent until it opens again.
+ */
+export function outboxChanged() {
+  if (!enabled || beatTimer) return
+  const s = snapshot()
+  if (lastBeat && lastBeat.pending === s.pending && lastBeat.rejected === s.rejected) return
+  beatTimer = setTimeout(() => {
+    beatTimer = null
+    void heartbeat()
+  }, Math.max(2_000, BEAT_MIN_MS - (Date.now() - lastBeatAt)))
+}
+
 /** Start: listeners, the restored queue, vitals, the heartbeat. Once, from main.tsx. */
-export function startTelemetry(env?: { PROD?: boolean; MODE?: string }) {
+export function startTelemetry(env?: Env) {
   if (enabled || !telemetryAllowed(env) || typeof window === 'undefined') return
   // The in-memory fixtures are nobody's phone.
   if (location.pathname.startsWith('/t/_/') || location.pathname.startsWith('/admin/_')) return
@@ -292,8 +359,10 @@ export function startTelemetry(env?: { PROD?: boolean; MODE?: string }) {
   window.addEventListener('unhandledrejection', (e) => reportError('unhandledrejection', e.reason))
   // A page going away sends what it has; a page coming back says it is alive.
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') void flush()
-    else void heartbeat()
+    if (document.visibilityState === 'hidden') {
+      saveNow()
+      void flush()
+    } else void heartbeat()
   })
   window.addEventListener('online', () => void flush())
   setInterval(() => {
@@ -324,8 +393,11 @@ export function resetTelemetryForTests(on = false) {
   ownPushes.clear()
   once.clear()
   offset = null
-  if (flushTimer) clearTimeout(flushTimer)
-  flushTimer = null
+  handled.clear()
+  lastBeat = null
+  lastBeatAt = 0
+  for (const t of [flushTimer, saveTimer, beatTimer]) if (t) clearTimeout(t)
+  flushTimer = saveTimer = beatTimer = null
   flushing = false
 }
 /** For tests: what is queued. */
