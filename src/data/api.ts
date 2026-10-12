@@ -5,6 +5,7 @@ import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { supabase } from '../lib/supabase'
 import { step } from '../lib/telemetry'
+import { acceptLegal } from './legal'
 import { entryChanged } from './entryEvents'
 import { mapTournament, type Row } from './mappers'
 
@@ -164,7 +165,10 @@ export type ClaimResult =
 export async function claimPlayer(playerId: string, pin: string): Promise<ClaimResult> {
   const res = await supabase().rpc('claim_player', { p_player_id: playerId, p_pin: pin })
   if (res.error) throw ApiError.from(res.error)
-  step((res.data as ClaimResult | null)?.ok ? 'pin_claimed' : 'pin_refused')
+  const ok = (res.data as ClaimResult | null)?.ok === true
+  step(ok ? 'pin_claimed' : 'pin_refused')
+  // The faces and the PIN step show the consent line (TRUST-05).
+  if (ok) void acceptLegal('pin')
   return res.data as ClaimResult
 }
 

@@ -19,6 +19,7 @@ import { authSettings, supabase } from '../lib/supabase'
 import { unsentBeforeClaim, unsentWrites } from './outbox'
 import { signOut, signOutRunning } from './auth'
 import { setLastTournament } from './session'
+import { acceptLegal, forgetLegal } from './legal'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
@@ -85,6 +86,8 @@ export async function finishProfileSignIn(): Promise<{ firstTime: boolean; link:
   const hint = stashedNameHint() ?? (claim ? await claimNameHint(claim.playerId) : null)
   // "First time" = never edited: the shell may have created the profile a moment ago, on the session change.
   const profile = await ensureMyProfile(hint)
+  // /entrar showed the consent line before the email or Google (TRUST-05).
+  void acceptLegal('account')
   let link = await redeemStashedToken()
   if (!link && claim) link = await linkMyProfile(claim.playerId)
   await useMyProfile.getState().load()
@@ -207,6 +210,7 @@ export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null })
 async function forgetSignedOut() {
   useMyProfile.getState().clear()
   setLastTournament(null)
+  forgetLegal()
   await clearAllCached()
 }
 

@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '76f60f6c551bf235' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -251,7 +251,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-12.3')
+    expect(t.legal.privacy.version).toBe('2026-10-12.4')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
