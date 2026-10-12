@@ -11,9 +11,11 @@
 -- statement, hence one snapshot, and with it, from that same snapshot:
 -- - the highest audit_log id, so the route reads the history (append-only,
 --   40 MB, too big for one request) up to exactly that row;
--- - each account's essentials: id, email, phone, anonymous or not, when it
---   was created, confirmed and banned, its app and user metadata (provider,
---   display name). Never a password hash, a token or a session;
+-- - each account's essentials: id, instance, audience and role (what GoTrue
+--   looks an account up by), email, phone, anonymous or not, when it was
+--   created, confirmed and banned, its app and user metadata (provider,
+--   display name, a Google photo). Never a password hash, a token or a
+--   session;
 -- - each account's sign-in identities (email, Google): provider, provider id,
 --   identity data;
 -- - each file's place and metadata in Storage (the files themselves go to
@@ -65,7 +67,8 @@ begin
     || '''auditMaxId'', (select max(id) from public.audit_log), '
     || '''tables'', ' || coalesce(nullif(array_to_string(parts, ' || '), ''), '''{}''::jsonb') || ', '
     || '''auth'', jsonb_build_object('
-    || '''users'', (select coalesce(jsonb_agg(jsonb_build_object(''id'', u.id, ''email'', u.email, ''phone'', u.phone, ''is_anonymous'', u.is_anonymous, '
+    || '''users'', (select coalesce(jsonb_agg(jsonb_build_object(''id'', u.id, ''instance_id'', u.instance_id, ''aud'', u.aud, ''role'', u.role, '
+    ||   '''email'', u.email, ''phone'', u.phone, ''is_anonymous'', u.is_anonymous, '
     ||   '''created_at'', u.created_at, ''email_confirmed_at'', u.email_confirmed_at, ''banned_until'', u.banned_until, '
     ||   '''raw_app_meta_data'', u.raw_app_meta_data, ''raw_user_meta_data'', u.raw_user_meta_data) order by u.id), ''[]''::jsonb) from auth.users u), '
     || '''identities'', (select coalesce(jsonb_agg(jsonb_build_object(''id'', i.id, ''user_id'', i.user_id, ''provider'', i.provider, ''provider_id'', i.provider_id, '
@@ -78,3 +81,6 @@ begin
 end $$;
 revoke execute on function public.backup_snapshot(jsonb) from public, anon, authenticated;
 grant execute on function public.backup_snapshot(jsonb) to service_role;
+
+-- What each night copied of the files to R2 ({copied, pending, failed}), for Admin › Salud.
+alter table public.backup_runs add column if not exists files jsonb;

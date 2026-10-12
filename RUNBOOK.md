@@ -99,16 +99,25 @@ Esto es para cuando el proyecto de Supabase ya no está o quedó dañado entero.
 
 - **Qué hay.** Cada noche, a las 2 de la mañana de Los Cabos, una copia completa de la app va a Cloudflare R2 (`cardi-golf-backups`, en `backups/AAAA-MM-DD.json.gz`). Lleva todos los torneos tomados en el mismo instante, el historial de cambios, las cuentas sin contraseñas y la lista de archivos. Las fotos y tarjetas subidas se copian aparte, en `files/`. Admin de Polo › Salud dice cuándo fue el último.
 - **Quién lo hace.** Claude, con las llaves de esta sesión, o tú con Claude al lado. Crear el proyecto nuevo es gratis, pero tú lo apruebas.
-- **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 35 segundos en una base vacía, revisado fila por fila. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
+- **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 17 segundos en una base vacía (esquema incluido), revisado fila por fila antes de guardarlo. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
 
 Pasos (Claude):
 
 1. Proyecto nuevo de Supabase en la organización Cardi-Golf (tú apruebas el aviso). Anota su ref.
-2. El esquema: `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/db.mjs migrate`, y la configuración de acceso: `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/auth-config.mjs`.
-3. Los datos: `node scripts/restore-r2.mjs --from r2:latest --db "<cadena de conexión del proyecto nuevo>"`. Se niega a escribir en producción y en una base con torneos. Al final compara cada tabla con el respaldo, fila por fila, y revisa todas las llaves; si algo no cuadra, se detiene y dice qué.
-4. Los archivos: súbelos desde R2 `files/<bucket>/<nombre>` al bucket `tournament-assets` del proyecto nuevo, con el mismo nombre.
-5. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3.
-6. Avísale a todos:
+2. El esquema: `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/db.mjs migrate`.
+3. El acceso, con `PATCH /v1/projects/<ref nuevo>/config/auth` de la API de administración (los mismos valores que CLAUDE.md §3 dice de producción):
+   - usuarios anónimos encendidos (`external_anonymous_users_enabled`): sin esto nadie entra con su PIN;
+   - `site_url` `https://golf.cardigan.mx` y la lista de URLs permitidas (golf.cardigan.mx, cardi-golf.vercel.app, sus vistas previas y localhost);
+   - `password_min_length` 8, `mailer_autoconfirm` apagado, `mailer_otp_length` 6, `rate_limit_email_sent` 60, `security_manual_linking_enabled` encendido;
+   - el correo por Resend (todo el bloque SMTP en una sola petición: `smtp.resend.com`, puerto 465, remitente `"Polo" <golf@cardigan.mx>`): sin esto, quien tiene cuenta no recibe su código;
+   - Google: el ID y el secreto del cliente (Google Cloud › proyecto Polo › Credenciales) y la URL de vuelta del proyecto nuevo en ese cliente.
+
+   Luego `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/auth-config.mjs` pone los asuntos y textos de los correos en español.
+4. Los datos: `node scripts/restore-r2.mjs --from r2:latest --db "<cadena de conexión del proyecto nuevo>"`. Se niega a escribir en producción y en una base que ya tenga cuentas, perfiles o torneos. Escribe y revisa en una sola transacción: compara cada tabla y las cuentas con el respaldo, fila por fila, y todas las llaves; si algo no cuadra, no deja nada escrito y dice qué.
+   - Un respaldo de formato 1 (los de antes del 13 de octubre de 2026) no trae cuentas: cada perfil, amistad y crew queda en una cuenta vacía con el mismo id, y nadie puede entrar a ella. Usa una noche de formato 2 (el script dice el formato al empezar).
+5. Los archivos: súbelos desde R2 `files/<bucket>/<nombre>` al bucket `tournament-assets` del proyecto nuevo, con el mismo nombre.
+6. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3.
+7. Avísale a todos:
    - Con cuenta: entran otra vez con su correo y el código, o con Google. Su cuenta, su perfil y sus torneos son los mismos.
    - Sin cuenta: cada jugador vuelve a entrar con su PIN. Lo que capturó sin señal y no se mandó sigue en su teléfono y se manda al entrar.
 

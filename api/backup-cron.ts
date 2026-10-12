@@ -24,8 +24,12 @@ export const config = { maxDuration: 60 }
 const PAGE = 1000
 /** The history, read in pages up to the snapshot's last row; every other table is in the snapshot. */
 const HISTORY = 'audit_log'
-/** Seconds the file copy may take after the backup is written; the rest goes the next night. */
-const FILES_BUDGET_MS = 20_000
+/** The file copy stops this long after the run started (maxDuration is 60 s); the rest goes the next night. */
+const FILES_DEADLINE_MS = 48_000
+/** Each Storage read and R2 write gives up after this: one stuck file must not take the night's manifest with it. */
+const FILE_TIMEOUT_MS = 8_000
+/** The manifest is saved every few files, so a run cut short keeps what it copied. */
+const MANIFEST_EVERY = 5
 const MANIFEST = 'files/manifest.json'
 
 type Row = Record<string, unknown>
@@ -85,7 +89,7 @@ async function readSnapshot(url: string, key: string, at: Date): Promise<Dump | 
     throw new Error(`snapshot: ${body.message ?? `HTTP ${r.status}`}`)
   }
   const snap = (await r.json()) as Snapshot
-  const history = snap.auditMaxId == null ? [] : await readTable(url, key, HISTORY, BACKUP_TABLES[HISTORY]!, `&id=lte.${snap.auditMaxId}`)
+  const history = snap.auditMaxId == null ? [] : await readHistory(url, key, snap.auditMaxId)
   return {
     version: 2,
     createdAt: at.toISOString(),
@@ -96,22 +100,57 @@ async function readSnapshot(url: string, key: string, at: Date): Promise<Dump | 
   }
 }
 
+/**
+ * The history up to the snapshot's last row, by key (each page after the last
+ * id read), not by offset: a row that commits mid-read below that id would
+ * shift an offset page and repeat a row, and a backup with a repeated row
+ * does not restore (PR 122's verifier).
+ */
+async function readHistory(url: string, key: string, maxId: number): Promise<Row[]> {
+  const rows: Row[] = []
+  let last = 0
+  for (;;) {
+    const r = await fetch(`${url}/rest/v1/${HISTORY}?select=*&order=id&and=(id.gt.${last},id.lte.${maxId})&limit=${PAGE}`, { headers: headers(key) })
+    if (!r.ok) throw new Error(`${HISTORY}: HTTP ${r.status}`)
+    const page = (await r.json()) as Row[]
+    rows.push(...page)
+    if (page.length < PAGE) return rows
+    last = Number(page[page.length - 1]!.id)
+  }
+}
+
 async function readPaged(url: string, key: string, at: Date): Promise<Dump> {
   const tables: Record<string, Row[]> = {}
   for (const [table, order] of Object.entries(BACKUP_TABLES)) tables[table] = await readTable(url, key, table, order)
   return { version: 1, createdAt: at.toISOString(), tables }
 }
 
-/** Tell Admin › Salud how this run went. Never fails the backup. */
-async function record(url: string, key: string, run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string }) {
+/** Tell Admin › Salud how this run went; its row's id, to add the files to. Never fails the backup. */
+async function record(url: string, key: string, run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string }): Promise<number | null> {
   try {
-    await fetch(`${url}/rest/v1/backup_runs`, {
+    const r = await fetch(`${url}/rest/v1/backup_runs`, {
       method: 'POST',
-      headers: { ...headers(key), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      headers: { ...headers(key), 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(run),
     })
+    const rows = r.ok ? ((await r.json().catch(() => [])) as Array<{ id?: number }>) : []
+    return rows[0]?.id ?? null
   } catch {
     // The backup itself is what matters; the record is a courtesy.
+    return null
+  }
+}
+
+/** The night's files, on its backup_runs row (0039's `files`). Never fails the backup. */
+async function recordFiles(url: string, key: string, id: number, files: { copied: number; pending: number; failed: number }) {
+  try {
+    await fetch(`${url}/rest/v1/backup_runs?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers(key), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ files }),
+    })
+  } catch {
+    // As record().
   }
 }
 
@@ -122,19 +161,36 @@ export function encodePath(name: string): string {
 
 /**
  * Copies to R2 each Storage file the manifest doesn't have at its current
- * `updated_at`, until the budget runs out; the manifest is written after.
- * Never fails the backup: the counts say what happened.
+ * `updated_at`, until the deadline; each request has its own timeout, and the
+ * manifest is saved every few files and at the end, so a night cut short
+ * keeps what it copied and the next goes on from there. Never fails the
+ * backup: the counts say what happened.
  */
 async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: number) {
   const base = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}`
   const out = { copied: 0, pending: 0, failed: 0 }
   let manifest: Record<string, string> = {}
   try {
-    const m = await r2.fetch(`${base}/${MANIFEST}`)
+    const m = await r2.fetch(`${base}/${MANIFEST}`, { signal: AbortSignal.timeout(FILE_TIMEOUT_MS) })
     if (m.ok) manifest = (await m.json()) as Record<string, string>
     else if (m.status !== 404) return { ...out, failed: objects.length }
   } catch {
     return { ...out, failed: objects.length }
+  }
+  let unsaved = 0
+  const saveManifest = async () => {
+    try {
+      const put = await r2.fetch(`${base}/${MANIFEST}`, {
+        method: 'PUT',
+        body: JSON.stringify(manifest),
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+      })
+      if (!put.ok) out.failed++
+      else unsaved = 0
+    } catch {
+      out.failed++
+    }
   }
   for (const o of objects) {
     const bucket = String(o.bucket_id)
@@ -147,28 +203,26 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
       continue
     }
     try {
-      const got = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(name)}`, { headers: headers(env.SUPABASE_SECRET_KEY!) })
+      const got = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(name)}`, {
+        headers: headers(env.SUPABASE_SECRET_KEY!),
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+      })
       if (!got.ok) throw new Error(String(got.status))
       const put = await r2.fetch(`${base}/files/${encodeURIComponent(bucket)}/${encodePath(name)}`, {
         method: 'PUT',
         body: await got.arrayBuffer(),
         headers: { 'Content-Type': got.headers.get('content-type') ?? 'application/octet-stream' },
+        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
       })
       if (!put.ok) throw new Error(String(put.status))
       manifest[id] = stamp
       out.copied++
+      if (++unsaved >= MANIFEST_EVERY) await saveManifest()
     } catch {
       out.failed++
     }
   }
-  if (out.copied) {
-    try {
-      const put = await r2.fetch(`${base}/${MANIFEST}`, { method: 'PUT', body: JSON.stringify(manifest), headers: { 'Content-Type': 'application/json' } })
-      if (!put.ok) out.failed++
-    } catch {
-      out.failed++
-    }
-  }
+  if (unsaved) await saveManifest()
   return out
 }
 
@@ -214,8 +268,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(502).json({ error: 'upload failed', status: put.status })
     return
   }
-  await record(url, key, { ok: true, key: objectKey, bytes: body.length, tables: Object.keys(counts).length, rows })
-  const files = dump.storage ? await copyFiles(env, r2, dump.storage.objects, Date.now() + FILES_BUDGET_MS) : null
+  // The night is safe in R2 before any file is copied: a slow copy can't lose it.
+  const runId = await record(url, key, { ok: true, key: objectKey, bytes: body.length, tables: Object.keys(counts).length, rows })
+  const files = dump.storage ? await copyFiles(env, r2, dump.storage.objects, startedAt.getTime() + FILES_DEADLINE_MS) : null
+  if (files && runId != null) await recordFiles(url, key, runId, files)
   res.status(200).json({
     ok: true,
     key: objectKey,

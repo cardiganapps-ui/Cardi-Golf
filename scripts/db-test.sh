@@ -119,10 +119,20 @@ done
 
 step "3d. Disaster recovery: the seeded database backed up the nightly way, restored into an empty one, row for row (DB-07)"
 fresh "${P}_dr" "$P"
+# As on a real Supabase project, GoTrue's columns have no defaults: the restore must fill them itself (PR 122's verifier).
+"${PSQL[@]}" -d "${P}_dr" -c "alter table auth.users alter column instance_id drop default, alter column aud drop default, alter column role drop default, alter column confirmation_token drop default, alter column recovery_token drop default, alter column email_change_token_new drop default, alter column email_change drop default, alter column updated_at drop default, alter column email_change_token_current drop default, alter column phone_change drop default, alter column phone_change_token drop default, alter column reauthentication_token drop default" -c "alter table auth.identities alter column updated_at drop default"
+# A newer schema than the backup's: a column the backup never had.
+"${PSQL[@]}" -d "${P}_dr" -c "alter table public.players add column e2e_newer text not null default ''"
 PGDATABASE="${P}_seeded" node "$root/scripts/backup-local.mjs" "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; exit 1; }
 sed 's/^/  /' "$work/out"
-PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; echo "  ✗ the restore"; exit 1; }
+# A history page that repeated a row (offset paging while a row committed): the night still restores.
+node -e 'const z=require("zlib"),f=require("fs");const d=JSON.parse(z.gunzipSync(f.readFileSync(process.argv[1])));d.tables.audit_log.splice(1,0,d.tables.audit_log[0]);f.writeFileSync(process.argv[1],z.gzipSync(JSON.stringify(d)))' "$work/backup.json.gz"
+# A laptop whose Postgres speaks local time.
+PGTZ=America/Mexico_City PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; echo "  ✗ the restore"; exit 1; }
 sed 's/^/  /' "$work/out"
+n=$("${PSQL[@]}" -d "${P}_dr" -Atc "select count(*) from auth.users where instance_id is null or aud is null or role is null or confirmation_token is null or recovery_token is null or email_change is null or email_change_token_new is null or updated_at is null")
+[ "$n" -eq 0 ] || { echo "  ✗ $n restored account(s) GoTrue could not read"; exit 1; }
+echo "  ✓ every restored account carries what GoTrue reads it by (instance, audience, role, empty tokens)"
 if PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1; then echo "  ✗ a second restore over tournaments was not refused"; exit 1; fi
 grep -q 'already holds' "$work/out" || { cat "$work/out"; exit 1; }
 echo "  ✓ a restore over a database that holds tournaments is refused"
@@ -131,6 +141,13 @@ PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.js
 if PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" --verify-only >"$work/out" 2>&1; then echo "  ✗ one changed name went unnoticed"; exit 1; fi
 grep -q 'players: 1 row(s) differ' "$work/out" || { cat "$work/out"; exit 1; }
 echo "  ✓ the check catches one changed name"
+# A target someone already uses (an account, no tournament yet): refused, and nothing written.
+fresh "${P}_dr2" "$P"
+"${PSQL[@]}" -d "${P}_dr2" -c "insert into auth.users (id, email) values (gen_random_uuid(), 'ya@polo.test')"
+if PGDATABASE="${P}_dr2" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1; then echo "  ✗ a restore over an account was not refused"; exit 1; fi
+grep -q '1 account(s)' "$work/out" || { cat "$work/out"; exit 1; }
+[ "$("${PSQL[@]}" -d "${P}_dr2" -Atc "select count(*) from public.tournaments")" -eq 0 ] || { echo "  ✗ the refused restore wrote something"; exit 1; }
+echo "  ✓ a restore over a database with an account is refused before it writes"
 if PGHOST=db.gmohwledjejlhcwqjnhd.supabase.co node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1; then echo "  ✗ a restore aimed at production was not refused"; exit 1; fi
 grep -q 'this is production' "$work/out" || { cat "$work/out"; exit 1; }
 echo "  ✓ a restore aimed at production is refused before it connects"
@@ -139,5 +156,5 @@ step "4. Supabase's advisors (splinter), held at the baseline"
 "${PSQL[@]}" -d "$P" -At -F ',' -c 'begin' -f "$H/splinter.sql" -c "select name, level, count(*) from _lint group by 1, 2 order by 1, 2" -c 'rollback' >"$work/lints.csv"
 node "$root/scripts/db-lints.mjs" "$work/lints.csv" "$H/lint-baseline.json" ${POLO_LINT_WRITE:+--write}
 
-for db in "${P}_plain" "${P}_legacy" "${P}_seeded" "${P}_t" "${P}_dr"; do "${PSQL[@]}" -d postgres -c "drop database if exists $db with (force)"; done
+for db in "${P}_plain" "${P}_legacy" "${P}_seeded" "${P}_t" "${P}_dr" "${P}_dr2"; do "${PSQL[@]}" -d postgres -c "drop database if exists $db with (force)"; done
 printf '\n✓ database suite clean\n'

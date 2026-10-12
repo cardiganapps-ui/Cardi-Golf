@@ -44,6 +44,7 @@ async function run(world: World = {}) {
   const read: string[] = []
   const uploads: Array<{ url: string; body: Buffer }> = []
   const records: Array<{ ok: boolean; error?: string }> = []
+  const patches: Array<{ url: string; body: unknown }> = []
   const rpcBodies: Array<{ p_tables: Record<string, string> }> = []
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : null
@@ -65,10 +66,21 @@ async function run(world: World = {}) {
     const table = /\/rest\/v1\/([a-z_]+)/.exec(url)![1]!
     if (method === 'POST' && table === 'backup_runs') {
       records.push(JSON.parse(String(init!.body)))
-      return new Response(null, { status: 201 })
+      return new Response(JSON.stringify([{ id: 7 }]), { status: 201 })
+    }
+    if (method === 'PATCH' && table === 'backup_runs') {
+      patches.push({ url: url.replace('https://db.invalid/rest/v1/', ''), body: JSON.parse(String(init!.body)) })
+      return new Response(null, { status: 204 })
     }
     read.push(url.replace('https://db.invalid/rest/v1/', ''))
     if (table === absent) return new Response(JSON.stringify({ code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` }), { status: 404 })
+    // The history by key (format 2): the page after the last id read, up to the snapshot's.
+    const keyset = /and=\(id\.gt\.(\d+),id\.lte\.(\d+)\)&limit=(\d+)/.exec(url)
+    if (table === 'audit_log' && keyset) {
+      const [after, upTo, limit] = keyset.slice(1).map(Number) as [number, number, number]
+      const n = Math.max(0, Math.min(limit, upTo - after))
+      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1 }))))
+    }
     if (table === 'audit_log') {
       const from = rangeStart(init)
       const n = Math.max(0, Math.min(1000, history - from))
@@ -93,7 +105,7 @@ async function run(world: World = {}) {
   await handler({ headers: { authorization: 'Bearer s' } } as never, res as never)
   const backup = uploads.find((u) => u.url.includes('/backups/'))
   const dump = backup ? JSON.parse(gunzipSync(backup.body).toString('utf8')) : null
-  return { status, body, read, uploads, records, rpcBodies, dump }
+  return { status, body, read, uploads, records, patches, rpcBodies, dump }
 }
 
 describe('the nightly backup', () => {
@@ -101,7 +113,9 @@ describe('the nightly backup', () => {
     const r = await run()
     expect(r.status).toBe(200)
     expect(Object.keys(r.rpcBodies[0]!.p_tables)).toEqual(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log'))
-    expect(r.read).toEqual(['audit_log?select=*&order=id&id=lte.1500', 'audit_log?select=*&order=id&id=lte.1500'])
+    // By key, never by offset: a row committed mid-read can't repeat one (PR 122's verifier).
+    expect(r.read).toEqual(['audit_log?select=*&order=id&and=(id.gt.0,id.lte.1500)&limit=1000', 'audit_log?select=*&order=id&and=(id.gt.1000,id.lte.1500)&limit=1000'])
+    expect(new Set(r.dump.tables.audit_log.map((a: { id: number }) => a.id)).size).toBe(1500)
     expect(r.dump.version).toBe(2)
     expect(Object.keys(r.dump.tables).sort()).toEqual(Object.keys(BACKUP_TABLES).sort())
     expect(r.dump.tables.money_adjustments).toEqual([])
@@ -142,6 +156,8 @@ describe('the nightly backup', () => {
     const files = r.uploads.filter((u) => !u.url.includes('/backups/')).map((u) => u.url.replace('https://a.r2.cloudflarestorage.com/d/', ''))
     expect(files).toEqual(['files/tournament-assets/courses/c1/tarjeta%20del%20campo.jpg', 'files/manifest.json'])
     expect(r.body.files).toEqual({ copied: 1, pending: 0, failed: 0 })
+    // And on the night's row, for Salud.
+    expect(r.patches).toEqual([{ url: 'backup_runs?id=eq.7', body: { files: { copied: 1, pending: 0, failed: 0 } } }])
     expect(JSON.parse(r.uploads.at(-1)!.body.toString('utf8'))).toEqual({
       'tournament-assets/profiles/u1/foto.png': '2026-10-02',
       'tournament-assets/courses/c1/tarjeta del campo.jpg': '2026-10-01',
