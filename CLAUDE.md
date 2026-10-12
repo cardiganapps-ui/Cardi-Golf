@@ -511,6 +511,9 @@ The settlement nets to zero across all people (banker included)
 - Salud (0024): `platform_health()`: backups from `backup_runs` (written by `api/backup-cron.ts` on every run, good or bad), push (Vault configured, subscriptions, pg_net's last few hours), last migration, blocked accounts and PIN locks, the switches.
 - Switches (0024): `platform_settings` via `platform_set_flag(key, value, reason)`: `new_accounts_paused` (trigger on `profiles`), `new_tournaments_paused` (trigger on `tournaments`), `maintenance_banner` (≤200 chars). The admin is exempt. `app_flags()` is public (anon too); AppShell loads it with a 5 s timeout and `MaintenanceBanner` shows the banner. Supabase's own «disable sign-ups» is deliberately not used: it would stop the anonymous phones players join with.
 
+**What the notice covers** (2026-10-12, TRUST-04; `src/lib/dataInventory.ts`)
+- Every table a migration creates is in `DATA_INVENTORY`: what it keeps about people, the privacy-notice section that tells them (`t.legal.privacy`) and its retention (one of `RETENTION_WORDS`, each stated in «Cuánto tiempo los guardamos»), or why it holds nobody. `dataInventory.test.ts` refuses a table missing from it, one with a person-naming column (an account, player, name, photo, email, device) filed as holding nobody, a section the notice lacks, and a retention it doesn't state. A new table needs its line here and, when it is a new kind of data, a sentence in the notice (a new version and fingerprint, `legalNotice.test.ts`).
+
 **Records**
 - `audit_log`: `id`, `table_name`, `row_id`, `actor_player_id`, `action`, `before`, `after`, `reason`, `at`. Written by triggers on `scores`, `handicap_overrides`, `players`, `pairs`, `groups`, and the Calcutta tables.
 - `photos` (optional): `id`, `round_id`, `player_id`, `hole`, `url`, `created_at`.

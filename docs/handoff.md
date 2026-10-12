@@ -27,7 +27,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
    - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.
    - Sirve para probar cada migración antes de producción, para que las vistas previas no toquen datos reales, y como respaldo en caliente si Supabase falla en el viaje.
-5. [ ] **Cinco decisiones** (contesta en el chat):
+5. [ ] **Seis decisiones** (contesta en el chat):
    - **a. Dos teléfonos capturan distinto el mismo hoyo.**
      - Hoy gana el último, sin avisar.
      - Propongo que gane el primero que llegó y que al segundo le pregunte. Ya está hecho así en la PR #106 (sin juntar todavía): el segundo teléfono ve «Hoyo 7: Diego ya capturó a Justo: 6. No se guardó lo tuyo: 5.», con «Guardar el mío» o «Dejar el suyo».
@@ -52,7 +52,20 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - Propongo borrar en automático los respaldos de más de 35 días (una regla de R2, gratis), y decirlo en el aviso. Para el viaje sobran: el de cada noche y los de las 5 semanas anteriores.
      - No lo hago sin tu sí, porque borra datos. Si prefieres otro plazo (90 días, un año), dime cuál.
      - Ojo al borrar una cuenta desde Admin de Polo: si el Comité propuso ese perfil a un jugador equivocado que se llama igual que la persona, ese jugador también queda como «Jugador borrado». La hoja de borrar dice en qué torneos; si uno no es de esa persona, cámbiale el nombre a mano en el Comité.
-6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
+   - **f. Tu domicilio para el aviso de privacidad** (TRUST-04).
+     - La ley pide que el aviso diga el domicilio de quien es responsable de los datos. Hoy dice tu nombre, pero no un domicilio.
+     - Puede ser una dirección para recibir correspondencia (de oficina, por ejemplo); no tiene que ser tu casa.
+     - Mándamela en el chat y la agrego. Si prefieres que el responsable sea una empresa tuya, dime su nombre legal y su domicilio.
+     - Ojo: el aviso nuevo (versión 2026-10-12.3) lo escribí yo con lo que dice la ley, sin abogado. Si un día quieres que lo revise uno, está en `src/i18n/es-MX.ts` (`legal.privacy`), y cada tabla de la base de datos dice en qué sección del aviso está (`src/lib/dataInventory.ts`).
+6. [ ] **Que golf@cardigan.mx reciba correos** (TRUST-01, gratis). El aviso de privacidad dice que hoy no recibe mensajes, y por eso las solicitudes sobre datos llegan a ti directo o por el Comité.
+   - **Pasos:**
+     1. Cloudflare → la zona `cardigan.mx` → **Email** → **Email Routing** → **Get started** / **Enable**.
+     2. Si Cloudflare avisa que ya hay registros MX en `cardigan.mx`, detente y dime: no hay que romper un correo que ya uses.
+     3. **Destination addresses** → agrega tu correo personal → abre el correo de verificación que te llega y confirma.
+     4. **Routing rules** → **Create address** → `golf` → acción **Send to an email** → tu correo → **Save**.
+     5. Mándale un correo de prueba a golf@cardigan.mx desde otra cuenta: debe llegarte.
+   - **Cómo lo verifico:** te mando un correo a golf@cardigan.mx y me dices que llegó; luego quito «todavía no recibe mensajes» del aviso y de la pantalla legal.
+7. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.
      2. Mira la barra de arriba, la de la hora y la batería: ¿de qué color es y se lee la hora?
