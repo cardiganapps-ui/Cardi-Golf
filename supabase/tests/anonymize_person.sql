@@ -46,8 +46,10 @@ select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/
 set local role authenticated;
 select id as t_photo from public.create_tournament('Copa del Comité', '{}'::jsonb) \gset
 reset role;
-insert into public.players (tournament_id, full_name, display_name, avatar_url, sort_order, profile_id, profile_status)
-  values (:'t_photo', 'Z. Zeta, la del Comité', 'Z.', 'https://example.test/profiles/zoe-perfil.jpg', 0, :'zoe', 'pending') returning id as photo_copy \gset
+-- It came from a duplicate (her name, form guide and photo); the Comité then renamed it, so its history holds her.
+insert into public.players (tournament_id, full_name, display_name, avatar_url, form_guide, sort_order, profile_id, profile_status)
+  values (:'t_photo', 'Zoé Zeta Única', 'Zoé', 'https://example.test/profiles/zoe-perfil.jpg', 'zoeforma: 88, 91, 85', 0, :'zoe', 'pending') returning id as photo_copy \gset
+update public.players set full_name = 'Z. Zeta, la del Comité', display_name = 'Z.' where id = :'photo_copy';
 -- Before she changed her email, the operator gave her a Comité under the old one.
 insert into public.platform_audit_log (actor_auth_user_id, action, target_kind, target_id, tournament_id, reason, payload)
   values (:'padmin', 'set_organizer', 'tournament', :'t_quick', :'t_quick', 'Comité nuevo', jsonb_build_object('userId', :'zoe', 'email', 'zoe.antes@polo.test', 'role', 'owner'));
@@ -110,8 +112,10 @@ select harness.check((select bool_and(full_name = 'Jugador borrado' and display_
   from public.players where id in (:'quick_copy', :'dup_copy')), 'the copies of her (a Ronda rápida''s, a duplicate''s) are «Jugador borrado» too');
 select harness.check((select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'zoe' or payload -> 'traits' ->> 'user_id' = :'zoe') = 0
   and (select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'org_a') = 1, 'GoTrue''s audit rows by her and about her go, nobody else''s');
-select harness.check((select full_name = 'Z. Zeta, la del Comité' and display_name = 'Z.' and avatar_url is null from public.players where id = :'photo_copy'),
-  'a copy the Comité renamed keeps that name and loses her photo');
+select harness.check((select full_name = 'Z. Zeta, la del Comité' and display_name = 'Z.' and avatar_url is null and form_guide is null from public.players where id = :'photo_copy'),
+  'a copy the Comité renamed keeps that name and loses her photo and her form guide');
+select harness.check((select count(*) from public.audit_log where table_name = 'players' and row_id = :'photo_copy'
+  and (before::text || coalesce(after::text, '')) like '%la del Comité%') >= 1, 'its history keeps the Comité''s name');
 select harness.check((select payload ->> 'emailHash' = encode(extensions.digest('zoe.antes@polo.test:' || :'zoe', 'sha256'), 'hex') and not payload ? 'email'
   from public.platform_audit_log where action = 'set_organizer' and target_id = :'t_quick'), 'a row with the email she had before keeps that email''s fingerprint');
 select harness.check((select payload ->> 'emailHash' = encode(extensions.digest('zoe.zeta@polo.test:' || :'zoe', 'sha256'), 'hex') and not payload ? 'email' and payload ->> 'role' = 'admin'
