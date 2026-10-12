@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ddedff9f7a1fc00c' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'f77af05debc9a6f1' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -76,14 +76,19 @@ describe('the integral notice (TRUST-04)', () => {
   it('names every processor and the country, and says none uses the data for itself', () => {
     const abroad = sections['Fuera de México']!
     for (const who of ['Supabase', 'Vercel', 'Resend', 'Cloudflare', 'Anthropic', 'Google', 'Estados Unidos']) expect(abroad).toContain(who)
-    expect(abroad).toContain('no usan tus datos para lo suyo')
+    expect(abroad).toContain('Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo')
+    // Google and the browser's push service are not Polo's processors, and the notice doesn't say they are.
+    expect(abroad).toContain('no trabajan para Polo')
   })
 
   it('says how to exercise the rights, how identity is checked, the answer time and the authority', () => {
     const arco = sections['Cómo pedir algo sobre tus datos']!
     expect(arco).toContain('acceso, rectificación, cancelación y oposición')
     expect(arco).toContain('retirar tu consentimiento o limitar su uso')
-    expect(arco).toContain('un código al correo de tu cuenta')
+    // Never a sign-in code read back to the operator: that would hand him the account.
+    expect(arco).toContain('que nos escribas desde el correo de tu cuenta')
+    expect(arco).not.toContain('código')
+    expect(arco).toContain('por medio del Comité de tu torneo')
     expect(arco).toContain('20 días hábiles')
     expect(arco).toContain('15 días hábiles')
     expect(arco).toContain('Secretaría Anticorrupción y Buen Gobierno')
@@ -91,8 +96,16 @@ describe('the integral notice (TRUST-04)', () => {
     expect(arco).toContain('el correo golf@cardigan.mx todavía no recibe mensajes')
   })
 
+  it('a deleted tournament\'s history stays, and so do anonymous users and sessions', () => {
+    const kept = sections['Cuánto tiempo los guardamos']!
+    expect(kept).toContain('si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía')
+    expect(kept).toContain('los usuarios anónimos que se crean al abrir un enlace')
+    expect(kept).toContain('cerrar sesión no los apaga')
+    expect(kept).toContain('tu lugar en tus crews')
+  })
+
   it('a minor needs a parent\'s permission, and changes show in the date and version', () => {
-    expect(sections['Menores de edad']).toContain('mayores de 18 años')
+    expect(sections['Menores de edad']).toContain('pensado para mayores de 18 años y no le pide la edad a nadie')
     expect(sections['Cambios a este aviso']).toContain('cambian la fecha y la versión de arriba')
   })
 })

@@ -20,15 +20,30 @@ const sql = readdirSync(dir)
   .map((f) => readFileSync(join(dir, f), 'utf8'))
   .join('\n')
 const blocks = new Map<string, string>()
-for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi)) blocks.set(m[1]!, m[2]!)
+// Multi-line or on one line, with or without the schema (PR 118's verifier: both slipped past).
+for (const m of sql.matchAll(/create table (?:if not exists )?(?:public\.)?([a-z_]+)\s*\(([\s\S]*?)\n\);/gi)) blocks.set(m[1]!, m[2]!)
+for (const m of sql.matchAll(/create table (?:if not exists )?(?:public\.)?([a-z_]+)\s*\(([^\n]*)\);/gi)) if (!blocks.has(m[1]!)) blocks.set(m[1]!, m[2]!)
 for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)\s+add column (?:if not exists )?([a-z_]+)/gi)) blocks.set(m[1]!, `${blocks.get(m[1]!) ?? ''}\n${m[2]!} `)
 blocks.set('_migrations', 'name text primary key, applied_at timestamptz ')
 
 const sections = new Map(t.legal.privacy.sections)
-/** Columns that name or point at a person. */
-const PERSON = /^\s*(full_name|display_name|email|avatar_url|auth_user_id|player_id|profile_id|created_by|bidder_id|owner_id|from_player_id|to_player_id|signed_by|entered_by|device_id|endpoint|a|b)\s/m
+/** A column that names or points at a person: an account, a player, who did something, a name, a photo, an address, a device. */
+const PERSON = /(^|_)(user|player|profile|actor|owner|bidder|writer)(_id)?$|_by$|^(a|b|email|avatar_url|full_name|display_name|handle|ip|user_agent|endpoint|device_id|auth_user_id)$/
+/** The column names of a `create table` body (and of columns added later): the first word of each piece between commas. */
+function columns(block: string): string[] {
+  return block
+    .split(/,|\n/)
+    .map((piece) => piece.trim().split(/\s+/)[0] ?? '')
+    .filter((c) => /^[a-z_]+$/.test(c))
+}
 
 describe('data inventory (TRUST-04)', () => {
+  it('reads the columns of every table, a one-line one included', () => {
+    expect(columns('id uuid primary key,\n  tournament_id uuid not null, player_id uuid, primary key (a, b)')).toEqual(['id', 'tournament_id', 'player_id', 'primary'])
+    expect(['user_id', 'player_id', 'updated_by', 'ip', 'user_agent', 'handle', 'writer_player_id'].every((c) => PERSON.test(c))).toBe(true)
+    expect(['id', 'name', 'tournament_id', 'round_id', 'par', 'stroke_index'].some((c) => PERSON.test(c))).toBe(false)
+  })
+
   it('names every table the migrations create, and only those', () => {
     expect([...blocks.keys()].filter((x) => !(x in DATA_INVENTORY))).toEqual([])
     expect(Object.keys(DATA_INVENTORY).filter((x) => !blocks.has(x))).toEqual([])
@@ -40,7 +55,7 @@ describe('data inventory (TRUST-04)', () => {
 
   it('files no table with a person in it as holding nobody', () => {
     const bad = Object.entries(DATA_INVENTORY)
-      .filter(([table, e]) => !e.personal && PERSON.test(blocks.get(table) ?? ''))
+      .filter(([table, e]) => !e.personal && columns(blocks.get(table) ?? '').some((c) => PERSON.test(c)))
       .map(([table]) => table)
     expect(bad).toEqual([])
   })

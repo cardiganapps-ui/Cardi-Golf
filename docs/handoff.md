@@ -57,7 +57,15 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - Puede ser una dirección para recibir correspondencia (de oficina, por ejemplo); no tiene que ser tu casa.
      - Mándamela en el chat y la agrego. Si prefieres que el responsable sea una empresa tuya, dime su nombre legal y su domicilio.
      - Ojo: el aviso nuevo (versión 2026-10-12.3) lo escribí yo con lo que dice la ley, sin abogado. Si un día quieres que lo revise uno, está en `src/i18n/es-MX.ts` (`legal.privacy`), y cada tabla de la base de datos dice en qué sección del aviso está (`src/lib/dataInventory.ts`).
-6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
+6. [ ] **Que golf@cardigan.mx reciba correos** (TRUST-01, gratis). El aviso de privacidad dice que hoy no recibe mensajes, y por eso las solicitudes sobre datos llegan a ti directo o por el Comité.
+   - **Pasos:**
+     1. Cloudflare → la zona `cardigan.mx` → **Email** → **Email Routing** → **Get started** / **Enable**.
+     2. Si Cloudflare avisa que ya hay registros MX en `cardigan.mx`, detente y dime: no hay que romper un correo que ya uses.
+     3. **Destination addresses** → agrega tu correo personal → abre el correo de verificación que te llega y confirma.
+     4. **Routing rules** → **Create address** → `golf` → acción **Send to an email** → tu correo → **Save**.
+     5. Mándale un correo de prueba a golf@cardigan.mx desde otra cuenta: debe llegarte.
+   - **Cómo lo verifico:** te mando un correo a golf@cardigan.mx y me dices que llegó; luego quito «todavía no recibe mensajes» del aviso y de la pantalla legal.
+7. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.
      2. Mira la barra de arriba, la de la hora y la batería: ¿de qué color es y se lee la hora?

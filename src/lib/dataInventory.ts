@@ -87,7 +87,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   platform_admins: T('who operates Polo', OPERATOR, 'record'),
   platform_unlocks: T('when the operator unlocked a Protegido tournament, and why', OPERATOR, 'record'),
   platform_audit_log: T('what the operator did, and why', OPERATOR, 'record'),
-  platform_settings: NONE('the operator\'s switches and banner'),
+  platform_settings: T('the operator\'s switches and banner, and which admin set them', OPERATOR, 'record'),
   backup_runs: NONE('when each nightly backup ran and its size'),
   client_events: T('errors, sync times, speed and a few steps from each phone', DATA, 'telemetry'),
   device_status: T('each phone\'s app version and what it still has to send', DATA, 'devices'),
