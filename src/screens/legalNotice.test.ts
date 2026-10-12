@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'b551483a6a59d525' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'f76009afeccec166' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -228,7 +228,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
 
   it('what stays: the players without the person, every profile photo, a fingerprint of the email, and all of it in the backups', () => {
     expect(rights()).toContain('En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando.')
-    expect(rights()).toContain('También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda como lo escribió.')
+    expect(rights()).toContain('También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto.')
     expect(rights()).toContain('cada foto que subiste, también las anteriores, como archivo público;')
     expect(rights()).toContain('de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo;')
     expect(rights()).toContain('lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió;')
@@ -238,7 +238,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     expect(rights()).not.toContain('tu correo, en el registro del borrado')
   })
 
-  it('the deletion it describes (0031, 0032): the person\'s players and their copies renamed, their audit images redacted, the email fingerprinted', () => {
+  it('the deletion it describes (0031 to 0033): the person\'s players and their copies renamed, their audit images redacted, the email fingerprinted', () => {
     const latest = (fn: string) => {
       const all = filesUnder('supabase/migrations', (n) => n.endsWith('.sql')).map((f) => source(f)).filter((x) => x.includes(`create or replace function public.${fn}(`))
       const body = all.at(-1)!
@@ -254,14 +254,15 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     // The handicap and the holes stay: the results are made of them.
     expect(anon).not.toMatch(/base_hcp|handicap_index|estimate_inputs|public\.scores/)
     expect(anon).toContain('update public.audit_log')
-    // Every operator-log row with the email, not just the deletion's.
-    expect(anon).toContain("where payload ? 'email' and lower(btrim(payload ->> 'email')) = lower(btrim(mail))")
-    // Whose players: confirmed, or pending and carrying the person's name or photo (a Ronda rápida's, a duplicate's).
+    // Every operator-log row that names the account or holds its email, not just the deletion's (0033).
+    expect(anon).toContain("l.payload ->> 'userId' = me or l.target_id = me")
+    // Whose players: confirmed, or pending and carrying the person's name (a Ronda rápida's, a duplicate's)…
     const ids = latest('person_player_ids')
     expect(ids).toContain("p.profile_status = 'confirmed'")
-    expect(ids).toContain("p.profile_status = 'pending'")
-    expect(ids).toMatch(/lower\(btrim\(p\.full_name\)\) in \(select n from names\)/)
-    expect(ids).toMatch(/nullif\(btrim\(p\.avatar_url\), ''\) in \(select a from photos\)/)
+    expect(ids).toMatch(/p\.profile_status = 'pending' and lower\(btrim\(p\.full_name\)\) in \(select n from names\)/)
+    // …and a copy under the Comité's name that carries the photo loses only the photo.
+    expect(anon).toContain('update public.players set avatar_url = null where id = any (photo_ids);')
+    expect(latest('person_photo_ids')).toContain('not p.id = any (public.person_player_ids(p_user_id))')
   })
 
   it('the facts it rests on: when one changes, so does the sentence', () => {

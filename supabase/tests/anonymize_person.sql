@@ -41,13 +41,25 @@ insert into public.players (tournament_id, full_name, display_name, avatar_url, 
   values (:'t_quick', 'Zoé Zeta Única', 'Zoé', 'https://example.test/profiles/zoe-perfil.jpg', 0, :'zoe', 'pending') returning id as quick_copy \gset
 insert into public.players (tournament_id, full_name, display_name, avatar_url, form_guide, sort_order, profile_id, profile_status)
   values (:'t_copy', 'Zoé Zeta Única', 'Zoé', 'https://example.test/t/zoe-jugadora.jpg', 'zoeforma: 88, 91, 85', 0, :'zoe', 'pending') returning id as dup_copy \gset
+-- A copy the Comité renamed but left with her photo: it keeps the Comité's name and loses the photo.
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select id as t_photo from public.create_tournament('Copa del Comité', '{}'::jsonb) \gset
+reset role;
+insert into public.players (tournament_id, full_name, display_name, avatar_url, sort_order, profile_id, profile_status)
+  values (:'t_photo', 'Z. Zeta, la del Comité', 'Z.', 'https://example.test/profiles/zoe-perfil.jpg', 0, :'zoe', 'pending') returning id as photo_copy \gset
+-- Before she changed her email, the operator gave her a Comité under the old one.
+insert into public.platform_audit_log (actor_auth_user_id, action, target_kind, target_id, tournament_id, reason, payload)
+  values (:'padmin', 'set_organizer', 'tournament', :'t_quick', :'t_quick', 'Comité nuevo', jsonb_build_object('userId', :'zoe', 'email', 'zoe.antes@polo.test', 'role', 'owner'));
 -- The operator gave her a Comité once: platform_set_organizer logs her email (0022).
 insert into public.platform_audit_log (actor_auth_user_id, action, target_kind, target_id, tournament_id, reason, payload)
   values (:'padmin', 'set_organizer', 'tournament', :'t_a', :'t_a', 'Se quedó sin Comité', jsonb_build_object('userId', :'zoe', 'email', 'zoe.zeta@polo.test', 'role', 'admin'));
 -- GoTrue's own audit log (stubbed as Supabase has it): a sign-in of hers and one of the Comité's.
 insert into auth.audit_log_entries (id, payload, created_at) values
   (gen_random_uuid(), json_build_object('actor_id', :'zoe', 'actor_username', 'zoe.zeta@polo.test', 'action', 'login'), now()),
-  (gen_random_uuid(), json_build_object('actor_id', :'org_a', 'actor_username', 'org-a@polo.test', 'action', 'login'), now());
+  (gen_random_uuid(), json_build_object('actor_id', :'org_a', 'actor_username', 'org-a@polo.test', 'action', 'login'), now()),
+  -- An admin action about her: GoTrue files it under the admin, with her in traits.
+  (gen_random_uuid(), json_build_object('actor_id', :'padmin', 'actor_username', 'admin@polo.test', 'action', 'user_modified', 'traits', json_build_object('user_id', :'zoe', 'user_email', 'zoe.zeta@polo.test')), now());
 update public.rounds set status = 'live' where id = :'r1';
 insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up) values (:'r1', :'ana', 1, 5, 2, false);
 -- The Comité edits her once more: one more pair of images in the audit log.
@@ -82,9 +94,9 @@ set local role authenticated;
 select public.platform_delete_preview(:'zoe')::text as preview \gset
 select public.platform_delete_account(:'zoe', 'Zoe.Zeta@polo.test', 'Pidió borrar su cuenta') \g /dev/null
 reset role;
-select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 3 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 4
+select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 3 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 5
   and :'preview'::jsonb -> 'anonymizedIn' = '["Ronda de Bob", "Seed Torneo A", "Torneo A, ensayo"]'::jsonb,
-  'the preview: 4 linked, 3 renamed (hers and the two copies), and where: ' || :'preview');
+  'the preview: 5 linked, 3 renamed (hers and the two copies; not the Comité''s name with her photo), and where: ' || :'preview');
 
 -- Her player stays, without her.
 select harness.check((select full_name = 'Jugador borrado' and display_name = 'Borrado' and avatar_url is null and form_guide is null and profile_id is null
@@ -96,10 +108,14 @@ select harness.check((select full_name = 'Carla Beta' and display_name = 'Carla'
   'a player the Comité named otherwise, never confirmed, keeps the Comité''s name and loses the link');
 select harness.check((select bool_and(full_name = 'Jugador borrado' and display_name = 'Borrado' and avatar_url is null and form_guide is null)
   from public.players where id in (:'quick_copy', :'dup_copy')), 'the copies of her (a Ronda rápida''s, a duplicate''s) are «Jugador borrado» too');
-select harness.check((select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'zoe') = 0
-  and (select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'org_a') = 1, 'GoTrue''s audit rows for her go, nobody else''s');
+select harness.check((select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'zoe' or payload -> 'traits' ->> 'user_id' = :'zoe') = 0
+  and (select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'org_a') = 1, 'GoTrue''s audit rows by her and about her go, nobody else''s');
+select harness.check((select full_name = 'Z. Zeta, la del Comité' and display_name = 'Z.' and avatar_url is null from public.players where id = :'photo_copy'),
+  'a copy the Comité renamed keeps that name and loses her photo');
+select harness.check((select payload ->> 'emailHash' = encode(extensions.digest('zoe.antes@polo.test:' || :'zoe', 'sha256'), 'hex') and not payload ? 'email'
+  from public.platform_audit_log where action = 'set_organizer' and target_id = :'t_quick'), 'a row with the email she had before keeps that email''s fingerprint');
 select harness.check((select payload ->> 'emailHash' = encode(extensions.digest('zoe.zeta@polo.test:' || :'zoe', 'sha256'), 'hex') and not payload ? 'email' and payload ->> 'role' = 'admin'
-  from public.platform_audit_log where action = 'set_organizer' and payload ->> 'userId' = :'zoe'), 'an earlier log row with her email keeps the fingerprint and the rest');
+  from public.platform_audit_log where action = 'set_organizer' and target_id = :'t_a'), 'an earlier log row with her email keeps the fingerprint and the rest');
 
 -- Nothing of hers anywhere in the public schema.
 create function pg_temp.hits(needle text) returns text language plpgsql as $$
@@ -123,6 +139,8 @@ select pg_temp.hits('zoeforma') as form_hits \gset
 select harness.check(:'name_hits' = 'none', 'her name is in no table: ' || :'name_hits');
 select harness.check(:'email_hits' = 'none', 'her email is in no table: ' || :'email_hits');
 select harness.check((select count(*) from auth.audit_log_entries x where x::text ilike '%zoe.zeta@polo.test%') = 0, 'nor in GoTrue''s audit log');
+select pg_temp.hits('zoe.antes@polo.test') as old_email_hits \gset
+select harness.check(:'old_email_hits' = 'none', 'her old email is in no table: ' || :'old_email_hits');
 select harness.check(:'photo_hits' = 'none', 'her player photo is in no table: ' || :'photo_hits');
 select harness.check(:'profile_photo_hits' = 'none', 'her profile photo is in no table: ' || :'profile_photo_hits');
 select harness.check(:'form_hits' = 'none', 'her form guide is in no table: ' || :'form_hits');

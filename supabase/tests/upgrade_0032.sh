@@ -36,7 +36,10 @@ insert into public.platform_audit_log (action, target_kind, target_id, reason, p
   ('block', 'person', '55555555-5555-4555-8555-555555555555', 'Spam', '{"email": "ida@polo.test", "until": "2027-01-01"}');
 SQL
 
-DB_TARGET=local PGDATABASE=$DB node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0032 did not apply"; }
+# 0032 and nothing after it.
+mkdir "$out/m32"
+for f in "$ROOT"/supabase/migrations/*.sql; do [[ "$(basename "$f")" < "0033" ]] && cp "$f" "$out/m32/"; done
+DB_TARGET=local PGDATABASE=$DB POLO_MIGRATIONS_DIR=$out/m32 node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0032 did not apply"; }
 grep -q 'applying.*0032' "$out/log" || { cat "$out/log"; fail "db.mjs did not apply 0032"; }
 ok "0032 applied by db.mjs migrate"
 

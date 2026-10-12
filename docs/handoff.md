@@ -51,6 +51,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - Desde la PR #114, al borrar una cuenta, su jugador queda como «Jugador borrado» y el registro ya no guarda su correo. Pero las copias de antes siguen teniendo su nombre y su correo, para siempre.
      - Propongo borrar en automático los respaldos de más de 35 días (una regla de R2, gratis), y decirlo en el aviso. Para el viaje sobran: el de cada noche y los de las 5 semanas anteriores.
      - No lo hago sin tu sí, porque borra datos. Si prefieres otro plazo (90 días, un año), dime cuál.
+     - Ojo al borrar una cuenta desde Admin de Polo: si el Comité propuso ese perfil a un jugador equivocado que se llama igual que la persona, ese jugador también queda como «Jugador borrado». La hoja de borrar dice en qué torneos; si uno no es de esa persona, cámbiale el nombre a mano en el Comité.
 6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.
