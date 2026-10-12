@@ -7,6 +7,7 @@ import { Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
+import { acceptLegal } from '../../data/legal'
 import { LegalConsent } from '../../components/LegalLinks'
 import { humanError, UserError } from '../../lib/humanError'
 
@@ -51,11 +52,15 @@ export function OrganizerLoginScreen() {
       await refuseWithUnsent('switch')
       if (mode === 'in') {
         await signInWithPassword(email.trim(), password)
+        void acceptLegal('organizer')
         navigate('/organizer', { replace: true })
       } else {
         const r = await signUpWithPassword(email.trim(), password, name.trim())
         if (r.needsConfirmation) setAwaiting('signup')
-        else navigate('/organizer', { replace: true })
+        else {
+          void acceptLegal('organizer')
+          navigate('/organizer', { replace: true })
+        }
       }
     })
   }
@@ -86,6 +91,8 @@ export function OrganizerLoginScreen() {
               } catch {
                 throw new UserError(t.auth.badCode)
               }
+              // Signed in under the consent line of the step before (TRUST-05).
+              void acceptLegal('organizer')
               navigate('/organizer', { replace: true })
             })
           }}

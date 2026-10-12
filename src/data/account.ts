@@ -19,6 +19,7 @@ import { authSettings, supabase } from '../lib/supabase'
 import { unsentBeforeClaim, unsentWrites } from './outbox'
 import { signOut, signOutRunning } from './auth'
 import { setLastTournament } from './session'
+import { acceptLegal, forgetLegal } from './legal'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
@@ -80,6 +81,8 @@ export async function confirmProfileCode(email: string, code: string, mode: Code
  * it converted in place) saved into the profile.
  */
 export async function finishProfileSignIn(): Promise<{ firstTime: boolean; link: LinkResult | null }> {
+  // /entrar showed the consent line before the email or Google (TRUST-05); first, so the shell's check finds it.
+  void acceptLegal('account')
   // A new profile starts with the names of the player it is saved from (the stashed one, or this device's).
   const claim = await myDeviceClaim()
   const hint = stashedNameHint() ?? (claim ? await claimNameHint(claim.playerId) : null)
@@ -207,6 +210,7 @@ export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null })
 async function forgetSignedOut() {
   useMyProfile.getState().clear()
   setLastTournament(null)
+  forgetLegal()
   await clearAllCached()
 }
 

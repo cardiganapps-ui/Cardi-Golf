@@ -5,6 +5,7 @@
  */
 import { supabase } from '../lib/supabase'
 import { step } from '../lib/telemetry'
+import { acceptLegal } from './legal'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
 import type { TournamentSettings } from '../engine/settings/schema'
@@ -31,6 +32,8 @@ export async function createQuickRound({ crewId, ...input }: QuickRoundInput): P
   if (error) throw ApiError.from(error)
   const created = data as { id: string; slug: string }
   step('quick_round_created')
+  // Created under the consent line (TRUST-05).
+  void acceptLegal('quick')
   if (crewId) await setTournamentCrew(created.id, crewId)
   return created
 }

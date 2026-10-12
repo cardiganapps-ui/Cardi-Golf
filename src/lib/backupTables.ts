@@ -56,6 +56,7 @@ export const BACKUP_TABLES: Record<string, string> = {
   platform_audit_log: 'id',
   platform_settings: 'key',
   backup_runs: 'id',
+  legal_acceptances: 'id',
 }
 
 /**
