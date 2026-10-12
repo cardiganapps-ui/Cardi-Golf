@@ -2103,6 +2103,20 @@ export const t = {
       confidence: { high: 'Lectura confiable', medium: 'Revisar con cuidado', low: 'Lectura dudosa' },
       source: { manual: 'A mano', golfcourseapi: 'Importado', opengolfapi: 'Importado', scorecard_photo: 'De foto' },
     },
+    // Rondas › Teléfonos del torneo (STRAT-02, 0037): lo que cada teléfono reporta.
+    devices: {
+      title: 'Teléfonos del torneo',
+      hint: 'Los que se usaron en los últimos 7 días, con lo que les falta por mandar. Antes de terminar un día, que el que tenga hoyos abra la Tarjeta con señal.',
+      refresh: 'Actualizar',
+      none: 'Ningún teléfono ha reportado todavía.',
+      unavailable: 'La lista de teléfonos todavía no está disponible.',
+      failed: 'No se pudo leer la lista de teléfonos. Intenta de nuevo con señal.',
+      noPlayer: 'Sin jugador (no ha entrado con su PIN)',
+      pending: (n: number, when: string | null) => `${n === 1 ? 'Un hoyo sin mandar' : `${n} hoyos sin mandar`}${when ? `, el primero ${when}` : ''}`,
+      clear: 'Todo mandado',
+      rejected: (n: number) => (n === 1 ? 'Un hoyo que el servidor no tomó' : `${n} hoyos que el servidor no tomó`),
+      seen: (when: string, sha: string | null, other: boolean) => `Visto ${when}${sha ? `, versión ${sha}${other ? ', otra que la tuya' : ''}` : ''}`,
+    },
     rounds: {
       add: 'Agregar ronda',
       empty: 'Sin rondas. Agrega el día 1.',
@@ -2131,6 +2145,8 @@ export const t = {
       inboxCount: (n: number) => (n === 1 ? 'Un hoyo por revisar en Tarjetas' : `${n} hoyos por revisar en Tarjetas`),
       /** Nothing here knows what another phone still holds (REL-08), so the Comité asks before closing. */
       phonesBeforeFinish: 'Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran: antes, que cada teléfono que capturó abra la Tarjeta con señal y no le queden hoyos por subir.',
+      devicesBeforeFinish: (holes: number, names: string[]) =>
+        `${names.length === 1 ? 'El teléfono' : 'Los teléfonos'} de ${andList(names)} ${names.length === 1 ? 'reporta' : 'reportan'} ${holes === 1 ? 'un hoyo sin mandar' : `${holes} hoyos sin mandar`} (Teléfonos del torneo, abajo).`,
       noDate: 'Sin fecha',
       teeSaved: 'Tee guardado.',
       duplicateNumber: (n: number) => `Ya hay un día ${n}. Cambia el número.`,

@@ -11,6 +11,7 @@ import { fillRound, makeFirstTournament, makeGroup, makePlayer, makeRound, makeS
 import type { Player, Snapshot } from '../engine/types'
 import type { LookupResult } from '../data/api'
 import type { InboxItem } from '../data/rejectedInbox'
+import type { TournamentDevice } from '../data/tournamentDevices'
 import type { Me } from '../screens/tournament/TournamentGate'
 
 export interface Fixture {
@@ -22,6 +23,8 @@ export interface Fixture {
   lookup: LookupResult
   /** Holes the server kept for the Comité («Pendientes de revisar»): a fixture has no server to read them from. */
   inbox?: InboxItem[]
+  /** The phones' heartbeats (Rondas › Teléfonos del torneo). */
+  devices?: TournamentDevice[]
 }
 
 const NAMES = [
@@ -212,6 +215,26 @@ function inboxOf(snap: Snapshot): InboxItem[] {
   ]
 }
 
+/** Day 2 in juego: one phone out of signal with three holes, one with a refused hole, the rest up to date (times from now). */
+function devicesOf(snap: Snapshot): TournamentDevice[] {
+  const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
+  const name = (id: string) => snap.players.find((p) => p.id === id)?.displayName ?? null
+  const phone = (playerId: string | null, pending: number, rejected: number, seen: string, oldest: string | null = null): TournamentDevice => ({
+    playerId,
+    player: playerId ? name(playerId) : null,
+    build: 1791700000,
+    buildSha: 'abc1234',
+    platform: 'ios',
+    standalone: true,
+    pending,
+    rejected,
+    oldestPendingAt: oldest,
+    lastSyncAt: seen,
+    lastSeenAt: seen,
+  })
+  return [phone('p1', 0, 0, ago(2)), phone('p5', 3, 0, ago(40), ago(55)), phone('p9', 0, 1, ago(5)), phone(null, 0, 0, ago(180))]
+}
+
 function full12(finished: boolean): Fixture {
   const snap = makeFirstTournament()
   snap.players = withNames(snap.players, NAMES).map((p, i) => ({ ...p, isAdmin: i === 8, isHonoree: i === 3 }))
@@ -254,6 +277,7 @@ function full12(finished: boolean): Fixture {
   snap.handicapOverrides.push({ roundId: 'r2', playerId: 'p7', playingHcp: 13, reason: 'Jugó tees rojas el día 1', by: 'p9', at: '2027-04-09T18:00:00Z' })
   return {
     inbox: finished ? [] : inboxOf(snap),
+    devices: finished ? [] : devicesOf(snap),
     name: `full12-${finished ? 'finished' : 'live'}`,
     description: finished ? '12 jugadores, todos los módulos, torneo terminado (ceremonia, liquidación)' : '12 jugadores, todos los módulos, día 2 en juego; víbora pendiente, hoyo en disputa, tarjeta sin firmar',
     snapshot: snap,
