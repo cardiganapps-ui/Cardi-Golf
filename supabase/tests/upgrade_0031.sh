@@ -36,7 +36,10 @@ insert into public.platform_audit_log (action, target_kind, target_id, reason, p
   ('block', 'person', '33333333-3333-4333-8333-333333333333', 'Spam', '{"email": "otra@polo.test", "until": "2027-01-01"}');
 SQL
 
-DB_TARGET=local PGDATABASE=$DB node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0031 did not apply"; }
+# 0031 and nothing after it: a later migration is its own upgrade test's business.
+mkdir "$out/m31"
+for f in "$ROOT"/supabase/migrations/*.sql; do [[ "$(basename "$f")" < "0032" ]] && cp "$f" "$out/m31/"; done
+DB_TARGET=local PGDATABASE=$DB POLO_MIGRATIONS_DIR=$out/m31 node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0031 did not apply"; }
 grep -q 'applying.*0031' "$out/log" || { cat "$out/log"; fail "db.mjs did not apply 0031"; }
 ok "0031 applied by db.mjs migrate"
 
