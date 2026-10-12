@@ -11,10 +11,10 @@
  * and their «hoyo» exactly as field.ts works them out).
  *
  * The round runs twice, each on its own tournament: on the runner's own
- * network, and with both phones on emulated 4G (REL-11): Chromium's network
- * throttling through the DevTools protocol, which holds back requests and the
- * live channel's WebSocket frames alike, at the round trip and bandwidth of a
- * fair 4G signal on a course (FOUR_G).
+ * network, and with both phones on emulated 4G (REL-11, FOUR_G): every
+ * request through Chromium's network conditions, and every frame of the live
+ * channel late by half the round trip each way (DevTools throttling leaves an
+ * open WebSocket's frames alone; phone.ts, `slowSockets`).
  */
 import { t } from '../../src/i18n/es-MX'
 import { ROUND, SLUGS, type HoleEntry } from './field'
@@ -37,6 +37,7 @@ import {
   test,
   typeHole,
   watchFor,
+  type Link,
   type Phone,
   type Shown,
 } from './phone'
@@ -45,18 +46,11 @@ import {
 const BUDGET_MS = 2000
 
 /**
- * A fair 4G signal: 150 ms of round trip, 1.6 Mbps down and 750 kbps up
- * (Lighthouse's «slow 4G» is harsher, 150 ms with 1.6 / 0.75 Mbps applied to
- * the whole page load; this is the same link held for the round).
+ * A fair 4G signal: 150 ms of round trip, 1.6 Mbps down and 750 kbps up,
+ * held for the whole round, joining included: on every request (Chromium's
+ * network conditions) and on every frame of the live channel, each way.
  */
-const FOUR_G = { offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
-
-/** Both directions of one phone on `conditions`, requests and WebSocket frames alike. */
-async function throttle(phone: Phone, conditions: typeof FOUR_G) {
-  const cdp = await phone.page.context().newCDPSession(phone.page)
-  await cdp.send('Network.enable')
-  await cdp.send('Network.emulateNetworkConditions', conditions)
-}
+const FOUR_G: Link = { latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
 
 interface Sample {
   what: 'tarjeta' | 'board' | 'correction'
@@ -72,16 +66,12 @@ const FIXES = [
   { hole: 5, name: 'Dani', strokes: 3, putts: 2 },
 ]
 
-type Join = (slug: string, name: string) => Promise<Phone>
+type Join = (slug: string, name: string, link?: Link) => Promise<Phone>
 
 /** The whole round on `slug`, measured; `network` says which link the phones were on, for the summary. */
-async function playRound(join: Join, outputDir: string, slug: string, network: { label: string; key: string; conditions?: typeof FOUR_G }) {
-  const ana = await join(slug, 'Ana')
-  const beto = await join(slug, 'Beto')
-  if (network.conditions) {
-    await throttle(ana, network.conditions)
-    await throttle(beto, network.conditions)
-  }
+async function playRound(join: Join, outputDir: string, slug: string, network: { label: string; key: string; conditions?: Link }) {
+  const ana = await join(slug, 'Ana', network.conditions)
+  const beto = await join(slug, 'Beto', network.conditions)
   const card = new Map<number, HoleEntry>()
   const samples: Sample[] = []
 
@@ -157,7 +147,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples }, [
     `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
     '',
-    `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones throttled to ${network.conditions.latency} ms round trip, 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
+    `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones on ${network.conditions.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
     '',
     '| Where | Hole | ms |',
     '|---|---:|---:|',
