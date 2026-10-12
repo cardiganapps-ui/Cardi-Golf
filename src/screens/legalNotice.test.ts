@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ddedff9f7a1fc00c' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -72,6 +72,31 @@ describe('each document is pinned to its own version and date', () => {
   })
 })
 
+describe('the integral notice (TRUST-04)', () => {
+  it('names every processor and the country, and says none uses the data for itself', () => {
+    const abroad = sections['Fuera de México']!
+    for (const who of ['Supabase', 'Vercel', 'Resend', 'Cloudflare', 'Anthropic', 'Google', 'Estados Unidos']) expect(abroad).toContain(who)
+    expect(abroad).toContain('no usan tus datos para lo suyo')
+  })
+
+  it('says how to exercise the rights, how identity is checked, the answer time and the authority', () => {
+    const arco = sections['Cómo pedir algo sobre tus datos']!
+    expect(arco).toContain('acceso, rectificación, cancelación y oposición')
+    expect(arco).toContain('retirar tu consentimiento o limitar su uso')
+    expect(arco).toContain('un código al correo de tu cuenta')
+    expect(arco).toContain('20 días hábiles')
+    expect(arco).toContain('15 días hábiles')
+    expect(arco).toContain('Secretaría Anticorrupción y Buen Gobierno')
+    // The mailbox is not set up yet (TRUST-01): the notice never sends people to it as if it were.
+    expect(arco).toContain('el correo golf@cardigan.mx todavía no recibe mensajes')
+  })
+
+  it('a minor needs a parent\'s permission, and changes show in the date and version', () => {
+    expect(sections['Menores de edad']).toContain('mayores de 18 años')
+    expect(sections['Cambios a este aviso']).toContain('cambian la fecha y la versión de arriba')
+  })
+})
+
 describe('the sections, in order', () => {
   it('the notice', () => {
     expect(t.legal.privacy.sections.map(([h]) => h)).toEqual([
@@ -84,8 +109,13 @@ describe('the sections, in order', () => {
       'El dinero de un torneo',
       'Quién opera Polo',
       'Dónde viven',
+      'Fuera de México',
+      'Cuánto tiempo los guardamos',
       'Google',
       'Tus derechos',
+      'Cómo pedir algo sobre tus datos',
+      'Menores de edad',
+      'Cambios a este aviso',
     ])
   })
 
@@ -208,7 +238,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-12.2')
+    expect(t.legal.privacy.version).toBe('2026-10-12.3')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })

@@ -3319,11 +3319,14 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 118,
+      "tests": [
+        "src/lib/dataInventory.test.ts",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Notice 2026-10-12.3 (PR #118), on top of TRUST-02/03: «Fuera de México» (every processor by name, in the US, acting on Polo's behalf, no transfer for their own use), «Cuánto tiempo los guardamos» (per category: account, tournament, records without a deletion date, push, one-time tokens, telemetry 30/90 days, backups), «Cómo pedir algo sobre tus datos» (ARCO, revocation and limitation, what to send, identity check by account code or the Comité, 20 + 15 business days, the Secretaría Anticorrupción y Buen Gobierno), «Menores de edad» and «Cambios a este aviso». src/lib/dataInventory.ts files every table the migrations create with its notice section and retention, and the test refuses a table with a person in it filed as holding nobody. Left: the responsable's domicilio (Diego, handoff 5f); the mailbox golf@cardigan.mx does not receive yet (TRUST-01), so requests go to Diego directly; drafted without counsel (an accepted residual, Diego's call); no in-app announcement of a changed notice yet (TRUST-05 part 2)."
     },
     {
       "id": "TRUST-05",
