@@ -21,6 +21,7 @@ import { EmptyState, Money } from '../../components/primitives'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { applyPaidWrites, markPaidWrites, restorePaidWrites, unmarkPaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
+import type { PrizeAward } from '../../engine/modules/module'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
@@ -55,7 +56,7 @@ export function MoneyScreen() {
    * Grouped by the game that awarded the money, biggest pot first.
    */
   const byGame = useMemo(() => {
-    const groups = new Map<string, { label: string; total: number; final: boolean; lines: Array<{ playerId: string; amount: number; label: string }> }>()
+    const groups = new Map<string, { label: string; total: number; final: boolean; lines: Array<{ playerId: string; amount: number; label: string; why: PrizeAward['why'] }> }>()
     for (const pr of state.prizes) {
       const key = pr.gameId ?? pr.moduleId
       const gameLabel = pr.gameId
@@ -68,7 +69,7 @@ export function MoneyScreen() {
       g.final = g.final && pr.final
       // «Individual, 1.º» → «1.º»: the heading already says which game it is.
       const trimmed = gameLabel && pr.label.startsWith(gameLabel) ? pr.label.slice(gameLabel.length).replace(/^\s*,\s*/, '') : pr.label
-      g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: trimmed })
+      g.lines.push({ playerId: pr.playerId, amount: pr.amount, label: trimmed, why: pr.why })
       groups.set(key, g)
     }
     return [...groups.values()].sort((a, b) => b.total - a.total)
@@ -324,6 +325,9 @@ export function MoneyScreen() {
           </span>
           <span className={`${styles.bankVerdict} ${verdictClass}`}>{verdict}</span>
         </div>
+        <span className={styles.bankHow}>
+          <HowCalculated why={money.banker.why} ariaLabel={`${t.money.howCalculated} ${M.bank}`} />
+        </span>
         {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
         {state.flags.poolWarning && (
           <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
@@ -415,7 +419,7 @@ export function MoneyScreen() {
                       {name(l.playerId)}
                       {l.label ? `, ${l.label}` : ''}
                     </span>
-                    <span>{formatMoney(l.amount)}</span>
+                    <HowCalculated why={l.why} label={formatMoney(l.amount)} ariaLabel={`${t.money.howCalculated} ${g.label}: ${name(l.playerId)}${l.label ? `, ${l.label}` : ''}, ${formatMoney(l.amount)}`} />
                   </div>
                 ))}
               </div>
@@ -478,7 +482,9 @@ export function MoneyScreen() {
                         </span>
                       )}
                     </span>
-                    <span className={styles.amount}>{formatMoney(tr.amount)}</span>
+                    <span className={styles.amount}>
+                      <HowCalculated why={tr.why} label={formatMoney(tr.amount)} ariaLabel={`${t.money.howCalculated} ${lineText(tr.from, tr.to, tr.amount)}`} />
+                    </span>
                     {/* Every line keeps the slot, so a line with a provisional prize (no button) keeps its amount in the column. */}
                     {markable && (
                       <span className={styles.action}>

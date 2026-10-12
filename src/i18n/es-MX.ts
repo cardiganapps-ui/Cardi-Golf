@@ -2254,6 +2254,42 @@ export const t = {
     noBanker: 'Falta definir al banquero en Comité, sección Torneo.',
     provisional: 'Provisional: hay premios abiertos.',
   },
+  /** «¿Cómo se calculó?» of the numbers people pay by: each settlement line and the bank (MONEY-07). */
+  settleWhy: {
+    /** One part of a line, signed from the payer's side: + he owes it, − it nets against it. */
+    part: (label: string, amount: string) => `${label}: ${amount}`,
+    /** A flow partly paid already: what is left of it. */
+    partOf: (label: string, amount: string, of: string) => `${label}: ${amount} (de ${of}; lo demás ya se pagó)`,
+    /** An account paid beyond what it owes. */
+    overpaid: (kind: string) => `${kind}, pagado de más (se devuelve)`,
+    total: (amount: string) => `Total: ${amount}`,
+    /** A vía-banco line whose parts cancel out. */
+    nets: 'Lo que le deben y lo que debe se compensan: no cambia de manos dinero, solo se cierran las cuentas.',
+    owesTotal: (name: string, amount: string) => `${name} todavía debe ${amount} en total`,
+    getsTotal: (name: string, amount: string) => `${name} todavía tiene que recibir ${amount} en total`,
+    /** The bank's side, in two parts: the banker holds it, or it stands as itself. */
+    bankCollects: 'Lo que el banco todavía cobra',
+    bankPays: 'Lo que el banco todavía paga',
+    ruleTitle: 'Cómo se reparte',
+    rule: 'Para hacer las menos transferencias, el que más debe le paga al que más tiene que recibir, y así hasta cuadrar.',
+    share: (from: string, total: string, amount: string, to: string) => `De los ${total} que debe ${from}, ${amount} van a ${to}.`,
+    bankTitle: 'El banco',
+    bankIn: (label: string, amount: string) => `Entra, ${label}: ${amount}`,
+    bankOut: (label: string, amount: string) => `Sale, ${label}: ${amount}`,
+    bankInTotal: (amount: string) => `Entra en total: ${amount}`,
+    bankOutTotal: (amount: string) => `Sale en total: ${amount}`,
+    entries: (n: number, fee: string) => `inscripciones (${n} × ${fee})`,
+    lots: (n: number) => `Calcutta (${n === 1 ? '1 lote' : `${n} lotes`})`,
+    mainPrizes: 'premios del torneo',
+    calcuttaShares: 'pagos de la Calcutta',
+    houseCut: (amount: string) => `Para la casa: ${amount}`,
+    toHouse: (amount: string) => `El Comité lo dejó a la casa: ${amount}`,
+    squares: 'Lo que entra es lo que sale: cuadra al peso.',
+    left: (amount: string) => `Queda en el banco: ${amount}.`,
+    short: (amount: string) => `Falta en el banco: ${amount}.`,
+    /** Counts are what is owed, paid or not: «Quién debe qué» says what is still due. */
+    gross: 'Cuenta todo lo que se debe, ya pagado o no.',
+  },
   /** Money the rules leave to the Comité, and its decisions (MONEY-05, COPY-09). */
   unassigned: {
     // What the engine writes: the buckets, their explanations, the assignments.
