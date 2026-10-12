@@ -27,7 +27,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
    - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.
    - Sirve para probar cada migración antes de producción, para que las vistas previas no toquen datos reales, y como respaldo en caliente si Supabase falla en el viaje.
-5. [ ] **Cuatro decisiones** (contesta en el chat):
+5. [ ] **Cinco decisiones** (contesta en el chat):
    - **a. Dos teléfonos capturan distinto el mismo hoyo.**
      - Hoy gana el último, sin avisar.
      - Propongo que gane el primero que llegó y que al segundo le pregunte. Ya está hecho así en la PR #106 (sin juntar todavía): el segundo teléfono ve «Hoyo 7: Diego ya capturó a Justo: 6. No se guardó lo tuyo: 5.», con «Guardar el mío» o «Dejar el suyo».
@@ -46,6 +46,11 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - Antes cobraba premios de la Calcutta sin haber puesto nada en el bote.
      - Ya lo cambié así: un lote sin vender no cobra. Los lugares de la Calcutta se cuentan entre los lotes vendidos, y el Comité ve un aviso con su nombre.
      - La otra opción: contarlo como suyo al precio de salida ($250). Esa cantidad se suma al bote y él la debe. ¿Prefieres esa?
+   - **e. ¿Cuánto tiempo guardar los respaldos de cada noche?** (TRUST-03)
+     - Hoy no se borra ninguno: cada noche se suma una copia completa de todo en Cloudflare R2, y el aviso de privacidad lo dice así.
+     - Desde la PR #114, al borrar una cuenta, su jugador queda como «Jugador borrado» y el registro ya no guarda su correo. Pero las copias de antes siguen teniendo su nombre y su correo, para siempre.
+     - Propongo borrar en automático los respaldos de más de 35 días (una regla de R2, gratis), y decirlo en el aviso. Para el viaje sobran: el de cada noche y los de las 5 semanas anteriores.
+     - No lo hago sin tu sí, porque borra datos. Si prefieres otro plazo (90 días, un año), dime cuál.
 6. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.

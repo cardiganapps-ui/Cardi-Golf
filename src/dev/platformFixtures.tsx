@@ -167,7 +167,7 @@ const api: PlatformApi = {
     return person(id)
   },
   async deletePreview() {
-    return { orphaned: [{ id: 'f-orphan', name: 'Copa de Otoño' }], organizerOf: 1, linkedPlayers: 2, crewsHanded: ['Los del jueves'], crewsDeleted: [], friendships: 4, rivalries: 1, notifications: 12, push: 1, hasProfile: true }
+    return { orphaned: [{ id: 'f-orphan', name: 'Copa de Otoño' }], organizerOf: 1, linkedPlayers: 2, anonymizedPlayers: 1, anonymizedIn: ['Copa de Otoño'], crewsHanded: ['Los del jueves'], crewsDeleted: [], friendships: 4, rivalries: 1, notifications: 12, push: 1, hasProfile: true }
   },
   async block() {},
   async unblock() {},

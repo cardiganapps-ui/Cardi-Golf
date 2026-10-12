@@ -108,7 +108,10 @@ ok "a database at 0029 with $rows rows ($(grep '^scores ' "$out/before.data" | c
 
 # 0030, as production gets it.
 start=$(date +%s%N)
-DB_TARGET=local PGDATABASE=$DB node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0030 did not apply"; }
+# 0030 and nothing after it: a later migration is its own upgrade test's business.
+mkdir "$out/m30"
+for f in "$ROOT"/supabase/migrations/*.sql; do [[ "$(basename "$f")" < "0031" ]] && cp "$f" "$out/m30/"; done
+DB_TARGET=local PGDATABASE=$DB POLO_MIGRATIONS_DIR=$out/m30 node "$ROOT/scripts/db.mjs" migrate >"$out/log" || { cat "$out/log"; fail "0030 did not apply"; }
 grep -q 'applying.*0030' "$out/log" || { cat "$out/log"; fail "db.mjs did not apply 0030"; }
 ms=$(( ($(date +%s%N) - start) / 1000000 ))
 ok "0030 applied by db.mjs migrate in ${ms} ms (process start included)"

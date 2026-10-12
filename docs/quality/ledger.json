@@ -3292,11 +3292,15 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 114,
+      "tests": [
+        "supabase/tests/anonymize_person.sql",
+        "supabase/tests/upgrade_0031.sh",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Migration 0031: platform_delete_account calls anonymize_person, which renames every player the account confirmed as its own to «Jugador borrado» («Borrado»), clears its photo and form guide, and redacts the same fields from the audit log's images of those rows; the deletion log keeps a sha-256 fingerprint of the email (existing deletion rows rewritten). The harness test deletes an account and finds its name, email, photos and form guide in no table of the public schema. Kept on purpose: holes, handicap fields and money (the engine and the other players' results are made of them), and players only claimed by a PIN or never confirmed (the Comité's entry). Left: files in Storage stay, unreferenced (SQL cannot clear Storage; a Storage API cleanup needs a server route); nightly backups keep everything until a retention rule exists (Diego's decision, handoff 5e); there is still no self-service deletion (the notice says so); deletions before 0031 cannot be anonymized retroactively (nothing recorded which players were theirs)."
     },
     {
       "id": "TRUST-04",

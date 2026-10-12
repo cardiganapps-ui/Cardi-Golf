@@ -272,6 +272,9 @@ try {
   check(!setOrg && aOnTZ?.role === 'owner' && !!anonOrg, 'the admin gives it a new owner (an account, never a phone)', { setOrg: setOrg?.message, aOnTZ })
   const personLog = await query(`select action from public.platform_audit_log where target_id = '${uuid(Z.id)}' order by at`)
   check(personLog.map((x) => x.action).join(',') === 'block,unblock,delete', 'block, unblock and delete are in the platform log', personLog)
+  // TRUST-03 (0031): the deletion log keeps a fingerprint of the email, never the address.
+  const [delLog] = await query(`select payload ? 'email' as has_email, payload ->> 'emailHash' as hash, (payload::text ilike '%${Z.email.replace(/'/g, "''")}%') as leaks from public.platform_audit_log where target_id = '${uuid(Z.id)}' and action = 'delete'`)
+  check(delLog?.has_email === false && /^[0-9a-f]{64}$/.test(delLog?.hash ?? '') && delLog?.leaks === false, 'the deletion log keeps the email\'s fingerprint, not the email (TRUST-03)', delLog)
   await query(`delete from public.crews where id = '${uuid(crew.id)}'`)
 
   console.log('Campos:')

@@ -363,7 +363,8 @@ function DeleteAccountSheet({ open, person, onClose, onBlockInstead, onDeleted }
     ? [
         preview.orphaned.length ? H.deleteOrphaned(t.common.andList(preview.orphaned.map((x) => x.name))) : null,
         preview.organizerOf > preview.orphaned.length ? H.deleteOrganizer(preview.organizerOf) : null,
-        preview.linkedPlayers ? H.deletePlayers(preview.linkedPlayers) : null,
+        preview.anonymizedPlayers ? H.deleteAnonymized(preview.anonymizedPlayers, t.common.andList(preview.anonymizedIn ?? [])) : null,
+        preview.linkedPlayers - (preview.anonymizedPlayers ?? 0) > 0 ? H.deletePlayers(preview.linkedPlayers - (preview.anonymizedPlayers ?? 0)) : null,
         preview.crewsHanded.length ? H.deleteCrewsHanded(t.common.andList(preview.crewsHanded)) : null,
         preview.crewsDeleted.length ? H.deleteCrewsDeleted(t.common.andList(preview.crewsDeleted)) : null,
         preview.friendships || preview.rivalries ? H.deleteSocial(preview.friendships, preview.rivalries) : null,
