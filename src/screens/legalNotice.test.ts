@@ -238,7 +238,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     expect(rights()).not.toContain('tu correo, en el registro del borrado')
   })
 
-  it('the deletion it describes (0031 to 0034): the person\'s players and their copies renamed, their audit images redacted, the email fingerprinted', () => {
+  it('the deletion it describes (0031 to 0035): the person\'s players and their copies renamed, their audit images redacted, the email fingerprinted', () => {
     const latest = (fn: string) => {
       const all = filesUnder('supabase/migrations', (n) => n.endsWith('.sql')).map((f) => source(f)).filter((x) => x.includes(`create or replace function public.${fn}(`))
       const body = all.at(-1)!
@@ -261,9 +261,11 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
     expect(ids).toContain("p.profile_status = 'confirmed'")
     expect(ids).toMatch(/p\.profile_status = 'pending' and lower\(btrim\(p\.full_name\)\) in \(select n from names\)/)
     // …and a copy under the Comité's name that carries the photo loses only the photo.
-    expect(anon).toContain('set avatar_url = null, form_guide = case when form_guide = any (forms) then null else form_guide end')
-    expect(anon).toContain('set before = public.redact_copy(before, names, forms), after = public.redact_copy(after, names, forms)')
-    expect(latest('person_photo_ids')).toContain('not p.id = any (public.person_player_ids(p_user_id))')
+    // Every other pending copy loses what of it is hers, its history too (0035): her photo, form guide and short name.
+    expect(anon).toContain("p.profile_status = 'pending' and not p.id = any (ids)")
+    expect(anon).toContain("set avatar_url = case when nullif(btrim(avatar_url), '') = any (photos) then null else avatar_url end")
+    expect(anon).toContain('form_guide = case when form_guide = any (forms) then null else form_guide end')
+    expect(anon).toContain('set before = public.redact_copy(before, names, forms, photos), after = public.redact_copy(after, names, forms, photos)')
   })
 
   it('the facts it rests on: when one changes, so does the sentence', () => {

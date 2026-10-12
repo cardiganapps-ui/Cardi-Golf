@@ -50,6 +50,19 @@ reset role;
 insert into public.players (tournament_id, full_name, display_name, avatar_url, form_guide, sort_order, profile_id, profile_status)
   values (:'t_photo', 'Zoé Zeta Única', 'Zoé', 'https://example.test/profiles/zoe-perfil.jpg', 'zoeforma: 88, 91, 85', 0, :'zoe', 'pending') returning id as photo_copy \gset
 update public.players set full_name = 'Z. Zeta, la del Comité', display_name = 'Z.' where id = :'photo_copy';
+-- Two more duplicates' copies (PR 114's fourth verifier): one the Comité renamed and gave its own photo,
+-- one it renamed in full name only (the boards still say «Zoé»).
+select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
+set local role authenticated;
+select id as t_copy_b from public.create_tournament('Torneo A, copia B', '{}'::jsonb) \gset
+select id as t_copy_c from public.create_tournament('Torneo A, copia C', '{}'::jsonb) \gset
+reset role;
+insert into public.players (tournament_id, full_name, display_name, avatar_url, form_guide, sort_order, profile_id, profile_status)
+  values (:'t_copy_b', 'Zoé Zeta Única', 'Zoé', 'https://example.test/t/zoe-jugadora.jpg', 'zoeforma: 88, 91, 85', 0, :'zoe', 'pending') returning id as copy_b \gset
+update public.players set full_name = 'Renombrado B', display_name = 'RB', avatar_url = 'https://example.test/t/comite-b.jpg' where id = :'copy_b';
+insert into public.players (tournament_id, full_name, display_name, avatar_url, form_guide, sort_order, profile_id, profile_status)
+  values (:'t_copy_c', 'Zoé Zeta Única', 'Zoé', null, 'zoeforma: 88, 91, 85', 0, :'zoe', 'pending') returning id as copy_c \gset
+update public.players set full_name = 'Renombrada C' where id = :'copy_c';
 -- Before she changed her email, the operator gave her a Comité under the old one.
 insert into public.platform_audit_log (actor_auth_user_id, action, target_kind, target_id, tournament_id, reason, payload)
   values (:'padmin', 'set_organizer', 'tournament', :'t_quick', :'t_quick', 'Comité nuevo', jsonb_build_object('userId', :'zoe', 'email', 'zoe.antes@polo.test', 'role', 'owner'));
@@ -96,9 +109,9 @@ set local role authenticated;
 select public.platform_delete_preview(:'zoe')::text as preview \gset
 select public.platform_delete_account(:'zoe', 'Zoe.Zeta@polo.test', 'Pidió borrar su cuenta') \g /dev/null
 reset role;
-select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 3 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 5
+select harness.check((:'preview'::jsonb ->> 'anonymizedPlayers')::int = 3 and (:'preview'::jsonb ->> 'linkedPlayers')::int = 7
   and :'preview'::jsonb -> 'anonymizedIn' = '["Ronda de Bob", "Seed Torneo A", "Torneo A, ensayo"]'::jsonb,
-  'the preview: 5 linked, 3 renamed (hers and the two copies; not the Comité''s name with her photo), and where: ' || :'preview');
+  'the preview: 7 linked, 3 renamed (hers and the two copies; not the Comité''s name with her photo), and where: ' || :'preview');
 
 -- Her player stays, without her.
 select harness.check((select full_name = 'Jugador borrado' and display_name = 'Borrado' and avatar_url is null and form_guide is null and profile_id is null
@@ -114,6 +127,12 @@ select harness.check((select count(*) from auth.audit_log_entries where payload 
   and (select count(*) from auth.audit_log_entries where payload ->> 'actor_id' = :'org_a') = 1, 'GoTrue''s audit rows by her and about her go, nobody else''s');
 select harness.check((select full_name = 'Z. Zeta, la del Comité' and display_name = 'Z.' and avatar_url is null and form_guide is null from public.players where id = :'photo_copy'),
   'a copy the Comité renamed keeps that name and loses her photo and her form guide');
+select harness.check((select full_name = 'Renombrado B' and display_name = 'RB' and avatar_url = 'https://example.test/t/comite-b.jpg' and form_guide is null
+  from public.players where id = :'copy_b'), 'a copy the Comité renamed with its own photo keeps both and loses her form guide');
+select harness.check((select full_name = 'Renombrada C' and display_name = 'Renombrada C' and form_guide is null from public.players where id = :'copy_c'),
+  'a copy renamed in full name only no longer shows her short name');
+select harness.check((select count(*) from public.audit_log where table_name = 'players' and row_id = :'copy_b' and (before::text || coalesce(after::text, '')) like '%comite-b.jpg%') >= 1,
+  'its history keeps the photo the Comité set');
 select harness.check((select count(*) from public.audit_log where table_name = 'players' and row_id = :'photo_copy'
   and (before::text || coalesce(after::text, '')) like '%la del Comité%') >= 1, 'its history keeps the Comité''s name');
 select harness.check((select payload ->> 'emailHash' = encode(extensions.digest('zoe.antes@polo.test:' || :'zoe', 'sha256'), 'hex') and not payload ? 'email'
