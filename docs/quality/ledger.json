@@ -1006,11 +1006,15 @@
       "workstream": "W12",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 122,
+      "tests": [
+        "src/lib/backupCron.test.ts",
+        "supabase/tests/backup_snapshot.sql",
+        "scripts/db-test.sh"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Done (PR #122, migration 0039): one consistent snapshot of every table plus the history up to its last row, the accounts' essentials and identities (no password hashes, no tokens) and the Storage file list in the nightly dump; the files themselves copied to R2 files/ each night; scripts/restore-r2.mjs restores a dump into an empty database and proves it row for row and key by key; the db CI job round-trips the seeded harness on every schema change; the real drill restored the 2026-10-12 production night (51,889 rows) in 35 s; RUNBOOK.md §8b. Left: putting the files back into a new project's bucket is a manual upload (one file today); the backup is not encrypted by us and is never deleted (retention is Diego's call, handoff 5e; TRUST-10); during the trip windows it stays nightly (an hourly pg_cron run is the plan's next step); a weekly drill of the real dump in CI needs an R2 read token as a GitHub Actions secret (handoff); no warm standby (the staging project, handoff item 4)."
     },
     {
       "id": "DB-09",
@@ -1131,7 +1135,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partly (PR #122): RUNBOOK.md §8b covers a lost or corrupted project (who acts, the restore, the time measured, what each person does). Still open: an outage on Calcutta night that is not data loss (Supabase down for hours), and a warm standby to switch to."
     },
     {
       "id": "DB-20",

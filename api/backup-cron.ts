@@ -1,10 +1,18 @@
 /**
- * GET /api/backup-cron — nightly backup (CLAUDE.md §3 "Backups (R2)").
- * Vercel Cron calls it with `Authorization: Bearer $CRON_SECRET`. It reads
- * every public table with the service-role key and writes one gzipped JSON
- * snapshot to R2 at backups/YYYY-MM-DD.json.gz. This is the only code allowed
- * to use SUPABASE_SECRET_KEY, and it never returns row data — only counts.
- * Every run, good or bad, is recorded in backup_runs for Admin › Salud.
+ * GET /api/backup-cron — nightly backup (CLAUDE.md §3 "Backups (R2)", DB-07).
+ * Vercel Cron calls it with `Authorization: Bearer $CRON_SECRET`. With the
+ * service-role key it takes one consistent snapshot of every table, the
+ * accounts' essentials and the list of Storage files (`backup_snapshot`,
+ * migration 0039), reads the history (`audit_log`, too big for one request)
+ * up to the snapshot's last row, and writes one gzipped JSON to R2 at
+ * backups/YYYY-MM-DD.json.gz (format 2, what scripts/restore-r2.mjs loads).
+ * Then it copies the Storage files that changed since the last night to R2
+ * (files/<bucket>/<name>, with files/manifest.json), within a time budget:
+ * what is left goes the next night. On a database without 0039 it reads
+ * each table page by page, as before (format 1), so no night is lost.
+ * This is the only code allowed to use SUPABASE_SECRET_KEY, and it never
+ * returns row data, only counts. Every run, good or bad, is recorded in
+ * backup_runs for Admin › Salud.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { gzipSync } from 'node:zlib'
@@ -14,14 +22,24 @@ import { BACKUP_TABLES, backupKey } from '../src/lib/backupTables.js'
 export const config = { maxDuration: 60 }
 
 const PAGE = 1000
+/** The history, read in pages up to the snapshot's last row; every other table is in the snapshot. */
+const HISTORY = 'audit_log'
+/** Seconds the file copy may take after the backup is written; the rest goes the next night. */
+const FILES_BUDGET_MS = 20_000
+const MANIFEST = 'files/manifest.json'
 
 type Row = Record<string, unknown>
+type Env = Record<string, string | undefined>
 
-async function readTable(url: string, key: string, table: string, order: string): Promise<Row[]> {
+function headers(key: string): Record<string, string> {
+  return { apikey: key, Authorization: `Bearer ${key}` }
+}
+
+async function readTable(url: string, key: string, table: string, order: string, filter = ''): Promise<Row[]> {
   const rows: Row[] = []
   for (let from = 0; ; from += PAGE) {
-    const r = await fetch(`${url}/rest/v1/${table}?select=*&order=${order}`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items' },
+    const r = await fetch(`${url}/rest/v1/${table}?select=*&order=${order}${filter}`, {
+      headers: { ...headers(key), Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items' },
     })
     if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`)
     const page = (await r.json()) as Row[]
@@ -30,12 +48,66 @@ async function readTable(url: string, key: string, table: string, order: string)
   }
 }
 
+interface Snapshot {
+  snapshotAt: string
+  auditMaxId: number | null
+  tables: Record<string, Row[]>
+  auth: { users: Row[]; identities: Row[] }
+  storage: { objects: Row[] }
+}
+
+/** What goes to R2: format 2 (one snapshot) when the database has 0039, else format 1 (page by page, as before 0039). */
+export interface Dump {
+  version: 1 | 2
+  createdAt: string
+  snapshotAt?: string
+  tables: Record<string, Row[]>
+  auth?: Snapshot['auth']
+  storage?: Snapshot['storage']
+}
+
+/** One consistent snapshot, then the history up to its last row. Null when the database has no backup_snapshot yet. */
+async function readSnapshot(url: string, key: string, at: Date): Promise<Dump | null> {
+  const p_tables = Object.fromEntries(Object.entries(BACKUP_TABLES).filter(([t]) => t !== HISTORY))
+  const r = await fetch(`${url}/rest/v1/rpc/backup_snapshot`, {
+    method: 'POST',
+    headers: { ...headers(key), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_tables }),
+  })
+  if (r.status === 404) {
+    const body = (await r.json().catch(() => ({}))) as { code?: string }
+    if (body.code === 'PGRST202') return null
+    throw new Error(`snapshot: HTTP 404`)
+  }
+  if (!r.ok) {
+    // The database's own words name the table it could not read.
+    const body = (await r.json().catch(() => ({}))) as { message?: string }
+    throw new Error(`snapshot: ${body.message ?? `HTTP ${r.status}`}`)
+  }
+  const snap = (await r.json()) as Snapshot
+  const history = snap.auditMaxId == null ? [] : await readTable(url, key, HISTORY, BACKUP_TABLES[HISTORY]!, `&id=lte.${snap.auditMaxId}`)
+  return {
+    version: 2,
+    createdAt: at.toISOString(),
+    snapshotAt: snap.snapshotAt,
+    tables: { ...snap.tables, [HISTORY]: history },
+    auth: snap.auth,
+    storage: snap.storage,
+  }
+}
+
+async function readPaged(url: string, key: string, at: Date): Promise<Dump> {
+  const tables: Record<string, Row[]> = {}
+  for (const [table, order] of Object.entries(BACKUP_TABLES)) tables[table] = await readTable(url, key, table, order)
+  return { version: 1, createdAt: at.toISOString(), tables }
+}
+
 /** Tell Admin › Salud how this run went. Never fails the backup. */
 async function record(url: string, key: string, run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string }) {
   try {
     await fetch(`${url}/rest/v1/backup_runs`, {
       method: 'POST',
-      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      headers: { ...headers(key), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify(run),
     })
   } catch {
@@ -43,9 +115,66 @@ async function record(url: string, key: string, run: { ok: boolean; key?: string
   }
 }
 
+/** A Storage path, each segment encoded on its own (names may hold spaces, accents, «#»). */
+export function encodePath(name: string): string {
+  return name.split('/').map(encodeURIComponent).join('/')
+}
+
+/**
+ * Copies to R2 each Storage file the manifest doesn't have at its current
+ * `updated_at`, until the budget runs out; the manifest is written after.
+ * Never fails the backup: the counts say what happened.
+ */
+async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: number) {
+  const base = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}`
+  const out = { copied: 0, pending: 0, failed: 0 }
+  let manifest: Record<string, string> = {}
+  try {
+    const m = await r2.fetch(`${base}/${MANIFEST}`)
+    if (m.ok) manifest = (await m.json()) as Record<string, string>
+    else if (m.status !== 404) return { ...out, failed: objects.length }
+  } catch {
+    return { ...out, failed: objects.length }
+  }
+  for (const o of objects) {
+    const bucket = String(o.bucket_id)
+    const name = String(o.name)
+    const id = `${bucket}/${name}`
+    const stamp = String(o.updated_at ?? o.created_at ?? '')
+    if (manifest[id] === stamp) continue
+    if (Date.now() > deadline) {
+      out.pending++
+      continue
+    }
+    try {
+      const got = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(name)}`, { headers: headers(env.SUPABASE_SECRET_KEY!) })
+      if (!got.ok) throw new Error(String(got.status))
+      const put = await r2.fetch(`${base}/files/${encodeURIComponent(bucket)}/${encodePath(name)}`, {
+        method: 'PUT',
+        body: await got.arrayBuffer(),
+        headers: { 'Content-Type': got.headers.get('content-type') ?? 'application/octet-stream' },
+      })
+      if (!put.ok) throw new Error(String(put.status))
+      manifest[id] = stamp
+      out.copied++
+    } catch {
+      out.failed++
+    }
+  }
+  if (out.copied) {
+    try {
+      const put = await r2.fetch(`${base}/${MANIFEST}`, { method: 'PUT', body: JSON.stringify(manifest), headers: { 'Content-Type': 'application/json' } })
+      if (!put.ok) out.failed++
+    } catch {
+      out.failed++
+    }
+  }
+  return out
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
-  const env = process.env
+  const env = process.env as Env
   if (!env.CRON_SECRET || req.headers.authorization !== `Bearer ${env.CRON_SECRET}`) {
     res.status(401).json({ error: 'unauthorized' })
     return
@@ -59,33 +188,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const startedAt = new Date()
-  const tables: Record<string, Row[]> = {}
-  const counts: Record<string, number> = {}
+  const url = env.SUPABASE_URL!
+  const key = env.SUPABASE_SECRET_KEY!
+  let dump: Dump
   try {
-    for (const [table, order] of Object.entries(BACKUP_TABLES)) {
-      tables[table] = await readTable(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, table, order)
-      counts[table] = tables[table].length
-    }
+    dump = (await readSnapshot(url, key, startedAt)) ?? (await readPaged(url, key, startedAt))
   } catch (e) {
-    await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: false, error: `read: ${(e as Error).message}`.slice(0, 500) })
+    await record(url, key, { ok: false, error: `read: ${(e as Error).message}`.slice(0, 500) })
     res.status(502).json({ error: 'read failed', detail: (e as Error).message })
     return
   }
+  const counts = Object.fromEntries(Object.entries(dump.tables).map(([t, rows]) => [t, rows.length]))
 
-  const body = gzipSync(JSON.stringify({ version: 1, createdAt: startedAt.toISOString(), tables }))
-  const key = backupKey(startedAt)
+  const body = gzipSync(JSON.stringify(dump))
+  const objectKey = backupKey(startedAt)
   const r2 = new AwsClient({ accessKeyId: env.R2_ACCESS_KEY_ID!, secretAccessKey: env.R2_SECRET_ACCESS_KEY!, service: 's3', region: 'auto' })
-  const put = await r2.fetch(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}/${key}`, {
+  const put = await r2.fetch(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}/${objectKey}`, {
     method: 'PUT',
     body,
     headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
   })
   const rows = Object.values(counts).reduce((a, b) => a + b, 0)
   if (!put.ok) {
-    await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: false, key, error: `upload: HTTP ${put.status}` })
+    await record(url, key, { ok: false, key: objectKey, error: `upload: HTTP ${put.status}` })
     res.status(502).json({ error: 'upload failed', status: put.status })
     return
   }
-  await record(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!, { ok: true, key, bytes: body.length, tables: Object.keys(counts).length, rows })
-  res.status(200).json({ ok: true, key, bytes: body.length, counts })
+  await record(url, key, { ok: true, key: objectKey, bytes: body.length, tables: Object.keys(counts).length, rows })
+  const files = dump.storage ? await copyFiles(env, r2, dump.storage.objects, Date.now() + FILES_BUDGET_MS) : null
+  res.status(200).json({
+    ok: true,
+    key: objectKey,
+    version: dump.version,
+    bytes: body.length,
+    counts,
+    accounts: dump.auth?.users.length ?? null,
+    files,
+  })
 }

@@ -117,9 +117,27 @@ for t in "$root"/supabase/tests/upgrade_*.sh; do
   echo "  ✓ $(basename "$t")"
 done
 
+step "3d. Disaster recovery: the seeded database backed up the nightly way, restored into an empty one, row for row (DB-07)"
+fresh "${P}_dr" "$P"
+PGDATABASE="${P}_seeded" node "$root/scripts/backup-local.mjs" "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; exit 1; }
+sed 's/^/  /' "$work/out"
+PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; echo "  ✗ the restore"; exit 1; }
+sed 's/^/  /' "$work/out"
+if PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1; then echo "  ✗ a second restore over tournaments was not refused"; exit 1; fi
+grep -q 'already holds' "$work/out" || { cat "$work/out"; exit 1; }
+echo "  ✓ a restore over a database that holds tournaments is refused"
+PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" --verify-only >"$work/out" 2>&1 || { cat "$work/out"; echo "  ✗ the restored database does not match on a second look"; exit 1; }
+"${PSQL[@]}" -d "${P}_dr" -c "update public.players set display_name = display_name || '·' where id = (select id from public.players order by id limit 1)"
+if PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" --verify-only >"$work/out" 2>&1; then echo "  ✗ one changed name went unnoticed"; exit 1; fi
+grep -q 'players: 1 row(s) differ' "$work/out" || { cat "$work/out"; exit 1; }
+echo "  ✓ the check catches one changed name"
+if PGHOST=db.gmohwledjejlhcwqjnhd.supabase.co node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" >"$work/out" 2>&1; then echo "  ✗ a restore aimed at production was not refused"; exit 1; fi
+grep -q 'this is production' "$work/out" || { cat "$work/out"; exit 1; }
+echo "  ✓ a restore aimed at production is refused before it connects"
+
 step "4. Supabase's advisors (splinter), held at the baseline"
 "${PSQL[@]}" -d "$P" -At -F ',' -c 'begin' -f "$H/splinter.sql" -c "select name, level, count(*) from _lint group by 1, 2 order by 1, 2" -c 'rollback' >"$work/lints.csv"
 node "$root/scripts/db-lints.mjs" "$work/lints.csv" "$H/lint-baseline.json" ${POLO_LINT_WRITE:+--write}
 
-for db in "${P}_plain" "${P}_legacy" "${P}_seeded" "${P}_t"; do "${PSQL[@]}" -d postgres -c "drop database if exists $db with (force)"; done
+for db in "${P}_plain" "${P}_legacy" "${P}_seeded" "${P}_t" "${P}_dr"; do "${PSQL[@]}" -d postgres -c "drop database if exists $db with (force)"; done
 printf '\n✓ database suite clean\n'

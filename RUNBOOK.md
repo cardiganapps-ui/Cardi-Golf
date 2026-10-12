@@ -91,7 +91,28 @@ Sigue capturando: la app guarda en el teléfono; arriba dice "Sin señal" y abaj
 
 ## 8. Respaldo
 
-Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "Descargar CSV". Guarda los archivos en el teléfono y en Drive. Restaurar: mismo lugar, "Restaurar desde JSON…" (solo acepta respaldos de ese mismo torneo y reemplaza todo). Un respaldo bajado antes de la migración 0030 se restaura igual que uno nuevo. **Mientras no se aplique la migración 0025** (espera las llaves, ver `docs/handoff.md`), restaurar no regresa los juegos de apuestas: quién entró a cada bolsa, los ganadores de los concursos por hoyo y los resultados de las apuestas se quedan como estaban; revísalos a mano en Comité › Juegos después de restaurar.
+Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "Descargar CSV". Guarda los archivos en el teléfono y en Drive. Restaurar: mismo lugar, "Restaurar desde JSON…" (solo acepta respaldos de ese mismo torneo y reemplaza todo). Un respaldo bajado antes de la migración 0030 se restaura igual que uno nuevo, juegos de apuestas incluidos (quién entró a cada bolsa, los ganadores de los concursos por hoyo y los resultados de las apuestas).
+
+### 8b. Si se pierde la base de datos (el respaldo de cada noche)
+
+Esto es para cuando el proyecto de Supabase ya no está o quedó dañado entero. Si solo un torneo quedó mal, usa la sección 8.
+
+- **Qué hay.** Cada noche, a las 2 de la mañana de Los Cabos, una copia completa de la app va a Cloudflare R2 (`cardi-golf-backups`, en `backups/AAAA-MM-DD.json.gz`). Lleva todos los torneos tomados en el mismo instante, el historial de cambios, las cuentas sin contraseñas y la lista de archivos. Las fotos y tarjetas subidas se copian aparte, en `files/`. Admin de Polo › Salud dice cuándo fue el último.
+- **Quién lo hace.** Claude, con las llaves de esta sesión, o tú con Claude al lado. Crear el proyecto nuevo es gratis, pero tú lo apruebas.
+- **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 35 segundos en una base vacía, revisado fila por fila. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
+
+Pasos (Claude):
+
+1. Proyecto nuevo de Supabase en la organización Cardi-Golf (tú apruebas el aviso). Anota su ref.
+2. El esquema: `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/db.mjs migrate`, y la configuración de acceso: `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/auth-config.mjs`.
+3. Los datos: `node scripts/restore-r2.mjs --from r2:latest --db "<cadena de conexión del proyecto nuevo>"`. Se niega a escribir en producción y en una base con torneos. Al final compara cada tabla con el respaldo, fila por fila, y revisa todas las llaves; si algo no cuadra, se detiene y dice qué.
+4. Los archivos: súbelos desde R2 `files/<bucket>/<nombre>` al bucket `tournament-assets` del proyecto nuevo, con el mismo nombre.
+5. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3.
+6. Avísale a todos:
+   - Con cuenta: entran otra vez con su correo y el código, o con Google. Su cuenta, su perfil y sus torneos son los mismos.
+   - Sin cuenta: cada jugador vuelve a entrar con su PIN. Lo que capturó sin señal y no se mandó sigue en su teléfono y se manda al entrar.
+
+Ensayo: `node scripts/restore-r2.mjs --from r2:latest` en una base local vacía con las migraciones (lo que hace el job `db` con datos de prueba en cada cambio). Repítelo antes de cada ensayo con los 12 teléfonos y la víspera del viaje.
 
 ## 9. Ensayo y simulador
 

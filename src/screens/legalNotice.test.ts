@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '92471eb8bbbf27df' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -230,7 +230,8 @@ describe('the rest of the verifier\'s list', () => {
   it('6. backups are plain gzipped JSON that only Cloudflare encrypts at rest; Microsoft is among the push services', () => {
     const where = sections['Dónde viven']!
     expect(where).not.toContain('cifrados')
-    expect(where).toContain('Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido: nosotros no la ciframos (Cloudflare cifra lo que guarda)')
+    expect(where).toContain('Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido')
+    expect(where).toContain('nunca su contraseña) y una copia de cada archivo subido: nosotros no la ciframos (Cloudflare cifra lo que guarda)')
     expect(where).toContain('(el de Apple, Google, Microsoft o Mozilla)')
   })
 
@@ -251,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-12.4')
+    expect(t.legal.privacy.version).toBe('2026-10-12.5')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
