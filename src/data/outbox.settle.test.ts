@@ -202,17 +202,23 @@ describe('what waits for the frame never undoes what happened meanwhile (PR 155�
     expect(useOutbox.getState().pendingHoles).toBe(1)
   })
 
-  it('a save made while the queue is read again (another tab’s notice) stays in this tab’s queue and its count', async () => {
+  /** The queue's next read takes what storage holds at once, and its answer comes back only on `release()`. */
+  function holdNextRead() {
     const d = _outboxTest.db()!
     const toArray = d.items.toArray.bind(d.items)
     let release!: () => void
     const held = new Promise<void>((resolve) => (release = resolve))
-    // The read takes what storage holds now, and its answer comes back late.
-    vi.spyOn(d.items, 'toArray').mockImplementationOnce(async () => {
+    const late = async () => {
       const rows = await toArray()
       await held
       return rows
-    })
+    }
+    vi.spyOn(d.items, 'toArray').mockImplementationOnce(late as unknown as typeof d.items.toArray)
+    return release
+  }
+
+  it('a save made while the queue is read again (another tab’s notice) stays in this tab’s queue and its count', async () => {
+    const release = holdNextRead()
     const reading = _outboxTest.load()
     await enqueueHole('t1', hole(11))
     release()
@@ -223,18 +229,10 @@ describe('what waits for the frame never undoes what happened meanwhile (PR 155�
 
   it('…unless what was read holds a newer version of its key: another tab’s newer answer stays', async () => {
     _outboxTest.setPush(() => new Promise<never>(() => undefined))
-    const d = _outboxTest.db()!
     const answer = (last: string) => ({ round_id: 'r1', group_id: 'g1', hole: 12, last_holed_player_id: last, decided_by: 'p1' })
     // Another tab's answer for the hole, newer than any this tab will make.
-    await d.items.put({ key: 'tiebreak:r1:g1:12', kind: 'tiebreak', tournamentId: 't1', payload: answer('p4'), attempts: 0, createdAt: Date.now(), seq: Date.now() * 1000 + 1e12, actingUid: 'uid-a' })
-    const toArray = d.items.toArray.bind(d.items)
-    let release!: () => void
-    const held = new Promise<void>((resolve) => (release = resolve))
-    vi.spyOn(d.items, 'toArray').mockImplementationOnce(async () => {
-      const rows = await toArray()
-      await held
-      return rows
-    })
+    await _outboxTest.db()!.items.put({ key: 'tiebreak:r1:g1:12', kind: 'tiebreak', tournamentId: 't1', payload: answer('p4'), attempts: 0, createdAt: Date.now(), seq: Date.now() * 1000 + 1e12, actingUid: 'uid-a' })
+    const release = holdNextRead()
     const reading = _outboxTest.load()
     await enqueueTiebreak('t1', answer('p3'))
     release()
