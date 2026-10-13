@@ -118,6 +118,7 @@ test('a link followed from inside a sheet leaves no dead back step behind (PWA-0
 })
 
 test('a sheet with typed work asks before back throws it away; back on the question keeps editing (UX-15, PWA-05)', async ({ page }) => {
+  await open(page, '/fixture')
   await open(page, '/t/_/full12-live/admin/jugadores')
   const url = page.url()
   await page.getByRole('button', { name: t.admin.players.add }).click()
@@ -141,4 +142,6 @@ test('a sheet with typed work asks before back throws it away; back on the quest
   await page.getByRole('dialog', { name: t.common.discardTitle }).getByRole('button', { name: t.common.discard }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(page.url()).toBe(url)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/fixture$/)
 })

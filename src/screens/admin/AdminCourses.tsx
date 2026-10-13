@@ -35,7 +35,9 @@ export function AdminCourses() {
     setDraft(d)
     setDraftFrom(fresh ? '' : JSON.stringify(d))
     setEdited(null)
+    setPasting(false)
   }
+  const [pasting, setPasting] = useState(false)
   /** The editor's draft as typed (it keeps its own copy): what tells the sheet there is work in it. */
   const [edited, setEdited] = useState<CourseDraft | null>(null)
   const [notes, setNotes] = useState<string[]>([])
@@ -337,8 +339,8 @@ export function AdminCourses() {
         )}
       </Sheet>
 
-      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide dirty={!!draft && JSON.stringify(edited ?? draft) !== draftFrom}>
-        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} onEdit={setEdited} />}
+      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide dirty={!!draft && (pasting || JSON.stringify(edited ?? draft) !== draftFrom)}>
+        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} onEdit={setEdited} onPasting={setPasting} />}
       </Sheet>
     </div>
   )

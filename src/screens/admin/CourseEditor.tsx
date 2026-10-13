@@ -48,7 +48,7 @@ export const blankTee = (name = 'Azules'): CourseDraftTee => ({
 })
 
 /** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
-export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; onEdit?: (d: CourseDraft) => void }) {
+export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onPasting }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; onEdit?: (d: CourseDraft) => void; onPasting?: (pending: boolean) => void }) {
   const [d, setDraftHere] = useState<CourseDraft>(draft)
   /** Every edit, and the caller hears of it (`onEdit`): its sheet asks before a stray tap discards the card (UX-15). */
   const setD = (next: CourseDraft) => {
@@ -56,7 +56,12 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit }: {
     onEdit?.(next)
   }
   const [teeIdx, setTeeIdx] = useState(0)
-  const [paste, setPaste] = useState('')
+  const [paste, setPasteHere] = useState('')
+  /** A card pasted and not applied yet is work too: the sheet asks before it goes (UX-15). */
+  const setPaste = (text: string) => {
+    setPasteHere(text)
+    onPasting?.(text.trim() !== '')
+  }
   const [pasteErr, setPasteErr] = useState<string | null>(null)
   const tee = d.tees[teeIdx] ?? d.tees[0]!
   const issues = useMemo(() => d.tees.flatMap((x) => validateTee(x).map((i) => `${x.name}: ${i}`)), [d])
