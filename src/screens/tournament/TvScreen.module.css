@@ -381,6 +381,24 @@
   color: var(--board-ink-2);
   white-space: nowrap;
 }
+/* Stopped by the room (A11Y-21): the rule gives way to the word, in the first ink. */
+.rotationPaused {
+  flex: 1;
+  font-size: var(--tv-floor);
+  font-weight: 600;
+  color: var(--board-ink);
+}
+.rotationButton {
+  font: inherit;
+  font-size: var(--tv-floor);
+  color: var(--board-ink);
+  background: transparent;
+  border: 1px solid var(--board-ink-2);
+  border-radius: var(--r-md);
+  padding: 0.4vh 1.2vw;
+  white-space: nowrap;
+  cursor: pointer;
+}
 
 /* Calcutta night's other two moments: the order out of the hat, the pairs draw (MOT-05, UX-17). */
 .hat {

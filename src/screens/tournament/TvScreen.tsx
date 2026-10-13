@@ -47,18 +47,39 @@ export function TvScreen() {
     return b
   }, [state.modules, state.games, state.feed.length])
   const [idx, setIdx] = useState(0)
+  /**
+   * The room can stop the rotation to read a board (A11Y-21, WCAG 2.2.2):
+   * «Pausar», Space on a keyboard or a clicker, and ← → to step the boards.
+   * Unattended, the TV goes on rotating; going on gives the board its time again.
+   */
+  const [paused, setPaused] = useState(false)
   /** When the board on screen leaves: ROTATE_MS after it came, later when the leaderboard re-sorts just before (MOT-08). */
   const [stay, setStay] = useState<{ from: number; until: number } | null>(null)
   useEffect(() => {
     if (isAuctionNight) return
     const now = Date.now()
     setStay({ from: now, until: now + ROTATE_MS })
-  }, [idx, isAuctionNight])
+  }, [idx, isAuctionNight, paused])
   useEffect(() => {
-    if (isAuctionNight || !stay) return
+    if (isAuctionNight || !stay || paused) return
     const timer = setTimeout(() => setIdx((i) => i + 1), Math.max(0, stay.until - Date.now()))
     return () => clearTimeout(timer)
-  }, [stay, isAuctionNight])
+  }, [stay, isAuctionNight, paused])
+  useEffect(() => {
+    if (isAuctionNight) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+      // A focused control keeps its own keys: Space on «Pausar» presses it once, not twice.
+      if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.closest('button, a, input, select, textarea')) return
+      if (e.key === ' ') setPaused((p) => !p)
+      else if (e.key === 'ArrowRight' || e.key === 'PageDown') setIdx((i) => i + 1)
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') setIdx((i) => Math.max(0, i - 1))
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isAuctionNight])
   const board = boards[idx % boards.length] ?? 'individual'
   const next = boards.length > 1 ? boards[(idx + 1) % boards.length] : undefined
   // A board longer than the screen shows its next page on each pass of the rotation.
@@ -274,16 +295,23 @@ export function TvScreen() {
       {/* How long this board stays and which comes next: the room knows a change is a rotation, not a glitch (MOT-08). */}
       {!isAuctionNight && next && stay && (
         <footer className={styles.rotation}>
-          <span className={styles.rotationRule} aria-hidden="true">
-            <motion.span
-              key={`${idx}:${stay.until}`}
-              className={styles.rotationFill}
-              initial={{ scaleX: reduce ? 1 : Math.min(1, (Date.now() - stay.from) / (stay.until - stay.from)) }}
-              animate={{ scaleX: 1 }}
-              transition={reduce ? still : timer((stay.until - Date.now()) / 1000)}
-            />
-          </span>
+          {paused ? (
+            <span className={styles.rotationPaused}>{t.tv.paused}</span>
+          ) : (
+            <span className={styles.rotationRule} aria-hidden="true">
+              <motion.span
+                key={`${idx}:${stay.until}`}
+                className={styles.rotationFill}
+                initial={{ scaleX: reduce ? 1 : Math.min(1, (Date.now() - stay.from) / (stay.until - stay.from)) }}
+                animate={{ scaleX: 1 }}
+                transition={reduce ? still : timer((stay.until - Date.now()) / 1000)}
+              />
+            </span>
+          )}
           <span className={styles.rotationNext}>{t.tv.next(boardLabel(next))}</span>
+          <button type="button" className={styles.rotationButton} onClick={() => setPaused((p) => !p)}>
+            {paused ? t.tv.resume : t.tv.pause}
+          </button>
         </footer>
       )}
     </div>
