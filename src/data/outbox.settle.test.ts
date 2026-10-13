@@ -151,6 +151,15 @@ describe('a hole’s first save is one write, committed before the page takes it
     f.draw()
     await saving
   })
+
+  it('a transaction that cannot commit early still stores the hole, and the save is never refused for it', async () => {
+    vi.spyOn(IDBTransaction.prototype, 'commit').mockImplementation(() => {
+      throw new DOMException('The transaction has finished.', 'InvalidStateError')
+    })
+    await enqueueHole('t1', hole(8))
+    expect(await storedKinds()).toEqual(['hole'])
+    expect(_outboxTest.queue().map((x) => x.kind)).toEqual(['hole'])
+  })
 })
 
 describe('what waits for the frame never undoes what happened meanwhile (PR 155’s verifier)', () => {
