@@ -277,3 +277,21 @@ for (const [w, h] of ROOMS) {
   })
 }
 
+test('Space holds the board until «Seguir», which gives it its 12 s again (A11Y-21)', async ({ page }) => {
+  await page.clock.install()
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.goto('/t/_/full12-live/tv', { waitUntil: 'networkidle' })
+  const next = page.locator('footer').getByText(/^Sigue: /)
+  const before = (await next.textContent())!
+  await page.keyboard.press('Space')
+  await expect(page.getByText(t.tv.paused, { exact: true })).toBeVisible()
+  await page.clock.runFor(40_000)
+  await expect(next).toHaveText(before)
+  await page.getByRole('button', { name: t.tv.resume }).click()
+  await expect(page.getByText(t.tv.paused, { exact: true })).toHaveCount(0)
+  await page.clock.runFor(11_000)
+  await expect(next).toHaveText(before)
+  await page.clock.runFor(1_500)
+  await expect(next).not.toHaveText(before)
+})
+

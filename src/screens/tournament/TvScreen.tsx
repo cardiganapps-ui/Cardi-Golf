@@ -59,19 +59,29 @@ export function TvScreen() {
     if (isAuctionNight) return
     const now = Date.now()
     setStay({ from: now, until: now + ROTATE_MS })
-  }, [idx, isAuctionNight, paused])
+  }, [idx, isAuctionNight])
   useEffect(() => {
     if (isAuctionNight || !stay || paused) return
     const timer = setTimeout(() => setIdx((i) => i + 1), Math.max(0, stay.until - Date.now()))
     return () => clearTimeout(timer)
   }, [stay, isAuctionNight, paused])
+  /** Going on gives the board its time again in the same update: a timer never sees the deadline the pause outlived. */
+  const togglePause = () => {
+    if (paused) {
+      const now = Date.now()
+      setStay({ from: now, until: now + ROTATE_MS })
+    }
+    setPaused(!paused)
+  }
+  const toggleRef = useRef(togglePause)
+  toggleRef.current = togglePause
   useEffect(() => {
     if (isAuctionNight) return
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
       // A focused control keeps its own keys: Space on «Pausar» presses it once, not twice.
       if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.closest('button, a, input, select, textarea')) return
-      if (e.key === ' ') setPaused((p) => !p)
+      if (e.key === ' ') toggleRef.current()
       else if (e.key === 'ArrowRight' || e.key === 'PageDown') setIdx((i) => i + 1)
       else if (e.key === 'ArrowLeft' || e.key === 'PageUp') setIdx((i) => Math.max(0, i - 1))
       else return
@@ -309,7 +319,7 @@ export function TvScreen() {
             </span>
           )}
           <span className={styles.rotationNext}>{t.tv.next(boardLabel(next))}</span>
-          <button type="button" className={styles.rotationButton} onClick={() => setPaused((p) => !p)}>
+          <button type="button" className={styles.rotationButton} onClick={togglePause}>
             {paused ? t.tv.resume : t.tv.pause}
           </button>
         </footer>
