@@ -1545,11 +1545,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 145,
+      "tests": [
+        "supabase/tests/results_event_index.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "A Comité correction of a player's handicap after a round is finished re-scores that round at its next rebuild (a score change, «Publicar resultados», a status change), not at once: nothing rebuilds results when only a player's handicap or tee changes."
     },
     {
       "id": "MOT-01",
