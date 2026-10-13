@@ -63,6 +63,11 @@ const ACCOUNT_FILL = {
   reauthentication_token: "''",
   updated_at: 'coalesce(created_at, now())',
 }
+/** The same fill, as the check reads it over the backup's row `p`. */
+const overRow = (fill) => Object.fromEntries(Object.entries(fill).map(([c, v]) => [c, v.replace(/\bcreated_at\b/g, 'p.created_at')]))
+const IDENTITY_FILL = { updated_at: 'coalesce(created_at, now())' }
+/** The fills for the columns the target has (an older GoTrue may lack one). */
+const has = (cols, fill) => Object.fromEntries(Object.entries(fill).filter(([c]) => cols.some((x) => x.name === c && !x.generated)))
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 // .env.local fills what the environment doesn't (R2's keys), as scripts/db.mjs does.
@@ -142,6 +147,9 @@ async function loadDump() {
     const neu = `${to.replace(/\/+$/, '')}/storage/v1/`
     text = text.split(old).join(neu)
   }
+  const oldLinks = text.split(`https://${PRODUCTION_REF}.supabase.co/storage/v1/`).length - 1
+  if (oldLinks && !to)
+    console.log(`  ! ${oldLinks} link(s) to the old project's Storage (photos, logos): --storage-to https://<new ref>.supabase.co points them at the new one (RUNBOOK.md §8b)`)
   const dump = JSON.parse(text)
   if (![1, 2].includes(dump.version) || typeof dump.tables !== 'object') fail(`${source}: not a Polo backup`)
   return { dump, source, bytes: raw.length }
@@ -229,22 +237,36 @@ function dedupe(rows, pk) {
 const csv = (v) => `"${String(v).replace(/"/g, '""')}"`
 
 /** `schema.table`'s rows from the loaded copy (`pg_temp.want`), into the table. */
-function insert(schema, table, cols, conflict = '') {
-  const list = cols.map(ident).join(', ')
+function insert(schema, table, cols, conflict = '', fill = {}) {
+  const all = [...new Set([...cols, ...Object.keys(fill)])]
+  const list = all.map(ident).join(', ')
   const key = lit(`${schema}.${table}`)
-  return `insert into ${schema}.${ident(table)} (${list}) overriding system value select ${cols.map((c) => `p.${ident(c)}`).join(', ')} from pg_temp.want w, jsonb_populate_record(null::${schema}.${ident(table)}, w.j) p where w.t = ${key}${conflict};\n`
+  // A column filled in for GoTrue gets its fill wherever the backup has nothing, never the target's own default: what the check expects.
+  const value = (c) => (c in fill ? `coalesce(p.${ident(c)}, ${fill[c]})` : `p.${ident(c)}`)
+  return `insert into ${schema}.${ident(table)} (${list}) overriding system value select ${all.map(value).join(', ')} from pg_temp.want w, jsonb_populate_record(null::${schema}.${ident(table)}, w.j) p where w.t = ${key}${conflict};\n`
 }
 
 /**
  * Inside the transaction: `schema.table` against its loaded rows, on the
- * backup's own columns (a newer schema's extra ones, and `skip`, are left
- * out), with the same count and not one row different; raises, so the whole
- * restore rolls back.
+ * backup's own columns (a newer schema's extra ones are left out), each row of
+ * the backup read as the table's type (so an offset written in another time
+ * zone, or a number's spelling, is no mismatch) and with `fill` applied as the
+ * restore applied it (column → SQL over the backup's row `p`); the same count
+ * and not one row different, or it raises and the whole restore rolls back.
+ * A column of the backup the target lacks stops the run before anything is
+ * written: the insert would drop it without a word.
  */
-function check(schema, table, rows, all, skip = new Set()) {
+function check(schema, table, rows, all, fill = {}) {
   const keys = new Set(rows.flatMap((r) => Object.keys(r)))
-  const out = all.filter((c) => !keys.has(c.name) || skip.has(c.name)).map((c) => lit(c.name))
+  const names = new Set(all.map((c) => c.name))
+  const unknown = [...keys].filter((k) => !names.has(k))
+  if (unknown.length) fail(`${schema}.${table}: the target has no column ${unknown.slice(0, 3).join(', ')}: apply the migrations the backup was taken with`)
+  const filled = Object.entries(fill).filter(([c]) => names.has(c))
+  const out = all.filter((c) => !keys.has(c.name) && !(c.name in fill)).map((c) => lit(c.name))
   const drop = (e) => (out.length ? `${e} - array[${out.join(', ')}]::text[]` : e)
+  const want = filled.length
+    ? `to_jsonb(p) || jsonb_build_object(${filled.map(([c, v]) => `${lit(c)}, coalesce(p.${ident(c)}, ${v})`).join(', ')})`
+    : 'to_jsonb(p)'
   const key = lit(`${schema}.${table}`)
   return `do $check$
 declare n bigint; m bigint;
@@ -254,7 +276,7 @@ begin
   if n <> m then
     raise exception '%: % rows restored, the backup has %', ${key}, n, m;
   end if;
-  select count(*) into n from (select ${drop('to_jsonb(x)')} as j from ${schema}.${ident(table)} x except select ${drop('j')} from pg_temp.want where t = ${key}) d;
+  select count(*) into n from (select ${drop('to_jsonb(x)')} as j from ${schema}.${ident(table)} x except select ${drop(`(${want})`)} from pg_temp.want w, jsonb_populate_record(null::${schema}.${ident(table)}, w.j) p where w.t = ${key}) d;
   if n > 0 then
     raise exception '%: % row(s) differ from the backup', ${key}, n;
   end if;
@@ -301,6 +323,14 @@ async function main() {
   else guardTarget(dump)
 
   const work = mkdtempSync(join(tmpdir(), 'polo-restore-'))
+  // Ctrl-C or a kill mid-run: psql stops with it, and the folder still goes (Node runs these once psql returns).
+  const gone = (code) => () => {
+    rmSync(work, { recursive: true, force: true })
+    process.exit(code)
+  }
+  process.once('SIGINT', gone(130))
+  process.once('SIGTERM', gone(143))
+  process.once('SIGHUP', gone(129))
   try {
     /** The loaded copy: one CSV line per row, `schema.table` and the row as JSON. */
     const lines = []
@@ -311,23 +341,22 @@ async function main() {
     let checks = ''
     let accounts = 0
     let restored = 0
-    // What the restore fills in for GoTrue is not the backup's to compare.
-    const filled = new Set(Object.keys(ACCOUNT_FILL))
     if (dump.auth?.users?.length) {
       const all = columns('auth', 'users')
       const users = dedupe(dump.auth.users, ['id'])
       load('auth', 'users', users)
-      sql += insert('auth', 'users', all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name), ' on conflict (id) do nothing')
-      checks += check('auth', 'users', users, all, filled)
+      const fill = has(all, overRow(ACCOUNT_FILL))
+      sql += insert('auth', 'users', all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name), ' on conflict (id) do nothing', fill)
+      checks += check('auth', 'users', users, all, fill)
       accounts = users.length
     }
     if (dump.auth?.identities?.length) {
       const all = columns('auth', 'identities')
       const ids = dedupe(dump.auth.identities, ['id'])
       load('auth', 'identities', ids)
-      sql += insert('auth', 'identities', all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name), ' on conflict do nothing')
-      sql += 'update auth.identities set updated_at = coalesce(created_at, now()) where updated_at is null;\n'
-      checks += check('auth', 'identities', ids, all, new Set(['updated_at']))
+      const fill = has(all, overRow(IDENTITY_FILL))
+      sql += insert('auth', 'identities', all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name), ' on conflict do nothing', fill)
+      checks += check('auth', 'identities', ids, all, fill)
     }
     if (!dump.auth) {
       // Format 1 has no accounts: a bare one for each id a row names through a key to auth.users, so the keys hold.
@@ -375,13 +404,12 @@ async function main() {
 end $seq$;
 `
     const rowsFile = join(work, 'rows.csv')
-    writeFileSync(rowsFile, `${lines.join('\n')}\n`, { mode: 0o600 })
+    if (lines.length) writeFileSync(rowsFile, `${lines.join('\n')}\n`, { mode: 0o600 })
     // Every timestamp compared as the backup wrote it (UTC), whatever the target's own time zone; the rows streamed in by COPY.
     const head = `begin;
 set local timezone = 'UTC';
 ${verifyOnly ? '' : 'set local session_replication_role = replica;\n'}create temporary table want (t text not null, j jsonb not null) on commit drop;
-\\copy pg_temp.want from ${lit(rowsFile)} with (format csv)
-create index on pg_temp.want (t);
+${lines.length ? `\\copy pg_temp.want from ${lit(rowsFile)} with (format csv)\n` : ''}create index on pg_temp.want (t);
 analyze pg_temp.want;
 `
     // The check, inside the same transaction: any mismatch rolls everything back.

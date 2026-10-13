@@ -25,11 +25,13 @@ const PAGE = 1000
 /** The history, read in pages up to the snapshot's last row; every other table is in the snapshot. */
 const HISTORY = 'audit_log'
 /**
- * No file is started after this, counted from the run's start; with one
- * read, one write and the last manifest save at FILE_TIMEOUT_MS each, the run
- * ends before Vercel's 60 s (maxDuration). The rest goes the next night.
+ * No file is started after this, counted from the run's start; with the last
+ * file's read and write, the last manifest save and the run's record at
+ * FILE_TIMEOUT_MS each (34 + 4 × 6 = 58 s), the run ends before Vercel's 60 s
+ * (maxDuration). The rest goes the next night, and `backup_runs.files.pending`
+ * says how many.
  */
-const FILES_DEADLINE_MS = 38_000
+const FILES_DEADLINE_MS = 34_000
 /** Each Storage read and R2 write gives up after this: one stuck file must not take the night's manifest with it. */
 const FILE_TIMEOUT_MS = 6_000
 /** The manifest is saved every few files, so a run cut short keeps what it copied. */
@@ -152,6 +154,7 @@ async function recordFiles(url: string, key: string, id: number, files: { copied
       method: 'PATCH',
       headers: { ...headers(key), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify({ files }),
+      signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
     })
   } catch {
     // As record().
@@ -221,7 +224,8 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
       if (!put.ok) throw new Error(String(put.status))
       manifest[id] = stamp
       out.copied++
-      if (++unsaved >= MANIFEST_EVERY) await saveManifest()
+      // Past the deadline the last save is the one after the loop, so a slow R2 costs one save, not two.
+      if (++unsaved >= MANIFEST_EVERY && Date.now() <= deadline) await saveManifest()
     } catch {
       out.failed++
     }
