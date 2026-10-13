@@ -8,7 +8,7 @@
 // Fixture states come from src/dev/fixtures.ts (no database). The few screens
 // that need a real session (Home, Entrar, organizer) run against the Ensayo
 // tournament with the throwaway organizer from scripts/design-organizer.mjs.
-// Same Chromium/relay setup as e2e/smoke.mjs.
+// CHROMIUM=/path/to/chrome (defaults to Playwright's). E2E_RELAY=1 routes Supabase HTTP through Node's fetch (for sandboxes whose proxy breaks Chromium's CONNECT tunnel; needs NODE_USE_ENV_PROXY=1).
 import { chromium } from 'playwright-core'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'

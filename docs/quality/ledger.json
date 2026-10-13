@@ -998,7 +998,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": "Open: postgres_changes still sends every delete's key to every phone listening to the table, whatever its tournament; the fix is Broadcast from the database on a private per-tournament topic (PLAN §5.2). Mitigated on the phone (claude/realtime-teams, with teams and team_members on the channel): an applied table's delete changes only a row the snapshot holds (realtimeApply.ts), and a structural one reloads only when its key is held or a fetch is on its way (concernsBoards), so another tournament's deletes cost nothing; it does not stop the keys arriving."
+      "residual": "Partial (open), reconciled 2026-10-13. Done on the phone (#92, #109, #111, #112): a delete on an applied table removes only a row this snapshot holds, a structural change reloads only when it concerns this tournament (concernsBoards), the Comité's inbox re-reads only for a row it holds, and since 0030 every child row carries tournament_id, so another tournament's insert or update is dropped at once (tournamentStore.apply.test.ts replays another tournament's deletes and inserts and asserts no request). Left: the channel is still postgres_changes with no filter, so every delete's primary key still reaches every phone listening to the table, and each counts against the Realtime quota; the fix is a tournament_id filter per subscription or Broadcast on a private per-tournament topic (PLAN §5.2)."
     },
     {
       "id": "DB-07",
@@ -1030,7 +1030,7 @@
       "pr": 94,
       "tests": [],
       "verifiedBy": null,
-      "residual": "Done (#94): the db job replays every migration from zero on Postgres 16 with Supabase's stubs, through db.mjs as production gets them, runs the SQL tests and holds the advisors at a baseline, on ready PRs, main and nightly. Left: a staging project the release applies to first, an on-demand backup before production, and migrations applied by the pipeline instead of by hand (they need the GitHub Actions secrets and Diego's yes to the staging project, docs/handoff.md); a reverse path for risky migrations; production runs Postgres 15/17 where CI runs 16."
+      "residual": "Partial (open), reconciled 2026-10-13. Done (#94): the db job replays every migration from zero on Postgres 16 with Supabase's stubs, twice (psql loop and db.mjs, as production gets them); db.mjs keeps each file's sha256 and refuses one edited, removed or run again; the job runs the SQL tests, races, upgrades and the advisors at a baseline on ready PRs, main and nightly. #111 added the first reverse path (revert_0030.sql, proven by upgrade_0030.sh). Every production migration since 0025 went out after a full backup with rls-test and platform-test after it. Left: a staging project every release goes through first (Diego, handoff), the backup and the migrations run by the pipeline rather than by hand (they need GitHub Actions secrets), reverse scripts for the other migrations, and a check that CI's Postgres version matches production's."
     },
     {
       "id": "DB-12",
@@ -1078,7 +1078,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Open, reconciled 2026-10-13: refresh_round_results is unchanged since 0015 (delete then insert, no advisory lock, no ON CONFLICT). save_hole (#98) makes one live hole's write a single statement, but this race is on finished rounds (admin_save_score against «Terminar ronda»), and no two-session test covers it."
     },
     {
       "id": "DB-15",
@@ -1106,7 +1106,7 @@
       "pr": 94,
       "tests": [],
       "verifiedBy": null,
-      "residual": "Held, not yet lowered: the db job fails on any advisor finding over supabase/tests/harness/lint-baseline.json (405 findings in 9 lints at 0025). Bringing it to zero or to documented exceptions is Phase 3 (set-based RLS removes most of auth_rls_initplan and multiple_permissive_policies)."
+      "residual": "Partial (open), reconciled 2026-10-13. Done: the db job runs splinter on the migrated chain and fails when any lint's count goes over lint-baseline.json (#94); set-based RLS with per-command write policies (#111) took multiple_permissive_policies from 92 to 8. Left, held at the baseline: auth_rls_initplan 16, function_search_path_mutable 5, public_bucket_allows_listing 1 (TRUST-07), anon-callable SECURITY DEFINER 86 and authenticated-callable 139; no default-privileges revoke or allow-list of the RPCs the app calls; production's advisors not compared with the harness."
     },
     {
       "id": "DB-17",
@@ -2330,7 +2330,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partial (open), reconciled 2026-10-13. Done (#72): Claude's push guard refuses main and runs the preflight in the tree pushed, a PreToolUse hook refuses the GitHub MCP write tools on main, .githooks/pre-push refuses main for any git client (src/lib/guards.test.ts proves all three); no commit has reached main outside a PR since. Left, on GitHub and Vercel: main is unprotected (no ruleset requiring check, e2e-fixtures, db and e2e-stack), and Vercel promotes production without waiting for the checks. While the repo stays public (CHAIR-02) a branch ruleset is free; it is Diego's click (handoff)."
     },
     {
       "id": "QA-11",
@@ -2357,13 +2357,13 @@
       "workstream": "W14",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 130,
       "tests": [
         "e2e/stack/smoke.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: e2e/stack/smoke.spec.ts (#99) replaced the tautologies: it asserts the live round from the page, the whole board before and after to the values the seed gives and the four rows read back from the database, then the same board on a second phone with no outbox; on a throwaway tournament seeded per run, waiting on state, with names from the i18n strings, in CI (e2e-stack, blocking). PR #130 deleted the old e2e/smoke.mjs and its `npm run e2e` (7 check(true), fixed sleeps, writes to the shared Ensayo)."
     },
     {
       "id": "QA-13",
@@ -2436,7 +2436,7 @@
         "e2e/stack/offline.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partial (open), reconciled 2026-10-13. Done (#99, #123): e2e-stack runs the real app against a local Supabase; every hole of a round and four corrections saved on one phone must show on the other within 2 s, on the runner's network and on emulated 4G (p95 719 ms), the times on the run summary; offline.spec.ts brings two offline holes (one corrected) to the other phone when the signal returns with exactly the final values; samecard.spec.ts has two phones capture the same hole at once. Left: two phones, not the four the M3 acceptance test names; nothing measures «a foursome's hole in under 10 seconds»; no correction while the outbox drains; never run against a staging project or the Ensayo before the trip."
     },
     {
       "id": "QA-18",
@@ -3285,7 +3285,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Open (mitigated), reconciled 2026-10-13: since #88 and #118 the notice names the operator, says golf@cardigan.mx does not receive messages yet and offers the Comité or signing in in front of the operator (pinned by legalNotice.test.ts and LegalScreen.test.tsx). Left: cardigan.mx has no MX, so the address receives nothing (Diego's Cloudflare Email Routing, handoff item 6); no Salud check that the contact domain resolves MX; no in-app privacy request."
     },
     {
       "id": "TRUST-02",
@@ -3377,7 +3377,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": "Next migration batch: drop the assets_public_read policy (a public bucket still serves each file by its URL without it), so the bucket can no longer be listed. src/screens/legalNotice.test.ts pins that policy and fails when it goes, to have the notice sentence on uploaded files read again."
+      "residual": "Open, reconciled 2026-10-13: only disclosed (the notice says uploaded files are public and never deleted; legalNotice.test.ts pins the assets_public_read policy so removing it forces the sentence to be re-read). The bucket is still listable, nothing expires uploads or removes a replaced file, and there are no signed URLs or unguessable paths."
     },
     {
       "id": "TRUST-08",
@@ -3503,7 +3503,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Lo que el Comité captura de cada jugador» lists what the Comité types and who sees it, and the Comité's player sheet opens on a line saying so, linked there (both pinned by tests). Left: the terms don't make the organizer confirm he may share the people he adds; nobody added by a Comité is told on the face grid or after the PIN; no «Esto es lo que el Comité guardó de ti» view or «Pedir corrección»; estimate_inputs and form_guide are readable by the whole field outside the auction."
     },
     {
       "id": "TRUST-17",
@@ -3517,7 +3517,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Quién opera Polo», pinned word for word, says what the operator sees and can do (any tournament with its money, a Protegido one unlocked with a reason, every account's email, sign-ins, profile, tournaments, crews with members, friend counts, device players; block, delete, notices). Left: the rule isn't written once: CLAUDE.md §7 says the social graph stays private from the admin, while platform_crew returns every member and the crew's join code and platform_person returns crews and friend counts; drop the join code and say in CLAUDE.md the admin sees crews for moderation, or cut the panels to counts."
     },
     {
       "id": "TRUST-18",
