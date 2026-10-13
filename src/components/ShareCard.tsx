@@ -166,7 +166,7 @@ function Card({ what }: { what: ShareKind }) {
           <div key={m.playerId} className={styles.row}>
             <span className={styles.name}>{nameOf(m.playerId)}</span>
             <span className={styles.small}>
-              {t.money.paid} {formatMoney(m.paid)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives)}
+              {t.money.puts} {formatMoney(m.paid)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives)}
             </span>
             <span className={`${styles.big} ${m.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(m.net)}</span>
           </div>

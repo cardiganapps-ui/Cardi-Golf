@@ -639,11 +639,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 132,
+      "tests": [
+        "src/screens/tournament/MoneyScreen.copy.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the figure everything a person puts in (entry, Calcutta, buybacks, side pots, bets lost, paid or not) reads «Pone» on Dinero, the player sheet, the share card and the WhatsApp text, never «Pagó»; and beside it, in caution, «debe $X»: what is still due today, on exactly the accounts «Quién debe qué» lists (collectible() and stillOwes() in money.ts, which the list now uses too). The test renders Dinero with nothing marked paid (no «Pagó $» anywhere, «debe» shown) and checks each person's WhatsApp line."
     },
     {
       "id": "COPY-04",
@@ -687,11 +689,14 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 132,
+      "tests": [
+        "src/screens/tournament/MoneyScreen.test.tsx",
+        "src/screens/tournament/MoneyScreen.copy.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: an unpaid row's action reads «Marcar pagado» with the debt in its accessible name (PR #68), a paid one is «Pagado» with the check and aria-pressed in «Ya pagaron», where a tap takes it back with «Deshacer» (PR #86), and since PR #132 the heading says what is still out: «Quién debe qué: 14 pendientes, $19,625». Pinned by MoneyScreen.test.tsx (the buttons by name) and MoneyScreen.copy.test.tsx (the heading)."
     },
     {
       "id": "COPY-08",

@@ -104,6 +104,15 @@
   composes: rowSubText from '../../components/primitives.module.css';
 
 }
+/* «Quién debe qué: 14 pendientes, $19,625» (COPY-07). */
+.checklistCount {
+  color: var(--caution);
+}
+/* What is still due today, in caution until «Quién debe qué» is clear (COPY-03). */
+.owes {
+  color: var(--caution);
+  font-weight: 600;
+}
 .net {
   font-size: var(--fs-lg);
   font-weight: 600;

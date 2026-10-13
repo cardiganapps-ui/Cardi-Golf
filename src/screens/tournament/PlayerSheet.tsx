@@ -180,7 +180,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
               {person && (
                 <div className={`${styles.row} ${styles.rowTotal}`}>
                   <span>
-                    {t.money.paid} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
+                    {t.money.puts} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
                   </span>
                   <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
                     <Money amount={person.net} signed />

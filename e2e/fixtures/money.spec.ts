@@ -147,7 +147,7 @@ function recordWrites(page: Page) {
   return writes
 }
 /** The rows of one list on Dinero, as text: what the banker reads. */
-const owedRows = (page: Page) => page.locator('section').filter({ has: page.getByRole('heading', { name: M.checklist }) }).locator('[class*="_transfer_"]').allInnerTexts()
+const owedRows = (page: Page) => page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').allInnerTexts()
 const settlementRows = (page: Page) => page.locator('section').filter({ has: page.getByRole('radio', { name: M.viaBank }) }).locator('[class*="_transfer_"]').allInnerTexts()
 const paidList = (page: Page) => page.locator('details').filter({ has: page.locator('summary').filter({ hasText: withCount(M.paidTitle) }) })
 
@@ -172,7 +172,7 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
   ] as const) {
     writes.length = 0
     // The action says what it does, and its name says which debt; the row leaves the list.
-    const row = page.locator('section').filter({ has: page.getByRole('heading', { name: M.checklist }) }).locator('[class*="_transfer_"]').filter({ hasText: who }).filter({ hasText: detail })
+    const row = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').filter({ hasText: who }).filter({ hasText: detail })
     const mark = row.getByRole('button', { name: new RegExp(`^${M.markPaid}`) })
     await expect(mark).toHaveAccessibleName(`${M.markPaid}: ${who} ${M.paysTo} ${M.bank}, ${detail}: ${amount}`)
     await mark.click()
@@ -201,7 +201,7 @@ test('Dinero: «Deshacer» puts a payment back the way it was, both ways (UX-21)
   const owedBefore = await owedRows(page)
 
   // A wrong «Marcar pagado», undone from the toast.
-  const camilo = page.locator('section').filter({ has: page.getByRole('heading', { name: M.checklist }) }).locator('[class*="_transfer_"]').filter({ hasText: 'Camilo' }).filter({ hasText: M.owesLots([1]) })
+  const camilo = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').filter({ hasText: 'Camilo' }).filter({ hasText: M.owesLots([1]) })
   await camilo.getByRole('button', { name: new RegExp(`^${M.markPaid}`) }).click()
   // The list follows the server's answer: wait for it rather than read it once.
   await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
