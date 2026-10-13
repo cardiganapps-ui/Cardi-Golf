@@ -51,6 +51,20 @@ describe('CountUp', () => {
     expect(seen(container)).toBe('10000')
   })
 
+  it('opens on the figure it is given, and counts only a change, over its own time (MOT-05)', () => {
+    const { container, rerender } = render(<CountUp value={12000} format={String} from={12000} seconds={0.5} />)
+    expect(seen(container)).toBe('12000')
+    advance(1000)
+    expect(seen(container)).toBe('12000')
+    rerender(<CountUp value={12500} format={String} from={12000} seconds={0.5} />)
+    advance(150)
+    const mid = Number(seen(container))
+    expect(mid).toBeGreaterThan(12000)
+    expect(mid).toBeLessThan(12500)
+    advance(400)
+    expect(seen(container)).toBe('12500')
+  })
+
   it('a screen reader hears the final value from the start, never the numbers flying by', () => {
     const { container } = render(<CountUp value={73} format={fmt} />)
     expect(spoken(container)).toBe('73 puntos')

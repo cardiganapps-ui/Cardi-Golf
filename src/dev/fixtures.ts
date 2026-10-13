@@ -184,6 +184,44 @@ function auction12(): Fixture {
   }
 }
 
+/** Calcutta night after the last hammer, the pairs just drawn (UX-17): what the TV shows the room. Three pairs have named themselves. */
+function draw12(): Fixture {
+  const fx = auction12()
+  const snap = fx.snapshot
+  for (const lot of snap.calcuttaLots) {
+    if (lot.status === 'sold') continue
+    // The rest sold at the bid standing, to whoever made it (the player himself when nobody bid).
+    const top = snap.calcuttaBids.filter((b) => b.lotId === lot.id).sort((a, b) => b.amount - a.amount)[0]
+    Object.assign(lot, { status: 'sold', price: top?.amount ?? 250, ownerId: top?.bidderId ?? lot.playerId, soldAt: new Date(Date.UTC(2027, 3, 8, 21, lot.lotNumber)).toISOString() })
+  }
+  // A with D, B with C; the groom (p4, B) picked Mateo (p7, C).
+  const pairs: Array<[string, string, string]> = [['p1', 'p10', 'AD'], ['p2', 'p11', 'AD'], ['p3', 'p12', 'AD'], ['p4', 'p7', 'BC'], ['p5', 'p8', 'BC'], ['p6', 'p9', 'BC']]
+  const names = ['Los Cuñados', null, 'Los del Fondo', 'Par y Medio', null, null]
+  snap.pairs = pairs.map(([a, b, kind], i) => ({ id: `dp${i + 1}`, name: names[i]!, player1Id: a, player2Id: b, kind, pickedByHonoree: a === 'p4', drawnAt: '2027-04-08T22:10:00.000Z' }))
+  return { ...fx, name: 'draw12', description: 'Noche de la Calcutta: todo vendido y el sorteo de parejas hecho', lookup: lookupOf(snap) }
+}
+
+/** Before the Calcutta: no lots yet, the order still to draw in the console (MOT-05). */
+function calcutta12(): Fixture {
+  const fx = auction12()
+  const snap = fx.snapshot
+  snap.tournament = { ...snap.tournament, status: 'setup' }
+  snap.calcuttaLots = []
+  snap.calcuttaBids = []
+  snap.calcuttaBuybacks = []
+  return { ...fx, name: 'calcutta12', description: 'Antes de la Calcutta: el orden de los lotes por sortear', lookup: lookupOf(snap) }
+}
+
+/** Calcutta night before the first lot: the order out of the hat, nothing opened yet (MOT-05). */
+function hat12(): Fixture {
+  const fx = auction12()
+  const snap = fx.snapshot
+  for (const lot of snap.calcuttaLots) Object.assign(lot, { status: 'pending', price: 0, ownerId: null, soldAt: null })
+  snap.calcuttaBids = []
+  snap.calcuttaBuybacks = []
+  return { ...fx, name: 'hat12', description: 'Noche de la Calcutta: el orden ya salió del sombrero, ningún lote abierto', lookup: lookupOf(snap) }
+}
+
 /**
  * What the Comité is asked about on day 2 in juego (0028 `rejected_inbox`:
  * refusals of a value a person typed; a conflict never reaches it, nor an
@@ -555,6 +593,9 @@ const BUILDERS: Record<string, () => Fixture> = {
   large60,
   longnames,
   auction12,
+  calcutta12,
+  hat12,
+  draw12,
 }
 
 export const FIXTURE_NAMES = Object.keys(BUILDERS)

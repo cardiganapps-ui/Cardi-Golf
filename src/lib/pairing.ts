@@ -50,6 +50,21 @@ export function drawPairs(players: Player[], pairing: Array<[string, string]>, f
   return out
 }
 
+/**
+ * The order a saved draw is revealed in, on the Comité's phone and the TV
+ * alike (UX-17): the honoree's pick first, then each kind in the pairing's
+ * order (A with D, then B with C), then any left over; within a kind by id,
+ * which the server made at random.
+ */
+export function drawOrder<P extends Pick<Pair, 'id' | 'kind' | 'pickedByHonoree'>>(pairs: P[], pairing: Array<[string, string]>): P[] {
+  const rank = (p: P) => {
+    if (p.pickedByHonoree) return -1
+    const i = pairing.findIndex(([a, b]) => p.kind === `${a}${b}`)
+    return i < 0 ? pairing.length : i
+  }
+  return [...pairs].sort((x, y) => rank(x) - rank(y) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+}
+
 /** The tier the honoree's partner must come from, per the pairing rules. */
 export function partnerTier(honoreeTier: string | null, pairing: Array<[string, string]>): string | null {
   if (!honoreeTier) return null

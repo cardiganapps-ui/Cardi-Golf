@@ -381,3 +381,66 @@
   color: var(--board-ink-2);
   white-space: nowrap;
 }
+
+/* Calcutta night's other two moments: the order out of the hat, the pairs draw (MOT-05, UX-17). */
+.hat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2vh;
+  min-height: 0;
+}
+.hatList {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 0 3vw;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--board-rule);
+}
+.hatItem {
+  display: grid;
+  grid-template-columns: 6vh minmax(0, 1fr);
+  align-items: center;
+  gap: 1.5vw;
+  padding: 0.8vh 0;
+  border-bottom: 1px solid var(--board-rule);
+  font-size: var(--tv-name);
+  color: var(--board-ink);
+}
+.hatNum {
+  font-weight: 600;
+  color: var(--board-ink-2);
+  text-align: right;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+.hatName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+/* A pair: the two faces with the rings between them, then who they are. */
+.rowDraw {
+  grid-template-columns: 7vh 6vh 7vh minmax(0, 1fr);
+  column-gap: 1vw;
+}
+.rowDraw > span {
+  display: inline-flex;
+}
+.rowDraw > .name {
+  margin-left: 1.5vw;
+}
+.drawRings {
+  justify-content: center;
+  font-size: var(--tv-title);
+  color: var(--board-ink);
+}
+.drawRings svg {
+  width: 1em;
+  height: 1em;
+}
+

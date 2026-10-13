@@ -16,6 +16,9 @@ const PAGES: Record<string, string[]> = {
   stroke8: ['', 'juegos'],
   match8: ['', 'juegos'],
   team8: ['', 'juegos'],
+  // Calcutta night before the first lot and after the draw (MOT-05, UX-17).
+  calcutta12: ['admin/calcutta'],
+  draw12: ['admin/parejas'],
 }
 const PHONES = [375, 393]
 const ROOMS: Array<[string, number, number]> = [
@@ -23,6 +26,10 @@ const ROOMS: Array<[string, number, number]> = [
   ['full12-live/tv', 1280, 720],
   ['auction12/tv', 1920, 1080],
   ['auction12/tv', 1280, 720],
+  ['hat12/tv', 1920, 1080],
+  ['hat12/tv', 1280, 720],
+  ['draw12/tv', 1920, 1080],
+  ['draw12/tv', 1280, 720],
   ['full12-finished/ceremonia', 1920, 1080],
 ]
 

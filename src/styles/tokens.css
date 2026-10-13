@@ -126,6 +126,9 @@
   --dur: 200ms;
   --dur-slow: 250ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* The board surface (TV, Ceremonia) is watched from across a room (MOT-11): its changes take twice the phone's slowest, on a softer landing. */
+  --dur-board: 500ms;
+  --ease-board: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -133,5 +136,6 @@
     --dur-fast: 0ms;
     --dur: 0ms;
     --dur-slow: 0ms;
+    --dur-board: 0ms;
   }
 }

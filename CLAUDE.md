@@ -647,7 +647,7 @@ All of section 5, rewritten as friendly Spanish copy. This mirrors the printed r
 ### 9.9 Modo TV (`/tv`)
 - Full-screen, on the board palette (`DESIGN_DIRECTION.md`), huge type, logo.
 - Auto-rotates every ~12 seconds: Individual → Matrimonios → Víbora holders → Calcutta values → Feed.
-- On Calcutta night it shows the auction board instead (section 10).
+- On Calcutta night it shows the auction board instead (section 10): before the first lot, the order out of the hat; after the last sale's stamp, the pairs draw.
 - **Sized for the room** (2026-10-13, VIS-05; `DESIGN_NOTES.md` «TV at room scale»): it is read from 4 m off a 55-inch screen.
   - Nothing on any board is under 3.5vh, and names are 4.5vh.
   - Each figure sits under its label: «hoyo», «hoy» and «total» on Individual, «por día» and «total» on the pairs board, «invirtió» and «vale hoy» on the Calcutta values. The labels share the board title's line.
@@ -693,6 +693,16 @@ One tap generates a branded image of a leaderboard, a player's round, or the set
 2. The remaining A↔D and B↔C pairs are drawn with a rings animation.
 3. Pairs name themselves (editable).
 4. The app generates Day 1 groups (random A+D vs B+C) and the Comité sets tee times.
+
+On the TV, for the room (2026-10-13, UX-17, MOT-05; `TvScreen.tsx` `HatBoard`, `DrawBoard`):
+- **The draw is saved the moment it is drawn.** «Sortear el resto» calls `save_draw` with nameless pairs, the Day 1 groups and `p_go_live` false, so the tournament stays on Calcutta night.
+  - Once the last sale has had its stamp, the TV reveals the draw a pair at a time (`DRAW_STEP`, 0.8 s): the two faces slide together under the rings.
+  - The Comité's phone reveals it in the same order (`drawOrder`: the honoree's pick, then each pairing kind, then by id).
+  - A TV opened after the draw shows every pair at once. A redraw (asked first: the room has seen the draw) comes out from the start again.
+- **The pairs name themselves on the Comité's phone.** «Guardar nombres» calls `renamePair` for each name typed, and each name reaches the TV as a reload.
+- **«Empezar el torneo» closes the night** (status `live`), after saving the names typed. Saving the draw used to do it.
+- **The order out of the hat.** Before the first lot opens, the TV shows «así salieron del sombrero»: the lots in order, dropping in one at a time when drawn while it is on. The console's list shuffles into its new order (`reorder`).
+- **The pot counts up** to each sale's new figure over `--dur-board`. It opens on its figure, never from $0.
 
 ### Payment check
 Before everyone goes to bed, the app shows who still owes what for entry and Calcutta, with "Pagado" toggles.

@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { DUR, DUR_FAST, DUR_SLOW, EASE } from './motion'
+import { DRAW_STEP, DUR, DUR_BOARD, DUR_FAST, DUR_SLOW, EASE, EASE_BOARD, HAT_STEP, MOMENT, REVEAL } from './motion'
 
 const tokens = readFileSync(new URL('../styles/tokens.css', import.meta.url), 'utf8')
 
@@ -69,19 +69,37 @@ function walk(dir: string): string[] {
 }
 
 describe('motion tokens', () => {
-  it('the seconds match --dur-fast, --dur and --dur-slow', () => {
+  it('the seconds match --dur-fast, --dur, --dur-slow and --dur-board', () => {
     expect(token('--dur-fast')).toBe(`${DUR_FAST * 1000}ms`)
     expect(token('--dur')).toBe(`${DUR * 1000}ms`)
     expect(token('--dur-slow')).toBe(`${DUR_SLOW * 1000}ms`)
+    expect(token('--dur-board')).toBe(`${DUR_BOARD * 1000}ms`)
   })
 
-  it('the curve matches --ease', () => {
+  it('the curves match --ease and --ease-board', () => {
     expect(token('--ease')).toBe(`cubic-bezier(${EASE.join(', ')})`)
+    expect(token('--ease-board')).toBe(`cubic-bezier(${EASE_BOARD.join(', ')})`)
   })
 
-  it('every duration is inside the documented 150–250ms', () => {
+  it('each surface keeps its own range (MOT-11)', () => {
+    // The phone: 150–250 ms, a tap confirmed.
     for (const d of [DUR_FAST, DUR, DUR_SLOW]) expect(d).toBeGreaterThanOrEqual(0.15)
     for (const d of [DUR_FAST, DUR, DUR_SLOW]) expect(d).toBeLessThanOrEqual(0.25)
+    // The board surface, seen from across a room: 400–600 ms.
+    expect(DUR_BOARD).toBeGreaterThanOrEqual(0.4)
+    expect(DUR_BOARD).toBeLessThanOrEqual(0.6)
+    // A moment begins every part of itself within 1.2 s: the champion's trophy line, a pair of the draw (its
+    // faces meet over the board's time), a lot out of the hat.
+    expect(MOMENT).toBeLessThanOrEqual(1.2)
+    expect(REVEAL.trophy).toBeLessThanOrEqual(MOMENT)
+    expect(DUR_BOARD).toBeLessThanOrEqual(DRAW_STEP)
+    expect(DRAW_STEP).toBeLessThanOrEqual(MOMENT)
+    expect(HAT_STEP).toBeLessThanOrEqual(MOMENT)
+  })
+
+  it('reduced motion stops the board too', () => {
+    const reduced = tokens.slice(tokens.indexOf('prefers-reduced-motion'))
+    for (const name of ['--dur-fast', '--dur', '--dur-slow', '--dur-board']) expect(reduced).toMatch(new RegExp(`${name}:\\s*0ms`))
   })
 
   it('no screen hard-codes a duration, a curve or a spring', () => {

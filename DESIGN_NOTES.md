@@ -238,6 +238,13 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - **The snake's holder** is on the yellow plate, the snake beside his name, one row per group with its pot. The 3 px underline and the 20 px icon could not be seen from the couch. It is board yellow's one use besides the leader and the live mark (DESIGN_DIRECTION, `tokens.css`).
 - **Fitting the room's sizes.** A 1080p page holds six rows, two-line pair rows included: twelve players are two pages, six pairs one, sixty players ten passes of the rotation. The feed shows seven items at the name's size, its icons and the snake's at the type's size (the phone's 18 and 24 px are specks from the couch). The lot card's form guide stops at three lines, so a long one never pushes the bid off the card.
 
+## Calcutta night on the TV (2026-10-13, UX-17, MOT-05, MOT-11)
+
+- **Motion by surface.** The phone keeps 150–250 ms. The board surface gets `--dur-board` (500 ms) on `--ease-board`, which lands softer: the TV's rows re-sorting, the boards crossing, the bid's pulse (it was 150 ms, over before the room looked up), the feed. A moment's parts all begin within `MOMENT` (1.2 s). The champion's reveal fits in it: the count-up went from 0.9 to 0.7 s, so the trophy line comes at 1.2 s. The hammer's stamp stays a quick hit. `motion.test.ts` holds each surface to its own range.
+- **The order out of the hat.** Before the first lot opens, the TV shows «así salieron del sombrero»: the lots down the columns, in order. Lots drawn while the TV is on drop in one every `HAT_STEP` (0.25 s). On the console, «Sortear el orden» moves each row to its new place over the board's time, each a beat after the one above (`reorder`); it used to swap the list in one frame.
+- **The pot counts up** to each sale's figure. `CountUp` takes a duration and a starting figure, so the TV opens on the pot and counts only the change.
+- **The pairs draw is the room's.** «Sortear el resto» saves the draw nameless at once, without leaving Calcutta night. Once the last sale has had its stamp, the TV takes the board for it: a pair every `DRAW_STEP` (0.8 s), the two faces sliding together and the rings closing between them, then who they are. A named pair's second line is its two players, an unnamed pair's its categories, and the honoree's pick says «la eligió …» on either. The phone reveals in the same order (`drawOrder`). A TV opened after the draw shows it whole, and a redraw comes out from the start. «Empezar el torneo» closes the night; saving the draw used to.
+
 ## «Para empezar» (2026-10-01, UX-06)
 
 - **The wizard's days are rounds.** «¿Cuántos días (rondas)?» creates rounds 1..N with no course or date; Rondas used to say «Sin rondas» right after.
