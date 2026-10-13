@@ -2013,9 +2013,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 153,
+      "tests": [
+        "src/screens/tournament/screenRenders.test.tsx",
+        "src/data/tournamentStore.share.test.ts",
+        "src/data/share.test.ts",
+        "src/screens/tournament/boardsAge.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
