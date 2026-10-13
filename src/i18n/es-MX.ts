@@ -2095,6 +2095,8 @@ export const t = {
       committee: 'Comité',
       strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
+      /** Save waits for a handicap someone typed, by the method chosen (UX-16): a new player opened on 18. */
+      hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe los golpes de sus tres rondas para guardarlo.' },
       reordered: 'Las rondas venían en otro orden; se acomodaron.',
     },
     courses: {
@@ -2140,6 +2142,9 @@ export const t = {
       issues: 'Revisar',
       siNotPermutation: 'Los índices de golpe (SI) deben ser 1 a 18 sin repetir.',
       parSum: (n: number) => `Los pares suman ${n}.`,
+      /** A tee started from scratch: cells nobody has typed yet (UX-16). */
+      holesUntyped: (holes: number[]) =>
+        holes.length > 6 ? `Falta el par o el índice de ${holes.length} hoyos.` : `Falta el par o el índice ${holes.length === 1 ? 'del hoyo' : 'de los hoyos'} ${andList(holes.map(String))}.`,
       confidence: { high: 'Lectura confiable', medium: 'Revisar con cuidado', low: 'Lectura dudosa' },
       source: { manual: 'A mano', golfcourseapi: 'Importado', opengolfapi: 'Importado', scorecard_photo: 'De foto' },
     },

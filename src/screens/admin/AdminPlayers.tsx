@@ -9,29 +9,30 @@ import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deletePlayer, playersWithPin, setPlayerPin, uploadAsset, upsertPlayer, type PlayerInput } from '../../data/api'
+import { deletePlayer, playersWithPin, setPlayerPin, uploadAsset, upsertPlayer } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { courseHandicap, estimateIndex, playingHandicap, strokesReceived } from '../../engine/core/handicap'
-import type { EstimateInput, Player } from '../../engine/types'
+import type { Player } from '../../engine/types'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
+import { completePlayer, type DraftEstimate, type PlayerDraft } from './playerDraft'
 import a from './Admin.module.css'
 import { OthersDataNotice } from '../../components/LegalLinks'
-import { NumberField, OptionalNumberField } from '../../components/NumberField'
+import { OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 
 const P = t.admin.players
 const SEARCH_FROM = 12
 
-function toInput(p: Player | null, sortOrder: number): PlayerInput {
+function toInput(p: Player | null, sortOrder: number): PlayerDraft {
   return {
     id: p?.id,
     full_name: p?.fullName ?? '',
     display_name: p?.displayName ?? '',
     tier: p?.tier ?? null,
-    base_hcp: p?.baseHcp ?? 18,
+    base_hcp: p?.baseHcp ?? null,
     handicap_source: p?.handicapSource ?? 'manual',
     handicap_index: p?.handicapIndex ?? null,
     estimate_inputs: p?.estimateInputs ?? null,
@@ -44,10 +45,10 @@ function toInput(p: Player | null, sortOrder: number): PlayerInput {
   }
 }
 
-const emptyEstimate = (): [EstimateInput, EstimateInput, EstimateInput] => [
-  { gross: 85, rating: null, slope: null, par: null },
-  { gross: 92, rating: null, slope: null, par: null },
-  { gross: 100, rating: null, slope: null, par: null },
+const emptyEstimate = (): [DraftEstimate, DraftEstimate, DraftEstimate] => [
+  { gross: null, rating: null, slope: null, par: null },
+  { gross: null, rating: null, slope: null, par: null },
+  { gross: null, rating: null, slope: null, par: null },
 ]
 
 /** "2 en SI 1–7, 1 en SI 8–18" from the 18 per-SI stroke counts. */
@@ -73,10 +74,10 @@ export function AdminPlayers() {
   const players = data!.snapshot.players
   const settings = data!.settings
   const tees = data!.snapshot.courses.flatMap((c) => c.tees.map((tee) => ({ ...tee, courseName: c.name })))
-  const [editing, setEditing] = useState<PlayerInput | null>(null)
+  const [editing, setEditing] = useState<PlayerDraft | null>(null)
   /** The form as it opened: anything typed since makes the sheet ask before it closes (UX-15). */
   const [editingFrom, setEditingFrom] = useState('')
-  const startEditing = (p: PlayerInput) => {
+  const startEditing = (p: PlayerDraft) => {
     setEditing(p)
     setEditingFrom(JSON.stringify(p))
   }
@@ -100,17 +101,19 @@ export function AdminPlayers() {
   }, [players, q])
 
   const preview = useMemo(() => {
-    if (!editing) return null
-    let base = editing.base_hcp
+    // Nothing to preview until a handicap is typed: a preview of 18 read as his.
+    const ready = editing ? completePlayer(editing) : null
+    if (!ready) return null
+    let base = ready.base_hcp
     let estimate: ReturnType<typeof estimateIndex> | null = null
-    if (editing.handicap_source === 'estimate' && editing.estimate_inputs) {
-      estimate = estimateIndex(editing.estimate_inputs, settings.handicap)
+    if (ready.handicap_source === 'estimate' && ready.estimate_inputs) {
+      estimate = estimateIndex(ready.estimate_inputs, settings.handicap)
       base = estimate.value
-    } else if (editing.handicap_source === 'index') base = editing.handicap_index ?? 0
+    } else if (ready.handicap_source === 'index') base = ready.handicap_index ?? 0
     let courseHcp = base
     let course: ReturnType<typeof courseHandicap> | null = null
-    const tee = tees.find((x) => x.id === editing.default_tee_id)
-    if (editing.handicap_source !== 'manual' && tee) {
+    const tee = tees.find((x) => x.id === ready.default_tee_id)
+    if (ready.handicap_source !== 'manual' && tee) {
       course = courseHandicap(base, { slope: tee.slope, rating: tee.rating, par: tee.holes.reduce((s, h) => s + h.par, 0) || 72 })
       courseHcp = course.value
     }
@@ -120,10 +123,11 @@ export function AdminPlayers() {
   }, [editing, settings.handicap, tees])
 
   async function save() {
-    if (!editing) return
+    const ready = editing ? completePlayer(editing) : null
+    if (!ready) return
     setBusy(true)
     try {
-      const input = { ...editing }
+      const input = { ...ready }
       if (input.handicap_source === 'estimate' && preview?.estimate) input.base_hcp = preview.estimate.value
       if (input.handicap_source === 'index') input.base_hcp = input.handicap_index ?? 0
       if (!input.display_name.trim()) input.display_name = input.full_name.split(' ')[0] ?? input.full_name
@@ -307,7 +311,7 @@ export function AdminPlayers() {
             </div>
             {E.handicap_source === 'manual' && (
               <Field label={P.baseHcp}>
-                <NumberField min={0} max={54} decimals={1} value={E.base_hcp} onChange={(v) => setEditing({ ...E, base_hcp: v })} />
+                <OptionalNumberField min={0} max={54} decimals={1} value={E.base_hcp} onChange={(v) => setEditing({ ...E, base_hcp: v })} />
               </Field>
             )}
             {E.handicap_source === 'index' && (
@@ -319,13 +323,13 @@ export function AdminPlayers() {
               <div className="stack">
                 {([P.goodDay, P.normalDay, P.badDay] as const).map((lbl, i) => {
                   const row = E.estimate_inputs![i]!
-                  const upd = (patch: Partial<EstimateInput>) => {
-                    const next = [...E.estimate_inputs!] as [EstimateInput, EstimateInput, EstimateInput]
+                  const upd = (patch: Partial<DraftEstimate>) => {
+                    const next = [...E.estimate_inputs!] as [DraftEstimate, DraftEstimate, DraftEstimate]
                     next[i] = { ...row, ...patch }
                     setEditing({ ...E, estimate_inputs: next })
                   }
                   const par = row.par ?? 72
-                  const weird = row.gross < par - 5 || row.gross > par + 60
+                  const weird = row.gross != null && (row.gross < par - 5 || row.gross > par + 60)
                   return (
                     <div key={lbl} className={a.section}>
                       <div className={a.sectionTitle}>
@@ -333,7 +337,7 @@ export function AdminPlayers() {
                       </div>
                       <div className={a.grid2}>
                         <Field label={P.gross}>
-                          <NumberField min={1} value={row.gross} onChange={(v) => upd({ gross: v })} />
+                          <OptionalNumberField min={1} value={row.gross} onChange={(v) => upd({ gross: v })} />
                         </Field>
                         <Field label={P.par}>
                           <OptionalNumberField placeholder="72" value={row.par} onChange={(v) => upd({ par: v })} />
@@ -387,6 +391,7 @@ export function AdminPlayers() {
             <Field label={P.formGuide}>
               <textarea className="textarea" value={E.form_guide ?? ''} onChange={(e) => setEditing({ ...E, form_guide: e.target.value || null })} />
             </Field>
+            {!completePlayer(E) && <p className={a.help}>{P.hcpMissing[E.handicap_source]}</p>}
             <div className={a.formActions}>
               {E.id ? (
                 <button className="btn btn--danger" type="button" onClick={() => setAskDelete(true)} disabled={busy}>
@@ -395,7 +400,7 @@ export function AdminPlayers() {
               ) : (
                 <span />
               )}
-              <button className="btn btn--primary" type="button" onClick={() => void save()} disabled={busy || !E.full_name.trim()}>
+              <button className="btn btn--primary" type="button" onClick={() => void save()} disabled={busy || !E.full_name.trim() || !completePlayer(E)}>
                 {busy ? t.common.saving : t.common.save}
               </button>
             </div>

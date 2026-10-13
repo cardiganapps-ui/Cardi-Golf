@@ -3,11 +3,15 @@ import { t } from '../../i18n/es-MX'
 import { Field } from '../../components/ui'
 import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
-import { NumberField, OptionalNumberField } from '../../components/NumberField'
+import { OptionalNumberField } from '../../components/NumberField'
+import { NOT_TYPED, untypedHoles } from './courseCells'
 
 const C = t.admin.courses
 
 export function validateTee(tee: CourseDraftTee): string[] {
+  const missing = untypedHoles(tee)
+  // The rest can only be judged on a whole card.
+  if (missing.length) return [C.holesUntyped(missing)]
   const issues: string[] = []
   const n = tee.holes.length
   const sis = [...tee.holes.map((h) => h.strokeIndex)].sort((a, b) => a - b)
@@ -44,7 +48,7 @@ export const blankTee = (name = 'Azules'): CourseDraftTee => ({
   color: null,
   rating: null,
   slope: null,
-  holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, strokeIndex: i + 1, yards: null })),
+  holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: NOT_TYPED, strokeIndex: NOT_TYPED, yards: null })),
 })
 
 /** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
@@ -98,6 +102,7 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
   }
 
   const par = tee.holes.reduce((s, h) => s + h.par, 0)
+  const parKnown = untypedHoles(tee).length === 0
 
   return (
     <div className="stack">
@@ -173,10 +178,10 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
               <tr key={h.number}>
                 <td className="num">{h.number}</td>
                 <td>
-                  <NumberField inputClassName="input--sm" label={C.par} min={3} max={6} value={h.par} onChange={(v) => setHole(i, { par: v })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.par} min={3} max={6} value={h.par === NOT_TYPED ? null : h.par} onChange={(v) => setHole(i, { par: v ?? NOT_TYPED })} />
                 </td>
                 <td>
-                  <NumberField inputClassName="input--sm" label={C.si} min={1} max={18} value={h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.si} min={1} max={18} value={h.strokeIndex === NOT_TYPED ? null : h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v ?? NOT_TYPED })} />
                 </td>
                 <td>
                   <OptionalNumberField inputClassName="input--sm" label={C.yards} value={h.yards} onChange={(v) => setHole(i, { yards: v })} />
@@ -188,7 +193,8 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
                 <strong>{C.parTotal}</strong>
               </td>
               <td className="num">
-                <strong>{par}</strong>
+                {/* The total of a card still being typed would be a number nobody gave. */}
+                <strong>{parKnown ? par : ''}</strong>
               </td>
               <td colSpan={2} />
             </tr>
