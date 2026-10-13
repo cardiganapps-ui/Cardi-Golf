@@ -15,7 +15,9 @@ vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 const admin = vi.hoisted(() => ({ saves: [] as Array<{ row: Record<string, unknown>; reason: string }> }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
-  adminSaveScore: vi.fn(async (row: Record<string, unknown>, reason: string) => void admin.saves.push({ row, reason })),
+  adminSaveHole: vi.fn(async (roundId: string, hole: number, rows: Array<Record<string, unknown>>, reason: string) => {
+    for (const r of rows) admin.saves.push({ row: { round_id: roundId, hole, ...r }, reason })
+  }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
