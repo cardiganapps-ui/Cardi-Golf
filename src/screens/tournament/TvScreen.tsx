@@ -444,10 +444,11 @@ function AuctionBoard() {
         </div>
         <div className={styles.stake}>
           <span className={styles.small}>{t.auction.atStake}</span>
-          {settings.auction.payout.map((s, i) => (
+          {/* The engine's pesos, adding up to the pot: never pot × share worked out here (MONEY-16). */}
+          {auction.stakes.map(({ slot: s, pesos }, i) => (
             <span key={i} className={styles.stakeRow}>
               <span>{t.rules.slotName(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, settings.labels.lastPlace)}</span>
-              <span className="num">{formatMoney(Math.floor(auction.pot * s.share))}</span>
+              <span className="num">{formatMoney(pesos)}</span>
             </span>
           ))}
         </div>

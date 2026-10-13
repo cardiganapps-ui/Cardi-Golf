@@ -20,6 +20,7 @@ import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
 import { NumberField, keepNumeric } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 import { handicapsLocked } from '../../engine/core/handicapLock'
+import { bidSteps } from '../../engine/modules/auction/bids'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -145,8 +146,14 @@ export function AdminAuction() {
   async function bid(delta: number | null) {
     if (!open || !bidder) return
     const amount = delta == null ? Number(custom) : bidAmount + delta
-    if (!Number.isFinite(amount) || amount <= bidAmount) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       toast(A.minBid(formatMoney(bidAmount)))
+      return
+    }
+    // Up in the increment from the bid standing (§5.9), as the server checks (MONEY-19).
+    const steps = bidSteps(bidAmount, cfg.increment, amount)
+    if (steps) {
+      toast(A.offStep(formatMoney(cfg.increment), steps.map((x) => formatMoney(x))))
       return
     }
     // The high bidder never raises himself: the auctioneer picks who shouted (UX-13).
@@ -154,7 +161,7 @@ export function AdminAuction() {
       toast(A.leadingLabel(name(bidder)))
       return
     }
-    const ok = await run(() => placeBid(open.lotId, bidder, Math.round(amount)))
+    const ok = await run(() => placeBid(open.lotId, bidder, amount))
     setCustom('')
     // The next shout is someone else's: nobody stays picked, so «+$250» can't go to the same bidder twice by habit.
     if (ok) setBidder(null)

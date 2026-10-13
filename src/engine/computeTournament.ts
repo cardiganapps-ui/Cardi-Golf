@@ -29,6 +29,7 @@ import { bracketState, type BracketState } from './formats/bracket'
 import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
 import { handicapChanges, type HandicapChange } from './core/handicapLock'
+import { missingPutts, puttingGames, type MissingPutts } from './core/putts'
 
 /** "$27,500": the engine's one formatter (core/pesos.ts). */
 const peso = pesos
@@ -50,6 +51,8 @@ export interface StatusFlags {
   unsignedCards: Array<{ roundId: Id; pairId: Id }>
   /** Holes overwritten by a different device with different values (§8). */
   discrepancies: Array<{ roundId: Id; playerId: Id; hole: number }>
+  /** Holes played without putts while a game pays on putts (MONEY-18): the Comité captures them, and the close waits. */
+  missingPutts: MissingPutts[]
   /** Enabled modules with no implementation (should never happen in production). */
   missingModules: ModuleId[]
   /** Enabled instance games whose type this build does not implement (an older app). */
@@ -173,6 +176,15 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       .map((pr) => pr.playerId)
     if (players.length) incompleteRounds.push({ roundId: rid, players })
   }
+  // Holes played without putts while a game pays on them (MONEY-18): named for the Comité, and the close waits for them.
+  const noPutts = missingPutts(core, settings)
+  const puttsWarnings: string[] = []
+  if (noPutts.length) {
+    const days = new Map<Id, Array<{ day: number; holes: number[] }>>()
+    for (const m of noPutts) days.set(m.playerId, [...(days.get(m.playerId) ?? []), { day: m.roundNumber, holes: m.holes }])
+    const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
+    puttsWarnings.push(t.missingPutts.warning([...days].map(([id, d]) => t.missingPutts.who(nameOf(id), d)), puttingGames(settings)))
+  }
   const unsignedCards: StatusFlags['unsignedCards'] = []
   if (modules.pairs) {
     for (const rid of core.roundIds) {
@@ -276,9 +288,10 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       pendingSnakeTiebreaks: modules.snake?.pending ?? [],
       unsignedCards,
       discrepancies,
+      missingPutts: noPutts,
       missingModules,
       missingGames,
-      warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...puttsWarnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
       handicapChanges: handicapChanges(snapshot, settings),

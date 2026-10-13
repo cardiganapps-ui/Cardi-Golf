@@ -5,14 +5,15 @@
  * money goes to the player's owners by ownership percentage, whole pesos,
  * rounding remainder to the champion's owners. A player whose lot was never
  * sold is not in the Calcutta: the slots go to the next finishers whose lots
- * were (MONEY-11).
+ * were (MONEY-11). Every screen shows a slot's `pesos`, what it hands over,
+ * never pot × share worked out again (MONEY-16).
  */
 import { ordinal, t } from '../../../i18n/es-MX'
 import type { AuctionPayoutSlot } from '../../settings/schema'
 import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { rankIndividual } from '../individual'
-import { pesos } from '../../core/pesos'
+import { pesos, pesosCents } from '../../core/pesos'
 
 export interface Ownership {
   ownerId: Id
@@ -43,8 +44,10 @@ export interface SlotResult {
   share: number
   /** Players filling the slot (several when tied); empty when nobody qualifies. */
   playerIds: Id[]
-  /** Pot × share (before rounding to owners). */
+  /** Pot × share, centavos kept: what each owner's share is worked out from. Never shown: see `pesos`. */
   amount: number
+  /** The finishing places a place slot pays (several when tied): 1 is the champion's. */
+  places?: number[]
   /**
    * Each player's fraction of the slot, when it is not an even split: two
    * teams of different sizes tied for a place split it per team first, then
@@ -53,14 +56,33 @@ export interface SlotResult {
   weights?: Record<Id, number>
   /** Nobody qualifies (no player of that tier, or every candidate already cashed a higher slot): the money stays with the banker until the Comité decides, in whole pesos (MONEY-08). */
   unfilled: boolean
+  /**
+   * The slot in whole pesos as it is handed over (MONEY-16): its owners'
+   * shares, each floored, plus the pot's rounding pesos when this slot's
+   * owner takes them; for an unfilled slot, what stays in the bank. The
+   * slots' pesos add up to the pot exactly.
+   */
+  pesos: number
   why: Explanation
+}
+
+/** A slot as the ranking fills it, before its owners are paid. */
+export type AssignedSlot = Omit<SlotResult, 'pesos'>
+
+/** One slot of the payout on the pot as it stands, before anyone has a result (the TV's «Lo que está en juego»). */
+export interface Stake {
+  slot: AuctionPayoutSlot
+  label: string
+  share: number
+  /** Pot × share in whole pesos, the rounding pesos to the champion's slot (or the highest one): the stakes add up to the pot. */
+  pesos: number
 }
 
 export interface OwnerPayout {
   ownerId: Id
   amount: number
-  /** Which player(s) earned it. */
-  lines: Array<{ playerId: Id; slotLabel: string; amount: number; pct: number }>
+  /** Which player(s) earned it; `slot` is the index of the slot paid. The rounding line names the slot it rides with. */
+  lines: Array<{ playerId: Id; slotLabel: string; amount: number; pct: number; slot: number; rounding?: true }>
 }
 
 export interface OwnerPortfolio {
@@ -80,6 +102,8 @@ export interface AuctionState {
   /** For the console: who may still bid (limit not reached) and how many they hold. */
   holdings: Record<Id, number>
   slots: SlotResult[]
+  /** The payout's slots on the pot as it stands, in the settings' order, whatever the ranking. */
+  stakes: Stake[]
   /** Sum of the unfilled slots' money: not paid to anyone, flagged in `warnings`. */
   unfilled: number
   /** ownerId → payout (live or final, see `final`). */
@@ -92,6 +116,9 @@ export interface AuctionState {
 
 /** Cents-safe: 12000 × 0.55 = 6600.000000000001 → 6600. */
 const money = (x: number) => Math.round(x * 100) / 100
+
+/** The pot's rounding pesos, paid with the slot they ride with. */
+const ROUNDING = 'Redondeo'
 
 function slotLabel(slot: AuctionPayoutSlot, ctx: ModuleContext): string {
   switch (slot.slot) {
@@ -161,12 +188,12 @@ export function assignSlots(
    * between teams splits per team.
    */
   groups: Array<{ position: number; members: Id[]; places?: number; entrants?: Id[][]; finish?: number }>,
-): SlotResult[] {
+): AssignedSlot[] {
   const { settings, snapshot } = ctx
   const tierOf = new Map(snapshot.players.map((p) => [p.id, p.tier]))
   const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
   const cashed = new Set<Id>()
-  const results: SlotResult[] = []
+  const results: AssignedSlot[] = []
   // Highest share first: a player cashes the highest slot he qualifies for.
   const slots = [...settings.auction.payout].sort((a, b) => b.share - a.share)
   // Place slots are handled together per tie group: a group occupying places
@@ -204,7 +231,7 @@ export function assignSlots(
                 ? `${pct(share)} ÷ ${teams.length} equipos = ${pct(share / teams.length)} por equipo, repartido entre sus jugadores`
                 : `${pct(share)} ÷ ${members.length} = ${pct(share / members.length)} cada uno`,
             ]
-      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
+      results.push({ slot, label, share, playerIds: members, amount: money(pot * share), places: covered.map((c) => c.place), unfilled: false, why: { title: label, steps }, ...(weights ? { weights } : {}) })
       for (const m of members) cashed.add(m)
       continue
     }
@@ -271,12 +298,17 @@ function pct(share: number): string {
 }
 
 /** Whole pesos (MONEY-08): the centavos of an unfilled slot go with the rounding, so payouts and what stays in the bank add up to the pot. */
-function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: string): SlotResult {
+function unfilledSlot(slot: AuctionPayoutSlot, label: string, share: number, pot: number, reason: string): AssignedSlot {
   return { slot, label, share, playerIds: [], amount: Math.floor(money(pot * share)), unfilled: true, why: { title: label, steps: [reason, 'Se queda en el banco hasta que el Comité decida'] } }
 }
 
-/** Distribute slot money to owners in whole pesos; remainder to the champion's owners. */
-export function payoutsToOwners(lots: LotState[], slots: SlotResult[], pot: number): Record<Id, OwnerPayout> {
+/**
+ * Distribute slot money to owners in whole pesos. The rounding pesos go to
+ * the champion's owner (§5.9), his buyer when he bought part of himself back;
+ * with no champion's slot paid, to the first owner of the highest slot paid,
+ * never to the player himself for holding the lot (MONEY-17).
+ */
+export function payoutsToOwners(lots: LotState[], slots: AssignedSlot[], pot: number): Record<Id, OwnerPayout> {
   const out: Record<Id, OwnerPayout> = {}
   const add = (ownerId: Id, line: OwnerPayout['lines'][number]) => {
     const o = (out[ownerId] ??= { ownerId, amount: 0, lines: [] })
@@ -284,10 +316,11 @@ export function payoutsToOwners(lots: LotState[], slots: SlotResult[], pot: numb
     o.lines.push(line)
   }
   let distributed = 0
-  let championOwner: Id | null = null
+  let target: { ownerId: Id; playerId: Id; slot: number; champion: boolean } | null = null
   const unfilledTotal = slots.filter((s) => s.unfilled).reduce((sum, s) => sum + s.amount, 0)
-  for (const s of slots) {
-    if (s.unfilled) continue
+  slots.forEach((s, i) => {
+    if (s.unfilled) return
+    const champion = s.places?.includes(1) ?? false
     for (const pid of s.playerIds) {
       const perPlayer = s.amount * (s.weights?.[pid] ?? 1 / s.playerIds.length)
       const lot = lots.find((l) => l.playerId === pid && l.status === 'sold')
@@ -295,17 +328,59 @@ export function payoutsToOwners(lots: LotState[], slots: SlotResult[], pot: numb
       for (const o of owners) {
         const amount = Math.floor((perPlayer * o.pct) / 100)
         distributed += amount
-        add(o.ownerId, { playerId: pid, slotLabel: s.label, amount, pct: o.pct })
-        if (s.slot.slot === 'place' && s.slot.place === 1 && championOwner == null) championOwner = o.ownerId
+        add(o.ownerId, { playerId: pid, slotLabel: s.label, amount, pct: o.pct, slot: i })
+        // Slots come highest share first: the first owner paid, unless a champion's slot comes after.
+        if (!target || (champion && !target.champion)) target = { ownerId: o.ownerId, playerId: pid, slot: i, champion }
       }
     }
-  }
+  })
   // Only the rounding pesos go to the champion's owners (§5.9); unfilled slots stay with the banker.
   const remainder = Math.round(pot - unfilledTotal - distributed)
-  const filled = slots.filter((s) => !s.unfilled)
-  if (remainder > 0 && filled.length) {
-    const target = championOwner ?? filled[0]!.playerIds[0]!
-    add(target, { playerId: target, slotLabel: 'Redondeo', amount: remainder, pct: 0 })
+  if (remainder > 0 && target) {
+    const { ownerId, playerId, slot } = target
+    add(ownerId, { playerId, slotLabel: ROUNDING, amount: remainder, pct: 0, slot, rounding: true })
+  }
+  return out
+}
+
+/**
+ * Each slot in whole pesos as it is handed over (MONEY-16): the sum of its
+ * owners' lines, the rounding pesos with the slot whose owner takes them; an
+ * unfilled slot's floored amount stays in the bank. Its explanation goes on
+ * from the share to those pesos.
+ */
+function withPesos(slots: AssignedSlot[], payouts: Record<Id, OwnerPayout>, pot: number): SlotResult[] {
+  const floored = slots.map(() => 0)
+  const rounding = slots.map(() => 0)
+  for (const p of Object.values(payouts)) for (const l of p.lines) (l.rounding ? rounding : floored)[l.slot]! += l.amount
+  return slots.map((s, i) => {
+    const raw = money(pot * s.share)
+    const steps = [...s.why.steps]
+    if (s.unfilled) {
+      steps.splice(1, 0, `${pct(s.share)} de ${pesos(pot)} = ${pesosCents(raw)}`, ...(raw !== s.amount ? [`En pesos enteros: ${pesos(s.amount)}; los centavos van al redondeo`] : []))
+      return { ...s, pesos: s.amount, why: { ...s.why, steps } }
+    }
+    const paid = floored[i]! + rounding[i]!
+    steps.push(`${pct(s.share)} de ${pesos(pot)} = ${pesosCents(raw)}`)
+    if (floored[i] !== raw) steps.push(`En pesos enteros: ${pesos(floored[i]!)}`)
+    if (rounding[i]) steps.push(`Más ${pesos(rounding[i]!)} del redondeo de todo el pozo: ${pesos(paid)}`)
+    return { ...s, pesos: paid, why: { ...s.why, steps } }
+  })
+}
+
+/**
+ * The payout on the pot as it stands, slot by slot in the settings' order:
+ * what each one comes to for a single owner, centavos dropped and the pesos
+ * left to the champion's slot, else the highest. What the TV shows at the
+ * auction, before anyone has a result (MONEY-16).
+ */
+export function planStakes(ctx: ModuleContext, pot: number): Stake[] {
+  const out = ctx.settings.auction.payout.map((slot) => ({ slot, label: slotLabel(slot, ctx), share: slot.share, pesos: Math.floor(money(pot * slot.share)) }))
+  const left = pot - out.reduce((s, x) => s + x.pesos, 0)
+  if (left > 0 && out.length) {
+    const champion = out.findIndex((x) => x.slot.slot === 'place' && x.slot.place === 1)
+    const top = out.reduce((best, x, i) => (x.share > out[best]!.share ? i : best), 0)
+    out[champion >= 0 ? champion : top]!.pesos += left
   }
   return out
 }
@@ -320,8 +395,9 @@ export const auctionModule: GameModule<AuctionState> = {
     const holdings = ownerHoldings(lots, ctx)
     const anyScores = Object.values(ctx.core.totals).some((t) => t.thru > 0)
     const groups = anyScores || ctx.tournamentFinal ? inCalcutta(rankIndividual(ctx), new Set(sold.map((l) => l.playerId))) : []
-    const slots = pot > 0 && groups.length ? assignSlots(ctx, pot, groups) : []
-    const payouts = payoutsToOwners(lots, slots, pot)
+    const assigned = pot > 0 && groups.length ? assignSlots(ctx, pot, groups) : []
+    const payouts = payoutsToOwners(lots, assigned, pot)
+    const slots = withPesos(assigned, payouts, pot)
     const paidOut = Object.values(payouts).reduce((s, p) => s + p.amount, 0)
     const unfilled = slots.filter((s) => s.unfilled).reduce((s, x) => s + x.amount, 0)
     const portfolios: OwnerPortfolio[] = []
@@ -346,6 +422,7 @@ export const auctionModule: GameModule<AuctionState> = {
       soldCount: sold.length,
       holdings,
       slots,
+      stakes: planStakes(ctx, pot),
       unfilled,
       payouts,
       portfolios,
@@ -355,6 +432,7 @@ export const auctionModule: GameModule<AuctionState> = {
   },
   prizes(state, ctx) {
     const label = ctx.settings.modules.auction.label
+    const nameOf = (id: Id) => ctx.snapshot.players.find((x) => x.id === id)?.displayName ?? id
     const out: PrizeAward[] = []
     for (const p of Object.values(state.payouts)) {
       for (const line of p.lines) {
@@ -367,11 +445,16 @@ export const auctionModule: GameModule<AuctionState> = {
           final: state.final,
           why: {
             title: pesos(line.amount),
-            steps: line.pct ? [`${line.pct}% de ${ctx.snapshot.players.find((x) => x.id === line.playerId)?.displayName ?? line.playerId}`] : ['Resto del redondeo al dueño del campeón'],
+            steps: line.rounding ? [roundingWhy(state.slots[line.slot], nameOf(line.playerId))] : [`${line.pct}% de ${nameOf(line.playerId)}`],
           },
         })
       }
     }
     return out
   },
+}
+
+/** Whose owner takes the pot's rounding pesos, and why him. */
+function roundingWhy(slot: SlotResult | undefined, name: string): string {
+  return slot?.places?.includes(1) ? 'Resto del redondeo al dueño del campeón' : `Resto del redondeo al dueño de ${name}, que cobra el premio más alto`
 }

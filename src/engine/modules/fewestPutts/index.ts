@@ -1,7 +1,11 @@
 /**
  * Fewest putts (§5.7): lowest total putts over all rounds. Picked-up holes
- * count `pickupPuttsForFewestPutts` (§18.1). Tie: split.
+ * count `pickupPuttsForFewestPutts` (§18.1). Tie: split. A hole played
+ * without putts counts for nothing, not as 0 putts (MONEY-18): the player has
+ * fewer holes than the field, so he can't take the prize until they are
+ * captured.
  */
+import { puttsMissing } from '../../core/putts'
 import { flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -19,6 +23,8 @@ export interface PuttsRow {
   onePutts: number
   threePutts: number
   pickedUpHoles: number
+  /** Holes played without putts: not counted until the Comité captures them (MONEY-18). */
+  missingPutts: number
 }
 
 export interface FewestPuttsState {
@@ -29,11 +35,15 @@ export interface FewestPuttsState {
 }
 
 export function puttsTotals(ctx: ModuleContext, playerId: Id) {
-  const t = { putts: 0, holes: 0, onePutts: 0, threePutts: 0, pickedUpHoles: 0 }
+  const t = { putts: 0, holes: 0, onePutts: 0, threePutts: 0, pickedUpHoles: 0, missingPutts: 0 }
   const threshold = ctx.settings.modules.snake.puttsThreshold
   for (const rid of ctx.core.roundIds) {
     for (const h of ctx.core.rounds[rid]?.[playerId]?.holes ?? []) {
       if (!h.played) continue
+      if (puttsMissing(h)) {
+        t.missingPutts++
+        continue
+      }
       t.holes++
       // A picked-up hole counts at least the setting (§18.1): the player never holed out, so his count is a floor.
       const putts = h.pickedUp ? Math.max(h.putts ?? 0, ctx.settings.pickupPuttsForFewestPutts) : (h.putts ?? 0)
@@ -81,6 +91,7 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
         onePutts: t.onePutts,
         threePutts: t.threePutts,
         pickedUpHoles: t.pickedUpHoles,
+        missingPutts: t.missingPutts,
       }
     })
     const prizes: FewestPuttsState['prizes'] = {}

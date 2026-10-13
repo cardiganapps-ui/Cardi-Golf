@@ -322,7 +322,7 @@ export function CeremonyScreen() {
               {s.label}: <strong>{s.unfilled ? t.games.unassigned : andList(s.playerIds.map(nameOf))}</strong>
             </>
           ),
-          figure: formatMoney(s.amount),
+          figure: formatMoney(s.pesos),
         })),
         // Nobody has cashed yet (no scores): the slots alone, not an empty list.
         list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount) })) : undefined,

@@ -84,6 +84,20 @@ describe('Calcutta night on the TV (MOT-04)', () => {
   })
 })
 
+describe('«Lo que está en juego» shows the pesos each slot pays (MONEY-16)', () => {
+  it('an odd pot: the champion’s slot carries the rounding peso and the five add up to the pot, never a peso short', () => {
+    mount()
+    expect(useTournament.getState().data!.settings.auction.payout.map((s) => s.share)).toEqual([0.55, 0.2, 0.1, 0.1, 0.05])
+    // Nine lots sold: make the pot $11,750, so 55% is $6,462.50 and 5% $587.50.
+    const pot = snap.calcuttaLots.filter((l) => l.status === 'sold').reduce((s, l) => s + (l.price ?? 0), 0)
+    lot(1).price = (lot(1).price ?? 0) + 11750 - pot
+    act(() => load(snap))
+    const stakes = Array.from(document.querySelectorAll('[class*="stakeRow"]')).map((r) => r.lastElementChild?.textContent)
+    // The TV floored pot × share itself: $6,462 and $587, a peso short of the pot.
+    expect(stakes).toEqual(['$6,463', '$2,350', '$1,175', '$1,175', '$587'].map((x) => formatMoney(Number(x.replace(/[$,]/g, '')))))
+  })
+})
+
 describe('the TV says how old its boards are while they may be behind (REL-10)', () => {
   function showTv(state: { error: string | null; minutesAgo: number }) {
     const fx = getFixture('full12-live')!

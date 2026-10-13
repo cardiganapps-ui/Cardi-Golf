@@ -26,7 +26,7 @@ import { openDays } from './core/unassigned'
 
 const C = t.closeGate
 
-export type CloseBlockerKind = 'missingRounds' | 'openRounds' | 'tiebreaks' | 'unassigned' | 'badAssignments' | 'unsignedCards' | 'rejectedWrites'
+export type CloseBlockerKind = 'missingRounds' | 'openRounds' | 'tiebreaks' | 'missingPutts' | 'unassigned' | 'badAssignments' | 'unsignedCards' | 'rejectedWrites'
 
 export interface CloseBlocker {
   kind: CloseBlockerKind
@@ -68,6 +68,9 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   if (open.length) blockers.push({ kind: 'openRounds', text: C.openRounds(open) })
   const pending = state.flags.pendingSnakeTiebreaks.length
   if (pending) blockers.push({ kind: 'tiebreaks', text: C.tiebreaks(pending) })
+  // A hole without putts would close on a guess: the putting games never read it as 0 (MONEY-18).
+  const noPutts = state.flags.missingPutts.reduce((n, m) => n + m.holes.length, 0)
+  if (noPutts) blockers.push({ kind: 'missingPutts', text: C.missingPutts(noPutts) })
   if (settings.modules.auction.enabled) {
     const unsold = closed.calcuttaLots.filter((l) => l.status !== 'sold')
     if (unsold.length) warnings.push(C.unsoldLots(t.common.andList(unsold.map((l) => closed.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))))

@@ -446,3 +446,122 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
     expect(computeTournament(snap, S).flags.warnings.filter((w) => w.includes('sin vender'))).toEqual([])
   })
 })
+
+describe('Every screen shows what a slot pays, and the rounding pesos go to an owner (MONEY-16, MONEY-17)', () => {
+  const POINTS: Record<string, number> = { p1: 80, p2: 60, p3: 58, p4: 72, p5: 62, p6: 56, p7: 70, p8: 64, p9: 55, p10: 68, p11: 61, p12: 50 }
+  function played(opts: { owner?: (pid: string) => string; price?: number; settings?: typeof S; edit?: (snap: Snapshot) => void; buybacks?: CalcuttaBuyback[] } = {}): TournamentState {
+    const snap = makeFirstTournament()
+    sellAll(snap, opts.owner, opts.price)
+    opts.edit?.(snap)
+    snap.calcuttaBuybacks.push(...(opts.buybacks ?? []))
+    scoreEveryone(snap, (pid) => POINTS[pid]!)
+    return computeTournament(snap, opts.settings ?? S)
+  }
+  const withPayout = (payout: (typeof S)['auction']['payout']): typeof S => ({ ...S, auction: { ...S.auction, payout } })
+  /** What the bank pays under one Calcutta label, by the money flows (not the module's own lines). */
+  const bankPays = (st: TournamentState, label: string) =>
+    st.money.flows.filter((f) => f.kind === 'payout' && f.potId === 'calcutta' && f.label === `La Calcutta, ${label}`).reduce((s, f) => s + f.amount, 0)
+  const rounding = (st: TournamentState) => Object.values(st.modules.auction!.payouts).flatMap((p) => p.lines.filter((l) => l.rounding).map((l) => [p.ownerId, l.playerId, l.amount]))
+
+  it('an odd pot: each slot is the pesos it hands over, the champion’s with the rounding peso, and they add up to the pot', () => {
+    // Pot $11,750: 55% is $6,462.50 and the Cuchara’s 5% $587.50. Juegos showed «$588» for a Cuchara whose owner is paid $587.
+    const st = played({ edit: (snap) => void (snap.calcuttaLots[11]!.price = 750) })
+    const a = st.modules.auction!
+    expect(a.pot).toBe(11750)
+    expect(a.slots.map((s) => [s.label, s.pesos])).toEqual([
+      ['Campeón', 6463],
+      ['Subcampeón', 2350],
+      ['Mejor C', 1175],
+      ['Mejor D', 1175],
+      ['La Cuchara de Palo', 587],
+    ])
+    expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(11750)
+    // What the bank pays, slot by slot: the champion’s slot carries the $1 of rounding.
+    expect([bankPays(st, 'Campeón') + bankPays(st, 'Redondeo'), bankPays(st, 'La Cuchara de Palo')]).toEqual([6463, 587])
+    expect(a.slots[4]!.why.steps).toEqual(['Último lugar: J12', '5% de $11,750 = $587.50', 'En pesos enteros: $587'])
+    expect(a.slots[0]!.why.steps.slice(1)).toEqual(['55% de $11,750 = $6,462.50', 'En pesos enteros: $6,462', 'Más $1 del redondeo de todo el pozo: $6,463'])
+    // Before anyone plays, the TV’s stakes are the same pesos.
+    expect(a.stakes.map((s) => s.pesos)).toEqual([6463, 2350, 1175, 1175, 587])
+  })
+
+  it('a share that floats below a peso: 29% of $25,000 is $7,250, never $7,249', () => {
+    // 25,000 × 0.29 = 7,249.999999999999 in floating point; the TV floored it to $7,249.
+    const settings = withPayout([
+      { slot: 'place', place: 1, share: 0.51 },
+      { slot: 'place', place: 2, share: 0.29 },
+      { slot: 'bestOfTier', tier: 'C', share: 0.1 },
+      { slot: 'bestOfTier', tier: 'D', share: 0.1 },
+    ])
+    const st = played({ price: 2000, settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 3000) })
+    const a = st.modules.auction!
+    expect(a.pot).toBe(25000)
+    expect(a.stakes.map((s) => [s.label, s.pesos])).toEqual([
+      ['Campeón', 12750],
+      ['Subcampeón', 7250],
+      ['Mejor C', 2500],
+      ['Mejor D', 2500],
+    ])
+    expect(a.slots.map((s) => s.pesos)).toEqual([12750, 7250, 2500, 2500])
+    expect(bankPays(st, 'Subcampeón')).toBe(7250)
+  })
+
+  it('a buyback that loses pesos to the floor: the champion’s slot still reads what its two owners and the rounding come to', () => {
+    // $6,462.50 at 75/25: $4,846 to the buyer p2, $1,615 to p1, and the $2 of rounding to the buyer.
+    const st = played({ owner: (pid) => (pid === 'p1' ? 'p2' : pid), buybacks: [{ lotId: 'lot1', pct: 25, amount: 250, paid: false }], edit: (snap) => void (snap.calcuttaLots[11]!.price = 750) })
+    const a = st.modules.auction!
+    expect(rounding(st)).toEqual([['p2', 'p1', 2]])
+    expect(a.slots[0]!.pesos).toBe(6463)
+    expect(bankPays(st, 'Campeón') + bankPays(st, 'Redondeo')).toBe(6463)
+    expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(a.pot)
+  })
+
+  it('no champion’s slot: the rounding peso goes to the owner of the highest slot’s player, not to the player (MONEY-17)', () => {
+    // The review’s case: Mejor C 50% and Mejor D 50%, every lot owned by p1, pot $12,001. The $1 went to J7 himself.
+    const settings = withPayout([
+      { slot: 'bestOfTier', tier: 'C', share: 0.5 },
+      { slot: 'bestOfTier', tier: 'D', share: 0.5 },
+    ])
+    const st = played({ owner: () => 'p1', settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 1001) })
+    const a = st.modules.auction!
+    expect(a.pot).toBe(12001)
+    expect(a.slots.map((s) => [s.label, s.playerIds, s.pesos])).toEqual([
+      ['Mejor C', ['p7'], 6001],
+      ['Mejor D', ['p10'], 6000],
+    ])
+    expect(rounding(st)).toEqual([['p1', 'p7', 1]])
+    expect(a.payouts.p7).toBeUndefined()
+    const prize = st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!
+    expect([prize.playerId, prize.amount, prize.why.steps]).toEqual(['p1', 1, ['Resto del redondeo al dueño de J7, que cobra el premio más alto']])
+    expect(a.stakes.map((s) => s.pesos)).toEqual([6001, 6000])
+  })
+
+  it('a champion’s slot smaller than another: the rounding still goes to the champion’s owner', () => {
+    // Mejor C 60% is paid first (J7), the champion’s 40% after it (J1): the peso follows the champion.
+    const settings = withPayout([
+      { slot: 'bestOfTier', tier: 'C', share: 0.6 },
+      { slot: 'place', place: 1, share: 0.4 },
+    ])
+    const st = played({ owner: (pid) => (pid === 'p1' ? 'p5' : pid), settings, edit: (snap) => void (snap.calcuttaLots[11]!.price = 1001) })
+    const a = st.modules.auction!
+    expect(a.slots.map((s) => [s.label, s.playerIds, s.pesos])).toEqual([
+      ['Mejor C', ['p7'], 7200],
+      ['Campeón', ['p1'], 4801],
+    ])
+    expect(rounding(st)).toEqual([['p5', 'p1', 1]])
+    expect(st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!.why.steps).toEqual(['Resto del redondeo al dueño del campeón'])
+    expect(a.stakes.map((s) => s.pesos)).toEqual([7200, 4801])
+  })
+
+  it('an unfilled slot’s pesos are what stays in the bank, its centavos with the rounding', () => {
+    // Pot $12,250. The D players p10 and p11 finish 1st and 2nd, so last-place p12 is the best D left: nobody for the Cuchara (5% = $612.50).
+    const snap = makeFirstTournament()
+    sellAll(snap)
+    snap.calcuttaLots[11]!.price = 1250
+    scoreEveryone(snap, (pid) => ({ ...POINTS, p10: 90, p11: 85 })[pid]!)
+    const a = computeTournament(snap, S).modules.auction!
+    const cuchara = a.slots.find((s) => s.label === 'La Cuchara de Palo')!
+    expect([cuchara.unfilled, cuchara.pesos]).toEqual([true, 612])
+    expect(cuchara.why.steps).toEqual(['Quien quedó último ya cobra un lugar mejor', '5% de $12,250 = $612.50', 'En pesos enteros: $612; los centavos van al redondeo', 'Se queda en el banco hasta que el Comité decida'])
+    expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(12250)
+  })
+})

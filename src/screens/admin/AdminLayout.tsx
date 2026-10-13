@@ -38,7 +38,7 @@ export function AdminLayout() {
   }
   const flags = data?.state.flags
   const settings = data?.settings
-  const hot = (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0)
+  const hot = (flags?.pendingSnakeTiebreaks.length ?? 0) + (flags?.discrepancies.length ?? 0) + (flags?.missingPutts.length ?? 0)
   const scoresBadge = hot + (flags?.unsignedCards.length ?? 0)
   const roundsBadge = flags?.incompleteRounds.length ?? 0
   const tournamentBadge =
