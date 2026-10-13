@@ -33,7 +33,7 @@ create function pg_temp.state(t uuid) returns jsonb language sql stable as $$
        ls as (select id from public.calcutta_lots where tournament_id = t),
        tm as (select id from public.teams where tournament_id = t)
   select jsonb_build_object(
-    'tournaments', (select jsonb_agg(jsonb_build_object('name', name, 'tagline', tagline, 'logo_url', logo_url, 'accent_color', accent_color, 'status', status, 'settings', settings, 'timezone', timezone, 'currency', currency, 'current_round_id', current_round_id, 'banker_player_id', banker_player_id)) from public.tournaments where id = t),
+    'tournaments', (select jsonb_agg(jsonb_build_object('name', name, 'tagline', tagline, 'logo_url', logo_url, 'accent_color', accent_color, 'status', status, 'settings', settings, 'timezone', timezone, 'currency', currency, 'current_round_id', current_round_id, 'banker_player_id', banker_player_id, 'handicaps_locked_at', handicaps_locked_at)) from public.tournaments where id = t),
     'players', (select jsonb_agg(to_jsonb(x) - 'profile_id' - 'profile_status' order by to_jsonb(x)::text) from public.players x where tournament_id = t),
     'rounds', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.rounds x where tournament_id = t),
     'groups', (select jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text) from public.groups x where id in (select id from gs)),
@@ -159,6 +159,13 @@ insert into public.game_entries (tournament_id, game_id, player_id) values (:'t_
 insert into public.game_results (tournament_id, game_id, player_id, share) values (:'t_a', 'tacos', :'p1', 1);
 insert into public.hole_awards (round_id, group_id, hole, game_id, player_id, decided_by) values (:'r1', :'g1', 3, 'ctp', :'p1', :'p2'), (:'r1', :g2, 12, 'ctp', :p3, :p4);
 update public.tournaments set current_round_id = :'r1', banker_player_id = :'p1', tagline = 'Antes', accent_color = '#0f6e77' where id = :'t_a';
+-- The handicaps fixed, and a change after that with its reason (0046, UX-28): both come back with the backup.
+select set_config('cardi.handicap_lock', '1', true) \g /dev/null
+update public.tournaments set handicaps_locked_at = now() - interval '5 days' where id = :'t_a';
+select set_config('cardi.handicap_lock', '', true) \g /dev/null
+select set_config('cardi.reason', 'Trajo su índice', true) \g /dev/null
+update public.players set base_hcp = 16 where id = :'p2';
+select set_config('cardi.reason', '', true) \g /dev/null
 -- Tournament B gets a row in each table a backup could name by id.
 select id as pb1 from harness.seed where key = 'player_b1' \gset
 select id as pb2 from harness.seed where key = 'player_b2' \gset
@@ -180,6 +187,11 @@ create temp table before_b on commit drop as select pg_temp.state(:'t_b') as s;
 select harness.check((select count(*) from jsonb_each((select s from before_a)) e(k, v) where v is null) = 0, 'every table holds a row before the backup') \g /dev/null
 
 -- 3. Every table changes after the backup.
+-- (The handicaps freed first, and the record with them: the changes below need no reason.)
+select set_config('cardi.handicap_lock', '1', true) \g /dev/null
+update public.tournaments set handicaps_locked_at = null where id = :'t_a';
+update public.players set handicap_note = null where id = :'p2';
+select set_config('cardi.handicap_lock', '', true) \g /dev/null
 update public.tournaments set tagline = 'Después', accent_color = '#b04327', banker_player_id = :'p2', current_round_id = :r2 where id = :'t_a';
 update public.players set display_name = 'Ana cambiada', base_hcp = 30 where id = :'p1';
 delete from public.players where id = :p4;

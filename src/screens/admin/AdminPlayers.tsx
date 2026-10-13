@@ -4,15 +4,20 @@
  * sources, the estimate from three scores (§13b-E) and a live preview.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { handicapText, t } from '../../i18n/es-MX'
+import { handicapText, hcpFromTo, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deletePlayer, playersWithPin, setPlayerPin, uploadAsset, upsertPlayer } from '../../data/api'
+import { ReasonSheet } from '../../components/ReasonSheet'
+import { HandicapChanges } from '../../components/HandicapChanges'
+import { localWhen } from '../../lib/localWhen'
+import { deletePlayer, lockHandicaps, playersWithPin, setPlayerPin, unlockHandicaps, updatePlayer, uploadAsset, upsertPlayer, type PlayerInput } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { courseHandicap, estimateIndex, playingHandicap, strokesReceived } from '../../engine/core/handicap'
-import type { Player } from '../../engine/types'
+import { baseHandicap } from '../../engine/core/compute'
+import { handicapsLocked, handicapUsed } from '../../engine/core/handicapLock'
+import type { HandicapInputs, Player } from '../../engine/types'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
@@ -24,7 +29,12 @@ import { OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 
 const P = t.admin.players
+const L = t.admin.players.lock
 const SEARCH_FROM = 12
+
+/** The fields a handicap is computed from, of a stored player or of the sheet's. */
+const inputsOf = (p: Player): HandicapInputs => ({ handicapSource: p.handicapSource, baseHcp: p.baseHcp, handicapIndex: p.handicapIndex, estimateInputs: p.estimateInputs })
+const inputsOfRow = (p: PlayerInput): HandicapInputs => ({ handicapSource: p.handicap_source, baseHcp: p.base_hcp, handicapIndex: p.handicap_index, estimateInputs: p.estimate_inputs })
 
 function toInput(p: Player | null, sortOrder: number): PlayerDraft {
   return {
@@ -90,6 +100,15 @@ export function AdminPlayers() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [profiles, reloadProfiles] = useTournamentProfiles(tournamentId)
   const noticeId = useId()
+  const lockId = useId()
+  const tournament = data!.snapshot.tournament
+  // Fixed by the Comité or by the tournament leaving setup (UX-28): a change from here needs a reason (0046).
+  const locked = handicapsLocked(tournament)
+  const changes = data!.state.flags.handicapChanges
+  const [askLock, setAskLock] = useState(false)
+  const [askFree, setAskFree] = useState(false)
+  /** The player about to be saved over a fixed handicap: the reason sheet is open for him. */
+  const [askReason, setAskReason] = useState<(PlayerInput & { id: string }) | null>(null)
 
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
@@ -125,16 +144,46 @@ export function AdminPlayers() {
   async function save() {
     const ready = editing ? completePlayer(editing) : null
     if (!ready) return
+    const input = { ...ready }
+    if (input.handicap_source === 'estimate' && preview?.estimate) input.base_hcp = preview.estimate.value
+    if (input.handicap_source === 'index') input.base_hcp = input.handicap_index ?? 0
+    if (!input.display_name.trim()) input.display_name = input.full_name.split(' ')[0] ?? input.full_name
+    // A fixed handicap changes only with a reason: what the engine reads, not a base no rule reads (0046's handicap_used).
+    const stored = input.id ? players.find((p) => p.id === input.id) : undefined
+    if (locked && stored && input.id && handicapUsed(inputsOf(stored)) !== handicapUsed(inputsOfRow(input))) {
+      setAskReason({ ...input, id: input.id })
+      return
+    }
     setBusy(true)
     try {
-      const input = { ...ready }
-      if (input.handicap_source === 'estimate' && preview?.estimate) input.base_hcp = preview.estimate.value
-      if (input.handicap_source === 'index') input.base_hcp = input.handicap_index ?? 0
-      if (!input.display_name.trim()) input.display_name = input.full_name.split(' ')[0] ?? input.full_name
       await upsertPlayer(tournamentId, input)
       await reload()
       setEditing(null)
       toast(t.common.saved)
+    } catch (e) {
+      toast(humanError(e))
+      // Fixed meanwhile from another phone: the boards say so now, and the next «Guardar» asks for the reason.
+      void reload()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** The sheet saved with the Comité's reason (update_player): the reason sheet shows any refusal itself. */
+  async function saveWithReason(reason: string) {
+    if (!askReason) return
+    await updatePlayer(askReason, reason)
+    await reload()
+    setEditing(null)
+    toast(t.common.saved)
+  }
+
+  async function fix() {
+    setBusy(true)
+    try {
+      await lockHandicaps(tournamentId)
+      await reload()
+      setAskLock(false)
     } catch (e) {
       toast(humanError(e))
     } finally {
@@ -204,6 +253,9 @@ export function AdminPlayers() {
   }, [editing?.id, data, players])
 
   const E = editing
+  const reasonFor = askReason ? players.find((p) => p.id === askReason.id) : undefined
+  const reasonBody = askReason && reasonFor ? L.reasonBody(reasonFor.displayName, hcpFromTo(baseHandicap(inputsOf(reasonFor), settings), baseHandicap(inputsOfRow(askReason), settings))) : undefined
+  const editingChange = E?.id ? changes.find((c) => c.playerId === E.id) : undefined
   return (
     <div className={a.screen}>
       <div className={a.head}>
@@ -216,6 +268,25 @@ export function AdminPlayers() {
         </button>
       </div>
       {players.length === 0 && <EmptyState title={P.empty} body={P.emptyHint} />}
+      {players.length > 0 && (
+        <section className={a.section} aria-labelledby={lockId}>
+          <div className={a.sectionTitle}>
+            <strong id={lockId}>{L.title}</strong>
+            {!locked ? (
+              <button className="btn btn--secondary btn--sm" type="button" onClick={() => setAskLock(true)} disabled={busy}>
+                {L.fix}
+              </button>
+            ) : (
+              tournament.status === 'setup' && (
+                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskFree(true)} disabled={busy}>
+                  {L.free}
+                </button>
+              )
+            )}
+          </div>
+          <p className={a.help}>{locked ? L.fixed(tournament.handicapsLockedAt ? localWhen(tournament.handicapsLockedAt, tournament.timezone) : null) : L.open}</p>
+        </section>
+      )}
       {players.length > SEARCH_FROM && (
         <div className={a.search}>
           <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={P.search} aria-label={P.search} />
@@ -234,6 +305,7 @@ export function AdminPlayers() {
                     {p.tier && <span className="tierBadge">{p.tier}</span>} {t.live.hcp} {handicapText(p.baseHcp)}
                     {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
                     {p.isAdmin ? `, ${P.committee}` : ''}
+                    {changes.some((c) => c.playerId === p.id) ? `, ${L.changed}` : ''}
                     {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
                   </span>
                 </span>
@@ -296,6 +368,8 @@ export function AdminPlayers() {
             </Field>
 
             <span className="label">{P.handicap}</span>
+            {locked && E.id && <p className={a.help}>{L.fixedHint}</p>}
+            {editingChange && <HandicapChanges change={editingChange} timeZone={tournament.timezone} />}
             <div className="segmented" role="tablist">
               {(['manual', 'index', 'estimate'] as const).map((s) => (
                 <button
@@ -418,6 +492,20 @@ export function AdminPlayers() {
         onConfirm={() => (deleteInfo?.blocked ? setAskDelete(false) : void remove())}
         onClose={() => setAskDelete(false)}
       />
+
+      <ConfirmSheet open={askLock} title={L.fixTitle} body={L.fixBody} busy={busy} confirmLabel={L.fix} onConfirm={() => void fix()} onClose={() => setAskLock(false)} />
+      <ReasonSheet
+        open={askFree}
+        title={L.freeTitle}
+        body={L.freeBody}
+        confirmLabel={L.free}
+        onConfirm={async (reason) => {
+          await unlockHandicaps(tournamentId, reason)
+          await reload()
+        }}
+        onClose={() => setAskFree(false)}
+      />
+      <ReasonSheet open={!!askReason} title={L.reasonTitle} body={reasonBody} confirmLabel={L.reasonConfirm} onConfirm={saveWithReason} onClose={() => setAskReason(null)} />
 
       <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
         <div className="stack">

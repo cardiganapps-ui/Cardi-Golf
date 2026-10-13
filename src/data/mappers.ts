@@ -10,6 +10,8 @@ import type {
   GameEntry,
   GameResult,
   Group,
+  HandicapInputs,
+  HandicapNote,
   HandicapOverride,
   Hole,
   HoleAward,
@@ -46,6 +48,7 @@ export const mapTournament = (r: Row): TournamentRow => ({
   countsForStats: r.counts_for_stats ?? true,
   quick: r.quick ?? false,
   crewId: r.crew_id ?? null,
+  handicapsLockedAt: r.handicaps_locked_at ?? null,
 })
 
 export const mapPlayer = (r: Row): Player => ({
@@ -63,7 +66,41 @@ export const mapPlayer = (r: Row): Player => ({
   avatarUrl: r.avatar_url ?? null,
   formGuide: r.form_guide ?? null,
   sortOrder: r.sort_order ?? 0,
+  handicapNote: mapHandicapNote(r.handicap_note),
 })
+
+/** One side of players.handicap_note, as the trigger writes it (0046); null when it can't be read. */
+function mapHandicapInputs(v: unknown): HandicapInputs | null {
+  if (!v || typeof v !== 'object') return null
+  const x = v as Row
+  const source = x.handicap_source
+  if (source !== 'index' && source !== 'estimate' && source !== 'manual') return null
+  const base = Number(x.base_hcp)
+  if (!Number.isFinite(base)) return null
+  return {
+    handicapSource: source,
+    baseHcp: base,
+    handicapIndex: x.handicap_index == null || !Number.isFinite(Number(x.handicap_index)) ? null : Number(x.handicap_index),
+    estimateInputs: Array.isArray(x.estimate_inputs) && x.estimate_inputs.length === 3 ? (x.estimate_inputs as Player['estimateInputs']) : null,
+  }
+}
+
+/** players.handicap_note (0046): the handicap when they were fixed and each change after it; null when absent or unreadable. */
+export function mapHandicapNote(v: unknown): HandicapNote | null {
+  if (!v || typeof v !== 'object') return null
+  const x = v as Row
+  const from = mapHandicapInputs(x.from)
+  if (!from || !Array.isArray(x.changes)) return null
+  const changes: HandicapNote['changes'] = []
+  for (const c of x.changes as unknown[]) {
+    if (!c || typeof c !== 'object') continue
+    const to = mapHandicapInputs((c as Row).to)
+    const at = (c as Row).at
+    const reason = (c as Row).reason
+    if (to && typeof at === 'string' && typeof reason === 'string') changes.push({ at, reason, to })
+  }
+  return { from, changes }
+}
 
 export const mapHole = (r: Row): Hole => ({
   number: r.number,

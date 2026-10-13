@@ -52,7 +52,8 @@ function teePar(tee: Tee | null, holes: number): number {
   return tee.holes.slice(0, holes).reduce((s, h) => s + h.par, 0)
 }
 
-function baseHandicap(player: Player, settings: TournamentSettings): CoreState['handicaps'][string] {
+/** Where a player's handicap starts: an estimate from three scores, an index, or the base the Comité typed (§13b). */
+export function baseHandicap(player: Pick<Player, 'handicapSource' | 'baseHcp' | 'handicapIndex' | 'estimateInputs'>, settings: TournamentSettings): CoreState['handicaps'][string] {
   if (player.handicapSource === 'estimate' && player.estimateInputs) {
     const est = estimateIndex(player.estimateInputs, settings.handicap)
     return { source: 'estimate', base: est.value, estimated: true, why: est.why }
