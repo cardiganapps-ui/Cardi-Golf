@@ -647,6 +647,7 @@ All of section 5, rewritten as friendly Spanish copy. This mirrors the printed r
 ### 9.9 Modo TV (`/tv`)
 - Full-screen, on the board palette (`DESIGN_DIRECTION.md`), huge type, logo.
 - Auto-rotates every ~12 seconds: Individual → Matrimonios → Víbora holders → Calcutta values → Feed.
+  - The room can stop it (2026-10-13, A11Y-21, WCAG 2.2.2). «Pausar» in the footer, or Space on a keyboard or a clicker, holds the board until «Seguir», and «En pausa» takes the rule's place. ← → (PageUp/PageDown) step the boards, paused or not. Going on gives the board its 12 s again. Unattended, it rotates.
 - On Calcutta night it shows the auction board instead (section 10): before the first lot, the order out of the hat; after the last sale's stamp, the pairs draw.
 - **Sized for the room** (2026-10-13, VIS-05; `DESIGN_NOTES.md` «TV at room scale»): it is read from 4 m off a 55-inch screen.
   - Nothing on any board is under 3.5vh, and names are 4.5vh.

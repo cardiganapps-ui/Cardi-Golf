@@ -2846,6 +2846,10 @@ export const t = {
     tier: (tier: string) => `Categoría ${tier}`,
     /** Under the board, which one comes next (MOT-08). */
     next: (board: string) => `Sigue: ${board}`,
+    /** The room stops the rotation to read a board (A11Y-21). */
+    pause: 'Pausar',
+    resume: 'Seguir',
+    paused: 'En pausa',
     /** Calcutta night on the TV (MOT-05, UX-17): the lot order out of the hat, then the pairs draw. */
     hatTitle: 'así salieron del sombrero',
     hatMore: (n: number) => (n === 1 ? 'y 1 lote más' : `y ${n} lotes más`),

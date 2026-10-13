@@ -20,7 +20,7 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 
 ## 1. Noche de Calcutta (la víspera del día 1)
 
-1. Conecta la tele: abre `/t/<slug>/tv` en un navegador (Chromecast / AirPlay / HDMI). Mientras el torneo esté en modo subasta muestra el tablero de la Calcutta.
+1. Conecta la tele: abre `/t/<slug>/tv` en un navegador (Chromecast / AirPlay / HDMI). Mientras el torneo esté en modo subasta muestra el tablero de la Calcutta. En los días de juego la tele cambia de tablero cada 12 segundos; si alguien quiere leer uno con calma, **«Pausar»** (abajo a la derecha, o la barra espaciadora con un teclado) lo detiene hasta **«Seguir»**, y las flechas ← → pasan de un tablero a otro.
 2. En el teléfono del subastador: **Más › Consola del Comité › Calcutta**.
 3. **"Sortear el orden"** sortea el orden de los lotes: en el teléfono la lista se acomoda sola en su nuevo orden (puedes reordenar a mano) → "Abrir lote 1". El torneo pasa a estado *Subasta* y la tele muestra «así salieron del sombrero»: los lotes salen uno por uno, en orden. Al abrir el lote 1 la tele pasa a su tarjeta. El pozo de la tele sube contando con cada venta.
 4. Por cada lote: la puja abre en $250 con el propio jugador. Toca al postor y luego **+$250 / +$500 / +$1,000** u "Otra". "Otra" tiene que subir de $250 en $250: si escribes $1,370 la app no la manda y te dice cuál sigue («Las pujas suben de $250 en $250: la siguiente es $1,500»). Un postor con 3 jugadores se apaga solo. "Deshacer última puja" si te equivocas.
