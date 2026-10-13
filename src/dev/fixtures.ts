@@ -123,6 +123,8 @@ function minimal(status: 'setup' | 'live', money = true): Fixture {
   )
   const snap = makeSnapshot({ players, rounds: [makeRound(1, { status: status === 'setup' ? 'scheduled' : 'live', date: '2027-05-15' })], settings, status })
   snap.tournament = { ...snap.tournament, id: money ? 'fx-min' : 'fx-gloria', slug: `fixture-minimal4-${status}`, name: money ? 'Sábado en Bosques' : 'Sábado por la gloria', tagline: null, joinCode: 'BOSQUE' }
+  // Ready to play: in setup, the Comité already fixed the handicaps (UX-28); under way they are fixed anyway.
+  if (status === 'setup') snap.tournament.handicapsLockedAt = '2027-05-14T20:00:00Z'
   snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
   if (status === 'live') {
     fillRound(snap, 'r1', 3)

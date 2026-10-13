@@ -10,6 +10,7 @@ import { ExplanationSheet, HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Sheet } from '../../components/ui'
 import { Money, ScorecardGrid, type GridHole } from '../../components/primitives'
 import { ShareCardButton } from '../../components/ShareCard'
+import { HandicapChanges } from '../../components/HandicapChanges'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentProfiles } from '../../data/profiles'
 import { useTournamentCtx } from './TournamentGate'
@@ -69,6 +70,8 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
   const totals = state.core.totals[p.id]
   const putts = state.modules.fewestPutts?.rows.find((r) => r.playerId === p.id)
   const profile = profiles.find((x) => x.playerId === p.id && x.status === 'confirmed')
+  // Changed after they were fixed (UX-28): what it was, what it is, and the Comité's reasons.
+  const hcpChange = state.flags.handicapChanges.find((c) => c.playerId === p.id)
 
   return (
     <Sheet open={!!playerId} onClose={onClose} title={p.fullName} wide>
@@ -105,6 +108,7 @@ export function PlayerSheet({ playerId, onClose }: { playerId: string | null; on
             {hc?.estimated ? ` (${t.admin.players.estimated})` : ''}
             {rounds.filter((r) => r.pr).map(({ round, pr }) => `, ${t.player.dayHcp(round.number, pr!.playingHcp, pr!.cut)}${pr!.overridden ? ` (${t.admin.handicaps.override.toLowerCase()})` : ''}`)}
           </p>
+          {hcpChange && <HandicapChanges change={hcpChange} timeZone={snapshot.tournament.timezone} />}
         </section>
 
         {rounds.map(({ round, pr }, idx) =>

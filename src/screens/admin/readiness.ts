@@ -9,9 +9,10 @@ import { teeById, teeForPlayerRound } from '../../engine/core/compute'
 import type { BracketState } from '../../engine/formats/bracket'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Course, Round, Snapshot, Tee } from '../../engine/types'
+import { handicapsLocked } from '../../engine/core/handicapLock'
 import { t } from '../../i18n/es-MX'
 
-export type ReadinessId = 'players' | 'pins' | 'rounds' | 'roundSetup' | 'card' | 'foreignTees' | 'teams' | 'pairs' | 'bracket' | 'tees' | 'groups'
+export type ReadinessId = 'players' | 'pins' | 'handicaps' | 'rounds' | 'roundSetup' | 'card' | 'foreignTees' | 'teams' | 'pairs' | 'bracket' | 'tees' | 'groups'
 
 export interface ReadinessItem {
   id: ReadinessId
@@ -100,6 +101,11 @@ export function readiness(snapshot: Snapshot, settings: TournamentSettings, entr
   if (entry.pins && players.length) {
     const missing = players.filter((p) => !entry.pins!.has(p.id) && !entry.linked?.has(p.id)).length
     items.push({ id: 'pins', done: missing === 0, text: missing ? R.pinsMissing(missing) : R.pins, to: 'jugadores' })
+  }
+  // The handicaps fixed before anything is bought or played on them (UX-28): leaving setup fixes them by itself.
+  if (players.length >= 2) {
+    const fixed = handicapsLocked(snapshot.tournament)
+    items.push({ id: 'handicaps', done: fixed, text: fixed ? R.handicaps : R.handicapsMissing, to: 'jugadores' })
   }
 
   // Under match play the bracket sets how many rounds it takes: 1 v N, … up to a power of two, halved each day.

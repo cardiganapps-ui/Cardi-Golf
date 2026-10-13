@@ -125,7 +125,7 @@ describe('Para empezar (UX-06)', () => {
     expect(screen.queryByText(LISTO)).toBeNull()
     await act(async () => answer(pinsOf(['p1', 'p2', 'p3', 'p4'])))
     // One tee on the course: no tees were checked, so it does not say «tees».
-    expect(await screen.findByText(R.allSet('jugadores, PIN, rondas, campo y grupos'))).toBeTruthy()
+    expect(await screen.findByText(R.allSet('jugadores, PIN, hándicaps, rondas, campo y grupos'))).toBeTruthy()
     expect(screen.queryByRole('heading', { name: R.title })).toBeNull()
   })
 

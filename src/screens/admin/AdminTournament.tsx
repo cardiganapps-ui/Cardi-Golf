@@ -35,6 +35,7 @@ import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
+import { handicapsLocked } from '../../engine/core/handicapLock'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
 
@@ -397,6 +398,7 @@ export function AdminTournament() {
           ))}
         </div>
         {closeGate.sheet}
+        {tr.status === 'setup' && !handicapsLocked(tr) && <p className={a.help}>{A.statusLocksHandicaps}</p>}
         <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />
         <CrewField tournamentId={tournamentId} />
         <Field label={A.banker}>

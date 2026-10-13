@@ -226,6 +226,26 @@ export async function upsertPlayer(tournamentId: string, p: PlayerInput) {
   return unwrap(await supabase().from('players').upsert(row).select('id').single()) as { id: string }
 }
 
+/**
+ * The player sheet saved with a reason (UX-28, 0046): a handicap changed after
+ * they were fixed. The whole row in one statement; the reason lands on the
+ * player's record (En vivo and his sheet show it) and in Historial.
+ */
+export async function updatePlayer(p: PlayerInput & { id: string }, reason: string) {
+  const { id, ...row } = p
+  await rpc<string>('update_player', { p_player_id: id, p_row: row, p_reason: reason })
+}
+
+/** «Fijar hándicaps» (UX-28): from now on a change needs a reason. Answers when they were fixed. */
+export async function lockHandicaps(tournamentId: string): Promise<string> {
+  return rpc<string>('lock_handicaps', { p_tournament_id: tournamentId })
+}
+
+/** «Liberar»: only before the tournament leaves setup, with a reason; what was recorded goes with the lock. */
+export async function unlockHandicaps(tournamentId: string, reason: string): Promise<void> {
+  await rpc('unlock_handicaps', { p_tournament_id: tournamentId, p_reason: reason })
+}
+
 export async function deletePlayer(id: string) {
   unwrap(await supabase().from('players').delete().eq('id', id).select('id'))
 }

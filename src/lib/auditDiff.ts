@@ -5,7 +5,8 @@
  */
 import type { AuditEntry } from '../data/api'
 
-const NOISE = new Set(['updated_at', 'client_ts', 'created_at', 'id'])
+// handicap_note is the record a lock keeps (0046): its reason is the entry's own, shown above the fields.
+const NOISE = new Set(['updated_at', 'client_ts', 'created_at', 'id', 'handicap_note'])
 
 export function changedFields(e: Pick<AuditEntry, 'action' | 'before' | 'after'>): Array<{ key: string; before: unknown; after: unknown }> {
   const b = e.before ?? {}

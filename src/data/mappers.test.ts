@@ -201,6 +201,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
       countsForStats: false,
       quick: false,
       crewId: id(90),
+      handicapsLockedAt: null,
     })
     // Parsed by the store, not here: a broken settings object must reach parseSettings to be reported.
     expect(t.settings).toBe(TOURNAMENT.settings)
@@ -223,6 +224,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
         avatarUrl: null,
         formGuide: 'Viene de 88 y 91',
         sortOrder: 1,
+        handicapNote: null,
       },
       {
         id: BETO,
@@ -239,6 +241,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
         avatarUrl: 'https://example.supabase.co/a/beto.jpg',
         formGuide: null,
         sortOrder: 2,
+        handicapNote: null,
       },
       {
         id: CHUY,
@@ -255,6 +258,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
         avatarUrl: null,
         formGuide: null,
         sortOrder: 3,
+        handicapNote: null,
       },
     ])
     // PostgREST's own form, JSON numbers, maps the same.
@@ -441,9 +445,26 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
     expect(mapGameResult({ tournament_id: T, game_id: 'tacos', player_id: CHUY, share: 0.5, created_at: CREATED })).toEqual({ gameId: 'tacos', playerId: CHUY, share: 0.5 })
   })
 
+  it('the handicap lock (0046): when they were fixed, and a player’s record of each change with its reason', () => {
+    expect(mapTournament({ ...TOURNAMENT, handicaps_locked_at: '2027-04-08T03:14:00+00:00' }).handicapsLockedAt).toBe('2027-04-08T03:14:00+00:00')
+    const side = (base: number) => ({ handicap_source: 'manual', base_hcp: base, handicap_index: null, estimate_inputs: null })
+    const note = { from: side(14), changes: [{ at: '2027-04-09T16:30:00+00:00', reason: 'Error de captura', to: side(12) }] }
+    expect(mapPlayer({ ...PLAYERS[0]!, handicap_note: note }).handicapNote).toEqual({
+      from: { handicapSource: 'manual', baseHcp: 14, handicapIndex: null, estimateInputs: null },
+      changes: [{ at: '2027-04-09T16:30:00+00:00', reason: 'Error de captura', to: { handicapSource: 'manual', baseHcp: 12, handicapIndex: null, estimateInputs: null } }],
+    })
+    // As the trigger writes numeric(4, 1) into jsonb ("14.0" as text from an older path reads the same).
+    expect(mapPlayer({ ...PLAYERS[0]!, handicap_note: { ...note, from: { ...side(14), base_hcp: '14.0', handicap_source: 'index', handicap_index: '8.1' } } }).handicapNote!.from).toEqual({ handicapSource: 'index', baseHcp: 14, handicapIndex: 8.1, estimateInputs: null })
+    // What can't be read is no record, rather than a sheet that breaks: a broken side, a change with no reason.
+    expect(mapPlayer({ ...PLAYERS[0]!, handicap_note: { from: { base_hcp: 14 }, changes: [] } }).handicapNote).toBeNull()
+    expect(mapPlayer({ ...PLAYERS[0]!, handicap_note: { from: side(14), changes: [{ at: 'x', to: side(12) }, null, 'x'] } }).handicapNote).toEqual({ from: expect.objectContaining({ baseHcp: 14 }), changes: [] })
+    expect(mapPlayer({ ...PLAYERS[0]!, handicap_note: 'nope' }).handicapNote).toBeNull()
+  })
+
   it('a row from before a column existed gets that column’s default', () => {
     const without = (r: Row, ...columns: string[]): Row => Object.fromEntries(Object.entries(r).filter(([k]) => !columns.includes(k)))
-    expect(mapTournament(without(TOURNAMENT, 'counts_for_stats', 'quick', 'crew_id'))).toMatchObject({ countsForStats: true, quick: false, crewId: null })
+    expect(mapTournament(without(TOURNAMENT, 'counts_for_stats', 'quick', 'crew_id', 'handicaps_locked_at'))).toMatchObject({ countsForStats: true, quick: false, crewId: null, handicapsLockedAt: null })
+    expect(mapPlayer(without(PLAYERS[0]!, 'handicap_note')).handicapNote).toBeNull()
     expect(mapScore(without(SCORES[0]!, 'disputed', 'previous'))).toMatchObject({ disputed: false, previous: null })
     expect(mapGroup(without(GROUP_ROW, 'start_hole'), MEMBERS).startHole).toBe(1)
     expect(mapRound(without(ROUND_ROW, 'holes')).holes).toBe(18)

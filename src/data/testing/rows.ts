@@ -17,7 +17,7 @@
  * primary key, as `SNAPSHOT_KEYS` asks) followed by the store's own sorts.
  * The database keeps no other order, so neither can the snapshot.
  */
-import type { Snapshot } from '../../engine/types'
+import type { HandicapInputs, HandicapNote, Snapshot } from '../../engine/types'
 import type { Row } from '../mappers'
 import type { SnapshotTable } from '../snapshotTables'
 
@@ -73,6 +73,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
         quick: t.quick ?? false,
         crew_id: t.crewId ?? null,
         is_protected: false,
+        handicaps_locked_at: t.handicapsLockedAt ?? null,
       },
     ],
     players: s.players.map((p) => ({
@@ -94,6 +95,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       created_at: CREATED,
       profile_id: null,
       profile_status: null,
+      handicap_note: noteRow(p.handicapNote ?? null),
     })),
     courses: s.courses.map((c) => ({
       id: c.id,
@@ -205,11 +207,18 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
   return JSON.parse(JSON.stringify(rows)) as Record<SnapshotTable, Row[]>
 }
 
+/** players.handicap_note as 0046's trigger writes it: the jsonb keeps numbers as numbers. */
+function noteRow(note: HandicapNote | null): Row | null {
+  if (!note) return null
+  const side = (h: HandicapInputs) => ({ handicap_source: h.handicapSource, base_hcp: h.baseHcp, handicap_index: h.handicapIndex, estimate_inputs: h.estimateInputs })
+  return { from: side(note.from), changes: note.changes.map((c) => ({ at: c.at, reason: c.reason, to: side(c.to) })) }
+}
+
 export function asStored(s: Snapshot): Snapshot {
   const read = new Set(s.rounds.map((r) => r.courseId).filter(Boolean))
   return {
-    tournament: { ...s.tournament, countsForStats: s.tournament.countsForStats ?? true, quick: s.tournament.quick ?? false, crewId: s.tournament.crewId ?? null },
-    players: by(by(s.players, (p) => [p.id]), (p) => [p.sortOrder]),
+    tournament: { ...s.tournament, countsForStats: s.tournament.countsForStats ?? true, quick: s.tournament.quick ?? false, crewId: s.tournament.crewId ?? null, handicapsLockedAt: s.tournament.handicapsLockedAt ?? null },
+    players: by(by(s.players, (p) => [p.id]), (p) => [p.sortOrder]).map((p) => ({ ...p, handicapNote: p.handicapNote ?? null })),
     // Only the courses its rounds are played on; tees in their saved order, holes by number.
     courses: by(
       s.courses.filter((c) => read.has(c.id)),

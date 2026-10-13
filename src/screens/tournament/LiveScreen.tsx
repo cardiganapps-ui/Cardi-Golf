@@ -6,7 +6,7 @@
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { hcpFromTo, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
@@ -194,6 +194,12 @@ export function LiveScreen() {
           <span key={w} className={styles.caution}>
             <IconAlert size={16} /> {w}
           </span>
+        ))}
+        {/* A handicap changed after they were fixed (UX-28): everyone sees it, and a tap opens the player with the reason. */}
+        {state.flags.handicapChanges.map((c) => (
+          <button key={c.playerId} type="button" className={`${styles.caution} ${styles.cautionLink}`} onClick={() => setOpen(c.playerId)}>
+            <IconAlert size={16} /> {t.live.hcpChanged(byId.get(c.playerId)?.displayName ?? '?', hcpFromTo(c.from, c.to))}
+          </button>
         ))}
       </div>
 

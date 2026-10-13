@@ -19,6 +19,7 @@ import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
 import { NumberField, keepNumeric } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
+import { handicapsLocked } from '../../engine/core/handicapLock'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -113,6 +114,7 @@ export function AdminAuction() {
           ))}
         </ol>
         <div className={a.sticky}>
+          {!handicapsLocked(snapshot.tournament) && <p className={a.help}>{A.locksHandicaps}</p>}
           <button
             className="btn btn--primary btn--block"
             type="button"

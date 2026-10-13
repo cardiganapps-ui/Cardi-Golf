@@ -61,6 +61,10 @@
  *     columns change through `update_settings` (0043) alone, with no audit
  *     and, as with save_hole, no lock to wait on; `publish_tournament_results`
  *     answers its counts after its checks and keeps no results;
+ *   - players: no write is served (the Comité's screens mock the API), so
+ *     neither is the handicap lock (0046: `lock_handicaps`, `update_player`,
+ *     the trigger that refuses a fixed handicap changed with no reason);
+ *     supabase/tests/handicap_lock.sql pins it on the migrations;
  *   - `claim_player`: the lockout after five wrong PINs and the attempts
  *     left (the fake always says 4), a PIN sent as a number; an unknown
  *     function or argument is not a 404;
