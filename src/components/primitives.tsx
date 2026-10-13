@@ -10,6 +10,7 @@ import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
+import { haptic } from '../lib/haptics'
 
 // ---- Buttons ----
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
@@ -65,15 +66,20 @@ export function Money({ amount, signed }: { amount: number; signed?: boolean }) 
  * reads out eight bare figures.
  */
 export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label, disabled, quiet }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string; disabled?: boolean; quiet?: boolean }) {
+  // Each tick is felt, where the phone can vibrate (MOT-10).
+  const step = (v: number) => {
+    haptic('tick')
+    onChange(v)
+  }
   return (
     <div className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''} ${disabled ? s.stepperOff : ''}`} role="group" aria-label={label}>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepDown}`} disabled={disabled || value <= min} onClick={() => onChange(value - 1)}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepDown}`} disabled={disabled || value <= min} onClick={() => step(value - 1)}>
         <IconMinus />
       </button>
       <span className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`} aria-live={quiet ? undefined : 'polite'}>
         {value}
       </span>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepUp}`} disabled={disabled || value >= max} onClick={() => onChange(value + 1)}>
+      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepUp}`} disabled={disabled || value >= max} onClick={() => step(value + 1)}>
         <IconPlus />
       </button>
     </div>

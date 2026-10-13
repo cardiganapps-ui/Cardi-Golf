@@ -1504,6 +1504,12 @@ export const t = {
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
+    /** On the button for a moment after a save (MOT-02). */
+    savedCheck: 'Guardado',
+    /** The snake changed hands with this save (MOT-07). */
+    snakePasses: (name: string) => `La víbora pasa a ${name}`,
+    /** The mark on the row of the one who carries it. */
+    snakeHolder: 'Tiene la víbora',
     restoredHole: (n: number) => `Hoyo ${n} quedó como estaba`,
     allDefaultsTitle: (n: number) => `¿Guardar el ${n} con todos en par?`,
     allDefaultsHint: 'Acabas de guardar el hoyo anterior y aquí nadie ha cambiado nada. Si fue un doble toque, regresa.',
@@ -1626,6 +1632,9 @@ export const t = {
     hcpChange: (when: string, reason: string) => `${when}: «${reason}»`,
   },
   more: {
+    /** MOT-10: the Tarjeta's vibration, on this phone only. */
+    haptics: 'Vibrar al capturar',
+    hapticsHint: 'Un toque corto en cada número y al guardar un hoyo, más largo en un birdie o si pasa la víbora. Solo en este teléfono.',
     title: 'Más',
     rules: 'Reglamento',
     stats: 'Estadísticas y premios',
