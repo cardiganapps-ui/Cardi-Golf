@@ -23,8 +23,9 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 1. Conecta la tele: abre `/t/<slug>/tv` en un navegador (Chromecast / AirPlay / HDMI). Mientras el torneo esté en modo subasta muestra el tablero de la Calcutta.
 2. En el teléfono del subastador: **Más › Consola del Comité › Calcutta**.
 3. **"Sacar del sombrero"** sortea el orden de los lotes (puedes reordenar a mano) → "Abrir lote 1". El torneo pasa a estado *Subasta*.
-4. Por cada lote: la puja abre en $250 con el propio jugador. Toca al postor y luego **+$250 / +$500 / +$1,000** u "Otra". Un postor con 3 jugadores se apaga solo. "Deshacer última puja" si te equivocas.
-5. **"¡Vendido!"** → pregunta la recompra (0 / 25 / 50 % o un monto). Muestra cuánto le paga el jugador a su dueño. → "Siguiente lote".
+4. Por cada lote: la puja abre en $250 con el propio jugador. Toca al postor y luego **+$250 / +$500 / +$1,000** u "Otra". "Otra" tiene que subir de $250 en $250: si escribes $1,370 la app no la manda y te dice cuál sigue («Las pujas suben de $250 en $250: la siguiente es $1,500»). Un postor con 3 jugadores se apaga solo. "Deshacer última puja" si te equivocas.
+   - Si hay dos teléfonos del Comité en la consola, el servidor revisa cada puja: si los dos suben al mismo tiempo, entra la primera y la otra se rechaza con la siguiente puja; vuelve a tocar.
+5. **"¡Vendido!"** → pregunta la recompra (0 / 25 / 50 % o un monto). Muestra cuánto le paga el jugador a su dueño. → "Siguiente lote". El servidor vende solo el lote abierto, a la puja más alta y a quien la hizo: si otro teléfono pujó mientras tanto, el martillo se rechaza con la puja que va («El lote se vende a la puja más alta: $1,500 de Diego»); revisa y vuelve a tocar.
 6. Si vendiste mal un lote: en la lista de vendidos toca ↶ para reabrirlo.
 7. Al vender el último: **"Sorteo de parejas"**. El homenajeado escoge a su pareja de la categoría que le toca; el resto sale con anillos. Ponles nombre y **guarda**: genera los grupos del día 1 (una pareja A+D con una B+C). Ajusta horas de salida en **Grupos**.
 8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Toca **Marcar pagado** conforme paguen (el aviso trae **Deshacer**). Todo se paga esa noche.

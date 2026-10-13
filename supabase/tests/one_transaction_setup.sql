@@ -55,6 +55,8 @@ $$;
 -- 1. «Sacar del sombrero»: one lot per player in the order given, the sold ones kept
 select pg_temp.draw(:'org_a', array[:'beto', :'ana']::uuid[]) \g /dev/null
 select harness.check(pg_temp.lots() = '1:Beto:pending 2:Ana:pending', 'a lot per player in the order drawn: ' || pg_temp.lots());
+-- The setup between calls runs with no session, as a script (the Calcutta's rules, 0048, are the Comité's).
+select set_config('request.jwt.claims', '', true) \g /dev/null
 update public.calcutta_lots set status = 'sold', owner_id = :'beto', price = 500 where tournament_id = :'t_a' and player_id = :'ana';
 select pg_temp.draw(:'org_a', array[:'ana', :'beto']::uuid[]) as out \gset
 select harness.check(pg_temp.lots() = '2:Ana:sold 3:Beto:pending' and jsonb_array_length(:'out'::jsonb) = 1, 'a new draw keeps the sold lot and numbers after it: ' || pg_temp.lots());
@@ -69,6 +71,7 @@ select harness.check(:'out' like '42501 %', 'another tournament''s Comité: ' ||
 
 -- 2. «Deshacer la venta»: open again, no owner, price or buyback; the bids stay
 select id as lot_ana from public.calcutta_lots where tournament_id = :'t_a' and player_id = :'ana' \gset
+select set_config('request.jwt.claims', '', true) \g /dev/null
 insert into public.calcutta_bids (lot_id, bidder_id, amount) values (:'lot_ana', :'beto', 500);
 insert into public.calcutta_buybacks (lot_id, pct, amount) values (:'lot_ana', 50, 250);
 select pg_temp.as_user(:'dev_a', format('select public.reopen_lot(%L)::text', :'lot_ana')) as out \gset

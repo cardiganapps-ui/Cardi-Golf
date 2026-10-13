@@ -38,6 +38,10 @@ select id as g_b from harness.seed where key = 'group_b1' \gset
 begin;
 
 \ir harness/tenant_fixture.sql
+-- The lot each tournament's bids go to is open, as on Calcutta night: since
+-- 0048 a bid on a sold lot is refused whoever sends it (MONEY-19), and this
+-- file asks who may write, not what. Every answer stays as before.
+update public.calcutta_lots set status = 'open' where id in ('a5000000-0000-4000-8000-000000000001', 'b5000000-0000-4000-8000-000000000001');
 
 -- ---------------------------------------------------------------------------
 -- The requests: one template per table, for each tournament (who asks: the fixture's `who`)
