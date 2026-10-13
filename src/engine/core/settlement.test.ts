@@ -14,6 +14,7 @@ import { parseSettings, type TournamentSettings } from '../settings/schema'
 import { makeSnapshot } from '../testing/fixtures'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
+import type { GameResultState } from '../games/game'
 import type { Id, PaymentKind, Snapshot } from '../types'
 import { computeMoney, markPaidWrites, restorePaidWrites, type MoneyState, type PaidWrite, type Transfer } from './money'
 
@@ -64,7 +65,8 @@ function fourPlayers(over: Partial<TournamentSettings> = {}) {
   return { s, snap }
 }
 
-const money = (snap: Snapshot, s: TournamentSettings, prizes: PrizeAward[], auction?: AuctionState): MoneyState => computeMoney(snap, s, prizes, auction, true)
+const money = (snap: Snapshot, s: TournamentSettings, prizes: PrizeAward[], auction?: AuctionState, games: Record<string, GameResultState> = {}): MoneyState =>
+  computeMoney(snap, s, prizes, auction, true, games)
 
 describe('settlement on what is still due (MONEY-01)', () => {
   it('every entry paid: vía banco only pays the winner his gross prize', () => {
@@ -241,7 +243,7 @@ function rng(seed: number) {
 }
 
 describe('settlement properties', () => {
-  it('on random tournaments and random payment states, nothing is charged twice and every line closes', () => {
+  it('on random tournaments (side pots included, QA-04) and random payment states, nothing is charged twice and every line closes', () => {
     for (let seed = 1; seed <= 300; seed++) {
       const r = rng(seed)
       const n = 2 + Math.floor(r() * 9)
@@ -281,6 +283,17 @@ describe('settlement properties', () => {
         if (from !== to && r() < 0.5) prizes.push(prize(to, 50 * (1 + Math.floor(r() * 10)), { payerId: from, moduleId: 'skins', label: `Apuesta ${b}` }))
       }
       const auction = { lots } as unknown as AuctionState
+      // Side pots (QA-04): some players buy in, the pot is paid back out to one of them.
+      const games: Record<string, GameResultState> = {}
+      for (let gi = 0; gi < 2; gi++) {
+        if (r() < 0.5) continue
+        const id = `side${gi}`
+        const buyIn = 50 * (1 + Math.floor(r() * 4))
+        const entrants = ids.filter(() => r() < 0.7)
+        if (!entrants.length) continue
+        games[id] = { config: { id, label: `Bote ${gi}`, money: { source: 'side', buyIn } }, entrants } as unknown as GameResultState
+        prizes.push(prize(entrants[Math.floor(r() * entrants.length)]!, buyIn * entrants.length, { potId: id, moduleId: 'skins', label: `Bote ${gi}` }))
+      }
 
       // Random payment state on every key: nothing, in full, partly, or overpaid.
       const keyOwed = new Map<string, { kind: PaymentKind; from: Id | null; to: Id | null; owed: number }>()
@@ -291,6 +304,7 @@ describe('settlement properties', () => {
         keyOwed.set(k, e)
       }
       if (fee > 0) for (const id of ids) add('entry', id, null, fee)
+      for (const g of Object.values(games)) for (const id of g.entrants) add('side', id, null, (g.config.money as { buyIn: number }).buyIn)
       for (const l of lots) add('calcutta', l.ownerId as Id, null, l.price as number)
       for (const p of prizes) add(p.payerId ? 'bet' : 'payout', p.payerId ?? null, p.playerId, p.amount)
       const paidOn = new Map<string, number>()
@@ -314,7 +328,7 @@ describe('settlement properties', () => {
         if (bb && !bb.paid) move(l.playerId as Id, l.ownerId as Id, bb.amount)
       }
 
-      const m = money(snap, s, prizes, auction)
+      const m = money(snap, s, prizes, auction, games)
       const ctx = `seed ${seed}`
 
       // Vía banco: each party ends exactly square, and no account is in two lines.
@@ -343,7 +357,7 @@ describe('settlement properties', () => {
 
       // Marking every line paid closes everything.
       for (const t of m.viaBank) apply(snap, markPaidWrites(t.settles!))
-      const after = money(snap, s, prizes, auction)
+      const after = money(snap, s, prizes, auction, games)
       expect(after.viaBank, ctx).toEqual([])
       expect(after.peerToPeer, ctx).toEqual([])
     }

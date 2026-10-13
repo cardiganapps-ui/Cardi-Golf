@@ -2277,11 +2277,14 @@
       "workstream": "W3",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 144,
+      "tests": [
+        "src/engine/rulePins.test.ts",
+        "src/engine/core/settlement.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Each surviving mutant of the review (M13 side pots in vía banco, M14 a payout paid in part, M16 percent-place remainders, M23 a pair prize's odd peso) was rebuilt on today's code and is killed; the settlement property test now draws side pots too. No mutation tool runs in CI yet: the plan's weekly job (§5.6) is still to come."
     },
     {
       "id": "QA-05",
@@ -2291,11 +2294,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 144,
+      "tests": [
+        "src/engine/rulePins.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The review's mutants M17 (best round without countback), M06 (a stale snake answer), M07 (a group with a player who stopped) and M24 (no last place once final) were rebuilt on today's code; each is killed by a hand-worked case."
     },
     {
       "id": "QA-06",
