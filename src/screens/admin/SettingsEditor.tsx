@@ -14,6 +14,7 @@ import { Field, Toggle } from '../../components/ui'
 import { NumberField } from '../../components/NumberField'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { FieldShape } from '../../engine/settings/prizeCheck'
+import { BUYBACK_MAX_PCT, CUT_MAX_STROKES } from '../../engine/settings/sense'
 import { FormatEditor } from '../organizer/setup/FormatEditor'
 import { GameCatalog } from '../organizer/setup/GameCatalog'
 import { MoneyEditor } from '../organizer/setup/MoneyEditor'
@@ -98,9 +99,11 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
             <NumberField min={0} max={100} suffix="%" value={Math.round(value.handicap.allowance * 100)} onChange={(v) => set((d) => (d.handicap.allowance = v / 100))} />
           </Field>
           <Field label={A.cap}>
-            <NumberField min={0} max={54} value={value.handicap.cap} onChange={(v) => set((d) => (d.handicap.cap = v))} />
+            <NumberField min={1} max={54} value={value.handicap.cap} onChange={(v) => set((d) => (d.handicap.cap = v))} />
           </Field>
         </div>
+        {/* A scratch event is one on purpose (MONEY-13): 0 % says so, where it is typed. */}
+        {value.handicap.allowance === 0 && <p className="help">{t.admin.sense.scratch}</p>}
         {value.rounds > 1 && (
           <>
             <span className="help">{A.cutTitle}</span>
@@ -112,7 +115,7 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
                 <NumberField min={1} value={value.day2Cut.pointsPerStroke} onChange={(v) => set((d) => (d.day2Cut.pointsPerStroke = v))} />
               </Field>
               <Field label={A.cutMax}>
-                <NumberField min={0} value={value.day2Cut.maxStrokes} onChange={(v) => set((d) => (d.day2Cut.maxStrokes = v))} />
+                <NumberField min={0} max={CUT_MAX_STROKES} value={value.day2Cut.maxStrokes} onChange={(v) => set((d) => (d.day2Cut.maxStrokes = v))} />
               </Field>
             </div>
             {value.rounds > 2 && (
@@ -155,10 +158,9 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
             </Field>
           </div>
           <Field label={A.buybackMax}>
-            <NumberField min={0} max={100} suffix="%" value={value.auction.buybackMaxPct} onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))} />
+            <NumberField min={0} max={BUYBACK_MAX_PCT} suffix="%" value={value.auction.buybackMaxPct} onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))} />
           </Field>
           <Toggle label={A.selfCounts} checked={value.auction.selfOwnedCountsTowardMax} onChange={(v) => set((d) => (d.auction.selfOwnedCountsTowardMax = v))} />
-          <Toggle label={A.guests} checked={value.auction.guestsCanBid} onChange={(v) => set((d) => (d.auction.guestsCanBid = v))} />
           <span className="help">{A.payoutSlots}</span>
           <div className="stack">
             {value.auction.payout.map((slot, i) => (

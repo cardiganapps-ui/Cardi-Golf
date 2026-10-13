@@ -154,8 +154,17 @@ export const AuctionSettings = z.object({
   increment: money.min(1),
   maxPlayersPerOwner: z.number().int().min(1),
   selfOwnedCountsTowardMax: z.boolean(),
+  /**
+   * Wired to nothing: only the tournament's players bid (§18.4, «No»), and
+   * the editor no longer offers the switch (MONEY-13). Kept so every stored
+   * settings object still parses.
+   */
   guestsCanBid: z.boolean(),
-  /** Max share (0–100) a player can buy back of himself right after the hammer. */
+  /**
+   * Max share (0–100) a player can buy back of himself right after the
+   * hammer. Saving more than 50 is refused (settings/sense.ts, §5.9), not
+   * parsing it: a stored tournament keeps loading as it was.
+   */
   buybackMaxPct: z.number().int().min(0).max(100),
   payout: z.array(AuctionPayoutSlot).refine(
     (slots) => Math.abs(slots.reduce((s, x) => s + x.share, 0) - 1) < 1e-9,

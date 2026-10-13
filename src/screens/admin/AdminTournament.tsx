@@ -24,6 +24,7 @@ import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
+import { settingsSense } from '../../engine/settings/sense'
 import { downscaleImage } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
@@ -148,15 +149,18 @@ export function AdminTournament() {
   const field = useMemo(() => ({ ...fieldShape(data!.snapshot, checked), players, groupSizes }), [data, checked, players, groupSizes])
   const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
   const balanced = check?.balanced ?? false
-  // Balanced, and every paid place has someone who can take it (MONEY-09).
-  const savable = check?.ok ?? false
+  // What parses but makes no sense (MONEY-13), on the draft and so on what is stored while nothing is typed.
+  const sense = useMemo(() => (parsed.success ? settingsSense(parsed.data, fieldKnown ? field : null) : []), [parsed, field, fieldKnown])
+  // Balanced, every paid place has someone who can take it (MONEY-09), and nothing that makes no sense.
+  const savable = (check?.ok ?? false) && sense.length === 0
 
   async function save() {
     // Parse what is on screen right now: `parsed` is deferred and can be a
     // keystroke behind, and a save must never write a stale settings object.
     const fresh = safeParseSettings(settings)
     if (!fresh.success) return
-    if (!checkPrizePool(fresh.data, { ...fieldShape(data!.snapshot, settings), players, groupSizes }).ok) return
+    const freshField = { ...fieldShape(data!.snapshot, settings), players, groupSizes }
+    if (!checkPrizePool(fresh.data, freshField).ok || settingsSense(fresh.data, fieldKnown ? freshField : null).length) return
     // Only what changed is written, and only while every key this screen read
     // still holds what it read: the prize check above read them all (ARCH-13).
     const from = start.current
@@ -461,9 +465,19 @@ export function AdminTournament() {
       {(dirty || (tab !== 'danger' && tab !== 'status')) && (
         <div className={a.sticky}>
           {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
-          {dirty && parsed.success && !savable && !fieldKnown && <span className={a.error}>{A.fieldUnknownNearSave}</span>}
+          {dirty && parsed.success && !(check?.ok ?? false) && !fieldKnown && <span className={a.error}>{A.fieldUnknownNearSave}</span>}
           {dirty && parsed.success && fieldKnown && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
-          {dirty && parsed.success && fieldKnown && balanced && !savable && <span className={a.error}>{A.unreachableNearSave}</span>}
+          {dirty && parsed.success && fieldKnown && balanced && !(check?.ok ?? false) && <span className={a.error}>{A.unreachableNearSave}</span>}
+          {sense.length > 0 && (
+            <div className={a.error}>
+              <span>{t.admin.sense.nearSave}</span>
+              <ul>
+                {sense.map((x) => (
+                  <li key={`${x.key}:${x.text}`}>{x.text}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !savable} onClick={() => void save()}>
             {busy ? t.common.saving : t.common.save}
           </button>

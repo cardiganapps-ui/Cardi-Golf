@@ -791,6 +791,8 @@ export const t = {
       off: (diff: string) => `Faltan ${diff}`,
       over: (diff: string) => `Sobran ${diff}`,
       unreachable: 'Hay premios que nadie gana',
+      /** MONEY-13: it balances, but something else in the settings makes no sense (listed by Guardar or Crear). */
+      sense: 'Hay algo que corregir',
     },
   },
   account: {
@@ -1630,6 +1632,23 @@ export const t = {
   admin: {
     title: 'Comité',
     /** «Para empezar» (UX-06): what the tournament still needs before the first tee. */
+    /** MONEY-13: settings that parse but make no sense; each refuses the save (engine/settings/sense.ts). */
+    sense: {
+      cap: 'El tope de hándicap es 0: nadie recibe golpes. Para jugar scratch, pon 0 % de hándicap.',
+      cutMax: (max: number) => `El recorte de hándicap llega hasta ${max} golpes por día.`,
+      houseCut: (cut: string, pot: string) => `La casa se queda con ${cut} y las inscripciones suman ${pot}.`,
+      placeTwice: (place: string) => `Dos casillas de la Calcutta pagan lo mismo: ${place}.`,
+      placeUnreachable: (place: string, field: string) => `La Calcutta paga el ${place} lugar y hay ${field}: nadie lo puede ganar.`,
+      tierTwice: (tier: string) => `Dos casillas de la Calcutta pagan al mejor de la categoría ${tier}.`,
+      lastTwice: (label: string) => `Dos casillas de la Calcutta pagan a ${label}.`,
+      buyback: (max: number) => `La recompra llega hasta la mitad: ${max} %.`,
+      currency: (c: string) => `Polo cuenta en pesos mexicanos (MXN), no en ${c}.`,
+      timezone: (zone: string) => `La zona horaria «${zone}» no existe.`,
+      /** Not an error: said beside the allowance, so a scratch event is never one by accident. */
+      scratch: 'Con 0 % nadie recibe golpes: se juega scratch.',
+      /** Near Guardar and Crear. */
+      nearSave: 'Corrige esto antes de guardar:',
+    },
     ready: {
       title: 'Para empezar',
       hint: 'Lo que falta para el primer tee. Toca una línea para ir a su sección.',
@@ -2000,7 +2019,6 @@ export const t = {
       increment: 'Incremento',
       maxPerOwner: 'Jugadores por dueño, máximo',
       selfCounts: 'Comprarse cuenta en el máximo',
-      guests: 'Pueden pujar invitados',
       buybackMax: 'Recompra máxima (%)',
       payoutSlots: 'Reparto del pozo, suma 100%',
       lastPlaceLabel: 'Nombre del último lugar',

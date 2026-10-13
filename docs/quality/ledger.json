@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-10",
+  "updated": "2026-10-13",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -1426,11 +1426,14 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 143,
+      "tests": [
+        "src/engine/settings/sense.test.ts",
+        "src/screens/admin/AdminTournament.sense.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Checked when settings are saved, not when they are parsed: a tournament already holding such settings keeps loading as it was, and Comité › Torneo names each problem until it is fixed. Currency stays MXN only until ARCH-06 makes it data."
     },
     {
       "id": "MONEY-15",
