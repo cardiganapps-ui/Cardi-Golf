@@ -17,7 +17,7 @@
   color: var(--board-ink);
   display: flex;
   flex-direction: column;
-  padding: max(3vh, var(--safe-top)) 4vw max(3vh, var(--safe-bottom));
+  padding: max(3vh, var(--safe-top)) max(4vw, var(--safe-right)) max(3vh, var(--safe-bottom)) max(4vw, var(--safe-left));
   gap: 2vh;
   overflow: hidden;
   font-size: clamp(16px, 2.2vh, 30px);

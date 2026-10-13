@@ -20,21 +20,28 @@
 }
 
 .main {
+  --main-max: 560px;
+  /* Centred, the column already sits this far from each side of the screen, so a
+     landscape inset only needs what that leaves uncovered (PWA-07). Everything
+     inside reads these gutters, so a full-bleed row still meets the column's edge. */
+  --main-edge: max(0px, (100vw - var(--main-max)) / 2);
+  --gutter-left: max(var(--gutter), var(--safe-left) - var(--main-edge));
+  --gutter-right: max(var(--gutter), var(--safe-right) - var(--main-edge));
   flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 560px;
+  max-width: var(--main-max);
   margin: 0 auto;
-  padding: 0 var(--gutter) calc(24px + var(--safe-bottom));
+  padding: 0 var(--gutter-right) calc(24px + var(--safe-bottom)) var(--gutter-left);
 }
 
 .mainWide {
-  max-width: 960px;
+  --main-max: 960px;
 }
 
 .mainPlatform {
-  max-width: 1200px;
+  --main-max: 1200px;
 }
 
 .mainTabbed {

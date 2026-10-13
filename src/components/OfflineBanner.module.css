@@ -4,7 +4,7 @@
   text-align: center;
   font-size: var(--fs-sm);
   font-weight: 600;
-  padding: var(--s2) var(--gutter);
+  padding: var(--s2) var(--gutter-right) var(--s2) var(--gutter-left);
 }
 .maintenance {
   background: var(--caution);

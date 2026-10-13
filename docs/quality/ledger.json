@@ -2126,11 +2126,13 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 134,
+      "tests": [
+        "e2e/fixtures/safearea.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the Comité save bar sits above the home indicator (bottom: 12 px plus the inset), and every screen edge clears the side insets. tokens.css adds --safe-left/--safe-right and the gutters --gutter-left/--gutter-right; a centred column (the shell's main, a sheet) narrows them by how far it already sits from the edge, so the Comité, the platform panel and the wide player sheet pad the inset while the phone-width player column keeps its 16 px. The TV, Ceremonia, the toasts and the offline banner span the screen and pad the full inset. The spec emulates the insets in Chromium (CDP): portrait 34 px at the bottom, landscape 59 px a side on an iPhone 15 and 50 px on a 13 mini; it failed on the Comité, the TV and the sheet before the fix. Left: a real iPhone in landscape is on the rehearsal checklist (WebKit draws its own insets)."
     },
     {
       "id": "PWA-08",

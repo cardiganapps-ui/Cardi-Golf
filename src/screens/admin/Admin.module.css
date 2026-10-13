@@ -166,7 +166,8 @@
 /* Sticky save bar. */
 .sticky {
   position: sticky;
-  bottom: var(--s3);
+  /* Above the home indicator in the installed iPhone app, where an upward flick leaves the app (PWA-07). */
+  bottom: calc(var(--s3) + var(--safe-bottom));
   z-index: 4;
   display: flex;
   flex-direction: column;

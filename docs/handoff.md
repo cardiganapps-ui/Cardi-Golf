@@ -66,14 +66,16 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      4. **Routing rules** → **Create address** → `golf` → acción **Send to an email** → tu correo → **Save**.
      5. Mándale un correo de prueba a golf@cardigan.mx desde otra cuenta: debe llegarte.
    - **Cómo lo verifico:** te mando un correo a golf@cardigan.mx y me dices que llegó; luego quito «todavía no recibe mensajes» del aviso y de la pantalla legal.
-7. [ ] **Revisar la barra de arriba en tu iPhone** (PWA-02, cuando quieras, antes del primer ensayo).
+7. [ ] **Revisar la barra de arriba y los bordes en tu iPhone** (PWA-02, PWA-07, cuando quieras, antes del primer ensayo).
    - **Pasos:**
      1. Abre Polo desde el ícono de tu pantalla de inicio.
      2. Mira la barra de arriba, la de la hora y la batería: ¿de qué color es y se lee la hora?
      3. Baja en En vivo. Nada debe pasar por debajo de la hora.
      4. Si la hora se ve blanca sobre fondo crema (no se lee), quita Polo de la pantalla de inicio y vuélvela a agregar (Safari → Compartir → «Agregar a inicio»). Revisa otra vez.
      5. Abre Más → Modo TV: el título y «Salir» deben verse completos.
-   - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app y tu versión de iOS. Lo anoto para el ensayo con los 12 teléfonos.
+     6. En Comité › Grupos, con la pantalla sin mover: el botón «Guardar» de abajo queda arriba de la rayita de la orilla (la que usas para salir de la app), no encima de ella.
+     7. Gira el teléfono (horizontal) en Comité › Tarjetas y en Modo TV: ningún texto debe quedar debajo de la muesca o la isla del lado.
+   - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app, tu versión de iOS y si algo quedó debajo de la muesca al girar. Lo anoto para el ensayo con los 12 teléfonos.
 
 ---
 
