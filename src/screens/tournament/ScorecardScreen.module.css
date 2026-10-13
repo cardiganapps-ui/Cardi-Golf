@@ -156,6 +156,23 @@
   gap: var(--s2);
   align-items: stretch;
 }
+/* «Golpes» and «Putts» over the steppers' columns, once for the four players (COPY-18). */
+.colHeads {
+  padding-top: var(--s2);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: var(--lh-ui);
+  color: var(--ink-2);
+  text-align: center;
+}
+/* The third column: an invisible «Levantó» of no height, so the columns are as wide as the rows'. */
+.pickup.colHeadPad {
+  visibility: hidden;
+  min-height: 0;
+  height: 0;
+  padding-block: 0;
+  border-block-width: 0;
+}
 .pickup {
   min-width: 64px;
   min-height: 56px;

@@ -7,7 +7,7 @@
  * the tournament blocks the switch.
  */
 import 'fake-indexeddb/auto'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -75,10 +75,33 @@ describe('«Cambiar de jugador» with writes still on the phone', () => {
     expect(gate.leave).not.toHaveBeenCalled()
   })
 
-  it('a write of another tournament does not block this one, and nothing queued lets the player go', async () => {
+  it('a write of another tournament does not block this one, and nothing queued lets the player go once confirmed', async () => {
     await _outboxTest.enqueue({ key: 'signature:r9:pair9', kind: 'signature', tournamentId: 't-otro', payload: { round_id: 'r9', pair_id: 'pair9', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
     open()
     fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
+    // One tap at the bottom of Más asks first (UX-09).
+    const dialog = await screen.findByRole('dialog')
+    expect(gate.leave).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: t.enter.switchPlayer }))
     expect(gate.leave).toHaveBeenCalledTimes(1)
+  })
+
+  it('closing the question keeps the player on this phone', async () => {
+    open()
+    fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/Este teléfono deja de ser/)).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: t.common.cancel }))
+    expect(gate.leave).not.toHaveBeenCalled()
+  })
+
+  it('a hole queued while the question was open still holds the player', async () => {
+    open()
+    fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
+    const dialog = await screen.findByRole('dialog')
+    await _outboxTest.enqueue({ key: 'signature:r1:pair1', kind: 'signature', tournamentId: 't1', payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    fireEvent.click(within(dialog).getByRole('button', { name: t.enter.switchPlayer }))
+    expect(await screen.findByText(t.sync.unsentWritesBeforeSwitch)).toBeTruthy()
+    expect(gate.leave).not.toHaveBeenCalled()
   })
 })
