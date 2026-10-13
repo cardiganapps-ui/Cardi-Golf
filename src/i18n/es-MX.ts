@@ -238,7 +238,7 @@ export const t = {
       tournaments: 'Torneo', tournament_organizers: 'Comité', payments: 'Pago', handicap_overrides: 'Hándicap',
       round_tees: 'Tee', snake_tiebreaks: 'Víbora', card_signatures: 'Firma', calcutta_lots: 'Calcutta',
       calcutta_bids: 'Puja', calcutta_buybacks: 'Recompra', game_entries: 'Juego', hole_awards: 'Premio de hoyo',
-      game_results: 'Resultado', courses: 'Campo', tees: 'Tee', holes: 'Hoyo del campo',
+      game_results: 'Resultado', courses: 'Campo', tees: 'Tee', holes: 'Hoyo del campo', pin_claims: 'Teléfono',
     } as Record<string, string>,
     practiceCount: (n: number) => `${n} ${n === 1 ? 'ensayo' : 'ensayos'}`,
     count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'torneo' : 'torneos'}` : `${shown} de ${total}`),
@@ -1046,14 +1046,14 @@ export const t = {
      */
     privacy: {
       title: 'Aviso de privacidad',
-      version: '2026-10-13.1',
+      version: '2026-10-13.2',
       updated: 'Última actualización: 13 de octubre de 2026',
       sections: [
         ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN y el historial de cambios a sus golpes, jugadores, grupos y pagos. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse.'],
         ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
         ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si tu perfil aparece en búsquedas: viene prendido y lo puedes apagar. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
-        ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si un amigo te agrega a una Ronda rápida, tu nombre completo, tu foto y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen.'],
+        ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si un amigo te agrega a una Ronda rápida, tu nombre completo, tu foto y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.'],
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.'],
@@ -1757,6 +1757,20 @@ export const t = {
       fields: 'Qué cambió',
       detail: 'Detalle del cambio',
       reason: (r: string) => `Motivo: ${r}`,
+      /**
+       * Which of the player's phones made the change, once he has entered with his PIN on more than one (TRUST-24):
+       * «teléfono 2 de 2, Android». On an iPhone, Safari and the app on the home screen count as two.
+       */
+      phone: (n: number, of: number, kind: string | null) => `teléfono ${n} de ${of}${kind ? `, ${kind}` : ''}`,
+      /** A phone's kind, as the server read it from the phone (0050); «other» says nothing. */
+      kinds: { ios: 'iPhone', android: 'Android', desktop: 'computadora' } as Record<string, string>,
+      /** A PIN claim's line (pin_claims): a phone took the player, let go of him, or the Comité took it off. */
+      claim: {
+        took: (player: string, from: string) => `${player} entró con su PIN ${from}`,
+        from: { ios: 'desde un iPhone', android: 'desde un Android', desktop: 'desde una computadora', other: 'desde un teléfono' } as Record<string, string>,
+        left: (player: string) => `Un teléfono dejó de entrar como ${player}`,
+        removed: (player: string) => `El Comité sacó del torneo un teléfono que entraba como ${player}`,
+      },
     },
     games: {
       hint: 'Quién juega cada bote y los partidos. Los juegos se agregan o quitan en Torneo.',
@@ -2133,6 +2147,20 @@ export const t = {
       resetPin: 'Cambiar PIN',
       pinSet: 'PIN guardado. Mándaselo por WhatsApp.',
       pinInput: 'PIN de 4 dígitos',
+      /** The phones holding a player's PIN (TRUST-24): a row says how many when there are more than one. */
+      phonesCount: (n: number) => `en ${n} teléfonos`,
+      phones: 'Teléfonos con su PIN',
+      phonesHelp:
+        'Cada teléfono que entró como este jugador con su PIN. En un iPhone, Safari y la app de la pantalla de inicio cuentan como dos. Cambiar el PIN no saca a los que ya entraron: sácalos aquí.',
+      /** «Teléfono 2, iPhone, desde 13 oct 2026, 10:02»: its number is the one Historial names. */
+      phoneLine: (n: number, kind: string | null, since: string) => `Teléfono ${n}${kind ? `, ${kind}` : ''}, desde ${since}`,
+      removePhone: 'Sacar',
+      /** Each «Sacar» names its phone, so a screen reader tells them apart (the visible word stays in the name). */
+      removePhoneOf: (n: number) => `Sacar el teléfono ${n}`,
+      removePhoneTitle: 'Sacar este teléfono del torneo',
+      removePhoneBody:
+        'Ese teléfono tendrá que volver a escribir el PIN, y lo que tenga sin mandar espera a que lo escriba. Para que no vuelva a entrar, cambia también el PIN. Queda en el historial con tu motivo.',
+      phoneRemoved: 'Teléfono sacado del torneo.',
       handicap: 'Hándicap',
       source: 'Cómo se obtiene',
       sourceManual: 'A mano',

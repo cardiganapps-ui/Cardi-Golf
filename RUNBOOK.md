@@ -58,6 +58,8 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
   - Un motivo hecho solo de espacios (también los que no se ven, como el espacio de no separación) no cuenta.
   - Si dice «Esto no se puede aplicar», descártala y, si hace falta, corrige el hoyo a mano en la tarjeta de abajo.
   - Si otro teléfono del Comité ya la resolvió, la app lo dice y la quita de la lista.
+- **«Yo no puse ese 9»** (un jugador dice que el hoyo no lo capturó él): Comité › **Historial** dice quién capturó cada cosa y, si ese jugador entró con su PIN en más de un teléfono, desde cuál («Ana, teléfono 2 de 2, iPhone»). Cada vez que un teléfono entra con un PIN también queda ahí («Ana entró con su PIN desde un iPhone»). En un iPhone, Safari y la app de la pantalla de inicio cuentan como dos teléfonos: dos no quiere decir que fue otra persona; pregúntale si entró desde los dos.
+- **Un teléfono que no debería tener el PIN de alguien:** Comité › Jugadores → el renglón dice «en 2 teléfonos» → **Cambiar PIN** → abajo, «Teléfonos con su PIN» → **Sacar** en el que no es, con un motivo. Ese teléfono tiene que volver a escribir el PIN: cámbiale el PIN al jugador y mándale el nuevo solo a él, para que el otro no vuelva a entrar.
 
 ## 4. Sin señal
 
