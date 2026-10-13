@@ -27,6 +27,15 @@ export const easeFast = { duration: DUR_FAST, ease: EASE } as const
 /** A reveal worth watching — a ceremony, a row re-sorting on a big board. */
 export const easeSlow = { duration: DUR_SLOW, ease: EASE } as const
 
+/**
+ * Not motion but a clock: the TV's rule that fills over a board's time on
+ * screen (MOT-08), linear and as long as what is left of that time. Nothing
+ * else may run this long; under reduced motion it is `still`.
+ */
+export const timer = (seconds: number) => ({ duration: Math.max(0, seconds), ease: 'linear' }) as const
+/** No transition: the end state at once (reduced motion). */
+export const still = { duration: 0 } as const
+
 /** Delay the nth item of a staggered reveal, without stretching the whole list. */
 export const stagger = (i: number, step = DUR_FAST) => ({ ...ease, delay: i * step })
 

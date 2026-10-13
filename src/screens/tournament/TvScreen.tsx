@@ -16,10 +16,14 @@ import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
 import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
-import { easeFast, easeSlow } from '../../design/motion'
+import { easeFast, easeSlow, still, timer } from '../../design/motion'
 import { dayFigureText } from '../../lib/figureText'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
+/** Each board's time on screen. */
+const ROTATE_MS = 12_000
+/** A leaderboard that re-sorts this close to its turn's end stays this long more, so the room sees the lead change (MOT-08). */
+const HOLD_MS = 2_000
 
 export function TvScreen() {
   const data = useTournament((s) => s.data)!
@@ -39,15 +43,41 @@ export function TvScreen() {
     return b
   }, [state.modules, state.games, state.feed.length])
   const [idx, setIdx] = useState(0)
+  /** When the board on screen leaves: ROTATE_MS after it came, later when the leaderboard re-sorts just before (MOT-08). */
+  const [stay, setStay] = useState<{ from: number; until: number } | null>(null)
   useEffect(() => {
     if (isAuctionNight) return
-    const timer = setInterval(() => setIdx((i) => i + 1), 12000)
-    return () => clearInterval(timer)
-  }, [isAuctionNight])
+    const now = Date.now()
+    setStay({ from: now, until: now + ROTATE_MS })
+  }, [idx, isAuctionNight])
+  useEffect(() => {
+    if (isAuctionNight || !stay) return
+    const timer = setTimeout(() => setIdx((i) => i + 1), Math.max(0, stay.until - Date.now()))
+    return () => clearTimeout(timer)
+  }, [stay, isAuctionNight])
   const board = boards[idx % boards.length] ?? 'individual'
+  const next = boards.length > 1 ? boards[(idx + 1) % boards.length] : undefined
   // A board longer than the screen shows its next page on each pass of the rotation.
   const turn = Math.floor(idx / boards.length)
   const indivRows = state.modules.individual?.rows ?? []
+  // A lead change the room should see: the rows slide, and the board stays at least HOLD_MS after it.
+  const order = indivRows.map((r) => r.playerId).join(',')
+  const lastOrder = useRef(order)
+  useEffect(() => {
+    if (order === lastOrder.current) return
+    lastOrder.current = order
+    if (board !== 'individual' || isAuctionNight) return
+    setStay((st) => (st && st.until - Date.now() < HOLD_MS ? { ...st, until: Date.now() + HOLD_MS } : st))
+  }, [order, board, isAuctionNight])
+  const reduce = useReducedMotion()
+  const rowMotion = reduce ? {} : { layout: 'position' as const, transition: easeSlow }
+  const boardLabel = (b: Board): string =>
+    b === 'individual' ? settings.modules.individual.label
+    : b === 'pairs' ? settings.modules.pairs.label
+    : b === 'snake' ? settings.modules.snake.label
+    : b === 'auction' ? settings.modules.auction.label
+    : b === 'feed' ? t.feed.title
+    : (state.games[b.slice(5)]?.config.label ?? '')
   // Keep the screen awake while the board is up (re-request after a tab switch).
   useEffect(() => {
     let lock: { release(): Promise<void> } | null = null
@@ -105,7 +135,7 @@ export function TvScreen() {
                     const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
                     const label = team ? r.entrant.name : name(r.playerId)
                     return (
-                      <div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId}>
+                      <motion.div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId} {...rowMotion}>
                         <span className={styles.pos}>{r.label}</span>
                         <Avatar name={label} url={team ? undefined : byId.get(r.playerId)?.avatarUrl} honoree={members.some((id) => byId.get(id)?.isHonoree)} />
                         <span className={styles.name}>
@@ -116,7 +146,7 @@ export function TvScreen() {
                         </span>
                         <span className={styles.small}>{round && thru > 0 ? [`${t.live.thru} ${t.round.thru(thru, round.holes)}`, today && !today.empty ? dayFigureText(today) : null].filter(Boolean).join(', ') : ''}</span>
                         <span className={styles.big}>{r.figure.text}</span>
-                      </div>
+                      </motion.div>
                     )
                 }}
               />
@@ -128,7 +158,7 @@ export function TvScreen() {
                 items={state.modules.pairs.rows}
                 render={(r) => (
                   // Its own grid: position, the pair with both partners in full, days, total (VIS-04).
-                  <div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`}>
+                  <motion.div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`} {...rowMotion}>
                     <span className={styles.pos}>{r.label}</span>
                     <span className={styles.name}>
                       <span>{r.name}</span>
@@ -136,7 +166,7 @@ export function TvScreen() {
                     </span>
                     <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
                     <span className={styles.big}>{r.total}</span>
-                  </div>
+                  </motion.div>
                 )}
               />
             )}
@@ -228,6 +258,21 @@ export function TvScreen() {
           </motion.section>
         )}
       </AnimatePresence>
+      {/* How long this board stays and which comes next: the room knows a change is a rotation, not a glitch (MOT-08). */}
+      {!isAuctionNight && next && stay && (
+        <footer className={styles.rotation}>
+          <span className={styles.rotationRule} aria-hidden="true">
+            <motion.span
+              key={`${idx}:${stay.until}`}
+              className={styles.rotationFill}
+              initial={{ scaleX: reduce ? 1 : Math.min(1, (Date.now() - stay.from) / (stay.until - stay.from)) }}
+              animate={{ scaleX: 1 }}
+              transition={reduce ? still : timer((stay.until - Date.now()) / 1000)}
+            />
+          </span>
+          <span className={styles.rotationNext}>{t.tv.next(boardLabel(next))}</span>
+        </footer>
+      )}
     </div>
   )
 }
@@ -349,7 +394,12 @@ function AuctionBoard() {
             <span className={styles.lotNum}>{lot ? t.auction.lot(lot.lotNumber) : ''}</span>
             <h2 className={styles.lotName}>{player.fullName}</h2>
             <span className={styles.lotMeta}>
-              {player.tier && <span className="tierBadge">{player.tier}</span>} {ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`}
+              {player.tier && <span className={styles.lotTier}>{t.tv.tier(player.tier)}</span>}
+              {(() => {
+                const hcp = ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`
+                // After the tier the line goes on in lower case: «Categoría C, hándicap de juego 10».
+                return player.tier ? `, ${hcp.charAt(0).toLowerCase()}${hcp.slice(1)}` : hcp
+              })()}
               {pair ? `, ${t.auction.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
             </span>
             {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
