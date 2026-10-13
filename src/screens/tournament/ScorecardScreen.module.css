@@ -428,3 +428,57 @@
   white-space: nowrap;
   transform: rotate(-8deg);
 }
+
+/* MOT-02: the hole's figures and the rows move together under the finger and slide in on a new hole. */
+.holeFig {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s3);
+  min-width: 0;
+}
+/* On the hole view, sideways moves are the card's (the swipe between holes); vertical ones and pinch-zoom stay the
+   browser's. Not on the grid, whose table scrolls sideways. */
+.swipeArea {
+  touch-action: pan-y pinch-zoom;
+}
+
+/* MOT-07: who carries the snake, beside his name; it slides to the next holder's row. */
+.nameWrap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  min-width: 0;
+}
+.snakeMark {
+  flex: none;
+  display: inline-flex;
+  align-self: center;
+  color: var(--ink);
+}
+.snakeNote {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* MOT-02: «Guardado» rests on the button for a moment after a save; the label stays its name underneath. */
+.saveBtn {
+  position: relative;
+}
+.saveBtnDone .saveLabel {
+  opacity: 0;
+}
+.saveCheck {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+}

@@ -7,7 +7,8 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { buildLabel } from '../../lib/build'
 import { InstallGuide } from '../../components/InstallGuide'
-import { Avatar, CopyButton, ShareButton, Sheet, toast } from '../../components/ui'
+import { Avatar, CopyButton, ShareButton, Sheet, Toggle, toast } from '../../components/ui'
+import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
 import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
@@ -37,6 +38,8 @@ export function MoreScreen() {
    * longer in the group, and was refused for good.
    */
   const [unsent, setUnsent] = useState<{ holes: number; writes: number } | null>(null)
+  /** The Tarjeta's vibration (MOT-10): on this phone only, offered where the phone can vibrate. */
+  const [vibrate, setVibrate] = useState(hapticsOn)
   const account = !!user && !isAnonymous
 
   async function saveHere() {
@@ -148,6 +151,19 @@ export function MoreScreen() {
       </div>
 
       <InstallGuide />
+
+      {canVibrate() && (
+        <Toggle
+          label={t.more.haptics}
+          hint={t.more.hapticsHint}
+          checked={vibrate}
+          onChange={(on) => {
+            setHapticsOn(on)
+            setVibrate(on)
+            if (on) haptic('tick')
+          }}
+        />
+      )}
 
       <div className={styles.session}>
         {me.playerId && (

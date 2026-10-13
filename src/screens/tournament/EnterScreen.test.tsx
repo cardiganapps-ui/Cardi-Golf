@@ -18,6 +18,7 @@ import { ensureSession, useAuth } from '../../data/auth'
 import { _outboxTest } from '../../data/outbox'
 import { t } from '../../i18n/es-MX'
 import { EnterScreen } from './EnterScreen'
+import { PATTERNS } from '../../lib/haptics'
 
 const lookup: LookupResult = {
   id: 't1',
@@ -59,6 +60,23 @@ describe('the PIN starts the browser\'s user (TRUST-05)', () => {
     await vi.waitFor(() => expect(order).toEqual(['session', 'claim']))
     // typePin queued a refusal this test never reached: it must not reach the next one.
     vi.mocked(claimPlayer).mockReset()
+  })
+})
+
+describe('a wrong PIN is felt (MOT-10)', () => {
+  it('two firm buzzes where the phone can vibrate, and the reason in words', async () => {
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vi.fn(() => true) })
+    vi.mocked(claimPlayer).mockResolvedValueOnce({ ok: false, reason: 'wrong_pin', attemptsLeft: 3 } as never)
+    render(
+      <MemoryRouter>
+        <EnterScreen lookup={lookup} onEntered={vi.fn()} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
+    expect(await screen.findByText(new RegExp(t.enter.wrongPin))).toBeTruthy()
+    expect(navigator.vibrate).toHaveBeenCalledWith(PATTERNS.error)
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
   })
 })
 
