@@ -19,6 +19,7 @@ export const SLUGS = {
   session: 'e2e-sesion',
   sameCard: 'e2e-misma-tarjeta',
   conflict: 'e2e-conflicto',
+  fourG: 'e2e-cuatro-g',
 } as const
 
 export interface FieldPlayer {
