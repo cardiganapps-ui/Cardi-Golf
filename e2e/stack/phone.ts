@@ -51,10 +51,12 @@ function markSaves(labels: string[]) {
 }
 
 /**
- * A link a phone is on (REL-11): the round trip and the bandwidth. Chromium's
- * network conditions (DevTools protocol) hold back HTTP requests; the live
- * channel's WebSocket frames get the same round trip from `slowSockets`, half
- * each way, since DevTools throttling leaves an open WebSocket's frames alone.
+ * A link a phone is on (REL-11): the round trip and the bandwidth, half the
+ * round trip each way. Chromium's network conditions (DevTools protocol) put
+ * all of their latency on the response, so they get half of it and a route
+ * holds every request back the other half before it leaves; the live
+ * channel's WebSocket frames get the same from `slowSockets`, since DevTools
+ * throttling leaves an open WebSocket's frames alone.
  */
 export interface Link {
   latency: number
@@ -109,7 +111,7 @@ export async function openPage(phone: Phone, path: string): Promise<Page> {
   if (phone.link) {
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Network.enable')
-    await cdp.send('Network.emulateNetworkConditions', { offline: false, ...phone.link })
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, ...phone.link, latency: phone.link.latency / 2 })
   }
   phone.page = page
   await page.goto(path)
@@ -120,7 +122,14 @@ export async function openPage(phone: Phone, path: string): Promise<Page> {
 export async function joinAs(browser: Browser, slug: string, name: string, link?: Link): Promise<Phone> {
   const context = await browser.newContext(PHONE)
   await context.addInitScript(markSaves, [t.card.save, t.card.saveLast])
-  if (link) await context.addInitScript(slowSockets, link.latency / 2)
+  if (link) {
+    const oneWay = link.latency / 2
+    await context.addInitScript(slowSockets, oneWay)
+    await context.route('**/*', async (route) => {
+      await new Promise((r) => setTimeout(r, oneWay))
+      await route.continue()
+    })
+  }
   const phone: Phone = { name, context, page: undefined as unknown as Page, errors: [], signUps: 0, link }
   context.on('request', (r) => {
     if (r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/auth/v1/signup')) phone.signUps++

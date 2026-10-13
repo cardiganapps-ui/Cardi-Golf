@@ -12,9 +12,8 @@
  *
  * The round runs twice, each on its own tournament: on the runner's own
  * network, and with both phones on emulated 4G (REL-11, FOUR_G): every
- * request through Chromium's network conditions, and every frame of the live
- * channel late by half the round trip each way (DevTools throttling leaves an
- * open WebSocket's frames alone; phone.ts, `slowSockets`).
+ * request and every frame of the live channel late by half the round trip
+ * each way, on Chromium's bandwidth limits (phone.ts, `Link`).
  */
 import { t } from '../../src/i18n/es-MX'
 import { ROUND, SLUGS, type HoleEntry } from './field'
