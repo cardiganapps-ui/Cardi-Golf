@@ -334,7 +334,8 @@ export function AdminPlayers() {
               <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
                 {P.uploadAvatar}
               </button>
-              <input ref={fileRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => e.target.files?.[0] && void onAvatar(e.target.files[0])} />
+              {/* No `capture`: it opened the front camera only, and the Comité loads faces from photos it already has (PWA-16). The phone's sheet offers the camera too. */}
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void onAvatar(e.target.files[0])} />
             </div>
             <Field label={P.fullName}>
               {/* A new player's sheet opens on this field, below the notice: a screen reader hears the notice with it. */}

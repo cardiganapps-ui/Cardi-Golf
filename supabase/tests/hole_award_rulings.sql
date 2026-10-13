@@ -93,7 +93,12 @@ select public.upsert_groups(:'r1', '[]'::jsonb) \g /dev/null
 reset role;
 select harness.check(:'out' = '1' and pg_temp.rows(7) = 'Beto:comite', 'every group deleted: the claims go, the Comité''s ruling stays: ' || pg_temp.rows(7));
 
--- 6. Realtime's delete event names whose row it was (the key is the replica identity)
-select harness.check((select relreplident from pg_class where oid = 'public.hole_awards'::regclass) = 'd', 'deletes are published by the key, which carries it');
+-- 6. Realtime's delete event names whose row it was. With RLS on, a delete's old record is cut to the
+-- primary key, which carries `source`, whatever the table logs: since 0049 it logs the whole old row, so
+-- the binding's tournament filter can read it too (DB-05).
+select harness.check((select relreplident from pg_class where oid = 'public.hole_awards'::regclass) in ('d', 'f')
+  and exists (select 1 from pg_index i join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
+    where i.indrelid = 'public.hole_awards'::regclass and i.indisprimary and a.attname = 'source'),
+  'deletes are published by the key, which carries it');
 
 rollback;

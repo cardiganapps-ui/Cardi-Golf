@@ -204,11 +204,41 @@ export async function typeHole(page: Page, hole: number, entry: HoleEntry) {
   if (wait > 0) await page.waitForTimeout(wait)
 }
 
-/** Taps the save button; returns once the phone says the hole is saved (on the phone: the outbox has it). */
+/** Taps the save button; returns once the phone says the hole is saved (its outbox may be storing it still). */
 export async function saveHole(page: Page, hole: number) {
   await page.getByRole('button', { name: hole === 18 ? t.card.saveLast : t.card.save, exact: true }).click()
   // The save bar's note. (On the last hole the card's live region says the same words, to a screen reader only.)
   await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^${t.card.savedHole(hole)}$`) })).toBeVisible()
+}
+
+/** The phone's outbox holds a save of `hole` in IndexedDB, where the app opened again reads it (no signal: nothing sent it). */
+export async function expectKeptOnPhone(page: Page, hole: number) {
+  const kept = () =>
+    page.evaluate(
+      (h) =>
+        new Promise<number>((resolve) => {
+          const open = indexedDB.open('cardi-golf-outbox')
+          open.onerror = () => resolve(0)
+          open.onsuccess = () => {
+            const db = open.result
+            if (!db.objectStoreNames.contains('items')) {
+              db.close()
+              return resolve(0)
+            }
+            const all = db.transaction('items').objectStore('items').getAll()
+            all.onsuccess = () => {
+              db.close()
+              resolve((all.result as Array<{ kind?: string; payload?: { hole?: number } }>).filter((x) => x.kind === 'hole' && x.payload?.hole === h).length)
+            }
+            all.onerror = () => {
+              db.close()
+              resolve(0)
+            }
+          }
+        }),
+      hole,
+    )
+  await expect.poll(kept, { message: `hole ${hole} in the phone's outbox` }).toBeGreaterThan(0)
 }
 
 /** When the phone last tapped «Guardar…», on its own clock (ms since the epoch). */

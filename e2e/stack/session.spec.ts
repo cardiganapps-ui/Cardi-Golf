@@ -14,7 +14,7 @@
 import { t } from '../../src/i18n/es-MX'
 import { lit, sql } from './env'
 import { HOLE_1, ROUND, SLUGS, type HoleEntry } from './field'
-import { expect, expectedScores, openCard, openPage, saveHole, serverScores, storedSession, test, typeHole } from './phone'
+import { expect, expectKeptOnPhone, expectedScores, openCard, openPage, saveHole, serverScores, storedSession, test, typeHole } from './phone'
 
 const REFRESH = /\/auth\/v1\/token\?grant_type=refresh_token/
 
@@ -32,6 +32,10 @@ test('a lapsed session keeps its queued holes and its player: no new anonymous u
   await saveHole(ana.page, 1)
   await typeHole(ana.page, 2, ROUND[1]!)
   await saveHole(ana.page, 2)
+  // Both are in the phone's storage before the app is closed below. A person can't close it within
+  // milliseconds of a tap; a test can, so it waits (the outbox's own tests hold how soon a save is stored).
+  await expectKeptOnPhone(ana.page, 1)
+  await expectKeptOnPhone(ana.page, 2)
   await ana.page.evaluate(() => {
     const key = 'cardi-golf-auth'
     const session = JSON.parse(localStorage.getItem(key)!) as { expires_at: number }

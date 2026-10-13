@@ -216,7 +216,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               type="password"
               inputMode="numeric"
               pattern="[0-9]*"
-              autoComplete="one-time-code"
+              /* Not `one-time-code`: iOS offered there the 6-digit code an account's email brings, which went in as a wrong PIN (PWA-16). */
+              autoComplete="off"
               maxLength={4}
               value={pin}
               autoFocus
@@ -229,9 +230,15 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                * second submit from a backspace-and-retype mid-flight.
                */
               onChange={(e) => {
-                const v = e.target.value.replace(/\D/g, '').slice(0, 4)
-                setPin(v)
-                if (v.length === 4 && !busy) void submit(v)
+                const digits = e.target.value.replace(/\D/g, '')
+                // More than four at once is something pasted or filled in (an emailed code), not a PIN typed: cut to
+                // four, it was sent as a wrong one, and five of those lock the player out for five minutes.
+                if (digits.length > 4) {
+                  setPin('')
+                  return
+                }
+                setPin(digits)
+                if (digits.length === 4 && !busy) void submit(digits)
               }}
             />
           </label>

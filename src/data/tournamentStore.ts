@@ -26,7 +26,7 @@ import { humanError, isTransient } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { changeArrived, track } from '../lib/telemetry'
 import { fetchAll } from './paged'
-import { INBOX_TABLES, REALTIME_TABLES } from './realtimeTables'
+import { INBOX_TABLES, liveFilter, REALTIME_TABLES } from './realtimeTables'
 import { inboxChanged } from './rejectedInbox'
 import { APPLIED_TABLES, applyChange, concernsBoards, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
 import { onCacheCleared, saveSnapshot } from './snapshotCache'
@@ -642,7 +642,8 @@ export const useTournament = create<StoreState>((set, get) => ({
     // SUBSCRIBED that never delivers anything (REL-01).
     let ch = sb.channel(`tournament:${id}`, { config: { postgres_changes_options: { wait: true } } })
     for (const table of REALTIME_TABLES) {
-      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, (payload: { eventType?: LiveChange['eventType']; new?: Record<string, unknown>; old?: Record<string, unknown>; errors?: unknown }) => {
+      // This tournament's rows only: the server matches each change to its own tournament's phones, deletes included (DB-05).
+      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table, filter: liveFilter(table, id) }, (payload: { eventType?: LiveChange['eventType']; new?: Record<string, unknown>; old?: Record<string, unknown>; errors?: unknown }) => {
         // A channel that was left still delivers until the server takes the leave: its tournament is not on screen.
         if (channel !== ch) return
         // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
@@ -652,7 +653,7 @@ export const useTournament = create<StoreState>((set, get) => ({
         // How long another phone's hole took to get here (STRAT-02).
         if (table === 'scores' && payload?.eventType && payload.eventType !== 'DELETE' && payload.new) changeArrived(payload.new)
         if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}) as LiveChange['new'], old: (payload.old ?? {}) as LiveChange['old'] })
-        // A structural row reloads, unless it is plainly another tournament's (DB-05: a delete reaches every phone).
+        // A structural row reloads, unless it is plainly another tournament's (DB-05: the filter keeps them away, and this holds without it).
         else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}) as Row, old: (payload.old ?? {}) as Row }, fetching > 0)) scheduleReload()
       })
     }

@@ -606,11 +606,13 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 92,
+      "tests": [
+        "src/data/tournamentStore.overlay.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed by #92 (REL-11, PERF-07): compute() lays the outbox overlay on lists of its own (`laid`), and the store keeps the server's rows (`base`) apart from what the screens read (`snapshot`), so the saved copy is the server's. The overlay test holds that a queued hole, signature or snake answer is in neither the server's rows nor the phone's saved copy. Recorded with #158."
     },
     {
       "id": "CHAIR-01",
@@ -1018,9 +1020,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 156,
+      "tests": [
+        "src/data/realtimeTables.test.ts",
+        "src/data/tournamentStore.realtime.test.ts",
+        "supabase/tests/realtime_filters.sql",
+        "e2e/stack/isolation.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done on the phone (#92, #109, #111, #112): a delete on an applied table removes only a row this snapshot holds, a structural change reloads only when it concerns this tournament (concernsBoards), the Comité's inbox re-reads only for a row it holds, and since 0030 every child row carries tournament_id, so another tournament's insert or update is dropped at once (tournamentStore.apply.test.ts replays another tournament's deletes and inserts and asserts no request). Left: the channel is still postgres_changes with no filter, so every delete's primary key still reaches every phone listening to the table, and each counts against the Realtime quota; the fix is a tournament_id filter per subscription or Broadcast on a private per-tournament topic (PLAN §5.2)."
     },
@@ -2301,11 +2308,14 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "src/screens/tournament/EnterScreen.test.tsx",
+        "src/screens/admin/AdminPlayers.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the PIN field asks the phone to fill in nothing (autocomplete=\"off\", not one-time-code), and more than four digits at once (pasted or filled in) empty it and send nothing, so an emailed code can no longer go in as a wrong PIN toward the lock. The player photo picker has no capture attribute: the phone offers its photos and its camera, as the profile and logo pickers did. Left: the QuickType suggestion itself needs a real iPhone to see."
     },
     {
       "id": "QA-03",
@@ -2504,11 +2514,16 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 157,
+      "tests": [
+        "src/lib/pushSw.test.ts",
+        "src/lib/precache.test.ts",
+        "src/data/appUpdate.test.tsx",
+        "e2e/fixtures/update.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: push-sw.js's handlers run in a stand-in for the worker's scope (the notice, the icon's count, a tap's page, never another site); the build checks its own precache (the shell and what it loads, the fonts, the manifest and its icons, the push handler at the fingerprint the worker imports it by, within 3,072 KiB; 2,652 on 2026-10-13); and the fixtures build's real worker is updated mid-hole on a static server of the test's own: nothing reloads, the typed value stays, the bar waits for the hole and «Actualizar» loads the new build. The tests found two bugs, fixed in the same PR: «Actualizar» did nothing on a first visit (vite-plugin-pwa reloads only a page that had a worker when it opened), and push-sw.js was imported at a hand-bumped ?v=1, so a change to it could stay old on every phone. Left: a real push delivered by a push service, and the installed app on a real iPhone, are not in CI."
     },
     {
       "id": "QA-17",
@@ -2549,11 +2564,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "src/engine/core/compute.test.ts",
+        "src/engine/core/handicap.test.ts",
+        "src/engine/handCalc.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: PH2 is asserted through computeCore (with §6's exact «PH1 2, P1 44 → PH2 0»), not re-implemented in handicap.test.ts, and the comment that contradicted its own assertion in handCalc.test.ts is gone."
     },
     {
       "id": "QA-20",
@@ -4004,11 +4023,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "e2e/fixtures/adminNav.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the open section is brought into view in the row of sections (centred when it can be), before the first paint and again once the settings add sections; only the row scrolls. The spec fails eight of its nine cases on main. Not done: the edge fade and the grouping the finding also suggests (the cut-off section at the edge already shows there are more)."
     },
     {
       "id": "UX-25",
