@@ -41,11 +41,14 @@ export function AdminAuction() {
   const [buybackFor, setBuybackFor] = useState<string | null>(null)
   const [bbPct, setBbPct] = useState<number>(0)
   const [askReset, setAskReset] = useState(false)
+  const [askHammer, setAskHammer] = useState(false)
+  const [askReopen, setAskReopen] = useState<string | null>(null)
 
   const lots = auction?.lots ?? []
   const open = lots.find((l) => l.status === 'open') ?? null
   const nextPending = lots.find((l) => l.status === 'pending') ?? null
   const soldCount = lots.filter((l) => l.status === 'sold').length
+  const reopening = askReopen ? lots.find((l) => l.lotId === askReopen && l.status === 'sold') : undefined
 
   /** Runs a mutation and reloads; false when it failed (the toast already said why). */
   const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
@@ -144,11 +147,19 @@ export function AdminAuction() {
       toast(A.minBid(formatMoney(bidAmount)))
       return
     }
-    await run(() => placeBid(open.lotId, bidder, Math.round(amount)))
+    // The high bidder never raises himself: the auctioneer picks who shouted (UX-13).
+    if (bidder === bidderId) {
+      toast(A.leadingLabel(name(bidder)))
+      return
+    }
+    const ok = await run(() => placeBid(open.lotId, bidder, Math.round(amount)))
     setCustom('')
+    // The next shout is someone else's: nobody stays picked, so «+$250» can't go to the same bidder twice by habit.
+    if (ok) setBidder(null)
   }
 
   async function hammer() {
+    setAskHammer(false)
     if (!open || !bidderId) return
     // Selling to himself still counts toward his limit when the setting says so (§18.3).
     if (bidderId === open.playerId && cfg.selfOwnedCountsTowardMax && (holdings[bidderId] ?? 0) >= cfg.maxPlayersPerOwner) {
@@ -231,16 +242,20 @@ export function AdminAuction() {
                 {bidderList.map((p) => {
                   const ok = eligibleBidders.some((e) => e.id === p.id)
                   const held = holdings[p.id] ?? 0
+                  // The one already on top can't be picked: he would only raise himself (UX-13).
+                  const leading = p.id === bidderId
                   return (
-                    <button key={p.id} type="button" role="radio" aria-checked={bidder === p.id} className={`${a.tile} ${bidder === p.id ? a.tileOn : ''}`} disabled={!ok} onClick={() => setBidder(p.id)} aria-label={ok ? p.displayName : `${p.displayName}, ${A.limitReached(held)}`}>
+                    <button key={p.id} type="button" role="radio" aria-checked={bidder === p.id} className={`${a.tile} ${bidder === p.id ? a.tileOn : ''}`} disabled={!ok || leading} onClick={() => setBidder(p.id)} aria-label={leading ? A.leadingLabel(p.displayName) : ok ? p.displayName : `${p.displayName}, ${A.limitReached(held)}`}>
                       <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
                       <span className={a.tileText}>{p.displayName}</span>
-                      <span className={styles.held}>{ok ? (held > 0 ? held : '') : A.limitReached(held)}</span>
+                      <span className={styles.held}>{leading ? A.leading : ok ? (held > 0 ? held : '') : A.limitReached(held)}</span>
                     </button>
                   )
                 })}
               </div>
-              <div className={styles.bidControls}>
+              {!bidder && <p className={styles.pickHint}>{A.pickBidder}</p>}
+              <div className={styles.dock}>
+                <div className={styles.bidControls}>
                 {[cfg.increment, cfg.increment * 2, cfg.increment * 4].map((d) => (
                   <button key={d} className="btn btn--secondary" type="button" disabled={busy || !bidder} onClick={() => void bid(d)}>
                     {A.bid(formatMoney(d))}
@@ -263,9 +278,10 @@ export function AdminAuction() {
                 <button className="btn btn--ghost" type="button" disabled={busy || !lastBid} onClick={() => lastBid && void run(() => deleteBid(lastBid.id))}>
                   <IconUndo /> {A.undo}
                 </button>
-                <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void hammer()}>
+                <button className="btn btn--primary" type="button" disabled={busy} onClick={() => setAskHammer(true)}>
                   {busy ? t.common.saving : A.sold}
                 </button>
+              </div>
               </div>
             </>
           )}
@@ -291,8 +307,8 @@ export function AdminAuction() {
                     </span>
                   </span>
                   <span className={a.fig}>{formatMoney(l.price)}</span>
-                  <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void run(() => reopenLot(l.lotId))} aria-label={A.reopen}>
-                    <IconUndo />
+                  <button className="btn btn--ghost btn--sm" type="button" disabled={busy || (!!open && open.lotId !== l.lotId)} title={open ? A.reopenWhileOpen : undefined} onClick={() => setAskReopen(l.lotId)}>
+                    <IconUndo /> {A.reopen}
                   </button>
                 </div>
               ))}
@@ -314,6 +330,29 @@ export function AdminAuction() {
         </div>
       </div>
 
+      {open && bidderId && (
+        <ConfirmSheet
+          open={askHammer}
+          title={A.hammerTitle}
+          body={bidderId === open.playerId ? A.hammerSelf(name(open.playerId), formatMoney(bidAmount)) : A.hammerBody(name(open.playerId), name(bidderId), formatMoney(bidAmount))}
+          busy={busy}
+          confirmLabel={A.sold}
+          onConfirm={() => void hammer()}
+          onClose={() => setAskHammer(false)}
+        />
+      )}
+      {reopening && (
+        <ConfirmSheet
+          open
+          title={A.reopenTitle(name(reopening.playerId))}
+          body={A.reopenBody(formatMoney(reopening.price), reopening.ownerId === reopening.playerId ? A.self : name(reopening.ownerId ?? ''), reopening.buybackPct > 0)}
+          danger
+          busy={busy}
+          confirmLabel={A.reopen}
+          onConfirm={() => void run(() => reopenLot(reopening.lotId)).then(() => setAskReopen(null))}
+          onClose={() => setAskReopen(null)}
+        />
+      )}
       <ConfirmSheet open={askReset} title={A.reset} body={A.resetConfirm} danger busy={busy} confirmLabel={A.reset} onConfirm={() => void run(async () => { await resetAuction(tournamentId); setAskReset(false) })} onClose={() => setAskReset(false)} />
 
       <Sheet open={!!buybackFor} onClose={() => setBuybackFor(null)} title={A.buyback}>

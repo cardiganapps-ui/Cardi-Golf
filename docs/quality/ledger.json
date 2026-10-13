@@ -3733,11 +3733,13 @@
       "workstream": "W5",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 126,
+      "tests": [
+        "src/screens/admin/AdminAuction.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the bidder is picked for every bid (nobody stays picked after «+$250»; «Toca quién puja.»), the one on top can't be picked («Va arriba») nor raise himself, «¡Vendido!» asks first with the player, the buyer and the price, «Reabrir lote» is labelled, waits while another lot is open, and asks first (saying a buyback goes with it); the increments and the hammer sit in a dock that stays under the thumb whatever the bidder grid's length. Left: a one-tap «this person bids +increment» tile was not adopted (two taps per bid, the second one deliberate)."
     },
     {
       "id": "UX-15",
