@@ -2,7 +2,8 @@
  * Every color is declared once, in tokens.css. This test fails when a hex,
  * rgb() or hsl() literal appears anywhere else under src/, except:
  * - PERMANENT: files that hold data, not styling (fixtures, the curated
- *   accent set, which mirrors --chart-1..6).
+ *   accent set, which mirrors --chart-1..6, and the app manifest's splash and
+ *   status-bar colors, which mirror --bg and --accent: appManifest.test.ts).
  * - PENDING: screen files still on the old stylesheet, migrated one by one
  *   in phase 3. Each entry must still contain a literal, so the list cannot
  *   rot: remove the file here when you clean it.
@@ -13,7 +14,7 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = new URL('../', import.meta.url).pathname
 const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/
-const PERMANENT = new Set(['styles/tokens.css', 'design/accents.ts', 'dev/fixtures.ts'])
+const PERMANENT = new Set(['styles/tokens.css', 'design/accents.ts', 'dev/fixtures.ts', 'lib/appManifest.ts'])
 const PENDING = new Set<string>([])
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -27,6 +27,7 @@ import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/
 import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneRounds, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
+import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
 
 export interface Me {
@@ -128,6 +129,10 @@ export function TournamentGate() {
   // minutes from Mi Polo, and every 15 s once the phone was signed out.
   useEffect(() => () => useTournament.getState().unsubscribe(), [])
 
+  // An app added to the home screen from this tournament's pages, Entrar included, opens it the first time (PWA-09).
+  const manifestSlug = phase.kind === 'enter' || phase.kind === 'in' ? phase.lookup.slug : null
+  useEffect(() => pointManifestAt(manifestSlug), [manifestSlug])
+
   // The saved boards first, before the session is even confirmed.
   useEffect(() => {
     settled.current = false
@@ -215,7 +220,7 @@ export function TournamentGate() {
         // A platform visit is not "my tournament": it is not where home
         // returns to, and it is not kept on the device for offline use.
         if (!platform) {
-          setLastTournament({ slug: lookup.slug, name: lookup.name })
+          setLastTournament({ slug: lookup.slug, name: lookup.name, at: Date.now() })
           // Under the tournament's own slug, even when the link was the code typed at home:
           // «Tu último torneo» opens /t/<slug>, and with no signal the boards must be there.
           void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })

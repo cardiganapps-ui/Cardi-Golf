@@ -593,7 +593,15 @@ Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**. Tabs and the
 ### 9.1 Entrar
 - Reached via `/t/<slug>` or a join code. Shows the tournament's logo and name.
 - A grid of the players' faces. Tap yours, enter your PIN, done. The session stays on the device.
-- First run shows a short "Agrégala a tu pantalla de inicio" guide with steps for iOS and for Android.
+- **Installing** (2026-10-13, PWA-08 and PWA-09; `src/components/InstallGuide.tsx`, `src/lib/install.ts`). The steps are for this phone only: an iPhone's (any browser there adds to the home screen through Share, under «⋯» in iOS 26's Safari), or Android's. A laptop gets nothing, and so does the installed app itself.
+  - **Before the PIN, on an iPhone's browser:** Entrar says to install first and enter from the icon (`InstallFirst`), since the installed app keeps nothing of Safari's.
+  - **After the PIN:** a card at the top of En vivo (`InstallCard`, also on Home and Mi Polo). On Android it is a one-tap «Instalar» when Chrome offered it (`beforeinstallprompt`, kept from the first moment by `listenForInstall`), else the ⋮ menu's steps. «Ahora no» puts it off for a week, «Ya la tengo» for good.
+  - **Más › «Cómo instalar la app»** always opens the steps (`InstallRow`).
+  - **On a tournament's pages,** Entrar included, the manifest link points at `api/manifest.ts`. That is the build's own manifest (`src/lib/appManifest.ts`, same `id`) with `start_url` `/?t=<slug>`, so an app installed there opens that tournament the first time.
+  - **On launch,** the installed app goes straight back to a tournament opened in the last four days, once per launch (`launchTarget`; `cardi-golf:last-tournament` carries `at`). Home stays Home when the app goes there itself.
+  - **Home's field** takes the code, a pasted link or the whole invitation (`joinTarget`); it took six letters and digits only, so a pasted link read «HTTPS».
+  - **In an iPhone's browser,** the Tarjeta says that what is saved there stays in that browser, apart from the app (`CaptureFromIcon`): a link from WhatsApp always opens Safari. While that browser still has holes to send, the line says how many, louder: only that browser can send them.
+  - **Tests:** `e2e/fixtures/install.spec.ts` opens these screens as an iPhone and as an Android phone (the suite's own browser reads as a laptop, which is shown nothing), with the suite's checks, Chrome's offer and a pasted invitation.
 
 ### 9.2 En vivo (home)
 - **Top strip:** "Día 1 · En juego", plus where the lead group is ("Hoyo 12").

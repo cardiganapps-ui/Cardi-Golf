@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { InstallGuide } from '../../components/InstallGuide'
+import { InstallCard } from '../../components/InstallGuide'
 import { LegalLinks } from '../../components/LegalLinks'
 import { Avatar, ErrorBox, Spinner, toast } from '../../components/ui'
 import { IconBell, IconChevronRight, IconPeople, IconSettings, IconShield } from '../../components/icons'
@@ -352,7 +352,7 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
         </div>
       </section>
 
-      <InstallGuide />
+      <InstallCard />
       <LegalLinks />
     </div>
   )

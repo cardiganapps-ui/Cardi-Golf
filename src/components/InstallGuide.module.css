@@ -2,19 +2,78 @@
   display: flex;
   flex-direction: column;
   gap: var(--s2);
-  padding-top: var(--s4);
-  border-top: var(--hairline);
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  background: var(--surface);
 }
-.steps {
+.guide h2 {
   margin: 0;
-  padding-left: var(--s5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s1);
+}
+.step {
+  margin: 0;
   font-size: var(--fs-sm);
   color: var(--ink-2);
   line-height: var(--lh-body);
 }
-.guide button {
+.withGlyph {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+}
+.glyph {
+  flex: none;
+  color: var(--ink);
+}
+.both {
+  margin: 0;
+  display: grid;
+  gap: var(--s1) var(--s3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+}
+.both dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+.both dd {
+  margin: 0 0 var(--s2);
+  color: var(--ink-2);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.guide > button {
   align-self: flex-start;
+}
+.first {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.first p {
+  margin: 0;
+}
+/* Holes only this browser holds: louder than the line it replaces (PWA-09). */
+.held {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  background: var(--caution-soft);
+  color: var(--caution);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: var(--lh-body);
+}
+/* A word in a sentence that opens the steps: it reads as the sentence's own link, and is a button. */
+.inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }

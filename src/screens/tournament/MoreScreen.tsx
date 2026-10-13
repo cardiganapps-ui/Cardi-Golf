@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { buildLabel } from '../../lib/build'
-import { InstallGuide } from '../../components/InstallGuide'
+import { InstallRow } from '../../components/InstallGuide'
 import { Avatar, CopyButton, ShareButton, Sheet, Toggle, toast } from '../../components/ui'
 import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
 import { useAuth } from '../../data/auth'
@@ -139,6 +139,8 @@ export function MoreScreen() {
             <IconTrophy /> {t.more.ceremony}
           </Link>
         )}
+        {/* Always here: the card on En vivo can be put off, and the steps never came back (PWA-08). */}
+        <InstallRow className={styles.link} />
       </nav>
 
       <div className={styles.join}>
@@ -150,7 +152,6 @@ export function MoreScreen() {
         </div>
       </div>
 
-      <InstallGuide />
 
       {canVibrate() && (
         <Toggle
