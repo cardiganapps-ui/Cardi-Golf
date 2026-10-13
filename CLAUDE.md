@@ -613,7 +613,7 @@ Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**. Tabs and the
   - A "Levantó" toggle.
   - A live points badge, e.g. "3 pts · birdie neto".
 - **Saving:** "Guardar hoyo" saves and moves to the next hole. Swipe between holes.
-  - The card moves on in the tap's own frame (PERF-10, 2026-10-13). The outbox writes the hole once that frame is on screen (`afterPaint`, 100 ms at most), so recomputing the boards never holds the frame back.
+  - The card moves on in the tap's own frame (PERF-10, 2026-10-13). The hole, its contest winners and its snake answer go into the phone's storage at the tap; the boards take them once that frame is on screen (`afterPaint`: 100 ms at most, or at once when the page is hidden or closed; the outbox's `settle`), so recomputing the boards never holds the frame back. At first the write itself waited for the frame, and an app closed or put away inside it lost the hole: the stack suite's lapsed-session test lost hole 2 on main (`src/data/outbox.settle.test.ts`).
   - At 4× CPU, click to next hole is two commits and about 28 ms at 12 or 60 players. It used to be five commits and 131–177 ms. A real tap shows the new hole about 70 ms after the finger lands.
   - Only the phone's storage can refuse that write. If it does, the card goes back to the hole with what was typed and says why.
   - A Comité correction on a closed day or a signed card goes to the server, so the card waits for its answer.

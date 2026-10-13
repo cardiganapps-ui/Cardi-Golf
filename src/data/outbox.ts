@@ -769,7 +769,13 @@ export class OutboxStorageError extends UserError {
   }
 }
 
-async function enqueue(newItem: NewItem) {
+/**
+ * `settle`: what the screen that saved it waits for before the rest (PERF-10: the Tarjeta's next hole paints
+ * first). The write is in the phone's storage and in this tab's queue before anything waits on it, so a page
+ * closed or hidden right after a save keeps it; the counts, the other tabs, the boards' recompute and the
+ * push follow once `settle` resolves. The promise this returns resolves after them.
+ */
+async function enqueue(newItem: NewItem, settle?: Promise<unknown>) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
   // Writes are queued from the tournament open on screen: its name and slug go with them.
@@ -799,6 +805,7 @@ async function enqueue(newItem: NewItem) {
   }
   const newer = queue.find((x) => x.key === item.key && x.seq > item.seq)
   if (!newer) queue = [...queue.filter((x) => x.key !== item.key), item]
+  if (settle) await settle
   publish()
   announce()
   // Optimistic: recompute right away with the overlay.
@@ -835,9 +842,10 @@ function mergeHoles(into: HoleItem, newer: HoleItem): HoleItem {
  * round still waiting to go out takes these fields over its own (field by
  * field); one already sent is never touched, and this one queues behind it
  * (ARCH-01). The merge is decided in IndexedDB's transaction, against what a
- * flush in another tab marked sent.
+ * flush in another tab marked sent. `settle`: as for `enqueue`, the hole is
+ * kept on the phone first and the rest waits for it.
  */
-export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }) {
+export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }, settle?: Promise<unknown>) {
   step('hole_saved')
   const entries = input.entries.filter((e) => Object.keys(e.fields).length > 0).map((e) => ({ ...e, base: e.base ?? {} }))
   if (!entries.length) return
@@ -876,6 +884,7 @@ export async function enqueueHole(tournamentId: string, input: { round_id: strin
     item = into ? mergeHoles(into, fresh) : fresh
   }
   queue = [...queue.filter((x) => x.key !== item.key), item]
+  if (settle) await settle
   // Captured again: what the phone asked about these players on this hole is settled.
   await dropConflicts(entries.map((e) => conflictKey(input.round_id, e.player_id, input.hole)))
   publish()
@@ -962,14 +971,14 @@ function lockManager(): LockManagerLike | null {
   return locks
 }
 
-export function enqueueScore(tournamentId: string, payload: ScorePayload) {
-  return enqueue({ key: `score:${payload.round_id}:${payload.player_id}:${payload.hole}`, kind: 'score', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueScore(tournamentId: string, payload: ScorePayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `score:${payload.round_id}:${payload.player_id}:${payload.hole}`, kind: 'score', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
-export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload) {
-  return enqueue({ key: `tiebreak:${payload.round_id}:${payload.group_id}:${payload.hole}`, kind: 'tiebreak', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `tiebreak:${payload.round_id}:${payload.group_id}:${payload.hole}`, kind: 'tiebreak', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
-export function enqueueAward(tournamentId: string, payload: AwardPayload) {
-  return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueAward(tournamentId: string, payload: AwardPayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
   step('card_signed')
