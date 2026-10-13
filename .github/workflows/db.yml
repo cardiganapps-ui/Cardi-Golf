@@ -18,6 +18,9 @@ on:
       - 'scripts/lib/**'
       - 'scripts/server-rules.mjs'
       - 'src/data/testing/cases/**'
+      - 'scripts/restore-r2.mjs'
+      - 'scripts/backup-local.mjs'
+      - 'src/lib/backupTables.ts'
       - '.github/workflows/db.yml'
   push:
     branches: [main]
@@ -29,6 +32,9 @@ on:
       - 'scripts/lib/**'
       - 'scripts/server-rules.mjs'
       - 'src/data/testing/cases/**'
+      - 'scripts/restore-r2.mjs'
+      - 'scripts/backup-local.mjs'
+      - 'src/lib/backupTables.ts'
       - '.github/workflows/db.yml'
   schedule:
     - cron: '23 8 * * *'
