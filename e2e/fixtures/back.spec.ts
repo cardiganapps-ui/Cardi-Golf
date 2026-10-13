@@ -3,8 +3,16 @@
  * threw away a half-entered hole. Now back closes the top sheet first, and
  * the Tarjeta keeps what was typed until it is saved.
  */
+import type { Page } from '@playwright/test'
 import { t } from '../../src/i18n/es-MX'
 import { expect, open, test } from './base'
+
+/**
+ * A sheet closed any way but back gives its history entry back a tick later
+ * (sheetHistory.ts). A back pressed before that lands on the entry and is
+ * spent there, as it would be for a person that fast; wait it out first.
+ */
+const sheetEntryGone = (page: Page) => expect.poll(() => page.evaluate(() => !!(history.state as Record<string, unknown> | null)?.poloSheet)).toBe(false)
 
 test('back closes the open sheet, then the nested one first, before leaving the screen (PWA-05)', async ({ page }) => {
   await open(page, '/fixture')
@@ -32,6 +40,7 @@ test('a sheet closed with «Cerrar» leaves no step behind: the next back leaves
   await page.locator('button[class*="leaderRow"]').first().click()
   await page.getByRole('dialog').getByRole('button', { name: t.common.close }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await sheetEntryGone(page)
   await page.goBack()
   await expect(page).toHaveURL(/\/fixture$/)
 })
@@ -142,6 +151,7 @@ test('a sheet with typed work asks before back throws it away; back on the quest
   await page.getByRole('dialog', { name: t.common.discardTitle }).getByRole('button', { name: t.common.discard }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(page.url()).toBe(url)
+  await sheetEntryGone(page)
   await page.goBack()
   await expect(page).toHaveURL(/\/fixture$/)
 })
