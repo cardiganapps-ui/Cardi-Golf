@@ -146,12 +146,9 @@ describe('the token a push checked', () => {
     await whileAnotherTabSignsOut(() => enqueueScore('t1', holeScore('p2', 14, 5)))
     expect(server.writeRequests().map((r) => [r.method, r.as, r.result])).toEqual([['POST', player, 201]])
 
-    // A hole award is two requests: the old answer goes, the new one goes in.
+    // A hole award is one call (0044): the old answer goes and the new one comes in, as the player too.
     await whileAnotherTabSignsOut(() => enqueueAward('t1', holeAward(14, ['p2'])))
-    expect(server.writeRequests('hole_awards').map((r) => [r.method, r.as, r.result])).toEqual([
-      ['DELETE', player, 204],
-      ['POST', player, 201],
-    ])
+    expect(server.writeRequests('rpc/save_group_awards').map((r) => [r.method, r.as, r.result])).toEqual([['POST', player, 200]])
     expect(server.tables.hole_awards).toEqual([expect.objectContaining({ hole: 14, game_id: 'closest', player_id: 'p2' })])
     expect(server.score('p2', 14)).toMatchObject({ strokes: 5 })
     expect(useOutbox.getState()).toMatchObject({ pending: 0, rejected: [] })

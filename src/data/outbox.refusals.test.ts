@@ -24,7 +24,7 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Snapshot } from '../engine/types'
 import type { Row } from './mappers'
-import { enterAs, holeAward, holeScore, installFakePhone, isWrite, settle, snakeAnswer } from './testing/fakePhone'
+import { enterAs, holeAward, holeScore, installFakePhone, isAwardCall, isWrite, settle, snakeAnswer } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
 const { _outboxTest, enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, overlayPending, startOutbox, useOutbox } = await import('./outbox')
@@ -110,23 +110,8 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
   })
 
   describe('refused by a constraint', () => {
-    it('two phones name the same winner at once: a duplicate key (23505)', async () => {
-      let raced = false
-      server.decide = (req) => {
-        // The group's other phone inserts the same winner between this phone's delete and its insert.
-        if (!raced && isWrite(req, 'hole_awards') && req.method === 'POST') {
-          raced = true
-          server.seed('hole_awards', [award({ player_id: 'p2', decided_by: 'p3' })])
-        }
-        return 'answer'
-      }
-      await savedThenSent(
-        () => enqueueAward('t1', holeAward(5, ['p2'])),
-        () => enqueueScore('t1', holeScore('p2', 6, 4)),
-      )
-      expect(rejected()).toEqual(['award:r1:g1:closest:5'])
-      expect(server.score('p2', 6)).toMatchObject({ strokes: 4 })
-    })
+    // Two phones naming the same winner at once no longer meet on a duplicate key: one call replaces the
+    // other's row under the hole's lock (0044; outbox.errors.test.ts, race_one_transaction.sh).
 
     it('a check: 16 strokes (23514)', async () => {
       await savedThenSent(
@@ -196,9 +181,9 @@ describe('a write the server refuses goes to «rechazados», and the one queued 
 })
 
 describe('a hole’s winners, and «nadie»', () => {
-  it('«nadie» whose delete the network loses stays queued, and the old winner stays on the server', async () => {
+  it('«nadie» whose call the network loses stays queued, and the old winner stays on the server', async () => {
     server.seed('hole_awards', [award({})])
-    server.decide = (req) => (isWrite(req, 'hole_awards') && req.method === 'DELETE' ? 'offline' : 'answer')
+    server.decide = (req) => (isAwardCall(req) ? 'offline' : 'answer')
     await enqueueAward('t1', holeAward(5, []))
     await settle(useOutbox)
     expect(_outboxTest.queue().map((x) => x.key)).toEqual(['award:r1:g1:closest:5'])

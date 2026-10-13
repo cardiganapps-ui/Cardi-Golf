@@ -13588,6 +13588,693 @@
         "status": 401,
         "code": "42501"
       }
+    },
+    {
+      "name": "save_group_awards: a phone saves its group's winners on a hole in one call, replacing the group's own and no other group's (0044, ARCH-13)",
+      "as": "uid-p1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          },
+          {
+            "round_id": "r1",
+            "group_id": "g5",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p5",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "deleted": [
+            {
+              "round_id": "r1",
+              "game_id": "closest",
+              "hole": 7,
+              "player_id": "p3",
+              "source": "group"
+            }
+          ],
+          "rows": [
+            {
+              "player_id": "p2",
+              "group_id": "g1",
+              "decided_by": "p1",
+              "source": "group"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "group_id": "g1",
+              "decided_by": "p1"
+            },
+            {
+              "player_id": "p5",
+              "group_id": "g5",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_group_awards: a winner the server refuses leaves the group's claim as it was (it was a delete, then a refused insert)",
+      "as": "uid-p1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p5"
+          ],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Ese jugador no está en este grupo"
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p3",
+              "group_id": "g1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_group_awards: the phone's own player decides, whoever the call names",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p4"
+          ],
+          "p_decided_by": "p2"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "rows": [
+            {
+              "player_id": "p4",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p4",
+              "decided_by": "p1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_group_awards: an empty list takes the group's claim, and only its own",
+      "as": "uid-p1",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          },
+          {
+            "round_id": "r1",
+            "group_id": "g5",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p5",
+            "decided_by": "p1"
+          },
+          {
+            "round_id": "r1",
+            "group_id": null,
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": null
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "deleted": [
+            {
+              "player_id": "p3",
+              "source": "group"
+            }
+          ],
+          "rows": []
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p5",
+              "group_id": "g5"
+            },
+            {
+              "player_id": "p2",
+              "group_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "save_group_awards: a closed day refuses the phone, in words its outbox reads as a closed day",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r2",
+          "p_group_id": "g2",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "La ronda ya no está en juego; el Comité tiene que capturarlo"
+      }
+    },
+    {
+      "name": "save_group_awards: a phone outside the group",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g5",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p5"
+          ],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo alguien del grupo captura este concurso"
+      }
+    },
+    {
+      "name": "save_group_awards: the Comité saves a group's claim after its day",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r2",
+          "p_group_id": "g2",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "rows": [
+            {
+              "player_id": "p2",
+              "group_id": "g2",
+              "decided_by": null
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "save_group_awards: the Comité names a group of the round, never another round's",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g2",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Ese grupo no es de esta ronda"
+      }
+    },
+    {
+      "name": "save_group_awards: no session, no call",
+      "as": "anon",
+      "request": {
+        "method": "RPC",
+        "fn": "save_group_awards",
+        "args": {
+          "p_round_id": "r1",
+          "p_group_id": "g1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "set_hole_ruling: the Comité's ruling sits beside the groups' claims, in one call (0044)",
+      "as": "uid-org",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "set_hole_ruling",
+        "args": {
+          "p_round_id": "r1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "deleted": [],
+          "rows": [
+            {
+              "player_id": "p2",
+              "group_id": null,
+              "source": "comite"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p3",
+              "group_id": "g1"
+            },
+            {
+              "player_id": "p2",
+              "group_id": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_hole_ruling: null clears the ruling, and the groups' claims count again",
+      "as": "uid-org",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          },
+          {
+            "round_id": "r1",
+            "group_id": null,
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": null
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "set_hole_ruling",
+        "args": {
+          "p_round_id": "r1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": null,
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "deleted": [
+            {
+              "player_id": "p2",
+              "source": "comite"
+            }
+          ],
+          "rows": []
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": [
+            {
+              "player_id": "p3",
+              "group_id": "g1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_hole_ruling: «nadie» takes the groups' claims too, as the Comité's sheet did",
+      "as": "uid-org",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p3",
+            "decided_by": "p3"
+          },
+          {
+            "round_id": "r1",
+            "group_id": null,
+            "hole": 7,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": null
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "set_hole_ruling",
+        "args": {
+          "p_round_id": "r1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [],
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "rows": []
+        }
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 7
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "set_hole_ruling: a player's phone rules nothing",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "set_hole_ruling",
+        "args": {
+          "p_round_id": "r1",
+          "p_game_id": "closest",
+          "p_hole": 7,
+          "p_player_ids": [
+            "p2"
+          ],
+          "p_decided_by": null
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo el Comité decide un concurso"
+      }
+    },
+    {
+      "name": "set_game_results: a custom bet's result is replaced in one call (0044, ARCH-13)",
+      "as": "uid-org",
+      "given": {
+        "game_results": [
+          {
+            "tournament_id": "t1",
+            "game_id": "tacos",
+            "player_id": "p1",
+            "share": 1
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "set_game_results",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_game_id": "tacos",
+          "p_winners": [
+            {
+              "player_id": "p2",
+              "share": 1
+            },
+            {
+              "player_id": "p3",
+              "share": 2
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200
+      },
+      "then": [
+        {
+          "table": "game_results",
+          "where": {
+            "tournament_id": "t1",
+            "game_id": "tacos"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "share": 1
+            },
+            {
+              "player_id": "p3",
+              "share": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_game_results: a refused result leaves the one in place (it was deleted first, then the insert refused)",
+      "as": "uid-org",
+      "given": {
+        "game_results": [
+          {
+            "tournament_id": "t1",
+            "game_id": "tacos",
+            "player_id": "p1",
+            "share": 1
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "set_game_results",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_game_id": "tacos",
+          "p_winners": [
+            {
+              "player_id": "q1",
+              "share": 1
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "Ese jugador no es de este torneo"
+      },
+      "then": [
+        {
+          "table": "game_results",
+          "where": {
+            "tournament_id": "t1",
+            "game_id": "tacos"
+          },
+          "rows": [
+            {
+              "player_id": "p1",
+              "share": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "set_game_results: a player's phone records no result",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "set_game_results",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_game_id": "tacos",
+          "p_winners": []
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo el Comité registra el resultado de una apuesta"
+      }
     }
   ]
 }

@@ -661,24 +661,18 @@ export async function seedGameEntries(tournamentId: string, gameId: string, play
   unwrap(await supabase().from('game_entries').upsert(playerIds.map((player_id) => ({ tournament_id: tournamentId, game_id: gameId, player_id })), { onConflict: 'tournament_id,game_id,player_id' }).select('player_id'))
 }
 
-/** Comité: set the winners of a contest hole for the whole field (group-less rows override the groups' claims). */
+/**
+ * Comité: the winners of a contest hole for the whole field (its rows sit beside the groups' claims and settle
+ * them). null clears the ruling (the groups' claims count again); [] is «nadie», which takes the claims too.
+ * One call (0044, ARCH-13): a refused ruling leaves the one in place.
+ */
 export async function adminSetAwards(roundId: string, gameId: string, hole: number, playerIds: string[] | null, decidedBy: string | null) {
-  const sb = supabase()
-  unwrap(await sb.from('hole_awards').delete().eq('round_id', roundId).eq('game_id', gameId).eq('hole', hole).is('group_id', null).select('hole'))
-  // null = clear the Comité's decision (the groups' claims count again); [] = nobody won.
-  if (playerIds === null) return
-  if (!playerIds.length) {
-    unwrap(await sb.from('hole_awards').delete().eq('round_id', roundId).eq('game_id', gameId).eq('hole', hole).select('hole'))
-    return
-  }
-  unwrap(await sb.from('hole_awards').insert(playerIds.map((player_id) => ({ round_id: roundId, group_id: null, hole, game_id: gameId, player_id, decided_by: decidedBy }))).select('hole'))
+  await rpc('set_hole_ruling', { p_round_id: roundId, p_game_id: gameId, p_hole: hole, p_player_ids: playerIds, p_decided_by: decidedBy })
 }
 
-/** Comité: the winners of a custom bet (replaces the previous result). */
+/** Comité: the winners of a custom bet, replacing the previous result in one call (0044): a refused one leaves it as it was. */
 export async function setGameResults(tournamentId: string, gameId: string, winners: Array<{ playerId: string; share: number }>) {
-  const sb = supabase()
-  unwrap(await sb.from('game_results').delete().eq('tournament_id', tournamentId).eq('game_id', gameId).select('player_id'))
-  if (winners.length) unwrap(await sb.from('game_results').insert(winners.map((w) => ({ tournament_id: tournamentId, game_id: gameId, player_id: w.playerId, share: w.share }))).select('player_id'))
+  await rpc('set_game_results', { p_tournament_id: tournamentId, p_game_id: gameId, p_winners: winners.map((w) => ({ player_id: w.playerId, share: w.share })) })
 }
 
 /** The Comité's setup as `update_settings` reads and writes it: settings keys and the brand columns (0043). */

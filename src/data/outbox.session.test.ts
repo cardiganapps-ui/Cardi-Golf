@@ -61,6 +61,8 @@ const srv = vi.hoisted(() => {
       insert: () => request(table, 'insert'),
       delete: () => request(table, 'delete'),
     }),
+    // A hole's winners go out as one call (0044 `save_group_awards`).
+    rpc: (name: string) => request(`rpc/${name}`, 'call'),
   }
   return state
 })
@@ -148,8 +150,7 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
     await vi.waitFor(() => expect(_outboxTest.queue()).toEqual([]))
     expect(srv.sent).toEqual([
       { table: 'scores', method: 'upsert', auth: 'Bearer tok-2' },
-      { table: 'hole_awards', method: 'delete', auth: 'Bearer tok-2' },
-      { table: 'hole_awards', method: 'insert', auth: 'Bearer tok-2' },
+      { table: 'rpc/save_group_awards', method: 'call', auth: 'Bearer tok-2' },
     ])
     expect(useOutbox.getState().rejected).toEqual([])
   })
@@ -159,10 +160,7 @@ describe('a write goes out with the player’s own token, or waits (REL-16)', ()
     srv.dropAfterRead = true
     await _outboxTest.enqueue(award(14))
     await flush()
-    expect(srv.sent).toEqual([
-      { table: 'hole_awards', method: 'delete', auth: 'Bearer tok-1' },
-      { table: 'hole_awards', method: 'insert', auth: 'Bearer tok-1' },
-    ])
+    expect(srv.sent).toEqual([{ table: 'rpc/save_group_awards', method: 'call', auth: 'Bearer tok-1' }])
     expect(useOutbox.getState().rejected).toEqual([])
     expect(_outboxTest.queue()).toEqual([])
   })

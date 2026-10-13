@@ -1088,18 +1088,17 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   }
   if (item.kind === 'award') {
     const p = item.payload
-    const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).select().setHeader('Authorization', auth)
-    if (del.error) throw new Error(del.error.message)
-    // The winners it took away, by the key a delete names; then the ones it put in.
-    const gone: LiveChange[] = (del.data ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source } }))
-    if (!p.player_ids.length) return gone
+    // One call (0044, ARCH-13): the group's old winners go and the new ones come in one transaction, so a winner
+    // the server refuses leaves the hole's claim as it was. It was a delete and then an insert: a refused insert
+    // left the hole with no claim at all.
     const { data, error } = await sb
-      .from('hole_awards')
-      .insert(p.player_ids.map((player_id) => ({ round_id: p.round_id, group_id: p.group_id, hole: p.hole, game_id: p.game_id, player_id, decided_by: p.decided_by })))
-      .select()
+      .rpc('save_group_awards', { p_round_id: p.round_id, p_group_id: p.group_id, p_game_id: p.game_id, p_hole: p.hole, p_player_ids: p.player_ids, p_decided_by: p.decided_by })
       .setHeader('Authorization', auth)
-    if (error) throw new Error(error.message)
-    return [...gone, ...stored('hole_awards', data)]
+    if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
+    const answer = (data ?? {}) as { deleted?: Row[]; rows?: Row[] }
+    // The winners it took away, by the key a delete names; then the ones it put in.
+    const gone: LiveChange[] = (answer.deleted ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source } }))
+    return [...gone, ...stored('hole_awards', answer.rows ?? [])]
   }
   if (item.kind === 'signature') {
     // A card the other phone signed first comes back empty: its signature is the one that stands.
@@ -1132,6 +1131,15 @@ function isPermanentError(e: unknown): boolean {
 /** A refused hole's message: a call `save_hole` could not read is invalid, whatever its text says. */
 function refusalOf(e: unknown): string {
   if (e instanceof ServerRefusal && e.code === '22023') return t.sync.errInvalid
+  return describeSyncError(e instanceof Error ? e.message : String(e))
+}
+/**
+ * Any other refused item's message (a contest's winners, 0044): by the code when the server sent one, since
+ * its sentence is ours and in Spanish, which the text rules below don't read. A closed day keeps its own line.
+ */
+function itemRefusal(e: unknown): string {
+  if (e instanceof ServerRefusal && /^22/.test(e.code)) return t.sync.errInvalid
+  if (e instanceof ServerRefusal && e.code === '42501' && !/en juego|not live|is_live/i.test(e.message)) return t.sync.errDenied
   return describeSyncError(e instanceof Error ? e.message : String(e))
 }
 
@@ -1367,7 +1375,7 @@ async function runFlush(): Promise<boolean> {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         if (isPermanentError(e)) {
-          const why = sending.kind === 'hole' ? refusalOf(e) : describeSyncError(msg)
+          const why = sending.kind === 'hole' ? refusalOf(e) : itemRefusal(e)
           await reject(sending, why)
           publish({ lastError: why })
           // The optimistic value was wrong: the server's rows at once, then its truth.

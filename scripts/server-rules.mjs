@@ -175,10 +175,25 @@ function refusedBeforeDb(req) {
   return null
 }
 
-/** An RPC argument as SQL: a uuid for an id, jsonb for an object or a list (its ids mapped, at any depth: `idsToDb`), else text. */
-function argSql(k, v) {
+/** Each public function's arguments, as PostgREST reads them from the catalog: `fn arg` → its type (`uuid[]`, `integer`…). */
+const argTypes = new Map()
+for (const line of psql(`select p.proname || ' ' || a.name || ' ' || format_type(a.typ, null) from pg_proc p cross join lateral unnest(p.proargnames[1:p.pronargs], p.proargtypes::oid[]) a(name, typ) where p.pronamespace = 'public'::regnamespace and p.proargnames is not null`).split('\n')) {
+  const [fn, arg, ...type] = line.split(' ')
+  if (fn && arg) argTypes.set(`${fn} ${arg}`, type.join(' '))
+}
+/**
+ * An RPC argument as SQL, by the function's own type for it: a uuid or a list of them for ids (names mapped to their
+ * uuid), a number or a boolean as one, a null of the type; jsonb for an object or a list (its ids mapped, at any
+ * depth: `idsToDb`); else text.
+ */
+function argSql(fn, k, v) {
+  const type = argTypes.get(`${fn} ${k}`)
+  if (type === 'uuid[]') return v === null ? 'null::uuid[]' : `array[${v.map((x) => `'${uuid(x)}'`).join(', ')}]::uuid[]`
+  if (type === 'uuid' && v === null) return 'null::uuid'
+  if (type && /^(integer|bigint|smallint|numeric|boolean)$/.test(type)) return v === null ? `null::${type}` : `(${jsonLiteral([v])} ->> 0)::${type}`
   if (v !== null && typeof v === 'object') return `(${jsonLiteral(idsToDb(v))})::jsonb`
-  if (typeof v === 'string' && (/_id$/.test(k) || k === 'tid')) return `'${uuid(v)}'::uuid`
+  // By name only when the catalog doesn't say (`p_game_id` is text).
+  if (typeof v === 'string' && (type ? type === 'uuid' : /_id$/.test(k) || k === 'tid')) return `'${uuid(v)}'::uuid`
   return `${jsonLiteral([v])} ->> 0`
 }
 
@@ -196,7 +211,7 @@ function argSql(k, v) {
  */
 function requestSql(req) {
   if (req.method === 'RPC') {
-    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${argSql(k, v)}`).join(', ')
+    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${argSql(req.fn, k, v)}`).join(', ')
     return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
   }
   const t = ident(req.table)

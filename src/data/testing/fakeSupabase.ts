@@ -1229,6 +1229,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       })
     }
     if (name === 'update_settings') return updateSettings(args, as)
+    if (name === 'save_group_awards' || name === 'set_hole_ruling') return holeAwards(name, args, as)
+    if (name === 'set_game_results') return gameResults(args, as)
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
     if (name === 'resolve_rejected_write') return resolveRejected(args, as)
     if (name === 'rejected_inbox') return rejectedInbox(args, as)
@@ -1299,6 +1301,78 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
     }
     return json(200, { assigned: entries.length })
+  }
+
+  /**
+   * 0044 `save_group_awards` (a group's winners on a contest hole: the phone's
+   * push) and `set_hole_ruling` (the Comité's ruling), each one statement, in
+   * the order they check: who may, the group and the hole, the winners, then
+   * the rows. Answers {deleted, rows}: what went, by the keys a delete names,
+   * and what came, as stored. One call never runs beside another here, so the
+   * lock on the hole is moot.
+   */
+  function holeAwards(name: string, args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const rid = args.p_round_id
+    const tid = roundTournament(rid)
+    const game = args.p_game_id
+    const hole = args.p_hole
+    const winners = args.p_player_ids
+    const me = myPlayer(as, tid)
+    const organizer = tid != null && as !== 'anon' && organizes(as, tid)
+    const shape = typeof game === 'string' && /^[a-z0-9-]{1,32}$/.test(game) && typeof hole === 'number' && Number.isInteger(hole) && hole >= 1 && hole <= 18
+    const ofTournament = (x: unknown) => rowsOf('players').some((p) => p.id === x && p.tournament_id === tid)
+    const twice = (xs: unknown[]) => new Set(xs).size !== xs.length
+    const onHole = (r: Row) => r.round_id === rid && r.game_id === game && r.hole === hole
+    const key = (r: Row) => ({ round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source })
+    const rows = rowsOf('hole_awards')
+    if (name === 'save_group_awards') {
+      const gid = args.p_group_id
+      const notOfGroup = 'Solo alguien del grupo captura este concurso'
+      if (tid == null || gid == null || as === 'anon') return fail('42501', notOfGroup)
+      if (!organizer) {
+        if (!(groupOfRound(gid, rid) && inGroup(gid, me))) return fail('42501', notOfGroup)
+        if (!roundIsLive(rid)) return fail('42501', 'La ronda ya no está en juego; el Comité tiene que capturarlo')
+      }
+      if (!groupOfRound(gid, rid)) return fail('22023', 'Ese grupo no es de esta ronda')
+      if (!shape || !Array.isArray(winners)) return fail('22023', 'Ese concurso no se puede guardar así')
+      if (winners.some((x) => !ofTournament(x))) return fail('22023', 'Ese jugador no es de este torneo')
+      if (twice(winners)) return fail('22023', 'Cada ganador va una sola vez')
+      if (!organizer && winners.some((x) => !inGroup(gid, x))) return fail('22023', 'Ese jugador no está en este grupo')
+      const gone = rows.filter((r) => onHole(r) && r.group_id === gid)
+      const made = winners.map((x) => withDefaults('hole_awards', { round_id: rid, group_id: gid, hole, game_id: game, player_id: x, decided_by: me ?? args.p_decided_by ?? null }))
+      server.tables.hole_awards = [...rows.filter((r) => !gone.includes(r)), ...made]
+      return json(200, { deleted: gone.map(key), rows: made })
+    }
+    // set_hole_ruling: null clears the ruling; an empty list is «nadie», which takes the groups' claims too.
+    if (!organizer) return fail('42501', 'Solo el Comité decide un concurso')
+    if (!shape || (winners != null && !Array.isArray(winners))) return fail('22023', 'Ese concurso no se puede guardar así')
+    const list = winners as unknown[] | null | undefined
+    if (list && list.some((x) => !ofTournament(x))) return fail('22023', 'Ese jugador no es de este torneo')
+    if (list && twice(list)) return fail('22023', 'Cada ganador va una sola vez')
+    const gone = rows.filter((r) => onHole(r) && (r.group_id == null || (list != null && list.length === 0)))
+    const made = list?.length ? list.map((x) => withDefaults('hole_awards', { round_id: rid, group_id: null, hole, game_id: game, player_id: x, decided_by: args.p_decided_by ?? null })) : []
+    server.tables.hole_awards = [...rows.filter((r) => !gone.includes(r)), ...made]
+    return json(200, { deleted: gone.map(key), rows: made })
+  }
+
+  /** 0044 `set_game_results`: a custom bet's winners and shares, replaced in one statement, after the checks the migration makes in its order. */
+  function gameResults(args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const tid = args.p_tournament_id
+    if (tid == null || as === 'anon' || !organizes(as, tid)) return fail('42501', 'Solo el Comité registra el resultado de una apuesta')
+    const game = args.p_game_id
+    if (typeof game !== 'string' || !/^[a-z0-9-]{1,32}$/.test(game)) return fail('22023', 'Ese juego no se puede guardar así')
+    const winners = args.p_winners
+    if (!Array.isArray(winners)) return fail('22023', 'El resultado lleva la lista de ganadores')
+    for (const w of winners as unknown[]) {
+      if (!isPlainObject(w) || typeof w.player_id !== 'string' || typeof w.share !== 'number' || !(w.share > 0)) return fail('22023', 'Cada ganador lleva su jugador y una parte mayor que cero')
+      if (!rowsOf('players').some((p) => p.id === w.player_id && p.tournament_id === tid)) return fail('22023', 'Ese jugador no es de este torneo')
+    }
+    if (new Set((winners as Row[]).map((w) => w.player_id)).size !== winners.length) return fail('22023', 'Cada ganador va una sola vez')
+    const made = (winners as Row[]).map((w) => ({ tournament_id: tid, game_id: game, player_id: w.player_id, share: w.share, created_at: stamp() }))
+    server.tables.game_results = [...rowsOf('game_results').filter((r) => !(r.tournament_id === tid && r.game_id === game)), ...made]
+    return json(200, made)
   }
 
   /**
