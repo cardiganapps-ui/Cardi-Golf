@@ -31,6 +31,8 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
+-- Every timestamp as UTC, whoever calls it: the restore compares against it in UTC.
+set timezone = 'UTC'
 as $$
 declare
   t text;
@@ -82,5 +84,5 @@ end $$;
 revoke execute on function public.backup_snapshot(jsonb) from public, anon, authenticated;
 grant execute on function public.backup_snapshot(jsonb) to service_role;
 
--- What each night copied of the files to R2 ({copied, pending, failed}), for Admin › Salud.
+-- What each night copied of the files to R2 ({copied, pending, failed}), kept with the run (Admin › Salud does not show it yet).
 alter table public.backup_runs add column if not exists files jsonb;

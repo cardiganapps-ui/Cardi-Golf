@@ -7,6 +7,12 @@
 //   node scripts/restore-r2.mjs --from ./backup.json.gz     # a file
 //   node scripts/restore-r2.mjs --from r2:latest --save ./backup.json.gz --download-only
 //   node scripts/restore-r2.mjs --from ./backup.json.gz --verify-only   # compare a restored database again, write nothing
+//   node scripts/restore-r2.mjs --from r2:latest --db <new project> --storage-to https://<new ref>.supabase.co
+//
+// --storage-to: the photos and logos are links to the old project's Storage
+// (https://<ref>.supabase.co/storage/v1/…); with the files uploaded to the
+// new project (RUNBOOK.md §8b), the restore writes them pointing there. The
+// same flag on --verify-only compares against the links as rewritten.
 //
 // The target is psql's: the PG* variables (PGHOST, PGPORT, PGUSER,
 // PGPASSWORD, PGDATABASE), or --db <connection string>. Prepare it first:
@@ -24,7 +30,10 @@
 // still inside it, checks every table and the accounts against the backup,
 // row for row (the backup's columns, in UTC), and every foreign key for
 // orphans. Anything that does not match rolls the whole restore back: the
-// target is never left half restored. Files in Storage are not written: they
+// target is never left half restored. The rows reach the database through
+// COPY (CSV, streamed, into a temporary table), never inside the SQL text:
+// nothing a person typed can end a statement early, and no 40 MB literal is
+// parsed in one piece on a small instance. Files in Storage are not written: they
 // are in R2 under files/ (RUNBOOK.md §8b says how to put them back).
 //
 // R2 needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and
@@ -36,7 +45,6 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
-import { randomBytes } from 'node:crypto'
 
 const PRODUCTION_REF = 'gmohwledjejlhcwqjnhd'
 const SKIP = new Set(['_migrations'])
@@ -77,9 +85,10 @@ if (!from) {
   process.exit(2)
 }
 
+/** Stops the run; main's cleanup still runs (the work folder holds the rows), then the exit. */
+class Stop extends Error {}
 function fail(msg) {
-  console.error(`✗ ${msg}`)
-  process.exit(1)
+  throw new Stop(msg)
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +134,14 @@ async function loadDump() {
   } else raw = readFileSync(from)
   if (opt('--save')) writeFileSync(opt('--save'), raw, { mode: 0o600 })
   // R2 may hand the object back already decompressed (Content-Encoding: gzip).
-  const text = raw[0] === 0x1f && raw[1] === 0x8b ? gunzipSync(raw).toString('utf8') : raw.toString('utf8')
+  let text = raw[0] === 0x1f && raw[1] === 0x8b ? gunzipSync(raw).toString('utf8') : raw.toString('utf8')
+  const to = opt('--storage-to')
+  if (to) {
+    // The links to the old project's files, wherever they are (a photo, a logo, a link inside settings), now to the new one's.
+    const old = `${opt('--storage-from') ?? `https://${PRODUCTION_REF}.supabase.co`}/storage/v1/`
+    const neu = `${to.replace(/\/+$/, '')}/storage/v1/`
+    text = text.split(old).join(neu)
+  }
   const dump = JSON.parse(text)
   if (![1, 2].includes(dump.version) || typeof dump.tables !== 'object') fail(`${source}: not a Polo backup`)
   return { dump, source, bytes: raw.length }
@@ -198,14 +214,6 @@ function primaryKey(schema, table) {
 // ---------------------------------------------------------------------------
 // The restore, and its check, in one transaction
 // ---------------------------------------------------------------------------
-function quoteJson(rows) {
-  const json = JSON.stringify(rows)
-  let tag
-  do tag = `$polo_${randomBytes(6).toString('hex')}$`
-  while (json.includes(tag))
-  return `${tag}${json}${tag}::jsonb`
-}
-
 /** One row per key: a history page that repeated a row must not stop the night from restoring. */
 function dedupe(rows, pk) {
   const seen = new Set()
@@ -217,32 +225,38 @@ function dedupe(rows, pk) {
   })
 }
 
-function insert(schema, table, rows, cols, conflict = '') {
+/** A CSV field: quoted, quotes doubled (CSV takes no backslash escapes, so JSON passes through as written). */
+const csv = (v) => `"${String(v).replace(/"/g, '""')}"`
+
+/** `schema.table`'s rows from the loaded copy (`pg_temp.want`), into the table. */
+function insert(schema, table, cols, conflict = '') {
   const list = cols.map(ident).join(', ')
-  return `insert into ${schema}.${ident(table)} (${list}) overriding system value select ${list} from jsonb_populate_recordset(null::${schema}.${ident(table)}, ${quoteJson(rows)})${conflict};\n`
+  const key = lit(`${schema}.${table}`)
+  return `insert into ${schema}.${ident(table)} (${list}) overriding system value select ${cols.map((c) => `p.${ident(c)}`).join(', ')} from pg_temp.want w, jsonb_populate_record(null::${schema}.${ident(table)}, w.j) p where w.t = ${key}${conflict};\n`
 }
 
 /**
- * Inside the transaction: `schema.table` against `rows`, on the backup's own
- * columns (a newer schema's extra ones, and what the restore filled in for
- * GoTrue, are left out), with the same count and not one row different;
- * raises, so the whole restore rolls back.
+ * Inside the transaction: `schema.table` against its loaded rows, on the
+ * backup's own columns (a newer schema's extra ones, and `skip`, are left
+ * out), with the same count and not one row different; raises, so the whole
+ * restore rolls back.
  */
-function check(schema, table, rows, all) {
+function check(schema, table, rows, all, skip = new Set()) {
   const keys = new Set(rows.flatMap((r) => Object.keys(r)))
-  const extra = all.filter((c) => !keys.has(c.name)).map((c) => lit(c.name))
-  const proj = extra.length ? `to_jsonb(x) - array[${extra.join(', ')}]::text[]` : 'to_jsonb(x)'
-  const name = `${schema === 'public' ? '' : `${schema}.`}${table}`
+  const out = all.filter((c) => !keys.has(c.name) || skip.has(c.name)).map((c) => lit(c.name))
+  const drop = (e) => (out.length ? `${e} - array[${out.join(', ')}]::text[]` : e)
+  const key = lit(`${schema}.${table}`)
   return `do $check$
-declare n bigint; want jsonb := ${quoteJson(rows)};
+declare n bigint; m bigint;
 begin
   select count(*) into n from ${schema}.${ident(table)} x;
-  if n <> jsonb_array_length(want) then
-    raise exception '%: % rows restored, the backup has %', ${lit(name)}, n, jsonb_array_length(want);
+  select count(*) into m from pg_temp.want where t = ${key};
+  if n <> m then
+    raise exception '%: % rows restored, the backup has %', ${key}, n, m;
   end if;
-  select count(*) into n from (select ${proj} as j from ${schema}.${ident(table)} x except select e from jsonb_array_elements(want) e) d;
+  select count(*) into n from (select ${drop('to_jsonb(x)')} as j from ${schema}.${ident(table)} x except select ${drop('j')} from pg_temp.want where t = ${key}) d;
   if n > 0 then
-    raise exception '%: % row(s) differ from the backup', ${lit(name)}, n;
+    raise exception '%: % row(s) differ from the backup', ${key}, n;
   end if;
 end $check$;
 `
@@ -288,24 +302,32 @@ async function main() {
 
   const work = mkdtempSync(join(tmpdir(), 'polo-restore-'))
   try {
-    // Every timestamp compared as the backup wrote it (UTC), whatever the target's own time zone.
-    let sql = "begin;\nset local timezone = 'UTC';\nset local session_replication_role = replica;\n"
+    /** The loaded copy: one CSV line per row, `schema.table` and the row as JSON. */
+    const lines = []
+    const load = (schema, table, rows) => {
+      for (const r of rows) lines.push(`${csv(`${schema}.${table}`)},${csv(JSON.stringify(r))}`)
+    }
+    let sql = ''
     let checks = ''
     let accounts = 0
     let restored = 0
+    // What the restore fills in for GoTrue is not the backup's to compare.
+    const filled = new Set(Object.keys(ACCOUNT_FILL))
     if (dump.auth?.users?.length) {
       const all = columns('auth', 'users')
       const users = dedupe(dump.auth.users, ['id'])
-      sql += insert('auth', 'users', users, all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name), ' on conflict (id) do nothing')
-      checks += check('auth', 'users', users, all)
+      load('auth', 'users', users)
+      sql += insert('auth', 'users', all.filter((c) => !c.generated && users.some((u) => c.name in u)).map((c) => c.name), ' on conflict (id) do nothing')
+      checks += check('auth', 'users', users, all, filled)
       accounts = users.length
     }
     if (dump.auth?.identities?.length) {
       const all = columns('auth', 'identities')
       const ids = dedupe(dump.auth.identities, ['id'])
-      sql += insert('auth', 'identities', ids, all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name), ' on conflict do nothing')
+      load('auth', 'identities', ids)
+      sql += insert('auth', 'identities', all.filter((c) => !c.generated && ids.some((u) => c.name in u)).map((c) => c.name), ' on conflict do nothing')
       sql += 'update auth.identities set updated_at = coalesce(created_at, now()) where updated_at is null;\n'
-      checks += check('auth', 'identities', ids, all)
+      checks += check('auth', 'identities', ids, all, new Set(['updated_at']))
     }
     if (!dump.auth) {
       // Format 1 has no accounts: a bare one for each id a row names through a key to auth.users, so the keys hold.
@@ -319,7 +341,10 @@ async function main() {
         for (const r of dump.tables[t] ?? []) if (r[col]) ids.add(r[col])
       }
       const stubs = [...ids].map((id) => ({ id, is_anonymous: false }))
-      if (stubs.length) sql += insert('auth', 'users', stubs, ['id', 'is_anonymous'], ' on conflict (id) do nothing')
+      if (stubs.length) {
+        load('auth', 'users', stubs)
+        sql += insert('auth', 'users', ['id', 'is_anonymous'], ' on conflict (id) do nothing')
+      }
       console.log(`  ! format 1: ${stubs.length} bare accounts (no email): their profiles, friends and crews stay on those ids, and nobody can sign in to them (RUNBOOK.md §8b)`)
     }
     // Each account as GoTrue reads it: the columns its own migrations leave without a default.
@@ -334,7 +359,8 @@ async function main() {
       if (!pk) fail(`${t} has no primary key to compare by`)
       const rows = dedupe(dump.tables[t], pk)
       restored += rows.length
-      if (rows.length) sql += insert('public', t, rows, all.filter((c) => !c.generated && rows.some((r) => c.name in r)).map((c) => c.name))
+      load('public', t, rows)
+      if (rows.length) sql += insert('public', t, all.filter((c) => !c.generated && rows.some((r) => c.name in r)).map((c) => c.name))
       checks += check('public', t, rows, all)
     }
     // Each identity or serial column past the rows it holds now.
@@ -348,23 +374,35 @@ async function main() {
   end loop;
 end $seq$;
 `
+    const rowsFile = join(work, 'rows.csv')
+    writeFileSync(rowsFile, `${lines.join('\n')}\n`, { mode: 0o600 })
+    // Every timestamp compared as the backup wrote it (UTC), whatever the target's own time zone; the rows streamed in by COPY.
+    const head = `begin;
+set local timezone = 'UTC';
+${verifyOnly ? '' : 'set local session_replication_role = replica;\n'}create temporary table want (t text not null, j jsonb not null) on commit drop;
+\\copy pg_temp.want from ${lit(rowsFile)} with (format csv)
+create index on pg_temp.want (t);
+analyze pg_temp.want;
+`
     // The check, inside the same transaction: any mismatch rolls everything back.
     const file = join(work, 'restore.sql')
-    if (verifyOnly) writeFileSync(file, `begin;\nset local timezone = 'UTC';\n${checks}${ORPHANS}rollback;\n`, { mode: 0o600 })
-    else writeFileSync(file, `${sql}${checks}${ORPHANS}commit;\n`, { mode: 0o600 })
+    writeFileSync(file, verifyOnly ? `${head}${checks}${ORPHANS}rollback;\n` : `${head}${sql}${checks}${ORPHANS}commit;\n`, { mode: 0o600 })
     psql(file, { file: true })
 
-    const rows = restored
     const dt = `${((Date.now() - t0) / 1000).toFixed(1)} s`
-    if (verifyOnly) console.log(`✓ the target matches the backup: ${rows} rows in ${tables.length} tables and ${accounts} accounts, row for row and key by key, ${dt}`)
+    if (verifyOnly) console.log(`✓ the target matches the backup: ${restored} rows in ${tables.length} tables and ${accounts} accounts, row for row and key by key, ${dt}`)
     else
       console.log(
-        `✓ restored ${rows} rows in ${tables.length} tables and ${accounts} accounts into ${db ? 'the --db target' : target}, checked row for row and key by key before it was committed, ${dt} in all`,
+        `✓ restored ${restored} rows in ${tables.length} tables and ${accounts} accounts into ${db ? 'the --db target' : target}, checked row for row and key by key before it was committed, ${dt} in all`,
       )
     if (dump.storage?.objects?.length) console.log(`  · ${dump.storage.objects.length} file(s) listed in Storage: in R2 under files/ (RUNBOOK.md §8b)`)
   } finally {
+    // The work folder holds every row and every email: never left behind, the run failed or not.
     rmSync(work, { recursive: true, force: true })
   }
 }
 
-main().catch((e) => fail(e.message))
+main().catch((e) => {
+  console.error(`✗ ${e instanceof Stop ? e.message : e?.message ?? e}`)
+  process.exit(1)
+})

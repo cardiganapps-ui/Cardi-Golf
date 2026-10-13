@@ -24,10 +24,14 @@ export const config = { maxDuration: 60 }
 const PAGE = 1000
 /** The history, read in pages up to the snapshot's last row; every other table is in the snapshot. */
 const HISTORY = 'audit_log'
-/** The file copy stops this long after the run started (maxDuration is 60 s); the rest goes the next night. */
-const FILES_DEADLINE_MS = 48_000
+/**
+ * No file is started after this, counted from the run's start; with one
+ * read, one write and the last manifest save at FILE_TIMEOUT_MS each, the run
+ * ends before Vercel's 60 s (maxDuration). The rest goes the next night.
+ */
+const FILES_DEADLINE_MS = 38_000
 /** Each Storage read and R2 write gives up after this: one stuck file must not take the night's manifest with it. */
-const FILE_TIMEOUT_MS = 8_000
+const FILE_TIMEOUT_MS = 6_000
 /** The manifest is saved every few files, so a run cut short keeps what it copied. */
 const MANIFEST_EVERY = 5
 const MANIFEST = 'files/manifest.json'

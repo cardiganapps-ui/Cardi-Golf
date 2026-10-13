@@ -98,8 +98,8 @@ Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "
 Esto es para cuando el proyecto de Supabase ya no está o quedó dañado entero. Si solo un torneo quedó mal, usa la sección 8.
 
 - **Qué hay.** Cada noche, a las 2 de la mañana de Los Cabos, una copia completa de la app va a Cloudflare R2 (`cardi-golf-backups`, en `backups/AAAA-MM-DD.json.gz`). Lleva todos los torneos tomados en el mismo instante, el historial de cambios, las cuentas sin contraseñas y la lista de archivos. Las fotos y tarjetas subidas se copian aparte, en `files/`. Admin de Polo › Salud dice cuándo fue el último.
-- **Quién lo hace.** Claude, con las llaves de esta sesión, o tú con Claude al lado. Crear el proyecto nuevo es gratis, pero tú lo apruebas.
-- **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 17 segundos en una base vacía (esquema incluido), revisado fila por fila antes de guardarlo. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
+- **Quién lo hace.** Claude hace los pasos por la API (1–3 y 5–7), con las llaves de esta sesión. El paso 4 necesita `psql` conectado directo a la base de datos, y la sesión de Claude no puede abrir esa conexión: lo corres tú en tu computadora, con Claude diciéndote cada comando. Crear el proyecto nuevo es gratis, pero tú lo apruebas.
+- **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 14 segundos en una base vacía (esquema incluido), revisado fila por fila antes de guardarlo. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
 
 Pasos (Claude):
 
@@ -109,14 +109,14 @@ Pasos (Claude):
    - usuarios anónimos encendidos (`external_anonymous_users_enabled`): sin esto nadie entra con su PIN;
    - `site_url` `https://golf.cardigan.mx` y la lista de URLs permitidas (golf.cardigan.mx, cardi-golf.vercel.app, sus vistas previas y localhost);
    - `password_min_length` 8, `mailer_autoconfirm` apagado, `mailer_otp_length` 6, `rate_limit_email_sent` 60, `security_manual_linking_enabled` encendido;
-   - el correo por Resend (todo el bloque SMTP en una sola petición: `smtp.resend.com`, puerto 465, remitente `"Polo" <golf@cardigan.mx>`): sin esto, quien tiene cuenta no recibe su código;
+   - el correo por Resend (todo el bloque SMTP en una sola petición: `smtp.resend.com`, puerto 465, usuario `resend`, la contraseña es la llave de Resend, `RESEND_API_KEY` en `.env.local` o una nueva en resend.com › API Keys, remitente `"Polo" <golf@cardigan.mx>`): sin esto, quien tiene cuenta no recibe su código;
    - Google: el ID y el secreto del cliente (Google Cloud › proyecto Polo › Credenciales) y la URL de vuelta del proyecto nuevo en ese cliente.
 
    Luego `SUPABASE_PROJECT_REF=<ref nuevo> node scripts/auth-config.mjs` pone los asuntos y textos de los correos en español.
-4. Los datos: `node scripts/restore-r2.mjs --from r2:latest --db "<cadena de conexión del proyecto nuevo>"`. Se niega a escribir en producción y en una base que ya tenga cuentas, perfiles o torneos. Escribe y revisa en una sola transacción: compara cada tabla y las cuentas con el respaldo, fila por fila, y todas las llaves; si algo no cuadra, no deja nada escrito y dice qué.
+4. Los datos (en tu computadora, con Node y `psql`; Claude te pasa los comandos): la cadena de conexión está en Supabase › el proyecto nuevo › **Connect** › **Direct connection** (o **Session pooler** si tu red no tiene IPv6), con la contraseña de la base que pusiste al crearlo. Luego `node scripts/restore-r2.mjs --from r2:latest --db "<esa cadena>" --storage-to https://<ref nuevo>.supabase.co`. Con `--storage-to`, las fotos y los logos quedan apuntando al Storage del proyecto nuevo. Se niega a escribir en producción y en una base que ya tenga cuentas, perfiles o torneos. Escribe y revisa en una sola transacción: compara cada tabla y las cuentas con el respaldo, fila por fila, y todas las llaves; si algo no cuadra, no deja nada escrito y dice qué.
    - Un respaldo de formato 1 (los de antes del 13 de octubre de 2026) no trae cuentas: cada perfil, amistad y crew queda en una cuenta vacía con el mismo id, y nadie puede entrar a ella. Usa una noche de formato 2 (el script dice el formato al empezar).
 5. Los archivos: súbelos desde R2 `files/<bucket>/<nombre>` al bucket `tournament-assets` del proyecto nuevo, con el mismo nombre.
-6. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3.
+6. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3. Cambia también la URL y la llave de `.github/workflows/keepalive.yml`: sin eso, el proyecto nuevo se pausa a los 7 días sin uso. Y en el código, el ref de producción que `scripts/restore-r2.mjs` y los demás scripts se niegan a tocar pasa a ser el nuevo.
 7. Avísale a todos:
    - Con cuenta: entran otra vez con su correo y el código, o con Google. Su cuenta, su perfil y sus torneos son los mismos.
    - Sin cuenta: cada jugador vuelve a entrar con su PIN. Lo que capturó sin señal y no se mandó sigue en su teléfono y se manda al entrar.
