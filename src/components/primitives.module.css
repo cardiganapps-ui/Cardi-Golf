@@ -328,7 +328,7 @@
 .mine::before {
   content: '';
   position: absolute;
-  left: calc(-1 * var(--gutter));
+  left: calc(-1 * var(--gutter-left));
   top: 0;
   bottom: 0;
   width: 3px;

@@ -6,7 +6,8 @@
   z-index: 7;
   background: var(--board-bg);
   color: var(--board-ink);
-  padding: max(3vh, var(--safe-top)) 4vw 3vh;
+  /* Clear of every inset: a phone mirrored to the TV in landscape keeps the positions out of the notch (PWA-07). */
+  padding: max(3vh, var(--safe-top)) max(4vw, var(--safe-right)) max(3vh, var(--safe-bottom)) max(4vw, var(--safe-left));
   display: flex;
   flex-direction: column;
   gap: 2vh;
