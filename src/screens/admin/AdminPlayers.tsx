@@ -74,6 +74,12 @@ export function AdminPlayers() {
   const settings = data!.settings
   const tees = data!.snapshot.courses.flatMap((c) => c.tees.map((tee) => ({ ...tee, courseName: c.name })))
   const [editing, setEditing] = useState<PlayerInput | null>(null)
+  /** The form as it opened: anything typed since makes the sheet ask before it closes (UX-15). */
+  const [editingFrom, setEditingFrom] = useState('')
+  const startEditing = (p: PlayerInput) => {
+    setEditing(p)
+    setEditingFrom(JSON.stringify(p))
+  }
   const [pins, setPins] = useState<Set<string>>(new Set())
   const [pinFor, setPinFor] = useState<Player | null>(null)
   const [pin, setPin] = useState('')
@@ -201,7 +207,7 @@ export function AdminPlayers() {
           <h2>{t.admin.sections.players}</h2>
           {players.length > 0 && <span className={a.count}>{P.count(players.length)}</span>}
         </div>
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing(toInput(null, players.length))}>
+        <button className="btn btn--primary btn--sm" type="button" onClick={() => startEditing(toInput(null, players.length))}>
           {P.add}
         </button>
       </div>
@@ -216,7 +222,7 @@ export function AdminPlayers() {
         <div className={a.rows}>
           {shown.map((p) => (
             <div key={p.id} className={a.row}>
-              <button type="button" className={a.rowBtn} onClick={() => setEditing(toInput(p, p.sortOrder))}>
+              <button type="button" className={a.rowBtn} onClick={() => startEditing(toInput(p, p.sortOrder))}>
                 <Avatar name={p.displayName} url={p.avatarUrl} honoree={p.isHonoree} />
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{p.fullName}</span>
@@ -243,7 +249,7 @@ export function AdminPlayers() {
         </div>
       )}
 
-      <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add}>
+      <Sheet open={!!E} onClose={() => setEditing(null)} title={E?.id ? t.common.edit : P.add} dirty={!!E && JSON.stringify(E) !== editingFrom}>
         {E && (
           <div className="stack">
             <OthersDataNotice id={noticeId} />

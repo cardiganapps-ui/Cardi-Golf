@@ -3759,11 +3759,14 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 129,
+      "tests": [
+        "src/components/Sheet.dirty.test.tsx",
+        "e2e/fixtures/back.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: Sheet takes `dirty`; with work in it the backdrop, Escape, «Cerrar» and the system back ask «¿Descartar lo que capturaste?» in a sheet of their own (a back on the question keeps editing, PWA-05's history intact), and «Descartar» closes. The Comité's player form and course drafts set it: a form changed since it opened, an edited card (the editor reports each edit), and an import or a photo read from the start. Left: drafts are not kept in sessionStorage across a reload, and the drag handle still has no gesture."
     },
     {
       "id": "UX-16",
@@ -3801,11 +3804,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 82,
+      "tests": [
+        "e2e/fixtures/ceremony.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed in PR #82 (found unrecorded in the ledger on 2026-10-13): →, PageDown, Space or Enter is the next beat (reveal, the list's next page, the next step: one control runs the show) and ← or PageUp goes back, so a presentation clicker drives it from across the room; a held key doesn't race and Space on a focused button stays that button's press. Left: no phone «control remoto» over the realtime channel."
     },
     {
       "id": "UX-19",
