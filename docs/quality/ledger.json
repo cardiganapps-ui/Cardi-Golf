@@ -4086,9 +4086,12 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 149,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts",
+        "src/screens/tournament/TvScreen.formats.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
