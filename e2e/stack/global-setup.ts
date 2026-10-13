@@ -7,7 +7,7 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { assertLocal, DB_URL, sql } from './env'
-import { CARD, PLAYERS, SLUGS } from './field'
+import { CARD, PLAYERS, SLUGS, groupOf } from './field'
 
 interface Seeded {
   slug: string
@@ -42,7 +42,7 @@ export default function globalSetup() {
       slug,
       tournament: 'live',
       round: 'live',
-      players: PLAYERS.map((p) => ({ name: p.name, fullName: p.fullName, base: p.base, group: p.group, pin: true })),
+      players: PLAYERS.map((p) => ({ name: p.name, fullName: p.fullName, base: p.base, group: groupOf(slug, p.name), pin: true })),
       holes: CARD,
     }))
   if (JSON.stringify(seeded) !== JSON.stringify(want)) {

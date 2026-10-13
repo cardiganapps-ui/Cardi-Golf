@@ -2534,14 +2534,15 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 161,
       "tests": [
         "e2e/stack/live.spec.ts",
-        "e2e/stack/offline.spec.ts"
+        "e2e/stack/offline.spec.ts",
+        "e2e/stack/fourphones.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": "Partial (open), reconciled 2026-10-13. Done (#99, #123): e2e-stack runs the real app against a local Supabase; every hole of a round and four corrections saved on one phone must show on the other within 2 s, on the runner's network and on emulated 4G (p95 719 ms), the times on the run summary; offline.spec.ts brings two offline holes (one corrected) to the other phone when the signal returns with exactly the final values; samecard.spec.ts has two phones capture the same hole at once. Left: two phones, not the four the M3 acceptance test names; nothing measures «a foursome's hole in under 10 seconds»; no correction while the outbox drains; never run against a staging project or the Ensayo before the trip."
+      "residual": "Done (#99, #123, #161): two phones on one card within 2 s on the runner's network and on 4G; four phones saving the same hole at once, each twosome's hole on two other phones within 2 s, all on 4G (first run: 36 saves, p95 876 ms, max 889 ms); offline holes arriving when the signal returns; corrections made while the phone is still sending (one on its way, one waiting) landing as corrected; a foursome's hole at a person's 0.6 s a tap under 10 s (first run: 3.2 taps on average, 9 at most, a tap answered in p95 48 ms, the longest hole about 5.8 s). Left: a person's own pace is the rehearsal's to check, and the suite never runs against a staging project (needs Diego) or the Ensayo before the trip."
     },
     {
       "id": "QA-18",
