@@ -76,6 +76,9 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      6. En Comité › Grupos, con la pantalla sin mover: el botón «Guardar» de abajo queda arriba de la rayita de la orilla (la que usas para salir de la app), no encima de ella.
      7. Gira el teléfono (horizontal) en Comité › Tarjetas y en Modo TV: ningún texto debe quedar debajo de la muesca o la isla del lado.
    - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app, tu versión de iOS y si algo quedó debajo de la muesca al girar. Lo anoto para el ensayo con los 12 teléfonos.
+8. [ ] **El enlace para ver: ¿solo para la tele, o también para el grupo?** (STRAT-05, decisión, gratis). Ya existe y viene apagado: el Comité lo crea en Comité › Torneo › Estado, «Sin dinero» salvo que elija «Con dinero», y lo cambia o lo apaga cuando quiera. La tele de la cena lo necesita «Con dinero» (la subasta son precios). Quien lo tenga ve los tableros sin cuenta ni PIN, con el nombre corto de cada jugador, nunca su nombre completo ni su foto. Tú decides si se comparte más allá de la tele (familia, grupo de WhatsApp); si sí, que sea «Sin dinero», tocando antes «Cambiar enlace» (RUNBOOK §1).
+   - Ojo: sin fotos ni nombres completos, en la tele de la Calcutta cada lote sale con sus iniciales y su nombre corto, sin su forma reciente. Si quieres las fotos en el enlace, dime y las agrego (cambia una línea del aviso de privacidad).
+   - **Cómo lo verifico:** me dices en el chat «solo la tele» o «también el grupo», y si van las fotos; lo dejo escrito en el RUNBOOK y lo probamos en el ensayo.
 
 ---
 
