@@ -1510,11 +1510,16 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 147,
+      "tests": [
+        "supabase/tests/calcutta_rules.sql",
+        "supabase/tests/race_calcutta_bids.sh",
+        "src/engine/modules/auction/bids.test.ts",
+        "src/screens/admin/AdminAuction.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The console half shipped in #146. The service role, scripts and the superuser are left to the policies (trusted, as before): the rules hold every client write."
     },
     {
       "id": "MONEY-20",
