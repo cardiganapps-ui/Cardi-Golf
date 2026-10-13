@@ -131,8 +131,12 @@ try {
   const { data: migRows } = await dev.from('_migrations').select('name')
   check(!!migRead || (migRows ?? []).length === 0, '_migrations is not readable with the publishable key')
   const noSession = client()
-  const { error: lookupNoSession } = await noSession.rpc('lookup_tournament', { p_code: A.tournament.join_code })
-  check(!!lookupNoSession, 'lookup_tournament without a session is refused')
+  // 0040 (TRUST-05): the faces a link shows anyone, before any user exists; nothing of the caller's, no join code.
+  const { data: lookupNoSession, error: lookupNoSessionErr } = await noSession.rpc('lookup_tournament', { p_code: A.tournament.join_code })
+  check(
+    !lookupNoSessionErr && lookupNoSession?.id === A.tournament.id && lookupNoSession.joinCode == null && lookupNoSession.players.every((p) => !p.isMe && !p.pendingMe),
+    'lookup_tournament without a session shows the faces, with nothing of the caller and no join code',
+  )
   const { data: lookupMember } = await dev.rpc('lookup_tournament', { p_code: A.tournament.slug })
   const { data: lookupStranger } = await dev2.rpc('lookup_tournament', { p_code: B.tournament.slug })
   check(lookupMember?.joinCode === A.tournament.join_code && lookupStranger?.joinCode == null, 'the join code is returned to members only')

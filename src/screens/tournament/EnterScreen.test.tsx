@@ -10,9 +10,11 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), claimPlayer: vi.fn() }))
+// The PIN starts the browser's user when it has none (TRUST-05): here it has one.
+vi.mock('../../data/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/auth')>()), ensureSession: vi.fn(async () => ({ user: { id: 'u' } })) }))
 
 import { ApiError, claimPlayer, type LookupResult } from '../../data/api'
-import { useAuth } from '../../data/auth'
+import { ensureSession, useAuth } from '../../data/auth'
 import { _outboxTest } from '../../data/outbox'
 import { t } from '../../i18n/es-MX'
 import { EnterScreen } from './EnterScreen'
@@ -41,6 +43,24 @@ async function typePin(error: unknown) {
 }
 
 afterEach(cleanup)
+
+describe('the PIN starts the browser\'s user (TRUST-05)', () => {
+  it('before the claim, so a link opened shows the faces and the consent line with no user behind them', async () => {
+    const order: string[] = []
+    vi.mocked(ensureSession).mockImplementationOnce(async () => {
+      order.push('session')
+      return { user: { id: 'u' } } as never
+    })
+    vi.mocked(claimPlayer).mockImplementationOnce(async () => {
+      order.push('claim')
+      return { ok: true, playerId: 'p1', tournamentId: 't1' }
+    })
+    await typePin(null)
+    await vi.waitFor(() => expect(order).toEqual(['session', 'claim']))
+    // typePin queued a refusal this test never reached: it must not reach the next one.
+    vi.mocked(claimPlayer).mockReset()
+  })
+})
 
 describe('EnterScreen PIN error', () => {
   it.each([

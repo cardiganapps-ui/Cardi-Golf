@@ -21,6 +21,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const server = vi.hoisted(() => ({
   ensureSession: vi.fn(),
+  /** The session the phone already has (auth's `sessionIfAny`): the stored one, as ensureSession gives it, unless a test says none. */
+  sessionIfAny: vi.fn(),
   lookupTournament: vi.fn(),
   myMembership: vi.fn(),
   releaseDevice: vi.fn(async () => undefined),
@@ -28,6 +30,7 @@ const server = vi.hoisted(() => ({
   myDeviceClaim: vi.fn(async (): Promise<{ playerId: string; tournamentId: string } | null> => null),
 }))
 vi.mock('../../data/auth', () => ({
+  sessionIfAny: () => server.sessionIfAny(),
   ensureSession: server.ensureSession,
   signedOutOnPurpose: () => false,
   signOutsAsked: () => 0,
@@ -109,6 +112,8 @@ beforeEach(async () => {
   await clearCached(id)
   useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
   server.ensureSession.mockReset()
+  server.sessionIfAny.mockReset()
+  server.sessionIfAny.mockImplementation(() => server.ensureSession())
   server.lookupTournament.mockReset()
   server.myMembership.mockReset()
   vi.mocked(adoptQueuedWrites).mockClear()
@@ -197,6 +202,26 @@ describe('recovering when the signal comes back (REL-02)', () => {
   })
 })
 
+describe('a browser with no session yet (TRUST-05)', () => {
+  it('sees Entrar from the link, with no user started for it and no membership asked', async () => {
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    open()
+    expect(await screen.findByText('Entrar')).toBeTruthy()
+    expect(server.lookupTournament).toHaveBeenCalledWith(slug)
+    expect(server.ensureSession).not.toHaveBeenCalled()
+    expect(server.myMembership).not.toHaveBeenCalled()
+  })
+
+  it('a link that leads nowhere says «no existe», still with no user started', async () => {
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(null)
+    open()
+    expect(await screen.findByText(t.enter.notFound)).toBeTruthy()
+    expect(server.ensureSession).not.toHaveBeenCalled()
+  })
+})
+
 describe('saved boards that no longer belong here', () => {
   it('a device the tournament no longer knows sees Entrar, and the saved boards go', async () => {
     await saveOnPhone('Guardado en el teléfono')
@@ -206,6 +231,16 @@ describe('saved boards that no longer belong here', () => {
     open()
     expect(await screen.findByText('Entrar')).toBeTruthy()
     await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+  })
+
+  it('a browser left with no session (an account deleted or blocked, a token revoked) sees Entrar, and the saved boards go', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    open()
+    expect(await screen.findByText('Entrar')).toBeTruthy()
+    await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+    expect(server.ensureSession).not.toHaveBeenCalled()
   })
 
   it('a deleted tournament says «no existe», and its saved boards go', async () => {

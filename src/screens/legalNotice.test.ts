@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -66,7 +66,7 @@ describe('each document is pinned to its own version and date', () => {
   }
 
   it('the two documents carry their own date (the terms used to take the notice\'s)', () => {
-    expect(t.legal.privacy.updated).toBe('Última actualización: 12 de octubre de 2026')
+    expect(t.legal.privacy.updated).toBe('Última actualización: 13 de octubre de 2026')
     expect(t.legal.terms.updated).toBe('Última actualización: 1 de octubre de 2026')
     expect(t.legal).not.toHaveProperty('updated')
   })
@@ -99,7 +99,7 @@ describe('the integral notice (TRUST-04)', () => {
   it('a deleted tournament\'s history stays, and so do anonymous users and sessions', () => {
     const kept = sections['Cuánto tiempo los guardamos']!
     expect(kept).toContain('si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía')
-    expect(kept).toContain('los usuarios anónimos que se crean al abrir un enlace')
+    expect(kept).toContain('los usuarios anónimos que se crean al mandar un PIN')
     expect(kept).toContain('cerrar sesión no los apaga')
     expect(kept).toContain('tu lugar en tus crews')
   })
@@ -252,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-12.5')
+    expect(t.legal.privacy.version).toBe('2026-10-13.1')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -376,13 +376,19 @@ describe('what the notice left out (P3-6)', () => {
     expect(sections['Quién opera Polo']).toContain('Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión.')
   })
 
-  it('opening a tournament or a profile link creates an anonymous user, before any line shows', () => {
-    expect(sections['Qué datos guardamos']).toContain('Con solo abrir el enlace de un torneo o de un perfil en un navegador sin sesión, se le crea un usuario anónimo (sin correo ni nombre).')
-    // ensureSession starts one session at a time (startSession); with no session stored, that is an anonymous one.
+  it('opening a tournament or a profile link creates no user: the PIN does, under its consent line', () => {
+    expect(sections['Qué datos guardamos']).toContain(
+      'Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto.',
+    )
+    // ensureSession is the one way an anonymous user starts, and only Entrar calls it, right before the PIN goes out.
     expect(source('src/data/auth.ts')).toMatch(/export (?:async )?function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
-    // The gate signs in before it even looks the tournament up, so before Entrar and its line.
-    expect(source('src/screens/tournament/TournamentGate.tsx')).toMatch(/await ensureSession\(\)\s+(?:if \(stale\(\)\) return\s+)?const lookup = await lookupTournament\(slug\)/)
-    expect(source('src/screens/profile/ProfileScreen.tsx')).toContain('await ensureSession()')
+    expect(source('src/screens/tournament/EnterScreen.tsx')).toMatch(/await ensureSession\(\)[\s\S]{0,200}claimPlayer\(/)
+    // The gate and a profile link only ask for the session the browser already has.
+    expect(source('src/screens/tournament/TournamentGate.tsx')).not.toContain('ensureSession()')
+    expect(source('src/screens/tournament/TournamentGate.tsx')).toContain('sessionIfAny()')
+    expect(source('src/screens/profile/ProfileScreen.tsx')).not.toContain('ensureSession()')
+    // The faces come before any session: lookup_tournament answers anon (0040).
+    expect(source('supabase/migrations/0040_lookup_without_session.sql')).toMatch(/grant execute on function public\.lookup_tournament\(text\) to anon, authenticated/)
   })
 
   it('Vercel serves the app and runs the nightly backup, the notices and the scorecard reading', () => {

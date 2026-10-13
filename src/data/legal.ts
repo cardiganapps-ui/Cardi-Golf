@@ -205,8 +205,9 @@ async function holdsClaim(): Promise<boolean | null> {
  * version is older than the one the app shows. With no record at all, both,
  * for an account (signed in from an email link, or before 0038) and for a
  * phone that entered with a PIN (before 0038, or its acceptance never got
- * through); not for an anonymous user that only opened a link: its first
- * consent point (the PIN) records it. Null when it can't tell (no session, no
+ * through); not for an anonymous user that only sent a PIN that did not take
+ * (or, on a bundle before 0040, only opened a link): its first consent point
+ * that goes through (the PIN) records it. Null when it can't tell (no session, no
  * signal, a server without 0038).
  */
 export async function legalUpdate(): Promise<LegalChange | null> {
