@@ -1424,11 +1424,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 137,
+      "tests": [
+        "src/engine/explanations.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: one peso formatter for the whole engine (src/engine/core/pesos.ts: «$10,000», «−$1,200», whole pesos), used by every explanation: the ranking's places and ties, the snake, the pairs, the Calcutta, the team split, the prize check and the games (`fmt` is the same function). A team member's line is titled with what the member is paid, the team's prize a step («Los Compadres: $2,880 ÷ 2 = $1,440»). The floor at zero was already written out («4 + 0 − 9 + 2 = −3, cuenta 0 pts»). The property test runs every design fixture: no amount without its thousands anywhere in the state, and every prize's title shows its own amount; it failed on 12 of the 16 fixtures before the fix. Left: the engine still writes its Spanish itself (ARCH-05), and the explanations stay terse (COPY-19)."
     },
     {
       "id": "MONEY-16",

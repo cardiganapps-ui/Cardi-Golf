@@ -7,6 +7,7 @@
 import { playOrder } from '../../core/playOrder'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, PrizeAward } from '../module'
+import { pesos } from '../../core/pesos'
 
 export interface SnakePass {
   hole: number
@@ -109,12 +110,12 @@ export const snakeModule: GameModule<SnakeState> = {
               if (pid === holderId) {
                 payouts[pid] = {
                   amount: 0,
-                  why: { title: '$0', steps: [`Terminó con la víbora (últimos ${threshold} putts o más en el hoyo ${passes.at(-1)?.hole})`] },
+                  why: { title: pesos(0), steps: [`Terminó con la víbora (últimos ${threshold} putts o más en el hoyo ${passes.at(-1)?.hole})`] },
                 }
               } else {
                 payouts[pid] = {
                   amount: perSurvivor,
-                  why: { title: `$${perSurvivor}`, steps: [`Sin víbora al final; ${nameOf(holderId)} se la quedó`] },
+                  why: { title: pesos(perSurvivor), steps: [`Sin víbora al final; ${nameOf(holderId)} se la quedó`] },
                 }
               }
             }
@@ -126,7 +127,7 @@ export const snakeModule: GameModule<SnakeState> = {
               rem -= extra
               payouts[pid] = {
                 amount: each + extra,
-                why: { title: `$${each + extra}`, steps: [`Nadie hizo ${threshold} putts: $${pot} entre ${n}`] },
+                why: { title: pesos(each + extra), steps: [`Nadie hizo ${threshold} putts: ${pesos(pot)} entre ${n}`] },
               }
             }
           }

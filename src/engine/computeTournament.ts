@@ -23,13 +23,14 @@ import type { SnakeState } from './modules/snake'
 import { ALL_GAMES, type AnyGame } from './games'
 import type { GameContext, GameResultState } from './games/game'
 import { gamePot } from './games/payout'
+import { pesos } from './core/pesos'
 import type { GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
 import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
 
-/** "$27,500": the engine stays locale-free. */
-const peso = (n: number) => `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+/** "$27,500": the engine's one formatter (core/pesos.ts). */
+const peso = pesos
 
 export interface ModuleStates {
   individual?: IndividualState
