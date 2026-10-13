@@ -347,6 +347,21 @@ try {
   const { error: devRestore } = await dev.rpc('restore_tournament', { p_tournament_id: A.tournament.id, p_backup: backup })
   check(!!devRestore, 'a player cannot restore')
 
+  console.log('the Calcutta, one call each (0045, ARCH-13):')
+  const { data: drawnLots, error: lotsErr } = await A.sb.rpc('create_lots', { p_tournament_id: A.tournament.id, p_player_ids: [p2, A.player.id] })
+  check(!lotsErr && drawnLots?.length === 2 && drawnLots[0].player_id === p2 && drawnLots[0].lot_number === 1, 'create_lots: one lot per player in the order drawn', { lotsErr })
+  const { error: lotsForeign } = await A.sb.rpc('create_lots', { p_tournament_id: A.tournament.id, p_player_ids: [B.player.id] })
+  const { data: lotsStill } = await A.sb.from('calcutta_lots').select('id').eq('tournament_id', A.tournament.id)
+  check(lotsForeign?.code === '22023' && lotsStill?.length === 2, 'a draw naming another tournament\'s player is refused, and the lots stand', { lotsForeign })
+  const soldLot = drawnLots[0]
+  await A.sb.from('calcutta_lots').update({ status: 'sold', owner_id: A.player.id, price: 500, sold_at: new Date().toISOString() }).eq('id', soldLot.id)
+  await A.sb.from('calcutta_buybacks').insert({ lot_id: soldLot.id, pct: 50, amount: 250 })
+  const { error: reopenDev } = await dev.rpc('reopen_lot', { p_lot_id: soldLot.id })
+  const { data: lotReopened, error: reopenErr } = await A.sb.rpc('reopen_lot', { p_lot_id: soldLot.id })
+  const { data: buybackLeft } = await A.sb.from('calcutta_buybacks').select('lot_id').eq('lot_id', soldLot.id)
+  check(reopenDev?.code === '42501' && !reopenErr && lotReopened?.status === 'open' && lotReopened.owner_id === null && (buybackLeft ?? []).length === 0, 'reopen_lot: the sale undone with its buyback, by the Comité only', { reopenDev, reopenErr })
+  await A.sb.from('calcutta_lots').delete().eq('tournament_id', A.tournament.id)
+
   console.log('accounts:')
   // An anonymous session that sets an email must verify it (mailer_autoconfirm off): it stays anonymous until then.
   const probe = client()
@@ -395,6 +410,18 @@ try {
   await A.sb.from('rounds').update({ course_id: null }).eq('id', r1.id)
   const { error: delOk } = await dev.rpc('delete_course', { p_course_id: devCourse.id })
   check(!delOk, 'the creator deletes an unused course')
+  // 0045 (ARCH-13): a course's card in one call, all of it or none of it.
+  const teeCard = (firstPar) => Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: i === 0 ? firstPar : 4, stroke_index: i + 1, yards: 350 }))
+  const { data: cardId, error: cardErr } = await A.sb.rpc('save_course', { p: { name: `RLS card ${rand}`, tees: [{ name: 'Azules', color: 'blue', rating: 72.1, slope: 131, holes: teeCard(4) }] } })
+  const { data: cardTees } = await A.sb.from('tees').select('id, name, par_total').eq('course_id', cardId)
+  const { data: cardHoles } = await A.sb.from('holes').select('number').eq('tee_id', cardTees?.[0]?.id)
+  check(!cardErr && cardTees?.length === 1 && cardTees[0].par_total === 72 && cardHoles?.length === 18, 'save_course: a new card in one call, its tee and 18 holes', { cardErr })
+  const { error: halfErr } = await A.sb.rpc('save_course', { p: { id: cardId, name: `RLS card ${rand}`, tees: [{ id: cardTees[0].id, name: 'Azul', holes: teeCard(5) }, { name: 'Mal capturado', holes: teeCard(9) }] } })
+  const { data: afterHalf } = await A.sb.from('tees').select('name, par_total').eq('course_id', cardId)
+  check(!!halfErr && afterHalf?.length === 1 && afterHalf[0].name === 'Azules' && afterHalf[0].par_total === 72, 'a card that fails on its second tee leaves the first as it was', { halfErr })
+  const { error: outsiderCard } = await B.sb.rpc('save_course', { p: { id: cardId, name: 'Mío', tees: [] } })
+  check(outsiderCard?.code === '42501', 'save_course: a Comité whose tournament doesn\'t play the course cannot edit it', { outsiderCard })
+  await A.sb.rpc('delete_course', { p_course_id: cardId })
 
   console.log('identity: profiles, links, one account in two tournaments:')
   // A person with an account (U), a stranger (S) and a late account (W).

@@ -483,11 +483,19 @@
       "workstream": "W1",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": 140,
-      "tests": [],
+      "status": "fixed",
+      "pr": 141,
+      "tests": [
+        "supabase/tests/update_settings.sql",
+        "supabase/tests/race_update_settings.sh",
+        "src/screens/admin/settingsSaves.test.tsx",
+        "src/data/settingsWrite.test.ts",
+        "supabase/tests/one_transaction_games.sql",
+        "supabase/tests/race_one_transaction.sh",
+        "supabase/tests/one_transaction_setup.sql"
+      ],
       "verifiedBy": null,
-      "residual": "Partial (open), 2026-10-13. Done (#139, migration 0043): the settings are no longer one blob with last-write-wins. update_settings(p_tournament_id, p_seen, p_set) compares every key a screen saw with the row under its lock and writes only the keys it changed; a key that moved meanwhile refuses the whole save and names it. Torneo sees every key (its prize check read them all), writes what it changed, and after a refusal lays its draft over the row (what only it changed stays, a key both changed is theirs, said in the toast); Juegos sees and writes only the games. The brand columns go the same way, and before there is a roster the prize check runs on the planned field (Dinero lets the Comité set it) or on nobody, never on an assumed 12. Tests: supabase/tests/update_settings.sql, race_update_settings.sh (fails without the row lock), the update_settings: cases on both servers, src/screens/admin/settingsSaves.test.tsx (each of three client mutations fails it), src/data/settingsWrite.test.ts. Done (#140, migration 0044): a contest hole's winners and a custom bet's result are one call each: save_group_awards (the outbox's award push), set_hole_ruling (the Comité's) and set_game_results replace what they rewrite in one transaction, under a lock on the hole or the game, so a refused winner leaves the claim as it was and two phones saving one hole run one after the other (supabase/tests/one_transaction_games.sql, race_one_transaction.sh, which fails without the lock; 16 cases on both servers; the outbox's award tests). Left (part B2): createLots, reopenLot and saveCourse's tee-by-tee writes with its check-then-delete on round_tees (a tee deleted while a round takes it cascades to that round's tees) are still several requests; each becomes one transactional RPC."
+      "residual": "Fixed in three parts. #139 (0043): settings are saved key by key through update_settings, refused when a key the screen read changed meanwhile (Torneo reads every key, so what it stores is what its prize check read; Juegos only the games), and the prize check never assumes 12 players before there is a roster. #140 (0044): a contest hole's winners (the outbox's award push and the Comité's ruling) and a custom bet's result are one call each, under a lock on the hole or the game. #141 (0045): «Sacar del sombrero», «Deshacer la venta» and a course's card are one call each; save_course writes the whole card or none of it, and a tee a round plays or a player has as default, in any tournament, stops the card at the triggers on tees (0010's tees_guard, 0045's tees_guard_default), which see past the caller's policies (the old check ran under them: another tournament's tee of the day reached the delete, which tees_guard refused after the rest of the card was saved, and another tournament's default tee was nulled). Each function was applied to production before its bundle, with rls-test exercising it live. Residual: older bundles in the field may still write these tables directly until the contract (PLAN §2.7); the triggers on tees stop the destructive ones (a tee a round plays, or a player has as default)."
     },
     {
       "id": "ARCH-14",
