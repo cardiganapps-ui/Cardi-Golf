@@ -3705,13 +3705,16 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 160,
       "tests": [
-        "supabase/tests/save_hole.sql"
+        "supabase/tests/pin_phones.sql",
+        "e2e/stack/phones.spec.ts",
+        "src/screens/admin/AdminHistory.phones.test.tsx",
+        "src/screens/admin/AdminPlayers.phones.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "Part in migration 0026: every score records the device and the mutation that last wrote it (save_hole). Historial does not show the device yet; that comes with the save_hole client. Outbox v2 (#106) sends no device id yet: the rows save_hole writes name the mutation, and the device column stays empty until the phone keeps an install id."
+      "residual": "A phone is an anonymous user, so Safari and the home-screen app of one iPhone count as two phones. The player himself is not told when another phone takes his PIN (a PIN player has no inbox; PWA-10). save_hole's device column (0026) still stays empty: Historial names the phone from the claims, not from the score row."
     },
     {
       "id": "UX-01",
