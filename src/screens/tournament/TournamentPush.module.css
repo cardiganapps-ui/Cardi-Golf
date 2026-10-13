@@ -1,0 +1,32 @@
+/* En vivo's offer: the install card's shape (components/InstallGuide.module.css), where that card sits. */
+.offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.offer h2 {
+  margin: 0;
+}
+.offer p {
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+/* Más: a section like the join code's, its button the width of its words. */
+.switch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.switch p {
+  margin: 0;
+}
+.switch > button {
+  align-self: flex-start;
+}
