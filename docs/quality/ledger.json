@@ -606,11 +606,13 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 92,
+      "tests": [
+        "src/data/tournamentStore.overlay.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed by #92 (REL-11, PERF-07): compute() lays the outbox overlay on lists of its own (`laid`), and the store keeps the server's rows (`base`) apart from what the screens read (`snapshot`), so the saved copy is the server's. The overlay test holds that a queued hole, signature or snake answer is in neither the server's rows nor the phone's saved copy. Recorded with #158."
     },
     {
       "id": "CHAIR-01",
@@ -2295,11 +2297,14 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "src/screens/tournament/EnterScreen.test.tsx",
+        "src/screens/admin/AdminPlayers.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the PIN field asks the phone to fill in nothing (autocomplete=\"off\", not one-time-code), and more than four digits at once (pasted or filled in) empty it and send nothing, so an emailed code can no longer go in as a wrong PIN toward the lock. The player photo picker has no capture attribute: the phone offers its photos and its camera, as the profile and logo pickers did. Left: the QuickType suggestion itself needs a real iPhone to see."
     },
     {
       "id": "QA-03",
@@ -2543,11 +2548,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "src/engine/core/compute.test.ts",
+        "src/engine/core/handicap.test.ts",
+        "src/engine/handCalc.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: PH2 is asserted through computeCore (with §6's exact «PH1 2, P1 44 → PH2 0»), not re-implemented in handicap.test.ts, and the comment that contradicted its own assertion in handCalc.test.ts is gone."
     },
     {
       "id": "QA-20",
@@ -3998,11 +4007,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 158,
+      "tests": [
+        "e2e/fixtures/adminNav.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the open section is brought into view in the row of sections (centred when it can be), before the first paint and again once the settings add sections; only the row scrolls. The spec fails eight of its nine cases on main. Not done: the edge fade and the grouping the finding also suggests (the cut-off section at the edge already shows there are more)."
     },
     {
       "id": "UX-25",
