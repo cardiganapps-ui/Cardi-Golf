@@ -9,7 +9,7 @@
 // Creates its own organizer, two tournaments and the accounts, and removes them.
 //   npm run build && npx vite preview --port 4173 &
 //   node e2e/profile.mjs [outputDir]
-// Needs VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY; E2E_RELAY / CHROMIUM as in smoke.mjs.
+// Needs VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY; E2E_RELAY=1 (Supabase HTTP through Node's fetch, with NODE_USE_ENV_PROXY=1) and CHROMIUM=<path> as in scripts/design-shots.mjs.
 import { createClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright-core'
 import { mkdirSync } from 'node:fs'
