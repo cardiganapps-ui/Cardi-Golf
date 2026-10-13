@@ -7,13 +7,16 @@
  * (REL-01). `realtimeTables.test.ts` checks this list against the migrations
  * up to `ON_PRODUCTION`.
  *
+ * Each binding is filtered by tournament (`liveFilter`), so the server sends
+ * a phone its own tournament's changes and no other's (DB-05).
+ *
  * Most of them reach the boards: the rows of `APPLIED_TABLES`
  * (`realtimeApply.ts`) by key, the rest (`RELOADED_TABLES`) by a reload, but
- * only for a change that concerns this tournament (`concernsBoards`: a delete
- * reaches every phone listening, DB-05). `INBOX_TABLES` are not
- * part of the tournament's snapshot: a change reads the Comité's
- * «Pendientes de revisar» again (`rejectedInbox.ts`), and never touches the
- * boards.
+ * only for a change that concerns this tournament (`concernsBoards`: a
+ * server without the filters, or a bundle from before them, still hears
+ * every tournament's deletes). `INBOX_TABLES` are not part of the
+ * tournament's snapshot: a change reads the Comité's «Pendientes de revisar»
+ * again (`rejectedInbox.ts`), and never touches the boards.
  */
 export const REALTIME_TABLES = [
   'tournaments',
@@ -40,6 +43,25 @@ export const REALTIME_TABLES = [
   'team_members',
 ] as const
 
+export type RealtimeTable = (typeof REALTIME_TABLES)[number]
+
+/**
+ * The column a table's binding is filtered on (DB-05): the tournament row by its id, every other table by
+ * its `tournament_id` (since 0030 each round-, group- and lot-scoped table carries one). Realtime refuses a
+ * filter on a column the table lacks, and the whole channel with it (REL-01), and Postgres Changes reads a
+ * delete's filter from what the delete logged: a filter that is not the primary key needs the table to log
+ * its whole old row (`replica identity full`, 0049), or the phone hears none of its deletes.
+ * `realtimeTables.test.ts` holds both to the migrations up to `ON_PRODUCTION`.
+ */
+export function filterColumn(table: RealtimeTable): 'id' | 'tournament_id' {
+  return table === 'tournaments' ? 'id' : 'tournament_id'
+}
+
+/** The binding's filter: this tournament's rows only. */
+export function liveFilter(table: RealtimeTable, tournamentId: string): string {
+  return `${filterColumn(table)}=eq.${tournamentId}`
+}
+
 /** On the channel, but not in the snapshot: their changes go to the Comité's inbox store, never to the boards. */
 export const INBOX_TABLES = ['rejected_writes'] as const
 
@@ -56,5 +78,9 @@ export const INBOX_TABLES = ['rejected_writes'] as const
  * read back from production's publication.
  * 0030 (2026-10-10): `db.mjs migrate` ran through 0030, and `teams` and
  * `team_members` (published by 0025) read back from production's publication.
+ * 0049 (2026-10-13): `db.mjs migrate` ran through 0049, after a full backup;
+ * production's catalog read back: the same 22 published tables, the 21 but
+ * `tournaments` with `relreplident` 'f', and each one's filter column there and
+ * not null. `rls-test` and `platform-test` passed on it.
  */
-export const ON_PRODUCTION = '0030'
+export const ON_PRODUCTION = '0049'
