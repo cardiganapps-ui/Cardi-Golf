@@ -235,6 +235,8 @@ export function AdminScores() {
 
       <RejectedWrites canResend />
 
+      <TiebreakAnswers />
+
       <section className={a.section} id="admin-card">
         {rounds.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noRounds} />}
         {rounds.length > 0 && snapshot.players.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noPlayers} />}
@@ -330,5 +332,92 @@ export function AdminScores() {
 
       <ConfirmSheet open={askUnsign} title={SC.unsign} body={SC.unsignConfirm} busy={busy} confirmLabel={SC.unsign} onConfirm={() => void doUnsign()} onClose={() => setAskUnsign(false)} />
     </div>
+  )
+}
+
+/**
+ * The snake's answered tiebreaks, each with who holed out last and who said
+ * so, and «Cambiar»: a thumb that landed on the wrong name decided who carried
+ * the snake from that hole, and nobody could fix it (UX-22). The change is an
+ * upsert of the same row, audited like the first answer.
+ */
+function TiebreakAnswers() {
+  const data = useTournament((s) => s.data)!
+  const reload = useTournament((s) => s.reload)
+  const { me } = useTournamentCtx()
+  const { snapshot, settings } = data
+  const [changing, setChanging] = useState<{ roundId: string; groupId: string; hole: number } | null>(null)
+  const [busy, setBusy] = useState(false)
+  if (!settings.modules.snake.enabled || snapshot.snakeTiebreaks.length === 0) return null
+  const name = (id: string | null | undefined) => (id ? (snapshot.players.find((p) => p.id === id)?.displayName ?? '?') : null)
+  const round = (id: string) => snapshot.rounds.find((r) => r.id === id)
+  const group = (id: string) => snapshot.groups.find((g) => g.id === id)
+  const answers = [...snapshot.snakeTiebreaks]
+    .filter((tb) => round(tb.roundId) && group(tb.groupId))
+    .sort((x, y) => round(x.roundId)!.number - round(y.roundId)!.number || group(x.groupId)!.number - group(y.groupId)!.number || x.hole - y.hole)
+  if (answers.length === 0) return null
+  const threshold = settings.modules.snake.puttsThreshold
+  /** Who could have holed out last: the group's players at the threshold on that hole (all of the group if putts were changed since). */
+  const candidates = (q: { roundId: string; groupId: string; hole: number }) => {
+    const members = group(q.groupId)?.playerIds ?? []
+    const at = members.filter((pid) => (snapshot.scores.find((x) => x.roundId === q.roundId && x.playerId === pid && x.hole === q.hole)?.putts ?? 0) >= threshold)
+    return at.length >= 2 ? at : members
+  }
+  const current = changing ? snapshot.snakeTiebreaks.find((tb) => tb.roundId === changing.roundId && tb.groupId === changing.groupId && tb.hole === changing.hole) : undefined
+
+  async function pick(pid: string) {
+    if (!changing) return
+    if (current?.lastHoledPlayerId === pid) {
+      setChanging(null)
+      return
+    }
+    setBusy(true)
+    try {
+      await answerTiebreak({ round_id: changing.roundId, group_id: changing.groupId, hole: changing.hole, last_holed_player_id: pid, decided_by: me.playerId })
+      await reload()
+      toast(t.common.saved)
+      setChanging(null)
+    } catch (e) {
+      toast(humanError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className={a.section}>
+      <div className={a.sectionTitle}>
+        <strong>{IB.answeredTitle}</strong>
+        <span className={a.count}>{answers.length}</span>
+      </div>
+      <span className={a.help}>{IB.answeredHint}</span>
+      <div className={a.inbox}>
+        {answers.map((tb) => (
+          <div key={`${tb.roundId}${tb.groupId}${tb.hole}`} className={a.inboxRow}>
+            <span className={a.inboxText}>
+              <span className={a.inboxTitle}>{IB.tiebreak(group(tb.groupId)!.number, tb.hole)}</span>
+              <span className={a.inboxSub}>{IB.answeredSub(t.round.day(round(tb.roundId)!.number), name(tb.lastHoledPlayerId) ?? '?', name(tb.decidedBy))}</span>
+            </span>
+            <span className={a.inboxActions}>
+              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setChanging({ roundId: tb.roundId, groupId: tb.groupId, hole: tb.hole })}>
+                {IB.change}
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+      <Sheet open={!!changing && !!current} onClose={() => setChanging(null)} title={changing ? IB.changeTitle(group(changing.groupId)?.number ?? 0, changing.hole) : ''}>
+        {changing && (
+          <div className="stack">
+            <p className="help">{IB.changeHint}</p>
+            {candidates(changing).map((pid) => (
+              <button key={pid} type="button" className="btn btn--secondary btn--block" aria-pressed={current?.lastHoledPlayerId === pid} disabled={busy} onClick={() => void pick(pid)}>
+                {name(pid)}
+              </button>
+            ))}
+          </div>
+        )}
+      </Sheet>
+    </section>
   )
 }

@@ -747,7 +747,7 @@ function overlayItem(s: Snapshot, it: OutboxItem): void {
   } else if (it.kind === 'tiebreak') {
     const p = it.payload
     s.snakeTiebreaks = s.snakeTiebreaks.filter((x) => !(x.roundId === p.round_id && x.groupId === p.group_id && x.hole === p.hole))
-    s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id })
+    s.snakeTiebreaks.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, lastHoledPlayerId: p.last_holed_player_id, ...(p.decided_by != null && { decidedBy: p.decided_by }) })
   } else if (it.kind === 'award') {
     const p = it.payload
     s.holeAwards = (s.holeAwards ?? []).filter((x) => !(x.roundId === p.round_id && x.gameId === p.game_id && x.hole === p.hole && x.groupId === p.group_id))

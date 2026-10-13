@@ -151,6 +151,7 @@ export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({
   groupId: r.group_id,
   hole: r.hole,
   lastHoledPlayerId: r.last_holed_player_id,
+  ...(r.decided_by != null && { decidedBy: r.decided_by }),
 })
 
 export const mapCardSignature = (r: Row): CardSignature => ({

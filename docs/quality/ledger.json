@@ -3859,11 +3859,14 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 127,
+      "tests": [
+        "src/screens/admin/AdminScores.tiebreaks.test.tsx",
+        "src/data/mappers.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: Comité › Tarjetas lists every answered snake tiebreak (day, group, hole, who holed out last and who said so, read from snake_tiebreaks.decided_by, «el Comité» when no player) with «Cambiar»: the group's players at the threshold on that hole (all of the group if putts were changed since), the current answer pressed; the other saves as the same row's upsert under the Comité's player, audited like the first answer (Historial). Left: the group's own phone still can't change its answer after saving the hole (the Comité does), and the Víbora's pass history has no edit affordance of its own."
     },
     {
       "id": "UX-23",

@@ -1744,6 +1744,13 @@ export const t = {
       count: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
       none: 'Nada pendiente.',
       tiebreak: (group: number, hole: number) => `Víbora, grupo ${group}, hoyo ${hole}`,
+      // UX-22: an answer given by the wrong thumb can be changed; the change stays in Historial.
+      answeredTitle: 'Desempates de la víbora',
+      answeredHint: 'Quién embocó al último en cada empate de 3 putts. Si alguien contestó mal, cámbialo aquí; el cambio queda en el historial.',
+      answeredSub: (day: string, who: string, by: string | null) => `${day}. Embocó al último: ${who}. Lo dijo ${by ?? 'el Comité'}.`,
+      change: 'Cambiar',
+      changeTitle: (group: number, hole: number) => `Grupo ${group}, hoyo ${hole}: ¿quién embocó al último?`,
+      changeHint: 'Toca a quien de verdad embocó al último. La víbora y su dinero se recalculan desde ese hoyo.',
       dispute: (name: string, hole: number) => `Discrepancia, ${name}, hoyo ${hole}`,
       unsigned: (pair: string) => `Tarjeta sin firmar, ${pair}`,
       incomplete: (n: number) => `${n} tarjeta${n === 1 ? '' : 's'} sin terminar`,

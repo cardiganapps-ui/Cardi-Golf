@@ -145,6 +145,8 @@ export interface SnakeTiebreak {
   groupId: Id
   hole: number
   lastHoledPlayerId: Id
+  /** Who answered (a player of the group or the Comité's); Comité › Tarjetas names him (UX-22). */
+  decidedBy?: Id | null
 }
 
 export interface CardSignature {
