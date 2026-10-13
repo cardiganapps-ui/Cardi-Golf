@@ -1544,6 +1544,11 @@ export const t = {
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
+    /** A hole the whole group had played, saved again: the card goes back to where the group is (UX-19). */
+    correctedHole: (n: number, backTo: number | null) => (backTo == null ? `Hoyo ${n} corregido` : `Hoyo ${n} corregido; seguimos en el ${backTo}`),
+    /** The Comité's correction goes to the server at once (a closed day, a signed card): with no signal it is not kept (REL-22). */
+    correctionNeedsSignal: 'Sin señal: la corrección no se guardó. Guárdala otra vez cuando haya señal; lo que escribiste sigue aquí.',
+    undoNeedsSignal: 'Sin señal: no se deshizo. Inténtalo otra vez cuando haya señal.',
     /** On the button for a moment after a save (MOT-02). */
     savedCheck: 'Guardado',
     /** The snake changed hands with this save (MOT-07). */

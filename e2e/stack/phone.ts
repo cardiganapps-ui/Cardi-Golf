@@ -229,7 +229,9 @@ export async function typeHole(page: Page, hole: number, entry: HoleEntry) {
 export async function saveHole(page: Page, hole: number) {
   await page.getByRole('button', { name: hole === 18 ? t.card.saveLast : t.card.save, exact: true }).click()
   // The save bar's note. (On the last hole the card's live region says the same words, to a screen reader only.)
-  await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^${t.card.savedHole(hole)}$`) })).toBeVisible()
+  // A hole the group had played is a correction: its note says so, and where the card went back to (UX-19).
+  const notes = [t.card.savedHole(hole), t.card.correctedHole(hole, null), t.card.correctedHole(hole, 99).replace('99', '\\d+')]
+  await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^(${notes.join('|')})$`) })).toBeVisible()
 }
 
 /** The phone's outbox holds a save of `hole` in IndexedDB, where the app opened again reads it (no signal: nothing sent it). */
