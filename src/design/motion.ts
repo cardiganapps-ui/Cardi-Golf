@@ -24,8 +24,30 @@ export const EASE = [0.2, 0, 0, 1] as const
 export const ease = { duration: DUR, ease: EASE } as const
 /** A small change that should not draw the eye. */
 export const easeFast = { duration: DUR_FAST, ease: EASE } as const
-/** A reveal worth watching — a ceremony, a row re-sorting on a big board. */
+/** A reveal worth watching on a phone: a sheet's content, a row settling. */
 export const easeSlow = { duration: DUR_SLOW, ease: EASE } as const
+
+/**
+ * The board surface (TV, Ceremonia) is watched from four metres (MOT-11): a
+ * 150 ms pulse there is over before anyone looks up. Its changes (a bid, the
+ * pot, a row re-sorting, the next board) take --dur-board on --ease-board.
+ */
+export const DUR_BOARD = 0.5
+/** --ease-board: lands softer than --ease, so a big move reads as arriving, not snapping. */
+export const EASE_BOARD = [0.16, 1, 0.3, 1] as const
+export const easeBoard = { duration: DUR_BOARD, ease: EASE_BOARD } as const
+/**
+ * A moment (the champion, a pair of the draw, a lot out of the hat) is one
+ * choreographed beat: every part of it begins within MOMENT seconds of the
+ * first, and the room can skip it.
+ */
+export const MOMENT = 1.2
+/** The pairs draw on the TV: one pair every DRAW_STEP seconds. */
+export const DRAW_STEP = 0.8
+/** The lots coming out of the hat on the TV: one every HAT_STEP seconds. */
+export const HAT_STEP = 0.25
+/** The console's lot order shuffling into place: each row a beat after the one above it. */
+export const reorder = (i: number) => ({ ...easeBoard, delay: i * 0.03 })
 
 /**
  * Not motion but a clock: the TV's rule that fills over a board's time on
@@ -46,4 +68,4 @@ export const stagger = (i: number, step = DUR_FAST) => ({ ...ease, delay: i * st
  * Seconds from «Revelar»; each further winner of a step starts `nextWinner`
  * later.
  */
-export const REVEAL = { name: DUR_SLOW, figures: DUR_SLOW * 2, countUp: 0.9, trophy: DUR_SLOW * 2 + 0.9, nextWinner: 0.3 } as const
+export const REVEAL = { name: DUR_SLOW, figures: DUR_SLOW * 2, countUp: 0.7, trophy: DUR_SLOW * 2 + 0.7, nextWinner: 0.3 } as const

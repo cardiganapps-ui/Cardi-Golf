@@ -3,6 +3,7 @@
  * avatar, undo, hammer, buyback, next. Everything is a row the engine
  * derives from, so the TV board and every phone follow in real time.
  */
+import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { handicapText, t } from '../../i18n/es-MX'
@@ -21,6 +22,7 @@ import { NumberField, keepNumeric } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
 import { handicapsLocked } from '../../engine/core/handicapLock'
 import { bidSteps } from '../../engine/modules/auction/bids'
+import { reorder } from '../../design/motion'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -95,9 +97,10 @@ export function AdminAuction() {
             {A.manualOrder}
           </button>
         </div>
+        {/* «Sortear el orden» shuffles the rows into place, each a beat after the one above (MOT-05); reduced motion places them at once. */}
         <ol className={`${a.rows} ${styles.orderList}`}>
           {draft.map((pid, i) => (
-            <li key={pid} className={a.row}>
+            <motion.li key={pid} className={a.row} layout="position" transition={reorder(i)}>
               <span className={styles.orderNum}>{i + 1}</span>
               <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} size="sm" />
               <span className={a.rowText} style={{ flex: 1 }}>
@@ -111,7 +114,7 @@ export function AdminAuction() {
                   <IconArrowDown />
                 </button>
               </span>
-            </li>
+            </motion.li>
           ))}
         </ol>
         <div className={a.sticky}>

@@ -15,11 +15,13 @@ import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
-import { IconSnake } from '../../components/icons'
+import { IconRings, IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
-import { easeFast, easeSlow, still, timer } from '../../design/motion'
+import { DRAW_STEP, DUR_BOARD, HAT_STEP, easeBoard, easeFast, still, timer } from '../../design/motion'
+import { CountUp } from '../../components/CountUp'
 import { dayFigureText } from '../../lib/figureText'
 import { Plate } from '../../components/primitives'
+import { drawOrder } from '../../lib/pairing'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 /** Each board's time on screen. */
@@ -72,7 +74,8 @@ export function TvScreen() {
     setStay((st) => (st && st.until - Date.now() < HOLD_MS ? { ...st, until: Date.now() + HOLD_MS } : st))
   }, [order, board, isAuctionNight])
   const reduce = useReducedMotion()
-  const rowMotion = reduce ? {} : { layout: 'position' as const, transition: easeSlow }
+  // From the couch a re-sort has to be seen moving (MOT-11): the board's time, not the phone's.
+  const rowMotion = reduce ? {} : { layout: 'position' as const, transition: easeBoard }
   const boardLabel = (b: Board): string =>
     b === 'individual' ? settings.modules.individual.label
     : b === 'pairs' ? settings.modules.pairs.label
@@ -124,11 +127,11 @@ export function TvScreen() {
       {/* The next board comes in while the last one leaves: the screen is never blank between boards (MOT-01). */}
       <AnimatePresence mode="popLayout" initial={false}>
         {isAuctionNight && state.modules.auction ? (
-          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeSlow}>
+          <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeBoard}>
             <AuctionBoard />
           </motion.section>
         ) : (
-          <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={easeSlow}>
+          <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={easeBoard}>
             {board === 'individual' && state.modules.individual && (
               <PagedRows
                 title={settings.modules.individual.label}
@@ -295,9 +298,10 @@ export function TvScreen() {
  *
  * `columns` labels the last columns of the rows' grid (VIS-05). The title takes
  * the columns before them on the same line, as a printed table does, so the
- * labels cost the rows no line of their own.
+ * labels cost the rows no line of their own. `follow` shows the last page: a
+ * reveal adding rows one at a time keeps its newest row on screen.
  */
-function PagedRows<T>({ title, turn, items, render, columns }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; columns?: { className: string | undefined; labels: string[] } }) {
+function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; columns?: { className: string | undefined; labels: string[] }; follow?: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   // Until measured, everything is laid out once (before paint) so the tallest row can be measured.
   const [fit, setFit] = useState<number | null>(null)
@@ -336,7 +340,7 @@ function PagedRows<T>({ title, turn, items, render, columns }: { title: string; 
   }, [])
   const per = Math.max(1, Math.min(fit ?? items.length, items.length))
   const pages = Math.max(1, Math.ceil(items.length / per))
-  const page = turn % pages
+  const page = follow ? pages - 1 : turn % pages
   const shown = items.slice(page * per, page * per + per)
   const heading = (
     <h2 className={styles.boardTitle} style={columns ? { gridColumnStart: 1, gridColumnEnd: -(columns.labels.length + 1) } : undefined}>
@@ -411,6 +415,21 @@ function AuctionBoard() {
   const ph = lot ? state.core.rounds[state.core.roundIds[0] ?? '']?.[lot.playerId]?.playingHcp : undefined
   const pair = lot ? snapshot.pairs.find((p) => p.player1Id === lot.playerId || p.player2Id === lot.playerId) : undefined
   const soldAt = new Map(snapshot.calcuttaLots.map((l) => [l.id, l.soldAt ?? '']))
+  /*
+   * The night's other two moments, on the TV for the room (MOT-05, UX-17): the
+   * order out of the hat until the first lot opens, and the pairs draw once the
+   * last sale has had its stamp. A draw or an order made while the TV is on is
+   * revealed; one that was there when it opened shows at once.
+   */
+  const lotKey = auction.lots.map((l) => l.lotId).join(',')
+  const pairKey = snapshot.pairs.map((p) => p.id).join(',')
+  const openedWith = useRef({ lots: lotKey, pairs: pairKey })
+  if (auction.lots.length > 0 && auction.lots.every((l) => l.status === 'pending')) {
+    return <HatBoard revealKey={lotKey !== openedWith.current.lots ? lotKey : null} />
+  }
+  if (!lot && settings.modules.pairs.enabled && snapshot.pairs.length > 0) {
+    return <DrawBoard revealKey={pairKey !== openedWith.current.pairs ? pairKey : null} />
+  }
 
   return (
     <div className={styles.auction}>
@@ -431,7 +450,8 @@ function AuctionBoard() {
             </span>
             {player.formGuide && !sold && <p className={styles.form}>{player.formGuide}</p>}
             {open && (
-              <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeFast}>
+              // Each bid pulses for the board's time: a 150 ms pulse was over before the room looked up (MOT-05).
+              <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeBoard}>
                 <span className={styles.bidAmount}>{formatMoney(bid)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
               </motion.div>
@@ -458,9 +478,10 @@ function AuctionBoard() {
       <div className={styles.side}>
         <div className={styles.potBox}>
           <span className={styles.small}>{t.auction.pot}</span>
-          <motion.span key={auction.pot} className={styles.pot} initial={{ scale: 1.15 }} animate={{ scale: 1 }} transition={easeSlow}>
-            {formatMoney(auction.pot)}
-          </motion.span>
+          {/* Each sale counts the pot up to its new figure (MOT-05); it opens on the figure, never from $0. */}
+          <span className={styles.pot}>
+            <CountUp value={auction.pot} format={formatMoney} seconds={DUR_BOARD} from={auction.pot} />
+          </span>
         </div>
         <div className={styles.stake}>
           <span className={styles.small}>{t.auction.atStake}</span>
@@ -489,5 +510,114 @@ function AuctionBoard() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * The lot order out of the hat (MOT-05), before the first lot opens: the room
+ * sees who comes up when. Drawn while the TV is on, the lots come out one at a
+ * time; the console's «Abrir lote» takes the board to the first lot.
+ */
+function HatBoard({ revealKey }: { revealKey: string | null }) {
+  const data = useTournament((s) => s.data)!
+  const { snapshot, state, settings } = data
+  const byId = new Map(snapshot.players.map((p) => [p.id, p]))
+  const lots = [...state.modules.auction!.lots].sort((a, b) => a.lotNumber - b.lotNumber)
+  const reduce = useReducedMotion()
+  const reveal = !!revealKey && !reduce
+  // Each lot drops in from a little above, in the screen's own units.
+  const drop = Math.round(window.innerHeight * 0.03)
+  // Down the columns, in order: one up to seven lots, two up to fourteen, three after.
+  const cols = Math.min(3, Math.max(1, Math.ceil(lots.length / 7)))
+  return (
+    <div className={styles.hat}>
+      <h2 className={styles.boardTitle}>
+        {settings.modules.auction.label}, {t.tv.hatTitle}
+      </h2>
+      <ol className={styles.hatList} key={revealKey ?? 'shown'} style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${Math.ceil(Math.min(lots.length, HAT_MAX) / cols)}, auto)` }}>
+        {lots.slice(0, HAT_MAX).map((l, i) => (
+          <motion.li key={l.lotId} className={styles.hatItem} initial={reveal ? { opacity: 0, y: -drop } : false} animate={{ opacity: 1, y: 0 }} transition={{ ...easeBoard, delay: reveal ? i * HAT_STEP : 0 }}>
+            <span className={styles.hatNum}>{l.lotNumber}</span>
+            <span className={styles.hatName}>{byId.get(l.playerId)?.displayName ?? '?'}</span>
+          </motion.li>
+        ))}
+      </ol>
+      {lots.length > HAT_MAX && <p className={styles.sub}>{t.tv.hatMore(lots.length - HAT_MAX)}</p>}
+    </div>
+  )
+}
+/** Three columns of seven: as many as the board holds at the name's size. */
+const HAT_MAX = 21
+
+/**
+ * The pairs draw (UX-17, MOT-05): the dinner's second moment, for the room, not
+ * only the phone of whoever runs it. The phone saves the draw as it is drawn;
+ * the TV reveals it a pair at a time, the two faces sliding together under the
+ * rings, and the names the pairs give themselves land as they are typed.
+ */
+function DrawBoard({ revealKey }: { revealKey: string | null }) {
+  const data = useTournament((s) => s.data)!
+  const { snapshot, settings } = data
+  const byId = new Map(snapshot.players.map((p) => [p.id, p]))
+  const name = (id: string) => byId.get(id)?.displayName ?? '?'
+  const honoree = snapshot.players.find((p) => p.isHonoree)
+  const pairs = drawOrder(snapshot.pairs, settings.modules.pairs.pairing)
+  const reduce = useReducedMotion()
+  const reveal = !!revealKey && !reduce
+  // The two faces start apart by a share of the screen's width and meet.
+  const slide = Math.round(window.innerWidth * 0.04)
+  const [shown, setShown] = useState(() => (reveal ? 1 : Infinity))
+  // A new draw comes out a pair every DRAW_STEP; the names typed afterwards change nothing here.
+  useEffect(() => {
+    if (!reveal) {
+      setShown(Infinity)
+      return
+    }
+    // The first pair at once, then one every DRAW_STEP.
+    setShown(1)
+    const timers = pairs.slice(1).map((_, i) => setTimeout(() => setShown(i + 2), DRAW_STEP * 1000 * (i + 1)))
+    return () => timers.forEach(clearTimeout)
+  }, [revealKey, reveal]) // eslint-disable-line react-hooks/exhaustive-deps -- a new draw restarts the reveal, a name doesn't
+  // Once every pair is out, a draw longer than the screen shows its pages in turn.
+  const [turn, setTurn] = useState(0)
+  const done = shown >= pairs.length
+  useEffect(() => {
+    if (!done) return
+    const id = setInterval(() => setTurn((n) => n + 1), ROTATE_MS)
+    return () => clearInterval(id)
+  }, [done])
+  const kindText = (kind: string | null) => {
+    const rule = settings.modules.pairs.pairing.find(([a, b]) => kind === `${a}${b}`)
+    return rule ? t.tv.drawKind(rule[0], rule[1]) : null
+  }
+  return (
+    <PagedRows
+      title={t.tv.drawTitle(settings.modules.pairs.label)}
+      turn={turn}
+      follow={!done}
+      items={pairs.slice(0, shown)}
+      render={(p) => {
+        const both = t.common.andList([name(p.player1Id), name(p.player2Id)])
+        // Named, the pair's second line is who they are; unnamed, their categories. The honoree's pick says so on either.
+        const sub = [p.name ? both : kindText(p.kind), p.pickedByHonoree && honoree ? t.tv.drawPicked(honoree.displayName) : null].filter(Boolean).join(', ')
+        return (
+          <div key={p.id} className={`${styles.row} ${styles.rowDraw}`} data-pair={p.id}>
+            <motion.span initial={reveal ? { x: -slide, opacity: 0 } : false} animate={{ x: 0, opacity: 1 }} transition={easeBoard}>
+              <Avatar name={name(p.player1Id)} url={byId.get(p.player1Id)?.avatarUrl} honoree={byId.get(p.player1Id)?.isHonoree} />
+            </motion.span>
+            <motion.span className={styles.drawRings} aria-hidden="true" initial={reveal ? { scale: 0.3, rotate: -45, opacity: 0 } : false} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.6 : 0 }}>
+              <IconRings />
+            </motion.span>
+            <motion.span initial={reveal ? { x: slide, opacity: 0 } : false} animate={{ x: 0, opacity: 1 }} transition={easeBoard}>
+              <Avatar name={name(p.player2Id)} url={byId.get(p.player2Id)?.avatarUrl} honoree={byId.get(p.player2Id)?.isHonoree} />
+            </motion.span>
+            <motion.span className={styles.name} initial={reveal ? { opacity: 0 } : false} animate={{ opacity: 1 }} transition={{ ...easeBoard, delay: reveal ? DUR_BOARD * 0.8 : 0 }}>
+              <span>{p.name ?? both}</span>
+              {sub && <span className={`${styles.small} ${styles.sub}`}>{sub}</span>}
+            </motion.span>
+          </div>
+        )
+      }}
+    />
   )
 }

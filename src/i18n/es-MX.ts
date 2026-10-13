@@ -2378,13 +2378,22 @@ export const t = {
     redraw: 'Volver a sortear',
     names: 'Nombres de las parejas',
     namePlaceholder: (a: string, b: string) => andList([a, b]),
-    save: 'Guardar parejas y grupos',
-    saved: 'Parejas y grupos guardados. Ajusta las horas de salida en Grupos.',
+    /** Each pair's name field, by who is in it: «Nombre de Camilo y Matías». */
+    nameOf: (both: string) => `Nombre de ${both}`,
+    /** The draw is saved as it is drawn, and the TV shows it (UX-17). */
+    saved: 'Sorteo guardado con los grupos del día 1; la tele lo va mostrando. Las horas de salida se ajustan en Grupos.',
+    onTv: 'La tele muestra el sorteo pareja por pareja:',
     existing: 'Ya hay parejas. Volver a sortear las reemplaza (los grupos del día 1 también).',
+    redrawConfirm: 'La sala ya vio este sorteo. Volver a sortear reemplaza las parejas y los grupos del día 1.',
     noHonoree: 'No hay homenajeado marcado; todo sale al azar.',
     missingTiers: 'Faltan categorías en algunos jugadores; asígnalas en Jugadores antes del sorteo.',
     showAll: 'Mostrar todas',
-    saveConfirm: 'Se guardan las parejas y se reemplazan los grupos del día 1. Las horas de salida se ajustan en Grupos.',
+    saveNames: 'Guardar nombres',
+    namesSaved: 'Nombres guardados.',
+    /** On Calcutta night the draw ends the night: «Empezar el torneo» takes the TV to the tournament's boards. */
+    start: 'Empezar el torneo',
+    startHint: 'Cierra la noche de la Calcutta: la tele pasa a los tableros del torneo. Los nombres escritos se guardan antes.',
+    started: 'El torneo empezó.',
   },
   moneyScreen: {
     live: 'Si terminara ahora',
@@ -2837,6 +2846,12 @@ export const t = {
     tier: (tier: string) => `Categoría ${tier}`,
     /** Under the board, which one comes next (MOT-08). */
     next: (board: string) => `Sigue: ${board}`,
+    /** Calcutta night on the TV (MOT-05, UX-17): the lot order out of the hat, then the pairs draw. */
+    hatTitle: 'así salieron del sombrero',
+    hatMore: (n: number) => (n === 1 ? 'y 1 lote más' : `y ${n} lotes más`),
+    drawTitle: (label: string) => `${label}, el sorteo`,
+    drawKind: (a: string, b: string) => `Categorías ${andList([a, b])}`,
+    drawPicked: (name: string) => `la eligió ${name}`,
   },
   errors: {
     missingEnv: 'Falta configurar la conexión a la base de datos (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',

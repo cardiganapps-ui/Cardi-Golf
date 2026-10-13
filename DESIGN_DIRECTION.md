@@ -10,7 +10,11 @@ Two directions, both grounded in golf's own material culture rather than app aes
 - **Convention over invention:** red for under par, blue for over par (The Open), plain ink for par. Pencil notation on the scorecard: circle = birdie, double circle = eagle or better, square = bogey, double square = double or worse.
 - **Structure from space, alignment and rules.** Cards only for true objects (a lot in the auction, a share image, a sheet). Everything else is a ruled sheet.
 - **No emoji.** One inline SVG icon set on a 24-px grid, one stroke weight, used only where an icon speeds recognition (the tab bar, sync state, a handful of actions).
-- **Motion** confirms or shows change: 150–250 ms, ease-out, one orchestrated moment (leaderboard re-sort, final reveal). `prefers-reduced-motion` turns it off.
+- **Motion** confirms or shows change, at the speed of the surface it is seen on (MOT-11):
+  - On the phone, 150–250 ms ease-out (`--dur-fast`, `--dur`, `--dur-slow`, `--ease`).
+  - On the board surface (TV, Ceremonia), watched from across a room, 500 ms on a softer ease-out (`--dur-board`, `--ease-board`): a bid, the pot, a row re-sorting, the next board.
+  - A moment (the champion, a pair of the draw, a lot out of the hat) is one choreographed beat whose every part begins within 1.2 s, and the room can skip it.
+  - `prefers-reduced-motion` turns all of it off.
 - **Copy:** calm, precise, correct golf vernacular, no exclamation marks, no middle-dot strings, no arrows in buttons. Personality only in the live feed.
 
 ## Direction A — "La tarjeta" (the paper scorecard and the pencil)

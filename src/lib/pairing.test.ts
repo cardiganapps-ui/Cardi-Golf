@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeFirstTournament } from '../engine/testing/fixtures'
-import { drawGroupsFromPairs, drawPairs, drawTeams, groupsFromTeams, partnerTier, shuffle } from './pairing'
+import { drawGroupsFromPairs, drawOrder, drawPairs, drawTeams, groupsFromTeams, partnerTier, shuffle } from './pairing'
 import type { Player } from '../engine/types'
 
 // Deterministic rng: a simple LCG.
@@ -40,6 +40,20 @@ describe('pairing', () => {
     expect(pairs[0]).toEqual(fixed[0])
     expect(pairs).toHaveLength(6)
     expect(new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id])).size).toBe(12)
+  })
+
+  it('reveals a saved draw the same way on every screen: the honoree\'s pick, then each kind in the rule\'s order, then by id (UX-17)', () => {
+    const saved = [
+      { id: 'f', kind: 'BC', pickedByHonoree: false },
+      { id: 'b', kind: 'AD', pickedByHonoree: false },
+      { id: 'z', kind: '?', pickedByHonoree: false },
+      { id: 'd', kind: 'BC', pickedByHonoree: false },
+      { id: 'e', kind: 'AD', pickedByHonoree: true },
+      { id: 'a', kind: 'AD', pickedByHonoree: false },
+    ]
+    expect(drawOrder(saved, pairing).map((p) => p.id)).toEqual(['e', 'a', 'b', 'd', 'f', 'z'])
+    // Whatever order the rows came in.
+    expect(drawOrder([...saved].reverse(), pairing).map((p) => p.id)).toEqual(['e', 'a', 'b', 'd', 'f', 'z'])
   })
 
   it('finds the partner tier from the rules', () => {

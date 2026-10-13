@@ -242,3 +242,38 @@ test('the leader\'s total and the snake\'s holder sit on the yellow plate, the o
   await expect(holder.getByRole('img', { name: t.games.holder })).toBeVisible()
   expect(await holder.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(plates.accent)
 })
+
+/**
+ * Calcutta night's other two moments at the room's size (MOT-05, UX-17): the
+ * order out of the hat before the first lot, the pairs draw after the last.
+ */
+for (const [w, h] of ROOMS) {
+  test(`the order out of the hat at ${w}×${h}: every lot on screen, nothing under 3.5vh (MOT-05)`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto('/t/_/hat12/tv', { waitUntil: 'networkidle' })
+    const items = page.locator('[class*="_hatItem_"]')
+    await expect(items).toHaveCount(12)
+    for (const box of await items.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect))) {
+      expect(box.bottom).toBeLessThanOrEqual(h)
+      expect(box.right).toBeLessThanOrEqual(w)
+    }
+    expect(await underFloor(page)).toEqual([])
+  })
+
+  test(`the pairs draw at ${w}×${h}: every pair with both faces and the rings, nothing under 3.5vh (UX-17)`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto('/t/_/draw12/tv', { waitUntil: 'networkidle' })
+    const rows = page.locator('[data-pair]')
+    await expect(rows).toHaveCount(6)
+    const shapes = await rows.evaluateAll((els) =>
+      els.map((row) => ({ faces: row.querySelectorAll('.avatar').length, rings: row.querySelectorAll('svg').length, bottom: row.getBoundingClientRect().bottom, inside: row.parentElement!.getBoundingClientRect().bottom })),
+    )
+    for (const r of shapes) {
+      expect(r.faces).toBe(2)
+      expect(r.rings).toBe(1)
+      expect(r.bottom).toBeLessThanOrEqual(Math.min(r.inside, h) + 0.5)
+    }
+    expect(await underFloor(page)).toEqual([])
+  })
+}
+
