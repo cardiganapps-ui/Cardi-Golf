@@ -81,6 +81,10 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
+        // A first visit is served by its worker as soon as it installs, not from the next load on: a deploy
+        // later the same day can't leave the page asking for screens the server no longer has (REL-13).
+        // Updates still wait for «Actualizar» (no skipWaiting).
+        clientsClaim: true,
         // Web push (PR 8): the handler lives in public/push-sw.js; bump ?v= when it changes.
         importScripts: ['/push-sw.js?v=1'],
         // Icon URLs carry ?v=<fingerprint>; offline, they still resolve to the precached file.

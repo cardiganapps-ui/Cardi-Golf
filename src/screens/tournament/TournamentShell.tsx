@@ -4,6 +4,7 @@ import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { useBoardsMayBeOld } from './boardsAge'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
@@ -57,8 +58,9 @@ export function TournamentShell() {
   // tab from every screen, not only inside the Tarjeta (REL-17).
   const pendingHoles = useOutbox((st) => st.pendingHoles)
   const rejectedCount = useOutbox((st) => st.rejected.length)
-  // The boards may be old: the phone's copy, or no signal. Say how old (REL-04).
-  const showAge = !isFixture && !!data && (!online || source === 'cache')
+  // The boards may be old: the phone's copy, no signal, or a fetch that failed. Say how old (REL-04, REL-10).
+  const showAge = useBoardsMayBeOld()
+  const fetchFailed = useTournament((st) => st.error != null && !!st.data)
 
   return (
     <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
@@ -66,7 +68,7 @@ export function TournamentShell() {
         <div className={styles.bar}>
           {logo && <img className={styles.logo} src={logo} alt="" />}
           <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
-          {(!isFixture || !online) && <HeaderStatus online={online} source={source} realtime={realtime} />}
+          {(!isFixture || !online) && <HeaderStatus online={online} source={source} realtime={realtime} fetchFailed={fetchFailed} />}
         </div>
         {showAge && <BoardsAge updatedAt={updatedAt} pendingHoles={online ? 0 : pendingHoles} />}
       </header>
@@ -104,12 +106,14 @@ export function TournamentShell() {
  * The connection in a word or two, from facts (REL-02): the phone's
  * connection, where the boards came from, and the live channel. «Sin señal» is
  * the phone; «Conectando…» is the phone's copy while the live tournament is on
- * its way; «Sin actualizaciones en vivo» is the channel with a connection. It
- * used to read «Sin señal» whenever the channel was off, signal or not.
+ * its way, or a fetch of the boards that failed while it is tried again
+ * (REL-10: it read «En vivo» over minutes-old boards); «Sin actualizaciones en
+ * vivo» is the channel with a connection. It used to read «Sin señal»
+ * whenever the channel was off, signal or not.
  */
-function HeaderStatus({ online, source, realtime }: { online: boolean; source: 'cache' | 'server' | null; realtime: string }) {
+function HeaderStatus({ online, source, realtime, fetchFailed }: { online: boolean; source: 'cache' | 'server' | null; realtime: string; fetchFailed: boolean }) {
   if (!online) return <LiveStatus text={t.sync.offlineShort} live={false} />
-  if (source === 'cache') return <LiveStatus text={t.sync.connecting} live={false} />
+  if (source === 'cache' || fetchFailed) return <LiveStatus text={t.sync.connecting} live={false} />
   if (realtime === 'live') return <LiveStatus text={t.sync.live} />
   if (realtime === 'error') return <LiveStatus text={t.sync.noLive} live={false} />
   return null

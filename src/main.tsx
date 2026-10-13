@@ -8,7 +8,11 @@ import { router } from './app/router'
 import { RootBoundary } from './app/RootBoundary'
 import { offerUpdate, startUpdateChecks } from './data/appUpdate'
 import { setTelemetryTournament, startTelemetry, step } from './lib/telemetry'
+import { startChunkRecovery } from './lib/chunkReload'
 import { useTournament } from './data/tournamentStore'
+
+// A screen from the build before a deploy loads the new build instead of failing (REL-13).
+startChunkRecovery()
 
 // A new deploy is offered by a bar that stays until it is applied, never
 // applied on its own: an automatic reload would throw away a half-entered
