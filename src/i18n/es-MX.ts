@@ -594,8 +594,8 @@ export const t = {
     myTournaments: 'Mis torneos',
     newTournament: 'Nuevo torneo',
     joinTitle: 'Entrar a un torneo',
-    joinHint: 'Escribe el código de seis caracteres que te mandaron.',
-    joinPlaceholder: 'Código',
+    joinHint: 'Escribe el código de seis caracteres que te mandaron, o pega el enlace.',
+    joinPlaceholder: 'Código o enlace',
     joinButton: 'Entrar',
     lastTournament: 'Tu último torneo',
     organizerTitle: 'Organizadores',
@@ -1088,7 +1088,7 @@ export const t = {
     disable: 'Apagar en este teléfono',
     on: 'Activados en este teléfono.',
     denied: 'Los bloqueaste en este teléfono. Actívalos en los ajustes del navegador para Polo.',
-    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, «Agregar a pantalla de inicio») y ábrela desde ahí.',
+    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, «Agregar a inicio») y ábrela desde ahí.',
     unsupported: 'Este navegador no recibe avisos.',
     enabled: 'Listo: te avisamos aquí.',
     disabled: 'Avisos apagados en este teléfono.',
@@ -1317,9 +1317,27 @@ export const t = {
   install: {
     title: 'Instala la app',
     why: 'Abre en un toque, a pantalla completa y sin señal.',
-    ios: 'iPhone: toca Compartir (el cuadro con la flecha) y luego «Agregar a pantalla de inicio».',
-    android: 'Android: toca el menú ⋮ y luego «Instalar app» o «Agregar a pantalla de inicio».',
+    // iOS 26's compact Safari keeps Share under «⋯»; the sheet's item reads «Agregar a inicio» in es-MX.
+    ios: 'Toca Compartir (el cuadro con la flecha; si no lo ves, está en ⋯) y luego «Agregar a inicio». Después abre Polo desde el ícono.',
+    android: 'Toca el menú ⋮ y luego «Instalar app» o «Agregar a pantalla de inicio».',
+    onIphone: 'En iPhone',
+    onAndroid: 'En Android',
+    installButton: 'Instalar',
+    later: 'Ahora no',
     done: 'Ya la tengo',
+    /** Más: always there, whatever the card was told. */
+    howTo: 'Cómo instalar la app',
+    /** Entrar in an iPhone's browser, before the PIN: the installed app keeps nothing of the browser's. */
+    iosFirst: 'En iPhone, instala Polo antes de entrar y entra desde el ícono: así entras una sola vez.',
+    iosFirstHow: 'Cómo se instala',
+    alreadyIos: 'Si ya la instalaste, abre Polo desde el ícono.',
+    /** The Tarjeta in an iPhone's browser: holes saved here stay in this browser. */
+    iosCard: 'Si ya instalaste Polo, captura desde el ícono: lo que guardes aquí se queda en este navegador.',
+    /** …and when this browser still has holes to send: only it can send them. */
+    iosCardHeld: (n: number) =>
+      n === 1
+        ? 'Este navegador tiene 1 hoyo por subir, y la app del ícono no lo ve: déjalo abierto con señal hasta que suba.'
+        : `Este navegador tiene ${n} hoyos por subir, y la app del ícono no los ve: déjalo abierto con señal hasta que suban.`,
   },
   sync: {
     synced: 'Sincronizado',

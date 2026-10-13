@@ -17,6 +17,7 @@ import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { baseRow, enqueueAward, enqueueHole, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox, type HoleEntry, type HoleFields } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
 import { RejectedWrites } from '../../components/RejectedWrites'
+import { CaptureFromIcon } from '../../components/InstallGuide'
 import { HoleConflicts } from '../../components/HoleConflicts'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
@@ -49,19 +50,30 @@ const SAVED_CHECK_MS = 400
 const SNAKE_NOTE_MS = 5000
 /** How far the next hole comes in from, in the direction the card moved (MOT-02). */
 const SLIDE_PX = 24
-/** A page that draws no frames (hidden, a locked phone) still writes the hole this soon. */
+/** A page that draws no frames still takes the save onto the boards this soon. */
 const PAINT_WAIT_MS = 100
 
-/** Once the frame being prepared is on screen: a task after the next animation frame, or PAINT_WAIT_MS at most. */
+/**
+ * Once the frame being prepared is on screen: a task after the next animation frame, or PAINT_WAIT_MS at most,
+ * or at once when the page goes away (a locked phone, the app closed or put away draws no frame, and its timers
+ * may never run again).
+ */
 function afterPaint(): Promise<void> {
   return new Promise((resolve) => {
-    const cap = setTimeout(resolve, PAINT_WAIT_MS)
-    requestAnimationFrame(() =>
-      setTimeout(() => {
-        clearTimeout(cap)
-        resolve()
-      }, 0),
-    )
+    const done = () => {
+      clearTimeout(cap)
+      document.removeEventListener('visibilitychange', hidden)
+      window.removeEventListener('pagehide', done)
+      resolve()
+    }
+    const hidden = () => {
+      if (document.visibilityState === 'hidden') done()
+    }
+    const cap = setTimeout(done, PAINT_WAIT_MS)
+    document.addEventListener('visibilitychange', hidden)
+    window.addEventListener('pagehide', done)
+    requestAnimationFrame(() => setTimeout(done, 0))
+    hidden()
   })
 }
 
@@ -557,18 +569,22 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
    * phone sends the hole as one save (REL-05): per player only the fields that differ from the row it saw
    * (`seen`, else the boards' row now), so a value another phone saved meanwhile is never overwritten; the
    * server asks instead. `auto`: players written with untouched defaults (an all-par hole).
+   * `settle`: what the boards wait for (the next hole's frame). Every write starts at once and is in the
+   * phone's storage before anything waits: the app may be closed the moment the card moves on.
    */
-  async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string, seen?: Map<string, HoleFields>, auto?: Set<string>) {
+  async function writeHole(values: Record<string, Draft>, holeNumber: number, lastHoled?: string, seen?: Map<string, HoleFields>, auto?: Set<string>, settle?: Promise<void>) {
     // save_hole is the group's: the Comité writing another group's card keeps its direct write (0026 allows it while the day is live).
     const ofGroup = !!me.playerId && group.playerIds.includes(me.playerId)
     const entries: HoleEntry[] = []
+    const queued: Promise<void>[] = []
+    const corrections: Array<Parameters<typeof adminSaveScore>[0]> = []
     for (const p of players) {
       const d = values[p.id]
       if (!d) continue
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
       // A Comité correction where a phone's write is refused (a round not live, a signed card, 0026): the server RPC, as Comité › Tarjetas does.
-      if (me.isAdmin && (round.status !== 'live' || signed(p.id))) await adminSaveScore(payload, reason.trim() || null)
-      else if (!ofGroup) await enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() })
+      if (me.isAdmin && (round.status !== 'live' || signed(p.id))) corrections.push(payload)
+      else if (!ofGroup) queued.push(enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() }, settle))
       else {
         const base = seen?.get(p.id) ?? rowOf(p.id, holeNumber)
         const was = baseRow(base)
@@ -581,13 +597,22 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
         entries.push({ player_id: p.id, fields, base, auto: !!auto?.has(p.id), dflt })
       }
     }
-    if (entries.length) await enqueueHole(tournamentId, { round_id: round.id, hole: holeNumber, entered_by: me.playerId, entries })
+    if (entries.length) queued.push(enqueueHole(tournamentId, { round_id: round.id, hole: holeNumber, entered_by: me.playerId, entries }, settle))
     for (const c of contests) {
       const chosen = picks[c.id]
-      if (chosen && holeNumber === hole) await enqueueAward(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, game_id: c.id, player_ids: chosen, decided_by: me.playerId })
+      if (chosen && holeNumber === hole) queued.push(enqueueAward(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, game_id: c.id, player_ids: chosen, decided_by: me.playerId }, settle))
     }
     if (lastHoled) {
-      await enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, last_holed_player_id: lastHoled, decided_by: me.playerId })
+      queued.push(enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, last_holed_player_id: lastHoled, decided_by: me.playerId }, settle))
+    }
+    // The server's corrections, one by one, once the phone's own writes are on their way; then those, failed or not.
+    const stored = Promise.all(queued)
+    // Awaited below; a refusal meanwhile is not an unhandled one.
+    stored.catch(() => undefined)
+    try {
+      for (const payload of corrections) await adminSaveScore(payload, reason.trim() || null)
+    } finally {
+      await stored
     }
   }
 
@@ -620,15 +645,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     /*
      * A Comité correction goes to the server (a closed day, a signed card) and can be refused or lost on a bad
      * signal: the card waits for its answer. Everything else goes into the phone's own outbox, which only the
-     * phone's storage can refuse: the card moves on in the tap's frame and the outbox writes the hole once that
-     * frame is on screen, so its recompute of the boards never holds the frame back. It waited for the write and
-     * the recompute, a third of a second on a mid-range phone (PERF-10).
+     * phone's storage can refuse: the card moves on in the tap's frame. The hole goes into the phone's storage
+     * at once, so an app closed or put away the moment the card moves on keeps it, and the boards take it once
+     * that frame is on screen, so their recompute never holds the frame back. It waited for the write and the
+     * recompute, a third of a second on a mid-range phone (PERF-10); then the write waited for the frame, and a
+     * page closed inside it lost the hole.
      */
     const viaServer = Object.keys(writes).some((id) => me.isAdmin && (round.status !== 'live' || signed(id)))
     const seen = new Map(bases.current)
     // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
     const auto = new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id)))
-    const writing = viaServer ? writeHole(writes, hole, lastHoled, seen, auto) : afterPaint().then(() => writeHole(writes, hole, lastHoled, seen, auto))
+    const writing = writeHole(writes, hole, lastHoled, seen, auto, viaServer ? undefined : afterPaint())
     if (viaServer) {
       setBusy(true)
       try {
@@ -1115,6 +1142,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
           </div>
+          {/* An iPhone's browser keeps its own holes, apart from the installed app's (PWA-09). */}
+          <CaptureFromIcon />
           <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
         </>
       )}

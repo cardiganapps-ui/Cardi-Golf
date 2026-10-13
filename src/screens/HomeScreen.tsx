@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { t } from '../i18n/es-MX'
 import { Wordmark } from '../components/Wordmark'
-import { InstallGuide } from '../components/InstallGuide'
+import { InstallCard } from '../components/InstallGuide'
 import { LegalLinks } from '../components/LegalLinks'
 import { supabaseConfigured } from '../lib/supabase'
+import { joinTarget } from '../lib/joinInput'
+import { launchTarget } from '../lib/launch'
 import { getLastTournament, type LastTournament } from '../data/session'
 import { hasCached } from '../data/snapshotCache'
 import { hasStoredSession, useAuth } from '../data/auth'
@@ -24,17 +26,24 @@ import styles from './HomeScreen.module.css'
  */
 export function HomeScreen() {
   const navigate = useNavigate()
+  const { search } = useLocation()
   const [code, setCode] = useState('')
   const last = getLastTournament()
   const saved = useSavedOnPhone(last?.slug)
   const { ready, user, isAnonymous, bootError } = useAuth()
   const organizerSignedIn = !!user && !isAnonymous
+  // The code, a pasted link or the whole invitation (PWA-09).
+  const target = joinTarget(code)
+
+  // The installed app opens here: once per launch, straight back to the tournament it was in (PWA-09).
+  useEffect(() => {
+    const to = launchTarget(search)
+    if (to) navigate(`/t/${to}`, { replace: true })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- once, on the launch
 
   function onJoin(e: FormEvent) {
     e.preventDefault()
-    const clean = code.trim().toUpperCase()
-    if (clean.length !== 6) return
-    navigate(`/t/${clean}`)
+    if (target) navigate(`/t/${target}`)
   }
 
   // Accounts live in Mi Polo; wait for the stored session so they don't see
@@ -76,13 +85,14 @@ export function HomeScreen() {
             className={`input ${styles.codeInput}`}
             placeholder={t.home.joinPlaceholder}
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+            onChange={(e) => setCode(e.target.value)}
             autoCapitalize="characters"
             autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="text"
-            maxLength={6}
           />
-          <button className={`btn ${last ? 'btn--secondary' : 'btn--primary'}`} type="submit" disabled={code.trim().length !== 6}>
+          <button className={`btn ${last ? 'btn--secondary' : 'btn--primary'}`} type="submit" disabled={!target}>
             {t.home.joinButton}
           </button>
         </form>
@@ -102,7 +112,7 @@ export function HomeScreen() {
         </Link>
       </nav>
 
-      <InstallGuide />
+      <InstallCard />
       <LegalLinks />
     </div>
   )

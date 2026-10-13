@@ -267,6 +267,8 @@ let conflictsAll: ConflictItem[] = []
 let running: Promise<void> | null = null
 /** Keys of the writes this tab's flush is pushing right now: the server may be storing them. */
 const inFlight = new Set<string>()
+/** Saves of a hole (tournament, round, hole, account) still on their way into storage: a second one merges into the first. */
+const storingHoles = new Map<string, number>()
 let timer: ReturnType<typeof setTimeout> | null = null
 /** When the server last answered a push from this tab, for the heartbeat. */
 let lastAnswerAt: number | null = null
@@ -550,10 +552,16 @@ export function refreshOutboxCounters() {
 }
 
 async function loadQueue() {
+  // Every write this tab queues from here on has a higher seq. One stored after the read set out may be missing
+  // from it (another tab's notice reads the queue again while this tab saves): it stays, unless storage holds a
+  // newer version of its key. It used to drop out of this tab's queue, count and boards until the next read.
+  const since = lastSeq
   try {
     const d = getDb()
     const stored = d ? await d.items.toArray() : []
-    queue = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 })).sort((a, b) => a.seq - b.seq)
+    const read = stored.map((x) => ({ ...x, seq: x.seq ?? x.createdAt * 1000 }))
+    const meanwhile = queue.filter((x) => x.seq > since && !read.some((y) => y.key === x.key && y.seq >= x.seq))
+    queue = [...read.filter((y) => !meanwhile.some((x) => x.key === y.key)), ...meanwhile].sort((a, b) => a.seq - b.seq)
     lastSeq = Math.max(lastSeq, ...queue.map((x) => x.seq))
     rejectedAll = d ? await d.rejected.orderBy('at').toArray() : []
     conflictsAll = d ? await d.conflicts.orderBy('at').toArray() : []
@@ -769,7 +777,31 @@ export class OutboxStorageError extends UserError {
   }
 }
 
-async function enqueue(newItem: NewItem) {
+/**
+ * One write, committed at once: IndexedDB commits it without waiting for this page to take a reply, so a page
+ * closed or put away right after the tap keeps it. A transaction that read first waited, for that read's reply,
+ * behind the next hole's render (PR 155's verifier). Only for a hole's save under its own key, which replaces
+ * nothing: a write under a shared key reads first, so it never replaces a newer version another tab stored.
+ */
+function putNow(d: OutboxDb, item: HoleItem) {
+  return d.transaction('rw', d.items, (tx) => {
+    const put = d.items.put(item)
+    try {
+      ;(tx.idbtrans as IDBTransaction & { commit?: () => void }).commit?.()
+    } catch {
+      // A transaction that can't commit early commits by itself once the page takes the reply: never a refusal.
+    }
+    return put
+  })
+}
+
+/**
+ * `settle`: what the screen that saved it waits for before the rest (PERF-10: the Tarjeta's next hole paints
+ * first). The write is in the phone's storage and in this tab's queue before anything waits on it, so a page
+ * closed or hidden right after a save keeps it, and the other tabs are told then; the counts, the boards'
+ * recompute and the push follow once `settle` resolves. The promise this returns resolves after them.
+ */
+async function enqueue(newItem: NewItem, settle?: Promise<unknown>) {
   // A newer version of the same key replaces the queued one, even while that
   // one is in flight: the flush pushes this version after it (ARCH-01).
   // Writes are queued from the tournament open on screen: its name and slug go with them.
@@ -799,8 +831,10 @@ async function enqueue(newItem: NewItem) {
   }
   const newer = queue.find((x) => x.key === item.key && x.seq > item.seq)
   if (!newer) queue = [...queue.filter((x) => x.key !== item.key), item]
-  publish()
+  // The other tabs read the queue again now: this tab may be closed before its frame.
   announce()
+  if (settle) await settle
+  publish()
   // Optimistic: recompute right away with the overlay.
   useTournament.getState().refresh()
   void flush()
@@ -835,9 +869,10 @@ function mergeHoles(into: HoleItem, newer: HoleItem): HoleItem {
  * round still waiting to go out takes these fields over its own (field by
  * field); one already sent is never touched, and this one queues behind it
  * (ARCH-01). The merge is decided in IndexedDB's transaction, against what a
- * flush in another tab marked sent.
+ * flush in another tab marked sent. `settle`: as for `enqueue`, the hole is
+ * kept on the phone first and the rest waits for it.
  */
-export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }) {
+export async function enqueueHole(tournamentId: string, input: { round_id: string; hole: number; entered_by: string | null; entries: HoleEntry[] }, settle?: Promise<unknown>) {
   step('hole_saved')
   const entries = input.entries.filter((e) => Object.keys(e.fields).length > 0).map((e) => ({ ...e, base: e.base ?? {} }))
   if (!entries.length) return
@@ -860,26 +895,49 @@ export async function enqueueHole(tournamentId: string, input: { round_id: strin
     x.kind === 'hole' && !x.sent && x.tournamentId === tournamentId && x.payload.round_id === input.round_id && x.payload.hole === input.hole && (x.actingUid ?? null) === (fresh.actingUid ?? null)
   void askPersistence()
   let item: HoleItem = fresh
-  const d = getDb()
-  if (d) {
-    try {
-      await d.transaction('rw', d.items, async () => {
-        const into = (await d.items.where('tournamentId').equals(tournamentId).toArray()).filter(mergeable).sort((a, b) => a.seq - b.seq).at(-1)
-        item = into ? mergeHoles(into, fresh) : fresh
-        await d.items.put(item)
-      })
-    } catch {
-      throw new OutboxStorageError()
+  // Nothing of this hole still to send in this tab, nor on its way into storage (its first save, the usual case).
+  const holeKey = `${tournamentId}:${input.round_id}:${input.hole}:${fresh.actingUid ?? ''}`
+  const alone = !queue.some(mergeable) && !storingHoles.get(holeKey)
+  storingHoles.set(holeKey, (storingHoles.get(holeKey) ?? 0) + 1)
+  try {
+    const d = getDb()
+    if (d) {
+      try {
+        if (alone) {
+          // The hole alone, under its own key, at once. A merge only makes two calls one: another tab's unsent save
+          // of this hole, if any, goes out before this one (seq), each over the row it saw.
+          await putNow(d, fresh)
+        } else {
+          await d.transaction('rw', d.items, async () => {
+            const into = (await d.items.where('tournamentId').equals(tournamentId).toArray()).filter(mergeable).sort((a, b) => a.seq - b.seq).at(-1)
+            item = into ? mergeHoles(into, fresh) : fresh
+            await d.items.put(item)
+          })
+        }
+      } catch {
+        throw new OutboxStorageError()
+      }
     }
-  } else {
-    const into = queue.filter(mergeable).at(-1)
-    item = into ? mergeHoles(into, fresh) : fresh
+    // Captured again: what the phone asked about these players on this hole is settled, before this save can go
+    // out (a flush already under way takes it from the queue) and meet a question of its own.
+    await dropConflicts(entries.map((e) => conflictKey(input.round_id, e.player_id, input.hole))).catch(() => undefined)
+    if (!d) {
+      // No storage to decide the merge in: decided here, with nothing awaited before the queue takes it, so a second
+      // save of the hole made meanwhile merges into this one (PR 155's verifier).
+      const into = queue.filter(mergeable).at(-1)
+      item = into ? mergeHoles(into, fresh) : fresh
+    }
+    // Never over a newer version of it: two saves of the hole may finish storing in either order.
+    if (!queue.some((x) => x.key === item.key && x.seq > item.seq)) queue = [...queue.filter((x) => x.key !== item.key), item]
+  } finally {
+    const left = (storingHoles.get(holeKey) ?? 1) - 1
+    if (left > 0) storingHoles.set(holeKey, left)
+    else storingHoles.delete(holeKey)
   }
-  queue = [...queue.filter((x) => x.key !== item.key), item]
-  // Captured again: what the phone asked about these players on this hole is settled.
-  await dropConflicts(entries.map((e) => conflictKey(input.round_id, e.player_id, input.hole)))
-  publish()
+  // The other tabs read the queue again now: this tab may be closed before its frame.
   announce()
+  if (settle) await settle
+  publish()
   useTournament.getState().refresh()
   void flush()
 }
@@ -962,14 +1020,14 @@ function lockManager(): LockManagerLike | null {
   return locks
 }
 
-export function enqueueScore(tournamentId: string, payload: ScorePayload) {
-  return enqueue({ key: `score:${payload.round_id}:${payload.player_id}:${payload.hole}`, kind: 'score', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueScore(tournamentId: string, payload: ScorePayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `score:${payload.round_id}:${payload.player_id}:${payload.hole}`, kind: 'score', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
-export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload) {
-  return enqueue({ key: `tiebreak:${payload.round_id}:${payload.group_id}:${payload.hole}`, kind: 'tiebreak', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueTiebreak(tournamentId: string, payload: TiebreakPayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `tiebreak:${payload.round_id}:${payload.group_id}:${payload.hole}`, kind: 'tiebreak', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
-export function enqueueAward(tournamentId: string, payload: AwardPayload) {
-  return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+export function enqueueAward(tournamentId: string, payload: AwardPayload, settle?: Promise<unknown>) {
+  return enqueue({ key: `award:${payload.round_id}:${payload.group_id}:${payload.game_id}:${payload.hole}`, kind: 'award', tournamentId, payload, attempts: 0, createdAt: Date.now() }, settle)
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
   step('card_signed')
@@ -993,6 +1051,7 @@ export const _outboxTest = {
     conflictsAll = []
     running = null
     inFlight.clear()
+    storingHoles.clear()
     blocked = false
     persistAsked = false
     useOutbox.setState({ persistent: null })

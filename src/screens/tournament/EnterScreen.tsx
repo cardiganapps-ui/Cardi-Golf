@@ -6,6 +6,7 @@ import { Avatar } from '../../components/ui'
 import { EventName } from '../../components/primitives'
 import { nearestAccent } from '../../design/accents'
 import { claimPlayer, type LookupResult } from '../../data/api'
+import { InstallFirst } from '../../components/InstallGuide'
 import { ensureSession, useAuth } from '../../data/auth'
 import { refuseClaimWithUnsent } from '../../data/account'
 import { queuedFor } from '../../data/outbox'
@@ -129,6 +130,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             <h2>{t.enter.tapYourFace}</h2>
             {/* Above the faces: with a full field the grid runs past the first screen (TRUST-05). */}
             <LegalConsent enter />
+            {/* An iPhone's browser: install first, or this player enters twice (PWA-09). */}
+            <InstallFirst />
             {heldHoles > 0 && (
               <p className="help" role="status">
                 {t.sync.heldForPin(heldHoles)}

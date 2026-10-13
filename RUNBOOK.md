@@ -9,7 +9,12 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 - [ ] **Campo cargado.** Comité › Campos: los dos campos con sus tees, par e índice de golpe (SI) por hoyo (búsqueda por nombre o foto de la tarjeta). Comité › Rondas: cada día con su campo y fecha.
 - [ ] **Jugadores completos.** Comité › Jugadores: los 12, con categoría, hándicap base, tee, foto, quién es el homenajeado y quiénes son admins. Revisa la vista previa del 80 % y los golpes de ventaja. Luego toca **«Fijar hándicaps»** (arriba de la lista): desde ahí, cambiar un hándicap pide un motivo y todos lo ven en En vivo. Si no lo haces, se fijan solos al abrir la subasta.
 - [ ] **PINs enviados.** Comité › Jugadores › PIN: uno por jugador. Mándalos por WhatsApp uno a uno.
-- [ ] **App instalada en los 12 teléfonos.** Cada quien abre el link, "Agregar a pantalla de inicio" (la guía sale la primera vez) y entra con su cara + PIN. Una vez adentro, la sesión se queda en el teléfono.
+- [ ] **App instalada en los 12 teléfonos.** Cada quien abre el enlace del torneo.
+  - **En iPhone, primero se instala y luego se entra** (Compartir, que en iOS 26 está en «⋯», y «Agregar a inicio»). La app instalada no comparte nada con Safari: quien entra en Safari y luego instala tiene que volver a entrar. Entrar lo dice arriba de las caras. La app instalada desde la página del torneo abre directo en ese torneo; si no, en Inicio se pega el enlace o se escribe el código.
+  - **En Android** se entra primero; En vivo muestra «Instalar» (un toque) o los pasos del menú ⋮.
+  - Cada quien entra con su cara y su PIN, y la sesión se queda en el teléfono. La app instalada vuelve sola al torneo cada vez que se abre (durante cuatro días desde la última vez).
+  - Los pasos siguen en Más › «Cómo instalar la app» aunque alguien haya tocado «Ahora no».
+  - En un iPhone, un enlace tocado en WhatsApp abre Safari, no la app: allí la Tarjeta recuerda capturar desde el ícono. Si Safari tiene hoyos por subir, lo dice con el número: hay que dejarlo abierto con señal hasta que suban, porque la app no los ve.
 - [ ] **Banquero definido.** Comité › Torneo › Banquero (quien cobra inscripciones y martillazos y paga premios).
 - [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde. Desde que el torneo sale de preparación, la app vuelve a revisarlo con los jugadores y rondas reales: si alguien no llega o se agrega un día, En vivo, Dinero y el Comité avisan "faltan $…" hasta que se ajusten los premios.
 - [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.

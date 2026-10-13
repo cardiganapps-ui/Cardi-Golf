@@ -2042,10 +2042,11 @@
       "status": "fixed",
       "pr": 152,
       "tests": [
-        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx"
+        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx",
+        "src/data/outbox.settle.test.ts"
       ],
       "verifiedBy": null,
-      "residual": "The push landing and the live echo each still recompute the boards and re-render every screen after the network answers (PERF-09)."
+      "residual": "The push landing and the live echo each still recompute the boards and re-render every screen after the network answers (PERF-09). PR 152's deferred write lost a hole closed inside the frame; PR 155 stores it at the tap, committed at once. Its snake answer and contest winners still read first (shared key, REL-18) and finish 33–55 ms after the tap, and two tabs saving one hole within a few milliseconds can make two calls."
     },
     {
       "id": "PERF-13",
@@ -2213,9 +2214,13 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/components/InstallGuide.test.tsx",
+        "src/lib/install.test.ts",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2227,9 +2232,16 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/lib/install.test.ts",
+        "src/lib/joinInput.test.ts",
+        "src/lib/appManifest.test.ts",
+        "src/screens/HomeScreen.join.test.tsx",
+        "src/components/InstallGuide.test.tsx",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
