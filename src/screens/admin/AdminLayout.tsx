@@ -3,7 +3,8 @@
  * as tabs (a side column on a laptop). Sections carry a badge when the engine
  * flags something for them; modules that are off hide their section.
  */
-import { Link, NavLink, Outlet } from 'react-router'
+import { useLayoutEffect, useRef } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -13,9 +14,29 @@ import styles from './AdminLayout.module.css'
 import { useEntryInfo } from './entryInfo'
 import { readiness, setupBadge, teamPlay } from './readiness'
 
+/**
+ * On a phone the sections are a row that scrolls sideways: the one open is brought into view, in the middle of the
+ * row when it can be, so Calcutta or Datos is never off the edge (UX-24). The row scrolls, the page doesn't.
+ */
+function useActiveInView(sectionsFrom: unknown) {
+  const nav = useRef<HTMLElement>(null)
+  const { pathname } = useLocation()
+  useLayoutEffect(() => {
+    const row = nav.current
+    const active = row?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!row || !active || row.scrollWidth <= row.clientWidth) return
+    const r = row.getBoundingClientRect()
+    const a = active.getBoundingClientRect()
+    row.scrollLeft += a.left - r.left - (r.width - a.width) / 2
+    // Again once the settings arrive: a section they turn on (Calcutta, Parejas, Equipos) moves the open one along.
+  }, [pathname, sectionsFrom])
+  return nav
+}
+
 export function AdminLayout() {
   const { me, slug, tournamentId } = useTournamentCtx()
   const data = useTournament((s) => s.data)
+  const nav = useActiveInView(data?.settings)
   // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
   const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
   const entry = useEntryInfo(tournamentId, data, { enabled: setup })
@@ -74,7 +95,7 @@ export function AdminLayout() {
       </div>
       {me.via === 'platform' && <PlatformBanner />}
       <div className={styles.body}>
-        <nav className={styles.nav} aria-label={t.admin.sectionsLabel}>
+        <nav ref={nav} className={styles.nav} aria-label={t.admin.sectionsLabel}>
           {sections
             .filter((s) => s.show !== false)
             .map((s) => (

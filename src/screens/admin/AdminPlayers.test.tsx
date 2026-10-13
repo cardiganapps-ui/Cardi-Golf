@@ -99,6 +99,15 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
   })
 })
 
+describe('a player’s photo (PWA-16)', () => {
+  it('comes from the photos the phone has, or its camera: the picker no longer opens only the front camera', async () => {
+    await newPlayer()
+    const picker = sheet().querySelector('input[type="file"]')!
+    expect(picker.getAttribute('accept')).toBe('image/*')
+    expect(picker.hasAttribute('capture')).toBe(false)
+  })
+})
+
 describe('completePlayer', () => {
   const base: PlayerDraft = {
     full_name: 'Ana',
