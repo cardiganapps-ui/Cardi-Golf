@@ -3,6 +3,8 @@
  */
 import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
+import { t } from '../i18n/es-MX'
+import { UserError } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { step } from '../lib/telemetry'
 import { acceptLegal } from './legal'
@@ -679,6 +681,45 @@ export async function setGameResults(tournamentId: string, gameId: string, winne
   if (winners.length) unwrap(await sb.from('game_results').insert(winners.map((w) => ({ tournament_id: tournamentId, game_id: gameId, player_id: w.playerId, share: w.share }))).select('player_id'))
 }
 
-export async function saveSettings(tournamentId: string, settings: TournamentSettings) {
-  await updateTournament(tournamentId, { settings })
+/** The Comité's setup as `update_settings` reads and writes it: settings keys and the brand columns (0043). */
+export interface SetupFields {
+  settings?: Record<string, unknown>
+  name?: string
+  tagline?: string | null
+  accent_color?: string | null
+}
+/** The tournament's setup as the server holds it after a save, or after a refusal. */
+export interface SetupRow {
+  /** The settings jsonb as stored (raw: `tournaments.settings`). */
+  settings: unknown
+  name: string
+  tagline: string | null
+  accent_color: string | null
+}
+
+/**
+ * Refused because a key the save read changed meanwhile (another Comité
+ * screen or device): nothing was written. `now` is the row as it is, and
+ * `changed` names what moved (`settings.games`, `name`).
+ */
+export class SettingsChanged extends UserError {
+  readonly now: SetupRow
+  readonly changed: string[]
+  constructor(now: SetupRow, changed: string[]) {
+    super(t.admin.tournament.settingsChanged)
+    this.name = 'SettingsChanged'
+    this.now = now
+    this.changed = changed
+  }
+}
+
+/**
+ * The Comité's setup, key by key (ARCH-13): `seen` is what the screen started
+ * from for every key it depends on, `set` only what it changed (settingsWrite.ts
+ * builds both). Throws SettingsChanged when one of the keys seen moved since.
+ */
+export async function updateSettings(tournamentId: string, seen: SetupFields, set: SetupFields): Promise<SetupRow> {
+  const r = await rpc<{ ok: boolean; changed?: string[]; now: SetupRow }>('update_settings', { p_tournament_id: tournamentId, p_seen: seen, p_set: set })
+  if (!r.ok) throw new SettingsChanged(r.now, r.changed ?? [])
+  return r.now
 }

@@ -72,8 +72,11 @@ function send(server: FakeSupabase, token: string, req: Request): Promise<Respon
   return server.fetch(url, { method: req.method, headers, body: req.body === undefined ? undefined : JSON.stringify(req.body) })
 }
 
-/** Rows as a multiset, compared on the columns the case names. */
-const bag = (rows: Row[]) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k] ?? null]))).sort()
+/** A value with every object's keys in order, at any depth: jsonb keeps keys in an order of its own. */
+const sorted = (v: unknown): unknown =>
+  Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted((v as Row)[k])])) : v
+/** Rows as a multiset, compared on the columns the case names; a jsonb column by its content. */
+const bag = (rows: Row[]) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, sorted(r[k] ?? null)]))).sort()
 const pick = (row: Row, columns: string[]) => Object.fromEntries(columns.map((c) => [c, row[c] ?? null]))
 /** At least what the case writes: an object's named keys; a list's items each matching a different one, in any order (or in this one, `ordered`); else equal. */
 function holds(actual: unknown, want: unknown, ordered = false): boolean {

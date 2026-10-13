@@ -7,7 +7,8 @@ import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
 import { EmptyState, Segmented } from '../../components/primitives'
-import { adminSetAwards, saveSettings, seedGameEntries, setGameEntry, setGameResults } from '../../data/api'
+import { adminSetAwards, seedGameEntries, setGameEntry, setGameResults, SettingsChanged, updateSettings } from '../../data/api'
+import { settingsWrite } from '../../data/settingsWrite'
 import { CONTEST_SINGLE, type ContestHole, type ContestState } from '../../engine/games/contest'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournament } from '../../data/tournamentStore'
@@ -45,16 +46,24 @@ export function AdminGames() {
       await reload()
     } catch (e) {
       toast(humanError(e))
+      // The games changed on another screen or phone, and this change was not saved: show them as they are now.
+      if (e instanceof SettingsChanged) void reload()
     } finally {
       setBusy(false)
     }
   }
-  const updateGame = (id: string, fn: (g: GameConfig) => void) => {
+  /**
+   * Only the games are written, and only while they are what this screen
+   * showed (ARCH-13): a Torneo save of anything else in between stays, and a
+   * change to the games in between refuses this one instead of being undone.
+   */
+  const updateGame = async (id: string, fn: (g: GameConfig) => void) => {
     const next: TournamentSettings = structuredClone(settings)
     const g = next.games.find((x) => x.id === id)
-    if (!g) return Promise.resolve()
+    if (!g) return
     fn(g)
-    return saveSettings(tid, next)
+    const w = settingsWrite(snapshot.tournament.settings, settings, next, { whole: data.settingsError != null, readAll: false })
+    await updateSettings(tid, { settings: w.seen }, { settings: w.set })
   }
 
   const setMode = (g: GameConfig, mode: 'all' | 'list') =>

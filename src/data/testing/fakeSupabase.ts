@@ -57,7 +57,9 @@
  *     deletes a row removes them;
  *   - tournaments: only a PATCH of the status is served (0003's
  *     `tournaments_update`, 0029's close gate), with no audit and no
- *     results withdrawn on leaving Terminado; `publish_tournament_results`
+ *     results withdrawn on leaving Terminado; the settings and the brand
+ *     columns change through `update_settings` (0043) alone, with no audit
+ *     and, as with save_hole, no lock to wait on; `publish_tournament_results`
  *     answers its counts after its checks and keeps no results;
  *   - `claim_player`: the lockout after five wrong PINs and the attempts
  *     left (the fake always says 4), a PIN sent as a number; an unknown
@@ -527,6 +529,15 @@ function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
 
 /** `a is distinct from b`, with a missing column read as null. */
 const distinct = (a: unknown, b: unknown) => (a ?? null) !== (b ?? null)
+
+const isPlainObject = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v)
+/** JSON with every object's keys in order, at any depth. */
+const sortedJson = (v: unknown): unknown =>
+  Array.isArray(v) ? v.map(sortedJson) : isPlainObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortedJson(v[k])])) : v
+/** Two jsonb values are equal: by content, whatever order an object's keys come in. */
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(sortedJson(a)) === JSON.stringify(sortedJson(b))
+/** The order jsonb keeps an object's keys in: shorter first, then by their bytes (ASCII keys here). */
+const jsonbKeyOrder = (a: string, b: string) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0)
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
@@ -1217,6 +1228,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         protected: t ? (t.is_protected ?? false) : null,
       })
     }
+    if (name === 'update_settings') return updateSettings(args, as)
     if (name === 'assign_unassigned' || name === 'void_adjustment') return adjust(name, args, as)
     if (name === 'resolve_rejected_write') return resolveRejected(args, as)
     if (name === 'rejected_inbox') return rejectedInbox(args, as)
@@ -1287,6 +1299,67 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
     }
     return json(200, { assigned: entries.length })
+  }
+
+  /**
+   * 0043 `update_settings(p_tournament_id, p_seen, p_set)` (ARCH-13), in the
+   * order it checks: the Comité, the shape (each key set also seen), a blank
+   * name, then every key seen against the row. One changed: nothing written,
+   * `{ok: false, changed, now}`. Else only the keys set are written, a
+   * settings key set to null removed, and `{ok: true, now}`. Values compare
+   * as jsonb does: by content, key order aside; a key the row lacks is null.
+   */
+  function updateSettings(args: Record<string, unknown>, as: string): Response {
+    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const denied = 'Solo el Comité puede cambiar la configuración del torneo'
+    const unreadable = 'No pudimos leer ese cambio; abre la configuración otra vez y repítelo'
+    const tid = args.p_tournament_id
+    if (tid == null || as === 'anon' || !organizes(as, tid)) return fail('42501', denied)
+    const seen = args.p_seen
+    const set = args.p_set
+    if (!isPlainObject(seen) || !isPlainObject(set)) return fail('22023', unreadable)
+    // `-> 'settings'`: a key present with null is null, not absent.
+    const seenS = 'settings' in seen ? seen.settings : {}
+    const setS = 'settings' in set ? set.settings : {}
+    if (!isPlainObject(seenS) || !isPlainObject(setS)) return fail('22023', unreadable)
+    const KEYS = ['settings', 'name', 'tagline', 'accent_color']
+    const COLUMNS = ['name', 'tagline', 'accent_color']
+    const text = (o: Row, k: string, orNull: boolean) => !(k in o) || typeof o[k] === 'string' || (orNull && o[k] === null)
+    if (
+      Object.keys(seen).some((k) => !KEYS.includes(k)) ||
+      Object.keys(set).some((k) => !KEYS.includes(k)) ||
+      Object.keys(setS).some((k) => !(k in seenS)) ||
+      Object.keys(set).some((k) => k !== 'settings' && !(k in seen)) ||
+      ![seen, set].every((o) => text(o, 'name', false) && text(o, 'tagline', true) && text(o, 'accent_color', true))
+    ) {
+      return fail('22023', unreadable)
+    }
+    // btrim: spaces only, as create_tournament trims a name.
+    const btrim = (s: string) => s.replace(/^ +| +$/g, '')
+    if ('name' in set && btrim(set.name as string) === '') return fail('22023', 'El torneo necesita nombre')
+    const t = rowsOf('tournaments').find((x) => x.id === tid)
+    if (!t) return fail('42501', denied)
+    const cur: Row = isPlainObject(t.settings) ? t.settings : {}
+    const now = () => ({ settings: t.settings ?? {}, name: t.name, tagline: t.tagline ?? null, accent_color: t.accent_color ?? null })
+    const changed = [
+      ...Object.keys(seenS)
+        .sort(jsonbKeyOrder)
+        .filter((k) => !sameJson(cur[k] ?? null, seenS[k]))
+        .map((k) => `settings.${k}`),
+      ...COLUMNS.filter((k) => k in seen && !sameJson(t[k] ?? null, seen[k])),
+    ]
+    if (changed.length) return json(200, { ok: false, changed, now: now() })
+    if (!Object.keys(setS).length && !COLUMNS.some((k) => k in set)) return json(200, { ok: true, now: now() })
+    const next: Row = { ...cur }
+    for (const [k, v] of Object.entries(setS)) {
+      if (v === null) delete next[k]
+      else next[k] = v
+    }
+    t.settings = next
+    if ('name' in set) t.name = btrim(set.name as string)
+    if ('tagline' in set) t.tagline = set.tagline == null ? null : btrim(set.tagline as string) || null
+    if ('accent_color' in set) t.accent_color = set.accent_color
+    return json(200, { ok: true, now: now() })
   }
 
   /** 0028 `rejected_write_for_comite`: a refusal (not a conflict) of a value a person typed (not `auto`). */

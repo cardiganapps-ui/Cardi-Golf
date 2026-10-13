@@ -1947,6 +1947,11 @@ export const t = {
       publishFailed: 'No se publicaron los resultados:',
       unbalancedNearSave: 'La bolsa no cuadra: ajusta los premios antes de guardar.',
       unreachableNearSave: 'Hay premios que nadie puede ganar: ajústalos antes de guardar.',
+      /** update_settings refused a save (ARCH-13): what it read changed on another screen or phone, and nothing was written. */
+      settingsChanged: 'Alguien más cambió la configuración mientras tanto y tu cambio no se guardó. Ya ves cómo quedó: vuelve a hacerlo.',
+      /** Torneo after that refusal: the draft kept over what the server holds now. */
+      settingsMerged: 'Mientras editabas, alguien más guardó cambios en la configuración. Ya los ves aquí junto con los tuyos: revisa y vuelve a guardar.',
+      settingsMergedLost: 'Mientras editabas, alguien más cambió lo mismo que tú y quedó lo suyo. Tus demás cambios siguen aquí: revisa y vuelve a guardar.',
       brand: 'Marca',
       name: 'Nombre',
       tagline: 'Lema',
@@ -2011,6 +2016,9 @@ export const t = {
       bets: 'Apuestas directas',
       invalid: 'Hay un error en la configuración:',
       playersForCheck: 'Jugadores para el cuadre',
+      expectedPlayers: 'Jugadores que esperas',
+      expectedPlayersHint: 'Mientras no hay jugadores, la bolsa se revisa con este número.',
+      fieldUnknownNearSave: 'Escribe en Dinero cuántos jugadores esperas: con eso se revisa la bolsa.',
       danger: 'Zona de peligro',
       deleteTournament: 'Borrar este torneo',
       deleteConfirm: (name: string) => `Escribe «${name}» para confirmar que quieres borrar el torneo y todos sus datos.`,
