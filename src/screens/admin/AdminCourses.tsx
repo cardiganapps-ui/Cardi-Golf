@@ -26,6 +26,18 @@ export function AdminCourses() {
   const reload = useTournament((s) => s.reload)
   const uid = useAuth((s) => s.user?.id ?? null)
   const [draft, setDraft] = useState<CourseDraft | null>(null)
+  /**
+   * The draft as it opened, to tell typed work from a draft only looked at
+   * (UX-15). An import or a photo read is work from the start: '' never matches.
+   */
+  const [draftFrom, setDraftFrom] = useState('')
+  const openDraft = (d: CourseDraft, fresh: boolean) => {
+    setDraft(d)
+    setDraftFrom(fresh ? '' : JSON.stringify(d))
+    setEdited(null)
+  }
+  /** The editor's draft as typed (it keeps its own copy): what tells the sheet there is work in it. */
+  const [edited, setEdited] = useState<CourseDraft | null>(null)
   const [notes, setNotes] = useState<string[]>([])
   const [mode, setMode] = useState<'none' | 'search' | 'import'>('none')
   const [q, setQ] = useState('')
@@ -94,11 +106,12 @@ export function AdminCourses() {
 
   function importPicked() {
     if (!provider) return
-    setDraft(
+    openDraft(
       provenance(
         provider,
         provider.tees.filter((_, i) => pick.has(i)).map((tee) => ({ name: tee.name, color: tee.color, rating: tee.rating, slope: tee.slope, holes: tee.holes })),
       ),
+      true,
     )
     setNotes([])
     setMode('none')
@@ -121,7 +134,7 @@ export function AdminCourses() {
       const base = pendingCourseId.current ? await loadCourseDraft(pendingCourseId.current) : null
       pendingCourseId.current = null
       const d: CourseDraft = base ? { ...base, tees, source: base.source === 'manual' ? 'scorecard_photo' : base.source } : { name: r.courseName, source: 'scorecard_photo', tees }
-      setDraft(d)
+      openDraft(d, true)
       setNotes(issues)
       // Keep the photo for later re-checks (saved once the course exists).
       pendingPhoto.current = { blob, type }
@@ -172,7 +185,7 @@ export function AdminCourses() {
     try {
       pendingPhoto.current = null
       pendingCourseId.current = null
-      setDraft(await loadCourseDraft(id))
+      openDraft(await loadCourseDraft(id), false)
       setNotes([])
     } catch (e) {
       toast(humanError(e))
@@ -216,7 +229,7 @@ export function AdminCourses() {
           onClick={() => {
             pendingPhoto.current = null
             pendingCourseId.current = null
-            setDraft({ name: '', tees: [blankTee()] })
+            openDraft({ name: '', tees: [blankTee()] }, false)
             setNotes([])
           }}
         >
@@ -324,8 +337,8 @@ export function AdminCourses() {
         )}
       </Sheet>
 
-      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide>
-        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} />}
+      <Sheet open={!!draft} onClose={closeDraft} title={draft?.id ? t.common.edit : C.review} wide dirty={!!draft && JSON.stringify(edited ?? draft) !== draftFrom}>
+        {draft && <CourseEditor draft={draft} notes={notes} busy={busy} onCancel={closeDraft} onSave={(d) => void save(d)} onEdit={setEdited} />}
       </Sheet>
     </div>
   )

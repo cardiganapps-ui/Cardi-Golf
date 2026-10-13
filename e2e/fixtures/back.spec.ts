@@ -116,3 +116,29 @@ test('a link followed from inside a sheet leaves no dead back step behind (PWA-0
   await page.goBack()
   await expect(page).toHaveURL(/\/fixture$/)
 })
+
+test('a sheet with typed work asks before back throws it away; back on the question keeps editing (UX-15, PWA-05)', async ({ page }) => {
+  await open(page, '/t/_/full12-live/admin/jugadores')
+  const url = page.url()
+  await page.getByRole('button', { name: t.admin.players.add }).click()
+  const form = page.getByRole('dialog', { name: t.admin.players.add })
+  const name = form.getByLabel(t.admin.players.fullName)
+  await name.click()
+  await name.pressSequentially('Camilo Duarte', { delay: 30 })
+  // Back: the question, and the form still there under it.
+  await page.goBack()
+  const ask = page.getByRole('dialog', { name: t.common.discardTitle })
+  await expect(ask).toBeVisible()
+  await expect(name).toHaveValue('Camilo Duarte')
+  expect(page.url()).toBe(url)
+  // Back again: the question goes, the typing stays.
+  await page.goBack()
+  await expect(ask).toHaveCount(0)
+  await expect(name).toHaveValue('Camilo Duarte')
+  expect(page.url()).toBe(url)
+  // «Cerrar», then «Descartar»: gone, and the next back leaves the screen.
+  await form.getByRole('button', { name: t.common.close }).click()
+  await page.getByRole('dialog', { name: t.common.discardTitle }).getByRole('button', { name: t.common.discard }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(page.url()).toBe(url)
+})

@@ -48,8 +48,13 @@ export const blankTee = (name = 'Azules'): CourseDraftTee => ({
 })
 
 /** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
-export function CourseEditor({ draft, notes, busy, onSave, onCancel }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void }) {
-  const [d, setD] = useState<CourseDraft>(draft)
+export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; onEdit?: (d: CourseDraft) => void }) {
+  const [d, setDraftHere] = useState<CourseDraft>(draft)
+  /** Every edit, and the caller hears of it (`onEdit`): its sheet asks before a stray tap discards the card (UX-15). */
+  const setD = (next: CourseDraft) => {
+    setDraftHere(next)
+    onEdit?.(next)
+  }
   const [teeIdx, setTeeIdx] = useState(0)
   const [paste, setPaste] = useState('')
   const [pasteErr, setPasteErr] = useState<string | null>(null)
