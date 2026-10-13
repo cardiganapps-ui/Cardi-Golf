@@ -190,7 +190,8 @@ reset role;
 select harness.check(:'phone_tid' = :'t_a', 'a phone''s score, sent without the tenant as every bundle sends it, lands with its round''s tournament');
 select harness.check(:'upsert_tid' = :'t_a' and :'upsert_strokes' = '5', 'an upsert''s update path (no BEFORE INSERT trigger) keeps it');
 select harness.check(:'phone_names_tid' = '42501', 'a phone cannot write scores.tournament_id itself (no column grant, like reason and disputed): ' || :'phone_names_tid');
--- Every child table, without the tenant, as the Comité writes them.
+-- Every child table, without the tenant, as the Comité writes them (Beto's lot open for its bid, 0048).
+update public.calcutta_lots set status = 'open' where id = 'a5000000-0000-4000-8000-000000000002';
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 create temp table filled (tbl text, tid uuid);
@@ -209,7 +210,7 @@ with x as (insert into public.hole_awards (round_id, group_id, hole, game_id, pl
   insert into pg_temp.filled select 'hole_awards', tournament_id from x;
 with x as (insert into public.photos (round_id, player_id, hole, url) values (:'r_a', :'beto', 4, 'https://x.test/4.jpg') returning tournament_id)
   insert into pg_temp.filled select 'photos', tournament_id from x;
-with x as (insert into public.calcutta_bids (lot_id, bidder_id, amount) values ('a5000000-0000-4000-8000-000000000002', :'ana', 250) returning tournament_id)
+with x as (insert into public.calcutta_bids (lot_id, bidder_id, amount) values ('a5000000-0000-4000-8000-000000000002', :'ana', 500) returning tournament_id)
   insert into pg_temp.filled select 'calcutta_bids', tournament_id from x;
 with x as (insert into public.calcutta_buybacks (lot_id, pct, amount) values ('a5000000-0000-4000-8000-000000000002', 10, 25) returning tournament_id)
   insert into pg_temp.filled select 'calcutta_buybacks', tournament_id from x;

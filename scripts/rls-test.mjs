@@ -385,7 +385,21 @@ try {
   const { data: lotsStill } = await A.sb.from('calcutta_lots').select('id').eq('tournament_id', A.tournament.id)
   check(lotsForeign?.code === '22023' && lotsStill?.length === 2, 'a draw naming another tournament\'s player is refused, and the lots stand', { lotsForeign })
   const soldLot = drawnLots[0]
-  await A.sb.from('calcutta_lots').update({ status: 'sold', owner_id: A.player.id, price: 500, sold_at: new Date().toISOString() }).eq('id', soldLot.id)
+  // The Calcutta's money rules on the server (0048, MONEY-19): bids only on the open lot, up in the increment from
+  // the bid standing ($250 over the opening $250), by the tournament's players; the hammer sells at the top bid to its bidder.
+  const bidOn = (bidder, amount) => A.sb.from('calcutta_bids').insert({ lot_id: soldLot.id, bidder_id: bidder, amount }).select('id')
+  const hammer = (owner, price) => A.sb.from('calcutta_lots').update({ status: 'sold', owner_id: owner, price, sold_at: new Date().toISOString() }).eq('id', soldLot.id).select('id')
+  const { error: pendingBid } = await bidOn(A.player.id, 500)
+  const { error: pendingSale } = await hammer(A.player.id, 250)
+  await A.sb.from('calcutta_lots').update({ status: 'open' }).eq('id', soldLot.id).select('id')
+  const { error: offStep } = await bidOn(A.player.id, 620)
+  const { error: foreignBidder } = await bidOn(B.player.id, 500)
+  const { error: onStep } = await bidOn(A.player.id, 500)
+  check(pendingBid?.code === '22023' && pendingSale?.code === '22023' && offStep?.code === '22023' && /la siguiente es \$750/.test(offStep?.message ?? '') && foreignBidder?.code === '22023' && !onStep, 'the Calcutta (0048): bids only on the open lot, up in the increment, by the tournament\'s players', { pendingBid, pendingSale, offStep, foreignBidder, onStep })
+  const { error: staleSale } = await hammer(A.player.id, 250)
+  const { error: sale } = await hammer(A.player.id, 500)
+  const { error: saleChanged } = await A.sb.from('calcutta_lots').update({ price: 1370 }).eq('id', soldLot.id).select('id')
+  check(staleSale?.code === '22023' && !sale && saleChanged?.code === '22023', 'the hammer sells at the bid standing, and a sale is never changed after (0048)', { staleSale, sale, saleChanged })
   await A.sb.from('calcutta_buybacks').insert({ lot_id: soldLot.id, pct: 50, amount: 250 })
   const { error: reopenDev } = await dev.rpc('reopen_lot', { p_lot_id: soldLot.id })
   const { data: lotReopened, error: reopenErr } = await A.sb.rpc('reopen_lot', { p_lot_id: soldLot.id })
