@@ -3,6 +3,7 @@
  */
 import { ordinal, t } from '../../i18n/es-MX'
 import type { Explanation } from '../types'
+import { pesos } from './pesos'
 
 export interface Ranked<T> {
   item: T
@@ -130,7 +131,6 @@ export function onlyWithResult<T>(groups: RankGroup<T>[], has: (t: T) => boolean
   return out
 }
 
-const pesos = (n: number) => `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
 
 /**
  * Once a game is over, the warning for its places with a prize that nobody
@@ -184,15 +184,15 @@ export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (
       remainder -= extra
       const amount = base + extra
       const steps: string[] = []
-      if (n === 1) steps.push(`${ordinal(String(g.position))} lugar: $${total}`)
+      if (n === 1) steps.push(`${ordinal(String(g.position))} lugar: ${pesos(total)}`)
       else {
         steps.push(
-          `Empate a ${n} en el ${ordinal(String(g.position))}: se reparten los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))} ($${total})`,
+          `Empate a ${n} en el ${ordinal(String(g.position))}: se reparten los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))} (${pesos(total)})`,
         )
-        steps.push(`$${total} ÷ ${n} = $${base}${extra ? ' (+$1 de redondeo)' : ''}`)
+        steps.push(`${pesos(total)} ÷ ${n} = ${pesos(base)}${extra ? ' (+$1 de redondeo)' : ''}`)
         steps.push(`Empatados: ${t.common.andList(g.members.map(name))}`)
       }
-      out.push({ item: m, amount, why: { title: `$${amount}`, steps } })
+      out.push({ item: m, amount, why: { title: pesos(amount), steps } })
       void i
     })
   }
