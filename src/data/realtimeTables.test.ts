@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { APPLIED_TABLES, RELOADED_TABLES } from './realtimeApply'
-import { INBOX_TABLES, ON_PRODUCTION, REALTIME_TABLES } from './realtimeTables'
+import { filterColumn, INBOX_TABLES, liveFilter, ON_PRODUCTION, REALTIME_TABLES } from './realtimeTables'
 import { SNAPSHOT_KEYS } from './snapshotTables'
 
 const dir = join(process.cwd(), 'supabase/migrations')
@@ -40,6 +40,87 @@ function publishedThrough(last: string): Set<string> {
   }
   return tables
 }
+
+/** The tables that log their whole old row (`replica identity full`) after replaying the migrations up to `last`. */
+function fullIdentityThrough(last: string): Set<string> {
+  const sql = files
+    .filter((f) => prefix(f) <= last)
+    .map(text)
+    .join('\n')
+  const tables = new Set<string>()
+  for (const m of sql.matchAll(/alter table\s+(?:only\s+)?(?:if exists\s+)?(?:public\.)?(\w+)\s+replica identity\s+(full|default|nothing|using index)\b/gi)) {
+    if (m[2]!.toLowerCase() === 'full') tables.add(m[1]!)
+    else tables.delete(m[1]!)
+  }
+  return tables
+}
+
+/**
+ * The columns `table` has after replaying the migrations up to `last`: its `create table`'s, each one an
+ * `alter table … add column` added since (or 0030's loop, which adds `tournament_id` over a list of
+ * tables), less each one dropped.
+ */
+function columnsThrough(table: string, last: string): Set<string> {
+  const cols = new Set<string>()
+  for (const f of files.filter((f) => prefix(f) <= last)) {
+    const sql = text(f)
+    for (const m of sql.matchAll(new RegExp(`create table\\s+(?:if not exists\\s+)?(?:public\\.)?${table}\\s*\\(`, 'gi'))) {
+      let depth = 1
+      let start = m.index! + m[0].length
+      for (let i = start; i < sql.length && depth > 0; i++) {
+        const ch = sql[i]
+        if (ch === '(') depth++
+        else if (ch === ')') depth--
+        if ((ch === ',' && depth === 1) || depth === 0) {
+          const name = /^\s*"?(\w+)/.exec(sql.slice(start, i))?.[1]?.toLowerCase()
+          if (name && !['constraint', 'primary', 'unique', 'check', 'foreign', 'exclude', 'like'].includes(name)) cols.add(name)
+          start = i + 1
+        }
+      }
+    }
+    for (const m of sql.matchAll(new RegExp(`alter table\\s+(?:only\\s+)?(?:if exists\\s+)?(?:public\\.)?${table}\\b([^;]*);`, 'gi'))) {
+      for (const a of m[1]!.matchAll(/\badd\s+column\s+(?:if not exists\s+)?"?(\w+)/gi)) cols.add(a[1]!.toLowerCase())
+      for (const d of m[1]!.matchAll(/\bdrop\s+column\s+(?:if exists\s+)?"?(\w+)/gi)) cols.delete(d[1]!.toLowerCase())
+    }
+    for (const m of sql.matchAll(/\bdo \$\$([\s\S]*?)\$\$;/gi)) {
+      const added = /format\('alter table public\.%I add column if not exists (\w+)/i.exec(m[1]!)
+      if (added && new RegExp(`\\(\\s*\\d+\\s*,\\s*'${table}'`).test(m[1]!)) cols.add(added[1]!.toLowerCase())
+    }
+  }
+  return cols
+}
+
+describe('each binding is filtered by tournament (DB-05)', () => {
+  it('reads the columns the migrations give a table, 0030’s loop included', () => {
+    expect(columnsThrough('players', '0001').has('tournament_id')).toBe(true)
+    expect(columnsThrough('groups', '0029').has('tournament_id')).toBe(false)
+    expect(columnsThrough('groups', '0030').has('tournament_id')).toBe(true)
+    expect(columnsThrough('calcutta_bids', '0030').has('tournament_id')).toBe(true)
+    expect(columnsThrough('rejected_writes', '0026').has('tournament_id')).toBe(true)
+    expect(columnsThrough('scores', '0001').has('putts')).toBe(true)
+    expect(columnsThrough('scores', '0001').has('primary')).toBe(false)
+  })
+
+  it('on a column each table has on production: Realtime refuses a filter on a column the table lacks, and the whole channel with it (REL-01)', () => {
+    const lacking = REALTIME_TABLES.filter((t) => !columnsThrough(t, ON_PRODUCTION).has(filterColumn(t)))
+    expect(lacking, `give these the column in a migration, apply it to production, then move ON_PRODUCTION`).toEqual([])
+  })
+
+  it('a table filtered on anything but its primary key logs its whole old row on production: Postgres Changes reads a delete’s filter from what the delete logged, so without it the phone hears none of its deletes', () => {
+    const blind = REALTIME_TABLES.filter((t) => filterColumn(t) !== 'id' && !fullIdentityThrough(ON_PRODUCTION).has(t))
+    expect(blind, `apply the migration that sets replica identity full to production, read it back, then move ON_PRODUCTION`).toEqual([])
+  })
+
+  it('the guard bites: through 0048 no table logs its whole old row, through 0049 every filtered one does', () => {
+    expect(fullIdentityThrough('0048').size).toBe(0)
+    expect(REALTIME_TABLES.filter((t) => filterColumn(t) !== 'id' && !fullIdentityThrough('0049').has(t))).toEqual([])
+  })
+
+  it('the tournament row by its id, every other table by its tournament', () => {
+    expect(liveFilter('tournaments', 't1')).toBe('id=eq.t1')
+    for (const t of REALTIME_TABLES.filter((t) => t !== 'tournaments')) expect(liveFilter(t, 't1')).toBe('tournament_id=eq.t1')
+  })
+})
 
 describe('realtime tables', () => {
   it('finds the publication in the migrations', () => {

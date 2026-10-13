@@ -1018,9 +1018,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 156,
+      "tests": [
+        "src/data/realtimeTables.test.ts",
+        "src/data/tournamentStore.realtime.test.ts",
+        "supabase/tests/realtime_filters.sql",
+        "e2e/stack/isolation.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done on the phone (#92, #109, #111, #112): a delete on an applied table removes only a row this snapshot holds, a structural change reloads only when it concerns this tournament (concernsBoards), the Comité's inbox re-reads only for a row it holds, and since 0030 every child row carries tournament_id, so another tournament's insert or update is dropped at once (tournamentStore.apply.test.ts replays another tournament's deletes and inserts and asserts no request). Left: the channel is still postgres_changes with no filter, so every delete's primary key still reaches every phone listening to the table, and each counts against the Realtime quota; the fix is a tournament_id filter per subscription or Broadcast on a private per-tournament topic (PLAN §5.2)."
     },

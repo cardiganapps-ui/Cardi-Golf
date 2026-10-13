@@ -10,6 +10,8 @@ interface FakeChannel {
   name: string
   opts: unknown
   bindings: string[]
+  /** Each binding's whole spec, as realtime-js sends it to the server. */
+  specs: Array<Record<string, unknown>>
   system?: (p: unknown) => void
   status?: StatusCb
   on(type: string, filter: { table?: string }, cb: (p: unknown) => void): FakeChannel
@@ -23,9 +25,13 @@ const fakeClient = {
       name,
       opts,
       bindings: [],
+      specs: [],
       on(type, filter, cb) {
         if (type === 'system') ch.system = cb
-        else ch.bindings.push(filter.table ?? '')
+        else {
+          ch.bindings.push(filter.table ?? '')
+          ch.specs.push(filter)
+        }
         return ch
       },
       subscribe(cb) {
@@ -75,6 +81,16 @@ describe('tournament channel', () => {
     const ch = channels[0]!
     expect(ch.opts).toEqual({ config: { postgres_changes_options: { wait: true } } })
     expect(ch.bindings).toEqual([...REALTIME_TABLES])
+  })
+
+  it('filters every binding to this tournament, so the server sends no other one’s changes, deletes included (DB-05)', () => {
+    useTournament.getState().subscribe()
+    const specs = channels[0]!.specs
+    expect(specs).toHaveLength(REALTIME_TABLES.length)
+    for (const spec of specs) {
+      const filter = spec.table === 'tournaments' ? 'id=eq.t1' : 'tournament_id=eq.t1'
+      expect(spec, String(spec.table)).toEqual({ event: '*', schema: 'public', table: spec.table, filter })
+    }
   })
 
   it('shows the outage, polls, and rebuilds the channel after a rejected join', async () => {

@@ -20,6 +20,9 @@ export const SLUGS = {
   sameCard: 'e2e-misma-tarjeta',
   conflict: 'e2e-conflicto',
   fourG: 'e2e-cuatro-g',
+  /** DB-05: the phone's tournament, and another one whose changes must never reach it. */
+  own: 'e2e-propio',
+  other: 'e2e-ajeno',
 } as const
 
 export interface FieldPlayer {

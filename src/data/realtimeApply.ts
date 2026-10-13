@@ -46,7 +46,7 @@ export interface LiveChange {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE'
   /** The row after an insert or update (empty for a delete). */
   new: Row
-  /** For a delete, the primary key (the default replica identity). */
+  /** For a delete, the primary key: with RLS on, Realtime cuts a delete's old record to it, whatever the table logs (0049 logs the whole row). */
   old: Row
 }
 
