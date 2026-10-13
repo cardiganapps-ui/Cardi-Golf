@@ -1621,11 +1621,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 128,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the TV's Individual and pairs rows slide to their new places when the board re-sorts (layout=position, the phone board's easeSlow; none under reduced motion), a re-sort in the last 2 s of the Individual board's turn holds it 2 s more, and a rule under the board fills over the 12 s with «Sigue: <next board>» at its right (a `timer` from design/motion, static under reduced motion); boards already cross-fade (MOT-01). The spec checks the rule fills, names the next board, and that board comes next."
     },
     {
       "id": "MOT-09",
@@ -4026,11 +4028,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 128,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the auction lot card says the tier in words at the line's size and in the board's ink («Categoría C, hándicap de juego 10»; board-ink on board-surface is held at 7:1 by tokens.test.ts), not a 12 px badge at 1.3:1; the fixture spec checks the colour. The ranked boards keep their own badge override."
     },
     {
       "id": "VIS-08",
@@ -4040,11 +4044,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 128,
+      "tests": [
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed on both show surfaces: the TV and Ceremonia put the tournament's logo on a light plate (--on-dark, --r-md, padding, contained), so a dark mark on a transparent ground reads on the board green. Left: a separate square mark for 40 px slots, a preview at 40 px and on the board in the Comité, and downscaling on upload (the 889 KB patch for a 40 px slot) are not built."
     },
     {
       "id": "VIS-09",

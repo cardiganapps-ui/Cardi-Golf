@@ -2720,6 +2720,10 @@ export const t = {
     range: (from: number, to: number, of: number) => `${from}–${to} de ${of}`,
     invested: 'invirtió',
     worth: 'vale hoy',
+    /** The lot card's tier, in words the room reads from the couch (VIS-07): «Categoría C». */
+    tier: (tier: string) => `Categoría ${tier}`,
+    /** Under the board, which one comes next (MOT-08). */
+    next: (board: string) => `Sigue: ${board}`,
   },
   errors: {
     missingEnv: 'Falta configurar la conexión a la base de datos (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',

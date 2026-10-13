@@ -97,3 +97,37 @@ for (const [w, h] of ROOMS) {
     expect(box.y + box.height).toBeLessThanOrEqual(h)
   })
 }
+
+test('under the board, a rule fills toward the next board and names it; the next one is the one named (MOT-08)', async ({ page }) => {
+  // Real time, as the VIS-04 test: the rotation and its transitions run on the browser's own clock.
+  test.setTimeout(60_000)
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.goto('/t/_/full12-finished/tv', { waitUntil: 'networkidle' })
+  const next = page.locator('footer').getByText(/^Sigue: /)
+  await expect(next).toBeVisible()
+  const label = ((await next.textContent()) ?? '').replace(/^Sigue: /, '')
+  expect(label.length).toBeGreaterThan(0)
+  // The rule is filling: its scale grows toward 1 over the 12 s.
+  const fill = page.locator('footer [class*="_rotationFill_"]')
+  const scale = () => fill.evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a)
+  const a = await scale()
+  await page.waitForTimeout(1_500)
+  expect(await scale()).toBeGreaterThan(a)
+  await expect(page.locator('section h2', { hasText: label })).toBeVisible({ timeout: 15_000 })
+})
+
+test('the auction lot card says the tier in words, in the board ink (VIS-07)', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 })
+  await page.goto('/t/_/auction12/tv', { waitUntil: 'networkidle' })
+  const tier = page.getByText(/^Categoría [A-Z]$/).first()
+  await expect(tier).toBeVisible()
+  const { color, ink } = await tier.evaluate((el) => {
+    const probe = document.createElement('span')
+    probe.style.color = 'var(--board-ink)'
+    el.parentElement!.appendChild(probe)
+    const ink = getComputedStyle(probe).color
+    probe.remove()
+    return { color: getComputedStyle(el).color, ink }
+  })
+  expect(color).toBe(ink)
+})
