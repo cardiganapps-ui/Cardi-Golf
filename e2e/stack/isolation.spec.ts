@@ -5,10 +5,11 @@
  * (0049), so the server can read a delete's tournament too.
  *
  * One phone in e2e-propio. The database writes a score, changes it and
- * deletes it in e2e-ajeno, then the same in e2e-propio. The phone's socket
+ * deletes it, in e2e-ajeno and in e2e-propio, step by step. The phone's socket
  * must carry all three of its own tournament's changes and none of the
- * other's. Without the filter the other's three arrive (deletes reached every
- * phone listening); without 0049 the phone's own delete never does.
+ * other's. Without the filter the other's delete arrives (RLS cannot check a
+ * delete, so it reached every phone listening); without 0049 the phone's own
+ * delete never does.
  */
 import type { WebSocket } from '@playwright/test'
 import { lit, sql } from './env'
@@ -36,9 +37,9 @@ function heard(frame: string): Heard | null {
   return { table: data.table, type: data.type, id: data.record?.id ?? data.old_record?.id ?? null }
 }
 
-/** One score for Hugo (group 2, nobody's card here) on hole 18 of the tournament's live day: written, changed, deleted. Returns its id. */
-function writeChangeDelete(slug: string): string {
-  const { id } = sql<{ id: string }>(`
+/** One score for Hugo (group 2, nobody's card here) on hole 18 of the tournament's live day. Returns its id. */
+function write(slug: string): string {
+  return sql<{ id: string }>(`
     with p as (
       select pl.id as player_id, r.id as round_id
       from public.players pl
@@ -50,11 +51,10 @@ function writeChangeDelete(slug: string): string {
       select round_id, player_id, 18, 5, 2, false from p
       returning id
     )
-    select json_build_object('id', id) from ins`)
-  sql(`with u as (update public.scores set strokes = 6 where id = ${lit(id)} returning 1) select to_json(count(*)) from u`)
-  sql(`with d as (delete from public.scores where id = ${lit(id)} returning 1) select to_json(count(*)) from d`)
-  return id
+    select json_build_object('id', id) from ins`).id
 }
+const change = (id: string) => sql(`with u as (update public.scores set strokes = 6 where id = ${lit(id)} returning 1) select to_json(count(*)) from u`)
+const remove = (id: string) => sql(`with d as (delete from public.scores where id = ${lit(id)} returning 1) select to_json(count(*)) from d`)
 
 test('a phone hears its own tournament’s changes, a delete included, and nothing of another’s (DB-05)', async ({ join }) => {
   const ana = await join(SLUGS.own, 'Ana')
@@ -73,12 +73,20 @@ test('a phone hears its own tournament’s changes, a delete included, and nothi
   await page.goto(`/t/${SLUGS.own}`)
   await expectLive(page)
 
-  // The other tournament first: had the server meant to send its changes, they would land before the phone's own.
-  const theirs = writeChangeDelete(SLUGS.other)
-  const mine = writeChangeDelete(SLUGS.own)
-
+  // Each step in the other tournament first: had the server meant to send its change, it would land before the
+  // phone's own. And each waits for the phone's own change: Realtime checks an insert or an update against the
+  // row as it stands, so a row deleted before it got there is not sent.
   const of = (id: string) => frames.filter((h) => h.table === 'scores' && h.id === id).map((h) => h.type)
-  await expect.poll(() => of(mine), { message: 'the phone’s own tournament: written, changed, deleted', timeout: 15_000 }).toEqual(['INSERT', 'UPDATE', 'DELETE'])
+  const heardOwn = (types: string[], what: string) => expect.poll(() => of(mine), { message: `the phone’s own tournament: ${what}`, timeout: 15_000 }).toEqual(types)
+  const theirs = write(SLUGS.other)
+  const mine = write(SLUGS.own)
+  await heardOwn(['INSERT'], 'written')
+  change(theirs)
+  change(mine)
+  await heardOwn(['INSERT', 'UPDATE'], 'changed')
+  remove(theirs)
+  remove(mine)
+  await heardOwn(['INSERT', 'UPDATE', 'DELETE'], 'deleted')
   // A moment more for anything still on its way.
   await page.waitForTimeout(1_000)
   expect(of(theirs), 'another tournament’s changes reached this phone').toEqual([])
