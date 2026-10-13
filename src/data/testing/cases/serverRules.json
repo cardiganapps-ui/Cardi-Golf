@@ -12630,6 +12630,964 @@
         "code": "42501",
         "message": "Solo el Comité publica resultados"
       }
+    },
+    {
+      "name": "update_settings: the key a Comité screen changed is written, checked against what the screen saw; every other key stays (0043, ARCH-13)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {
+              "entryFee": 500
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 600
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": true,
+          "now": {
+            "settings": {
+              "entryFee": 600,
+              "games": [],
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              }
+            },
+            "name": "Configuración",
+            "tagline": null
+          }
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 600,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": []
+              },
+              "name": "Configuración"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: two screens saving different keys both stay: Torneo's entry, then Juegos' games, each from the row it saw (ARCH-13)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "update_settings",
+          "args": {
+            "p_tournament_id": "t3",
+            "p_seen": {
+              "settings": {
+                "entryFee": 500
+              }
+            },
+            "p_set": {
+              "settings": {
+                "entryFee": 600
+              }
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {
+              "games": []
+            }
+          },
+          "p_set": {
+            "settings": {
+              "games": [
+                {
+                  "id": "skins",
+                  "label": "Skins"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": true
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 600,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": [
+                  {
+                    "id": "skins",
+                    "label": "Skins"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a key someone changed since the screen saw it refuses the whole save; the answer names it and carries the row as it is (ARCH-13)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "update_settings",
+          "args": {
+            "p_tournament_id": "t3",
+            "p_seen": {
+              "settings": {
+                "entryFee": 500
+              }
+            },
+            "p_set": {
+              "settings": {
+                "entryFee": 600
+              }
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {
+              "entryFee": 500,
+              "games": []
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 700,
+              "games": [
+                {
+                  "id": "skins",
+                  "label": "Skins"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": false,
+          "changed": [
+            "settings.entryFee"
+          ],
+          "now": {
+            "settings": {
+              "entryFee": 600,
+              "games": []
+            }
+          }
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 600,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a key the screen only read, changed meanwhile, refuses too: what Torneo's prize check read is what it stores (ARCH-13)",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "update_settings",
+          "args": {
+            "p_tournament_id": "t3",
+            "p_seen": {
+              "settings": {
+                "games": []
+              }
+            },
+            "p_set": {
+              "settings": {
+                "games": [
+                  {
+                    "id": "skins",
+                    "label": "Skins"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {
+              "entryFee": 500,
+              "games": []
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 700
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": false,
+          "changed": [
+            "settings.games"
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 500,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": [
+                  {
+                    "id": "skins",
+                    "label": "Skins"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a settings key set to null goes, and a key the row lacks was seen as null",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "expectedPlayers": null
+            }
+          },
+          "p_set": {
+            "settings": {
+              "labels": null,
+              "expectedPlayers": 12
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": true
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 500,
+                "games": [],
+                "expectedPlayers": 12
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: the brand columns are checked and written the same way: the name trimmed, a blank tagline empty",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "name": "Configuración",
+            "tagline": null,
+            "accent_color": null
+          },
+          "p_set": {
+            "name": "  Ensayo de Cabos  ",
+            "tagline": "   ",
+            "accent_color": "#0F6E77"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": true,
+          "now": {
+            "name": "Ensayo de Cabos",
+            "tagline": null,
+            "accent_color": "#0F6E77"
+          }
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "name": "Ensayo de Cabos",
+              "tagline": null,
+              "accent_color": "#0F6E77",
+              "settings": {
+                "entryFee": 500,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a name changed meanwhile refuses a tagline saved beside it",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "before": [
+        {
+          "method": "RPC",
+          "fn": "update_settings",
+          "args": {
+            "p_tournament_id": "t3",
+            "p_seen": {
+              "name": "Configuración"
+            },
+            "p_set": {
+              "name": "Otro nombre"
+            }
+          }
+        }
+      ],
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "name": "Configuración",
+            "tagline": null
+          },
+          "p_set": {
+            "tagline": "La despedida"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": false,
+          "changed": [
+            "name"
+          ],
+          "now": {
+            "name": "Otro nombre",
+            "tagline": null
+          }
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "name": "Otro nombre",
+              "tagline": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: nothing is written blind: a key set without what the screen saw of it is refused, in Spanish",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "settings": {}
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 1
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "No pudimos leer ese cambio; abre la configuración otra vez y repítelo"
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 500,
+                "labels": {
+                  "lastPlace": "Último lugar",
+                  "honoree": "El novio"
+                },
+                "games": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a blank name is refused",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "name": "Configuración"
+          },
+          "p_set": {
+            "name": "   "
+          }
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "El torneo necesita nombre"
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t3"
+          },
+          "rows": [
+            {
+              "name": "Configuración"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: only the settings and the brand columns: another column is refused",
+      "as": "uid-org",
+      "given": {
+        "tournaments": [
+          {
+            "id": "t3",
+            "slug": "configuracion",
+            "name": "Configuración",
+            "join_code": "CONFIG",
+            "status": "setup",
+            "settings": {
+              "entryFee": 500,
+              "labels": {
+                "lastPlace": "Último lugar",
+                "honoree": "El novio"
+              },
+              "games": []
+            }
+          }
+        ],
+        "tournament_organizers": [
+          {
+            "tournament_id": "t3",
+            "auth_user_id": "uid-org",
+            "role": "owner"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t3",
+          "p_seen": {
+            "slug": "otro"
+          },
+          "p_set": {}
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "22023",
+        "message": "No pudimos leer ese cambio; abre la configuración otra vez y repítelo"
+      }
+    },
+    {
+      "name": "update_settings: a player's phone is not the Comité",
+      "as": "uid-p1",
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_seen": {
+            "settings": {
+              "entryFee": null
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 1
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo el Comité puede cambiar la configuración del torneo"
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t1"
+          },
+          "rows": [
+            {
+              "name": "Ensayo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: a player the Comité made admin is the Comité",
+      "as": "uid-pz",
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_seen": {
+            "settings": {
+              "entryFee": null
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 500
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "ok": true,
+          "now": {
+            "settings": {
+              "entryFee": 500
+            }
+          }
+        }
+      },
+      "then": [
+        {
+          "table": "tournaments",
+          "where": {
+            "id": "t1"
+          },
+          "rows": [
+            {
+              "settings": {
+                "entryFee": 500
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "update_settings: another tournament's Comité is refused",
+      "as": "uid-org",
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t2",
+          "p_seen": {
+            "settings": {
+              "entryFee": null
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 1
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501",
+        "message": "Solo el Comité puede cambiar la configuración del torneo"
+      }
+    },
+    {
+      "name": "update_settings: no session, no call",
+      "as": "anon",
+      "request": {
+        "method": "RPC",
+        "fn": "update_settings",
+        "args": {
+          "p_tournament_id": "t1",
+          "p_seen": {
+            "settings": {
+              "entryFee": null
+            }
+          },
+          "p_set": {
+            "settings": {
+              "entryFee": 1
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": 401,
+        "code": "42501"
+      }
     }
   ]
 }

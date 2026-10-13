@@ -15,7 +15,9 @@ import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
 import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { deleteTournament, rotateJoinCode, setTournamentProtected, updateTournament, uploadAsset } from '../../data/api'
+import { deleteTournament, rotateJoinCode, setTournamentProtected, SettingsChanged, updateSettings, updateTournament, uploadAsset, type SetupFields, type SetupRow } from '../../data/api'
+import { changedKeys, mergeOver, settingsWrite } from '../../data/settingsWrite'
+import { OptionalNumberField } from '../../components/NumberField'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { useCloseGate } from '../../components/CloseGate'
 import { useTournament } from '../../data/tournamentStore'
@@ -34,6 +36,37 @@ import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
+
+/** The brand columns as the form shows them and a save writes them. */
+interface Brand {
+  name: string
+  tagline: string | null
+  accent_color: string
+}
+const BRAND_KEYS = ['name', 'tagline', 'accent_color'] as const
+const brandOf = (name: string, tagline: string, accent: string): Brand => ({ name: name.trim(), tagline: tagline.trim() || null, accent_color: accent })
+
+/**
+ * What the editor started from (ARCH-13): the row's settings as fetched, the
+ * same parsed (the defaults when the row does not parse: `whole`), and the
+ * brand columns as stored (`seen`) and as the form showed them (`form`).
+ */
+interface Start {
+  raw: unknown
+  parsed: TournamentSettings
+  whole: boolean
+  seen: SetupFields
+  form: Brand
+}
+function startOf(tr: { name: string; tagline: string | null; accentColor?: string | null; settings: unknown }, parsed: TournamentSettings, whole: boolean): Start {
+  return {
+    raw: tr.settings,
+    parsed,
+    whole,
+    seen: { name: tr.name, tagline: tr.tagline ?? null, accent_color: tr.accentColor ?? null },
+    form: brandOf(tr.name, tr.tagline ?? '', tr.accentColor ?? DEFAULT_ACCENT.hex),
+  }
+}
 
 /** The sub-nav. `brand` and `status` are tournament columns; the rest are settings. */
 type Tab = 'brand' | 'status' | SettingsSection | 'danger'
@@ -54,6 +87,8 @@ export function AdminTournament() {
   const [accent, setAccent] = useState(tr.accentColor ?? DEFAULT_ACCENT.hex)
   const [settings, setSettings] = useState<TournamentSettings>(data!.settings)
   const [dirty, setDirty] = useState(false)
+  // A save says it saw this and writes only what changed since; the server refuses it when any of it moved meanwhile (0043).
+  const start = useRef<Start>(startOf(tr, data!.settings, data!.settingsError != null))
   const [busy, setBusy] = useState(false)
   const [quick, setQuick] = useState(false)
   const [askCode, setAskCode] = useState(false)
@@ -79,7 +114,11 @@ export function AdminTournament() {
   const fileRef = useRef<HTMLInputElement>(null)
   const A = t.admin.tournament
   const link = `${window.location.origin}/t/${slug}`
-  const players = data!.snapshot.players.length || settings.expectedPlayers || 12
+  // The planned field until the roster exists. With neither, the check runs on nobody: a pot that pays
+  // nothing still saves, anything else waits for the number. Never the first tournament's 12 (ARCH-13, UX-16).
+  const roster = data!.snapshot.players.length
+  const players = roster || settings.expectedPlayers || 0
+  const fieldKnown = players >= 2
   const warnings = data!.state.flags.warnings
   // Real group sizes per round, so the snake pot in the balance follows them (a group of 3 pays two).
   const groupSizes = useMemo(
@@ -91,10 +130,11 @@ export function AdminTournament() {
   useEffect(() => {
     if (dirty) return
     setSettings(data!.settings)
+    start.current = startOf(tr, data!.settings, data!.settingsError != null)
     setName(tr.name)
     setTagline(tr.tagline ?? '')
     setAccent(tr.accentColor ?? DEFAULT_ACCENT.hex)
-  }, [data, dirty, tr.name, tr.tagline, tr.accentColor])
+  }, [data, dirty, tr, tr.name, tr.tagline, tr.accentColor])
 
   /*
    * Checking the settings means a full Zod parse of the schema plus the prize
@@ -117,22 +157,62 @@ export function AdminTournament() {
     const fresh = safeParseSettings(settings)
     if (!fresh.success) return
     if (!checkPrizePool(fresh.data, { ...fieldShape(data!.snapshot, settings), players, groupSizes }).ok) return
+    // Only what changed is written, and only while every key this screen read
+    // still holds what it read: the prize check above read them all (ARCH-13).
+    const from = start.current
+    const write = settingsWrite(from.raw, from.parsed, fresh.data, { whole: from.whole, readAll: true })
+    const brand = brandOf(name, tagline, accent)
+    const set: SetupFields = { settings: write.set }
+    for (const k of BRAND_KEYS) if (brand[k] !== from.form[k]) Object.assign(set, { [k]: brand[k] })
     setBusy(true)
     try {
-      await updateTournament(tournamentId, { name: name.trim(), tagline: tagline.trim() || null, accent_color: accent, settings: fresh.data })
-      patch((s) => {
-        s.tournament.name = name.trim()
-        s.tournament.tagline = tagline.trim() || null
-        s.tournament.accentColor = accent
-        s.tournament.settings = fresh.data
-      })
+      landRow(await updateSettings(tournamentId, { settings: write.seen, ...from.seen }, set))
       setDirty(false)
       toast(t.common.saved)
     } catch (e) {
-      toast(humanError(e))
+      if (e instanceof SettingsChanged) refused(e, fresh.data, brand)
+      else toast(humanError(e))
     } finally {
       setBusy(false)
     }
+  }
+
+  /** The row as the server holds it, onto the store's: what every screen reads. */
+  function landRow(row: SetupRow) {
+    patch((s) => {
+      s.tournament.name = row.name
+      s.tournament.tagline = row.tagline
+      s.tournament.accentColor = row.accent_color
+      s.tournament.settings = row.settings
+    })
+  }
+
+  /**
+   * Refused: another screen or phone saved meanwhile, and nothing was
+   * written. The draft goes over the row as it is now: what only this screen
+   * changed stays, everything else is theirs, and where both changed the
+   * same thing theirs stays and the toast says so. Saving again sends it.
+   */
+  function refused(e: SettingsChanged, mine: TournamentSettings, brand: Brand) {
+    const from = start.current
+    landRow(e.now)
+    const now = safeParseSettings(e.now.settings)
+    if (!now.success) {
+      // Settings this build can't read: the screen follows the store's.
+      setDirty(false)
+      toast(humanError(e))
+      return
+    }
+    const next = startOf({ name: e.now.name, tagline: e.now.tagline, accentColor: e.now.accent_color, settings: e.now.settings }, now.data, false)
+    const s = mergeOver(from.parsed, mine, now.data)
+    const b = mergeOver(from.form, brand, next.form)
+    start.current = next
+    setSettings(s.merged)
+    setName(b.merged.name)
+    setTagline(b.merged.tagline ?? '')
+    setAccent(b.merged.accent_color)
+    setDirty(changedKeys(now.data, s.merged).length > 0 || changedKeys(next.form, b.merged).length > 0)
+    toast(s.lost.length || b.lost.length ? A.settingsMergedLost : A.settingsMerged)
   }
 
   async function onLogo(file: File) {
@@ -344,6 +424,21 @@ export function AdminTournament() {
 
       {isSettingsTab(tab) && (
         <>
+          {/* No roster yet: the field the check plans for comes first, before a balance that waits on it. */}
+          {tab === 'money' && !roster && (
+            <Field label={A.expectedPlayers} hint={A.expectedPlayersHint}>
+              <OptionalNumberField
+                label={A.expectedPlayers}
+                min={2}
+                max={200}
+                value={settings.expectedPlayers ?? null}
+                onChange={(v) => {
+                  setSettings({ ...settings, expectedPlayers: v ?? undefined })
+                  setDirty(true)
+                }}
+              />
+            </Field>
+          )}
           <SettingsEditor
             value={settings}
             onChange={(v) => {
@@ -353,7 +448,7 @@ export function AdminTournament() {
             field={field}
             section={tab}
           />
-          {tab === 'money' && (
+          {tab === 'money' && roster > 0 && (
             <p className={a.help}>
               {A.playersForCheck}: {players}
             </p>
@@ -366,8 +461,9 @@ export function AdminTournament() {
       {(dirty || (tab !== 'danger' && tab !== 'status')) && (
         <div className={a.sticky}>
           {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
-          {dirty && parsed.success && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
-          {dirty && parsed.success && balanced && !savable && <span className={a.error}>{A.unreachableNearSave}</span>}
+          {dirty && parsed.success && !savable && !fieldKnown && <span className={a.error}>{A.fieldUnknownNearSave}</span>}
+          {dirty && parsed.success && fieldKnown && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
+          {dirty && parsed.success && fieldKnown && balanced && !savable && <span className={a.error}>{A.unreachableNearSave}</span>}
           <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !savable} onClick={() => void save()}>
             {busy ? t.common.saving : t.common.save}
           </button>

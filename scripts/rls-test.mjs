@@ -144,6 +144,26 @@ try {
   const { error: rotateB } = await A.sb.rpc('rotate_join_code', { p_tournament_id: B.tournament.id })
   check(!rotateErr && /^[A-Z2-9]{6}$/.test(newCode) && newCode !== A.tournament.join_code && !!rotateB, 'rotate_join_code works for the owner and not across tournaments')
 
+  console.log('settings, key by key (0043, ARCH-13):')
+  const { data: before0043 } = await A.sb.from('tournaments').select('settings').eq('id', A.tournament.id).single()
+  const s0 = before0043.settings
+  const saveSettings = (sb, tid, seen, set) => sb.rpc('update_settings', { p_tournament_id: tid, p_seen: { settings: seen }, p_set: { settings: set } })
+  const { data: u1, error: u1Err } = await saveSettings(A.sb, A.tournament.id, { entryFee: s0.entryFee }, { entryFee: s0.entryFee + 100 })
+  const { data: u2, error: u2Err } = await saveSettings(A.sb, A.tournament.id, { labels: s0.labels }, { labels: { ...s0.labels, lastPlace: 'La Cuchara' } })
+  check(
+    !u1Err && !u2Err && u1?.ok === true && u2?.ok === true && u2.now.settings.entryFee === s0.entryFee + 100 && u2.now.settings.labels.lastPlace === 'La Cuchara',
+    'update_settings: two saves of different keys, each from the row it saw, both stay',
+    { u1Err, u2Err },
+  )
+  const { data: stale } = await saveSettings(A.sb, A.tournament.id, { entryFee: s0.entryFee }, { entryFee: 1 })
+  const { data: afterStale } = await A.sb.from('tournaments').select('settings').eq('id', A.tournament.id).single()
+  check(stale?.ok === false && stale.changed?.join() === 'settings.entryFee' && afterStale.settings.entryFee === s0.entryFee + 100, 'a save from a stale entry is refused, names the key and writes nothing')
+  const { error: crossSave } = await saveSettings(A.sb, B.tournament.id, { entryFee: null }, { entryFee: 1 })
+  const { error: devSave } = await saveSettings(dev, A.tournament.id, { entryFee: s0.entryFee + 100 }, { entryFee: 1 })
+  check(crossSave?.code === '42501' && devSave?.code === '42501', 'neither another tournament’s Comité nor a player saves settings', { crossSave, devSave })
+  const { data: back } = await saveSettings(A.sb, A.tournament.id, { entryFee: s0.entryFee + 100, labels: u2.now.settings.labels }, { entryFee: s0.entryFee, labels: s0.labels })
+  check(back?.ok === true, 'and the settings go back as they were')
+
   console.log('rounds, groups, tiebreaks:')
   const mk = async (sb, tid, name, tier) => (await sb.from('players').insert({ tournament_id: tid, full_name: name, display_name: name, tier, sort_order: 1 }).select('id').single()).data.id
   const p2 = await mk(A.sb, A.tournament.id, 'P2', null)

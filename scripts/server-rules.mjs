@@ -305,7 +305,10 @@ function runCase(c) {
 /** The status a request answered with when it went through: a PATCH answers its rows (200) only when it asks for them. */
 const okStatus = (req) => ({ GET: 200, POST: 201, DELETE: 204, RPC: 200, PATCH: req.select ? 200 : 204 })[req.method]
 
-const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]))).sort()
+/** A value with every object's keys in order, at any depth: jsonb keeps keys in an order of its own. */
+const sorted = (v) => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v)
+/** Rows as a multiset, compared on their columns; a jsonb column by its content. */
+const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, sorted(r[k])]))).sort()
 /**
  * `expect.answer`: an RPC's answer holds at least what the case writes. An object, the keys it names; a list, as
  * many items, each matching a different one in any order (the database's order of a set is none), or in the order
