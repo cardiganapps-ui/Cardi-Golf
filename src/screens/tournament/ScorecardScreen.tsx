@@ -49,6 +49,21 @@ const SAVED_CHECK_MS = 400
 const SNAKE_NOTE_MS = 5000
 /** How far the next hole comes in from, in the direction the card moved (MOT-02). */
 const SLIDE_PX = 24
+/** A page that draws no frames (hidden, a locked phone) still writes the hole this soon. */
+const PAINT_WAIT_MS = 100
+
+/** Once the frame being prepared is on screen: a task after the next animation frame, or PAINT_WAIT_MS at most. */
+function afterPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    const cap = setTimeout(resolve, PAINT_WAIT_MS)
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        clearTimeout(cap)
+        resolve()
+      }, 0),
+    )
+  })
+}
 
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
@@ -602,21 +617,18 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       wasPlayed[p.id] = !!h?.played
       before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
     }
-    const writing = writeHole(
-      writes,
-      hole,
-      lastHoled,
-      new Map(bases.current),
-      // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
-      new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id))),
-    )
     /*
      * A Comité correction goes to the server (a closed day, a signed card) and can be refused or lost on a bad
      * signal: the card waits for its answer. Everything else goes into the phone's own outbox, which only the
-     * phone's storage can refuse: the card moves on in the tap's frame and the outbox catches up after it. It
-     * waited for the write and the recompute, a third of a second on a mid-range phone (PERF-10).
+     * phone's storage can refuse: the card moves on in the tap's frame and the outbox writes the hole once that
+     * frame is on screen, so its recompute of the boards never holds the frame back. It waited for the write and
+     * the recompute, a third of a second on a mid-range phone (PERF-10).
      */
     const viaServer = Object.keys(writes).some((id) => me.isAdmin && (round.status !== 'live' || signed(id)))
+    const seen = new Map(bases.current)
+    // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
+    const auto = new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id)))
+    const writing = viaServer ? writeHole(writes, hole, lastHoled, seen, auto) : afterPaint().then(() => writeHole(writes, hole, lastHoled, seen, auto))
     if (viaServer) {
       setBusy(true)
       try {

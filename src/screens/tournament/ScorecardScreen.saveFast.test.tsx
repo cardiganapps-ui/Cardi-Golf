@@ -106,6 +106,11 @@ function tapSave(at: number) {
     fireEvent.click(saveButton())
   })
 }
+/** The frame after the tap is on screen (here, the most the card waits for one): the outbox gets the hole. */
+const painted = () =>
+  act(async () => {
+    vi.advanceTimersByTime(100)
+  })
 
 beforeEach(() => {
   localStorage.clear()
@@ -147,7 +152,11 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     expect(screen.getByText(S.savedCheck)).toBeTruthy()
     // «Guardado» rests on the button as it is, not greyed out while the phone writes.
     expect(saveButton()).toHaveProperty('disabled', false)
+    // The hole goes into the outbox once that frame is on screen, so the boards' recompute never holds it back.
+    expect(outbox.pending).toHaveLength(0)
+    await painted()
     expect(outbox.pending).toHaveLength(1)
+    expect(commits).toBeLessThanOrEqual(2)
     // The write lands: the boards take the hole in one more commit, and that is the save.
     await act(async () => outbox.pending[0]!.land())
     expect(commits).toBeLessThanOrEqual(3)
@@ -166,6 +175,7 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     // A tap now saves nothing: hole 11 waits for hole 10.
     clock = 21_000
     fireEvent.click(saveButton())
+    await painted()
     expect(outbox.pending).toHaveLength(1)
     await act(async () => outbox.pending[0]!.land())
     expect(saveButton()).toHaveProperty('disabled', false)
@@ -179,6 +189,7 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     outbox.hold = true
     tapSave(20_000)
     expect(holeOnScreen()).toBe(11)
+    await painted()
     await act(async () => outbox.pending[0]!.fail(new OutboxStorageError()))
     expect(holeOnScreen()).toBe(10)
     expect(puttsShown('p3')).toBe(3)
@@ -191,6 +202,9 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
       fireEvent.click(saveButton())
     })
     expect(holeOnScreen()).toBe(11)
+    await painted()
+    await act(async () => undefined)
+    expect(snap.scores.some((x) => x.playerId === 'p3' && x.hole === 10 && x.putts === 3)).toBe(true)
   })
 
   it('a Comité correction on a closed day waits for the server’s answer before the card moves on', async () => {

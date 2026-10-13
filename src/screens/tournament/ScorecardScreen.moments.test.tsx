@@ -79,7 +79,13 @@ async function tapSave(at: number) {
   await act(async () => {
     fireEvent.click(saveButton())
   })
+  await painted()
 }
+/** The frame after a save is on screen (with these timers, the most the card waits for one): the hole goes out then (PERF-10). */
+const painted = () =>
+  act(async () => {
+    vi.advanceTimersByTime(100)
+  })
 /** Whose row carries the snake's mark. */
 const markedRow = () => {
   const marks = screen.queryAllByRole('img', { name: S.snakeHolder })

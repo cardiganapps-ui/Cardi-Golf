@@ -69,6 +69,8 @@ async function tapSave(at: number) {
   await act(async () => {
     fireEvent.click(saveButton())
   })
+  // The card hands the hole to the outbox once the next frame is on screen (PERF-10); then IndexedDB answers.
+  await act(() => new Promise<void>((done) => requestAnimationFrame(() => setTimeout(done, 0))))
   await act(async () => {
     for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r))
   })
