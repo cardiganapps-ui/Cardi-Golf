@@ -280,7 +280,8 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     const h12 = outbox.holes.find((h) => h.hole === 12)!
     expect(h12.entries).toHaveLength(4)
     expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
-    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }))
+    // With the hole: kept on the phone at once, on the boards with it.
+    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }), expect.any(Promise))
   })
 
   it('«No sabemos: que decida el Comité» saves the hole with no answer, and the snake waits for the Comité (UX-08)', async () => {
