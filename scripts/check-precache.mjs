@@ -50,6 +50,8 @@ export function precacheProblems(dir, budgetKib = PRECACHE_BUDGET_KIB) {
     const at = /push-sw\.js\?v=([0-9a-f]+)/.exec(sw)?.[1]
     const now = fingerprint(readFileSync(join(dir, 'push-sw.js')))
     if (at !== now) problems.push(`the worker imports push-sw.js at ${at ? `?v=${at}` : 'no fingerprint'}, but the file's is ${now}: phones would keep the old handler`)
+    // The images a notice shows (its icon, Android's badge): with patchy signal, the push may be all that arrives.
+    for (const m of read('push-sw.js').matchAll(/['"]\/([^'"?#]+\.png)['"]/g)) need(m[1], 'a notice shows it')
   }
 
   let bytes = 0
