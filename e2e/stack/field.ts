@@ -23,6 +23,8 @@ export const SLUGS = {
   /** DB-05: the phone's tournament, and another one whose changes must never reach it. */
   own: 'e2e-propio',
   other: 'e2e-ajeno',
+  /** TRUST-24: the phones that hold a PIN, each claim's kind read from the request. */
+  phones: 'e2e-telefonos',
 } as const
 
 export interface FieldPlayer {

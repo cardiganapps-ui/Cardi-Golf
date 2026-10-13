@@ -106,6 +106,7 @@ select pg_temp.e2e_tournament('e2e-conflicto', 'E2E Conflicto', :'settings'::jso
 select pg_temp.e2e_tournament('e2e-cuatro-g', 'E2E Cuatro G', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-propio', 'E2E Propio', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-ajeno', 'E2E Ajeno', :'settings'::jsonb, :'course_id', :'tee_id');
+select pg_temp.e2e_tournament('e2e-telefonos', 'E2E Teléfonos', :'settings'::jsonb, :'course_id', :'tee_id');
 \o
 
 commit;

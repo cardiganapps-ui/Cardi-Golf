@@ -79,6 +79,11 @@ export interface AuditEntry {
   platform: boolean
   /** The player or account name; null for the admin or when nobody is known. */
   actor: string | null
+  /**
+   * From which of the player's phones (0050, TRUST-24), once he has entered with his PIN on more than one: its
+   * number among them and its kind. Absent for one phone, his own account, the admin, and a database without 0050.
+   */
+  phone?: { n: number; of: number; kind: 'ios' | 'android' | 'desktop' | 'other' } | null
   reason: string | null
   before: Record<string, unknown> | null
   after: Record<string, unknown> | null

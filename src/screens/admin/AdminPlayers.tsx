@@ -27,6 +27,7 @@ import a from './Admin.module.css'
 import { OthersDataNotice } from '../../components/LegalLinks'
 import { OptionalNumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
+import { phonesOf, playerPhones, releasePhone, type PinPhone } from '../../data/pinPhones'
 
 const P = t.admin.players
 const L = t.admin.players.lock
@@ -94,6 +95,10 @@ export function AdminPlayers() {
   const [pins, setPins] = useState<Set<string>>(new Set())
   const [pinFor, setPinFor] = useState<Player | null>(null)
   const [pin, setPin] = useState('')
+  /** The phones holding each player's PIN (TRUST-24); null while unread or on a server without them. */
+  const [phones, setPhones] = useState<PinPhone[] | null>(null)
+  /** The phone about to be taken off its player: the reason sheet is open for it. */
+  const [removing, setRemoving] = useState<PinPhone | null>(null)
   const [busy, setBusy] = useState(false)
   const [askDelete, setAskDelete] = useState(false)
   const [q, setQ] = useState('')
@@ -113,6 +118,10 @@ export function AdminPlayers() {
   useEffect(() => {
     playersWithPin(tournamentId).then(setPins).catch(() => undefined)
   }, [tournamentId, players.length])
+  // Read again with the players, and each time the PIN sheet opens: a phone may have entered meanwhile.
+  useEffect(() => {
+    playerPhones(tournamentId).then(setPhones).catch(() => undefined)
+  }, [tournamentId, players.length, pinFor])
 
   const shown = useMemo(() => {
     const needle = norm(q.trim())
@@ -306,6 +315,7 @@ export function AdminPlayers() {
                     {p.handicapSource === 'estimate' ? `, ${P.estimated}` : ''}
                     {p.isAdmin ? `, ${P.committee}` : ''}
                     {changes.some((c) => c.playerId === p.id) ? `, ${L.changed}` : ''}
+                    {phonesOf(phones, p.id).length > 1 ? `, ${P.phonesCount(phonesOf(phones, p.id).length)}` : ''}
                     {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
                   </span>
                 </span>
@@ -507,6 +517,23 @@ export function AdminPlayers() {
         onClose={() => setAskFree(false)}
       />
       <ReasonSheet open={!!askReason} title={L.reasonTitle} body={reasonBody} confirmLabel={L.reasonConfirm} onConfirm={saveWithReason} onClose={() => setAskReason(null)} />
+      <ReasonSheet
+        open={!!removing}
+        title={P.removePhoneTitle}
+        body={P.removePhoneBody}
+        confirmLabel={P.removePhone}
+        danger
+        onConfirm={async (reason) => {
+          const gone = removing!
+          await releasePhone(gone.id, reason)
+          setRemoving(null)
+          toast(P.phoneRemoved)
+          // Off the list at once; the read that follows renumbers nothing (a phone keeps its number) but says what else changed.
+          setPhones((cur) => (cur ? cur.filter((x) => x.id !== gone.id) : cur))
+          void playerPhones(tournamentId).then(setPhones).catch(() => undefined)
+        }}
+        onClose={() => setRemoving(null)}
+      />
 
       <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
         <div className="stack">
@@ -515,6 +542,24 @@ export function AdminPlayers() {
           <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void savePin()}>
             {busy ? t.common.saving : t.common.save}
           </button>
+          {pinFor && phonesOf(phones, pinFor.id).length > 0 && (
+            <section className="stack" aria-label={P.phones}>
+              <span className="label">{P.phones}</span>
+              <p className={a.help}>{P.phonesHelp}</p>
+              <div className={a.rows}>
+                {phonesOf(phones, pinFor.id).map((ph) => (
+                  <div key={ph.id} className={a.row}>
+                    <span className={a.rowText}>
+                      <span className={a.rowTitle}>{P.phoneLine(ph.n, t.admin.history.kinds[ph.kind] ?? null, localWhen(ph.since, tournament.timezone))}</span>
+                    </span>
+                    <button className="btn btn--ghost btn--sm" type="button" aria-label={P.removePhoneOf(ph.n)} onClick={() => setRemoving(ph)}>
+                      {P.removePhone}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </Sheet>
     </div>
