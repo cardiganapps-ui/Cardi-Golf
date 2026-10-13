@@ -395,7 +395,7 @@ try {
   const { error: offStep } = await bidOn(A.player.id, 620)
   const { error: foreignBidder } = await bidOn(B.player.id, 500)
   const { error: onStep } = await bidOn(A.player.id, 500)
-  check(pendingBid?.code === '22023' && pendingSale?.code === '22023' && offStep?.code === '22023' && /la siguiente es \$750/.test(offStep?.message ?? '') && foreignBidder?.code === '22023' && !onStep, 'the Calcutta (0048): bids only on the open lot, up in the increment, by the tournament\'s players', { pendingBid, pendingSale, offStep, foreignBidder, onStep })
+  check(pendingBid?.code === '22023' && pendingSale?.code === '22023' && offStep?.code === '22023' && /\$500 o \$750/.test(offStep?.message ?? '') && foreignBidder?.code === '22023' && !onStep, 'the Calcutta (0048): bids only on the open lot, up in the increment, by the tournament\'s players', { pendingBid, pendingSale, offStep, foreignBidder, onStep })
   const { error: staleSale } = await hammer(A.player.id, 250)
   const { error: sale } = await hammer(A.player.id, 500)
   const { error: saleChanged } = await A.sb.from('calcutta_lots').update({ price: 1370 }).eq('id', soldLot.id).select('id')
