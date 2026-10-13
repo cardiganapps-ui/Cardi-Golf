@@ -11,7 +11,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-/** KiB the precache may hold: 2,871 on 2026-10-13. Splitting the routes (PERF-01 to 05) lowers both. */
+/** KiB the precache may hold: the production build held 2,652 on 2026-10-13. Splitting the routes (PERF-01 to 05) lowers both. */
 export const PRECACHE_BUDGET_KIB = 3072
 
 /** The URLs the built worker precaches (`precacheAndRoute([{url, revision}, …])`), each once. */
