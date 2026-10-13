@@ -2992,11 +2992,14 @@
       "workstream": "W1",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 162,
+      "tests": [
+        "supabase/tests/admin_save_hole.sql",
+        "src/screens/tournament/ScorecardScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Comité corrections still need signal: by design they are never queued to land later on numbers that may have moved. With no signal the Tarjeta keeps nothing, says so and keeps what was typed."
     },
     {
       "id": "SEC-01",
@@ -3951,11 +3954,14 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 162,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The snake question for a corrected hole is asked again only when the hole has no answer stored; an answer given before stays."
     },
     {
       "id": "UX-20",
