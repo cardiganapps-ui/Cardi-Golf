@@ -106,7 +106,22 @@ export class SessionUnavailableError extends UserError {
 let starting: Promise<Session> | null = null
 
 /**
- * A session of any kind (anonymous if none). Used when opening a tournament link.
+ * The session this phone already has, never a new one: null when it has
+ * none, so a link opened shows the tournament's faces and the consent line
+ * before any user exists for this browser (TRUST-05); the anonymous user is
+ * started by the step that needs it (the PIN, ensureSession). A stored
+ * session that can't be confirmed now throws, as in ensureSession.
+ */
+export async function sessionIfAny(): Promise<Session | null> {
+  const { data } = await withTimeout(supabase().auth.getSession(), SESSION_TIMEOUT_MS, 'sesión')
+  if (data.session) return data.session
+  if (hasStoredSession()) throw new SessionUnavailableError()
+  return null
+}
+
+/**
+ * A session of any kind (anonymous if none). Only Entrar calls it, as the PIN
+ * goes out under its consent line (TRUST-05).
  *
  * Never replaces a stored session with a new anonymous user (REL-16): when a
  * phone's token lapses in a dead zone, getSession() returns nothing until the

@@ -3343,7 +3343,7 @@
       "phase": 2,
       "tripSafe": true,
       "status": "fixed",
-      "pr": 121,
+      "pr": 124,
       "tests": [
         "src/screens/consentPoints.test.tsx",
         "src/components/LegalLinks.test.tsx",
@@ -3351,10 +3351,13 @@
         "e2e/fixtures/consent.spec.ts",
         "src/data/legal.test.ts",
         "src/app/LegalUpdate.test.tsx",
-        "supabase/tests/legal_acceptances.sql"
+        "supabase/tests/legal_acceptances.sql",
+        "supabase/tests/lookup_without_session.sql",
+        "src/screens/tournament/TournamentGate.test.tsx",
+        "src/screens/legalNotice.test.ts"
       ],
       "verifiedBy": null,
-      "residual": "Part 1 (PR #88): the consent line with both links, before the action, at every place that takes data. Part 2 (PR #121, migration 0038): once the action goes through (a PIN the server took, an account's code or Google, an organizer's sign-in or sign-up, a Ronda rápida) the app records which version of the notice and of the terms that user accepted, when (the phone's time) and at which step (legal_acceptances, written only by accept_legal), under the anonymous user for a phone without an account; it waits on the phone tied to that user, goes only under that user, and is forgotten on sign-out. When a version changes, whoever accepted an older one sees it (LegalUpdate: «Entendido» records it, «Cerrar» asks again next open), and so does anyone with no record at all who gave data: an account (an email-link sign-in, or before 0038) or a phone that entered with a PIN; never over the Tarjeta, the auction console, a room screen or the documents. Left, disclosed in the notice: opening a tournament or profile link still creates an anonymous user before any line shows (ensureSession runs before the gate looks the tournament up); a shared phone's players share one anonymous user, so its record is that user's, not each player's."
+      "residual": "Part 1 (PR #88): the consent line with both links, before the action, at every place that takes data. Part 2 (PR #121, migration 0038): once the action goes through (a PIN the server took, an account's code or Google, an organizer's sign-in or sign-up, a Ronda rápida) the app records which version of the notice and of the terms that user accepted, when (the phone's time) and at which step (legal_acceptances, written only by accept_legal), under the anonymous user for a phone without an account; it waits on the phone tied to that user, goes only under that user, and is forgotten on sign-out. When a version changes, whoever accepted an older one sees it (LegalUpdate: «Entendido» records it, «Cerrar» asks again next open), and so does anyone with no record at all who gave data: an account (an email-link sign-in, or before 0038) or a phone that entered with a PIN; never over the Tarjeta, the auction console, a room screen or the documents. Part 3 (PR #124, migration 0040): opening a tournament or profile link creates no user; the gate looks the tournament up with no session (lookup_tournament answers anon: the faces, never the join code) and the anonymous user starts only when the PIN goes out, under its consent line; the notice says so (version 2026-10-13.1). Left, disclosed in the notice: a shared phone's players share one anonymous user, so its record is that user's, not each player's; a PIN that does not take leaves an anonymous user with no record (it gave no data but the attempt)."
     },
     {
       "id": "TRUST-07",

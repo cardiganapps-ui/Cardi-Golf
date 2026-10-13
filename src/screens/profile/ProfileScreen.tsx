@@ -14,7 +14,7 @@ import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { friendBlock, friendRemove, friendRequest, friendRespond, friendshipWith, type Friendship } from '../../data/social'
 import { IconChevronRight, IconSettings } from '../../components/icons'
-import { ensureSession, useAuth } from '../../data/auth'
+import { sessionIfAny, useAuth } from '../../data/auth'
 import {
   formatIndex,
   indexBreakdown,
@@ -421,7 +421,11 @@ function ProfilePage({ handle }: { handle: string }) {
     let live = true
     void (async () => {
       try {
-        await ensureSession()
+        // No session on this browser: nobody to show a card to, and no anonymous user is started for it (TRUST-05).
+        if (!(await sessionIfAny())) {
+          if (live) setCard(null)
+          return
+        }
         const [c, f] = await Promise.all([profileCard(handle), account ? friendshipWith(handle) : Promise.resolve(undefined)])
         if (!live) return
         setCard(c)

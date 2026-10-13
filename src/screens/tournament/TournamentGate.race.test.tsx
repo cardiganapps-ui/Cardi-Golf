@@ -36,6 +36,8 @@ const phone = vi.hoisted(() => ({
 vi.mock('../../data/auth', async () => {
   const { create } = await import('zustand')
   return {
+    // The gate asks for the session the phone already has (sessionIfAny, TRUST-05); a stored one here.
+    sessionIfAny: server.ensureSession,
     ensureSession: server.ensureSession,
     signedOutOnPurpose: () => server.signedOut,
     signOutsAsked: () => server.signOuts,
