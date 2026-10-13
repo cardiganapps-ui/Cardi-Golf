@@ -3967,7 +3967,7 @@
       "phase": 3,
       "tripSafe": true,
       "status": "fixed",
-      "pr": null,
+      "pr": 142,
       "tests": [
         "supabase/tests/handicap_lock.sql",
         "supabase/tests/restore_roundtrip.sql",
