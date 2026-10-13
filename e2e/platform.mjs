@@ -8,7 +8,7 @@
 // the Historial marks the admin's correction → Personas finds an account,
 // blocks, unblocks and deletes it. Everything it creates is removed.
 // Needs VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY,
-// SUPABASE_PAT, SUPABASE_PROJECT_REF; E2E_RELAY / CHROMIUM as in smoke.mjs.
+// SUPABASE_PAT, SUPABASE_PROJECT_REF; E2E_RELAY=1 (Supabase HTTP through Node's fetch, with NODE_USE_ENV_PROXY=1) and CHROMIUM=<path> as in scripts/design-shots.mjs.
 import { createClient } from '@supabase/supabase-js'
 import { chromium } from 'playwright-core'
 import { mkdirSync } from 'node:fs'
