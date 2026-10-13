@@ -152,6 +152,18 @@ describe('with no IndexedDB, the queue in memory', () => {
     expect(_outboxTest.queue()).toEqual([])
   })
 
+  it('two saves of a hole made back to back, the first still on its way into the queue, are one (PR 155’s verifier)', async () => {
+    setOutboxBlocked(true)
+    await Promise.all([
+      hole(4, [{ player_id: 'p1', fields: { strokes: 5, putts: 2 } }]),
+      hole(4, [{ player_id: 'p1', fields: { putts: 1 }, base: { strokes: 5, putts: 2, picked_up: false } }]),
+    ])
+    expect(_outboxTest.queue()).toHaveLength(1)
+    const [only] = _outboxTest.queue()
+    expect(only?.kind === 'hole' && only.payload.entries.map((e) => [e.player_id, e.fields])).toEqual([['p1', { strokes: 5, putts: 1 }]])
+    setOutboxBlocked(false)
+  })
+
   it('an older hole keeps its players the newer one leaves out; a hole queued under another identity is not merged into', async () => {
     setOutboxBlocked(true)
     await hole(4, [{ player_id: 'p1', fields: { strokes: 5, putts: 2 } }, { player_id: 'p2', fields: { strokes: 4, putts: 2 } }])

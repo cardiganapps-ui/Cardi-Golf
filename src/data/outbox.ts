@@ -786,7 +786,11 @@ export class OutboxStorageError extends UserError {
 function putNow(d: OutboxDb, item: HoleItem) {
   return d.transaction('rw', d.items, (tx) => {
     const put = d.items.put(item)
-    ;(tx.idbtrans as IDBTransaction & { commit?: () => void }).commit?.()
+    try {
+      ;(tx.idbtrans as IDBTransaction & { commit?: () => void }).commit?.()
+    } catch {
+      // A transaction that can't commit early commits by itself once the page takes the reply: never a refusal.
+    }
     return put
   })
 }
@@ -913,13 +917,16 @@ export async function enqueueHole(tournamentId: string, input: { round_id: strin
       } catch {
         throw new OutboxStorageError()
       }
-    } else {
-      const into = queue.filter(mergeable).at(-1)
-      item = into ? mergeHoles(into, fresh) : fresh
     }
     // Captured again: what the phone asked about these players on this hole is settled, before this save can go
     // out (a flush already under way takes it from the queue) and meet a question of its own.
     await dropConflicts(entries.map((e) => conflictKey(input.round_id, e.player_id, input.hole))).catch(() => undefined)
+    if (!d) {
+      // No storage to decide the merge in: decided here, with nothing awaited before the queue takes it, so a second
+      // save of the hole made meanwhile merges into this one (PR 155's verifier).
+      const into = queue.filter(mergeable).at(-1)
+      item = into ? mergeHoles(into, fresh) : fresh
+    }
     // Never over a newer version of it: two saves of the hole may finish storing in either order.
     if (!queue.some((x) => x.key === item.key && x.seq > item.seq)) queue = [...queue.filter((x) => x.key !== item.key), item]
   } finally {
