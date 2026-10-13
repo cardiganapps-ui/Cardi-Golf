@@ -54,6 +54,25 @@ describe('other tabs', () => {
     }
   })
 
+  it('hear of a save as soon as it is stored, before the screen that saved it draws its frame (PR 155’s verifier)', async () => {
+    const heard: unknown[] = []
+    const other = new BroadcastChannel(OUTBOX_CHANNEL)
+    other.onmessage = (e) => void heard.push(e.data)
+    let draw!: () => void
+    const frame = new Promise<void>((resolve) => (draw = resolve))
+    try {
+      const saving = enqueueScore('t1', holeScore('p1', 8, 5), frame)
+      // This tab may be closed before its frame: the other tabs have the save from storage already.
+      await until(() => heard.includes('changed'), 'the other tabs to hear of the save', 2000)
+      expect(server.writeRequests()).toHaveLength(0)
+      draw()
+      await saving
+      await until(() => useOutbox.getState().pending === 0, 'the hole to land')
+    } finally {
+      other.close()
+    }
+  })
+
   it('holding the outbox’s lock: this tab tries again by itself once it is free', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     let held = true
