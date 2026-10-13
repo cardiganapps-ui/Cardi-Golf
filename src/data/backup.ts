@@ -42,7 +42,7 @@ const PK: Record<string, string[]> = {
   calcutta_buybacks: ['lot_id'],
   game_entries: ['game_id', 'player_id'],
   game_results: ['game_id', 'player_id'],
-  hole_awards: ['round_id', 'game_id', 'hole', 'player_id'],
+  hole_awards: ['round_id', 'game_id', 'hole', 'player_id', 'source'],
   holes: ['tee_id', 'number'],
 }
 

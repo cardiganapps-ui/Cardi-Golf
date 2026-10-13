@@ -151,11 +151,16 @@ select harness.check(:rows_read >= 90 and :calls <= 3, 'a player reads ' || :row
 -- ---------------------------------------------------------------------------
 -- 4. A tenant that disagrees with the parent never goes in
 -- ---------------------------------------------------------------------------
+-- The columns a writer may name: a generated one (0042's hole_awards.source) refuses any value (428C9).
+create function pg_temp.writable(tbl text) returns text language sql as $$
+  select string_agg(quote_ident(a.attname), ', ' order by a.attnum) from pg_attribute a
+  where a.attrelid = ('public.' || quote_ident(tbl))::regclass and a.attnum > 0 and not a.attisdropped and a.attgenerated = ''
+$$;
 create temp table wrong_tenant as
   select c.tbl,
     pg_temp.try(format('update public.%I set tournament_id = %L where tournament_id = %L', c.tbl, :'t_b', :'t_a')) as upd,
-    pg_temp.try(format('insert into public.%1$I select (jsonb_populate_record(null::public.%1$I, to_jsonb(x) || %2$L::jsonb || jsonb_build_object(''tournament_id'', %3$L))).* from public.%1$I x where x.tournament_id = %4$L limit 1',
-      c.tbl, c.patch, :'t_b', :'t_a')) as ins
+    pg_temp.try(format('insert into public.%1$I (%5$s) select %5$s from (select (jsonb_populate_record(null::public.%1$I, to_jsonb(x) || %2$L::jsonb || jsonb_build_object(''tournament_id'', %3$L))).* from public.%1$I x where x.tournament_id = %4$L limit 1) r',
+      c.tbl, c.patch, :'t_b', :'t_a', pg_temp.writable(c.tbl))) as ins
   from child c;
 select format('%s: update %s, insert %s', tbl, upd, ins) from wrong_tenant where upd <> '23503' or ins <> '23503';
 select harness.check(not exists (select 1 from wrong_tenant where upd <> '23503' or ins <> '23503'),

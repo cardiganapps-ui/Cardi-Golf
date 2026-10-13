@@ -971,11 +971,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 136,
+      "tests": [
+        "supabase/tests/hole_award_rulings.sql",
+        "supabase/tests/upgrade_0042.sh",
+        "src/engine/games/capture.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed (migration 0042): a Comité ruling is told apart by `hole_awards.source`, generated from group_id ('comite' with no group, 'group' with one), and a group's claims go with the group (on delete cascade instead of set null). Dissolving a group in Grupos (upsert_groups) used to leave its claims with no group, each read as a ruling for the whole field: the SQL test reproduces it on 0041 and shows the claim gone after 0042, the other group's claim standing and no ruling appearing. The engine reads a ruling by `source` (isRuling), falling back to the group for rows from before 0042. A restore deletes and re-inserts the awards (0025), so it is unaffected. Left: a claim stays with its group when the claimed player moves to another group (upsert_groups voids only snake answers)."
     },
     {
       "id": "DB-04",
@@ -985,11 +989,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 136,
+      "tests": [
+        "supabase/tests/hole_award_rulings.sql",
+        "src/data/testing/cases/serverRules.json",
+        "src/data/realtimeApply.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed (migration 0042): `source` is in the primary key (round_id, game_id, hole, player_id, source), so the Comité's ruling for a player a group claimed is a second row instead of a 23505, and a phone's claim for a player the Comité ruled for goes in too (case X25 pinned the collision; it now expects both rows). No writer sets `source` (428C9). The snapshot, the export, the nightly backup and the realtime key read it; a delete from before 0042 names no source and takes the player's row whichever it is. The shared cases run against the fake and Postgres."
     },
     {
       "id": "DB-05",

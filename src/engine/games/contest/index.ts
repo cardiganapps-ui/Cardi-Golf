@@ -13,7 +13,7 @@
  */
 import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
-import type { Id } from '../../types'
+import type { HoleAward, Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
 import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { holeOf, moneyByPlayer, namer, plural, rankLabel, roundHoles, roundNumberOf } from '../util'
@@ -48,6 +48,9 @@ export function contestHoles(ctx: GameContext<Cfg>, roundId: Id): number[] {
   return (ref?.holes ?? []).filter((h) => h.par === 3).map((h) => h.hole)
 }
 
+/** A Comité ruling on a hole contest: it overrides the groups' claims on its hole (0042 keeps the two apart: DB-03, DB-04). */
+export const isRuling = (a: HoleAward): boolean => (a.source ? a.source === 'comite' : a.groupId == null)
+
 export const contestGame: GameImpl<ContestState, Cfg> = {
   type: 'contest',
   defaultLabel: 'Más cerca del hoyo',
@@ -60,8 +63,8 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
     for (const rid of ctx.roundIds) {
       for (const hole of contestHoles(ctx, rid)) {
         const rows = ctx.snapshot.holeAwards.filter((a) => a.roundId === rid && a.gameId === ctx.config.id && a.hole === hole && inGame.has(a.playerId))
-        // A Comité decision (no group) overrides the groups' claims.
-        const comite = rows.filter((a) => a.groupId == null)
+        // A Comité ruling overrides the groups' claims.
+        const comite = rows.filter(isRuling)
         const claims = [...new Set((comite.length ? comite : rows).map((a) => a.playerId))]
         const voided: Id[] = []
         let winners = claims

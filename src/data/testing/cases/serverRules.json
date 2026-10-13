@@ -1547,6 +1547,92 @@
       }
     },
     {
+      "name": "awards: the Comité rules a hole for a player a group claimed: the ruling stands beside the claim (0042, DB-04)",
+      "as": "uid-org",
+      "given": {
+        "hole_awards": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": "p1"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": null,
+            "hole": 5,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": null
+          }
+        ]
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 5,
+            "game_id": "closest"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "source": "group"
+            },
+            {
+              "player_id": "p2",
+              "source": "comite"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "awards: no writer says whose row it is: source is generated from the group (0042)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "hole_awards",
+        "body": [
+          {
+            "round_id": "r1",
+            "group_id": "g1",
+            "hole": 6,
+            "game_id": "closest",
+            "player_id": "p2",
+            "decided_by": null,
+            "source": "comite"
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "code": "428C9"
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 6
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
       "name": "awards: the group's old winners deleted by a phone of the group go",
       "as": "uid-p1",
       "given": {
@@ -3240,7 +3326,7 @@
       }
     },
     {
-      "name": "X25 a phone whose Comité winner has no group re-names it",
+      "name": "X25 a phone names a winner the Comité already ruled for: its claim stands beside the ruling (0042; it hit 23505)",
       "as": "uid-p1",
       "given": {
         "hole_awards": [
@@ -3281,9 +3367,28 @@
         ]
       },
       "expect": {
-        "status": 409,
-        "code": "23505"
-      }
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "hole_awards",
+          "where": {
+            "round_id": "r1",
+            "hole": 6,
+            "game_id": "closest"
+          },
+          "rows": [
+            {
+              "player_id": "p2",
+              "source": "comite"
+            },
+            {
+              "player_id": "p2",
+              "source": "group"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "X26 the snake answer of another player of the group, replaced",

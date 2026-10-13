@@ -230,7 +230,11 @@ export function asStored(s: Snapshot): Snapshot {
     calcuttaBuybacks: by(s.calcuttaBuybacks, (x) => [x.lotId]),
     payments: by(s.payments, (x) => [x.id]),
     gameEntries: by(s.gameEntries, (x) => [x.gameId, x.playerId]),
-    holeAwards: by(s.holeAwards, (x) => [x.roundId, x.gameId, x.hole, x.playerId]),
+    // 0042 generates `source` from the group, and the key orders by it.
+    holeAwards: by(
+      s.holeAwards.map((x) => ({ ...x, source: x.source ?? (x.groupId == null ? ('comite' as const) : ('group' as const)) })),
+      (x) => [x.roundId, x.gameId, x.hole, x.playerId, x.source],
+    ),
     gameResults: by(s.gameResults, (x) => [x.gameId, x.playerId]),
     moneyAdjustments: by(s.moneyAdjustments ?? [], (x) => [x.id]),
   }
