@@ -125,6 +125,13 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
   - whether a copy installed before this change picks the new bar up or needs to be removed and re-added;
   - iOS 26's glass edge.
 
+## Safe areas on every edge (2026-10-13, PWA-07)
+- **Every edge pads its inset, not only the top.** `tokens.css` has `--safe-left` and `--safe-right` beside the top and bottom ones, and two gutters, `--gutter-left` and `--gutter-right`: the 16 px gutter, or the inset where it is larger (landscape on a notched iPhone, 44 to 59 px a side).
+- **A centred column pads only what its margin leaves.** The shell's main column and a sheet redefine the gutters from how far they already sit from the edge (`(100vw − max-width) / 2`), so the phone-width player screens keep their 16 px in landscape and the Comité, the platform panel and the wide sheets pad the inset. Everything inside reads the same gutters, so a full-bleed row (the tournament header, a signed card) still meets the column's edge.
+- **Whatever spans the screen pads the whole inset:** the TV and Ceremonia boards (`max(4vw, inset)` a side), the toasts and the offline banner.
+- **The Comité save bar sticks 12 px above the home indicator**, not on it: an upward flick there leaves the app.
+- **Proof:** `e2e/fixtures/safearea.spec.ts` emulates the insets in Chromium (portrait 34 px at the bottom; landscape 59 px a side on an iPhone 15 and 50 px on a 13 mini). A real iPhone in landscape is on the handoff's checks (item 7).
+
 ## Money in columns, and «Ya pagaron» (2026-10-01, VIS-01, UX-21)
 - **A row owns its columns.** A screen composes the row primitives and never re-declares what it composes. Both rules are one class, so the bundle's order picks the winner, and the screens' `display: grid` had lost to `rowLine`'s `display: flex` on La Calcutta, the Matrimonios head-to-head and the Liquidación.
 - **The convention.**

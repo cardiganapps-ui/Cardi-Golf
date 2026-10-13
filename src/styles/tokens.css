@@ -96,6 +96,13 @@
   --tap: 44px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Landscape on a notched iPhone: the sensor housing on one side, the rounded corners on both (PWA-07). */
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* The side gutters of anything that spans the screen, never inside an inset. A centred
+     column (the shell's main, a sheet) narrows them by how far it already sits from the edge. */
+  --gutter-left: max(var(--gutter), var(--safe-left));
+  --gutter-right: max(var(--gutter), var(--safe-right));
 
   /* ---- Radius: two values tied to hierarchy, plus round ---- */
   --r-sm: 4px; /* controls, marks, inputs */

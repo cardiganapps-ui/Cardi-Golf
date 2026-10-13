@@ -98,9 +98,9 @@
 /* A signed card: a lock beside the name and the ruled surface, not faded text (contrast stays AA). */
 .locked {
   background: var(--surface);
-  margin: 0 calc(-1 * var(--gutter));
-  padding-left: var(--gutter);
-  padding-right: var(--gutter);
+  margin: 0 calc(-1 * var(--gutter-right)) 0 calc(-1 * var(--gutter-left));
+  padding-left: var(--gutter-left);
+  padding-right: var(--gutter-right);
 }
 .lockMark {
   display: inline-flex;

@@ -19,19 +19,24 @@
   animation: fadeIn var(--dur-fast) var(--ease);
 }
 .sheet {
+  --sheet-max: 560px;
+  /* As the main column: centred, so a landscape inset only needs what its margin leaves (PWA-07). */
+  --sheet-edge: max(0px, (100vw - var(--sheet-max)) / 2);
+  --gutter-left: max(var(--gutter), var(--safe-left) - var(--sheet-edge));
+  --gutter-right: max(var(--gutter), var(--safe-right) - var(--sheet-edge));
   width: 100%;
-  max-width: 560px;
+  max-width: var(--sheet-max);
   max-height: 92dvh;
   background: var(--surface-2);
   border-radius: var(--r-md) var(--r-md) 0 0;
   box-shadow: var(--elev-sheet);
-  padding: var(--s2) var(--gutter) calc(var(--s5) + var(--safe-bottom));
+  padding: var(--s2) var(--gutter-right) calc(var(--s5) + var(--safe-bottom)) var(--gutter-left);
   display: flex;
   flex-direction: column;
   animation: slideUp var(--dur) var(--ease);
 }
 .sheetWide {
-  max-width: 760px;
+  --sheet-max: 760px;
 }
 .sheetHandle {
   width: 36px;
@@ -133,8 +138,8 @@
   position: fixed;
   /* Gutter to gutter with the toasts centred inside: a centred box with
      left: 50% shrank to half the screen and wrapped every toast (PWA-01). */
-  left: var(--gutter);
-  right: var(--gutter);
+  left: var(--gutter-left);
+  right: var(--gutter-right);
   bottom: calc(80px + var(--safe-bottom));
   display: flex;
   flex-direction: column;

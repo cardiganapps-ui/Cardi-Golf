@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   min-height: calc(100dvh - var(--safe-top));
-  margin: 0 calc(-1 * var(--gutter));
+  margin: 0 calc(-1 * var(--gutter-right)) 0 calc(-1 * var(--gutter-left));
 }
 .top {
   display: flex;
@@ -11,7 +11,7 @@
   /* Tall enough for the age line too (two lines at the default text size), so
      it comes and goes with the signal without moving the screen under it (MOT-17). */
   min-height: 56px;
-  padding: var(--s1) var(--gutter);
+  padding: var(--s1) var(--gutter-right) var(--s1) var(--gutter-left);
   position: sticky;
   /* Under the status bar's band, never behind it (PWA-02). */
   top: var(--safe-top);
@@ -51,7 +51,7 @@
 }
 .body {
   flex: 1;
-  padding: 0 var(--gutter) var(--s6);
+  padding: 0 var(--gutter-right) var(--s6) var(--gutter-left);
 }
 .tabbar {
   position: sticky;
