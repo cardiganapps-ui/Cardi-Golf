@@ -20,7 +20,7 @@ import { Avatar, Segmented, ShareButton, toast } from '../../components/ui'
 import { EmptyState, Money } from '../../components/primitives'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
-import { applyPaidWrites, markPaidWrites, restorePaidWrites, unmarkPaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
+import { applyPaidWrites, collectible, markPaidWrites, restorePaidWrites, stillOwes, unmarkPaidWrites, type Account, type PaidWrite, type Transfer } from '../../engine/core/money'
 import type { PrizeAward } from '../../engine/modules/module'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
@@ -78,7 +78,7 @@ export function MoneyScreen() {
   /** «Quién debe qué»: one row per debt still due (a payment key), the way «Pagado» records it. */
   const owed = useMemo(
     () =>
-      money.accounts.filter((a) => a.due > 0 && a.from !== null && (a.kind === 'entry' || a.kind === 'calcutta' || a.kind === 'buyback' || a.kind === 'side' || (a.kind === 'bet' && a.final))),
+      money.accounts.filter(collectible),
     [money.accounts],
   )
   /** «Ya pagaron»: every account with a payment on record, where a wrong «Marcar pagado» is taken back (UX-21). */
@@ -264,7 +264,11 @@ export function MoneyScreen() {
 
   const shareText = useMemo(() => {
     const lines = [M.shareTitle(snapshot.tournament.name), '']
-    for (const p of people) lines.push(`${name(p.playerId)}: ${t.money.paid.toLowerCase()} ${formatMoney(p.paid)}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net)}`)
+    for (const p of people) {
+      // What friends settle from: what each puts in and gets back, and what of it is still due (COPY-03).
+      const due = stillOwes(money.accounts, p.playerId)
+      lines.push(`${name(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid)}${due > 0 ? ` (${t.money.owes(formatMoney(due))})` : ''}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net)}`)
+    }
     lines.push('', settle === 'bank' ? M.viaBank : M.p2p)
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
     for (const tr of transfers) if (tr.amount > 0) lines.push(M.pays(name(tr.from), name(tr.to), formatMoney(tr.amount)))
@@ -362,7 +366,11 @@ export function MoneyScreen() {
                   <span className={styles.personText}>
                     <span className={styles.personName}>{player.displayName}</span>
                     <span className={styles.personSub}>
-                      {t.money.paid} {formatMoney(p.paid)}, {t.money.receives.toLowerCase()} {formatMoney(p.receives)}
+                      {t.money.puts} {formatMoney(p.paid)}, {t.money.receives.toLowerCase()} {formatMoney(p.receives)}
+                      {(() => {
+                        const due = stillOwes(money.accounts, p.playerId)
+                        return due > 0 ? <span className={styles.owes}>, {t.money.owes(formatMoney(due))}</span> : null
+                      })()}
                     </span>
                   </span>
                   <span className={`${styles.net} ${p.net < 0 ? styles.netNeg : ''}`}>
@@ -435,7 +443,10 @@ export function MoneyScreen() {
         <>
           {!state.tournamentFinal && (
             <section className={styles.section}>
-              <h3>{M.checklist}</h3>
+              <h3>
+                {M.checklist}
+                {owed.length > 0 && <span className={styles.checklistCount}>: {M.checklistCount(owed.length, formatMoney(owed.reduce((n, a) => n + a.due, 0)))}</span>}
+              </h3>
               {owed.length === 0 ? (
                 <span className="help">{M.nothingOwed}</span>
               ) : (

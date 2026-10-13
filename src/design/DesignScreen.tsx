@@ -366,7 +366,7 @@ export function DesignScreen() {
             <BoardHead figureLabel="Neto" />
             {fx.data.snapshot.players.slice(0, 3).map((p, i) => {
               const m = fx.data.state.money.people[p.id]!
-              return <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={`Pagó ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(m.paid)}`} figure={`${m.net < 0 ? '−' : '+'}$${Math.abs(m.net).toLocaleString('es-MX')}`} tone={m.net < 0 ? 'under' : 'even'} />
+              return <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={`Pone ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(m.paid)}`} figure={`${m.net < 0 ? '−' : '+'}$${Math.abs(m.net).toLocaleString('es-MX')}`} tone={m.net < 0 ? 'under' : 'even'} />
             })}
           </Board>
         </section>

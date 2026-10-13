@@ -532,6 +532,23 @@ export type PaidWrite = { lotId: Id; paid: boolean } | { kind: PaymentKind; from
  * that only holds money to give back (owed 0) is cleared. The screen and
  * the tests both use this, so they cannot disagree on what a tap means.
  */
+/**
+ * A debt the bank collects now, as «Quién debe qué» lists it: still due, from
+ * a person, and an entry, a Calcutta purchase, a buyback, a side pot or a bet
+ * already decided (a bet still in play is no debt yet).
+ */
+export function collectible(a: Account): boolean {
+  return a.due > 0 && a.from !== null && (a.kind === 'entry' || a.kind === 'calcutta' || a.kind === 'buyback' || a.kind === 'side' || (a.kind === 'bet' && a.final))
+}
+
+/**
+ * What a person still has to pay today, on the same accounts «Quién debe qué»
+ * lists (COPY-03): the figure next to «Pone» that says whether the money is in.
+ */
+export function stillOwes(accounts: readonly Account[], playerId: Id): number {
+  return accounts.reduce((n, a) => (a.from === playerId && collectible(a) ? n + a.due : n), 0)
+}
+
 export function markPaidWrites(settles: readonly Account[]): PaidWrite[] {
   return settles.map((a) => (a.lotId ? { lotId: a.lotId, paid: true } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.owed), paid: a.owed > 0 }))
 }
