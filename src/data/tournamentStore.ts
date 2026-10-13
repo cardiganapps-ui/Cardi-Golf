@@ -21,7 +21,7 @@ import { computeTournament, type TournamentState } from '../engine/computeTourna
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
-import { humanError } from '../lib/humanError'
+import { humanError, isTransient } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { changeArrived, track } from '../lib/telemetry'
 import { fetchAll } from './paged'
@@ -475,6 +475,37 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let retryTimer: ReturnType<typeof setTimeout> | null = null
 let retryDelay = RETRY_MIN_MS
 
+/**
+ * A fetch of the boards that failed on the way (no signal, a timeout, the
+ * server down) is tried again, waiting longer each time, while the phone is
+ * open and on screen (REL-10). It used to wait for the next trigger (a live
+ * change, the five-minute check) while the header read «En vivo». While the
+ * channel is down the 15 s poll does this already; an answer that will not
+ * change by itself (a released phone, a deleted tournament) waits for the check.
+ */
+export const RELOAD_RETRY_MIN_MS = 5_000
+const RELOAD_RETRY_MAX_MS = 2 * 60_000
+let reloadRetryTimer: ReturnType<typeof setTimeout> | null = null
+let reloadRetryDelay = RELOAD_RETRY_MIN_MS
+function retryReloadSoon() {
+  if (reloadRetryTimer || pollTimer) return
+  reloadRetryTimer = setTimeout(() => {
+    reloadRetryTimer = null
+    const st = useTournament.getState()
+    if (!open || left || !st.tournamentId || st.error == null || fetching > 0) return
+    // Offline, or out of sight: the signal coming back, or the phone, reloads (`ensureListeners`).
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+    void st.reload()
+  }, reloadRetryDelay)
+  reloadRetryDelay = Math.min(reloadRetryDelay * 2, RELOAD_RETRY_MAX_MS)
+}
+function stopReloadRetry() {
+  if (reloadRetryTimer) clearTimeout(reloadRetryTimer)
+  reloadRetryTimer = null
+  reloadRetryDelay = RELOAD_RETRY_MIN_MS
+}
+
 function stopDegraded() {
   if (pollTimer) clearInterval(pollTimer)
   if (retryTimer) clearTimeout(retryTimer)
@@ -521,6 +552,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       lastFetchMono = liveClock()
       baseReadAt = readAt
       healWait = 0
+      stopReloadRetry()
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       afterFetch()
@@ -531,6 +563,8 @@ export const useTournament = create<StoreState>((set, get) => ({
         return afterFetch()
       }
       set({ loading: false, error: humanError(e) })
+      // Over the phone's copy the gate keeps asking; over the server's boards, the store does.
+      if (get().source === 'server' && isTransient(e)) retryReloadSoon()
       afterFetch()
     }
   },
@@ -556,6 +590,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       lastFetchMono = liveClock()
       baseReadAt = readAt
       healWait = 0
+      stopReloadRetry()
       set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
       afterFetch()
@@ -564,6 +599,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       healWait = Math.min(Math.max(healWait * 2, HEAL_MS * 2), HEAL_MAX_MS)
       if (seq !== fetchSeq) return afterFetch()
       set({ error: humanError(e) })
+      if (isTransient(e)) retryReloadSoon()
       // A failed fetch read nothing: the one more fetch a landing asked for still goes, once (V22).
       afterFetch()
     }
@@ -670,6 +706,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     refetch = false
     fetchAfterPushes = false
     stopDegraded()
+    stopReloadRetry()
     retryDelay = RETRY_MIN_MS
     if (healTimer) clearInterval(healTimer)
     healTimer = null

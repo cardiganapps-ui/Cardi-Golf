@@ -7,11 +7,9 @@ import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { savedWhen } from '../../lib/freshness'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
-import { useOnline } from '../../components/OfflineBanner'
 import { useTournament } from '../../data/tournamentStore'
 import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
@@ -19,6 +17,7 @@ import { ShareCardButton } from '../../components/ShareCard'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
+import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
 import { QuickFinish } from './QuickFinish'
 import { useActiveRound } from './useMyGroup'
 import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
@@ -40,16 +39,6 @@ function grossToPar(state: TournamentState, playerId: string, roundId?: string):
   return n ? d : null
 }
 
-/** How old the boards are, in words (REL-04), kept current every 30 s. */
-function useSavedWhen(ts: number): string | null {
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000)
-    return () => clearInterval(id)
-  }, [])
-  return ts ? savedWhen(ts, now) : null
-}
-
 export function LiveScreen() {
   const data = useTournament((s) => s.data)
   const updatedAt = useTournament((s) => s.updatedAt)
@@ -60,12 +49,9 @@ export function LiveScreen() {
   const prevOrder = useRef<Map<string, number>>(new Map())
   const [moves, setMoves] = useState<Map<string, number>>(new Map())
   const updatedWhen = useSavedWhen(updatedAt)
-  // While the boards may be old (the phone's copy, or no signal), the header's
-  // second line says how old: once is enough.
-  const source = useTournament((s) => s.source)
-  const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
-  const online = useOnline()
-  const ageInHeader = !isFixture && (!online || source === 'cache')
+  // While the boards may be old (the phone's copy, no signal, a fetch that
+  // failed), the header's second line says how old: once is enough.
+  const ageInHeader = useBoardsMayBeOld()
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
   useEffect(() => {

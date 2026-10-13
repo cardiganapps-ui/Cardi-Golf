@@ -83,3 +83,29 @@ describe('Calcutta night on the TV (MOT-04)', () => {
     expect(rows()).toHaveLength(10)
   })
 })
+
+describe('the TV says how old its boards are while they may be behind (REL-10)', () => {
+  function showTv(state: { error: string | null; minutesAgo: number }) {
+    const fx = getFixture('full12-live')!
+    useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, source: 'server', realtime: 'live', error: state.error, updatedAt: Date.now() - state.minutesAgo * 60_000 })
+    return render(
+      <MemoryRouter>
+        <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+          <TvScreen />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+  }
+  const headerLine = () => document.querySelector('header')!.textContent ?? ''
+
+  it('a fetch of them that failed: «Actualizado hace 7 min» under the event name, for the room', () => {
+    showTv({ error: t.errors.network, minutesAgo: 7 })
+    expect(headerLine()).toContain(t.sync.boardsAge('hace 7 min'))
+  })
+
+  it('live boards: no age', () => {
+    showTv({ error: null, minutesAgo: 7 })
+    expect(headerLine()).not.toContain(t.sync.boardsAge('hace 7 min'))
+  })
+})
+

@@ -144,6 +144,16 @@ function generic(p: Parts): string {
   return ref ? E.unknownRef(ref) : E.unknown
 }
 
+/**
+ * A failure that may pass by itself (no signal, a timeout, the server down or
+ * busy): worth trying again. A refusal, a missing row or a lapsed session is
+ * not: it answers the same until something else changes.
+ */
+export function isTransient(e: unknown): boolean {
+  const copy = humanError(e)
+  return copy === E.network || copy === E.timeout || copy === E.server || copy === E.tooMany
+}
+
 /** Spanish copy for any error: show this, log the error itself. */
 export function humanError(e: unknown, overrides: ErrorOverrides = {}): string {
   if (e instanceof UserError) return e.message

@@ -2701,11 +2701,15 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 135,
+      "tests": [
+        "src/data/tournamentStore.fresh.test.ts",
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/screens/tournament/TvScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: a fetch of the boards that fails on the way (no signal, a timeout, the server down or busy) is tried again after 5 s, doubling to every 2 minutes, while the phone is on screen with signal and the channel is up (the 15 s poll covers a channel that is down); a refusal or a missing row is not retried and waits for the five-minute check. Until a fetch works the error stays: the header reads «Conectando…» with «Actualizado hace N min», and so does the TV's top line, where it read «En vivo» over boards minutes old. The store test failed before the fix (no try after the failure). Left: the snapshot is still about 22 requests, all or nothing (one `tournament_snapshot` RPC is PLAN §5.2's), and postgrest-js's own retries add to each."
     },
     {
       "id": "REL-11",
@@ -2738,11 +2742,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 135,
+      "tests": [
+        "src/lib/chunkReload.test.ts",
+        "e2e/fixtures/deploy.spec.ts",
+        "src/app/RouteError.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: a page no service worker controls that asks for a screen's chunk a deploy removed loads the new build, once (`vite:preloadError`), never offline and never twice in a minute (the second failure shows the crash screen with «Reiniciar la app», no loop); the error screen stays blank and unreported while it reloads. `vercel.json` leaves `/assets/` out of the SPA rewrite, so the old chunk is a 404, not the app's HTML, and the worker claims a first visit's page once installed (`clientsClaim`, updates still wait for «Actualizar»). The fixture spec blocks service workers and answers this build's Estadísticas with a 404: it showed «Algo falló al abrir Polo» before the fix. Left: a two-build deploy on a real static server is not in CI (the spec fakes the missing chunk)."
     },
     {
       "id": "REL-14",
@@ -2850,11 +2858,14 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 87,
+      "tests": [
+        "src/screens/tournament/TournamentShell.test.tsx",
+        "src/data/tournamentStore.fresh.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed in #87 (REL-04): `patch()` leaves `updatedAt` alone, so a hole saved on the phone no longer makes old boards read «Actualizado ahora»; the shell test («a hole saved on a two-day-old copy leaves it two days old») pins it on screen, and #135's store test pins `updatedAt` itself. Live changes from the channel still move it (they are the server's)."
     },
     {
       "id": "REL-21",
