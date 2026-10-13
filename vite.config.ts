@@ -6,6 +6,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
+import { APP_MANIFEST } from './src/lib/appManifest'
 
 /**
  * Which build a phone runs (PWA-03). The id is the build time in seconds:
@@ -49,31 +50,8 @@ export default defineConfig({
       // A new deploy is offered, never forced: a reload mid-hole would lose the steppers.
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
-      manifest: {
-        id: '/',
-        name: 'Polo',
-        short_name: 'Polo',
-        description:
-          'Torneos de golf entre amigos: marcador en vivo, juegos, Calcutta y dinero.',
-        lang: 'es-MX',
-        dir: 'ltr',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        orientation: 'any',
-        background_color: '#FBFAF7',
-        theme_color: '#1E6B3B',
-        icons: [
-          { src: versioned('/icons/icon-192.png'), sizes: '192x192', type: 'image/png' },
-          { src: versioned('/icons/icon-512.png'), sizes: '512x512', type: 'image/png' },
-          {
-            src: versioned('/icons/icon-maskable-512.png'),
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
+      // One manifest for the build and for a tournament's own start URL (api/manifest.ts, PWA-09).
+      manifest: { ...APP_MANIFEST, icons: APP_MANIFEST.icons.map((icon) => ({ ...icon, src: versioned(icon.src) })) },
       workbox: {
         // App shell, fonts, logo. Supabase calls are never cached by the SW:
         // the outbox (Dexie) owns offline writes and the store owns reads.

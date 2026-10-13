@@ -14,6 +14,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
 import { ShareCardButton } from '../../components/ShareCard'
+import { InstallCard } from '../../components/InstallGuide'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
@@ -243,6 +244,8 @@ export function LiveScreen() {
       )}
 
       <QuickFinish />
+      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). */}
+      <InstallCard />
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>

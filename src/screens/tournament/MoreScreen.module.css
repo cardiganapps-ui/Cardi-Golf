@@ -35,6 +35,17 @@
 .link svg {
   color: var(--ink-2);
 }
+/* «Cómo instalar la app» opens a sheet, so it is a button; it reads as the rows around it. */
+button.link {
+  width: 100%;
+  border: 0;
+  border-bottom: var(--hairline);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .join {
   display: flex;
   flex-direction: column;

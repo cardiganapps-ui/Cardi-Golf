@@ -17,6 +17,7 @@ import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { baseRow, enqueueAward, enqueueHole, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox, type HoleEntry, type HoleFields } from '../../data/outbox'
 import { CONTEST_SINGLE, type ContestState } from '../../engine/games/contest'
 import { RejectedWrites } from '../../components/RejectedWrites'
+import { CaptureFromIcon } from '../../components/InstallGuide'
 import { HoleConflicts } from '../../components/HoleConflicts'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
@@ -1141,6 +1142,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               <span className={`${styles.saveStatus} ${styles.saveStatusWarn}`}>{anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}</span>
             )}
           </div>
+          {/* An iPhone's browser keeps its own holes, apart from the installed app's (PWA-09). */}
+          <CaptureFromIcon />
           <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
         </>
       )}

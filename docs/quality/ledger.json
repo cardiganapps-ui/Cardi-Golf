@@ -2213,9 +2213,13 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/components/InstallGuide.test.tsx",
+        "src/lib/install.test.ts",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2227,9 +2231,16 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/lib/install.test.ts",
+        "src/lib/joinInput.test.ts",
+        "src/lib/appManifest.test.ts",
+        "src/screens/HomeScreen.join.test.tsx",
+        "src/components/InstallGuide.test.tsx",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
