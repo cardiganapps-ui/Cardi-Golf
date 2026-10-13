@@ -36,6 +36,12 @@ export interface TournamentRow {
   quick?: boolean
   /** The crew it belongs to (0018), if any. */
   crewId?: string | null
+  /**
+   * When the Comité fixed the base handicaps (0046, UX-28): «Fijar hándicaps»,
+   * or the tournament leaving setup. Out of setup they count as fixed even
+   * with no moment (a tournament under way before 0046). See `handicapsLocked`.
+   */
+  handicapsLockedAt?: string | null
 }
 
 export interface Player {
@@ -56,6 +62,22 @@ export interface Player {
   avatarUrl: string | null
   formGuide: string | null
   sortOrder: number
+  /** Each change to his handicap after they were fixed, with its reason (0046, UX-28); null when none. */
+  handicapNote?: HandicapNote | null
+}
+
+/** The fields a player's handicap is computed from: what a lock fixes. */
+export interface HandicapInputs {
+  handicapSource: Player['handicapSource']
+  baseHcp: number
+  handicapIndex: number | null
+  estimateInputs: Player['estimateInputs']
+}
+
+/** players.handicap_note: the handicap when they were fixed, and every change after it (the 20 latest). */
+export interface HandicapNote {
+  from: HandicapInputs
+  changes: Array<{ at: string; reason: string; to: HandicapInputs }>
 }
 
 export interface EstimateInput {

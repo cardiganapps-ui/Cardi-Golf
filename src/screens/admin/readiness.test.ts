@@ -13,6 +13,7 @@ import { makeCourse, makeRound, makeTee } from '../../engine/testing/fixtures'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { checkedText, coveredByChecklist, hrefOf, readiness, setupBadge, type Entry, type ReadinessItem } from './readiness'
+import { t } from '../../i18n/es-MX'
 
 type Items = Partial<Record<ReadinessItem['id'], ReadinessItem>>
 
@@ -34,6 +35,7 @@ const settingsOf = (s: Snapshot) => s.tournament.settings as TournamentSettings
 function knockout(s: Snapshot, opts: { players?: number; days: number; rounds?: number }) {
   s.players = s.players.slice(0, opts.players ?? s.players.length)
   s.tournament.status = 'setup'
+  s.tournament.handicapsLockedAt = '2027-06-01T00:00:00Z'
   s.tournament.settings = { ...settingsOf(s), rounds: opts.days }
   s.rounds = Array.from({ length: opts.rounds ?? opts.days }, (_, i) => makeRound(i + 1, { status: 'scheduled', date: `2027-06-1${i + 2}` }))
   s.groups = []
@@ -69,7 +71,7 @@ describe('Para empezar', () => {
     const r = check('minimal4-setup')
     expect(Object.values(r).every((i) => i!.done)).toBe(true)
     // One tee on the course: nothing to choose, so no tee line.
-    expect(Object.keys(r).sort()).toEqual(['card', 'groups', 'pins', 'players', 'roundSetup', 'rounds'])
+    expect(Object.keys(r).sort()).toEqual(['card', 'groups', 'handicaps', 'pins', 'players', 'roundSetup', 'rounds'])
   })
 
   it('players without a PIN are counted; with the PINs unknown the line is left out', () => {
@@ -96,12 +98,24 @@ describe('Para empezar', () => {
   })
 
   it('«Listo para jugar» names what was checked, and nothing else', () => {
-    expect(checkedText(run('minimal4-setup').items)).toBe('jugadores, PIN, rondas, campo y grupos')
+    expect(checkedText(run('minimal4-setup').items)).toBe('jugadores, PIN, hándicaps, rondas, campo y grupos')
     const twoTees = run('minimal4-setup', (s) => {
       s.courses[0]!.tees.push(makeTee('tee2', s.courses[0]!.id, { name: 'Blancas' }))
     })
-    expect(checkedText(twoTees.items)).toBe('jugadores, PIN, rondas, campo, tees y grupos')
-    expect(checkedText(run('team8', (s) => (s.tournament.status = 'setup')).items)).toBe('jugadores, PIN, rondas, campo, equipos y grupos')
+    expect(checkedText(twoTees.items)).toBe('jugadores, PIN, hándicaps, rondas, campo, tees y grupos')
+    expect(checkedText(run('team8', (s) => (s.tournament.status = 'setup')).items)).toBe('jugadores, PIN, hándicaps, rondas, campo, equipos y grupos')
+  })
+
+  it('the handicaps fixed before anything is bought or played on them (UX-28)', () => {
+    // In setup with nothing fixed: open, and it goes to Jugadores, where «Fijar hándicaps» is.
+    const free = check('minimal4-setup', (s) => (s.tournament.handicapsLockedAt = null))
+    expect(free.handicaps).toEqual({ id: 'handicaps', done: false, text: t.admin.ready.handicapsMissing, to: 'jugadores' })
+    expect(check('minimal4-setup').handicaps).toMatchObject({ done: true, text: t.admin.ready.handicaps })
+    // Under way they are fixed, moment or not.
+    expect(check('minimal4-live').handicaps).toMatchObject({ done: true })
+    expect(check('minimal4-setup', (s) => ((s.tournament.status = 'auction'), (s.tournament.handicapsLockedAt = null))).handicaps).toMatchObject({ done: true })
+    // With nobody to fix, there is no line.
+    expect(check('minimal4-setup', (s) => (s.players = s.players.slice(0, 1))).handicaps).toBeUndefined()
   })
 })
 

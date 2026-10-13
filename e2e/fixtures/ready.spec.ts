@@ -51,7 +51,7 @@ test('a design fixture asks no server: everything done reads «Listo para jugar�
     if (/players_with_pin|tournament_profiles/.test(r.url())) asked.push(r.url())
   })
   await open(page, '/t/_/minimal4-setup/admin/torneo')
-  await expect(page.getByText(R.allSet('jugadores, PIN, rondas, campo y grupos'))).toBeVisible()
+  await expect(page.getByText(R.allSet('jugadores, PIN, hándicaps, rondas, campo y grupos'))).toBeVisible()
   await expect(page.getByRole('link', { name: t.admin.sections.tournament, exact: true })).toBeVisible()
   expect(asked).toEqual([])
 })

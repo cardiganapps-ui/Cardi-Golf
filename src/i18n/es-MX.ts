@@ -64,6 +64,14 @@ export function handicapText(n: number): string {
   return n < 0 ? `+${-n}` : String(n)
 }
 
+type HcpSource = 'index' | 'estimate' | 'manual'
+const HCP_WORD: Record<HcpSource, string> = { index: 'índice', estimate: 'estimado', manual: 'base' }
+/** A handicap changed after they were fixed (UX-28): «de 14 a 12», «de 14.2 a 12.3 (índice)», «de 14 (base) a 12.3 (índice)». */
+export function hcpFromTo(from: { source: HcpSource; base: number }, to: { source: HcpSource; base: number }): string {
+  if (from.source === to.source) return `de ${handicapText(from.base)} a ${handicapText(to.base)}${from.source === 'manual' ? '' : ` (${HCP_WORD[from.source]})`}`
+  return `de ${handicapText(from.base)} (${HCP_WORD[from.source]}) a ${handicapText(to.base)} (${HCP_WORD[to.source]})`
+}
+
 /** What the phone may not do yet while a tournament's writes are still on it (account.ts). */
 export type UnsentAction = 'signOut' | 'switch' | 'enter'
 const UNSENT_ACTION: Record<UnsentAction, string> = {
@@ -1432,6 +1440,8 @@ export const t = {
     // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
     rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today && !blankFigure(today) ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', blankFigure(figure) ? '' : figure].filter(Boolean).join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
+    /** UX-28: a handicap changed after they were fixed; tapping it opens the player. */
+    hcpChanged: (name: string, fromTo: string) => `El hándicap de ${name} cambió después de fijarlos: ${fromTo}`,
   },
   card: {
     contest: {
@@ -1606,6 +1616,10 @@ export const t = {
     round: (day: number, figure: string) => `Día ${day}: ${figure}`,
     grossPutts: (gross: number | null, putts: number) => `${gross != null ? `${gross} golpes, ` : ''}${putts} putts`,
     whyHole: (n: number) => `Hoyo ${n}`,
+    /** UX-28: his handicap is not what it was when they were fixed. `fromTo` from `hcpFromTo`. */
+    hcpChanged: (fromTo: string) => `Su hándicap cambió después de fijarlos: ${fromTo}.`,
+    /** One change, with the Comité's reason. */
+    hcpChange: (when: string, reason: string) => `${when}: «${reason}»`,
   },
   more: {
     title: 'Más',
@@ -1639,12 +1653,14 @@ export const t = {
       todoLabel: 'Pendiente',
       /** `what`: the lines it checked, from `checked` (andList). */
       allSet: (what: string) => `Listo para jugar: ${what}.`,
-      checked: { players: 'jugadores', pins: 'PIN', rounds: 'rondas', roundSetup: 'rondas', card: 'campo', foreignTees: 'tees', teams: 'equipos', pairs: 'parejas', bracket: 'cuadro', tees: 'tees', groups: 'grupos' },
+      checked: { players: 'jugadores', pins: 'PIN', handicaps: 'hándicaps', rounds: 'rondas', roundSetup: 'rondas', card: 'campo', foreignTees: 'tees', teams: 'equipos', pairs: 'parejas', bracket: 'cuadro', tees: 'tees', groups: 'grupos' },
       day: (n: number) => `día ${n}`,
       players: (n: number) => `${n} jugadores dados de alta`,
       playersMissing: 'Da de alta a los jugadores (al menos 2)',
       pins: 'Todos tienen PIN para entrar',
       pinsMissing: (n: number) => (n === 1 ? 'A 1 jugador le falta su PIN' : `A ${n} jugadores les falta su PIN`),
+      handicaps: 'Hándicaps fijados',
+      handicapsMissing: 'Revisa los hándicaps y fíjalos (abrir la subasta o empezar a jugar los fija solo)',
       rounds: (n: number) => (n === 1 ? '1 ronda creada' : `${n} rondas creadas`),
       roundsMissing: (n: number) => (n === 1 ? 'Falta crear 1 ronda' : `Faltan ${n} rondas por crear`),
       roundsCancelled: (n: number) => (n === 1 ? 'La ronda está cancelada: vuelve a programarla' : 'Todas las rondas están canceladas: vuelve a programar una'),
@@ -1959,6 +1975,8 @@ export const t = {
       uploadLogo: 'Subir logo',
       accent: 'Color de acento',
       status: 'Estado',
+      /** UX-28: leaving Configuración fixes the base handicaps (0046). */
+      statusLocksHandicaps: 'Pasar a Subasta o a En juego fija los hándicaps: después, cambiar uno pide un motivo.',
       joinCode: 'Código para entrar',
       newCode: 'Generar otro código',
       newCodeConfirm: 'El código anterior deja de funcionar. Quien ya entró sigue dentro.',
@@ -2106,6 +2124,25 @@ export const t = {
       /** Save waits for a handicap someone typed, by the method chosen (UX-16): a new player opened on 18. */
       hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe los golpes de sus tres rondas para guardarlo.' },
       reordered: 'Las rondas venían en otro orden; se acomodaron.',
+      /** UX-28: the base handicaps fixed before the Calcutta (0046). */
+      lock: {
+        title: 'Hándicaps',
+        open: 'Fíjalos antes de que empiece el torneo: después, cambiar uno pide un motivo y todos lo ven en En vivo. Abrir la subasta o empezar a jugar los fija solo.',
+        fix: 'Fijar hándicaps',
+        fixTitle: 'Fijar los hándicaps',
+        fixBody: 'Desde ahora, cambiar el hándicap de un jugador pide un motivo, y En vivo y su ficha dicen qué cambió y por qué.',
+        fixed: (when: string | null) =>
+          `${when ? `Fijados el ${when}` : 'Fijados desde que empezó el torneo'}. Cambiar uno pide un motivo, y todos lo ven en En vivo.`,
+        free: 'Liberar',
+        freeTitle: 'Liberar los hándicaps',
+        freeBody: 'Se vuelven a cambiar sin motivo, y se borra lo que se anotó al cambiarlos. Solo se puede antes de que empiece el torneo.',
+        fixedHint: 'Fijado: cambiarlo pide un motivo.',
+        reasonTitle: 'Cambiar un hándicap fijado',
+        reasonBody: (name: string, fromTo: string) => `El hándicap de ${name} cambia ${fromTo}. Todos lo verán en En vivo, con este motivo.`,
+        reasonConfirm: 'Guardar con motivo',
+        changed: 'cambió después de fijarlos',
+        history: 'Cambios después de fijarlos',
+      },
     },
     courses: {
       title: 'Campos',
@@ -2217,6 +2254,8 @@ export const t = {
     lot: (n: number) => `Lote ${n}`,
     of: (n: number, total: number) => `${n} de ${total}`,
     open: 'Abrir lote',
+    /** UX-28: opening the auction fixes the base handicaps (0046). */
+    locksHandicaps: 'Abrir la subasta fija los hándicaps: después, cambiar uno pide un motivo.',
     currentBid: 'Puja actual',
     self: 'él mismo',
     owner: 'Dueño',

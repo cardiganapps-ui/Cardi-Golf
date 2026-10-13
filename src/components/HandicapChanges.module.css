@@ -1,0 +1,18 @@
+.box {
+  display: grid;
+  gap: var(--s1);
+  padding: var(--s3);
+  border-radius: var(--r-sm);
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.line {
+  margin: 0;
+  font-weight: 700;
+}
+.list {
+  margin: 0;
+  padding-left: var(--s4);
+  display: grid;
+  gap: var(--s1);
+}

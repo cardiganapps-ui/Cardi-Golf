@@ -22,6 +22,18 @@
   gap: var(--s1);
   color: var(--caution);
 }
+/* A caution that opens its player (UX-28): the line as the others read, a full tap target. */
+.cautionLink {
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .spotlight {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);

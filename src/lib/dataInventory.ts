@@ -45,7 +45,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   course_documents: T('scorecard photos and PDFs someone uploaded', WHERE, 'record'),
   tees: NONE('a course tee: rating, slope, par'),
   holes: NONE('a course hole: par, stroke index, yards'),
-  players: T('name, photo, tier, handicap, the three rounds of an estimate, form guide, which profile it is', CAPTURED, 'tournament'),
+  players: T('name, photo, tier, handicap, the three rounds of an estimate, form guide, which profile it is, and each change to the handicap after it was fixed with the Comité\'s reason', CAPTURED, 'tournament'),
   player_pins: T('the PIN, as a hash', CAPTURED, 'tournament'),
   pin_attempts: T('failed PIN tries per device', DATA, 'short'),
   device_sessions: T('which player each phone entered as', DATA, 'tournament'),

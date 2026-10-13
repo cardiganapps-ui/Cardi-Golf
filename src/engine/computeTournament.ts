@@ -28,6 +28,7 @@ import type { GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
 import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
+import { handicapChanges, type HandicapChange } from './core/handicapLock'
 
 /** "$27,500": the engine's one formatter (core/pesos.ts). */
 const peso = pesos
@@ -58,6 +59,8 @@ export interface StatusFlags {
   pool: PrizeCheck
   /** The warning for an unbalanced pool once past setup (also in `warnings`), for the money screens. */
   poolWarning: string | null
+  /** Players whose handicap changed after they were fixed (UX-28): En vivo and their sheet say so. */
+  handicapChanges: HandicapChange[]
 }
 
 export interface TournamentState {
@@ -278,6 +281,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       warnings: [...poolWarnings, ...core.warnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
+      handicapChanges: handicapChanges(snapshot, settings),
     },
     tournamentFinal,
   }

@@ -1,7 +1,7 @@
 {
   "source": "docs/review/2026-09-30/findings.json",
   "plan": "docs/quality/PLAN.md",
-  "updated": "2026-10-10",
+  "updated": "2026-10-13",
   "statuses": {
     "open": "not fixed yet",
     "fixed": "merged with a regression test (or an automated check) that failed before the fix",
@@ -3966,11 +3966,19 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
+      "status": "fixed",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/handicap_lock.sql",
+        "supabase/tests/restore_roundtrip.sql",
+        "src/engine/core/handicapLock.test.ts",
+        "src/screens/admin/AdminPlayers.lock.test.tsx",
+        "src/screens/tournament/LiveScreen.handicaps.test.tsx",
+        "src/screens/admin/readiness.test.ts",
+        "src/data/mappers.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The tee is not part of the lock: a player's tee for a day can still change without a reason (the brief puts tees per round, §13b-D). Older bundles cannot give a reason, so a fixed handicap is theirs to keep until they update."
     },
     {
       "id": "VIS-01",
