@@ -155,7 +155,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       reason: null,
       tournament_id: tid,
     })),
-    snake_tiebreaks: s.snakeTiebreaks.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, last_holed_player_id: x.lastHoledPlayerId, decided_by: null, created_at: CREATED, tournament_id: tid })),
+    snake_tiebreaks: s.snakeTiebreaks.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, last_holed_player_id: x.lastHoledPlayerId, decided_by: x.decidedBy ?? null, created_at: CREATED, tournament_id: tid })),
     card_signatures: s.cardSignatures.map((x) => ({ round_id: x.roundId, pair_id: x.pairId, signed_by: x.signedBy, signed_at: x.signedAt, tournament_id: tid })),
     handicap_overrides: s.handicapOverrides.map((x) => ({ round_id: x.roundId, player_id: x.playerId, playing_hcp: x.playingHcp, reason: x.reason, by: x.by, at: x.at, tournament_id: tid })),
     calcutta_lots: s.calcuttaLots.map((l) => ({

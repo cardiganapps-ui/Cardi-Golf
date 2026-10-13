@@ -406,6 +406,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
       groupId: GROUP,
       hole: 7,
       lastHoledPlayerId: CHUY,
+      decidedBy: ANA,
     })
     expect(mapCardSignature({ round_id: ROUND, pair_id: id(401), signed_by: BETO, signed_at: '2027-04-10T21:30:00+00:00' })).toEqual({
       roundId: ROUND,
