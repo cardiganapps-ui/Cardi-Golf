@@ -30,7 +30,7 @@ Two directions, both grounded in golf's own material culture rather than app aes
 | Over par | blue | `#235380` | figures only; 7.7:1 on background, 7.1:1 on the ruled surface (AAA) |
 | Hairline | rule | `#D8D5CB` | 1 px rules; the heavy rule is ink at 2 px |
 
-Board surface (TV, Ceremonia): `#0F2E22` background, `#F6F3EA` figures (13.2:1), `#A9BBAF` secondary, `#F2C230` for the leader plate and the live mark only.
+Board surface (TV, Ceremonia): `#0F2E22` background, `#F6F3EA` figures (13.2:1), `#A9BBAF` secondary, `#F2C230` for the leader plate, the snake holder's plate on the TV, and the live mark only.
 
 **Type.** **Archivo** (variable: weight 100–900, width 62–125) for everything: text at width 100, figures at width 90 so 60-row columns stay tight without a second family, weight 600 for figures, 500 for names, 400 for body. It is a grotesque with newspaper and print heritage, sturdy in sunlight, with tabular lining figures that align. **Fraunces 600** survives for exactly one role: the event name, the way club scorecards set the club's name in a serif above a sans grid. Scale (rem, 4-px rhythm): 11 · 12 · 14 · 16 · 18 · 22 · 28 · 36 · 56. Line-heights 1.1 display, 1.3 UI, 1.5 body. No tracking except 0.04em on tiny table headers.
 
