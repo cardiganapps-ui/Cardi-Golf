@@ -80,6 +80,11 @@ export const t = {
     description: 'Marcador en vivo, juegos, Calcutta y cuentas claras para torneos entre amigos.',
   },
   common: {
+    // UX-15: a sheet holding typed work asks before a stray tap, Escape or back throws it away.
+    discardTitle: '¿Descartar lo que capturaste?',
+    discardBody: 'Si cierras ahora, se pierde lo que escribiste en esta hoja.',
+    keepEditing: 'Seguir capturando',
+    discard: 'Descartar',
     save: 'Guardar',
     cancel: 'Cancelar',
     delete: 'Borrar',

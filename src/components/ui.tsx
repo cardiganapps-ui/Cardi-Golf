@@ -4,7 +4,7 @@
  * grid, marks) live in ./primitives and are re-exported here so existing
  * imports keep working.
  */
-import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { humanError } from '../lib/humanError'
 import styles from './ui.module.css'
@@ -73,8 +73,13 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
 }
 
 
-/** Bottom sheet / modal. Focus moves in on open and back to the opener on close. */
-export function Sheet({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean }) {
+/**
+ * Bottom sheet / modal. Focus moves in on open and back to the opener on close.
+ * `dirty`: the sheet holds work typed into it (a scorecard, a player); the
+ * backdrop, Escape, «Cerrar» and the system back then ask before discarding
+ * it, in a sheet of their own, so a back on that question keeps editing (UX-15).
+ */
+export function Sheet({ open, onClose, title, children, wide, dirty }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean; dirty?: boolean }) {
   const id = useId()
   const frame = useRef<HTMLDivElement>(null)
   const opener = useRef<HTMLElement | null>(null)
@@ -85,12 +90,20 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
    * the opener, so only the first character reached the field (UX-01).
    */
   const close = useRef(onClose)
+  const isDirty = useRef(!!dirty)
   useEffect(() => {
     close.current = onClose
-  }, [onClose])
+    isDirty.current = !!dirty
+  }, [onClose, dirty])
+  const [asking, setAsking] = useState(false)
+  /** Every way out but the sheet's own actions: straight out, or the question first when there is work in it. */
+  const tryClose = useCallback(() => {
+    if (isDirty.current) setAsking(true)
+    else close.current()
+  }, [])
   useEffect(() => {
     if (!open) return
-    sheetOpened(id, () => close.current())
+    sheetOpened(id, tryClose)
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
     /*
@@ -111,7 +124,7 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !isTopSheet(id)) return
       e.stopPropagation()
-      close.current()
+      tryClose()
     }
     window.addEventListener('keydown', onKey)
     // Runs only when the sheet closes or unmounts, never on a re-render.
@@ -121,13 +134,34 @@ export function Sheet({ open, onClose, title, children, wide }: { open: boolean;
       sheetClosed(id)
       if (!anySheetOpen()) document.body.style.overflow = ''
       opener.current?.focus?.()
+      setAsking(false)
     }
-  }, [open, id])
+  }, [open, id, tryClose])
   if (!open) return null
   return (
-    <div className={styles.backdrop} onClick={onClose} role="presentation">
-      <SheetFrame title={title} onClose={onClose} wide={wide} frameRef={frame}>
+    <div className={styles.backdrop} onClick={tryClose} role="presentation">
+      <SheetFrame title={title} onClose={tryClose} wide={wide} frameRef={frame}>
         {children}
+        <Sheet open={asking} onClose={() => setAsking(false)} title={t.common.discardTitle}>
+          <div className="stack">
+            <p className="help">{t.common.discardBody}</p>
+            <div className="row">
+              <button className="btn btn--secondary" type="button" onClick={() => setAsking(false)}>
+                {t.common.keepEditing}
+              </button>
+              <button
+                className="btn btn--danger grow"
+                type="button"
+                onClick={() => {
+                  setAsking(false)
+                  close.current()
+                }}
+              >
+                {t.common.discard}
+              </button>
+            </div>
+          </div>
+        </Sheet>
       </SheetFrame>
     </div>
   )
