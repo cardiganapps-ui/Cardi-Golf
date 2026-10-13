@@ -642,9 +642,15 @@ Tabs: Individual · Matrimonios · Mejor ronda · Víbora · Putts · Calcutta.
 All of section 5, rewritten as friendly Spanish copy. This mirrors the printed rules sheet.
 
 ### 9.9 Modo TV (`/tv`)
-- Full-screen, dark deep-teal theme, huge type, logo, and the wave motif.
+- Full-screen, on the board palette (`DESIGN_DIRECTION.md`), huge type, logo.
 - Auto-rotates every ~12 seconds: Individual → Matrimonios → Víbora holders → Calcutta values → Feed.
 - On Calcutta night it shows the auction board instead (section 10).
+- **Sized for the room** (2026-10-13, VIS-05; `DESIGN_NOTES.md` «TV at room scale»): it is read from 4 m off a 55-inch screen.
+  - Nothing on any board is under 3.5vh, and names are 4.5vh.
+  - Each figure sits under its label: «hoyo», «hoy» and «total» on Individual, «por día» and «total» on the pairs board, «invirtió» and «vale hoy» on the Calcutta values. The labels share the board title's line.
+  - Each leaderboard's total sits on the board's plate, the leader's in yellow. The snake's holder is on the yellow plate.
+  - There are no tier badges.
+  - `e2e/fixtures/tv.spec.ts` measures every visible text on every board at 1920×1080 and 1280×720.
 
 ### 9.10 Ceremonia (`/ceremonia`)
 The admin taps through reveals, one at a time, each with drama:

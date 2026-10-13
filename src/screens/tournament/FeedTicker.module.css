@@ -39,19 +39,26 @@
   border-top-color: var(--board-rule);
 }
 .big .item {
-  grid-template-columns: 4vh minmax(0, 1fr) auto;
-  font-size: 3vh;
-  padding: 1.2vh 0;
+  grid-template-columns: 5vh minmax(0, 1fr) auto;
+  /* A name's size for the room (VIS-05). */
+  font-size: 4.5vh;
+  padding: 1vh 0;
   border-bottom-color: var(--board-rule);
   color: var(--board-ink);
 }
 .big .icon {
   color: var(--board-ink-2);
 }
+/* The phone's 18 px icon, at the room's size. */
+.big .icon svg {
+  width: 0.8em;
+  height: 0.8em;
+}
 .big .lead .icon {
   color: var(--board-accent);
 }
 .big .when {
   color: var(--board-ink-2);
-  font-size: 2vh;
+  /* The board's floor (VIS-05). */
+  font-size: 3.5vh;
 }

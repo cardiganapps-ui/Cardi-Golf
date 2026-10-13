@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 /**
  * STRAT-03: the TV's main board under match play. A decided match reads the
- * same for both sides («4&3»), so each row's day says whose it was: «Hoyo F,
- * ganó 4&3» beside the winner's point, «Hoyo F, perdió 4&3» beside the loser's.
+ * same for both sides («4&3»), so each row's day says whose it was: «ganó
+ * 4&3» beside the winner's point, «perdió 4&3» beside the loser's, under «hoy».
  */
 import { cleanup, render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -24,10 +24,10 @@ function tv(fixture: string) {
     </MemoryRouter>,
   )
 }
-/** A player's row on the board: where he is and his day, then his figure. */
+/** A player's row on the board: where he is, his day, then his figure, each under its column (VIS-05). */
 const tvRow = (playerId: string) => {
   const row = document.querySelector(`[data-player="${playerId}"]`)!
-  return [row.querySelector('[class*="_small_"]')!.textContent, row.querySelector('[class*="_big_"]')!.textContent]
+  return [...row.querySelectorAll('[class*="_mid_"]'), row.querySelector('[class*="_big_"]')!].map((c) => c.textContent)
 }
 
 afterEach(() => cleanup())
@@ -36,7 +36,7 @@ describe('the TV board under match play (STRAT-03)', () => {
   it("each row's day says whose it was", () => {
     // match8, group 1 (off the 1st tee): Fabián beat Elías 4&3.
     tv('match8')
-    expect(tvRow('p2')).toEqual(['Hoyo F, ganó 4&3', '1'])
-    expect(tvRow('p1')).toEqual(['Hoyo F, perdió 4&3', '0'])
+    expect(tvRow('p2')).toEqual(['F', 'ganó 4&3', '1'])
+    expect(tvRow('p1')).toEqual(['F', 'perdió 4&3', '0'])
   })
 })

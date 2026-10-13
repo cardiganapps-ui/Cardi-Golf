@@ -19,6 +19,7 @@ import { IconSnake } from '../../components/icons'
 import { nearestAccent } from '../../design/accents'
 import { easeFast, easeSlow, still, timer } from '../../design/motion'
 import { dayFigureText } from '../../lib/figureText'
+import { Plate } from '../../components/primitives'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 /** Each board's time on screen. */
@@ -133,6 +134,7 @@ export function TvScreen() {
                 title={settings.modules.individual.label}
                 turn={turn}
                 items={indivRows}
+                columns={{ className: styles.rowIndiv, labels: [round ? t.tv.thru : '', round ? t.tv.today : '', t.tv.total] }}
                 render={(r) => {
                     // A team's row is the team; the figures are the format's own (STRAT-03): today's and the total, never Stableford points under strokes.
                     const team = r.entrant.isTeam
@@ -141,18 +143,23 @@ export function TvScreen() {
                     const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
                     const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
                     const label = team ? r.entrant.name : name(r.playerId)
+                    // What the room reads from the couch, each under its label (VIS-05): who, where on the course, the day
+                    // in the format's own figure («ganó 4&3» under match play, STRAT-03), the total. The tier is the phone's.
                     return (
-                      <motion.div key={r.playerId} className={`${styles.row} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId} {...rowMotion}>
+                      <motion.div key={r.playerId} className={`${styles.row} ${styles.rowIndiv} ${r.position === 1 ? styles.leader : ''}`} data-player={r.playerId} {...rowMotion}>
                         <span className={styles.pos}>{r.label}</span>
                         <Avatar name={label} url={team ? undefined : byId.get(r.playerId)?.avatarUrl} honoree={members.some((id) => byId.get(id)?.isHonoree)} />
                         <span className={styles.name}>
-                          <span>
-                            {label}
-                            {!team && byId.get(r.playerId)?.tier && <span className="tierBadge">{byId.get(r.playerId)!.tier}</span>}
-                          </span>
+                          <span>{label}</span>
                         </span>
-                        <span className={styles.small}>{round && thru > 0 ? [`${t.live.thru} ${t.round.thru(thru, round.holes)}`, today && !today.empty ? dayFigureText(today) : null].filter(Boolean).join(', ') : ''}</span>
-                        <span className={styles.big}>{r.figure.text}</span>
+                        <span className={styles.mid} aria-label={round && thru > 0 ? `${t.live.thru} ${t.round.thru(thru, round.holes)}` : undefined}>
+                          {round && thru > 0 ? t.round.thru(thru, round.holes) : ''}
+                        </span>
+                        <span className={`${styles.mid} ${styles.day}`}>{round && thru > 0 && today && !today.empty ? dayFigureText(today) : ''}</span>
+                        {/* The total on the board's plate, the leader's in yellow: the one figure per row the room looks for. */}
+                        <span className={styles.big}>
+                          <Plate value={r.figure.text} leader={r.position === 1} />
+                        </span>
                       </motion.div>
                     )
                 }}
@@ -163,6 +170,7 @@ export function TvScreen() {
                 title={settings.modules.pairs.label}
                 turn={turn}
                 items={state.modules.pairs.rows}
+                columns={{ className: styles.rowPair, labels: [t.tv.days, t.tv.total] }}
                 render={(r) => (
                   // Its own grid: position, the pair with both partners in full, days, total (VIS-04).
                   <motion.div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`} {...rowMotion}>
@@ -171,45 +179,47 @@ export function TvScreen() {
                       <span>{r.name}</span>
                       <span className={`${styles.small} ${styles.sub}`}>{t.common.andList([name(r.playerIds[0]), name(r.playerIds[1])])}</span>
                     </span>
-                    <span className={styles.small}>{t.common.plusList(r.perRound)}</span>
-                    <span className={styles.big}>{r.total}</span>
+                    <span className={`${styles.small} ${styles.figure}`}>{t.common.plusList(r.perRound)}</span>
+                    <span className={styles.big}>
+                      <Plate value={String(r.total)} leader={r.position === 1} />
+                    </span>
                   </motion.div>
                 )}
               />
             )}
             {board === 'snake' && state.modules.snake && (
-              <>
-                <h2 className={styles.boardTitle}>{settings.modules.snake.label}</h2>
-                <div className={styles.snakeGrid}>
-                  {state.modules.snake.groups
-                    .filter((g) => !round || g.roundId === round.id)
-                    .map((g) => (
-                      <div key={g.groupId} className={styles.snakeGroup}>
-                        <span className={styles.small}>
-                          {t.card.group} {g.groupNumber}, {formatMoney(g.pot)}
-                        </span>
-                        <div className={styles.snakePlayers}>
-                          {g.playerIds.map((pid) => (
-                            <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
-                              <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} size="lg" />
-                              <span>{name(pid)}</span>
-                              {g.holderId === pid && (
-                                <span className={styles.snakeIcon}>
-                                  <IconSnake />
-                                </span>
-                              )}
+              <PagedRows
+                title={settings.modules.snake.label}
+                turn={turn}
+                items={state.modules.snake.groups.filter((g) => !round || g.roundId === round.id)}
+                render={(g) => (
+                  // One row per group, read from the couch: the four names, the one carrying the snake on the board-yellow plate, the pot (VIS-05).
+                  <div key={g.groupId} className={`${styles.row} ${styles.rowSnake}`}>
+                    <span className={styles.snakeGroupNum}>
+                      {t.card.group} {g.groupNumber}
+                    </span>
+                    <span className={styles.snakePlayers}>
+                      {g.playerIds.map((pid) => (
+                        <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
+                          {name(pid)}
+                          {g.holderId === pid && (
+                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder}>
+                              <IconSnake />
                             </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </>
+                          )}
+                        </span>
+                      ))}
+                    </span>
+                    <span className={styles.big}>{formatMoney(g.pot)}</span>
+                  </div>
+                )}
+              />
             )}
             {board === 'feed' && (
               <>
                 <h2 className={styles.boardTitle}>{t.feed.title}</h2>
-                <FeedTicker limit={9} big />
+                {/* Seven at the room's size fill the board (VIS-05). */}
+                <FeedTicker limit={7} big />
               </>
             )}
             {board === 'auction' && state.modules.auction && (
@@ -217,14 +227,7 @@ export function TvScreen() {
                 title={`${settings.modules.auction.label}, ${formatMoney(state.modules.auction.pot)}`}
                 turn={turn}
                 items={state.modules.auction.portfolios}
-                head={
-                  <div className={`${styles.colHead} ${styles.rowOwner}`} aria-hidden="true">
-                    <span />
-                    <span />
-                    <span>{t.tv.invested}</span>
-                    <span>{t.tv.worth}</span>
-                  </div>
-                }
+                columns={{ className: styles.rowOwner, labels: [t.tv.invested, t.tv.worth] }}
                 render={(pf) => (
                   // Its own grid: owner, holdings in full, what he put in, what it is worth now (VIS-04).
                   <div key={pf.ownerId} className={`${styles.row} ${styles.rowOwner}`}>
@@ -257,7 +260,7 @@ export function TvScreen() {
                         {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label, r.sub].filter(Boolean).join(', ')}</span>}
                       </span>
                       <span className={styles.small}>{r.money ? formatMoney(r.money) : ''}</span>
-                      <span className={styles.big}>{r.figure}</span>
+                      <span className={styles.big}>{r.figure ? <Plate value={r.figure} leader={r.pos === '1'} /> : null}</span>
                     </div>
                 )}
               />
@@ -289,8 +292,12 @@ export function TvScreen() {
  * Rows are sized for the room (vh), so how many fit depends on the screen, the
  * header and long names: it is measured, never assumed. A board longer than the
  * screen says which rows it shows, «1–9 de 12», and the next pass shows the rest.
+ *
+ * `columns` labels the last columns of the rows' grid (VIS-05). The title takes
+ * the columns before them on the same line, as a printed table does, so the
+ * labels cost the rows no line of their own.
  */
-function PagedRows<T>({ title, turn, items, render, head }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; head?: ReactNode }) {
+function PagedRows<T>({ title, turn, items, render, columns }: { title: string; turn: number; items: T[]; render: (item: T, i: number) => ReactNode; columns?: { className: string | undefined; labels: string[] } }) {
   const box = useRef<HTMLDivElement>(null)
   // Until measured, everything is laid out once (before paint) so the tallest row can be measured.
   const [fit, setFit] = useState<number | null>(null)
@@ -331,13 +338,26 @@ function PagedRows<T>({ title, turn, items, render, head }: { title: string; tur
   const pages = Math.max(1, Math.ceil(items.length / per))
   const page = turn % pages
   const shown = items.slice(page * per, page * per + per)
+  const heading = (
+    <h2 className={styles.boardTitle} style={columns ? { gridColumnStart: 1, gridColumnEnd: -(columns.labels.length + 1) } : undefined}>
+      {title}
+      {pages > 1 && <span className={styles.range}> {t.tv.range(page * per + 1, page * per + shown.length, items.length)}</span>}
+    </h2>
+  )
   return (
     <>
-      <h2 className={styles.boardTitle}>
-        {title}
-        {pages > 1 && <span className={styles.range}> {t.tv.range(page * per + 1, page * per + shown.length, items.length)}</span>}
-      </h2>
-      {head}
+      {columns ? (
+        <div className={`${styles.colHead} ${columns.className}`}>
+          {heading}
+          {columns.labels.map((label, i) => (
+            <span key={i} aria-hidden="true">
+              {label}
+            </span>
+          ))}
+        </div>
+      ) : (
+        heading
+      )}
       <div ref={box} className={styles.rows}>
         {shown.map((item, i) => render(item, page * per + i))}
       </div>

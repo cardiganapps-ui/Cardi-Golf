@@ -230,6 +230,14 @@ Found by the organizer/admin line-level audit (Appendix C of `DESIGN_AUDIT.md`).
 - **One beat, however it is asked for.** «Siguiente», →, PageDown, Space and Enter all do the next beat: reveal, the list's next page, then the next step. A mouse click that leaves «Siguiente» focused used to turn Space into a skip of the reveal. The list reports its pages before paint, so a clicker's quick double press pages instead of leaving the step.
 - **The TV rotates without a blank board.** The next board comes in while the last one leaves, as on Ceremonia; `motion.test.ts` refuses `mode="wait"` on either, however it is written.
 
+## TV at room scale (2026-10-13, VIS-05)
+
+- **Type for a room.** One ladder on `.tv`: `--tv-floor` 3.5vh, `--tv-name` 4.5vh, `--tv-title` 5vh, `--tv-big` 5.5vh. Every size on the board is one of them. From 4 m off a 55-inch 1080p screen, a name's capitals are about 18′ of arc and a label about 14′, against the 16′ reading floor; the board used to be the phone's type (names 12′, «Hoyo 11, 25» 9′, the tier badge 4.5′).
+- **Each figure under its label.** The Individual board is position, face, name, then «hoyo», «hoy» and «total». «Hoy» is the day in the format's own figure («22 pts», «ganó 4&3»). The pairs board labels «por día» and «total», the Calcutta's «invirtió» and «vale hoy». The labels share the board title's line, as a printed table's do, so they cost the rows no line of their own; they are a grid of their own, so the figure tracks are fixed widths and every label lands over its figure. No tier badge: the tier is the phone's.
+- **Plates.** Each leaderboard's total (Individual, the pairs, side games) sits on the board's `Plate`, the leader's in yellow. His position takes the first ink, so a row carries one yellow.
+- **The snake's holder** is on the yellow plate, the snake beside his name, one row per group with its pot. The 3 px underline and the 20 px icon could not be seen from the couch. It is board yellow's one use besides the leader and the live mark (DESIGN_DIRECTION, `tokens.css`).
+- **Fitting the room's sizes.** A 1080p page holds six rows, two-line pair rows included: twelve players are two pages, six pairs one, sixty players ten passes of the rotation. The feed shows seven items at the name's size, its icons and the snake's at the type's size (the phone's 18 and 24 px are specks from the couch). The lot card's form guide stops at three lines, so a long one never pushes the bid off the card.
+
 ## «Para empezar» (2026-10-01, UX-06)
 
 - **The wizard's days are rounds.** «¿Cuántos días (rondas)?» creates rounds 1..N with no course or date; Rondas used to say «Sin rondas» right after.
