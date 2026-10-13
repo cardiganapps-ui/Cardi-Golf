@@ -1459,9 +1459,13 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 146,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts",
+        "src/screens/tournament/TvScreen.test.tsx",
+        "src/engine/core/pesos.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1473,9 +1477,11 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 146,
+      "tests": [
+        "src/engine/modules/auction/auction.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1487,11 +1493,14 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 146,
+      "tests": [
+        "src/engine/core/putts.test.ts",
+        "src/screens/admin/AdminScores.putts.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Engine-side: a hole with strokes and no putts is flagged, left out of Menos putts and blocks «Cerrar torneo»; the snake and a three-putt fine read it as no three-putt until it is captured. The database still accepts strokes without putts (the Tarjeta and the Comité always send them)."
     },
     {
       "id": "MONEY-19",
