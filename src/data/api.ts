@@ -267,61 +267,33 @@ export interface CourseDraft {
   tees: CourseDraftTee[]
 }
 
-/** Create or replace a course with its tees and holes. Returns the course id. */
+/**
+ * Create or replace a course with its tees and holes, in one call (0045, ARCH-13): all of the card or none of
+ * it, and a tee taken out only once nobody in any tournament plays it (a round's tee of the day, a player's
+ * default). Returns the course id.
+ */
 export async function saveCourse(draft: CourseDraft): Promise<string> {
-  const sb = supabase()
-  const courseRow: Row = {
-    name: draft.name,
-    location: draft.location ?? null,
-    source: draft.source ?? 'manual',
-    external_id: draft.externalId ?? null,
-    imported_at: draft.source && draft.source !== 'manual' ? new Date().toISOString() : null,
-    attribution: draft.attribution ?? null,
-    website: draft.website ?? null,
-    latitude: draft.latitude ?? null,
-    longitude: draft.longitude ?? null,
-  }
-  let courseId = draft.id
-  if (courseId) {
-    unwrap(await sb.from('courses').update(courseRow).eq('id', courseId).select('id'))
-  } else {
-    const { data: u } = await sb.auth.getUser()
-    courseId = (unwrap(await sb.from('courses').insert({ ...courseRow, created_by: u.user?.id }).select('id').single()) as { id: string }).id
-  }
-  // Tees: upsert the ones in the draft, delete the rest.
-  const existing = unwrap(await sb.from('tees').select('id').eq('course_id', courseId)) as Array<{ id: string }>
-  const keep = new Set<string>()
-  for (const [i, t] of draft.tees.entries()) {
-    const teeRow: Row = {
-      course_id: courseId,
-      name: t.name,
-      color: t.color,
-      rating: t.rating,
-      slope: t.slope,
-      par_total: t.holes.reduce((s, h) => s + h.par, 0),
-      sort_order: i,
-    }
-    let teeId = t.id
-    if (teeId) unwrap(await sb.from('tees').update(teeRow).eq('id', teeId).select('id'))
-    else teeId = (unwrap(await sb.from('tees').insert(teeRow).select('id').single()) as { id: string }).id
-    keep.add(teeId)
-    unwrap(
-      await sb
-        .from('holes')
-        .upsert(
-          t.holes.map((h) => ({ tee_id: teeId, number: h.number, par: h.par, stroke_index: h.strokeIndex, yards: h.yards })),
-          { onConflict: 'tee_id,number' },
-        )
-        .select('number'),
-    )
-  }
-  const stale = existing.filter((e) => !keep.has(e.id)).map((e) => e.id)
-  if (stale.length) {
-    const inUse = unwrap(await sb.from('round_tees').select('tee_id').in('tee_id', stale)) as Array<{ tee_id: string }>
-    if (inUse.length) throw new ApiError('Ese tee lo juega alguien en una ronda; cámbialo primero', '22023')
-    unwrap(await sb.from('tees').delete().in('id', stale).select('id'))
-  }
-  return courseId
+  return rpc<string>('save_course', {
+    p: {
+      id: draft.id ?? null,
+      name: draft.name,
+      location: draft.location ?? null,
+      source: draft.source ?? 'manual',
+      external_id: draft.externalId ?? null,
+      attribution: draft.attribution ?? null,
+      website: draft.website ?? null,
+      latitude: draft.latitude ?? null,
+      longitude: draft.longitude ?? null,
+      tees: draft.tees.map((t) => ({
+        id: t.id ?? null,
+        name: t.name,
+        color: t.color,
+        rating: t.rating,
+        slope: t.slope,
+        holes: t.holes.map((h) => ({ number: h.number, par: h.par, stroke_index: h.strokeIndex, yards: h.yards })),
+      })),
+    },
+  })
 }
 
 export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null; createdBy: string | null }>> {
@@ -454,15 +426,9 @@ export async function unsignCard(roundId: string, pairId: string) {
 // ---------------------------------------------------------------------------
 // Calcutta (M5)
 // ---------------------------------------------------------------------------
-/** Create one lot per player in the given order (replaces any unsold draft). */
+/** Create one lot per player in the given order, replacing any unsold draft; sold lots stay. One call (0045): a refused draw leaves the lots as they were. */
 export async function createLots(tournamentId: string, playerIdsInOrder: string[]) {
-  const sb = supabase()
-  unwrap(await sb.from('calcutta_lots').delete().eq('tournament_id', tournamentId).neq('status', 'sold').select('id'))
-  const { data: sold } = await sb.from('calcutta_lots').select('player_id, lot_number').eq('tournament_id', tournamentId)
-  const soldIds = new Set((sold ?? []).map((r: Row) => r.player_id))
-  let n = (sold ?? []).reduce((m: number, r: Row) => Math.max(m, r.lot_number), 0)
-  const rows = playerIdsInOrder.filter((id) => !soldIds.has(id)).map((player_id) => ({ tournament_id: tournamentId, player_id, lot_number: ++n, status: 'pending' }))
-  if (rows.length) unwrap(await sb.from('calcutta_lots').insert(rows).select('id'))
+  await rpc('create_lots', { p_tournament_id: tournamentId, p_player_ids: playerIdsInOrder })
 }
 
 export async function setLotStatus(lotId: string, status: 'pending' | 'open') {
@@ -491,11 +457,9 @@ export async function setBuybackPaid(lotId: string, paid: boolean) {
   unwrap(await supabase().from('calcutta_buybacks').update({ paid }).eq('lot_id', lotId).select('lot_id'))
 }
 
-/** Reopen a sold lot (undo the hammer): bids stay, buyback is removed. */
+/** Reopen a sold lot (undo the hammer): bids stay, the buyback goes, in one call (0045). */
 export async function reopenLot(lotId: string) {
-  const sb = supabase()
-  unwrap(await sb.from('calcutta_buybacks').delete().eq('lot_id', lotId).select('lot_id'))
-  unwrap(await sb.from('calcutta_lots').update({ status: 'open', owner_id: null, price: null, sold_at: null }).eq('id', lotId).select('id'))
+  await rpc('reopen_lot', { p_lot_id: lotId })
 }
 
 export async function resetAuction(tournamentId: string) {
