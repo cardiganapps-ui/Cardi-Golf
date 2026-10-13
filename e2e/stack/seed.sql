@@ -103,6 +103,7 @@ select pg_temp.e2e_tournament('e2e-sin-senal', 'E2E Sin señal', :'settings'::js
 select pg_temp.e2e_tournament('e2e-sesion', 'E2E Sesión', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-misma-tarjeta', 'E2E Misma tarjeta', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-conflicto', 'E2E Conflicto', :'settings'::jsonb, :'course_id', :'tee_id');
+select pg_temp.e2e_tournament('e2e-cuatro-g', 'E2E Cuatro G', :'settings'::jsonb, :'course_id', :'tee_id');
 \o
 
 commit;

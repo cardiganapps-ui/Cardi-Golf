@@ -34,6 +34,8 @@ export interface Phone {
   errors: string[]
   /** Requests for a new anonymous user (POST /auth/v1/signup) since the phone opened the link. */
   signUps: number
+  /** The link every page of this phone is on, when not the runner's own (REL-11). */
+  link?: Link
 }
 
 /** Every tap on «Guardar…» gets a timestamp on the phone's own clock (ms since the epoch). */
@@ -48,20 +50,87 @@ function markSaves(labels: string[]) {
   )
 }
 
+/**
+ * A link a phone is on (REL-11): the round trip and the bandwidth, half the
+ * round trip each way. Chromium's network conditions (DevTools protocol) put
+ * all of their latency on the response, so they get half of it and a route
+ * holds every request back the other half before it leaves; the live
+ * channel's WebSocket frames get the same from `slowSockets`, since DevTools
+ * throttling leaves an open WebSocket's frames alone.
+ */
+export interface Link {
+  latency: number
+  downloadThroughput: number
+  uploadThroughput: number
+}
+
+/** In the page: every WebSocket frame, sent or received, `oneWayMs` late, in order; `__e2eSlowFrames` counts them. */
+function slowSockets(oneWayMs: number) {
+  const Native = window.WebSocket
+  const w = window as unknown as { __e2eSlowFrames: number }
+  w.__e2eSlowFrames = 0
+  class Slow extends Native {
+    send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+      w.__e2eSlowFrames++
+      setTimeout(() => {
+        if (this.readyState === Native.OPEN) Native.prototype.send.call(this, data)
+      }, oneWayMs)
+    }
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions) {
+      if (!listener) return
+      if (type !== 'message') return super.addEventListener(type, listener, options)
+      const call = typeof listener === 'function' ? listener : (e: Event) => listener.handleEvent(e)
+      return super.addEventListener(
+        type,
+        (e) => {
+          w.__e2eSlowFrames++
+          setTimeout(() => call.call(this, e), oneWayMs)
+        },
+        options,
+      )
+    }
+    set onmessage(fn: ((this: WebSocket, e: MessageEvent) => unknown) | null) {
+      super.onmessage = fn
+        ? (e: MessageEvent) => {
+            w.__e2eSlowFrames++
+            setTimeout(() => fn.call(this, e), oneWayMs)
+          }
+        : null
+    }
+    get onmessage() {
+      return super.onmessage
+    }
+  }
+  window.WebSocket = Slow as typeof WebSocket
+}
+
 /** Opens a page on the phone (the app again, after it was closed), watching it for uncaught errors. */
 export async function openPage(phone: Phone, path: string): Promise<Page> {
   const page = await phone.context.newPage()
   page.on('pageerror', (e) => phone.errors.push(`${phone.name}: ${e.message}`))
+  if (phone.link) {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Network.enable')
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, ...phone.link, latency: phone.link.latency / 2 })
+  }
   phone.page = page
   await page.goto(path)
   return page
 }
 
-/** A new phone opens the tournament's link, taps `name` and types the PIN; returns once the live board is up. */
-export async function joinAs(browser: Browser, slug: string, name: string): Promise<Phone> {
+/** A new phone opens the tournament's link, taps `name` and types the PIN; returns once the live board is up. On `link`, from its first request. */
+export async function joinAs(browser: Browser, slug: string, name: string, link?: Link): Promise<Phone> {
   const context = await browser.newContext(PHONE)
   await context.addInitScript(markSaves, [t.card.save, t.card.saveLast])
-  const phone: Phone = { name, context, page: undefined as unknown as Page, errors: [], signUps: 0 }
+  if (link) {
+    const oneWay = link.latency / 2
+    await context.addInitScript(slowSockets, oneWay)
+    await context.route('**/*', async (route) => {
+      await new Promise((r) => setTimeout(r, oneWay))
+      await route.continue()
+    })
+  }
+  const phone: Phone = { name, context, page: undefined as unknown as Page, errors: [], signUps: 0, link }
   context.on('request', (r) => {
     if (r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/auth/v1/signup')) phone.signUps++
   })
@@ -76,11 +145,11 @@ export async function joinAs(browser: Browser, slug: string, name: string): Prom
  * Phones made with `join` are closed after the test, so no live channel from
  * one test keeps running into the next; any uncaught error on them fails it.
  */
-export const test = base.extend<{ join: (slug: string, name: string) => Promise<Phone> }>({
+export const test = base.extend<{ join: (slug: string, name: string, link?: Link) => Promise<Phone> }>({
   join: async ({ browser }, provide) => {
     const phones: Phone[] = []
-    await provide(async (slug, name) => {
-      const phone = await joinAs(browser, slug, name)
+    await provide(async (slug, name, link) => {
+      const phone = await joinAs(browser, slug, name, link)
       phones.push(phone)
       return phone
     })
