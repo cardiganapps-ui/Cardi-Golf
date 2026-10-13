@@ -3813,7 +3813,7 @@
         "src/screens/admin/CourseEditor.test.tsx"
       ],
       "verifiedBy": null,
-      "residual": "Fixed: nothing is assumed. A new player's handicap starts empty under every method and the sheet saves only once someone types it: a number, the index («Índice» with nothing typed saved 0, a scratch golfer), or all three scores (they opened on 85, 92 and 100); the preview waits for it too. A card started from scratch has every par and stroke index empty, says which holes are missing, and saves once each is typed or pasted (it was eighteen par 4s with SI = hole number, which passed the checks). Both tests failed on the old screens. Left: a player still cannot be saved without a handicap (the column is NOT NULL, default 18); the Comité types its best guess on purpose rather than inherit one."
+      "residual": "Fixed: nothing is assumed. A new player's handicap starts empty under every method and the sheet saves only once someone types it: a number, the index («Índice» with nothing typed saved 0, a scratch golfer), or the strokes of all three rounds (they opened on 85, 92 and 100); the preview waits for it too. A card started from scratch has every par and stroke index empty, says which holes are missing, and saves once each is typed or pasted (it was eighteen par 4s with SI = hole number, which passed the checks). Both tests failed on the old screens. Left: a player still cannot be saved without a handicap (the column is NOT NULL, default 18); the Comité types its best guess on purpose rather than inherit one."
     },
     {
       "id": "UX-17",

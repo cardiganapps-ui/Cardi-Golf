@@ -2096,7 +2096,7 @@ export const t = {
       strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
       /** Save waits for a handicap someone typed, by the method chosen (UX-16): a new player opened on 18. */
-      hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe sus tres scores para guardarlo.' },
+      hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe los golpes de sus tres rondas para guardarlo.' },
       reordered: 'Las rondas venían en otro orden; se acomodaron.',
     },
     courses: {
