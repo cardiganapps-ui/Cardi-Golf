@@ -1074,11 +1074,13 @@
       "workstream": "W1",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 131,
+      "tests": [
+        "supabase/tests/race_round_results.sh"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed (migration 0041): refresh_round_results takes a transaction lock on its round first, so a second rebuild waits for the first and sees its rows (the race test reproduced the 23505 and the lost correction before the fix); the score trigger reads each round's status FOR SHARE, so a score in flight while «Terminar ronda» commits is counted whichever commits first (both orders in the race test; before, the score stayed out). Left: results are still rebuilt delete-then-insert for the whole round (no ON CONFLICT upsert), and the outbox still treats a 23505 as permanent, which this lock makes unreachable from the rebuild."
     },
     {
       "id": "DB-15",
