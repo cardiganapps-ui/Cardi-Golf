@@ -8,12 +8,11 @@ import type { Explanation, Id } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { RankGroup } from '../core/ranking'
 import { splitPrizes } from '../core/ranking'
+import { pesos } from '../core/pesos'
 import type { GameContext } from './game'
 
-export function fmt(n: number): string {
-  const sign = n < 0 ? '−' : ''
-  return `${sign}$${Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
-}
+/** The engine's peso formatter (core/pesos.ts), under the name the games use. */
+export const fmt = pesos
 
 /** The pot a game's money config funds. */
 export function gamePot(config: GameConfig, entrants: number): number {

@@ -8,6 +8,7 @@ import { ordinal, t } from '../../../i18n/es-MX'
 import { flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
+import { pesos } from '../../core/pesos'
 
 export interface PairRow {
   pairId: Id
@@ -134,8 +135,8 @@ export const pairsModule: GameModule<PairsState> = {
       const p = byId.get(s.item)!
       const each = Math.floor(s.amount / 2)
       const odd = s.amount - each * 2
-      const why: Explanation = { title: `$${each} cada uno`, steps: [...s.why.steps, `$${s.amount} entre los dos = $${each} cada uno${odd ? ` (+$${odd} para ${playersById.get(p.player1Id)?.displayName ?? ''})` : ''}`] }
-      prizes[p.player1Id] = { amount: each + odd, why: odd ? { ...why, title: `$${each + odd}` } : why, pairId: p.id }
+      const why: Explanation = { title: `${pesos(each)} cada uno`, steps: [...s.why.steps, `${pesos(s.amount)} entre los dos = ${pesos(each)} cada uno${odd ? ` (+${pesos(odd)} para ${playersById.get(p.player1Id)?.displayName ?? ''})` : ''}`] }
+      prizes[p.player1Id] = { amount: each + odd, why: odd ? { ...why, title: pesos(each + odd) } : why, pairId: p.id }
       prizes[p.player2Id] = { amount: each, why, pairId: p.id }
     }
     const paired = new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id]))

@@ -12,6 +12,7 @@ import type { AuctionPayoutSlot } from '../../settings/schema'
 import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { rankIndividual } from '../individual'
+import { pesos } from '../../core/pesos'
 
 export interface Ownership {
   ownerId: Id
@@ -365,7 +366,7 @@ export const auctionModule: GameModule<AuctionState> = {
           amount: line.amount,
           final: state.final,
           why: {
-            title: `$${line.amount}`,
+            title: pesos(line.amount),
             steps: line.pct ? [`${line.pct}% de ${ctx.snapshot.players.find((x) => x.id === line.playerId)?.displayName ?? line.playerId}`] : ['Resto del redondeo al dueño del campeón'],
           },
         })

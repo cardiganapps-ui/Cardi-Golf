@@ -19,6 +19,7 @@ import { t } from '../../i18n/es-MX'
 import type { TournamentSettings } from './schema'
 import type { GameConfig } from './games'
 import type { Snapshot } from '../types'
+import { pesos } from '../core/pesos'
 
 export interface PrizeLine {
   /** A module id, `house`, or `game:<id>` for an instance game on the main pot. */
@@ -98,10 +99,8 @@ export interface FieldShape {
   rounds?: number
 }
 
-/** "$10,000" without Intl (the engine stays locale-free). */
-function fmt(n: number): string {
-  return `$${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
-}
+/** "$10,000": the engine's one formatter (core/pesos.ts). */
+const fmt = pesos
 
 export function snakePotPerGroup(settings: TournamentSettings): number {
   // A group of N: the N−1 survivors get `snakePerSurvivor` each; with no
@@ -299,7 +298,7 @@ export class PrizePoolError extends Error {
   readonly check: PrizeCheck
   constructor(check: PrizeCheck) {
     super(
-      `La bolsa no cuadra: entran $${check.entryPot} y se reparten $${check.prizesTotal}.`,
+      `La bolsa no cuadra: entran ${pesos(check.entryPot)} y se reparten ${pesos(check.prizesTotal)}.`,
     )
     this.name = 'PrizePoolError'
     this.check = check

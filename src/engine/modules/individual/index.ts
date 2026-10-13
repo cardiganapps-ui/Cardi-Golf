@@ -13,6 +13,7 @@ import { formatFor, toParText, withTrueMinus, type Entrant, type Figure, type Fo
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { fieldShape, individualPrizeAmounts } from '../../settings/prizeCheck'
+import { pesos } from '../../core/pesos'
 
 export interface IndividualRow {
   /** The competitor: a player, or a team in a team format. */
@@ -204,7 +205,8 @@ export const individualModule: GameModule<IndividualState> = {
           playerId,
           amount: each + extra,
           final: state.final,
-          why: members.length > 1 ? { title: p.why.title, steps: [...p.why.steps, `${row.entrant.name}: $${p.amount} ÷ ${members.length}`] } : p.why,
+          // A member's line is titled with what the member is paid; the team's prize is a step (MONEY-15).
+          why: members.length > 1 ? { title: pesos(each + extra), steps: [...p.why.steps, `${row.entrant.name}: ${pesos(p.amount)} ÷ ${members.length} = ${pesos(each)}${extra ? ' (+$1 de redondeo)' : ''}`] } : p.why,
         })
       }
     }
