@@ -25,9 +25,21 @@ self.addEventListener('push', (event) => {
   event.waitUntil(Promise.all(work).catch(() => undefined))
 })
 
+/* A page of Polo, whatever the payload says: the server sends no other (safeNoticeUrl), and a tap never
+   leaves the app for another site or fails on a link it can't read. */
+function noticePage(link) {
+  try {
+    const url = new URL(link || '/', self.location.origin)
+    if (url.origin === self.location.origin) return url.href
+  } catch {
+    /* not a link: the app's home */
+  }
+  return new URL('/', self.location.origin).href
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href
+  const url = noticePage(event.notification.data && event.notification.data.url)
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {

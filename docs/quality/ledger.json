@@ -2498,11 +2498,16 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 157,
+      "tests": [
+        "src/lib/pushSw.test.ts",
+        "src/lib/precache.test.ts",
+        "src/data/appUpdate.test.tsx",
+        "e2e/fixtures/update.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: push-sw.js's handlers run in a stand-in for the worker's scope (the notice, the icon's count, a tap's page, never another site); the build checks its own precache (the shell and what it loads, the fonts, the manifest and its icons, the push handler at the fingerprint the worker imports it by, within 3,072 KiB; 2,652 on 2026-10-13); and the fixtures build's real worker is updated mid-hole on a static server of the test's own: nothing reloads, the typed value stays, the bar waits for the hole and «Actualizar» loads the new build. The tests found two bugs, fixed in the same PR: «Actualizar» did nothing on a first visit (vite-plugin-pwa reloads only a page that had a worker when it opened), and push-sw.js was imported at a hand-bumped ?v=1, so a change to it could stay old on every phone. Left: a real push delivered by a push service, and the installed app on a real iPhone, are not in CI."
     },
     {
       "id": "QA-17",
