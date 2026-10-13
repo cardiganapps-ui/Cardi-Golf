@@ -23,6 +23,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - `SUPABASE_PAT`: el mismo del paso 2.
      - `VERCEL_TOKEN`: uno nuevo, solo para CI. vercel.com → avatar → **Account Settings** → **Tokens** → **Create**; en «Scope» elige tu equipo.
      - `CRON_SECRET`: el mismo que ya está en Vercel (proyecto `cardi-golf` → **Settings** → **Environment Variables** → `CRON_SECRET` → el ojo para verlo).
+     - Opcional, para que el ensayo de restaurar el respaldo de cada noche corra solo cada semana (DB-07): `R2_DRILL_ACCESS_KEY_ID` y `R2_DRILL_SECRET_ACCESS_KEY`, de un token nuevo de **solo lectura**. Cloudflare → **R2** → **Manage R2 API Tokens** → **Create API token** → permiso **Object Read only**, solo el bucket `cardi-golf-backups`. Mientras no estén, Claude corre el ensayo a mano (RUNBOOK.md §8b).
    - **Cómo lo verifico:** un workflow imprime «secretos presentes» (nunca los valores).
 4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
    - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.

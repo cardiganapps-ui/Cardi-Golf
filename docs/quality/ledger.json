@@ -1006,11 +1006,15 @@
       "workstream": "W12",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 122,
+      "tests": [
+        "src/lib/backupCron.test.ts",
+        "supabase/tests/backup_snapshot.sql",
+        "scripts/db-test.sh"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Done (PR #122, migration 0039): one consistent snapshot of every table plus the history up to its last row, the accounts' essentials and identities (no password hashes, no tokens) and the Storage file list in the nightly dump; the files themselves copied to R2 files/ each night; scripts/restore-r2.mjs restores a dump into an empty database in one transaction, fills each account as GoTrue reads it, and proves it row for row and key by key before it commits (PR 122's verifier: accounts GoTrue could not read, a history page that could repeat a row, false mismatches in local time or on a newer schema, a refused restore that left rows behind; round 2: text with a dollar-quote tag that broke every later restore, so the rows now come in by COPY, never inside the SQL; photo links to the dead project, rewritten by --storage-to; all fixed and in CI; round 3: the account check skipped the role and audience it fills in, so now it compares them as filled, each backup row is read as the table's type (an offset in another time zone or a number's spelling is no mismatch, a backup column the target lacks stops the run), Ctrl-C removes the work folder, an empty backup restores, the file copy is bounded at 58 s, and the db job also runs when only the restore scripts change); the db CI job round-trips the seeded harness on every schema change; the real drill restored the 2026-10-12 production night (51,889 rows) in 14 s with the schema built from zero (11.6 s for the data after round 3); RUNBOOK.md §8b. Left: putting the files back into a new project's bucket is a manual upload (one file today); the backup is not encrypted by us and is never deleted (retention is Diego's call, handoff 5e; TRUST-10); during the trip windows it stays nightly (an hourly pg_cron run is the plan's next step); a weekly drill of the real dump in CI needs an R2 read token as a GitHub Actions secret (handoff); no warm standby (the staging project, handoff item 4). A number inside jsonb with more digits than a double holds, or trailing zeros, comes back numerically equal but not digit for digit (Node's JSON.parse); none in today's data. A history row with an id at or below the snapshot's that commits after it can come in (Historial only). Step 4 of RUNBOOK §8b needs psql with a direct connection, which this session can't open: Diego runs it on his computer (Node, psql, the repo and a read-only R2 token of his own, all listed there), Claude guides. The restore has run only against local Postgres, never a real Supabase project."
     },
     {
       "id": "DB-09",
@@ -1131,7 +1135,7 @@
       "pr": null,
       "tests": [],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Partly (PR #122): RUNBOOK.md §8b covers a lost or corrupted project (who acts, the restore, the time measured, what each person does). Still open: an outage on Calcutta night that is not data loss (Supabase down for hours), and a warm standby to switch to."
     },
     {
       "id": "DB-20",
