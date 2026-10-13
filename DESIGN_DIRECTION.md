@@ -59,6 +59,7 @@ TARJETA (score entry, one hole)
 ┌──────────────────────────────┐
 │ Hoyo 12       Par 4 · SI 2   │  ← the hole number is the biggest text
 │──────────────────────────────│
+│                 Golpes  Putts│  ← the columns named once, over the four players (COPY-18)
 │ Diego •      [−]  4  [+]  2  │  ← strokes (huge) · putts (small), one line per player
 │ Ignacio ••   [−]  4  [+]  2  │
 │ Martín •     [−]  4  [+]  2  │

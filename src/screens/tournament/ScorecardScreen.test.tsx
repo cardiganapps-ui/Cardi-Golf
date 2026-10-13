@@ -283,12 +283,44 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }))
   })
 
+  it('«No sabemos: que decida el Comité» saves the hole with no answer, and the snake waits for the Comité (UX-08)', async () => {
+    vi.mocked(enqueueTiebreak).mockClear()
+    mount((s) => {
+      const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
+      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+    })
+    await tapSave(11_000) // hole 10: three at 2 putts, a tie
+    const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
+    expect(outbox.holes.some((h) => h.hole === 10)).toBe(false)
+    expect(within(ask).getByText(S.whoHoledLastUnknownHint)).toBeTruthy()
+    await act(async () => {
+      fireEvent.click(within(ask).getByRole('button', { name: S.whoHoledLastUnknown }))
+    })
+    // The scores went in; no answer was sent, so the tiebreak stays «pendiente» for Comité › Tarjetas.
+    expect(outbox.holes.find((h) => h.hole === 10)!.entries.length).toBeGreaterThan(0)
+    expect(enqueueTiebreak).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog', { name: S.whoHoledLast })).toBeNull()
+    expect(holeOnScreen()).toBe(11)
+  })
+
   it('a hole played normally, long after the last save, needs no question', async () => {
     mount()
     await tapSave(11_000)
     await tapSave(11_000 + 4 * 60_000)
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(written().filter((r) => r.includes('@11='))).toHaveLength(3)
+  })
+})
+
+describe('Tarjeta: the steppers say which number is which (COPY-18)', () => {
+  it('«Golpes» and «Putts» head the columns once, and each stepper keeps its full name for a screen reader', () => {
+    mount()
+    const heads = screen.getByText(S.strokes).parentElement!
+    expect(heads.getAttribute('aria-hidden')).toBe('true')
+    expect(within(heads).getByText(S.putts)).toBeTruthy()
+    expect(screen.getAllByText(S.strokes)).toHaveLength(1)
+    expect(screen.getByRole('group', { name: S.strokesOf(nameOf('p1')) })).toBeTruthy()
+    expect(screen.getByRole('group', { name: S.puttsOf(nameOf('p1')) })).toBeTruthy()
   })
 })
 

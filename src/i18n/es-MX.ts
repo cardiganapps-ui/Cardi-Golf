@@ -1498,6 +1498,9 @@ export const t = {
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',
     whoHoledLast: '¿Quién embocó al último?',
     whoHoledLastHint: (threshold: number) => `Dos o más hicieron ${threshold} putts o más en este hoyo. La víbora se la queda el que embocó al último.`,
+    // UX-08: the group that doesn't remember saves the hole all the same; the snake waits for the Comité (Comité › Tarjetas).
+    whoHoledLastUnknown: 'No sabemos: que decida el Comité',
+    whoHoledLastUnknownHint: 'El hoyo se guarda igual. La víbora queda pendiente hasta que el Comité diga quién fue.',
     markName: { eagle: 'águila o mejor', birdie: 'birdie', par: 'par', bogey: 'bogey', double: 'doble bogey o peor', pickup: 'levantó' } as Record<string, string>,
     weirdTitle: '¿Seguro?',
     weirdFix: 'Corregir',
@@ -1609,6 +1612,8 @@ export const t = {
     saveHere: 'Guardar este torneo en mi perfil',
     savedHere: 'Guardado en tu perfil',
     notMeBody: (name: string) => `Tu perfil deja de ser ${name} en este torneo. Para volver, entra con su PIN.`,
+    // UX-09: one tap at the bottom of Más used to drop the player mid-round.
+    switchBody: (name: string) => `Este teléfono deja de ser ${name} en este torneo. Para volver, entra con su PIN.`,
   },
   admin: {
     title: 'Comité',

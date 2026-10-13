@@ -7,7 +7,7 @@ import { useTournamentCtx } from './TournamentGate'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
-import { useOnline } from '../../components/OfflineBanner'
+import { useOnline, useOwnConnectionStatus } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
 import { PlatformBanner } from './PlatformBanner'
 import { useOutbox } from '../../data/outbox'
@@ -40,6 +40,8 @@ export function TournamentShell() {
   const source = useTournament((s) => s.source)
   const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const online = useOnline()
+  // The header says «Sin señal» itself, in place: the shell's banner would push every screen down (MOT-17).
+  useOwnConnectionStatus()
   const { pathname } = useLocation()
   const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
   const accent = data?.snapshot.tournament.accentColor ?? lookup.accentColor ?? undefined
@@ -64,7 +66,7 @@ export function TournamentShell() {
         <div className={styles.bar}>
           {logo && <img className={styles.logo} src={logo} alt="" />}
           <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
-          {!isFixture && <HeaderStatus online={online} source={source} realtime={realtime} />}
+          {(!isFixture || !online) && <HeaderStatus online={online} source={source} realtime={realtime} />}
         </div>
         {showAge && <BoardsAge updatedAt={updatedAt} pendingHoles={online ? 0 : pendingHoles} />}
       </header>
