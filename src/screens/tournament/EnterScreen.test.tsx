@@ -63,6 +63,31 @@ describe('the PIN starts the browser\'s user (TRUST-05)', () => {
   })
 })
 
+describe('the PIN field takes a PIN, not a code (PWA-16)', () => {
+  function open() {
+    render(
+      <MemoryRouter>
+        <EnterScreen lookup={lookup} onEntered={vi.fn()} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    return screen.getByLabelText(t.enter.pin) as HTMLInputElement
+  }
+
+  it('asks the phone for no one-time code: iOS offered the 6-digit code an account’s email brings', () => {
+    expect(open().getAttribute('autocomplete')).toBe('off')
+  })
+
+  it('six digits at once (that code, pasted or filled in) send nothing and leave the field empty', async () => {
+    vi.mocked(claimPlayer).mockClear()
+    const field = open()
+    fireEvent.change(field, { target: { value: '482915' } })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(claimPlayer).not.toHaveBeenCalled()
+    expect(field.value).toBe('')
+  })
+})
+
 describe('a wrong PIN is felt (MOT-10)', () => {
   it('two firm buzzes where the phone can vibrate, and the reason in words', async () => {
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vi.fn(() => true) })

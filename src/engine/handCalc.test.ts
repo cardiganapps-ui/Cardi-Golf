@@ -101,7 +101,6 @@ describe('hand calculation, group 1 of the first tournament', () => {
     // p10 picked up a hole after two putts: the pick-up counts the setting (3), never less (§18.1).
     expect(putts.find((r) => r.playerId === 'p10')!.putts).toBe(39)
     expect(putts.find((r) => r.playerId === 'p4')!.putts).toBe(37)
-    // Hole 18 for p10 was picked up with 2 putts entered → counts the entered 2 (no putts → would count 3).
   })
 
   it('Day 2 with the cut handicaps: p1 plays a 41 again and the totals follow', () => {

@@ -49,6 +49,25 @@ describe('computeCore', () => {
     expect(core.rounds.r2!.p1!.playingHcp).toBe(0)
   })
 
+  it('§6 exactly: PH1 2, P1 44 → PH2 0', () => {
+    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 2 })], rounds: 2, settings: FIRST_TOURNAMENT_SETTINGS })
+    let birdies = 0
+    for (let h = 1; h <= 18; h++) {
+      const hole = snap.courses[0]!.tees[0]!.holes[h - 1]!
+      // PH 2: a stroke on SI 1 and 2, so par there is a net birdie (3 points each). Six gross birdies elsewhere
+      // (3 each) and ten pars (2 each): 6 + 18 + 20 = 44.
+      const birdie = hole.strokeIndex > 2 && birdies < 6
+      if (birdie) birdies++
+      snap.scores.push(score('r1', 'p1', h, hole.par - (birdie ? 1 : 0)))
+    }
+    const core = computeCore(snap, FIRST_TOURNAMENT_SETTINGS)
+    expect(core.rounds.r1!.p1!.playingHcp).toBe(2)
+    expect(core.rounds.r1!.p1!.points).toBe(44)
+    expect(core.rounds.r2!.p1!.cut).toBe(4)
+    expect(core.rounds.r2!.p1!.playingHcp).toBe(0)
+    expect(core.rounds.r2!.p1!.playingHcpWhy.steps.join(' ')).toContain('no baja de 0')
+  })
+
   it('an override replaces the playing handicap and is explained', () => {
     const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 1, settings: FIRST_TOURNAMENT_SETTINGS })
     snap.handicapOverrides.push({ roundId: 'r1', playerId: 'p1', playingHcp: 14, reason: 'Jugó de azules', by: null, at: '' })

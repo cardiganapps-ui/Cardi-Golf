@@ -57,12 +57,8 @@ describe('Day 2 cut', () => {
   ])('P1 %s → cut %s', (p1, cut) => {
     expect(nextRoundCut(p1, CUT).value).toBe(cut)
   })
-  it('PH1 16, P1 42 → PH2 13', () => {
-    expect(Math.max(0, 16 - nextRoundCut(42, CUT).value)).toBe(13)
-  })
-  it('PH1 2, P1 44 → PH2 0 (floor at 0)', () => {
-    expect(Math.max(0, 2 - nextRoundCut(44, CUT).value)).toBe(0)
-  })
+  // PH2 from PH1 and the cut (§6: PH1 16, P1 42 → 13; PH1 2, P1 44 → 0) is the engine's own arithmetic, so it is
+  // tested through it, in core/compute.test.ts: written out here it only proved the test's own sum (QA-19).
 })
 
 describe('course handicap (WHS, §13b-D)', () => {
