@@ -35,7 +35,7 @@ export const BACKUP_TABLES: Record<string, string> = {
   payments: 'id',
   money_adjustments: 'id',
   game_entries: 'tournament_id,game_id,player_id',
-  hole_awards: 'round_id,game_id,hole,player_id',
+  hole_awards: 'round_id,game_id,hole,player_id,source',
   game_results: 'tournament_id,game_id,player_id',
   photos: 'id',
   audit_log: 'id',

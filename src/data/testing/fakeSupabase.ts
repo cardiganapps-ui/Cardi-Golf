@@ -372,7 +372,8 @@ const UNIQUE_KEYS: Record<string, Array<{ name: string; columns: string[] }>> = 
   ],
   snake_tiebreaks: [{ name: 'snake_tiebreaks_pkey', columns: ['round_id', 'group_id', 'hole'] }],
   card_signatures: [{ name: 'card_signatures_pkey', columns: ['round_id', 'pair_id'] }],
-  hole_awards: [{ name: 'hole_awards_pkey', columns: ['round_id', 'game_id', 'hole', 'player_id'] }],
+  // 0042: a player's ruling (no group) and the same player's claim are two rows (DB-04).
+  hole_awards: [{ name: 'hole_awards_pkey', columns: ['round_id', 'game_id', 'hole', 'player_id', 'source'] }],
 }
 /** What a session may insert and update in `scores` (0010): the flags and the Comité's reason are not a phone's to send. */
 const SCORE_INSERT = new Set(['id', 'round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
@@ -423,8 +424,15 @@ const COLUMNS: Record<string, Record<string, ColumnType>> = {
   },
   snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
   card_signatures: { round_id: 'uuid', pair_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz' },
-  hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
+  hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz', source: 'text' },
 }
+/** Generated columns (0042 `hole_awards.source`): PostgREST knows them, and Postgres refuses any value written to one. */
+const GENERATED: Record<string, string[]> = { hole_awards: ['source'] }
+/** What a generated column holds, from the row's own values. */
+const generate = (table: string, row: Row): Row => (table === 'hole_awards' ? { ...row, source: row.group_id == null ? 'comite' : 'group' } : row)
+/** Tables as the database holds them: a generated column always has its value, whatever world a test starts from. */
+const asStored = (tables: Record<string, Row[]>): Record<string, Row[]> =>
+  Object.fromEntries(Object.entries(structuredClone(tables)).map(([table, rows]) => [table, rows.map((r) => generate(table, r))]))
 /** Each phone table's foreign keys, as the migrations name them. Ids here are names, so a uuid's shape is not checked; that it exists is. */
 const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: string }>> = {
   scores: [
@@ -622,7 +630,7 @@ function jwt(claims: Record<string, unknown>, serial: number): string {
 
 export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   const gates: Gate[] = []
-  let initial = structuredClone(tables)
+  let initial = asStored(tables)
   /** Live access tokens → whose, and until when (ms). */
   const access = new Map<string, { uid: string; until: number }>()
   /** Live refresh tokens → whose. */
@@ -643,7 +651,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
     const id = keys.length === 1 && keys[0] === 'id' && row.id == null ? { id: `${table}-${++serial}` } : {}
     if (table === 'scores') return { ...id, picked_up: false, version: 1, device_id: null, mutation_id: null, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
-    if (table === 'snake_tiebreaks' || table === 'hole_awards') return { ...id, created_at: stamp(), ...row }
+    if (table === 'hole_awards') return generate(table, { ...id, created_at: stamp(), ...row })
+    if (table === 'snake_tiebreaks') return { ...id, created_at: stamp(), ...row }
     if (table === 'card_signatures') return { ...id, signed_at: stamp(), ...row }
     return { ...id, ...row }
   }
@@ -867,6 +876,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     // In the order they are met. PostgREST refuses a column its schema cache doesn't know before the database sees the request.
     const unknown = columns.find((c) => !(c in (COLUMNS[table] ?? {})))
     if (unknown) return json(400, { code: 'PGRST204', details: null, hint: null, message: `Could not find the '${unknown}' column of '${table}' in the schema cache` })
+    const generated = columns.find((c) => GENERATED[table]?.includes(c))
+    if (generated) return json(400, { code: '428C9', details: `Column "${generated}" is a generated column.`, hint: null, message: `cannot insert a non-DEFAULT value into column "${generated}"` })
     // Planning: the ON CONFLICT target must be a unique key.
     const keys = UNIQUE_KEYS[table]!
     const target = resolution ? (req.params.get('on_conflict')?.split(',') ?? keys[0]!.columns) : null
@@ -917,7 +928,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
       if (table === 'scores') Object.assign(merged, { entered_by: myPlayer(caller, roundTournament(merged.round_id)) ?? null, device_id: null, mutation_id: null })
-      const updated = table === 'scores' ? scoreUpdated(old, merged) : merged
+      const updated = table === 'scores' ? scoreUpdated(old, merged) : generate(table, merged)
       if (!rule.check(caller, updated)) return policy()
       const badUpdate = constraintError(table, updated)
       if (badUpdate) return badUpdate
@@ -1441,7 +1452,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   }
 
   const server: FakeSupabase = {
-    tables: structuredClone(tables),
+    tables: structuredClone(initial),
     requests: [],
     rpcCalls: [],
     rpcResult: { data: null, error: null },
@@ -1558,7 +1569,7 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       for (const row of rows) list.push(withDefaults(table, row))
     },
     reset(next) {
-      if (next) initial = structuredClone(next)
+      if (next) initial = asStored(next)
       const claims = server.tables.device_sessions
       server.tables = structuredClone(initial)
       // The phones that entered stay in: their PIN claims are the server's, not the test's tables.

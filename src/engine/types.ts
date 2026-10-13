@@ -237,6 +237,8 @@ export interface HoleAward {
   hole: number
   gameId: string
   playerId: Id
+  /** Whose row (0042): the Comité's ruling, which has no group, or a group's claim. Left out, it follows the group. */
+  source?: 'comite' | 'group'
 }
 
 /** The Comité's result for a custom bet: who won and what share (weights, split pro rata). */

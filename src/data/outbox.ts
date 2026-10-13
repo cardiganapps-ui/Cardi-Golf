@@ -1091,7 +1091,7 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
     const del = await sb.from('hole_awards').delete().eq('round_id', p.round_id).eq('game_id', p.game_id).eq('hole', p.hole).eq('group_id', p.group_id).select().setHeader('Authorization', auth)
     if (del.error) throw new Error(del.error.message)
     // The winners it took away, by the key a delete names; then the ones it put in.
-    const gone: LiveChange[] = (del.data ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id } }))
+    const gone: LiveChange[] = (del.data ?? []).map((r: Row) => ({ table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source } }))
     if (!p.player_ids.length) return gone
     const { data, error } = await sb
       .from('hole_awards')

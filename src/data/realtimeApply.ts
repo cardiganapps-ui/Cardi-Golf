@@ -166,8 +166,9 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     scope: 'round',
     get: (s) => s.holeAwards ?? [],
     set: (s, l) => (s.holeAwards = l),
-    same: (x, r) => x.roundId === r.round_id && x.gameId === r.game_id && x.hole === r.hole && x.playerId === r.player_id,
-    order: byFields((x) => x.roundId, (x) => x.gameId, (x) => x.hole, (x) => x.playerId),
+    // 0042: a player's ruling and the same player's claim are two rows; a delete from before it names no source, and takes the player's row whichever it is.
+    same: (x, r) => x.roundId === r.round_id && x.gameId === r.game_id && x.hole === r.hole && x.playerId === r.player_id && (r.source == null || x.source === r.source),
+    order: byFields((x) => x.roundId, (x) => x.gameId, (x) => x.hole, (x) => x.playerId, (x) => x.source),
     map: mapHoleAward,
   }),
   handicap_overrides: spec({

@@ -11,40 +11,16 @@
  * round) is checked like a full one; the fake server would let an empty
  * table's wrong key through.
  */
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type { Row } from './mappers'
 import { SNAPSHOT_KEYS } from './snapshotTables'
+import { primaryKeys } from './testing/migrationKeys'
 import { fakeSupabase, type FakeSupabase } from './testing/fakeSupabase'
 
 let server: FakeSupabase = fakeSupabase({})
 vi.mock('../lib/supabase', () => ({ supabase: () => server.client, supabaseConfigured: true }))
 
 const { exportBackup } = await import('./backup')
-
-const dir = join(process.cwd(), 'supabase/migrations')
-const sql = readdirSync(dir)
-  .filter((f) => f.endsWith('.sql'))
-  .sort()
-  .map((f) => readFileSync(join(dir, f), 'utf8').replace(/--[^\n]*/g, ''))
-  .join('\n')
-
-/** Table → primary key columns, from its `create table` block (the parse snapshotTables.test.ts uses). */
-function primaryKeys(): Map<string, string[]> {
-  const keys = new Map<string, string[]>()
-  for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(([\s\S]*?)\n\);/gi)) {
-    const body = m[2]!
-    const composite = body.match(/primary key\s*\(([^)]+)\)/i)
-    if (composite) {
-      keys.set(m[1]!, composite[1]!.split(',').map((c) => c.trim()))
-      continue
-    }
-    const column = body.match(/^\s*([a-z_]+)\s+[^,\n]*\bprimary key\b/im)
-    if (column) keys.set(m[1]!, [column[1]!])
-  }
-  return keys
-}
 
 describe('the backup’s paging keys (QA-07)', () => {
   it('orders every table it pages by the table’s primary key, whether or not the table has rows', async () => {

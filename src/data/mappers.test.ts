@@ -423,14 +423,19 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
       at: CREATED,
     })
     expect(mapGameEntry({ tournament_id: T, game_id: 'low', player_id: BETO, created_at: CREATED })).toEqual({ gameId: 'low', playerId: BETO })
-    // The Comité's decision for the whole field has no group.
-    expect(mapHoleAward({ round_id: ROUND, group_id: null, hole: 16, game_id: 'cerca', player_id: ANA, decided_by: ANA, created_at: CREATED })).toEqual({
+    // The Comité's ruling for the whole field has no group; 0042 says so in `source`.
+    expect(mapHoleAward({ round_id: ROUND, group_id: null, hole: 16, game_id: 'cerca', player_id: ANA, decided_by: ANA, created_at: CREATED, source: 'comite' })).toEqual({
       roundId: ROUND,
       groupId: null,
       hole: 16,
       gameId: 'cerca',
       playerId: ANA,
+      source: 'comite',
     })
+    expect(mapHoleAward({ round_id: ROUND, group_id: GROUP, hole: 16, game_id: 'cerca', player_id: ANA, decided_by: ANA, created_at: CREATED, source: 'group' }).source).toBe('group')
+    // A row from before 0042 (a phone's saved boards) follows its group the same way.
+    expect(mapHoleAward({ round_id: ROUND, group_id: null, hole: 16, game_id: 'cerca', player_id: ANA }).source).toBe('comite')
+    expect(mapHoleAward({ round_id: ROUND, group_id: GROUP, hole: 16, game_id: 'cerca', player_id: ANA }).source).toBe('group')
     // numeric with no scale, as text and as PostgREST sends it.
     expect(mapGameResult({ tournament_id: T, game_id: 'tacos', player_id: CHUY, share: '0.5', created_at: CREATED })).toEqual({ gameId: 'tacos', playerId: CHUY, share: 0.5 })
     expect(mapGameResult({ tournament_id: T, game_id: 'tacos', player_id: CHUY, share: 0.5, created_at: CREATED })).toEqual({ gameId: 'tacos', playerId: CHUY, share: 0.5 })
