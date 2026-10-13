@@ -1,6 +1,7 @@
 /**
  * Tarjetas (§13): first the inbox, every flag the engine raises across all
- * rounds (snake tiebreaks, discrepancies, unsigned cards, unfinished cards);
+ * rounds (snake tiebreaks, discrepancies, holes without putts, unsigned
+ * cards, unfinished cards);
  * then the holes the server kept for the Comité («Pendientes de revisar»,
  * REL-08); then any player's card, hole by hole, editable with a reason once
  * signed.
@@ -16,6 +17,7 @@ import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard } from '../.
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { mainScoring } from '../../engine/formats'
+import { puttingGames, puttsMissing } from '../../engine/core/putts'
 import { ownDayText } from '../../lib/figureText'
 import styles from './AdminScores.module.css'
 import a from './Admin.module.css'
@@ -33,6 +35,8 @@ export function AdminScores() {
   // The card in the event's own figure (STRAT-03): points only where something counts them.
   const scoring = mainScoring(settings)
   const showPoints = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
+  // A hole with strokes and no putts is marked only where a game pays on putts (MONEY-18).
+  const puttsCount = puttingGames(settings).length > 0
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
   const [roundId, setRoundId] = useState<string>(snapshot.tournament.currentRoundId ?? rounds[0]?.id ?? '')
   const [playerId, setPlayerId] = useState<string>(snapshot.players[0]?.id ?? '')
@@ -45,8 +49,8 @@ export function AdminScores() {
   const pr = state.core.rounds[roundId]?.[playerId]
   const pair = snapshot.pairs.find((p) => p.player1Id === playerId || p.player2Id === playerId)
   const signed = pair ? snapshot.cardSignatures.find((s) => s.roundId === roundId && s.pairId === pair.id) : undefined
-  const { pendingSnakeTiebreaks: pending, discrepancies: disputes, unsignedCards, incompleteRounds } = state.flags
-  const inboxCount = pending.length + disputes.length + unsignedCards.length + incompleteRounds.length
+  const { pendingSnakeTiebreaks: pending, discrepancies: disputes, unsignedCards, incompleteRounds, missingPutts } = state.flags
+  const inboxCount = pending.length + disputes.length + missingPutts.length + unsignedCards.length + incompleteRounds.length
 
   // Players grouped by their group in the selected round, unassigned last.
   const groupedPlayers = useMemo(() => {
@@ -189,6 +193,24 @@ export function AdminScores() {
                 </div>
               )
             })}
+            {missingPutts.map((m) => (
+              <div key={`p${m.roundId}${m.playerId}`} className={a.inboxRow}>
+                <span className={a.inboxText}>
+                  <span className={a.inboxTitle}>
+                    <span className={`${a.inboxMark} ${a.inboxMarkHot}`} aria-hidden="true" />
+                    {IB.missingPutts(name(m.playerId), m.holes)}
+                  </span>
+                  <span className={a.inboxSub}>
+                    {dayOf(m.roundId)}. {IB.missingPuttsWhy(puttingGames(settings))}
+                  </span>
+                </span>
+                <span className={a.inboxActions}>
+                  <button className="btn btn--ghost btn--sm" type="button" onClick={() => show(m.roundId, m.playerId)}>
+                    {IB.view}
+                  </button>
+                </span>
+              </div>
+            ))}
             {unsignedCards.map((u) => {
               const pr2 = snapshot.pairs.find((p) => p.id === u.pairId)
               const label = pr2 ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)])) : '?'
@@ -285,7 +307,7 @@ export function AdminScores() {
                     <button
                       key={h.hole}
                       type="button"
-                      className={`${styles.hole} ${!h.played ? styles.empty : ''} ${h.disputed ? styles.disputed : ''}`}
+                      className={`${styles.hole} ${!h.played ? styles.empty : ''} ${h.disputed || (puttsCount && puttsMissing(h)) ? styles.disputed : ''}`}
                       onClick={() => setEdit({ hole: h.hole, strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp, reason: '' })}
                     >
                       <span className={styles.holeNum}>{h.hole}</span>
@@ -293,6 +315,7 @@ export function AdminScores() {
                       {/* Points and putts on two lines: «putts», never «p», does not fit one line six tiles across. */}
                       <span className={styles.holeSub}>{h.played && showPoints ? t.games.pointsFigure(h.points) : `${t.player.par} ${h.par}`}</span>
                       {h.played && h.putts != null && <span className={styles.holeSub}>{t.games.puttsFigure(h.putts)}</span>}
+                      {puttsCount && puttsMissing(h) && <span className={styles.holeSub}>{SC.noPutts}</span>}
                     </button>
                   ))}
                 </div>

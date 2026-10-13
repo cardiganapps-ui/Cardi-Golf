@@ -116,7 +116,8 @@ export function AdminRounds() {
   // A tee chosen for the day stays when the round's course changes: «Tees» shows while any is set, so it can be put back to «Por defecto».
   const hasRoundTees = (rid: string) => data!.snapshot.roundTees.some((x) => x.roundId === rid)
   const teeName = (teeId: string) => data!.snapshot.courses.flatMap((c) => c.tees).find((tee) => tee.id === teeId)?.name ?? null
-  const pendingFor = (rid: string) => flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length + flags.discrepancies.filter((d) => d.roundId === rid).length + flags.unsignedCards.filter((u) => u.roundId === rid).length
+  const pendingFor = (rid: string) =>
+    flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length + flags.discrepancies.filter((d) => d.roundId === rid).length + flags.unsignedCards.filter((u) => u.roundId === rid).length + flags.missingPutts.filter((m) => m.roundId === rid).length
 
   const askBody = ask
     ? ask.kind === 'finish'

@@ -13,6 +13,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { t } from '../../i18n/es-MX'
+import { Toaster } from '../../components/ui'
 
 const api = vi.hoisted(() => ({
   placeBid: vi.fn(async () => undefined),
@@ -107,5 +108,48 @@ describe('Calcutta console at a loud dinner (UX-13)', () => {
     expect(within(ask).getByText(/Se deshace la venta de/)).toBeTruthy()
     await act(async () => fireEvent.click(within(ask).getByRole('button', { name: A.reopen })))
     expect(api.reopenLot).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('a custom bid goes up in the increment (MONEY-19)', () => {
+  /** The console with its toasts, a bidder picked who is not on top, and the bid standing on the open lot. */
+  function ready() {
+    const fx = getFixture('auction12')!
+    useTournament.setState({ tournamentId: 'fx-auction', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined } as never)
+    render(
+      <MemoryRouter>
+        <AdminAuction />
+        <Toaster />
+      </MemoryRouter>,
+    )
+    const open = useTournament.getState().data!.state.modules.auction!.lots.find((l) => l.status === 'open')!
+    const leader = open.currentBid?.bidderId ?? open.playerId
+    const other = fx.snapshot.players.find((p) => p.id !== leader)!
+    fireEvent.click(tiles().getByRole('radio', { name: other.displayName }))
+    return { open, other, standing: open.currentBid?.amount ?? 250 }
+  }
+  const custom = async (amount: number) => {
+    fireEvent.change(screen.getByRole('textbox', { name: A.customAmount }), { target: { value: String(amount) } })
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: A.custom })))
+  }
+
+  it('a fat finger off the step is refused, naming the next bid, and nothing is sent', async () => {
+    const { standing } = ready()
+    await custom(standing + 120)
+    expect(api.placeBid).not.toHaveBeenCalled()
+    expect(screen.getByText(A.offStep(formatMoney(250), [formatMoney(standing + 250)]))).toBeTruthy()
+  })
+
+  it('between two steps further up, both are offered', async () => {
+    const { standing } = ready()
+    await custom(standing + 850)
+    expect(api.placeBid).not.toHaveBeenCalled()
+    expect(screen.getByText(A.offStep(formatMoney(250), [formatMoney(standing + 750), formatMoney(standing + 1000)]))).toBeTruthy()
+  })
+
+  it('on the step, the bid goes as typed', async () => {
+    const { open, other, standing } = ready()
+    await custom(standing + 750)
+    expect(api.placeBid).toHaveBeenCalledWith(open.lotId, other.id, standing + 750)
   })
 })

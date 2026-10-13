@@ -85,7 +85,7 @@ export function GamesScreen() {
       stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts)), amount: settings.prizes.fewestPutts }
     } else if (id === 'auction' && m.auction) {
       const s0 = m.auction.slots.find((x) => !x.unfilled)
-      leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.amount)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
+      leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.pesos)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
       stake = { text: t.games.pot, amount: m.auction.pot }
     }
     return { id, label, leader, stake }
@@ -303,6 +303,7 @@ export function GamesScreen() {
                       <span>
                         {r.holes ? `${r.average.toFixed(2)} por hoyo, ${r.onePutts} a uno, ${r.threePutts} a tres` : t.games.noResults}
                         {r.pickedUpHoles > 0 ? `, ${r.pickedUpHoles} L` : ''}
+                        {r.missingPutts > 0 ? `, ${t.games.missingPutts(r.missingPutts)}` : ''}
                       </span>
                       {state.modules.fewestPutts!.prizes[r.playerId] && <span className={styles.subMoney}>{money(state.modules.fewestPutts!.prizes[r.playerId]!.amount)}</span>}
                     </span>
@@ -336,7 +337,7 @@ export function GamesScreen() {
                           {s.unfilled ? t.games.unassigned : t.common.andList(s.playerIds.map(name))}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
-                      <HowCalculated why={s.why} label={formatMoney(s.amount)} />
+                      <HowCalculated why={s.why} label={formatMoney(s.pesos)} />
                     </div>
                   ))}
                 </div>

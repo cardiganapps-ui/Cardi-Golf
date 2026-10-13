@@ -8,3 +8,11 @@ export function pesos(n: number): string {
   const whole = Math.round(n)
   return `${whole < 0 ? '−' : ''}$${Math.abs(whole).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
 }
+
+/** Pesos with their centavos when there are any (MONEY-16): «$6,462.50», «$6,600». For the step where a share becomes pesos. */
+export function pesosCents(n: number): string {
+  const cents = Math.round(n * 100)
+  if (cents % 100 === 0) return pesos(cents / 100)
+  const abs = Math.abs(cents)
+  return `${cents < 0 ? '−' : ''}${pesos(Math.floor(abs / 100))}.${String(abs % 100).padStart(2, '0')}`
+}

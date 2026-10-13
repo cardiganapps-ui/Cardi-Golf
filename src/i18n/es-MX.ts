@@ -1557,6 +1557,8 @@ export const t = {
     roi: 'rendimiento',
     pointsFigure: (n: number) => `${n} pts`,
     puttsFigure: (n: number) => (n === 1 ? '1 putt' : `${n} putts`),
+    /** Menos putts: holes saved without putts, left out until captured (MONEY-18). */
+    missingPutts: (n: number) => `faltan los putts de ${n === 1 ? '1 hoyo' : `${n} hoyos`}`,
     player: 'Jugador',
     headToHead: 'Cara a cara por grupo',
     unpaired: (names: string) => `Sin pareja: ${names}`,
@@ -1801,6 +1803,9 @@ export const t = {
       dispute: (name: string, hole: number) => `Discrepancia, ${name}, hoyo ${hole}`,
       unsigned: (pair: string) => `Tarjeta sin firmar, ${pair}`,
       incomplete: (n: number) => `${n} tarjeta${n === 1 ? '' : 's'} sin terminar`,
+      // MONEY-18: holes saved with strokes and no putts; the games that pay on putts wait for them.
+      missingPutts: (name: string, holes: number[]) => `Faltan los putts de ${name}: ${holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(holes.map(String))}`,
+      missingPuttsWhy: (games: string[]) => `${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'} hasta que se capturen.`,
       warning: 'Aviso',
       view: 'Ver',
       rejectedTitle: 'Capturas rechazadas por el servidor',
@@ -1919,6 +1924,8 @@ export const t = {
     scores: {
       invalidStrokes: 'Los golpes van de 1 a 15.',
       invalidPutts: 'Los putts van de 0 a los golpes.',
+      /** A hole tile saved with strokes and no putts (MONEY-18): what to fill. */
+      noPutts: 'sin putts',
       pendingTitle: 'Víboras pendientes',
       disputesTitle: 'Discrepancias',
       disputesHint: 'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
@@ -2300,6 +2307,8 @@ export const t = {
     reopenWhileOpen: 'Primero vende o deshaz el lote abierto.',
     limitReached: (n: number) => `Ya tiene ${n}`,
     minBid: (amount: string) => `La puja tiene que superar ${amount}.`,
+    /** A custom bid off the step (MONEY-19): the valid amounts either side of it. */
+    offStep: (increment: string, options: string[]) => `Las pujas suben de ${increment} en ${increment}: ${options.length === 1 ? `la siguiente es ${options[0]}` : `${options[0]} o ${options[1]}`}.`,
     selfAtLimit: (n: number) => `Ya tiene ${n} jugadores; no puede quedarse consigo mismo. Alguien más tiene que pujar.`,
     searchBidder: 'Buscar postor',
     buyback: 'Recompra',
@@ -2546,6 +2555,11 @@ export const t = {
     rowWhat: (label: string, amount: string, reason: string) => `${label}, ${amount}: ${reason}`,
   },
   /** «Cerrar torneo»: what blocks Terminado and publishing (MONEY-05). */
+  /** Holes saved with strokes and no putts (MONEY-18): the engine's warning. */
+  missingPutts: {
+    who: (name: string, days: Array<{ day: number; holes: number[] }>) => `${name} (${days.map((d) => `día ${d.day}: ${d.holes.length === 1 ? 'hoyo' : 'hoyos'} ${andList(d.holes.map(String))}`).join('; ')})`,
+    warning: (who: string[], games: string[]) => `Faltan putts: ${andList(who)}. Hasta que el Comité los capture en Tarjetas, ${andList(games)} no ${games.length === 1 ? 'los cuenta' : 'los cuentan'}.`,
+  },
   closeGate: {
     title: 'Antes de cerrar el torneo',
     blocked: 'Falta resolver esto:',
@@ -2560,6 +2574,7 @@ export const t = {
     unassigned: (amount: string) => `${amount} por asignar: el Comité decide en Dinero, Liquidación.`,
     badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
     unsignedCards: (n: number) => `${n === 1 ? 'Una tarjeta sin firmar' : `${n} tarjetas sin firmar`} en rondas terminadas: el Comité puede firmarlas en Tarjeta.`,
+    missingPutts: (n: number) => `Faltan los putts de ${n === 1 ? 'un hoyo' : `${n} hoyos`}: captúralos en Comité, sección Tarjetas.`,
     rejectedWrites: (n: number) => `${n === 1 ? 'Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo' : `${n} hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos`} en Comité, sección Tarjetas, «Pendientes de revisar».`,
     /** The server has no «Pendientes de revisar» yet (0028 not applied): nothing there can hold the close. */
     rejectedUnavailable: 'La lista «Pendientes de revisar» todavía no está en el servidor, así que no detiene el cierre. Si un teléfono avisó que un hoyo quedó para el Comité, corrígelo antes en Tarjetas.',
