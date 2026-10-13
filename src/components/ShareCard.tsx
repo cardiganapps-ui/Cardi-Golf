@@ -3,7 +3,7 @@
  * turned into a PNG on tap. Three kinds: leaderboard, a player's round, the
  * settlement. Sized for WhatsApp (1080 px wide at 2×).
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../lib/money'
@@ -15,12 +15,13 @@ import styles from './ShareCard.module.css'
 
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement' }
 
-export function ShareCardButton({ what, label, className }: { what: ShareKind; label?: string; className?: string }) {
+/** Memoized: a screen re-rendering around it renders no share button (PERF-09). */
+export const ShareCardButton = memo(function ShareCardButton({ what, label, className }: { what: ShareKind; label?: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
-  const data = useTournament((s) => s.data)
-  const slug = data?.snapshot.tournament.slug
-  const name = data?.snapshot.tournament.name ?? ''
+  // Two words, not the boards: a score saved elsewhere renders no share button (PERF-09). The card reads the boards.
+  const slug = useTournament((s) => s.data?.snapshot.tournament.slug)
+  const name = useTournament((s) => s.data?.snapshot.tournament.name ?? '')
   // The card is mounted off-screen only while an image is being generated.
   useEffect(() => {
     if (!busy || !ref.current) return
@@ -40,7 +41,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
       cancelled = true
     }
   }, [busy, slug, name, what.kind])
-  if (!data) return null
+  if (slug == null) return null
   const text = label || (what.kind === 'leaderboard' ? t.share.leaderboard : what.kind === 'player' ? t.share.round : t.share.settlement)
   return (
     <>
@@ -56,7 +57,7 @@ export function ShareCardButton({ what, label, className }: { what: ShareKind; l
       )}
     </>
   )
-}
+})
 
 function Card({ what }: { what: ShareKind }) {
   const data = useTournament((s) => s.data)!

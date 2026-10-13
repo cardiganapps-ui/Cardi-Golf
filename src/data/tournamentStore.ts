@@ -18,6 +18,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { z } from 'zod'
 import { computeTournament, type TournamentState } from '../engine/computeTournament'
+import { shareSnapshot } from './share'
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
@@ -235,7 +236,7 @@ function flushChanges() {
   const { applied, reload } = applyAll(next, id, [...takeParked(now), ...batch.map((change) => ({ at: now, change }))])
   if (applied) {
     // The players are untouched, so their key stays; the boards are as fresh as the server's last change.
-    useTournament.setState({ data: compute(next, d.playersKey), ...(st.source === 'server' ? { updatedAt: now } : {}) })
+    useTournament.setState({ data: compute(next, d.playersKey, d), ...(st.source === 'server' ? { updatedAt: now } : {}) })
     if (st.keepOnPhone) saveSoon(id)
   }
   if (reload) scheduleReload()
@@ -346,22 +347,38 @@ function hashKey(text: string): string {
 const fetchedPlayers = new WeakMap<Snapshot, string>()
 const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? hashKey(JSON.stringify(snapshot.players))
 
-function compute(raw: Snapshot, playersKey = playersKeyOf(raw)): TournamentData {
+/**
+ * The boards from the server's rows and this phone's unsent writes. `last` is what the screens hold now: where
+ * the new boards read the same, its objects come back (`shareSnapshot`), and when nothing reads differently,
+ * `last` itself does, so nothing re-renders and the engine does not run (PERF-09). Only the same tournament's.
+ */
+function compute(raw: Snapshot, playersKey = playersKeyOf(raw), last: TournamentData | null = null): TournamentData {
+  const prev = last && last.base.tournament.id === raw.tournament.id ? last : null
   // A snapshot cached by an older build has no instance-game tables.
-  const base: Snapshot = { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [], moneyAdjustments: raw.moneyAdjustments ?? [] }
+  const base = shareSnapshot(prev?.base, { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [], moneyAdjustments: raw.moneyAdjustments ?? [] })
   // The overlays write into lists of their own: the server's rows stay the server's.
-  const snapshot: Snapshot = overlays.length
+  const laid: Snapshot = overlays.length
     ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards!] }
     : base
-  for (const fn of overlays) fn(snapshot)
+  for (const fn of overlays) fn(laid)
+  const snapshot = shareSnapshot(prev?.snapshot, laid)
+  if (prev && snapshot === prev.snapshot) {
+    // The boards read as they did: their state, settings and every object a screen holds stay as they are.
+    return base === prev.base && playersKey === prev.playersKey ? prev : { ...prev, base, playersKey }
+  }
   let settings: TournamentSettings
   let settingsError: string | null = null
-  try {
-    settings = parseSettings(snapshot.tournament.settings)
-  } catch (e) {
-    settings = DEFAULT_SETTINGS
-    // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
-    settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
+  if (prev && snapshot.tournament === prev.snapshot.tournament) {
+    settings = prev.settings
+    settingsError = prev.settingsError
+  } else {
+    try {
+      settings = parseSettings(snapshot.tournament.settings)
+    } catch (e) {
+      settings = DEFAULT_SETTINGS
+      // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
+      settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
+    }
   }
   return { snapshot, base, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
 }
@@ -553,7 +570,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       baseReadAt = readAt
       healWait = 0
       stopReloadRetry()
-      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      set({ data: compute(snapshot, undefined, get().data), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       afterFetch()
       if (leaves === leavesAtStart) get().subscribe()
@@ -591,7 +608,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       baseReadAt = readAt
       healWait = 0
       stopReloadRetry()
-      set({ data: compute(snapshot), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      set({ data: compute(snapshot, undefined, get().data), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
       afterFetch()
     } catch (e) {
@@ -611,7 +628,7 @@ export const useTournament = create<StoreState>((set, get) => ({
     // Entering it from the copy: the reloads a cold open needs are this tournament's, not a left one's.
     left = false
     // A copy on the phone is of a tournament the phone keeps.
-    set({ tournamentId, data: compute(snapshot), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
+    set({ tournamentId, data: compute(snapshot, undefined, get().data), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
   },
   subscribe() {
     const id = get().tournamentId
@@ -737,11 +754,11 @@ export const useTournament = create<StoreState>((set, get) => ({
     // `updatedAt` stays: nothing new came from the server (REL-04). A patch
     // that leaves the players alone (a score, a mark) keeps their key.
     const same = JSON.stringify(snapshot.players) === JSON.stringify(d.base.players)
-    set({ data: compute(snapshot, same ? d.playersKey : undefined) })
+    set({ data: compute(snapshot, same ? d.playersKey : undefined, d) })
   },
   refresh() {
     const d = get().data
-    if (d) set({ data: compute(d.base, d.playersKey) })
+    if (d) set({ data: compute(d.base, d.playersKey, d) })
   },
   landChanges(tournamentId, changes, since, sentAt, opts = {}) {
     const st = get()
@@ -773,7 +790,7 @@ export const useTournament = create<StoreState>((set, get) => ({
       const next = structuredClone(d.base)
       const now = Date.now()
       const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))
-      set({ data: compute(next, d.playersKey) })
+      set({ data: compute(next, d.playersKey, d) })
       if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
       if (reload) scheduleReload()
       // The boards hold the row stamped later, and kept it. A write that waited on the row's lock commits last with

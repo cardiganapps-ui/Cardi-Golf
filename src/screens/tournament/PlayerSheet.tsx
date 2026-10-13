@@ -3,7 +3,7 @@
  * explanation, each round as a scorecard with notation (tap a hole for the
  * breakdown), pair and owners, money so far, and the basic stats.
  */
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ExplanationSheet, HowCalculated } from '../../components/HowCalculated'
@@ -21,11 +21,16 @@ import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
 
-export function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
+/** Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a change (PERF-09). */
+export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
+  return playerId ? <PlayerSheetOpen playerId={playerId} onClose={onClose} /> : null
+})
+
+function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const data = useTournament((s) => s.data)
   const [why, setWhy] = useState<{ title: string; why: Explanation } | null>(null)
   const { tournamentId } = useTournamentCtx()
-  const [profiles] = useTournamentProfiles(playerId ? tournamentId : null)
+  const [profiles] = useTournamentProfiles(tournamentId)
   const p = data?.snapshot.players.find((x) => x.id === playerId)
   const money = useMemo(() => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []), [data, playerId])
   const rounds = useMemo(

@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
-import { useBoardsMayBeOld } from './boardsAge'
+import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
@@ -35,9 +34,9 @@ function tabsFor({ hasMoney, canScore }: { hasMoney: boolean; canScore: boolean 
  */
 export function TournamentShell() {
   const { slug, lookup, me } = useTournamentCtx()
-  const data = useTournament((s) => s.data)
+  // The few words the frame shows, not the boards: a score saved elsewhere renders no header and no tab bar (PERF-09).
+  const tournament = useTournament((s) => s.data?.snapshot.tournament)
   const realtime = useTournament((s) => s.realtime)
-  const updatedAt = useTournament((s) => s.updatedAt)
   const source = useTournament((s) => s.source)
   const isFixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const online = useOnline()
@@ -45,13 +44,15 @@ export function TournamentShell() {
   useOwnConnectionStatus()
   const { pathname } = useLocation()
   const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
-  const accent = data?.snapshot.tournament.accentColor ?? lookup.accentColor ?? undefined
-  const logo = data?.snapshot.tournament.logoUrl ?? lookup.logoUrl
+  const accent = tournament?.accentColor ?? lookup.accentColor ?? undefined
+  const logo = tournament?.logoUrl ?? lookup.logoUrl
   // Money exists if anyone pays anything: the entry pot, a side pot, a direct
   // bet or the auction. Until the snapshot loads, assume it does, so the bar
   // does not shuffle under a thumb already on its way to a tab.
-  const s = data?.settings
-  const hasMoney = !s || s.entryFee > 0 || s.modules.auction.enabled || s.games.some((g) => g.money.source !== 'none')
+  const hasMoney = useTournament((st) => {
+    const s = st.data?.settings
+    return !s || s.entryFee > 0 || s.modules.auction.enabled || s.games.some((g) => g.money.source !== 'none')
+  })
   const canScore = !!me.playerId || me.isAdmin
   const tabs = tabsFor({ hasMoney, canScore })
   // Holes still on this phone, and writes the server refused: on the Tarjeta
@@ -67,10 +68,10 @@ export function TournamentShell() {
       <header className={styles.top}>
         <div className={styles.bar}>
           {logo && <img className={styles.logo} src={logo} alt="" />}
-          <span className={`grow ${styles.name}`}>{data?.snapshot.tournament.name ?? lookup.name}</span>
+          <span className={`grow ${styles.name}`}>{tournament?.name ?? lookup.name}</span>
           {(!isFixture || !online) && <HeaderStatus online={online} source={source} realtime={realtime} fetchFailed={fetchFailed} />}
         </div>
-        {showAge && <BoardsAge updatedAt={updatedAt} pendingHoles={online ? 0 : pendingHoles} />}
+        {showAge && <BoardsAge pendingHoles={online ? 0 : pendingHoles} />}
       </header>
       <div className={styles.body}>
         {me.via === 'platform' && <PlatformBanner />}
@@ -125,12 +126,9 @@ function HeaderStatus({ online, source, realtime, fetchFailed }: { online: boole
  * the holes still on the phone too. It used to sit in the chip («Conectando,
  * guardado ayer, 7:49 a.m.»), which cut the event name to «Nach…» at 375 px.
  */
-function BoardsAge({ updatedAt, pendingHoles }: { updatedAt: number; pendingHoles: number }) {
-  // The age keeps counting while it shows.
-  const [, tick] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 30_000)
-    return () => clearInterval(id)
-  }, [])
-  return <p className={styles.boardsAge}>{t.sync.boardsAge(savedWhen(updatedAt), pendingHoles)}</p>
+function BoardsAge({ pendingHoles }: { pendingHoles: number }) {
+  // The age keeps counting while it shows, and reads the boards' time itself: a reload renders this line, not the shell (PERF-09).
+  const updatedAt = useTournament((s) => s.updatedAt)
+  const when = useSavedWhen(updatedAt)
+  return <p className={styles.boardsAge}>{t.sync.boardsAge(when ?? savedWhen(updatedAt), pendingHoles)}</p>
 }

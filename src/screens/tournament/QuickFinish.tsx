@@ -2,7 +2,7 @@
  * On a Ronda rápida, the organizer closes it from En vivo: finish the round
  * and the tournament and publish to the players' profiles in one tap.
  */
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/ui'
 import { useCloseGate } from '../../components/CloseGate'
@@ -13,15 +13,21 @@ import { humanError } from '../../lib/humanError'
 
 const Q = t.quick
 
-export function QuickFinish() {
+/** Only a Ronda rápida's organizer has it, while it is live: anyone else's En vivo reads one flag, not the boards (PERF-09). */
+export const QuickFinish = memo(function QuickFinish() {
+  const { me } = useTournamentCtx()
+  const live = useTournament((s) => !!s.data?.snapshot.tournament.quick && s.data.snapshot.tournament.status === 'live')
+  return live && me.isOrganizer ? <QuickFinishCard /> : null
+})
+
+function QuickFinishCard() {
   const data = useTournament((s) => s.data)
-  const { me, tournamentId } = useTournamentCtx()
+  const { tournamentId } = useTournamentCtx()
   const [busy, setBusy] = useState(false)
   // «Cerrar torneo» (MONEY-05): the round closes only once nothing is left open; the check reads it as finished.
   const closeGate = useCloseGate(tournamentId)
   if (!data) return null
   const { snapshot, state } = data
-  if (!snapshot.tournament.quick || !me.isOrganizer || snapshot.tournament.status !== 'live') return null
 
   const live = snapshot.rounds.filter((r) => r.status === 'live')
   const missing = new Set<string>()
