@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import type { NoticeLike } from '../lib/noticeText'
 import { ApiError } from './api'
 
 export interface FriendCard {
@@ -32,12 +33,25 @@ export interface Actor {
   avatarUrl: string | null
 }
 
-export type NotificationKind = 'friend_request' | 'friend_accepted' | 'rivalry_proposed' | 'rivalry_accepted' | 'rivalry_round' | 'link_pending' | 'results' | 'round_invite' | 'crew_join'
+export type NotificationKind =
+  | 'friend_request'
+  | 'friend_accepted'
+  | 'rivalry_proposed'
+  | 'rivalry_accepted'
+  | 'rivalry_round'
+  | 'link_pending'
+  | 'results'
+  | 'round_invite'
+  | 'crew_join'
+  // A tournament's notices to its players (0051): an account that is the player's hears them in its inbox too.
+  | 'round_live'
+  | 'card_to_sign'
+  | 'snake_tiebreak'
 
 export interface Notice {
   id: string
   kind: NotificationKind
-  data: { tournament?: string; slug?: string; player?: string; rankLabel?: string | null; field?: number; rivalryId?: string; crew?: string }
+  data: NoticeLike['data']
   read: boolean
   createdAt: string
   actor: Actor | null

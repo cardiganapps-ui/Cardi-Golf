@@ -21,6 +21,13 @@ export interface NoticeLike {
     title?: string
     body?: string
     url?: string | null
+    /** A tournament's notices to its players (0051): the day, the group, where it starts, the hole, the game. */
+    round?: number
+    group?: number | null
+    startHole?: number | null
+    teeTime?: string | null
+    hole?: number
+    game?: string
   }
   actor: { handle: string; displayName: string } | null
 }
@@ -29,6 +36,19 @@ export interface NoticeLike {
 export function safeNoticeUrl(url: string | null | undefined): string | null {
   return url && /^\/[A-Za-z0-9/_.?=&%-]*$/.test(url) && !url.startsWith('//') ? url : null
 }
+
+/** A tournament's page, `rest` after its slug; home when the slug isn't one (the server only sends real ones). */
+function tournamentPage(slug: string | undefined, rest = ''): string {
+  return slug && /^[a-z0-9][a-z0-9-]{0,59}$/.test(slug) ? `/t/${slug}${rest}` : '/'
+}
+
+/** «09:00» as people say it, «9:00»; anything else is left out. */
+function clock(teeTime: string | null | undefined): string | null {
+  const m = teeTime ? /^(\d{2}):(\d{2})/.exec(teeTime) : null
+  return m ? `${Number(m[1])}:${m[2]}` : null
+}
+
+const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
 
 /**
  * A notice's line and where tapping it goes. A notice from the Admin de Polo
@@ -64,6 +84,32 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       const title = n.data.title ?? S.notice.platformTitle
       const body = n.data.body ?? ''
       return { text: S.notice.platform_notice(title, body), to: safeNoticeUrl(n.data.url) ?? '/avisos', title, body }
+    }
+    // A tournament's notices to its players (0051): the push says the tournament above, and opens its Tarjeta.
+    case 'round_live': {
+      const tournament = n.data.tournament ?? ''
+      const round = num(n.data.round) ?? 1
+      const body = S.notice.roundLiveBody(round, num(n.data.group), num(n.data.startHole), clock(n.data.teeTime))
+      return { text: S.notice.round_live(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta'), title: tournament || undefined, body }
+    }
+    case 'card_to_sign': {
+      const tournament = n.data.tournament ?? ''
+      const round = num(n.data.round) ?? 1
+      // The grid, where «Firmar» is.
+      return { text: S.notice.card_to_sign(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta?vista=tarjeta'), title: tournament || undefined, body: S.notice.cardToSignBody(round) }
+    }
+    case 'snake_tiebreak': {
+      const tournament = n.data.tournament ?? ''
+      const game = n.data.game || S.notice.snakeGame
+      const round = num(n.data.round) ?? 1
+      const hole = num(n.data.hole)
+      // On that hole: saving it again asks «¿Quién embocó al último?».
+      return {
+        text: S.notice.snake_tiebreak(tournament, game, hole ?? 0),
+        to: tournamentPage(n.data.slug, hole != null ? `/tarjeta?hoyo=${hole}` : '/tarjeta'),
+        title: tournament || undefined,
+        body: S.notice.snakeTiebreakBody(game, round, hole ?? 0),
+      }
     }
     default:
       return { text: '', to: '/' }
