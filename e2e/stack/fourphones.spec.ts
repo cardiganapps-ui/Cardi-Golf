@@ -111,7 +111,8 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
 
   const ms = samples.map((x) => x.ms)
   const stats = { saves: HOLES * scorers.length, shown: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
-  console.log(`::notice title=save-to-shown (4 phones at once, 4G)::${stats.saves} saves, each on ${watchers.length} phones: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
+  // No comma in the title: the workflow command reads one as the end of it.
+  console.log(`::notice title=save-to-shown (4 phones at once on 4G)::${stats.saves} saves, each on ${watchers.length} phones: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
   keepMetrics(testInfo.project.outputDir, 'save-to-shown-4-phones', { budgetMs: BUDGET_MS, network: FOUR_G, stats, samples }, [
     '### Four phones saving at once → shown on two others (e2e-stack, 4G)',
     '',
