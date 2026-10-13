@@ -11,6 +11,7 @@ import { Field, Segmented } from '../../../components/ui'
 import { GAME_SOURCES, PAYS_BY_PLACE, type GameConfig } from '../../../engine/settings/games'
 import { safeParseSettings, type TournamentSettings } from '../../../engine/settings/schema'
 import { checkPrizePool, percentPlaces, type FieldShape } from '../../../engine/settings/prizeCheck'
+import { settingsSense } from '../../../engine/settings/sense'
 import { formatMoney } from '../../../lib/money'
 import { PrizeSummary } from '../../admin/PrizeSummary'
 import { NumberField } from '../../../components/NumberField'
@@ -173,6 +174,8 @@ function PlacesEditor({ values, mode, pesos, currency, onChange }: { values: num
 export function MoneyBar({ value, field }: { value: TournamentSettings; field: FieldShape }) {
   const parsed = useMemo(() => safeParseSettings(value), [value])
   const check = parsed.success ? checkPrizePool(parsed.data, field) : null
+  // Balanced is not «Cuadra» while something else makes no sense (MONEY-13): the bar was green over a Calcutta that pays nobody.
+  const sense = parsed.success ? settingsSense(parsed.data, field) : []
   const pots = check?.sidePots.reduce((s, p) => s + p.pot, 0) ?? 0
   const diff = check?.difference ?? 0
   const cur = value.currency
@@ -192,6 +195,8 @@ export function MoneyBar({ value, field }: { value: TournamentSettings; field: F
         <span className={styles.barOff}>{diff > 0 ? U.bar.over(formatMoney(diff, cur)) : U.bar.off(formatMoney(-diff, cur))}</span>
       ) : check.unreachable.length ? (
         <span className={styles.barOff}>{U.bar.unreachable}</span>
+      ) : sense.length ? (
+        <span className={styles.barOff}>{U.bar.sense}</span>
       ) : (
         <span className={styles.barOk}>{U.bar.ok}</span>
       )}

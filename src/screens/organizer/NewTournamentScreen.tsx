@@ -21,6 +21,7 @@ import { createTournament, upsertRound } from '../../data/api'
 import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
+import { settingsSense } from '../../engine/settings/sense'
 import { safeParseSettings } from '../../engine/settings/schema'
 import { PlayStep } from './setup/PlayStep'
 import { formatFor } from '../../engine/formats'
@@ -77,11 +78,14 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   const field = useMemo(() => ({ players }), [players])
   const parsed = useMemo(() => safeParseSettings(settings), [settings])
   const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
+  // What parses but makes no sense (MONEY-13) holds «Crear» too, named where the button is.
+  const sense = useMemo(() => (parsed.success ? settingsSense(parsed.data, field) : []), [parsed, field])
+  const creatable = parsed.success && !!check?.ok && sense.length === 0
   const W = t.organizer.wizard
   const stepNames = [W.step1, W.step2, W.review]
 
   async function create() {
-    if (!parsed.success) return
+    if (!parsed.success || !creatable) return
     setBusy(true)
     setError(null)
     try {
@@ -174,8 +178,15 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         <div className={styles.form}>
           <ReviewCard name={name} tagline={tagline} settings={settings} players={players} />
           {error && <p className="error">{error}</p>}
-          {(!parsed.success || !check?.ok) && <p className="help">{W.fixToCreate}</p>}
-          {nav(2, null, busy ? W.creating : W.create, busy || !parsed.success || !check?.ok, () => void create())}
+          {!creatable && <p className="help">{W.fixToCreate}</p>}
+          {sense.length > 0 && (
+            <ul className="error">
+              {sense.map((x) => (
+                <li key={`${x.key}:${x.text}`}>{x.text}</li>
+              ))}
+            </ul>
+          )}
+          {nav(2, null, busy ? W.creating : W.create, busy || !creatable, () => void create())}
         </div>
       )}
 
