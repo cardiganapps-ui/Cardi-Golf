@@ -1391,7 +1391,14 @@ export const t = {
   },
   money: {
     ifEndedNow: 'si terminara ahora',
-    paid: 'Pagó',
+    /**
+     * What a person puts in (entry, Calcutta, buybacks, side pots, bets lost),
+     * paid or not: «Pone $6,000, recibe $16,000». It used to read «Pagó», a
+     * past tense for money nobody had handed over (COPY-03).
+     */
+    puts: 'Pone',
+    /** What of it is still due today, beside «Pone»: what «Quién debe qué» asks him for. */
+    owes: (amount: string) => `debe ${amount}`,
     receives: 'Recibe',
     net: 'Neto',
     markPaid: 'Pagado',
@@ -2343,6 +2350,8 @@ export const t = {
     share: 'Compartir liquidación',
     shareTitle: (name: string) => `Liquidación, ${name}`,
     checklist: 'Quién debe qué',
+    /** The heading's count and total, so a glance says how much is still out (COPY-07). */
+    checklistCount: (n: number, total: string) => (n === 1 ? `1 pendiente, ${total}` : `${n} pendientes, ${total}`),
     owesEntry: 'Inscripción',
     owesLots: (lots: number[]) => `Calcutta, ${lots.length === 1 ? 'lote' : 'lotes'} ${andList(lots.map(String))}`,
     owesBuyback: 'Recompra',

@@ -63,7 +63,8 @@ function mount(edit?: (s: Snapshot) => void) {
 /** Leonel paid his first lot ($750) before buying two more ($500 and $1,000). */
 const paidFirstLot = (s: Snapshot) => void s.payments.push({ id: 'pay-cal-p11', fromPlayerId: 'p11', toPlayerId: null, amount: 750, kind: 'calcutta', paid: true, note: null })
 
-const owedList = () => within(screen.getByRole('heading', { name: M.checklist }).closest('section')!)
+// The heading carries the count and total once something is owed (COPY-07): «Quién debe qué: 3 pendientes, $5,250».
+const owedList = () => within(screen.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }).closest('section')!)
 function paidList() {
   const summary = screen.getByText(/^Ya pagaron \(\d+\)$/)
   const details = summary.closest('details')!
