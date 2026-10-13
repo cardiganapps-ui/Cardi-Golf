@@ -189,6 +189,9 @@ export function TournamentGate() {
         settled.current = true
         recheck.current = false
         failures.current = 0
+        // Nobody on this browser (an account deleted or blocked, a refresh token revoked): the boards it
+        // kept, money included, are no one's to see here any more, as when a session finds it is no member.
+        void clearCached(lookup.id)
         setPhase({ kind: 'enter', lookup })
         return
       }

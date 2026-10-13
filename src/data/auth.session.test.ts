@@ -30,7 +30,7 @@ vi.mock('../lib/supabase', () => ({
   }),
 }))
 
-const { ensureSession, SessionUnavailableError } = await import('./auth')
+const { ensureSession, sessionIfAny, SessionUnavailableError } = await import('./auth')
 
 describe('ensureSession', () => {
   beforeEach(() => {
@@ -65,5 +65,30 @@ describe('ensureSession', () => {
     session = a
     await expect(ensureSession()).resolves.toBe(a)
     expect(anonCalls).toBe(1)
+  })
+})
+
+describe('sessionIfAny: the session this browser has, never a new one (TRUST-05)', () => {
+  beforeEach(() => {
+    session = null
+    anonCalls = 0
+    storage.clear()
+  })
+
+  it('returns the current session', async () => {
+    session = { user: { id: 'me' } }
+    await expect(sessionIfAny()).resolves.toBe(session)
+    expect(anonCalls).toBe(0)
+  })
+
+  it('a browser with none gets null, and no anonymous user is started for it', async () => {
+    await expect(sessionIfAny()).resolves.toBeNull()
+    expect(anonCalls).toBe(0)
+  })
+
+  it('a stored session it cannot confirm throws, as ensureSession does, and starts nobody', async () => {
+    storage.set('cardi-golf-auth', JSON.stringify({ access_token: 'expired', refresh_token: 'r' }))
+    await expect(sessionIfAny()).rejects.toBeInstanceOf(SessionUnavailableError)
+    expect(anonCalls).toBe(0)
   })
 })

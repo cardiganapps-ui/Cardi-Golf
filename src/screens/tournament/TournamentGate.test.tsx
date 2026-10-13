@@ -233,6 +233,16 @@ describe('saved boards that no longer belong here', () => {
     await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
   })
 
+  it('a browser left with no session (an account deleted or blocked, a token revoked) sees Entrar, and the saved boards go', async () => {
+    await saveOnPhone('Guardado en el teléfono')
+    server.sessionIfAny.mockResolvedValue(null)
+    server.lookupTournament.mockResolvedValue(fx.lookup)
+    open()
+    expect(await screen.findByText('Entrar')).toBeTruthy()
+    await vi.waitFor(async () => expect(await readCached(slug)).toBeNull())
+    expect(server.ensureSession).not.toHaveBeenCalled()
+  })
+
   it('a deleted tournament says «no existe», and its saved boards go', async () => {
     await saveOnPhone('Guardado en el teléfono')
     server.ensureSession.mockResolvedValue({})

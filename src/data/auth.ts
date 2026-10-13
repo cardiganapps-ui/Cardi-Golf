@@ -106,20 +106,6 @@ export class SessionUnavailableError extends UserError {
 let starting: Promise<Session> | null = null
 
 /**
- * A session of any kind (anonymous if none). Used when opening a tournament link.
- *
- * Never replaces a stored session with a new anonymous user (REL-16): when a
- * phone's token lapses in a dead zone, getSession() returns nothing until the
- * refresh succeeds, and signing in anonymously then gave the phone a new
- * identity, so the server refused every hole it had queued. auth-js deletes
- * the stored session itself when its refresh token is really dead; only then
- * does the device start over (and its queued holes wait for the PIN, see
- * outbox `adoptQueuedWrites`).
- *
- * One at a time: two callers at once (the gate's retry and the PIN) used to
- * start two anonymous users on a device with none.
- */
-/**
  * The session this phone already has, never a new one: null when it has
  * none, so a link opened shows the tournament's faces and the consent line
  * before any user exists for this browser (TRUST-05); the anonymous user is
@@ -133,6 +119,21 @@ export async function sessionIfAny(): Promise<Session | null> {
   return null
 }
 
+/**
+ * A session of any kind (anonymous if none). Only Entrar calls it, as the PIN
+ * goes out under its consent line (TRUST-05).
+ *
+ * Never replaces a stored session with a new anonymous user (REL-16): when a
+ * phone's token lapses in a dead zone, getSession() returns nothing until the
+ * refresh succeeds, and signing in anonymously then gave the phone a new
+ * identity, so the server refused every hole it had queued. auth-js deletes
+ * the stored session itself when its refresh token is really dead; only then
+ * does the device start over (and its queued holes wait for the PIN, see
+ * outbox `adoptQueuedWrites`).
+ *
+ * One at a time: two callers at once (the gate's retry and the PIN) used to
+ * start two anonymous users on a device with none.
+ */
 export function ensureSession(): Promise<Session> {
   starting ??= startSession().finally(() => {
     starting = null

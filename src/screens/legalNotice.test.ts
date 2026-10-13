@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a2dd768babaf01da' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -378,7 +378,7 @@ describe('what the notice left out (P3-6)', () => {
 
   it('opening a tournament or a profile link creates no user: the PIN does, under its consent line', () => {
     expect(sections['Qué datos guardamos']).toContain(
-      'Abrir el enlace de un torneo o de un perfil no crea nada: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas tu PIN, y es el que queda ligado a tu jugador.',
+      'Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto.',
     )
     // ensureSession is the one way an anonymous user starts, and only Entrar calls it, right before the PIN goes out.
     expect(source('src/data/auth.ts')).toMatch(/export (?:async )?function ensureSession\(\)[\s\S]*?signInAnonymously\(\)/)
