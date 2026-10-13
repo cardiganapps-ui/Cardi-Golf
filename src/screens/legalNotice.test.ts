@@ -16,7 +16,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { t } from '../i18n/es-MX'
-import { BACKUP_TABLES } from '../lib/backupTables'
+import { BACKUP_TABLES, NOT_BACKED_UP } from '../lib/backupTables'
 
 type Doc = { title: string; version: string; updated: string; sections: Array<[string, string]> }
 
@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.4': '64969a21a7a5eb70' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -143,7 +143,7 @@ const PROFILE_SUMMARY = 'ese resumen solo lo ves tú, pero cada cifra la ven en 
 describe('who sees a tournament\'s money (TRUST-02)', () => {
   it('word for word: everyone in it on every screen it shows, anyone of them can share it, the profile summary, the notices', () => {
     expect(sections['El dinero de un torneo']).toBe(
-      'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.',
+      'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo; y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.',
     )
   })
 
@@ -252,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-13.2')
+    expect(t.legal.privacy.version).toBe('2026-10-13.4')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -446,5 +446,71 @@ describe('the phones that hold a PIN (TRUST-24)', () => {
     expect(m).toMatch(/create or replace function public\.release_pin_claim[\s\S]*?not public\.is_tournament_organizer\(c\.tournament_id\)/)
     expect(m).toContain("'before', a.before - array['pin_hash', 'token_hash', 'p256dh', 'auth', 'endpoint', 'auth_user_id', 'released_by']")
     expect(m).toContain("'phone', case when not a.actor_platform and ph.total > 1")
+  })
+})
+
+/**
+ * STRAT-05 (0052): the link to watch a tournament without a PIN. The notice
+ * says it starts off, who sees what through it (anyone who has it, no account,
+ * no user made), what it never shows, the money choice, that the Comité can
+ * change or switch it off, and how long it lasts; the migration and the page
+ * do no more than that.
+ */
+describe('the link to watch a tournament (STRAT-05)', () => {
+  const m = source('supabase/migrations/0052_spectator_link.sql')
+  /** One function's body in the migration, up to its closing $$. */
+  const fn = (name: string) => m.slice(m.indexOf(`create or replace function public.${name}(`)).split('\n$$;')[0]!
+
+  it('who sees what, word for word', () => {
+    expect(sections['Lo que se ve de un torneo']).toContain(
+      'Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, y si es el homenajeado; sus golpes, putts y resultados, los grupos, las parejas y los juegos. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta; con dinero ve también lo que cada quien paga, gana y debe, y la Calcutta con sus precios. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera.',
+    )
+    expect(sections['El dinero de un torneo']).toContain('y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace.')
+    expect(sections['Lo que el Comité captura de cada jugador']).toContain('el nombre corto, la categoría, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea.')
+    expect(sections['Dónde viven']).toContain('Un navegador que abre un enlace para ver no guarda nada del torneo: lo pide otra vez mientras lo tiene en pantalla.')
+    expect(sections['Cuánto tiempo los guardamos']).toContain(
+      'El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace.',
+    )
+  })
+
+  it('off until the Comité makes it, «Sin dinero» unless it says, and only the Comité manages it', () => {
+    expect(m).toContain('money boolean not null default false')
+    for (const name of ['spectator_link', 'save_spectator_link', 'delete_spectator_link']) expect(fn(name)).toMatch(/\nbegin\n {2}if not public\.is_tournament_organizer\(p_tournament_id\) then\n {4}raise exception '[^']+' using errcode = '42501';/)
+    expect(m).toMatch(/revoke all on public\.spectator_links from public, anon, authenticated;/)
+    expect(m).not.toMatch(/create policy [a-z_]+ on public\.spectator_links/)
+    // Changed or switched off, a token answers null at once; the history never keeps one.
+    expect(fn('save_spectator_link')).toContain('token = case when coalesce(p_new_token, false) then excluded.token else s.token end')
+    expect(fn('spectator_links_audit')).toContain("to_jsonb(new) - 'token'")
+    expect(fn('spectator_links_audit')).toContain("to_jsonb(old) - 'token'")
+    expect(NOT_BACKED_UP).toHaveProperty('spectator_links')
+  })
+
+  it('anyone with it, no account: the boards answer without a session, and the page never makes a user', () => {
+    expect(m).toContain('grant execute on function public.spectator_board(text, text) to anon, authenticated;')
+    const page = source('src/screens/spectator/SpectatorGate.tsx')
+    expect(page).not.toMatch(/ensureSession|signInAnonymously|claimPlayer|sessionIfAny/)
+    // It reads the boards and nothing else.
+    expect(source('src/data/spectator.ts')).toMatch(/rpc<Row \| null>\('spectator_board'/)
+  })
+
+  it('what it never shows: the answer names the columns it carries, and none of these is one', () => {
+    const board = fn('spectator_board')
+    for (const column of ["'full_name'", "'avatar_url'", "'form_guide'", "'handicap_note'", "'pin_hash'", "'profile_id'", "'join_code'", "'slug'", "'reason'", "'note'", "'created_by'", "'entered_by'", "'decided_by'", "'is_admin'", "'void_reason'"]) {
+      expect(board, column).not.toContain(column)
+    }
+    expect(board).toContain("'display_name', p.display_name")
+    // The money, only inside «Con dinero».
+    const [before, money] = board.split('if l.money then\n    answer := answer ||')
+    for (const table of ['calcutta_lots', 'calcutta_bids', 'calcutta_buybacks', 'payments', 'money_adjustments']) {
+      expect(before, table).not.toContain(`'${table}'`)
+      expect(money, table).toContain(`'${table}'`)
+    }
+    expect(board).toContain("'settings', public.spectator_settings(t.settings, l.money)")
+    // A custom bet's description, the Comité's free text, with money or without.
+    expect(fn('spectator_settings')).toContain("then jsonb_build_object('options', (g -> 'options') || jsonb_build_object('description', ''))")
+    expect(source('src/data/spectator.ts')).toContain("out.options = { ...g.options, description: '' }")
+    // And the phone shows no more than the server sends, the design fixtures included.
+    const page = source('src/data/spectator.ts')
+    expect(page).toContain('fullName: p.displayName, avatarUrl: null, formGuide: null, isAdmin: false, handicapNote: null')
   })
 })

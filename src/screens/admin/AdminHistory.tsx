@@ -72,6 +72,14 @@ export function AdminHistory() {
       if (e.action === 'INSERT') return H.claim.took(player, H.claim.from[String(row.platform)] ?? H.claim.from.other!)
       if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null) return e.reason ? H.claim.removed(player) : H.claim.left(player)
     }
+    // The link to watch (STRAT-05, 0052): made, given a new token, its money switched, or turned off. Its token is never in the history.
+    if (e.table === 'spectator_links') {
+      const L = t.spectator.history
+      if (e.action === 'INSERT') return L.created(row.money === true)
+      if (e.action === 'DELETE') return L.off
+      if (e.before?.rotated_at !== e.after?.rotated_at) return L.rotated
+      if (e.before?.money !== e.after?.money) return L.money(e.after?.money === true)
+    }
     const what = t.platform.tables[e.table] ?? e.table
     const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${row.number ?? ''}` : name(row.player_id)
     return `${what}${who ? ` ${who}` : ''}, ${verb}`

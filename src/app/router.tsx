@@ -32,6 +32,9 @@ const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({
 const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
 const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
 import { FixtureGate, FixtureIndex } from '../dev/FixtureGate'
+import { SpectatorFixture } from '../dev/SpectatorFixture'
+import { SpectatorGate } from '../screens/spectator/SpectatorGate'
+import { spectatorChildren } from '../screens/spectator/routes'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
@@ -173,6 +176,8 @@ export const router = createBrowserRouter([
             { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
             { path: 'organizer/nuevo/_', element: <NewTournamentScreen demo /> },
             { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
+            { path: 'v/_/:name', element: <SpectatorFixture />, children: spectatorChildren },
+            { path: 'v/_dinero/:name', element: <SpectatorFixture money />, children: spectatorChildren },
             { path: 'p/_/:name', element: <ProfileFixture /> },
             { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
             { path: 'p/_/:name/anio', element: <Lazy><RecapFixture /></Lazy> },
@@ -186,6 +191,8 @@ export const router = createBrowserRouter([
       // The Admin de Polo panel: only the platform admin gets past the gate.
       { path: 'admin', element: <PlatformGate />, children: [{ element: <Lazy><PlatformLayout /></Lazy>, children: platformChildren }] },
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
+      // A link to watch, with no session: the boards, read-only (STRAT-05).
+      { path: 'v/:token', element: <SpectatorGate />, children: spectatorChildren },
       { path: 'p/:handle', element: <ProfileScreen /> },
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
       { path: 'c/unirme/:code', element: <Lazy><CrewJoinScreen /></Lazy> },

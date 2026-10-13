@@ -20,7 +20,10 @@ export function AppShell() {
   // The Admin de Polo panel puts a list and its detail side by side on a laptop.
   const platform = /^\/admin(\/|$)/.test(path)
   // Inside the tournament shell the tab bar already pads the safe area; the main column must not add its own.
-  const tabbed = /^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)
+  // A link to watch (`/v/<token>`, its fixtures `/v/_/<name>`) has the same tab bar, the TV aside (STRAT-05).
+  const tabbed =
+    (/^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)) ||
+    (/^\/v\//.test(path) && !/\/tv\/?$/.test(path))
   useEffect(() => {
     void init()
     void startOutbox()

@@ -139,10 +139,11 @@ export function scrub(text: string, max = 300): string {
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '[id]')
     .slice(0, max)
 }
-/** The route without its ids: «/t/:slug/tarjeta», so errors on the same screen group together. */
+/** The route without its ids: «/t/:slug/tarjeta», so errors on the same screen group together. A link to watch's token is a key to the boards: it never leaves the phone (STRAT-05). */
 export function routeOf(path: string): string {
   return path
     .replace(/^\/t\/[^/]+/, '/t/:slug')
+    .replace(/^\/v\/[^/]+/, '/v/:token')
     .replace(/^\/p\/[^/]+/, '/p/:handle')
     .replace(/^\/c\/unirme\/[^/]+/, '/c/unirme/:code')
     .replace(/^\/c\/(?!unirme\/)[^/]+/, '/c/:slug')

@@ -388,6 +388,23 @@ export function dataFromSnapshot(snapshot: Snapshot): TournamentData {
   return compute(snapshot)
 }
 
+/** The store's id for the boards a link to watch shows (STRAT-05): no server fetch, no channel, never kept on the phone. */
+export const SPECTATOR_PREFIX = 'spectator:'
+
+/**
+ * Boards that came from outside a member's fetch: a link to watch
+ * (`spectator_board`, which the page polls) or its design fixture. What the
+ * screens held stays where it reads the same (PERF-09), the boards are as
+ * fresh as `at`, and nothing is kept on the phone or listened to.
+ */
+export function showBoards(tournamentId: string, snapshot: Snapshot, at = Date.now()) {
+  const st = useTournament.getState()
+  // Another tournament's channel and checks stop with it, as when the gate leaves one.
+  if (st.tournamentId !== tournamentId) st.unsubscribe()
+  const last = st.tournamentId === tournamentId ? st.data : null
+  useTournament.setState({ tournamentId, data: compute(snapshot, undefined, last), updatedAt: at, loading: false, error: null, realtime: 'off', source: 'server', keepOnPhone: false })
+}
+
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
   // Paged (PostgREST caps a response at 1,000 rows), ordered by each table's primary key so pages never overlap.
@@ -445,31 +462,73 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
     inList('team_members', 'team_id', teamIds),
   ])
 
-  const snapshot: Snapshot = {
-    tournament: mapTournament(tRes.data),
-    players: players.map(mapPlayer).sort((a, b) => a.sortOrder - b.sortOrder),
-    courses: courses.map((c) => mapCourse(c, tees, holes)),
-    rounds: rounds.map(mapRound).sort((a, b) => a.number - b.number),
-    groups: groups.map((g) => mapGroup(g, members)).sort((a, b) => a.number - b.number),
-    roundTees: roundTees.map(mapRoundTee),
-    pairs: pairs.map(mapPair),
-    teams: teams.map((x) => mapTeam(x, teamMembers)).sort((a, b) => a.number - b.number),
-    scores: scores.map(mapScore),
-    snakeTiebreaks: tiebreaks.map(mapSnakeTiebreak),
-    cardSignatures: signatures.map(mapCardSignature),
-    handicapOverrides: overrides.map(mapHandicapOverride),
-    calcuttaLots: lots.map(mapLot),
-    calcuttaBids: bids.map(mapBid),
-    calcuttaBuybacks: buybacks.map(mapBuyback),
-    payments: payments.map(mapPayment),
-    gameEntries: gameEntries.map(mapGameEntry),
-    holeAwards: holeAwards.map(mapHoleAward),
-    gameResults: gameResults.map(mapGameResult),
-    moneyAdjustments: adjustments.map(mapMoneyAdjustment),
-  }
+  const snapshot = snapshotFromRows({
+    tournament: tRes.data,
+    players,
+    rounds,
+    pairs,
+    teams,
+    team_members: teamMembers,
+    calcutta_lots: lots,
+    calcutta_bids: bids,
+    calcutta_buybacks: buybacks,
+    payments,
+    game_entries: gameEntries,
+    game_results: gameResults,
+    money_adjustments: adjustments,
+    groups,
+    group_members: members,
+    round_tees: roundTees,
+    scores,
+    snake_tiebreaks: tiebreaks,
+    card_signatures: signatures,
+    handicap_overrides: overrides,
+    hole_awards: holeAwards,
+    courses,
+    tees,
+    holes,
+  })
   fetchedPlayers.set(snapshot, hashKey(JSON.stringify([...players].sort((a, b) => String(a.id).localeCompare(String(b.id))))))
-  // In the order live changes insert in, whatever order the database's collation gave.
-  return inLiveOrder(snapshot)
+  return snapshot
+}
+
+/** A tournament's rows by table, as PostgREST answers them: the tournament's own row, and every other table's. */
+export type SnapshotRows = { tournament: Row } & Partial<Record<Exclude<SnapshotTable, 'tournaments'>, Row[]>>
+
+/**
+ * The snapshot the engine reads, from the rows: a member's fetch and a link to
+ * watch (`spectator_board`, 0052) build it the same way. A table left out reads
+ * as empty. In the order live changes insert in, whatever order the database's
+ * collation gave.
+ */
+export function snapshotFromRows(r: SnapshotRows): Snapshot {
+  const all = (table: Exclude<SnapshotTable, 'tournaments'>) => r[table] ?? []
+  const members = all('group_members')
+  const tees = all('tees')
+  const holes = all('holes')
+  const teamMembers = all('team_members')
+  return inLiveOrder({
+    tournament: mapTournament(r.tournament),
+    players: all('players').map(mapPlayer).sort((a, b) => a.sortOrder - b.sortOrder),
+    courses: all('courses').map((c) => mapCourse(c, tees, holes)),
+    rounds: all('rounds').map(mapRound).sort((a, b) => a.number - b.number),
+    groups: all('groups').map((g) => mapGroup(g, members)).sort((a, b) => a.number - b.number),
+    roundTees: all('round_tees').map(mapRoundTee),
+    pairs: all('pairs').map(mapPair),
+    teams: all('teams').map((x) => mapTeam(x, teamMembers)).sort((a, b) => a.number - b.number),
+    scores: all('scores').map(mapScore),
+    snakeTiebreaks: all('snake_tiebreaks').map(mapSnakeTiebreak),
+    cardSignatures: all('card_signatures').map(mapCardSignature),
+    handicapOverrides: all('handicap_overrides').map(mapHandicapOverride),
+    calcuttaLots: all('calcutta_lots').map(mapLot),
+    calcuttaBids: all('calcutta_bids').map(mapBid),
+    calcuttaBuybacks: all('calcutta_buybacks').map(mapBuyback),
+    payments: all('payments').map(mapPayment),
+    gameEntries: all('game_entries').map(mapGameEntry),
+    holeAwards: all('hole_awards').map(mapHoleAward),
+    gameResults: all('game_results').map(mapGameResult),
+    moneyAdjustments: all('money_adjustments').map(mapMoneyAdjustment),
+  })
 }
 
 /** While live updates are down, reload this often so the boards keep moving. */
@@ -588,8 +647,10 @@ export const useTournament = create<StoreState>((set, get) => ({
   async reload() {
     const id = get().tournamentId
     // A design fixture (`src/dev`) has no server: its snapshot is the truth,
-    // and a fetch would only replace it with nothing after a write.
-    if (!id || id.startsWith('fixture:')) return
+    // and a fetch would only replace it with nothing after a write. A link to
+    // watch reads only through its own poll (`showBoards`): a member's fetch
+    // would need a session it does not have.
+    if (!id || id.startsWith('fixture:') || id.startsWith(SPECTATOR_PREFIX)) return
     // A tournament left is fetched by nothing, a refused write's answer included (N9).
     if (left) return
     const seq = ++fetchSeq

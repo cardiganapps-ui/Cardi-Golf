@@ -25,6 +25,8 @@ export const SLUGS = {
   other: 'e2e-ajeno',
   /** TRUST-24: the phones that hold a PIN, each claim's kind read from the request. */
   phones: 'e2e-telefonos',
+  /** STRAT-05: the link to watch, opened with no session. */
+  spectator: 'e2e-espectador',
 } as const
 
 export interface FieldPlayer {

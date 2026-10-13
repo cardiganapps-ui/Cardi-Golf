@@ -25,6 +25,7 @@ import type { PrizeAward } from '../../engine/modules/module'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
 import { useTournamentCtx } from './TournamentGate'
+import { tournamentBase } from './tournamentView'
 import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
@@ -35,7 +36,10 @@ export function MoneyScreen() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const patch = useTournament((s) => s.patch)
-  const { me, tournamentId, slug } = useTournamentCtx()
+  const ctx = useTournamentCtx()
+  // On a link to watch «Con dinero» (STRAT-05) nobody is the Comité: nothing here writes, and what is shared carries the link.
+  const { me, tournamentId, spectator } = ctx
+  const base = tournamentBase(ctx)
   const { snapshot, state, settings } = data
   const money = state.money
   const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
@@ -303,7 +307,7 @@ export function MoneyScreen() {
         <h1>{t.nav.money}</h1>
         <span className={styles.headActions}>
           <ShareCardButton what={{ kind: 'settlement' }} className="btn btn--ghost btn--sm" label={t.common.share} />
-          <ShareButton text={shareText} title={M.shareTitle(snapshot.tournament.name)} />
+          <ShareButton text={shareText} url={spectator?.url} title={M.shareTitle(snapshot.tournament.name)} />
         </span>
       </div>
       <Segmented
@@ -433,9 +437,11 @@ export function MoneyScreen() {
               </div>
             </section>
           ))}
-          <Link className="btn btn--ghost btn--sm" to={`/t/${slug}/reglamento`}>
-            {M.seeRules}
-          </Link>
+          {!spectator && (
+            <Link className="btn btn--ghost btn--sm" to={`${base}/reglamento`}>
+              {M.seeRules}
+            </Link>
+          )}
         </div>
       )}
 

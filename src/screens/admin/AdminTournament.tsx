@@ -31,6 +31,7 @@ import { SettingsEditor } from './SettingsEditor'
 import type { SettingsSection } from './SettingsEditor'
 import { CrewField } from './CrewField'
 import { ReadinessCard } from './ReadinessCard'
+import { SpectatorLinkCard } from './SpectatorLinkCard'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
@@ -427,6 +428,8 @@ export function AdminTournament() {
         </div>
       </section>
       )}
+      {/* The link to watch without a PIN (STRAT-05): the TV's, and whoever else the Comité gives it to. */}
+      {tab === 'status' && <SpectatorLinkCard />}
 
       {isSettingsTab(tab) && (
         <>

@@ -14,6 +14,7 @@ import { HandicapChanges } from '../../components/HandicapChanges'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentProfiles } from '../../data/profiles'
 import { useTournamentCtx } from './TournamentGate'
+import { useShowMoney } from './tournamentView'
 import { formatMoney } from '../../lib/money'
 import type { Explanation } from '../../engine/types'
 import { figureKind, holeStrokes, mainScoring, strokesWhy, type Figure } from '../../engine/formats'
@@ -29,8 +30,10 @@ export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { pl
 function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const data = useTournament((s) => s.data)
   const [why, setWhy] = useState<{ title: string; why: Explanation } | null>(null)
-  const { tournamentId } = useTournamentCtx()
-  const [profiles] = useTournamentProfiles(tournamentId)
+  const { tournamentId, spectator } = useTournamentCtx()
+  // A link to watch (STRAT-05) asks nobody's profile, and «Sin dinero» shows no money section.
+  const [profiles] = useTournamentProfiles(spectator ? null : tournamentId)
+  const showMoney = useShowMoney()
   const p = data?.snapshot.players.find((x) => x.id === playerId)
   const money = useMemo(() => (playerId && data ? data.state.prizes.filter((x) => x.playerId === playerId) : []), [data, playerId])
   const rounds = useMemo(
@@ -157,14 +160,14 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
                 {t.player.partner.toLowerCase()}: <strong>{partner.displayName}</strong>
               </p>
             )}
-            {myLot && (
+            {myLot && showMoney && (
               <p className={styles.line}>
                 <span className="label">{settings.modules.auction.label}</span>
                 <br />
                 {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))}, {formatMoney(myLot.price)}
               </p>
             )}
-            {owned.length > 0 && (
+            {owned.length > 0 && showMoney && (
               <p className={styles.line}>
                 {t.player.owns}: {t.common.andList(owned.map((l) => `${nameOf(l.playerId)} ${l.owners.find((o) => o.ownerId === p.id)!.pct}%`))}
               </p>
@@ -172,33 +175,35 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
           </section>
         )}
 
-        <section className={styles.section}>
-          <span className="label">{t.nav.money}</span>
-          {money.length === 0 && <span className="help">{t.player.noMoneyYet}</span>}
-          {(money.length > 0 || person) && (
-            <div className={styles.rows}>
-              {money.map((m, i) => (
-                <div key={i} className={styles.row}>
-                  <span>
-                    {m.label}
-                    {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
-                  </span>
-                  <HowCalculated why={m.why} label={formatMoney(m.amount)} />
-                </div>
-              ))}
-              {person && (
-                <div className={`${styles.row} ${styles.rowTotal}`}>
-                  <span>
-                    {t.money.puts} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
-                  </span>
-                  <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
-                    <Money amount={person.net} signed />
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+        {showMoney && (
+          <section className={styles.section}>
+            <span className="label">{t.nav.money}</span>
+            {money.length === 0 && <span className="help">{t.player.noMoneyYet}</span>}
+            {(money.length > 0 || person) && (
+              <div className={styles.rows}>
+                {money.map((m, i) => (
+                  <div key={i} className={styles.row}>
+                    <span>
+                      {m.label}
+                      {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
+                    </span>
+                    <HowCalculated why={m.why} label={formatMoney(m.amount)} />
+                  </div>
+                ))}
+                {person && (
+                  <div className={`${styles.row} ${styles.rowTotal}`}>
+                    <span>
+                      {t.money.puts} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
+                    </span>
+                    <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
+                      <Money amount={person.net} signed />
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>

@@ -3,9 +3,10 @@
  * turned into a PNG on tap. Three kinds: leaderboard, a player's round, the
  * settlement. Sized for WhatsApp (1080 px wide at 2×).
  */
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
+import { TournamentContext } from '../screens/tournament/TournamentGate'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'
 import { figureKind, mainScoring, type Figure } from '../engine/formats'
@@ -31,7 +32,8 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
       await new Promise((r) => setTimeout(r, 50))
       if (cancelled) return
       try {
-        await shareCard(node, `${slug}-${what.kind}.png`, name)
+        // A link to watch has no slug to name the file after (STRAT-05).
+        await shareCard(node, `${slug || 'polo'}-${what.kind}.png`, name)
       } finally {
         if (!cancelled) setBusy(false)
       }
@@ -61,6 +63,8 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
 
 function Card({ what }: { what: ShareKind }) {
   const data = useTournament((s) => s.data)!
+  // Shared from a link to watch (STRAT-05): the image carries that link, so whoever gets it can open the boards too.
+  const watch = useContext(TournamentContext)?.spectator?.url ?? null
   const { snapshot, state, settings } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const nameOf = (id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : t.moneyScreen.bank)
@@ -76,6 +80,7 @@ function Card({ what }: { what: ShareKind }) {
   const footer = (
     <div className={styles.footer}>
       <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      {watch && <span className={styles.watch}>{t.spectator.cardLink(watch.replace(/^https?:\/\//, ''))}</span>}
       <Wordmark size={13} />
     </div>
   )

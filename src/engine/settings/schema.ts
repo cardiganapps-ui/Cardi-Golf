@@ -209,7 +209,13 @@ const TournamentSettingsBase = z.object({
   pickupPuttsForFewestPutts: z.number().int().min(0).max(10),
   /** What happens when countback still ties: split the prizes. */
   tieFallback: z.enum(['split']),
-  /** Optional read-only public board (no money). */
+  /**
+   * Wired to nothing. The link to watch without a PIN (STRAT-05) is not a
+   * setting: its token lives in its own table (0052 `spectator_links`), since
+   * every member reads the settings, the export carries them and
+   * `duplicate_tournament` copies them; the Comité makes it in Torneo, pestaña
+   * Estado. Kept so every stored settings object still parses.
+   */
   spectatorLink: z.boolean(),
   timezone: z.string().min(1),
   currency: z.string().length(3),
