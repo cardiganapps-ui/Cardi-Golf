@@ -12,7 +12,7 @@ import { ApiError } from '../data/api'
 import { t } from '../i18n/es-MX'
 import { RouteError } from './courseApi'
 import { RequestTimeoutError } from './fetchWithTimeout'
-import { humanError, UserError } from './humanError'
+import { humanError, isTransient, UserError } from './humanError'
 import { TimeoutError } from './timeout'
 
 const E = t.errors
@@ -244,5 +244,23 @@ describe('found by the verifier on PR 80', () => {
   it('the generic line does not repeat ErrorBox\'s heading', () => {
     expect(E.unknown).not.toMatch(/Algo salió mal/)
     expect(humanError(new Error('boom'))).not.toMatch(/Algo salió mal/)
+  })
+})
+
+describe('what is worth trying again (REL-10)', () => {
+  it('no signal, no answer in time, the server down or busy', () => {
+    for (const e of [new TypeError('Failed to fetch'), new TypeError('Load failed'), transport('TypeError', 'Failed to fetch'), new RequestTimeoutError(10_000), new TimeoutError('perfil', 10_000), { message: 'Service Unavailable', status: 503 }, { message: 'Too Many Requests', status: 429 }])
+      expect(isTransient(e), String((e as Error).message)).toBe(true)
+  })
+
+  it('not a refusal, a missing row, a lapsed session or the app\'s own copy: they answer the same until something else changes', () => {
+    for (const e of [
+      { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' },
+      { message: 'new row violates row-level security policy', code: '42501' },
+      { message: 'JWT expired', code: 'PGRST301' },
+      new AuthSessionMissingError(),
+      new UserError('Ese torneo no existe'),
+    ])
+      expect(isTransient(e), String((e as Error).message)).toBe(false)
   })
 })

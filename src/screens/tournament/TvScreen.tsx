@@ -11,6 +11,7 @@ import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
+import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
@@ -99,6 +100,8 @@ export function TvScreen() {
     }
   }, [])
   const accent = snapshot.tournament.accentColor ?? undefined
+  const mayBeOld = useBoardsMayBeOld()
+  const updatedWhen = useSavedWhen(useTournament((s) => s.updatedAt))
 
   return (
     <div className={styles.tv} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
@@ -106,7 +109,11 @@ export function TvScreen() {
         {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
         <div className="grow">
           <h1 className={styles.title}>{snapshot.tournament.name}</h1>
-          <span className={styles.sub}>{isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status]}</span>
+          <span className={styles.sub}>
+            {isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status]}
+            {/* The room can't see a phone's header: while the boards may be behind, the TV says how old they are (REL-10). */}
+            {mayBeOld && updatedWhen && `. ${t.sync.boardsAge(updatedWhen)}`}
+          </span>
         </div>
         <Link to={`/t/${slug}`} className={styles.exit}>
           {t.tv.exit}

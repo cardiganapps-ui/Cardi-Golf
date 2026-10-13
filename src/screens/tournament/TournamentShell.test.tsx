@@ -67,9 +67,9 @@ describe('the Tarjeta tab says what is still on the phone (REL-17)', () => {
 })
 
 /** The boards on screen, from the phone or the server, saved `minutesAgo`. */
-function showBoards(state: { source: 'cache' | 'server'; realtime?: 'off' | 'live' | 'error'; minutesAgo: number }) {
+function showBoards(state: { source: 'cache' | 'server'; realtime?: 'off' | 'live' | 'error'; minutesAgo: number; error?: string }) {
   const fx = getFixture('minimal4-live')!
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: state.realtime ?? 'off', updatedAt: Date.now() - state.minutesAgo * 60_000 })
+  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: state.realtime ?? 'off', updatedAt: Date.now() - state.minutesAgo * 60_000, error: state.error ?? null })
   return render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
@@ -133,6 +133,16 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     expect(header()).toContain(t.sync.noLive)
   })
 
+  it('the server\'s boards after a fetch of them failed: «Conectando…» while it is tried again, and how old they are (REL-10)', () => {
+    // It read «En vivo» with no age while every fetch failed.
+    showBoards({ source: 'server', realtime: 'live', minutesAgo: 7, error: t.errors.network })
+    expect(chip()).toBe(t.sync.connecting)
+    expect(age()).toBe(t.sync.boardsAge('hace 7 min'))
+    act(() => useTournament.setState({ error: null, updatedAt: Date.now() }))
+    expect(chip()).toBe(t.sync.live)
+    expect(age()).toBeNull()
+  })
+
   it('a two-day-old copy says so', () => {
     showBoards({ source: 'cache', minutesAgo: 2 * 24 * 60 })
     expect(age()).toMatch(/hace 2 días/)
@@ -161,9 +171,9 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
 })
 
 /** En vivo inside the shell, as the app shows it. */
-function showLive(state: { source: 'cache' | 'server'; minutesAgo: number }) {
+function showLive(state: { source: 'cache' | 'server'; minutesAgo: number; error?: string }) {
   const fx = getFixture('minimal4-live')!
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: 'off', updatedAt: Date.now() - state.minutesAgo * 60_000 })
+  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: 'off', updatedAt: Date.now() - state.minutesAgo * 60_000, error: state.error ?? null })
   return render(
     <MemoryRouter initialEntries={['/t/nacho']}>
       <Routes>
@@ -200,5 +210,11 @@ describe('En vivo says how old the boards are once (REL-04)', () => {
     showLive({ source: 'server', minutesAgo: 5 })
     expect(age()).toBeNull()
     expect(times(t.live.updated('hace 5 min'))).toBe(1)
+  })
+
+  it('a fetch that failed: the header says how old, the status line does not repeat it (REL-10)', () => {
+    showLive({ source: 'server', minutesAgo: 5, error: t.errors.timeout })
+    expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
+    expect(times('hace 5 min')).toBe(1)
   })
 })
