@@ -180,6 +180,20 @@ describe('the other tables applied in place', () => {
     expect(s.holeAwards).toEqual([expect.objectContaining({ playerId: b })])
   })
 
+  it('a Comité ruling and the same player\'s claim are two rows: taking the ruling away keeps the claim (0042, DB-04)', () => {
+    const s = fx()
+    const round = s.rounds[0]!
+    const group = s.groups.find((g) => g.roundId === round.id)!
+    const [a] = group.playerIds
+    s.holeAwards = []
+    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: group.id, hole: 3, game_id: 'ctp', player_id: a, source: 'group' }))).toBe('applied')
+    expect(applyChange(s, T(s), ins('hole_awards', { round_id: round.id, group_id: null, hole: 3, game_id: 'ctp', player_id: a, source: 'comite' }))).toBe('applied')
+    expect(s.holeAwards.map((x) => x.source)).toEqual(['comite', 'group'])
+    // A delete names the key, `source` with it.
+    expect(applyChange(s, T(s), del('hole_awards', { round_id: round.id, game_id: 'ctp', hole: 3, player_id: a, source: 'comite' }))).toBe('applied')
+    expect(s.holeAwards).toEqual([expect.objectContaining({ playerId: a, groupId: group.id, source: 'group' })])
+  })
+
   it('arrays are replaced, never mutated: a snapshot on screen does not move under it', () => {
     const s = fx()
     const shown = s.scores

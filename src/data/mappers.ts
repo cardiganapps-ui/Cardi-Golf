@@ -203,6 +203,8 @@ export const mapHoleAward = (r: Row): HoleAward => ({
   hole: r.hole,
   gameId: r.game_id,
   playerId: r.player_id,
+  // 0042 generates it from the group; a row from before it (a phone's saved boards) follows its group the same way.
+  source: r.source === 'comite' || r.source === 'group' ? r.source : r.group_id == null ? 'comite' : 'group',
 })
 
 export const mapGameResult = (r: Row): GameResult => ({ gameId: r.game_id, playerId: r.player_id, share: Number(r.share) })

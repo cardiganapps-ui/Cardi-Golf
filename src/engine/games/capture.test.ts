@@ -44,11 +44,21 @@ describe('hole contests', () => {
     expect((st.games.ctp!.state as ContestState).holes[0]!.status).toBe('disputed')
     expect(st.prizes).toEqual([])
     expect(st.flags.warnings.some((w) => w.includes('en disputa'))).toBe(true)
-    // The Comité's pick (no group) wins over the groups' claims.
-    snap.holeAwards.push(award(3, 'p3', null))
+    // The Comité's ruling (no group) wins over the groups' claims; since 0042 it sits beside p3's own claim (DB-04).
+    snap.holeAwards.push({ ...award(3, 'p3', null), source: 'comite' })
     st = run(snap)
     expect((st.games.ctp!.state as ContestState).holes[0]!).toMatchObject({ status: 'won', winners: ['p3'] })
     expect(st.prizes.map((p) => [p.playerId, p.amount])).toEqual([['p3', 400]])
+  })
+
+  it('a ruling is the Comité\'s by its source, a claim the group\'s by its own (0042, DB-03)', () => {
+    const snap = setup([ctp(money({ source: 'side', buyIn: 100 }))])
+    // Group 2 claimed p3 for the 3rd, group 1 claimed p1: disputed, whatever the rows' order.
+    snap.holeAwards = [{ ...award(3, 'p1', 'g1'), source: 'group' }, { ...award(3, 'p3', 'g2'), source: 'group' }]
+    expect((run(snap).games.ctp!.state as ContestState).holes[0]!.status).toBe('disputed')
+    // Group 2 dissolved: since 0042 its claim goes with it (it used to stay with no group, a ruling for p3 nobody made).
+    snap.holeAwards = [{ ...award(3, 'p1', 'g1'), source: 'group' }]
+    expect((run(snap).games.ctp!.state as ContestState).holes[0]!).toMatchObject({ status: 'won', winners: ['p1'] })
   })
 
   it('greenies: one per group allowed, and only with par or better', () => {
