@@ -1592,9 +1592,13 @@
       "workstream": "W4",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 148,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.moments.test.tsx",
+        "src/screens/tournament/swipe.test.ts",
+        "e2e/fixtures/moments.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1651,9 +1655,11 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 148,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.moments.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1695,11 +1701,16 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 148,
+      "tests": [
+        "src/lib/haptics.test.ts",
+        "src/screens/tournament/ScorecardScreen.moments.test.tsx",
+        "src/screens/tournament/EnterScreen.test.tsx",
+        "src/screens/tournament/MoreScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "iPhone's Safari has no Vibration API: there the slide and «Guardado» carry the confirmation."
     },
     {
       "id": "MOT-11",
