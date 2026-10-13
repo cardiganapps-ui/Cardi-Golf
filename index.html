@@ -25,6 +25,7 @@
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- The iPhone launch images (apple-touch-startup-image) are linked here at build time: vite.config.ts, src/lib/launchImages.ts. -->
     <title>Polo</title>
   </head>
   <body>
@@ -35,11 +36,16 @@
       a reset button appears. It must work without the bundle, so it is plain
       inline code: drop the service worker and its caches, then reload. It
       never touches localStorage (session) or IndexedDB (unsent scores).
+      PWA-14: it covers the screen in the page's paper and ink from the first
+      frame (tokens.css --bg and --ink, written out: no stylesheet has loaded;
+      appManifest.test.ts holds them), with the launch images' own mark in the
+      middle, so an iPhone's cold start reads as one screen. It was white, then
+      «Polo» and «Cargando…» in the system font.
     -->
     <div id="root">
-      <div id="boot" style="font-family:system-ui,-apple-system,sans-serif;max-width:28rem;margin:0 auto;padding:48px 20px;color:CanvasText">
-        <p style="font-size:28px;font-weight:700;margin:0">Polo</p>
-        <p id="boot-msg" style="margin:12px 0 0;opacity:.7">Cargando…</p>
+      <div id="boot" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;background:#FBFAF7;color:#1B211D;font-family:system-ui,-apple-system,sans-serif">
+        <img src="/brand/boot-mark.png" width="120" height="120" alt="Polo" />
+        <p id="boot-msg" style="max-width:28rem;margin:12px 0 0;opacity:.7">Cargando…</p>
         <button id="boot-reset" type="button" hidden style="margin-top:20px;min-height:44px;padding:0 18px;font:inherit;font-weight:600;border-radius:8px;border:1px solid ButtonBorder;background:ButtonFace;color:ButtonText">Reiniciar la app</button>
       </div>
     </div>

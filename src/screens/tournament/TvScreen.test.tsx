@@ -12,6 +12,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
+import { OfflineBanner } from '../../components/OfflineBanner'
 import { TournamentContext } from './TournamentGate'
 import { TvScreen } from './TvScreen'
 
@@ -120,6 +121,32 @@ describe('the TV says how old its boards are while they may be behind (REL-10)',
   it('live boards: no age', () => {
     showTv({ error: null, minutesAgo: 7 })
     expect(headerLine()).not.toContain(t.sync.boardsAge('hace 7 min'))
+  })
+
+  it('no signal: its own line says so, once, at the room’s size, and the app’s banner stays away (REL-21)', async () => {
+    // It showed the phone's strip «Sin señal. Se guarda en el teléfono.» over the board, and the age under the name.
+    const fx = getFixture('full12-live')!
+    useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, source: 'server', realtime: 'live', error: null, updatedAt: Date.now() - 3 * 60_000 })
+    render(
+      <MemoryRouter>
+        <OfflineBanner />
+        <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+          <TvScreen />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      await act(async () => {
+        window.dispatchEvent(new Event('offline'))
+      })
+      expect(headerLine()).toContain(`. ${t.sync.offlineShort}. ${t.sync.boardsAge('hace 3 min')}`)
+      expect(document.body.textContent?.split(t.sync.offlineShort).length).toBe(2)
+      expect(document.body.textContent).not.toContain(t.sync.offline)
+    } finally {
+      onLine.mockRestore()
+      window.dispatchEvent(new Event('online'))
+    }
   })
 })
 

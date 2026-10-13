@@ -2,8 +2,9 @@
 /**
  * What the service worker keeps for a phone with no signal (QA-16, §8). The app opens offline only if the
  * precache holds index.html and everything it loads, every font the styles use, the manifest and its icons,
- * and the push handler at the fingerprint the worker imports it by. Read from a built dist/ after
- * `vite build` (`npm run build` runs it); the total stays under PRECACHE_BUDGET_KIB.
+ * and the push handler at the fingerprint the worker imports it by. The iPhone launch images index.html links
+ * and the manifest's screenshots are the exception: shipped, never precached (PWA-14). Read from a built
+ * dist/ after `vite build` (`npm run build` runs it); the total stays under PRECACHE_BUDGET_KIB.
  *   node scripts/check-precache.mjs [dist]
  */
 import { createHash } from 'node:crypto'
@@ -37,13 +38,31 @@ export function precacheProblems(dir, budgetKib = PRECACHE_BUDGET_KIB) {
   }
 
   need('index.html', 'every route opens it')
-  for (const m of read('index.html').matchAll(/(?:src|href)="\/([^"?#]+\.(?:js|css|svg|png|webmanifest|woff2))/g)) need(m[1], 'index.html loads it')
+  const html = read('index.html')
+  // The iPhone launch images (PWA-14): iOS reads them when the app is added to the home screen, never through
+  // the worker. The build must ship them, and the precache must not carry them: every phone would keep a dozen
+  // screens' worth for nothing.
+  const launch = new Set(
+    [...html.matchAll(/<link\b[^>]*\brel="apple-touch-startup-image"[^>]*>/g)].map((m) => /\bhref="\/([^"?#]+)/.exec(m[0])?.[1]).filter(Boolean),
+  )
+  for (const m of html.matchAll(/(?:src|href)="\/([^"?#]+\.(?:js|css|svg|png|webmanifest|woff2))/g)) if (!launch.has(m[1])) need(m[1], 'index.html loads it')
+  for (const path of launch) {
+    if (!existsSync(join(dir, path))) problems.push(`${path} is linked as a launch image but not in ${dir}`)
+    if (held.has(path)) problems.push(`${path} is precached, but iOS reads launch images only when the app is added to the home screen`)
+  }
   for (const css of existsSync(join(dir, 'assets')) ? readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.css')) : []) {
     for (const m of read(`assets/${css}`).matchAll(/url\(["']?\/?(assets\/[^)"'?#]+\.woff2)/g)) need(m[1], `assets/${css} uses it`)
   }
   need('manifest.webmanifest', 'the installed app reads it')
   if (existsSync(join(dir, 'manifest.webmanifest'))) {
-    for (const icon of JSON.parse(read('manifest.webmanifest')).icons ?? []) need(String(icon.src).replace(/^\//, '').split('?')[0], 'the manifest names it')
+    const manifest = JSON.parse(read('manifest.webmanifest'))
+    for (const icon of manifest.icons ?? []) need(String(icon.src).replace(/^\//, '').split('?')[0], 'the manifest names it')
+    // Its screenshots (PWA-14): Chrome reads them for its install sheet, online. Shipped, never precached.
+    for (const shot of manifest.screenshots ?? []) {
+      const path = String(shot.src).replace(/^\//, '').split('?')[0]
+      if (!existsSync(join(dir, path))) problems.push(`${path} is a screenshot the manifest names but not in ${dir}`)
+      if (held.has(path)) problems.push(`${path} is precached, but only the install sheet shows it`)
+    }
   }
   need('push-sw.js', 'the worker imports it')
   if (existsSync(join(dir, 'push-sw.js'))) {

@@ -13,25 +13,44 @@ import { dataFromSnapshot } from '../data/tournamentStore'
 import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
 import { EnterScreen } from '../screens/tournament/EnterScreen'
 import { FIXTURE_NAMES, getFixture } from './fixtures'
+import { t } from '../i18n/es-MX'
 
 const noop = async () => undefined
+
+type NetState = Pick<ReturnType<typeof useTournament.getState>, 'source' | 'realtime' | 'error' | 'updatedAt'>
+/**
+ * `?net=`: the header's connection as a real tournament would show it (REL-21), for the browser suite. A
+ * fixture has no server, so by default it says nothing (offline still shows). `cache`: the phone's copy, 5
+ * min old, the live one on its way. `failed`: the server's boards after a fetch that failed, 7 min old.
+ * `joining`: the server's boards, the live channel joining. `live`: the channel up.
+ */
+function netState(net: string | null): NetState {
+  const ago = (min: number) => Date.now() - min * 60_000
+  if (net === 'cache') return { source: 'cache', realtime: 'off', error: null, updatedAt: ago(5) }
+  if (net === 'failed') return { source: 'server', realtime: 'live', error: t.errors.network, updatedAt: ago(7) }
+  if (net === 'joining') return { source: 'server', realtime: 'connecting', error: null, updatedAt: ago(0) }
+  if (net === 'live') return { source: 'server', realtime: 'live', error: null, updatedAt: ago(0) }
+  return { source: null, realtime: 'off', error: null, updatedAt: 0 }
+}
 
 export function FixtureGate() {
   const { name = '' } = useParams()
   const fixture = useMemo(() => getFixture(name), [name])
   const tournamentId = useTournament((s) => s.tournamentId)
-  const as = useSearchParams()[0].get('as')
+  const [search] = useSearchParams()
+  const as = search.get('as')
+  const net = search.get('net')
   const navigate = useNavigate()
 
   useEffect(() => {
     if (!fixture) return
     useTournament.getState().unsubscribe()
-    useTournament.setState({ tournamentId: `fixture:${fixture.name}`, data: dataFromSnapshot(structuredClone(fixture.snapshot)), loading: false, error: null, realtime: 'off' })
+    useTournament.setState({ tournamentId: `fixture:${fixture.name}`, data: dataFromSnapshot(structuredClone(fixture.snapshot)), loading: false, ...netState(net) })
     // The Comité's inbox is read from the server; a fixture's is what it says.
     useRejectedInbox.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.inbox ?? []), status: 'ready', error: null, fixture: true })
     // And its phones (STRAT-02): what their heartbeats would say.
     useTournamentDevices.setState({ tournamentId: fixture.snapshot.tournament.id, items: structuredClone(fixture.devices ?? []), status: 'ready', fixture: true })
-  }, [fixture])
+  }, [fixture, net])
 
   if (!fixture) return <FixtureIndex />
   // `?as=new-phone`: the same tournament on a phone that has not picked its face yet (the grid, then the PIN).

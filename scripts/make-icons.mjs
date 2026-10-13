@@ -1,13 +1,14 @@
-// Generates the platform's PWA icons, favicon and the in-app symbol images from
-// the Polo logo as lifted off the approved sheet (design/brand/polo-logo-sheet.jpg)
-// by scripts/brand/extract-logo.py: the pencil layers in design/brand/layer-*.png
-// (the sheet's own pixels, separated from its paper) and the outline and
-// geometry in src/design/logoMark.json. Paper and favicon ink are read from
-// src/styles/tokens.css, never typed here.
+// Generates the platform's PWA icons, favicon, iPhone launch images and the in-app
+// symbol images from the Polo logo as lifted off the approved sheet
+// (design/brand/polo-logo-sheet.jpg) by scripts/brand/extract-logo.py: the pencil
+// layers in design/brand/layer-*.png (the sheet's own pixels, separated from its
+// paper) and the outline and geometry in src/design/logoMark.json. Paper and ink
+// are read from src/styles/tokens.css, never typed here.
 // Run: npm run icons  (output is committed under public/)
 // A tournament's logo is NOT the app icon: brands are per tournament.
 import sharp from 'sharp'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { LAUNCH_MARK_PX, LAUNCH_SCREENS, launchImagePath, launchPixels } from '../src/lib/launchImages.ts'
 
 const tokens = await readFile('src/styles/tokens.css', 'utf8')
 const token = (name) => {
@@ -41,6 +42,52 @@ async function markImage(file, layer) {
   console.log('wrote', file, `${w}x${h}`)
 }
 
+/**
+ * An iPhone launch image (PWA-14, src/lib/launchImages.ts): the page's paper, and the icon's pencil in the
+ * middle at the size the boot screen shows the icon (LAUNCH_MARK_PX), so the two read as one. A palette
+ * PNG: a flat page and one mark.
+ */
+async function launchImage(screen) {
+  const { width, height } = launchPixels(screen)
+  const tile = LAUNCH_MARK_PX * screen.ratio
+  const pencil = await sharp('design/brand/layer-icon.png').resize(tile, tile, { kernel: 'lanczos3' }).png().toBuffer()
+  const file = `public${launchImagePath(screen)}`
+  await sharp({ create: { width, height, channels: 3, background: BG } })
+    .composite([{ input: pencil, left: Math.round((width - tile) / 2), top: Math.round((height - tile) / 2) }])
+    .png({ palette: true, colors: 64, compressionLevel: 9 })
+    .toFile(file)
+  console.log('wrote', file)
+}
+
+/**
+ * The boot screen's mark (index.html, until the app mounts): the launch images' own, on the same paper, at
+ * three times LAUNCH_MARK_PX, so the launch image, the boot screen and the app read as one (PWA-14).
+ */
+async function bootMark(file) {
+  const tile = LAUNCH_MARK_PX * 3
+  const pencil = await sharp('design/brand/layer-icon.png').resize(tile, tile, { kernel: 'lanczos3' }).png().toBuffer()
+  await sharp({ create: { width: tile, height: tile, channels: 3, background: BG } })
+    .composite([{ input: pencil, left: 0, top: 0 }])
+    .png({ palette: true, colors: 64, compressionLevel: 9 })
+    .toFile(file)
+  console.log('wrote', file)
+}
+
+/**
+ * A shortcut's icon (the manifest's «Mi tarjeta» and «En vivo», PWA-14): its tab's glyph in ink on the
+ * paper, in the middle half, since Android crops shortcut icons to its own shape as it does the maskable
+ * icon. `paths` are the glyph's, as src/components/icons.tsx draws it (24-px grid, 1.75 stroke).
+ */
+async function shortcutIcon(file, paths) {
+  const size = 192
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
+  <rect width="24" height="24" fill="${BG}"/>
+  <g transform="translate(6 6) scale(0.5)" fill="none" stroke="${INK}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${paths.map((d) => `<path d="${d}"/>`).join('')}</g>
+</svg>`
+  await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(file)
+  console.log('wrote', file)
+}
+
 /** Favicon: the icon copy's outline in solid ink, enlarged in its tile so it reads at 16 px. */
 function favicon() {
   const size = 64
@@ -57,6 +104,7 @@ function favicon() {
 
 await mkdir('public/icons', { recursive: true })
 await mkdir('public/brand', { recursive: true })
+await mkdir('public/splash', { recursive: true })
 await icon('public/icons/icon-192.png', 192)
 await icon('public/icons/icon-512.png', 512)
 // Maskable: Android crops to a circle; logoMark.json says how far to shrink.
@@ -66,3 +114,8 @@ await markImage('public/brand/polo-mark.png', 'design/brand/layer-lockup.png')
 await markImage('public/brand/polo-mark-board.png', 'design/brand/layer-board.png')
 await writeFile('public/favicon.svg', favicon())
 console.log('wrote public/favicon.svg')
+for (const screen of LAUNCH_SCREENS) await launchImage(screen)
+await bootMark('public/brand/boot-mark.png')
+// IconPencil and IconFlag (src/components/icons.tsx): the Tarjeta's tab and En vivo's.
+await shortcutIcon('public/icons/shortcut-tarjeta.png', ['M4 20l4-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5 16l-1 4z', 'M13.5 7.5l3 3'])
+await shortcutIcon('public/icons/shortcut-envivo.png', ['M6 21V4', 'M6 4h10l-2.5 3.5L16 11H6'])
