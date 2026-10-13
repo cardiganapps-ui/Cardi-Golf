@@ -9,7 +9,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Reac
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
-import { IconAlert, IconChevronLeft, IconChevronRight, IconLock } from '../../components/icons'
+import { IconAlert, IconCheck, IconChevronLeft, IconChevronRight, IconLock, IconSnake } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
 import { adminSaveScore } from '../../data/api'
 import { hasStoredSession, useAuth } from '../../data/auth'
@@ -24,8 +24,10 @@ import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
 import { holeStrokes, mainScoring } from '../../engine/formats'
 import type { HoleResult } from '../../engine/core/types'
 import type { Group, Round } from '../../engine/types'
-import { motion } from 'motion/react'
-import { easeSlow } from '../../design/motion'
+import { animate, motion, useMotionValue, useReducedMotion } from 'motion/react'
+import { easeFast, easeSlow, still } from '../../design/motion'
+import { haptic } from '../../lib/haptics'
+import { dragOffset, swipeEnd, swipeIntent, type Intent } from './swipe'
 import { celebrationColors } from '../../lib/tokens'
 import { humanError } from '../../lib/humanError'
 import { useTournamentCtx } from './TournamentGate'
@@ -41,6 +43,12 @@ const SETTLE_MS = 700
 const DOUBLE_SAVE_MS = 3000
 /** How long the last save stays in the save bar with its «Corregir». */
 const SAVED_NOTE_MS = 6000
+/** «Guardado» on the resting button after a save: the hand sees the save land before the next tap (MOT-02). */
+const SAVED_CHECK_MS = 400
+/** How long «La víbora pasa a…» stays under the hole (MOT-07). */
+const SNAKE_NOTE_MS = 5000
+/** How far the next hole comes in from, in the direction the card moved (MOT-02). */
+const SLIDE_PX = 24
 
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
@@ -150,6 +158,9 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const order = useMemo(() => playOrder(group.startHole, round.holes), [group.startHole, round.holes])
   const roundState = state.core.rounds[round.id] ?? {}
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
+  /** Who carries the snake in this group today, marked on his row (MOT-07). */
+  const holderOf = (st: typeof state) => (settings.modules.snake.enabled ? (st.modules.snake?.groups.find((g) => g.roundId === round.id && g.groupId === group.id)?.holderId ?? null) : null)
+  const snakeHolder = holderOf(state)
   const scoring = mainScoring(settings)
   /** Whether anything this tournament plays counts Stableford points (STRAT-03). */
   const pointsCount = scoring === 'points' || settings.modules.bestRound.enabled || settings.modules.pairs.enabled
@@ -172,7 +183,6 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmDefaults, setConfirmDefaults] = useState(false)
-  const touch = useRef<{ x: number; y: number } | null>(null)
   /** The saved values of the hole before the last save, for a real undo. */
   const undo = useRef<{ hole: number; drafts: Record<string, Draft>; wasPlayed: Record<string, boolean> } | null>(null)
   /** Players whose steppers were changed on this hole: only they, and players the server has nothing for, are written (REL-05). */
@@ -190,6 +200,27 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     savedTimer.current = setTimeout(() => setSavedNote(null), SAVED_NOTE_MS)
   }
   const sheetOpen = !!tiebreak || !!confirmWeird || !!signing || askReason || confirmDefaults
+  /** Which way the last hole change went (+1 next, -1 back, 0 neither): the hole comes in from that side (MOT-02). */
+  const slide = useRef(0)
+  /** The hole follows the finger while it swipes, and springs back if the swipe doesn't go (MOT-02). */
+  const dragX = useMotionValue(0)
+  const swipe = useRef<{ x: number; y: number; at: number; intent: Intent } | null>(null)
+  const reduce = useReducedMotion()
+  const titleRef = useRef<HTMLSpanElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  /** The button rests on «Guardado» for a moment after a save (MOT-02). */
+  const [justSaved, setJustSaved] = useState(false)
+  const justSavedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  /** The snake changed hands with this phone's save: said under the hole for a few seconds (MOT-07). */
+  const [snakeNote, setSnakeNote] = useState<string | null>(null)
+  const snakeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(justSavedTimer.current)
+      clearTimeout(snakeTimer.current)
+    },
+    [],
+  )
   /** One polite live region for the whole card: whose score changed and what it is worth, or the new hole (A11Y-01). */
   const [said, setSaid] = useState('')
   /** «Hoyo 12 guardado», said with the next hole in one message instead of two at once. */
@@ -398,8 +429,20 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const goto = (i: number) => {
     if (i < 0 || i >= order.length) return
     chose.current = true
+    slide.current = Math.sign(i - idx)
     setHole(order[i]!)
   }
+  // The new hole comes in from the side the card moved, as a page turns (MOT-02); under reduced motion it fades
+  // in. The rows stay mounted, so a stepper keeps its focus and the snake's mark can slide between them.
+  const shownFor = useRef(hole)
+  useLayoutEffect(() => {
+    if (shownFor.current === hole) return
+    shownFor.current = hole
+    const dir = slide.current
+    slide.current = 0
+    const from = reduce || !dir ? { opacity: [0.4, 1] } : { opacity: [0, 1], x: [dir * SLIDE_PX, 0] }
+    for (const el of [titleRef.current, bodyRef.current]) if (el) void animate(el, from, easeFast)
+  }, [hole, reduce])
   // Opened before the phone had read its queued holes (the copy shows first), the card sat on a hole this
   // phone had already played offline, as unplayed (NEW-11). Once the queue is read it moves to the first open
   // hole, once, unless the player chose a hole or touched a player. A card opened after that never moves on
@@ -410,6 +453,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     if (!followQueue.current || !queueRead) return
     followQueue.current = false
     if (chose.current || order.includes(asked) || touched.current.size > 0 || sheetOpen || busy || hole === firstOpen) return
+    slide.current = 0
     setHole(firstOpen)
   }, [queueRead]) // eslint-disable-line react-hooks/exhaustive-deps -- once, when the queue has been read
 
@@ -535,6 +579,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     setAskReason(false)
     const savedHole = hole
     const savedIdx = idx
+    const holderBefore = snakeHolder
     try {
       let celebrate = false
       const before: Record<string, Draft> = {}
@@ -582,16 +627,31 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
       }
+      // The boards already hold this save (the outbox's overlay): did the snake change hands with it (MOT-07)?
+      const now = useTournament.getState().data
+      const holderAfter = now ? holderOf(now.state) : null
+      const passedTo = holderAfter && holderAfter !== holderBefore ? players.find((p) => p.id === holderAfter) : undefined
+      if (passedTo) {
+        clearTimeout(snakeTimer.current)
+        setSnakeNote(cardName(passedTo))
+        snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
+      }
+      // The hand feels the save; a birdie or a snake pass a little more (MOT-10). The button says «Guardado» a moment (MOT-02).
+      haptic(celebrate || passedTo ? 'moment' : 'save')
+      clearTimeout(justSavedTimer.current)
+      setJustSaved(true)
+      justSavedTimer.current = setTimeout(() => setJustSaved(false), SAVED_CHECK_MS)
       // Move on, and offer the way back instead of asking first: a real undo when the hole
       // already had values (they are written back), "Corregir" when it was new. It lives in
       // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
       const written = Object.keys(writes)
       showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
+      const savedLine = [S.savedHole(savedHole), ...(passedTo ? [S.snakePasses(cardName(passedTo))] : [])].join('. ')
       if (savedIdx < order.length - 1) {
-        savedSaid.current = S.savedHole(savedHole)
+        savedSaid.current = savedLine
         goto(savedIdx + 1)
       } else {
-        setSaid(S.savedHole(savedHole))
+        setSaid(savedLine)
         setView('grid')
       }
     } catch (e) {
@@ -681,6 +741,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           className={`${styles.holeBtn} ${h === hole ? styles.holeCurrent : ''}`}
           onClick={() => {
             chose.current = true
+            slide.current = 0
             setHole(h)
             setView('hole')
           }}
@@ -742,17 +803,28 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   return (
     <div
       className={styles.screen}
-      onTouchStart={(e) => (touch.current = { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY })}
+      onTouchStart={(e) => (swipe.current = { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY, at: performance.now(), intent: null })}
+      onTouchMove={(e) => {
+        // The hole follows a sideways finger (MOT-02); a vertical one is the page scrolling.
+        const sw = swipe.current
+        if (!sw || view !== 'hole' || sheetOpen) return
+        const dx = e.touches[0]!.clientX - sw.x
+        sw.intent ??= swipeIntent(dx, e.touches[0]!.clientY - sw.y)
+        if (sw.intent === 'swipe') dragX.set(dragOffset(dx, idx > 0, idx < order.length - 1))
+      }}
       onTouchEnd={(e) => {
+        const sw = swipe.current
+        swipe.current = null
         // A drag inside a sheet must never change the hole under it.
-        if (!touch.current || view !== 'hole' || sheetOpen) {
-          touch.current = null
-          return
-        }
-        const dx = e.changedTouches[0]!.clientX - touch.current.x
-        const dy = e.changedTouches[0]!.clientY - touch.current.y
-        touch.current = null
-        if (Math.abs(dx) > 70 && Math.abs(dy) < 50) goto(dx < 0 ? idx + 1 : idx - 1)
+        const to = sw && view === 'hole' && !sheetOpen && sw.intent !== 'scroll' ? swipeEnd(e.changedTouches[0]!.clientX - sw.x, e.changedTouches[0]!.clientY - sw.y, performance.now() - sw.at, idx > 0, idx < order.length - 1) : 0
+        if (to) {
+          dragX.set(0)
+          goto(idx + to)
+        } else if (dragX.get() !== 0) void animate(dragX, 0, reduce ? still : easeFast)
+      }}
+      onTouchCancel={() => {
+        swipe.current = null
+        if (dragX.get() !== 0) void animate(dragX, 0, reduce ? still : easeFast)
       }}
     >
       <div className={styles.top}>
@@ -845,22 +917,32 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
             </button>
             <h1 className={styles.holeTitle}>
               <span className="sr-only">{holeSpoken}</span>
-              <span className={styles.holeNum} aria-hidden="true">
-                {hole}
-              </span>
-              <span className={styles.holeMeta} aria-hidden="true">
-                {t.player.par} {par}, {t.player.si} {lead?.strokeIndex ?? '–'}
-                {lead?.yards ? `, ${t.player.yards(lead.yards)}` : ''}
-              </span>
+              <motion.span className={`${styles.holeFig} ${styles.swipeArea}`} style={{ x: dragX }} aria-hidden="true">
+                <span ref={titleRef} className={styles.holeFig}>
+                  <span className={styles.holeNum}>{hole}</span>
+                  <span className={styles.holeMeta}>
+                    {t.player.par} {par}, {t.player.si} {lead?.strokeIndex ?? '–'}
+                    {lead?.yards ? `, ${t.player.yards(lead.yards)}` : ''}
+                  </span>
+                </span>
+              </motion.span>
             </h1>
             <button className={styles.holeNav} type="button" onClick={() => goto(idx + 1)} disabled={idx === order.length - 1} aria-label={S.next}>
               <IconChevronRight />
             </button>
           </header>
 
+          {/* The snake changed hands with this save (MOT-07); the screen reader hears it with the saved hole. */}
+          {snakeNote && (
+            <p className={styles.snakeNote} aria-hidden="true">
+              <IconSnake size={18} />
+              {S.snakePasses(snakeNote)}
+            </p>
+          )}
           {restoredCount > 0 && <p className={styles.restoredNote}>{S.restoredDraft}</p>}
           <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
-          <div className={styles.players}>
+          <motion.div className={styles.swipeArea} style={{ x: dragX }}>
+          <div ref={bodyRef} className={styles.players}>
             {/* Which number is which, over the steppers' own columns (COPY-18); each stepper keeps its full name for a screen reader. */}
             <div className={`${styles.controls} ${styles.colHeads}`} aria-hidden="true">
               <span>{S.strokes}</span>
@@ -878,19 +960,27 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               return (
                 <div key={p.id} className={`${styles.player} ${locked ? styles.locked : ''}`} role="group" aria-labelledby={`${uid}-${p.id}`}>
                   <div className={styles.playerLine}>
-                    <span className={styles.playerName}>
-                      <span className={styles.playerNameText} id={`${uid}-${p.id}`}>
-                        {cardName(p)}
+                    <span className={styles.nameWrap}>
+                      <span className={styles.playerName}>
+                        <span className={styles.playerNameText} id={`${uid}-${p.id}`}>
+                          {cardName(p)}
+                        </span>
+                        {locked && (
+                          <span className={styles.lockMark} aria-label={S.cardSigned}>
+                            <IconLock size={14} />
+                          </span>
+                        )}
+                        {h.strokesReceived > 0 && (
+                          <span className={styles.dots} aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
+                            {'•'.repeat(h.strokesReceived)}
+                          </span>
+                        )}
                       </span>
-                      {locked && (
-                        <span className={styles.lockMark} aria-label={S.cardSigned}>
-                          <IconLock size={14} />
-                        </span>
-                      )}
-                      {h.strokesReceived > 0 && (
-                        <span className={styles.dots} aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
-                          {'•'.repeat(h.strokesReceived)}
-                        </span>
+                      {/* Outside the name's clipped box, so it slides from the old holder's row to the new one's (MOT-07). */}
+                      {snakeHolder === p.id && (
+                        <motion.span layoutId={`tarjeta-snake-${group.id}`} className={styles.snakeMark} role="img" aria-label={S.snakeHolder} transition={easeSlow}>
+                          <IconSnake size={16} />
+                        </motion.span>
                       )}
                     </span>
                     <span className={`${styles.pts} ${untouched ? styles.ptsMuted : good ? styles.ptsHigh : ''}`}>
@@ -901,7 +991,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
                   <div className={styles.controls}>
                     <Stepper label={S.strokesOf(cardName(p))} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={locked || d.pickedUp} onChange={(v) => setDraft(p.id, { strokes: v, putts: Math.min(d.putts, v) })} />
                     <Stepper label={S.puttsOf(cardName(p))} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={locked} onChange={(v) => setDraft(p.id, { putts: v })} />
-                    <button type="button" className={styles.pickup} disabled={locked} onClick={() => setDraft(p.id, { pickedUp: !d.pickedUp })} aria-pressed={d.pickedUp} aria-label={S.pickedUpOf(cardName(p))}>
+                    <button
+                      type="button"
+                      className={styles.pickup}
+                      disabled={locked}
+                      onClick={() => {
+                        haptic('tick')
+                        setDraft(p.id, { pickedUp: !d.pickedUp })
+                      }}
+                      aria-pressed={d.pickedUp}
+                      aria-label={S.pickedUpOf(cardName(p))}
+                    >
                       {S.pickedUp}
                     </button>
                   </div>
@@ -909,6 +1009,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               )
             })}
           </div>
+          </motion.div>
 
           {contests.map((c) => {
             const chosen = pickOf(c.id)
@@ -936,8 +1037,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           })}
 
           <div className={styles.saveBar}>
-            <button className="btn btn--primary btn--block" type="button" disabled={busy || !canEdit || !queueRead} onClick={() => void save()}>
-              {busy ? t.common.saving : idx === order.length - 1 ? S.saveLast : S.save}
+            {/* For a moment after a save it shows «Guardado» (MOT-02); its name stays the button's, and taps then are the settle guard's (UX-02). */}
+            <button className={`btn btn--primary btn--block ${styles.saveBtn} ${justSaved ? styles.saveBtnDone : ''}`} type="button" disabled={busy || !canEdit || !queueRead} onClick={() => void save()}>
+              <span className={styles.saveLabel}>{busy ? t.common.saving : idx === order.length - 1 ? S.saveLast : S.save}</span>
+              {justSaved && (
+                <span className={styles.saveCheck} aria-hidden="true">
+                  <IconCheck size={18} />
+                  {S.savedCheck}
+                </span>
+              )}
             </button>
             {canEdit ? (
               statusLine(<span className={`${styles.saveStatus} ${syncWarn ? styles.saveStatusWarn : ''}`}>{syncText}</span>)

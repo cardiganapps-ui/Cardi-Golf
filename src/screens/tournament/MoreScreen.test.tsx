@@ -105,3 +105,29 @@ describe('«Cambiar de jugador» with writes still on the phone', () => {
     expect(gate.leave).not.toHaveBeenCalled()
   })
 })
+
+describe('the Tarjeta\'s vibration, switched on this phone (MOT-10)', () => {
+  afterEach(() => {
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
+    localStorage.clear()
+  })
+
+  it('offered where the phone can vibrate: off stays off on this phone, on gives a tick', () => {
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vi.fn(() => true) })
+    open()
+    const sw = screen.getByRole('checkbox', { name: new RegExp(t.more.haptics) })
+    expect((sw as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(sw)
+    expect(localStorage.getItem('cardi-golf:haptics')).toBe('off')
+    expect(navigator.vibrate).not.toHaveBeenCalled()
+    fireEvent.click(sw)
+    expect(localStorage.getItem('cardi-golf:haptics')).toBeNull()
+    expect(navigator.vibrate).toHaveBeenCalledTimes(1)
+  })
+
+  it('not offered where it can\'t (an iPhone): a switch that does nothing would be a lie', () => {
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
+    open()
+    expect(screen.queryByRole('checkbox', { name: new RegExp(t.more.haptics) })).toBeNull()
+  })
+})

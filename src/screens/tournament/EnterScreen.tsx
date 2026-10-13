@@ -1,4 +1,5 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
+import { animate, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
@@ -12,6 +13,8 @@ import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profile
 import styles from './EnterScreen.module.css'
 import { humanError } from '../../lib/humanError'
 import { LegalConsent } from '../../components/LegalLinks'
+import { haptic } from '../../lib/haptics'
+import { easeSlow } from '../../design/motion'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -26,6 +29,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pinRef = useRef<HTMLInputElement>(null)
+  const reduce = useReducedMotion()
+  /** A wrong PIN is felt and seen: two buzzes and the field shakes no, as a lock does (MOT-10); under reduced motion only the words. */
+  const refused = () => {
+    haptic('error')
+    if (!reduce && pinRef.current) void animate(pinRef.current, { x: [0, -6, 6, -6, 6, -3, 0] }, easeSlow)
+  }
   const [query, setQuery] = useState('')
   /** After a PIN on an account: offer to keep this tournament in the profile. */
   const [askSave, setAskSave] = useState<LookupResult['players'][number] | null>(null)
@@ -61,6 +71,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       if (r.reason === 'no_pin') setError(t.enter.noPin)
       else if (r.reason === 'locked') setError(t.enter.locked)
       else if (r.reason === 'wrong_pin') setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
+      if (r.reason === 'wrong_pin' || r.reason === 'locked') refused()
       else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
       else setError(t.enter.notFound)
     } catch (e) {
@@ -197,6 +208,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           <label className="field">
             <span className="label">{t.enter.pin}</span>
             <input
+              ref={pinRef}
               className={`input ${styles.pin}`}
               type="password"
               inputMode="numeric"
