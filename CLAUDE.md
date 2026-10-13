@@ -607,6 +607,11 @@ Bottom tab bar: **En vivo · Tarjeta · Juegos · Dinero · Más**. Tabs and the
   - A "Levantó" toggle.
   - A live points badge, e.g. "3 pts · birdie neto".
 - **Saving:** "Guardar hoyo" saves and moves to the next hole. Swipe between holes.
+  - The card moves on in the tap's own frame (PERF-10, 2026-10-13). The outbox writes the hole once that frame is on screen (`afterPaint`, 100 ms at most), so recomputing the boards never holds the frame back.
+  - At 4× CPU, click to next hole is two commits and about 28 ms at 12 or 60 players. It used to be five commits and 131–177 ms. A real tap shows the new hole about 70 ms after the finger lands.
+  - Only the phone's storage can refuse that write. If it does, the card goes back to the hole with what was typed and says why.
+  - A Comité correction on a closed day or a signed card goes to the server, so the card waits for its answer.
+  - One hole is in storage at a time. If storage takes longer than the 700 ms settle guard, the button shows «Guardando…» until it answers.
 - **Grid view:** all 18 holes × 4 players with points and totals; missing holes are highlighted.
 - **Validation:** strokes 1–15; putts 0–strokes; picking up clears strokes and keeps putts optional. Confirm unusual values (strokes of 10 or more, putts of 5 or more).
 - **Snake tiebreak:** when 2+ players take 3+ putts on the same hole, show "¿Quién embocó al último?" before saving that hole.

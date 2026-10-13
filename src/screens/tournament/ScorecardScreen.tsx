@@ -49,6 +49,21 @@ const SAVED_CHECK_MS = 400
 const SNAKE_NOTE_MS = 5000
 /** How far the next hole comes in from, in the direction the card moved (MOT-02). */
 const SLIDE_PX = 24
+/** A page that draws no frames (hidden, a locked phone) still writes the hole this soon. */
+const PAINT_WAIT_MS = 100
+
+/** Once the frame being prepared is on screen: a task after the next animation frame, or PAINT_WAIT_MS at most. */
+function afterPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    const cap = setTimeout(resolve, PAINT_WAIT_MS)
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        clearTimeout(cap)
+        resolve()
+      }, 0),
+    )
+  })
+}
 
 export function ScorecardScreen() {
   const data = useTournament((s) => s.data)
@@ -182,6 +197,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [askReason, setAskReason] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  /** The hole on its way into the phone's storage: the card has moved on, and the next save waits for it (PERF-10). */
+  const saving = useRef<Promise<void> | null>(null)
   const [confirmDefaults, setConfirmDefaults] = useState(false)
   /** The saved values of the hole before the last save, for a real undo. */
   const undo = useRef<{ hole: number; drafts: Record<string, Draft>; wasPlayed: Record<string, boolean> } | null>(null)
@@ -497,7 +514,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
 
   /** `confirmedPar`: the player answered «Sí, todos par»: those pars are his capture, not untouched defaults (REL-08). */
   async function save(force = false, confirmedPar = false) {
-    if (!canEdit || busy) return
+    if (!canEdit || busy || saving.current) return
     // The holes kept on the phone are not read yet: the hole on screen may be one of them, shown unplayed (NEW-11).
     if (!useOutbox.getState().queueRead) return
     if (!force) {
@@ -575,89 +592,134 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
 
   async function commit(lastHoled?: string, confirmedPar = false) {
-    setBusy(true)
     setAskReason(false)
     const savedHole = hole
     const savedIdx = idx
+    const savedKey = holeKey
     const holderBefore = snakeHolder
-    try {
-      let celebrate = false
-      const before: Record<string, Draft> = {}
-      const wasPlayed: Record<string, boolean> = {}
-      // Only what this phone means to write: the players touched here, and the
-      // ones the server has nothing for yet (that is how an all-par hole stays
-      // one tap). A player the other phone already saved is left alone (REL-05).
-      const writes: Record<string, Draft> = {}
-      for (const p of players) {
-        if (touched.current.has(p.id) || !holeInfo(p.id)?.played) writes[p.id] = drafts[p.id]!
+    let celebrate = false
+    const before: Record<string, Draft> = {}
+    const wasPlayed: Record<string, boolean> = {}
+    // Only what this phone means to write: the players touched here, and the
+    // ones the server has nothing for yet (that is how an all-par hole stays
+    // one tap). A player the other phone already saved is left alone (REL-05).
+    const writes: Record<string, Draft> = {}
+    for (const p of players) {
+      if (touched.current.has(p.id) || !holeInfo(p.id)?.played) writes[p.id] = drafts[p.id]!
+    }
+    for (const p of players) {
+      const d = writes[p.id]
+      if (!d) continue
+      const h = holeInfo(p.id)
+      const sr = h?.strokesReceived ?? 0
+      const pts = stablefordPoints(h?.par ?? par, sr, d.pickedUp ? null : d.strokes, d.pickedUp)
+      if (!d.pickedUp && pts >= 3 && p.id === me.playerId) celebrate = true
+      wasPlayed[p.id] = !!h?.played
+      before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
+    }
+    /*
+     * A Comité correction goes to the server (a closed day, a signed card) and can be refused or lost on a bad
+     * signal: the card waits for its answer. Everything else goes into the phone's own outbox, which only the
+     * phone's storage can refuse: the card moves on in the tap's frame and the outbox writes the hole once that
+     * frame is on screen, so its recompute of the boards never holds the frame back. It waited for the write and
+     * the recompute, a third of a second on a mid-range phone (PERF-10).
+     */
+    const viaServer = Object.keys(writes).some((id) => me.isAdmin && (round.status !== 'live' || signed(id)))
+    const seen = new Map(bases.current)
+    // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
+    const auto = new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id)))
+    const writing = viaServer ? writeHole(writes, hole, lastHoled, seen, auto) : afterPaint().then(() => writeHole(writes, hole, lastHoled, seen, auto))
+    if (viaServer) {
+      setBusy(true)
+      try {
+        await writing
+      } catch (e) {
+        toast(humanError(e))
+        setBusy(false)
+        return
       }
-      for (const p of players) {
-        const d = writes[p.id]
-        if (!d) continue
-        const h = holeInfo(p.id)
-        const sr = h?.strokesReceived ?? 0
-        const pts = stablefordPoints(h?.par ?? par, sr, d.pickedUp ? null : d.strokes, d.pickedUp)
-        if (!d.pickedUp && pts >= 3 && p.id === me.playerId) celebrate = true
-        wasPlayed[p.id] = !!h?.played
-        before[p.id] = h?.played ? { strokes: h.gross ?? h.par, putts: h.putts ?? 2, pickedUp: h.pickedUp } : d
-      }
-      await writeHole(
-        writes,
-        hole,
-        lastHoled,
-        new Map(bases.current),
-        // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
-        new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id))),
-      )
-      // Saved (in the outbox): nothing left to keep for this hole, and the save is the hole's new
-      // starting point. The last hole stays on screen after its save: a correction made there is
-      // kept against the save, and a later save writes only what was touched after it.
-      writeKept(holeKey, {})
-      restored.current.clear()
-      restoredShown.current.clear()
-      setRestoredCount(0)
-      touched.current = new Set()
-      baselines.current = new Map()
-      bases.current = new Map()
-      initialDrafts.current = JSON.stringify(drafts)
-      useOutbox.setState({ editing: false })
-      undo.current = { hole: savedHole, drafts: before, wasPlayed }
-      lastSaveAt.current = performance.now()
-      setTiebreak(null)
-      if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
-      }
-      // The boards already hold this save (the outbox's overlay): did the snake change hands with it (MOT-07)?
-      const now = useTournament.getState().data
-      const holderAfter = now ? holderOf(now.state) : null
-      const passedTo = holderAfter && holderAfter !== holderBefore ? players.find((p) => p.id === holderAfter) : undefined
-      if (passedTo) {
-        clearTimeout(snakeTimer.current)
-        setSnakeNote(cardName(passedTo))
-        snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
-      }
-      // The hand feels the save; a birdie or a snake pass a little more (MOT-10). The button says «Guardado» a moment (MOT-02).
-      haptic(celebrate || passedTo ? 'moment' : 'save')
-      clearTimeout(justSavedTimer.current)
-      setJustSaved(true)
-      justSavedTimer.current = setTimeout(() => setJustSaved(false), SAVED_CHECK_MS)
-      // Move on, and offer the way back instead of asking first: a real undo when the hole
-      // already had values (they are written back), "Corregir" when it was new. It lives in
-      // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
-      const written = Object.keys(writes)
-      showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
-      const savedLine = [S.savedHole(savedHole), ...(passedTo ? [S.snakePasses(cardName(passedTo))] : [])].join('. ')
-      if (savedIdx < order.length - 1) {
-        savedSaid.current = savedLine
-        goto(savedIdx + 1)
-      } else {
-        setSaid(savedLine)
-        setView('grid')
-      }
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
       setBusy(false)
+    }
+    // One hole in the phone's storage at a time. The settle guard ignores taps for SETTLE_MS anyway; storage slower
+    // than that shows «Guardando…» until it answers, and «Guardar hoyo» never waits greyed out on a save that took ms.
+    saving.current = writing
+    let saidSaving = false
+    const slow = viaServer
+      ? undefined
+      : setTimeout(() => {
+          saidSaving = true
+          setBusy(true)
+        }, SETTLE_MS)
+    // The save is the hole's new starting point. The last hole stays on screen after its save: a correction made
+    // there is kept against the save, and a later save writes only what was touched after it.
+    restored.current.clear()
+    restoredShown.current.clear()
+    setRestoredCount(0)
+    touched.current = new Set()
+    baselines.current = new Map()
+    bases.current = new Map()
+    initialDrafts.current = JSON.stringify(drafts)
+    useOutbox.setState({ editing: false })
+    const undoBefore = undo.current
+    const lastSaveBefore = lastSaveAt.current
+    undo.current = { hole: savedHole, drafts: before, wasPlayed }
+    lastSaveAt.current = performance.now()
+    setTiebreak(null)
+    if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
+    }
+    // The hand feels the save; a birdie or a snake pass a little more (MOT-10). The button says «Guardado» a moment (MOT-02).
+    haptic(celebrate ? 'moment' : 'save')
+    clearTimeout(justSavedTimer.current)
+    setJustSaved(true)
+    justSavedTimer.current = setTimeout(() => setJustSaved(false), SAVED_CHECK_MS)
+    // Move on, and offer the way back instead of asking first: a real undo when the hole
+    // already had values (they are written back), "Corregir" when it was new. It lives in
+    // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
+    const written = Object.keys(writes)
+    showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
+    const moveOn = savedIdx < order.length - 1
+    if (moveOn) {
+      savedSaid.current = S.savedHole(savedHole)
+      goto(savedIdx + 1)
+    } else {
+      setSaid(S.savedHole(savedHole))
+      setView('grid')
+    }
+    try {
+      await writing
+    } catch (e) {
+      // The phone's storage refused the hole (full, or blocked), so nothing was kept: back to it, with what was
+      // typed there (kept on the phone as it was typed, PWA-05) and why.
+      clearTimeout(justSavedTimer.current)
+      setJustSaved(false)
+      clearTimeout(savedTimer.current)
+      setSavedNote(null)
+      undo.current = undoBefore
+      lastSaveAt.current = lastSaveBefore
+      setView('hole')
+      if (moveOn) goto(savedIdx)
+      toast(humanError(e))
+      return
+    } finally {
+      clearTimeout(slow)
+      if (saving.current === writing) saving.current = null
+      // Only when it said «Guardando…»: setting an unchanged state still costs a render now and then.
+      if (saidSaving) setBusy(false)
+    }
+    // In the outbox: nothing left to keep for this hole.
+    writeKept(savedKey, {})
+    // The boards hold the save now (the outbox's overlay): did the snake change hands with it (MOT-07)?
+    const now = useTournament.getState().data
+    const holderAfter = now ? holderOf(now.state) : null
+    const passedTo = holderAfter && holderAfter !== holderBefore ? players.find((p) => p.id === holderAfter) : undefined
+    if (passedTo) {
+      clearTimeout(snakeTimer.current)
+      setSnakeNote(cardName(passedTo))
+      snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
+      if (!celebrate) haptic('moment')
+      // One message for a screen reader: the hole saved, the snake, and where the card is now.
+      setSaid([S.savedHole(savedHole), S.snakePasses(cardName(passedTo)), ...(moveOn ? [latest.current.holeSpoken] : [])].join('. '))
     }
   }
 

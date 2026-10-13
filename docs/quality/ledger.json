@@ -2027,11 +2027,13 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 152,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The push landing and the live echo each still recompute the boards and re-render every screen after the network answers (PERF-09)."
     },
     {
       "id": "PERF-13",
