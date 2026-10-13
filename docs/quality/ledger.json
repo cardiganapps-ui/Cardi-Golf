@@ -817,11 +817,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 125,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: «Golpes» and «Putts» head the steppers' columns once, over the four players (aria-hidden; each stepper keeps its full name, «Golpes de Diego»), aligned by the same grid as the rows; DESIGN_DIRECTION's mock carries them."
     },
     {
       "id": "COPY-19",
@@ -1745,11 +1747,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 125,
+      "tests": [
+        "e2e/fixtures/signal.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: inside a tournament the header says «Sin señal» in place (now in the fixtures too) and the shell's banner steps aside (useOwnConnectionStatus), and the header is tall enough for the boards' age line, so the signal going and coming moves nothing: the fixture spec checks the second player's «+» and «Guardar hoyo» stay put offline and back. Outside a tournament (Mi Polo, the Comité) the banner still shows in flow; no stepper lives there."
     },
     {
       "id": "MOT-18",
@@ -3705,11 +3709,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 125,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: the question has a third, quieter answer, «No sabemos: que decida el Comité»: the hole saves with no answer, the snake shows «Pendiente en el hoyo N» and Comité › Tarjetas answers it (as any unanswered tiebreak); «Cerrar torneo» still waits for it."
     },
     {
       "id": "UX-09",
@@ -3719,11 +3725,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 125,
+      "tests": [
+        "src/screens/tournament/MoreScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Fixed: «Cambiar de jugador» asks first («Este teléfono deja de ser Nico en este torneo»), and the unsent-writes guard (already there since PR #95) runs again at the confirming tap, so a hole queued while the question was open still holds the player."
     },
     {
       "id": "UX-13",

@@ -478,7 +478,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       return
     }
     // Snake tiebreak: 2+ players at the threshold on this hole and no answer yet. The hole saves
-    // only with the answer (its buttons commit). The reason sheet of a correction on a signed card
+    // from the question's sheet: with an answer, or with «que decida el Comité» (UX-08). The reason sheet of a correction on a signed card
     // gives way first: the question used to open underneath it, and a second «Guardar» saved
     // the hole without the answer.
     const candidates = players.filter((p) => drafts[p.id]!.putts >= threshold).map((p) => p.id)
@@ -861,6 +861,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           {restoredCount > 0 && <p className={styles.restoredNote}>{S.restoredDraft}</p>}
           <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
           <div className={styles.players}>
+            {/* Which number is which, over the steppers' own columns (COPY-18); each stepper keeps its full name for a screen reader. */}
+            <div className={`${styles.controls} ${styles.colHeads}`} aria-hidden="true">
+              <span>{S.strokes}</span>
+              <span>{S.putts}</span>
+              <span className={`${styles.pickup} ${styles.colHeadPad}`}>{S.pickedUp}</span>
+            </div>
             {players.map((p) => {
               const d = drafts[p.id]
               const h = holeInfo(p.id)
@@ -954,6 +960,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
               </button>
             )
           })}
+          {/* Nobody remembers: the scores go in now and the question waits for the Comité, never a guess (UX-08). */}
+          <button type="button" className="btn btn--ghost btn--block" disabled={busy} onClick={() => void commit(undefined, tiebreak?.confirmedPar)}>
+            {S.whoHoledLastUnknown}
+          </button>
+          <p className="help">{S.whoHoledLastUnknownHint}</p>
         </div>
       </Sheet>
 

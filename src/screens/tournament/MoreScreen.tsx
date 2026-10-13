@@ -29,6 +29,7 @@ export function MoreScreen() {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
   const [askNotMe, setAskNotMe] = useState(false)
+  const [askSwitch, setAskSwitch] = useState(false)
   /**
    * What is still on this phone when the player tried to switch: switching
    * would strand it (UX-09, REL-16). Any write, not only score holes: a card
@@ -157,7 +158,7 @@ export function MoreScreen() {
               const q = queuedFor(lookup.id)
               if (q.writes > 0) setUnsent(q)
               else if (me.via === 'profile') setAskNotMe(true)
-              else void leave()
+              else setAskSwitch(true)
             }}
           >
             {me.via === 'profile' ? t.enter.notMe : t.enter.switchPlayer}
@@ -191,6 +192,21 @@ export function MoreScreen() {
         confirmLabel={t.enter.notMe}
         onConfirm={() => void notMe()}
         onClose={() => setAskNotMe(false)}
+      />
+      <ConfirmSheet
+        open={askSwitch}
+        title={t.enter.switchPlayer}
+        body={t.more.switchBody(player?.displayName ?? '')}
+        busy={saving}
+        confirmLabel={t.enter.switchPlayer}
+        onConfirm={() => {
+          // The holes may have gone on hold while the sheet was open: the guard runs again at the tap that leaves.
+          const q = queuedFor(lookup.id)
+          setAskSwitch(false)
+          if (q.writes > 0) setUnsent(q)
+          else void leave()
+        }}
+        onClose={() => setAskSwitch(false)}
       />
       {persistent === false && <p className="help">{t.sync.notPersistent}</p>}
       <p className={styles.version}>
