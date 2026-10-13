@@ -351,7 +351,11 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
   useLayoutEffect(() => {
     const el = box.current
     if (!el) return
-    const key = `${el.clientWidth}x${el.clientHeight}:${items.length}`
+    // A new size is the board's, which the screen gives it, never the rows' own box: that one shrinks when the title
+    // takes its range («1–9 de 12») and wraps, as it does on a phone held upright, so measuring again for it put the
+    // range back and took it away on every render, until React stopped the page.
+    const frame = el.parentElement ?? el
+    const key = `${frame.clientWidth}x${frame.clientHeight}:${items.length}`
     if (key !== measuredFor.current) {
       measuredFor.current = key
       tallest.current = 0
@@ -364,7 +368,9 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
     tallest.current = Math.max(tallest.current, ...rows.map((r) => r.getBoundingClientRect().height))
     if (tallest.current > 0) {
       const n = Math.max(1, Math.floor(el.clientHeight / tallest.current))
-      if (n !== fit) setFit(n)
+      // For one size the fit only tightens, as the tallest row only grows: more rows would drop the range, and the
+      // room it frees would ask for fewer again.
+      if (fit === null || n < fit) setFit(n)
     }
     // On every page shown (turn), every fit, and every resize.
   }, [items, turn, fit, resized])
