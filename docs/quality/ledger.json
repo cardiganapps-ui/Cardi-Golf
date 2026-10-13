@@ -1627,9 +1627,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 150,
+      "tests": [
+        "e2e/fixtures/calcutta.spec.ts",
+        "src/screens/tournament/TvScreen.draw.test.tsx",
+        "src/components/CountUp.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1720,9 +1724,11 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 150,
+      "tests": [
+        "src/design/motion.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3866,9 +3872,13 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 150,
+      "tests": [
+        "src/screens/admin/AdminDraw.test.tsx",
+        "src/screens/tournament/TvScreen.draw.test.tsx",
+        "e2e/fixtures/tv.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
