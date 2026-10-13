@@ -13,6 +13,9 @@ const srv = vi.hoisted(() => {
   const state = {
     /** `table:method` → the rows the server answers with. */
     answers: new Map<string, Row[]>(),
+    /** A function → what it answers (0044 `save_group_awards`: {deleted, rows}), and the calls it got. */
+    rpcAnswers: new Map<string, unknown>(),
+    rpcCalls: [] as Array<{ name: string; args: unknown }>,
     /** The requests that asked for their rows back. */
     selected: [] as string[],
     landed: [] as Array<{ tournamentId: string; changes: unknown[]; since: number; opts?: unknown }>,
@@ -48,6 +51,18 @@ const srv = vi.hoisted(() => {
       insert: () => request(table, 'insert'),
       delete: () => request(table, 'delete'),
     }),
+    rpc(name: string, args: unknown) {
+      state.rpcCalls.push({ name, args })
+      const req = {
+        setHeader: () => req,
+        then<A, B>(ok?: (v: { data: unknown; error: null }) => A, bad?: (e: unknown) => B) {
+          state.selected.push(`rpc:${name}`)
+          const answer = { data: structuredClone(state.rpcAnswers.get(name) ?? null), error: null }
+          return new Promise<typeof answer>((r) => setTimeout(() => r(answer), state.delay)).then(ok, bad)
+        },
+      }
+      return req
+    },
   }
   return state
 })
@@ -74,11 +89,15 @@ const { useAuth } = await import('./auth')
 
 const item = <K extends 'score' | 'tiebreak' | 'award' | 'signature'>(kind: K, key: string, payload: Record<string, unknown>) => ({ key, kind, tournamentId: 't1', payload, attempts: 0, createdAt: 1 }) as never
 const award = (winners: string[]) => item('award', 'award:r1:g1:closest:12', { round_id: 'r1', group_id: 'g1', hole: 12, game_id: 'closest', player_ids: winners, decided_by: 'p1' })
-const winner = (id: string, player: string) => ({ id, round_id: 'r1', group_id: 'g1', hole: 12, game_id: 'closest', player_id: player, decided_by: 'p1', created_at: '2027-04-09T18:00:00.5+00:00' })
+const winner = (id: string, player: string) => ({ id, round_id: 'r1', group_id: 'g1', hole: 12, game_id: 'closest', player_id: player, decided_by: 'p1', created_at: '2027-04-09T18:00:00.5+00:00', source: 'group' })
+/** A winner the call took away, by the key a delete names. */
+const taken = (player: string) => ({ round_id: 'r1', game_id: 'closest', hole: 12, player_id: player, source: 'group' })
 
 beforeEach(() => {
   _outboxTest.reset()
   srv.answers.clear()
+  srv.rpcAnswers.clear()
+  srv.rpcCalls = []
   srv.selected = []
   srv.landed = []
   srv.reloads = 0
@@ -109,15 +128,15 @@ describe('a push hands the store the rows the server stored', () => {
     expect(srv.landed.map((l) => l.changes)).toEqual([[{ table: 'snake_tiebreaks', eventType: 'UPDATE', new: row, old: {} }]])
   })
 
-  it('winners replaced: the ones taken away, by the key a delete names, then the ones put in', async () => {
-    srv.answers.set('hole_awards:delete', [winner('a-old', 'p3')])
-    srv.answers.set('hole_awards:insert', [winner('a-new', 'p1'), winner('a-new2', 'p2')])
+  it('winners replaced in one call (0044): the ones taken away, by the key a delete names, then the ones put in', async () => {
+    srv.rpcAnswers.set('save_group_awards', { deleted: [taken('p3')], rows: [winner('a-new', 'p1'), winner('a-new2', 'p2')] })
     await _outboxTest.enqueue(award(['p1', 'p2']))
     await flush()
-    expect(srv.selected).toEqual(['hole_awards:delete', 'hole_awards:insert'])
+    expect(srv.selected).toEqual(['rpc:save_group_awards'])
+    expect(srv.rpcCalls).toEqual([{ name: 'save_group_awards', args: { p_round_id: 'r1', p_group_id: 'g1', p_game_id: 'closest', p_hole: 12, p_player_ids: ['p1', 'p2'], p_decided_by: 'p1' } }])
     expect(srv.landed.map((l) => l.changes)).toEqual([
       [
-        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: 'r1', game_id: 'closest', hole: 12, player_id: 'p3' } },
+        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: taken('p3') },
         { table: 'hole_awards', eventType: 'UPDATE', new: winner('a-new', 'p1'), old: {} },
         { table: 'hole_awards', eventType: 'UPDATE', new: winner('a-new2', 'p2'), old: {} },
       ],
@@ -125,22 +144,23 @@ describe('a push hands the store the rows the server stored', () => {
   })
 
   it('a contest left without a winner: only the ones taken away', async () => {
-    srv.answers.set('hole_awards:delete', [winner('a-old', 'p3'), winner('a-old2', 'p4')])
+    srv.rpcAnswers.set('save_group_awards', { deleted: [taken('p3'), taken('p4')], rows: [] })
     await _outboxTest.enqueue(award([]))
     await flush()
-    expect(srv.selected).toEqual(['hole_awards:delete'])
+    expect(srv.selected).toEqual(['rpc:save_group_awards'])
     expect(srv.landed.map((l) => l.changes)).toEqual([
       [
-        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: 'r1', game_id: 'closest', hole: 12, player_id: 'p3' } },
-        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: { round_id: 'r1', game_id: 'closest', hole: 12, player_id: 'p4' } },
+        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: taken('p3') },
+        { table: 'hole_awards', eventType: 'DELETE', new: {}, old: taken('p4') },
       ],
     ])
   })
 
   it('a contest answered «nobody» where nobody was named comes back empty: nothing lands, and no fetch is asked (K-V24)', async () => {
+    srv.rpcAnswers.set('save_group_awards', { deleted: [], rows: [] })
     await _outboxTest.enqueue(award([]))
     await flush()
-    expect(srv.selected).toEqual(['hole_awards:delete'])
+    expect(srv.selected).toEqual(['rpc:save_group_awards'])
     // Only a card signed first by the other pair asks a fetch of an empty answer.
     expect(srv.landed.map((l) => [l.changes, l.opts])).toEqual([[[], { flushing: true, fetch: false }]])
   })

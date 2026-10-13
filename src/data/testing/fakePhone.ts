@@ -56,7 +56,7 @@ export function holeScore(player: string, hole: number, strokes: number, round =
 export function snakeAnswer(hole: number, lastHoled: string): TiebreakPayload {
   return { round_id: 'r1', group_id: 'g1', hole, last_holed_player_id: lastHoled, decided_by: 'p1' }
 }
-/** The group's winners of a hole contest: one push of two requests (the old answer goes, the new one goes in). */
+/** The group's winners of a hole contest: one push, one call (0044 `save_group_awards`: the old answer goes and the new one comes in one transaction). */
 export function holeAward(hole: number, winners: string[]): AwardPayload {
   return { round_id: 'r1', group_id: 'g1', hole, game_id: 'closest', player_ids: winners, decided_by: 'p1' }
 }
@@ -64,6 +64,10 @@ export function holeAward(hole: number, winners: string[]): AwardPayload {
 /** A write to `table` (POST or DELETE): what `decide` usually picks out. */
 export function isWrite(req: Exchange, table = 'scores'): boolean {
   return req.target === table && req.method !== 'GET'
+}
+/** A group's winners going out (0044): the one call that replaces them. */
+export function isAwardCall(req: Exchange): boolean {
+  return req.target === 'rpc/save_group_awards'
 }
 /** PostgREST's answer to a write the row-level security policies refuse. */
 export function refusedByRls(table: string): Outcome {
