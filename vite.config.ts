@@ -85,8 +85,9 @@ export default defineConfig({
         // later the same day can't leave the page asking for screens the server no longer has (REL-13).
         // Updates still wait for «Actualizar» (no skipWaiting).
         clientsClaim: true,
-        // Web push (PR 8): the handler lives in public/push-sw.js; bump ?v= when it changes.
-        importScripts: ['/push-sw.js?v=1'],
+        // Web push (PR 8): the handler lives in public/push-sw.js, imported at its own fingerprint, so a change to
+        // it is a new worker that every phone installs (scripts/check-precache.mjs holds the two together).
+        importScripts: [versioned('/push-sw.js')],
         // Icon URLs carry ?v=<fingerprint>; offline, they still resolve to the precached file.
         ignoreURLParametersMatching: [/^v$/],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,

@@ -43,14 +43,34 @@ export async function checkForUpdate() {
   }
 }
 
+let reloadPage = () => window.location.reload()
+
+/**
+ * vite-plugin-pwa reloads once the new worker takes the page, but only on a page that had a worker when it
+ * loaded. On a first visit (no worker yet, then this build's took the page) the new worker took it and nothing
+ * reloaded: the bar stayed, and a second tap had no waiting worker left to tell (QA-16). The page reloads
+ * itself when its worker changes.
+ */
+function reloadOnNewWorker() {
+  navigator.serviceWorker?.addEventListener('controllerchange', () => reloadPage(), { once: true })
+}
+
 /** Apply the update: the waiting worker if there is one, else look for it, else a plain reload. */
 export async function applyUpdate() {
   const { applyWaiting } = useAppUpdate.getState()
-  if (applyWaiting) return applyWaiting()
+  if (applyWaiting) {
+    // Nothing waiting any more (another tab of the app took the update): this page has the new worker already.
+    if (registration && !registration.waiting) return reloadPage()
+    reloadOnNewWorker()
+    return applyWaiting()
+  }
   await checkForUpdate()
   const now = useAppUpdate.getState().applyWaiting
-  if (now) return now()
-  window.location.reload()
+  if (now) {
+    reloadOnNewWorker()
+    return now()
+  }
+  reloadPage()
 }
 
 function evaluate(minBuild: unknown) {
@@ -82,6 +102,11 @@ export const _appUpdateTest = {
   reset() {
     started = false
     registration = null
+    reloadPage = () => window.location.reload()
     useAppUpdate.setState({ waiting: false, required: false, applyWaiting: null })
+  },
+  /** What a reload does here. */
+  setReload(fn: () => void) {
+    reloadPage = fn
   },
 }

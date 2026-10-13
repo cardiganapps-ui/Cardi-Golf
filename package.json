@@ -6,7 +6,7 @@
   "description": "Platform for running amateur golf tournaments among friends: live scoring, side games, Calcutta auction, money and settlement.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-precache.mjs dist",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",

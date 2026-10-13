@@ -77,6 +77,54 @@ describe('the update bar', () => {
   })
 })
 
+describe('«Actualizar» loads the new build (QA-16)', () => {
+  /** The page's service worker container: the new worker taking the page fires `controllerchange`. */
+  function workers() {
+    const container = new EventTarget()
+    Object.defineProperty(navigator, 'serviceWorker', { value: container, configurable: true })
+    return container
+  }
+  const reload = vi.fn()
+  beforeEach(() => {
+    reload.mockReset()
+    _appUpdateTest.setReload(reload)
+  })
+  afterEach(() => {
+    delete (navigator as { serviceWorker?: unknown }).serviceWorker
+  })
+
+  it('a first visit’s page reloads itself once the new worker takes it (vite-plugin-pwa reloads only a page that had a worker)', async () => {
+    const container = workers()
+    startUpdateChecks(Object.assign(fakeRegistration(), { waiting: {} }))
+    // As vite-plugin-pwa's own: tells the waiting worker to take over, and reloads nothing on a first visit.
+    const apply = vi.fn(async () => undefined)
+    render(<UpdateBar />)
+    act(() => offerUpdate(apply))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: t.sync.update }))
+    })
+    expect(apply).toHaveBeenCalledTimes(1)
+    expect(reload).not.toHaveBeenCalled()
+    container.dispatchEvent(new Event('controllerchange'))
+    expect(reload).toHaveBeenCalledTimes(1)
+    container.dispatchEvent(new Event('controllerchange'))
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('nothing waiting any more (another tab took the update): the tap loads the new build at once', async () => {
+    workers()
+    startUpdateChecks(Object.assign(fakeRegistration(), { waiting: null }))
+    const apply = vi.fn(async () => undefined)
+    render(<UpdateBar />)
+    act(() => offerUpdate(apply))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: t.sync.update }))
+    })
+    expect(apply).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('the minimum build', () => {
   it('a floor above this build blocks the outbox and insists, even mid-hole; lifting it unblocks', () => {
     startUpdateChecks(null)
