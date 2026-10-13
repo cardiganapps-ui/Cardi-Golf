@@ -14,12 +14,18 @@ export function useBoardsMayBeOld(): boolean {
   return useTournament((s) => !!s.data && !(s.tournamentId?.startsWith('fixture:') ?? false) && (!online || s.source === 'cache' || s.error != null))
 }
 
-/** How old the boards are, in words (REL-04), kept current every 30 s. */
+/**
+ * How old the boards are, in words (REL-04), kept current every 30 s. The clock moves only when the words
+ * would: «hace 5 min» for two ticks is one render, not two (PERF-09).
+ */
 export function useSavedWhen(ts: number): string | null {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000)
+    const id = setInterval(() => {
+      const at = Date.now()
+      setNow((was) => (ts && savedWhen(ts, was) === savedWhen(ts, at) ? was : at))
+    }, 30_000)
     return () => clearInterval(id)
-  }, [])
+  }, [ts])
   return ts ? savedWhen(ts, now) : null
 }

@@ -754,8 +754,9 @@ function overlayItem(s: Snapshot, it: OutboxItem): void {
     for (const playerId of p.player_ids) s.holeAwards.push({ roundId: p.round_id, groupId: p.group_id, hole: p.hole, gameId: p.game_id, playerId })
   } else if (it.kind === 'signature') {
     const p = it.payload
+    // Signed when it was queued: the same moment on every recompute, so the boards that read the same stay the same (PERF-09).
     if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
-      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date().toISOString() })
+      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date(it.createdAt).toISOString() })
     }
   }
 }

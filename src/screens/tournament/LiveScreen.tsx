@@ -4,7 +4,7 @@
  * toggle), and the feed. Rows re-sort once, in 200 ms.
  */
 import { motion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { hcpFromTo, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
@@ -39,19 +39,85 @@ function grossToPar(state: TournamentState, playerId: string, roundId?: string):
   return n ? d : null
 }
 
-export function LiveScreen() {
-  const data = useTournament((s) => s.data)
-  const updatedAt = useTournament((s) => s.updatedAt)
-  const { me, slug } = useTournamentCtx()
-  const round = useActiveRound()
-  const [open, setOpen] = useState<string | null>(null)
-  const [view, setView] = useState<'points' | 'gross'>('points')
-  const prevOrder = useRef<Map<string, number>>(new Map())
-  const [moves, setMoves] = useState<Map<string, number>>(new Map())
-  const updatedWhen = useSavedWhen(updatedAt)
+/**
+ * The strip's second line: where the lead group is, and how fresh the boards are. Its own component: a
+ * reload that brought nothing new, and the 30 s clock, render this line and not the board (PERF-09).
+ */
+const DetailLine = memo(function DetailLine({ lead }: { lead: string | null }) {
+  const updatedWhen = useSavedWhen(useTournament((s) => s.updatedAt))
   // While the boards may be old (the phone's copy, no signal, a fetch that
   // failed), the header's second line says how old: once is enough.
   const ageInHeader = useBoardsMayBeOld()
+  const line = [lead, updatedWhen == null || ageInHeader ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
+  return line ? <span>{line}</span> : null
+})
+
+/** The share target, one object for every render: a new one each time would render the button again (PERF-09). */
+const LEADERBOARD = { kind: 'leaderboard' } as const
+
+/**
+ * One row of the board, from plain values: a change elsewhere on the board, or a reload that brought
+ * nothing new, renders only the rows whose values changed (PERF-09).
+ */
+const BoardRow = memo(function BoardRow(props: {
+  playerId: string
+  /** Its place on the board: a row that moves renders in the commit that moves it, so Motion slides it from where it was. */
+  place: number
+  animate: boolean
+  pos: string
+  name: string
+  /** The team's players, under a team format; else the player's tier and «estimado». */
+  teamNames: string | null
+  tier: string | null
+  estimated: boolean
+  cash: number
+  owners: string | undefined
+  honoree: boolean
+  today: string | undefined
+  todayTone: Tone | undefined
+  todaySpoken: string | undefined
+  thru: string | undefined
+  figure: string
+  tone: Tone
+  mine: boolean
+  moved: 'up' | 'down' | null
+  dense: boolean
+  onOpen: (playerId: string) => void
+}) {
+  const { playerId, place, animate, teamNames, tier, estimated, cash, onOpen, ...row } = props
+  const sub = (
+    <span className={styles.sub}>
+      {teamNames != null ? (
+        <span>{teamNames}</span>
+      ) : (
+        <>
+          {tier && <span className="tierBadge">{tier}</span>}
+          {estimated && <span>{t.admin.players.estimated}</span>}
+        </>
+      )}
+      {cash > 0 && (
+        <span className={styles.subMoney}>
+          <Money amount={cash} />
+        </span>
+      )}
+    </span>
+  )
+  return (
+    <motion.div layout={animate} layoutDependency={place} transition={ease}>
+      <LeaderRow {...row} sub={sub} onClick={() => onOpen(playerId)} />
+    </motion.div>
+  )
+})
+
+export function LiveScreen() {
+  const data = useTournament((s) => s.data)
+  const { me, slug } = useTournamentCtx()
+  const round = useActiveRound()
+  const [open, setOpen] = useState<string | null>(null)
+  const closeSheet = useCallback(() => setOpen(null), [])
+  const [view, setView] = useState<'points' | 'gross'>('points')
+  const prevOrder = useRef<Map<string, number>>(new Map())
+  const [moves, setMoves] = useState<Map<string, number>>(new Map())
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
   useEffect(() => {
@@ -62,7 +128,8 @@ export function LiveScreen() {
       const before = prevOrder.current.get(r.playerId)
       if (before != null && before !== i) m.set(r.playerId, before - i)
     })
-    if (prevOrder.current.size) setMoves(m)
+    // Nothing moved and no arrow showing: no second render of the board (PERF-09).
+    if (prevOrder.current.size) setMoves((cur) => (m.size === 0 && cur.size === 0 ? cur : m))
     prevOrder.current = next
     // The arrows mark the last re-sort only; clear them once the transition is over.
     const timer = setTimeout(() => setMoves((cur) => (cur.size ? new Map() : cur)), 600)
@@ -133,7 +200,7 @@ export function LiveScreen() {
   })()
 
   const statusLine = round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status as keyof typeof t.status] ?? snapshot.tournament.status
-  const detailLine = [round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null, updatedWhen == null || ageInHeader ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
+  const lead = round?.status === 'live' && leadHole > 0 ? t.live.leadGroup(leadHole) : null
 
   /*
    * The Puntos/Gross toggle only says something under Stableford, where the
@@ -179,7 +246,7 @@ export function LiveScreen() {
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>
-        {detailLine && <span>{detailLine}</span>}
+        <DetailLine lead={lead} />
         {myHole && (
           <Link className={`btn btn--primary btn--block ${styles.scoreNow}`} to={`/t/${slug}/tarjeta?hoyo=${myHole.hole}`}>
             {myHole.thru >= (round?.holes ?? 18) ? t.live.scoreDone : t.live.scoreHole(myHole.hole)}
@@ -231,7 +298,7 @@ export function LiveScreen() {
             onChange={setView}
           />
         ) : (
-          <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />
+          <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />
         )}
       </div>
 
@@ -275,56 +342,44 @@ export function LiveScreen() {
               }
               // A team's "thru" is where its slowest member is.
               const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
-              const sub = (
-                <span className={styles.sub}>
-                  {byTeam ? (
-                    <span>{t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id))}</span>
-                  ) : (
-                    <>
-                      {p.tier && <span className="tierBadge">{p.tier}</span>}
-                      {state.core.handicaps[p.id]?.estimated && <span>{t.admin.players.estimated}</span>}
-                    </>
-                  )}
-                  {cash > 0 && (
-                    <span className={styles.subMoney}>
-                      <Money amount={cash} />
-                    </span>
-                  )}
-                </span>
-              )
               return (
-                <motion.div key={r.playerId} layout={animate} transition={ease}>
-                  <LeaderRow
-                    pos={grossView ? grossLabel(i) : r.label}
-                    name={byTeam ? r.entrant.name : p.displayName}
-                    sub={sub}
-                    owners={byTeam ? undefined : owners.get(p.id)}
-                    honoree={!!honoree && members.includes(honoree.id)}
-                    today={today}
-                    todayTone={todayTone}
-                    todaySpoken={todaySpoken}
-                    thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
-                    figure={figure}
-                    tone={tone}
-                    mine={!!me.playerId && members.includes(me.playerId)}
-                    moved={mv > 0 ? 'up' : mv < 0 ? 'down' : null}
-                    dense={rows.length > 20}
-                    onClick={() => setOpen(p.id)}
-                  />
-                </motion.div>
+                <BoardRow
+                  key={r.playerId}
+                  playerId={p.id}
+                  place={i}
+                  animate={animate}
+                  pos={grossView ? grossLabel(i) : r.label}
+                  name={byTeam ? r.entrant.name : p.displayName}
+                  teamNames={byTeam ? t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id)) : null}
+                  tier={p.tier ?? null}
+                  estimated={!!state.core.handicaps[p.id]?.estimated}
+                  cash={cash}
+                  owners={byTeam ? undefined : owners.get(p.id)}
+                  honoree={!!honoree && members.includes(honoree.id)}
+                  today={today}
+                  todayTone={todayTone}
+                  todaySpoken={todaySpoken}
+                  thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
+                  figure={figure}
+                  tone={tone}
+                  mine={!!me.playerId && members.includes(me.playerId)}
+                  moved={mv > 0 ? 'up' : mv < 0 ? 'down' : null}
+                  dense={rows.length > 20}
+                  onOpen={setOpen}
+                />
               )
             })}
         </Board>
       )}
       <div className="row row--between">
         <span className="help">{t.money.ifEndedNow}</span>
-        {hasHandicaps && <ShareCardButton what={{ kind: 'leaderboard' }} className="btn btn--ghost btn--sm" />}
+        {hasHandicaps && <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />}
       </div>
 
       <h2 className={styles.feedHead}>{t.feed.title}</h2>
       <FeedTicker limit={10} />
 
-      <PlayerSheet playerId={open} onClose={() => setOpen(null)} />
+      <PlayerSheet playerId={open} onClose={closeSheet} />
     </div>
   )
 }

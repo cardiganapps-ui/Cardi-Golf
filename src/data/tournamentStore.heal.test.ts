@@ -68,8 +68,9 @@ describe('the heal', () => {
       if (t === 'tournaments') pending.push({ release: server.hold().release, at: Date.now() })
       return origFrom(t)
     }
-    let replaced = 0
-    let last = store().data
+    // A fetch that lands says when (the boards themselves stay the same object when it brought nothing new, PERF-09).
+    let landed = 0
+    let last = store().updatedAt
     const n0 = reads()
     for (let s = 0; s < 15 * 60; s++) {
       await vi.advanceTimersByTimeAsync(1000)
@@ -79,12 +80,12 @@ describe('the heal', () => {
         p.release()
         p.at = -1
       }
-      if (store().data !== last) {
-        replaced++
-        last = store().data
+      if (store().updatedAt !== last) {
+        landed++
+        last = store().updatedAt
       }
     }
-    expect(replaced).toBeGreaterThan(0)
+    expect(landed).toBeGreaterThan(0)
     // One out at a time: a fetch every five minutes and 40 s at most.
     expect(reads() - n0).toBeLessThanOrEqual(3)
   })
