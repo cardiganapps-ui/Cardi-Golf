@@ -738,7 +738,7 @@ Before everyone goes to bed, the app shows who still owes what for entry and Cal
 
 - **Tournament:** name, brand, dates, settings (section 18) — which modules are on, their parameters and labels — with the prize-sum validation, status transitions, and who the banker is. Terminado goes through «Cerrar torneo» (§11); the server refuses it, and a publish, while a planned day is missing or open or a hole waits in «Pendientes de revisar» (0029, §7), and leaving Terminado is never refused.
 - **Course:** tees, and par / stroke index / yardage for each hole on each tee. Allow bulk paste from a scorecard.
-- **Players:** names, avatars, tier, base handicap, tee, groom flag, admin flag, PIN reset, and form guide. Show a live preview of 80% and strokes received.
+- **Players:** names, avatars, tier, base handicap, tee, groom flag, admin flag, PIN reset, and form guide. Show a live preview of 80% and strokes received. Nothing is assumed (UX-16): a new player's handicap starts empty under every method (a number, the index, the three scores) and the sheet saves once someone types it; a card started from scratch has every par and stroke index empty (`NOT_TYPED`, `screens/admin/courseCells.ts`) and saves once each is typed or pasted. They used to open on hándicap 18, scores 85/92/100, «Índice» saving 0, and eighteen par 4s with SI = hole number.
 - **Calcutta:** the console from section 10.
 - **Matrimonios and groups:** the draw, manual edits, tee times, starting holes, and the Day 2 group generator (default from section 5.5, with an override).
 - **Rounds:** start ("En juego"), finish, and cancel.
