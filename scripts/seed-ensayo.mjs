@@ -88,11 +88,15 @@ if (!t) {
 }
 await sb.from('tournament_organizers').upsert({ tournament_id: t.id, auth_user_id: ownerId, role: 'owner' })
 
-// Logo.
+// Logo: its rendition, as Comité › Torneo stores one (src/lib/logo.ts, PERF-01): WebP inside
+// 720 × 240, transparency kept, its size in its name, a new file cached a year. The 889 KB
+// PNG itself used to go up and ship to a 28 px header.
 try {
+  const { default: sharp } = await import('sharp')
   const png = await readFile(path.join(root, 'assets', 'nacho-logo.png'))
-  const p = `${t.id}/logo.png`
-  const { error } = await sb.storage.from('tournament-assets').upload(p, png, { upsert: true, contentType: 'image/png' })
+  const { data: webp, info } = await sharp(png).resize({ width: 720, height: 240, fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toBuffer({ resolveWithObject: true })
+  const p = `${t.id}/logo-${info.width}x${info.height}-${Date.now()}.webp`
+  const { error } = await sb.storage.from('tournament-assets').upload(p, webp, { upsert: true, contentType: 'image/webp', cacheControl: '31536000' })
   if (error) throw error
   const { data } = sb.storage.from('tournament-assets').getPublicUrl(p)
   await sb.from('tournaments').update({ logo_url: data.publicUrl }).eq('id', t.id)

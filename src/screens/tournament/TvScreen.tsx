@@ -23,6 +23,7 @@ import { DRAW_STEP, DUR_BOARD, HAT_STEP, easeBoard, easeFast, still, timer } fro
 import { CountUp } from '../../components/CountUp'
 import { dayFigureText } from '../../lib/figureText'
 import { Plate } from '../../components/primitives'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { drawOrder } from '../../lib/pairing'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
@@ -146,7 +147,7 @@ export function TvScreen() {
   return (
     <div className={styles.tv} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
       <header className={styles.header}>
-        {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
+        {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">
           <h1 className={styles.title}>{snapshot.tournament.name}</h1>
           <span className={styles.sub}>
