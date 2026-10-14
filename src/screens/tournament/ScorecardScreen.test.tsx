@@ -11,7 +11,7 @@
  * figure, and a change was announced as a bare number.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const outbox = vi.hoisted(() => ({ scores: [] as Array<Record<string, unknown>>, holes: [] as Array<{ round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }> }))
@@ -914,5 +914,84 @@ describe('Tarjeta: a player the Comité adds to the group while a hole is open (
     expect(strokesOf('p5')).toBeGreaterThan(0)
     await tapSave(20_000)
     expect(written().some((r) => r.startsWith('p5@10='))).toBe(true)
+  })
+})
+
+describe('Tarjeta: the notice that a card is ready to sign opens the whole card (PWA-10)', () => {
+  it('«?vista=tarjeta» opens the grid, where «Firmar» is; without it, the hole', () => {
+    window.history.replaceState(null, '', '/?vista=tarjeta')
+    try {
+      mount()
+      expect(screen.getByRole('button', { name: S.holeView, exact: true } as never)).toBeTruthy()
+      expect(screen.getByRole('table')).toBeTruthy()
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+    cleanup()
+    mount()
+    expect(screen.getByRole('button', { name: S.grid, exact: true } as never)).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+})
+
+describe('Tarjeta: a notice tapped while the card is open goes where it says (PWA-10, PWA-12)', () => {
+  // The service worker asks the open app to go to the notice's page through its router (src/lib/noticeTaps):
+  // the address changes and the card, already open, must follow it.
+  let go: (to: string) => void = () => undefined
+  function Router() {
+    const navigate = useNavigate()
+    go = (to) => void navigate(to)
+    return null
+  }
+  function mountRouted(edit?: (s: Snapshot) => void) {
+    const fx = getFixture('minimal4-live')!
+    snap = structuredClone(fx.snapshot)
+    edit?.(snap)
+    load(snap)
+    return render(
+      <MemoryRouter>
+        <Router />
+        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+          <ScorecardScreen />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+  }
+
+  it('the snake’s question: to its hole, and what was typed on the hole it left comes back there', () => {
+    mountRouted()
+    expect(holeOnScreen()).toBe(10)
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    act(() => go('/?hoyo=4'))
+    expect(holeOnScreen()).toBe(4)
+    act(() => go('/?hoyo=10'))
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(before + 1)
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    // Nothing was saved on the way.
+    expect(outbox.holes).toEqual([])
+  })
+
+  it('the card to sign: the whole card; from the grid, the snake’s hole is the hole view again', () => {
+    mountRouted()
+    act(() => go('/?vista=tarjeta'))
+    expect(screen.getByRole('table')).toBeTruthy()
+    act(() => go('/?hoyo=7'))
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(holeOnScreen()).toBe(7)
+  })
+
+  it('never under an open question: its answer is the hole on screen’s', async () => {
+    mountRouted((s) => {
+      const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
+      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+    })
+    await tapSave(11_000) // hole 10: three at 2 putts, a tie
+    expect(screen.getByRole('dialog', { name: S.whoHoledLast })).toBeTruthy()
+    act(() => go('/?hoyo=4'))
+    expect(holeOnScreen()).toBe(10)
+    await answer(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    expect(outbox.holes.map((h) => h.hole)).toEqual([10])
   })
 })

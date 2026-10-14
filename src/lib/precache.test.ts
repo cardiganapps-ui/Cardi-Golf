@@ -68,6 +68,22 @@ describe('what the worker keeps for no signal (QA-16)', () => {
     expect(precacheProblems(d)).toEqual([expect.stringMatching(/^the worker imports push-sw\.js at \?v=[0-9a-f]{10}, but the file's is [0-9a-f]{10}: phones would keep the old handler$/)])
   })
 
+  it('an image a notice shows (its icon, the badge) is precached with it (PWA-12)', () => {
+    const shows = `self.addEventListener("push", () => ({ icon: '/icons/icon-192.png', badge: '/icons/badge-96.png' }))`
+    const d = build((f) => {
+      f['push-sw.js'] = shows
+      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`)
+      f['icons/badge-96.png'] = 'png'
+    })
+    expect(precacheProblems(d)).toEqual(['icons/badge-96.png is not precached (a notice shows it)'])
+    const listed = build((f) => {
+      f['push-sw.js'] = shows
+      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`).replace('{url:"push-sw.js"', '{url:"icons/badge-96.png",revision:"r"},{url:"push-sw.js"')
+      f['icons/badge-96.png'] = 'png'
+    })
+    expect(precacheProblems(listed)).toEqual([])
+  })
+
   it('a file listed but missing, and a precache over its budget, are refused', () => {
     const d = build((f) => void delete f['assets/index-a1.js'])
     expect(precacheProblems(d)).toEqual([`assets/index-a1.js is precached but not in ${d}`])

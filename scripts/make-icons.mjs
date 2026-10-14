@@ -18,6 +18,8 @@ const token = (name) => {
 }
 const BG = token('bg')
 const INK = token('ink')
+// White, as text on the accent is: the notification badge's only colour.
+const BADGE = token('accent-ink')
 const G = JSON.parse(await readFile('src/design/logoMark.json', 'utf8'))
 
 /** An app icon: the sheet's tile, its pencil layer on card stock. */
@@ -102,6 +104,21 @@ function favicon() {
 `
 }
 
+/**
+ * The notification badge (public/push-sw.js, PWA-12): Android draws it from its alpha alone, tinted by the
+ * system, so the icon copy's outline on transparent, no tile (the opaque icon read as a white square). It fills
+ * the 20 of 24 dp a status-bar icon keeps clear of its edge, its pencil line thickened by `line` px so it still
+ * reads at 24 dp.
+ */
+async function badge(file, size, line = 2) {
+  const k = ((size - line) * (20 / 24)) / Math.max(G.bbox.w, G.bbox.h)
+  const tx = (size - G.bbox.w * k) / 2 - G.bbox.x * k
+  const ty = (size - G.bbox.h * k) / 2 - G.bbox.y * k
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><path d="${G.d}" fill-rule="${G.fillRule}" fill="${BADGE}" stroke="${BADGE}" stroke-width="${(line / k).toFixed(4)}" stroke-linejoin="round" transform="translate(${tx.toFixed(3)} ${ty.toFixed(3)}) scale(${k.toFixed(5)})"/></svg>`
+  await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(file)
+  console.log('wrote', file)
+}
+
 await mkdir('public/icons', { recursive: true })
 await mkdir('public/brand', { recursive: true })
 await mkdir('public/splash', { recursive: true })
@@ -110,6 +127,7 @@ await icon('public/icons/icon-512.png', 512)
 // Maskable: Android crops to a circle; logoMark.json says how far to shrink.
 await icon('public/icons/icon-maskable-512.png', 512, { rounded: false, scale: G.maskableScale })
 await icon('public/apple-touch-icon.png', 180, { rounded: false })
+await badge('public/icons/badge-96.png', 96)
 await markImage('public/brand/polo-mark.png', 'design/brand/layer-lockup.png')
 await markImage('public/brand/polo-mark-board.png', 'design/brand/layer-board.png')
 await writeFile('public/favicon.svg', favicon())

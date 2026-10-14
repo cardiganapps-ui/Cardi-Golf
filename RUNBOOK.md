@@ -15,6 +15,11 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
   - Cada quien entra con su cara y su PIN, y la sesión se queda en el teléfono. La app instalada vuelve sola al torneo cada vez que se abre (durante cuatro días desde la última vez).
   - Los pasos siguen en Más › «Cómo instalar la app» aunque alguien haya tocado «Ahora no».
   - En un iPhone, un enlace tocado en WhatsApp abre Safari, no la app: allí la Tarjeta recuerda capturar desde el ícono. Si Safari tiene hoyos por subir, lo dice con el número: hay que dejarlo abierto con señal hasta que suban, porque la app no los ve.
+- [ ] **Avisos del torneo activados en los 12 teléfonos.** Ya dentro del torneo: **Más › «Avisos del torneo» › Activar avisos**, y el teléfono pregunta si los permite. En iPhone solo se puede desde la app del ícono (iOS 16.4 o más nuevo); en Safari, Más dice que primero se instale. Avisan cuando empieza cada día (con su grupo, el hoyo de salida y la hora), cuando a una pareja le toca firmar la tarjeta, cuando su grupo dejó pendiente quién embocó al último en la víbora y cuando salen los resultados. Nunca llevan montos.
+  - A más tardar la noche de la Calcutta, para que el aviso del día 1 les llegue. En vivo también los ofrece después del primer hoyo guardado.
+  - Si alguien los bloqueó, Más le dice dónde volver a prenderlos en su teléfono.
+  - El aviso es del jugador que el teléfono tiene: si cambia de jugador, entra con otro PIN o el Comité lo saca del torneo, deja de recibirlos y hay que activarlos otra vez después de entrar con su PIN.
+  - El teléfono que causa el aviso no lo recibe (el que tocó «Iniciar ronda», el que guardó el hoyo): ya lo está viendo.
 - [ ] **Banquero definido.** Comité › Torneo › Banquero (quien cobra inscripciones y martillazos y paga premios).
 - [ ] **Bolsa cuadrada.** Comité › Torneo: el cuadre de premios debe estar en verde. Desde que el torneo sale de preparación, la app vuelve a revisarlo con los jugadores y rondas reales: si alguien no llega o se agrega un día, En vivo, Dinero y el Comité avisan "faltan $…" hasta que se ajusten los premios.
 - [ ] **Supabase despierto.** El proyecto gratuito se pausa tras 7 días sin uso; el cron diario lo mantiene vivo. El día antes del viaje abre la app y confirma que carga.
@@ -38,18 +43,19 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
    - **"Empezar el torneo"** cierra la noche de la Calcutta (guarda antes los nombres escritos): la tele pasa a los tableros del torneo. Antes lo hacía «Guardar parejas»; ahora es este botón.
    - Ajusta horas de salida en **Grupos**.
 8. **Antes de dormir:** **Dinero › Liquidación › "Quién debe qué"**: inscripciones, martillazos y recompras. Toca **Marcar pagado** conforme paguen (el aviso trae **Deshacer**). Todo se paga esa noche.
+   - Pide a quien no lo haya hecho que active **Más › «Avisos del torneo»** (sección 0): el aviso de que empezó el día 1, con su grupo y su hora, sale cuando el Comité toca "Iniciar ronda".
    - **¿Marcaste a alguien por error?** Abre **"Ya pagaron"**, justo abajo de la lista: está todo lo marcado, con su monto. Toca **Pagado** en esa fila y vuelve a "Quién debe qué" (el aviso trae **Deshacer** por si tocaste la fila equivocada). Solo cambia esa fila.
    - **Ojo con quien pagó a medias** (pagó un lote y luego compró otro): "Ya pagaron" muestra lo que pagó, y al quitarlo vuelve a deber **todo**, no solo esa parte. **Deshacer** la regresa tal cual; pasado el aviso, la app ya no puede registrar solo una parte. Si te pasa, cóbrale solo lo que de verdad le falta y entonces toca **Marcar pagado**: queda registrado completo.
 
 ## 2. Empezar una ronda
 
-1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.)
+1. Comité › **Rondas** › "Iniciar ronda" en el día que toca. (Si el día 1 no arranca, revisa que la ronda tenga campo y grupos.) Arma los grupos y sus horas antes de iniciarla: cada jugador con los avisos activados recibe «Empezó el día N» con su grupo, su hoyo de salida y su hora, y tocarlo abre su Tarjeta. El aviso sale una sola vez por día, aunque el día se reabra.
 2. Cada grupo abre **Tarjeta**: sale su grupo y "Llevas la tarjeta de: [pareja rival]". Cualquiera del grupo puede capturar a los cuatro. Si alguien se sale a medio hoyo (el botón de atrás, otra pestaña, otro hoyo, o el teléfono cierra la app), lo que llevaba capturado se queda en ese teléfono hasta 12 horas y vuelve a aparecer al abrir ese hoyo, con el aviso «Falta guardarlo». Si mientras tanto el otro teléfono ya guardó a ese jugador, vale lo que guardó el otro. En una tarjeta firmada ya no vuelve para los jugadores; al Comité sí, porque la puede corregir (con su razón). El botón de atrás del teléfono cierra primero la ventana que esté abierta.
 3. Por hoyo: golpes (arranca en par), putts (arranca en 2), "Levantó" si aplica → **Guardar hoyo**. El botón dice «Guardado» un instante y el siguiente hoyo entra de lado; en Android el teléfono vibra (se apaga en **Más › «Vibrar al capturar»**). Los demás teléfonos ven el cambio en menos de 2 segundos. Abajo del botón queda "Hoyo N guardado · Corregir" unos segundos para regresar. Para cambiar de hoyo también se desliza el dedo de lado: el hoyo sigue al dedo y, si el trazo es corto, regresa solo.
    - Si el hoyo que guardaste le pasa la víbora a alguien, abajo del número dice «La víbora pasa a …», y su fila lleva la víbora el resto del día.
    - Con dos teléfonos en el grupo, cada uno guarda solo a los jugadores que tocó (y a los que nadie ha capturado todavía): lo que ya guardó el otro teléfono no se pisa con el par. Si el otro guarda mientras tienes el hoyo abierto, sus valores aparecen solos.
    - Un doble toque no guarda el hoyo siguiente: el segundo toque no cuenta, y si guardas un hoyo sin tocar nada segundos después del anterior, la app pregunta "¿Guardar el N con todos en par?".
-4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar.
+4. Si dos hacen 3 putts en el mismo hoyo, la app pregunta **"¿Quién embocó al último?"** antes de guardar. Si el grupo sigue sin contestar (o tocó «No sabemos: que decida el Comité») y guarda un hoyo posterior, a los otros teléfonos del grupo con los avisos activados les llega un aviso con el hoyo pendiente; tocarlo abre ese hoyo en la Tarjeta, y al guardarlo otra vez vuelve la pregunta. El Comité también lo contesta en Comité › Tarjetas.
 
 ## 3. Corregir un score
 
@@ -87,7 +93,7 @@ Sigue capturando: la app guarda en el teléfono; arriba dice "Sin señal" y abaj
 
 ## 6. Cerrar una ronda
 
-1. Cada pareja **firma la tarjeta de la otra** al terminar el 18 ("Firmar tarjeta" en Tarjeta). Eso la bloquea.
+1. Cada pareja **firma la tarjeta de la otra** al terminar el 18 ("Firmar tarjeta" en Tarjeta). Eso la bloquea. Cuando el grupo tiene todos los hoyos guardados, a cada pareja le llega un aviso para firmar la tarjeta de la otra (menos al teléfono que guardó el último hoyo, que ya lo está viendo); tocarlo abre la tarjeta completa, donde está "Firmar".
 2. **Antes de terminar:** que cada teléfono que capturó abra la **Tarjeta con señal** y no le queden hoyos por subir. Un teléfono que se quedó sin señal puede tener hoyos sin subir, y después de terminar ya no entran (le salen como "Rechazado"). Lo mismo con "Terminar y publicar" en una Ronda rápida.
 3. Comité › **Rondas** › "Terminar ronda". Revisa en **En vivo** que no queden hoyos sin capturar ni víboras pendientes (sale un chip rojo). Si el día tiene hoyos en «Pendientes de revisar», Rondas lo dice en el día y "Terminar ronda" lo avisa; se puede terminar y resolverlos después en Comité › Tarjetas (sección 3), pero antes de marcar el torneo Terminado.
 4. Comité › **Hándicaps**: revisa el recorte del día 2 de cada jugador (regla anti-sandbag). Ajusta con razón si el Comité lo decide.

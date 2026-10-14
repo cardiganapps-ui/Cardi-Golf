@@ -16,6 +16,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { queuedFor, useOutbox } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { TournamentPushSwitch } from './TournamentPush'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
 import styles from './MoreScreen.module.css'
 import { humanError } from '../../lib/humanError'
@@ -152,6 +153,8 @@ export function MoreScreen() {
         </div>
       </div>
 
+      {/* The tournament's notices on this phone (PWA-10): always here, whatever En vivo's offer was told. */}
+      <TournamentPushSwitch />
 
       {canVibrate() && (
         <Toggle

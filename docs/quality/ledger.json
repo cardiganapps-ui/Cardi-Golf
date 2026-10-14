@@ -2259,11 +2259,17 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "supabase/tests/push_players.sql",
+        "src/lib/pushDispatch.test.ts",
+        "src/data/push.test.ts",
+        "src/screens/tournament/TournamentPush.test.tsx",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Event-driven only: no reminder before a tee time (needs pg_cron, not checked on production). A snake tiebreak on a group's last hole is told only when a card is signed, so without the pairs game it gets no notice (the red chip and Comité › Tarjetas still show it). Real delivery on iOS and Android to be checked at Rehearsal 1."
     },
     {
       "id": "PWA-12",
@@ -2273,9 +2279,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "src/lib/pushSw.test.ts",
+        "src/lib/noticeTaps.test.ts",
+        "src/data/push.test.ts",
+        "src/lib/noticeText.test.ts",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

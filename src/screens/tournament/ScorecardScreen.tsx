@@ -6,6 +6,7 @@
  */
 import confetti from 'canvas-confetti'
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
@@ -200,7 +201,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const [hole, setHole] = useState<number>(order.includes(asked) ? asked : firstOpen)
   /** The player chose a hole (a swipe, the grid, a save): the card stops following the first open one. */
   const chose = useRef(false)
-  const [view, setView] = useState<'hole' | 'grid'>('hole')
+  // The notice that a card is ready to sign opens the whole card (`?vista=tarjeta`), where «Firmar» is (PWA-10).
+  const [view, setView] = useState<'hole' | 'grid'>(() => (new URLSearchParams(window.location.search).get('vista') === 'tarjeta' ? 'grid' : 'hole'))
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   // `confirmedPar` rides along: the answer commits the hole, and «Sí, todos par» before it still holds.
   const [tiebreak, setTiebreak] = useState<{ candidates: string[]; confirmedPar: boolean } | null>(null)
@@ -486,6 +488,25 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     slide.current = 0
     setHole(firstOpen)
   }, [queueRead]) // eslint-disable-line react-hooks/exhaustive-deps -- once, when the queue has been read
+  // A notice tapped while the card is open (PWA-10, PWA-12) changes the address through the router, and this
+  // screen read the address when it opened: go where it says, as a tap on the grid would (the hole of the
+  // snake's question, or the whole card, where «Firmar» is). What was typed here stays on the phone, as when
+  // the card moves on (PWA-05). Never under an open question or a save on its way: its answer is this hole's.
+  const { search } = useLocation()
+  const searchSeen = useRef(search)
+  useEffect(() => {
+    if (searchSeen.current === search) return
+    searchSeen.current = search
+    if (sheetOpen || busy) return
+    const q = new URLSearchParams(search)
+    const h = Number(q.get('hoyo'))
+    if (order.includes(h)) {
+      chose.current = true
+      slide.current = Math.sign(order.indexOf(h) - idx)
+      setHole(h)
+      setView('hole')
+    } else if (q.get('vista') === 'tarjeta') setView('grid')
+  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps -- when the address changes, with the card as it is then
 
   const pairsOn = settings.modules.pairs.enabled
   const myPair = me.playerId ? snapshot.pairs.find((p) => p.player1Id === me.playerId || p.player2Id === me.playerId) : null

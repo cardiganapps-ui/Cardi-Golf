@@ -9,6 +9,7 @@ import { Link, Outlet, useNavigate, useParams, useSearchParams } from 'react-rou
 import { useTournament } from '../data/tournamentStore'
 import { useRejectedInbox } from '../data/rejectedInbox'
 import { useTournamentDevices } from '../data/tournamentDevices'
+import { usePushFixture, type PushState } from '../data/push'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
 import { EnterScreen } from '../screens/tournament/EnterScreen'
@@ -16,6 +17,7 @@ import { FIXTURE_NAMES, getFixture } from './fixtures'
 import { t } from '../i18n/es-MX'
 
 const noop = async () => undefined
+const PUSH_STATES: readonly string[] = ['unsupported', 'needsInstall', 'denied', 'off', 'on'] satisfies PushState[]
 
 type NetState = Pick<ReturnType<typeof useTournament.getState>, 'source' | 'realtime' | 'error' | 'updatedAt'>
 /**
@@ -37,10 +39,17 @@ export function FixtureGate() {
   const { name = '' } = useParams()
   const fixture = useMemo(() => getFixture(name), [name])
   const tournamentId = useTournament((s) => s.tournamentId)
-  const [search] = useSearchParams()
-  const as = search.get('as')
-  const net = search.get('net')
+  const [params] = useSearchParams()
+  const as = params.get('as')
+  const net = params.get('net')
   const navigate = useNavigate()
+  // `?push=off` (or on, denied, needsInstall, unsupported): the notices' switches as on such a phone, with no
+  // browser asked; kept while moving between the tournament's tabs, gone with the fixture.
+  const push = params.get('push')
+  useEffect(() => {
+    if (push && PUSH_STATES.includes(push)) usePushFixture.setState({ state: push as PushState })
+  }, [push])
+  useEffect(() => () => usePushFixture.setState({ state: null }), [])
 
   useEffect(() => {
     if (!fixture) return

@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -252,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-13.2')
+    expect(t.legal.privacy.version).toBe('2026-10-13.3')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -446,5 +446,53 @@ describe('the phones that hold a PIN (TRUST-24)', () => {
     expect(m).toMatch(/create or replace function public\.release_pin_claim[\s\S]*?not public\.is_tournament_organizer\(c\.tournament_id\)/)
     expect(m).toContain("'before', a.before - array['pin_hash', 'token_hash', 'p256dh', 'auth', 'endpoint', 'auth_user_id', 'released_by']")
     expect(m).toContain("'phone', case when not a.actor_platform and ph.total > 1")
+  })
+})
+
+/**
+ * PWA-10 (0052): a PIN phone can turn on its tournament's notices. The notice
+ * says what is kept (the address and the browser, tied to the phone's
+ * anonymous user and its player, and which notices each player was sent),
+ * what the notices say (never amounts, nor other players' names), and that
+ * the address goes when the phone stops holding the player; the migration
+ * does no more than that.
+ */
+describe('a PIN phone\'s tournament notices (PWA-10)', () => {
+  const m = source('supabase/migrations/0052_push_players.sql')
+
+  it('what is kept: the address and the browser, tied to the anonymous user and the player, and what each player was sent', () => {
+    expect(sections['Qué datos guardamos']).toContain(
+      'Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador.',
+    )
+    expect(m).toMatch(/create table public\.pin_push_subscriptions \([\s\S]*?player_id uuid not null[\s\S]*?auth_user_id uuid not null[\s\S]*?endpoint text not null unique[\s\S]*?user_agent text,/)
+    // The player is the phone's claim, never one it names.
+    expect(m).toMatch(/create or replace function public\.save_pin_push[\s\S]*?select d\.player_id into holds from public\.device_sessions d\s+where d\.auth_user_id = auth\.uid\(\) and d\.tournament_id = p_tournament_id/)
+    expect(m).toContain('create table public.player_notices (')
+  })
+
+  it('what the notices say: the day, the group, a card to sign, the snake\'s question, a place; never an amount nor another player\'s name', () => {
+    expect(sections['Para qué los usamos']).toContain(
+      'Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores.',
+    )
+    expect(m).toContain("kind text not null check (kind in ('round_live', 'card_to_sign', 'snake_tiebreak', 'results'))")
+    // What each notice says is built in these four places and no other (push_players.sql checks what is sent).
+    const events = m.slice(m.indexOf('-- 3. The events'), m.indexOf('-- 4. restore_tournament'))
+    for (const data of [
+      "'tournament', t.name, 'slug', t.slug, 'round', new.number,\n        'group', x.group_no, 'startHole', x.start_hole, 'teeTime', to_char(x.tee_time, 'HH24:MI')",
+      "base := jsonb_build_object('tournament', t.name, 'slug', t.slug, 'round', r.number, 'group', g.number);",
+      "base || jsonb_build_object('hole', pending, 'game', ",
+      "jsonb_build_object('tournament', t.name, 'slug', t.slug, 'rankLabel', n.rank_label, 'field', n.field)",
+    ])
+      expect(events).toContain(data)
+    expect(events.match(/perform public\.notify_player\(/g)).toHaveLength(4)
+    expect(events).not.toMatch(/display_name|full_name|amount|price|payments|calcutta/)
+  })
+
+  it('how long: until the phone stops holding the player, whatever ended it', () => {
+    expect(sections['Cuánto tiempo los guardamos']).toContain(
+      'La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador.',
+    )
+    expect(m).toContain('create trigger device_sessions_drop_push after update or delete on public.device_sessions')
+    expect(m).toMatch(/player_id uuid not null references public\.players \(id\) on delete cascade,\n {2}auth_user_id uuid not null references auth\.users \(id\) on delete cascade,\n {2}endpoint/)
   })
 })
