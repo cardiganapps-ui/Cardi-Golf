@@ -47,6 +47,12 @@ describe('a tournament’s manifest (PWA-09)', () => {
     expect(r.json.id).toBe('/')
   })
 
+  it('cached a day by the CDN and an hour by the phone: the same slug always gets the same answer (QA-14)', () => {
+    expect(call({ t: 'nachos-bachelor' }).headers['cache-control']).toBe('public, max-age=3600, s-maxage=86400')
+    expect(call({}).headers['cache-control']).toBe('public, max-age=3600, s-maxage=86400')
+    expect(call({}).json).toEqual({ ...APP_MANIFEST, start_url: '/' })
+  })
+
   it('a code reads as the slug the server would read: lower case', () => {
     expect(startUrlFor('NACHO1')).toBe('/?t=nacho1')
   })

@@ -119,11 +119,21 @@ export default defineConfig({
     // build does not know, which the flush never sends, and a closed channel's refusal to post a
     // landing. Branch coverage moves a little between runs (the lock and the backoff take
     // timing-dependent paths), so its bar sits a point and a half under the lowest (outbox v2: 93.5).
+    //
+    // QA-14: the serverless routes and their gate (api/, src/server/) hold the service-role key, the
+    // Anthropic key and the push secret, and none of them ran in CI until a 500 shipped. Their tests call
+    // each handler with the network and the SDKs stubbed; the bars are what they cover today, rounded down.
+    // What is left: scorecard-extract's last 500 (an error that is not the SDK's, which nothing upstream
+    // throws) and a few `??` fallbacks.
     coverage: {
       provider: 'v8',
-      include: ['src/data/outbox.ts'],
+      include: ['src/data/outbox.ts', 'api/**', 'src/server/**'],
       reporter: ['text'],
-      thresholds: { 'src/data/outbox.ts': { statements: 99.5, branches: 93, functions: 100, lines: 99.5 } },
+      thresholds: {
+        'src/data/outbox.ts': { statements: 99.5, branches: 93, functions: 100, lines: 99.5 },
+        'api/**': { statements: 99, branches: 95, functions: 100, lines: 99 },
+        'src/server/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+      },
     },
   },
 })

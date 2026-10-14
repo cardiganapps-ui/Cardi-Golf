@@ -11,12 +11,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { gunzipSync } from 'node:zlib'
 import { BACKUP_TABLES } from './backupTables'
+import { callRoute, leaked } from './testing/route'
 
-const ENV = { CRON_SECRET: 's', SUPABASE_URL: 'https://db.invalid', SUPABASE_SECRET_KEY: 'k', R2_ACCOUNT_ID: 'a', R2_ACCESS_KEY_ID: 'b', R2_SECRET_ACCESS_KEY: 'c', R2_BACKUP_BUCKET: 'd' }
+const ENV = {
+  CRON_SECRET: 'cron-secret-555',
+  SUPABASE_URL: 'https://db.invalid',
+  SUPABASE_SECRET_KEY: 'service-role-key-444',
+  R2_ACCOUNT_ID: 'a',
+  R2_ACCESS_KEY_ID: 'r2-access-666',
+  R2_SECRET_ACCESS_KEY: 'r2-secret-777',
+  R2_BACKUP_BUCKET: 'd',
+}
+/** What must never reach the answer or the logs. */
+const SECRETS = [ENV.CRON_SECRET, ENV.SUPABASE_SECRET_KEY, ENV.R2_SECRET_ACCESS_KEY]
 
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
+  vi.useRealTimers()
   vi.resetModules()
 })
 
@@ -28,8 +40,28 @@ interface World {
   /** Storage's files, and what R2's manifest already holds. */
   objects?: Array<{ bucket_id: string; name: string; updated_at: string }>
   manifest?: Record<string, string> | null
-  /** The history's rows. */
-  history?: number
+  /** The history's rows; null when the snapshot has none (`auditMaxId` null). */
+  history?: number | null
+  /** The request's Authorization header (none when null), and the environment's own changes. */
+  auth?: string | null
+  env?: Partial<Record<keyof typeof ENV, string>>
+  /** The snapshot's own failure: its status and body. */
+  snapshotFails?: { status: number; body: string }
+  /**
+   * R2 refuses (a status) or never answers (throw) the night's file, a Storage file, or the manifest's read or
+   * write. A 4xx: aws4fetch tries a 5xx again, up to ten times, waiting longer each time.
+   */
+  r2Backup?: number | 'throw'
+  r2File?: number | 'throw'
+  manifestRead?: number | 'throw'
+  manifestWrite?: number | 'throw'
+  /** Storage files that can't be read. */
+  unreadable?: string[]
+  /** backup_runs refuses (a status) or never answers (throw) the night's row, or the files added to it. */
+  recordFails?: number | 'throw'
+  filesRecordFails?: 'throw'
+  /** How long each Storage read takes, on a clock the test moves. */
+  readMs?: number
 }
 
 function rangeStart(init?: RequestInit): number {
@@ -40,7 +72,13 @@ function rangeStart(init?: RequestInit): number {
 /** The route against `world`, and what it read, uploaded and recorded. */
 async function run(world: World = {}) {
   const { snapshot = true, absent = null, objects = [], manifest = null, history = 1500 } = world
-  for (const [k, v] of Object.entries(ENV)) vi.stubEnv(k, v)
+  for (const [k, v] of Object.entries({ ...ENV, ...world.env })) vi.stubEnv(k, v)
+  const outcome = (o: number | 'throw' | undefined) => {
+    if (o === 'throw') throw new TypeError('fetch failed')
+    return o
+  }
+  /** Every request, with where it went and the headers it carried. */
+  const requests: Array<{ url: string; headers: Record<string, string> }> = []
   const read: string[] = []
   const uploads: Array<{ url: string; body: Buffer }> = []
   const records: Array<{ ok: boolean; error?: string }> = []
@@ -50,26 +88,42 @@ async function run(world: World = {}) {
     const req = input instanceof Request ? input : null
     const url = req ? req.url : String(input)
     const method = req ? req.method : (init?.method ?? 'GET')
+    requests.push({ url, headers: req ? Object.fromEntries(req.headers) : ((init?.headers ?? {}) as Record<string, string>) })
     if (url.includes('r2.cloudflarestorage.com')) {
-      if (method === 'GET') return manifest ? new Response(JSON.stringify(manifest)) : new Response('', { status: 404 })
+      const isManifest = url.endsWith('/files/manifest.json')
+      if (method === 'GET') {
+        const refused = outcome(world.manifestRead)
+        if (refused) return new Response('', { status: refused })
+        return manifest ? new Response(JSON.stringify(manifest)) : new Response('', { status: 404 })
+      }
+      const refused = outcome(isManifest ? world.manifestWrite : url.includes('/backups/') ? world.r2Backup : world.r2File)
+      if (refused) return new Response('', { status: refused })
       uploads.push({ url, body: req ? Buffer.from(await req.arrayBuffer()) : Buffer.from(init!.body as ArrayBuffer) })
       return new Response(null, { status: 200 })
     }
-    if (url.includes('/storage/v1/object/')) return new Response('png', { headers: { 'content-type': 'image/png' } })
+    if (url.includes('/storage/v1/object/')) {
+      if (world.readMs) vi.setSystemTime(Date.now() + world.readMs)
+      if (world.unreadable?.some((n) => url.endsWith(`/${n}`))) return new Response('', { status: 500 })
+      return new Response('png', { headers: { 'content-type': 'image/png' } })
+    }
     if (url.includes('/rest/v1/rpc/backup_snapshot')) {
       rpcBodies.push(JSON.parse(String(init!.body)))
+      if (world.snapshotFails) return new Response(world.snapshotFails.body, { status: world.snapshotFails.status })
       if (!snapshot) return new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function public.backup_snapshot' }), { status: 404 })
       if (absent) return new Response(JSON.stringify({ code: '22023', message: `${absent}: la tabla no existe en esta base de datos.` }), { status: 400 })
-      const tables = Object.fromEntries(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log').map((t) => [t, t === 'tournaments' ? [{ id: 't1' }] : []]))
-      return new Response(JSON.stringify({ snapshotAt: '2026-10-12T09:00:00Z', auditMaxId: history, tables, auth: { users: [{ id: 'u1' }], identities: [] }, storage: { objects } }))
+      const tables = Object.fromEntries(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log').map((t) => [t, t === 'tournaments' ? [{ id: 't1', name: 'Copa privada' }] : []]))
+      return new Response(JSON.stringify({ snapshotAt: '2026-10-12T09:00:00Z', auditMaxId: history, tables, auth: { users: [{ id: 'u1', email: 'ana@example.com' }], identities: [] }, storage: { objects } }))
     }
     const table = /\/rest\/v1\/([a-z_]+)/.exec(url)![1]!
     if (method === 'POST' && table === 'backup_runs') {
       records.push(JSON.parse(String(init!.body)))
+      const refused = outcome(world.recordFails)
+      if (refused) return new Response('', { status: refused })
       return new Response(JSON.stringify([{ id: 7 }]), { status: 201 })
     }
     if (method === 'PATCH' && table === 'backup_runs') {
       patches.push({ url: url.replace('https://db.invalid/rest/v1/', ''), body: JSON.parse(String(init!.body)) })
+      outcome(world.filesRecordFails)
       return new Response(null, { status: 204 })
     }
     read.push(url.replace('https://db.invalid/rest/v1/', ''))
@@ -83,29 +137,18 @@ async function run(world: World = {}) {
     }
     if (table === 'audit_log') {
       const from = rangeStart(init)
-      const n = Math.max(0, Math.min(1000, history - from))
+      const n = Math.max(0, Math.min(1000, (history ?? 0) - from))
       return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: from + i + 1 }))))
     }
     return new Response('[]', { status: 200 })
   })
   const { default: handler } = await import('../../api/backup-cron')
-  let status = 0
-  let body: Record<string, unknown> = {}
-  const res = {
-    setHeader() {},
-    status(s: number) {
-      status = s
-      return res
-    },
-    json(b: Record<string, unknown>) {
-      body = b
-      return res
-    },
-  }
-  await handler({ headers: { authorization: 'Bearer s' } } as never, res as never)
+  const auth = world.auth === undefined ? `Bearer ${ENV.CRON_SECRET}` : world.auth
+  const answer = await callRoute(handler, { headers: auth == null ? {} : { authorization: auth } })
   const backup = uploads.find((u) => u.url.includes('/backups/'))
   const dump = backup ? JSON.parse(gunzipSync(backup.body).toString('utf8')) : null
-  return { status, body, read, uploads, records, patches, rpcBodies, dump }
+  const body = answer.body as Record<string, unknown>
+  return { status: answer.status, body, answer, requests, read, uploads, records, patches, rpcBodies, dump }
 }
 
 describe('the nightly backup', () => {
@@ -120,7 +163,7 @@ describe('the nightly backup', () => {
     expect(Object.keys(r.dump.tables).sort()).toEqual(Object.keys(BACKUP_TABLES).sort())
     expect(r.dump.tables.money_adjustments).toEqual([])
     expect(r.dump.tables.audit_log).toHaveLength(1500)
-    expect(r.dump.auth.users).toEqual([{ id: 'u1' }])
+    expect(r.dump.auth.users).toEqual([{ id: 'u1', email: 'ana@example.com' }])
     expect(r.uploads).toHaveLength(1)
     expect(r.records).toEqual([expect.objectContaining({ ok: true })])
   })
@@ -170,3 +213,163 @@ describe('the nightly backup', () => {
     expect(r.body.files).toEqual({ copied: 0, pending: 0, failed: 0 })
   })
 })
+
+describe('the backup’s gate (QA-14)', () => {
+  it('without the cron’s secret, a wrong one or none set on the deploy: 401, and nothing read or written', async () => {
+    const worlds: World[] = [
+      { auth: null },
+      { auth: 'Bearer wrong' },
+      { auth: ENV.CRON_SECRET },
+      { auth: `bearer ${ENV.CRON_SECRET}` },
+      { auth: 'Bearer ', env: { CRON_SECRET: '' } },
+      { auth: 'Bearer undefined', env: { CRON_SECRET: '' } },
+    ]
+    for (const world of worlds) {
+      const r = await run(world)
+      expect([r.status, r.body]).toEqual([401, { error: 'unauthorized' }])
+      expect(r.answer.headers['cache-control']).toBe('no-store')
+      expect(r.requests).toEqual([])
+      expect(leaked(r.answer, SECRETS)).toEqual([])
+    }
+  })
+
+  it('a deploy missing a setting: 503 naming the settings, never their values, and nothing read', async () => {
+    const r = await run({ env: { SUPABASE_SECRET_KEY: '', R2_BACKUP_BUCKET: '' } })
+    expect([r.status, r.body]).toEqual([503, { error: 'backup not configured', missing: ['SUPABASE_SECRET_KEY', 'R2_BACKUP_BUCKET'] }])
+    expect(r.requests).toEqual([])
+    expect(leaked(r.answer, SECRETS)).toEqual([])
+  })
+})
+
+describe('what the backup answers and where its keys go (QA-14)', () => {
+  it('counts only: no row, no account, no key in the answer or the logs', async () => {
+    const r = await run({ objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+    expect(r.status).toBe(200)
+    expect(Object.keys(r.body).sort()).toEqual(['accounts', 'bytes', 'counts', 'files', 'key', 'ok', 'version'])
+    expect(r.body.counts).toMatchObject({ tournaments: 1, audit_log: 1500 })
+    expect(r.body.accounts).toBe(1)
+    expect(r.answer.text).not.toMatch(/Copa privada|ana@example\.com|t1/)
+    expect(leaked(r.answer, SECRETS)).toEqual([])
+  })
+
+  it('the service-role key goes to the database only; R2 gets a signature, never the key', async () => {
+    const r = await run({ objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+    const r2 = r.requests.filter((q) => q.url.includes('r2.cloudflarestorage.com'))
+    expect(r2.length).toBeGreaterThan(0)
+    for (const q of r2) {
+      expect(JSON.stringify(q.headers)).not.toContain(ENV.SUPABASE_SECRET_KEY)
+      expect(JSON.stringify(q.headers)).not.toContain(ENV.R2_SECRET_ACCESS_KEY)
+      expect(q.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=r2-access-666\//)
+    }
+    for (const q of r.requests.filter((q) => !q.url.includes('r2.cloudflarestorage.com'))) expect(q.url.startsWith('https://db.invalid/')).toBe(true)
+  })
+
+  it('the night’s file is gzipped JSON at its date', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-13T09:00:05Z'))
+    const r = await run()
+    expect(r.body.key).toBe('backups/2026-10-13.json.gz')
+    expect(r.uploads[0]!.url).toBe('https://a.r2.cloudflarestorage.com/d/backups/2026-10-13.json.gz')
+    const put = r.requests.find((q) => q.url.includes('/backups/'))!
+    expect([put.headers['content-type'], put.headers['content-encoding']]).toEqual(['application/json', 'gzip'])
+  })
+
+  it('a snapshot with no history reads none', async () => {
+    const r = await run({ history: null })
+    expect(r.status).toBe(200)
+    expect(r.read).toEqual([])
+    expect(r.dump.tables.audit_log).toEqual([])
+  })
+})
+
+describe('when the backup fails (QA-14)', () => {
+  it('the snapshot refused without words of its own, or another 404: 502 with its status, recorded', async () => {
+    for (const [fails, detail] of [
+      [{ status: 500, body: '<html>bad gateway</html>' }, 'snapshot: HTTP 500'],
+      [{ status: 404, body: '{"code":"PGRST125"}' }, 'snapshot: HTTP 404'],
+    ] as const) {
+      const r = await run({ snapshotFails: fails })
+      expect([r.status, r.body]).toEqual([502, { error: 'read failed', detail }])
+      expect(r.records).toEqual([{ ok: false, error: `read: ${detail}` }])
+      expect(r.uploads).toEqual([])
+    }
+  })
+
+  it('R2 refuses the night’s file: 502 with its status, recorded as failed, no file copied', async () => {
+    const r = await run({ r2Backup: 403, objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+    expect([r.status, r.body]).toEqual([502, { error: 'upload failed', status: 403 }])
+    expect(r.records).toEqual([{ ok: false, key: expect.stringMatching(/^backups\//), error: 'upload: HTTP 403' }])
+    expect(r.requests.some((q) => q.url.includes('/storage/v1/object/'))).toBe(false)
+  })
+
+  it('R2 never answers the night’s file: 502, and the night is recorded as failed, not lost without a word', async () => {
+    const r = await run({ r2Backup: 'throw' })
+    expect([r.status, r.body]).toEqual([502, { error: 'upload failed', status: null }])
+    expect(r.records).toEqual([{ ok: false, key: expect.stringMatching(/^backups\//), error: 'upload: fetch failed' }])
+    expect(leaked(r.answer, SECRETS)).toEqual([])
+  })
+
+  it('backup_runs refuses or never answers: the backup still stands, its files still copied', async () => {
+    for (const recordFails of [500, 'throw'] as const) {
+      const r = await run({ recordFails, objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+      expect(r.status).toBe(200)
+      expect(r.body.files).toEqual({ copied: 1, pending: 0, failed: 0 })
+      // No row to add the files to.
+      expect(r.patches).toEqual([])
+    }
+  })
+})
+
+describe('the night’s Storage files (QA-14)', () => {
+  const files = (n: number) => Array.from({ length: n }, (_, i) => ({ bucket_id: 'b', name: `f${i}.png`, updated_at: '1' }))
+
+  it('a manifest that can’t be read: no file copied, every one counted failed, and the backup stands', async () => {
+    for (const manifestRead of [403, 'throw'] as const) {
+      const r = await run({ manifestRead, objects: files(3) })
+      expect(r.status).toBe(200)
+      expect(r.body.files).toEqual({ copied: 0, pending: 0, failed: 3 })
+      expect(r.uploads.map((u) => u.url)).toEqual([expect.stringContaining('/backups/')])
+    }
+  })
+
+  it('a file Storage can’t give or R2 won’t take is counted failed; the rest go on', async () => {
+    const unreadable = await run({ unreadable: ['f1.png'], objects: files(3) })
+    expect(unreadable.body.files).toEqual({ copied: 2, pending: 0, failed: 1 })
+    const refused = await run({ r2File: 403, objects: files(2) })
+    expect(refused.body.files).toEqual({ copied: 0, pending: 0, failed: 2 })
+    const thrown = await run({ r2File: 'throw', objects: files(2) })
+    expect(thrown.body.files).toEqual({ copied: 0, pending: 0, failed: 2 })
+  })
+
+  it('the manifest is saved every five files and at the end, so a night cut short keeps what it copied', async () => {
+    const r = await run({ objects: files(7) })
+    const saves = r.uploads.filter((u) => u.url.endsWith('/files/manifest.json')).map((u) => Object.keys(JSON.parse(u.body.toString('utf8'))).length)
+    expect(saves).toEqual([5, 7])
+    expect(r.body.files).toEqual({ copied: 7, pending: 0, failed: 0 })
+  })
+
+  it('a manifest R2 won’t save is counted failed', async () => {
+    for (const manifestWrite of [403, 'throw'] as const) {
+      const r = await run({ manifestWrite, objects: files(2) })
+      expect(r.body.files).toEqual({ copied: 2, pending: 0, failed: 1 })
+    }
+  })
+
+  it('the files’ counts not reaching the night’s row fails nothing', async () => {
+    const r = await run({ filesRecordFails: 'throw', objects: files(1) })
+    expect(r.status).toBe(200)
+    expect(r.patches).toHaveLength(1)
+    expect(r.body.files).toEqual({ copied: 1, pending: 0, failed: 0 })
+  })
+
+  it('no file is started 34 s after the run began: the rest wait for the next night', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    // Each read takes 10 s: files 1 to 4 start by 30 s, the fifth would start at 40 s.
+    const r = await run({ readMs: 10_000, objects: files(6) })
+    expect(r.body.files).toEqual({ copied: 4, pending: 2, failed: 0 })
+    expect(r.patches).toEqual([{ url: 'backup_runs?id=eq.7', body: { files: { copied: 4, pending: 2, failed: 0 } } }])
+    const saves = r.uploads.filter((u) => u.url.endsWith('/files/manifest.json'))
+    expect(saves).toHaveLength(1)
+  })
+})
+

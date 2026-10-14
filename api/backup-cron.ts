@@ -265,15 +265,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = gzipSync(JSON.stringify(dump))
   const objectKey = backupKey(startedAt)
   const r2 = new AwsClient({ accessKeyId: env.R2_ACCESS_KEY_ID!, secretAccessKey: env.R2_SECRET_ACCESS_KEY!, service: 's3', region: 'auto' })
-  const put = await r2.fetch(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}/${objectKey}`, {
-    method: 'PUT',
-    body,
-    headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
-  })
+  // A request that never answers (R2 unreachable) throws: it is a failed night like a refusal, recorded for
+  // Salud, never an unhandled 500 that leaves no row behind (QA-14).
+  const put = await r2
+    .fetch(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BACKUP_BUCKET}/${objectKey}`, {
+      method: 'PUT',
+      body,
+      headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
+    })
+    .catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))))
   const rows = Object.values(counts).reduce((a, b) => a + b, 0)
-  if (!put.ok) {
-    await record(url, key, { ok: false, key: objectKey, error: `upload: HTTP ${put.status}` })
-    res.status(502).json({ error: 'upload failed', status: put.status })
+  if (put instanceof Error || !put.ok) {
+    const status = put instanceof Error ? null : put.status
+    const why = put instanceof Error ? put.message : `HTTP ${status}`
+    await record(url, key, { ok: false, key: objectKey, error: `upload: ${why}`.slice(0, 500) })
+    res.status(502).json({ error: 'upload failed', status })
     return
   }
   // The night is safe in R2 before any file is copied: a slow copy can't lose it.
