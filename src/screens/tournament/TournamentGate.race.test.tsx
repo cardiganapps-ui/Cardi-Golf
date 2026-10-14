@@ -85,7 +85,7 @@ function savedCopy(name = 'Guardado en el teléfono') {
 }
 /** What the shell would show: whose boards, and where they came from. */
 function Board() {
-  const { me, leave } = useTournamentCtx()
+  const { me, leave, retry } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const source = useTournament((s) => s.source)
   return (
@@ -93,6 +93,10 @@ function Board() {
       <p>{`${data?.snapshot.tournament.name}: ${source}, ${me.playerId}`}</p>
       <button type="button" onClick={() => void leave()}>
         Cambiar de jugador
+      </button>
+      {/* The header's chip before the live tournament is on screen (PWA-15). */}
+      <button type="button" onClick={() => void retry?.()}>
+        Actualizar
       </button>
     </>
   )
@@ -113,7 +117,8 @@ function serverLoads(name = 'En vivo del servidor') {
   const load = vi.fn(async (tid: string) => {
     const snapshot = structuredClone(fx.snapshot)
     snapshot.tournament.name = name
-    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null })
+    // As the store's load does: the boards, then the live channel opened (it joins later).
+    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null, realtime: 'connecting' })
   })
   useTournament.setState({ load })
   return load
@@ -130,7 +135,7 @@ async function backOnline() {
 const realLoad = useTournament.getState().load
 beforeEach(() => {
   useAuth.setState({ ready: true, user: { id: 'uid-phone' } as never })
-  useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
+  useTournament.setState({ tournamentId: null, data: null, source: null, error: null, realtime: 'off', load: realLoad })
   for (const f of [server.ensureSession, server.lookupTournament, server.myMembership, phone.readCached]) f.mockReset()
   for (const f of [phone.clearCached, phone.clearCachedSlug, phone.saveEntry]) f.mockClear()
   server.ensureSession.mockResolvedValue({})
@@ -274,6 +279,74 @@ describe('when the gate stops asking (REL-02)', () => {
       await vi.advanceTimersByTimeAsync(10 * 60_000)
     })
     expect(server.lookupTournament.mock.calls.length).toBe(lookups)
+  })
+})
+
+describe('the gate keeps asking until the live channel is open (REL-21)', () => {
+  it('the server’s boards from another fetch (the outbox’s) opened no channel: asked again, then no more', async () => {
+    // The header said «Conectando…» over them for good: the gate saw the server's boards and stopped asking.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    // The gate's first ask is lost on the way…
+    server.lookupTournament.mockRejectedValueOnce(new Error('TypeError: Failed to fetch')).mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue(member)
+    const load = serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    // …while a write's landing fetched the server's boards, which opens no channel.
+    act(() => useTournament.setState({ source: 'server', updatedAt: Date.now() }))
+    expect(useTournament.getState().realtime).toBe('off')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_500)
+    })
+    expect(load).toHaveBeenCalledTimes(1)
+    expect(useTournament.getState().realtime).toBe('connecting')
+    const asks = asked()
+    await backOnline()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5 * 60_000)
+    })
+    expect(asked()).toBe(asks)
+  })
+})
+
+describe('«Actualizar» before the live tournament is on screen (PWA-15)', () => {
+  const refreshButton = () => screen.getByRole('button', { name: 'Actualizar' })
+
+  it('the ask already out is waited for, not started again', async () => {
+    phone.readCached.mockResolvedValue(savedCopy())
+    const slow = deferred<typeof member>()
+    server.myMembership.mockReturnValueOnce(slow.promise).mockResolvedValue(member)
+    const load = serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await vi.waitFor(() => expect(asked()).toBe(1))
+    await act(async () => {
+      fireEvent.click(refreshButton())
+    })
+    expect(asked()).toBe(1)
+    await act(async () => slow.resolve(member))
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
+    expect(asked()).toBe(1)
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('with none out, one now: no waiting for the 20 s timer', async () => {
+    phone.readCached.mockResolvedValue(savedCopy())
+    // Opened with no signal: the first ask fails, and with no signal nothing is scheduled.
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    onLine.mockReturnValue(true)
+    const before = asked()
+    await act(async () => {
+      fireEvent.click(refreshButton())
+    })
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
+    expect(asked()).toBe(before + 1)
   })
 })
 

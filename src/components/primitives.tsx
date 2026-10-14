@@ -7,7 +7,7 @@
  */
 import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
-import { IconMinus, IconPlus } from './icons'
+import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
 import { TournamentLogo } from './TournamentLogo'
@@ -345,12 +345,24 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
     </div>
   )
 }
-export function LiveStatus({ text, live = true }: { text: string; live?: boolean }) {
-  return (
-    <span className={s.live}>
+/**
+ * A state in a word or two, with its dot (on while live). Given `onRefresh` it is a button, «Actualizar»
+ * (PWA-15): `label` is its whole name, the words shown first. `busy` while the refresh is under way: a tap
+ * then does nothing.
+ */
+export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text: string; live?: boolean; onRefresh?: () => void; busy?: boolean; label?: string }) {
+  const inner = (
+    <>
       <span className={`${s.liveDot} ${live ? '' : s.liveDotOff}`} aria-hidden="true" />
-      {text}
-    </span>
+      <span>{text}</span>
+    </>
+  )
+  if (!onRefresh) return <span className={s.live}>{inner}</span>
+  return (
+    <button type="button" className={`${s.live} ${s.liveButton}`} aria-label={label} aria-busy={busy || undefined} onClick={() => !busy && onRefresh()}>
+      {inner}
+      <IconRefresh size={16} className={`${s.liveIcon} ${busy ? s.liveIconBusy : ''}`} />
+    </button>
   )
 }
 

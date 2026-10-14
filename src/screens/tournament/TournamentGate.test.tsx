@@ -101,7 +101,8 @@ function serverLoads(name: string, fail = 0) {
     }
     const snapshot = structuredClone(fx.snapshot)
     snapshot.tournament.name = name
-    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null })
+    // As the store's load does: the boards, then the live channel opened (it joins later).
+    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null, realtime: 'connecting' })
   })
   useTournament.setState({ load })
   return load
@@ -110,7 +111,7 @@ function serverLoads(name: string, fail = 0) {
 const realLoad = useTournament.getState().load
 beforeEach(async () => {
   await clearCached(id)
-  useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
+  useTournament.setState({ tournamentId: null, data: null, source: null, error: null, realtime: 'off', load: realLoad })
   server.ensureSession.mockReset()
   server.sessionIfAny.mockReset()
   server.sessionIfAny.mockImplementation(() => server.ensureSession())
@@ -383,7 +384,7 @@ describe('a tournament joined with its code: the saved boards follow the tournam
     await saveSnapshot(id, fx.snapshot)
     cleanup()
     // The next morning, no signal: home's «Tu último torneo» opens /t/<slug>.
-    useTournament.setState({ tournamentId: null, data: null, source: null, error: null, load: realLoad })
+    useTournament.setState({ tournamentId: null, data: null, source: null, error: null, realtime: 'off', load: realLoad })
     server.ensureSession.mockImplementation(never)
     open(slug)
     expect(await screen.findByText(`${fx.snapshot.tournament.name}: cache`, {}, { timeout: 500 })).toBeTruthy()
