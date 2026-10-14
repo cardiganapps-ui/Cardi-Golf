@@ -2281,9 +2281,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/lib/launch.test.ts",
+        "src/lib/launchImages.test.ts",
+        "src/screens/ContinueScreen.test.tsx",
+        "src/lib/appManifest.test.ts",
+        "src/lib/precache.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2295,9 +2301,14 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/PullToRefresh.test.tsx",
+        "src/screens/tournament/pull.test.ts",
+        "src/data/tournamentStore.refresh.test.ts",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2978,9 +2989,13 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/connection.test.ts",
+        "src/screens/tournament/TournamentShell.status.test.tsx",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
