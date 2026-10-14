@@ -14,6 +14,10 @@ import { rateLimited, requireCourseManager } from '../src/server/auth.js'
 
 const GCA = 'https://api.golfcourseapi.com/v1'
 const OGA = 'https://api.opengolfapi.org'
+/** Longer than any course's name: a longer search is not one, and goes to no provider. */
+export const MAX_QUERY = 100
+/** Longer than any provider's id with its prefix. */
+const MAX_REF = 120
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = Record<string, any>
@@ -29,6 +33,21 @@ async function getJson(url: string, headers: Record<string, string>): Promise<An
     return null
   } finally {
     clearTimeout(timer)
+  }
+}
+
+/**
+ * A provider's hits, or null when its answer can't be read (`courses` not a list, a hit the adapter can't
+ * map): that provider drops out like one that is down, instead of failing the whole search.
+ */
+function hitsOf(body: Any | null, map: (c: Any) => ProviderSearchHit): ProviderSearchHit[] | null {
+  if (!body) return null
+  const courses: unknown = body.courses ?? []
+  if (!Array.isArray(courses)) return null
+  try {
+    return courses.slice(0, 25).map(map)
+  } catch {
+    return null
   }
 }
 
@@ -49,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const id = typeof req.query.id === 'string' ? req.query.id.trim() : ''
 
   if (id) {
-    const ref = parseRef(id)
+    const ref = id.length <= MAX_REF ? parseRef(id) : null
     if (!ref) {
       res.status(400).json({ error: 'Referencia inválida.' })
       return
@@ -80,15 +99,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(400).json({ error: 'Escribe al menos 2 letras.' })
     return
   }
+  if (q.length > MAX_QUERY) {
+    res.status(400).json({ error: `Escribe un nombre más corto: hasta ${MAX_QUERY} letras.` })
+    return
+  }
   const [g, o] = await Promise.all([
     gcaKey ? getJson(`${GCA}/search?search_query=${encodeURIComponent(q)}`, { Authorization: `Key ${gcaKey}` }) : Promise.resolve(null),
     getJson(`${OGA}/v1/courses/search?q=${encodeURIComponent(q)}`, ogaHeaders),
   ])
-  const gHits: ProviderSearchHit[] = ((g?.courses as Any[] | undefined) ?? []).slice(0, 25).map(gca.mapSearchHit)
-  const oHits: ProviderSearchHit[] = ((o?.courses as Any[] | undefined) ?? []).slice(0, 25).map(oga.mapSearchHit)
-  if (!g && !o) {
+  const gHits = hitsOf(g, gca.mapSearchHit)
+  const oHits = hitsOf(o, oga.mapSearchHit)
+  if (!gHits && !oHits) {
     res.status(503).json({ error: 'Búsqueda no disponible; sube una foto o captúralo a mano.', code: gcaKey ? 'down' : 'no_key' })
     return
   }
-  res.status(200).json({ hits: mergeHits([gHits, oHits]).slice(0, 30), providers })
+  res.status(200).json({ hits: mergeHits([gHits ?? [], oHits ?? []]).slice(0, 30), providers })
 }

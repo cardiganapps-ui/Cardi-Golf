@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
 import { rateLimited, requireCourseManager } from '../src/server/auth.js'
+import { jsonBody } from '../src/server/body.js'
 
 const HoleSchema = z.object({
   number: z.number().int().min(1).max(18),
@@ -41,7 +42,7 @@ export const MAX_IMAGE_CHARS = 4_000_000
  * well, ~$0.0025 per card. If a real card comes back wrong twice, raise this
  * one constant to 'claude-sonnet-5'.
  */
-const MODEL = 'claude-haiku-4-5'
+export const MODEL = 'claude-haiku-4-5'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
@@ -59,14 +60,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(503).json({ error: 'Lectura de tarjeta pendiente: falta configurar la llave.', code: 'no_key' })
     return
   }
-  const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as { image?: string; mediaType?: string }
-  const image = body.image ?? ''
+  const body = jsonBody(req) ?? {}
+  const image = body.image
   const mediaType = body.mediaType ?? 'image/jpeg'
-  if (!MEDIA_TYPES.includes(mediaType)) {
+  if (typeof mediaType !== 'string' || !MEDIA_TYPES.includes(mediaType)) {
     res.status(400).json({ error: 'Formato no soportado: usa JPG, PNG, WebP o PDF.' })
     return
   }
-  if (!image || image.length > MAX_IMAGE_CHARS) {
+  // Only text goes on to the paid call: a number or an object here was sent to Anthropic as the image.
+  if (typeof image !== 'string' || !image || image.length > MAX_IMAGE_CHARS) {
     res.status(400).json({ error: 'Falta la imagen o es demasiado grande (máximo 3 MB).' })
     return
   }
@@ -111,7 +113,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
     if (e instanceof Anthropic.APIError) {
-      res.status(502).json({ error: `No se pudo leer la tarjeta (${e.status}).` })
+      // A connection that never answered has no status: «(undefined)» is no help to anyone.
+      res.status(502).json({ error: typeof e.status === 'number' ? `No se pudo leer la tarjeta (${e.status}).` : 'No se pudo leer la tarjeta.' })
+      return
+    }
+    if (e instanceof Anthropic.AnthropicError) {
+      // The SDK's own refusal of what came back: text that isn't the card's shape (a read cut short, a
+      // refusal's few words, a hole outside the schema). That is a card it couldn't read, as above.
+      res.status(422).json({ error: 'No pude leer esa tarjeta. Prueba con otra foto más nítida.' })
       return
     }
     res.status(500).json({ error: 'No se pudo leer la tarjeta.' })
