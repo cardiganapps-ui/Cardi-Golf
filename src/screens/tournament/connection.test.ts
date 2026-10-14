@@ -4,7 +4,7 @@
  * model now says what the boards are, from facts, and the header shows it (TournamentShell.test.tsx).
  */
 import { describe, expect, it } from 'vitest'
-import { connectionOf, type ConnectionFacts } from './connection'
+import { connectionOf, factsOf, type ConnectionFacts } from './connection'
 
 const facts = (f: Partial<ConnectionFacts> = {}): ConnectionFacts => ({ online: true, hasData: true, fixture: false, polled: false, source: 'server', realtime: 'live', fetchFailed: false, ...f })
 
@@ -55,5 +55,15 @@ describe('the connection, from facts (REL-21)', () => {
     expect(connectionOf(facts({ polled: true, realtime: 'off' }))).toEqual({ kind: 'live', mayBeOld: false })
     expect(connectionOf(facts({ polled: true, realtime: 'off', fetchFailed: true }))).toEqual({ kind: 'connecting', mayBeOld: true })
     expect(connectionOf(facts({ polled: true, realtime: 'off', online: false }))).toEqual({ kind: 'offline', mayBeOld: true })
+  })
+
+  it('a link’s design fixture reads as a healthy link, «En vivo», as a real link does; a member’s fixture says nothing', () => {
+    const store = (tournamentId: string) => ({ tournamentId, data: {}, source: 'server' as const, realtime: 'off' as const, error: null })
+    // As SpectatorFixture and SpectatorGate put their boards in the store (showBoards: from the server, no channel).
+    expect(connectionOf(factsOf(store('fixture:spectator:full12-live'), true))).toEqual({ kind: 'live', mayBeOld: false })
+    expect(connectionOf(factsOf(store('fixture:spectator:dinero:full12-live'), true))).toEqual({ kind: 'live', mayBeOld: false })
+    expect(connectionOf(factsOf(store('spectator:abc'), true))).toEqual({ kind: 'live', mayBeOld: false })
+    expect(connectionOf(factsOf({ ...store('fixture:full12-live'), source: null as never }, true))).toBeNull()
+    expect(connectionOf(factsOf(store('fixture:spectator:full12-live'), false))).toEqual({ kind: 'offline', mayBeOld: true })
   })
 })

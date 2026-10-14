@@ -35,7 +35,7 @@ function open(at: string) {
 }
 
 describe('the shell on a link to watch (STRAT-05)', () => {
-  for (const at of ['/v/0EGCoHWzowIk4PgecAWI9b15', '/v/0EGCoHWzowIk4PgecAWI9b15/tv', '/v/_/full12-live/juegos', '/v/_dinero/full12-live/dinero']) {
+  for (const at of ['/v/0EGCoHWzowIk4PgecAWI9b15', '/V/0EGCoHWzowIk4PgecAWI9b15', '/v/0EGCoHWzowIk4PgecAWI9b15/', '/v/0EGCoHWzowIk4PgecAWI9b15/tv', '/v/_/full12-live/juegos', '/v/_dinero/full12-live/dinero']) {
     it(`${at}: no outbox and no session, only the app's switches`, () => {
       open(at)
       expect(startOutbox).not.toHaveBeenCalled()

@@ -145,7 +145,7 @@ export function scrub(text: string, max = 300): string {
 export function routeOf(path: string): string {
   return path
     .replace(/^\/t\/[^/]+/, '/t/:slug')
-    .replace(/^\/v\/[^/]+/, '/v/:token')
+    .replace(/^\/v\/[^/]+/i, '/v/:token')
     .replace(/^\/p\/[^/]+/, '/p/:handle')
     .replace(/^\/c\/unirme\/[^/]+/, '/c/unirme/:code')
     .replace(/^\/c\/(?!unirme\/)[^/]+/, '/c/:slug')

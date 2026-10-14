@@ -23,7 +23,21 @@ const from = vi.fn(() => {
   throw new Error('a link to watch reads and writes no table')
 })
 const auth = new Proxy({}, { get: () => () => { throw new Error('a link to watch starts no session') } })
-vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc, from, auth, channel: from, removeChannel: from }), supabaseConfigured: true }))
+// The app's client is never used on a link: its asks go as anon with no session (`anonRpc`), which answers from `rpc`.
+const appClient = vi.fn(() => {
+  throw new Error('a link to watch asks nothing with the app’s client (its session)')
+})
+vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc: appClient, from, auth, channel: from, removeChannel: from }), supabaseConfigured: true }))
+vi.mock('../../data/anonRpc', async () => {
+  const { ApiError } = await import('../../data/api')
+  return {
+    anonRpc: async (name: string, args: Record<string, unknown>) => {
+      const res = await rpc(name, args)
+      if (res.error) throw ApiError.from(res.error)
+      return res.data
+    },
+  }
+})
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 // The share image stays mounted while it is being made: the test reads it, and nothing is ever shared.
 vi.mock('../../components/shareAction', () => ({ shareCard: vi.fn(() => new Promise(() => undefined)) }))
@@ -117,6 +131,7 @@ describe('a link «Sin dinero» (the default)', () => {
     expect(screen.queryByText(t.live.pendingSnake(1))).toBeNull()
     expect(asked()).toEqual(['spectator_board'])
     expect(rpc.mock.calls[0]![1]).toEqual({ p_token: TOKEN, p_seen: null })
+    expect(appClient).not.toHaveBeenCalled()
     expect(from).not.toHaveBeenCalled()
   })
 

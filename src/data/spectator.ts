@@ -12,9 +12,11 @@
 import { supabase } from '../lib/supabase'
 import type { Snapshot } from '../engine/types'
 import { ApiError } from './api'
+import { anonRpc } from './anonRpc'
 import type { Row } from './mappers'
 import { SPECTATOR_PREFIX, snapshotFromRows, type SnapshotRows } from './tournamentStore'
 import SETTINGS_SPEC from './spectatorSettingsSpec.json'
+import { normalizeLegacySettings } from '../engine/settings/schema'
 
 /** The link as the Comité sees it (0053 `spectator_link`). */
 export interface SpectatorLink {
@@ -89,7 +91,8 @@ export function spectatorStoreId(token: string): string {
  */
 export async function spectatorBoard(token: string, seen: string | null): Promise<BoardAnswer | null> {
   if (!TOKEN_SHAPE.test(token)) return null
-  const answer = await rpc<Row | null>('spectator_board', { p_token: token, p_seen: seen })
+  // As anon with no session, whatever this browser keeps: the page is nobody's (`anonRpc`).
+  const answer = await anonRpc<Row | null>('spectator_board', { p_token: token, p_seen: seen })
   if (!answer || typeof answer !== 'object') return null
   if (answer.same === true) return { same: true, version: String(answer.version) }
   return { same: false, version: String(answer.version ?? ''), money: answer.money === true, snapshot: snapshotFromBoard(answer, spectatorStoreId(token)) }
@@ -167,13 +170,14 @@ function spectatorGame(g: unknown, money: boolean): unknown {
 
 /**
  * The settings as a link shows them, the same as 0053's `spectator_settings`:
- * only the keys the schema knows (`SPECTATOR_SETTINGS_SPEC`), never a custom
+ * older keys first read as today's (`normalizeLegacySettings`, as the members'
+ * parse reads them), then only the keys the schema knows (`SPECTATOR_SETTINGS_SPEC`), never a custom
  * bet's description, the Comité's free text; and without money every peso at
  * zero, the Calcutta off, each side game for fun and a side pot left out
  * altogether. The boards computed from them carry no money, and they still parse.
  */
 export function spectatorSettings(input: unknown, money: boolean): unknown {
-  const raw = pickBySpec(input, SPECTATOR_SETTINGS_SPEC)
+  const raw = pickBySpec(normalizeLegacySettings(input), SPECTATOR_SETTINGS_SPEC)
   if (!isObject(raw)) return raw
   if (money) return Array.isArray(raw.games) ? { ...raw, games: raw.games.map((g) => spectatorGame(g, true)) } : raw
   const modules = isObject(raw.modules) ? raw.modules : null

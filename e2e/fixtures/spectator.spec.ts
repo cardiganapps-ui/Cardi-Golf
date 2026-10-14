@@ -141,6 +141,9 @@ test('a link «Con dinero» on Calcutta night: the auction board, prices and all
 test('En vivo on a link: what it is, the TV and back', async ({ page }) => {
   await open(page, '/v/_/full12-live')
   await expect(page.getByText(t.spectator.note)).toBeVisible()
+  // A healthy link, as a real one reads once its ask is answered: «En vivo», never «Conectando…».
+  await expect(page.locator('header').first()).toContainText(t.sync.live)
+  await expect(page.locator('header').first()).not.toContainText(t.sync.connecting)
   await page.getByRole('link', { name: new RegExp(t.spectator.viewTv) }).click()
   await expect(page).toHaveURL(/\/v\/_\/full12-live\/tv$/)
   await page.getByRole('link', { name: t.tv.exit }).click()
@@ -186,6 +189,33 @@ test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage
   expect(kept.session.filter((k) => k.startsWith('cardi-golf')), 'sessionStorage').toEqual([])
   // No session asked for, so no sign-in, profile or inbox: only the app's switches.
   expect([...new Set(asked)].filter((p) => !p.endsWith('/rpc/app_flags')), 'requests').toEqual([])
+  expect(errors).toEqual([])
+  await context.close()
+})
+
+test('in a browser that keeps someone’s Polo session, a link asks as anon and leaves that session as it was', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 393, height: 852 } })
+  // Someone entered Polo in this browser once, and their session has expired: the app's client would refresh it.
+  const session = JSON.stringify({ access_token: 'the-user-jwt', token_type: 'bearer', expires_in: 3600, expires_at: 1, refresh_token: 'the-refresh-token', user: { id: '00000000-0000-4000-8000-000000000001', aud: 'authenticated', role: 'authenticated' } })
+  await context.addInitScript((s) => {
+    if (!localStorage.getItem('cardi-golf-auth')) localStorage.setItem('cardi-golf-auth', s)
+  }, session)
+  const page = await context.newPage()
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  const asked: Array<{ path: string; authorization: string | undefined; apikey: string | undefined }> = []
+  await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, async (r) => {
+    const headers = await r.request().allHeaders()
+    asked.push({ path: new URL(r.request().url()).pathname, authorization: headers.authorization, apikey: headers.apikey })
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  })
+  for (const path of ['/v/_/full12-live', '/V/_/full12-live/juegos', '/v/_dinero/full12-live/dinero/', '/v/_/full12-live/tv']) await open(page, path)
+  expect(asked.length, 'the app’s switches were asked').toBeGreaterThan(0)
+  expect(asked.filter((a) => a.path.includes('/auth/v1/')), 'no sign-in or token refresh').toEqual([])
+  for (const a of asked) expect(a, a.path).toMatchObject({ authorization: `Bearer ${a.apikey}` })
+  expect(JSON.stringify(asked)).not.toContain('the-user-jwt')
+  expect(await page.evaluate(() => localStorage.getItem('cardi-golf-auth')), 'the session kept here, untouched').toBe(session)
+  expect(await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name))).toEqual([])
   expect(errors).toEqual([])
   await context.close()
 })

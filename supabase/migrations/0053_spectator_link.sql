@@ -272,7 +272,38 @@ end;
 $$;
 revoke execute on function public.spectator_pick(jsonb, jsonb) from public, anon, authenticated;
 
--- The settings as a link shows them: only the keys the schema knows (`spectator_settings_spec`), and never a
+-- Older rows' keys under the names the schema reads, as the members' parse reads them (src/engine/settings/schema.ts
+-- `LEGACY_SETTINGS_ALIASES`, the same list: a test holds them together). In the object at `path`, a row with `from`
+-- and no `to` has `from` renamed `to`: the first tournament's `prizes.matrimonios` is `prizes.pairs`. Picking first
+-- would drop the old key, and a link «Con dinero» would fail to parse what the members read. Internal.
+create or replace function public.spectator_settings_legacy(p jsonb)
+returns jsonb
+language plpgsql immutable
+set search_path = public
+as $$
+declare
+  a jsonb;
+  path text[];
+  obj jsonb;
+begin
+  for a in select x from jsonb_array_elements('[{"path":["prizes"],"from":"matrimonios","to":"pairs"}]'::jsonb) x loop
+    if jsonb_typeof(p) is distinct from 'object' then
+      return p;
+    end if;
+    path := array(select jsonb_array_elements_text(a -> 'path'));
+    obj := case when cardinality(path) = 0 then p else p #> path end;
+    if jsonb_typeof(obj) = 'object' and not obj ? (a ->> 'to') and obj ? (a ->> 'from') then
+      obj := (obj - (a ->> 'from')) || jsonb_build_object(a ->> 'to', obj -> (a ->> 'from'));
+      p := case when cardinality(path) = 0 then obj else jsonb_set(p, path, obj) end;
+    end if;
+  end loop;
+  return p;
+end;
+$$;
+revoke execute on function public.spectator_settings_legacy(jsonb) from public, anon, authenticated;
+
+-- The settings as a link shows them: older keys read as today's (`spectator_settings_legacy`), then only the keys
+-- the schema knows (`spectator_settings_spec`), and never a
 -- custom bet's description, the Comité's free text, with money or without. Without money, also every peso at
 -- zero, the Calcutta off, every side game for fun, and a side pot left out altogether: who is in one is who
 -- paid into it. The boards computed from them carry no money, and they still parse (src/data/spectator.ts
@@ -282,7 +313,7 @@ returns jsonb
 language sql immutable
 set search_path = public
 as $$
-  with s as (select public.spectator_pick(p_settings, public.spectator_settings_spec()) as v),
+  with s as (select public.spectator_pick(public.spectator_settings_legacy(p_settings), public.spectator_settings_spec()) as v),
   games as (
     select coalesce(jsonb_agg(case when jsonb_typeof(g) is distinct from 'object' then g else
         g

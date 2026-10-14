@@ -30,12 +30,18 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
   // A browser with no session and nothing stored: what it asks, and whether anything signs in or listens.
   const context = await browser.newContext(PHONE)
   const rest: string[] = []
+  /** Each REST request's bearer against its key: a link asks as anon, with no session (`anonRpc`). */
+  const bearers: Array<[string | undefined, string | undefined]> = []
   let auth = 0
   let sockets = 0
   context.on('request', (r) => {
     const path = new URL(r.url()).pathname
     const at = path.indexOf('/rest/v1/')
-    if (at >= 0) rest.push(path.slice(at + '/rest/v1/'.length))
+    if (at >= 0) {
+      rest.push(path.slice(at + '/rest/v1/'.length))
+      const h = r.headers()
+      bearers.push([h.authorization, h.apikey])
+    }
     if (path.includes('/auth/v1/')) auth++
   })
   const viewer = await context.newPage()
@@ -84,6 +90,7 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
   expect(auth, 'requests to /auth/v1/ (a sign-in, a new anonymous user)').toBe(0)
   expect(sockets, 'live channels opened').toBe(0)
   expect(rest).toContain('rpc/spectator_board')
+  expect(bearers.every(([bearer, key]) => !!key && bearer === `Bearer ${key}`), 'every request as anon').toBe(true)
   expect([...new Set(rest)].filter((p) => p !== 'rpc/spectator_board' && p !== 'rpc/app_flags'), 'other requests').toEqual([])
   expect(errors).toEqual([])
   await context.close()

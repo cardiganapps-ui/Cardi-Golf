@@ -143,7 +143,7 @@ select pg_temp.as_user(:'org_a', format('insert into public.spectator_links (tou
 select harness.check(:'out' like '42501%', 'nor writes it: ' || :'out');
 select harness.check((select bool_and(not has_function_privilege(r, f, 'execute'))
     from unnest(array['anon', 'authenticated']) r,
-         unnest(array['public.new_spectator_token()', 'public.spectator_settings(jsonb, boolean)', 'public.spectator_settings_spec()', 'public.spectator_pick(jsonb, jsonb)', 'public.spectator_side_pot(jsonb)', 'public.spectator_links_audit()', 'public.spectator_link_json(public.spectator_links)']) f),
+         unnest(array['public.new_spectator_token()', 'public.spectator_settings(jsonb, boolean)', 'public.spectator_settings_spec()', 'public.spectator_settings_legacy(jsonb)', 'public.spectator_pick(jsonb, jsonb)', 'public.spectator_side_pot(jsonb)', 'public.spectator_links_audit()', 'public.spectator_link_json(public.spectator_links)']) f),
   'its internal functions are nobody''s to call');
 select harness.check(has_function_privilege('anon', 'public.spectator_board(text, text)', 'execute')
     and not has_function_privilege('anon', 'public.spectator_link(uuid)', 'execute')
@@ -355,5 +355,21 @@ select harness.check(:'s'::jsonb -> 'games' -> 0 = '{"id":"skins","type":"skins"
 select harness.check(public.spectator_pick('"texto"', public.spectator_settings_spec()) = 'null'::jsonb
   and public.spectator_settings('"texto"', true) = 'null'::jsonb and public.spectator_settings(null, false) is null,
   'settings that are not an object come as null');
+
+-- 12. The settings as the phone shows them, case for case: every fixture's, and each legacy key (src/data/spectatorSettings.cases.test.ts
+-- writes the cases and proves each parses as the members' settings do; here the server must give exactly the same)
+\ir harness/spectator_settings_cases.sql
+select harness.check((select count(*) from spectator_settings_cases) >= 30, 'the shared cases are there: ' || (select count(*) from spectator_settings_cases));
+select harness.check(not exists (select 1 from spectator_settings_cases c where public.spectator_settings(c.input, c.money) is distinct from c.expected),
+  'spectator_settings gives what the phone shows, for every case, with money and without: ' || coalesce((select string_agg(c.name || ' (money ' || c.money || ')', '; ')
+    from spectator_settings_cases c where public.spectator_settings(c.input, c.money) is distinct from c.expected), 'all equal'));
+select harness.check((select (public.spectator_settings(c.input, true) -> 'prizes' -> 'pairs') = '[2000, 1000]'::jsonb
+    and not (public.spectator_settings(c.input, true) -> 'prizes' ? 'matrimonios')
+  from spectator_settings_cases c where c.name = 'first tournament: prizes.matrimonios instead of pairs' and c.money),
+  'an older row''s prizes.matrimonios comes as prizes.pairs, as the members read it');
+select harness.check(public.spectator_settings_legacy('{"prizes": {"pairs": [1], "matrimonios": [2]}}') = '{"prizes": {"pairs": [1], "matrimonios": [2]}}'::jsonb
+  and public.spectator_settings_legacy('{"prizes": ["matrimonios"]}') = '{"prizes": ["matrimonios"]}'::jsonb
+  and public.spectator_settings_legacy('"texto"') = '"texto"'::jsonb and public.spectator_settings_legacy(null) is null,
+  'the new key wins over the old one, a list is no object, and anything else stays as it is');
 
 rollback;

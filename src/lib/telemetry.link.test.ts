@@ -27,8 +27,8 @@ afterEach(() => {
 })
 
 describe('telemetry on a link to watch (STRAT-05)', () => {
-  it('never starts there: no device id, nothing queued, nothing sent', async () => {
-    history.replaceState(null, '', '/v/0EGCoHWzowIk4PgecAWI9b15')
+  for (const at of ['/v/0EGCoHWzowIk4PgecAWI9b15', '/V/0EGCoHWzowIk4PgecAWI9b15', '/v/0EGCoHWzowIk4PgecAWI9b15/tv/']) it(`never starts at ${at}: no device id, nothing queued, nothing sent`, async () => {
+    history.replaceState(null, '', at)
     tel.startTelemetry({ PROD: true, MODE: 'production' })
     tel.step('app_open')
     tel.reportError('window.error', new TypeError('boom'))

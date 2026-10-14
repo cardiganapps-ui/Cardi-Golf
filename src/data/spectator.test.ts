@@ -10,14 +10,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computeTournament } from '../engine/computeTournament'
 import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
-import { parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
+import { LEGACY_SETTINGS_ALIASES, parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
 import { FIXTURE_NAMES } from '../dev/fixtures'
 import { readFileSync } from 'node:fs'
 import { getFixture } from '../dev/fixtures'
 import { SPECTATOR_MONEY_COLUMNS, spectatorAnswer } from './testing/spectatorAnswer'
 
 const rpc = vi.fn()
-vi.mock('../lib/supabase', () => ({ supabase: () => ({ rpc, from: () => { throw new Error('a link to watch reads no table') } }), supabaseConfigured: true }))
+vi.mock('../lib/supabase', () => ({ supabase: () => ({ rpc: () => { throw new Error('a link asks nothing with the app’s client') }, from: () => { throw new Error('a link to watch reads no table') } }), supabaseConfigured: true }))
+// The boards are asked as anon with no session; `rpc` answers as the server would.
+vi.mock('./anonRpc', async () => {
+  const { ApiError } = await import('./api')
+  return {
+    anonRpc: async (name: string, args: Record<string, unknown>) => {
+      const res = await rpc(name, args)
+      if (res.error) throw ApiError.from(res.error)
+      return res.data
+    },
+  }
+})
 
 const { forSpectators, nextPoll, pickBySpec, POLL, snapshotFromBoard, SPECTATOR_SETTINGS_SPEC, spectatorBoard, spectatorSettings, spectatorStoreId, TOKEN_SHAPE } = await import('./spectator')
 type Spec = typeof SPECTATOR_SETTINGS_SPEC
@@ -151,6 +162,28 @@ describe('only the keys the settings schema knows (0053 spectator_settings_spec)
     const migration = readFileSync(new URL('../../supabase/migrations/0053_spectator_link.sql', import.meta.url), 'utf8')
     const body = migration.slice(migration.indexOf('create or replace function public.spectator_settings_spec()')).split('\n$$;')[0]!
     expect(JSON.parse(/select '(\{.*\})'::jsonb/.exec(body)![1]!)).toEqual(SPECTATOR_SETTINGS_SPEC)
+  })
+
+  it('knows the keys older rows stored under another name: read as today’s first, in the same list on the server', () => {
+    // Each alias lands on a key the list keeps, and its old name is not one: it is renamed before the list applies.
+    const objectAt = (path: readonly string[]) =>
+      path.reduce<Spec>((s, k) => {
+        expect(s !== 's' && 'o' in s && s.o[k], k).toBeTruthy()
+        return (s as { o: Record<string, Spec> }).o[k]!
+      }, SPECTATOR_SETTINGS_SPEC) as { o: Record<string, Spec> }
+    expect(LEGACY_SETTINGS_ALIASES.length).toBeGreaterThan(0)
+    for (const a of LEGACY_SETTINGS_ALIASES) {
+      expect(objectAt(a.path).o, a.to).toHaveProperty(a.to)
+      expect(objectAt(a.path).o, a.from).not.toHaveProperty(a.from)
+    }
+    const migration = readFileSync(new URL('../../supabase/migrations/0053_spectator_link.sql', import.meta.url), 'utf8')
+    const body = migration.slice(migration.indexOf('create or replace function public.spectator_settings_legacy(')).split('\n$$;')[0]!
+    expect(JSON.parse(/jsonb_array_elements\('(\[.*\])'::jsonb\)/.exec(body)![1]!)).toEqual(LEGACY_SETTINGS_ALIASES)
+    expect(migration).toContain('public.spectator_pick(public.spectator_settings_legacy(p_settings), public.spectator_settings_spec())')
+    // And the schema's own parse renames exactly these: nothing else in it reads a key under another name.
+    const schema = readFileSync(new URL('../engine/settings/schema.ts', import.meta.url), 'utf8')
+    expect(schema.match(/normalizeLegacySettings\(raw\)/g)).toHaveLength(2)
+    expect(schema).not.toMatch(/z\.preprocess|\.transform\(/)
   })
 
   it('every fixture parses through it exactly as before, with money', () => {
