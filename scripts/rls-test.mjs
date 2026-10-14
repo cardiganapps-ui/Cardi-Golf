@@ -863,7 +863,7 @@ try {
     check(!pruneErr && pruned === 1 && (after ?? []).length === 0, 'the dispatch secret prunes a dead endpoint', { pruneErr: pruneErr?.message, pruned })
   }
 
-  console.log('push: a PIN phone, for the player it holds (0051):')
+  console.log('push: a PIN phone, for the player it holds (0052):')
   const pinPhone = client()
   const { data: pinSession } = await pinPhone.auth.signInAnonymously()
   created.users.push(pinSession.user.id)

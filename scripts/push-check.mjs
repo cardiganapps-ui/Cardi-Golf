@@ -5,7 +5,7 @@
 //      answering 201 (delivered) and 410 (gone). A notification for that
 //      account must go trigger → pg_net → /api/push-dispatch → web-push; the
 //      410 subscription is then pruned through push_prune and the 201 one stays.
-//   2. a PIN phone's (0051, PWA-10): a throwaway tournament with one player, a
+//   2. a PIN phone's (0052, PWA-10): a throwaway tournament with one player, a
 //      user holding him by PIN (device_sessions) and the same two endpoints
 //      saved for that player. A notice for him must go player_notices → pg_net
 //      → the route → web-push, and the gone endpoint is pruned from
@@ -72,7 +72,7 @@ try {
   const left = await settle('push_subscriptions', 'profile_id', uid)
   check(left?.length === 1 && left[0] === ok, 'a notification reaches the dispatch route; the gone endpoint is pruned, the live one stays', left)
 
-  console.log('a PIN phone’s notice (0051):')
+  console.log('a PIN phone’s notice (0052):')
   const { data: phone, error: phoneErr } = await admin.auth.admin.createUser({ email: `push-pin-${rand}@cardi-golf.test`, email_confirm: true })
   if (phoneErr) throw phoneErr
   users.push(phone.user.id)

@@ -21,7 +21,7 @@ export interface NoticeLike {
     title?: string
     body?: string
     url?: string | null
-    /** A tournament's notices to its players (0051): the day, the group, where it starts, the hole, the game. */
+    /** A tournament's notices to its players (0052): the day, the group, where it starts, the hole, the game. */
     round?: number
     group?: number | null
     startHole?: number | null
@@ -85,7 +85,7 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       const body = n.data.body ?? ''
       return { text: S.notice.platform_notice(title, body), to: safeNoticeUrl(n.data.url) ?? '/avisos', title, body }
     }
-    // A tournament's notices to its players (0051): the push says the tournament above, and opens its Tarjeta.
+    // A tournament's notices to its players (0052): the push says the tournament above, and opens its Tarjeta.
     case 'round_live': {
       const tournament = n.data.tournament ?? ''
       const round = num(n.data.round) ?? 1

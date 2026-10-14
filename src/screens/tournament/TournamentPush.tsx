@@ -7,7 +7,7 @@
  *   player has a hole saved: when the notices are worth something, never on
  *   load and never over the Tarjeta. «Ahora no» puts it away for this
  *   tournament; the switch in Más stays.
- * A phone that holds its player by PIN saves its address for him (0051, gone
+ * A phone that holds its player by PIN saves its address for him (0052, gone
  * when it stops holding him); an account that is the player's turns on its
  * own notices, which carry its tournaments' too. The permission prompt comes
  * only from the tap on «Activar avisos».

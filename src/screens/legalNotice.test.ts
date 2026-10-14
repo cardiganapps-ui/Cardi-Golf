@@ -450,7 +450,7 @@ describe('the phones that hold a PIN (TRUST-24)', () => {
 })
 
 /**
- * PWA-10 (0051): a PIN phone can turn on its tournament's notices. The notice
+ * PWA-10 (0052): a PIN phone can turn on its tournament's notices. The notice
  * says what is kept (the address and the browser, tied to the phone's
  * anonymous user and its player, and which notices each player was sent),
  * what the notices say (never amounts, nor other players' names), and that
@@ -458,7 +458,7 @@ describe('the phones that hold a PIN (TRUST-24)', () => {
  * does no more than that.
  */
 describe('a PIN phone\'s tournament notices (PWA-10)', () => {
-  const m = source('supabase/migrations/0051_push_players.sql')
+  const m = source('supabase/migrations/0052_push_players.sql')
 
   it('what is kept: the address and the browser, tied to the anonymous user and the player, and what each player was sent', () => {
     expect(sections['Qué datos guardamos']).toContain(

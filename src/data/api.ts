@@ -434,6 +434,14 @@ export async function adminSaveScore(payload: { round_id: string; player_id: str
   })
 }
 
+/**
+ * A Comité correction of one hole, every player in one call (0051, REL-22): admin_save_score for each row in one
+ * transaction, so a refused value or a lost signal leaves the hole as it was, never half corrected.
+ */
+export async function adminSaveHole(roundId: string, hole: number, rows: Array<{ player_id: string; strokes: number | null; putts: number | null; picked_up: boolean }>, reason: string | null) {
+  await rpc('admin_save_hole', { p_round_id: roundId, p_hole: hole, p_rows: rows, p_reason: reason })
+}
+
 /** keep = true: the current values stand; false: the previous device's values come back. Either way the flag clears. */
 export async function resolveDispute(roundId: string, playerId: string, hole: number, keep = true) {
   await rpc('resolve_score_dispute', { p_round_id: roundId, p_player_id: playerId, p_hole: hole, p_keep: keep })

@@ -4,7 +4,7 @@
  * for what it hears:
  * - an account (migration 0019): its notices, its tournaments' included, on
  *   every phone where it turned them on;
- * - the player a phone holds by PIN in one tournament (0051, PWA-10): that
+ * - the player a phone holds by PIN in one tournament (0052, PWA-10): that
  *   tournament's notices, until the phone stops holding him (the server drops
  *   the address then).
  * iPhone and iPad allow it only from the app on the home screen (16.4+), so

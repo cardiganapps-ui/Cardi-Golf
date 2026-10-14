@@ -1,4 +1,4 @@
--- PWA-10 (0051): push for the players who enter with a PIN, on tournament
+-- PWA-10 (0052): push for the players who enter with a PIN, on tournament
 -- days. On the two-tenant seed, tournament A plays the first tournament's
 -- games (pairs and the snake on) with four players on four PIN phones: Ana
 -- (dev_a, the seed's), Beto, Ceci and Dani, in one group, pairs Ana+Dani and
@@ -323,7 +323,7 @@ create function pg_temp.backup(t uuid) returns jsonb language sql stable as $$
   ))
 $$;
 select pg_temp.backup(:'t_a')::text as bk \gset
--- As if every event before had happened before 0051: nothing on record, day 1 closed since the backup.
+-- As if every event before had happened before 0052: nothing on record, day 1 closed since the backup.
 delete from public.player_notices where tournament_id = :'t_a';
 update public.rounds set status = 'finished' where id = :'r1';
 select pg_temp.mark() as m \gset

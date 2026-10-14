@@ -1023,7 +1023,7 @@ export const t = {
       privacy: 'Aviso de privacidad',
       end: '.',
     },
-    /** The tournament's switch on a PIN phone (Más, En vivo): what turning it on stores, and until when (save_pin_push, 0051). */
+    /** The tournament's switch on a PIN phone (Más, En vivo): what turning it on stores, and until when (save_pin_push, 0052). */
     pinPushNote: {
       start: 'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el ',
       privacy: 'Aviso de privacidad',
@@ -1103,7 +1103,7 @@ export const t = {
     unsupportedIos: 'Este iPhone no recibe avisos: hace falta iOS 16.4 o más nuevo.',
     enabled: 'Listo: te avisamos aquí.',
     disabled: 'Avisos apagados en este teléfono.',
-    /** A tournament's notices (0051, PWA-10): in Más always, and on En vivo after the first hole saved in the installed app. */
+    /** A tournament's notices (0052, PWA-10): in Más always, and on En vivo after the first hole saved in the installed app. */
     tournament: {
       title: 'Avisos del torneo',
       /** What they tell, for the games this tournament plays. */
@@ -1304,7 +1304,7 @@ export const t = {
       platform_notice: (title: string, body: string) => `${title}: ${body}`,
       platformTitle: 'Aviso de Polo',
       /**
-       * A tournament's notices to its players (0051, PWA-10), PIN phones included: the inbox row, and the push's
+       * A tournament's notices to its players (0052, PWA-10), PIN phones included: the inbox row, and the push's
        * body under the tournament's name. No names and never an amount: the server sends neither.
        */
       round_live: (tournament: string, round: number) => `Empezó el día ${round} de ${tournament}`,
@@ -1559,6 +1559,11 @@ export const t = {
     noStrokes: 'Sin golpes de ventaja',
     save: 'Guardar hoyo',
     savedHole: (n: number) => `Hoyo ${n} guardado`,
+    /** A hole the whole group had played, saved again: the card goes back to where the group is (UX-19). */
+    correctedHole: (n: number, backTo: number | null) => (backTo == null ? `Hoyo ${n} corregido` : `Hoyo ${n} corregido; seguimos en el ${backTo}`),
+    /** The Comité's correction goes to the server at once (a closed day, a signed card): with no signal it is not kept (REL-22). */
+    correctionNeedsSignal: 'Sin señal: la corrección no se guardó. Guárdala otra vez cuando haya señal; lo que escribiste sigue aquí.',
+    undoNeedsSignal: 'Sin señal: no se deshizo. Inténtalo otra vez cuando haya señal.',
     /** On the button for a moment after a save (MOT-02). */
     savedCheck: 'Guardado',
     /** The snake changed hands with this save (MOT-07). */

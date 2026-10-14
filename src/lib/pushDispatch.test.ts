@@ -1,7 +1,7 @@
 /**
  * The dispatch route (api/push-dispatch.ts): the database's trigger hands it a notice and the phones to send it
  * to, it signs and sends each, and gives the dead ones back. An account's notice carries the inbox's count for
- * the icon; a PIN phone's (0051, PWA-10) carries none, so the icon is left alone (it used to get «0», which
+ * the icon; a PIN phone's (0052, PWA-10) carries none, so the icon is left alone (it used to get «0», which
  * cleared whatever the icon showed).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'

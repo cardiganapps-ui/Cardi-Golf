@@ -2,10 +2,12 @@ name: Stack
 
 # The stack suite (QA-17, playwright.stack.config.ts, e2e/stack/): the real app
 # against a real local Supabase (`supabase start`: Postgres with every
-# migration, Auth, PostgREST, Realtime), in Chromium, two browser contexts as
-# two phones. It proves the live-scoring path end to end: a hole saved on one
-# phone shows on the other within 2 s, holes saved with no signal arrive when it
-# returns, and a lapsed session keeps its queued holes and its player (REL-16).
+# migration, Auth, PostgREST, Realtime), in Chromium, browser contexts as
+# phones. It proves the live-scoring path end to end: a hole saved on one phone
+# shows on the others within 2 s (two phones, and four saving at once on 4G),
+# holes saved with no signal arrive when it returns, corrections made while
+# they are being sent land as corrected, and a lapsed session keeps its queued
+# holes and its player (REL-16).
 # Runs on pull requests that are ready for review and touch the sync path, the
 # database or the suite, nightly on main, and by hand. Drafts skip it (Actions
 # minutes are budgeted once the repository is private).

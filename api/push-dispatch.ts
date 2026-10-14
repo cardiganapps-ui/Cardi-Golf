@@ -2,7 +2,7 @@
  * POST /api/push-dispatch, called by the database through pg_net once per new
  * notice: an account's notification (trigger notifications_push, migration
  * 0019) or a tournament's notice to the phones that hold a player by PIN
- * (trigger player_notices_push, 0051):
+ * (trigger player_notices_push, 0052):
  *   Authorization: Bearer <PUSH_DISPATCH_SECRET>
  *   { subscriptions: [{ endpoint, keys: { p256dh, auth } }], notice: { id, kind, data, actor }, unread? }
  * Sends one web push per subscription, signed with the VAPID pair, and hands

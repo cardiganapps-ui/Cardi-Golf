@@ -1,4 +1,4 @@
--- 0051: push for the players who enter with a PIN, on tournament days (PWA-10).
+-- 0052: push for the players who enter with a PIN, on tournament days (PWA-10).
 --
 -- Push reached accounts only, and only for social events: a subscription
 -- belonged to a profile (0019), and a notification was a profile's (0016).
@@ -656,7 +656,7 @@ begin
   perform set_config('cardi.restore', was, true);
   delete from public.players where tournament_id = p_tournament_id and not exists (select 1 from r_players r where r.id = players.id);
 
-  -- What the backup brings back is no news: its days, holes and signatures tell no player anything (0051).
+  -- What the backup brings back is no news: its days, holes and signatures tell no player anything (0052).
   quiet := coalesce(current_setting('cardi.restore', true), '');
   perform set_config('cardi.restore', '1', true);
   update public.rounds set number = number + 1000 where tournament_id = p_tournament_id;

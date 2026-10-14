@@ -43,7 +43,7 @@ export type NotificationKind =
   | 'results'
   | 'round_invite'
   | 'crew_join'
-  // A tournament's notices to its players (0051): an account that is the player's hears them in its inbox too.
+  // A tournament's notices to its players (0052): an account that is the player's hears them in its inbox too.
   | 'round_live'
   | 'card_to_sign'
   | 'snake_tiebreak'

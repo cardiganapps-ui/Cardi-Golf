@@ -12,7 +12,7 @@ import { Sheet, toast } from '../../components/ui'
 import { EmptyState, ScoreMark, Stepper, markFor } from '../../components/primitives'
 import { IconAlert, IconCheck, IconChevronLeft, IconChevronRight, IconLock, IconSnake } from '../../components/icons'
 import { useOnline } from '../../components/OfflineBanner'
-import { adminSaveScore } from '../../data/api'
+import { adminSaveHole } from '../../data/api'
 import { hasStoredSession, useAuth } from '../../data/auth'
 import { roundRivalries, type RoundRivalry } from '../../data/quick'
 import { baseRow, enqueueAward, enqueueHole, enqueueScore, enqueueSignature, enqueueTiebreak, useOutbox, type HoleEntry, type HoleFields } from '../../data/outbox'
@@ -31,7 +31,7 @@ import { easeFast, easeSlow, still } from '../../design/motion'
 import { haptic } from '../../lib/haptics'
 import { dragOffset, swipeEnd, swipeIntent, type Intent } from './swipe'
 import { celebrationColors } from '../../lib/tokens'
-import { humanError } from '../../lib/humanError'
+import { humanError, isTransient } from '../../lib/humanError'
 import { useTournamentCtx } from './TournamentGate'
 import { readKept, sweepKept, writeKept, type Draft, type KeptDraft } from './tarjetaDrafts'
 import { useActiveRound, useMyGroup } from './useMyGroup'
@@ -222,7 +222,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const settledAt = useRef(0)
   const lastSaveAt = useRef(-Infinity)
   /** The last save, shown in the save bar instead of a toast over «Guardar hoyo» (PWA-01). */
-  const [savedNote, setSavedNote] = useState<{ hole: number; idx: number; canUndo: boolean; restored?: boolean } | null>(null)
+  /** `corrected`: the hole was a correction, and where the card went back to (null: the round is all played, UX-19). */
+  const [savedNote, setSavedNote] = useState<{ hole: number; idx: number; canUndo: boolean; restored?: boolean; corrected?: number | null } | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(savedTimer.current), [])
   const showSaved = (note: NonNullable<typeof savedNote>) => {
@@ -525,6 +526,11 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   }
   /** A Comité correction on a signed card needs a reason (§7); it is written through the server RPC, not the outbox. */
   const needsReason = me.isAdmin && anySigned
+  /**
+   * Whether writing these players is a Comité correction on the server: a phone's write would be refused (a day
+   * no longer live, a signed card, 0026). Then the whole hole goes in one call, every player or none (REL-22).
+   */
+  const correctsOnServer = (ids: string[]) => me.isAdmin && ids.some((id) => round.status !== 'live' || signed(id))
   /** Untouched defaults on an unplayed hole: the points badge stays quiet (P2). */
   const initialDraft = (pid: string): Draft | null => {
     try {
@@ -598,13 +604,15 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     const ofGroup = !!me.playerId && group.playerIds.includes(me.playerId)
     const entries: HoleEntry[] = []
     const queued: Promise<void>[] = []
-    const corrections: Array<Parameters<typeof adminSaveScore>[0]> = []
+    const viaServer = correctsOnServer(Object.keys(values))
+    const corrections: Array<{ player_id: string; strokes: number | null; putts: number | null; picked_up: boolean }> = []
     for (const p of players) {
       const d = values[p.id]
       if (!d) continue
       const payload = { round_id: round.id, player_id: p.id, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
-      // A Comité correction where a phone's write is refused (a round not live, a signed card, 0026): the server RPC, as Comité › Tarjetas does.
-      if (me.isAdmin && (round.status !== 'live' || signed(p.id))) corrections.push(payload)
+      // A Comité correction where a phone's write is refused: every player of the hole to the server, as one correction.
+      // One by one, a refusal or a lost signal on the second came after the first was saved: half a hole (REL-22).
+      if (viaServer) corrections.push({ player_id: p.id, strokes: payload.strokes, putts: payload.putts, picked_up: payload.picked_up })
       else if (!ofGroup) queued.push(enqueueScore(tournamentId, { ...payload, entered_by: me.playerId, client_ts: new Date().toISOString() }, settle))
       else {
         const base = seen?.get(p.id) ?? rowOf(p.id, holeNumber)
@@ -626,12 +634,12 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     if (lastHoled) {
       queued.push(enqueueTiebreak(tournamentId, { round_id: round.id, group_id: group.id, hole: holeNumber, last_holed_player_id: lastHoled, decided_by: me.playerId }, settle))
     }
-    // The server's corrections, one by one, once the phone's own writes are on their way; then those, failed or not.
+    // The server's correction, in one call, once the phone's own writes (winners, the snake's answer) are on their way; then those, failed or not.
     const stored = Promise.all(queued)
     // Awaited below; a refusal meanwhile is not an unhandled one.
     stored.catch(() => undefined)
     try {
-      for (const payload of corrections) await adminSaveScore(payload, reason.trim() || null)
+      if (corrections.length) await adminSaveHole(round.id, holeNumber, corrections, reason.trim() || null)
     } finally {
       await stored
     }
@@ -646,6 +654,10 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     let celebrate = false
     const before: Record<string, Draft> = {}
     const wasPlayed: Record<string, boolean> = {}
+    // A hole the whole group had played, saved again, is a correction: the card goes back to where the group is,
+    // the first hole someone still has to play, not to the hole after this one (UX-19).
+    const correcting = players.every((p) => holeInfo(p.id)?.played)
+    const backTo = correcting ? (order.find((h) => h !== savedHole && players.some((p) => !roundState[p.id]?.holes[h - 1]?.played)) ?? null) : null
     // Only what this phone means to write: the players touched here, and the
     // ones the server has nothing for yet (that is how an all-par hole stays
     // one tap). A player the other phone already saved is left alone (REL-05).
@@ -672,7 +684,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
      * recompute, a third of a second on a mid-range phone (PERF-10); then the write waited for the frame, and a
      * page closed inside it lost the hole.
      */
-    const viaServer = Object.keys(writes).some((id) => me.isAdmin && (round.status !== 'live' || signed(id)))
+    const viaServer = correctsOnServer(Object.keys(writes))
     const seen = new Map(bases.current)
     // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
     const auto = new Set(confirmedPar ? [] : Object.keys(writes).filter((id) => !touched.current.has(id)))
@@ -682,7 +694,8 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       try {
         await writing
       } catch (e) {
-        toast(humanError(e))
+        // Nothing of the hole was kept (one call, REL-22): with no signal, say so, and what was typed stays on the card.
+        toast(isTransient(e) ? S.correctionNeedsSignal : humanError(e))
         setBusy(false)
         return
       }
@@ -725,13 +738,17 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
     // already had values (they are written back), "Corregir" when it was new. It lives in
     // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
     const written = Object.keys(writes)
-    showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]) })
-    const moveOn = savedIdx < order.length - 1
+    showSaved({ hole: savedHole, idx: savedIdx, canUndo: written.length > 0 && written.every((id) => wasPlayed[id]), ...(correcting ? { corrected: backTo } : {}) })
+    // Where the card goes: after a correction, back to where the group is (the grid when it has played every hole);
+    // after a new hole, the next one (the grid after the last).
+    const target = correcting ? (backTo == null ? null : order.indexOf(backTo)) : savedIdx < order.length - 1 ? savedIdx + 1 : null
+    const moveOn = target != null
+    const savedLine = correcting ? S.correctedHole(savedHole, backTo) : S.savedHole(savedHole)
     if (moveOn) {
-      savedSaid.current = S.savedHole(savedHole)
-      goto(savedIdx + 1)
+      savedSaid.current = savedLine
+      goto(target)
     } else {
-      setSaid(S.savedHole(savedHole))
+      setSaid(savedLine)
       setView('grid')
     }
     try {
@@ -767,7 +784,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
       snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
       if (!celebrate) haptic('moment')
       // One message for a screen reader: the hole saved, the snake, and where the card is now.
-      setSaid([S.savedHole(savedHole), S.snakePasses(cardName(passedTo)), ...(moveOn ? [latest.current.holeSpoken] : [])].join('. '))
+      setSaid([savedLine, S.snakePasses(cardName(passedTo)), ...(moveOn ? [latest.current.holeSpoken] : [])].join('. '))
     }
   }
 
@@ -792,7 +809,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
           setSaid(S.restoredHole(u.hole))
         },
         (e: unknown) => {
-          toast(humanError(e))
+          toast(isTransient(e) ? S.undoNeedsSignal : humanError(e))
           if (undo.current === u) showSaved(note)
         },
       )
@@ -818,7 +835,7 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   const statusLine = (fallback: ReactNode) =>
     savedNote ? (
       <span className={styles.savedLine}>
-        <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : S.savedHole(savedNote.hole)}</span>
+        <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : savedNote.corrected !== undefined ? S.correctedHole(savedNote.hole, savedNote.corrected) : S.savedHole(savedNote.hole)}</span>
         {!savedNote.restored && (
           <button type="button" className={styles.savedAction} onClick={undoLast}>
             {savedNote.canUndo ? t.common.undo : S.correct}

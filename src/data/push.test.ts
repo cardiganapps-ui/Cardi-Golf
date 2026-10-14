@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 /**
  * Push on this device (src/data/push.ts): an account's address (0019) and a PIN phone's, for the player it
- * holds (0051, PWA-10). PWA-12's rough edges: an iPad read as «this browser takes no notices» (iPadOS Safari
+ * holds (0052, PWA-10). PWA-12's rough edges: an iPad read as «this browser takes no notices» (iPadOS Safari
  * sends a Mac's user agent), the blocked copy sent the installed iPhone app to browser settings it has none of,
  * and the icon's count followed nothing but Avisos.
  */
