@@ -72,7 +72,9 @@ function paidList() {
   return within(details)
 }
 const markButtons = () => owedList().getAllByRole('button', { name: new RegExp(`^${M.markPaid}: `) })
-const leonelOwes = (amount: string) => owedList().queryByRole('button', { name: new RegExp(`^${M.markPaid}: Leonel ${M.paysTo} ${M.bank}, .*: \\${amount}$`) })
+/** «Leonel le paga al banco» (COPY-08: the bank is no one's name). */
+const toBank = (who: string, paid = false) => M.payText(M.payWords(who, null, paid))
+const leonelOwes = (amount: string) => owedList().queryByRole('button', { name: new RegExp(`^${M.markPaid}: ${toBank('Leonel')}, .*: \\${amount}$`) })
 /** Every promise the screen chained, settled. */
 const settle = () => act(async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve()
@@ -91,7 +93,7 @@ describe('Dinero: a payment made in parts (UX-21)', () => {
     mount(paidFirstLot)
     expect(leonelOwes('$1,500')).toBeTruthy()
     // «Ya pagaron» lists what he paid, even though he still owes the rest.
-    const toggle = paidList().getByRole('button', { name: new RegExp(`^${M.paid}: Leonel ${M.paidTo} ${M.bank}, .*: \\$750$`) })
+    const toggle = paidList().getByRole('button', { name: new RegExp(`^${M.paid}: ${toBank('Leonel', true)}, .*: \\$750$`) })
     fireEvent.click(toggle)
     await settle()
     expect(api.writes).toEqual([{ from_player_id: 'p11', to_player_id: null, amount: 750, kind: 'calcutta', paid: false }])
@@ -155,7 +157,7 @@ describe('Dinero: payment writes one at a time (UX-21)', () => {
     fireEvent.click(markButtons()[0]!)
     await settle()
     // Taken back from «Ya pagaron»: a later tap on the same payment.
-    const who = name.slice(`${M.markPaid}: `.length).split(` ${M.paysTo} `)[0]!
+    const who = name.slice(`${M.markPaid}: `.length).split(/ (le paga|pone lo suyo|se queda)/)[0]!
     fireEvent.click(paidList().getAllByRole('button', { name: new RegExp(`^${M.paid}: ${who} `) })[0]!)
     await settle()
     expect(api.writes).toHaveLength(2)

@@ -301,7 +301,8 @@ export function computeMoney(
   // «¿Cómo se calculó?» of what people pay by (MONEY-07): an account's part of
   // an amount is each of its flows still due, or what was paid beyond it.
   const names = new Map(players.map((p) => [p.id, p.displayName]))
-  const nameOf = (id: Id | null) => (id ? (names.get(id) ?? '?') : M.bank)
+  /** A party of a money sentence: the person's name, or null for the bank, which the sentence words itself (COPY-08). */
+  const nameOf = (id: Id | null) => (id ? (names.get(id) ?? '?') : null)
   /** `sign` 1: from the account's payer's side (what he owes is +). */
   const accountParts = (a: Account, sign: 1 | -1): MoneyPart[] => {
     if (a.due < 0) return [{ label: W.overpaid(kindLabel(a.kind)), amount: sign * a.due }]
@@ -379,7 +380,9 @@ export function computeMoney(
   const line = (from: Id | null, to: Id | null, amount: number, settles: Account[]): Transfer => {
     // From the payer's side: what he owes first, then what nets against it.
     const parts = settles.flatMap((a) => accountParts(a, a.from === from ? 1 : -1)).sort((x, y) => Number(x.amount < 0) - Number(y.amount < 0))
-    const title = amount === 0 ? M.squared(nameOf(from), nameOf(to)) : M.pays(nameOf(from), nameOf(to), fmt(amount))
+    // The banker with his own bank is his money in or out of what he holds, never a payment to himself.
+    const bankerSelf = !!bankerId && ((from === bankerId && to === null) || (from === null && to === bankerId))
+    const title = amount === 0 ? M.squared(nameOf(from), nameOf(to)) : M.pays(nameOf(from), nameOf(to), fmt(amount), bankerSelf)
     return { from, to, amount, settles, final: settles.every((a) => a.final), parts, why: [{ title, steps: [...parts.map(partText), amount === 0 ? W.nets : W.total(fmt(amount))] }] }
   }
   for (const p of players) {

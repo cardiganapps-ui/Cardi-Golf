@@ -31,8 +31,11 @@ function mount() {
   )
 }
 const state = () => useTournament.getState().data!.state
-const name = (id: string | null) => (id ? useTournament.getState().data!.snapshot.players.find((p) => p.id === id)!.displayName : M.bank)
-const lineName = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(name(from), name(to)) : M.pays(name(from), name(to), formatMoney(amount)))
+/** A party as the sentence takes it: a name, or null for the bank (COPY-08). */
+const party = (id: string | null) => (id ? useTournament.getState().data!.snapshot.players.find((p) => p.id === id)!.displayName : null)
+const banker = () => useTournament.getState().data!.snapshot.tournament.bankerPlayerId
+const bankerSelf = (from: string | null, to: string | null) => !!banker() && ((from === banker() && to === null) || (from === null && to === banker()))
+const lineName = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.pays(party(from), party(to), formatMoney(amount), bankerSelf(from, to)))
 /** Opens the trigger and returns the steps the sheet lists. */
 function open(button: HTMLElement) {
   fireEvent.click(button)
@@ -59,6 +62,18 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
       mount()
       fireEvent.click(screen.getByRole('radio', { name: M.final }))
     }
+  })
+
+  it('the bank takes its article, and the banker with his own bank is his own money, never a payment to himself (COPY-08)', () => {
+    fireEvent.click(screen.getByRole('radio', { name: M.final }))
+    const rows = Array.from(document.querySelectorAll('[class*="_transfer_"]'), (r) => r.textContent ?? '')
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.filter((x) => /Banco (le )?paga|paga a Banco|al Banco|pagó a Banco/.test(x))).toEqual([])
+    const own = state().money.viaBank.find((tr) => (tr.from === banker() && tr.to === null) || (tr.from === null && tr.to === banker()))
+    expect(own, 'the banker has a line of his own with the bank').toBeTruthy()
+    const words = M.payText(M.payWords(party(own!.from), party(own!.to), false, true))
+    expect(words).toMatch(/^.+ (pone lo suyo en el banco|se queda con lo suyo del banco)$/)
+    expect(rows.some((x) => x.includes(words))).toBe(true)
   })
 
   it('sin banco: a transfer shows both positions and the share between them', () => {

@@ -174,13 +174,13 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
     // The action says what it does, and its name says which debt; the row leaves the list.
     const row = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').filter({ hasText: who }).filter({ hasText: detail })
     const mark = row.getByRole('button', { name: new RegExp(`^${M.markPaid}`) })
-    await expect(mark).toHaveAccessibleName(`${M.markPaid}: ${who} ${M.paysTo} ${M.bank}, ${detail}: ${amount}`)
+    await expect(mark).toHaveAccessibleName(`${M.markPaid}: ${M.payText(M.payWords(who, null))}, ${detail}: ${amount}`)
     await mark.click()
     await expect(page.getByRole('status').filter({ hasText: M.markedPaid }).last()).toBeVisible()
     await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
 
     // In «Ya pagaron» the state reads «Pagado», pressed, and a tap takes it back.
-    const toggle = (await openPaid(page)).getByRole('button', { name: `${M.paid}: ${who} ${M.paidTo} ${M.bank}, ${detail}: ${amount}`, exact: true })
+    const toggle = (await openPaid(page)).getByRole('button', { name: `${M.paid}: ${M.payText(M.payWords(who, null, true))}, ${detail}: ${amount}`, exact: true })
     await expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await toggle.click()
     await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last()).toBeVisible()
@@ -213,7 +213,7 @@ test('Dinero: «Deshacer» puts a payment back the way it was, both ways (UX-21)
   const paid = await openPaid(page)
   const paidBefore = await paid.locator('[class*="_transfer_"]').allInnerTexts()
   writes.length = 0
-  await paid.getByRole('button', { name: `${M.paid}: Arturo ${M.paidTo} ${M.bank}, ${M.owesEntry}: $2,500`, exact: true }).click()
+  await paid.getByRole('button', { name: `${M.paid}: ${M.payText(M.payWords('Arturo', null, true))}, ${M.owesEntry}: $2,500`, exact: true }).click()
   await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length + 1)
   await page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last().getByRole('button', { name: t.common.undo }).click()
   await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid })).toHaveCount(0)
@@ -230,13 +230,14 @@ test('Dinero once final: a vía-banco line marked by mistake comes back from «Y
   await open(page, '/t/_/full12-finished/dinero')
   await page.getByRole('radio', { name: M.final }).click()
   const before = await settlementRows(page)
-  const line = page.locator('[class*="_transfer_"]').filter({ hasText: /Banco\s+paga a\s+Camilo/ })
+  // COPY-08: «El banco le paga a Camilo», never «Banco paga a Camilo».
+  const line = page.locator('[class*="_transfer_"]').filter({ hasText: /El banco\s+le paga a\s+Camilo/ })
   await expect(line).toContainText('$10,200')
   await line.getByRole('button', { name: new RegExp(`^${M.markPaid}`) }).click()
   await expect(line).toHaveCount(0)
   // The line closed two accounts, his prizes and his lot: each is on record, and each comes back.
   const paid = await openPaid(page)
-  for (const name of [`${M.paid}: ${M.bank} ${M.paidTo} Camilo, ${M.prizes}`, `${M.paid}: Camilo ${M.paidTo} ${M.bank}, ${M.owesLots([1])}`]) {
+  for (const name of [`${M.paid}: ${M.payText(M.payWords(null, 'Camilo', true))}, ${M.prizes}`, `${M.paid}: ${M.payText(M.payWords('Camilo', null, true))}, ${M.owesLots([1])}`]) {
     await paid.getByRole('button', { name: new RegExp(`^${name}: `) }).click()
   }
   await expect(line).toContainText('$10,200')

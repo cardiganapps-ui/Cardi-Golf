@@ -63,7 +63,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
             {prizes.map((p, i) => (
               <div key={i} className={styles.rowLine}>
                 <span className={styles.rowText}>
-                  <strong>{p.payerId ? `${name(p.payerId)} ${t.moneyScreen.paysTo} ${name(p.playerId)}` : name(p.playerId)}</strong>
+                  <strong>{p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}</strong>
                   <span className={styles.rowSub}>
                     {p.label}
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
