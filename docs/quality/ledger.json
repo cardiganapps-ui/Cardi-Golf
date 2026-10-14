@@ -3812,9 +3812,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/styles/module-classes.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3826,9 +3830,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/setup/reviewLines.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3840,11 +3848,14 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Back across documents (the wizard opened by its address, or after a reload) loads the previous page: no beforeunload prompt, by the codebase's choice; the draft survives in the tab and Forward restores it. iOS edge-swipe and Android back gesture to be checked on real phones."
     },
     {
       "id": "UX-06",
