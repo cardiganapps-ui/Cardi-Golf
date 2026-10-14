@@ -508,10 +508,16 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 169,
+      "tests": [
+        "src/screens/tournament/scorecard/saveDecision.test.ts",
+        "src/screens/tournament/scorecard/writeHole.test.ts",
+        "src/screens/tournament/scorecard/holeEntry.test.ts",
+        "src/screens/tournament/scorecard/parts.test.tsx",
+        "src/screens/tournament/ScorecardScreen.emptyGroup.test.tsx"
+      ],
+      "verifiedBy": "independent verifier 2026-10-14: 28 behaviour tests run on main and the branch, 27 identical; the one difference (V7, sync line) fixed in this PR",
       "residual": null
     },
     {
@@ -2509,11 +2515,15 @@
       "workstream": "W14",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 169,
+      "tests": [
+        "src/screens/tournament/scorecard/saveDecision.test.ts",
+        "src/screens/tournament/scorecard/parts.test.tsx",
+        "src/screens/tournament/renderSmoke.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Admin screens are left to the browser render check (e2e/fixtures/pages.spec.ts): they read from the server when they open."
     },
     {
       "id": "QA-14",
