@@ -5,8 +5,9 @@
  * unusual values), a player's row and the save bar. The conflicts box is `HoleConflicts`, tested in
  * src/components/HoleConflicts.test.tsx. The whole card is ScorecardScreen*.test.tsx's.
  */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useAuth } from '../../../data/auth'
 import { useOutbox } from '../../../data/outbox'
 import { dataFromSnapshot } from '../../../data/tournamentStore'
 import { getFixture } from '../../../dev/fixtures'
@@ -14,7 +15,7 @@ import type { HoleResult } from '../../../engine/core/types'
 import { t } from '../../../i18n/es-MX'
 import { CorrectionReasonSheet } from './CorrectionReasonSheet'
 import { PlayerRow } from './PlayerRow'
-import { SaveBar } from './SaveBar'
+import { SaveBar, SESSION_RECHECK_MS } from './SaveBar'
 import { DefaultsSheet, TiebreakSheet, UnusualSheet } from './SaveSheets'
 import { ScoreGrid } from './ScoreGrid'
 import { SignSheet, SigningPanel } from './SigningPanel'
@@ -268,6 +269,23 @@ describe('SaveBar', () => {
     bar({ locked: S.lockedSigned })
     expect(screen.getByText(S.lockedSigned)).toBeTruthy()
     expect(screen.queryByText(t.sync.pendingHoles(2))).toBeNull()
+  })
+
+  it('a session that auth-js gives up on while the card is open turns the line into «espera tu PIN» (the split verifier’s V7)', () => {
+    vi.useFakeTimers()
+    try {
+      localStorage.setItem('cardi-golf-auth', '{}')
+      useAuth.setState({ user: null })
+      useOutbox.setState({ pending: 4, pendingHoles: 1, held: 4, heldHoles: 1 })
+      bar()
+      expect(screen.getByText(t.sync.pendingHoles(1))).toBeTruthy()
+      localStorage.removeItem('cardi-golf-auth')
+      act(() => void vi.advanceTimersByTime(SESSION_RECHECK_MS))
+      expect(screen.getByText(t.sync.heldForPinShort(1))).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+      localStorage.removeItem('cardi-golf-auth')
+    }
   })
 
   it('after a correction the note says where the card went back to, with «Corregir» on a new hole (UX-19)', () => {

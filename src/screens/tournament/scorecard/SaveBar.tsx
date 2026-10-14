@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { IconCheck } from '../../../components/icons'
 import { useOnline } from '../../../components/OfflineBanner'
 import { hasStoredSession, useAuth } from '../../../data/auth'
@@ -9,6 +9,8 @@ import type { SavedNote } from './useHoleSave'
 import styles from '../ScorecardScreen.module.css'
 
 const S = t.card
+/** While signed out, how often the line looks at the stored session again (auth-js removes it with no event). */
+export const SESSION_RECHECK_MS = 2000
 
 /**
  * The line under «Guardar hoyo» (and under the grid): the last save with its way back for a few seconds, else
@@ -23,6 +25,14 @@ export const SaveStatus = memo(function SaveStatus({ savedNote, onUndo }: { save
   const rejected = useOutbox((s) => s.rejected.length)
   const signedOut = useAuth((s) => !s.user)
   const online = useOnline()
+  // auth-js removes a session it gave up on after the user is already null, so no store tells this line: the
+  // card used to read it again on its every render; now that it doesn't render the line, it looks again itself.
+  const [, recheck] = useState(0)
+  useEffect(() => {
+    if (!signedOut || heldHoles === 0) return
+    const id = setInterval(() => recheck((n) => n + 1), SESSION_RECHECK_MS)
+    return () => clearInterval(id)
+  }, [signedOut, heldHoles])
   const sync = syncWords({ pending, pendingHoles, heldHoles, lastError, rejected, signedOut, online, storedSession: hasStoredSession() })
   if (!savedNote) return <span className={`${styles.saveStatus} ${sync.warn ? styles.saveStatusWarn : ''}`}>{sync.text}</span>
   return (
