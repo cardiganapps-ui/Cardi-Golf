@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': '9ab5969b4c81c9b2' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -463,11 +463,14 @@ describe('the link to watch a tournament (STRAT-05)', () => {
 
   it('who sees what, word for word', () => {
     expect(sections['Lo que se ve de un torneo']).toContain(
-      'Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, y si es el homenajeado; sus golpes, putts y resultados, los grupos, las parejas y los juegos. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta; con dinero ve también lo que cada quien paga, gana y debe, y la Calcutta con sus precios. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera.',
+      'Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, el tee que juega cada día, el hándicap de juego que le fije el Comité (sin su motivo) y si es el homenajeado; el campo de cada día con sus tees y sus hoyos; sus golpes, putts y resultados, los grupos, las parejas, los equipos, quién firmó cada tarjeta y cuándo, y los juegos, con quién juega cada uno y quién ganó cada concurso. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta, ni los juegos con bote aparte ni quién entró en ellos; con dinero ve también lo que cada quien paga, gana y debe, la Calcutta con sus precios y los botes aparte. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera.',
     )
     expect(sections['El dinero de un torneo']).toContain('y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace.')
-    expect(sections['Lo que el Comité captura de cada jugador']).toContain('el nombre corto, la categoría, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea.')
-    expect(sections['Dónde viven']).toContain('Un navegador que abre un enlace para ver no guarda nada del torneo: lo pide otra vez mientras lo tiene en pantalla.')
+    expect(sections['Lo que el Comité captura de cada jugador']).toContain('el nombre corto, la categoría, el tee, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea.')
+    expect(sections['Dónde viven']).toContain(
+      'Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido.',
+    )
+    expect(sections['Qué datos guardamos']).toContain('Un navegador que solo abre un enlace para ver no manda ninguno.')
     expect(sections['Cuánto tiempo los guardamos']).toContain(
       'El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace.',
     )
@@ -479,10 +482,42 @@ describe('the link to watch a tournament (STRAT-05)', () => {
     expect(m).toMatch(/revoke all on public\.spectator_links from public, anon, authenticated;/)
     expect(m).not.toMatch(/create policy [a-z_]+ on public\.spectator_links/)
     // Changed or switched off, a token answers null at once; the history never keeps one.
-    expect(fn('save_spectator_link')).toContain('token = case when coalesce(p_new_token, false) then excluded.token else s.token end')
+    expect(fn('save_spectator_link')).toContain('token = case when coalesce(p_new_token, false) then public.new_spectator_token() else token end')
     expect(fn('spectator_links_audit')).toContain("to_jsonb(new) - 'token'")
     expect(fn('spectator_links_audit')).toContain("to_jsonb(old) - 'token'")
     expect(NOT_BACKED_UP).toHaveProperty('spectator_links')
+  })
+
+  it('everything the link shows is in the notice: the course and its tees, the tee of each day, teams, signatures, overrides', () => {
+    const board = fn('spectator_board')
+    const said = sections['Lo que se ve de un torneo']!
+    for (const [table, words] of [
+      ["'courses'", 'el campo de cada día con sus tees y sus hoyos'],
+      ["'tees'", 'el campo de cada día con sus tees y sus hoyos'],
+      ["'holes'", 'el campo de cada día con sus tees y sus hoyos'],
+      ["'round_tees'", 'el tee que juega cada día'],
+      ["'teams'", 'los equipos'],
+      ["'card_signatures'", 'quién firmó cada tarjeta y cuándo'],
+      ["'handicap_overrides'", 'el hándicap de juego que le fije el Comité (sin su motivo)'],
+      ["'game_entries'", 'con quién juega cada uno'],
+      ["'hole_awards'", 'quién ganó cada concurso'],
+    ] as const) {
+      expect(board, table).toContain(table)
+      expect(said, table).toContain(words)
+    }
+    // «Sin dinero» a side pot is not on it, nor who entered it (who paid in), as the notice says.
+    expect(fn('spectator_settings')).toContain('where p_money or not public.spectator_side_pot(g)')
+    expect(board).toContain('x.game_id <> all (hidden)')
+    expect(said).toContain('ni los juegos con bote aparte ni quién entró en ellos')
+  })
+
+  it('«no guarda nada del torneo»: on a link the app opens no outbox, reads no session and sends no technical data', () => {
+    const shell = source('src/app/AppShell.tsx')
+    expect(shell).toMatch(/if \(linkPage\) return\n {4}void init\(\)\n {4}void startOutbox\(\)/)
+    const telemetry = source('src/lib/telemetry.ts')
+    expect(telemetry).toContain("location.pathname.startsWith('/admin/_') || onLinkPage()) return")
+    expect(telemetry).toContain('if (!enabled || onLinkPage()) return')
+    expect(source('src/lib/linkPage.ts')).toContain("export const isLinkPage = (path: string): boolean => /^\\/v\\//.test(path)")
   })
 
   it('anyone with it, no account: the boards answer without a session, and the page never makes a user', () => {

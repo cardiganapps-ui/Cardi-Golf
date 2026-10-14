@@ -253,10 +253,11 @@ export function LiveScreen() {
       )}
 
       <QuickFinish />
-      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). */}
-      <InstallCard />
+      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). Not on a link to
+          watch (STRAT-05): the installed app opens Home, never the link, and on an iPhone it keeps nothing of Safari's. */}
+      {!spectator && <InstallCard />}
       {/* In the installed app, once this phone's player saved a hole: the tournament's notices (PWA-10). */}
-      <TournamentPushOffer />
+      {!spectator && <TournamentPushOffer />}
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>

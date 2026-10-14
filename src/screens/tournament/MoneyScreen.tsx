@@ -350,13 +350,14 @@ export function MoneyScreen() {
           <HowCalculated why={money.banker.why} ariaLabel={`${t.money.howCalculated} ${M.bank}`} />
         </span>
         {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
-        {state.flags.poolWarning && (
+        {/* What the Comité fixes, and where in its screens: not a link to watch's to read (STRAT-05). */}
+        {state.flags.poolWarning && !spectator && (
           <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
             {state.flags.poolWarning}
           </span>
         )}
-        {!banker && <span className={styles.bankNote}>{M.noBanker}</span>}
-        {u.openDays && (
+        {!banker && !spectator && <span className={styles.bankNote}>{M.noBanker}</span>}
+        {u.openDays && !spectator && (
           <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
             {t.unassigned.finalOpen(u.openDays.open, u.openDays.missing)}
           </span>

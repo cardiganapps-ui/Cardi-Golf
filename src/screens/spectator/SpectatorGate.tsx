@@ -23,7 +23,7 @@ import { showBoards, useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'
 import { TournamentContext, useTournamentCtx } from '../tournament/TournamentGate'
 import { MoneyScreen } from '../tournament/MoneyScreen'
-import { forgetBoards, SPECTATOR_ME } from './spectatorView'
+import { forgetBoards, SPECTATOR_ME, useNoIndex } from './spectatorView'
 
 const noop = async () => undefined
 
@@ -38,6 +38,7 @@ export function SpectatorGate() {
   /** Ask now (the error's «Reintentar», the context's refresh). */
   const askNow = useRef<() => void>(() => undefined)
   const has = useTournament((s) => s.tournamentId === id && !!s.data)
+  useNoIndex()
 
   useEffect(() => {
     let stopped = false

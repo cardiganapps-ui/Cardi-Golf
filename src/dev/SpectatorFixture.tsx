@@ -10,7 +10,7 @@ import { Outlet, useParams } from 'react-router'
 import { forSpectators } from '../data/spectator'
 import { showBoards, useTournament } from '../data/tournamentStore'
 import { TournamentContext } from '../screens/tournament/TournamentGate'
-import { forgetBoards, SPECTATOR_ME, spectatorLookup } from '../screens/spectator/spectatorView'
+import { forgetBoards, SPECTATOR_ME, spectatorLookup, useNoIndex } from '../screens/spectator/spectatorView'
 import { FixtureIndex } from './FixtureGate'
 import { getFixture } from './fixtures'
 
@@ -25,6 +25,7 @@ export function SpectatorFixture({ money = false }: { money?: boolean }) {
     return fixture ? forSpectators(structuredClone(fixture.snapshot), money, id) : null
   }, [name, money, id])
   const has = useTournament((s) => s.tournamentId === id && !!s.data)
+  useNoIndex()
 
   useEffect(() => {
     if (!snapshot) return

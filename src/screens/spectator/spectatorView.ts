@@ -3,6 +3,7 @@
  * the page polled in the store, and nothing left behind once it closes.
  * Shared by the real gate and its design fixtures.
  */
+import { useEffect } from 'react'
 import type { LookupResult } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
@@ -15,6 +16,20 @@ export const SPECTATOR_ME: Me = { playerId: null, isOrganizer: false, isAdmin: f
 export function spectatorLookup(s: Snapshot): LookupResult {
   const tr = s.tournament
   return { id: tr.id, slug: '', name: tr.name, tagline: tr.tagline, logoUrl: tr.logoUrl, accentColor: tr.accentColor, status: tr.status, joinCode: '', players: [] }
+}
+
+/**
+ * A link to watch is never a search engine's: its address is the key to the boards. The page says so while it is
+ * on screen (`vercel.json` says it in the response's headers too, for a crawler that reads no script).
+ */
+export function useNoIndex() {
+  useEffect(() => {
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => meta.remove()
+  }, [])
 }
 
 /** The store, once this link's boards are no longer on screen: money it showed does not stay in memory. */

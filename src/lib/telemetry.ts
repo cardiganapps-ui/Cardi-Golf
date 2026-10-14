@@ -15,9 +15,11 @@
  * Never a name, an email, a score or an amount: data carries a message, a
  * route and small counters, and the server strips secret-shaped keys and
  * addresses again. Nothing is sent from tests, dev builds or the in-memory
- * fixtures; and a send that fails is kept (at most 200 events) for the next.
+ * fixtures, and nothing is kept or sent from a link to watch (`/v/`, nobody's
+ * phone); and a send that fails is kept (at most 200 events) for the next.
  */
 import { BUILD } from './build'
+import { onLinkPage } from './linkPage'
 import { supabase, supabaseConfigured } from './supabase'
 import { withTimeout } from './timeout'
 
@@ -153,7 +155,8 @@ export function routeOf(path: string): string {
 
 /** Record one event. Cheap and synchronous; it goes out with the next batch. */
 export function track(kind: EventKind, name: string, value?: number, data?: ClientEvent['data']) {
-  if (!enabled) return
+  // A link to watch logs nothing, even when this page started telemetry on a screen of its own before.
+  if (!enabled || onLinkPage()) return
   const id = newId()
   handled.add(id)
   queue.push({
@@ -204,7 +207,9 @@ export function reportError(name: string, error: unknown) {
 }
 
 /** The tournament on screen: events and heartbeats carry it (the server keeps it only if the phone is in it). */
-export function setTelemetryTournament(id: string | null) {
+export function setTelemetryTournament(raw: string | null) {
+  // A link to watch's boards (the store's `spectator:` id) are no tournament this phone is in.
+  const id = raw?.startsWith('spectator:') ? null : raw
   if (tournamentId === id) return
   tournamentId = id
   if (enabled) void heartbeat()
@@ -356,8 +361,8 @@ export function outboxChanged() {
 /** Start: listeners, the restored queue, vitals, the heartbeat. Once, from main.tsx. */
 export function startTelemetry(env?: Env) {
   if (enabled || !telemetryAllowed(env) || typeof window === 'undefined') return
-  // The in-memory fixtures are nobody's phone.
-  if (location.pathname.startsWith('/t/_/') || location.pathname.startsWith('/admin/_')) return
+  // The in-memory fixtures are nobody's phone, and neither is a link to watch: no device id, nothing queued.
+  if (location.pathname.startsWith('/t/_/') || location.pathname.startsWith('/admin/_') || onLinkPage()) return
   enabled = true
   restore()
   window.addEventListener('error', (e) => reportError('window.error', e.error ?? e.message))

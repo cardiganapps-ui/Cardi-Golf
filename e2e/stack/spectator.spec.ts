@@ -69,6 +69,9 @@ test('a link to watch: no session, the boards «Sin dinero», a hole a phone sav
     .toBe(true)
   console.log(`[e2e-stack] link to watch: hole 1 saved → shown on the link in ${Date.now() - savedAt} ms (asks every ${POLL_MS} ms)`)
   expect(await pesos(viewer), 'a link «Sin dinero» shows no peso').toEqual([])
+  // It keeps nothing of its own on the phone: no outbox database, no key in storage (no telemetry device id or queue).
+  const kept = await viewer.evaluate(async () => ({ databases: (await indexedDB.databases()).map((d) => d.name), keys: Object.keys(localStorage).filter((k) => k.startsWith('cardi-golf')) }))
+  expect(kept).toEqual({ databases: [], keys: [] })
 
   // «Apagar»: the next ask (coming back to the page asks at once) says so, and the boards go.
   const off = sql<number>(`with d as (delete from public.spectator_links where tournament_id = (select id from public.tournaments where slug = ${lit(SLUGS.spectator)}) returning 1) select count(*)::int from d`)

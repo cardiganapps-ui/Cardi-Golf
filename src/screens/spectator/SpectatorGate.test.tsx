@@ -25,6 +25,8 @@ const from = vi.fn(() => {
 const auth = new Proxy({}, { get: () => () => { throw new Error('a link to watch starts no session') } })
 vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc, from, auth, channel: from, removeChannel: from }), supabaseConfigured: true }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
+// The share image stays mounted while it is being made: the test reads it, and nothing is ever shared.
+vi.mock('../../components/shareAction', () => ({ shareCard: vi.fn(() => new Promise(() => undefined)) }))
 
 const { getFixture } = await import('../../dev/fixtures')
 const { spectatorAnswer } = await import('../../data/testing/spectatorAnswer')
@@ -85,6 +87,9 @@ async function readEveryExplanation(inside: ParentNode = document) {
   }
   return triggers.length
 }
+/** Copy that sends the reader to a Comité screen: never on a link to watch, which is nobody's to act on. */
+const comiteSteps = () => (document.body.textContent ?? '').match(/[^.]*en Comité, sección[^.]*\./g) ?? []
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 /** The calls the page made: only ever the boards. */
 const asked = () => rpc.mock.calls.map(([name]) => name)
 /**
@@ -113,6 +118,40 @@ describe('a link «Sin dinero» (the default)', () => {
     expect(asked()).toEqual(['spectator_board'])
     expect(rpc.mock.calls[0]![1]).toEqual({ p_token: TOKEN, p_seen: null })
     expect(from).not.toHaveBeenCalled()
+  })
+
+  it('on a phone that could install Polo: no install card and no notices offer (the app would open Home, not the link)', async () => {
+    const ua = navigator.userAgent
+    Object.defineProperty(navigator, 'userAgent', { value: IPHONE, configurable: true })
+    try {
+      serve(board('full12-live', false))
+      open()
+      await waitFor(() => expect(rows().length).toBe(12))
+      expect(screen.queryByRole('region', { name: t.install.title })).toBeNull()
+      expect(screen.queryByText(t.install.why)).toBeNull()
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true })
+    }
+  })
+
+  it('tells a search engine to keep away while it is on screen', async () => {
+    serve(board('full12-live', false))
+    open()
+    await waitFor(() => expect(rows().length).toBe(12))
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, nofollow')
+    cleanup()
+    expect(document.head.querySelector('meta[name="robots"]')).toBeNull()
+  })
+
+  it('the leaderboard’s share image says nothing of money either: no «si terminara ahora»', async () => {
+    serve(board('full12-live', false))
+    open()
+    await waitFor(() => expect(rows().length).toBe(12))
+    fireEvent.click(screen.getAllByRole('button', { name: t.share.leaderboard })[0]!)
+    const card = await waitFor(() => document.querySelector('[data-share-card="leaderboard"]')!)
+    expect(card.textContent).toContain(getFixture('full12-live')!.snapshot.tournament.name)
+    expect(card.textContent).not.toContain(t.money.ifEndedNow)
+    expect(card.textContent?.match(/\$\s?[\d,.]+/g) ?? []).toEqual([])
   })
 
   it('a player’s sheet: his card and handicap, every explanation opened, and not a peso; no money section', async () => {
@@ -216,6 +255,29 @@ describe('a link «Con dinero»', () => {
     // Nor a way to the Reglamento, which a link does not open.
     expect(screen.queryByRole('link', { name: t.moneyScreen.seeRules })).toBeNull()
     expect(from).not.toHaveBeenCalled()
+  })
+
+  it('nothing sends the reader to a Comité screen, on any tab, even with a pot that doesn’t square and no banker', async () => {
+    // The verifier's case: «El Comité ajusta los premios en Comité, sección Torneo» on a link's Dinero.
+    serve(board('full12-live', true, 'v1', (s) => {
+      ;(s.tournament.settings as { entryFee: number }).entryFee = 100
+      s.tournament.bankerPlayerId = null
+    }))
+    open()
+    await waitFor(() => expect(rows().length).toBe(12))
+    expect(comiteSteps()).toEqual([])
+    for (const tab of [t.nav.games, t.nav.money]) {
+      fireEvent.click(screen.getByRole('link', { name: tab }))
+      await screen.findByRole('heading', { level: 1, name: tab })
+      if (tab === t.nav.money) {
+        for (const mode of [t.moneyScreen.live, t.moneyScreen.byGame, t.moneyScreen.final]) {
+          fireEvent.click(screen.getByRole('radio', { name: mode }))
+          expect(comiteSteps(), mode).toEqual([])
+        }
+      } else expect(comiteSteps(), tab).toEqual([])
+    }
+    // The verdict still says the pot is open: only where the Comité fixes it is left out.
+    expect(document.body.textContent).toContain(t.moneyScreen.provisional)
   })
 
   it('the TV on Calcutta night: the auction board, with its prices', async () => {

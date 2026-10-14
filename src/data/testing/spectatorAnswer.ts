@@ -3,7 +3,8 @@
  * tests (never imported by the app): each table with the columns the
  * migration selects, money tables only «Con dinero», and the settings as
  * `spectator_settings` gives them (every peso at zero without it, never a
- * custom bet's description). The column lists are the ones
+ * custom bet's description), and without money no side pot's entries, claims
+ * or results. The column lists are the ones
  * supabase/tests/spectator_link.sql pins on the real function; the rows come
  * from `snapshotToRows`, which carries every column a table has, so a mapper
  * that read a column the answer lacks would show here.
@@ -65,6 +66,11 @@ export function spectatorAnswer(s: Snapshot, money: boolean, version = 'v1'): Ro
       ...(money ? { banker_player_id: t.banker_player_id } : {}),
     },
   }
-  for (const [table, columns] of Object.entries({ ...SPECTATOR_COLUMNS, ...(money ? SPECTATOR_MONEY_COLUMNS : {}) })) answer[table] = (rows[table] ?? []).map((r) => pick(r, columns))
+  // «Sin dinero»: a side pot's entries, claims and results stay out with it (who is in one paid into it).
+  const games = (t.settings as { games?: Array<{ id?: string; money?: { source?: string } }> } | null)?.games ?? []
+  const hidden = new Set(money ? [] : games.filter((g) => g.money?.source === 'side').map((g) => g.id))
+  const kept = (table: string, r: Row) => !['game_entries', 'hole_awards', 'game_results'].includes(table) || !hidden.has(r.game_id as string)
+  for (const [table, columns] of Object.entries({ ...SPECTATOR_COLUMNS, ...(money ? SPECTATOR_MONEY_COLUMNS : {}) }))
+    answer[table] = (rows[table] ?? []).filter((r) => kept(table, r)).map((r) => pick(r, columns))
   return answer
 }

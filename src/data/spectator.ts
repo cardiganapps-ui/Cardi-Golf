@@ -14,6 +14,7 @@ import type { Snapshot } from '../engine/types'
 import { ApiError } from './api'
 import type { Row } from './mappers'
 import { SPECTATOR_PREFIX, snapshotFromRows, type SnapshotRows } from './tournamentStore'
+import SETTINGS_SPEC from './spectatorSettingsSpec.json'
 
 /** The link as the Comité sees it (0053 `spectator_link`). */
 export interface SpectatorLink {
@@ -47,10 +48,16 @@ export async function spectatorLink(tournamentId: string): Promise<SpectatorLink
 
 /**
  * «Crear enlace para ver», the money choice, and «Cambiar enlace» (`newToken`:
- * the old link stops working at once). The Comité only.
+ * the old link stops working at once). The Comité only. `seen` is the link as
+ * the card showed it when the choice was made (null: none): the server refuses
+ * the save, writing nothing, when the link is not that one any more (another
+ * Comité phone made it, changed it or switched it off meanwhile), so a stale
+ * card never shows the money on a link already shared without asking first.
  */
-export async function saveSpectatorLink(tournamentId: string, money: boolean, newToken = false): Promise<SpectatorLink | null> {
-  return asLink(await rpc<unknown>('save_spectator_link', { p_tournament_id: tournamentId, p_money: money, p_new_token: newToken }))
+export async function saveSpectatorLink(tournamentId: string, money: boolean, seen: SpectatorLink | null, newToken = false): Promise<SpectatorLink | null> {
+  return asLink(
+    await rpc<unknown>('save_spectator_link', { p_tournament_id: tournamentId, p_money: money, p_seen: seen ? { token: seen.token, money: seen.money } : null, p_new_token: newToken }),
+  )
 }
 
 /** «Apagar»: nobody opens the boards with it any more. The Comité only. */
@@ -104,6 +111,52 @@ export function snapshotFromBoard(answer: Row, id: string): Snapshot {
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 
+/**
+ * What of the settings a link carries, as a tree: "s" a plain value, `o` an
+ * object with those keys, `a` a list, `u` either, `d` an object whose key `d`
+ * says which shape it is. It is the settings schema's own shape (a test holds
+ * it to `TournamentSettingsSchema` and to 0053's `spectator_settings_spec`).
+ */
+export type SettingsSpec = 's' | { o: Record<string, SettingsSpec> } | { a: SettingsSpec } | { u: SettingsSpec[] } | { d: string; by: Record<string, SettingsSpec> }
+export const SPECTATOR_SETTINGS_SPEC = SETTINGS_SPEC as SettingsSpec
+
+const plain = (v: unknown) => v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
+
+/**
+ * `v` as `spec` allows it, the same as 0053's `spectator_pick`: an object keeps
+ * only the keys the spec names, a list each element, a value of another kind
+ * is null and an object of a kind the spec doesn't know is {}. What the schema
+ * reads parses exactly as before (it drops unknown keys itself, and a value of
+ * the wrong kind fails it either way); nothing else comes through.
+ */
+export function pickBySpec(v: unknown, spec: SettingsSpec): unknown {
+  if (v === undefined) return undefined
+  if (spec === 's') return plain(v) ? v : null
+  if ('o' in spec) {
+    if (!isObject(v)) return null
+    const out: Record<string, unknown> = {}
+    for (const [k, s] of Object.entries(spec.o)) if (Object.hasOwn(v, k)) out[k] = pickBySpec(v[k], s)
+    return out
+  }
+  if ('a' in spec) return Array.isArray(v) ? v.map((e) => pickBySpec(e, spec.a) ?? null) : null
+  if ('d' in spec) {
+    if (!isObject(v)) return null
+    const tag = v[spec.d]
+    return typeof tag === 'string' && Object.hasOwn(spec.by, tag) ? pickBySpec(v, spec.by[tag]!) : {}
+  }
+  const opt = spec.u.find((o) => (o === 's' ? plain(v) : 'a' in o ? Array.isArray(v) : isObject(v)))
+  return opt ? pickBySpec(v, opt) : null
+}
+
+/** A side game paid from a side pot: whoever is in it paid its buy-in. */
+const sidePot = (g: unknown) => isObject(g) && isObject(g.money) && g.money.source === 'side'
+
+/** The side pots' ids: «Sin dinero» leaves them out, with who is in them, their claims and results. */
+function sidePotIds(raw: unknown): Set<string> {
+  const games = isObject(raw) && Array.isArray(raw.games) ? raw.games : []
+  return new Set(games.filter(sidePot).map((g) => (g as { id?: unknown }).id).filter((id): id is string => typeof id === 'string'))
+}
+
 /** A side game as a link shows it: a custom bet without its description (the Comité's free text), and without money just for fun. */
 function spectatorGame(g: unknown, money: boolean): unknown {
   if (!isObject(g)) return g
@@ -114,11 +167,13 @@ function spectatorGame(g: unknown, money: boolean): unknown {
 
 /**
  * The settings as a link shows them, the same as 0053's `spectator_settings`:
- * never a custom bet's description, the Comité's free text; and without money
- * every peso at zero, the Calcutta off, each side game for fun. The boards
- * computed from them carry no money, and they still parse.
+ * only the keys the schema knows (`SPECTATOR_SETTINGS_SPEC`), never a custom
+ * bet's description, the Comité's free text; and without money every peso at
+ * zero, the Calcutta off, each side game for fun and a side pot left out
+ * altogether. The boards computed from them carry no money, and they still parse.
  */
-export function spectatorSettings(raw: unknown, money: boolean): unknown {
+export function spectatorSettings(input: unknown, money: boolean): unknown {
+  const raw = pickBySpec(input, SPECTATOR_SETTINGS_SPEC)
   if (!isObject(raw)) return raw
   if (money) return Array.isArray(raw.games) ? { ...raw, games: raw.games.map((g) => spectatorGame(g, true)) } : raw
   const modules = isObject(raw.modules) ? raw.modules : null
@@ -128,7 +183,7 @@ export function spectatorSettings(raw: unknown, money: boolean): unknown {
     houseCut: 0,
     prizes: { stableford: [], stablefordMode: 'amount', pairs: [], bestRoundPerDay: 0, snakePerSurvivor: 0, fewestPutts: 0 },
     auction: { openingBid: 1, increment: 1, maxPlayersPerOwner: 1, selfOwnedCountsTowardMax: true, guestsCanBid: false, buybackMaxPct: 0, payout: [{ slot: 'place', place: 1, share: 1 }] },
-    games: (Array.isArray(raw.games) ? raw.games : []).map((g) => spectatorGame(g, false)),
+    games: (Array.isArray(raw.games) ? raw.games : []).filter((g) => !sidePot(g)).map((g) => spectatorGame(g, false)),
     ...(modules && isObject(modules.auction) ? { modules: { ...modules, auction: { ...modules.auction, enabled: false } } } : {}),
   }
 }
@@ -139,10 +194,12 @@ export function spectatorSettings(raw: unknown, money: boolean): unknown {
  * fixture): short names only (no full name, photo, form guide, Comité flag or
  * handicap note), nobody's account or entry, none of the free text the Comité
  * types beyond names, and without money no payment, decision, Calcutta lot,
- * bid or buyback, no banker, and settings with no peso in them.
+ * bid or buyback, no banker, no side pot or who is in one, and settings with
+ * no peso in them.
  */
 export function forSpectators(s: Snapshot, money: boolean, id: string): Snapshot {
   const t = s.tournament
+  const hidden = money ? new Set<string>() : sidePotIds(t.settings)
   return {
     ...s,
     tournament: {
@@ -164,6 +221,9 @@ export function forSpectators(s: Snapshot, money: boolean, id: string): Snapshot
     scores: s.scores.map((x) => ({ roundId: x.roundId, playerId: x.playerId, hole: x.hole, strokes: x.strokes, putts: x.putts, pickedUp: x.pickedUp, enteredBy: null, updatedAt: x.updatedAt })),
     snakeTiebreaks: s.snakeTiebreaks.map((x) => ({ roundId: x.roundId, groupId: x.groupId, hole: x.hole, lastHoledPlayerId: x.lastHoledPlayerId })),
     handicapOverrides: s.handicapOverrides.map((x) => ({ ...x, reason: '', by: null })),
+    gameEntries: s.gameEntries.filter((x) => !hidden.has(x.gameId)),
+    holeAwards: s.holeAwards.filter((x) => !hidden.has(x.gameId)),
+    gameResults: s.gameResults.filter((x) => !hidden.has(x.gameId)),
     calcuttaLots: money ? s.calcuttaLots : [],
     calcuttaBids: money ? s.calcuttaBids : [],
     calcuttaBuybacks: money ? s.calcuttaBuybacks : [],

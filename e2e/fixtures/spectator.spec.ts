@@ -152,3 +152,40 @@ test('Dinero on a link «Sin dinero» leads back to En vivo', async ({ page }) =
   await expect(page).toHaveURL(/\/v\/_\/full12-live$/)
   expect(await pesos(page)).toEqual([])
 })
+
+test('a link keeps and sends nothing of its own: no IndexedDB, no key in storage, no install offer, no search engine', async ({ browser }) => {
+  // An iPhone's browser, where the install card would show on a member's En vivo.
+  const context = await browser.newContext({
+    viewport: { width: 393, height: 852 },
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    isMobile: true,
+    hasTouch: true,
+  })
+  const page = await context.newPage()
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  const asked: string[] = []
+  await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => {
+    asked.push(new URL(r.request().url()).pathname)
+    return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  })
+  for (const path of ['/v/_/full12-live', '/v/_/full12-live/juegos', '/v/_dinero/full12-live/dinero', '/v/_/full12-live/tv']) {
+    await open(page, path)
+    expect(await page.locator('meta[name="robots"]').getAttribute('content'), path).toBe('noindex, nofollow')
+  }
+  await open(page, '/v/_/full12-live')
+  await expect(page.getByText(t.spectator.note)).toBeVisible()
+  await expect(page.getByRole('region', { name: t.install.title })).toHaveCount(0)
+  const kept = await page.evaluate(async () => ({
+    databases: (await indexedDB.databases()).map((d) => d.name),
+    local: Object.keys(localStorage),
+    session: Object.keys(sessionStorage),
+  }))
+  expect(kept.databases, 'IndexedDB: the outbox and the boards a member keeps are never opened').toEqual([])
+  expect(kept.local.filter((k) => k.startsWith('cardi-golf')), 'localStorage').toEqual([])
+  expect(kept.session.filter((k) => k.startsWith('cardi-golf')), 'sessionStorage').toEqual([])
+  // No session asked for, so no sign-in, profile or inbox: only the app's switches.
+  expect([...new Set(asked)].filter((p) => !p.endsWith('/rpc/app_flags')), 'requests').toEqual([])
+  expect(errors).toEqual([])
+  await context.close()
+})

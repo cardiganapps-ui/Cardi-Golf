@@ -24,9 +24,12 @@ const audit = vi.hoisted(() => ({ entries: [] as AuditEntry[] }))
 vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit: vi.fn(async () => audit.entries) }))
 
 const { SpectatorLinkCard } = await import('./SpectatorLinkCard')
+const { Toaster } = await import('../../components/ui')
 const { AdminHistory } = await import('./AdminHistory')
 
 const S = t.spectator
+/** 0053's refusal of a save made against a link that changed meanwhile. */
+const STALE = 'El enlace para ver cambió en otro teléfono mientras lo veías: revisa cómo quedó y vuelve a elegir'
 const fx = getFixture('full12-live')!
 const token = () => `tok${String(++server.n).padStart(21, '0')}`
 const json = (l: typeof server.link) => (l ? { token: l.token, money: l.money, createdAt: '2027-04-08T20:00:00Z', rotatedAt: null } : null)
@@ -38,6 +41,11 @@ beforeEach(() => {
     if (server.missing) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } }
     if (name === 'spectator_link') return { data: json(server.link), error: null }
     if (name === 'save_spectator_link') {
+      // As 0053 does: a save made against another link than the one stored is refused, and nothing changes.
+      const seen = args.p_seen as null | { token: string; money: boolean }
+      if (!server.link !== !seen || (server.link && seen && (server.link.token !== seen.token || server.link.money !== seen.money))) {
+        return { data: null, error: { code: '22023', message: STALE } }
+      }
       if (!server.link) server.link = { token: token(), money: args.p_money as boolean }
       else server.link = { token: args.p_new_token ? token() : server.link.token, money: args.p_money as boolean }
       return { data: json(server.link), error: null }
@@ -60,6 +68,7 @@ function mount() {
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <SpectatorLinkCard />
+        <Toaster />
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
@@ -81,7 +90,7 @@ describe('Enlace para ver (STRAT-05)', () => {
     await screen.findByText(`${window.location.origin}/v/${server.link!.token}`)
     expect(calls()).toEqual([
       ['spectator_link', { p_tournament_id: 'fx-full' }],
-      ['save_spectator_link', { p_tournament_id: 'fx-full', p_money: false, p_new_token: false }],
+      ['save_spectator_link', { p_tournament_id: 'fx-full', p_money: false, p_seen: null, p_new_token: false }],
     ])
     // The TV opens the link's own TV view, in a tab of its own.
     const tv = screen.getByRole('link', { name: S.tv })
@@ -136,6 +145,43 @@ describe('Enlace para ver (STRAT-05)', () => {
     await confirm(S.off, S.off)
     expect(await screen.findByText(S.none)).toBeTruthy()
     expect(server.link).toBeNull()
+  })
+
+  it('a stale «Crear»: another Comité phone made the link meanwhile, so nothing changes and the card shows the link as it is', async () => {
+    mount()
+    await screen.findByText(S.none)
+    // The other phone makes it «Sin dinero» while this card still shows none, and this one chooses «Con dinero».
+    server.link = { token: token(), money: false }
+    fireEvent.click(choice(S.withMoney))
+    fireEvent.click(screen.getByRole('button', { name: S.create }))
+    expect(await screen.findByText(STALE)).toBeTruthy()
+    // Read again: the link the other phone made, still «Sin dinero», on the card.
+    await screen.findByText(`${window.location.origin}/v/${server.link.token}`)
+    expect(server.link.money).toBe(false)
+    expect(choice(S.noMoney).getAttribute('aria-checked')).toBe('true')
+    expect(calls().filter(([n]) => n === 'spectator_link')).toHaveLength(2)
+  })
+
+  it('a stale «Cambiar enlace» or «Con dinero»: the link changed on another phone, so the save is refused and the card reads it again', async () => {
+    server.link = { token: token(), money: true }
+    mount()
+    const first = server.link.token
+    await screen.findByText(`${window.location.origin}/v/${first}`)
+    // Another phone turns the money off; this card still shows «Con dinero» and asks for a new token, which keeps the money it shows.
+    server.link = { token: first, money: false }
+    fireEvent.click(screen.getByRole('button', { name: S.rotate }))
+    await confirm(S.rotate, S.rotate)
+    expect(await screen.findByText(STALE)).toBeTruthy()
+    await waitFor(() => expect(choice(S.noMoney).getAttribute('aria-checked')).toBe('true'))
+    expect(server.link).toEqual({ token: first, money: false })
+    expect(calls().find(([n]) => n === 'save_spectator_link')).toEqual(['save_spectator_link', { p_tournament_id: 'fx-full', p_money: true, p_seen: { token: first, money: true }, p_new_token: true }])
+    // Another phone gives it a new token; this card's «Con dinero» (asked first) is refused against the old one.
+    server.link = { token: token(), money: false }
+    fireEvent.click(choice(S.withMoney))
+    await confirm(S.moneyOnTitle, S.withMoney)
+    await waitFor(() => expect(screen.getAllByText(STALE).length).toBeGreaterThan(0))
+    await screen.findByText(`${window.location.origin}/v/${server.link.token}`)
+    expect(server.link.money).toBe(false)
   })
 
   it('a database without 0053 says so, never an error', async () => {

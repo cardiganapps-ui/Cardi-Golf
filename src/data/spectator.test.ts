@@ -10,14 +10,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computeTournament } from '../engine/computeTournament'
 import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
-import { parseSettings } from '../engine/settings/schema'
+import { parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
+import { FIXTURE_NAMES } from '../dev/fixtures'
+import { readFileSync } from 'node:fs'
 import { getFixture } from '../dev/fixtures'
 import { SPECTATOR_MONEY_COLUMNS, spectatorAnswer } from './testing/spectatorAnswer'
 
 const rpc = vi.fn()
 vi.mock('../lib/supabase', () => ({ supabase: () => ({ rpc, from: () => { throw new Error('a link to watch reads no table') } }), supabaseConfigured: true }))
 
-const { forSpectators, nextPoll, POLL, snapshotFromBoard, spectatorBoard, spectatorSettings, spectatorStoreId, TOKEN_SHAPE } = await import('./spectator')
+const { forSpectators, nextPoll, pickBySpec, POLL, snapshotFromBoard, SPECTATOR_SETTINGS_SPEC, spectatorBoard, spectatorSettings, spectatorStoreId, TOKEN_SHAPE } = await import('./spectator')
+type Spec = typeof SPECTATOR_SETTINGS_SPEC
 const withoutMoney = (raw: unknown) => spectatorSettings(raw, false)
 
 const TOKEN = 'sSjvTXmU1SDUNaaBFsFGLc7N'
@@ -47,10 +50,12 @@ describe('settings without money (0053 spectator_settings)', () => {
     expect(checkPrizePool(s, fieldShape(fx.snapshot, s)).balanced).toBe(true)
   })
 
-  it('a weekend of side games: every one for fun, each still the game it was', () => {
+  it('a weekend of side games: every one for fun, each still the game it was, and a side pot left out (who is in one paid into it)', () => {
     const fx = getFixture('friends8')!
     const s = parseSettings(withoutMoney(fx.snapshot.tournament.settings))
-    expect(s.games.map((g) => [g.id, g.type, g.label])).toEqual(parseSettings(fx.snapshot.tournament.settings).games.map((g) => [g.id, g.type, g.label]))
+    const games = parseSettings(fx.snapshot.tournament.settings).games
+    expect(games.filter((g) => g.money.source === 'side').map((g) => g.id)).toEqual(['skins', 'low', 'cerca'])
+    expect(s.games.map((g) => [g.id, g.type, g.label])).toEqual(games.filter((g) => g.money.source !== 'side').map((g) => [g.id, g.type, g.label]))
     expect(s.games.every((g) => g.money.source === 'none' && g.money.buyIn === 0 && g.money.stake === 0 && g.money.amount === 0)).toBe(true)
   })
 
@@ -71,11 +76,126 @@ describe('settings without money (0053 spectator_settings)', () => {
       expect(game.type === 'custom' && game.options.description).toBe('')
       // Everything else of every game is the Comité's as it set it (with money, its money too).
       expect(s.games.map(({ options: _o, money: m, ...g }) => ({ ...g, ...(money ? { m } : {}) }))).toEqual(
-        parseSettings(raw).games.map(({ options: _o, money: m, ...g }) => ({ ...g, ...(money ? { m } : {}) })),
+        parseSettings(raw)
+          .games.filter((g) => money || g.money.source !== 'side')
+          .map(({ options: _o, money: m, ...g }) => ({ ...g, ...(money ? { m } : {}) })),
       )
     }
     // Settings with no custom bet go through «Con dinero» as they are.
     expect(spectatorSettings(FIRST_TOURNAMENT_SETTINGS, true)).toEqual(FIRST_TOURNAMENT_SETTINGS)
+  })
+})
+
+/** What of a zod schema's definition `specOf` reads. */
+interface ZodDef {
+  type: string
+  innerType?: unknown
+  shape?: Record<string, unknown>
+  element?: unknown
+  items?: unknown[]
+  options?: unknown[]
+  discriminator?: string
+  values?: unknown[]
+}
+const defOf = (z: unknown) => (z as { _zod: { def: ZodDef } })._zod.def
+
+/** The settings schema's own shape, from zod's definitions: what `SPECTATOR_SETTINGS_SPEC` must be. */
+function specOf(z: unknown): Spec {
+  const def = defOf(z)
+  switch (def.type) {
+    case 'default':
+    case 'optional':
+    case 'nullable':
+      return specOf(def.innerType)
+    case 'string':
+    case 'number':
+    case 'boolean':
+    case 'enum':
+    case 'literal':
+      return 's'
+    case 'object':
+      return { o: Object.fromEntries(Object.entries(def.shape!).map(([k, v]) => [k, specOf(v)])) }
+    case 'array':
+      return { a: specOf(def.element) }
+    case 'tuple': {
+      // A tuple of one kind (two tiers, three weights) is a list of it to the link.
+      const items = def.items!.map(specOf)
+      expect(items.every((i) => JSON.stringify(i) === JSON.stringify(items[0]))).toBe(true)
+      return { a: items[0]! }
+    }
+    case 'union': {
+      const d = def.discriminator
+      if (d) return { d, by: Object.fromEntries(def.options!.map((o) => [String(defOf(defOf(o).shape![d]).values![0]), specOf(o)])) }
+      return { u: def.options!.map(specOf) }
+    }
+    default:
+      throw new Error(`a settings type the link's list doesn't know: ${def.type}`)
+  }
+}
+
+/** `v` with a key nobody knows (and a secret value) in every object the spec walks into, at every depth. */
+function withJunk(v: unknown, spec: Spec, n = { i: 0 }): unknown {
+  if (spec === 's' || v === null || typeof v !== 'object') return v
+  if ('a' in spec) return Array.isArray(v) ? v.map((e) => withJunk(e, spec.a, n)) : v
+  if ('u' in spec) return Array.isArray(v) ? withJunk(v, spec.u.find((o) => o !== 's' && 'a' in o) ?? 's', n) : v
+  const obj = v as Record<string, unknown>
+  const shape = 'o' in spec ? spec.o : (spec.by[obj[spec.d] as string] as { o: Record<string, Spec> }).o
+  const out: Record<string, unknown> = { junk: `secreto${n.i++}` }
+  for (const [k, x] of Object.entries(obj)) out[k] = shape[k] ? withJunk(x, shape[k]!, n) : x
+  return out
+}
+
+describe('only the keys the settings schema knows (0053 spectator_settings_spec)', () => {
+  it('the list is the schema itself, and the migration carries the same one', () => {
+    expect(SPECTATOR_SETTINGS_SPEC).toEqual(specOf(TournamentSettingsSchema))
+    const migration = readFileSync(new URL('../../supabase/migrations/0053_spectator_link.sql', import.meta.url), 'utf8')
+    const body = migration.slice(migration.indexOf('create or replace function public.spectator_settings_spec()')).split('\n$$;')[0]!
+    expect(JSON.parse(/select '(\{.*\})'::jsonb/.exec(body)![1]!)).toEqual(SPECTATOR_SETTINGS_SPEC)
+  })
+
+  it('every fixture parses through it exactly as before, with money', () => {
+    for (const fx of FIXTURE_NAMES.map((n) => getFixture(n)!)) {
+      const raw = fx.snapshot.tournament.settings
+      const before = TournamentSettingsSchema.safeParse(raw)
+      const after = TournamentSettingsSchema.safeParse(spectatorSettings(raw, true))
+      expect(after.success, fx.name).toBe(before.success)
+      // Only a custom bet's description differs, as it always did.
+      const blank = (s: typeof before.data) => s && { ...s, games: s.games.map((g) => (g.type === 'custom' ? { ...g, options: { description: '' } } : g)) }
+      expect(blank(after.data), fx.name).toEqual(blank(before.data))
+    }
+  })
+
+  it('a key the schema doesn’t know never comes through, at any depth, with money or without', () => {
+    const fx = getFixture('friends8')!
+    const raw = {
+      ...(withJunk(parseSettings(fx.snapshot.tournament.settings), SPECTATOR_SETTINGS_SPEC) as Record<string, unknown>),
+      secretoArriba: { nota: 'secretoA' },
+    } as Record<string, unknown>
+    raw.modules = { ...(raw.modules as object), nuevo: { enabled: true, label: 'secretoB' } }
+    raw.games = [...(raw.games as unknown[]), { id: 'raro', type: 'nuevo', label: 'secretoC' }]
+    raw.tiers = ['A', { nota: 'secretoD' }]
+    expect(JSON.stringify(raw).match(/secreto/g)!.length).toBeGreaterThan(40)
+    for (const money of [true, false]) {
+      const shown = spectatorSettings(raw, money)
+      expect(JSON.stringify(shown), `money ${money}`).not.toContain('secreto')
+      expect(JSON.stringify(shown)).not.toMatch(/"(junk|nota|nuevo|secretoArriba)"/)
+    }
+    // What the schema knows stays as it was; the game and the tier of a kind it doesn't know are empty, so the
+    // settings fail to parse, as they do for the members.
+    const shown = spectatorSettings(raw, true) as { games: unknown[]; tiers: unknown[] }
+    expect(shown.games.at(-1)).toEqual({})
+    expect(shown.tiers).toEqual(['A', null])
+    expect(TournamentSettingsSchema.safeParse(raw).success).toBe(false)
+    expect(TournamentSettingsSchema.safeParse(shown).success).toBe(false)
+    const clean = { ...shown, games: shown.games.slice(0, -1), tiers: ['A'] }
+    expect(parseSettings(clean)).toEqual(parseSettings({ ...parseSettings(fx.snapshot.tournament.settings), tiers: ['A'], games: parseSettings(fx.snapshot.tournament.settings).games.map((g) => (g.type === 'custom' ? { ...g, options: { description: '' } } : g)) }))
+  })
+
+  it('a value of another kind than the schema’s is null, and settings that are not an object are null', () => {
+    expect(pickBySpec('texto', SPECTATOR_SETTINGS_SPEC)).toBeNull()
+    expect(spectatorSettings(['a'], true)).toBeNull()
+    expect(pickBySpec({ rounds: { secreto: 1 }, labels: 'x', entryFee: [1] }, SPECTATOR_SETTINGS_SPEC)).toEqual({ rounds: null, labels: null, entryFee: null })
+    expect(pickBySpec({ games: [{ type: 'skins', rounds: [1, { x: 1 }] }, { type: { x: 'skins' } }, null] }, SPECTATOR_SETTINGS_SPEC)).toEqual({ games: [{ type: 'skins', rounds: [1, null] }, {}, null] })
   })
 })
 
@@ -120,6 +240,21 @@ describe('what the phone shows of a snapshot (forSpectators)', () => {
     expect(s.payments.map((p) => p.amount)).toEqual(fx.snapshot.payments.map((p) => p.amount))
     expect(s.tournament.bankerPlayerId).toBe(fx.snapshot.tournament.bankerPlayerId)
     expect(s.tournament.settings).toEqual(fx.snapshot.tournament.settings)
+  })
+
+  it('«Sin dinero»: a side pot is not on the link, nor who is in it, its claims or its results; a bet for fun is', () => {
+    const friends = getFixture('friends8')!
+    const s = forSpectators(structuredClone(friends.snapshot), false, 'spectator:x')
+    expect(friends.snapshot.gameEntries.map((e) => e.gameId)).toContain('low')
+    expect(friends.snapshot.holeAwards.map((e) => e.gameId)).toContain('cerca')
+    expect(s.gameEntries).toEqual([])
+    expect(s.holeAwards).toEqual([])
+    expect(s.gameResults).toEqual(friends.snapshot.gameResults)
+    const state = computeTournament(s, parseSettings(s.tournament.settings))
+    expect(Object.keys(state.games).sort()).toEqual(['birdies', 'drive', 'nassau', 'tacos', 'tres-putts'])
+    // With money, everything as the members see it.
+    const m = forSpectators(structuredClone(friends.snapshot), true, 'spectator:x')
+    expect([m.gameEntries, m.holeAwards, m.gameResults]).toEqual([friends.snapshot.gameEntries, friends.snapshot.holeAwards, friends.snapshot.gameResults])
   })
 
   it('applied twice it changes nothing more: the server’s answer and a fixture end the same', () => {

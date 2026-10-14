@@ -7,6 +7,12 @@
  * «Cambiar enlace» gives it a new token (the old one stops at once, the TV's
  * too), «Apagar» takes it away. Turning money on for a link that already
  * exists asks first: whoever has it sees the money from then on.
+ *
+ * Each save sends the link as this card shows it, and the server refuses one
+ * whose link changed meanwhile (another Comité phone made it, changed it or
+ * switched it off): a stale «Crear» or «Cambiar enlace» would otherwise turn a
+ * shared «Sin dinero» link into «Con dinero» without that question. Refused,
+ * the card says why and reads the link again.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
@@ -45,7 +51,11 @@ export function SpectatorLinkCard() {
     void read()
   }, [read])
 
-  /** One change, then the link as the server holds it now (another Comité phone may have moved it). */
+  /**
+   * One change, then the link as the server holds it now. Refused (another Comité phone changed the link
+   * meanwhile, or anything else), the toast says why and the card reads the link again, so what it shows
+   * next is the link as it is.
+   */
   async function run(change: () => Promise<SpectatorLink | null>, done: string) {
     setBusy(true)
     try {
@@ -54,6 +64,7 @@ export function SpectatorLinkCard() {
       toast(done)
     } catch (e) {
       toast(humanError(e))
+      void read()
     } finally {
       setBusy(false)
       setAsk(null)
@@ -89,7 +100,7 @@ export function SpectatorLinkCard() {
               if (busy || v === shown) return
               // Money on: whoever already has the link sees it from now on, so it asks first.
               if (v === 'money') setAsk('money')
-              else void run(() => saveSpectatorLink(tournamentId, false), S.moneyOff)
+              else void run(() => saveSpectatorLink(tournamentId, false, link), S.moneyOff)
             }}
           />
           <p className={a.help}>{shown === 'money' ? S.withMoneyHint : S.noMoneyHint}</p>
@@ -115,7 +126,7 @@ export function SpectatorLinkCard() {
           ) : (
             <>
               <p className={a.help}>{S.none}</p>
-              <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void run(() => saveSpectatorLink(tournamentId, choice === 'money'), S.created)}>
+              <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void run(() => saveSpectatorLink(tournamentId, choice === 'money', null), S.created)}>
                 {S.create}
               </button>
             </>
@@ -128,7 +139,7 @@ export function SpectatorLinkCard() {
         body={S.rotateBody}
         confirmLabel={S.rotate}
         busy={busy}
-        onConfirm={() => void run(() => saveSpectatorLink(tournamentId, link?.money ?? false, true), S.rotated)}
+        onConfirm={() => void run(() => saveSpectatorLink(tournamentId, link?.money ?? false, link, true), S.rotated)}
         onClose={() => setAsk(null)}
       />
       <ConfirmSheet
@@ -146,7 +157,7 @@ export function SpectatorLinkCard() {
         }
         onClose={() => setAsk(null)}
       />
-      <ConfirmSheet open={ask === 'money'} title={S.moneyOnTitle} body={S.moneyOnBody} confirmLabel={S.withMoney} busy={busy} onConfirm={() => void run(() => saveSpectatorLink(tournamentId, true), S.moneyOn)} onClose={() => setAsk(null)} />
+      <ConfirmSheet open={ask === 'money'} title={S.moneyOnTitle} body={S.moneyOnBody} confirmLabel={S.withMoney} busy={busy} onConfirm={() => void run(() => saveSpectatorLink(tournamentId, true, link), S.moneyOn)} onClose={() => setAsk(null)} />
     </section>
   )
 }
