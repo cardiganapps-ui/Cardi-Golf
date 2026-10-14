@@ -1,0 +1,56 @@
+/* The boards under a pull (PWA-15). The mark comes out from under the header, which sits above it (z-index 5). */
+.board {
+  position: relative;
+}
+.mark {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 4;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-round);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  box-shadow: var(--elev-toast);
+  pointer-events: none;
+  /* `--pull`: how far down its lower edge is, from the top of the boards. */
+  transform: translateY(calc(var(--pull, 0px) - 100%));
+  transition:
+    transform var(--dur) var(--ease),
+    opacity var(--dur) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+.mark svg {
+  transform: rotate(calc(var(--turn, 0) * 270deg));
+}
+.idle {
+  opacity: 0;
+}
+/* Under the finger it goes where the finger says, with no easing behind it. */
+.pulling,
+.armed {
+  transition: color var(--dur-fast) var(--ease);
+}
+/* Far enough: letting go now brings the boards. */
+.armed {
+  color: var(--accent);
+}
+/* The boards are on their way. The turn is the motion tokens', so reduced motion holds it still. */
+.waiting {
+  color: var(--accent);
+}
+.waiting svg {
+  animation: pullTurn calc(var(--dur-slow) * 4) linear infinite;
+}
+@keyframes pullTurn {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(1turn);
+  }
+}

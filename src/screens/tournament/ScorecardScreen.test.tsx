@@ -327,16 +327,28 @@ describe('Tarjeta: the steppers say which number is which (COPY-18)', () => {
   })
 })
 
-describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-17)', () => {
-  it('«Sin señal · 2 hoyos en el teléfono»', () => {
+describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-17), and not the signal (REL-21)', () => {
+  it('«2 hoyos por subir», once: the header alone says «Sin señal»', () => {
+    // It read «Sin señal, 2 hoyos en el teléfono» under the header's own «Sin señal».
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
     try {
       mount()
       act(() => useOutbox.setState({ pending: 8, pendingHoles: 2 }))
-      expect(screen.getByText(t.sync.offlineHoles(2))).toBeTruthy()
+      expect(screen.getAllByText(t.sync.pendingHoles(2))).toHaveLength(1)
+      expect(document.body.textContent).not.toContain(t.sync.offlineShort)
     } finally {
       Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
       useOutbox.setState({ pending: 0, pendingHoles: 0 })
+    }
+  })
+
+  it('nothing waiting: «Sincronizado», as with signal, and not in the caution color', () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    try {
+      mount()
+      expect(screen.getByText(t.sync.synced).className).not.toMatch(/saveStatusWarn/)
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
     }
   })
 })

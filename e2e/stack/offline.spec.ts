@@ -49,8 +49,10 @@ test('two holes saved with no signal reach the other phone when it returns, the 
   await typeHole(ana.page, 1, fix)
   await saveHole(ana.page, 1)
 
-  // The phone says two holes wait on it; the server has none of them, and Beto's board shows nothing yet.
-  await expect(ana.page.getByText(t.sync.offlineHoles(2), { exact: true }).first()).toBeVisible()
+  // The phone says two holes wait on it (the Tarjeta's line; only the header says «Sin señal», REL-21); the
+  // server has none of them, and Beto's board shows nothing yet.
+  await expect(ana.page.locator('header').getByText(t.sync.offlineShort, { exact: true })).toBeVisible()
+  await expect(ana.page.getByText(t.sync.pendingHoles(2), { exact: true }).first()).toBeVisible()
   expect(serverScores(SLUGS.offline)).toEqual([])
   expect(await boardRows(beto.page)).toEqual(PLAYERS.map((p) => row('T1', p.name, '—', '0')))
   await expectLive(beto.page)
@@ -86,7 +88,7 @@ test('holes corrected while the phone is still sending them land as corrected, a
     await typeHole(ana.page, hole, ROUND[hole - 1]!)
     await saveHole(ana.page, hole)
   }
-  await expect(ana.page.getByText(t.sync.offlineHoles(3), { exact: true }).first()).toBeVisible()
+  await expect(ana.page.getByText(t.sync.pendingHoles(3), { exact: true }).first()).toBeVisible()
 
   // The signal returns, and the first call out (hole 1) is held on its way: the phone is still sending.
   let release!: () => void
