@@ -108,6 +108,10 @@ export const t = {
     name: 'Polo',
     tagline: 'Torneos de golf entre amigos',
     description: 'Marcador en vivo, juegos, Calcutta y cuentas claras para torneos entre amigos.',
+    /** The installed app's shortcuts (a long press on its icon, PWA-14): the last tournament's card, and its En vivo. */
+    shortcuts: { card: 'Mi tarjeta', cardShort: 'Tarjeta', live: 'En vivo' },
+    /** What the install sheet's screenshots show (PWA-14). */
+    screenshots: { live: 'La tabla del torneo, en vivo', card: 'La tarjeta: un hoyo en segundos' },
   },
   common: {
     // UX-15: a sheet holding typed work asks before a stray tap, Escape or back throws it away.
@@ -1058,6 +1062,12 @@ export const t = {
       privacy: 'Aviso de privacidad',
       end: '.',
     },
+    /** The tournament's switch on a PIN phone (Más, En vivo): what turning it on stores, and until when (save_pin_push, 0052). */
+    pinPushNote: {
+      start: 'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el ',
+      privacy: 'Aviso de privacidad',
+      end: '.',
+    },
     /** Comité › Campos and /campos: a scorecard photo goes to Anthropic to be read (api/scorecard-extract.ts). */
     scorecardNote: {
       start: 'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el ',
@@ -1081,12 +1091,12 @@ export const t = {
      */
     privacy: {
       title: 'Aviso de privacidad',
-      version: '2026-10-13.2',
+      version: '2026-10-13.3',
       updated: 'Última actualización: 13 de octubre de 2026',
       sections: [
         ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse.'],
-        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse.'],
+        ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
         ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si tu perfil aparece en búsquedas: viene prendido y lo puedes apagar. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
         ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si un amigo te agrega a una Ronda rápida, tu nombre completo, tu foto y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.'],
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
@@ -1094,7 +1104,7 @@ export const t = {
         ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.'],
         ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido: nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
         ['Fuera de México', 'Los servicios que usa Polo son de empresas de Estados Unidos y guardan o procesan ahí lo que les toca: Supabase (las cuentas, la base de datos y los archivos, en Virginia), Vercel (sirve la app), Resend (los correos con código), Cloudflare (los respaldos de cada noche) y Anthropic (las fotos de tarjetas de campo). Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo. Google, si entras con Google, y el servicio de notificaciones de tu navegador (Apple, Google, Microsoft o Mozilla), si activas los avisos, no trabajan para Polo: reciben lo que tu cuenta o tu navegador ya les da, bajo sus propios avisos de privacidad. Fuera de ellos y de lo que este aviso dice que ve cada quien, no compartimos tus datos con nadie.'],
-        ['Cuánto tiempo los guardamos', 'Tu perfil, tus amistades, rivalidades y avisos, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados) se guarda mientras exista el torneo, también para quienes ya no juegan; si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía. Los campos cargados con sus fotos de tarjeta, el historial de cambios de cada torneo y los registros de quien opera Polo no tienen fecha de borrado, y tampoco los usuarios anónimos que se crean al mandar un PIN ni lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. Las copias de cada noche guardan todo lo anterior y hoy no se borran nunca.'],
+        ['Cuánto tiempo los guardamos', 'Tu perfil, tus amistades, rivalidades y avisos, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan; si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía. Los campos cargados con sus fotos de tarjeta, el historial de cambios de cada torneo y los registros de quien opera Polo no tienen fecha de borrado, y tampoco los usuarios anónimos que se crean al mandar un PIN ni lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. Las copias de cada noche guardan todo lo anterior y hoy no se borran nunca.'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
         ['Tus derechos', 'Puedes editar tu perfil cuando quieras, sacarlo de las búsquedas y apagar los avisos en cada teléfono. La app todavía no tiene cómo borrar tu cuenta ni cómo descargar tus datos: borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes, así que hoy hay que pedírselo a él directamente. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
         ['Cómo pedir algo sobre tus datos', 'Puedes pedir saber qué datos tenemos de ti, corregirlos, que los borremos o que dejemos de usarlos para algo (tus derechos de acceso, rectificación, cancelación y oposición), y también retirar tu consentimiento o limitar su uso. Pídeselo a quien opera Polo, Diego Gaxiola, directamente o por medio del Comité de tu torneo, que se lo pasa; el correo golf@cardigan.mx todavía no recibe mensajes. Di tu nombre, el correo de tu cuenta o el torneo y el jugador, qué pides y, si es una corrección, el dato correcto. Antes de hacerlo confirmamos que eres tú: que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta; si juegas sin cuenta, con el Comité de tu torneo. Te contestamos en un máximo de 20 días hábiles y, si procede, lo hacemos en los 15 días hábiles siguientes. Si no quedas conforme, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno, la autoridad de protección de datos personales en México.'],
@@ -1122,11 +1132,27 @@ export const t = {
     enable: 'Activar avisos',
     disable: 'Apagar en este teléfono',
     on: 'Activados en este teléfono.',
-    denied: 'Los bloqueaste en este teléfono. Actívalos en los ajustes del navegador para Polo.',
-    needsInstall: 'En iPhone, primero agrega Polo a tu pantalla de inicio (Compartir, «Agregar a inicio») y ábrela desde ahí.',
+    /** Blocked: where this phone undoes it (PWA-12). The installed iPhone app has no browser settings: it is Ajustes. */
+    denied: 'Los bloqueaste en este navegador. Para activarlos: el ícono junto a la dirección y luego Notificaciones.',
+    deniedIos: 'Los bloqueaste para Polo. Para activarlos: abre Ajustes, toca Notificaciones y luego Polo.',
+    deniedAndroidApp: 'Los bloqueaste para Polo. Para activarlos: en los Ajustes del teléfono, Aplicaciones, Polo y luego Notificaciones.',
+    deniedAndroid: 'Los bloqueaste en este navegador. Para activarlos: toca el ícono junto a la dirección, luego Permisos y Notificaciones.',
+    needsInstall: 'En iPhone y iPad los avisos llegan solo a la app de la pantalla de inicio (iOS 16.4 o más nuevo): toca Compartir, «Agregar a inicio», y abre Polo desde el ícono.',
     unsupported: 'Este navegador no recibe avisos.',
+    unsupportedIos: 'Este iPhone no recibe avisos: hace falta iOS 16.4 o más nuevo.',
     enabled: 'Listo: te avisamos aquí.',
     disabled: 'Avisos apagados en este teléfono.',
+    /** A tournament's notices (0052, PWA-10): in Más always, and on En vivo after the first hole saved in the installed app. */
+    tournament: {
+      title: 'Avisos del torneo',
+      /** What they tell, for the games this tournament plays. */
+      hint: (things: string[]) => `Te avisamos en este teléfono ${andList(things)}. Nunca llevan montos.`,
+      day: 'cuando empiece cada día',
+      card: 'cuando te toque firmar una tarjeta',
+      snake: (game: string) => `cuando en ${game} falte decir quién embocó al último`,
+      results: 'cuando salgan los resultados',
+      later: 'Ahora no',
+    },
   },
   achievements: {
     badges: 'Insignias',
@@ -1316,6 +1342,21 @@ export const t = {
       crew_join: (name: string, crew: string) => `${name} entró a ${crew}`,
       platform_notice: (title: string, body: string) => `${title}: ${body}`,
       platformTitle: 'Aviso de Polo',
+      /**
+       * A tournament's notices to its players (0052, PWA-10), PIN phones included: the inbox row, and the push's
+       * body under the tournament's name. No names and never an amount: the server sends neither.
+       */
+      round_live: (tournament: string, round: number) => `Empezó el día ${round} de ${tournament}`,
+      roundLiveBody: (round: number, group: number | null, startHole: number | null, teeTime: string | null) =>
+        group == null
+          ? `Empezó el día ${round}.`
+          : `Empezó el día ${round}. Tu grupo ${group} sale${startHole != null ? ` del hoyo ${startHole}` : ''}${teeTime ? ` a las ${teeTime}` : ''}.`,
+      card_to_sign: (tournament: string, round: number) => `Firma la tarjeta del día ${round} en ${tournament}`,
+      cardToSignBody: (round: number) => `Tu grupo terminó el día ${round}: firma la tarjeta de la otra pareja.`,
+      snake_tiebreak: (tournament: string, game: string, hole: number) => `${game} en ${tournament}: falta decir quién embocó al último en el ${hole}`,
+      snakeTiebreakBody: (game: string, round: number, hole: number) => `${game}, día ${round}: falta decir quién embocó al último en el hoyo ${hole}.`,
+      /** The snake's own name when a notice comes without it (the server always sends the tournament's). */
+      snakeGame: 'La Víbora',
     },
     someone: 'Alguien',
     // Feed
@@ -1379,13 +1420,16 @@ export const t = {
     live: 'En vivo',
     connecting: 'Conectando…',
     pending: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
+    /** The banner over screens outside a tournament; a tournament's header says it in place (MOT-17). */
     offline: 'Sin señal. Se guarda en el teléfono.',
     offlineShort: 'Sin señal',
-    offlineHoles: (n: number) => (n === 1 ? 'Sin señal, 1 hoyo en el teléfono' : `Sin señal, ${n} hoyos en el teléfono`),
     pendingHoles: (n: number) => (n === 1 ? '1 hoyo por subir' : `${n} hoyos por subir`),
+    /** The header's chip while a refresh someone asked for is under way (PWA-15). */
+    refreshing: 'Actualizando…',
+    /** The chip as a button (PWA-15): what it says, then what a tap does («Conectando… Actualizar», not «…. »). */
+    refreshLabel: (state: string) => `${state}${state.endsWith('…') ? '' : '.'} Actualizar`,
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
     notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
-    noLive: 'Sin actualizaciones en vivo',
     rejected: (n: number) => (n === 1 ? '1 rechazado' : `${n} rechazados`),
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
@@ -1419,11 +1463,12 @@ export const t = {
     updateRequired: 'Esta versión ya no sube hoyos. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
     /**
-     * The header's second line while the boards are the phone's copy, or there
-     * is no signal: how old they are, and offline the holes still on the phone
-     * (REL-04). Out of the chip, which cut the event name. `when` from `ago`.
+     * The header's second line while the boards may be old (the phone's copy,
+     * no signal, a fetch that failed): how old they are (REL-04). Out of the
+     * chip, which cut the event name. The holes still on the phone are the
+     * Tarjeta's to say (REL-21). `when` from `ago`.
      */
-    boardsAge: (when: string, holes = 0) => (holes > 0 ? `${holes === 1 ? '1 hoyo' : `${holes} hoyos`} en el teléfono. Actualizado ${when}` : `Actualizado ${when}`),
+    boardsAge: (when: string) => `Actualizado ${when}`,
     /** How old a saved board is (src/lib/freshness.ts). */
     ago: {
       now: 'hace un momento',
@@ -2080,6 +2125,9 @@ export const t = {
       tagline: 'Lema',
       logo: 'Logo',
       uploadLogo: 'Subir logo',
+      /** PERF-01: a logo stored whole, before renditions (or seeded straight into Storage). */
+      logoHeavy: 'Este logo está guardado completo y tarda en cargar en los teléfonos. Optimízalo: se ve igual y pesa mucho menos.',
+      optimizeLogo: 'Optimizar logo',
       accent: 'Color de acento',
       status: 'Estado',
       /** UX-28: leaving Configuración fixes the base handicaps (0046). */

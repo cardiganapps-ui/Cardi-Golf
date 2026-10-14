@@ -45,6 +45,7 @@ import { PushToggle } from './profile/PushToggle'
 import { expectShown, loadTokens } from './testing/shown'
 import { EnterScreen } from './tournament/EnterScreen'
 import { TournamentContext } from './tournament/TournamentGate'
+import { TournamentPushSwitch } from './tournament/TournamentPush'
 
 beforeAll(loadTokens)
 afterEach(() => {
@@ -71,6 +72,8 @@ const ENTER_LINE = 'Al entrar aceptas los Términos (se abre en otra pestaña) y
 const CONTINUE_LINE = 'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
 const OTHERS_NOTE = 'Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad (se abre en otra pestaña).'
 const PUSH_NOTE = 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'
+const PIN_PUSH_NOTE =
+  'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el Aviso de privacidad (se abre en otra pestaña).'
 const SCORECARD_NOTE =
   'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el Aviso de privacidad (se abre en otra pestaña).'
 const BOTH = ['/terminos', '/privacidad']
@@ -239,6 +242,22 @@ describe('the push switch', () => {
       expect(enable.getAttribute('aria-describedby')?.split(' ')).toContain(line.id)
     })
   }
+
+  it('Más › «Avisos del torneo» on a PIN phone (PWA-10): what it keeps and until when, before «Activar avisos»', async () => {
+    const fx = getFixture('full12-live')!
+    useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null })
+    render(
+      <MemoryRouter>
+        <TournamentContext.Provider value={{ tournamentId: fx.snapshot.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me: { ...fx.me, via: 'device' }, refresh: async () => undefined, leave: async () => undefined }}>
+          <TournamentPushSwitch />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+    const enable = await screen.findByRole('button', { name: t.push.enable })
+    const line = consentLine(PIN_PUSH_NOTE, NOTICE)
+    expect(before(line, enable)).toBe(true)
+    expect(enable.getAttribute('aria-describedby')?.split(' ')).toContain(line.id)
+  })
 })
 
 describe('the scorecard photo, read by Anthropic', () => {

@@ -11,7 +11,9 @@ import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
-import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
+import { useSavedWhen } from './boardsAge'
+import { useConnection } from './connection'
+import { useOwnConnectionStatus } from '../../components/OfflineBanner'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
@@ -21,6 +23,7 @@ import { DRAW_STEP, DUR_BOARD, HAT_STEP, easeBoard, easeFast, still, timer } fro
 import { CountUp } from '../../components/CountUp'
 import { dayFigureText } from '../../lib/figureText'
 import { Plate } from '../../components/primitives'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { drawOrder } from '../../lib/pairing'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
@@ -135,19 +138,23 @@ export function TvScreen() {
     }
   }, [])
   const accent = snapshot.tournament.accentColor ?? undefined
-  const mayBeOld = useBoardsMayBeOld()
+  // The connection, said once, in the room's own type (REL-21): the app's banner, a phone's strip («se guarda en
+  // el teléfono»), stays away from the TV.
+  const connection = useConnection()
+  useOwnConnectionStatus()
   const updatedWhen = useSavedWhen(useTournament((s) => s.updatedAt))
 
   return (
     <div className={styles.tv} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
       <header className={styles.header}>
-        {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
+        {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">
           <h1 className={styles.title}>{snapshot.tournament.name}</h1>
           <span className={styles.sub}>
             {isAuctionNight ? settings.modules.auction.label : round ? `${t.round.day(round.number)}, ${t.roundStatus[round.status].toLowerCase()}` : t.status[snapshot.tournament.status]}
-            {/* The room can't see a phone's header: while the boards may be behind, the TV says how old they are (REL-10). */}
-            {mayBeOld && updatedWhen && `. ${t.sync.boardsAge(updatedWhen)}`}
+            {/* The room can't see a phone's header: with no signal the TV says so, and while the boards may be behind, how old they are (REL-10). */}
+            {connection?.kind === 'offline' && `. ${t.sync.offlineShort}`}
+            {connection?.mayBeOld && updatedWhen && `. ${t.sync.boardsAge(updatedWhen)}`}
           </span>
         </div>
         <Link to={`/t/${slug}`} className={styles.exit}>

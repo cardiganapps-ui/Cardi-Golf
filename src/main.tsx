@@ -10,12 +10,18 @@ import { offerUpdate, startUpdateChecks } from './data/appUpdate'
 import { setTelemetryTournament, startTelemetry, step } from './lib/telemetry'
 import { startChunkRecovery } from './lib/chunkReload'
 import { listenForInstall } from './lib/install'
+import { listenForNoticeTaps } from './lib/noticeTaps'
+import { startBadgeSync } from './data/push'
 import { useTournament } from './data/tournamentStore'
 
 // A screen from the build before a deploy loads the new build instead of failing (REL-13).
 startChunkRecovery()
 // Android's install offer comes once and early: kept for the «Instalar» button (PWA-08).
 listenForInstall()
+// A tap on a notice goes to its page through the router, never a reload over a half-entered hole (PWA-12).
+listenForNoticeTaps((path) => void router.navigate(path))
+// The icon's count follows the inbox, read again each time the app comes back (PWA-12).
+startBadgeSync()
 
 // A new deploy is offered by a bar that stays until it is applied, never
 // applied on its own: an automatic reload would throw away a half-entered

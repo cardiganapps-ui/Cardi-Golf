@@ -68,11 +68,84 @@ describe('what the worker keeps for no signal (QA-16)', () => {
     expect(precacheProblems(d)).toEqual([expect.stringMatching(/^the worker imports push-sw\.js at \?v=[0-9a-f]{10}, but the file's is [0-9a-f]{10}: phones would keep the old handler$/)])
   })
 
+  it('an image a notice shows (its icon, the badge) is precached with it (PWA-12)', () => {
+    const shows = `self.addEventListener("push", () => ({ icon: '/icons/icon-192.png', badge: '/icons/badge-96.png' }))`
+    const d = build((f) => {
+      f['push-sw.js'] = shows
+      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`)
+      f['icons/badge-96.png'] = 'png'
+    })
+    expect(precacheProblems(d)).toEqual(['icons/badge-96.png is not precached (a notice shows it)'])
+    const listed = build((f) => {
+      f['push-sw.js'] = shows
+      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`).replace('{url:"push-sw.js"', '{url:"icons/badge-96.png",revision:"r"},{url:"push-sw.js"')
+      f['icons/badge-96.png'] = 'png'
+    })
+    expect(precacheProblems(listed)).toEqual([])
+  })
+
   it('a file listed but missing, and a precache over its budget, are refused', () => {
     const d = build((f) => void delete f['assets/index-a1.js'])
     expect(precacheProblems(d)).toEqual([`assets/index-a1.js is precached but not in ${d}`])
     const big = build((f) => void (f['assets/index-a1.js'] = 'x'.repeat(3 * 1024)))
     expect(precacheProblems(big, 2)).toEqual(['the precache is 3 KiB, over its budget of 2 KiB'])
+  })
+
+  describe('the iPhone launch images (PWA-14)', () => {
+    const LINK = '<link rel="apple-touch-startup-image" media="screen and (device-width: 393px)" href="/splash/iphone-1179x2556.png?v=abc">'
+    const withLaunch = (f: Record<string, string>) => {
+      f['index.html'] = `${f['index.html']}${LINK}`
+      f['splash/iphone-1179x2556.png'] = 'png'
+    }
+
+    it('one linked from index.html need not be precached: iOS reads it when the app is added to the home screen', () => {
+      expect(precacheProblems(build(withLaunch))).toEqual([])
+    })
+
+    it('one linked but not in the build is named', () => {
+      const d = build((f) => {
+        withLaunch(f)
+        delete f['splash/iphone-1179x2556.png']
+      })
+      expect(precacheProblems(d)).toEqual([`splash/iphone-1179x2556.png is linked as a launch image but not in ${d}`])
+    })
+
+    it('one precached is refused: every phone would keep it for nothing', () => {
+      const d = build((f) => {
+        withLaunch(f)
+        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"splash/iphone-1179x2556.png",revision:"r"},{url:"push-sw.js"')
+      })
+      expect(precacheProblems(d)).toEqual(['splash/iphone-1179x2556.png is precached, but iOS reads launch images only when the app is added to the home screen'])
+    })
+
+    it('any other image index.html loads is still needed in the precache', () => {
+      const d = build((f) => void (f['index.html'] = `${f['index.html']}<img src="/brand/boot-mark.png">`))
+      expect(precacheProblems(d)).toEqual(['brand/boot-mark.png is not precached (index.html loads it)'])
+    })
+  })
+
+  describe('the install sheet’s screenshots (PWA-14)', () => {
+    const withShot = (f: Record<string, string>) => {
+      f['manifest.webmanifest'] = JSON.stringify({ icons: [{ src: '/icons/icon-192.png?v=abc' }], screenshots: [{ src: '/screenshots/envivo.webp?v=def' }] })
+      f['screenshots/envivo.webp'] = 'webp'
+    }
+
+    it('shipped, and not precached: only the install sheet shows them', () => {
+      expect(precacheProblems(build(withShot))).toEqual([])
+    })
+
+    it('one missing from the build, or precached, is named', () => {
+      const missing = build((f) => {
+        withShot(f)
+        delete f['screenshots/envivo.webp']
+      })
+      expect(precacheProblems(missing)).toEqual([`screenshots/envivo.webp is a screenshot the manifest names but not in ${missing}`])
+      const held = build((f) => {
+        withShot(f)
+        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"screenshots/envivo.webp",revision:"r"},{url:"push-sw.js"')
+      })
+      expect(precacheProblems(held)).toEqual(['screenshots/envivo.webp is precached, but only the install sheet shows it'])
+    })
   })
 
   it('no build at all says so', () => {

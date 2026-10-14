@@ -1915,11 +1915,15 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/logo.test.ts",
+        "src/components/TournamentLogo.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Ensayo's production logo is still the raw 889 KB PNG until the Comité taps «Optimizar logo» (or the lead does it after merge). WebP logos need iOS 14+."
     },
     {
       "id": "PERF-02",
@@ -2090,9 +2094,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/images.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2259,11 +2266,17 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "supabase/tests/push_players.sql",
+        "src/lib/pushDispatch.test.ts",
+        "src/data/push.test.ts",
+        "src/screens/tournament/TournamentPush.test.tsx",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Event-driven only: no reminder before a tee time (needs pg_cron, not checked on production). A snake tiebreak on a group's last hole is told only when a card is signed, so without the pairs game it gets no notice (the red chip and Comité › Tarjetas still show it). Real delivery on iOS and Android to be checked at Rehearsal 1."
     },
     {
       "id": "PWA-12",
@@ -2273,9 +2286,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "src/lib/pushSw.test.ts",
+        "src/lib/noticeTaps.test.ts",
+        "src/data/push.test.ts",
+        "src/lib/noticeText.test.ts",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2287,9 +2306,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/lib/launch.test.ts",
+        "src/lib/launchImages.test.ts",
+        "src/screens/ContinueScreen.test.tsx",
+        "src/lib/appManifest.test.ts",
+        "src/lib/precache.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2301,9 +2326,14 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/PullToRefresh.test.tsx",
+        "src/screens/tournament/pull.test.ts",
+        "src/data/tournamentStore.refresh.test.ts",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2984,9 +3014,13 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/connection.test.ts",
+        "src/screens/tournament/TournamentShell.status.test.tsx",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

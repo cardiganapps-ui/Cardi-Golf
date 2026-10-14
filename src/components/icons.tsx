@@ -58,6 +58,13 @@ export const IconCheck = (p: P) => (
     <path d="M5 12.5l4.5 4.5L19 7.5" />
   </Svg>
 )
+/** Actualizar: the boards again from the server (PWA-15), the arrow going round. */
+export const IconRefresh = (p: P) => (
+  <Svg {...p}>
+    <path d="M20 12a8 8 0 1 1-8-8c2.24 0 4.38.89 6 2.44L20 8.5" />
+    <path d="M20 4v4.5h-4.5" />
+  </Svg>
+)
 export const IconUndo = (p: P) => (
   <Svg {...p}>
     <path d="M8 7H4v4" />

@@ -11,6 +11,7 @@ import { shareCard } from './shareAction'
 import { figureKind, mainScoring, type Figure } from '../engine/formats'
 import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
+import { TournamentLogo } from './TournamentLogo'
 import styles from './ShareCard.module.css'
 
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement' }
@@ -66,7 +67,7 @@ function Card({ what }: { what: ShareKind }) {
   const nameOf = (id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : t.moneyScreen.bank)
   const header = (sub: string) => (
     <div className={styles.header}>
-      {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} crossOrigin="anonymous" />}
+      {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} crossOrigin="anonymous" />}
       <div>
         <div className={styles.title}>{snapshot.tournament.name}</div>
         <div className={styles.sub}>{sub}</div>

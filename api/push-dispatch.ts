@@ -1,13 +1,17 @@
 /**
- * POST /api/push-dispatch, called by the database (trigger notifications_push,
- * migration 0019, through pg_net) once per new notification:
+ * POST /api/push-dispatch, called by the database through pg_net once per new
+ * notice: an account's notification (trigger notifications_push, migration
+ * 0019) or a tournament's notice to the phones that hold a player by PIN
+ * (trigger player_notices_push, 0052):
  *   Authorization: Bearer <PUSH_DISPATCH_SECRET>
- *   { subscriptions: [{ endpoint, keys: { p256dh, auth } }], notice: { id, kind, data, actor }, unread }
+ *   { subscriptions: [{ endpoint, keys: { p256dh, auth } }], notice: { id, kind, data, actor }, unread? }
  * Sends one web push per subscription, signed with the VAPID pair, and hands
  * the endpoints the push service rejected for good (404/410) back to the
  * database through push_prune (the same secret, the anon key). Never the
  * service-role key; never an amount the app wrote (its notices carry none;
- * a platform_notice is the Admin de Polo's own text).
+ * a platform_notice is the Admin de Polo's own text). `unread` is an
+ * account's inbox count, for the icon; a PIN phone has no inbox, so its
+ * notices carry none and leave the icon's count as it is.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
@@ -42,7 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? 'mailto:golf@cardigan.mx', pub, priv)
   const line = noticeLine(body.notice)
-  const payload = JSON.stringify({ title: line.title ?? 'Polo', body: line.body ?? line.text, url: line.to, tag: body.notice.id, badge: Math.max(0, body.unread ?? 0) })
+  const badge = typeof body.unread === 'number' && Number.isFinite(body.unread) ? Math.max(0, body.unread) : undefined
+  const payload = JSON.stringify({ title: line.title ?? 'Polo', body: line.body ?? line.text, url: line.to, tag: body.notice.id, badge })
 
   const dead: string[] = []
   let sent = 0

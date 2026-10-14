@@ -18,7 +18,7 @@ import { courseHandicap, estimateIndex, playingHandicap, strokesReceived } from 
 import { baseHandicap } from '../../engine/core/compute'
 import { handicapsLocked, handicapUsed } from '../../engine/core/handicapLock'
 import type { HandicapInputs, Player } from '../../engine/types'
-import { downscaleImage } from '../../lib/images'
+import { downscaleImage, extensionFor } from '../../lib/images'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { useTournamentProfiles } from '../../data/profiles'
 import { ProfileLink } from './ProfileLink'
@@ -221,7 +221,7 @@ export function AdminPlayers() {
     try {
       const { blob, type } = await downscaleImage(file, 512)
       const id = editing.id ?? crypto.randomUUID()
-      const url = await uploadAsset(`${tournamentId}/avatars/${id}.jpg`, blob, type)
+      const url = await uploadAsset(`${tournamentId}/avatars/${id}.${extensionFor(type)}`, blob, type)
       setEditing({ ...editing, avatar_url: url })
     } catch (e) {
       toast(humanError(e))
