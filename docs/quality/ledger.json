@@ -508,10 +508,16 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 169,
+      "tests": [
+        "src/screens/tournament/scorecard/saveDecision.test.ts",
+        "src/screens/tournament/scorecard/writeHole.test.ts",
+        "src/screens/tournament/scorecard/holeEntry.test.ts",
+        "src/screens/tournament/scorecard/parts.test.tsx",
+        "src/screens/tournament/ScorecardScreen.emptyGroup.test.tsx"
+      ],
+      "verifiedBy": "independent verifier 2026-10-14: 28 behaviour tests run on main and the branch, 27 identical; the one difference (V7, sync line) fixed in this PR",
       "residual": null
     },
     {
@@ -1915,11 +1921,15 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/logo.test.ts",
+        "src/components/TournamentLogo.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Ensayo's production logo is still the raw 889 KB PNG until the Comité taps «Optimizar logo» (or the lead does it after merge). WebP logos need iOS 14+."
     },
     {
       "id": "PERF-02",
@@ -2090,9 +2100,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/images.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2502,11 +2515,15 @@
       "workstream": "W14",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 169,
+      "tests": [
+        "src/screens/tournament/scorecard/saveDecision.test.ts",
+        "src/screens/tournament/scorecard/parts.test.tsx",
+        "src/screens/tournament/renderSmoke.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Admin screens are left to the browser render check (e2e/fixtures/pages.spec.ts): they read from the server when they open."
     },
     {
       "id": "QA-14",
@@ -2516,11 +2533,18 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 170,
+      "tests": [
+        "src/lib/courseSearch.test.ts",
+        "src/lib/scorecardExtract.test.ts",
+        "src/lib/routeAuth.test.ts",
+        "src/lib/backupCron.test.ts",
+        "src/lib/pushDispatch.test.ts",
+        "src/lib/appManifest.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Left as they are: backup-cron, course-search and manifest take any method; backup-cron compares its secret with !== (not constant time); the night's R2 upload has no timeout of its own; push-dispatch answers 503 before checking the secret."
     },
     {
       "id": "QA-15",
@@ -3805,9 +3829,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/styles/module-classes.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3819,9 +3847,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/setup/reviewLines.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3833,11 +3865,14 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Back across documents (the wizard opened by its address, or after a reload) loads the previous page: no beforeunload prompt, by the codebase's choice; the draft survives in the tab and Forward restores it. iOS edge-swipe and Android back gesture to be checked on real phones."
     },
     {
       "id": "UX-06",

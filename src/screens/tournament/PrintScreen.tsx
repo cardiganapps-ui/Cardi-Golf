@@ -12,6 +12,7 @@ import { useTournamentCtx } from './TournamentGate'
 import { useActiveRound } from './useMyGroup'
 import styles from './PrintScreen.module.css'
 import { IconPrint } from '../../components/icons'
+import { TournamentLogo } from '../../components/TournamentLogo'
 
 const P = t.print
 
@@ -52,7 +53,7 @@ export function PrintScreen() {
           return (
             <section key={g.id} className={styles.card}>
               <header className={styles.head}>
-                {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
+                {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
                 <div className="grow">
                   <h1 className={styles.title}>{snapshot.tournament.name}</h1>
                   <div className={styles.sub}>

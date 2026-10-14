@@ -10,6 +10,7 @@ import { t } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
+import { TournamentLogo } from './TournamentLogo'
 import { haptic } from '../lib/haptics'
 
 // ---- Buttons ----
@@ -369,7 +370,7 @@ export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text
 export function EventName({ name, tagline, logoUrl, small }: { name: string; tagline?: string; logoUrl?: string | null; small?: boolean }) {
   return (
     <div className={s.event}>
-      {logoUrl && <img src={logoUrl} alt="" className={s.eventLogo} />}
+      {logoUrl && <TournamentLogo url={logoUrl} className={s.eventLogo} />}
       <div>
         <div className={`${s.eventName} ${small ? s.eventNameSm : ''}`}>{name}</div>
         {!small && <div className={s.eventRule} aria-hidden="true" />}

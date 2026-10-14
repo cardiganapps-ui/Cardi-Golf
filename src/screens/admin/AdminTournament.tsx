@@ -25,7 +25,8 @@ import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
-import { downscaleImage } from '../../lib/images'
+import { LOGO_CACHE_SECONDS, logoPath, logoSize, prepareLogo } from '../../lib/logo'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { SettingsEditor } from './SettingsEditor'
 import type { SettingsSection } from './SettingsEditor'
@@ -35,7 +36,7 @@ import { SpectatorLinkCard } from './SpectatorLinkCard'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
-import { humanError } from '../../lib/humanError'
+import { humanError, UserError } from '../../lib/humanError'
 import { handicapsLocked } from '../../engine/core/handicapLock'
 
 const STATUSES = ['setup', 'auction', 'live', 'finished'] as const
@@ -221,12 +222,14 @@ export function AdminTournament() {
     toast(s.lost.length || b.lost.length ? A.settingsMergedLost : A.settingsMerged)
   }
 
-  async function onLogo(file: File) {
+  /** The logo goes up as its rendition (PERF-01, PERF-16): its own new file, transparency kept. */
+  async function onLogo(file: File, again = false) {
     setBusy(true)
     try {
-      const { blob, type } = await downscaleImage(file, 800)
-      const ext = type === 'image/png' ? 'png' : 'jpg'
-      const url = await uploadAsset(`${tournamentId}/logo.${ext}`, blob, type)
+      const prep = await prepareLogo(file)
+      // Processing a stored logo again only helps if the browser could redraw it.
+      if (again && prep.width == null) throw new UserError(t.errors.image)
+      const url = await uploadAsset(logoPath(tournamentId, prep), prep.blob, prep.type, prep.width ? LOGO_CACHE_SECONDS : undefined)
       await updateTournament(tournamentId, { logo_url: url })
       patch((s) => (s.tournament.logoUrl = url))
       toast(t.common.saved)
@@ -235,6 +238,29 @@ export function AdminTournament() {
     } finally {
       setBusy(false)
     }
+  }
+
+  /**
+   * A logo stored whole (before renditions, or seeded straight into Storage)
+   * is read back and processed as if uploaded now. A URL of its own, so the
+   * service worker's copy (an opaque one, from a plain <img>) is not what comes back.
+   */
+  async function optimizeLogo(url: string) {
+    setBusy(true)
+    let file: File
+    try {
+      const fresh = new URL(url)
+      fresh.searchParams.set('polo-optimize', String(Date.now()))
+      const res = await fetch(fresh.href, { cache: 'no-store' })
+      if (!res.ok) throw new UserError(t.errors.image)
+      const blob = await res.blob()
+      file = new File([blob], 'logo', { type: blob.type })
+    } catch (e) {
+      toast(humanError(e))
+      setBusy(false)
+      return
+    }
+    await onLogo(file, true)
   }
 
   /** The immediate mutations: one busy flag, a toast on success; `recipe` applies the change to the local snapshot. */
@@ -336,12 +362,20 @@ export function AdminTournament() {
           <strong>{A.brand}</strong>
         </div>
         <div className={a.chipRow}>
-          {tr.logoUrl ? <img src={tr.logoUrl} alt="" className={a.logo} /> : null}
+          {tr.logoUrl ? <TournamentLogo url={tr.logoUrl} className={a.logo} /> : null}
           <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
             {A.uploadLogo}
           </button>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void onLogo(e.target.files[0])} />
         </div>
+        {tr.logoUrl && !logoSize(tr.logoUrl) ? (
+          <div className={a.chipRow}>
+            <p className={a.help}>{A.logoHeavy}</p>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={() => void optimizeLogo(tr.logoUrl!)} disabled={busy}>
+              {A.optimizeLogo}
+            </button>
+          </div>
+        ) : null}
         <Field label={A.name}>
           <input
             className="input"

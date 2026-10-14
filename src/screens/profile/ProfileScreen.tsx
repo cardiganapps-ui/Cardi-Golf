@@ -12,6 +12,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { Avatar, CopyButton, ShareButton, Sheet, Spinner, toast } from '../../components/ui'
 import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { friendBlock, friendRemove, friendRequest, friendRespond, friendshipWith, type Friendship } from '../../data/social'
 import { IconChevronRight, IconSettings } from '../../components/icons'
 import { sessionIfAny, useAuth } from '../../data/auth'
@@ -40,7 +41,7 @@ const HISTORY_SHOWN = 8
 /** A tournament's logo, or its initial in a ruled square when it has none. */
 export function EventMark({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   return logoUrl ? (
-    <img className={styles.logo} src={logoUrl} alt="" />
+    <TournamentLogo className={styles.logo} url={logoUrl} />
   ) : (
     <span className={styles.mono} aria-hidden="true">
       {name.trim().charAt(0).toUpperCase()}
