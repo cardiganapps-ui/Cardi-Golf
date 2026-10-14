@@ -23,7 +23,16 @@ export const SLUGS = {
   /** DB-05: the phone's tournament, and another one whose changes must never reach it. */
   own: 'e2e-propio',
   other: 'e2e-ajeno',
+  /** TRUST-24: the phones that hold a PIN, each claim's kind read from the request. */
+  phones: 'e2e-telefonos',
+  /** QA-17: four phones saving at once, one per group, in four twosomes. */
+  fourPhones: 'e2e-cuatro-telefonos',
+  /** QA-17: holes corrected while the outbox is sending them. */
+  drain: 'e2e-vaciado',
 } as const
+
+/** The tournaments seeded as four twosomes (in sort order: Ana and Beto, Caro and Dani, …) instead of two foursomes. */
+export const TWOSOMES: ReadonlySet<string> = new Set([SLUGS.fourPhones])
 
 export interface FieldPlayer {
   name: string
@@ -45,6 +54,15 @@ export const PLAYERS: FieldPlayer[] = [
   { name: 'Hugo', fullName: 'Hugo Huerta', base: 35, group: 2 },
 ]
 export const GROUP_1 = PLAYERS.filter((p) => p.group === 1).map((p) => p.name)
+
+/** The group a player plays in, in the tournament `slug`. */
+export function groupOf(slug: string, name: string): number {
+  const i = PLAYERS.findIndex((p) => p.name === name)
+  if (i < 0) throw new Error(`not in the field: ${name}`)
+  return TWOSOMES.has(slug) ? Math.floor(i / 2) + 1 : PLAYERS[i]!.group
+}
+/** The players of group `group` in `slug`, in sort order. */
+export const groupNames = (slug: string, group: number) => PLAYERS.filter((p) => groupOf(slug, p.name) === group).map((p) => p.name)
 
 /** «Campo E2E»: [par, stroke index] for holes 1 to 18 (par 72). */
 export const CARD: Array<[par: number, si: number]> = [
@@ -118,10 +136,29 @@ export const ROUND: HoleEntry[] = [
   four(e(6), e(5), e(5), e(5)),
 ]
 
+/**
+ * Holes 1 to 9 for all eight, for the four twosomes (QA-17): Ana and Beto,
+ * Caro and Dani, Eli and Fede, Gabi and Hugo. Every twosome changes at least
+ * one value from par and 2 putts on every hole, so no save is two untouched
+ * defaults (the Tarjeta would rightly ask whether both made par). ROUND can't
+ * be reused: on its holes 5, 6, 8 and 9 one of these twosomes made par twice.
+ */
+export const FRONT_NINE_ALL: HoleEntry[] = [
+  { Ana: e(3, 1), Beto: e(5), Caro: e(4, 1), Dani: e(7, 3), Eli: e(4, 1), Fede: e(5), Gabi: e(6), Hugo: e(5) },
+  { Ana: e(5), Beto: e(5), Caro: e(5), Dani: e(5), Eli: e(5), Fede: e(4), Gabi: e(5), Hugo: e(6, 3) },
+  { Ana: e(3, 1), Beto: e(3, 1), Caro: e(3, 1), Dani: e(3, 1), Eli: e(3, 1), Fede: e(4), Gabi: e(4), Hugo: e(5) },
+  { Ana: e(5), Beto: e(4), Caro: e(5), Dani: e(6), Eli: e(5, 1), Fede: e(6), Gabi: e(6), Hugo: e(7) },
+  { Ana: e(5), Beto: e(4), Caro: e(4, 1), Dani: e(4), Eli: e(4), Fede: e(5), Gabi: e(5), Hugo: e(6) },
+  { Ana: e(4, 1), Beto: e(4), Caro: e(5), Dani: e(4), Eli: e(3, 1), Fede: e(4, 1), Gabi: e(5), Hugo: e(4) },
+  { Ana: e(2, 1), Beto: e(3), Caro: e(3), Dani: e(4), Eli: e(3), Fede: e(4), Gabi: e(4, 3), Hugo: e(3, 1) },
+  { Ana: e(4), Beto: e(6), Caro: e(4), Dani: e(5), Eli: e(5), Fede: e(5), Gabi: e(6), Hugo: e(5) },
+  { Ana: e(5), Beto: e(6), Caro: e(4), Dani: e(5), Eli: e(5), Fede: e(6), Gabi: e(6), Hugo: e(6) },
+]
+
 /** Total points per player over the holes given (a hole missing for a player scores nothing). */
-export function totals(card: Map<number, HoleEntry>): Record<string, number> {
+export function totals(card: Map<number, HoleEntry>, names: string[] = GROUP_1): Record<string, number> {
   const out: Record<string, number> = {}
-  for (const name of GROUP_1) {
+  for (const name of names) {
     out[name] = 0
     for (const [hole, entry] of card) if (entry[name]) out[name] += points(name, hole, entry[name]!.strokes)
   }

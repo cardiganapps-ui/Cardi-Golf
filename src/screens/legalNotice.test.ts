@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -252,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-13.1')
+    expect(t.legal.privacy.version).toBe('2026-10-13.2')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -420,5 +420,31 @@ describe('what the notice left out (P3-6)', () => {
     expect(source('src/screens/tournament/TournamentGate.tsx')).toContain('void clearCachedSlug(slug)')
     // What has not gone out is not part of that copy: sign-out and «Cambiar de jugador» wait for it.
     expect(source('src/data/snapshotCache.ts')).not.toMatch(/from '\.\/outbox'/)
+  })
+})
+
+/**
+ * TRUST-24 (0050): the phones that hold each player's PIN. The notice says
+ * what is kept of each (since and until when, what kind) and what the Comité
+ * sees of them (the phones per player, taking one off, which phone a change
+ * came from), and the migration does no more than that.
+ */
+describe('the phones that hold a PIN (TRUST-24)', () => {
+  it('what is kept of each phone, and what the Comité sees, as 0050 does it', () => {
+    expect(sections['Qué datos guardamos']).toContain(
+      'a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora',
+    )
+    expect(sections['Lo que se ve de un torneo']).toContain(
+      'También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.',
+    )
+    const m = source('supabase/migrations/0050_pin_phones.sql')
+    // The kind is all that is read of the phone: no user agent, model or version is kept.
+    expect(m).toContain("platform text not null default 'other' check (platform in ('ios', 'android', 'desktop', 'other'))")
+    expect(m).not.toMatch(/user_agent|ua text not null/)
+    // The Comité only, and never an account id.
+    expect(m).toMatch(/create or replace function public\.player_phones[\s\S]*?if not public\.is_tournament_organizer\(p_tournament_id\)/)
+    expect(m).toMatch(/create or replace function public\.release_pin_claim[\s\S]*?not public\.is_tournament_organizer\(c\.tournament_id\)/)
+    expect(m).toContain("'before', a.before - array['pin_hash', 'token_hash', 'p256dh', 'auth', 'endpoint', 'auth_user_id', 'released_by']")
+    expect(m).toContain("'phone', case when not a.actor_platform and ph.total > 1")
   })
 })

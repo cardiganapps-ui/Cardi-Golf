@@ -66,9 +66,21 @@ export function AdminHistory() {
       const after = e.action === 'DELETE' ? null : e.after?.picked_up ? 'levantó' : (e.after?.strokes as number | null) != null ? String(e.after?.strokes) : null
       return H.scoreLine(player, hole, before, after)
     }
+    // A phone took a player with his PIN, or stopped holding him (TRUST-24). Only the Comité's «Sacar» has a reason.
+    if (e.table === 'pin_claims') {
+      const player = name(row.player_id) ?? '?'
+      if (e.action === 'INSERT') return H.claim.took(player, H.claim.from[String(row.platform)] ?? H.claim.from.other!)
+      if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null) return e.reason ? H.claim.removed(player) : H.claim.left(player)
+    }
     const what = t.platform.tables[e.table] ?? e.table
     const who = e.table === 'players' ? (row.display_name as string | undefined) : e.table === 'rounds' ? `${row.number ?? ''}` : name(row.player_id)
     return `${what}${who ? ` ${who}` : ''}, ${verb}`
+  }
+  /** Who made it: once the player has entered on more than one phone, from which (TRUST-24). */
+  function by(e: AuditEntry): string {
+    if (e.platform) return H.byPlatform
+    const actor = e.actor ?? H.byComite
+    return e.phone ? `${actor}, ${H.phone(e.phone.n, e.phone.of, H.kinds[e.phone.kind] ?? null)}` : actor
   }
 
   if (error) return <ErrorBox error={error} onRetry={() => void load()} />
@@ -90,7 +102,7 @@ export function AdminHistory() {
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{title(e)}</span>
                   <span className={a.rowSub}>
-                    {[e.platform ? H.byPlatform : (e.actor ?? H.byComite), relTime(e.at), e.reason].filter(Boolean).join(', ')}
+                    {[by(e), relTime(e.at), e.reason].filter(Boolean).join(', ')}
                   </span>
                 </span>
                 {e.platform && <span className="chip chip--coral">{H.byPlatform}</span>}
@@ -119,7 +131,7 @@ export function AdminHistory() {
           <div className={a.section}>
             <strong>{title(open)}</strong>
             <span className={a.help}>
-              {[open.platform ? H.byPlatform : (open.actor ?? H.byComite), new Date(open.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].join(', ')}
+              {[by(open), new Date(open.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].join(', ')}
             </span>
             {open.reason && <span className={a.help}>{H.reason(open.reason)}</span>}
             <span className="label">{H.fields}</span>

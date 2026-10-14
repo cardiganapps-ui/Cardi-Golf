@@ -49,6 +49,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   player_pins: T('the PIN, as a hash', CAPTURED, 'tournament'),
   pin_attempts: T('failed PIN tries per device', DATA, 'short'),
   device_sessions: T('which player each phone entered as', DATA, 'tournament'),
+  pin_claims: T('each phone that entered with a player\'s PIN: what kind (iPhone, Android, computer), since when, until when, and whether the Comité took it off', TOURNAMENT, 'tournament'),
   pairs: T('who plays with whom', TOURNAMENT, 'tournament'),
   teams: T('the drawn teams', TOURNAMENT, 'tournament'),
   team_members: T('who is in each team', TOURNAMENT, 'tournament'),

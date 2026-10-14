@@ -79,6 +79,11 @@ export interface AuditEntry {
   platform: boolean
   /** The player or account name; null for the admin or when nobody is known. */
   actor: string | null
+  /**
+   * From which of the player's phones (0050, TRUST-24), once he has entered with his PIN on more than one: its
+   * number among them and its kind. Absent for one phone, his own account, the admin, and a database without 0050.
+   */
+  phone?: { n: number; of: number; kind: 'ios' | 'android' | 'desktop' | 'other' } | null
   reason: string | null
   before: Record<string, unknown> | null
   after: Record<string, unknown> | null
@@ -427,6 +432,14 @@ export async function adminSaveScore(payload: { round_id: string; player_id: str
     p_picked_up: payload.picked_up,
     p_reason: reason,
   })
+}
+
+/**
+ * A Comité correction of one hole, every player in one call (0051, REL-22): admin_save_score for each row in one
+ * transaction, so a refused value or a lost signal leaves the hole as it was, never half corrected.
+ */
+export async function adminSaveHole(roundId: string, hole: number, rows: Array<{ player_id: string; strokes: number | null; putts: number | null; picked_up: boolean }>, reason: string | null) {
+  await rpc('admin_save_hole', { p_round_id: roundId, p_hole: hole, p_rows: rows, p_reason: reason })
 }
 
 /** keep = true: the current values stand; false: the previous device's values come back. Either way the flag clears. */

@@ -46,7 +46,7 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 const admin = vi.hoisted(() => ({ pending: [] as Array<() => void> }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
-  adminSaveScore: vi.fn(() => new Promise<void>((resolve) => admin.pending.push(resolve))),
+  adminSaveHole: vi.fn(() => new Promise<void>((resolve) => admin.pending.push(resolve))),
 }))
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
@@ -242,7 +242,9 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
       await act(async () => {
         for (const done of admin.pending) done()
       })
-      expect(holeOnScreen()).toBe(18)
+      // Answered, it moves on: every hole is played, so to the card's grid, not to hole 18 (UX-19).
+      expect(screen.getByRole('button', { name: S.holeView })).toBeTruthy()
+      expect(screen.getAllByText(S.correctedHole(17, null)).length).toBeGreaterThan(0)
     } finally {
       window.history.replaceState(null, '', '/')
     }
