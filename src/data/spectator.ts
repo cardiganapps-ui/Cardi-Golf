@@ -1,5 +1,5 @@
 /**
- * A link to watch a tournament without a PIN (STRAT-05, migration 0052):
+ * A link to watch a tournament without a PIN (STRAT-05, migration 0053):
  * `/v/<token>`. The Comité makes it in Comité › Torneo › Estado; whoever has
  * it sees the boards with no account and no session, and nothing there writes.
  *
@@ -15,7 +15,7 @@ import { ApiError } from './api'
 import type { Row } from './mappers'
 import { SPECTATOR_PREFIX, snapshotFromRows, type SnapshotRows } from './tournamentStore'
 
-/** The link as the Comité sees it (0052 `spectator_link`). */
+/** The link as the Comité sees it (0053 `spectator_link`). */
 export interface SpectatorLink {
   /** 24 URL-safe characters: the link is `/v/<token>`. */
   token: string
@@ -76,7 +76,7 @@ export function spectatorStoreId(token: string): string {
 }
 
 /**
- * The boards for a link (0052 `spectator_board`), or null when the link does
+ * The boards for a link (0053 `spectator_board`), or null when the link does
  * not work: a wrong token, one the Comité changed or switched off. `seen` is
  * the version this page holds; when nothing changed the server answers that.
  */
@@ -113,7 +113,7 @@ function spectatorGame(g: unknown, money: boolean): unknown {
 }
 
 /**
- * The settings as a link shows them, the same as 0052's `spectator_settings`:
+ * The settings as a link shows them, the same as 0053's `spectator_settings`:
  * never a custom bet's description, the Comité's free text; and without money
  * every peso at zero, the Calcutta off, each side game for fun. The boards
  * computed from them carry no money, and they still parse.
@@ -134,7 +134,7 @@ export function spectatorSettings(raw: unknown, money: boolean): unknown {
 }
 
 /**
- * What a link to watch shows of a tournament, as 0052's `spectator_board`
+ * What a link to watch shows of a tournament, as 0053's `spectator_board`
  * answers it, from any snapshot (the server's answer again, or a design
  * fixture): short names only (no full name, photo, form guide, Comité flag or
  * handicap note), nobody's account or entry, none of the free text the Comité

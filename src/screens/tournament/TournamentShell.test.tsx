@@ -7,8 +7,11 @@
  * mostrando lo último guardado (10:42)» whenever the live channel was off,
  * signal or not, and gave a time of day that made a two-day-old board look
  * like this morning's.
+ *
+ * REL-21, PWA-15: one model of the connection, said once, here; the chip is
+ * «Actualizar» whenever the boards are not live.
  */
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
@@ -18,6 +21,7 @@ import { t } from '../../i18n/es-MX'
 import { TournamentContext } from './TournamentGate'
 import { TournamentShell } from './TournamentShell'
 import { LiveScreen } from './LiveScreen'
+import { useRefreshBoards } from './connection'
 
 function mount() {
   const fx = getFixture('minimal4-live')!
@@ -38,11 +42,13 @@ function mount() {
   )
 }
 const cardTab = () => screen.getByRole('link', { name: new RegExp(`^${t.nav.card}`) })
+const realRefreshNow = useTournament.getState().refreshNow
 
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   useOutbox.setState({ pendingHoles: 0, rejected: [] })
+  useTournament.setState({ refreshNow: realRefreshNow })
 })
 
 describe('the Tarjeta tab says what is still on the phone (REL-17)', () => {
@@ -66,13 +72,16 @@ describe('the Tarjeta tab says what is still on the phone (REL-17)', () => {
   })
 })
 
-/** The boards on screen, from the phone or the server, saved `minutesAgo`. */
-function showBoards(state: { source: 'cache' | 'server'; realtime?: 'off' | 'live' | 'error'; minutesAgo: number; error?: string }) {
+/** The boards on screen, from the phone or the server, saved `minutesAgo`. `ctx`: the gate's asks, for the chip's tap. */
+function showBoards(
+  state: { source: 'cache' | 'server'; realtime?: 'off' | 'connecting' | 'live' | 'error'; minutesAgo: number; error?: string },
+  ctx: { refresh?: () => Promise<void>; retry?: () => Promise<void> } = {},
+) {
   const fx = getFixture('minimal4-live')!
   useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: state.realtime ?? 'off', updatedAt: Date.now() - state.minutesAgo * 60_000, error: state.error ?? null })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: ctx.refresh ?? (async () => undefined), retry: ctx.retry, leave: async () => undefined }}>
         <TournamentShell />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -104,13 +113,15 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
   })
 
-  it('with no signal and holes still on the phone, the age stays', async () => {
-    // It used to read «Sin señal, 1 hoyo en el teléfono», with no age at all.
+  it('with no signal and holes still on the phone, the age stays, and the holes are the Tarjeta tab’s to say (REL-21)', async () => {
+    // It used to read «Sin señal, 1 hoyo en el teléfono», with no age at all; then the age line counted the
+    // holes too, which the Tarjeta's tab and its line already say.
     useOutbox.setState({ pendingHoles: 1 })
     showBoards({ source: 'cache', minutesAgo: 2 * 24 * 60 })
     await noSignal()
-    expect(header()).toContain('hace 2 días')
-    expect(header()).toContain('1 hoyo en el teléfono')
+    expect(age()).toBe(t.sync.boardsAge('hace 2 días'))
+    expect(header()).not.toMatch(/hoyo/)
+    expect(cardTab().textContent).toContain(t.sync.pendingHoles(1))
   })
 
   it('a hole saved on a two-day-old copy leaves it two days old', () => {
@@ -129,8 +140,10 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     expect(header()).not.toContain(t.sync.offlineShort)
     expect(age()).toBeNull()
     cleanup()
+    // It read «Sin actualizaciones en vivo», 27 characters beside the event name; the channel is joining again (REL-21).
     showBoards({ source: 'server', realtime: 'error', minutesAgo: 0 })
-    expect(header()).toContain(t.sync.noLive)
+    expect(chip()).toBe(t.sync.connecting)
+    expect(age()).toBeNull()
   })
 
   it('the server\'s boards after a fetch of them failed: «Conectando…» while it is tried again, and how old they are (REL-10)', () => {
@@ -167,6 +180,140 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+/** The chip as a button: «Actualizar» after what it says (PWA-15). */
+const chipButton = () => within(document.querySelector('header')!).queryByRole('button')
+/** A promise and the means to end it: a refresh under way. */
+function deferred() {
+  let done!: () => void
+  const promise = new Promise<void>((r) => (done = r))
+  return { promise, done }
+}
+
+describe('one connection, said once, in the header (REL-21)', () => {
+  it('the live channel joining reads «Conectando…»: it used to read nothing at all', () => {
+    showBoards({ source: 'server', realtime: 'connecting', minutesAgo: 0 })
+    expect(chip()).toBe(t.sync.connecting)
+    expect(age()).toBeNull()
+  })
+
+  it('«En vivo» only with the server’s boards and the channel joined', () => {
+    showBoards({ source: 'server', realtime: 'live', minutesAgo: 0 })
+    expect(chip()).toBe(t.sync.live)
+    expect(age()).toBeNull()
+    cleanup()
+    // The join answered over the phone's copy: still connecting until the server's boards are in.
+    showBoards({ source: 'cache', realtime: 'live', minutesAgo: 3 })
+    expect(chip()).toBe(t.sync.connecting)
+  })
+})
+
+describe('the chip is «Actualizar» while the boards are not live (PWA-15)', () => {
+  const setRefresh = (fn: () => Promise<void>) => useTournament.setState({ refreshNow: vi.fn(fn) })
+
+  it('live, it is the state and nothing else: no button', () => {
+    showBoards({ source: 'server', realtime: 'live', minutesAgo: 0 })
+    expect(chipButton()).toBeNull()
+  })
+
+  it('anything else is a button named for what it says, then «Actualizar»', async () => {
+    showBoards({ source: 'server', realtime: 'error', minutesAgo: 0 })
+    expect(chipButton()!.getAttribute('aria-label')).toBe(t.sync.refreshLabel(t.sync.connecting))
+    cleanup()
+    showBoards({ source: 'cache', minutesAgo: 5 })
+    await noSignal()
+    expect(chipButton()!.getAttribute('aria-label')).toBe(t.sync.refreshLabel(t.sync.offlineShort))
+    expect(chipButton()!.textContent).toBe(t.sync.offlineShort)
+  })
+
+  it('over the server’s boards a tap asks the store, once, and says so while it runs', async () => {
+    const run = deferred()
+    showBoards({ source: 'server', realtime: 'error', minutesAgo: 0 })
+    setRefresh(() => run.promise)
+    const refreshNow = useTournament.getState().refreshNow
+    await act(async () => {
+      fireEvent.click(chipButton()!)
+    })
+    expect(refreshNow).toHaveBeenCalledTimes(1)
+    expect(chip()).toBe(t.sync.refreshing)
+    expect(chipButton()!.getAttribute('aria-busy')).toBe('true')
+    // A second tap while it runs starts nothing.
+    await act(async () => {
+      fireEvent.click(chipButton()!)
+    })
+    expect(refreshNow).toHaveBeenCalledTimes(1)
+    await act(async () => run.done())
+    expect(chip()).toBe(t.sync.connecting)
+    expect(chipButton()!.getAttribute('aria-busy')).toBeNull()
+  })
+
+  it('a fetch that failed: the tap asks the store too', async () => {
+    showBoards({ source: 'server', realtime: 'live', minutesAgo: 7, error: t.errors.network })
+    setRefresh(async () => undefined)
+    await act(async () => {
+      fireEvent.click(chipButton()!)
+    })
+    expect(useTournament.getState().refreshNow).toHaveBeenCalledTimes(1)
+  })
+
+  it('over the phone’s copy, or with no channel, the gate asks again (session, boards and channel), not the store', async () => {
+    for (const state of [{ source: 'cache' as const, minutesAgo: 5 }, { source: 'server' as const, realtime: 'off' as const, minutesAgo: 0 }]) {
+      const retry = vi.fn(async () => undefined)
+      const refresh = vi.fn(async () => undefined)
+      showBoards(state, { retry, refresh })
+      setRefresh(async () => undefined)
+      await act(async () => {
+        fireEvent.click(chipButton()!)
+      })
+      expect(retry).toHaveBeenCalledTimes(1)
+      expect(refresh).not.toHaveBeenCalled()
+      expect(useTournament.getState().refreshNow).not.toHaveBeenCalled()
+      cleanup()
+    }
+  })
+
+  it('with no `retry` (the design fixtures), the gate’s `refresh`', async () => {
+    const refresh = vi.fn(async () => undefined)
+    showBoards({ source: 'cache', minutesAgo: 5 }, { refresh })
+    await act(async () => {
+      fireEvent.click(chipButton()!)
+    })
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('two asks in the same moment (the chip, and a pull let go) are one refresh, and both get it', async () => {
+    const run = deferred()
+    const fx = getFixture('minimal4-live')!
+    useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: 'server', realtime: 'error', error: null })
+    setRefresh(() => run.promise)
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>{children}</TournamentContext.Provider>
+    )
+    const { result } = renderHook(() => useRefreshBoards(), { wrapper })
+    let first: Promise<void> | undefined
+    let second: Promise<void> | undefined
+    act(() => {
+      first = result.current.refresh()
+      second = result.current.refresh()
+    })
+    expect(useTournament.getState().refreshNow).toHaveBeenCalledTimes(1)
+    expect(second).toBe(first)
+    expect(result.current.refreshing).toBe(true)
+    await act(async () => run.done())
+    expect(result.current.refreshing).toBe(false)
+  })
+
+  it('a refresh that fails puts the chip back as it was', async () => {
+    showBoards({ source: 'server', realtime: 'error', minutesAgo: 0 })
+    setRefresh(async () => {
+      throw new Error('sin red')
+    })
+    await act(async () => {
+      fireEvent.click(chipButton()!)
+    })
+    expect(chip()).toBe(t.sync.connecting)
   })
 })
 

@@ -16,7 +16,7 @@ import type { AuditEntry } from '../../data/api'
 import { t } from '../../i18n/es-MX'
 import { TournamentContext } from '../tournament/TournamentGate'
 
-/** The server's link for the tournament, as 0052 keeps it. */
+/** The server's link for the tournament, as 0053 keeps it. */
 const server = vi.hoisted(() => ({ link: null as null | { token: string; money: boolean }, n: 0, missing: false }))
 const rpc = vi.hoisted(() => vi.fn())
 vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc }), supabaseConfigured: true }))
@@ -138,7 +138,7 @@ describe('Enlace para ver (STRAT-05)', () => {
     expect(server.link).toBeNull()
   })
 
-  it('a database without 0052 says so, never an error', async () => {
+  it('a database without 0053 says so, never an error', async () => {
     server.missing = true
     mount()
     expect(await screen.findByText(S.unavailable)).toBeTruthy()

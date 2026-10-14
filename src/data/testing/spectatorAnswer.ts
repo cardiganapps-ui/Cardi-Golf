@@ -1,5 +1,5 @@
 /**
- * What 0052's `spectator_board` answers for a snapshot, written out for the
+ * What 0053's `spectator_board` answers for a snapshot, written out for the
  * tests (never imported by the app): each table with the columns the
  * migration selects, money tables only «Con dinero», and the settings as
  * `spectator_settings` gives them (every peso at zero without it, never a

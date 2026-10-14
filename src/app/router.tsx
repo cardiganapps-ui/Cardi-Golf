@@ -4,6 +4,7 @@ import { Lazy } from '../components/ui'
 import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
 import { HomeScreen } from '../screens/HomeScreen'
+import { ContinueScreen } from '../screens/ContinueScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
 import { RouteError } from './RouteError'
 import { PlatformGate } from '../screens/platform/PlatformGate'
@@ -154,6 +155,9 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <HomeScreen /> },
+      // The installed app's shortcuts (PWA-14): the last tournament, on En vivo or its Tarjeta.
+      { path: 'continuar', element: <ContinueScreen /> },
+      { path: 'continuar/tarjeta', element: <ContinueScreen tab="tarjeta" /> },
       { path: 'organizer/login', element: <OrganizerLoginScreen /> },
       { path: 'organizer', element: <MyTournamentsScreen /> },
       { path: 'organizer/new', element: <NewTournamentScreen /> },

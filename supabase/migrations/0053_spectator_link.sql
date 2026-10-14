@@ -1,4 +1,4 @@
--- 0052: a link to watch a tournament without a PIN (STRAT-05, §18.9).
+-- 0053: a link to watch a tournament without a PIN (STRAT-05, §18.9).
 --
 -- The group chat, partners and the villa TV could see the boards only by
 -- claiming a player with his PIN, and the TV then ran inside that player's

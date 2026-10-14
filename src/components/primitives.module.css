@@ -546,21 +546,56 @@
 }
 
 /* ---- Live status ---- */
+/* One line, whatever it says: beside a long event name «Sin señal» broke onto two (REL-21); the name gives way. */
 .live {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
 .liveDot {
   width: 8px;
   height: 8px;
+  flex-shrink: 0;
   border-radius: var(--r-round);
   background: var(--accent);
 }
 .liveDotOff {
   background: var(--rule-2);
+}
+/* «Actualizar» (PWA-15): the chip itself, quiet as a chip. Its target reaches 48 px tall past its box, so the
+   header keeps its height when the chip turns into a button. */
+.liveButton {
+  position: relative;
+  margin: 0;
+  padding: var(--s1) 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.liveButton::after {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 24px) calc(-1 * var(--s2));
+}
+.liveIcon {
+  flex-shrink: 0;
+  color: var(--ink);
+}
+/* Under way: the arrow keeps turning. Its turn is the motion tokens', so reduced motion holds it still. */
+.liveIconBusy {
+  animation: liveTurn calc(var(--dur-slow) * 4) linear infinite;
+}
+@keyframes liveTurn {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 /* ---- Event name ---- */

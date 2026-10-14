@@ -24,6 +24,7 @@ import {
   expect,
   expectLive,
   expectedScores,
+  FOUR_G,
   holeHeading,
   keepMetrics,
   openCard,
@@ -32,7 +33,9 @@ import {
   savedAt,
   serverScores,
   shownAt,
+  slowFrames,
   tab,
+  takeTaps,
   test,
   typeHole,
   watchFor,
@@ -43,13 +46,13 @@ import {
 
 /** §2: «Other phones see a new score in under 2 seconds on 4G». */
 const BUDGET_MS = 2000
-
+/** §2: «Entering one hole for a foursome takes under 10 seconds». */
+const FOURSOME_HOLE_MS = 10_000
 /**
- * A fair 4G signal: 150 ms of round trip, 1.6 Mbps down and 750 kbps up,
- * held for the whole round, joining included: on every request (Chromium's
- * network conditions) and on every frame of the live channel, each way.
+ * A person's tap: a deliberate one with the thumb, reading the stepper first. Generous on purpose, since the
+ * suite's taps are a machine's; the person's own pace is the rehearsal's to check (§17).
  */
-const FOUR_G: Link = { latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
+const PERSON_TAP_MS = 600
 
 interface Sample {
   what: 'tarjeta' | 'board' | 'correction'
@@ -73,6 +76,12 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   const beto = await join(slug, 'Beto', network.conditions)
   const card = new Map<number, HoleEntry>()
   const samples: Sample[] = []
+  /** Per hole of the round, each stepper tap Ana's phone took to show its new value (ms). */
+  const typing: Array<{ hole: number; taps: number[] }> = []
+  async function typeRoundHole(hole: number, entry: HoleEntry) {
+    await typeHole(ana.page, hole, entry)
+    typing.push({ hole, taps: takeTaps(ana.page) })
+  }
 
   /** Arms the watch on Beto's phone, saves on Ana's, and keeps the time it took. */
   async function measure(what: Sample['what'], hole: number, shown: Shown) {
@@ -111,7 +120,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   for (const hole of [1, 2, 3]) {
     const entry = ROUND[hole - 1]!
     await expect(holeHeading(beto.page, hole)).toBeVisible()
-    await typeHole(ana.page, hole, entry)
+    await typeRoundHole(hole, entry)
     card.set(hole, entry)
     await measure('tarjeta', hole, { card: cardShows(entry) })
     if (hole < 3) await beto.page.getByRole('button', { name: t.card.next, exact: true }).click()
@@ -122,7 +131,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   await expectLive(beto.page)
   for (let hole = 4; hole <= 18; hole++) {
     const entry = ROUND[hole - 1]!
-    await typeHole(ana.page, hole, entry)
+    await typeRoundHole(hole, entry)
     card.set(hole, entry)
     await measure('board', hole, { board: boardAfter(card, hole) })
   }
@@ -134,19 +143,30 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
     await ana.page.getByRole('button', { name: String(fix.hole), exact: true }).click()
     const entry = { [fix.name]: { strokes: fix.strokes, putts: fix.putts } }
     await typeHole(ana.page, fix.hole, entry)
+    takeTaps(ana.page)
     card.set(fix.hole, { ...card.get(fix.hole)!, ...entry })
     await measure('correction', fix.hole, { board: boardAfter(card, 18) })
   }
+
+  // A foursome's hole (§2): the taps it takes from par and 2 putts, plus «Guardar hoyo», each at a person's pace
+  // and the screen's own answer to a tap. The suite's taps carry Playwright's time too, so this errs long.
+  const tapMs = typing.flatMap((x) => x.taps)
+  const perHole = typing.map((x) => x.taps.length + 1)
+  const foursome = { holes: typing.length, meanTaps: Math.round((10 * perHole.reduce((a, b) => a + b, 0)) / perHole.length) / 10, maxTaps: Math.max(...perHole), tapP50: percentile(tapMs, 0.5), tapP95: percentile(tapMs, 0.95) }
+  const longestHoleMs = foursome.maxTaps * (PERSON_TAP_MS + foursome.tapP95)
+  console.log(`::notice title=a foursome's hole (${network.label})::${foursome.meanTaps} taps on average, ${foursome.maxTaps} at most; a tap shows its value in p50 ${foursome.tapP50} ms, p95 ${foursome.tapP95} ms; the longest hole at a person's pace ≈ ${(longestHoleMs / 1000).toFixed(1)} s`)
 
   const ms = samples.map((s) => s.ms)
   const stats = { saves: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
   console.log(`[e2e-stack] ${network.label}: save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
   // A notice on the check run: its annotations can be read through the API, the job's log and summary can't (from the session).
   console.log(`::notice title=save-to-shown (${network.label})::${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
-  keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples }, [
+  keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples, foursomeHole: { ...foursome, personTapMs: PERSON_TAP_MS, longestHoleMs, budgetMs: FOURSOME_HOLE_MS } }, [
     `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
     '',
     `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones on ${network.conditions.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
+    '',
+    `A foursome's hole: **${foursome.meanTaps}** taps on average, **${foursome.maxTaps}** at most (from par and 2 putts, «Guardar hoyo» included); each stepper tap showed its value in p50 ${foursome.tapP50} ms, p95 **${foursome.tapP95} ms**. At ${PERSON_TAP_MS} ms a tap for a person, the longest hole takes about **${(longestHoleMs / 1000).toFixed(1)} s** (budget ${FOURSOME_HOLE_MS / 1000} s).`,
     '',
     '| Where | Hole | ms |',
     '|---|---:|---:|',
@@ -154,9 +174,10 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   ].join('\n'))
 
   expect(samples.filter((s) => s.ms >= BUDGET_MS), `${network.label}: saves that took ${BUDGET_MS} ms or more to show on the other phone`).toEqual([])
+  expect(longestHoleMs, `${network.label}: the longest foursome hole, at a person's pace`).toBeLessThan(FOURSOME_HOLE_MS)
   // The live channel really was on the link: its frames went through slowSockets on both phones.
   if (network.conditions)
-    for (const p of [ana, beto]) expect(await p.page.evaluate(() => (window as unknown as { __e2eSlowFrames?: number }).__e2eSlowFrames ?? 0), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
+    for (const p of [ana, beto]) expect(await slowFrames(p.page), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
   // And the server holds the card as Ana's phone typed it: 72 rows, no discrepancy.
   expect(serverScores(slug)).toEqual(expectedScores(card, 'Ana'))
   assertSamePlayer(ana, beto)

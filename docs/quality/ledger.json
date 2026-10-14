@@ -719,9 +719,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 163,
+      "tests": [
+        "src/i18n/payWords.test.ts",
+        "src/screens/tournament/MoneyScreen.why.test.tsx",
+        "src/screens/tournament/MoneyScreen.test.tsx",
+        "e2e/fixtures/money.spec.ts",
+        "e2e/fixtures/flows.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2042,10 +2048,11 @@
       "status": "fixed",
       "pr": 152,
       "tests": [
-        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx"
+        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx",
+        "src/data/outbox.settle.test.ts"
       ],
       "verifiedBy": null,
-      "residual": "The push landing and the live echo each still recompute the boards and re-render every screen after the network answers (PERF-09)."
+      "residual": "The push landing and the live echo each still recompute the boards and re-render every screen after the network answers (PERF-09). PR 152's deferred write lost a hole closed inside the frame; PR 155 stores it at the tap, committed at once. Its snake answer and contest winners still read first (shared key, REL-18) and finish 33–55 ms after the tap, and two tabs saving one hole within a few milliseconds can make two calls."
     },
     {
       "id": "PERF-13",
@@ -2213,9 +2220,13 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/components/InstallGuide.test.tsx",
+        "src/lib/install.test.ts",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2227,9 +2238,16 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 154,
+      "tests": [
+        "src/lib/install.test.ts",
+        "src/lib/joinInput.test.ts",
+        "src/lib/appManifest.test.ts",
+        "src/screens/HomeScreen.join.test.tsx",
+        "src/components/InstallGuide.test.tsx",
+        "e2e/fixtures/install.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2241,11 +2259,17 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "supabase/tests/push_players.sql",
+        "src/lib/pushDispatch.test.ts",
+        "src/data/push.test.ts",
+        "src/screens/tournament/TournamentPush.test.tsx",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Event-driven only: no reminder before a tee time (needs pg_cron, not checked on production). A snake tiebreak on a group's last hole is told only when a card is signed, so without the pairs game it gets no notice (the red chip and Comité › Tarjetas still show it). Real delivery on iOS and Android to be checked at Rehearsal 1."
     },
     {
       "id": "PWA-12",
@@ -2255,9 +2279,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 165,
+      "tests": [
+        "src/lib/pushSw.test.ts",
+        "src/lib/noticeTaps.test.ts",
+        "src/data/push.test.ts",
+        "src/lib/noticeText.test.ts",
+        "e2e/fixtures/push.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2269,9 +2299,15 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/lib/launch.test.ts",
+        "src/lib/launchImages.test.ts",
+        "src/screens/ContinueScreen.test.tsx",
+        "src/lib/appManifest.test.ts",
+        "src/lib/precache.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2283,9 +2319,14 @@
       "workstream": "W7",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/PullToRefresh.test.tsx",
+        "src/screens/tournament/pull.test.ts",
+        "src/data/tournamentStore.refresh.test.ts",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2522,14 +2563,15 @@
       "workstream": "W2",
       "phase": 1,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 161,
       "tests": [
         "e2e/stack/live.spec.ts",
-        "e2e/stack/offline.spec.ts"
+        "e2e/stack/offline.spec.ts",
+        "e2e/stack/fourphones.spec.ts"
       ],
       "verifiedBy": null,
-      "residual": "Partial (open), reconciled 2026-10-13. Done (#99, #123): e2e-stack runs the real app against a local Supabase; every hole of a round and four corrections saved on one phone must show on the other within 2 s, on the runner's network and on emulated 4G (p95 719 ms), the times on the run summary; offline.spec.ts brings two offline holes (one corrected) to the other phone when the signal returns with exactly the final values; samecard.spec.ts has two phones capture the same hole at once. Left: two phones, not the four the M3 acceptance test names; nothing measures «a foursome's hole in under 10 seconds»; no correction while the outbox drains; never run against a staging project or the Ensayo before the trip."
+      "residual": "Done (#99, #123, #161): two phones on one card within 2 s on the runner's network and on 4G; four phones saving the same hole at once, each twosome's hole on two other phones within 2 s, all on 4G (first run: 36 saves, p95 876 ms, max 889 ms); offline holes arriving when the signal returns; corrections made while the phone is still sending (one on its way, one waiting) landing as corrected; a foursome's hole at a person's 0.6 s a tap under 10 s (first run: 3.2 taps on average, 9 at most, a tap answered in p95 48 ms, the longest hole about 5.8 s). Left: a person's own pace is the rehearsal's to check, and the suite never runs against a staging project (needs Diego) or the Ensayo before the trip."
     },
     {
       "id": "QA-18",
@@ -2965,9 +3007,13 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 164,
+      "tests": [
+        "src/screens/tournament/connection.test.ts",
+        "src/screens/tournament/TournamentShell.status.test.tsx",
+        "e2e/fixtures/connection.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2979,11 +3025,14 @@
       "workstream": "W1",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 162,
+      "tests": [
+        "supabase/tests/admin_save_hole.sql",
+        "src/screens/tournament/ScorecardScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Comité corrections still need signal: by design they are never queued to land later on numbers that may have moved. With no signal the Tarjeta keeps nothing, says so and keeps what was typed."
     },
     {
       "id": "SEC-01",
@@ -3938,11 +3987,14 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 162,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.test.tsx",
+        "src/screens/tournament/ScorecardScreen.saveFast.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The snake question for a corrected hole is asked again only when the hole has no answer stored; an answer given before stays."
     },
     {
       "id": "UX-20",

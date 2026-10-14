@@ -45,6 +45,13 @@ export function MoneyScreen() {
   const byId = useMemo(() => new Map(snapshot.players.map((p) => [p.id, p])), [snapshot.players])
   const name = useCallback((id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : M.bank), [byId])
   const banker = snapshot.tournament.bankerPlayerId ? byId.get(snapshot.tournament.bankerPlayerId) : undefined
+  /** A party of a money line: the person's name, or null for the bank, which the sentence words itself (COPY-08). */
+  const party = useCallback((id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : null), [byId])
+  /** Who pays whom: the banker with his own bank is his money in or out of what he holds, not a payment to himself. */
+  const words = useCallback(
+    (from: string | null, to: string | null, paid = false) => M.payWords(party(from), party(to), paid, !!banker && ((from === banker.id && to === null) || (from === null && to === banker.id))),
+    [party, banker],
+  )
   const [mode, setMode] = useState<'live' | 'byGame' | 'final'>(state.tournamentFinal ? 'final' : 'live')
   const [settle, setSettle] = useState<'bank' | 'p2p'>('bank')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -204,16 +211,24 @@ export function MoneyScreen() {
       toast(M.unmarkedPaid, { label: t.common.undo, onClick: () => undo([a], n) })
     })
   }
-  const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(name(from), name(to)) : M.pays(name(from), name(to), formatMoney(amount)))
+  const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.payText(words(from, to), formatMoney(amount)))
   /** A row's own name, read out with its button: who, to whom, for what and how much, so no two buttons share one. */
-  const accountText = (a: Account, part: 'due' | 'paid') => `${name(a.from)} ${part === 'due' ? M.paysTo : M.paidTo} ${name(a.to)}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid)}`
+  const accountText = (a: Account, part: 'due' | 'paid') => `${M.payText(words(a.from, a.to, part === 'paid'))}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid)}`
+  /** «<b>Leonel</b> le paga al banco», «<b>El banco</b> le paga a <b>Camilo</b>»: the payer in bold, and the payee too when `both`. */
+  const payLine = (from: string | null, to: string | null, opts: { paid?: boolean; both?: boolean } = {}) => {
+    const w = words(from, to, opts.paid)
+    return (
+      <>
+        <strong>{w.who}</strong> {w.verb}
+        {w.whom && <> {opts.both ? <strong>{w.whom}</strong> : w.whom}</>}
+      </>
+    )
+  }
   /** One debt still due, with «Marcar pagado» for admins. */
   const debtRow = (a: Account) => (
     <div key={`${a.kind}|${a.from}|${a.to}`} className={styles.transfer}>
       <span className={styles.transferText}>
-        <span>
-          <strong>{name(a.from)}</strong> {M.paysTo} {name(a.to)}
-        </span>
+        <span>{payLine(a.from, a.to)}</span>
         <span className={styles.transferKind}>{accountDetail(a)}</span>
       </span>
       <span className={styles.amount}>{formatMoney(a.due)}</span>
@@ -241,9 +256,7 @@ export function MoneyScreen() {
   const paidRow = (a: Account) => (
     <div key={`${a.kind}|${a.from}|${a.to}`} className={`${styles.transfer} ${styles.paidRow}`}>
       <span className={styles.transferText}>
-        <span>
-          <strong>{name(a.from)}</strong> {M.paidTo} {name(a.to)}
-        </span>
+        <span>{payLine(a.from, a.to, { paid: true })}</span>
         <span className={styles.transferKind}>{accountDetail(a, 'paid')}</span>
       </span>
       <span className={styles.amount}>{formatMoney(a.paid)}</span>
@@ -275,9 +288,9 @@ export function MoneyScreen() {
     }
     lines.push('', settle === 'bank' ? M.viaBank : M.p2p)
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
-    for (const tr of transfers) if (tr.amount > 0) lines.push(M.pays(name(tr.from), name(tr.to), formatMoney(tr.amount)))
+    for (const tr of transfers) if (tr.amount > 0) lines.push(M.payText(words(tr.from, tr.to), formatMoney(tr.amount)))
     return lines.join('\n')
-  }, [people, settle, money, snapshot.tournament.name, name])
+  }, [people, settle, money, snapshot.tournament.name, name, words])
 
   /** Vía banco, once final, an admin marks lines paid: the list gets a slot for the button. */
   const markable = me.isAdmin && settle === 'bank' && state.tournamentFinal
@@ -482,11 +495,9 @@ export function MoneyScreen() {
                   <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
                     <span className={styles.transferText}>
                       {tr.amount === 0 ? (
-                        <span>{M.squared(name(tr.from), name(tr.to))}</span>
+                        <span>{M.squared(party(tr.from), party(tr.to))}</span>
                       ) : (
-                        <span>
-                          <strong>{name(tr.from)}</strong> {M.paysTo} <strong>{name(tr.to)}</strong>
-                        </span>
+                        <span>{payLine(tr.from, tr.to, { both: true })}</span>
                       )}
                       {parts.length > 0 && (
                         <span className={styles.transferKind}>

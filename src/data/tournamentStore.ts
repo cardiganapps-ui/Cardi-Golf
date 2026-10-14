@@ -98,6 +98,12 @@ interface StoreState {
   keepOnPhone: boolean
   load(tournamentId: string, opts?: { keepOnPhone?: boolean }): Promise<void>
   reload(): Promise<void>
+  /**
+   * «Actualizar» (PWA-15): the boards from the server now, because the person asked. A fetch already on its
+   * way is waited for, not sent twice, and a live channel that failed is opened again now rather than at
+   * the end of its wait.
+   */
+  refreshNow(): Promise<void>
   /** Show a cached snapshot (no signal on open) and keep the store pointed at that tournament. */
   seed(tournamentId: string, snapshot: Snapshot, savedAt: number): void
   subscribe(): void
@@ -297,6 +303,8 @@ let open = false
 let left = false
 /** Fetches on their way: the heal waits for them, and a delete is logged only for them. */
 let fetching = 0
+/** The newest of them: «Actualizar» waits for it rather than sending another (`refreshNow`). */
+let fetchOut: Promise<unknown> | null = null
 /** A write landed while a fetch was on its way, which may have read a later change than it: one more fetch once it lands. */
 let refetch = false
 /** Times the tournament was left (the gate went): a load still on its way then lands, but opens no channel. */
@@ -497,7 +505,7 @@ export type SnapshotRows = { tournament: Row } & Partial<Record<Exclude<Snapshot
 
 /**
  * The snapshot the engine reads, from the rows: a member's fetch and a link to
- * watch (`spectator_board`, 0052) build it the same way. A table left out reads
+ * watch (`spectator_board`, 0053) build it the same way. A table left out reads
  * as empty. In the order live changes insert in, whatever order the database's
  * collation gave.
  */
@@ -613,7 +621,9 @@ export const useTournament = create<StoreState>((set, get) => ({
     const since = changeSeq
     fetching++
     try {
-      const snapshot = await fetchSnapshot(tournamentId).finally(() => fetching--)
+      const out = fetchSnapshot(tournamentId).finally(() => fetching--)
+      fetchOut = out
+      const snapshot = await out
       if (get().tournamentId !== tournamentId) return
       if (seq !== fetchSeq) {
         // A newer fetch of this tournament brings the boards (a reload a live change asked for); this load still owes the channel,
@@ -658,7 +668,9 @@ export const useTournament = create<StoreState>((set, get) => ({
     const since = changeSeq
     fetching++
     try {
-      const snapshot = await fetchSnapshot(id).finally(() => fetching--)
+      const out = fetchSnapshot(id).finally(() => fetching--)
+      fetchOut = out
+      const snapshot = await out
       if (get().tournamentId !== id) return
       // Superseded: the newer fetch brings the boards, and the one more fetch asked for while both were out still goes (N2).
       if (seq !== fetchSeq) return afterFetch()
@@ -681,6 +693,27 @@ export const useTournament = create<StoreState>((set, get) => ({
       // A failed fetch read nothing: the one more fetch a landing asked for still goes, once (V22).
       afterFetch()
     }
+  },
+  async refreshNow() {
+    const id = get().tournamentId
+    // A link to watch asks for its boards itself (SpectatorGate): the members' fetch is not its to run.
+    if (!id || id.startsWith('fixture:') || id.startsWith(SPECTATOR_PREFIX) || left) return
+    // The live channel failed and waits to be opened again (degrade): now, since the person is asking. Not with
+    // no signal, where it can't join: each try would only make the next automatic one wait longer.
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+    if (get().realtime === 'error' && channel && !offline) {
+      if (retryTimer) clearTimeout(retryTimer)
+      retryTimer = null
+      // Forget the channel first: removeChannel reports CLOSED synchronously.
+      const ch = channel
+      channel = null
+      void supabase().removeChannel(ch)
+      get().subscribe()
+    }
+    // A fetch on its way brings the boards as they are: its answer, not a second request behind it.
+    const landed = () => undefined
+    if (fetching > 0 && fetchOut) return fetchOut.then(landed, landed)
+    return get().reload()
   },
   seed(tournamentId, snapshot, savedAt) {
     // Never over the live boards: a cache read that lands after the server's answer is older than it.

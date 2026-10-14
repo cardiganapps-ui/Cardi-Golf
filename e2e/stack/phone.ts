@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { expect, test as base, type Browser, type BrowserContext, type Page } from '@playwright/test'
 import { t } from '../../src/i18n/es-MX'
 import { BASE_URL, lit, sql } from './env'
-import { GROUP_1, PIN, par, strokeIndex, totals, type HoleEntry } from './field'
+import { GROUP_1, PIN, PLAYERS, par, strokeIndex, totals, type HoleEntry } from './field'
 
 /** As the players hold it (the fixture suite's phone). */
 export const PHONE = {
@@ -24,7 +24,7 @@ export const PHONE = {
 }
 
 /** The suite's own marks on a page's window. */
-type Marked = Window & { __e2eSavedAt?: number; __e2eShownAt?: number | null; __e2eObserver?: MutationObserver }
+type Marked = Window & { __e2eSavedAt?: number; __e2eShownAt?: Record<string, number | null>; __e2eObserver?: MutationObserver }
 
 export interface Phone {
   name: string
@@ -63,6 +63,16 @@ export interface Link {
   downloadThroughput: number
   uploadThroughput: number
 }
+
+/**
+ * A fair 4G signal: 150 ms of round trip, 1.6 Mbps down and 750 kbps up,
+ * held for the whole round, joining included: on every request (Chromium's
+ * network conditions) and on every frame of the live channel, each way.
+ */
+export const FOUR_G: Link = { latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
+
+/** The live channel really was on the link: its frames went through `slowSockets` on this phone's page. */
+export const slowFrames = (page: Page) => page.evaluate(() => (window as unknown as { __e2eSlowFrames?: number }).__e2eSlowFrames ?? 0)
 
 /** In the page: every WebSocket frame, sent or received, `oneWayMs` late, in order; `__e2eSlowFrames` counts them. */
 function slowSockets(oneWayMs: number) {
@@ -176,14 +186,25 @@ export async function openCard(page: Page) {
   await expect(page.getByRole('heading', { level: 1, name: /^Hoyo \d+, par \d/ })).toBeVisible()
 }
 
+/** Per page, each stepper tap the suite made: ms from the click to the new value on screen (Playwright's own time included). */
+const taps = new WeakMap<Page, number[]>()
+/** The taps `typeHole` made on `page` so far, and forgets them. */
+export function takeTaps(page: Page): number[] {
+  const made = taps.get(page) ?? []
+  taps.delete(page)
+  return made
+}
+
 /** One stepper, stepped one tap at a time (each tap waits for the screen to change). */
 async function setStepper(page: Page, label: string, target: number) {
   const group = page.getByRole('group', { name: label, exact: true })
-  for (let taps = 0; taps <= 15; taps++) {
+  for (let tapped = 0; tapped <= 15; tapped++) {
     const now = Number((await group.textContent())?.trim())
     if (now === target) return
+    const at = Date.now()
     await page.getByRole('button', { name: `${label}: ${now < target ? t.common.stepUp : t.common.stepDown}`, exact: true }).click()
     await expect(group).not.toHaveText(String(now))
+    taps.set(page, [...(taps.get(page) ?? []), Date.now() - at])
   }
   throw new Error(`${label} did not reach ${target}`)
 }
@@ -204,11 +225,43 @@ export async function typeHole(page: Page, hole: number, entry: HoleEntry) {
   if (wait > 0) await page.waitForTimeout(wait)
 }
 
-/** Taps the save button; returns once the phone says the hole is saved (on the phone: the outbox has it). */
+/** Taps the save button; returns once the phone says the hole is saved (its outbox may be storing it still). */
 export async function saveHole(page: Page, hole: number) {
   await page.getByRole('button', { name: hole === 18 ? t.card.saveLast : t.card.save, exact: true }).click()
   // The save bar's note. (On the last hole the card's live region says the same words, to a screen reader only.)
-  await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^${t.card.savedHole(hole)}$`) })).toBeVisible()
+  // A hole the group had played is a correction: its note says so, and where the card went back to (UX-19).
+  const notes = [t.card.savedHole(hole), t.card.correctedHole(hole, null), t.card.correctedHole(hole, 99).replace('99', '\\d+')]
+  await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^(${notes.join('|')})$`) })).toBeVisible()
+}
+
+/** The phone's outbox holds a save of `hole` in IndexedDB, where the app opened again reads it (no signal: nothing sent it). */
+export async function expectKeptOnPhone(page: Page, hole: number) {
+  const kept = () =>
+    page.evaluate(
+      (h) =>
+        new Promise<number>((resolve) => {
+          const open = indexedDB.open('cardi-golf-outbox')
+          open.onerror = () => resolve(0)
+          open.onsuccess = () => {
+            const db = open.result
+            if (!db.objectStoreNames.contains('items')) {
+              db.close()
+              return resolve(0)
+            }
+            const all = db.transaction('items').objectStore('items').getAll()
+            all.onsuccess = () => {
+              db.close()
+              resolve((all.result as Array<{ kind?: string; payload?: { hole?: number } }>).filter((x) => x.kind === 'hole' && x.payload?.hole === h).length)
+            }
+            all.onerror = () => {
+              db.close()
+              resolve(0)
+            }
+          }
+        }),
+      hole,
+    )
+  await expect.poll(kept, { message: `hole ${hole} in the phone's outbox` }).toBeGreaterThan(0)
 }
 
 /** When the phone last tapped «Guardar…», on its own clock (ms since the epoch). */
@@ -226,10 +279,10 @@ export function boardRows(page: Page): Promise<string[]> {
 /** A board row as the app labels it (t.live.rowLabel), from the values the test expects. */
 export const row = (pos: string, name: string, figure: string, thru: string, today?: string) => t.live.rowLabel(pos, name, figure, today, thru)
 
-/** Group 1's rows after the holes in `card`, without the position (ties move it): «Ana, hoy 34, hoyo F, 34». */
-export function boardAfter(card: Map<number, HoleEntry>, thru: number): string[] {
-  const sum = totals(card)
-  return GROUP_1.map((name) => row('', name, String(sum[name]), t.round.thru(thru, 18), String(sum[name])))
+/** The rows of `names` after the holes in `card`, without the position (ties move it): «Ana, hoy 34, hoyo F, 34». */
+export function boardAfter(card: Map<number, HoleEntry>, thru: number, names: string[] = GROUP_1): string[] {
+  const sum = totals(card, names)
+  return names.map((name) => row('', name, String(sum[name]), t.round.thru(thru, 18), String(sum[name])))
 }
 
 /** The Tarjeta's steppers for group 1 showing `entry`: [label, value] pairs. */
@@ -242,15 +295,16 @@ export const cardShows = (entry: HoleEntry): Array<[string, string]> =>
 export type Shown = { board: string[] } | { card: Array<[label: string, value: string]> }
 
 /**
- * Arms a watch on `page` for `shown` (board rows by the end of their label,
- * or the values of the Tarjeta's steppers): the first moment the DOM shows
- * all of it is recorded on the page's own clock. It must not show yet: a
- * measurement that starts satisfied measures nothing.
+ * Arms one watch per key on `page`, each for its `Shown` (board rows by the
+ * end of their label, or the values of the Tarjeta's steppers): the first
+ * moment the DOM shows all of one is recorded under its key, on the page's
+ * own clock. None may show yet: a measurement that starts satisfied measures
+ * nothing. Arming again forgets the last watches.
  */
-export async function watchFor(page: Page, shown: Shown) {
-  const already = await page.evaluate((s) => {
+export async function watchEach(page: Page, shown: Record<string, Shown>) {
+  const already = await page.evaluate((all) => {
     const w = window as Marked
-    const holds = () => {
+    const holds = (s: Shown) => {
       if ('board' in s) {
         const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) => b.getAttribute('aria-label') ?? '')
         return s.board.every((want) => labels.some((l) => l === want || l.endsWith(`, ${want}`)))
@@ -261,28 +315,40 @@ export async function watchFor(page: Page, shown: Shown) {
       })
     }
     w.__e2eObserver?.disconnect()
-    w.__e2eShownAt = null
-    if (holds()) return true
+    const early = Object.keys(all).filter((k) => holds(all[k]!))
+    if (early.length) return early
+    const at: Record<string, number | null> = Object.fromEntries(Object.keys(all).map((k) => [k, null]))
+    w.__e2eShownAt = at
     const observer = new MutationObserver(() => {
-      if (w.__e2eShownAt == null && holds()) {
-        w.__e2eShownAt = performance.timeOrigin + performance.now()
-        observer.disconnect()
-      }
+      const now = performance.timeOrigin + performance.now()
+      for (const k of Object.keys(all)) if (at[k] == null && holds(all[k]!)) at[k] = now
+      if (Object.values(at).every((v) => v != null)) observer.disconnect()
     })
     observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true })
     w.__e2eObserver = observer
-    return false
+    return []
   }, shown)
-  expect(already, `already on screen before the save: ${JSON.stringify(shown)}`).toBe(false)
+  expect(already, `already on screen before the save: ${JSON.stringify(already.map((k) => shown[k]))}`).toEqual([])
 }
+
+/** When each watch armed by `watchEach` saw it all, on the page's clock; fails after `timeout` ms, naming the ones still waiting. */
+export async function shownEachAt(page: Page, timeout = 15_000): Promise<Record<string, number>> {
+  let at: Record<string, number | null> = {}
+  await expect
+    .poll(async () => {
+      at = await page.evaluate(() => ({ ...((window as Marked).__e2eShownAt ?? {}) }))
+      return Object.entries(at).filter(([, v]) => v == null).map(([k]) => k)
+    }, { timeout, message: 'the other phone never showed these' })
+    .toEqual([])
+  return at as Record<string, number>
+}
+
+/** One watch: `watchEach` with a single key. */
+export const watchFor = (page: Page, shown: Shown) => watchEach(page, { it: shown })
 
 /** When the watch armed by `watchFor` saw it all, on the page's clock; fails after `timeout` ms. */
 export async function shownAt(page: Page, timeout = 15_000): Promise<number> {
-  let at: number | null = null
-  await expect
-    .poll(async () => (at = await page.evaluate(() => (window as Marked).__e2eShownAt ?? null)), { timeout, message: 'the other phone never showed it' })
-    .not.toBeNull()
-  return at!
+  return (await shownEachAt(page, timeout)).it!
 }
 
 /** The session this phone keeps (supabase-js's storage key in src/lib/supabase.ts). */
@@ -317,9 +383,20 @@ export function serverScores(slug: string): ServerScore[] {
 
 /** The rows `card` should be on the server, every one entered by `by`'s phone. */
 export function expectedScores(card: Map<number, HoleEntry>, by: string): ServerScore[] {
-  return [...card.keys()]
-    .sort((a, b) => a - b)
-    .flatMap((hole) => GROUP_1.filter((name) => card.get(hole)![name]).map((name) => ({ hole, name, strokes: card.get(hole)![name]!.strokes, putts: card.get(hole)![name]!.putts, by, disputed: false })))
+  return expectedScoresOf([{ card, names: GROUP_1, by }])
+}
+
+/**
+ * The rows the server should hold for several groups' cards, each entered by
+ * its own phone, in `serverScores`' order: by hole, then by the field's order.
+ */
+export function expectedScoresOf(cards: Array<{ card: Map<number, HoleEntry>; names: string[]; by: string }>): ServerScore[] {
+  const order = (name: string) => PLAYERS.findIndex((p) => p.name === name)
+  return cards
+    .flatMap(({ card, names, by }) =>
+      [...card.entries()].flatMap(([hole, entry]) => names.filter((name) => entry[name]).map((name) => ({ hole, name, strokes: entry[name]!.strokes, putts: entry[name]!.putts, by, disputed: false }))),
+    )
+    .sort((a, b) => a.hole - b.hole || order(a.name) - order(b.name))
 }
 
 /** Nearest-rank percentile. */

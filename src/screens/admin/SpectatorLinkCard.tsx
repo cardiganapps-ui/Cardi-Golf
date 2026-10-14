@@ -1,6 +1,6 @@
 /**
  * Comité › Torneo › Estado: the link to watch the tournament without a PIN
- * (STRAT-05, 0052). Off until the Comité makes it, «Sin dinero» unless it
+ * (STRAT-05, 0053). Off until the Comité makes it, «Sin dinero» unless it
  * chooses «Con dinero». Its token is read from the server whenever the card
  * opens: only the Comité reads it, and nothing else on the phone keeps it.
  *
@@ -19,7 +19,7 @@ import { useTournamentCtx } from '../tournament/TournamentGate'
 import a from './Admin.module.css'
 
 const S = t.spectator
-/** A database without 0052 answers these: the card says so, never an error. */
+/** A database without 0053 answers these: the card says so, never an error. */
 const MISSING = new Set(['PGRST202', '42883'])
 
 type Money = 'none' | 'money'

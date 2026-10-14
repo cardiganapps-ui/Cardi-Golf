@@ -27,6 +27,7 @@ import { clearCached, clearCachedSlug, readCached, saveEntry } from '../../data/
 import { adoptQueuedWrites, refreshOutboxCounters, rejectGoneRounds, rejectGoneTournament } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
+import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
 
 export interface Me {
@@ -51,12 +52,18 @@ export interface TournamentCtx {
   slug: string
   lookup: LookupResult
   me: Me
+  /** Ask the server again who this device is here, and load the tournament: a new ask (after a link changed, say). */
   refresh(): Promise<void>
+  /**
+   * «Actualizar» before the live tournament is on screen (PWA-15): the ask already under way, or a new one
+   * now. Without it (the design fixtures), `refresh`.
+   */
+  retry?(): Promise<void>
   leave(): Promise<void>
   /** Where this tournament's screens live, when not `/t/<slug>`: a link to watch's `/v/<token>`. */
   base?: string
   /**
-   * Opened with a link to watch (STRAT-05, 0052): read-only, no session, no
+   * Opened with a link to watch (STRAT-05, 0053): read-only, no session, no
    * PIN. `money`: the link shows money («Con dinero»); `url`: the link itself,
    * which what is shared from here carries.
    */
@@ -98,6 +105,8 @@ export function TournamentGate() {
   const recheck = useRef(false)
   /** Asks still out: a retry never starts over one (on a slow connection the timer would throw away an ask nearly done). */
   const asking = useRef(0)
+  /** The newest ask while it is out: «Actualizar» waits for it rather than starting another (PWA-15). */
+  const askOut = useRef<Promise<void> | null>(null)
   /** Asks that failed in a row with signal, and the retry they scheduled. */
   const failures = useRef(0)
   const soon = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -136,6 +145,10 @@ export function TournamentGate() {
   // minutes from Mi Polo, and every 15 s once the phone was signed out.
   useEffect(() => () => useTournament.getState().unsubscribe(), [])
 
+  // An app added to the home screen from this tournament's pages, Entrar included, opens it the first time (PWA-09).
+  const manifestSlug = phase.kind === 'enter' || phase.kind === 'in' ? phase.lookup.slug : null
+  useEffect(() => pointManifestAt(manifestSlug), [manifestSlug])
+
   // The saved boards first, before the session is even confirmed.
   useEffect(() => {
     settled.current = false
@@ -160,7 +173,7 @@ export function TournamentGate() {
     soon.current = setTimeout(() => retryNow.current(), Math.min(CACHE_RETRY_MS, RETRY_SOON_MS * 2 ** failures.current++))
   }, [])
 
-  const resolve = useCallback(async () => {
+  const ask = useCallback(async () => {
     const seq = ++resolveSeq.current
     /** A newer resolve started (a retry, the PIN, another link): this one's answers no longer count. */
     const stale = () => seq !== resolveSeq.current
@@ -223,7 +236,7 @@ export function TournamentGate() {
         // A platform visit is not "my tournament": it is not where home
         // returns to, and it is not kept on the device for offline use.
         if (!platform) {
-          setLastTournament({ slug: lookup.slug, name: lookup.name })
+          setLastTournament({ slug: lookup.slug, name: lookup.name, at: Date.now() })
           // Under the tournament's own slug, even when the link was the code typed at home:
           // «Tu último torneo» opens /t/<slug>, and with no signal the boards must be there.
           void saveEntry({ slug: lookup.slug, tournamentId: lookup.id, lookup, me })
@@ -262,6 +275,18 @@ export function TournamentGate() {
       asking.current--
     }
   }, [slug, load, enterFromCache, askSoon])
+  /** Every ask goes through here, so «Actualizar» can wait for the one out (`askOut`). */
+  const resolve = useCallback(() => {
+    const p = ask()
+    askOut.current = p
+    const done = () => {
+      if (askOut.current === p) askOut.current = null
+    }
+    p.then(done, done)
+    return p
+  }, [ask])
+  /** «Actualizar» while the live tournament is not on screen yet (PWA-15): the ask out, or one now. */
+  const askAgain = useCallback(() => askOut.current ?? resolve(), [resolve])
 
   useEffect(() => {
     if (authReady) void resolve()
@@ -290,8 +315,11 @@ export function TournamentGate() {
   // and `online` fires only once (REL-16). Until the server's snapshot is on
   // screen, not just until the session is back: a lookup that worked and a
   // snapshot that didn't used to end the retries and leave the old boards up
-  // (REL-02). Never on Entrar or «no existe»: the server answered, and asking
-  // again every 20 s for as long as the app stayed open changed nothing.
+  // (REL-02). And until the live channel is open: server boards that came
+  // from another fetch (the outbox's, before the gate's own load) opened none,
+  // and the header said «Conectando…» over them for good (REL-21). Never on
+  // Entrar or «no existe»: the server answered, and asking again every 20 s
+  // for as long as the app stayed open changed nothing.
   useEffect(() => {
     const retry = () => {
       // Its person is signing out on purpose (asked while this gate was open):
@@ -300,7 +328,8 @@ export function TournamentGate() {
       // sign-out asks as usual.
       if (signOutsAsked() !== signOutsAtOpen.current && signedOutOnPurpose()) return
       const p = phaseNow.current
-      const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || useTournament.getState().source !== 'server'))
+      const st = useTournament.getState()
+      const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || st.source !== 'server' || st.realtime === 'off'))
       if (asking.current > 0 || !waiting) return
       if (typeof navigator !== 'undefined' && !navigator.onLine) return
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
@@ -396,7 +425,7 @@ export function TournamentGate() {
     )
   }
   return (
-    <Ctx.Provider value={{ tournamentId: phase.lookup.id, slug, lookup: phase.lookup, me: phase.me, refresh: resolve, leave }}>
+    <Ctx.Provider value={{ tournamentId: phase.lookup.id, slug, lookup: phase.lookup, me: phase.me, refresh: resolve, retry: askAgain, leave }}>
       <Outlet />
     </Ctx.Provider>
   )

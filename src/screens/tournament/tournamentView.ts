@@ -12,7 +12,7 @@ export const tournamentBase = (c: Pick<TournamentCtx, 'base' | 'slug'>) => c.bas
 /**
  * Whether the screens may show money: always for the tournament's own people,
  * never on a link to watch made «Sin dinero» (STRAT-05). Its data has no money
- * in it either (0052); this keeps the words for money off the screen too
+ * in it either (0053); this keeps the words for money off the screen too
  * («$0 por día», a snake's «$0»).
  */
 export function useShowMoney(): boolean {

@@ -211,7 +211,7 @@ const TournamentSettingsBase = z.object({
   tieFallback: z.enum(['split']),
   /**
    * Wired to nothing. The link to watch without a PIN (STRAT-05) is not a
-   * setting: its token lives in its own table (0052 `spectator_links`), since
+   * setting: its token lives in its own table (0053 `spectator_links`), since
    * every member reads the settings, the export carries them and
    * `duplicate_tournament` copies them; the Comité makes it in Torneo, pestaña
    * Estado. Kept so every stored settings object still parses.

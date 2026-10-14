@@ -8,7 +8,7 @@
  */
 
 /** How long a kind of data is kept: each has its sentence in «Cuánto tiempo los guardamos». */
-export type Retention = 'account' | 'tournament' | 'record' | 'push' | 'short' | 'telemetry' | 'devices'
+export type Retention = 'account' | 'tournament' | 'record' | 'push' | 'pinPush' | 'short' | 'telemetry' | 'devices'
 
 /** The words of «Cuánto tiempo los guardamos» that state each retention. */
 export const RETENTION_WORDS: Record<Retention, string> = {
@@ -16,6 +16,7 @@ export const RETENTION_WORDS: Record<Retention, string> = {
   tournament: 'mientras exista el torneo',
   record: 'no tienen fecha de borrado',
   push: 'hasta que apagues los avisos',
+  pinPush: 'en cuanto el teléfono deja de entrar como ese jugador',
   short: 'sirven unos minutos',
   telemetry: '30 días',
   devices: '90 días',
@@ -85,6 +86,8 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   crews: T('crews and their codes', PROFILE, 'account'),
   crew_members: T('who is in each crew', PROFILE, 'account'),
   push_subscriptions: T('the address a browser gives to receive notices, and which browser', DATA, 'push'),
+  pin_push_subscriptions: T('the address the browser of a phone that entered with a PIN gives to receive its tournament\'s notices, which browser, and its anonymous user and player', DATA, 'pinPush'),
+  player_notices: T('which of its notices a tournament sent each player, and what they said (the day, the group, the hole, a place)', DATA, 'tournament'),
   platform_admins: T('who operates Polo', OPERATOR, 'record'),
   platform_unlocks: T('when the operator unlocked a Protegido tournament, and why', OPERATOR, 'record'),
   platform_audit_log: T('what the operator did, and why', OPERATOR, 'record'),

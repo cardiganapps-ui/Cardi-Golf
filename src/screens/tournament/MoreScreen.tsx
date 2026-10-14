@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { buildLabel } from '../../lib/build'
-import { InstallGuide } from '../../components/InstallGuide'
+import { InstallRow } from '../../components/InstallGuide'
 import { Avatar, CopyButton, ShareButton, Sheet, Toggle, toast } from '../../components/ui'
 import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
 import { useAuth } from '../../data/auth'
@@ -16,6 +16,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { queuedFor, useOutbox } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { TournamentPushSwitch } from './TournamentPush'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
 import styles from './MoreScreen.module.css'
 import { humanError } from '../../lib/humanError'
@@ -139,6 +140,8 @@ export function MoreScreen() {
             <IconTrophy /> {t.more.ceremony}
           </Link>
         )}
+        {/* Always here: the card on En vivo can be put off, and the steps never came back (PWA-08). */}
+        <InstallRow className={styles.link} />
       </nav>
 
       <div className={styles.join}>
@@ -150,7 +153,8 @@ export function MoreScreen() {
         </div>
       </div>
 
-      <InstallGuide />
+      {/* The tournament's notices on this phone (PWA-10): always here, whatever En vivo's offer was told. */}
+      <TournamentPushSwitch />
 
       {canVibrate() && (
         <Toggle

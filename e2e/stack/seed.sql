@@ -13,7 +13,7 @@
 --   * 8 players with a typed handicap (`manual`: the number is the course
 --     handicap), played at 80%: individual Stableford only, as in
 --     scripts/fixtures/settings-minimal.json (the settings below);
---   * two groups of four, both off the 1st;
+--   * two groups of four, both off the 1st (e2e-cuatro-telefonos: four twosomes);
 --   * PIN 1234 for everyone, set by set_player_pin_admin (0005): the same
 --     crypt(pin, gen_salt('bf', 8)) as the Comité's set_player_pin, which is
 --     what claim_player checks.
@@ -53,8 +53,9 @@ from (values
   (10, 4, 8), (11, 3, 18), (12, 4, 2), (13, 5, 12), (14, 4, 4), (15, 4, 10), (16, 3, 16), (17, 4, 6), (18, 5, 14)
 ) as h(number, par, si);
 
--- One tournament: the field above, its round live, both groups out.
-create function pg_temp.e2e_tournament(p_slug text, p_name text, p_settings jsonb, p_course uuid, p_tee uuid)
+-- One tournament: the field above, its round live, both groups out. `p_twosomes`: four groups of two instead,
+-- in sort order (Ana and Beto, Caro and Dani, Eli and Fede, Gabi and Hugo), ten minutes apart (QA-17's four phones).
+create function pg_temp.e2e_tournament(p_slug text, p_name text, p_settings jsonb, p_course uuid, p_tee uuid, p_twosomes boolean default false)
 returns void
 language plpgsql
 as $fn$
@@ -63,6 +64,8 @@ declare
   rid uuid;
   g1 uuid;
   g2 uuid;
+  gs uuid[];
+  gid uuid;
   pid uuid;
   p record;
 begin
@@ -73,8 +76,16 @@ begin
   values (tid, 1, current_date, p_course, 18, 'live')
   returning id into rid;
   update public.tournaments set current_round_id = rid where id = tid;
-  insert into public.groups (round_id, number, tee_time, start_hole) values (rid, 1, '09:00', 1) returning id into g1;
-  insert into public.groups (round_id, number, tee_time, start_hole) values (rid, 2, '09:10', 1) returning id into g2;
+  if p_twosomes then
+    for n in 1..4 loop
+      insert into public.groups (round_id, number, tee_time, start_hole)
+      values (rid, n, (time '09:00' + (n - 1) * interval '10 minutes'), 1) returning id into gid;
+      gs := gs || gid;
+    end loop;
+  else
+    insert into public.groups (round_id, number, tee_time, start_hole) values (rid, 1, '09:00', 1) returning id into g1;
+    insert into public.groups (round_id, number, tee_time, start_hole) values (rid, 2, '09:10', 1) returning id into g2;
+  end if;
   for p in
     select * from (values
       (0, 'Ana Alfa', 'Ana', 0, 1),
@@ -91,7 +102,8 @@ begin
     values (tid, p.full_name, p.display_name, p.base_hcp, 'manual', p_tee, p.sort_order)
     returning id into pid;
     perform public.set_player_pin_admin(pid, '1234');
-    insert into public.group_members (group_id, player_id) values (case when p.grp = 1 then g1 else g2 end, pid);
+    insert into public.group_members (group_id, player_id)
+    values (case when p_twosomes then gs[p.sort_order / 2 + 1] when p.grp = 1 then g1 else g2 end, pid);
   end loop;
 end
 $fn$;
@@ -108,6 +120,8 @@ select pg_temp.e2e_tournament('e2e-propio', 'E2E Propio', :'settings'::jsonb, :'
 select pg_temp.e2e_tournament('e2e-ajeno', 'E2E Ajeno', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-telefonos', 'E2E Teléfonos', :'settings'::jsonb, :'course_id', :'tee_id');
 select pg_temp.e2e_tournament('e2e-espectador', 'E2E Espectador', :'settings'::jsonb, :'course_id', :'tee_id');
+select pg_temp.e2e_tournament('e2e-cuatro-telefonos', 'E2E Cuatro teléfonos', :'settings'::jsonb, :'course_id', :'tee_id', true);
+select pg_temp.e2e_tournament('e2e-vaciado', 'E2E Vaciado', :'settings'::jsonb, :'course_id', :'tee_id');
 \o
 
 commit;

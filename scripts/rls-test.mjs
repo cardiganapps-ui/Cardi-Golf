@@ -863,6 +863,32 @@ try {
     check(!pruneErr && pruned === 1 && (after ?? []).length === 0, 'the dispatch secret prunes a dead endpoint', { pruneErr: pruneErr?.message, pruned })
   }
 
+  console.log('push: a PIN phone, for the player it holds (0052):')
+  const pinPhone = client()
+  const { data: pinSession } = await pinPhone.auth.signInAnonymously()
+  created.users.push(pinSession.user.id)
+  const pinEndpoint = `https://push.example.test/rls-pin-${rand}`
+  const pinArgs = { p_tournament_id: C.t.id, p_endpoint: pinEndpoint, p_p256dh: 'x', p_auth: 'y' }
+  const { error: unclaimedSub } = await pinPhone.rpc('save_pin_push', pinArgs)
+  const { data: pinClaim } = await pinPhone.rpc('claim_player', { p_player_id: C.p1, p_pin: '4321' })
+  const { error: pinSubErr } = await pinPhone.rpc('save_pin_push', pinArgs)
+  const { data: pinOn } = await pinPhone.rpc('pin_push_on', { p_tournament_id: C.t.id, p_endpoint: pinEndpoint })
+  const { error: otherTournament } = await pinPhone.rpc('save_pin_push', { ...pinArgs, p_tournament_id: D.t.id, p_endpoint: `${pinEndpoint}-d` })
+  check(!!unclaimedSub && pinClaim?.ok === true && !pinSubErr && pinOn === true && !!otherTournament, 'a PIN phone saves its address only for the player it holds, in his tournament', {
+    unclaimed: unclaimedSub?.message,
+    pinSubErr: pinSubErr?.message,
+    pinOn,
+    other: otherTournament?.message,
+  })
+  const { error: pinRead } = await pinPhone.from('pin_push_subscriptions').select('endpoint')
+  const { error: noticesRead } = await pinPhone.from('player_notices').select('id')
+  const { error: notifyCall } = await pinPhone.rpc('notify_player', { p_player_id: C.p1, p_kind: 'results', p_key: 'x', p_data: {} })
+  check(!!pinRead && !!noticesRead && !!notifyCall, 'nobody reads the addresses or the notices directly, nor sends one')
+  await pinPhone.rpc('release_device')
+  const { data: pinOff } = await pinPhone.rpc('pin_push_on', { p_tournament_id: C.t.id, p_endpoint: pinEndpoint })
+  const { data: pinRows } = await admin.from('pin_push_subscriptions').select('id').eq('endpoint', pinEndpoint)
+  check(pinOff === false && (pinRows ?? []).length === 0, '«Cambiar de jugador» takes the address with the claim', { pinOff, rows: pinRows?.length })
+
   // Blocking ends it all.
   await U.sb.rpc('friend_block', { p_handle: sProfile.handle })
   const { data: blockedReq } = await S.sb.rpc('friend_request', { p_handle: uProfile.handle })

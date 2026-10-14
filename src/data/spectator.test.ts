@@ -31,7 +31,7 @@ function strings(v: unknown, out: string[] = []): string[] {
   return out
 }
 
-describe('settings without money (0052 spectator_settings)', () => {
+describe('settings without money (0053 spectator_settings)', () => {
   it('every peso at zero, the Calcutta off, each side game for fun, and they still parse', () => {
     const s = parseSettings(withoutMoney(FIRST_TOURNAMENT_SETTINGS))
     expect(s.entryFee).toBe(0)

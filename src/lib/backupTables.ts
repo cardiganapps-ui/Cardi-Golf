@@ -52,6 +52,10 @@ export const BACKUP_TABLES: Record<string, string> = {
   crews: 'id',
   crew_members: 'crew_id,profile_id',
   push_subscriptions: 'id',
+  // As an account's: a project restored elsewhere keeps the PIN phones' notices going (the addresses are the push services').
+  pin_push_subscriptions: 'id',
+  // What each player was told: kept so a restored database never tells them again.
+  player_notices: 'id',
   platform_admins: 'auth_user_id',
   platform_unlocks: 'auth_user_id,tournament_id',
   platform_audit_log: 'id',

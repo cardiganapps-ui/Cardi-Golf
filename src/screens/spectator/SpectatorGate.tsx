@@ -1,5 +1,5 @@
 /**
- * `/v/:token`: a link to watch the tournament (STRAT-05, migration 0052). No
+ * `/v/:token`: a link to watch the tournament (STRAT-05, migration 0053). No
  * session, no PIN, and nothing on it writes: the page asks `spectator_board`
  * for the boards while it is on screen and shows them on the tournament's own
  * screens, read-only (En vivo, Juegos, Dinero when the link shows money, the

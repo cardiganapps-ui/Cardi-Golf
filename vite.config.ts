@@ -6,6 +6,8 @@ import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
+import { APP_MANIFEST } from './src/lib/appManifest'
+import { LAUNCH_SCREENS, launchImageMedia, launchImagePath } from './src/lib/launchImages'
 
 /**
  * Which build a phone runs (PWA-03). The id is the build time in seconds:
@@ -31,6 +33,7 @@ function versioned(path: string): string {
   return `${path}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 10)}`
 }
 const ICON_LINKS = ['/favicon.svg', '/apple-touch-icon.png']
+const versionedIcon = <T extends { src: string }>(icon: T) => ({ ...icon, src: versioned(icon.src) })
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -45,39 +48,36 @@ export default defineConfig({
       transformIndexHtml: (html) =>
         ICON_LINKS.reduce((out, path) => out.replaceAll(`href="${path}"`, `href="${versioned(path)}"`), html),
     },
+    {
+      // The iPhone launch images (PWA-14, src/lib/launchImages.ts): one link per screen, each at its fingerprint.
+      name: 'launch-images',
+      transformIndexHtml: () =>
+        LAUNCH_SCREENS.map((screen) => ({
+          tag: 'link',
+          attrs: { rel: 'apple-touch-startup-image', media: launchImageMedia(screen), href: versioned(launchImagePath(screen)) },
+          injectTo: 'head' as const,
+        })),
+    },
     VitePWA({
       // A new deploy is offered, never forced: a reload mid-hole would lose the steppers.
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
+      // One manifest for the build and for a tournament's own start URL (api/manifest.ts, PWA-09).
       manifest: {
-        id: '/',
-        name: 'Polo',
-        short_name: 'Polo',
-        description:
-          'Torneos de golf entre amigos: marcador en vivo, juegos, Calcutta y dinero.',
-        lang: 'es-MX',
-        dir: 'ltr',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        orientation: 'any',
-        background_color: '#FBFAF7',
-        theme_color: '#1E6B3B',
-        icons: [
-          { src: versioned('/icons/icon-192.png'), sizes: '192x192', type: 'image/png' },
-          { src: versioned('/icons/icon-512.png'), sizes: '512x512', type: 'image/png' },
-          {
-            src: versioned('/icons/icon-maskable-512.png'),
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
+        ...APP_MANIFEST,
+        categories: [...APP_MANIFEST.categories],
+        icons: APP_MANIFEST.icons.map(versionedIcon),
+        shortcuts: APP_MANIFEST.shortcuts.map((shortcut) => ({ ...shortcut, icons: shortcut.icons.map(versionedIcon) })),
+        screenshots: APP_MANIFEST.screenshots.map(versionedIcon),
       },
       workbox: {
         // App shell, fonts, logo. Supabase calls are never cached by the SW:
         // the outbox (Dexie) owns offline writes and the store owns reads.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Not the iPhone launch images, nor the install sheet's screenshots: iOS and Chrome read them when the
+        // app is installed, never through the worker, and every phone would keep them for nothing
+        // (scripts/check-precache.mjs).
+        globIgnores: ['**/node_modules/**/*', 'splash/**', 'screenshots/**'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,

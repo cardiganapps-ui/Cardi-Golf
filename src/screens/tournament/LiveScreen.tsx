@@ -14,13 +14,16 @@ import { useTournament } from '../../data/tournamentStore'
 import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
 import { ShareCardButton } from '../../components/ShareCard'
+import { InstallCard } from '../../components/InstallGuide'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import { SpectatorNote } from '../spectator/SpectatorNote'
-import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
+import { useSavedWhen } from './boardsAge'
+import { useBoardsMayBeOld } from './connection'
 import { QuickFinish } from './QuickFinish'
+import { TournamentPushOffer } from './TournamentPush'
 import { useActiveRound } from './useMyGroup'
 import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
@@ -250,6 +253,10 @@ export function LiveScreen() {
       )}
 
       <QuickFinish />
+      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). */}
+      <InstallCard />
+      {/* In the installed app, once this phone's player saved a hole: the tournament's notices (PWA-10). */}
+      <TournamentPushOffer />
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>

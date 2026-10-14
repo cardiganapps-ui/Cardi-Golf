@@ -76,7 +76,16 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      6. En Comité › Grupos, con la pantalla sin mover: el botón «Guardar» de abajo queda arriba de la rayita de la orilla (la que usas para salir de la app), no encima de ella.
      7. Gira el teléfono (horizontal) en Comité › Tarjetas y en Modo TV: ningún texto debe quedar debajo de la muesca o la isla del lado.
    - **Cómo lo verifico:** me dices el color de la barra, si tuviste que volver a agregar la app, tu versión de iOS y si algo quedó debajo de la muesca al girar. Lo anoto para el ensayo con los 12 teléfonos.
-8. [ ] **El enlace para ver: ¿solo para la tele, o también para el grupo?** (STRAT-05, decisión, gratis). Ya existe y viene apagado: el Comité lo crea en Comité › Torneo › Estado, «Sin dinero» salvo que elija «Con dinero», y lo cambia o lo apaga cuando quiera. La tele de la cena lo necesita «Con dinero» (la subasta son precios). Quien lo tenga ve los tableros sin cuenta ni PIN, con el nombre corto de cada jugador, nunca su nombre completo ni su foto. Tú decides si se comparte más allá de la tele (familia, grupo de WhatsApp); si sí, que sea «Sin dinero», tocando antes «Cambiar enlace» (RUNBOOK §1).
+8. [ ] **Instalar desde la página del torneo en tu iPhone** (PWA-09, 5 minutos, antes del primer ensayo). Lo que solo se prueba en un iPhone de verdad: que la app instalada desde un torneo abra en ese torneo.
+   - **Pasos:**
+     1. Si ya tienes Polo en la pantalla de inicio, quítala (mantén presionado el ícono, «Eliminar app»).
+     2. En Safari abre https://golf.cardigan.mx/t/ensayo. Arriba de las caras debe decir «En iPhone, instala Polo antes de entrar…». No entres todavía.
+     3. Toca Compartir (si no lo ves, está en «⋯») y luego «Agregar a inicio».
+     4. Abre Polo desde el ícono: debe abrir en Ensayo, en las caras, y no en Inicio pidiendo un código.
+     5. Entra con el PIN de Nico. Cierra la app del todo (desliza hacia arriba) y ábrela otra vez desde el ícono: debe abrir en Ensayo, ya adentro.
+     6. Vuelve a Safari, a la misma página, y entra a la Tarjeta: abajo debe decir «Si ya instalaste Polo, captura desde el ícono…».
+   - **Cómo lo verifico:** me dices si el paso 4 abrió en Ensayo o en Inicio, y tu versión de iOS. Si abrió en Inicio, el plan B ya funciona: en Inicio se pega el enlace del torneo o se escribe el código. Con tu respuesta lo marco como verificado en la lista de calidad.
+9. [ ] **El enlace para ver: ¿solo para la tele, o también para el grupo?** (STRAT-05, decisión, gratis). Ya existe y viene apagado: el Comité lo crea en Comité › Torneo › Estado, «Sin dinero» salvo que elija «Con dinero», y lo cambia o lo apaga cuando quiera. La tele de la cena lo necesita «Con dinero» (la subasta son precios). Quien lo tenga ve los tableros sin cuenta ni PIN, con el nombre corto de cada jugador, nunca su nombre completo ni su foto. Tú decides si se comparte más allá de la tele (familia, grupo de WhatsApp); si sí, que sea «Sin dinero», tocando antes «Cambiar enlace» (RUNBOOK §1).
    - Ojo: sin fotos ni nombres completos, en la tele de la Calcutta cada lote sale con sus iniciales y su nombre corto, sin su forma reciente. Si quieres las fotos en el enlace, dime y las agrego (cambia una línea del aviso de privacidad).
    - **Cómo lo verifico:** me dices en el chat «solo la tele» o «también el grupo», y si van las fotos; lo dejo escrito en el RUNBOOK y lo probamos en el ensayo.
 

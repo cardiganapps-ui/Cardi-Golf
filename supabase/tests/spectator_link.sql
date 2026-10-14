@@ -1,4 +1,4 @@
--- STRAT-05 (0052): a link to watch a tournament without a PIN. On the
+-- STRAT-05 (0053): a link to watch a tournament without a PIN. On the
 -- two-tenant seed: org_a runs tournament A (Ana, Beto), org_b runs B (Carla,
 -- Dani), dev_a is Ana's phone (a player of A, not the Comité), dev_x is a
 -- phone in no tournament. The Comité makes the link; whoever has its token

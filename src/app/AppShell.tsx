@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { MaintenanceBanner } from '../components/MaintenanceBanner'
 import { UpdateBar } from '../components/UpdateBar'
@@ -10,6 +10,7 @@ import { useMyProfile } from '../data/profiles'
 import { useAppFlags, usePlatform } from '../data/platform'
 import { LateSignOutHome } from './LateSignOut'
 import { LegalUpdate } from './LegalUpdate'
+import { listenForLaunches } from '../lib/launch'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -29,6 +30,9 @@ export function AppShell() {
     void startOutbox()
     void useAppFlags.getState().load()
   }, [init])
+  // A shortcut or a link while the app is open focuses it (`focus-existing`, PWA-14): go where it says, in place.
+  const navigate = useNavigate()
+  useEffect(() => listenForLaunches((to) => void navigate(to)), [navigate])
   // An account has a profile (created on first load); it follows the session.
   const accountId = useAuth((s) => (s.user && !s.isAnonymous ? s.user.id : null))
   useEffect(() => {

@@ -11,7 +11,7 @@
  * figure, and a change was announced as a bare number.
  */
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const outbox = vi.hoisted(() => ({ scores: [] as Array<Record<string, unknown>>, holes: [] as Array<{ round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }> }))
@@ -31,16 +31,20 @@ vi.mock('../../data/outbox', async (importOriginal) => {
   }
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
-const admin = vi.hoisted(() => ({ saves: [] as Array<{ row: Record<string, unknown>; reason: string }> }))
+/** The Comité's corrections: each call (one per hole, REL-22) and each player's row in it, with the reason. */
+const admin = vi.hoisted(() => ({ calls: [] as Array<{ hole: number; players: string[] }>, saves: [] as Array<{ row: Record<string, unknown>; reason: string }> }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
-  adminSaveScore: vi.fn(async (row: Record<string, unknown>, reason: string) => void admin.saves.push({ row, reason })),
+  adminSaveHole: vi.fn(async (roundId: string, hole: number, rows: Array<Record<string, unknown>>, reason: string) => {
+    admin.calls.push({ hole, players: rows.map((r) => r.player_id as string) })
+    for (const r of rows) admin.saves.push({ row: { round_id: roundId, hole, ...r }, reason })
+  }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 import { toast } from '../../components/ui'
-import { adminSaveScore } from '../../data/api'
+import { adminSaveHole } from '../../data/api'
 import { useAuth } from '../../data/auth'
 import { enqueueTiebreak, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -280,7 +284,8 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     const h12 = outbox.holes.find((h) => h.hole === 12)!
     expect(h12.entries).toHaveLength(4)
     expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
-    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }))
+    // With the hole: kept on the phone at once, on the boards with it.
+    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }), expect.any(Promise))
   })
 
   it('«No sabemos: que decida el Comité» saves the hole with no answer, and the snake waits for the Comité (UX-08)', async () => {
@@ -322,16 +327,28 @@ describe('Tarjeta: the steppers say which number is which (COPY-18)', () => {
   })
 })
 
-describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-17)', () => {
-  it('«Sin señal · 2 hoyos en el teléfono»', () => {
+describe('Tarjeta: offline, the line says how many holes wait on the phone (REL-17), and not the signal (REL-21)', () => {
+  it('«2 hoyos por subir», once: the header alone says «Sin señal»', () => {
+    // It read «Sin señal, 2 hoyos en el teléfono» under the header's own «Sin señal».
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
     try {
       mount()
       act(() => useOutbox.setState({ pending: 8, pendingHoles: 2 }))
-      expect(screen.getByText(t.sync.offlineHoles(2))).toBeTruthy()
+      expect(screen.getAllByText(t.sync.pendingHoles(2))).toHaveLength(1)
+      expect(document.body.textContent).not.toContain(t.sync.offlineShort)
     } finally {
       Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
       useOutbox.setState({ pending: 0, pendingHoles: 0 })
+    }
+  })
+
+  it('nothing waiting: «Sincronizado», as with signal, and not in the caution color', () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    try {
+      mount()
+      expect(screen.getByText(t.sync.synced).className).not.toMatch(/saveStatusWarn/)
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
     }
   })
 })
@@ -714,7 +731,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
       mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isAdmin: true })
       await correctFirstAndSave()
       expect(admin.saves).toHaveLength(1)
-      vi.mocked(adminSaveScore).mockRejectedValueOnce(new Error('Failed to fetch'))
+      vi.mocked(adminSaveHole).mockRejectedValueOnce(new Error('Failed to fetch'))
       vi.mocked(toast).mockClear()
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: t.common.undo }))
@@ -746,6 +763,80 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     await correctFirstAndSave()
     expect(admin.saves).toEqual([])
     expect(outbox.scores.length).toBeGreaterThan(0)
+  })
+
+  it('a signed card with two players corrected: one call with both, and a lost signal keeps nothing and says so (REL-22)', async () => {
+    admin.saves = []
+    admin.calls = []
+    window.history.replaceState(null, '', '/?hoyo=18')
+    try {
+      mount(undefined, { fixture: 'full12-finished', isAdmin: true })
+      const groups = screen.getAllByRole('group', { name: new RegExp(`^${S.strokesOf('.+')}$`) }).slice(0, 2)
+      const typed = groups.map((g) => {
+        fireEvent.click(screen.getByRole('button', { name: `${g.getAttribute('aria-label')}: ${t.common.stepUp}` }))
+        return g.textContent
+      })
+      // No signal: the one call fails, so nothing of the hole is kept, and the card says why and keeps what was typed.
+      vi.mocked(adminSaveHole).mockRejectedValueOnce(new Error('Failed to fetch'))
+      await tapSave(11_000)
+      const reasonSheet = screen.getByRole('dialog', { name: S.signedReasonTitle })
+      fireEvent.change(within(reasonSheet).getByRole('textbox'), { target: { value: 'Error de captura' } })
+      await act(async () => {
+        fireEvent.click(within(reasonSheet).getByRole('button', { name: S.save }))
+      })
+      expect(toast).toHaveBeenCalledWith(S.correctionNeedsSignal)
+      expect(admin.calls).toEqual([])
+      expect(holeOnScreen()).toBe(18)
+      expect(groups.map((g) => g.textContent)).toEqual(typed)
+      // With signal, saved again: both players in one call, with the reason.
+      await tapSave(22_000)
+      expect(admin.calls).toHaveLength(1)
+      expect(admin.calls[0]!.players).toHaveLength(2)
+      expect(admin.saves.every((x) => x.reason === 'Error de captura' && x.row.hole === 18)).toBe(true)
+      expect(outbox.scores).toEqual([])
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+  })
+})
+
+describe('Tarjeta: a correction goes back to where the group is (UX-19)', () => {
+  it('a hole the whole group played, saved again, returns to the first open hole and says so', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
+    expect(holeOnScreen()).toBe(7)
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    // Back on hole 10, where the group is, not on 8 after the hole corrected; the note names both.
+    expect(holeOnScreen()).toBe(10)
+    expect(screen.getAllByText(S.correctedHole(7, 10)).length).toBeGreaterThan(0)
+    expect(written()).toContain(`p1@7=${before + 1}/${snap.scores.find((x) => x.roundId === 'r1' && x.playerId === 'p1' && x.hole === 7)!.putts}`)
+  })
+
+  it('a new hole still moves to the next one', async () => {
+    mount()
+    expect(holeOnScreen()).toBe(10)
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    expect(holeOnScreen()).toBe(11)
+    expect(screen.getAllByText(S.savedHole(10)).length).toBeGreaterThan(0)
+  })
+
+  it('with every hole played, a correction goes to the card’s grid', async () => {
+    mount((s) => {
+      for (const pid of ['p1', 'p2', 'p3', 'p4'])
+        for (let h = 1; h <= 18; h++)
+          if (!s.scores.some((x) => x.roundId === 'r1' && x.playerId === pid && x.hole === h)) s.scores.push({ roundId: 'r1', playerId: pid, hole: h, strokes: 5, putts: 2, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+    })
+    expect(holeOnScreen()).toBe(18)
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
+    expect(holeOnScreen()).toBe(17)
+    fireEvent.click(strokesUp('p1'))
+    await tapSave(11_000)
+    expect(screen.getByRole('button', { name: S.holeView })).toBeTruthy()
+    expect(screen.getAllByText(S.correctedHole(17, null)).length).toBeGreaterThan(0)
   })
 })
 
@@ -823,5 +914,84 @@ describe('Tarjeta: a player the Comité adds to the group while a hole is open (
     expect(strokesOf('p5')).toBeGreaterThan(0)
     await tapSave(20_000)
     expect(written().some((r) => r.startsWith('p5@10='))).toBe(true)
+  })
+})
+
+describe('Tarjeta: the notice that a card is ready to sign opens the whole card (PWA-10)', () => {
+  it('«?vista=tarjeta» opens the grid, where «Firmar» is; without it, the hole', () => {
+    window.history.replaceState(null, '', '/?vista=tarjeta')
+    try {
+      mount()
+      expect(screen.getByRole('button', { name: S.holeView, exact: true } as never)).toBeTruthy()
+      expect(screen.getByRole('table')).toBeTruthy()
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+    cleanup()
+    mount()
+    expect(screen.getByRole('button', { name: S.grid, exact: true } as never)).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+})
+
+describe('Tarjeta: a notice tapped while the card is open goes where it says (PWA-10, PWA-12)', () => {
+  // The service worker asks the open app to go to the notice's page through its router (src/lib/noticeTaps):
+  // the address changes and the card, already open, must follow it.
+  let go: (to: string) => void = () => undefined
+  function Router() {
+    const navigate = useNavigate()
+    go = (to) => void navigate(to)
+    return null
+  }
+  function mountRouted(edit?: (s: Snapshot) => void) {
+    const fx = getFixture('minimal4-live')!
+    snap = structuredClone(fx.snapshot)
+    edit?.(snap)
+    load(snap)
+    return render(
+      <MemoryRouter>
+        <Router />
+        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+          <ScorecardScreen />
+        </TournamentContext.Provider>
+      </MemoryRouter>,
+    )
+  }
+
+  it('the snake’s question: to its hole, and what was typed on the hole it left comes back there', () => {
+    mountRouted()
+    expect(holeOnScreen()).toBe(10)
+    const before = strokesOf('p1')
+    fireEvent.click(strokesUp('p1'))
+    act(() => go('/?hoyo=4'))
+    expect(holeOnScreen()).toBe(4)
+    act(() => go('/?hoyo=10'))
+    expect(holeOnScreen()).toBe(10)
+    expect(strokesOf('p1')).toBe(before + 1)
+    expect(screen.getByText(S.restoredDraft)).toBeTruthy()
+    // Nothing was saved on the way.
+    expect(outbox.holes).toEqual([])
+  })
+
+  it('the card to sign: the whole card; from the grid, the snake’s hole is the hole view again', () => {
+    mountRouted()
+    act(() => go('/?vista=tarjeta'))
+    expect(screen.getByRole('table')).toBeTruthy()
+    act(() => go('/?hoyo=7'))
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(holeOnScreen()).toBe(7)
+  })
+
+  it('never under an open question: its answer is the hole on screen’s', async () => {
+    mountRouted((s) => {
+      const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
+      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+    })
+    await tapSave(11_000) // hole 10: three at 2 putts, a tie
+    expect(screen.getByRole('dialog', { name: S.whoHoledLast })).toBeTruthy()
+    act(() => go('/?hoyo=4'))
+    expect(holeOnScreen()).toBe(10)
+    await answer(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    expect(outbox.holes.map((h) => h.hole)).toEqual([10])
   })
 })

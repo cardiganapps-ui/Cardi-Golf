@@ -3,10 +3,12 @@
  * PERF-10: «Guardar hoyo» waited for the outbox to write the hole and the
  * whole tournament to be recomputed before the card moved on: a third of a
  * second on a mid-range phone, half a second at sixty players, eleven commits.
- * Now the card moves on in the tap's own commit and the outbox catches up
- * after it. If the phone's storage refuses the hole, the card goes back to it
- * with what was typed. A Comité correction, which the server can refuse, still
- * waits for its answer.
+ * Now the card moves on in the tap's own commit: the hole goes into the
+ * phone's storage at the tap, and the boards take it once that frame is on
+ * screen (the write itself waited for the frame at first, and an app closed
+ * inside it lost the hole). If the phone's storage refuses the hole, the card
+ * goes back to it with what was typed. A Comité correction, which the server
+ * can refuse, still waits for its answer.
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Profiler } from 'react'
@@ -15,8 +17,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type HoleWrite = { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }
 const outbox = vi.hoisted(() => ({
-  /** Hold each hole's write until the test lets it land (or fail). */
+  /** Hold each hole's storage write until the test lets it land (or fail). */
   hold: false,
+  /** Holes whose storage write started: as the outbox does, at the call, before anything waits. */
+  started: [] as HoleWrite[],
   pending: [] as Array<{ land: () => void; fail: (e: unknown) => void }>,
   apply: null as null | ((h: HoleWrite) => void),
 }))
@@ -24,20 +28,14 @@ vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
   return {
     ...real,
-    enqueueHole: vi.fn((_tid: string, h: HoleWrite) => {
-      if (!outbox.hold) {
+    // Like the outbox: the hole goes into storage at the call; the boards take it once `settle` resolves.
+    enqueueHole: vi.fn((_tid: string, h: HoleWrite, settle?: Promise<unknown>) => {
+      outbox.started.push(h)
+      const stored = outbox.hold ? new Promise<void>((resolve, reject) => outbox.pending.push({ land: resolve, fail: reject })) : Promise.resolve()
+      return stored.then(async () => {
+        await settle
         outbox.apply?.(h)
-        return Promise.resolve()
-      }
-      return new Promise<void>((resolve, reject) =>
-        outbox.pending.push({
-          land: () => {
-            outbox.apply?.(h)
-            resolve()
-          },
-          fail: reject,
-        }),
-      )
+      })
     }),
     enqueueScore: vi.fn(async () => undefined),
     enqueueAward: vi.fn(async () => undefined),
@@ -48,7 +46,7 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 const admin = vi.hoisted(() => ({ pending: [] as Array<() => void> }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
-  adminSaveScore: vi.fn(() => new Promise<void>((resolve) => admin.pending.push(resolve))),
+  adminSaveHole: vi.fn(() => new Promise<void>((resolve) => admin.pending.push(resolve))),
 }))
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
@@ -118,6 +116,7 @@ beforeEach(() => {
   clock = 10_000
   commits = 0
   outbox.hold = false
+  outbox.started = []
   outbox.pending = []
   admin.pending = []
   vi.mocked(toast).mockClear()
@@ -152,16 +151,38 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     expect(screen.getByText(S.savedCheck)).toBeTruthy()
     // «Guardado» rests on the button as it is, not greyed out while the phone writes.
     expect(saveButton()).toHaveProperty('disabled', false)
-    // The hole goes into the outbox once that frame is on screen, so the boards' recompute never holds it back.
-    expect(outbox.pending).toHaveLength(0)
-    await painted()
+    // The hole went into the phone's storage with the tap: an app closed or put away now keeps it.
+    expect(outbox.started.map((h) => h.hole)).toEqual([10])
     expect(outbox.pending).toHaveLength(1)
-    expect(commits).toBeLessThanOrEqual(2)
-    // The write lands: the boards take the hole in one more commit, and that is the save.
+    // Stored, it waits for that frame before the boards take it, so their recompute never holds the frame back.
+    const onBoards = () => useTournament.getState().data!.snapshot.scores.filter((x) => x.hole === 10).length
+    const before = onBoards()
     await act(async () => outbox.pending[0]!.land())
+    expect(onBoards()).toBe(before)
+    expect(commits).toBeLessThanOrEqual(2)
+    // The frame is on screen: the boards take the hole in one more commit, and that is the save.
+    await painted()
+    expect(onBoards()).toBeGreaterThan(before)
     expect(commits).toBeLessThanOrEqual(3)
     expect(holeOnScreen()).toBe(11)
     expect(saveButton()).toHaveProperty('disabled', false)
+  })
+
+  it('a page put away in that frame takes the hole onto the boards at once: a locked phone draws no frame, and may never run a timer again', async () => {
+    mount('minimal4-live')
+    const before = useTournament.getState().data!.snapshot.scores.filter((x) => x.hole === 10).length
+    tapSave(20_000)
+    expect(outbox.started.map((h) => h.hole)).toEqual([10])
+    // The phone is locked before any frame or timer: no time passes here.
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    try {
+      await act(async () => {
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
+      expect(useTournament.getState().data!.snapshot.scores.filter((x) => x.hole === 10).length).toBeGreaterThan(before)
+    } finally {
+      delete (document as { visibilityState?: string }).visibilityState
+    }
   })
 
   it('storage slower than the settle window says «Guardando…», and the next hole waits for it', async () => {
@@ -176,6 +197,7 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     clock = 21_000
     fireEvent.click(saveButton())
     await painted()
+    expect(outbox.started).toHaveLength(1)
     expect(outbox.pending).toHaveLength(1)
     await act(async () => outbox.pending[0]!.land())
     expect(saveButton()).toHaveProperty('disabled', false)
@@ -189,7 +211,7 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
     outbox.hold = true
     tapSave(20_000)
     expect(holeOnScreen()).toBe(11)
-    await painted()
+    // The phone's storage answers before the frame: a refusal does not wait for it either.
     await act(async () => outbox.pending[0]!.fail(new OutboxStorageError()))
     expect(holeOnScreen()).toBe(10)
     expect(puttsShown('p3')).toBe(3)
@@ -220,7 +242,9 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
       await act(async () => {
         for (const done of admin.pending) done()
       })
-      expect(holeOnScreen()).toBe(18)
+      // Answered, it moves on: every hole is played, so to the card's grid, not to hole 18 (UX-19).
+      expect(screen.getByRole('button', { name: S.holeView })).toBeTruthy()
+      expect(screen.getAllByText(S.correctedHole(17, null)).length).toBeGreaterThan(0)
     } finally {
       window.history.replaceState(null, '', '/')
     }
