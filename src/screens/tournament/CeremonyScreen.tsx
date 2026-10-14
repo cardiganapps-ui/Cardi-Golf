@@ -28,6 +28,7 @@ import { celebrationColors } from '../../lib/tokens'
 import { REVEAL, ease, easeFast, easeSlow } from '../../design/motion'
 import { nearestAccent } from '../../design/accents'
 import { CountUp } from '../../components/CountUp'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 import { fromLine } from '../../engine/core/unassigned'
@@ -438,7 +439,7 @@ export function CeremonyScreen() {
   return (
     <div className={styles.stage} style={{ '--event-accent': nearestAccent(snapshot.tournament.accentColor).hex } as React.CSSProperties}>
       <header className={styles.header}>
-        {snapshot.tournament.logoUrl && <img src={snapshot.tournament.logoUrl} alt="" className={styles.logo} />}
+        {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">
           <h1 className={styles.title}>{C.title}</h1>
           <span className={styles.sub}>{snapshot.tournament.name}</span>

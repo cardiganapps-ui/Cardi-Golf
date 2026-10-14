@@ -7,6 +7,7 @@ import { useBoardsMayBeOld, useSavedWhen } from './boardsAge'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
+import { TournamentLogo } from '../../components/TournamentLogo'
 import { useOnline, useOwnConnectionStatus } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
 import { PlatformBanner } from './PlatformBanner'
@@ -67,7 +68,7 @@ export function TournamentShell() {
     <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
       <header className={styles.top}>
         <div className={styles.bar}>
-          {logo && <img className={styles.logo} src={logo} alt="" />}
+          {logo && <TournamentLogo className={styles.logo} url={logo} />}
           <span className={`grow ${styles.name}`}>{tournament?.name ?? lookup.name}</span>
           {(!isFixture || !online) && <HeaderStatus online={online} source={source} realtime={realtime} fetchFailed={fetchFailed} />}
         </div>

@@ -2067,6 +2067,9 @@ export const t = {
       tagline: 'Lema',
       logo: 'Logo',
       uploadLogo: 'Subir logo',
+      /** PERF-01: a logo stored whole, before renditions (or seeded straight into Storage). */
+      logoHeavy: 'Este logo está guardado completo y tarda en cargar en los teléfonos. Optimízalo: se ve igual y pesa mucho menos.',
+      optimizeLogo: 'Optimizar logo',
       accent: 'Color de acento',
       status: 'Estado',
       /** UX-28: leaving Configuración fixes the base handicaps (0046). */

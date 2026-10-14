@@ -10,7 +10,7 @@ import { supabase } from '../lib/supabase'
 import { ApiError } from './api'
 import { entryChanged } from './entryEvents'
 import { humanError } from '../lib/humanError'
-import { downscaleImage } from '../lib/images'
+import { downscaleImage, extensionFor } from '../lib/images'
 import { whsIndex10, whsRule } from '../engine/profile/whs'
 import type { PublishRow } from '../engine/profile/results'
 
@@ -239,7 +239,7 @@ export async function updateMyProfile(id: string, patch: ProfilePatch): Promise<
 
 export async function uploadMyAvatar(id: string, file: File): Promise<string> {
   const { blob, type } = await downscaleImage(file, 512, 0.88)
-  const path = `profiles/${id}/avatar-${Date.now()}.${type === 'image/png' ? 'png' : 'jpg'}`
+  const path = `profiles/${id}/avatar-${Date.now()}.${extensionFor(type)}`
   const sb = supabase()
   const { error } = await sb.storage.from('tournament-assets').upload(path, blob, { upsert: true, contentType: type })
   if (error) throw new Error(error.message)
