@@ -108,6 +108,10 @@ export const t = {
     name: 'Polo',
     tagline: 'Torneos de golf entre amigos',
     description: 'Marcador en vivo, juegos, Calcutta y cuentas claras para torneos entre amigos.',
+    /** The installed app's shortcuts (a long press on its icon, PWA-14): the last tournament's card, and its En vivo. */
+    shortcuts: { card: 'Mi tarjeta', cardShort: 'Tarjeta', live: 'En vivo' },
+    /** What the install sheet's screenshots show (PWA-14). */
+    screenshots: { live: 'La tabla del torneo, en vivo', card: 'La tarjeta: un hoyo en segundos' },
   },
   common: {
     // UX-15: a sheet holding typed work asks before a stray tap, Escape or back throws it away.
@@ -1366,13 +1370,16 @@ export const t = {
     live: 'En vivo',
     connecting: 'Conectando…',
     pending: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
+    /** The banner over screens outside a tournament; a tournament's header says it in place (MOT-17). */
     offline: 'Sin señal. Se guarda en el teléfono.',
     offlineShort: 'Sin señal',
-    offlineHoles: (n: number) => (n === 1 ? 'Sin señal, 1 hoyo en el teléfono' : `Sin señal, ${n} hoyos en el teléfono`),
     pendingHoles: (n: number) => (n === 1 ? '1 hoyo por subir' : `${n} hoyos por subir`),
+    /** The header's chip while a refresh someone asked for is under way (PWA-15). */
+    refreshing: 'Actualizando…',
+    /** The chip as a button (PWA-15): what it says, then what a tap does («Conectando… Actualizar», not «…. »). */
+    refreshLabel: (state: string) => `${state}${state.endsWith('…') ? '' : '.'} Actualizar`,
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
     notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
-    noLive: 'Sin actualizaciones en vivo',
     rejected: (n: number) => (n === 1 ? '1 rechazado' : `${n} rechazados`),
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
@@ -1406,11 +1413,12 @@ export const t = {
     updateRequired: 'Esta versión ya no sube hoyos. Actualiza y se sube todo lo guardado en el teléfono.',
     update: 'Actualizar',
     /**
-     * The header's second line while the boards are the phone's copy, or there
-     * is no signal: how old they are, and offline the holes still on the phone
-     * (REL-04). Out of the chip, which cut the event name. `when` from `ago`.
+     * The header's second line while the boards may be old (the phone's copy,
+     * no signal, a fetch that failed): how old they are (REL-04). Out of the
+     * chip, which cut the event name. The holes still on the phone are the
+     * Tarjeta's to say (REL-21). `when` from `ago`.
      */
-    boardsAge: (when: string, holes = 0) => (holes > 0 ? `${holes === 1 ? '1 hoyo' : `${holes} hoyos`} en el teléfono. Actualizado ${when}` : `Actualizado ${when}`),
+    boardsAge: (when: string) => `Actualizado ${when}`,
     /** How old a saved board is (src/lib/freshness.ts). */
     ago: {
       now: 'hace un momento',

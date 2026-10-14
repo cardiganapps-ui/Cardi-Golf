@@ -30,3 +30,69 @@ export function launchTarget(search: string, now = Date.now()): string | null {
   const t = new URLSearchParams(search).get('t')
   return t && TOURNAMENT_SEGMENT.test(t) ? t : null
 }
+
+/** What a shortcut of the installed app opens in the last tournament (PWA-14): En vivo is its own page. */
+export type ContinueTab = '' | 'tarjeta'
+
+/** The last tournament this phone opened, on that tab; Home when there is none. */
+function continuePath(tab: ContinueTab): string {
+  const last = getLastTournament()
+  if (typeof last?.slug !== 'string' || !last.slug) return '/'
+  return `/t/${last.slug}${tab ? `/${tab}` : ''}`
+}
+
+/**
+ * Where a shortcut goes (`/continuar`, `/continuar/tarjeta`; the manifest's «Mi tarjeta» and «En vivo»,
+ * PWA-14): the last tournament this phone opened, however long ago, since the person asked for it; with none,
+ * Home. The shortcut is the launch, so Home stays Home afterwards.
+ */
+export function continueTarget(tab: ContinueTab): string {
+  try {
+    sessionStorage.setItem(LAUNCHED, '1')
+  } catch {
+    // Nothing kept: Home may go back to the tournament once, which is where this went anyway.
+  }
+  return continuePath(tab)
+}
+
+interface LaunchQueue {
+  setConsumer(consumer: (params: { targetURL?: string }) => void): void
+}
+/** The page as it was opened: the launch that opened it is no launch into an open app. */
+const OPENED_AT = typeof location === 'undefined' ? '' : location.href
+let firstLaunch = true
+
+/**
+ * Where a launch into the open app goes (PWA-14): a shortcut's tournament and tab, or the page it names; null
+ * for another site's, none, or the page already on screen.
+ */
+export function launchPath(target: string | undefined, here: { origin: string; pathname: string; search: string; hash: string }): string | null {
+  if (!target) return null
+  let url: URL
+  try {
+    url = new URL(target)
+  } catch {
+    return null
+  }
+  if (url.origin !== here.origin) return null
+  const shortcut = /^\/continuar(?:\/(tarjeta))?\/?$/.exec(url.pathname)
+  const to = shortcut ? continuePath(shortcut[1] === 'tarjeta' ? 'tarjeta' : '') : `${url.pathname}${url.search}${url.hash}`
+  return to === `${here.pathname}${here.search}${here.hash}` ? null : to
+}
+
+/**
+ * `launch_handler: focus-existing` (the manifest, PWA-14): a launch while the app is open (a shortcut, a link)
+ * brings that window forward without loading it again, and hands the page its URL. The page goes there in
+ * place, as a tap inside it would, so a hole half typed on the Tarjeta stays on the phone (PWA-05). The launch
+ * that opened the page is its own, already on screen.
+ */
+export function listenForLaunches(go: (path: string) => void): void {
+  const queue = (globalThis as { launchQueue?: LaunchQueue }).launchQueue
+  queue?.setConsumer((params) => {
+    const own = firstLaunch && params.targetURL === OPENED_AT
+    firstLaunch = false
+    if (own) return
+    const to = launchPath(params.targetURL, location)
+    if (to) go(to)
+  })
+}

@@ -805,11 +805,13 @@ function GroupCard({ round, group, tournamentId }: { round: Round; group: Group;
   // subir» (REL-16). A stored session still being confirmed needs no PIN.
   const needsPin = heldHoles > 0 && signedOut && !hasStoredSession()
   const waiting = needsPin ? t.sync.heldForPinShort(heldHoles) : pendingHoles > 0 ? t.sync.pendingHoles(pendingHoles) : pending > 0 ? t.sync.pending(pending) : null
-  const offlineText = pendingHoles > 0 ? t.sync.offlineHoles(pendingHoles) : t.sync.offlineShort
-  const syncText = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : lastError ? lastError : (waiting ?? t.sync.synced)
-  const syncWarn = !online || !!lastError || pending > 0 || rejected.length > 0
+  // What this phone's writes are doing, and only that: the signal is the header's to say (REL-21). It read
+  // «Sin señal» here too, under the header's own. With no signal the last error waits for it, as it did.
+  const error = online ? lastError : null
+  const syncText = rejected.length ? t.sync.rejected(rejected.length) : error ? error : (waiting ?? t.sync.synced)
+  const syncWarn = !!error || pending > 0 || rejected.length > 0
   /** The sync state in a few words, for the one-line saved note (a long error waits until the note goes). */
-  const syncShort = !online ? offlineText : rejected.length ? t.sync.rejected(rejected.length) : waiting
+  const syncShort = rejected.length ? t.sync.rejected(rejected.length) : waiting
   /** The line under «Guardar hoyo»: the last save with its way back for a few seconds, else the sync state. */
   const statusLine = (fallback: ReactNode) =>
     savedNote ? (
