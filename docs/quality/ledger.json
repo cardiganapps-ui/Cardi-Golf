@@ -2523,11 +2523,18 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 170,
+      "tests": [
+        "src/lib/courseSearch.test.ts",
+        "src/lib/scorecardExtract.test.ts",
+        "src/lib/routeAuth.test.ts",
+        "src/lib/backupCron.test.ts",
+        "src/lib/pushDispatch.test.ts",
+        "src/lib/appManifest.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Left as they are: backup-cron, course-search and manifest take any method; backup-cron compares its secret with !== (not constant time); the night's R2 upload has no timeout of its own; push-dispatch answers 503 before checking the secret."
     },
     {
       "id": "QA-15",
