@@ -73,6 +73,28 @@ export function hcpFromTo(from: { source: HcpSource; base: number }, to: { sourc
 }
 
 /** What the phone may not do yet while a tournament's writes are still on it (account.ts). */
+/** A money line's words (COPY-08): who pays, the verb with its target, and whom when that is a person. */
+export interface PayWords {
+  who: string
+  verb: string
+  whom: string | null
+}
+/**
+ * Who pays whom, as a person says it. A party is a name, or null for the bank, which is no one's name: «Leonel le
+ * paga al banco», «El banco le paga a Camilo». `bankerSelf`: one party is the bank and the other the banker, who
+ * holds it, so it is his own money going in or coming out, never a payment to himself.
+ */
+function payWords(from: string | null, to: string | null, paid = false, bankerSelf = false): PayWords {
+  if (bankerSelf && to === null && from) return { who: from, verb: paid ? 'puso lo suyo en el banco' : 'pone lo suyo en el banco', whom: null }
+  if (bankerSelf && from === null && to) return { who: to, verb: paid ? 'se quedó con lo suyo del banco' : 'se queda con lo suyo del banco', whom: null }
+  const verb = paid ? 'le pagó' : 'le paga'
+  return to === null ? { who: from ?? 'El banco', verb: `${verb} al banco`, whom: null } : { who: from ?? 'El banco', verb: `${verb} a`, whom: to }
+}
+/** The words as one line, with the amount when there is one: «El banco le paga a Camilo: $3,300». */
+function payText(w: PayWords, amount?: string): string {
+  return `${w.who} ${w.verb}${w.whom ? ` ${w.whom}` : ''}${amount ? `: ${amount}` : ''}`
+}
+
 export type UnsentAction = 'signOut' | 'switch' | 'enter'
 const UNSENT_ACTION: Record<UnsentAction, string> = {
   signOut: 'cerrar sesión',
@@ -2507,7 +2529,8 @@ export const t = {
       `Lista mínima de transferencias entre personas, sobre lo que falta por pagar (el que más debe le paga al que más recibe).${banker ? ` Lo que ya entró al banco lo reparte ${banker}.` : ''}`,
     settlePreview: 'Así quedaría si terminara ahora. Mientras tanto, lo que se cobra se marca en «Quién debe qué».',
     allSettled: 'Todo liquidado: nadie le debe nada a nadie.',
-    squared: (a: string, b: string) => `${andList([a, b])} quedan a mano`,
+    /** Two parties square up; null is the bank («Iván J. queda a mano con el banco»). */
+    squared: (a: string | null, b: string | null) => (a === null || b === null ? `${a ?? b ?? ''} queda a mano con el banco` : `${andList([a, b])} quedan a mano`),
     recordPaid: 'Registrar algo que ya se pagó',
     recordPaidHint: 'Solo si alguien ya pagó y no se marcó: la liquidación de arriba ya lo cuenta como pendiente. Al marcarlo aquí, deja de pedirse.',
     markedPaid: 'Marcado como pagado.',
@@ -2522,12 +2545,15 @@ export const t = {
     /** Over, nothing listed, and the bank still does not square: a real mismatch. */
     bankOff: (diff: string) => `No cuadra: ${diff}`,
     byComite: 'Asignado por el Comité',
-    pays: (from: string, to: string, amount: string) => `${from} paga a ${to}: ${amount}`,
-    paysTo: 'paga a',
+    /** A money line in words (COPY-08); null is the bank, `bankerSelf` the banker with his own bank. */
+    pays: (from: string | null, to: string | null, amount: string, bankerSelf = false) => payText(payWords(from, to, false, bankerSelf), amount),
+    payWords,
+    payText,
+    /** On a person's own breakdown, whom he pays: «Apuesta, le paga a Camilo». */
+    paysTo: 'le paga a',
     markPaid: 'Marcar pagado',
     /** The state, on its own toggle in «Ya pagaron»; the action is «Marcar pagado». */
     paid: 'Pagado',
-    paidTo: 'pagó a',
     paidTitle: (n: number) => `Ya pagaron (${n})`,
     paidHint: 'Si algo se marcó por error, toca «Pagado» y vuelve a quedar pendiente. Si esa persona solo había pagado una parte, vuelve a deber todo: para volver a registrar solo esa parte, usa «Deshacer» en el aviso.',
     /** A «Deshacer» tapped after a later change to the same payment: it would bring back the older value. */
@@ -2557,14 +2583,14 @@ export const t = {
     total: (amount: string) => `Total: ${amount}`,
     /** A vía-banco line whose parts cancel out. */
     nets: 'Lo que le deben y lo que debe se compensan: no cambia de manos dinero, solo se cierran las cuentas.',
-    owesTotal: (name: string, amount: string) => `${name} todavía debe ${amount} en total`,
-    getsTotal: (name: string, amount: string) => `${name} todavía tiene que recibir ${amount} en total`,
+    owesTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía debe ${amount} en total`,
+    getsTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía tiene que recibir ${amount} en total`,
     /** The bank's side, in two parts: the banker holds it, or it stands as itself. */
     bankCollects: 'Lo que el banco todavía cobra',
     bankPays: 'Lo que el banco todavía paga',
     ruleTitle: 'Cómo se reparte',
     rule: 'Para hacer las menos transferencias, el que más debe le paga al que más tiene que recibir, y así hasta cuadrar.',
-    share: (from: string, total: string, amount: string, to: string) => `De los ${total} que debe ${from}, ${amount} van a ${to}.`,
+    share: (from: string | null, total: string, amount: string, to: string | null) => `De los ${total} que debe ${from ?? 'el banco'}, ${amount} van ${to === null ? 'al banco' : `a ${to}`}.`,
     bankTitle: 'El banco',
     bankIn: (label: string, amount: string) => `Entra, ${label}: ${amount}`,
     bankOut: (label: string, amount: string) => `Sale, ${label}: ${amount}`,

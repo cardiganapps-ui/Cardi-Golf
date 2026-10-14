@@ -40,7 +40,7 @@ test('Dinero: once final, the settlement asks only for what is still owed (MONEY
   await open(page, '/t/_/full12-finished/dinero')
   await page.getByRole('radio', { name: t.moneyScreen.final }).click()
   // Camilo: $13,200 of prizes and Calcutta, minus the $3,000 lot he has not paid. His entry is paid.
-  const camilo = page.locator('[class*="_transfer_"]').filter({ hasText: /Banco\s+paga a\s+Camilo/ })
+  const camilo = page.locator('[class*="_transfer_"]').filter({ hasText: /El banco\s+le paga a\s+Camilo/ })
   await expect(camilo).toContainText('$10,200')
   // The collection list is gone once final: showing both would ask for the same peso twice.
   await expect(page.getByRole('heading', { name: t.moneyScreen.checklist })).toHaveCount(0)
