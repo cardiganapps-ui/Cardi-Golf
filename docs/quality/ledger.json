@@ -719,9 +719,15 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 163,
+      "tests": [
+        "src/i18n/payWords.test.ts",
+        "src/screens/tournament/MoneyScreen.why.test.tsx",
+        "src/screens/tournament/MoneyScreen.test.tsx",
+        "e2e/fixtures/money.spec.ts",
+        "e2e/fixtures/flows.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
