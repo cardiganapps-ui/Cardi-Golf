@@ -243,6 +243,7 @@
 .review {
   display: flex;
   flex-direction: column;
+  margin: 0;
   border-top: var(--rule-heavy);
 }
 .reviewRow {
@@ -254,9 +255,27 @@
   border-bottom: var(--hairline);
 }
 .reviewKey {
+  margin: 0;
   font-size: var(--fs-sm);
   color: var(--ink-2);
 }
 .reviewValue {
+  margin: 0;
+  min-width: 0;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+/* What a game's figure is made of, under it. */
+.reviewDetail,
+.reviewWarn {
+  display: block;
+  font-size: var(--fs-sm);
+  font-weight: 400;
+}
+.reviewDetail {
+  color: var(--ink-2);
+}
+.reviewWarn {
+  color: var(--under);
 }
