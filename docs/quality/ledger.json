@@ -1915,11 +1915,15 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/logo.test.ts",
+        "src/components/TournamentLogo.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Ensayo's production logo is still the raw 889 KB PNG until the Comité taps «Optimizar logo» (or the lead does it after merge). WebP logos need iOS 14+."
     },
     {
       "id": "PERF-02",
@@ -2090,9 +2094,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 168,
+      "tests": [
+        "e2e/fixtures/logo.spec.ts",
+        "src/lib/images.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3805,9 +3812,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/styles/module-classes.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3819,9 +3830,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/setup/reviewLines.test.ts",
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3833,11 +3848,14 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 166,
+      "tests": [
+        "src/screens/organizer/NewTournamentScreen.test.tsx",
+        "e2e/fixtures/wizard.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Back across documents (the wizard opened by its address, or after a reload) loads the previous page: no beforeunload prompt, by the codebase's choice; the draft survives in the tab and Forward restores it. iOS edge-swipe and Android back gesture to be checked on real phones."
     },
     {
       "id": "UX-06",

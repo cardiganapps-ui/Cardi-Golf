@@ -739,8 +739,21 @@ export const t = {
       reviewField: (n: number) => `${n} jugadores`,
       reviewMoney: (fee: string, pot: string) => `${fee} por jugador, bolsa de ${pot}`,
       reviewNoMoney: 'Sin dinero',
-      reviewGames: (names: string[]) => (names.length ? andList(names) : 'Ninguno por ahora'),
       reviewHint: 'Todo esto se cambia después en Comité.',
+      // The games, one line each with what it pays: the prize statement, read before the tournament exists (UX-04).
+      reviewGamesTitle: 'Juegos y premios',
+      reviewNoPrize: 'Sin premio',
+      reviewPrizes: 'Premios de la bolsa',
+      reviewBalanced: (pot: string) => `Cuadra con la bolsa de ${pot}`,
+      reviewOwnPot: 'Pozo aparte',
+      reviewAuction: (slots: string[]) => `Lo que se pague en la subasta: ${andList(slots)}`,
+      reviewSidePot: (detail: string) => `Bote aparte: ${detail}`,
+      reviewBet: 'Apuesta directa',
+      // Leaving the wizard with something typed (UX-05).
+      leaveTitle: '¿Salir sin crear el torneo?',
+      leaveBody: 'Se borra lo que llevas.',
+      leaveConfirm: 'Salir y borrar',
+      leaveStay: 'Seguir aquí',
       players: '¿Cuántos jugadores?',
       playersHint: 'Aproximado; el cuadre de la bolsa lo usa hasta que cargues a los jugadores.',
       rounds: '¿Cuántos días (rondas)?',
@@ -2112,6 +2125,9 @@ export const t = {
       tagline: 'Lema',
       logo: 'Logo',
       uploadLogo: 'Subir logo',
+      /** PERF-01: a logo stored whole, before renditions (or seeded straight into Storage). */
+      logoHeavy: 'Este logo está guardado completo y tarda en cargar en los teléfonos. Optimízalo: se ve igual y pesa mucho menos.',
+      optimizeLogo: 'Optimizar logo',
       accent: 'Color de acento',
       status: 'Estado',
       /** UX-28: leaving Configuración fixes the base handicaps (0046). */

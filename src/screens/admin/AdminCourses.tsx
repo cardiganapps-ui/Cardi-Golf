@@ -11,7 +11,7 @@ import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { NoticeNote } from '../../components/LegalLinks'
 import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
-import { blobToBase64, downscaleImage } from '../../lib/images'
+import { blobToBase64, extensionFor, prepareImage } from '../../lib/images'
 import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from '../../lib/courseApi'
 import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/courseProviders/types'
 import { useCourses } from './useCourses'
@@ -124,7 +124,8 @@ export function AdminCourses() {
     setReading(true)
     try {
       const isPdf = file.type === 'application/pdf'
-      const { blob, type } = isPdf ? { blob: file, type: 'application/pdf' } : await downscaleImage(file, 2000, 0.9)
+      // Flattened on white: a transparent screenshot of a card would otherwise reach the reader on black. So it is a JPEG.
+      const { blob, type } = isPdf ? { blob: file, type: 'application/pdf' } : await prepareImage(file, { maxWidth: 2000, maxHeight: 2000, quality: 0.9, background: 'white' })
       const b64 = await blobToBase64(blob)
       const r = await extractScorecard(b64, type)
       const issues: string[] = []
@@ -154,7 +155,7 @@ export function AdminCourses() {
       const id = await saveCourse(d)
       if (pendingPhoto.current) {
         try {
-          const ext = pendingPhoto.current.type === 'application/pdf' ? 'pdf' : 'jpg'
+          const ext = extensionFor(pendingPhoto.current.type)
           const url = await uploadAsset(`courses/${id}/scorecard-${Date.now()}.${ext}`, pendingPhoto.current.blob, pendingPhoto.current.type)
           const { supabase } = await import('../../lib/supabase')
           await supabase().from('course_documents').insert({ course_id: id, kind: 'scorecard', url })

@@ -388,9 +388,10 @@ export async function setRoundTee(roundId: string, playerId: string, teeId: stri
 // ---------------------------------------------------------------------------
 // Storage
 // ---------------------------------------------------------------------------
-export async function uploadAsset(path: string, file: Blob, contentType?: string): Promise<string> {
+/** `cacheControl` is in seconds (Storage's default is an hour); a file whose name changes with every upload can keep a year. */
+export async function uploadAsset(path: string, file: Blob, contentType?: string, cacheControl?: string): Promise<string> {
   const sb = supabase()
-  const { error } = await sb.storage.from('tournament-assets').upload(path, file, { upsert: true, contentType: contentType ?? file.type })
+  const { error } = await sb.storage.from('tournament-assets').upload(path, file, { upsert: true, contentType: contentType ?? file.type, ...(cacheControl ? { cacheControl } : {}) })
   if (error) throw new Error(error.message)
   const { data } = sb.storage.from('tournament-assets').getPublicUrl(path)
   return `${data.publicUrl}?v=${Date.now()}`
