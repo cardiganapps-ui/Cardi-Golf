@@ -1893,9 +1893,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 210,
+      "tests": [
+        "e2e/fixtures/tabscroll.spec.ts",
+        "src/app/scrollKey.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
