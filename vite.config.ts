@@ -131,6 +131,11 @@ export default defineConfig({
       // fixtures build their data with calls at the module's top, which the bundler had to keep in every
       // production build (ARCH-07); `noDevCode` above fails one that still carries any.
       treeshake: { moduleSideEffects: (id) => !DEV_ONLY.test(id) },
+      // What the entry loads stays in the entry's chunk, as Rollup kept it. Rolldown's own split put the modules
+      // the entry shares with lazy screens in chunks of their own, whose stylesheets are linked before the
+      // entry's: global.css then came after the CSS modules, `.card` beat `.errorBox` on every ErrorBox, and
+      // primitives' rules shipped twice (e2e/fixtures/cascade.spec.ts).
+      output: { codeSplitting: { groups: [{ name: 'index', tags: ['$initial'] }] } },
     },
   },
   test: {
