@@ -6,9 +6,9 @@ import { fileURLToPath, URL } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { APP_MANIFEST } from './src/lib/appManifest'
-import { LAUNCH_SCREENS, launchImageMedia, launchImagePath } from './src/lib/launchImages'
-import { DEV_ONLY, noDevCode } from './src/lib/noDevCode'
+import { APP_MANIFEST } from './src/lib/appManifest.ts'
+import { LAUNCH_SCREENS, launchImageMedia, launchImagePath } from './src/lib/launchImages.ts'
+import { DEV_ONLY, noDevCode } from './src/lib/noDevCode.ts'
 
 /**
  * Which build a phone runs (PWA-03). The id is the build time in seconds:
@@ -125,7 +125,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       // A dev-only module (the fixtures, the style guide, the test builders) does nothing of its own when
       // imported: it is kept only where something uses what it exports, as the design routes do. The profile
       // fixtures build their data with calls at the module's top, which the bundler had to keep in every
@@ -152,6 +152,8 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/data/outbox.ts', 'api/**', 'src/server/**'],
       reporter: ['text'],
+      // Vitest 5 counts each `return`, `.catch` and inline callback on its own (Vitest 3 counted lines), so the same
+      // tests measured lower; the paths it found have tests now (src/data/outbox.edges.test.ts and its siblings).
       thresholds: {
         'src/data/outbox.ts': { statements: 99.5, branches: 93, functions: 100, lines: 99.5 },
         'api/**': { statements: 99, branches: 95, functions: 100, lines: 99 },
