@@ -62,6 +62,11 @@ interface World {
   /** backup_runs refuses (a status) or never answers (throw) the night's row, or the files added to it. */
   recordFails?: number | 'throw'
   filesRecordFails?: 'throw'
+  /** What backup_runs answers for the night's row, when not its id. */
+  recordBody?: string
+  /** A history page the database refuses (its status), or the history's rows that are still there (the rest went). */
+  historyFails?: number
+  historyHas?: number
   /** How long each Storage read takes, on a clock the test moves. */
   readMs?: number
 }
@@ -121,7 +126,7 @@ async function run(world: World = {}) {
       records.push(JSON.parse(String(init!.body)))
       const refused = outcome(world.recordFails)
       if (refused) return new Response('', { status: refused })
-      return new Response(JSON.stringify([{ id: 7 }]), { status: 201 })
+      return new Response(world.recordBody ?? JSON.stringify([{ id: 7 }]), { status: 201 })
     }
     if (method === 'PATCH' && table === 'backup_runs') {
       patches.push({ url: url.replace('https://db.invalid/rest/v1/', ''), body: JSON.parse(String(init!.body)) })
@@ -133,8 +138,9 @@ async function run(world: World = {}) {
     // The history by key (format 2): the page after the last id read, up to the snapshot's.
     const keyset = /and=\(id\.gt\.(\d+),id\.lte\.(\d+)\)&limit=(\d+)/.exec(url)
     if (table === 'audit_log' && keyset) {
+      if (world.historyFails) return new Response('', { status: world.historyFails })
       const [after, upTo, limit] = keyset.slice(1).map(Number) as [number, number, number]
-      const n = Math.max(0, Math.min(limit, world.cap ?? 1000, upTo - after))
+      const n = Math.max(0, Math.min(limit, world.cap ?? 1000, Math.min(upTo, world.historyHas ?? upTo) - after))
       return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1 }))))
     }
     if (table === 'audit_log') {
@@ -312,6 +318,8 @@ describe('when the backup fails (QA-14)', () => {
     for (const [fails, detail] of [
       [{ status: 500, body: '<html>bad gateway</html>' }, 'snapshot: HTTP 500'],
       [{ status: 404, body: '{"code":"PGRST125"}' }, 'snapshot: HTTP 404'],
+      // A 404 that is no JSON at all (a proxy's page): no PGRST202 to read, so a failure, never «no 0039».
+      [{ status: 404, body: 'Not Found' }, 'snapshot: HTTP 404'],
     ] as const) {
       const r = await run({ snapshotFails: fails })
       expect([r.status, r.body]).toEqual([502, { error: 'read failed', detail }])
@@ -332,6 +340,31 @@ describe('when the backup fails (QA-14)', () => {
     expect([r.status, r.body]).toEqual([502, { error: 'upload failed', status: null }])
     expect(r.records).toEqual([{ ok: false, key: expect.stringMatching(/^backups\//), error: 'upload: fetch failed' }])
     expect(leaked(r.answer, SECRETS)).toEqual([])
+  })
+
+  it('a history page the database refuses fails the run by name, and uploads nothing', async () => {
+    const r = await run({ historyFails: 500 })
+    expect([r.status, r.body]).toEqual([502, { error: 'read failed', detail: 'audit_log: HTTP 500' }])
+    expect(r.records).toEqual([{ ok: false, error: 'read: audit_log: HTTP 500' }])
+    expect(r.uploads).toEqual([])
+  })
+
+  it('history rows gone before the read (the snapshot\'s last id never comes): it ends at the empty page, never asks forever', async () => {
+    const r = await run({ history: 1500, historyHas: 1200 })
+    expect(r.status).toBe(200)
+    expect(r.dump.tables.audit_log).toHaveLength(1200)
+    expect(r.read).toEqual([
+      'audit_log?select=*&order=id&and=(id.gt.0,id.lte.1500)&limit=1000',
+      'audit_log?select=*&order=id&and=(id.gt.1000,id.lte.1500)&limit=1000',
+      'audit_log?select=*&order=id&and=(id.gt.1200,id.lte.1500)&limit=1000',
+    ])
+  })
+
+  it('backup_runs answers with nothing it can read: the backup stands, and its files go on no row', async () => {
+    const r = await run({ recordBody: 'ok', objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+    expect(r.status).toBe(200)
+    expect(r.body.files).toEqual({ copied: 1, pending: 0, failed: 0 })
+    expect(r.patches).toEqual([])
   })
 
   it('backup_runs refuses or never answers: the backup still stands, its files still copied', async () => {
