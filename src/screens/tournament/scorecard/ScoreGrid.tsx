@@ -52,11 +52,12 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
   const disputed = named.some((pl) => roundState[pl.id]?.holes.some((h) => h.disputed))
   const gridRow = (h: number) => (
     <tr key={h}>
-      <td>
-        <button type="button" className={`${styles.holeBtn} ${h === p.hole ? styles.holeCurrent : ''}`} onClick={() => p.onOpen(h)}>
+      {/* A11Y-10: the hole is the row's header, and its button says which hole it opens. */}
+      <th scope="row">
+        <button type="button" className={`${styles.holeBtn} ${h === p.hole ? styles.holeCurrent : ''}`} onClick={() => p.onOpen(h)} aria-label={`${t.player.hole} ${h}`}>
           {h}
         </button>
-      </td>
+      </th>
       <td className={styles.gridMeta}>{leadHole(p.hole) ? (leadHole(h)?.par ?? '') : ''}</td>
       <td className={styles.gridMeta}>{leadHole(h)?.strokeIndex ?? ''}</td>
       {named.map((pl) => {
@@ -74,6 +75,7 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
               <ScoreMark value={hi.pickedUp ? 'L' : (hi.gross ?? '–')} kind={markFor(hi.gross, hi.par, hi.pickedUp)} />
               <span className={styles.cellPts}>
                 {cellFigure(hi)}
+                {cellFigure(hi) != null && <span className="sr-only"> {pointsCount ? S.unitPoints(cellFigure(hi)) : S.unitNet}</span>}
                 {hi.disputed && (
                   <span className={styles.disputedMark} aria-label={S.disputed}>
                     <IconAlert size={12} />
@@ -88,10 +90,12 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
   )
   const subtotalRow = (label: string, holes: number[], total = false) => (
     <tr className={total ? styles.total : styles.subtotal}>
-      <td>
+      <th scope="row">
         {label}
-        <span className={styles.subCaption}>{pointsCount ? S.ptsGrossCaption : net ? S.netGrossCaption : S.grossCaption}</span>
-      </td>
+        <span className={styles.subCaption} aria-hidden="true">
+          {pointsCount ? S.ptsGrossCaption : net ? S.netGrossCaption : S.grossCaption}
+        </span>
+      </th>
       <td className={styles.gridMeta}>{holes.reduce((a, h) => a + (leadHole(h)?.par ?? 0), 0) || ''}</td>
       <td />
       {named.map((pl) => {
@@ -99,8 +103,15 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
         return (
           <td key={pl.id}>
             <span className={styles.cell}>
-              <span>{pointsCount ? sumPts(pl.id, holes) : net ? (sumNet(pl.id, holes) ?? '–') : ''}</span>
-              <span className={styles.cellPts}>{g ?? ''}</span>
+              {/* Said with their units, figure first as on screen: «19 pts, 39 golpes» (A11Y-10). */}
+              <span>
+                {pointsCount ? sumPts(pl.id, holes) : net ? (sumNet(pl.id, holes) ?? '–') : ''}
+                {(pointsCount || net) && <span className="sr-only"> {pointsCount ? S.unitPoints(sumPts(pl.id, holes)) : S.unitNet},</span>}
+              </span>
+              <span className={styles.cellPts}>
+                {g ?? ''}
+                {g != null && <span className="sr-only"> {S.unitStrokes(g)}</span>}
+              </span>
             </span>
           </td>
         )

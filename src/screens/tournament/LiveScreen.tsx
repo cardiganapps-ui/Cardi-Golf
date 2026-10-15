@@ -6,7 +6,8 @@
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { hcpFromTo, t } from '../../i18n/es-MX'
+import { hcpFromTo, t, type RowSpeech } from '../../i18n/es-MX'
+import { formatMoney } from '../../lib/money'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
@@ -77,7 +78,11 @@ const BoardRow = memo(function BoardRow(props: {
   estimated: boolean
   cash: number
   owners: string | undefined
+  /** The owners by name, for a screen reader («dueños: Iván y Camilo»); the row shows their initials. */
+  ownersSpoken: string | undefined
   honoree: boolean
+  honoreeLabel: string
+  unit: RowSpeech['unit']
   today: string | undefined
   todayTone: Tone | undefined
   todaySpoken: string | undefined
@@ -89,7 +94,16 @@ const BoardRow = memo(function BoardRow(props: {
   dense: boolean
   onOpen: (playerId: string) => void
 }) {
-  const { playerId, place, animate, teamNames, tier, estimated, cash, onOpen, ...row } = props
+  const { playerId, place, animate, teamNames, tier, estimated, cash, ownersSpoken, honoreeLabel, unit, onOpen, ...row } = props
+  // A11Y-11: what the row shows, said: the sub line's category and money and the owners' names.
+  const speech: RowSpeech = {
+    honoree: row.honoree ? honoreeLabel : null,
+    tier: teamNames == null ? tier : null,
+    estimated: teamNames == null && estimated,
+    unit,
+    money: cash > 0 ? formatMoney(cash) : null,
+    owners: ownersSpoken,
+  }
   const sub = (
     <span className={styles.sub}>
       {teamNames != null ? (
@@ -109,7 +123,7 @@ const BoardRow = memo(function BoardRow(props: {
   )
   return (
     <motion.div layout={animate} layoutDependency={place} transition={ease}>
-      <LeaderRow {...row} sub={sub} onClick={() => onOpen(playerId)} />
+      <LeaderRow {...row} sub={sub} speech={speech} onClick={() => onOpen(playerId)} />
     </motion.div>
   )
 })
@@ -146,11 +160,12 @@ export function LiveScreen() {
   }, [rows])
 
   const owners = useMemo(() => {
-    const m = new Map<string, string>()
+    const m = new Map<string, { initials: string; spoken: string }>()
     if (!data?.state.modules.auction || !showMoney) return m
     for (const lot of data.state.modules.auction.lots) {
       if (lot.status !== 'sold') continue
-      m.set(lot.playerId, lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName.slice(0, 2).toUpperCase() ?? '?').join(' '))
+      const names = lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName ?? '?')
+      m.set(lot.playerId, { initials: names.map((n) => (n === '?' ? n : n.slice(0, 2).toUpperCase())).join(' '), spoken: t.live.ownersSpoken(names) })
     }
     return m
   }, [data, showMoney])
@@ -371,7 +386,10 @@ export function LiveScreen() {
                   tier={p.tier ?? null}
                   estimated={!!state.core.handicaps[p.id]?.estimated}
                   cash={cash}
-                  owners={byTeam ? undefined : owners.get(p.id)}
+                  owners={byTeam ? undefined : owners.get(p.id)?.initials}
+                  ownersSpoken={byTeam ? undefined : owners.get(p.id)?.spoken}
+                  honoreeLabel={settings.labels.honoree}
+                  unit={grossView ? 'toPar' : figureKind(settings)}
                   honoree={!!honoree && members.includes(honoree.id)}
                   today={today}
                   todayTone={todayTone}

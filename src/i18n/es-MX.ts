@@ -12,6 +12,45 @@ function blankFigure(figure: string): boolean {
   return figure === '–' || figure === '—' || figure === '-'
 }
 
+/** What each pencil mark on a card says, in words. */
+const MARK_NAMES: Record<string, string> = { eagle: 'águila o mejor', birdie: 'birdie', par: 'par', bogey: 'bogey', double: 'doble bogey o peor', pickup: 'levantó' }
+
+/** How a board row is said beyond its figures (A11Y-11). */
+export interface RowSpeech {
+  me?: boolean
+  /** The honoree's label («El novio») on his row. */
+  honoree?: string | null
+  tier?: string | null
+  estimated?: boolean
+  /** What the figure counts: points, a match's points, strokes to par net or gross, or the gross view's to-par. */
+  unit?: 'points' | 'match' | 'net' | 'gross' | 'toPar' | null
+  /** The day's figure is already said in words (a match: «ganó 3&2»). */
+  todaySpoken?: boolean
+  /** What he would win if it ended now, as money text. */
+  money?: string | null
+  /** «dueños: Iván y Camilo», from `t.live.ownersSpoken`: a string, so an unchanged row stays the same props. */
+  owners?: string | null
+  moved?: 'up' | 'down' | null
+}
+
+/** «E» is «par», «+3» «3 sobre par», «−2» «2 bajo par»: the board's to-par figures as a voice says them. */
+function toParWords(text: string): string {
+  if (text === 'E') return 'par'
+  const m = /^([+−-])(\d+)$/.exec(text)
+  if (!m) return text
+  return `${m[2]} ${m[1] === '+' ? 'sobre par' : 'bajo par'}`
+}
+
+/** A board figure with its unit, for a screen reader (A11Y-11). */
+function spokenFigure(text: string, unit: RowSpeech['unit']): string {
+  if (unit === 'points') return `${text} ${text === '1' ? 'punto' : 'puntos'}`
+  if (unit === 'match') return `${text} ${text === '1' || text === '½' ? 'punto' : 'puntos'}`
+  if (unit === 'net') return `${toParWords(text)} neto`
+  if (unit === 'gross') return `${toParWords(text)} gross`
+  if (unit === 'toPar') return toParWords(text)
+  return text
+}
+
 /** "T3" → "empatado en 3.º", "3" → "3.º". Positions come from the engine as labels; no position yet («», «–») stays empty. */
 export function ordinal(label: string): string {
   const tied = label.startsWith('T')
@@ -1574,7 +1613,28 @@ export const t = {
     /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6»; a match won on the 18th is «1 arriba» for the winner and «1 abajo» for the loser. */
     matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text.replace(/ arriba$/, ' abajo')}` : text),
     // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
-    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string) => [ordinal(pos), name, today && !blankFigure(today) ? `hoy ${today}` : '', thru ? `hoyo ${thru}` : '', blankFigure(figure) ? '' : figure].filter(Boolean).join(', '),
+    /**
+     * A11Y-11: what a screen reader hears for a board row, everything the row shows: «1.º, Camilo (tú), El novio,
+     * categoría A, 60 puntos, hoy 25 puntos, hoyo 11, ganaría $12,200, dueños: Iván y Camilo, sube». It said
+     * «1.º, Camilo, hoy 25, hoyo 11, 60»: no unit, no money, no owners, nothing for «tú» or the arrow.
+     */
+    ownersSpoken: (names: string[]) => `${names.length === 1 ? 'dueño' : 'dueños'}: ${andList(names)}`,
+    rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string, x: RowSpeech = {}) =>
+      [
+        ordinal(pos),
+        x.me ? `${name} (tú)` : name,
+        x.honoree ?? '',
+        x.tier ? `categoría ${x.tier}` : '',
+        x.estimated ? 'hándicap estimado' : '',
+        blankFigure(figure) ? '' : spokenFigure(figure, x.unit),
+        today && !blankFigure(today) ? `hoy ${x.todaySpoken ? today : spokenFigure(today, x.unit)}` : '',
+        thru ? (thru === 'F' ? 'terminó' : `hoyo ${thru}`) : '',
+        x.money ? `ganaría ${x.money}` : '',
+        x.owners ?? '',
+        x.moved === 'up' ? 'sube' : x.moved === 'down' ? 'baja' : '',
+      ]
+        .filter(Boolean)
+        .join(', '),
     pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
     /** UX-28: a handicap changed after they were fixed; tapping it opens the player. */
     hcpChanged: (name: string, fromTo: string) => `El hándicap de ${name} cambió después de fijarlos: ${fromTo}`,
@@ -1595,6 +1655,10 @@ export const t = {
     roundFinished: (n: number) => `El día ${n} ya terminó. Solo el Comité puede corregir tarjetas.`,
     correct: 'Corregir',
     ptsGrossCaption: 'pts / golpes',
+    /** Units a screen reader hears after a figure of the grid (A11Y-10). */
+    unitPoints: (n: number | null) => (n === 1 ? 'punto' : 'puntos'),
+    unitNet: 'neto',
+    unitStrokes: (n: number | null) => (n === 1 ? 'golpe' : 'golpes'),
     netGrossCaption: 'neto / golpes',
     grossCaption: 'golpes',
     signedReasonTitle: 'Corrección con tarjeta firmada',
@@ -1672,7 +1736,9 @@ export const t = {
     // UX-08: the group that doesn't remember saves the hole all the same; the snake waits for the Comité (Comité › Tarjetas).
     whoHoledLastUnknown: 'No sabemos: que decida el Comité',
     whoHoledLastUnknownHint: 'El hoyo se guarda igual. La víbora queda pendiente hasta que el Comité diga quién fue.',
-    markName: { eagle: 'águila o mejor', birdie: 'birdie', par: 'par', bogey: 'bogey', double: 'doble bogey o peor', pickup: 'levantó' } as Record<string, string>,
+    markName: MARK_NAMES,
+    /** A11Y-10: a score mark as a screen reader says it: «7, doble bogey o peor»; a pick-up is «levantó». */
+    markSpoken: (value: string | number, kind: string) => (kind === 'pickup' ? 'levantó' : `${value}, ${(MARK_NAMES[kind] ?? kind)}`),
     weirdTitle: '¿Seguro?',
     weirdFix: 'Corregir',
     weirdConfirm: 'Sí, así fue',
@@ -1741,6 +1807,9 @@ export const t = {
     outdated: 'Esta versión de la app no conoce este juego. Actualiza la app (ciérrala y vuelve a abrirla).',
   },
   player: {
+    /** A11Y-10: a hole of the player's card, said whole: «Hoyo 5: 7 golpes, doble bogey o peor, 1 pt»; «Hoyo 5: levantó». */
+    holeSpoken: (n: number, gross: number | null, kind: string, pts: number | null) =>
+      `Hoyo ${n}: ${gross == null ? 'levantó' : `${gross} ${gross === 1 ? 'golpe' : 'golpes'}, ${(MARK_NAMES[kind] ?? kind)}`}${pts == null ? '' : `, ${pts} ${pts === 1 ? 'punto' : 'puntos'}`}`,
     gross: 'Gross',
     putts: 'Putts',
     strokesShort: 'Ventaja',

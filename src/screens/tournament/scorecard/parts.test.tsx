@@ -61,7 +61,7 @@ describe('ScoreGrid', () => {
   it('a hole’s number opens it', () => {
     const onOpen = vi.fn()
     mount({ onOpen })
-    fireEvent.click(screen.getByRole('button', { name: '3' }))
+    fireEvent.click(screen.getByRole('button', { name: `${t.player.hole} 3` }))
     expect(onOpen).toHaveBeenCalledWith(3)
   })
 

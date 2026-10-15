@@ -54,6 +54,13 @@ function holeLine(player: string) {
   const badge = screen.getByRole('group', { name: player }).querySelector('[class*="_pts_"]')!
   return { text: badge.textContent, highlighted: badge.className.includes('ptsHigh') }
 }
+/** What a cell shows: its text without the units only a screen reader hears (A11Y-10). */
+function visible(el: Element): string {
+  const c = el.cloneNode(true) as Element
+  c.querySelectorAll('.sr-only').forEach((n) => n.remove())
+  return c.textContent ?? ''
+}
+
 function showGrid() {
   fireEvent.click(screen.getByRole('button', { name: S.grid }))
   const rows = screen.getAllByRole('row')
@@ -62,7 +69,7 @@ function showGrid() {
   const cell = (row: string, player: string) => {
     const tr = rows.find((r) => (/^\d+$/.test(row) ? r.firstElementChild?.textContent === row : r.firstElementChild?.textContent?.startsWith(row)))!
     const box = tr.children[players.indexOf(player)]!.querySelector('[class*="_cell_"]')!
-    return [box.firstElementChild!.textContent, box.querySelector('[class*="cellPts"]')!.textContent]
+    return [visible(box.firstElementChild!), visible(box.querySelector('[class*="cellPts"]')!)]
   }
   const captions = Array.from(document.querySelectorAll('[class*="subCaption"]')).map((c) => c.textContent)
   return { cell, captions }
