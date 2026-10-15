@@ -96,6 +96,7 @@ import { SNAPSHOT_KEYS } from '../snapshotTables'
 import { compareValues } from './rows'
 import { reasonLength, trimReason } from '../../lib/reason'
 import { t } from '../../i18n/es-MX'
+import { cardSigningModeOf } from '../../engine/core/cardSigning'
 
 /** Supabase's default max-rows for PostgREST: the server's cap, not the client's page size. */
 export const SERVER_MAX_ROWS = 1000
@@ -377,7 +378,12 @@ const UNIQUE_KEYS: Record<string, Array<{ name: string; columns: string[] }>> = 
     { name: 'scores_round_id_player_id_hole_key', columns: ['round_id', 'player_id', 'hole'] },
   ],
   snake_tiebreaks: [{ name: 'snake_tiebreaks_pkey', columns: ['round_id', 'group_id', 'hole'] }],
-  card_signatures: [{ name: 'card_signatures_pkey', columns: ['round_id', 'pair_id'] }],
+  // 0054: a card is a pair's or one player's, keyed by its round and `card_id`; each kind keeps its own unique key.
+  card_signatures: [
+    { name: 'card_signatures_pkey', columns: ['round_id', 'card_id'] },
+    { name: 'card_signatures_pair_key', columns: ['round_id', 'pair_id'] },
+    { name: 'card_signatures_player_key', columns: ['round_id', 'player_id'] },
+  ],
   // 0042: a player's ruling (no group) and the same player's claim are two rows (DB-04).
   hole_awards: [{ name: 'hole_awards_pkey', columns: ['round_id', 'game_id', 'hole', 'player_id', 'source'] }],
 }
@@ -388,7 +394,7 @@ const SCORE_UPDATE = new Set(['round_id', 'player_id', 'hole', 'strokes', 'putts
 const NOT_NULL: Record<string, string[]> = {
   scores: ['id', 'round_id', 'player_id', 'hole', 'picked_up'],
   snake_tiebreaks: ['round_id', 'group_id', 'hole', 'last_holed_player_id', 'created_at'],
-  card_signatures: ['round_id', 'pair_id', 'signed_at'],
+  card_signatures: ['round_id', 'signed_at', 'card_id'],
   hole_awards: ['round_id', 'hole', 'game_id', 'player_id', 'created_at'],
 }
 const between = (v: unknown, lo: number, hi: number) => v == null || (typeof v === 'number' && v >= lo && v <= hi)
@@ -402,6 +408,8 @@ const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
     ['scores_strokes_check', (r) => between(r.strokes, 1, 15)],
   ],
   snake_tiebreaks: [['snake_tiebreaks_hole_check', (r) => between(r.hole, 1, 18)]],
+  // 0054: a pair's card or a player's, never both.
+  card_signatures: [['card_signatures_one_card', (r) => (r.pair_id == null) !== (r.player_id == null)]],
   hole_awards: [
     ['hole_awards_game_id_check', (r) => r.game_id == null || (typeof r.game_id === 'string' && /^[a-z0-9-]{1,32}$/.test(r.game_id))],
     ['hole_awards_hole_check', (r) => between(r.hole, 1, 18)],
@@ -429,18 +437,19 @@ const COLUMNS: Record<string, Record<string, ColumnType>> = {
     mutation_id: 'uuid',
   },
   snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
-  card_signatures: { round_id: 'uuid', pair_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz' },
+  card_signatures: { round_id: 'uuid', pair_id: 'uuid', player_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz', card_id: 'uuid' },
   hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz', source: 'text' },
 }
 /** Generated columns (0042 `hole_awards.source`): PostgREST knows them, and Postgres refuses any value written to one. */
-const GENERATED: Record<string, string[]> = { hole_awards: ['source'] }
-/** What a generated column holds, from the row's own values. */
-const generate = (table: string, row: Row): Row => (table === 'hole_awards' ? { ...row, source: row.group_id == null ? 'comite' : 'group' } : row)
+const GENERATED: Record<string, string[]> = { hole_awards: ['source'], card_signatures: ['card_id'] }
+/** What a generated column holds, from the row's own values (0054 `card_signatures.card_id`: the pair's id, or the player's). */
+const generate = (table: string, row: Row): Row =>
+  table === 'hole_awards' ? { ...row, source: row.group_id == null ? 'comite' : 'group' } : table === 'card_signatures' ? { ...row, card_id: row.pair_id ?? row.player_id ?? null } : row
 /** Tables as the database holds them: a generated column always has its value, whatever world a test starts from. */
 const asStored = (tables: Record<string, Row[]>): Record<string, Row[]> =>
   Object.fromEntries(Object.entries(structuredClone(tables)).map(([table, rows]) => [table, rows.map((r) => generate(table, r))]))
 /** Each phone table's foreign keys, as the migrations name them. Ids here are names, so a uuid's shape is not checked; that it exists is. */
-const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: string }>> = {
+const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: string; tenant?: boolean }>> = {
   scores: [
     { name: 'scores_round_id_fkey', column: 'round_id', table: 'rounds' },
     { name: 'scores_player_id_fkey', column: 'player_id', table: 'players' },
@@ -456,6 +465,8 @@ const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: 
     { name: 'card_signatures_round_id_fkey', column: 'round_id', table: 'rounds' },
     { name: 'card_signatures_pair_id_fkey', column: 'pair_id', table: 'pairs' },
     { name: 'card_signatures_signed_by_fkey', column: 'signed_by', table: 'players' },
+    // 0054: (tournament_id, player_id) → players (tournament_id, id): a player of the signature's own tournament.
+    { name: 'card_signatures_player_tenant_fkey', column: 'player_id', table: 'players', tenant: true },
   ],
   hole_awards: [
     { name: 'hole_awards_round_id_fkey', column: 'round_id', table: 'rounds' },
@@ -668,7 +679,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (table === 'scores') return { ...id, picked_up: false, version: 1, device_id: null, mutation_id: null, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
     if (table === 'hole_awards') return generate(table, { ...id, created_at: stamp(), ...row })
     if (table === 'snake_tiebreaks') return { ...id, created_at: stamp(), ...row }
-    if (table === 'card_signatures') return { ...id, signed_at: stamp(), ...row }
+    // 0030 `card_signatures_tenant`: the tournament comes from the round when the writer leaves it out.
+    if (table === 'card_signatures') return generate(table, { ...id, signed_at: stamp(), ...row, tournament_id: row.tournament_id ?? roundTournament(row.round_id) ?? null })
     return { ...id, ...row }
   }
 
@@ -749,9 +761,13 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return me != null && rowsOf('groups').some((g) => g.round_id === rid && inGroup(g.id, me) && inGroup(g.id, pid))
   }
   const roundIsLive = (rid: unknown) => rowsOf('rounds').some((r) => r.id === rid && r.status === 'live')
-  /** `card_is_signed(rid, pid)`: the card of the player's pair is signed for the round. */
+  /** `card_is_signed(rid, pid)` (0054): the card of the player's pair, or his own, is signed for the round. */
   const cardIsSigned = (rid: unknown, pid: unknown) =>
-    rowsOf('card_signatures').some((s) => s.round_id === rid && rowsOf('pairs').some((p) => p.id === s.pair_id && (p.player1_id === pid || p.player2_id === pid)))
+    rowsOf('card_signatures').some(
+      (s) => s.round_id === rid && ((s.player_id != null && s.player_id === pid) || rowsOf('pairs').some((p) => p.id === s.pair_id && (p.player1_id === pid || p.player2_id === pid))),
+    )
+  /** 0054 `card_signing_mode(settings)`: the tournament's signing rule, read from its stored settings. */
+  const signingMode = (tid: unknown) => cardSigningModeOf(rowsOf('tournaments').find((x) => x.id === tid)?.settings)
   /** The tournament a row belongs to, by the path its read policy takes. */
   function tenantOf(table: string, row: Row): unknown {
     if (table === 'tournaments') return row.id
@@ -818,12 +834,16 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       deletes: groupRow,
     },
     // 0013 `card_signatures_insert`: in a live round, as himself, the card of a pair of his group that is not his own.
+    // 0054 adds a player's card: in a live round of a tournament a marker signs by, as himself, another player of his group.
     // 0003 `card_signatures_delete`: the Comité. No UPDATE policy: a signature never changes.
     card_signatures: {
       check(uid, r) {
         const tid = roundTournament(r.round_id)
         if (organizes(uid, tid)) return true
         const me = myPlayer(uid, tid)
+        if (r.pair_id == null && r.player_id != null) {
+          return me != null && roundIsLive(r.round_id) && r.signed_by === me && me !== r.player_id && sharesGroup(uid, r.round_id, r.player_id) && signingMode(tid) === 'marker'
+        }
         const pair = rowsOf('pairs').find((p) => p.id === r.pair_id && p.tournament_id === tid)
         return (
           !!pair &&
@@ -953,16 +973,19 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     }
     // At the statement's end, the foreign keys (checked by the table's owner: no policy hides the row they point to).
     for (const row of stored) {
-      const broken = (FOREIGN_KEYS[table] ?? []).find((fk) => row[fk.column] != null && !rowsOf(fk.table).some((r) => r.id === row[fk.column]))
+      const broken = (FOREIGN_KEYS[table] ?? []).find(
+        (fk) => row[fk.column] != null && !rowsOf(fk.table).some((r) => r.id === row[fk.column] && (!fk.tenant || row.tournament_id == null || r.tournament_id === row.tournament_id)),
+      )
       if (broken) return json(409, { code: '23503', details: null, hint: null, message: `insert or update on table "${table}" violates foreign key constraint "${broken.name}"` })
     }
     server.tables[table] = next
-    // 0026 `card_signature_settles`: a card signed settles its pair's discrepancies in the round (NEW-01).
+    // 0026 `card_signature_settles`: a card signed settles its pair's discrepancies in the round (NEW-01); 0054, a player's his own.
     if (table === 'card_signatures') {
       for (const sig of stored) {
         const pair = rowsOf('pairs').find((p) => p.id === sig.pair_id)
+        const whose = pair ? [pair.player1_id, pair.player2_id] : sig.player_id != null ? [sig.player_id] : []
         for (const sc of rowsOf('scores')) {
-          if (pair && sc.round_id === sig.round_id && (sc.player_id === pair.player1_id || sc.player_id === pair.player2_id) && sc.disputed) {
+          if (sc.round_id === sig.round_id && whose.includes(sc.player_id) && sc.disputed) {
             Object.assign(sc, { disputed: false, previous: null, updated_at: stamp() })
           }
         }

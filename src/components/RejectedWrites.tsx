@@ -21,6 +21,7 @@ import { t } from '../i18n/es-MX'
 import { discardRejected, retryRejected, useOutbox, type AwardPayload, type RejectedItem, type ScorePayload, type SignaturePayload, type TiebreakPayload } from '../data/outbox'
 import { useTournament } from '../data/tournamentStore'
 import type { Snapshot } from '../engine/types'
+import { cardSignedFor } from '../engine/core/cardSigning'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Sheet, toast } from './ui'
 import styles from './RejectedWrites.module.css'
@@ -169,10 +170,15 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
   )
 }
 
-/** The card a refused write belongs to was signed: a score's player's pair, or the signature's own pair, on that day. */
+/**
+ * The card a refused write belongs to was signed on that day: a score's player's (by his pair or, under a marker's
+ * rule, his own signature), or the signature's own card.
+ */
 function signedFor(snapshot: Snapshot, r: RejectedItem): boolean {
-  const player = r.kind === 'score' ? (r.payload as ScorePayload).player_id : null
-  const pairId = r.kind === 'signature' ? (r.payload as SignaturePayload).pair_id : snapshot.pairs.find((p) => player && (p.player1Id === player || p.player2Id === player))?.id
+  const sig = r.kind === 'signature' ? (r.payload as SignaturePayload) : null
+  const player = r.kind === 'score' ? (r.payload as ScorePayload).player_id : (sig?.player_id ?? null)
+  if (player) return cardSignedFor(snapshot, r.payload.round_id, player)
+  const pairId = sig?.pair_id
   return !!pairId && snapshot.cardSignatures.some((s) => s.roundId === r.payload.round_id && s.pairId === pairId)
 }
 

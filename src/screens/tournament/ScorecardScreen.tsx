@@ -41,12 +41,14 @@ import { RivalryLines } from './scorecard/RivalryLines'
 import { SaveBar } from './scorecard/SaveBar'
 import { DefaultsSheet, TiebreakSheet, UnusualSheet } from './scorecard/SaveSheets'
 import { ScoreGrid } from './scorecard/ScoreGrid'
-import { SignSheet, SigningPanel } from './scorecard/SigningPanel'
+import { MarkerSigningPanel, SignSheet, SigningPanel } from './scorecard/SigningPanel'
+import { cardSigningMode } from '../../engine/core/cardSigning'
 import { useContestPicks } from './scorecard/useContestPicks'
 import { useHoleDrafts } from './scorecard/useHoleDrafts'
 import { useFollowHole, useHoleNav, useHoleSlide, useHoleSwipe } from './scorecard/useHoleNav'
 import { useHoleSave } from './scorecard/useHoleSave'
 import { useStableHandlers } from './scorecard/useStable'
+import { useViewFocus } from '../../components/viewFocus'
 import styles from './ScorecardScreen.module.css'
 
 const S = t.card
@@ -148,7 +150,8 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const firstOpen = order.find((h) => playerIds.some((id) => !playedOn(id, h))) ?? order[order.length - 1] ?? 1
   const nav = useHoleNav(order, firstOpen)
   const { hole, idx, view } = nav
-  const [signing, setSigning] = useState<string | null>(null)
+  /** The card about to be signed: a pair's (its id) or, under a marker's rule, one player's. */
+  const [signing, setSigning] = useState<{ pairId: string } | { playerId: string } | null>(null)
   /** One polite live region for the whole card: whose score changed and what it is worth, or the new hole (A11Y-01). */
   const [said, setSaid] = useState('')
   /** «Hoyo 12 guardado», said with the next hole in one message instead of two at once. */
@@ -177,7 +180,8 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
     const toPar = d.pickedUp ? null : (net ? d.strokes - h.strokesReceived : d.strokes) - h.par
     return { pts, good: toPar != null && toPar <= -1, text: t.feed.scoreName(toPar, net) }
   }
-  const rules = cardRules({ snapshot, round, playerIds, isAdmin: me.isAdmin })
+  const signingMode = cardSigningMode(settings)
+  const rules = cardRules({ snapshot, round, playerIds, isAdmin: me.isAdmin, perPlayer: signingMode === 'marker' })
   const holeKey = `${round.id}|${group.id}|${hole}`
   const entry = useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editableFor: rules.editableFor, rowOf, say: setSaid, sayWithNextHole: savedSaid })
   const contests = useContestPicks({ settings, state, holeAwards: snapshot.holeAwards, roundId: round.id, groupId: group.id, hole, players })
@@ -209,10 +213,23 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const sheetOpen = saver.asking || !!signing
   useFollowHole({ nav, order, firstOpen, queueRead, touched: entry.touched, sheetOpen, busy: saver.busy })
   const swipe = useHoleSwipe({ active: view === 'hole' && !sheetOpen, idx, count: order.length, goto: nav.goto, reduce })
+  // The hole and the grid swap in place, and an arrow goes disabled under the finger at the first or last hole.
+  // When focus went with them (A11Y-12): from a dead arrow to the other one (the new hole is said already), else to
+  // the new view's heading, the hole's sentence or the grid's name.
+  const cardRef = useRef<HTMLDivElement>(null)
+  useViewFocus(`${view}:${hole}`, () => {
+    const root = cardRef.current
+    const dead = document.activeElement
+    if (root && dead instanceof HTMLButtonElement && dead.disabled && root.contains(dead)) {
+      const other = dead.parentElement?.querySelector<HTMLButtonElement>(':scope > button:not([disabled])')
+      if (other) return other
+    }
+    return root?.querySelector('[data-view-heading]')
+  })
 
-  async function sign(pairId: string) {
+  async function sign(card: { pairId: string } | { playerId: string }) {
     setSigning(null)
-    await enqueueSignature(tournamentId, { round_id: round.id, pair_id: pairId, signed_by: me.playerId })
+    await enqueueSignature(tournamentId, 'pairId' in card ? { round_id: round.id, pair_id: card.pairId, signed_by: me.playerId } : { round_id: round.id, player_id: card.playerId, signed_by: me.playerId })
     toast(S.signed)
   }
   const on = useStableHandlers({
@@ -240,6 +257,8 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
     closeReason: () => saver.setAskReason(false),
     saveWithReason: () => void saver.save(true),
     closeSign: () => setSigning(null),
+    signPair: (pairId: string) => setSigning({ pairId }),
+    signPlayer: (playerId: string) => setSigning({ playerId }),
     sign: () => {
       if (signing) void sign(signing)
     },
@@ -249,12 +268,15 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const pairsOn = settings.modules.pairs.enabled
   const { myPair, rivalPair } = groupPairs(snapshot.pairs, group.playerIds, me.playerId)
   const pairName = pairNameIn(snapshot.players)
-  const signingPair = signing ? snapshot.pairs.find((p) => p.id === signing) : undefined
+  const signingPair = signing && 'pairId' in signing ? snapshot.pairs.find((p) => p.id === signing.pairId) : undefined
+  const signingName = signing && 'playerId' in signing ? named.find((x) => x.id === signing.playerId)?.name : undefined
   const complete = players.every((p) => roundState[p.id]?.complete)
+  // Under a marker's rule each card is signed as soon as it is complete (UX-23): a player who stops early never holds the rest back.
+  const completeNamed = useMemo(() => named.filter((x) => roundState[x.id]?.complete), [named, roundState])
   const locked = rules.canEdit ? null : rules.anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)
 
   return (
-    <div className={styles.screen} {...swipe.handlers}>
+    <div ref={cardRef} className={styles.screen} {...swipe.handlers}>
       <div className={styles.top}>
         <div className={styles.topText}>
           <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>
@@ -271,8 +293,20 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
           <ScoreGrid named={named} roundState={roundState} order={order} hole={hole} pointsCount={pointsCount} net={net} onOpen={on.openHole} savedNote={saver.savedNote} onUndo={on.undo} />
           <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
           <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
-          {pairsOn && complete && (
-            <SigningPanel roundId={round.id} groupPlayerIds={group.playerIds} pairs={snapshot.pairs} signatures={snapshot.cardSignatures} players={snapshot.players} myPairId={myPair?.id ?? null} isAdmin={me.isAdmin} onSign={setSigning} />
+          {signingMode === 'pairs' && pairsOn && complete && (
+            <SigningPanel roundId={round.id} groupPlayerIds={group.playerIds} pairs={snapshot.pairs} signatures={snapshot.cardSignatures} players={snapshot.players} myPairId={myPair?.id ?? null} isAdmin={me.isAdmin} onSign={on.signPair} />
+          )}
+          {signingMode === 'marker' && (
+            <MarkerSigningPanel
+              roundId={round.id}
+              players={completeNamed}
+              signatures={snapshot.cardSignatures}
+              pairs={snapshot.pairs}
+              myPlayerId={me.playerId}
+              inGroup={!!me.playerId && group.playerIds.includes(me.playerId)}
+              isAdmin={me.isAdmin}
+              onSign={on.signPlayer}
+            />
           )}
         </>
       ) : (
@@ -342,7 +376,13 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
       <DefaultsSheet open={saver.confirmDefaults} hole={hole} onBack={on.backFromDefaults} onConfirm={on.allPar} />
       <UnusualSheet lines={saver.confirmWeird} onFix={on.fixUnusual} onConfirm={on.saveUnusual} />
       <CorrectionReasonSheet open={saver.askReason} reason={saver.reason} onReason={saver.setReason} busy={saver.busy} onClose={on.closeReason} onSave={on.saveWithReason} />
-      <SignSheet open={!!signing} title={signingPair ? S.signTitle(pairName(signingPair)) : undefined} onClose={on.closeSign} onSign={on.sign} />
+      <SignSheet
+        open={!!signing}
+        title={signingPair ? S.signTitle(pairName(signingPair)) : signingName ? S.signPlayer(signingName) : undefined}
+        confirm={signingName ? S.signPlayerConfirm : undefined}
+        onClose={on.closeSign}
+        onSign={on.sign}
+      />
 
       {/* Last in the card, so reading it from the top meets the group before the last announcement. */}
       <p className="sr-only" aria-live="polite" aria-atomic="true">

@@ -41,5 +41,7 @@ export function quickSettings(o: QuickOptions): TournamentSettings {
     handicap: { ...base.handicap, allowance: 1 },
     prizes: { ...base.prizes, stableford: fee > 0 ? quickSplit(o.players) : [], stablefordMode: fee > 0 ? 'percent' : 'amount' },
     games,
+    // A friendly round signs nothing (UX-23): the group fixes its holes while the day is live, the organizer after.
+    cardSigning: 'none',
   }
 }

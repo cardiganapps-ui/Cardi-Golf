@@ -34,17 +34,37 @@ export const SaveStatus = memo(function SaveStatus({ savedNote, onUndo }: { save
     return () => clearInterval(id)
   }, [signedOut, heldHoles])
   const sync = syncWords({ pending, pendingHoles, heldHoles, lastError, rejected, signedOut, online, storedSession: hasStoredSession() })
-  if (!savedNote) return <span className={`${styles.saveStatus} ${sync.warn ? styles.saveStatusWarn : ''}`}>{sync.text}</span>
-  return (
-    <span className={styles.savedLine}>
-      <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : savedNote.corrected !== undefined ? S.correctedHole(savedNote.hole, savedNote.corrected) : S.savedHole(savedNote.hole)}</span>
-      {!savedNote.restored && (
-        <button type="button" className={styles.savedAction} onClick={onUndo}>
-          {savedNote.canUndo ? t.common.undo : S.correct}
-        </button>
-      )}
-      {sync.short && <span className={`${styles.savedSync} ${styles.saveStatusWarn}`}>{sync.short}</span>}
+  /*
+   * What a screen reader is told as it happens (A11Y-14), in a region that is always mounted so a change in it is
+   * heard: only what needs the player, a write the server refused or holes waiting for the PIN. Not «1 hoyo por
+   * subir» after every save (the card already says the hole was saved), nor an error the outbox retries by itself.
+   */
+  const said = rejected ? t.sync.rejectedSaid(rejected) : heldHoles > 0 && signedOut && !hasStoredSession() ? t.sync.heldForPin(heldHoles) : ''
+  const region = (
+    <span className="sr-only" role="status">
+      {said}
     </span>
+  )
+  if (!savedNote)
+    return (
+      <>
+        {region}
+        <span className={`${styles.saveStatus} ${sync.warn ? styles.saveStatusWarn : ''}`}>{sync.text}</span>
+      </>
+    )
+  return (
+    <>
+      {region}
+      <span className={styles.savedLine}>
+        <span>{savedNote.restored ? S.restoredHole(savedNote.hole) : savedNote.corrected !== undefined ? S.correctedHole(savedNote.hole, savedNote.corrected) : S.savedHole(savedNote.hole)}</span>
+        {!savedNote.restored && (
+          <button type="button" className={styles.savedAction} onClick={onUndo}>
+            {savedNote.canUndo ? t.common.undo : S.correct}
+          </button>
+        )}
+        {sync.short && <span className={`${styles.savedSync} ${styles.saveStatusWarn}`}>{sync.short}</span>}
+      </span>
+    </>
   )
 })
 

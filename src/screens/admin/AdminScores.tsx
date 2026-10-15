@@ -13,7 +13,8 @@ import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
 import { RejectedInbox } from './RejectedInbox'
-import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard } from '../../data/api'
+import { adminSaveScore, answerTiebreak, resolveDispute, unsignCard, unsignPlayerCard } from '../../data/api'
+import { playerSignature } from '../../engine/core/cardSigning'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { mainScoring } from '../../engine/formats'
@@ -48,7 +49,9 @@ export function AdminScores() {
   const dayOf = (rid: string) => t.round.day(snapshot.rounds.find((r) => r.id === rid)?.number ?? 0)
   const pr = state.core.rounds[roundId]?.[playerId]
   const pair = snapshot.pairs.find((p) => p.player1Id === playerId || p.player2Id === playerId)
-  const signed = pair ? snapshot.cardSignatures.find((s) => s.roundId === roundId && s.pairId === pair.id) : undefined
+  // His pair's signature, or his own (a marker's, 0054): either locks his card.
+  const ownSignature = playerSignature(snapshot.cardSignatures, roundId, playerId)
+  const signed = ownSignature ?? (pair ? snapshot.cardSignatures.find((s) => s.roundId === roundId && s.pairId === pair.id) : undefined)
   const { pendingSnakeTiebreaks: pending, discrepancies: disputes, unsignedCards, incompleteRounds, missingPutts } = state.flags
   const inboxCount = pending.length + disputes.length + missingPutts.length + unsignedCards.length + incompleteRounds.length
 
@@ -117,10 +120,11 @@ export function AdminScores() {
   }
 
   async function doUnsign() {
-    if (!pair) return
+    if (!ownSignature && !pair) return
     setBusy(true)
     try {
-      await unsignCard(roundId, pair.id)
+      if (ownSignature) await unsignPlayerCard(roundId, playerId)
+      else if (pair) await unsignCard(roundId, pair.id)
       await reload()
       setAskUnsign(false)
     } catch (e) {
@@ -213,10 +217,12 @@ export function AdminScores() {
               </div>
             ))}
             {unsignedCards.map((u) => {
-              const pr2 = snapshot.pairs.find((p) => p.id === u.pairId)
-              const label = pr2 ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)])) : '?'
+              // A marker's rule lists each player's card (UX-23); the pairs' rule, each pair's.
+              const pr2 = 'pairId' in u ? snapshot.pairs.find((p) => p.id === u.pairId) : undefined
+              const label = 'playerId' in u ? name(u.playerId) : pr2 ? (pr2.name ?? t.common.andList([name(pr2.player1Id), name(pr2.player2Id)])) : '?'
+              const who = 'playerId' in u ? u.playerId : pr2?.player1Id
               return (
-                <div key={`u${u.roundId}${u.pairId}`} className={a.inboxRow}>
+                <div key={`u${u.roundId}${'pairId' in u ? u.pairId : u.playerId}`} className={a.inboxRow}>
                   <span className={a.inboxText}>
                     <span className={a.inboxTitle}>
                       <span className={a.inboxMark} aria-hidden="true" />
@@ -225,7 +231,7 @@ export function AdminScores() {
                     <span className={a.inboxSub}>{dayOf(u.roundId)}</span>
                   </span>
                   <span className={a.inboxActions}>
-                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => show(u.roundId, pr2?.player1Id)}>
+                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => show(u.roundId, who)}>
                       {IB.view}
                     </button>
                   </span>
