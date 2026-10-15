@@ -96,4 +96,6 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   client_events: T('errors, sync times, speed and a few steps from each phone', DATA, 'telemetry'),
   device_status: T('each phone\'s app version and what it still has to send', DATA, 'devices'),
   legal_acceptances: T('which version of the notice and the terms each user accepted, when and where', DATA, 'account'),
+  // Keeps nobody's data, but shows a tournament's to whoever has it (STRAT-05): the notice says who sees what through it.
+  spectator_links: T('the key of the address anyone can open to watch the boards without a PIN, and whether it shows money', TOURNAMENT, 'tournament'),
 }

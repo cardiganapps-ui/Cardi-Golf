@@ -10,10 +10,12 @@
  *   apart from the installed app (a link from WhatsApp always opens Safari).
  * - `InstallSteps`: the steps themselves.
  */
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { t } from '../i18n/es-MX'
 import { useOutbox } from '../data/outbox'
 import { devicePlatform, installNow, isStandalone, markInstalled, saidInstalled, useInstallOffer, type DevicePlatform } from '../lib/install'
+import { onLinkPage } from '../lib/linkPage'
+import { TournamentContext } from '../screens/tournament/TournamentGate'
 import { IconHome, IconShare } from './icons'
 import { Sheet } from './ui'
 import styles from './InstallGuide.module.css'
@@ -66,8 +68,10 @@ export function InstallSteps({ platform }: { platform: DevicePlatform }) {
 export function InstallCard() {
   const installed = useInstallOffer((s) => s.installed)
   const [hidden, setHidden] = useState(() => laterActive() || saidInstalled())
+  // Never from a link to watch (STRAT-05): the installed app would open Home, not the link, and keep nothing of it.
+  const watching = !!useContext(TournamentContext)?.spectator || onLinkPage()
   const platform = devicePlatform()
-  if (hidden || installed || isStandalone() || platform === 'other') return null
+  if (watching || hidden || installed || isStandalone() || platform === 'other') return null
 
   function later() {
     try {

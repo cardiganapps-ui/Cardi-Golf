@@ -99,6 +99,31 @@ for (const [w, h] of ROOMS) {
   })
 }
 
+/**
+ * A phone held upright, or a tablet: the TV opened on «Algo falló al abrir Polo» (React #185, a render that never
+ * settles). The title wraps there once it takes its range («1–3 de 12»), the rows' box shrank, and the board measured
+ * itself again from scratch for the new box, which dropped the range, which grew the box, on every render.
+ */
+for (const [path, w, h] of [['/t/_/full12-live/tv', 393, 852], ['/t/_/full12-live/tv', 375, 667], ['/t/_/large60/tv', 768, 1024], ['/t/_/draw12/tv', 393, 852]] as const) {
+  test(`${path} on a screen held upright, ${w}×${h}: the board opens and pages, it never stops the page`, async ({ page }) => {
+    const reactErrors: string[] = []
+    page.on('console', (m) => m.type() === 'error' && /React error|Maximum update depth/.test(m.text()) && reactErrors.push(m.text().slice(0, 120)))
+    await page.setViewportSize({ width: w, height: h })
+    await page.goto(path, { waitUntil: 'networkidle' })
+    await expect(page.getByRole('link', { name: t.tv.exit })).toBeVisible()
+    await expect(page.locator('section h2').first()).toBeVisible()
+    await expect(page.getByText(t.boot.crashTitle)).toHaveCount(0)
+    expect(reactErrors).toEqual([])
+  })
+}
+
+test('Más, Modo TV on a phone: the TV opens', async ({ page }) => {
+  await page.goto('/t/_/full12-live/mas', { waitUntil: 'networkidle' })
+  await page.locator('a[href$="/tv"]').first().click()
+  await expect(page.getByRole('link', { name: t.tv.exit })).toBeVisible()
+  await expect(page.getByText(t.boot.crashTitle)).toHaveCount(0)
+})
+
 test('under the board, a rule fills toward the next board and names it; the next one is the one named (MOT-08)', async ({ page }) => {
   // Real time, as the VIS-04 test: the rotation and its transitions run on the browser's own clock.
   test.setTimeout(60_000)

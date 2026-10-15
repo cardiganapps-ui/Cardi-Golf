@@ -37,6 +37,10 @@ describe('telemetry', () => {
     expect(tel.routeOf('/c/unirme/ABC123')).toBe('/c/unirme/:code')
     expect(tel.routeOf('/c/los-de-siempre')).toBe('/c/:slug')
     expect(tel.routeOf('/admin/personas/d1b2c3d4-0000-4000-8000-00000000000a')).toBe('/admin/personas/:id')
+    // A link to watch's token opens the boards: an error on its page never sends it (STRAT-05).
+    expect(tel.routeOf('/v/0EGCoHWzowIk4PgecAWI9b15/tv')).toBe('/v/:token/tv')
+    expect(tel.routeOf('/v/0EGCoHWzowIk4PgecAWI9b15')).toBe('/v/:token')
+    expect(tel.routeOf('/V/0EGCoHWzowIk4PgecAWI9b15/TV')).toBe('/v/:token/TV')
   })
 
   it('groups an error: the same one once a minute, at most 30 per page load', () => {

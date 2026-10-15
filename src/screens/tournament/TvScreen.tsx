@@ -11,6 +11,7 @@ import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { useTournamentCtx } from './TournamentGate'
+import { tournamentBase, useShowMoney } from './tournamentView'
 import { useSavedWhen } from './boardsAge'
 import { useConnection } from './connection'
 import { useOwnConnectionStatus } from '../../components/OfflineBanner'
@@ -34,12 +35,17 @@ const HOLD_MS = 2_000
 
 export function TvScreen() {
   const data = useTournament((s) => s.data)!
-  const { slug } = useTournamentCtx()
+  const ctx = useTournamentCtx()
+  const base = tournamentBase(ctx)
+  // On a link to watch «Sin dinero» (STRAT-05) the snake shows no pot, and Calcutta night says what it needs.
+  const showMoney = useShowMoney()
   const round = useActiveRound()
   const { snapshot, state, settings } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const isAuctionNight = snapshot.tournament.status === 'auction'
+  /** Calcutta night on a link without money: the auction is all prices, so the board says the link it needs. */
+  const auctionNeedsMoney = isAuctionNight && !showMoney
   const boards = useMemo(() => {
     const b: Board[] = ['individual']
     if (state.modules.pairs) b.push('pairs')
@@ -157,14 +163,19 @@ export function TvScreen() {
             {connection?.mayBeOld && updatedWhen && `. ${t.sync.boardsAge(updatedWhen)}`}
           </span>
         </div>
-        <Link to={`/t/${slug}`} className={styles.exit}>
+        <Link to={base} className={styles.exit}>
           {t.tv.exit}
         </Link>
       </header>
 
       {/* The next board comes in while the last one leaves: the screen is never blank between boards (MOT-01). */}
       <AnimatePresence mode="popLayout" initial={false}>
-        {isAuctionNight && state.modules.auction ? (
+        {auctionNeedsMoney ? (
+          <motion.section key="auction-no-money" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeBoard}>
+            {/* The pairs draw carries no money: once it is made, the room sees it here too. */}
+            {settings.modules.pairs.enabled && snapshot.pairs.length > 0 ? <DrawBoard revealKey={null} /> : <NeedsMoneyBoard />}
+          </motion.section>
+        ) : isAuctionNight && state.modules.auction ? (
           <motion.section key="auction-live" className={styles.board} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={easeBoard}>
             <AuctionBoard />
           </motion.section>
@@ -251,7 +262,7 @@ export function TvScreen() {
                         </span>
                       ))}
                     </span>
-                    <span className={styles.big}>{formatMoney(g.pot)}</span>
+                    <span className={styles.big}>{showMoney ? formatMoney(g.pot) : ''}</span>
                   </div>
                 )}
               />
@@ -300,7 +311,7 @@ export function TvScreen() {
                         <span>{r.title ?? t.common.andList(r.playerIds.map(name))}</span>
                         {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label, r.sub].filter(Boolean).join(', ')}</span>}
                       </span>
-                      <span className={styles.small}>{r.money ? formatMoney(r.money) : ''}</span>
+                      <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money) : ''}</span>
                       <span className={styles.big}>{r.figure ? <Plate value={r.figure} leader={r.pos === '1'} /> : null}</span>
                     </div>
                 )}
@@ -358,7 +369,11 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
   useLayoutEffect(() => {
     const el = box.current
     if (!el) return
-    const key = `${el.clientWidth}x${el.clientHeight}:${items.length}`
+    // A new size is the board's, which the screen gives it, never the rows' own box: that one shrinks when the title
+    // takes its range («1–9 de 12») and wraps, as it does on a phone held upright, so measuring again for it put the
+    // range back and took it away on every render, until React stopped the page.
+    const frame = el.parentElement ?? el
+    const key = `${frame.clientWidth}x${frame.clientHeight}:${items.length}`
     if (key !== measuredFor.current) {
       measuredFor.current = key
       tallest.current = 0
@@ -371,7 +386,9 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
     tallest.current = Math.max(tallest.current, ...rows.map((r) => r.getBoundingClientRect().height))
     if (tallest.current > 0) {
       const n = Math.max(1, Math.floor(el.clientHeight / tallest.current))
-      if (n !== fit) setFit(n)
+      // For one size the fit only tightens, as the tallest row only grows: more rows would drop the range, and the
+      // room it frees would ask for fewer again.
+      if (fit === null || n < fit) setFit(n)
     }
     // On every page shown (turn), every fit, and every resize.
   }, [items, turn, fit, resized])
@@ -411,6 +428,22 @@ function PagedRows<T>({ title, turn, items, render, columns, follow }: { title: 
         {shown.map((item, i) => render(item, page * per + i))}
       </div>
     </>
+  )
+}
+
+/**
+ * Calcutta night on a link to watch «Sin dinero» (STRAT-05): the auction is
+ * prices and bids, which that link never carries, so the room reads what the
+ * TV needs instead of a board that shows nothing.
+ */
+function NeedsMoneyBoard() {
+  const label = useTournament((s) => s.data?.settings.modules.auction.label ?? '')
+  return (
+    <div className={styles.hat}>
+      <h2 className={styles.boardTitle}>{label || t.tv.auction}</h2>
+      <p className={styles.needsMoney}>{t.spectator.tvNeedsMoney}</p>
+      <p className={styles.sub}>{t.spectator.tvNeedsMoneyHint}</p>
+    </div>
   )
 }
 
