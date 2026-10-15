@@ -9,6 +9,7 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
+import { t } from '../../i18n/es-MX'
 import { TournamentContext } from './TournamentGate'
 import { TvScreen } from './TvScreen'
 
@@ -24,11 +25,19 @@ function tv(fixture: string) {
     </MemoryRouter>,
   )
 }
+/** What a cell shows, without the words it carries for a screen reader (A11Y-22). */
+const shown = (cell: Element) => {
+  const copy = cell.cloneNode(true) as Element
+  copy.querySelectorAll('.sr-only').forEach((n) => n.remove())
+  return copy.textContent
+}
 /** A player's row on the board: where he is, his day, then his figure, each under its column (VIS-05). */
 const tvRow = (playerId: string) => {
   const row = document.querySelector(`[data-player="${playerId}"]`)!
-  return [...row.querySelectorAll('[class*="_mid_"]'), row.querySelector('[class*="_big_"]')!].map((c) => c.textContent)
+  return [...row.querySelectorAll('[class*="_mid_"]'), row.querySelector('[class*="_big_"]')!].map(shown)
 }
+/** What a screen reader hears for where he is on the course. */
+const thruSaid = (playerId: string) => document.querySelector(`[data-player="${playerId}"] [class*="_mid_"] .sr-only`)?.textContent
 
 afterEach(() => cleanup())
 
@@ -38,5 +47,7 @@ describe('the TV board under match play (STRAT-03)', () => {
     tv('match8')
     expect(tvRow('p2')).toEqual(['F', 'ganó 4&3', '1'])
     expect(tvRow('p1')).toEqual(['F', 'perdió 4&3', '0'])
+    // «F» is said as a word, never «efe» (A11Y-22).
+    expect(thruSaid('p2')).toBe(t.round.thruSpoken(18, 18))
   })
 })

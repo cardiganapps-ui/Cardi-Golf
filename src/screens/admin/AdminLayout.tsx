@@ -110,7 +110,7 @@ export function AdminLayout() {
                   // A11Y-22: the count said with its words, inside the link's name; a label on a bare span is dropped.
                   <span className={`${styles.badge} ${s.hot ? styles.badgeHot : ''}`}>
                     <span aria-hidden="true">{s.badge}</span>
-                    <span className="sr-only">, {t.admin.inbox.count(s.badge)}</span>
+                    <span className="sr-only"> {t.admin.inbox.count(s.badge)}</span>
                   </span>
                 ) : null}
               </NavLink>
