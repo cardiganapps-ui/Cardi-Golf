@@ -1,6 +1,12 @@
 .trigger {
   min-height: 36px;
 }
+/* A11Y-16: this rule loads after global.css and beat its touch-screen size; the trigger is a full tap target there too. */
+@media (pointer: coarse) {
+  .trigger {
+    min-height: var(--tap);
+  }
+}
 .list {
   display: flex;
   flex-direction: column;

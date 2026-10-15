@@ -58,14 +58,14 @@ for (const width of [375, 393]) {
     test('Juegos › La Calcutta: what each slot pays and each owner holds, in one column (VIS-01)', async ({ page }) => {
       await open(page, '/t/_/full12-live/juegos')
       await page.getByRole('button', { name: /La Calcutta/ }).first().click()
-      await expect(page.getByRole('heading', { level: 3, name: t.games.owners })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 2, name: t.games.owners })).toBeVisible()
       expect(await ragged(page)).toEqual([])
     })
 
     test('Juegos › Los Matrimonios: each pair\'s points in a column of their own (VIS-01)', async ({ page }) => {
       await open(page, '/t/_/full12-live/juegos')
       await page.getByRole('button', { name: /Los Matrimonios/ }).first().click()
-      await expect(page.getByRole('heading', { level: 3, name: t.games.headToHead })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 2, name: t.games.headToHead })).toBeVisible()
       expect(await ragged(page)).toEqual([])
       // Inside the figures, the first pair's points and the second's are two columns.
       const columns = () =>

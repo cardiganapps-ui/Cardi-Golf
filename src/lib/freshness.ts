@@ -11,6 +11,8 @@ const MIN = 60_000
 const HOUR = 60 * MIN
 const DAY = 24 * HOUR
 const clock = (d: Date) => d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+/** A moment as this phone's clock reads it: «9:14 a.m.». */
+export const clockTime = (at: string | number | Date) => clock(new Date(at))
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 /** The date, with the year when it is not this year's: «el 6 de marzo» read like this spring's. */
 const dateOf = (d: Date, now: Date) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) })

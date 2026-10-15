@@ -15,6 +15,7 @@ import { t } from '../../i18n/es-MX'
 import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
 import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { Segmented } from '../../components/primitives'
 import { deleteTournament, rotateJoinCode, setTournamentProtected, SettingsChanged, updateSettings, updateTournament, uploadAsset, type SetupFields, type SetupRow } from '../../data/api'
 import { changedKeys, mergeOver, settingsWrite } from '../../data/settingsWrite'
 import { OptionalNumberField } from '../../components/NumberField'
@@ -278,6 +279,8 @@ export function AdminTournament() {
   }
   /** «Cerrar torneo» (MONEY-05): Terminado waits until nothing is left open. */
   const closeGate = useCloseGate(tournamentId)
+  /** The state picked and not yet confirmed (A11Y-17). */
+  const [askStatus, setAskStatus] = useState<(typeof STATUSES)[number] | null>(null)
   async function setStatus(status: (typeof STATUSES)[number]) {
     if (status === 'finished' && tr.status !== 'finished') return closeGate.guard({ confirmLabel: t.status.finished }, () => applyStatus(status))
     return applyStatus(status)
@@ -425,13 +428,26 @@ export function AdminTournament() {
           <strong>{A.status}</strong>
           {quick && <span className={a.count}>{t.common.saving}</span>}
         </div>
-        <div className="segmented" role="tablist" aria-busy={quick}>
-          {STATUSES.map((s) => (
-            <button key={s} type="button" role="tab" aria-selected={tr.status === s} disabled={quick || closeGate.checking} onClick={() => void setStatus(s)}>
-              {t.status[s]}
-            </button>
-          ))}
-        </div>
+        {/* A11Y-17: a choice, not tabs; moving it (a tap or an arrow key) asks before the tournament changes state. */}
+        <Segmented
+          value={tr.status}
+          options={STATUSES.map((st) => ({ value: st, label: t.status[st] }))}
+          onChange={(st) => (st === 'finished' ? void setStatus(st) : setAskStatus(st))}
+          label={A.status}
+          disabled={quick || closeGate.checking}
+        />
+        <ConfirmSheet
+          open={askStatus !== null && askStatus !== tr.status}
+          title={askStatus ? A.statusConfirmTitle(t.status[askStatus]) : ''}
+          body={A.statusConfirmBody}
+          busy={quick}
+          onConfirm={() => {
+            const st = askStatus
+            setAskStatus(null)
+            if (st) void setStatus(st)
+          }}
+          onClose={() => setAskStatus(null)}
+        />
         {closeGate.sheet}
         {tr.status === 'setup' && !handicapsLocked(tr) && <p className={a.help}>{A.statusLocksHandicaps}</p>}
         <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />

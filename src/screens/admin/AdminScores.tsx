@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
 import { RejectedInbox } from './RejectedInbox'
@@ -174,7 +174,7 @@ export function AdminScores() {
             ))}
             {disputes.map((d) => {
               const s = snapshot.scores.find((x) => x.roundId === d.roundId && x.playerId === d.playerId && x.hole === d.hole)!
-              const fmt = (strokes: number | null | undefined, putts: number | null | undefined, picked: boolean | null | undefined) => `${picked ? 'L' : (strokes ?? '–')}/${putts ?? '–'}`
+              const who = (id: string | null | undefined) => (id ? name(id) : null)
               return (
                 <div key={`d${d.roundId}${d.playerId}${d.hole}`} className={a.inboxRow}>
                   <span className={a.inboxText}>
@@ -183,7 +183,8 @@ export function AdminScores() {
                       {IB.dispute(name(d.playerId), d.hole)}
                     </span>
                     <span className={a.inboxSub}>
-                      {dayOf(d.roundId)}. {SC.now} {fmt(s.strokes, s.putts, s.pickedUp)} ({name(s.enteredBy ?? '')}), {SC.before} {fmt(s.previous?.strokes, s.previous?.putts, s.previous?.picked_up)} ({name(s.previous?.entered_by ?? '')})
+                      {dayOf(d.roundId)}. {SC.disputeNow(IB.scoreValue(s.strokes, s.putts, s.pickedUp), who(s.enteredBy))}{' '}
+                      {SC.disputeBefore(IB.scoreValue(s.previous?.strokes ?? null, s.previous?.putts ?? null, s.previous?.picked_up ?? false), who(s.previous?.entered_by))}
                     </span>
                   </span>
                   <span className={a.inboxActions}>
@@ -270,13 +271,7 @@ export function AdminScores() {
         {rounds.length > 0 && snapshot.players.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noPlayers} />}
         {rounds.length > 0 && snapshot.players.length > 0 && (
           <>
-            <div className="segmented" role="tablist">
-              {rounds.map((r) => (
-                <button key={r.id} type="button" role="tab" aria-selected={r.id === roundId} onClick={() => setRoundId(r.id)}>
-                  {t.round.day(r.number)}
-                </button>
-              ))}
-            </div>
+            <Segmented value={roundId} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />
             <select className="select" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label={SC.player}>
               {groupedPlayers.map((g) => (
                 <optgroup key={g.label} label={g.label}>

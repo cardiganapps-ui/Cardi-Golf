@@ -29,7 +29,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
       <p className="help">{(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(settings.modules.snake.puttsThreshold)}</p>
       {[...byRound.entries()].map(([rid, groups]) => (
         <section key={rid} className={styles.day}>
-          <h3>{t.round.day(groups[0]!.roundNumber)}</h3>
+          <h2 className="h3">{t.round.day(groups[0]!.roundNumber)}</h2>
           {groups.map((g) => (
             <div key={g.groupId} className={styles.group}>
               <div className={styles.groupHead}>

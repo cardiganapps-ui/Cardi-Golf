@@ -5,7 +5,7 @@
  * Every visual value comes from tokens.css through primitives.module.css.
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
-import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
+import { useRef, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import { t, type RowSpeech } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
@@ -89,11 +89,58 @@ export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', 
 
 // ---- Segmented ----
 /** A view toggle is a radio group; only a real set of panels (Juegos) is a tablist. */
-export function Segmented<T extends string>({ value, options, onChange, tabs, label }: { value: T; options: Array<{ value: T; label: string }>; onChange: (v: T) => void; tabs?: boolean; label?: string }) {
+/**
+ * A choice of a few (A11Y-17): a radio group, or with `tabs` the tab list of a panel (`panelId`, the panel's id,
+ * which the caller renders with role="tabpanel"). Either way one Tab stop, the chosen option, and the arrow keys,
+ * Home and End move among the options and choose as they go, as the ARIA patterns ask.
+ */
+export function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  tabs,
+  label,
+  panelId,
+  disabled,
+}: {
+  value: T
+  options: Array<{ value: T; label: string }>
+  onChange: (v: T) => void
+  tabs?: boolean
+  label?: string
+  panelId?: string
+  disabled?: boolean
+}) {
+  const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const current = Math.max(0, options.findIndex((o) => o.value === value))
+  function onKey(e: ReactKeyboardEvent<HTMLButtonElement>, i: number) {
+    const last = options.length - 1
+    const to = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : null
+    if (to === null) return
+    e.preventDefault()
+    refs.current[to]?.focus()
+    onChange(options[to]!.value)
+  }
   return (
-    <div className={s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label}>
-      {options.map((o) => (
-        <button key={o.value} type="button" role={tabs ? 'tab' : 'radio'} aria-selected={tabs ? o.value === value : undefined} aria-checked={tabs ? undefined : o.value === value} className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`} onClick={() => onChange(o.value)}>
+    <div className={s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label} aria-disabled={disabled || undefined}>
+      {options.map((o, i) => (
+        <button
+          key={o.value}
+          ref={(el) => {
+            refs.current[i] = el
+          }}
+          type="button"
+          role={tabs ? 'tab' : 'radio'}
+          id={tabs && panelId ? `${panelId}-tab-${o.value}` : undefined}
+          aria-controls={tabs ? panelId : undefined}
+          aria-selected={tabs ? o.value === value : undefined}
+          aria-checked={tabs ? undefined : o.value === value}
+          tabIndex={i === current ? 0 : -1}
+          disabled={disabled}
+          className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`}
+          onClick={() => onChange(o.value)}
+          onKeyDown={(e) => onKey(e, i)}
+        >
           {o.label}
         </button>
       ))}

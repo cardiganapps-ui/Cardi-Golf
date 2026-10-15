@@ -23,7 +23,7 @@ export function BracketBoard({ bracket }: { bracket: BracketState }) {
       )}
       {bracket.rounds.map((round) => (
         <section key={round.number} className={styles.round}>
-          <h3 className={styles.roundName}>{round.name}</h3>
+          <h2 className={`h3 ${styles.roundName}`}>{round.name}</h2>
           {round.matches.map((match, i) => {
             const [a, b] = match.sides
             return (

@@ -62,7 +62,7 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
 
   it('«Índice» with nothing typed never saves a scratch golfer', async () => {
     await newPlayer()
-    await act(async () => fireEvent.click(within(sheet()).getByRole('tab', { name: P.sourceIndex })))
+    await act(async () => fireEvent.click(within(sheet()).getByRole('radio', { name: P.sourceIndex })))
     expect(save().disabled).toBe(true)
     expect(within(sheet()).getByText(P.hcpMissing.index)).toBeTruthy()
     await type(within(sheet()).getByLabelText(P.index), '8.4')
@@ -73,7 +73,7 @@ describe('a new player’s handicap is typed, never assumed (UX-16)', () => {
 
   it('the estimate starts with no scores: all three before it saves', async () => {
     await newPlayer()
-    await act(async () => fireEvent.click(within(sheet()).getByRole('tab', { name: P.sourceEstimate })))
+    await act(async () => fireEvent.click(within(sheet()).getByRole('radio', { name: P.sourceEstimate })))
     const gross = within(sheet()).getAllByLabelText(P.gross) as HTMLInputElement[]
     expect(gross.map((g) => g.value)).toEqual(['', '', ''])
     expect(save().disabled).toBe(true)
