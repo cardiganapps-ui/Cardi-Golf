@@ -7,5 +7,5 @@
   "public_bucket_allows_listing (WARN)": 1,
   "rls_enabled_no_policy (INFO)": 16,
   "unindexed_foreign_keys (INFO)": 48,
-  "unused_index (INFO)": 52
+  "unused_index (INFO)": 53
 }

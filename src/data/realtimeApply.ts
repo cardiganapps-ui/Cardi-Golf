@@ -24,6 +24,7 @@
  * applied only when the key is one of this tournament's rows.
  */
 import type { Snapshot } from '../engine/types'
+import { signatureCard } from '../engine/core/cardSigning'
 import {
   mapBid,
   mapBuyback,
@@ -158,8 +159,12 @@ const SPECS: Record<AppliedTable, Spec<unknown>> = {
     scope: 'round',
     get: (s) => s.cardSignatures,
     set: (s, l) => (s.cardSignatures = l),
-    same: (x, r) => x.roundId === r.round_id && x.pairId === r.pair_id,
-    order: byFields((x) => x.roundId, (x) => x.pairId),
+    // 0054: a card is a pair's or one player's, keyed (round, card_id); a delete names that key, and one from
+    // before 0054 names the pair.
+    same: (x, r) =>
+      x.roundId === r.round_id &&
+      (r.card_id != null ? signatureCard(x) === r.card_id : r.pair_id != null ? x.pairId === r.pair_id : r.player_id != null && !x.pairId && x.playerId === r.player_id),
+    order: byFields((x) => x.roundId, (x) => signatureCard(x)),
     map: mapCardSignature,
   }),
   hole_awards: spec({

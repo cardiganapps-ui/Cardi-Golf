@@ -158,7 +158,7 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
       tournament_id: tid,
     })),
     snake_tiebreaks: s.snakeTiebreaks.map((x) => ({ round_id: x.roundId, group_id: x.groupId, hole: x.hole, last_holed_player_id: x.lastHoledPlayerId, decided_by: x.decidedBy ?? null, created_at: CREATED, tournament_id: tid })),
-    card_signatures: s.cardSignatures.map((x) => ({ round_id: x.roundId, pair_id: x.pairId, signed_by: x.signedBy, signed_at: x.signedAt, tournament_id: tid })),
+    card_signatures: s.cardSignatures.map((x) => ({ round_id: x.roundId, pair_id: x.pairId, player_id: x.playerId ?? null, signed_by: x.signedBy, signed_at: x.signedAt, tournament_id: tid })),
     handicap_overrides: s.handicapOverrides.map((x) => ({ round_id: x.roundId, player_id: x.playerId, playing_hcp: x.playingHcp, reason: x.reason, by: x.by, at: x.at, tournament_id: tid })),
     calcutta_lots: s.calcuttaLots.map((l) => ({
       id: l.id,
@@ -232,7 +232,8 @@ export function asStored(s: Snapshot): Snapshot {
     // `scoreRowId` keeps the snapshot's order and is the id a fetch brings; `disputed` and `previous` have column defaults.
     scores: s.scores.map((x, i) => ({ ...x, id: scoreRowId(i), disputed: x.disputed ?? false, previous: x.previous ?? null })),
     snakeTiebreaks: by(s.snakeTiebreaks, (x) => [x.roundId, x.groupId, x.hole]),
-    cardSignatures: by(s.cardSignatures, (x) => [x.roundId, x.pairId]),
+    // 0054 keys a signature by its card: the pair's id, or the player's.
+    cardSignatures: by(s.cardSignatures, (x) => [x.roundId, x.pairId ?? x.playerId ?? '']),
     handicapOverrides: by(s.handicapOverrides, (x) => [x.roundId, x.playerId]),
     calcuttaLots: by(s.calcuttaLots, (x) => [x.id]),
     calcuttaBids: by(s.calcuttaBids, (x) => [x.id]),

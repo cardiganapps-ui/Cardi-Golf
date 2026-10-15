@@ -30,6 +30,7 @@ import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
+import { newTournamentCardSigning } from '../../engine/core/cardSigning'
 import { safeParseSettings } from '../../engine/settings/schema'
 import { PlayStep } from './setup/PlayStep'
 import { ReviewCard } from './setup/ReviewCard'
@@ -196,7 +197,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
     try {
       // The organizer's own zone, not the platform's placeholder.
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || parsed.data.timezone
-      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players } })
+      // Who signs the cards (UX-23), written so the tournament never depends on the default rule: the pairs with the pairs game, else a marker.
+      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players, cardSigning: parsed.data.cardSigning ?? newTournamentCardSigning(parsed.data) } })
       // The days asked for on step 2, as rounds (UX-06): «Rondas» used to say «Sin rondas» right after.
       // Course and date come later, in the Comité. If this fails the tournament still exists, and
       // «Para empezar» lists the rounds still to create.

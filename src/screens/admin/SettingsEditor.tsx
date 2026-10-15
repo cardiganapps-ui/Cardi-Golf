@@ -15,6 +15,7 @@ import { NumberField } from '../../components/NumberField'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { FieldShape } from '../../engine/settings/prizeCheck'
 import { BUYBACK_MAX_PCT, CUT_MAX_STROKES } from '../../engine/settings/sense'
+import { CARD_SIGNING_MODES, cardSigningMode, type CardSigningMode } from '../../engine/core/cardSigning'
 import { FormatEditor } from '../organizer/setup/FormatEditor'
 import { GameCatalog } from '../organizer/setup/GameCatalog'
 import { MoneyEditor } from '../organizer/setup/MoneyEditor'
@@ -82,6 +83,7 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
             <Toggle label={A.honoreePicks} checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
           </div>
         )}
+        <CardSigningField value={value} onChange={(mode) => set((d) => (d.cardSigning = mode))} />
       </section>
       )}
 
@@ -209,6 +211,28 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
 }
 
 /** Pairing choices from the tiers: best with worst (A-D, B-C), neighbours (A-B, C-D), or none. */
+/**
+ * Who signs the cards (UX-23). What is stored is shown (a tournament from before the setting reads as the rule it
+ * always had); the pairs' rule is offered with the pairs game on, and while it is the stored value, so the Comité
+ * can change it once the game is off (the save waits for that: settings/sense.ts).
+ */
+function CardSigningField({ value, onChange }: { value: TournamentSettings; onChange: (mode: CardSigningMode) => void }) {
+  const A = t.admin.tournament
+  const mode = value.cardSigning ?? cardSigningMode(value)
+  const options = CARD_SIGNING_MODES.filter((m) => m !== 'pairs' || value.modules.pairs.enabled || mode === 'pairs')
+  return (
+    <Field label={A.cardSigning} hint={A.cardSigningHint[mode]}>
+      <select className="select" value={mode} onChange={(e) => onChange(e.target.value as CardSigningMode)}>
+        {options.map((m) => (
+          <option key={m} value={m}>
+            {A.cardSigningOption[m]}
+          </option>
+        ))}
+      </select>
+    </Field>
+  )
+}
+
 function pairingOptions(tiers: string[], current: string): Array<{ value: string; label: string }> {
   const out = [{ value: '', label: '—' }]
   const n = tiers.length

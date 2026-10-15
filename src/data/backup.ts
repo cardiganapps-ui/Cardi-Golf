@@ -37,7 +37,7 @@ const PK: Record<string, string[]> = {
   team_members: ['team_id', 'player_id'],
   round_tees: ['round_id', 'player_id'],
   snake_tiebreaks: ['round_id', 'group_id', 'hole'],
-  card_signatures: ['round_id', 'pair_id'],
+  card_signatures: ['round_id', 'card_id'],
   handicap_overrides: ['round_id', 'player_id'],
   calcutta_buybacks: ['lot_id'],
   game_entries: ['game_id', 'player_id'],

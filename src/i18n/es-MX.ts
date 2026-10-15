@@ -1385,6 +1385,8 @@ export const t = {
           : `Empezó el día ${round}. Tu grupo ${group} sale${startHole != null ? ` del hoyo ${startHole}` : ''}${teeTime ? ` a las ${teeTime}` : ''}.`,
       card_to_sign: (tournament: string, round: number) => `Firma la tarjeta del día ${round} en ${tournament}`,
       cardToSignBody: (round: number) => `Tu grupo terminó el día ${round}: firma la tarjeta de la otra pareja.`,
+      /** A marker's rule (UX-23): the notice names nobody (it never carries another player's name). */
+      cardToSignMarkerBody: (round: number) => `Ya hay tarjetas de tu grupo del día ${round} listas: firma las de tus compañeros.`,
       snake_tiebreak: (tournament: string, game: string, hole: number) => `${game} en ${tournament}: falta decir quién embocó al último en el ${hole}`,
       snakeTiebreakBody: (game: string, round: number, hole: number) => `${game}, día ${round}: falta decir quién embocó al último en el hoyo ${hole}.`,
       /** The snake's own name when a notice comes without it (the server always sends the tournament's). */
@@ -1677,6 +1679,11 @@ export const t = {
     sign: 'Firmar tarjeta',
     signConfirm: 'Al firmar se bloquea la tarjeta de esa pareja. ¿Todo correcto?',
     signTitle: (pair: string) => `Firmar la tarjeta de ${pair}`,
+    /** A marker signs each player's card (UX-23): the button says whose, the confirmation locks only his. */
+    signShort: 'Firmar',
+    signPlayer: (name: string) => `Firmar la tarjeta de ${name}`,
+    signPlayerConfirm: 'Al firmar se bloquea su tarjeta. ¿Todo correcto?',
+    signMarkerHint: 'Cada tarjeta la firma otro jugador del grupo, nunca el mismo jugador. Al firmarla se bloquea.',
     signed: 'Tarjeta firmada.',
     stamp: 'Firmada',
     cardSigned: 'Firmada y bloqueada',
@@ -1812,6 +1819,7 @@ export const t = {
       buyback: (max: number) => `La recompra llega hasta la mitad: ${max} %.`,
       currency: (c: string) => `Polo cuenta en pesos mexicanos (MXN), no en ${c}.`,
       timezone: (zone: string) => `La zona horaria «${zone}» no existe.`,
+      signingPairs: (game: string) => `Las tarjetas las firman las parejas, pero ${game} está apagado: en Reglas, elige quién firma.`,
       /** Not an error: said beside the allowance, so a scratch event is never one by accident. */
       scratch: 'Con 0 % nadie recibe golpes: se juega scratch.',
       /** Near Guardar and Crear. */
@@ -2183,6 +2191,14 @@ export const t = {
       moduleLabel: 'Nombre en la app',
       pairingRules: 'Reglas de pareja (A-D, B-C)',
       honoreePicks: 'El homenajeado escoge pareja',
+      /** UX-23: who signs a card after the last hole; `pairs` is offered only with the pairs game on. */
+      cardSigning: 'Quién firma las tarjetas',
+      cardSigningOption: { pairs: 'Las parejas, cruzado', marker: 'Otro jugador del grupo', none: 'Nadie firma' } as Record<'pairs' | 'marker' | 'none', string>,
+      cardSigningHint: {
+        pairs: 'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. La firma bloquea la tarjeta: después solo el Comité la corrige, con un motivo.',
+        marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada jugador; nadie firma la suya. La firma bloquea esa tarjeta: después solo el Comité la corrige, con un motivo.',
+        none: 'Nadie firma: el grupo puede corregir sus hoyos mientras el día esté en juego, y el Comité después.',
+      } as Record<'pairs' | 'marker' | 'none', string>,
       snakeThreshold: 'Putts que pasan la víbora',
       perRoundSlope: 'Ajustar hándicap por slope de cada ronda',
       perRoundSlopeHint: 'Apagado: un solo hándicap base para todo el torneo.',

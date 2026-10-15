@@ -9,7 +9,11 @@
       "uid-org",
       "uid-x",
       "uid-link",
-      "uid-link2"
+      "uid-link2",
+      "uid-m1",
+      "uid-m2",
+      "uid-m4",
+      "uid-mz"
     ],
     "tables": {
       "tournaments": [
@@ -18,14 +22,26 @@
           "slug": "ensayo",
           "name": "Ensayo",
           "join_code": "ENSAYO",
-          "status": "setup"
+          "status": "setup",
+          "settings": {}
         },
         {
           "id": "t2",
           "slug": "otro",
           "name": "Otro torneo",
           "join_code": "OTRAZZ",
-          "status": "setup"
+          "status": "setup",
+          "settings": {}
+        },
+        {
+          "id": "t4",
+          "slug": "marcador",
+          "name": "Firma por marcador",
+          "join_code": "MARCAD",
+          "status": "live",
+          "settings": {
+            "cardSigning": "marker"
+          }
         }
       ],
       "players": [
@@ -84,6 +100,41 @@
           "full_name": "Otro Dos",
           "display_name": "Otro Dos",
           "is_admin": false
+        },
+        {
+          "id": "m1",
+          "tournament_id": "t4",
+          "full_name": "Eme Uno",
+          "display_name": "Eme Uno",
+          "is_admin": false
+        },
+        {
+          "id": "m2",
+          "tournament_id": "t4",
+          "full_name": "Eme Dos",
+          "display_name": "Eme Dos",
+          "is_admin": false
+        },
+        {
+          "id": "m3",
+          "tournament_id": "t4",
+          "full_name": "Eme Tres",
+          "display_name": "Eme Tres",
+          "is_admin": false
+        },
+        {
+          "id": "m4",
+          "tournament_id": "t4",
+          "full_name": "Eme Cuatro",
+          "display_name": "Eme Cuatro",
+          "is_admin": false
+        },
+        {
+          "id": "mz",
+          "tournament_id": "t4",
+          "full_name": "Eme del Comité",
+          "display_name": "Eme del Comité",
+          "is_admin": true
         }
       ],
       "courses": [
@@ -110,6 +161,18 @@
           "tournament_id": "t2",
           "number": 1,
           "status": "live"
+        },
+        {
+          "id": "r4",
+          "tournament_id": "t4",
+          "number": 1,
+          "status": "live"
+        },
+        {
+          "id": "r5",
+          "tournament_id": "t4",
+          "number": 2,
+          "status": "finished"
         }
       ],
       "groups": [
@@ -131,6 +194,21 @@
         {
           "id": "g9",
           "round_id": "r9",
+          "number": 1
+        },
+        {
+          "id": "gm1",
+          "round_id": "r4",
+          "number": 1
+        },
+        {
+          "id": "gm2",
+          "round_id": "r4",
+          "number": 2
+        },
+        {
+          "id": "gm3",
+          "round_id": "r5",
           "number": 1
         }
       ],
@@ -178,6 +256,34 @@
         {
           "group_id": "g9",
           "player_id": "q2"
+        },
+        {
+          "group_id": "gm1",
+          "player_id": "m1"
+        },
+        {
+          "group_id": "gm1",
+          "player_id": "m2"
+        },
+        {
+          "group_id": "gm1",
+          "player_id": "m3"
+        },
+        {
+          "group_id": "gm2",
+          "player_id": "m4"
+        },
+        {
+          "group_id": "gm3",
+          "player_id": "m1"
+        },
+        {
+          "group_id": "gm3",
+          "player_id": "m2"
+        },
+        {
+          "group_id": "gm3",
+          "player_id": "m3"
         }
       ],
       "pairs": [
@@ -221,6 +327,26 @@
           "auth_user_id": "uid-q1",
           "player_id": "q1",
           "tournament_id": "t2"
+        },
+        {
+          "auth_user_id": "uid-m1",
+          "player_id": "m1",
+          "tournament_id": "t4"
+        },
+        {
+          "auth_user_id": "uid-m2",
+          "player_id": "m2",
+          "tournament_id": "t4"
+        },
+        {
+          "auth_user_id": "uid-m4",
+          "player_id": "m4",
+          "tournament_id": "t4"
+        },
+        {
+          "auth_user_id": "uid-mz",
+          "player_id": "mz",
+          "tournament_id": "t4"
         }
       ],
       "scores": [
@@ -259,6 +385,15 @@
           "putts": 1,
           "picked_up": false,
           "entered_by": "q1"
+        },
+        {
+          "round_id": "r4",
+          "player_id": "m2",
+          "hole": 1,
+          "strokes": 4,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "m2"
         }
       ]
     }
@@ -4495,6 +4630,570 @@
         "status": 409,
         "code": "23503"
       }
+    },
+    {
+      "name": "marker signatures: a phone signs another player's card of its group (0054)",
+      "as": "uid-m1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r4",
+            "player_id": "m2"
+          },
+          "rows": [
+            {
+              "signed_by": "m1",
+              "pair_id": null,
+              "card_id": "m2",
+              "tournament_id": "t4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: nobody signs his own card",
+      "as": "uid-m1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m1",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r4"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: the signature must be this phone's player's",
+      "as": "uid-m1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m3"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "marker signatures: a player of another group that day does not sign",
+      "as": "uid-m4",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m4"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "marker signatures: a day that is not live takes no signature from a phone",
+      "as": "uid-m1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r5",
+          "player_id": "m2",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "marker signatures: a tournament that does not sign by marker takes no player's signature from a phone",
+      "as": "uid-p1",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r1",
+          "player_id": "p2",
+          "signed_by": "p1"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      }
+    },
+    {
+      "name": "marker signatures: a card already signed keeps that signature",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m4"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r4",
+            "player_id": "m2"
+          },
+          "rows": [
+            {
+              "signed_by": "m4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: a plain second insert of a card is a duplicate of its key",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m4"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23505"
+      }
+    },
+    {
+      "name": "marker signatures: the Comité signs any card, after the day too",
+      "as": "uid-mz",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r5",
+          "player_id": "mz",
+          "signed_by": "mz"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r5"
+          },
+          "rows": [
+            {
+              "player_id": "mz",
+              "card_id": "mz"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: one signature is a pair's card or a player's, not both (23514)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "body": {
+          "round_id": "r1",
+          "pair_id": "pa",
+          "player_id": "p1",
+          "signed_by": null
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23514"
+      }
+    },
+    {
+      "name": "marker signatures: a signature of nobody's card has no key (23502)",
+      "as": "uid-org",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "body": {
+          "round_id": "r1",
+          "signed_by": null
+        }
+      },
+      "expect": {
+        "status": 400,
+        "code": "23502"
+      }
+    },
+    {
+      "name": "marker signatures: a player of another tournament is no card of this day (23503)",
+      "as": "uid-mz",
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "p1",
+          "signed_by": "mz"
+        }
+      },
+      "expect": {
+        "status": 409,
+        "code": "23503"
+      }
+    },
+    {
+      "name": "marker signatures: a player's signed card is locked to his group",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m3"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "hole": 1,
+          "strokes": 6,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "m1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "code": "42501"
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r4",
+            "player_id": "m2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: another player's signed card leaves this one's open",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m3"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "table": "scores",
+        "onConflict": "round_id,player_id,hole",
+        "prefer": "resolution=merge-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m3",
+          "hole": 1,
+          "strokes": 5,
+          "putts": 2,
+          "picked_up": false,
+          "entered_by": "m1",
+          "client_ts": "2027-04-09T12:00:00.000Z"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "name": "marker signatures: save_hole answers card_signed for a player's signed card",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m3"
+          }
+        ]
+      },
+      "request": {
+        "method": "RPC",
+        "fn": "save_hole",
+        "args": {
+          "p": {
+            "round_id": "r4",
+            "hole": 2,
+            "mutation_id": "m54",
+            "entries": [
+              {
+                "player_id": "m2",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              },
+              {
+                "player_id": "m3",
+                "fields": {
+                  "strokes": 5,
+                  "putts": 2
+                },
+                "base": {}
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "answer": {
+          "status": "partial",
+          "rows": [
+            {
+              "player_id": "m3",
+              "strokes": 5
+            }
+          ],
+          "rejected": [
+            {
+              "player_id": "m2",
+              "reason": "card_signed"
+            }
+          ]
+        }
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r4",
+            "player_id": "m2",
+            "hole": 2
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: signing a player's card settles his discrepancies",
+      "as": "uid-m1",
+      "before": [
+        {
+          "method": "POST",
+          "table": "scores",
+          "onConflict": "round_id,player_id,hole",
+          "prefer": "resolution=merge-duplicates",
+          "body": {
+            "round_id": "r4",
+            "player_id": "m2",
+            "hole": 1,
+            "strokes": 6,
+            "putts": 2,
+            "picked_up": false,
+            "entered_by": "m1",
+            "client_ts": "2027-04-09T12:00:00.000Z"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "table": "card_signatures",
+        "onConflict": "round_id,player_id",
+        "prefer": "resolution=ignore-duplicates",
+        "body": {
+          "round_id": "r4",
+          "player_id": "m2",
+          "signed_by": "m1"
+        }
+      },
+      "expect": {
+        "status": 201
+      },
+      "then": [
+        {
+          "table": "scores",
+          "where": {
+            "round_id": "r4",
+            "player_id": "m2",
+            "hole": 1
+          },
+          "rows": [
+            {
+              "strokes": 6,
+              "disputed": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: the Comité takes a player's signature off",
+      "as": "uid-mz",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m3"
+          }
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "table": "card_signatures",
+        "eq": {
+          "round_id": "r4",
+          "player_id": "m2"
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r4"
+          },
+          "rows": []
+        }
+      ]
+    },
+    {
+      "name": "marker signatures: a phone takes none off",
+      "as": "uid-m1",
+      "given": {
+        "card_signatures": [
+          {
+            "round_id": "r4",
+            "player_id": "m2",
+            "signed_by": "m3"
+          }
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "table": "card_signatures",
+        "eq": {
+          "round_id": "r4",
+          "player_id": "m2"
+        }
+      },
+      "expect": {
+        "status": 204
+      },
+      "then": [
+        {
+          "table": "card_signatures",
+          "where": {
+            "round_id": "r4"
+          },
+          "rows": [
+            {
+              "player_id": "m2"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "claim_player: a wrong PIN from an account confirmed as another player answers already_linked",

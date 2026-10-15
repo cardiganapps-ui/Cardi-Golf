@@ -134,6 +134,26 @@ function minimal(status: 'setup' | 'live', money = true): Fixture {
   return { name: money ? `minimal4-${status}` : 'gloria4', description: money ? `4 jugadores, 1 ronda, solo Individual, ${status === 'setup' ? 'sin empezar' : 'en juego (hoyo 9–11)'}` : '4 jugadores, sin dinero: se juega por la pura gloria', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
 }
 
+/**
+ * UX-23: a Stableford-only foursome that signs by marker, the day played to
+ * the last hole. Beto's card is signed (by Carla's phone); this phone holds
+ * the first player, who signs the other two and never his own.
+ */
+function marker4(): Fixture {
+  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 500, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [1200, 800] }, cardSigning: 'marker' }
+  const players = withNames(
+    Array.from({ length: 4 }, (_, i) => makePlayer(i + 1, { baseHcp: [9, 14, 21, 27][i]! })),
+    NAMES,
+  )
+  const snap = makeSnapshot({ players, rounds: [makeRound(1, { status: 'live', date: '2027-05-15' })], settings, status: 'live' })
+  snap.tournament = { ...snap.tournament, id: 'fx-firma', slug: 'fixture-firma4', name: 'Sábado con firma', tagline: null, joinCode: 'FIRMA4' }
+  snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
+  fillRound(snap, 'r1', 5)
+  stamp(snap)
+  snap.cardSignatures = [{ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p3', signedAt: '2027-05-15T20:10:00Z' }]
+  return { name: 'firma4', description: '4 jugadores, solo Individual, cada tarjeta la firma otro del grupo: día capturado completo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: false }, lookup: lookupOf(snap) }
+}
+
 function sellAuction(snap: Snapshot, seed: number) {
   const r = rng(seed)
   const ids = snap.players.map((p) => p.id)
@@ -541,6 +561,8 @@ const BUILDERS: Record<string, () => Fixture> = {
   // A tournament with no money at all: the tab bar drops Dinero.
   'gloria4': () => minimal('live', false),
   'minimal4-live': () => minimal('live'),
+  // A tournament that signs each player's card by marker (UX-23).
+  firma4: marker4,
   'full12-live': () => full12(false),
   'full12-finished': () => full12(true),
   pairs8,

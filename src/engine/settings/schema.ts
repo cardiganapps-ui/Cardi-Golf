@@ -210,6 +210,17 @@ const TournamentSettingsBase = z.object({
   /** What happens when countback still ties: split the prizes. */
   tieFallback: z.enum(['split']),
   /**
+   * Who signs a card after the last hole (UX-23): each pair the other pair's
+   * (`pairs`, the tarjeta cruzada of §5.5), another player of the group each
+   * player's (`marker`), or nobody (`none`). Absent in every tournament stored
+   * before it existed: `cardSigningMode` (core/cardSigning.ts) reads that as
+   * the rule it always had, `pairs` with the pairs game on and `none`
+   * without. A value a later build adds reads the same way instead of failing
+   * the whole parse (a stored tournament that fails is computed on the
+   * defaults).
+   */
+  cardSigning: z.enum(['pairs', 'marker', 'none']).optional().catch(undefined),
+  /**
    * Wired to nothing. The link to watch without a PIN (STRAT-05) is not a
    * setting: its token lives in its own table (0053 `spectator_links`), since
    * every member reads the settings, the export carries them and
