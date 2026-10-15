@@ -51,7 +51,7 @@ const pickUp = (s: Snapshot, playerId: string, hole: number) => {
   s.scores = s.scores.map((x) => (x.roundId === 'r1' && x.playerId === playerId && x.hole === hole ? score('r1', playerId, hole, null, 2, true) : x))
 }
 const days = (d: ReturnType<typeof sheet>) => d.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-const headLine = (d: ReturnType<typeof sheet>) => d.getByText(/, por el /).textContent
+const headLine = (d: ReturnType<typeof sheet>) => d.getByText(/^\d+\.º/).textContent
 /** The gross total of each nine (the last cell of the player's row) and the round's total line. */
 function grossTotals(d: ReturnType<typeof sheet>, player: string) {
   const nines = d.getAllByRole('table').map((table) => {
@@ -67,7 +67,7 @@ describe('the player sheet in each format (STRAT-03)', () => {
   it("a team player's day is his own card, under his team's figure", () => {
     // team8: Elías and Fabián are Los Compadres, −19 net as a team; Elías's own day is +3 net.
     const d = sheet('team8', 'p1')
-    expect(headLine(d)).toBe('1.º con Los Compadres, −19 neto, por el F')
+    expect(headLine(d)).toBe('1.º con Los Compadres, −19 neto, terminó')
     expect(days(d)).toEqual(['Día 1: +3 neto'])
   })
 
@@ -83,7 +83,7 @@ describe('the player sheet in each format (STRAT-03)', () => {
     // Los Compadres (Elías, Fabián) beat Las Palmas (Gael H., Hugo I.) 4&3; Elías's own card was +3 net. Tres
     // Marías won 2&1 off the 10th, so Los Compadres are 1st alone.
     const d = sheet('team8', 'p1', fourball)
-    expect(headLine(d)).toBe('1.º con Los Compadres, 1 punto, por el F')
+    expect(headLine(d)).toBe('1.º con Los Compadres, 1 punto, terminó')
     expect(days(d)).toEqual(['Día 1: ganó 4&3'])
     cleanup()
     expect(days(sheet('team8', 'p3', fourball))).toEqual(['Día 1: perdió 4&3'])
@@ -117,7 +117,7 @@ describe('the player sheet in each format (STRAT-03)', () => {
       playAs(s, 'strokePlay', { scoring: 'gross' })
       pickUp(s, 'p2', 5)
     })
-    expect(headLine(d)).toBe('1.º, +1 gross, por el F')
+    expect(headLine(d)).toBe('1.º, +1 gross, terminó')
     expect(grossTotals(d, 'Fabián')).toEqual({ nines: ['40', '33'], total: 'Total: 73 gross' })
   })
 
@@ -155,5 +155,29 @@ describe('the sheet and Estadísticas count alike (#91 round 3, P3-d)', () => {
     const stat = (label: string) => Number(d.getByText(label, { exact: true }).previousElementSibling!.textContent)
     expect([stat('Birdies gross'), stat('Birdies netos'), stat('Doble o peor'), stat('Levantó')]).toEqual([st.grossBirdies, st.netBirdies, st.doubleOrWorse, st.pickUps])
     expect(new Set([st.grossBirdies, st.netBirdies, st.doubleOrWorse, st.pickUps]).size).toBe(4)
+  })
+})
+
+describe('how far he is, on his day (COPY-26)', () => {
+  it('a player partway into day 2 is «por el n del día 2», never the count across both days', () => {
+    const fx = getFixture('full12-live')!
+    const r2 = fx.snapshot.rounds.find((r) => r.number === 2)!
+    // Someone with some of day 2 played and day 2 not finished.
+    const pid = fx.snapshot.players.find((p) => {
+      const n = fx.snapshot.scores.filter((s) => s.roundId === r2.id && s.playerId === p.id && (s.strokes != null || s.pickedUp)).length
+      return n > 0 && n < r2.holes
+    })!.id
+    const played = fx.snapshot.scores.filter((s) => s.roundId === r2.id && s.playerId === pid && (s.strokes != null || s.pickedUp)).length
+    const line = headLine(sheet('full12-live', pid))
+    expect(line).toMatch(new RegExp(`, por el ${played} del día 2$`))
+  })
+
+  it('a finished day of several says which, the last says «terminó», and one day names no day', async () => {
+    const { t } = await import('../../i18n/es-MX')
+    expect(t.player.where(18, 18, 1, 2, false)).toBe('terminó el día 1')
+    expect(t.player.where(18, 18, 2, 2, true)).toBe('terminó')
+    expect(t.player.where(9, 9, 1, 1, true)).toBe('terminó')
+    expect(t.player.where(8, 18, 2, 2, true)).toBe('por el 8 del día 2')
+    expect(t.player.where(8, 18, 1, 1, true)).toBe('por el 8')
   })
 })

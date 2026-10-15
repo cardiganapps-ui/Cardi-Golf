@@ -1377,7 +1377,10 @@ export const t = {
     noPin: 'Este jugador todavía no tiene PIN. Pídeselo al Comité.',
     wrongPin: 'PIN incorrecto.',
     attemptsLeft: (n: number) => (n === 1 ? 'Te queda 1 intento.' : `Te quedan ${n} intentos.`),
-    locked: 'Muchos intentos. Espera 5 minutos.',
+    /** COPY-13: the time the lock ends, on this phone's clock; none when the server did not say. */
+    lockedUntil: (time: string | null) =>
+      time ? `Demasiados intentos. Vuelve a intentar a las ${time}.` : 'Demasiados intentos. Espera unos minutos y vuelve a intentar.',
+    playerGone: 'Ese jugador ya no está en el torneo. Elige tu nombre otra vez.',
     isThisYou: '¿Eres tú?',
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
     alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
@@ -1726,9 +1729,16 @@ export const t = {
     threePutts: 'A tres putts',
     snakeHoles: 'Hoyos con víbora',
     /** `figure` already carries its unit (`common.figure`). */
-    position: (label: string, figure: string, thru: string) => `${ordinal(label)}, ${figure}, por el ${thru}`,
+    /** `where` is `where()`'s: how far into which day (COPY-26), or null before the first hole. */
+    position: (label: string, figure: string, where: string | null) => `${ordinal(label)}, ${figure}${where ? `, ${where}` : ''}`,
     /** A team format: where his team stands, and its figure. */
-    positionTeam: (label: string, team: string, figure: string, thru: string) => `${ordinal(label)} con ${team}, ${figure}, por el ${thru}`,
+    positionTeam: (label: string, team: string, figure: string, where: string | null) => `${ordinal(label)} con ${team}, ${figure}${where ? `, ${where}` : ''}`,
+    /**
+     * COPY-26: how far he is, on the day he is playing. A count across days read as a hole («por el 26» of 36):
+     * «por el 8 del día 2», «terminó el día 1», «terminó»; one day says no day.
+     */
+    where: (thru: number, holes: number, day: number, days: number, last: boolean) =>
+      thru >= holes ? (days > 1 && !last ? `terminó el día ${day}` : 'terminó') : days > 1 ? `por el ${thru} del día ${day}` : `por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
     dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, figure: string) => `Día ${day}: ${figure}`,
@@ -2060,8 +2070,9 @@ export const t = {
       pendingTitle: 'Víboras pendientes',
       disputesTitle: 'Discrepancias',
       disputesHint: 'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
-      now: 'ahora',
-      before: 'antes',
+      /** COPY-20: a discrepancy in words, each value with who captured it (nobody named: the Comité's own write). */
+      disputeNow: (value: string, who: string | null) => `Ahora: ${value} (capturó ${who ?? 'el Comité'}).`,
+      disputeBefore: (value: string, who: string | null) => `Antes: ${value} (capturó ${who ?? 'el Comité'}).`,
       keepCurrent: 'Dejar el actual',
       restorePrevious: 'Volver al anterior',
       restoreReason: 'Se restaura el valor anterior (discrepancia)',

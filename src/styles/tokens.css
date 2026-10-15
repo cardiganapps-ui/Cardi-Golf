@@ -131,6 +131,13 @@
   --ease-board: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* A11Y-16: on a touch screen a target is 48 px, as the brief promises (§9); a mouse keeps 44. */
+@media (pointer: coarse) {
+  :root {
+    --tap: 48px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 0ms;

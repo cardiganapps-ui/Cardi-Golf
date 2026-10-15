@@ -13,6 +13,7 @@ import { queuedFor } from '../../data/outbox'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
 import styles from './EnterScreen.module.css'
 import { humanError } from '../../lib/humanError'
+import { clockTime } from '../../lib/freshness'
 import { LegalConsent } from '../../components/LegalLinks'
 import { haptic } from '../../lib/haptics'
 import { easeSlow } from '../../design/motion'
@@ -69,12 +70,14 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
         return
       }
       setPin('')
+      // COPY-13: one message per answer. A missing player is that player, not the tournament, and a lock says
+      // until when (the server locks the phone 5 minutes and the player 15, and answers when it ends).
       if (r.reason === 'no_pin') setError(t.enter.noPin)
-      else if (r.reason === 'locked') setError(t.enter.locked)
+      else if (r.reason === 'locked') setError(t.enter.lockedUntil(r.lockedUntil ? clockTime(r.lockedUntil) : null))
       else if (r.reason === 'wrong_pin') setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
-      if (r.reason === 'wrong_pin' || r.reason === 'locked') refused()
       else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
-      else setError(t.enter.notFound)
+      else setError(t.enter.playerGone)
+      if (r.reason === 'wrong_pin' || r.reason === 'locked') refused()
     } catch (e) {
       setError(humanError(e))
     } finally {

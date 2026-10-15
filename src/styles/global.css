@@ -12,6 +12,11 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  /* A11Y-06 (WCAG 2.4.11): what the keyboard focuses scrolls clear of the sticky header (56 px and the status
+     bar's band) and the sticky tab bar (56 px and the home indicator), with room to spare
+     (e2e/fixtures/focusClear.spec.ts, the Tarjeta's save bar included). */
+  scroll-padding-top: calc(var(--safe-top) + 56px + var(--s2));
+  scroll-padding-bottom: calc(56px + var(--safe-bottom) + var(--s2));
 }
 
 body {
@@ -546,6 +551,11 @@ textarea {
   cursor: pointer;
   white-space: nowrap;
   padding: 0 var(--s1);
+}
+@media (pointer: coarse) {
+  .segmented button {
+    min-height: var(--tap);
+  }
 }
 .segmented button[aria-selected='true'] {
   color: var(--ink);
