@@ -3633,7 +3633,10 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/discovery.sql",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
