@@ -1227,9 +1227,13 @@
       "workstream": "W2",
       "phase": 2,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 190,
+      "tests": [
+        "src/data/paged.test.ts",
+        "src/data/api.courses.test.ts",
+        "src/lib/backupCron.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

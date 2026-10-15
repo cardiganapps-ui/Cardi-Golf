@@ -5,7 +5,7 @@
  * touched. Player PINs live in a separate table and are never exported.
  */
 import { supabase } from '../lib/supabase'
-import { fetchAll } from './paged'
+import { fetchAll, withCount } from './paged'
 import { ApiError } from './api'
 import { entryChanged } from './entryEvents'
 
@@ -48,8 +48,8 @@ const PK: Record<string, string[]> = {
 
 async function rows(table: string, col: string, ids: string[]): Promise<Row[]> {
   if (!ids.length) return []
-  return fetchAll<Row>((from, to) => {
-    let qb = supabase().from(table).select('*').in(col, ids)
+  return fetchAll<Row>((from, to, count) => {
+    let qb = supabase().from(table).select('*', withCount(count)).in(col, ids)
     for (const c of PK[table] ?? ['id']) qb = qb.order(c)
     return qb.range(from, to)
   })
