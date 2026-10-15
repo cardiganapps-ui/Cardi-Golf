@@ -35,6 +35,18 @@ function versioned(path: string): string {
 const ICON_LINKS = ['/favicon.svg', '/apple-touch-icon.png']
 const versionedIcon = <T extends { src: string }>(icon: T) => ({ ...icon, src: versioned(icon.src) })
 
+/**
+ * SEC-01: the headers vercel.json gives every page (the CSP among them). The
+ * fixture browser suite serves its build with them (POLO_PREVIEW_HEADERS=1,
+ * playwright.config.ts) and fails on any CSP violation, so a screen that needs
+ * something the policy refuses fails CI instead of production.
+ */
+function siteHeaders(): Record<string, string> {
+  const config = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+  const all = config.headers.find((h) => h.source === '/(.*)')
+  return Object.fromEntries((all?.headers ?? []).filter((h) => h.key !== 'Strict-Transport-Security').map((h) => [h.key, h.value]))
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -103,6 +115,7 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  preview: process.env.POLO_PREVIEW_HEADERS ? { headers: siteHeaders() } : undefined,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

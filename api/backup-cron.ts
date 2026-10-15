@@ -18,6 +18,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { gzipSync } from 'node:zlib'
 import { AwsClient } from 'aws4fetch'
 import { BACKUP_TABLES, backupKey } from '../src/lib/backupTables.js'
+import { bearerMatches } from '../src/server/secret.js'
 
 export const config = { maxDuration: 60 }
 
@@ -237,7 +238,7 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store')
   const env = process.env as Env
-  if (!env.CRON_SECRET || req.headers.authorization !== `Bearer ${env.CRON_SECRET}`) {
+  if (!bearerMatches(req.headers.authorization, env.CRON_SECRET)) {
     res.status(401).json({ error: 'unauthorized' })
     return
   }
