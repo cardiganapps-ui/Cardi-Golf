@@ -143,7 +143,8 @@ export interface LookupResult {
   players: Array<{
     id: string
     displayName: string
-    fullName: string
+    /** Only to a member of the tournament (0056, SEC-06): before a PIN the grid has short names and photos. */
+    fullName: string | null
     tier: string | null
     avatarUrl: string | null
     isHonoree: boolean
@@ -165,7 +166,14 @@ export async function lookupTournament(codeOrSlug: string): Promise<LookupResult
 
 export type ClaimResult =
   | { ok: true; playerId: string; tournamentId: string }
-  | { ok: false; reason: 'not_found' | 'no_pin' | 'locked' | 'wrong_pin'; lockedUntil?: string; attemptsLeft?: number }
+  | {
+      ok: false
+      reason: 'not_found' | 'no_pin' | 'locked' | 'wrong_pin'
+      lockedUntil?: string
+      attemptsLeft?: number
+      /** Which lock (0056, SEC-04): this phone's own, or the player's, which stops only phones that never held him. */
+      scope?: 'device' | 'player'
+    }
   /** This account is already confirmed as another player of the tournament. */
   | { ok: false; reason: 'already_linked'; playerId: string }
 

@@ -72,6 +72,7 @@ export function AdminHistory() {
       if (e.action === 'INSERT') return H.claim.took(player, H.claim.from[String(row.platform)] ?? H.claim.from.other!)
       if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null) return e.reason ? H.claim.removed(player) : H.claim.left(player)
     }
+    if (e.table === 'player_pins') return H.claim.unlocked(name(row.player_id) ?? '?')
     // The link to watch (STRAT-05, 0053): made, given a new token, its money switched, or turned off. Its token is never in the history.
     if (e.table === 'spectator_links') {
       const L = t.spectator.history

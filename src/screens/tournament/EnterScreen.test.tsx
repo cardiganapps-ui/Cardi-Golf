@@ -200,6 +200,15 @@ describe('one message per refusal (COPY-13)', () => {
     expect(screen.queryByText(/5 minutos/)).toBeNull()
   })
 
+  it('the player’s lock says where the PIN still works and who opens it (SEC-04)', async () => {
+    const until = new Date(2027, 3, 9, 9, 14)
+    await refusedWith({ ok: false, reason: 'locked', scope: 'player', lockedUntil: until.toISOString() })
+    const time = until.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+    expect(await screen.findByText(t.enter.lockedPlayer(time))).toBeTruthy()
+    expect(t.enter.lockedPlayer(time)).toMatch(/Comité/)
+    expect(t.enter.lockedPlayer(time)).toMatch(/ya entraste/)
+  })
+
   it('a lock with no time still says to wait', async () => {
     await refusedWith({ ok: false, reason: 'locked' })
     expect(await screen.findByText(t.enter.lockedUntil(null))).toBeTruthy()

@@ -41,6 +41,29 @@ export async function releasePhone(id: number, reason: string): Promise<void> {
   if (error) throw ApiError.from(error)
 }
 
+/** A player's PIN locked for new phones (0056, SEC-04): how many wrong PINs, and until when. */
+export interface PinLock {
+  playerId: string
+  failed: number
+  lockedUntil: string
+}
+
+/** The players whose PIN is locked for new phones now, or null on a database without 0056. */
+export async function pinLocks(tournamentId: string): Promise<PinLock[] | null> {
+  const { data, error } = await supabase().rpc('pin_locks', { p_tournament_id: tournamentId })
+  if (error) {
+    if (MISSING.has(error.code ?? '')) return null
+    throw ApiError.from(error)
+  }
+  return Array.isArray(data) ? (data as PinLock[]) : []
+}
+
+/** The Comité opens a locked PIN to new phones again; the PIN stays the same. */
+export async function unlockPin(playerId: string): Promise<void> {
+  const { error } = await supabase().rpc('unlock_player_pin', { p_player_id: playerId })
+  if (error) throw ApiError.from(error)
+}
+
 /** The phones of one player, by their number. */
 export function phonesOf(phones: PinPhone[] | null, playerId: string): PinPhone[] {
   return (phones ?? []).filter((p) => p.playerId === playerId).sort((a, b) => a.n - b.n)

@@ -26,8 +26,9 @@ import { completePlayer, type DraftEstimate, type PlayerDraft } from './playerDr
 import a from './Admin.module.css'
 import { OthersDataNotice } from '../../components/LegalLinks'
 import { OptionalNumberField } from '../../components/NumberField'
+import { clockTime } from '../../lib/freshness'
 import { humanError } from '../../lib/humanError'
-import { phonesOf, playerPhones, releasePhone, type PinPhone } from '../../data/pinPhones'
+import { phonesOf, pinLocks, playerPhones, releasePhone, unlockPin, type PinLock, type PinPhone } from '../../data/pinPhones'
 
 const P = t.admin.players
 const L = t.admin.players.lock
@@ -97,6 +98,8 @@ export function AdminPlayers() {
   const [pin, setPin] = useState('')
   /** The phones holding each player's PIN (TRUST-24); null while unread or on a server without them. */
   const [phones, setPhones] = useState<PinPhone[] | null>(null)
+  /** PINs locked for new phones by wrong guesses (SEC-04); null while unread or on a server without 0056. */
+  const [locks, setLocks] = useState<PinLock[] | null>(null)
   /** The phone about to be taken off its player: the reason sheet is open for it. */
   const [removing, setRemoving] = useState<PinPhone | null>(null)
   const [busy, setBusy] = useState(false)
@@ -121,7 +124,9 @@ export function AdminPlayers() {
   // Read again with the players, and each time the PIN sheet opens: a phone may have entered meanwhile.
   useEffect(() => {
     playerPhones(tournamentId).then(setPhones).catch(() => undefined)
+    pinLocks(tournamentId).then(setLocks).catch(() => undefined)
   }, [tournamentId, players.length, pinFor])
+  const lockOf = (playerId: string) => locks?.find((l) => l.playerId === playerId) ?? null
 
   const shown = useMemo(() => {
     const needle = norm(q.trim())
@@ -316,6 +321,7 @@ export function AdminPlayers() {
                     {p.isAdmin ? `, ${P.committee}` : ''}
                     {changes.some((c) => c.playerId === p.id) ? `, ${L.changed}` : ''}
                     {phonesOf(phones, p.id).length > 1 ? `, ${P.phonesCount(phonesOf(phones, p.id).length)}` : ''}
+                    {lockOf(p.id) ? `, ${P.pinLocked}` : ''}
                     {profiles.some((x) => x.playerId === p.id && x.status === 'confirmed') ? `, ${P.linkedTo(profiles.find((x) => x.playerId === p.id)!.handle)}` : ''}
                   </span>
                 </span>
@@ -535,6 +541,28 @@ export function AdminPlayers() {
           <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void savePin()}>
             {busy ? t.common.saving : t.common.save}
           </button>
+          {pinFor && lockOf(pinFor.id) && (
+            <div className="stack" role="status">
+              <p className={a.warn}>{P.pinLockedLine(lockOf(pinFor.id)!.failed, clockTime(lockOf(pinFor.id)!.lockedUntil))}</p>
+              <button
+                className="btn btn--secondary btn--sm"
+                type="button"
+                disabled={busy}
+                onClick={async () => {
+                  const id = pinFor.id
+                  try {
+                    await unlockPin(id)
+                    setLocks((cur) => (cur ? cur.filter((l) => l.playerId !== id) : cur))
+                    toast(P.pinUnlocked)
+                  } catch (e) {
+                    toast(humanError(e))
+                  }
+                }}
+              >
+                {P.unlockPin}
+              </button>
+            </div>
+          )}
           {pinFor && phonesOf(phones, pinFor.id).length > 0 && (
             <section className="stack" aria-label={P.phones}>
               <span className="label">{P.phones}</span>
