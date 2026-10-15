@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e', '2026-10-15.3': '5fc6344c8bc1e899' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -252,7 +252,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-15.2')
+    expect(t.legal.privacy.version).toBe('2026-10-15.3')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -577,10 +577,17 @@ describe('a PIN phone\'s tournament notices (PWA-10)', () => {
     expect(m).toContain('create table public.player_notices (')
   })
 
-  it('what the notices say: the day, the group, a card to sign, the snake\'s question, a place; never an amount nor another player\'s name', () => {
+  it('what the notices say: the day, the group, a card to sign, the snake\'s question, a Comité correction, a place; never an amount nor another player\'s name', () => {
     expect(sections['Para qué los usamos']).toContain(
-      'Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores.',
+      'Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo, que el Comité corrigió su tarjeta (qué cambió y por qué queda en ella, a la vista de todo el torneo) y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores.',
     )
+    // TRUST-14 (0062): the correction's notice carries the tournament and the day only.
+    const correction = source('supabase/migrations/0062_correction_notice.sql')
+    expect(correction).toContain("jsonb_build_object('tournament', t.name, 'slug', t.slug, 'round', r.number)")
+    // And every member reads each card's history, with who and when (card_history), as the notice says.
+    expect(sections['Lo que se ve de un torneo']).toContain('también el historial de cada tarjeta: qué valores tuvo cada hoyo, quién los capturó y cuándo, y el motivo cuando el Comité lo corrigió.')
+    expect(correction).toContain('create or replace function public.card_history(p_tournament_id uuid, p_player_id uuid)')
+    expect(correction).toContain("if p_tournament_id is null or not public.is_tournament_member(p_tournament_id) then")
     expect(m).toContain("kind text not null check (kind in ('round_live', 'card_to_sign', 'snake_tiebreak', 'results'))")
     // What each notice says is built in these four places and no other (push_players.sql checks what is sent).
     const events = m.slice(m.indexOf('-- 3. The events'), m.indexOf('-- 4. restore_tournament'))

@@ -52,6 +52,11 @@ function clock(teeTime: string | null | undefined): string | null {
 
 const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
 
+/** En vivo opens this phone's own player's sheet (`?jugador=yo`): the notice names nobody, the phone knows who it is. */
+export const MY_SHEET = 'jugador=yo'
+/** Whether an address asks for that sheet. */
+export const asksMySheet = (search: string): boolean => new URLSearchParams(search).get('jugador') === 'yo'
+
 /**
  * A notice's line and where tapping it goes. A notice from the Admin de Polo
  * also carries its own title and body for the push (the rest say «Polo» and
@@ -113,6 +118,18 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
         to: tournamentPage(n.data.slug, hole != null ? `/tarjeta?hoyo=${hole}` : '/tarjeta'),
         title: tournament || undefined,
         body: S.notice.snakeTiebreakBody(game, round, hole ?? 0),
+      }
+    }
+    // TRUST-14 (0062): the Comité corrected his card that day. It opens his own sheet on En vivo, which has every
+    // day's card with each hole the Comité decided and why, and the card's history (the Tarjeta shows today only).
+    case 'score_corrected': {
+      const tournament = n.data.tournament ?? ''
+      const round = num(n.data.round) ?? 1
+      return {
+        text: S.notice.score_corrected(tournament, round),
+        to: tournamentPage(n.data.slug, `?${MY_SHEET}`),
+        title: tournament || undefined,
+        body: S.notice.scoreCorrectedBody(round),
       }
     }
     default:

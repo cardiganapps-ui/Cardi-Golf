@@ -47,6 +47,8 @@ export type NotificationKind =
   | 'round_live'
   | 'card_to_sign'
   | 'snake_tiebreak'
+  // TRUST-14 (0062): the Comité corrected the player's card that day.
+  | 'score_corrected'
 
 export interface Notice {
   id: string

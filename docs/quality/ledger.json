@@ -3727,9 +3727,14 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 188,
+      "tests": [
+        "supabase/tests/correction_notice.sql",
+        "src/screens/tournament/corrections.test.tsx",
+        "src/lib/noticeText.test.ts",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

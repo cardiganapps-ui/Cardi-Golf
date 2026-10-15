@@ -201,6 +201,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
           pickedUp: !!s?.pickedUp,
           played,
           disputed: !!s?.disputed,
+          ...(s?.reason ? { correction: s.reason } : {}),
           why,
         })
         if (played) {

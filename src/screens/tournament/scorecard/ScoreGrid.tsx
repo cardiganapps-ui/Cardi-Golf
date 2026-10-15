@@ -1,9 +1,10 @@
 import { memo } from 'react'
-import { IconAlert } from '../../../components/icons'
+import { IconAlert, IconPencil } from '../../../components/icons'
 import { ScoreMark, markFor } from '../../../components/primitives'
 import type { HoleResult, PlayerRound } from '../../../engine/core/types'
 import { holeStrokes } from '../../../engine/formats'
 import { t } from '../../../i18n/es-MX'
+import { correctionLine } from '../../../lib/comiteReasons'
 import { SaveStatus } from './SaveBar'
 import type { SavedNote } from './useHoleSave'
 import styles from '../ScorecardScreen.module.css'
@@ -50,6 +51,13 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
   }
   const missing = named.some((pl) => order.some((h) => !holeOf(roundState, pl.id, h)?.played))
   const disputed = named.some((pl) => roundState[pl.id]?.holes.some((h) => h.disputed))
+  // TRUST-14: each hole the Comité corrected, with its reason, under the grid; the cell carries a mark.
+  const corrections = named.flatMap((pl) =>
+    [...order].sort((a, b) => a - b).flatMap((h) => {
+      const hi = holeOf(roundState, pl.id, h)
+      return hi?.correction ? [{ key: `${pl.id}:${h}`, text: correctionLine(h, named.length > 1 ? pl.name : null, hi.correction) }] : []
+    }),
+  )
   const gridRow = (h: number) => (
     <tr key={h}>
       {/* A11Y-10: the hole is the row's header, and its button says which hole it opens. */}
@@ -76,9 +84,17 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
               <span className={styles.cellPts}>
                 {cellFigure(hi)}
                 {cellFigure(hi) != null && <span className="sr-only"> {pointsCount ? S.unitPoints(cellFigure(hi)) : S.unitNet}</span>}
+                {/* A span has no name of its own (ARIA 1.2): each mark says itself in words a screen reader reads with the cell. */}
                 {hi.disputed && (
-                  <span className={styles.disputedMark} aria-label={S.disputed}>
+                  <span className={styles.disputedMark}>
                     <IconAlert size={12} />
+                    <span className="sr-only"> {S.disputed}</span>
+                  </span>
+                )}
+                {hi.correction && (
+                  <span className={styles.correctedMark}>
+                    <IconPencil size={12} />
+                    <span className="sr-only"> {S.corrected}</span>
                   </span>
                 )}
               </span>
@@ -149,6 +165,15 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
         <SaveStatus savedNote={p.savedNote} onUndo={p.onUndo} />
         {missing && <span className="help">{S.missingHoles}</span>}
         {disputed && <span className="help">{S.disputedHint}</span>}
+        {corrections.length > 0 && (
+          <ul className={styles.corrections} aria-label={S.correctionsTitle}>
+            {corrections.map((c) => (
+              <li key={c.key}>
+                <IconPencil size={12} /> {c.text}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   )
