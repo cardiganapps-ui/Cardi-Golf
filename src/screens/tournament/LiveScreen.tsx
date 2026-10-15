@@ -238,6 +238,8 @@ export function LiveScreen() {
 
   return (
     <div className={styles.screen}>
+      {/* The tournament's home page is named after it, for headings and for focus after a page change (A11Y-13); the header shows the name. */}
+      <h1 className="sr-only">{snapshot.tournament.name}</h1>
       {settingsError && (
         <div className="card card--alert">
           <strong>{t.admin.tournament.invalid}</strong>

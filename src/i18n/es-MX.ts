@@ -179,6 +179,37 @@ export const t = {
     more: 'Más',
     admin: 'Comité',
   },
+  /**
+   * Each screen's name (A11Y-13): the document title, and what a screen reader
+   * hears when the page changes. Inside a tournament its name follows.
+   */
+  titles: {
+    /** The document title: the page, then the app («Tarjeta, Copa Tres Marías — Polo»). Home is the app alone. */
+    document: (page: string) => `${page} — Polo`,
+    inTournament: (page: string, tournament: string) => `${page}, ${tournament}`,
+    /** A section of a console: «Comité: Jugadores», «Admin de Polo: Salud». */
+    section: (console: string, section: string) => `${console}: ${section}`,
+    home: 'Polo',
+    opening: 'Abriendo tu torneo',
+    enter: 'Entrar',
+    organizerLogin: 'Entrar como organizador',
+    newPassword: 'Nueva contraseña',
+    newTournament: 'Nuevo torneo',
+    myTournaments: 'Mis torneos',
+    account: 'Tu cuenta',
+    editProfile: 'Editar perfil',
+    friends: 'Amigos',
+    inbox: 'Avisos',
+    joinCrew: 'Unirte a una crew',
+    crew: 'Crew',
+    versus: 'Cara a cara',
+    year: 'Tu año en Polo',
+    profile: 'Perfil',
+    print: 'Tarjetas para imprimir',
+    notFound: 'Página no encontrada',
+    fixtures: 'Fixtures',
+    design: 'Diseño',
+  },
   boot: {
     slowTitle: 'Polo está tardando en conectar',
     slowBody: 'No pudimos confirmar tu sesión. Suele ser la señal: vuelve a intentar en un momento.',
@@ -1431,6 +1462,8 @@ export const t = {
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
     notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
     rejected: (n: number) => (n === 1 ? '1 rechazado' : `${n} rechazados`),
+    /** The same, said to a screen reader the moment it happens on the Tarjeta (A11Y-14). */
+    rejectedSaid: (n: number) => (n === 1 ? 'El servidor rechazó 1 cambio de este teléfono.' : `El servidor rechazó ${n} cambios de este teléfono.`),
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
@@ -1626,6 +1659,8 @@ export const t = {
     saveLast: 'Guardar y ver la tarjeta',
     grid: 'Ver tarjeta',
     holeView: 'Ver hoyo',
+    /** The grid's heading, for a screen reader (A11Y-12). */
+    gridHeading: 'La tarjeta completa',
     prev: 'Hoyo anterior',
     next: 'Hoyo siguiente',
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',

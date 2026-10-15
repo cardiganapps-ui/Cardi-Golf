@@ -47,6 +47,7 @@ import { useHoleDrafts } from './scorecard/useHoleDrafts'
 import { useFollowHole, useHoleNav, useHoleSlide, useHoleSwipe } from './scorecard/useHoleNav'
 import { useHoleSave } from './scorecard/useHoleSave'
 import { useStableHandlers } from './scorecard/useStable'
+import { useViewFocus } from '../../components/viewFocus'
 import styles from './ScorecardScreen.module.css'
 
 const S = t.card
@@ -209,6 +210,19 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const sheetOpen = saver.asking || !!signing
   useFollowHole({ nav, order, firstOpen, queueRead, touched: entry.touched, sheetOpen, busy: saver.busy })
   const swipe = useHoleSwipe({ active: view === 'hole' && !sheetOpen, idx, count: order.length, goto: nav.goto, reduce })
+  // The hole and the grid swap in place, and an arrow goes disabled under the finger at the first or last hole.
+  // When focus went with them (A11Y-12): from a dead arrow to the other one (the new hole is said already), else to
+  // the new view's heading, the hole's sentence or the grid's name.
+  const cardRef = useRef<HTMLDivElement>(null)
+  useViewFocus(`${view}:${hole}`, () => {
+    const root = cardRef.current
+    const dead = document.activeElement
+    if (root && dead instanceof HTMLButtonElement && dead.disabled && root.contains(dead)) {
+      const other = dead.parentElement?.querySelector<HTMLButtonElement>(':scope > button:not([disabled])')
+      if (other) return other
+    }
+    return root?.querySelector('[data-view-heading]')
+  })
 
   async function sign(pairId: string) {
     setSigning(null)
@@ -254,7 +268,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const locked = rules.canEdit ? null : rules.anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)
 
   return (
-    <div className={styles.screen} {...swipe.handlers}>
+    <div ref={cardRef} className={styles.screen} {...swipe.handlers}>
       <div className={styles.top}>
         <div className={styles.topText}>
           <span className={styles.topMain}>{S.groupLine(round.number, group.number)}</span>

@@ -10,6 +10,7 @@ import { useMyProfile } from '../data/profiles'
 import { useAppFlags, usePlatform } from '../data/platform'
 import { LateSignOutHome } from './LateSignOut'
 import { LegalUpdate } from './LegalUpdate'
+import { RouteAnnouncer } from './RouteAnnouncer'
 import { listenForLaunches } from '../lib/launch'
 import styles from './AppShell.module.css'
 
@@ -52,6 +53,7 @@ export function AppShell() {
       </main>
       <LegalUpdate />
       <Toaster />
+      <RouteAnnouncer />
     </div>
   )
 }
