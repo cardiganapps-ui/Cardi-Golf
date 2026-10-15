@@ -1747,6 +1747,8 @@ export const t = {
     back: 'Vuelta',
     groupLine: (day: number, group: number) => `Día ${day}, grupo ${group}`,
     ptsLine: (pts: number, name: string | null) => (name ? `${pts} pts, ${name}` : `${pts} pts`),
+    /** The badge of a player nobody has changed on a hole he hasn't played: the steppers show the par it would save (COPY-10). */
+    notCaptured: 'Sin capturar',
     parHere: (par: number) => `par ${par} en su tee`,
     saveLast: 'Guardar y ver la tarjeta',
     grid: 'Ver tarjeta',
