@@ -8,7 +8,7 @@
  * the same cap Stableford uses. Standings compare "to par" over the holes
  * played so far, so players on different holes line up fairly.
  */
-import { ordinal, t } from '../../../i18n/es-MX'
+import { ordinal, ptsText, t } from '../../../i18n/es-MX'
 import { flattenRanks, rankBy, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
@@ -112,7 +112,7 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
   },
   board(state, ctx) {
     const money = moneyByPlayer(lowScoreGame.prizes(state, ctx))
-    const fig = (v: number) => (ctx.config.options.basis === 'points' ? `${v} pts` : toParText(v))
+    const fig = (v: number) => (ctx.config.options.basis === 'points' ? ptsText(v) : toParText(v))
     const sections: BoardSection[] = state.tables.map((tb) => ({
       title: tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}` : undefined,
       rows: tb.rows.map((r) => ({ playerIds: [r.playerId], pos: r.label, figure: fig(r.value), sub: `${r.thru} hoyos`, money: money.get(r.playerId) ?? 0 })),

@@ -98,6 +98,14 @@ function orList(parts: string[]): string {
   return listWith(parts, (w) => (takesU(w) ? 'u' : 'o'))
 }
 
+/**
+ * A count of Stableford points, abbreviated as golf writes it: «1 pt», «0 pts», «34 pts», «−1 pt» (COPY-23: the
+ * copy wrote «1 pts»). `text` is the figure as shown, when it is not the bare number (a sign, a true minus).
+ */
+export function ptsText(n: number, text: string | number = n): string {
+  return `${text} ${Math.abs(n) === 1 ? 'pt' : 'pts'}`
+}
+
 /** A handicap as golfers write it: under zero is a «plus» handicap, +1.2 (the arithmetic in an explanation keeps −1.2). */
 export function handicapText(n: number): string {
   return n < 0 ? `+${-n}` : String(n)
@@ -183,11 +191,11 @@ export const t = {
     versus: ' contra ',
     plusList: (parts: Array<string | number>) => parts.join(' + '),
     /**
-     * A main-event figure with its unit: «34 pts», «−3 neto», «+2 gross»,
+     * A main-event figure with its unit: «34 pts», «1 pt», «−3 neto», «+2 gross»,
      * «1½ puntos» (match points). Points only where the event counts them.
      */
     figure: (text: string, value: number, kind: 'points' | 'net' | 'gross' | 'match') =>
-      kind === 'points' ? `${text} pts` : kind === 'match' ? `${text} ${value > 0 && value <= 1 ? 'punto' : 'puntos'}` : `${text} ${kind === 'net' ? 'neto' : 'gross'}`,
+      kind === 'points' ? ptsText(value, text) : kind === 'match' ? `${text} ${value > 0 && value <= 1 ? 'punto' : 'puntos'}` : `${text} ${kind === 'net' ? 'neto' : 'gross'}`,
     /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, «e» before an i sound included. The only way copy joins names. */
     andList,
     /** «Camilo o Damián», «Camilo u Óscar»: who, of these. */
@@ -1634,7 +1642,7 @@ export const t = {
     /** The honoree's card where the event does not count points: its figure, today's, and his last hole in words. */
     spotlightFigure: (pos: string, figure: string, today: string | null, lastHole: number | null, lastText: string | null) =>
       `${ordinal(pos)} con ${figure}${today ? `, hoy ${today}` : ''}${lastHole != null && lastText ? `, hoyo ${lastHole}: ${lastText}` : ''}`,
-    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${total} pts${today != null ? `, hoy ${today}` : ''}${lastHole != null ? `, hoyo ${lastHole}: ${lastPts} pts` : ''}`,
+    spotlight: (pos: string, total: number, today: number | null, lastHole: number | null, lastPts: number | null) => `${ordinal(pos)} con ${ptsText(total)}${today != null ? `, hoy ${today}` : ''}${lastHole != null && lastPts != null ? `, hoyo ${lastHole}: ${ptsText(lastPts)}` : ''}`,
     /** A decided match's day, said with its side: «ganó 8&6», «perdió 8&6»; a match won on the 18th is «1 arriba» for the winner and «1 abajo» for the loser. */
     matchDay: (result: 'won' | 'lost' | 'halved', text: string) => (result === 'won' ? `ganó ${text}` : result === 'lost' ? `perdió ${text.replace(/ arriba$/, ' abajo')}` : text),
     // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
@@ -1746,7 +1754,7 @@ export const t = {
     front: 'Ida',
     back: 'Vuelta',
     groupLine: (day: number, group: number) => `Día ${day}, grupo ${group}`,
-    ptsLine: (pts: number, name: string | null) => (name ? `${pts} pts, ${name}` : `${pts} pts`),
+    ptsLine: (pts: number, name: string | null) => (name ? `${ptsText(pts)}, ${name}` : ptsText(pts)),
     /** The badge of a player nobody has changed on a hole he hasn't played: the steppers show the par it would save (COPY-10). */
     notCaptured: 'Sin capturar',
     parHere: (par: number) => `par ${par} en su tee`,
@@ -1830,7 +1838,7 @@ export const t = {
     holders: 'La tienen',
     nobodyHolds: 'Nadie la tiene',
     roi: 'rendimiento',
-    pointsFigure: (n: number) => `${n} pts`,
+    pointsFigure: (n: number) => ptsText(n),
     puttsFigure: (n: number) => (n === 1 ? '1 putt' : `${n} putts`),
     /** Menos putts: holes saved without putts, left out until captured (MONEY-18). */
     missingPutts: (n: number) => `faltan los putts de ${n === 1 ? '1 hoyo' : `${n} hoyos`}`,
@@ -2341,6 +2349,10 @@ export const t = {
       course: 'Campo',
       cut: 'Recorte',
       override: 'Ajuste del Comité',
+      /** Inside a player's line, after a comma: the Comité keeps its capital (COPY-23: the line lowered the whole label). */
+      overrideInLine: 'ajuste del Comité',
+      /** The day before's points, in a player's line: «28 pts el día 1» (it read «día 1 28 pts»). */
+      prevDay: (points: number, day: number) => `${ptsText(points)} el día ${day}`,
       overrideHint: 'Sustituye el hándicap de juego de este jugador solo para este día.',
       reason: 'Razón',
       reasonPlaceholder: 'p. ej. Jugó de rojas',
@@ -2483,7 +2495,7 @@ export const t = {
       openingBid: 'Puja inicial',
       increment: 'Incremento',
       maxPerOwner: 'Jugadores por dueño, máximo',
-      selfCounts: 'Comprarse cuenta en el máximo',
+      selfCounts: 'Comprarse a sí mismo cuenta para el máximo',
       buybackMax: 'Recompra máxima (%)',
       payoutSlots: 'Reparto del pozo, suma 100%',
       lastPlaceLabel: 'Nombre del último lugar',
@@ -3068,14 +3080,18 @@ export const t = {
   feed: {
     title: 'Lo último',
     empty: 'Nada todavía. El primer birdie abre el marcador.',
-    birdie: (name: string, hole: number, pts: number, gross: boolean) => `${name}: ${gross ? 'birdie' : 'birdie neto'} en el ${hole}, +${pts} pts`,
-    eagle: (name: string, hole: number, pts: number) => `${name}: águila neta en el ${hole}, +${pts} pts`,
+    /**
+     * A Stableford hole at 3 points or more, named for its points: 3 a birdie, 4 an eagle, 5 or more an albatross.
+     * `plain` when the card itself made it with no stroke received, so the name takes no «neto» (COPY-23: every
+     * 4 or more read «águila neta», a gross eagle too).
+     */
+    underParPoints: (name: string, hole: number, pts: number, plain: boolean) => `${name}: ${underParName(pts - 2, !plain)} en el ${hole}, ${ptsText(pts, `+${pts}`)}`,
     /** Under strokes: «birdie neto», «águila» (gross), «albatros neto». No points: the event does not count them. */
     underPar: (name: string, hole: number, under: number, net: boolean) => `${name}: ${underParName(under, net)} en el ${hole}`,
     /** `figure` as the board writes the total: «34» points, «−3» or «E» against par. */
     leadChange: (name: string, figure: string) => `¡Cambio de líder! ${name} toma la punta ${figure === 'E' ? 'en par' : `con ${figure}`}`,
     snakePass: (name: string, hole: number) => `La víbora pasa a ${name} en el ${hole}`,
-    honoreeHole: (name: string, hole: number, pts: number) => (pts === 0 ? `${name} en el ${hole}: cero puntos.` : `${name} en el ${hole}: ${pts} pts`),
+    honoreeHole: (name: string, hole: number, pts: number) => (pts === 0 ? `${name} en el ${hole}: cero puntos.` : `${name} en el ${hole}: ${ptsText(pts)}`),
     /** A hole named on the score the event counts: «par», «bogey neto», «birdie», «levantó». */
     scoreName: (toPar: number | null, net: boolean) => (toPar == null ? 'levantó' : overParName(toPar, net)),
     /** The honoree's hole under strokes: «par», «bogey neto», «levantó». */
@@ -3120,10 +3136,10 @@ export const t = {
     worstHole: 'Peor hoyo',
     streak: 'Racha',
     moment: 'Momento del torneo',
-    momentText: (name: string, hole: number, day: number, pts: number) => `${name}, hoyo ${hole} del día ${day}: ${pts} puntos.`,
+    momentText: (name: string, hole: number, day: number, pts: number) => `${name}, hoyo ${hole} del día ${day}: ${pts} ${pts === 1 ? 'punto' : 'puntos'}.`,
     momentStrokes: (name: string, hole: number, day: number, toPar: number, net: boolean) => `${name}, hoyo ${hole} del día ${day}: ${overParName(toPar, net)}.`,
     cursed: 'Hoyo Maldito',
-    cursedText: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg} pts promedio.`,
+    cursedText: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${ptsText(avg)} promedio.`,
     cursedStrokes: (hole: number, day: number, avg: number) => `Hoyo ${hole} del día ${day}: ${avg === 0 ? 'en par en promedio' : `${Math.abs(avg)} ${avg > 0 ? 'sobre' : 'bajo'} par en promedio`}.`,
     noData: 'Cuando haya tarjetas capturadas, aquí salen las estadísticas.',
     award: {
@@ -3145,7 +3161,7 @@ export const t = {
         : unit === 'pct'
         ? `${Math.round(v * 100) < 0 ? '−' : ''}${Math.abs(Math.round(v * 100))}%`
         : unit === 'points'
-          ? `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} pts`
+          ? ptsText(v, `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}`)
           : unit === 'variance'
             ? `varianza ${v.toFixed(2)}`
             : `${v}`,
@@ -3187,14 +3203,16 @@ export const t = {
       cut: { threshold: number; pointsPerStroke: number; maxStrokes: number; mode?: 'previous' | 'cumulative' },
       event: { rounds: number; points: boolean },
     ) => {
-      const unit = event.points ? 'puntos' : 'puntos Stableford'
+      /** «36 puntos», «1 punto», with «Stableford» when the event counts strokes and the cut reads the points beside them. */
+      const points = (n: number) => `${n} ${n === 1 ? 'punto' : 'puntos'}${event.points ? '' : ' Stableford'}`
+      const each = cut.pointsPerStroke === 1 ? 'cada punto' : `cada ${cut.pointsPerStroke} puntos`
       const cutLine =
         event.rounds <= 1 || cut.maxStrokes <= 0
           ? []
           : event.rounds === 2
-            ? [`Recorte del día 2: si en el día 1 haces más de ${cut.threshold} ${unit}, para el día 2 se te recorta 1 golpe por cada ${cut.pointsPerStroke} puntos por encima, máximo ${cut.maxStrokes}. Nunca se suman golpes.`]
+            ? [`Recorte del día 2: si en el día 1 haces más de ${points(cut.threshold)}, para el día 2 se te recorta 1 golpe por ${each} por encima, máximo ${cut.maxStrokes}. Nunca se suman golpes.`]
             : [
-                `Recorte de hándicap: si en un día haces más de ${cut.threshold} ${unit}, al día siguiente se te recorta 1 golpe por cada ${cut.pointsPerStroke} puntos por encima, máximo ${cut.maxStrokes}${cut.mode === 'cumulative' ? ' cada vez; los recortes de los días se acumulan' : '; cada día se calcula solo con el anterior'}. Nunca se suman golpes.`,
+                `Recorte de hándicap: si en un día haces más de ${points(cut.threshold)}, al día siguiente se te recorta 1 golpe por ${each} por encima, máximo ${cut.maxStrokes}${cut.mode === 'cumulative' ? ' cada vez; los recortes de los días se acumulan' : '; cada día se calcula solo con el anterior'}. Nunca se suman golpes.`,
               ]
       return [
         `Hándicap de juego = ${allowancePct}% del hándicap base (tope ${cap}), redondeado al entero (mitad hacia arriba).`,
@@ -3263,6 +3281,8 @@ export const t = {
       auction: (label: string) => `${label}: pagos`,
       money: 'Resumen de dinero',
     },
+    /** Over the Calcutta step's list of owners, beside its places (COPY-23: the list had no heading). */
+    auctionOwners: 'Lo que cobra cada dueño',
     /** `name` is the tournament's own trophy (`labels.trophy`): «el Putter» for the first one. */
     trophy: (name: string) => `Se lleva ${name}`,
     champion: 'Campeón',

@@ -127,7 +127,7 @@ describe('lead changes in the feed (round 3)', () => {
   })
 
   it('a line keeps its key when its save syncs: the phone’s time becomes the server’s (#91 round 5)', () => {
-    const birdie = (at: string) => ({ kind: 'birdie' as const, at, roundNumber: 1, hole: 10, playerId: 'p1', points: 3, gross: true, under: 1, scoring: 'gross' as const })
+    const birdie = (at: string) => ({ kind: 'birdie' as const, at, roundNumber: 1, hole: 10, playerId: 'p1', points: 3, grossUnder: 1, under: 1, scoring: 'gross' as const })
     expect(feedKey(birdie('2027-04-09T18:00:01.123Z'))).toBe(feedKey(birdie('2027-04-09T18:00:01.456789+00:00')))
     const lead = (at: string) => ({ kind: 'leadChange' as const, at, roundNumber: 1, hole: 5, playerId: 'p1', by: 'p1', figure: '−2', scoring: 'gross' as const })
     expect(feedKey(lead('2027-04-09T18:00:01.123Z'))).toBe(feedKey(lead('2027-04-09T18:00:01.456789+00:00')))

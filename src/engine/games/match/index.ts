@@ -178,11 +178,12 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
     const sections: BoardSection[] = state.rounds.map((mr) => {
       const rows: BoardRow[] = mr.segments.map((seg) => {
         const lead = seg.bets[0]!.up
+        const leaders = lead > 0 ? mr.a : lead < 0 ? mr.b : []
         return {
           title: seg.label,
-          playerIds: lead > 0 ? mr.a : lead < 0 ? mr.b : [],
+          playerIds: leaders,
           pos: null,
-          figure: statusText(seg.bets[0]!),
+          figure: statusText(seg.bets[0]!, leaders.length > 1),
           sub: [seg.thru ? `después de ${seg.thru}` : 'sin empezar', ...seg.bets.slice(1).map((b) => `presión desde el ${b.fromHole}: ${pressText(b, mr, name)}`)].join(', '),
         }
       })
@@ -203,17 +204,20 @@ export const matchGame: GameImpl<MatchState, Cfg> = {
   },
 }
 
-function statusText(bet: MatchBet): string {
+/** `plural`: a side of two or more wins («Iván J. y Julián ganan 1 arriba», COPY-23: «gana»). */
+function statusText(bet: MatchBet, plural = false): string {
   if (bet.up === 0) return bet.decided ? 'Empate' : 'Iguales'
   const n = Math.abs(bet.up)
-  if (bet.decided && bet.remaining > 0) return `Gana ${n} y ${bet.remaining}`
-  if (bet.decided) return `Gana ${n} arriba`
+  const wins = plural ? 'Ganan' : 'Gana'
+  if (bet.decided && bet.remaining > 0) return `${wins} ${n} y ${bet.remaining}`
+  if (bet.decided) return `${wins} ${n} arriba`
   return `${n} arriba`
 }
 
 function pressText(bet: MatchBet, mr: MatchRound, name: (id: Id) => string): string {
   if (bet.up === 0) return statusText(bet)
-  return `${sideName(bet.up > 0 ? mr.a : mr.b, name)} ${statusText(bet).toLowerCase()}`
+  const side = bet.up > 0 ? mr.a : mr.b
+  return `${sideName(side, name)} ${statusText(bet, side.length > 1).toLowerCase()}`
 }
 
 function sideName(side: Id[], name: (id: Id) => string): string {

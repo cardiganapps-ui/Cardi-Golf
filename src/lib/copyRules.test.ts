@@ -183,7 +183,7 @@ function commaNameLists(text: string, names: string[]): string[] {
  * source line they sit on. Each says why it is not the mistake its rule looks for.
  */
 const ALLOW: Array<{ file: string; line: RegExp; why: string }> = [
-  { file: 'src/engine/games/match/index.ts', line: /`Gana \$\{n\} y \$\{bet\.remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
+  { file: 'src/engine/games/match/index.ts', line: /`\$\{wins\} \$\{n\} y \$\{bet\.remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
   { file: 'api/scorecard-extract.ts', line: /índice de dificultad \(handicap\/SI, 1–18\)/, why: 'the prompt that tells the model what a printed card calls the stroke index; nobody reads it in the app' },
 ]
 

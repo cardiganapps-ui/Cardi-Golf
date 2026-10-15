@@ -27,8 +27,12 @@ export type FeedEvent =
       playerId: Id
       /** Stableford points on the hole (always computed, shown only when the event counts points). */
       points: number
-      /** A gross birdie or better. */
-      gross: boolean
+      /**
+       * Strokes under par on the card itself, before any stroke received (0 at par or worse). When it
+       * reaches `under` the card made the score on its own and the line names it plainly: «águila», not
+       * «águila neta» (COPY-23).
+       */
+      grossUnder: number
       /** Strokes under par on the score the event counts (1 birdie, 2 eagle, 3 albatross). */
       under: number
       scoring: MainScoring
@@ -127,7 +131,8 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     const isBirdie = points ? h.points >= 3 : toPar != null && toPar <= -1
     if (isBirdie) {
       const under = points ? h.points - 2 : -toPar!
-      push({ kind: 'birdie', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, gross: !h.pickedUp && h.gross != null && h.gross <= h.par - 1, under, scoring }, at)
+      const grossUnder = !h.pickedUp && h.gross != null ? Math.max(0, h.par - h.gross) : 0
+      push({ kind: 'birdie', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, grossUnder, under, scoring }, at)
     } else if (honoree && s.playerId === honoree) {
       push({ kind: 'honoreeHole', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, toPar, scoring }, at)
     }

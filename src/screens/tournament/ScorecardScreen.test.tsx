@@ -415,7 +415,7 @@ describe('Tarjeta: a screen reader knows whose control it is and where it is (A1
     expect(live()).toBe('')
     const before = strokesOf('p1')
     fireEvent.click(strokesUp('p1'))
-    expect(live()).toMatch(new RegExp(`^${nameOf('p1')}: ${before + 1} golpes, 2 putts, \\d pts`))
+    expect(live()).toMatch(new RegExp(`^${nameOf('p1')}: ${before + 1} golpes, 2 putts, \\d pts?`))
     // The figures themselves are not live regions: a new hole would read out eight bare numbers.
     expect(document.querySelectorAll('[aria-live]')).toHaveLength(1)
     await tapSave(11_000)
