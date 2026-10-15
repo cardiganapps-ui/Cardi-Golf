@@ -116,12 +116,13 @@ describe('storage read and written by more than this tab', () => {
     await saveHole(5, [{ player_id: 'p2', fields: played(5), base: {} }])
     const d = _outboxTest.db()!
     const read = d.items.toArray.bind(d.items)
-    vi.spyOn(d.items, 'toArray').mockImplementationOnce(async () => {
+    // Dexie types toArray's answer as its own promise; the outbox only awaits it.
+    vi.spyOn(d.items, 'toArray').mockImplementationOnce((async () => {
       const rows = await read()
       // The read is out when the player saves the next hole.
       await saveHole(7, [{ player_id: 'p2', fields: played(6), base: {} }])
       return rows
-    })
+    }) as never)
     await _outboxTest.load()
     expect(holesQueued()).toEqual([5, 7])
     expect((await _outboxTest.stored()).length).toBe(2)

@@ -17,8 +17,8 @@ test('the first load is one stylesheet, and the app’s own rules come before ev
 
   await open(page, '/t/_/full12-live')
   const order = await page.evaluate((href) => {
-    const sheet = [...document.styleSheets].find((s) => s.href && new URL(s.href).pathname === href)
-    const selectors = sheet ? [...sheet.cssRules].map((r) => (r instanceof CSSStyleRule ? r.selectorText : '')) : []
+    const sheet = Array.from(document.styleSheets).find((s) => s.href && new URL(s.href).pathname === href)
+    const selectors = sheet ? Array.from(sheet.cssRules).map((r) => (r instanceof CSSStyleRule ? r.selectorText : '')) : []
     return {
       found: !!sheet,
       card: selectors.indexOf('.card'),
