@@ -89,6 +89,7 @@ export function AdminAuction() {
       <div className={a.screen}>
         <h2>{A.console}</h2>
         <p className={a.help}>{A.drawHint}</p>
+        <PaperSheet slug={slug} />
         <div className={a.chipRow}>
           <button className="btn btn--primary" type="button" onClick={() => setOrder(shuffle(draft))}>
             {A.drawOrder}
@@ -199,6 +200,7 @@ export function AdminAuction() {
       <p className={a.help}>
         {A.tvHint} <Link to={`/t/${slug}/tv`}>/t/{slug}/tv</Link>
       </p>
+      <PaperSheet slug={slug} />
 
       <div className={styles.console}>
         <div className={a.section}>
@@ -411,4 +413,13 @@ function move<T>(arr: T[], from: number, to: number): T[] {
   const [item] = x.splice(from, 1)
   x.splice(to, 0, item!)
   return x
+}
+
+/** The way to the night on paper (DB-19): the sheet prints the lots in their order, with what is sold filled in. */
+function PaperSheet({ slug }: { slug: string }) {
+  return (
+    <p className={a.help}>
+      {A.paperHint} <Link to={`/t/${slug}/imprimir?hoja=calcutta`}>{t.print.auctionSheet}</Link>
+    </p>
+  )
 }

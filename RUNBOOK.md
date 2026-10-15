@@ -27,6 +27,8 @@ Comité › Torneo empieza con **«Para empezar»**: dice qué falta (jugadores,
 - [ ] **Sin cambios a la base de datos durante el torneo.** De la noche de la Calcutta a la liquidación no se aplica ninguna migración (`node scripts/db.mjs migrate`): lo que haga falta espera al domingo. Antes de aplicar una, el job «Database» de GitHub la probó desde cero (`scripts/db-test.sh`).
 - [ ] **Tele probada.** En el lugar de la cena, abre el enlace para ver en la tele (sección 1, paso 1) y confirma que se ve. La tele nunca entra con el PIN de un jugador.
 - [ ] **Tarjetas de papel impresas.** Comité › Datos › "Ver tarjetas para imprimir" → imprime una por grupo (con los puntos de ventaja). Por si acaso.
+- [ ] **Hoja de la Calcutta impresa.** En la misma página, «Hoja de la Calcutta» (o desde la consola de la Calcutta): el orden de los lotes, las reglas y renglones para el comprador, el precio, la recompra y el pago. Por si se va el servidor esa noche (sección 5).
+- [ ] **Dos personas con acceso** a Supabase y a Cloudflare (R2) en el viaje (sección 5, docs/handoff.md).
 - [ ] **Ensayo hecho.** Corre una noche de Calcutta y una ronda en el torneo "Ensayo" con 2 o 3 amigos y sus teléfonos reales.
 
 ## 1. Noche de Calcutta (la víspera del día 1)
@@ -89,10 +91,25 @@ Sigue capturando: la app guarda en el teléfono; arriba dice "Sin señal" y abaj
 
 ## 5. Si la app se cae
 
-1. Usa las **tarjetas de papel** (sección 0). Golpes arriba, putts abajo, marca los 3 putts para la víbora.
-2. Al terminar, el admin captura todo desde Comité › **Tarjetas** (jugador por jugador) o desde Tarjeta eligiendo el grupo. Con la ronda ya terminada o la tarjeta firmada, cada hoyo va directo al servidor como corrección del Comité: hazlo con señal (si la tarjeta está firmada, te pide la razón).
-3. Si Supabase está pausado: dashboard de Supabase → proyecto Cardi-Golf → "Restore". Tarda 1–2 minutos.
-4. Si Vercel está caído: el último respaldo JSON (sección 8) tiene todo; la liquidación se puede hacer a mano con el CSV de resultados.
+**Primero, qué se cayó.** Abre la app en otro teléfono, con datos y con Wi-Fi. Si en todos dice «Conectando…» aunque haya señal, mira **status.supabase.com** (los datos, las cuentas) y **www.vercel-status.com** (la página, los avisos, el respaldo de la noche). Si solo es un teléfono, es su señal: sigue la sección 4.
+
+**Si se cae Vercel** (la página no abre en el navegador):
+- **La app instalada sigue funcionando**: la app vive en el teléfono y los datos van directo a Supabase, sin pasar por Vercel. Quien la tiene en el ícono sigue capturando y viendo los tableros. Solo quien la abre por primera vez se queda sin ella: que capture alguien más del grupo, o en papel.
+- La tele sigue si ya había abierto el enlace; si no, ábrelo en una laptop o tablet que ya lo haya abierto antes.
+- Mientras tanto no salen los avisos ni el respaldo de la noche (los manda Vercel): cuando vuelva, baja el respaldo a mano (sección 8).
+
+**Si se cae Supabase** (todos dicen «Conectando…» con señal y su página de estado está en rojo):
+1. Si está **pausado**: dashboard de Supabase → proyecto Cardi-Golf → "Restore". Tarda 1–2 minutos.
+2. Si está **caído** sin estar pausado, no hay nada que arreglar de nuestro lado: su página de estado dice cuándo vuelve. Mientras tanto:
+   - **En una ronda**, sigan capturando en la Tarjeta: se guarda en el teléfono y sube sola cuando vuelve (sección 4). Los tableros muestran lo último, con la hora en que se actualizaron. Si la caída dura toda la ronda, lleven también la tarjeta de papel.
+   - **En la noche de la Calcutta**, la consola no sirve: cada puja va al servidor. Sigue con la **Hoja de la Calcutta** impresa (sección 0): el orden, quién compra, a cuánto, la recompra y quién ya pagó. El sorteo de parejas, con papelitos. Cuando vuelva el servidor, en la consola, lote por lote: «Abrir lote», el comprador, «Otra» con el precio, «¡Vendido!» y la recompra. Luego las parejas en Comité › Parejas y los grupos en Grupos, y los pagos en Dinero.
+3. Si el proyecto **no vuelve** (se borró o quedó dañado): sección 8b, de 30 a 45 minutos.
+
+**Quién puede hacerlo.** Restaurar Supabase, mirar Vercel y bajar un respaldo de R2 piden entrar a esas cuentas. En el viaje tienen que poder dos personas (docs/handoff.md). Claude también puede hacerlo por la API, si la sesión tiene las llaves.
+
+**Las tarjetas de papel** (sección 0): golpes arriba, putts abajo, marca los 3 putts para la víbora. Al terminar, el admin captura todo desde Comité › **Tarjetas** (jugador por jugador) o desde Tarjeta eligiendo el grupo. Con la ronda ya terminada o la tarjeta firmada, cada hoyo va directo al servidor como corrección del Comité: hazlo con señal (si la tarjeta está firmada, te pide la razón). Si nadie tiene la app, el último respaldo JSON y el CSV de resultados (sección 8) tienen todo para liquidar a mano.
+
+**Ensáyalo.** En el Ensayo, apágale la señal al teléfono del subastador durante dos lotes: llévalos en la hoja y captúralos cuando vuelva. Restaurar la base completa desde el respaldo de la noche ya se probó: 14 segundos el 12 de octubre de 2026 (sección 8b).
 
 ## 6. Cerrar una ronda
 

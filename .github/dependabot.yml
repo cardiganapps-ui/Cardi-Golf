@@ -1,0 +1,33 @@
+# QA-21: dependency updates arrive as pull requests, each through the same CI
+# as any other change. Minor and patch versions come grouped, one pull request
+# a week; a major version comes on its own, so its breaking changes are read
+# and tested by themselves. Merged like any PR, once every check is green. From
+# 1 March 2027 until after the trip only security updates are merged (CLAUDE.md
+# §0.3).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Mexico_City
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: deps
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Mexico_City
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci

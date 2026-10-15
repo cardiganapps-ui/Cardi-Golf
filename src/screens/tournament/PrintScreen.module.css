@@ -115,3 +115,14 @@
     display: none !important;
   }
 }
+
+/* The Calcutta on paper (DB-19): room to write a name and a price by hand. */
+.sheet td {
+  height: 34px;
+}
+.sheet .left {
+  width: auto;
+}
+.lot {
+  width: 44px;
+}
