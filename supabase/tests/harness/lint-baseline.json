@@ -4,7 +4,6 @@
   "authenticated_security_definer_function_executable (WARN)": 150,
   "function_search_path_mutable (WARN)": 5,
   "multiple_permissive_policies (WARN)": 8,
-  "public_bucket_allows_listing (WARN)": 1,
   "rls_enabled_no_policy (INFO)": 16,
   "unindexed_foreign_keys (INFO)": 45,
   "unused_index (INFO)": 54

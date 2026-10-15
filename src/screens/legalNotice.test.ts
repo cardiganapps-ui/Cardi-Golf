@@ -337,7 +337,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
  * removed with TRUST-07 (a migration), and this test then fails and asks
  * for the sentence to be read again.
  */
-describe('uploaded files: public, never deleted (assets_public_read, 0003)', () => {
+describe('uploaded files: public by their link, never deleted (a public bucket; 0061 took the listing away)', () => {
   const where = () => sections['Dónde viven']!
 
   it('they are public files: anyone, without an account, can open them', () => {
@@ -350,14 +350,20 @@ describe('uploaded files: public, never deleted (assets_public_read, 0003)', () 
     expect(where()).toContain('nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca.')
   })
 
-  it('the rules it rests on: a public bucket, read by every role, and nothing ever replaced that policy', () => {
+  it('the rules it rests on: a public bucket, so a file opens by its link with no policy; listing it is for those who may write there (TRUST-07)', () => {
     const migrations = filesUnder('supabase/migrations', (n) => n.endsWith('.sql'))
       .sort()
       .map(source)
       .join('\n')
     expect(migrations).toMatch(/values \('tournament-assets', 'tournament-assets', true,/)
-    const statements = migrations.split(';').filter((s) => s.includes('assets_public_read'))
-    expect(statements.map((s) => s.trim().replace(/\s+/g, ' '))).toEqual(["create policy assets_public_read on storage.objects for select using (bucket_id = 'tournament-assets')"])
+    const statements = migrations
+      .replace(/--[^\n]*/g, '')
+      .split(';')
+      .filter((s) => /assets_(public|member)_read/.test(s))
+      .map((s) => s.trim().replace(/\s+/g, ' '))
+    expect(statements[0]).toBe("create policy assets_public_read on storage.objects for select using (bucket_id = 'tournament-assets')")
+    expect(statements.slice(1, 3)).toEqual(['drop policy if exists assets_public_read on storage.objects', expect.stringMatching(/^create policy assets_member_read on storage\.objects for select to authenticated using \( bucket_id = 'tournament-assets' and auth\.uid\(\) is not null and/)])
+    expect(statements).toHaveLength(3)
   })
 })
 
