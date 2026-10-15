@@ -271,15 +271,31 @@ export async function savedAt(page: Page): Promise<number> {
   return at
 }
 
-/** The leaderboard, one string per row as a screen reader hears it: «empatado en 1.º, Ana, hoy 3, hoyo 1, 3». */
+/**
+ * The parts of a row's spoken name these tests compare: its position, name, figures and hole. What else the
+ * row says (A11Y-11: «(tú)», the money it would win, its owners, «sube» or «baja») comes and goes with things the
+ * tests do not set, so it is left out. Inlined in `watchEach`, which runs in the page.
+ */
+const EXTRA_PART = /^(ganaría |dueños?: |categoría |hándicap estimado$|sube$|baja$)/
+export const scoredPart = (label: string) =>
+  label
+    .split(', ')
+    .filter((part) => !EXTRA_PART.test(part))
+    .map((part) => part.replace(/ \(tú\)$/, ''))
+    .join(', ')
+
+/** The leaderboard, one string per row as a screen reader hears it, its scored parts only: «empatado en 1.º, Ana, 3 puntos, hoy 3 puntos, hoyo 1». */
 export function boardRows(page: Page): Promise<string[]> {
-  return page.locator('button[class*="leaderRow"]').evaluateAll((rows) => rows.map((r) => r.getAttribute('aria-label') ?? ''))
+  return page
+    .locator('button[class*="leaderRow"]')
+    .evaluateAll((rows) => rows.map((r) => r.getAttribute('aria-label') ?? ''))
+    .then((labels) => labels.map(scoredPart))
 }
 
-/** A board row as the app labels it (t.live.rowLabel), from the values the test expects. */
-export const row = (pos: string, name: string, figure: string, thru: string, today?: string) => t.live.rowLabel(pos, name, figure, today, thru)
+/** A board row as the app labels it (t.live.rowLabel, a Stableford board's points), from the values the test expects. */
+export const row = (pos: string, name: string, figure: string, thru: string, today?: string) => t.live.rowLabel(pos, name, figure, today, thru, { unit: 'points' })
 
-/** The rows of `names` after the holes in `card`, without the position (ties move it): «Ana, hoy 34, hoyo F, 34». */
+/** The rows of `names` after the holes in `card`, without the position (ties move it): «Ana, 34 puntos, hoy 34 puntos, terminó». */
 export function boardAfter(card: Map<number, HoleEntry>, thru: number, names: string[] = GROUP_1): string[] {
   const sum = totals(card, names)
   return names.map((name) => row('', name, String(sum[name]), t.round.thru(thru, 18), String(sum[name])))
@@ -306,7 +322,14 @@ export async function watchEach(page: Page, shown: Record<string, Shown>) {
     const w = window as Marked
     const holds = (s: Shown) => {
       if ('board' in s) {
-        const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) => b.getAttribute('aria-label') ?? '')
+        // scoredPart, inlined: the page has no module to import it from.
+        const scored = (label: string) =>
+          label
+            .split(', ')
+            .filter((part) => !/^(ganaría |dueños?: |categoría |hándicap estimado$|sube$|baja$)/.test(part))
+            .map((part) => part.replace(/ \(tú\)$/, ''))
+            .join(', ')
+        const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) => scored(b.getAttribute('aria-label') ?? ''))
         return s.board.every((want) => labels.some((l) => l === want || l.endsWith(`, ${want}`)))
       }
       return s.card.every(([label, value]) => {

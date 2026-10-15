@@ -6,7 +6,7 @@
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
 import { useRef, type ButtonHTMLAttributes, type CSSProperties, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
-import { t } from '../i18n/es-MX'
+import { t, type RowSpeech } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
@@ -182,6 +182,8 @@ export interface LeaderRowProps {
   honoree?: boolean
   moved?: 'up' | 'down' | null
   dense?: boolean
+  /** What else a screen reader hears for the row (A11Y-11): «tú», category, the figure's unit, money, owners. */
+  speech?: RowSpeech
   onClick?: () => void
 }
 export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?: boolean }) {
@@ -195,10 +197,11 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     </div>
   )
 }
-export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, onClick }: LeaderRowProps) {
+export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, speech, onClick }: LeaderRowProps) {
   const subLine = [sub, owners].filter(Boolean)
+  const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, { me: mine, moved, ...speech, todaySpoken: !!todaySpoken })
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru)}>
+    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={label}>
       {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
       <span className={s.name}>
@@ -245,14 +248,18 @@ export function markFor(gross: number | null, par: number, pickedUp = false): Ma
 export function ScoreMark({ value, kind }: { value: string | number; kind: MarkKind }) {
   const stroke = kind === 'eagle' || kind === 'birdie' ? 'var(--under)' : 'var(--over)'
   return (
-    <span className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`} aria-label={t.card.markName[kind] ?? kind}>
+    // A11Y-10: one image named with the figure and what it is («7, doble bogey o peor»); a label on a plain span
+    // replaced the figure for some readers and was dropped by others.
+    <span className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`} role="img" aria-label={t.card.markSpoken(value, kind)}>
       <svg className={s.markSvg} viewBox="0 0 30 30" style={{ stroke }} aria-hidden="true">
         {(kind === 'birdie' || kind === 'eagle') && <circle cx="15" cy="15" r="12" />}
         {kind === 'eagle' && <circle cx="15" cy="15" r="9" />}
         {(kind === 'bogey' || kind === 'double') && <rect x="3" y="3" width="24" height="24" rx="1" />}
         {kind === 'double' && <rect x="6.5" y="6.5" width="17" height="17" rx="1" />}
       </svg>
-      <span className={kind === 'birdie' || kind === 'eagle' ? s.under : undefined}>{value}</span>
+      <span className={kind === 'birdie' || kind === 'eagle' ? s.under : undefined} aria-hidden="true">
+        {value}
+      </span>
     </span>
   )
 }
@@ -284,7 +291,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
   const mark = (h: GridHole) =>
     h.gross != null || h.pickedUp ? (
       onHole ? (
-        <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={`${t.player.hole} ${h.n}`}>
+        <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={t.player.holeSpoken(h.n, h.pickedUp ? null : h.gross, markFor(h.gross, h.par, h.pickedUp), showPoints ? (h.pts ?? null) : null)}>
           <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />
         </button>
       ) : (
@@ -306,21 +313,21 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
       </thead>
       <tbody>
         <tr className={s.gridMeta}>
-          <td>{t.player.par}</td>
+          <th scope="row">{t.player.par}</th>
           {hs.map((h) => (
             <td key={h.n}>{h.par}</td>
           ))}
           <td className={s.gridTotal}>{sum(hs, (h) => h.par)}</td>
         </tr>
         <tr className={s.gridMeta}>
-          <td>{t.player.si}</td>
+          <th scope="row">{t.player.si}</th>
           {hs.map((h) => (
             <td key={h.n}>{h.si}</td>
           ))}
           <td className={s.gridTotal} />
         </tr>
         <tr>
-          <td>{playerLabel}</td>
+          <th scope="row">{playerLabel}</th>
           {hs.map((h) => (
             <td key={h.n}>{mark(h)}</td>
           ))}
@@ -328,7 +335,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
         </tr>
         {showPutts && (
           <tr className={s.gridMeta}>
-            <td>{t.player.putts}</td>
+            <th scope="row">{t.player.putts}</th>
             {hs.map((h) => (
               <td key={h.n}>{h.putts ?? ''}</td>
             ))}
@@ -337,7 +344,7 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
         )}
         {showPoints && (
           <tr className={s.gridMeta}>
-            <td>{t.player.pts}</td>
+            <th scope="row">{t.player.pts}</th>
             {hs.map((h) => (
               <td key={h.n}>{h.pts ?? ''}</td>
             ))}

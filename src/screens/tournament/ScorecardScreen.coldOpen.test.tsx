@@ -264,7 +264,7 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
     seedBoards(base)
     mount()
     fireEvent.click(screen.getByRole('button', { name: new RegExp(S.grid) }))
-    fireEvent.click(screen.getByRole('button', { name: /^9$/ }))
+    fireEvent.click(screen.getByRole('button', { name: `${t.player.hole} 9` }))
     expect(holeOnScreen()).toBe(9)
     await readQueue()
     expect(holeOnScreen()).toBe(9)

@@ -84,8 +84,8 @@ describe("En vivo: the honoree's card in each format (STRAT-03)", () => {
     expect(document.querySelector('[class*="spotlightName"]')?.textContent).toBe('El novio: Gael H.')
     expect(spotlight()).toBe('6.º con 0 puntos, hoy perdió 1 abajo, hoyo 9: par')
     // His row on the board says it the same way, and so does the winner's.
-    expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe('6.º, Gael H., hoy perdió 1 abajo, hoyo F, 0')
-    expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe('3.º, Julián, hoy ganó 1 arriba, hoyo F, 1')
+    expect(screen.getByRole('button', { name: /^6\.º, Gael H\., / }).getAttribute('aria-label')).toBe('6.º, Gael H., El novio, 0 puntos, hoy perdió 1 abajo, terminó')
+    expect(screen.getByRole('button', { name: /, Julián, / }).getAttribute('aria-label')).toBe('3.º, Julián, 1 punto, hoy ganó 1 arriba, terminó')
     // And the day cell you see says it too: his «1 abajo», not the match's «1 arriba».
     const gael = screen.getByRole('button', { name: /^6\.º, Gael H\., / }).textContent
     expect(gael).toContain('1 abajo')

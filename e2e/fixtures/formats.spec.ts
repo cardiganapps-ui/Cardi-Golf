@@ -76,7 +76,8 @@ for (const f of FORMATS) {
     if (f.team) expect(cards.at(-1)).toMatch(WITH_TEAM)
     // A hole of his card explained: in the figure the event counts.
     const hole = sheet.locator(`button[aria-label^="${t.player.hole} "]`).first()
-    const n = Number((await hole.getAttribute('aria-label'))!.split(' ').at(-1))
+    // «Hoyo 5: 7 golpes, doble bogey o peor, 0 puntos» (A11Y-10): the hole's number follows «Hoyo».
+    const n = Number(new RegExp(`^${t.player.hole} (\\d+)`).exec((await hole.getAttribute('aria-label'))!)![1])
     await hole.click()
     const why = page.getByRole('dialog', { name: t.player.whyHole(n) })
     await expect(why).toBeVisible()

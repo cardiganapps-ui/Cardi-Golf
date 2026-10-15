@@ -114,7 +114,7 @@ describe('Tarjeta: the hole and the grid swap with focus kept (A11Y-12)', () => 
   it('a hole opened from the grid focuses the hole’s heading', () => {
     mount('minimal4-live', <ScorecardScreen />)
     fireEvent.click(screen.getByRole('button', { name: S.grid }))
-    press(screen.getByRole('button', { name: '3' }))
+    press(screen.getByRole('button', { name: `${t.player.hole} 3` }))
     expect(document.querySelector('[class*="holeNum"]')?.textContent).toBe('3')
     expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }))
   })

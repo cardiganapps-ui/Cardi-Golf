@@ -864,7 +864,7 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
     const was = actEnv.IS_REACT_ACT_ENVIRONMENT
     actEnv.IS_REACT_ACT_ENVIRONMENT = false
     try {
-      screen.getByRole('button', { name: String(target.hole), exact: true } as never).click()
+      screen.getByRole('button', { name: `${t.player.hole} ${target.hole}`, exact: true } as never).click()
       for (let i = 0; i < 20; i++) await Promise.resolve()
       expect(holeOnScreen()).toBe(target.hole)
       expect(strokesOf('p1')).toBe(target.strokes)
@@ -885,7 +885,7 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
     const was = actEnv.IS_REACT_ACT_ENVIRONMENT
     actEnv.IS_REACT_ACT_ENVIRONMENT = false
     try {
-      screen.getByRole('button', { name: String(target.hole), exact: true } as never).click()
+      screen.getByRole('button', { name: `${t.player.hole} ${target.hole}`, exact: true } as never).click()
       for (let i = 0; i < 20; i++) await Promise.resolve()
       // The finger's next tap, before any other task: «más» on p1.
       strokesUp('p1').click()

@@ -172,9 +172,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 176,
+      "tests": [
+        "src/components/ScorecardGrid.a11y.test.tsx",
+        "src/screens/tournament/ScorecardScreen.formats.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -186,9 +189,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 176,
+      "tests": [
+        "src/i18n/rowLabel.test.ts",
+        "src/screens/tournament/LiveScreen.speech.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
