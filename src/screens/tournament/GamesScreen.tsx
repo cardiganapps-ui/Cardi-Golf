@@ -2,7 +2,7 @@
  * Juegos (§9.4): one line per game (who leads, what is at stake), then the
  * detail of each enabled module on the board primitives.
  */
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
@@ -20,6 +20,7 @@ import { SnakeBoard } from './SnakeBoard'
 import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
 import { useActiveRound } from './useMyGroup'
 import { useTournamentCtx } from './TournamentGate'
+import { useViewFocus } from '../../components/viewFocus'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import styles from './GamesScreen.module.css'
 
@@ -43,12 +44,22 @@ export function GamesScreen() {
     const games = data.settings.games.filter((g) => g.enabled).map((g) => ({ value: `game:${g.id}`, label: g.label }))
     return [...mods, ...games]
   }, [data])
+  const current = tab && tabs.some((x) => x.value === tab) ? tab : null
+  /** The game opened from the list: going back, focus returns to its line (A11Y-12). */
+  const opened = useRef<string | null>(null)
+  const screenRef = useRef<HTMLDivElement>(null)
+  // The list and a game's detail swap in place: the button that had focus goes with the old view.
+  useViewFocus(current === null ? 'list' : 'detail', (view) => {
+    const root = screenRef.current
+    if (!root) return null
+    if (view === 'detail') return root.querySelector('[data-view-heading]')
+    return (opened.current && root.querySelector(`[data-game="${CSS.escape(opened.current)}"]`)) || root.querySelector('h1')
+  })
   if (!data) return null
   const { snapshot, state, settings } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
   const money = (amount: number | undefined) => (amount ? <Money amount={amount} /> : null)
-  const current = tab && tabs.some((x) => x.value === tab) ? tab : null
   // "Hoyo" is where a player is in the round being played (P1 17), never a cross-round count.
   const thruOf = (pid: string) => (round ? t.round.thru(state.core.rounds[round.id]?.[pid]?.thru ?? 0, round.holes) : undefined)
   const pairThru = (ids: readonly string[]) => (round ? t.round.thru(Math.min(...ids.map((pid) => state.core.rounds[round.id]?.[pid]?.thru ?? 0)), round.holes) : undefined)
@@ -96,7 +107,7 @@ export function GamesScreen() {
   })
 
   return (
-    <div className={styles.screen}>
+    <div className={styles.screen} ref={screenRef}>
       {current === null ? (
         <>
           <h1>{t.nav.games}</h1>
@@ -105,7 +116,16 @@ export function GamesScreen() {
           ) : (
             <div className={styles.overview}>
               {overview.map((g) => (
-                <button key={g.id} type="button" className={styles.gameRow} onClick={() => setTab(g.id)}>
+                <button
+                  key={g.id}
+                  type="button"
+                  className={styles.gameRow}
+                  data-game={g.id}
+                  onClick={() => {
+                    opened.current = g.id
+                    setTab(g.id)
+                  }}
+                >
                   <span className={styles.gameText}>
                     <span className={styles.gameLabel}>{g.label}</span>
                     <span className={styles.gameLeader}>{g.leader}</span>
@@ -147,7 +167,7 @@ export function GamesScreen() {
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTab(null)} aria-label={t.common.back}>
               <IconChevronLeft />
             </button>
-            <h1>{tabs.find((x) => x.value === current)?.label}</h1>
+            <h1 data-view-heading>{tabs.find((x) => x.value === current)?.label}</h1>
           </div>
           {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} />}
 

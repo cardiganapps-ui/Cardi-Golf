@@ -4,11 +4,12 @@
  * grid, marks) live in ./primitives and are re-exported here so existing
  * imports keep working.
  */
-import { Suspense, useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { humanError } from '../lib/humanError'
 import styles from './ui.module.css'
 import { anySheetOpen, isTopSheet, sheetClosed, sheetOpened } from './sheetHistory'
+import { modalClosed, modalOpened, wrapTab } from './modalFocus'
 
 export { Field, Segmented } from './primitives'
 
@@ -74,13 +75,16 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
 
 
 /**
- * Bottom sheet / modal. Focus moves in on open and back to the opener on close.
+ * Bottom sheet / modal. Focus moves in on open and back to the opener on close;
+ * while it is open the page behind it is inert and Tab goes round inside it
+ * (A11Y-03, ./modalFocus). Escape closes the top sheet only.
  * `dirty`: the sheet holds work typed into it (a scorecard, a player); the
  * backdrop, Escape, «Cerrar» and the system back then ask before discarding
  * it, in a sheet of their own, so a back on that question keeps editing (UX-15).
  */
 export function Sheet({ open, onClose, title, children, wide, dirty }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean; dirty?: boolean }) {
   const id = useId()
+  const backdrop = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLDivElement>(null)
   const opener = useRef<HTMLElement | null>(null)
   /*
@@ -101,10 +105,23 @@ export function Sheet({ open, onClose, title, children, wide, dirty }: { open: b
     if (isDirty.current) setAsking(true)
     else close.current()
   }, [])
+  /*
+   * The page goes inert in the same commit the sheet appears in, and comes back
+   * in the one it leaves in, before focus returns to the opener (a passive
+   * effect, below). The opener is read first: inside an inert branch it would
+   * already have lost focus.
+   */
+  useLayoutEffect(() => {
+    if (!open) return
+    opener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
+    const el = backdrop.current
+    if (!el) return
+    modalOpened(el)
+    return () => modalClosed(el)
+  }, [open])
   useEffect(() => {
     if (!open) return
     sheetOpened(id, tryClose)
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
     /*
      * Focus the frame, not the first field. Grabbing the first `input` raised
@@ -122,7 +139,12 @@ export function Sheet({ open, onClose, title, children, wide, dirty }: { open: b
       ;(wanted ?? el).focus()
     }, 30)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || !isTopSheet(id)) return
+      if (!isTopSheet(id)) return
+      if (e.key === 'Tab') {
+        if (frame.current) wrapTab(frame.current, e)
+        return
+      }
+      if (e.key !== 'Escape') return
       e.stopPropagation()
       tryClose()
     }
@@ -139,7 +161,7 @@ export function Sheet({ open, onClose, title, children, wide, dirty }: { open: b
   }, [open, id, tryClose])
   if (!open) return null
   return (
-    <div className={styles.backdrop} onClick={tryClose} role="presentation">
+    <div ref={backdrop} className={styles.backdrop} onClick={tryClose} role="presentation">
       <SheetFrame title={title} onClose={tryClose} wide={wide} frameRef={frame}>
         {children}
         <Sheet open={asking} onClose={() => setAsking(false)} title={t.common.discardTitle}>
@@ -201,10 +223,10 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
   )
 }
 
-/** One toast. Exported so the design page can show it at rest. */
+/** One toast. Exported so the design page can show it at rest. The Toaster's region says it; the toast itself is no region of its own, so it is heard once. */
 export function ToastItem({ text, action, onAction }: { text: string; action?: string; onAction?: () => void }) {
   return (
-    <div className={styles.toast} role="status">
+    <div className={styles.toast}>
       <span>{text}</span>
       {action && (
         <button type="button" className={styles.toastAction} onClick={onAction}>
@@ -216,27 +238,61 @@ export function ToastItem({ text, action, onAction }: { text: string; action?: s
 }
 
 /** Tiny toast queue. `toast(msg)` from anywhere; an optional action stays 6 s instead of 2.8 s. */
-type ToastMsg = { id: number; msg: string; action?: string; onAction?: () => void }
-let listeners: Array<(m: Omit<ToastMsg, 'id'>) => void> = []
+type ToastMsg = { id: number; msg: string; action?: string; onAction?: () => void; until: number }
+let listeners: Array<(m: Omit<ToastMsg, 'id' | 'until'>) => void> = []
 export function toast(msg: string, action?: { label: string; onClick: () => void }) {
   listeners.forEach((l) => l({ msg, action: action?.label, onAction: action?.onClick }))
 }
+/**
+ * The toasts' region is always there, empty between toasts (A11Y-14): a live
+ * region inserted together with its first message is one VoiceOver and NVDA
+ * often skip. A toast's time stops while the pointer or focus is on it, so its
+ * action («Deshacer») can be read and reached before it goes (WCAG 2.2.1).
+ */
 export function Toaster() {
   const [msgs, setMsgs] = useState<ToastMsg[]>([])
+  /** When the pointer or focus came onto a toast; null while time runs. */
+  const [pausedAt, setPausedAt] = useState<number | null>(null)
+  const queued = useRef(0)
   useEffect(() => {
-    const l = (m: Omit<ToastMsg, 'id'>) => {
+    const l = (m: Omit<ToastMsg, 'id' | 'until'>) => {
       const id = Date.now() + Math.random()
-      setMsgs((cur) => [...cur, { id, ...m }])
-      setTimeout(() => setMsgs((cur) => cur.filter((x) => x.id !== id)), m.action ? 6000 : 2800)
+      // Into an empty queue nothing is held: a toast removed under the pointer or the focus sends no leave or blur.
+      if (queued.current === 0) setPausedAt(null)
+      setMsgs((cur) => [...cur, { id, ...m, until: Date.now() + (m.action ? 6000 : 2800) }])
     }
     listeners.push(l)
     return () => {
       listeners = listeners.filter((x) => x !== l)
     }
   }, [])
-  if (!msgs.length) return null
+  useEffect(() => {
+    queued.current = msgs.length
+    if (pausedAt != null || !msgs.length) return
+    const now = Date.now()
+    const timers = msgs.map((m) => setTimeout(() => setMsgs((cur) => cur.filter((x) => x.id !== m.id)), Math.max(0, m.until - now)))
+    return () => timers.forEach(clearTimeout)
+  }, [msgs, pausedAt])
+  const pause = () => setPausedAt((at) => at ?? Date.now())
+  const resume = () => {
+    if (pausedAt == null) return
+    // The time spent paused is given back to every toast still showing.
+    const held = Date.now() - pausedAt
+    setMsgs((cur) => cur.map((m) => ({ ...m, until: m.until + held })))
+    setPausedAt(null)
+  }
   return (
-    <div className={styles.toaster} aria-live="polite">
+    <div
+      className={styles.toaster}
+      role="status"
+      aria-live="polite"
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+      onFocus={pause}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) resume()
+      }}
+    >
       {msgs.map((m) => (
         <ToastItem
           key={m.id}
@@ -244,6 +300,7 @@ export function Toaster() {
           action={m.action}
           onAction={() => {
             m.onAction?.()
+            resume()
             setMsgs((cur) => cur.filter((x) => x.id !== m.id))
           }}
         />

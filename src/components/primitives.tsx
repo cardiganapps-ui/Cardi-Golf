@@ -367,12 +367,14 @@ export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text
 }
 
 // ---- Event name, wordmark, plate ----
-export function EventName({ name, tagline, logoUrl, small }: { name: string; tagline?: string; logoUrl?: string | null; small?: boolean }) {
+/** `heading`: the name is the screen's h1 (Entrar, A11Y-13); its class sets every property the h1 would change. */
+export function EventName({ name, tagline, logoUrl, small, heading }: { name: string; tagline?: string; logoUrl?: string | null; small?: boolean; heading?: boolean }) {
+  const Name = heading ? 'h1' : 'div'
   return (
     <div className={s.event}>
       {logoUrl && <TournamentLogo url={logoUrl} className={s.eventLogo} />}
       <div>
-        <div className={`${s.eventName} ${small ? s.eventNameSm : ''}`}>{name}</div>
+        <Name className={`${s.eventName} ${small ? s.eventNameSm : ''}`}>{name}</Name>
         {!small && <div className={s.eventRule} aria-hidden="true" />}
         {tagline && !small && <div className={s.eventTagline}>{tagline}</div>}
       </div>

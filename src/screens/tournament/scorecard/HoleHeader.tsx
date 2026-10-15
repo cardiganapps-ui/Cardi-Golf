@@ -28,7 +28,7 @@ export const HoleHeader = memo(function HoleHeader(p: {
       <button className={styles.holeNav} type="button" onClick={p.onPrev} disabled={!p.canPrev} aria-label={S.prev}>
         <IconChevronLeft />
       </button>
-      <h1 className={styles.holeTitle}>
+      <h1 className={styles.holeTitle} data-view-heading>
         <span className="sr-only">{p.spoken}</span>
         <motion.span className={`${styles.holeFig} ${styles.swipeArea}`} style={{ x: p.dragX }} aria-hidden="true">
           <span ref={p.titleRef} className={styles.holeFig}>
