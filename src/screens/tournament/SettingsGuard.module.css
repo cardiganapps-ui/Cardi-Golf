@@ -1,0 +1,12 @@
+/* «Actualiza la app» in place of a screen this build can't compute (ARCH-04). */
+.notice {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+  margin: var(--s4);
+}
+/* The page's own heading (focus lands on it after a page change), at a card's size. */
+.title {
+  font-size: var(--fs-xl);
+  color: var(--under);
+}

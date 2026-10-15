@@ -8,6 +8,7 @@ import { lazy } from 'react'
 import { Lazy } from '../../components/ui'
 import { GamesScreen } from '../tournament/GamesScreen'
 import { LiveScreen } from '../tournament/LiveScreen'
+import { SettingsGuard } from '../tournament/SettingsGuard'
 import { TournamentShell } from '../tournament/TournamentShell'
 import { SpectatorMoney } from './SpectatorGate'
 
@@ -22,5 +23,5 @@ export const spectatorChildren = [
       { path: 'dinero', element: <SpectatorMoney /> },
     ],
   },
-  { path: 'tv', element: <Lazy><TvScreen /></Lazy> },
+  { path: 'tv', element: <SettingsGuard><Lazy><TvScreen /></Lazy></SettingsGuard> },
 ]

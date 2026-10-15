@@ -441,11 +441,16 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 195,
+      "tests": [
+        "src/engine/settings/read.test.ts",
+        "src/screens/tournament/SettingsGuard.test.tsx",
+        "src/data/settingsWrite.test.ts",
+        "src/data/spectator.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The server still stores whatever settings it is sent (no validation in SQL): every write comes from a build's parsed settings, key by key, and an older build now refuses to write over what it can't read."
     },
     {
       "id": "ARCH-05",

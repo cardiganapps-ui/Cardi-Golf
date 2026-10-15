@@ -16,10 +16,10 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { create } from 'zustand'
-import { z } from 'zod'
 import { computeTournament, type TournamentState } from '../engine/computeTournament'
 import { shareSnapshot } from './share'
-import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
+import { readSettings } from '../engine/settings/read'
+import type { TournamentSettings } from '../engine/settings/schema'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import type { Snapshot } from '../engine/types'
 import { humanError, isTransient } from '../lib/humanError'
@@ -61,6 +61,12 @@ export interface TournamentData {
   /** The server's rows only: what live changes apply to, and what the phone keeps. */
   base: Snapshot
   settings: TournamentSettings
+  /**
+   * This build can't read the tournament's settings (ARCH-04): a newer build wrote a key it
+   * doesn't know, or the schema refuses a value. What it doesn't recognize, for the Comité.
+   * `settings` and `state` are then the defaults', which no screen shows: the boards, the
+   * money and the Comité's setup say to update the app instead (`SettingsGuard`).
+   */
   settingsError: string | null
   state: TournamentState
   /**
@@ -380,13 +386,10 @@ function compute(raw: Snapshot, playersKey = playersKeyOf(raw), last: Tournament
     settings = prev.settings
     settingsError = prev.settingsError
   } else {
-    try {
-      settings = parseSettings(snapshot.tournament.settings)
-    } catch (e) {
-      settings = DEFAULT_SETTINGS
-      // The schema's own lines (what to fix), not ZodError's JSON dump; anything else as copy (COPY-04).
-      settingsError = e instanceof z.ZodError ? e.issues.map((i) => i.message).join('; ') : humanError(e)
-    }
+    const read = readSettings(snapshot.tournament.settings)
+    settings = read.ok ? read.settings : DEFAULT_SETTINGS
+    // What it doesn't recognize (a newer build's key, or the schema's own lines), never ZodError's JSON dump (COPY-04).
+    if (!read.ok) settingsError = read.detail.join('; ')
   }
   return { snapshot, base, settings, settingsError, state: computeTournament(snapshot, settings), playersKey }
 }

@@ -182,7 +182,7 @@ export function LiveScreen() {
   }, [data, showMoney])
 
   if (!data) return null
-  const { snapshot, state, settings, settingsError } = data
+  const { snapshot, state, settings } = data
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const board = state.modules.individual
   // A team format ranks teams, so a row covers more than one player.
@@ -272,11 +272,11 @@ export function LiveScreen() {
     <div className={styles.screen}>
       {/* The tournament's home page is named after it, for headings and for focus after a page change (A11Y-13); the header shows the name. */}
       <h1 className="sr-only">{snapshot.tournament.name}</h1>
-      {/* What the Comité acts on (a broken setting, a tiebreak to answer, a warning) is not a spectator's to read (STRAT-05). */}
-      {settingsError && !spectator && (
-        <div className="card card--alert">
-          <strong>{t.admin.tournament.invalid}</strong>
-          <p className="small">{settingsError}</p>
+      {/* A side game this build doesn't know may move money: no screen shows any, and this says why (ARCH-04). Settings it can't read at
+          all never reach this screen (SettingsGuard). */}
+      {state.flags.moneyUnknown.length > 0 && (
+        <div className="card card--alert" role="note">
+          <p>{t.outdated.money(state.flags.moneyUnknown)}</p>
         </div>
       )}
 

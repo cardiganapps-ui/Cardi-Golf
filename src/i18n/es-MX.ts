@@ -1823,6 +1823,26 @@ export const t = {
     },
     disputedHint: 'Los hoyos marcados los capturaron dos teléfonos con valores distintos. Vale el último; la firma de la tarjeta lo confirma.',
   },
+  /**
+   * A tournament's settings this build can't read in full (ARCH-04): a newer build wrote them.
+   * The boards, the money and the Comité's setup wait for the update instead of computing the
+   * defaults, and a side game it doesn't know is named and left out.
+   */
+  outdated: {
+    title: 'Actualiza la app',
+    body: 'Esta versión de la app no puede leer las reglas de este torneo, así que no muestra puntos ni dinero: con reglas que no conoce, saldrían mal.',
+    /** For the Comité: what it doesn't recognize («modules.wolf»). */
+    detail: (what: string) => `Lo que no reconoce: ${what}`,
+    /** A side game of a type this build doesn't know, among the warnings. */
+    game: (label: string) => `${label}: esta versión de la app no conoce este juego. Actualiza la app.`,
+    /** No money on any screen: a game it doesn't know may move some. */
+    money: (labels: string[]) =>
+      `Esta versión de la app no conoce ${andList(labels.map((l) => `«${l}»`))}, que ${labels.length > 1 ? 'mueven' : 'mueve'} dinero, así que no muestra el dinero. Actualízala para verlo.`,
+    /** A save of the games while the row holds one this build doesn't know: the save would drop it. */
+    games: (labels: string[]) => `Esta versión de la app no conoce ${andList(labels.map((l) => `«${l}»`))}: actualízala para cambiar los juegos.`,
+    /** A Comité save over a row this build can't read. */
+    save: 'Esta versión de la app no puede leer la configuración de este torneo: actualízala para cambiarla.',
+  },
   games: {
     more: 'Más sobre los juegos',
     seeRules: 'Cómo se juega cada uno',
