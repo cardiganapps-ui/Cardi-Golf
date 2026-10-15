@@ -216,8 +216,8 @@ try {
   const page2 = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_before: hist?.[1]?.id, p_limit: 1 })
   check(page2.data?.length === 1 && page2.data[0].id < hist[1].id, 'and pages by id')
   // TRUST-19 (0063): narrowed on the server, a player's scores, a hole, the admin's changes; and no account in any image.
-  const { data: byHole, error: byHoleErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { player: p0.id, hole: 4 } })
-  check(!byHoleErr && byHole?.length > 0 && byHole.every((h) => h.table === 'scores' && (h.after ?? h.before)?.player_id === p0.id && (h.after ?? h.before)?.hole === 4), 'tournament_audit narrows to a player\'s hole', { byHoleErr: byHoleErr?.message, n: byHole?.length })
+  const { data: byHole, error: byHoleErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { player: p0.id, hole: 3 } })
+  check(!byHoleErr && byHole?.length > 0 && byHole.every((h) => h.table === 'scores' && (h.after ?? h.before)?.player_id === p0.id && (h.after ?? h.before)?.hole === 3), 'tournament_audit narrows to a player\'s hole (the 3 the admin fixed unlocked)', { byHoleErr: byHoleErr?.message, n: byHole?.length })
   const { data: byAdmin } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { platform: true } })
   check(byAdmin?.length > 0 && byAdmin.every((h) => h.platform), 'and to the admin\'s changes, over the whole history')
   // U's profile is p0's (profile_id is its account), A owns the tournament (created_by, the organizer's row), P is the admin.
