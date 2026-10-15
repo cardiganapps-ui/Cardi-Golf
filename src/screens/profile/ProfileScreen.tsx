@@ -28,7 +28,6 @@ import {
   type ProfileTournament,
   type RoundResult,
 } from '../../data/profiles'
-import { PROFILE_FIXTURES } from '../../dev/profileFixtures'
 import { BadgesSection, RecapButton, RecordsSection } from './Achievements'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
@@ -490,11 +489,4 @@ function ProfilePage({ handle }: { handle: string }) {
     )
   }
   return <ProfileView card={card} tournaments={extra.tournaments} rounds={extra.rounds} money={extra.money} friendship={friendship} friendBusy={friendBusy} onFriend={(a) => void onFriend(a)} />
-}
-
-/** `/p/_/:name` (design routes only): the profile on fixture data. */
-export function ProfileFixture() {
-  const { name = 'yo' } = useParams()
-  const f = PROFILE_FIXTURES[name] ?? PROFILE_FIXTURES.yo!
-  return <ProfileView card={f.card} tournaments={f.tournaments} rounds={f.rounds} money={f.money} />
 }

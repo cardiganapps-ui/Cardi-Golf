@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { Lazy } from '../components/ui'
 import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
@@ -15,29 +15,22 @@ import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
 import { TournamentGate } from '../screens/tournament/TournamentGate'
 import { EntrarScreen } from '../screens/profile/EntrarScreen'
 import { OAuthReturnScreen } from '../screens/profile/OAuthReturnScreen'
-import { ProfileFixture, ProfileScreen } from '../screens/profile/ProfileScreen'
+import { ProfileScreen } from '../screens/profile/ProfileScreen'
 const ProfileEditScreen = lazy(() => import('../screens/profile/ProfileEditScreen').then((m) => ({ default: m.ProfileEditScreen })))
 const FriendsScreen = lazy(() => import('../screens/profile/FriendsScreen').then((m) => ({ default: m.FriendsScreen })))
 const InboxScreen = lazy(() => import('../screens/profile/InboxScreen').then((m) => ({ default: m.InboxScreen })))
 const VersusScreen = lazy(() => import('../screens/profile/VersusScreen').then((m) => ({ default: m.VersusScreen })))
 const QuickRoundScreen = lazy(() => import('../screens/profile/QuickRoundScreen').then((m) => ({ default: m.QuickRoundScreen })))
 const CoursesScreen = lazy(() => import('../screens/profile/CoursesScreen').then((m) => ({ default: m.CoursesScreen })))
-const QuickFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.QuickFixture })))
 const CrewsScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewsScreen })))
 const CrewJoinScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewJoinScreen })))
 const CrewScreen = lazy(() => import('../screens/profile/CrewScreen').then((m) => ({ default: m.CrewScreen })))
-const CrewFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.CrewFixture })))
-const RecapFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.RecapFixture })))
 const LegalScreen = lazy(() => import('../screens/LegalScreen').then((m) => ({ default: m.LegalScreen })))
-const FriendsFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.FriendsFixture })))
-const InboxFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.InboxFixture })))
-const VersusFixture = lazy(() => import('../dev/socialFixtures').then((m) => ({ default: m.VersusFixtureScreen })))
-import { FixtureGate, FixtureIndex } from '../dev/FixtureGate'
-import { SpectatorFixture } from '../dev/SpectatorFixture'
 import { SpectatorGate } from '../screens/spectator/SpectatorGate'
 import { spectatorChildren } from '../screens/spectator/routes'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { SettingsGuard } from '../screens/tournament/SettingsGuard'
+import { devRoutes } from './devRoutes'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
@@ -63,7 +56,6 @@ const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({
 const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
 /** `npm run dev`, or a build with VITE_DESIGN_ROUTES=1 (Vercel Preview, design-shots). */
 const DESIGN_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES === '1'
-const DesignScreen = lazy(() => import('../design/DesignScreen').then((m) => ({ default: m.DesignScreen })))
 const PlatformLayout = lazy(() => import('../screens/platform').then((m) => ({ default: m.PlatformLayout })))
 const PlatformOverview = lazy(() => import('../screens/platform').then((m) => ({ default: m.OverviewScreen })))
 const PlatformTournaments = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentsScreen })))
@@ -77,7 +69,6 @@ const PlatformCrew = lazy(() => import('../screens/platform').then((m) => ({ def
 const PlatformNotices = lazy(() => import('../screens/platform').then((m) => ({ default: m.NoticesScreen })))
 const PlatformAudit = lazy(() => import('../screens/platform').then((m) => ({ default: m.AuditScreen })))
 const PlatformHealth = lazy(() => import('../screens/platform').then((m) => ({ default: m.HealthScreen })))
-const PlatformFixture = lazy(() => import('../dev/platformFixtures').then((m) => ({ default: m.PlatformFixture })))
 const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
 const AdminTeams = lazy(() => import('../screens/admin/AdminTeams').then((m) => ({ default: m.AdminTeams })))
 
@@ -150,6 +141,12 @@ const platformChildren = [
   { path: 'salud', element: <Lazy><PlatformHealth /></Lazy> },
 ]
 
+/**
+ * The style guide and the design fixtures (ARCH-07), only where DESIGN_ROUTES holds. A production build folds
+ * this to `[]` and drops `devRoutes.tsx` with it, so none of their code ships or is precached.
+ */
+const DEV_ROUTES: RouteObject[] = DESIGN_ROUTES ? devRoutes({ tournamentChildren, platformChildren }) : []
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -174,26 +171,9 @@ export const router = createBrowserRouter([
       { path: 'ronda', element: <Lazy><QuickRoundScreen /></Lazy> },
       { path: 'campos', element: <Lazy><CoursesScreen /></Lazy> },
       { path: 'crews', element: <Lazy><CrewsScreen /></Lazy> },
-      // Dev-only: the style guide and the design fixtures (the same screens on in-memory
-      // tournaments, src/dev). In production they exist only on preview builds. Must precede `t/:slug`.
-      ...(DESIGN_ROUTES
-        ? [
-            { path: 'fixture', element: <FixtureIndex /> },
-            { path: 'design', element: <Lazy><DesignScreen /></Lazy> },
-            { path: 'organizer/nuevo/_', element: <NewTournamentScreen demo /> },
-            { path: 't/_/:name', element: <FixtureGate />, children: tournamentChildren },
-            { path: 'v/_/:name', element: <SpectatorFixture />, children: spectatorChildren },
-            { path: 'v/_dinero/:name', element: <SpectatorFixture money />, children: spectatorChildren },
-            { path: 'p/_/:name', element: <ProfileFixture /> },
-            { path: 'p/_/:name/vs', element: <Lazy><VersusFixture /></Lazy> },
-            { path: 'p/_/:name/anio', element: <Lazy><RecapFixture /></Lazy> },
-            { path: 'amigos/_', element: <Lazy><FriendsFixture /></Lazy> },
-            { path: 'avisos/_', element: <Lazy><InboxFixture /></Lazy> },
-            { path: 'ronda/_', element: <Lazy><QuickFixture /></Lazy> },
-            { path: 'c/_', element: <Lazy><CrewFixture /></Lazy> },
-            { path: 'admin/_', element: <Lazy><PlatformFixture /></Lazy>, children: platformChildren },
-          ]
-        : []),
+      // Dev-only: the style guide and the design fixtures (devRoutes.tsx). In production they exist only on
+      // preview builds. Must precede `t/:slug`.
+      ...DEV_ROUTES,
       // The Admin de Polo panel: only the platform admin gets past the gate.
       { path: 'admin', element: <PlatformGate />, children: [{ element: <Lazy><PlatformLayout /></Lazy>, children: platformChildren }] },
       { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
