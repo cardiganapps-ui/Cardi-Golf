@@ -284,9 +284,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 177,
+      "tests": [
+        "src/components/Segmented.test.tsx",
+        "src/screens/admin/AdminTournament.status.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
