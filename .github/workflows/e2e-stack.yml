@@ -41,8 +41,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
         with:
           version: 2.117.0
       # Pulling the images takes a while: it runs alongside npm ci and the browser install.
@@ -52,14 +52,14 @@ jobs:
         run: |
           ( supabase start -x studio,postgres-meta,imgproxy,storage-api,edge-runtime,logflare,vector,mailpit,supavisor \
               > "$RUNNER_TEMP/supabase-start.log" 2>&1; echo $? > "$RUNNER_TEMP/supabase-start.exit" ) &
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       # The browser download once stalled until the job's timeout, before any test ran: cache it, and give
       # each attempt four minutes, three attempts.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -103,7 +103,7 @@ jobs:
             echo "::group::$c"; docker logs --tail 300 "$c" 2>&1; echo "::endgroup::"
           done
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-stack
           path: |
