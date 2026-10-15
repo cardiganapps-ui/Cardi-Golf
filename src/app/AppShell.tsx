@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router'
+import { Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { MaintenanceBanner } from '../components/MaintenanceBanner'
 import { UpdateBar } from '../components/UpdateBar'
@@ -11,6 +11,7 @@ import { useAppFlags, usePlatform } from '../data/platform'
 import { LateSignOutHome } from './LateSignOut'
 import { LegalUpdate } from './LegalUpdate'
 import { RouteAnnouncer } from './RouteAnnouncer'
+import { scrollKey } from './scrollKey'
 import { listenForLaunches } from '../lib/launch'
 import { isLinkPage } from '../lib/linkPage'
 import styles from './AppShell.module.css'
@@ -65,6 +66,8 @@ export function AppShell() {
       <LegalUpdate />
       <Toaster />
       <RouteAnnouncer />
+      {/* Each tab and Comité section keeps its own scroll; any other page its history entry's (MOT-16). */}
+      <ScrollRestoration getKey={scrollKey} />
     </div>
   )
 }
