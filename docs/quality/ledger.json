@@ -3183,9 +3183,11 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 157,
+      "tests": [
+        "src/lib/pushSw.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

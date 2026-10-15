@@ -16,20 +16,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
-import { timingSafeEqual } from 'node:crypto'
 import { noticeLine, type NoticeLike } from '../src/lib/noticeText.js'
 import { jsonBody } from '../src/server/body.js'
+import { bearerMatches } from '../src/server/secret.js'
 
 interface Body {
   subscriptions?: Array<{ endpoint: string; keys: { p256dh: string; auth: string } }>
   notice?: NoticeLike & { id: string }
   unread?: number
-}
-
-const sameSecret = (a: string, b: string) => {
-  const x = Buffer.from(a)
-  const y = Buffer.from(b)
-  return x.length === y.length && timingSafeEqual(x, y)
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -38,8 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pub = process.env.VAPID_PUBLIC_KEY
   const priv = process.env.VAPID_PRIVATE_KEY
   if (!secret || !pub || !priv) return res.status(503).json({ error: 'push not configured' })
-  const auth = String(req.headers.authorization ?? '')
-  if (!sameSecret(auth, `Bearer ${secret}`)) return res.status(401).json({ error: 'unauthorized' })
+  if (!bearerMatches(req.headers.authorization, secret)) return res.status(401).json({ error: 'unauthorized' })
 
   const body = jsonBody(req) as Body | null
   if (!body) return res.status(400).json({ error: 'body' })
