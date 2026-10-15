@@ -312,3 +312,10 @@
   font-weight: 600;
   color: var(--caution);
 }
+
+/* Historial's filters (TRUST-19): as many columns as fit, two on a phone. */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--s3);
+}

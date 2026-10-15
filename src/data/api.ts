@@ -69,13 +69,13 @@ export async function deleteTournament(id: string) {
   unwrap(await supabase().from('tournaments').delete().eq('id', id).select('id'))
 }
 
-/** One change in a tournament's history (migration 0022 `tournament_audit`). */
+/** One change in a tournament's history (migration 0022 `tournament_audit`; its filters 0063). */
 export interface AuditEntry {
   id: number
   at: string
   table: string
   action: 'INSERT' | 'UPDATE' | 'DELETE'
-  rowId: string
+  rowId: string | null
   /** The Admin de Polo, outside a tournament he belongs to. */
   platform: boolean
   /** The player or account name; null for the admin or when nobody is known. */
@@ -90,9 +90,20 @@ export interface AuditEntry {
   after: Record<string, unknown> | null
 }
 
-/** The Comité's history, newest first; `before` pages by id. */
-export async function tournamentAudit(tournamentId: string, before?: number, limit = 50): Promise<AuditEntry[]> {
-  return rpc<AuditEntry[]>('tournament_audit', { p_tournament_id: tournamentId, p_before: before ?? null, p_limit: limit })
+/** What Historial narrows to (0063, TRUST-19): his rows, that day's, that hole's, the Comité's corrections, the Admin de Polo's. */
+export interface AuditFilter {
+  player?: string
+  round?: string
+  hole?: number
+  corrections?: boolean
+  platform?: boolean
+}
+
+/** The Comité's history, newest first; `before` pages by id, within what `filter` leaves. */
+export async function tournamentAudit(tournamentId: string, before?: number, limit = 50, filter?: AuditFilter): Promise<AuditEntry[]> {
+  // The filter goes only when there is one: a call without it is the one every server since 0022 answers.
+  const f = Object.fromEntries(Object.entries(filter ?? {}).filter(([, v]) => v !== undefined && v !== false && v !== ''))
+  return rpc<AuditEntry[]>('tournament_audit', { p_tournament_id: tournamentId, p_before: before ?? null, p_limit: limit, ...(Object.keys(f).length ? { p_filter: f } : {}) })
 }
 
 /** Protegido on or off: the owner or the platform admin. Off needs a reason. */
