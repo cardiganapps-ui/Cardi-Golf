@@ -97,7 +97,8 @@ function playedHoles(holes: HoleResult[]) {
 
 export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?: SnakeState; auction?: AuctionState }, scoring: MainScoring = 'points'): StatsState {
   const players: Record<Id, PlayerStats> = {}
-  const allMoments: Array<{ playerId: Id; roundNumber: number; hole: number; points: number; value: number; strokeIndex: number }> = []
+  // The tournament's best hole figure so far; ties go to the harder stroke index, then to the first one read.
+  let moment: StatsState['moment'] = null
   const points = scoring === 'points'
   /** A played hole's figure: its points, or its strokes against par. */
   const valueOf = (h: HoleResult) => (points ? h.points : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par)
@@ -173,10 +174,17 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
         // A scoring hole: some points, or no worse than bogey on the counted score.
         streak = (points ? h.points > 0 : v <= 1) ? streak + 1 : 0
         st.longestStreak = Math.max(st.longestStreak, streak)
-        const m = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, value: v, strokeIndex: h.strokeIndex }
-        if (!st.bestHole || better(m.value, st.bestHole.value) || (m.value === st.bestHole.value && m.strokeIndex < st.bestHole.strokeIndex)) st.bestHole = m
-        if (!st.worstHole || better(st.worstHole.value, m.value) || (m.value === st.worstHole.value && m.strokeIndex > st.worstHole.strokeIndex)) st.worstHole = m
-        allMoments.push({ playerId: p.id, ...m })
+        // A hole is written down only where it takes a place (PERF-14: one copy of every hole was made to find the moment).
+        const si = h.strokeIndex
+        const isBest = !st.bestHole || better(v, st.bestHole.value) || (v === st.bestHole.value && si < st.bestHole.strokeIndex)
+        const isWorst = !st.worstHole || better(st.worstHole.value, v) || (v === st.worstHole.value && si > st.worstHole.strokeIndex)
+        const isMoment = !moment || better(v, moment.value) || (v === moment.value && si < moment.strokeIndex)
+        if (isBest || isWorst || isMoment) {
+          const m: NonNullable<PlayerStats['bestHole']> = { roundNumber: pr.roundNumber, hole: h.hole, points: h.points, value: v, strokeIndex: si }
+          if (isBest) st.bestHole = m
+          if (isWorst) st.worstHole = m
+          if (isMoment) moment = { playerId: p.id, ...m }
+        }
       }
       st.valuePerRound.push(roundValue)
     }
@@ -250,9 +258,7 @@ export function computeStats(snapshot: Snapshot, core: CoreState, mods: { snake?
       if (!cursedHole || better(cursedHole.avg, h.avg)) cursedHole = { roundNumber: r.roundNumber, hole: h.hole, avgPoints: h.avgPoints, avg: h.avg }
     }
   }
-  // Moment of the tournament: the best hole figure; ties go to the harder stroke index.
-  const moment = allMoments.length ? allMoments.reduce((a, b) => (better(b.value, a.value) || (b.value === a.value && b.strokeIndex < a.strokeIndex) ? b : a)) : null
-  // A moment is a good hole: some points, or under par.
+  // Moment of the tournament (above): the best hole figure. A moment is a good hole: some points, or under par.
   const memorable = moment && (points ? moment.value > 0 : moment.value < 0)
 
   return { scoring, players, rounds, awards, cursedHole, moment: memorable ? moment : null }
