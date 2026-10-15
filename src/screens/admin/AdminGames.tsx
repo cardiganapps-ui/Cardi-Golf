@@ -231,6 +231,7 @@ function MatchSheet({ game, onClose, onSave }: { game: GameConfig | null; onClos
             setSize(v)
             reset()
           }}
+          label={G.matchKind}
         />
         {(['a', 'b'] as const).map((side) => (
           <div key={side} className="stack">

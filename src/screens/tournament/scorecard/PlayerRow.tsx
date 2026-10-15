@@ -45,12 +45,13 @@ export const PlayerRow = memo(function PlayerRow(p: {
               {name}
             </span>
             {p.locked && (
-              <span className={styles.lockMark} aria-label={S.cardSigned}>
+              <span className={styles.lockMark} role="img" aria-label={S.cardSigned}>
                 <IconLock size={14} />
               </span>
             )}
+            {/* A11Y-22: an image with its words; a label on a bare span is dropped, and the dots were read as «•••». */}
             {h.strokesReceived > 0 && (
-              <span className={styles.dots} aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
+              <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
                 {'•'.repeat(h.strokesReceived)}
               </span>
             )}

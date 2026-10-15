@@ -198,6 +198,7 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
               { value: 'gross', label: S.gross },
             ]}
             onChange={setBasis}
+            label={S.basis}
           />
         </div>
         {h2h.rounds.length === 0 ? (

@@ -6,6 +6,9 @@
  * Behavioural components (sheet, toasts, loading, avatar) live in ./ui.
  */
 import {
+  cloneElement,
+  isValidElement,
+  useId,
   useLayoutEffect,
   useRef,
   type ButtonHTMLAttributes,
@@ -13,6 +16,7 @@ import {
   type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactElement,
   type ReactNode,
   type RefObject,
 } from 'react'
@@ -74,18 +78,76 @@ export function Button({
 }
 
 // ---- Fields ----
+/**
+ * A label and its control, with a hint or an error under it (A11Y-24). The label holds only its words and the
+ * control, so the control is named by the label alone; the hint and the error describe it (`aria-describedby`)
+ * and an error marks it invalid (`aria-invalid`) and is said as it appears. They used to sit inside the label and
+ * became part of the field's name, and nothing was ever marked invalid. Anything that is not one field (a row of
+ * choices, a segmented switch, a list) is a group named by the label: a label around it handed a tap on its words
+ * to the first button in it.
+ */
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
-  return (
-    <label className={s.field}>
-      <span className={s.fieldLabel}>{label}</span>
-      {children}
-      {hint && !error && <span className={s.help}>{hint}</span>}
-      {error && <span className={s.errorText}>{error}</span>}
-    </label>
+  const id = useId()
+  const hintId = hint && !error ? `${id}-hint` : undefined
+  const errorId = error ? `${id}-error` : undefined
+  const notes = (
+    <>
+      {hintId && (
+        <span id={hintId} className={s.help}>
+          {hint}
+        </span>
+      )}
+      {errorId && (
+        <span id={errorId} className={s.errorText} role="alert">
+          {error}
+        </span>
+      )}
+    </>
   )
+  if (!isLabelable(children)) {
+    return (
+      <div className={s.field} role="group" aria-labelledby={`${id}-label`} aria-describedby={hintId ?? errorId}>
+        <span id={`${id}-label`} className={s.fieldLabel}>
+          {label}
+        </span>
+        {children}
+        {notes}
+      </div>
+    )
+  }
+  const own = children.props as { 'aria-describedby'?: string; 'aria-invalid'?: boolean | 'true' | 'false' }
+  const control = cloneElement(children as ReactElement<Record<string, unknown>>, {
+    'aria-describedby': [own['aria-describedby'], hintId ?? errorId].filter(Boolean).join(' ') || undefined,
+    'aria-invalid': error ? true : own['aria-invalid'],
+  })
+  return (
+    <div className={s.field}>
+      <label className={s.fieldControl}>
+        <span className={s.fieldLabel}>{label}</span>
+        {control}
+      </label>
+      {notes}
+    </div>
+  )
+}
+/** One field a label names: a native input, select or textarea, or a component that renders one (`labelable`). */
+function isLabelable(node: ReactNode): node is ReactElement {
+  if (!isValidElement(node)) return false
+  return typeof node.type === 'string' ? ['input', 'select', 'textarea'].includes(node.type) : !!(node.type as { labelable?: boolean }).labelable
 }
 export function Input({ error, code, className = '', ...rest }: InputHTMLAttributes<HTMLInputElement> & { error?: boolean; code?: boolean }) {
   return <input className={`${s.input} ${error ? s.inputError : ''} ${code ? s.codeInput : ''} ${className}`} {...rest} />
+}
+Input.labelable = true
+
+/** «SI» on the card, «índice de golpe» spoken (A11Y-22): a Spanish voice reads the letters as «sí». */
+export function SiAbbr() {
+  return (
+    <>
+      <span aria-hidden="true">{t.player.si}</span>
+      <span className="sr-only">{t.player.siSpoken}</span>
+    </>
+  )
 }
 
 // ---- Figures ----
@@ -435,7 +497,9 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
           <td className={s.gridTotal}>{sum(hs, (h) => h.par)}</td>
         </tr>
         <tr className={s.gridMeta}>
-          <th scope="row">{t.player.si}</th>
+          <th scope="row">
+            <SiAbbr />
+          </th>
           {hs.map((h) => (
             <td key={h.n}>{h.si}</td>
           ))}

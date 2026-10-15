@@ -182,6 +182,7 @@ export function StatsScreen() {
                   setCursor(null)
                   setPlaying(false)
                 }}
+                label={S.raceKind}
               />
             )}
             <p className={styles.help}>{raceKind === 'players' && strokes ? S.raceHintStrokes : S.raceHint}</p>

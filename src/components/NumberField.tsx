@@ -38,6 +38,9 @@ interface Shared {
   inputClassName?: string
   /** Take focus when the sheet this lives in opens. See `Sheet` in ui.tsx. */
   autoFocusInSheet?: boolean
+  /** Its hint or error, and whether it is in error: `Field` sets them (A11Y-24). */
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean | 'true' | 'false'
 }
 
 /** How a committed value is written back into the box. */
@@ -108,6 +111,8 @@ function NumericBox({
   className = '',
   inputClassName = '',
   autoFocusInSheet,
+  'aria-describedby': describedBy,
+  'aria-invalid': invalid,
 }: Shared & {
   text: string
   onText: (next: string) => void
@@ -127,6 +132,8 @@ function NumericBox({
         disabled={disabled}
         placeholder={placeholder}
         aria-label={label}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
         value={text}
         data-autofocus={autoFocusInSheet ? '' : undefined}
         onFocus={onFocus}
@@ -168,6 +175,8 @@ export function NumberField({ value, onChange, min = 0, max, decimals = 0, ...re
     />
   )
 }
+// One field: a `Field` around it is its label (A11Y-24).
+NumberField.labelable = true
 
 export interface OptionalNumberFieldProps extends Shared {
   value: number | null
@@ -204,3 +213,4 @@ export function OptionalNumberField({ value, onChange, min = 0, max, decimals = 
     />
   )
 }
+OptionalNumberField.labelable = true

@@ -204,7 +204,7 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
                       {m.label}
                       {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
                     </span>
-                    <HowCalculated why={m.why} label={formatMoney(m.amount)} />
+                    <HowCalculated why={m.why} label={formatMoney(m.amount)} about={m.label} />
                   </div>
                 ))}
                 {person && (

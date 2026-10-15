@@ -79,8 +79,9 @@ test('Matrimonios and Calcutta boards: names in full, totals at the right edge (
       expect(r.gapRight, `${which}: the total sits at the right edge`).toBeLessThan(40)
     }
     if (which === 'rowOwner') {
-      await expect(page.getByText(t.tv.invested, { exact: true })).toBeVisible()
-      await expect(page.getByText(t.tv.worth, { exact: true })).toBeVisible()
+      // The column's label, not the words each row carries for a screen reader (A11Y-22).
+      await expect(page.getByText(t.tv.invested, { exact: true }).and(page.locator(':not(.sr-only)'))).toBeVisible()
+      await expect(page.getByText(t.tv.worth, { exact: true }).and(page.locator(':not(.sr-only)'))).toBeVisible()
     }
   }
 })

@@ -331,6 +331,7 @@ export function MoneyScreen() {
           { value: 'final', label: M.final },
         ]}
         onChange={setMode}
+        label={M.view}
       />
 
       <section className={styles.bank}>
@@ -347,7 +348,7 @@ export function MoneyScreen() {
           <span className={`${styles.bankVerdict} ${verdictClass}`}>{verdict}</span>
         </div>
         <span className={styles.bankHow}>
-          <HowCalculated why={money.banker.why} ariaLabel={`${t.money.howCalculated} ${M.bank}`} />
+          <HowCalculated why={money.banker.why} about={M.bank} />
         </span>
         {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
         {/* What the Comité fixes, and where in its screens: not a link to watch's to read (STRAT-05). */}
@@ -407,7 +408,7 @@ export function MoneyScreen() {
                           {pr.label.split(',')[0]}, {M.paysTo} {name(pr.playerId)}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount)} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount)} about={`${pr.label.split(',')[0]}, ${M.paysTo} ${name(pr.playerId)}`} />
                       </div>
                     ))}
                     {prizes.map((pr, i) => (
@@ -416,7 +417,7 @@ export function MoneyScreen() {
                           {pr.label}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount)} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount)} about={pr.label} />
                       </div>
                     ))}
                     {p.buybacksReceived > 0 && <Line label={M.buybacksReceived} amount={p.buybacksReceived} />}
@@ -445,7 +446,7 @@ export function MoneyScreen() {
                       {name(l.playerId)}
                       {l.label ? `, ${l.label}` : ''}
                     </span>
-                    <HowCalculated why={l.why} label={formatMoney(l.amount)} ariaLabel={`${t.money.howCalculated} ${g.label}: ${name(l.playerId)}${l.label ? `, ${l.label}` : ''}, ${formatMoney(l.amount)}`} />
+                    <HowCalculated why={l.why} label={formatMoney(l.amount)} about={`${g.label}, ${name(l.playerId)}${l.label ? `, ${l.label}` : ''}`} />
                   </div>
                 ))}
               </div>
@@ -484,6 +485,7 @@ export function MoneyScreen() {
                 { value: 'p2p', label: M.p2p },
               ]}
               onChange={setSettle}
+              label={M.settleHow}
             />
             <span className="help">{settle === 'bank' ? M.viaBankHint(banker?.displayName ?? M.bank) : M.p2pHint(banker?.displayName ?? null)}</span>
             {!state.tournamentFinal && <span className="help">{M.settlePreview}</span>}
@@ -512,7 +514,7 @@ export function MoneyScreen() {
                       )}
                     </span>
                     <span className={styles.amount}>
-                      <HowCalculated why={tr.why} label={formatMoney(tr.amount)} ariaLabel={`${t.money.howCalculated} ${lineText(tr.from, tr.to, tr.amount)}`} />
+                      <HowCalculated why={tr.why} label={formatMoney(tr.amount)} ariaLabel={t.money.howCalculatedOf(lineText(tr.from, tr.to, tr.amount))} />
                     </span>
                     {/* Every line keeps the slot, so a line with a provisional prize (no button) keeps its amount in the column. */}
                     {markable && (
