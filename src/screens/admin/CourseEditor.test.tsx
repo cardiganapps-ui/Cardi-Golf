@@ -24,12 +24,12 @@ function editor(onSave = vi.fn()) {
 }
 const saveButton = () => screen.getByRole('button', { name: t.common.save }) as HTMLButtonElement
 const rows = () => screen.getAllByRole('row').slice(1, 19)
-const cell = (hole: number, label: string) => within(rows()[hole - 1]!).getByLabelText(label) as HTMLInputElement
+const cell = (hole: number, label: (n: number) => string) => within(rows()[hole - 1]!).getByLabelText(label(hole)) as HTMLInputElement
 
 describe('a card started from scratch (UX-16)', () => {
   it('opens with every par and index empty, and will not save', () => {
     editor()
-    expect(rows().map((_, i) => [cell(i + 1, C.par).value, cell(i + 1, C.si).value])).toEqual(PARS.map(() => ['', '']))
+    expect(rows().map((_, i) => [cell(i + 1, C.parOf).value, cell(i + 1, C.siOf).value])).toEqual(PARS.map(() => ['', '']))
     expect(saveButton().disabled).toBe(true)
     expect(screen.getByText(`Azules: ${C.holesUntyped(PARS.map((_, i) => i + 1))}`)).toBeTruthy()
   })
@@ -47,12 +47,12 @@ describe('a card started from scratch (UX-16)', () => {
   it('one hole still to type keeps it from saving, and says which', async () => {
     editor()
     for (let h = 1; h <= 18; h++) {
-      await act(async () => fireEvent.change(cell(h, C.par), { target: { value: String(PARS[h - 1]) } }))
-      if (h !== 12) await act(async () => fireEvent.change(cell(h, C.si), { target: { value: String(SIS[h - 1]) } }))
+      await act(async () => fireEvent.change(cell(h, C.parOf), { target: { value: String(PARS[h - 1]) } }))
+      if (h !== 12) await act(async () => fireEvent.change(cell(h, C.siOf), { target: { value: String(SIS[h - 1]) } }))
     }
     expect(saveButton().disabled).toBe(true)
     expect(screen.getByText(`Azules: ${C.holesUntyped([12])}`)).toBeTruthy()
-    await act(async () => fireEvent.change(cell(12, C.si), { target: { value: String(SIS[11]) } }))
+    await act(async () => fireEvent.change(cell(12, C.siOf), { target: { value: String(SIS[11]) } }))
     expect(saveButton().disabled).toBe(false)
   })
 })

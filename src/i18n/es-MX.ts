@@ -888,6 +888,17 @@ export const t = {
     pairScoring: { bestBall: 'Mejor bola', aggregate: 'Suma de la pareja' } as Record<string, string>,
     kind: { closest: 'Más cerca', longDrive: 'Drive largo', greenie: 'Greenie', sandy: 'Sandy', custom: 'Otro' } as Record<string, string>,
     holes: 'Hoyos',
+    /** A11Y-22: what each switch on a game's card chooses, said by a screen reader before its options. */
+    choose: {
+      basis: 'Cuenta en',
+      scope: 'Se juega',
+      event: 'Paga por',
+      format: 'Formato',
+      kind: 'Tipo de concurso',
+      holes: 'En qué hoyos',
+      pairScoring: 'Cómo cuenta la pareja',
+      money: (game: string) => `Dinero de ${game}`,
+    },
     holesPar3: 'Par 3',
     holesAll: 'Todos',
     holesPick: 'Elegir',
@@ -1402,6 +1413,8 @@ export const t = {
     recordShort: { won: 'Ganadas', lost: 'Perdidas', tied: 'Empates' },
     recordHow: 'Neto: gross ajustado menos tu hándicap de campo en el tee que jugó cada uno. Gross: solo rondas sin hoyos levantados.',
     sharedRounds: 'Rondas juntos',
+    /** A11Y-22: the Neto/Gross switch over the shared rounds. */
+    basis: 'Contar en',
     noShared: 'Todavía no tienen rondas completas juntos. Cuando el Comité cierre una en la que jugaron los dos, sale aquí.',
     you: 'Tú',
     /** Between the two faces on Cara a cara. */
@@ -1491,6 +1504,13 @@ export const t = {
       `Hubo demasiados intentos con este PIN desde teléfonos nuevos. ${time ? `Vuelve a intentar a las ${time}` : 'Espera unos minutos'} o pídele al Comité que lo desbloquee. Donde ya entraste antes, sigue funcionando.`,
     playerGone: 'Ese jugador ya no está en el torneo. Elige tu nombre otra vez.',
     isThisYou: '¿Eres tú?',
+    /**
+     * A11Y-23: what a screen reader hears for a face: «Diego A., categoría A, homenajeado». It heard «Diego A. A» (the
+     * tier glued to the name) and nothing of the honoree's ring. The lookup carries no settings, so the honoree is
+     * the platform's word, not the tournament's label; a face the Comité proposed for this profile asks «¿Eres tú?».
+     */
+    faceSpoken: (name: string, tier: string | null, honoree: boolean, askMe: boolean) =>
+      [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : ''].filter(Boolean).join(', '),
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
     alreadyLinked: (name: string) => `Tu perfil ya es ${name || 'otro jugador'} en este torneo. Si no eres tú, pídele al Comité que lo corrija.`,
     notFound: 'Ese torneo no existe. Revisa el enlace o el código.',
@@ -1611,6 +1631,8 @@ export const t = {
     day: (n: number) => `Día ${n}`,
     hole: (n: number) => `Hoyo ${n}`,
     thru: (n: number, holes = 18) => (n === holes ? 'F' : `${n}`),
+    /** A11Y-22: «F» said as a word, never «hoyo efe». */
+    thruSpoken: (n: number, holes = 18) => (n === holes ? 'terminó' : `hoyo ${n}`),
   },
   money: {
     ifEndedNow: 'si terminara ahora',
@@ -1626,6 +1648,8 @@ export const t = {
     net: 'Neto',
     markPaid: 'Pagado',
     howCalculated: '¿Cómo se calculó?',
+    /** A11Y-25: a «¿Cómo se calculó?» shown as a figure is said as what it explains: «Campeón, $6,600: ¿Cómo se calculó?». */
+    howCalculatedOf: (what: string) => (what ? `${what}: ¿Cómo se calculó?` : '¿Cómo se calculó?'),
     entryFee: 'Inscripción',
     pot: 'Bolsa',
     prizes: 'Premios',
@@ -1646,6 +1670,8 @@ export const t = {
     updated: (when: string) => `Actualizado ${when}`,
     points: 'Puntos',
     gross: 'Gross',
+    /** A11Y-22: the Puntos/Gross switch's name. */
+    boardIn: 'Tablero en',
     /** The honoree's card where the event does not count points: its figure, today's, and his last hole in words. */
     spotlightFigure: (pos: string, figure: string, today: string | null, lastHole: number | null, lastText: string | null) =>
       `${ordinal(pos)} con ${figure}${today ? `, hoy ${today}` : ''}${lastHole != null && lastText ? `, hoyo ${lastHole}: ${lastText}` : ''}`,
@@ -1910,6 +1936,8 @@ export const t = {
     hole: 'Hoyo',
     par: 'Par',
     si: 'SI',
+    /** A11Y-22: how «SI» is said; a Spanish voice reads the letters as «sí». */
+    siSpoken: 'índice de golpe',
     pts: 'Pts',
     yards: (y: number) => `${y} yd`,
     grossShort: 'Gross',
@@ -2224,6 +2252,8 @@ export const t = {
       addMatch: 'Agregar partido',
       singles: 'Uno contra uno',
       pairs: 'Parejas',
+      /** A11Y-22: the singles/pairs switch's name. */
+      matchKind: 'Modalidad',
       sideA: 'Lado A',
       sideB: 'Lado B',
       pick: 'Elige',
@@ -2704,8 +2734,11 @@ export const t = {
       slope: 'Slope',
       hole: 'Hoyo',
       par: 'Par',
-      si: 'SI',
       yards: 'Yardas',
+      /** A11Y-22: each box says its hole, and «SI» in words (a Spanish voice reads the letters as «sí»). */
+      parOf: (n: number) => `Par del hoyo ${n}`,
+      siOf: (n: number) => `Índice de golpe del hoyo ${n}`,
+      yardsOf: (n: number) => `Yardas del hoyo ${n}`,
       parTotal: 'Par total',
       paste: 'Pegar de la tarjeta',
       pasteHint: 'Pega dos o tres líneas: pares, índices de golpe y (opcional) yardas de los 18 hoyos, separados por espacios o comas.',
@@ -2894,6 +2927,9 @@ export const t = {
   moneyScreen: {
     live: 'Si terminara ahora',
     byGame: 'Por juego',
+    /** A11Y-22: the names of Dinero's two switches. */
+    view: 'Ver el dinero',
+    settleHow: 'Cómo se paga',
     byGameEmpty: 'Todavía no hay premios repartidos',
     byGameEmptyHint: 'Aquí verás cuánto paga cada juego y a quién, en cuanto haya tarjetas.',
     seeRules: 'Ver el reglamento completo',
@@ -3138,6 +3174,8 @@ export const t = {
     raceStrokes: 'Carrera de golpes',
     raceHintStrokes: 'Golpes sobre o bajo par, acumulados hoyo por hoyo: más arriba va mejor. Toca «Revivir» para verla de nuevo.',
     pairsRace: 'Carrera de parejas',
+    /** A11Y-22: the switch between the players' race and the pairs'. */
+    raceKind: 'Carrera',
     play: 'Revivir',
     stop: 'Parar',
     course: 'El campo',
@@ -3328,9 +3366,10 @@ export const t = {
   },
   print: {
     print: 'Imprimir o guardar PDF',
+    /** A11Y-22: the cards/Calcutta switch's name. */
+    whatToPrint: 'Qué imprimir',
     hole: 'Hoyo',
     par: 'Par',
-    si: 'SI',
     startHole: (n: number) => `Salida por el ${n}`,
     legend: 'Los puntos (•) son los golpes de ventaja en ese hoyo. Arriba golpes, abajo putts.',
     sign: 'Firmas',

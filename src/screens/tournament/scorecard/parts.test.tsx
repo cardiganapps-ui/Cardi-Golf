@@ -45,7 +45,10 @@ describe('ScoreGrid', () => {
   it('a row per hole, each nine and the day summed, a column per player', () => {
     mount()
     const table = screen.getByRole('table')
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual([t.player.hole, t.player.par, t.player.si, ...players.map((p) => p.name)])
+    // Each header by its accessible name: «SI» is said «índice de golpe» (A11Y-22), and shown as «SI».
+    const heads = within(table).getAllByRole('columnheader')
+    expect(heads.map((h) => h.querySelector('[aria-hidden="true"]')?.textContent ?? h.textContent)).toEqual([t.player.hole, t.player.par, t.player.si, ...players.map((p) => p.name)])
+    expect(within(table).getByRole('columnheader', { name: t.player.siSpoken })).toBe(heads[2])
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 18 + 3)
     // Each player's day in points is the engine's.
     const total = within(table).getAllByRole('row').at(-1)!

@@ -131,35 +131,35 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
 
 /** The two or three choices that define a game, right on its card. */
 function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (g: GameConfig) => void) => void }) {
-  const seg = <T extends string>(value: T, options: T[], labels: Record<string, string>, apply: (v: T) => void) => <Segmented value={value} options={options.map((o) => ({ value: o, label: labels[o] ?? o }))} onChange={apply} />
+  const seg = <T extends string>(name: string, value: T, options: T[], labels: Record<string, string>, apply: (v: T) => void) => <Segmented label={name} value={value} options={options.map((o) => ({ value: o, label: labels[o] ?? o }))} onChange={apply} />
   switch (g.type) {
     case 'skins':
       return (
         <div className={styles.fieldRow}>
-          {seg(g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'skins' && (x.options.basis = v)))}
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'skins' && (x.options.basis = v)))}
           <Toggle label={U.carry} checked={g.options.carryOver} onChange={(v) => onChange((x) => x.type === 'skins' && (x.options.carryOver = v))} />
         </div>
       )
     case 'lowScore':
       return (
         <div className={styles.fieldRow}>
-          {seg(g.options.basis, ['net', 'gross', 'points'], U.basis, (v) => onChange((x) => x.type === 'lowScore' && (x.options.basis = v)))}
-          {seg(g.options.scope, ['perRound', 'overall'], U.scope, (v) => onChange((x) => x.type === 'lowScore' && (x.options.scope = v)))}
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross', 'points'], U.basis, (v) => onChange((x) => x.type === 'lowScore' && (x.options.basis = v)))}
+          {seg(U.choose.scope, g.options.scope, ['perRound', 'overall'], U.scope, (v) => onChange((x) => x.type === 'lowScore' && (x.options.scope = v)))}
         </div>
       )
     case 'eventPot':
       return (
         <div className={styles.fieldRow}>
-          {g.options.event !== 'threePutt' && seg(g.options.event, ['birdie', 'eagle'], U.event, (v) => onChange((x) => x.type === 'eventPot' && (x.options.event = v)))}
-          {g.options.event !== 'threePutt' && seg(g.options.basis, ['gross', 'net'], U.basis, (v) => onChange((x) => x.type === 'eventPot' && (x.options.basis = v)))}
+          {g.options.event !== 'threePutt' && seg(U.choose.event, g.options.event, ['birdie', 'eagle'], U.event, (v) => onChange((x) => x.type === 'eventPot' && (x.options.event = v)))}
+          {g.options.event !== 'threePutt' && seg(U.choose.basis, g.options.basis, ['gross', 'net'], U.basis, (v) => onChange((x) => x.type === 'eventPot' && (x.options.basis = v)))}
         </div>
       )
     case 'match':
       return (
         <div className={styles.fieldRow}>
-          {seg(g.options.format, ['nassau', 'match'], U.format, (v) => onChange((x) => x.type === 'match' && (x.options.format = v)))}
-          {seg(g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'match' && (x.options.basis = v)))}
-          {seg(String(g.options.pressAt), ['0', '2', '3'], { '0': U.pressOff, '2': U.pressAt(2), '3': U.pressAt(3) }, (v) => onChange((x) => x.type === 'match' && (x.options.pressAt = Number(v))))}
+          {seg(U.choose.format, g.options.format, ['nassau', 'match'], U.format, (v) => onChange((x) => x.type === 'match' && (x.options.format = v)))}
+          {seg(U.choose.basis, g.options.basis, ['net', 'gross'], U.basis, (v) => onChange((x) => x.type === 'match' && (x.options.basis = v)))}
+          {seg(U.press, String(g.options.pressAt), ['0', '2', '3'], { '0': U.pressOff, '2': U.pressAt(2), '3': U.pressAt(3) }, (v) => onChange((x) => x.type === 'match' && (x.options.pressAt = Number(v))))}
         </div>
       )
     case 'contest': {
@@ -167,8 +167,8 @@ function QuickFields({ game: g, onChange }: { game: GameConfig; onChange: (fn: (
       const mode = holes === 'par3' ? 'par3' : holes === 'all' ? 'all' : 'pick'
       return (
         <div className="stack">
-          {g.options.kind !== 'longDrive' && g.options.kind !== 'closest' && seg(g.options.kind, ['greenie', 'sandy'], U.kind, (v) => onChange((x) => x.type === 'contest' && (x.options.kind = v)))}
-          {seg(mode, ['par3', 'all', 'pick'], { par3: U.holesPar3, all: U.holesAll, pick: U.holesPick }, (v) => onChange((x) => x.type === 'contest' && (x.options.holes = v === 'pick' ? (Array.isArray(holes) ? holes : [18]) : v)))}
+          {g.options.kind !== 'longDrive' && g.options.kind !== 'closest' && seg(U.choose.kind, g.options.kind, ['greenie', 'sandy'], U.kind, (v) => onChange((x) => x.type === 'contest' && (x.options.kind = v)))}
+          {seg(U.choose.holes, mode, ['par3', 'all', 'pick'], { par3: U.holesPar3, all: U.holesAll, pick: U.holesPick }, (v) => onChange((x) => x.type === 'contest' && (x.options.holes = v === 'pick' ? (Array.isArray(holes) ? holes : [18]) : v)))}
           {Array.isArray(holes) && (
             <div className={styles.holePicks} role="group" aria-label={U.holes}>
               {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => (
@@ -241,7 +241,7 @@ function MoreFields({ game: g, rounds, onChange, onDone }: { game: GameConfig; r
       )}
       {g.type === 'match' && (
         <>
-          <Segmented value={g.options.pairScoring} options={(['bestBall', 'aggregate'] as const).map((v) => ({ value: v, label: U.pairScoring[v]! }))} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.pairScoring = v))} />
+          <Segmented value={g.options.pairScoring} options={(['bestBall', 'aggregate'] as const).map((v) => ({ value: v, label: U.pairScoring[v]! }))} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.pairScoring = v))} label={U.choose.pairScoring} />
           {g.options.pressAt > 0 && (
             <Field label={U.maxPresses}>
               <NumberField label={U.maxPresses} value={g.options.maxPresses} min={1} max={5} onChange={(v) => onChange((x) => x.type === 'match' && (x.options.maxPresses = v))} />

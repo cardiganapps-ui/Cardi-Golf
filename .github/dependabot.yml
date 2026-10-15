@@ -17,6 +17,23 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+      # Vite, Vitest and their plugins move together: Vite 8 needs Vitest 4 or
+      # later, @vitejs/plugin-react 6 and a vite-plugin-pwa that knows it, so a
+      # major of one of them alone never passes (PR 201 could not).
+      vite:
+        patterns: ['vite', 'vitest', '@vitest/*', '@vitejs/*', 'vite-plugin-pwa']
+        update-types: [major]
+    ignore:
+      # TypeScript's majors wait for typescript-eslint, whose peer range ends
+      # below 6.1 (8.71, 2026-10-15): TypeScript 7 breaks `npm ci` (PR 200).
+      # Lift this when typescript-eslint takes it.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # The Node types are the oldest runtime we run on (`engines`, Node 22): a
+      # newer major types APIs that runtime lacks (PR 202). They move with
+      # `engines`, by hand.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: deps
   - package-ecosystem: github-actions

@@ -197,6 +197,7 @@ export function ProfileEditScreen() {
               { value: 'manual', label: P.indexManualOption },
             ]}
             onChange={(v) => set({ indexSource: v })}
+            label={P.indexSource}
           />
           {f.indexSource === 'polo' ? (
             <span className={styles.help}>{P.indexPoloHint}</span>
