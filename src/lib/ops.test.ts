@@ -40,8 +40,9 @@ describe('ops', () => {
     const pkg = JSON.parse(read('package.json')) as { engines: { node: string }; devDependencies: Record<string, string> }
     expect(pkg.devDependencies['@types/node']!.replace(/^\D*/, '').split('.')[0]).toBe(pkg.engines.node.replace(/^\D*/, ''))
     const ci = read('.github/workflows/ci.yml')
-    expect(ci).toContain('npm audit --omit=dev --audit-level=high')
+    // scripts/audit.mjs runs `npm audit --omit=dev --audit-level=high` (src/lib/audit.test.ts holds its command).
+    expect(ci).toContain('run: node scripts/audit.mjs')
     // After the preflight, in the same job the merge waits on.
-    expect(ci.indexOf('npm audit')).toBeGreaterThan(ci.indexOf('bash scripts/preflight.sh'))
+    expect(ci.indexOf('run: node scripts/audit.mjs')).toBeGreaterThan(ci.indexOf('bash scripts/preflight.sh'))
   })
 })
