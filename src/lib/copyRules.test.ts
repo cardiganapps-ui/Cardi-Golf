@@ -200,7 +200,7 @@ const code = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(nam
 // ---------------------------------------------------------------------------
 // The engine's own words, on every tournament we have.
 
-/** The golden tournament (golden.test.ts): finished, all six modules, a Calcutta and a buyback. */
+/** A finished first tournament on seeded cards: all six modules, a Calcutta and a buyback (golden.test.ts's cards until QA-18). */
 function golden(): Snapshot {
   const snap = makeFirstTournament()
   fillRound(snap, 'r1', 11)
