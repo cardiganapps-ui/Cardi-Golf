@@ -5,9 +5,10 @@
  */
 import { motion } from 'motion/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { hcpFromTo, t, type RowSpeech } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
+import { asksMySheet } from '../../lib/noticeText'
 import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
@@ -136,7 +137,17 @@ export function LiveScreen() {
   // A link to watch «Sin dinero» (STRAT-05): no money chips, no owners, no «si terminara ahora».
   const showMoney = useShowMoney()
   const round = useActiveRound()
-  const [open, setOpen] = useState<string | null>(null)
+  // A notice that the Comité corrected this phone's card (TRUST-14) opens its own player's sheet: on arrival, and on
+  // a tap that lands while En vivo is already open (the router changes the address, PWA-12).
+  const { search } = useLocation()
+  const mine = !spectator && asksMySheet(search) ? me.playerId : null
+  const [open, setOpen] = useState<string | null>(mine)
+  const searchSeen = useRef(search)
+  useEffect(() => {
+    if (searchSeen.current === search) return
+    searchSeen.current = search
+    if (mine) setOpen(mine)
+  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps -- when the address changes, with whose phone this is then
   const closeSheet = useCallback(() => setOpen(null), [])
   const [view, setView] = useState<'points' | 'gross'>('points')
   const prevOrder = useRef<Map<string, number>>(new Map())

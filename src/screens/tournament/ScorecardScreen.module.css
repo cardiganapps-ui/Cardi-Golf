@@ -349,6 +349,21 @@
   vertical-align: middle;
   margin-left: 2px;
 }
+.correctedMark {
+  display: inline-flex;
+  color: var(--ink-2);
+  vertical-align: middle;
+  margin-left: 2px;
+}
+.corrections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s1);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
 .subtotal td {
   background: var(--surface);
   font-weight: 600;

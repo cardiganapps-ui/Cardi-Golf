@@ -159,6 +159,8 @@ export interface Score {
   updatedAt: string | null
   /** Another device overwrote this hole with different values (§8). */
   disputed?: boolean
+  /** The Comité's reason when it corrected this hole (admin_save_score, «Aplicar» in Pendientes; TRUST-14). */
+  reason?: string | null
   previous?: { strokes: number | null; putts: number | null; picked_up: boolean; entered_by: Id | null } | null
 }
 

@@ -74,7 +74,7 @@ describe('the switch in Más', () => {
     expect(screen.getByText(T.title)).toBeTruthy()
     expect(
       screen.getByText(
-        `Te avisamos en este teléfono cuando empiece cada día, cuando te toque firmar una tarjeta, cuando en ${settings.modules.snake.label} falte decir quién embocó al último y cuando salgan los resultados. Nunca llevan montos.`,
+        `Te avisamos en este teléfono cuando empiece cada día, cuando te toque firmar una tarjeta, cuando en ${settings.modules.snake.label} falte decir quién embocó al último, cuando el Comité corrija tu tarjeta y cuando salgan los resultados. Nunca llevan montos.`,
       ),
     ).toBeTruthy()
     const line = document.querySelector<HTMLElement>('[data-legal-consent]')!
@@ -112,7 +112,7 @@ describe('the switch in Más', () => {
         settings.modules.snake!.enabled = false
       },
     })
-    expect(await screen.findByText('Te avisamos en este teléfono cuando empiece cada día y cuando salgan los resultados. Nunca llevan montos.')).toBeTruthy()
+    expect(await screen.findByText('Te avisamos en este teléfono cuando empiece cada día, cuando el Comité corrija tu tarjeta y cuando salgan los resultados. Nunca llevan montos.')).toBeTruthy()
   })
 
   it('the Comité with no player, and the Admin de Polo, have no player to hear for', async () => {

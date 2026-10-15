@@ -11,6 +11,8 @@ import { Avatar, Sheet } from '../../components/ui'
 import { Money, ScorecardGrid, type GridHole } from '../../components/primitives'
 import { ShareCardButton } from '../../components/ShareCard'
 import { HandicapChanges } from '../../components/HandicapChanges'
+import { correctionLine } from '../../lib/comiteReasons'
+import { CardHistory } from './CardHistory'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentProfiles } from '../../data/profiles'
 import { useTournamentCtx } from './TournamentGate'
@@ -29,6 +31,8 @@ export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { pl
 
 function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () => void }) {
   const data = useTournament((s) => s.data)
+  /** The in-memory fixtures have no server to ask a card's history of (TRUST-14). */
+  const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
   const [why, setWhy] = useState<{ title: string; why: Explanation } | null>(null)
   const { tournamentId, spectator } = useTournamentCtx()
   // A link to watch (STRAT-05) asks nobody's profile, and «Sin dinero» shows no money section.
@@ -146,9 +150,22 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
                   if (h) setWhy({ title: t.player.whyHole(n), why: scoring === 'points' ? h.why : strokesWhy(h, scoring === 'net') })
                 }}
               />
+              {/* TRUST-14: what the Comité corrected on his card, and why, where everyone reads his card. */}
+              {pr.holes.some((h) => h.correction) && (
+                <ul className={styles.corrections} aria-label={t.card.correctionsTitle}>
+                  {pr.holes
+                    .filter((h) => h.correction)
+                    .map((h) => (
+                      <li key={h.hole}>{correctionLine(h.hole, null, h.correction!)}</li>
+                    ))}
+                </ul>
+              )}
             </section>
           ) : null,
         )}
+
+        {/* TRUST-14: how each hole got to what it holds, for everyone in the tournament; never from a link to watch. */}
+        {!spectator && !fixture && rounds.some((r) => r.pr) && <CardHistory key={p.id} tournamentId={tournamentId} playerId={p.id} timeZone={snapshot.tournament.timezone} />}
 
         {(pair || myLot || owned.length > 0) && (
           <section className={styles.section}>

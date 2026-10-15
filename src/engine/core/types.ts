@@ -15,6 +15,8 @@ export interface HoleResult {
   /** Strokes or a pick-up were entered. */
   played: boolean
   disputed: boolean
+  /** Present only when the Comité corrected the hole: its reason (TRUST-14). */
+  correction?: string
   why: Explanation
 }
 

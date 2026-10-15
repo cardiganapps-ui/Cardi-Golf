@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { t } from '../i18n/es-MX'
 import { noticeLine } from './noticeText'
 
 const actor = { handle: 'diego.ortiz', displayName: 'Diego Ortiz' }
@@ -40,7 +41,16 @@ describe('noticeLine (inbox and push share it)', () => {
       title: 'Nacho’s Bachelor',
       body: 'La Víbora, día 2: falta decir quién embocó al último en el hoyo 7.',
     })
-    for (const kind of ['round_live', 'card_to_sign', 'snake_tiebreak', 'results']) {
+    // A Comité correction (0062, TRUST-14) says the day: never the hole, the value, the reason or who. It opens
+    // the phone's own player's sheet, where every day's card is.
+    expect(noticeLine({ kind: 'score_corrected', data: { ...at, round: 2 }, actor: null })).toEqual({
+      text: 'El Comité corrigió tu tarjeta del día 2 en Nacho’s Bachelor',
+      to: '/t/nachos-bachelor?jugador=yo',
+      title: 'Nacho’s Bachelor',
+      body: t.social.notice.scoreCorrectedBody(2),
+    })
+    expect(t.social.notice.scoreCorrectedBody(2)).toBe('El Comité corrigió tu tarjeta del día 2. Toca para ver qué cambió y por qué.')
+    for (const kind of ['round_live', 'card_to_sign', 'snake_tiebreak', 'score_corrected', 'results']) {
       const line = noticeLine({ kind, data: { ...at, round: 1, group: 1, hole: 3, game: 'La Víbora', rankLabel: '2', field: 12 }, actor: null })
       expect(`${line.text} ${line.body ?? ''}`, kind).not.toMatch(/\$|\d+,\d{3}/)
     }

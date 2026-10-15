@@ -181,6 +181,8 @@ export const mapScore = (r: Row): Score => ({
   updatedAt: r.updated_at ?? null,
   disputed: !!r.disputed,
   previous: r.previous ?? null,
+  // A Comité correction says why (TRUST-14); only then, so a hole with none stays as it always was.
+  ...(typeof r.reason === 'string' && r.reason.trim() ? { reason: r.reason } : {}),
 })
 
 export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({
