@@ -20,18 +20,26 @@ async function openStats(page: Page) {
 
 test('a screen of the build before a deploy: the page loads the new build and opens it (REL-13)', async ({ page }) => {
   await open(page, '/t/_/full12-live')
-  // The deploy: the server no longer has this build's Estadísticas. The reloaded page asks for the new one.
-  let deployed = false
+  // The deploy: the server no longer has this build's Estadísticas, however often the page asks. Vite preloads a
+  // screen's chunk and then imports it; Chromium 156 (CI's since Playwright 1.64) fetches the failed preload again
+  // where older ones kept it failed, so a mock that refused only once served the import. Only the reloaded page,
+  // the new build, gets it.
+  let reloads = 0
+  page.on('request', (r) => {
+    if (r.isNavigationRequest() && r.frame() === page.mainFrame()) reloads++
+  })
+  let refused = 0
   await page.route(STATS_CHUNK, (route) => {
-    if (deployed) return route.continue()
-    deployed = true
+    if (reloads > 0) return route.continue()
+    refused++
     return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' })
   })
   let loads = 0
   page.on('load', () => loads++)
   await openStats(page)
   await expect(page.getByRole('heading', { name: t.stats.title })).toBeVisible()
-  expect(deployed).toBe(true)
+  expect(refused).toBeGreaterThan(0)
+  expect(reloads).toBe(1)
   expect(loads).toBe(1)
   await expect(page.getByText(t.boot.crashTitle)).toHaveCount(0)
 })
