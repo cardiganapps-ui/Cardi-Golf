@@ -204,8 +204,13 @@ export function TvScreen() {
                         <span className={styles.name}>
                           <span>{label}</span>
                         </span>
-                        <span className={styles.mid} aria-label={round && thru > 0 ? `${t.live.thru} ${t.round.thru(thru, round.holes)}` : undefined}>
-                          {round && thru > 0 ? t.round.thru(thru, round.holes) : ''}
+                        <span className={styles.mid}>
+                          {round && thru > 0 && (
+                            <>
+                              <span aria-hidden="true">{t.round.thru(thru, round.holes)}</span>
+                              <span className="sr-only">{t.round.thruSpoken(thru, round.holes)}</span>
+                            </>
+                          )}
                         </span>
                         <span className={`${styles.mid} ${styles.day}`}>{round && thru > 0 && today && !today.empty ? dayFigureText(today) : ''}</span>
                         {/* The total on the board's plate, the leader's in yellow: the one figure per row the room looks for. */}
@@ -288,10 +293,13 @@ export function TvScreen() {
                       <span>{name(pf.ownerId)}</span>
                       <span className={`${styles.small} ${styles.sub}`}>{t.common.andList(pf.holdings.map((h) => name(h.playerId)))}</span>
                     </span>
-                    <span className={`${styles.small} ${styles.figure}`} aria-label={`${t.tv.invested} ${formatMoney(pf.invested)}`}>
+                    {/* A11Y-22: each figure with its words, which a label on a bare span never gave. */}
+                    <span className={`${styles.small} ${styles.figure}`}>
+                      <span className="sr-only">{t.tv.invested} </span>
                       {formatMoney(pf.invested)}
                     </span>
-                    <span className={styles.big} aria-label={`${t.tv.worth} ${formatMoney(pf.value)}`}>
+                    <span className={styles.big}>
+                      <span className="sr-only">{t.tv.worth} </span>
                       {formatMoney(pf.value)}
                     </span>
                   </div>

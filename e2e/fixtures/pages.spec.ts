@@ -2,6 +2,12 @@
  * Every main screen, at two phone widths: no uncaught error, nothing wider
  * than the screen, and no serious or critical axe violation (WCAG 2.1 A/AA).
  * The TV and the ceremony are checked at room sizes.
+ *
+ * Nothing wider than the screen means the phone does not zoom out either: an
+ * absolutely placed element that escapes a sideways scroller widens the page,
+ * and a phone fits the page to the screen, so there is no horizontal scroll to
+ * see, only a page drawn smaller with its sticky bars off their edges. The
+ * window's width must stay the phone's.
  */
 import AxeBuilder from '@axe-core/playwright'
 import { expect, open, test } from './base'
@@ -46,6 +52,7 @@ for (const [fixture, paths] of Object.entries(PAGES)) {
         await open(page, `/t/_/${fixture}/${path}`)
         expect(pageErrors, 'uncaught errors').toEqual([])
         expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+        expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the phone').toBe(width)
         expect(await seriousViolations(page)).toEqual([])
       })
     }
@@ -60,6 +67,7 @@ for (const path of ['salud']) {
       await open(page, `/admin/_/${path}`)
       expect(pageErrors, 'uncaught errors').toEqual([])
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+      expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the phone').toBe(width)
       expect(await seriousViolations(page)).toEqual([])
     })
   }
@@ -72,6 +80,7 @@ for (const [path, width, height] of ROOMS) {
     await page.waitForTimeout(500)
     expect(pageErrors, 'uncaught errors').toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(await page.evaluate(() => window.innerWidth), 'the page zoomed out to fit something wider than the screen').toBe(width)
     expect(await seriousViolations(page)).toEqual([])
   })
 }

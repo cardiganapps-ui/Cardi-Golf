@@ -171,6 +171,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                 type="button"
                 className={styles.face}
                 data-player={p.id}
+                aria-label={t.enter.faceSpoken(p.displayName, p.tier, p.isHonoree, !!p.pendingMe)}
                 onClick={() => {
                   lastFace.current = p.id
                   setSelected(p)

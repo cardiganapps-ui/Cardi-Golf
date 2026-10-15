@@ -3,7 +3,8 @@
  * Entrar for a screen reader. A11Y-14: a wrong PIN emptied the field and put
  * a plain line under it, so the person heard the digits vanish and nothing
  * else. A11Y-12: «No soy yo» dropped focus to <body>. A11Y-13: the event name
- * was no heading, and the page was titled «Polo».
+ * was no heading, and the page was titled «Polo». A11Y-23: a face was heard as
+ * «Diego A. A» (the tier glued to the name) and the honoree's ring as nothing.
  */
 import 'fake-indexeddb/auto'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
@@ -30,6 +31,9 @@ const lookup: LookupResult = {
   players: [
     { id: 'p1', displayName: 'Mauricio', fullName: 'Mauricio Lozano', tier: 'B', avatarUrl: null, isHonoree: false, hasPin: true },
     { id: 'p2', displayName: 'René', fullName: 'René Nosti', tier: 'C', avatarUrl: null, isHonoree: false, hasPin: true },
+    { id: 'p3', displayName: 'Diego A.', fullName: null, tier: 'A', avatarUrl: null, isHonoree: true, hasPin: true },
+    { id: 'p4', displayName: 'Jugador 12', fullName: null, tier: null, avatarUrl: null, isHonoree: false, hasPin: true },
+    { id: 'p5', displayName: 'Iván', fullName: null, tier: 'D', avatarUrl: null, isHonoree: false, hasPin: true, pendingMe: true },
   ],
 }
 
@@ -72,6 +76,17 @@ describe('Entrar for a screen reader', () => {
     notMe.focus()
     fireEvent.click(notMe)
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /René/ }))
+  })
+
+  it('each face is said as a name, its category and the honoree, never «Diego A. A» (A11Y-23)', () => {
+    open()
+    const names = screen.getAllByRole('button').filter((b) => b.hasAttribute('data-player')).map((b) => b.getAttribute('aria-label'))
+    expect(names).toEqual(['Mauricio, categoría B', 'René, categoría C', 'Diego A., categoría A, homenajeado', 'Jugador 12', 'Iván, ¿eres tú?'])
+    // The name a sighted person reads starts the spoken one (WCAG 2.5.3), so a voice command by name still works.
+    for (const b of screen.getAllByRole('button').filter((x) => x.hasAttribute('data-player'))) {
+      const shown = b.querySelector('[class*="faceName"]')!.textContent!
+      expect(b.getAttribute('aria-label')!.startsWith(shown)).toBe(true)
+    }
   })
 
   it('the event name is the page’s h1, and the page says it is Entrar (A11Y-13)', () => {
