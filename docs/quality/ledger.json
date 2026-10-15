@@ -3251,9 +3251,11 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 184,
+      "tests": [
+        "supabase/tests/social_limits.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },
