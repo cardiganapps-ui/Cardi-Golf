@@ -3621,8 +3621,8 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 187,
       "tests": [
         "supabase/tests/storage_listing.sql"
       ],
