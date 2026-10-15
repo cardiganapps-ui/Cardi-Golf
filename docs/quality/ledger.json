@@ -4096,10 +4096,16 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 171,
+      "tests": [
+        "supabase/tests/card_signing.sql",
+        "src/engine/core/cardSigning.test.ts",
+        "src/data/outbox.signature.test.ts",
+        "src/data/realtimeApply.signatures.test.ts",
+        "e2e/fixtures/signing.spec.ts"
+      ],
+      "verifiedBy": "Reviewed by hand (the verifier agent could not run): the marker policy, card_is_signed and the keys; P3 left: a group mate can sign an incomplete card on the server, as under the pairs rule",
       "residual": null
     },
     {
