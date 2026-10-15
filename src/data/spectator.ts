@@ -15,8 +15,9 @@ import { ApiError } from './api'
 import { anonRpc } from './anonRpc'
 import type { Row } from './mappers'
 import { SPECTATOR_PREFIX, snapshotFromRows, type SnapshotRows } from './tournamentStore'
-import SETTINGS_SPEC from './spectatorSettingsSpec.json'
+import { SETTINGS_SPEC, type SettingsSpec } from '../engine/settings/spec'
 import { normalizeLegacySettings } from '../engine/settings/schema'
+import { isUnknownGame, newerSettingsKeys, withoutUnknownGames } from '../engine/settings/read'
 
 /** The link as the Comité sees it (0053 `spectator_link`). */
 export interface SpectatorLink {
@@ -115,13 +116,12 @@ export function snapshotFromBoard(answer: Row, id: string): Snapshot {
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 
 /**
- * What of the settings a link carries, as a tree: "s" a plain value, `o` an
- * object with those keys, `a` a list, `u` either, `d` an object whose key `d`
- * says which shape it is. It is the settings schema's own shape (a test holds
- * it to `TournamentSettingsSchema` and to 0053's `spectator_settings_spec`).
+ * What of the settings a link carries: every key the settings schema knows
+ * (`engine/settings/spec.ts`; a test holds it to `TournamentSettingsSchema`
+ * and to 0053's `spectator_settings_spec`).
  */
-export type SettingsSpec = 's' | { o: Record<string, SettingsSpec> } | { a: SettingsSpec } | { u: SettingsSpec[] } | { d: string; by: Record<string, SettingsSpec> }
-export const SPECTATOR_SETTINGS_SPEC = SETTINGS_SPEC as SettingsSpec
+export type { SettingsSpec }
+export const SPECTATOR_SETTINGS_SPEC = SETTINGS_SPEC
 
 const plain = (v: unknown) => v === null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean'
 
@@ -168,6 +168,19 @@ function spectatorGame(g: unknown, money: boolean): unknown {
   return out
 }
 
+/** A side game this build doesn't know, as a link carries it: its name and whether it moves money (none without money), nothing else. */
+function unknownGamePlaceholder(g: unknown, money: boolean): Record<string, unknown> {
+  const o = isObject(g) ? g : {}
+  const source = isObject(o.money) && typeof o.money.source === 'string' ? o.money.source : null
+  return {
+    id: o.id,
+    type: o.type,
+    label: o.label,
+    enabled: o.enabled,
+    ...(money ? (source ? { money: { source } } : {}) : { money: { source: 'none' } }),
+  }
+}
+
 /**
  * The settings as a link shows them, the same as 0053's `spectator_settings`:
  * older keys first read as today's (`normalizeLegacySettings`, as the members'
@@ -177,9 +190,15 @@ function spectatorGame(g: unknown, money: boolean): unknown {
  * altogether. The boards computed from them carry no money, and they still parse.
  */
 export function spectatorSettings(input: unknown, money: boolean): unknown {
-  const raw = pickBySpec(normalizeLegacySettings(input), SPECTATOR_SETTINGS_SPEC)
+  // A newer build's settings (ARCH-04): picked to this build's keys, the page would compute without what it doesn't know.
+  // Nothing of them, so the page says to update; a side game it doesn't know goes on by its name, for the page to set aside.
+  if (newerSettingsKeys(input).length) return null
+  const unknown = (isObject(input) && Array.isArray(input.games) ? input.games : []).filter(isUnknownGame)
+  const placeholders = unknown.filter((g) => money || !sidePot(g)).map((g) => unknownGamePlaceholder(g, money))
+  const raw = pickBySpec(normalizeLegacySettings(withoutUnknownGames(input)), SPECTATOR_SETTINGS_SPEC)
   if (!isObject(raw)) return raw
-  if (money) return Array.isArray(raw.games) ? { ...raw, games: raw.games.map((g) => spectatorGame(g, true)) } : raw
+  const known = Array.isArray(raw.games) ? raw.games : []
+  if (money) return Array.isArray(raw.games) || placeholders.length ? { ...raw, games: [...known.map((g) => spectatorGame(g, true)), ...placeholders] } : raw
   const modules = isObject(raw.modules) ? raw.modules : null
   return {
     ...raw,
@@ -187,7 +206,7 @@ export function spectatorSettings(input: unknown, money: boolean): unknown {
     houseCut: 0,
     prizes: { stableford: [], stablefordMode: 'amount', pairs: [], bestRoundPerDay: 0, snakePerSurvivor: 0, fewestPutts: 0 },
     auction: { openingBid: 1, increment: 1, maxPlayersPerOwner: 1, selfOwnedCountsTowardMax: true, guestsCanBid: false, buybackMaxPct: 0, payout: [{ slot: 'place', place: 1, share: 1 }] },
-    games: (Array.isArray(raw.games) ? raw.games : []).filter((g) => !sidePot(g)).map((g) => spectatorGame(g, false)),
+    games: [...known.filter((g) => !sidePot(g)).map((g) => spectatorGame(g, false)), ...placeholders],
     ...(modules && isObject(modules.auction) ? { modules: { ...modules, auction: { ...modules.auction, enabled: false } } } : {}),
   }
 }

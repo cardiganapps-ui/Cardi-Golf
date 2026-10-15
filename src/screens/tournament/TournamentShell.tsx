@@ -7,6 +7,7 @@ import { tournamentBase, useShowMoney } from './tournamentView'
 import { useSavedWhen } from './boardsAge'
 import { useConnection, useRefreshBoards, type Connection } from './connection'
 import { PullToRefresh } from './PullToRefresh'
+import { SettingsGuard } from './SettingsGuard'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
@@ -53,7 +54,8 @@ export function TournamentShell() {
   const { refreshing, refresh } = useRefreshBoards()
   const { pathname } = useLocation()
   const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
-  const onBoard = BOARDS.has(pathname.slice(base.length).replace(/\/$/, ''))
+  const here = pathname.slice(base.length).replace(/\/$/, '')
+  const onBoard = BOARDS.has(here)
   const accent = tournament?.accentColor ?? lookup.accentColor ?? undefined
   const logo = tournament?.logoUrl ?? lookup.logoUrl
   // Money exists if anyone pays anything: the entry pot, a side pot, a direct
@@ -84,7 +86,8 @@ export function TournamentShell() {
       <div className={styles.body}>
         <PullToRefresh enabled={onBoard} refreshing={refreshing} onRefresh={refresh}>
           {me.via === 'platform' && <PlatformBanner />}
-          <Outlet />
+          {/* Settings this build can't read (ARCH-04): every screen but Más says to update instead of computing the defaults. */}
+          {here === '/mas' ? <Outlet /> : <SettingsGuard money={here === '/dinero'}><Outlet /></SettingsGuard>}
         </PullToRefresh>
       </div>
       <nav className={styles.tabbar} aria-label={t.common.sections}>

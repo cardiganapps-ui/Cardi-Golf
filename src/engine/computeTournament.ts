@@ -4,6 +4,7 @@
  * module, then the money, and merges the result.
  */
 import { MODULE_IDS, type ModuleId, type TournamentSettings } from './settings/schema'
+import { unknownGamesOf } from './settings/read'
 import type { Id, Snapshot } from './types'
 import { t } from '../i18n/es-MX'
 import { computeCore } from './core/compute'
@@ -64,6 +65,11 @@ export interface StatusFlags {
   missingModules: ModuleId[]
   /** Enabled instance games whose type this build does not implement (an older app). */
   missingGames: string[]
+  /**
+   * The labels of those games that may move money (ARCH-04): this build can't count the
+   * tournament's money, so no screen shows any (`useShowMoney`) and En vivo says why.
+   */
+  moneyUnknown: string[]
   warnings: string[]
   /** The main pot against the real field and rounds (MONEY-06); `balanced` false means prizes and entries drifted apart. */
   pool: PrizeCheck
@@ -144,7 +150,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     const impl = gameImpls[config.type]
     if (!impl) {
       missingGames.push(config.id)
-      gameWarnings.push(`${config.label}: esta versión de la app no conoce este juego. Actualiza la app.`)
+      gameWarnings.push(t.outdated.game(config.label))
       continue
     }
     const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
@@ -159,6 +165,13 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     prizes.push(...impl.prizes(state, gctx))
     if (impl.warnings) gameWarnings.push(...impl.warnings(state, gctx))
   }
+  // A newer build's game type: the row keeps it (`readSettings` set it aside), this build can't compute it (ARCH-04).
+  const unknownGames = unknownGamesOf(snapshot.tournament.settings).filter((g) => g.enabled)
+  for (const g of unknownGames) {
+    missingGames.push(g.id)
+    gameWarnings.push(t.outdated.game(g.label))
+  }
+  const moneyUnknown = unknownGames.filter((g) => g.money).map((g) => g.label)
 
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
   const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
@@ -306,6 +319,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       missingPutts: noPutts,
       missingModules,
       missingGames,
+      moneyUnknown,
       warnings: [...poolWarnings, ...core.warnings, ...puttsWarnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,

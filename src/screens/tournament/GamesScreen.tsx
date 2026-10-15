@@ -22,6 +22,7 @@ import { useActiveRound } from './useMyGroup'
 import { useTournamentCtx } from './TournamentGate'
 import { useViewFocus } from '../../components/viewFocus'
 import { tournamentBase, useShowMoney } from './tournamentView'
+import { unknownGamesOf } from '../../engine/settings/read'
 import styles from './GamesScreen.module.css'
 
 /** The game boards' panel, which the game tabs control (A11Y-17). */
@@ -44,7 +45,11 @@ export function GamesScreen() {
     const m = data.settings.modules
     const mods: Array<{ value: string; label: string }> = ORDER.filter((id) => m[id].enabled).map((id) => ({ value: id, label: m[id].label }))
     const games = data.settings.games.filter((g) => g.enabled).map((g) => ({ value: `game:${g.id}`, label: g.label }))
-    return [...mods, ...games]
+    // A newer build's game this one can't compute (ARCH-04): listed by its name, and its line says to update.
+    const unknown = unknownGamesOf(data.snapshot.tournament.settings)
+      .filter((g) => g.enabled && g.id)
+      .map((g) => ({ value: `game:${g.id}`, label: g.label }))
+    return [...mods, ...games, ...unknown]
   }, [data])
   const current = tab && tabs.some((x) => x.value === tab) ? tab : null
   /** The game opened from the list: going back, focus returns to its line (A11Y-12). */

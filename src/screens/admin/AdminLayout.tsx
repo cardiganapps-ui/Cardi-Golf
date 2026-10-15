@@ -10,6 +10,7 @@ import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
 import { EmptyState } from '../../components/primitives'
 import { PlatformBanner } from '../tournament/PlatformBanner'
+import { SettingsGuard } from '../tournament/SettingsGuard'
 import styles from './AdminLayout.module.css'
 import { useEntryInfo } from './entryInfo'
 import { readiness, setupBadge, teamPlay } from './readiness'
@@ -33,9 +34,13 @@ function useActiveInView(sectionsFrom: unknown) {
   return nav
 }
 
+/** What the Comité still reaches when this build can't read the settings (ARCH-04): the backup and the history compute nothing. */
+const READS_NO_SETTINGS = /\/admin\/(datos|historial)\/?$/
+
 export function AdminLayout() {
   const { me, slug, tournamentId } = useTournamentCtx()
   const data = useTournament((s) => s.data)
+  const { pathname } = useLocation()
   const nav = useActiveInView(data?.settings)
   // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
   const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
@@ -110,7 +115,7 @@ export function AdminLayout() {
             ))}
         </nav>
         <div className={styles.content}>
-          <Outlet />
+          {READS_NO_SETTINGS.test(pathname) ? <Outlet /> : <SettingsGuard><Outlet /></SettingsGuard>}
         </div>
       </div>
     </div>

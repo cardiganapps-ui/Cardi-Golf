@@ -37,6 +37,7 @@ import { SpectatorFixture } from '../dev/SpectatorFixture'
 import { SpectatorGate } from '../screens/spectator/SpectatorGate'
 import { spectatorChildren } from '../screens/spectator/routes'
 import { TournamentShell } from '../screens/tournament/TournamentShell'
+import { SettingsGuard } from '../screens/tournament/SettingsGuard'
 import { LiveScreen } from '../screens/tournament/LiveScreen'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
@@ -94,9 +95,10 @@ const tournamentChildren = [
               { path: 'mas', element: <MoreScreen /> },
             ],
           },
-          { path: 'tv', element: <Lazy><TvScreen /></Lazy> },
-          { path: 'ceremonia', element: <Lazy><CeremonyScreen /></Lazy> },
-          { path: 'imprimir', element: <Lazy><PrintScreen /></Lazy> },
+          // Full screens of their own: each computes from the settings, so each waits for a build that reads them (ARCH-04).
+          { path: 'tv', element: <SettingsGuard><Lazy><TvScreen /></Lazy></SettingsGuard> },
+          { path: 'ceremonia', element: <SettingsGuard money><Lazy><CeremonyScreen /></Lazy></SettingsGuard> },
+          { path: 'imprimir', element: <SettingsGuard><Lazy><PrintScreen /></Lazy></SettingsGuard> },
           {
             path: 'admin',
             element: <AdminLayout />,

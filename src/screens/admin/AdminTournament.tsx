@@ -24,6 +24,7 @@ import { useCloseGate } from '../../components/CloseGate'
 import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { safeParseSettings, type TournamentSettings } from '../../engine/settings/schema'
+import { readSettings } from '../../engine/settings/read'
 import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
 import { LOGO_CACHE_SECONDS, logoPath, logoSize, prepareLogo } from '../../lib/logo'
@@ -53,21 +54,20 @@ const brandOf = (name: string, tagline: string, accent: string): Brand => ({ nam
 
 /**
  * What the editor started from (ARCH-13): the row's settings as fetched, the
- * same parsed (the defaults when the row does not parse: `whole`), and the
- * brand columns as stored (`seen`) and as the form showed them (`form`).
+ * same parsed, and the brand columns as stored (`seen`) and as the form showed
+ * them (`form`). A row this build can't read never reaches the editor
+ * (SettingsGuard, ARCH-04), and `settingsWrite` refuses one all the same.
  */
 interface Start {
   raw: unknown
   parsed: TournamentSettings
-  whole: boolean
   seen: SetupFields
   form: Brand
 }
-function startOf(tr: { name: string; tagline: string | null; accentColor?: string | null; settings: unknown }, parsed: TournamentSettings, whole: boolean): Start {
+function startOf(tr: { name: string; tagline: string | null; accentColor?: string | null; settings: unknown }, parsed: TournamentSettings): Start {
   return {
     raw: tr.settings,
     parsed,
-    whole,
     seen: { name: tr.name, tagline: tr.tagline ?? null, accent_color: tr.accentColor ?? null },
     form: brandOf(tr.name, tr.tagline ?? '', tr.accentColor ?? DEFAULT_ACCENT.hex),
   }
@@ -93,7 +93,7 @@ export function AdminTournament() {
   const [settings, setSettings] = useState<TournamentSettings>(data!.settings)
   const [dirty, setDirty] = useState(false)
   // A save says it saw this and writes only what changed since; the server refuses it when any of it moved meanwhile (0043).
-  const start = useRef<Start>(startOf(tr, data!.settings, data!.settingsError != null))
+  const start = useRef<Start>(startOf(tr, data!.settings))
   const [busy, setBusy] = useState(false)
   const [quick, setQuick] = useState(false)
   const [askCode, setAskCode] = useState(false)
@@ -135,7 +135,7 @@ export function AdminTournament() {
   useEffect(() => {
     if (dirty) return
     setSettings(data!.settings)
-    start.current = startOf(tr, data!.settings, data!.settingsError != null)
+    start.current = startOf(tr, data!.settings)
     setName(tr.name)
     setTagline(tr.tagline ?? '')
     setAccent(tr.accentColor ?? DEFAULT_ACCENT.hex)
@@ -168,12 +168,13 @@ export function AdminTournament() {
     // Only what changed is written, and only while every key this screen read
     // still holds what it read: the prize check above read them all (ARCH-13).
     const from = start.current
-    const write = settingsWrite(from.raw, from.parsed, fresh.data, { whole: from.whole, readAll: true })
     const brand = brandOf(name, tagline, accent)
-    const set: SetupFields = { settings: write.set }
-    for (const k of BRAND_KEYS) if (brand[k] !== from.form[k]) Object.assign(set, { [k]: brand[k] })
     setBusy(true)
     try {
+      // Refused over a row a newer build wrote (ARCH-04): writing it back as this build reads it would drop what it doesn't know.
+      const write = settingsWrite(from.raw, from.parsed, fresh.data, { readAll: true })
+      const set: SetupFields = { settings: write.set }
+      for (const k of BRAND_KEYS) if (brand[k] !== from.form[k]) Object.assign(set, { [k]: brand[k] })
       landRow(await updateSettings(tournamentId, { settings: write.seen, ...from.seen }, set))
       setDirty(false)
       toast(t.common.saved)
@@ -204,22 +205,22 @@ export function AdminTournament() {
   function refused(e: SettingsChanged, mine: TournamentSettings, brand: Brand) {
     const from = start.current
     landRow(e.now)
-    const now = safeParseSettings(e.now.settings)
-    if (!now.success) {
-      // Settings this build can't read: the screen follows the store's.
+    const now = readSettings(e.now.settings)
+    if (!now.ok) {
+      // A newer build saved settings this one can't read (ARCH-04): the screen gives way to «Actualiza la app» (SettingsGuard).
       setDirty(false)
-      toast(humanError(e))
+      toast(t.outdated.save)
       return
     }
-    const next = startOf({ name: e.now.name, tagline: e.now.tagline, accentColor: e.now.accent_color, settings: e.now.settings }, now.data, false)
-    const s = mergeOver(from.parsed, mine, now.data)
+    const next = startOf({ name: e.now.name, tagline: e.now.tagline, accentColor: e.now.accent_color, settings: e.now.settings }, now.settings)
+    const s = mergeOver(from.parsed, mine, now.settings)
     const b = mergeOver(from.form, brand, next.form)
     start.current = next
     setSettings(s.merged)
     setName(b.merged.name)
     setTagline(b.merged.tagline ?? '')
     setAccent(b.merged.accent_color)
-    setDirty(changedKeys(now.data, s.merged).length > 0 || changedKeys(next.form, b.merged).length > 0)
+    setDirty(changedKeys(now.settings, s.merged).length > 0 || changedKeys(next.form, b.merged).length > 0)
     toast(s.lost.length || b.lost.length ? A.settingsMergedLost : A.settingsMerged)
   }
 
