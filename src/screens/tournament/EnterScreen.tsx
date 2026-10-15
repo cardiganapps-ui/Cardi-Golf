@@ -58,7 +58,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const players = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return lookup.players
-    return lookup.players.filter((p) => p.displayName.toLowerCase().includes(q) || p.fullName.toLowerCase().includes(q))
+    return lookup.players.filter((p) => p.displayName.toLowerCase().includes(q) || (p.fullName ?? '').toLowerCase().includes(q))
   }, [lookup.players, query])
 
   async function submit(nextPin: string) {
@@ -78,8 +78,10 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       }
       setPin('')
       // COPY-13: one message per answer. A missing player is that player, not the tournament, and a lock says
-      // until when (the server locks the phone 5 minutes and the player 15, and answers when it ends).
+      // until when (the server locks the phone 5 minutes and the player 15, and answers when it ends). The player's
+      // lock stops only phones that never held him (SEC-04), so it says where it still works and who opens it.
       if (r.reason === 'no_pin') setError(t.enter.noPin)
+      else if (r.reason === 'locked' && r.scope === 'player') setError(t.enter.lockedPlayer(r.lockedUntil ? clockTime(r.lockedUntil) : null))
       else if (r.reason === 'locked') setError(t.enter.lockedUntil(r.lockedUntil ? clockTime(r.lockedUntil) : null))
       else if (r.reason === 'wrong_pin') setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
       else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))

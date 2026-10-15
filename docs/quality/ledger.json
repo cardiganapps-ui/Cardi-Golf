@@ -3152,7 +3152,11 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/pin_lock.sql",
+        "src/screens/admin/AdminPlayers.pinLock.test.tsx",
+        "src/screens/tournament/EnterScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3183,7 +3187,9 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/pin_lock.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },

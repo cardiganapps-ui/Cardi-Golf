@@ -1462,6 +1462,9 @@ export const t = {
     /** COPY-13: the time the lock ends, on this phone's clock; none when the server did not say. */
     lockedUntil: (time: string | null) =>
       time ? `Demasiados intentos. Vuelve a intentar a las ${time}.` : 'Demasiados intentos. Espera unos minutos y vuelve a intentar.',
+    /** SEC-04: too many wrong PINs for this player from phones that never held him. His own phones still get in. */
+    lockedPlayer: (time: string | null) =>
+      `Hubo demasiados intentos con este PIN desde teléfonos nuevos. ${time ? `Vuelve a intentar a las ${time}` : 'Espera unos minutos'} o pídele al Comité que lo desbloquee. Donde ya entraste antes, sigue funcionando.`,
     playerGone: 'Ese jugador ya no está en el torneo. Elige tu nombre otra vez.',
     isThisYou: '¿Eres tú?',
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,
@@ -2010,6 +2013,8 @@ export const t = {
         from: { ios: 'desde un iPhone', android: 'desde un Android', desktop: 'desde una computadora', other: 'desde un teléfono' } as Record<string, string>,
         left: (player: string) => `Un teléfono dejó de entrar como ${player}`,
         removed: (player: string) => `El Comité sacó del torneo un teléfono que entraba como ${player}`,
+        /** SEC-04 (0056): the Comité opened a locked PIN to new phones again, the PIN unchanged. */
+        unlocked: (player: string) => `El Comité desbloqueó el PIN de ${player}`,
       },
     },
     games: {
@@ -2415,6 +2420,12 @@ export const t = {
       removePhoneBody:
         'Ese teléfono tendrá que volver a escribir el PIN, y lo que tenga sin mandar espera a que lo escriba. Para que no vuelva a entrar, cambia también el PIN. Queda en el historial con tu motivo.',
       phoneRemoved: 'Teléfono sacado del torneo.',
+      /** SEC-04: wrong PINs from phones that never held the player lock it for new phones; his own still get in. */
+      pinLocked: 'PIN bloqueado',
+      pinLockedLine: (failed: number, time: string) =>
+        `${failed} intentos fallidos desde teléfonos nuevos. Ningún teléfono nuevo puede entrar como este jugador hasta las ${time}; los que ya entraron siguen funcionando. Si no fue él, cambia el PIN.`,
+      unlockPin: 'Desbloquear',
+      pinUnlocked: 'PIN desbloqueado. El PIN no cambió.',
       handicap: 'Hándicap',
       source: 'Cómo se obtiene',
       sourceManual: 'A mano',

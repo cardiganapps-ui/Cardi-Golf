@@ -140,6 +140,12 @@ try {
   const { data: lookupMember } = await dev.rpc('lookup_tournament', { p_code: A.tournament.slug })
   const { data: lookupStranger } = await dev2.rpc('lookup_tournament', { p_code: B.tournament.slug })
   check(lookupMember?.joinCode === A.tournament.join_code && lookupStranger?.joinCode == null, 'the join code is returned to members only')
+  check(
+    lookupMember?.players?.every((p) => typeof p.fullName === 'string') &&
+      lookupStranger?.players?.length > 0 && lookupStranger.players.every((p) => p.fullName == null && p.displayName) &&
+      lookupNoSession?.players?.every((p) => p.fullName == null),
+    'full names go to members only; the faces before a PIN carry short names (SEC-06, 0056)',
+  )
   const { data: newCode, error: rotateErr } = await A.sb.rpc('rotate_join_code', { p_tournament_id: A.tournament.id })
   const { error: rotateB } = await A.sb.rpc('rotate_join_code', { p_tournament_id: B.tournament.id })
   check(!rotateErr && /^[A-Z2-9]{6}$/.test(newCode) && newCode !== A.tournament.join_code && !!rotateB, 'rotate_join_code works for the owner and not across tournaments')
