@@ -5,6 +5,7 @@
  * open it in one tap.
  */
 import { create } from 'zustand'
+import { onLinkPage } from './linkPage'
 
 /** The browser's install offer (Chrome, Edge, Samsung Internet): not in TypeScript's DOM types. */
 interface InstallPromptEvent extends Event {
@@ -80,7 +81,9 @@ export function listenForInstall(): void {
   })
   window.addEventListener('appinstalled', () => {
     useInstallOffer.setState({ offer: null })
-    markInstalled()
+    // A link to watch keeps nothing on the phone (STRAT-05): it knows for this visit only.
+    if (onLinkPage()) useInstallOffer.setState({ installed: true })
+    else markInstalled()
   })
 }
 

@@ -12,6 +12,7 @@ import { LateSignOutHome } from './LateSignOut'
 import { LegalUpdate } from './LegalUpdate'
 import { RouteAnnouncer } from './RouteAnnouncer'
 import { listenForLaunches } from '../lib/launch'
+import { isLinkPage } from '../lib/linkPage'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -21,13 +22,23 @@ export function AppShell() {
   const wide = /\/(admin|tv|ceremonia|imprimir)(\/|$)/.test(path)
   // The Admin de Polo panel puts a list and its detail side by side on a laptop.
   const platform = /^\/admin(\/|$)/.test(path)
+  // A link to watch is nobody's phone (STRAT-05): no session read (so no profile, inbox or badge either) and no outbox,
+  // whose IndexedDB is never opened there. The app's switches still load: a public read, which writes and records
+  // nothing, and carries the maintenance banner and the build every page must update to, a TV left on all day too.
+  const linkPage = isLinkPage(path)
   // Inside the tournament shell the tab bar already pads the safe area; the main column must not add its own.
-  const tabbed = /^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)
+  // A link to watch (`/v/<token>`, its fixtures `/v/_/<name>`) has the same tab bar, the TV aside (STRAT-05).
+  const tabbed =
+    (/^\/t\/[^/]+(\/(?!tv|ceremonia|imprimir|admin)[^/]*)?\/?$/.test(path) && !/\/(tv|ceremonia|imprimir|admin)(\/|$)/.test(path)) ||
+    (linkPage && !/\/tv\/?$/.test(path))
   useEffect(() => {
+    void useAppFlags.getState().load()
+  }, [])
+  useEffect(() => {
+    if (linkPage) return
     void init()
     void startOutbox()
-    void useAppFlags.getState().load()
-  }, [init])
+  }, [init, linkPage])
   // A shortcut or a link while the app is open focuses it (`focus-existing`, PWA-14): go where it says, in place.
   const navigate = useNavigate()
   useEffect(() => listenForLaunches((to) => void navigate(to)), [navigate])

@@ -60,6 +60,14 @@ export interface TournamentCtx {
    */
   retry?(): Promise<void>
   leave(): Promise<void>
+  /** Where this tournament's screens live, when not `/t/<slug>`: a link to watch's `/v/<token>`. */
+  base?: string
+  /**
+   * Opened with a link to watch (STRAT-05, 0053): read-only, no session, no
+   * PIN. `money`: the link shows money («Con dinero»); `url`: the link itself,
+   * which what is shared from here carries.
+   */
+  spectator?: { money: boolean; url: string }
 }
 
 const Ctx = createContext<TournamentCtx | null>(null)

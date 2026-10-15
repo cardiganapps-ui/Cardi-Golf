@@ -13,6 +13,8 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { withTimeout } from '../lib/timeout'
 import { ApiError } from './api'
+import { anonRpc } from './anonRpc'
+import { onLinkPage } from '../lib/linkPage'
 import { entryChanged } from './entryEvents'
 
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
@@ -482,7 +484,8 @@ export const useAppFlags = create<{ flags: AppFlags | null; load(): Promise<void
   flags: null,
   async load() {
     try {
-      set({ flags: await withTimeout(rpc<AppFlags>('app_flags'), 5000, 'avisos') })
+      // On a link to watch as anon with no session (STRAT-05): the page is nobody's, whatever this browser keeps.
+      set({ flags: await withTimeout(onLinkPage() ? anonRpc<AppFlags>('app_flags') : rpc<AppFlags>('app_flags'), 5000, 'avisos') })
     } catch {
       // No banner is better than a stuck app.
     }

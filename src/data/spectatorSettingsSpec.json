@@ -1,0 +1,383 @@
+{
+  "o": {
+    "modules": {
+      "o": {
+        "individual": {
+          "o": {
+            "enabled": "s",
+            "label": "s",
+            "format": "s",
+            "formatOptions": {
+              "o": {
+                "scoring": "s",
+                "matchMode": "s",
+                "teamMode": "s",
+                "teamScoring": "s"
+              }
+            }
+          }
+        },
+        "bestRound": {
+          "o": {
+            "enabled": "s",
+            "label": "s"
+          }
+        },
+        "pairs": {
+          "o": {
+            "enabled": "s",
+            "label": "s",
+            "pairing": {
+              "a": {
+                "a": "s"
+              }
+            },
+            "honoreePicks": "s"
+          }
+        },
+        "snake": {
+          "o": {
+            "enabled": "s",
+            "label": "s",
+            "puttsThreshold": "s"
+          }
+        },
+        "fewestPutts": {
+          "o": {
+            "enabled": "s",
+            "label": "s"
+          }
+        },
+        "auction": {
+          "o": {
+            "enabled": "s",
+            "label": "s"
+          }
+        }
+      }
+    },
+    "tiers": {
+      "a": "s"
+    },
+    "rounds": "s",
+    "groupSize": "s",
+    "expectedPlayers": "s",
+    "labels": {
+      "o": {
+        "lastPlace": "s",
+        "honoree": "s",
+        "trophy": "s"
+      }
+    },
+    "entryFee": "s",
+    "houseCut": "s",
+    "handicap": {
+      "o": {
+        "allowance": "s",
+        "cap": "s",
+        "rounding": "s",
+        "perRoundSlope": "s",
+        "estimateWeights": {
+          "a": "s"
+        }
+      }
+    },
+    "day2Cut": {
+      "o": {
+        "threshold": "s",
+        "pointsPerStroke": "s",
+        "maxStrokes": "s",
+        "mode": "s"
+      }
+    },
+    "prizes": {
+      "o": {
+        "stableford": {
+          "a": "s"
+        },
+        "stablefordMode": "s",
+        "pairs": {
+          "a": "s"
+        },
+        "bestRoundPerDay": "s",
+        "snakePerSurvivor": "s",
+        "fewestPutts": "s"
+      }
+    },
+    "auction": {
+      "o": {
+        "openingBid": "s",
+        "increment": "s",
+        "maxPlayersPerOwner": "s",
+        "selfOwnedCountsTowardMax": "s",
+        "guestsCanBid": "s",
+        "buybackMaxPct": "s",
+        "payout": {
+          "a": {
+            "d": "slot",
+            "by": {
+              "place": {
+                "o": {
+                  "slot": "s",
+                  "place": "s",
+                  "share": "s"
+                }
+              },
+              "bestOfTier": {
+                "o": {
+                  "slot": "s",
+                  "tier": "s",
+                  "share": "s"
+                }
+              },
+              "lastPlace": {
+                "o": {
+                  "slot": "s",
+                  "share": "s"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "games": {
+      "a": {
+        "d": "type",
+        "by": {
+          "skins": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "basis": "s",
+                  "carryOver": "s"
+                }
+              }
+            }
+          },
+          "lowScore": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "basis": "s",
+                  "scope": "s"
+                }
+              }
+            }
+          },
+          "eventPot": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "event": "s",
+                  "basis": "s"
+                }
+              }
+            }
+          },
+          "match": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "format": "s",
+                  "basis": "s",
+                  "pairScoring": "s",
+                  "pressAt": "s",
+                  "maxPresses": "s",
+                  "matches": {
+                    "a": {
+                      "o": {
+                        "id": "s",
+                        "a": {
+                          "a": "s"
+                        },
+                        "b": {
+                          "a": "s"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "contest": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "kind": "s",
+                  "holes": {
+                    "u": [
+                      "s",
+                      {
+                        "a": "s"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "custom": {
+            "o": {
+              "id": "s",
+              "label": "s",
+              "enabled": "s",
+              "rounds": {
+                "u": [
+                  "s",
+                  {
+                    "a": "s"
+                  }
+                ]
+              },
+              "entrants": "s",
+              "money": {
+                "o": {
+                  "source": "s",
+                  "buyIn": "s",
+                  "amount": "s",
+                  "stake": "s",
+                  "split": {
+                    "a": "s"
+                  }
+                }
+              },
+              "type": "s",
+              "options": {
+                "o": {
+                  "description": "s"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pickupPuttsForFewestPutts": "s",
+    "tieFallback": "s",
+    "spectatorLink": "s",
+    "timezone": "s",
+    "currency": "s"
+  }
+}

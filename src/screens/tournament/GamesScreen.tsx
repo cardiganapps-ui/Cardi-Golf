@@ -21,6 +21,7 @@ import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
 import { useActiveRound } from './useMyGroup'
 import { useTournamentCtx } from './TournamentGate'
 import { useViewFocus } from '../../components/viewFocus'
+import { tournamentBase, useShowMoney } from './tournamentView'
 import styles from './GamesScreen.module.css'
 
 const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction']
@@ -28,9 +29,12 @@ const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestP
 export function GamesScreen() {
   const data = useTournament((s) => s.data)
   const round = useActiveRound()
-  const { slug } = useTournamentCtx()
+  const ctx = useTournamentCtx()
+  const base = tournamentBase(ctx)
+  // A link to watch «Sin dinero» (STRAT-05): no stakes, no «por día», no way to Dinero; nor to the Reglamento, which it does not open.
+  const showMoney = useShowMoney()
   const cfg = data?.settings
-  const hasMoney = !!cfg && (cfg.entryFee > 0 || cfg.modules.auction.enabled || cfg.games.some((g) => g.money.source !== 'none'))
+  const hasMoney = showMoney && !!cfg && (cfg.entryFee > 0 || cfg.modules.auction.enabled || cfg.games.some((g) => g.money.source !== 'none'))
   const [open, setOpen] = useState<string | null>(null)
   const [tab, setTab] = useState<string | null>(null)
   const tabs = useMemo(() => {
@@ -67,7 +71,7 @@ export function GamesScreen() {
     const m = state.modules
     if (id.startsWith('game:')) {
       const g = state.games[id.slice(5)]
-      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g ? gameStake(g) : stake }
+      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g && showMoney ? gameStake(g) : stake }
     }
     if (id === 'individual' && m.individual) {
       const r = m.individual.rows[0]
@@ -99,7 +103,7 @@ export function GamesScreen() {
       leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.pesos)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
       stake = { text: t.games.pot, amount: m.auction.pot }
     }
-    return { id, label, leader, stake }
+    return { id, label, leader, stake: showMoney ? stake : { text: '' } }
   })
 
   return (
@@ -142,16 +146,20 @@ export function GamesScreen() {
           )}
           {/* "¿Qué es este juego?", "¿cuánto paga?" and "¿ya lo gané?" used to
               be three screens with no link between them. */}
-          <nav className={styles.crossLinks} aria-label={t.games.more}>
-            <Link className={styles.crossLink} to={`/t/${slug}/reglamento`}>
-              {t.games.seeRules}
-            </Link>
-            {hasMoney && (
-              <Link className={styles.crossLink} to={`/t/${slug}/dinero`}>
-                {t.games.seeMoney}
-              </Link>
-            )}
-          </nav>
+          {(!ctx.spectator || hasMoney) && (
+            <nav className={styles.crossLinks} aria-label={t.games.more}>
+              {!ctx.spectator && (
+                <Link className={styles.crossLink} to={`${base}/reglamento`}>
+                  {t.games.seeRules}
+                </Link>
+              )}
+              {hasMoney && (
+                <Link className={styles.crossLink} to={`${base}/dinero`}>
+                  {t.games.seeMoney}
+                </Link>
+              )}
+            </nav>
+          )}
         </>
       ) : (
         <>
@@ -284,7 +292,7 @@ export function GamesScreen() {
                 <div key={d.roundId} className={styles.section}>
                   <div className={styles.sectionHead}>
                     <h3>{t.round.day(d.roundNumber)}</h3>
-                    <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay))}</span>
+                    {showMoney && <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay))}</span>}
                   </div>
                   <Board>
                     <BoardHead figureLabel={t.live.points} dense={d.rows.length > 20} />

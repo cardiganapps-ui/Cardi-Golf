@@ -18,6 +18,8 @@ import { InstallCard } from '../../components/InstallGuide'
 import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './TournamentGate'
+import { tournamentBase, useShowMoney } from './tournamentView'
+import { SpectatorNote } from '../spectator/SpectatorNote'
 import { useSavedWhen } from './boardsAge'
 import { useBoardsMayBeOld } from './connection'
 import { QuickFinish } from './QuickFinish'
@@ -114,7 +116,11 @@ const BoardRow = memo(function BoardRow(props: {
 
 export function LiveScreen() {
   const data = useTournament((s) => s.data)
-  const { me, slug } = useTournamentCtx()
+  const ctx = useTournamentCtx()
+  const { me, spectator } = ctx
+  const base = tournamentBase(ctx)
+  // A link to watch «Sin dinero» (STRAT-05): no money chips, no owners, no «si terminara ahora».
+  const showMoney = useShowMoney()
   const round = useActiveRound()
   const [open, setOpen] = useState<string | null>(null)
   const closeSheet = useCallback(() => setOpen(null), [])
@@ -141,13 +147,13 @@ export function LiveScreen() {
 
   const owners = useMemo(() => {
     const m = new Map<string, string>()
-    if (!data?.state.modules.auction) return m
+    if (!data?.state.modules.auction || !showMoney) return m
     for (const lot of data.state.modules.auction.lots) {
       if (lot.status !== 'sold') continue
       m.set(lot.playerId, lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName.slice(0, 2).toUpperCase() ?? '?').join(' '))
     }
     return m
-  }, [data])
+  }, [data, showMoney])
 
   if (!data) return null
   const { snapshot, state, settings, settingsError } = data
@@ -240,7 +246,8 @@ export function LiveScreen() {
     <div className={styles.screen}>
       {/* The tournament's home page is named after it, for headings and for focus after a page change (A11Y-13); the header shows the name. */}
       <h1 className="sr-only">{snapshot.tournament.name}</h1>
-      {settingsError && (
+      {/* What the Comité acts on (a broken setting, a tiebreak to answer, a warning) is not a spectator's to read (STRAT-05). */}
+      {settingsError && !spectator && (
         <div className="card card--alert">
           <strong>{t.admin.tournament.invalid}</strong>
           <p className="small">{settingsError}</p>
@@ -248,31 +255,32 @@ export function LiveScreen() {
       )}
 
       <QuickFinish />
-      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). */}
-      <InstallCard />
+      {/* After the PIN the player lands here: this phone's way to install, until it has the app (PWA-08). Not on a link to
+          watch (STRAT-05): the installed app opens Home, never the link, and on an iPhone it keeps nothing of Safari's. */}
+      {!spectator && <InstallCard />}
       {/* In the installed app, once this phone's player saved a hole: the tournament's notices (PWA-10). */}
-      <TournamentPushOffer />
+      {!spectator && <TournamentPushOffer />}
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>
         <DetailLine lead={lead} />
         {myHole && (
-          <Link className={`btn btn--primary btn--block ${styles.scoreNow}`} to={`/t/${slug}/tarjeta?hoyo=${myHole.hole}`}>
+          <Link className={`btn btn--primary btn--block ${styles.scoreNow}`} to={`${base}/tarjeta?hoyo=${myHole.hole}`}>
             {myHole.thru >= (round?.holes ?? 18) ? t.live.scoreDone : t.live.scoreHole(myHole.hole)}
           </Link>
         )}
-        {state.flags.pendingSnakeTiebreaks.length > 0 && (
+        {!spectator && state.flags.pendingSnakeTiebreaks.length > 0 && (
           <span className={styles.caution}>
             <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}
           </span>
         )}
-        {state.flags.warnings.map((w) => (
+        {!spectator && state.flags.warnings.map((w) => (
           <span key={w} className={styles.caution}>
             <IconAlert size={16} /> {w}
           </span>
         ))}
         {/* A handicap changed after they were fixed (UX-28): everyone sees it, and a tap opens the player with the reason. */}
-        {state.flags.handicapChanges.map((c) => (
+        {!spectator && state.flags.handicapChanges.map((c) => (
           <button key={c.playerId} type="button" className={`${styles.caution} ${styles.cautionLink}`} onClick={() => setOpen(c.playerId)}>
             <IconAlert size={16} /> {t.live.hcpChanged(byId.get(c.playerId)?.displayName ?? '?', hcpFromTo(c.from, c.to))}
           </button>
@@ -323,7 +331,7 @@ export function LiveScreen() {
               if (!p) return null
               const pr = roundState?.[p.id]
               const mv = moves.get(r.playerId) ?? 0
-              const cash = members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0)
+              const cash = showMoney ? members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0) : 0
               let figure: string
               let tone: Tone = 'even'
               let today: string | undefined
@@ -381,12 +389,14 @@ export function LiveScreen() {
         </Board>
       )}
       <div className="row row--between">
-        <span className="help">{t.money.ifEndedNow}</span>
+        {showMoney ? <span className="help">{t.money.ifEndedNow}</span> : <span />}
         {hasHandicaps && <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />}
       </div>
 
       <h2 className={styles.feedHead}>{t.feed.title}</h2>
       <FeedTicker limit={10} />
+
+      <SpectatorNote />
 
       <PlayerSheet playerId={open} onClose={closeSheet} />
     </div>
