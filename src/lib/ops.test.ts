@@ -33,6 +33,12 @@ describe('ops', () => {
     for (const ecosystem of ['npm', 'github-actions']) expect(bot).toContain(`package-ecosystem: ${ecosystem}`)
     expect(bot.match(/interval: weekly/g)).toHaveLength(2)
     expect(bot).toMatch(/update-types: \[minor, patch\]/)
+    // Vite's family comes as one major (PR 201: Vite 8 alone could not pass), and the two majors that cannot land
+    // yet stay out: TypeScript's until typescript-eslint takes it, the Node types' until `engines` moves.
+    expect(bot).toMatch(/vite:\n\s+patterns: \['vite', 'vitest', '@vitest\/\*', '@vitejs\/\*', 'vite-plugin-pwa'\]\n\s+update-types: \[major\]/)
+    for (const held of ['typescript', "'@types/node'"]) expect(bot).toMatch(new RegExp(`dependency-name: ${held.replace(/[/.*]/g, '\\$&')}\\n\\s+update-types: \\['version-update:semver-major'\\]`))
+    const pkg = JSON.parse(read('package.json')) as { engines: { node: string }; devDependencies: Record<string, string> }
+    expect(pkg.devDependencies['@types/node']!.replace(/^\D*/, '').split('.')[0]).toBe(pkg.engines.node.replace(/^\D*/, ''))
     const ci = read('.github/workflows/ci.yml')
     expect(ci).toContain('npm audit --omit=dev --audit-level=high')
     // After the preflight, in the same job the merge waits on.
