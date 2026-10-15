@@ -3265,7 +3265,10 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/player_tenant_keys.sql",
+        "supabase/tests/tenant_ids.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -237,13 +237,23 @@ update public.scores set round_id = :'r_b', player_id = :'carla', hole = 16 wher
 select harness.check((select tournament_id from public.scores where round_id = :'r_b' and hole = 16) = :'t_b', 'a score moved to another tournament''s round takes that tournament with it');
 insert into public.rounds (id, tournament_id, number, holes) values ('a7000000-0000-4000-8000-000000000001', :'t_a', 9, 18);
 insert into public.groups (id, round_id, number) values ('a7100000-0000-4000-8000-000000000001', 'a7000000-0000-4000-8000-000000000001', 1);
+update public.rounds set tournament_id = :'t_b' where id = 'a7000000-0000-4000-8000-000000000001';
+select harness.check((select tournament_id from public.groups where id = 'a7100000-0000-4000-8000-000000000001') = :'t_b',
+  'a round moved to another tournament carries its groups (the keys cascade)');
+update public.rounds set tournament_id = :'t_a' where id = 'a7000000-0000-4000-8000-000000000001';
 insert into public.group_members (group_id, player_id) values ('a7100000-0000-4000-8000-000000000001', :'ana');
 insert into public.scores (round_id, player_id, hole, strokes, putts, picked_up) values ('a7000000-0000-4000-8000-000000000001', :'ana', 1, 4, 2, false);
-update public.rounds set tournament_id = :'t_b' where id = 'a7000000-0000-4000-8000-000000000001';
-select harness.check((select tournament_id from public.groups where id = 'a7100000-0000-4000-8000-000000000001') = :'t_b'
-    and (select tournament_id from public.group_members where group_id = 'a7100000-0000-4000-8000-000000000001') = :'t_b'
-    and (select tournament_id from public.scores where round_id = 'a7000000-0000-4000-8000-000000000001') = :'t_b',
-  'a round moved to another tournament carries its groups, their members and its scores (the keys cascade), as the old schema let it');
+-- SEC-11 (0057): its members and scores name tournament A's player, so the move would leave them naming a player of
+-- another tournament: refused, where the old schema let it through.
+select set_config('harness.t_b', :'t_b', true) \g /dev/null
+do $$
+begin
+  update public.rounds set tournament_id = current_setting('harness.t_b')::uuid where id = 'a7000000-0000-4000-8000-000000000001';
+  raise exception 'moved';
+exception when foreign_key_violation then null;
+end $$;
+select harness.check((select tournament_id from public.scores where round_id = 'a7000000-0000-4000-8000-000000000001') = :'t_a',
+  'a round whose rows name its players cannot move to another tournament (SEC-11)');
 rollback to savepoint moves;
 
 -- ---------------------------------------------------------------------------
