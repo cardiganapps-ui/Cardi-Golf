@@ -3078,9 +3078,12 @@
       "workstream": "W11",
       "phase": 2,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 173,
+      "tests": [
+        "src/lib/securityHeaders.test.ts",
+        "e2e/fixtures/base.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3181,9 +3184,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 173,
+      "tests": [
+        "src/server/secret.test.ts",
+        "src/lib/backupCron.test.ts",
+        "src/lib/pushDispatch.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3195,9 +3202,11 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 157,
+      "tests": [
+        "src/lib/pushSw.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

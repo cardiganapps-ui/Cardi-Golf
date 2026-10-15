@@ -121,7 +121,9 @@ test('leaving the wizard with something typed asks first, by a link or the syste
   await open(page, '/organizer/nuevo/_')
   const name = page.getByPlaceholder(W.namePlaceholder)
   const brand = page.locator('a[href="/organizer"]').first()
-  const left = /\/organizer(\/login)?$/
+  // Where the brand link lands: «Mis torneos», which sends a browser with no account on to its sign-in. Wait for
+  // that page, not for /organizer: a back taken before its redirect let the redirect replace the wizard's entry.
+  const left = /\/organizer\/login$/
   const wizard = /\/organizer\/nuevo\/_$/
   const asked = page.getByRole('heading', { name: W.leaveTitle })
   // Nothing typed: nothing to ask.
