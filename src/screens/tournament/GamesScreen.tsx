@@ -225,7 +225,7 @@ export function GamesScreen() {
                             {r.label} {r.entrant.isTeam ? r.entrant.name : name(r.playerId)}
                           </span>
                         </span>
-                        <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} />
+                        <HowCalculated why={r.countbackWhy!} label={t.games.tiebreak} about={`${r.label} ${r.entrant.isTeam ? r.entrant.name : name(r.playerId)}`} />
                       </div>
                     ))}
                 </div>
@@ -374,7 +374,7 @@ export function GamesScreen() {
                           {s.unfilled ? t.games.unassigned : t.common.andList(s.playerIds.map(name))}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
-                      <HowCalculated why={s.why} label={formatMoney(s.pesos)} />
+                      <HowCalculated why={s.why} label={formatMoney(s.pesos)} about={s.label} />
                     </div>
                   ))}
                 </div>

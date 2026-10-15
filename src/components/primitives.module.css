@@ -84,7 +84,8 @@
 }
 
 /* ---- Fields ---- */
-.field {
+.field,
+.fieldControl {
   display: flex;
   flex-direction: column;
   gap: var(--s1);

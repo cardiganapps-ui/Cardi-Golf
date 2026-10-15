@@ -84,11 +84,13 @@ export function AdminHandicaps() {
                       {pr.overridden ? `, ${H.overrideInLine}` : ''}
                     </span>
                   </span>
-                  <span className={a.fig} aria-label={`${H.plays} ${pr.playingHcp}`}>
-                    {pr.playingHcp}
+                  {/* A11Y-22: said with its words; a label on a bare span is dropped by most readers. */}
+                  <span className={a.fig}>
+                    <span aria-hidden="true">{pr.playingHcp}</span>
+                    <span className="sr-only">{`${H.plays} ${pr.playingHcp}`}</span>
                   </span>
                   <span className={a.rowActions}>
-                    <HowCalculated why={pr.playingHcpWhy} label="?" />
+                    <HowCalculated why={pr.playingHcpWhy} label="?" about={`${p.displayName}, ${H.plays} ${pr.playingHcp}`} />
                     <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ playerId: p.id, value: pr.playingHcp, reason: '' })}>
                       {t.common.edit}
                     </button>

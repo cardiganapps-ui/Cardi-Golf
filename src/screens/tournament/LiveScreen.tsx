@@ -386,6 +386,7 @@ export function LiveScreen() {
               { value: 'gross', label: t.live.gross },
             ]}
             onChange={setView}
+            label={t.live.boardIn}
           />
         ) : (
           <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />

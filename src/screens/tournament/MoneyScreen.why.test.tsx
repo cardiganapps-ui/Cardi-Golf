@@ -17,6 +17,8 @@ import { TournamentContext } from './TournamentGate'
 
 const M = t.moneyScreen
 const H = t.money.howCalculated
+/** A11Y-25: a trigger is said as what it explains, then «¿Cómo se calculó?». */
+const how = (what: string) => t.money.howCalculatedOf(what)
 const TID = 'fixture:full12-finished'
 
 function mount() {
@@ -55,7 +57,7 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
     const lines = state().money.viaBank
     expect(lines.length).toBeGreaterThan(0)
     for (const tr of lines) {
-      const steps = open(screen.getByRole('button', { name: `${H} ${lineName(tr.from, tr.to, tr.amount)}` }))
+      const steps = open(screen.getByRole('button', { name: how(lineName(tr.from, tr.to, tr.amount)) }))
       expect(steps).toEqual(tr.why[0]!.steps)
       fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
       cleanup()
@@ -80,12 +82,12 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
     fireEvent.click(screen.getByRole('radio', { name: M.final }))
     fireEvent.click(screen.getByRole('radio', { name: M.p2p }))
     const tr = state().money.peerToPeer[0]!
-    const steps = open(screen.getByRole('button', { name: `${H} ${lineName(tr.from, tr.to, tr.amount)}` }))
+    const steps = open(screen.getByRole('button', { name: how(lineName(tr.from, tr.to, tr.amount)) }))
     expect(steps).toEqual(tr.why.flatMap((w) => w.steps))
   })
 
   it('the bank: what comes in, what goes out, and what is left', () => {
-    const steps = open(screen.getByRole('button', { name: `${H} ${M.bank}` }))
+    const steps = open(screen.getByRole('button', { name: how(M.bank) }))
     expect(steps).toEqual(state().money.banker.why.steps)
     expect(steps).toContain(t.settleWhy.bankInTotal(formatMoney(state().money.banker.receives)))
   })
@@ -93,7 +95,7 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
   it('Por juego: each amount opens the prize’s own explanation', () => {
     fireEvent.click(screen.getByRole('radio', { name: M.byGame }))
     // The bank's own trigger stays above every mode.
-    const triggers = screen.getAllByRole('button', { name: new RegExp(`^${H.replace(/[?¿]/g, '\\$&')} `) }).filter((b) => b.getAttribute('aria-label') !== `${H} ${M.bank}`)
+    const triggers = screen.getAllByRole('button', { name: new RegExp(`: ${H.replace(/[?¿]/g, '\\$&')}$`) }).filter((b) => b.getAttribute('aria-label') !== how(M.bank))
     expect(triggers.length).toBe(state().prizes.length)
     const steps = open(triggers[0]!)
     expect(state().prizes.some((pr) => JSON.stringify(pr.why.steps) === JSON.stringify(steps))).toBe(true)

@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { IconAlert, IconPencil } from '../../../components/icons'
-import { ScoreMark, markFor } from '../../../components/primitives'
+import { ScoreMark, SiAbbr, markFor } from '../../../components/primitives'
 import type { HoleResult, PlayerRound } from '../../../engine/core/types'
 import { holeStrokes } from '../../../engine/formats'
 import { t } from '../../../i18n/es-MX'
@@ -146,7 +146,9 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
             <tr>
               <th>{t.player.hole}</th>
               <th className={styles.gridMeta}>{t.player.par}</th>
-              <th className={styles.gridMeta}>{t.player.si}</th>
+              <th className={styles.gridMeta}>
+                <SiAbbr />
+              </th>
               {named.map((pl) => (
                 <th key={pl.id}>{pl.name}</th>
               ))}

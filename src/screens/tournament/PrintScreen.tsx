@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Segmented } from '../../components/ui'
+import { SiAbbr } from '../../components/primitives'
 import { useTournament } from '../../data/tournamentStore'
 import { playOrder } from '../../engine/core/playOrder'
 import { useTournamentCtx } from './TournamentGate'
@@ -55,9 +56,10 @@ export function PrintScreen() {
               { value: 'calcutta', label: P.auctionSheet },
             ]}
             onChange={(v) => setParams(v === 'calcutta' ? { hoja: 'calcutta' } : {}, { replace: true })}
+            label={P.whatToPrint}
           />
         )}
-        {!sheet && rounds.length > 1 && <Segmented value={current?.id ?? ''} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} />}
+        {!sheet && rounds.length > 1 && <Segmented value={current?.id ?? ''} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />}
         <button className="btn btn--primary btn--sm" type="button" onClick={() => window.print()}>
           <IconPrint /> {P.print}
         </button>
@@ -93,19 +95,24 @@ export function PrintScreen() {
                     ))}
                     <th>{t.common.total}</th>
                   </tr>
+                  {/* A11Y-25: each row says what it is; its values are data, and the SI row has no total to head. */}
                   <tr className={styles.meta}>
-                    <th className={styles.left}>{P.par}</th>
+                    <th scope="row" className={styles.left}>
+                      {P.par}
+                    </th>
                     {order.map((h) => (
-                      <th key={h}>{ref?.holes.find((x) => x.hole === h)?.par ?? ''}</th>
+                      <td key={h}>{ref?.holes.find((x) => x.hole === h)?.par ?? ''}</td>
                     ))}
-                    <th>{ref ? ref.holes.reduce((a, h) => a + h.par, 0) : ''}</th>
+                    <td>{ref ? ref.holes.reduce((a, h) => a + h.par, 0) : ''}</td>
                   </tr>
                   <tr className={styles.meta}>
-                    <th className={styles.left}>{P.si}</th>
+                    <th scope="row" className={styles.left}>
+                      <SiAbbr />
+                    </th>
                     {order.map((h) => (
-                      <th key={h}>{ref?.holes.find((x) => x.hole === h)?.strokeIndex ?? ''}</th>
+                      <td key={h}>{ref?.holes.find((x) => x.hole === h)?.strokeIndex ?? ''}</td>
                     ))}
-                    <th />
+                    <td />
                   </tr>
                 </thead>
                 <tbody>
@@ -197,7 +204,12 @@ function PlayerRows({ name, sub, dots }: { name: string; sub: string; dots: numb
         </td>
         {dots.map((d, i) => (
           <td key={i} className={styles.strokes}>
-            <span className={styles.dots}>{'•'.repeat(d)}</span>
+            {/* A11Y-22: said as the strokes they are, not «viñeta, viñeta». */}
+            {d > 0 && (
+              <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(d)}>
+                {'•'.repeat(d)}
+              </span>
+            )}
           </td>
         ))}
         <td />

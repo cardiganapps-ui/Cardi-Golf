@@ -70,10 +70,16 @@ function mountComite(name: string, edit?: (s: Snapshot) => void, tournamentId = 
     </MemoryRouter>,
   )
   const tab = () => screen.getByRole('link', { name: new RegExp(`^${t.admin.sections.tournament}`) })
+  /** What the tab shows: its words and its badge, without the badge's words for a screen reader (A11Y-22). */
+  const shown = () => {
+    const copy = tab().cloneNode(true) as HTMLElement
+    copy.querySelectorAll('.sr-only').forEach((n) => n.remove())
+    return copy.textContent
+  }
   const go = async (section: 'jugadores' | 'torneo') => {
     await act(async () => fireEvent.click(screen.getByRole('link', { name: new RegExp(`^${section === 'torneo' ? t.admin.sections.tournament : t.admin.sections.players}`) })))
   }
-  return { ...view, snapshot, tab, go }
+  return { ...view, snapshot, tab, shown, go }
 }
 
 const pinsOf = (ids: string[]) => new Set(ids)
@@ -184,14 +190,14 @@ describe('Para empezar: «Listo» only when the day can be played (N1, N5)', () 
   it('everything on the list done, but the engine warns about something it does not say: no «Listo»', async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3', 'p4']))
     // The round's course is not loaded: the engine plays par 4 everywhere and says so above the card.
-    const { tab } = mountComite('minimal4-setup', (s) => {
+    const { shown } = mountComite('minimal4-setup', (s) => {
       s.rounds[0]!.courseId = 'ghost'
     })
     await waitFor(() => expect(api.playersWithPin).toHaveBeenCalled())
     await act(async () => undefined)
     expect(useTournament.getState().data!.state.flags.warnings).toHaveLength(1)
     expect(screen.queryByText(LISTO)).toBeNull()
-    expect(tab().textContent).toContain('1')
+    expect(shown()).toContain('1')
   })
 
   it('under way with every day left cancelled: nothing to prepare, so no card at all', async () => {
@@ -226,15 +232,15 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
 
   it('the tab counts the PIN line, the same answer the card shows, and says «1 pendiente» (M13)', async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
-    const { tab } = mountComite('minimal4-setup')
+    const { tab, shown } = mountComite('minimal4-setup')
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
-    expect(tab().textContent).toBe(`${t.admin.sections.tournament}1`)
-    expect(screen.getByRole('link', { name: `${t.admin.sections.tournament} 1 pendiente` })).toBe(tab())
+    expect(shown()).toBe(`${t.admin.sections.tournament}1`)
+    expect(screen.getByRole('link', { name: `${t.admin.sections.tournament} ${t.admin.inbox.count(1)}` })).toBe(tab())
   })
 
   it('a failed answer is asked for again when the card opens again, and the tab follows the card (M9)', async () => {
     api.playersWithPin.mockRejectedValueOnce(new Error('Sin conexión'))
-    const { tab, go } = mountComite('minimal4-setup')
+    const { shown, go } = mountComite('minimal4-setup')
     await waitFor(() => expect(api.playersWithPin).toHaveBeenCalledTimes(1))
     await act(async () => undefined)
     expect(screen.queryByText(LISTO)).toBeNull()
@@ -242,7 +248,7 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     await go('jugadores')
     await go('torneo')
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(3)}` })).toBeTruthy()
-    expect(tab().textContent).toBe(`${t.admin.sections.tournament}1`)
+    expect(shown()).toBe(`${t.admin.sections.tournament}1`)
   })
 
   it('PINs set on another phone: opening the card again asks again (a settled answer is not kept)', async () => {

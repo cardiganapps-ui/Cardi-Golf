@@ -28,14 +28,30 @@ export function Avatar({ name, url, size, honoree }: { name: string; url?: strin
   )
 }
 
+/**
+ * A switch with its words. The whole row is its label, so a tap anywhere on it flips it; it is named by its words
+ * alone and the hint describes it (A11Y-24): inside the label, the hint was part of its name.
+ */
 export function Toggle({ label, checked, onChange, hint, ariaLabel }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; ariaLabel?: string }) {
+  const id = useId()
   return (
     <label className="toggle">
       <span>
-        <span>{label}</span>
-        {hint && <span className="help">{hint}</span>}
+        <span id={`${id}-label`}>{label}</span>
+        {hint && (
+          <span className="help" id={`${id}-hint`}>
+            {hint}
+          </span>
+        )}
       </span>
-      <input type="checkbox" checked={checked} aria-label={ariaLabel} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={checked}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : `${id}-label`}
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        onChange={(e) => onChange(e.target.checked)}
+      />
     </label>
   )
 }

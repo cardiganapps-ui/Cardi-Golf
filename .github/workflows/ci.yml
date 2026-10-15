@@ -31,5 +31,8 @@ jobs:
       # QA-21: a known high or critical vulnerability in what ships to phones and
       # serverless routes (the production dependencies) fails the check. Dev
       # tooling comes up to date through Dependabot (.github/dependabot.yml).
+      # The script runs `npm audit --omit=dev --audit-level=high`, asks again
+      # when npm's advisory service gives no report, and says why it failed as
+      # an annotation on the check run.
       - if: hashFiles('package-lock.json') != ''
-        run: npm audit --omit=dev --audit-level=high
+        run: node scripts/audit.mjs

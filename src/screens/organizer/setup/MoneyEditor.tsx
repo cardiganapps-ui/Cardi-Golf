@@ -127,7 +127,7 @@ function GameMoneyCard({ game: g, currency, onChange }: { game: GameConfig; curr
   return (
     <div className={styles.card}>
       <span className={styles.cardTitle}>{g.label}</span>
-      <Segmented value={src} options={sources.map((s) => ({ value: s, label: U.source[s]! }))} onChange={(v) => onChange((x) => (x.money.source = v))} />
+      <Segmented value={src} options={sources.map((s) => ({ value: s, label: U.source[s]! }))} onChange={(v) => onChange((x) => (x.money.source = v))} label={U.choose.money(g.label)} />
       <span className="help">{U.sourceHint[src]}</span>
       {src === 'side' && <NumberField label={U.buyIn} prefix="$" value={g.money.buyIn} onChange={(v) => onChange((x) => (x.money.buyIn = v))} />}
       {src === 'main' && <NumberField label={U.amount} prefix="$" value={g.money.amount} onChange={(v) => onChange((x) => (x.money.amount = v))} />}
