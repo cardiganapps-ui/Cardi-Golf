@@ -3805,9 +3805,13 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 189,
+      "tests": [
+        "supabase/tests/history_filters.sql",
+        "src/screens/admin/AdminHistory.filters.test.tsx",
+        "src/lib/auditFields.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
