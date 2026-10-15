@@ -193,7 +193,9 @@ export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({
 
 export const mapCardSignature = (r: Row): CardSignature => ({
   roundId: r.round_id,
-  pairId: r.pair_id,
+  pairId: r.pair_id ?? null,
+  // A player's card, signed by a marker of his group (0054); a pair's signature has none.
+  ...(r.player_id != null && { playerId: r.player_id }),
   signedBy: r.signed_by,
   signedAt: r.signed_at,
 })

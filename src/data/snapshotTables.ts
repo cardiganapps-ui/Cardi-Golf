@@ -29,7 +29,7 @@ export const SNAPSHOT_KEYS = {
   round_tees: ['round_id', 'player_id'],
   scores: ['id'],
   snake_tiebreaks: ['round_id', 'group_id', 'hole'],
-  card_signatures: ['round_id', 'pair_id'],
+  card_signatures: ['round_id', 'card_id'],
   handicap_overrides: ['round_id', 'player_id'],
   hole_awards: ['round_id', 'game_id', 'hole', 'player_id', 'source'],
   courses: ['id'],

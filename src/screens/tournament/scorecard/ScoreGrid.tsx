@@ -109,6 +109,10 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
   )
   return (
     <>
+      {/* The whole card's name, where focus lands when the card turns to it (A11Y-12). */}
+      <h1 className="sr-only" data-view-heading>
+        {S.gridHeading}
+      </h1>
       <div className={styles.gridWrap}>
         <table className={styles.grid}>
           <thead>

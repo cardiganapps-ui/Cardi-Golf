@@ -16,6 +16,8 @@ import { humanError } from '../../lib/humanError'
 import { LegalConsent } from '../../components/LegalLinks'
 import { haptic } from '../../lib/haptics'
 import { easeSlow } from '../../design/motion'
+import { useViewFocus } from '../../components/viewFocus'
+import { usePageTitle } from '../../app/pageTitle'
 
 /** Above this many players the grid goes dense and gets a name filter. */
 const DENSE_FROM = 16
@@ -43,6 +45,11 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const account = !!user && !isAnonymous
   const pinHintId = useId()
   const consentId = useId()
+  const errorId = useId()
+  const screenRef = useRef<HTMLDivElement>(null)
+  /** The face last tapped: «No soy yo» comes back to it (A11Y-12). */
+  const lastFace = useRef<string | null>(null)
+  usePageTitle(t.titles.inTournament(t.titles.enter, lookup.name))
   // Holes this phone queued before its session lapsed: they go out once the player is back (REL-16).
   const { heldHoles } = queuedFor(lookup.id)
 
@@ -119,10 +126,19 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   }
 
   const accent = nearestAccent(lookup.accentColor).hex
+  // The faces, the PIN and the two questions swap in place, and the tapped button goes with the old view. The PIN
+  // field takes focus itself (autoFocus); a question gets its heading; back on the faces, the face tapped.
+  const view = !selected ? 'faces' : askSave ? 'save' : selected.pendingMe ? 'confirm' : 'pin'
+  useViewFocus(view, (v) => {
+    const root = screenRef.current
+    if (!root) return null
+    if (v === 'faces') return (lastFace.current && root.querySelector(`[data-player="${CSS.escape(lastFace.current)}"]`)) || root.querySelector('h1')
+    return root.querySelector('[data-view-heading]')
+  })
 
   return (
-    <div className={styles.screen} style={{ '--event-accent': accent } as React.CSSProperties}>
-      <EventName name={lookup.name} tagline={lookup.tagline ?? undefined} logoUrl={lookup.logoUrl} />
+    <div ref={screenRef} className={styles.screen} style={{ '--event-accent': accent } as React.CSSProperties}>
+      <EventName name={lookup.name} tagline={lookup.tagline ?? undefined} logoUrl={lookup.logoUrl} heading />
 
       {!selected ? (
         <>
@@ -145,7 +161,16 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           {dense && players.length === 0 && query && <p className="help">{t.enter.noMatch}</p>}
           <div className={`${styles.grid} ${dense ? styles.gridDense : ''}`}>
             {players.map((p) => (
-              <button key={p.id} type="button" className={styles.face} onClick={() => setSelected(p)}>
+              <button
+                key={p.id}
+                type="button"
+                className={styles.face}
+                data-player={p.id}
+                onClick={() => {
+                  lastFace.current = p.id
+                  setSelected(p)
+                }}
+              >
                 <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? undefined : 'lg'} honoree={p.isHonoree} />
                 <span className={styles.faceName}>{p.displayName}</span>
                 {p.pendingMe ? <span className={styles.faceAsk}>{t.enter.isThisYou}</span> : p.tier && <span className="tierBadge">{p.tier}</span>}
@@ -163,7 +188,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           <div className={styles.who}>
             <Avatar name={askSave.displayName} url={askSave.avatarUrl} size="lg" honoree={askSave.isHonoree} />
             <div className="grow">
-              <h2>{t.more.saveHere}</h2>
+              <h2 data-view-heading>{t.more.saveHere}</h2>
               <p className="help">{t.more.saveProfileHint}</p>
             </div>
           </div>
@@ -181,11 +206,15 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           <div className={styles.who}>
             <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} />
             <div className="grow">
-              <h2>{t.enter.isThisYou}</h2>
+              <h2 data-view-heading>{t.enter.isThisYou}</h2>
               <p className="help">{t.enter.confirmYou(selected.displayName)}</p>
             </div>
           </div>
-          {error && <p className="error">{error}</p>}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <div className={styles.actions}>
             <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void answer(false)}>
               {t.mipolo.no}
@@ -221,7 +250,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               maxLength={4}
               value={pin}
               autoFocus
-              aria-describedby={`${pinHintId} ${consentId}`}
+              aria-describedby={`${error ? `${errorId} ` : ''}${pinHintId} ${consentId}`}
+              aria-invalid={error ? true : undefined}
               /*
                * Never `disabled` while it submits: disabling the field iOS has
                * the keyboard open for dismisses that keyboard, so a wrong PIN
@@ -242,7 +272,12 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               }}
             />
           </label>
-          {error && <p className="error">{error}</p>}
+          {/* Said the moment it shows (A11Y-14): the field has just emptied itself, and nothing else tells a screen reader why. */}
+          {error && (
+            <p className="error" role="alert" id={errorId}>
+              {error}
+            </p>
+          )}
           <div className={styles.actions}>
             <button
               className="btn btn--secondary"

@@ -12,7 +12,7 @@ import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
 import { LEGACY_SETTINGS_ALIASES, parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
 import { FIXTURE_NAMES } from '../dev/fixtures'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { getFixture } from '../dev/fixtures'
 import { SPECTATOR_MONEY_COLUMNS, spectatorAnswer } from './testing/spectatorAnswer'
 
@@ -117,6 +117,7 @@ function specOf(z: unknown): Spec {
     case 'default':
     case 'optional':
     case 'nullable':
+    case 'catch':
       return specOf(def.innerType)
     case 'string':
     case 'number':
@@ -159,8 +160,16 @@ function withJunk(v: unknown, spec: Spec, n = { i: 0 }): unknown {
 describe('only the keys the settings schema knows (0053 spectator_settings_spec)', () => {
   it('the list is the schema itself, and the migration carries the same one', () => {
     expect(SPECTATOR_SETTINGS_SPEC).toEqual(specOf(TournamentSettingsSchema))
-    const migration = readFileSync(new URL('../../supabase/migrations/0053_spectator_link.sql', import.meta.url), 'utf8')
-    const body = migration.slice(migration.indexOf('create or replace function public.spectator_settings_spec()')).split('\n$$;')[0]!
+    // The latest migration that defines it (0053 made it; a migration adding a settings key redefines it).
+    const dir = new URL('../../supabase/migrations/', import.meta.url)
+    const head = 'create or replace function public.spectator_settings_spec()'
+    const migration = readdirSync(dir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort()
+      .map((f) => readFileSync(new URL(f, dir), 'utf8'))
+      .filter((sql) => sql.includes(head))
+      .at(-1)!
+    const body = migration.slice(migration.lastIndexOf(head)).split('\n$$;')[0]!
     expect(JSON.parse(/select '(\{.*\})'::jsonb/.exec(body)![1]!)).toEqual(SPECTATOR_SETTINGS_SPEC)
   })
 

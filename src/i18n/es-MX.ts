@@ -179,6 +179,37 @@ export const t = {
     more: 'Más',
     admin: 'Comité',
   },
+  /**
+   * Each screen's name (A11Y-13): the document title, and what a screen reader
+   * hears when the page changes. Inside a tournament its name follows.
+   */
+  titles: {
+    /** The document title: the page, then the app («Tarjeta, Copa Tres Marías — Polo»). Home is the app alone. */
+    document: (page: string) => `${page} — Polo`,
+    inTournament: (page: string, tournament: string) => `${page}, ${tournament}`,
+    /** A section of a console: «Comité: Jugadores», «Admin de Polo: Salud». */
+    section: (console: string, section: string) => `${console}: ${section}`,
+    home: 'Polo',
+    opening: 'Abriendo tu torneo',
+    enter: 'Entrar',
+    organizerLogin: 'Entrar como organizador',
+    newPassword: 'Nueva contraseña',
+    newTournament: 'Nuevo torneo',
+    myTournaments: 'Mis torneos',
+    account: 'Tu cuenta',
+    editProfile: 'Editar perfil',
+    friends: 'Amigos',
+    inbox: 'Avisos',
+    joinCrew: 'Unirte a una crew',
+    crew: 'Crew',
+    versus: 'Cara a cara',
+    year: 'Tu año en Polo',
+    profile: 'Perfil',
+    print: 'Tarjetas para imprimir',
+    notFound: 'Página no encontrada',
+    fixtures: 'Fixtures',
+    design: 'Diseño',
+  },
   boot: {
     slowTitle: 'Polo está tardando en conectar',
     slowBody: 'No pudimos confirmar tu sesión. Suele ser la señal: vuelve a intentar en un momento.',
@@ -1354,6 +1385,8 @@ export const t = {
           : `Empezó el día ${round}. Tu grupo ${group} sale${startHole != null ? ` del hoyo ${startHole}` : ''}${teeTime ? ` a las ${teeTime}` : ''}.`,
       card_to_sign: (tournament: string, round: number) => `Firma la tarjeta del día ${round} en ${tournament}`,
       cardToSignBody: (round: number) => `Tu grupo terminó el día ${round}: firma la tarjeta de la otra pareja.`,
+      /** A marker's rule (UX-23): the notice names nobody (it never carries another player's name). */
+      cardToSignMarkerBody: (round: number) => `Ya hay tarjetas de tu grupo del día ${round} listas: firma las de tus compañeros.`,
       snake_tiebreak: (tournament: string, game: string, hole: number) => `${game} en ${tournament}: falta decir quién embocó al último en el ${hole}`,
       snakeTiebreakBody: (game: string, round: number, hole: number) => `${game}, día ${round}: falta decir quién embocó al último en el hoyo ${hole}.`,
       /** The snake's own name when a notice comes without it (the server always sends the tournament's). */
@@ -1432,6 +1465,8 @@ export const t = {
     storeFailed: 'No se pudo guardar en el teléfono (sin espacio o modo privado). Libera espacio e intenta otra vez.',
     notPersistent: 'Este teléfono podría borrar los hoyos que aún no se suben si se queda sin espacio. Agrega Polo a tu pantalla de inicio para protegerlos.',
     rejected: (n: number) => (n === 1 ? '1 rechazado' : `${n} rechazados`),
+    /** The same, said to a screen reader the moment it happens on the Tarjeta (A11Y-14). */
+    rejectedSaid: (n: number) => (n === 1 ? 'El servidor rechazó 1 cambio de este teléfono.' : `El servidor rechazó ${n} cambios de este teléfono.`),
     errSigned: 'La tarjeta ya estaba firmada; el Comité tiene que capturarlo.',
     errNotLive: 'La ronda ya no está en juego; el Comité tiene que capturarlo.',
     errDenied: 'El servidor no aceptó este cambio.',
@@ -1627,6 +1662,8 @@ export const t = {
     saveLast: 'Guardar y ver la tarjeta',
     grid: 'Ver tarjeta',
     holeView: 'Ver hoyo',
+    /** The grid's heading, for a screen reader (A11Y-12). */
+    gridHeading: 'La tarjeta completa',
     prev: 'Hoyo anterior',
     next: 'Hoyo siguiente',
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',
@@ -1642,6 +1679,11 @@ export const t = {
     sign: 'Firmar tarjeta',
     signConfirm: 'Al firmar se bloquea la tarjeta de esa pareja. ¿Todo correcto?',
     signTitle: (pair: string) => `Firmar la tarjeta de ${pair}`,
+    /** A marker signs each player's card (UX-23): the button says whose, the confirmation locks only his. */
+    signShort: 'Firmar',
+    signPlayer: (name: string) => `Firmar la tarjeta de ${name}`,
+    signPlayerConfirm: 'Al firmar se bloquea su tarjeta. ¿Todo correcto?',
+    signMarkerHint: 'Cada tarjeta la firma otro jugador del grupo, nunca el mismo jugador. Al firmarla se bloquea.',
     signed: 'Tarjeta firmada.',
     stamp: 'Firmada',
     cardSigned: 'Firmada y bloqueada',
@@ -1777,6 +1819,7 @@ export const t = {
       buyback: (max: number) => `La recompra llega hasta la mitad: ${max} %.`,
       currency: (c: string) => `Polo cuenta en pesos mexicanos (MXN), no en ${c}.`,
       timezone: (zone: string) => `La zona horaria «${zone}» no existe.`,
+      signingPairs: (game: string) => `Las tarjetas las firman las parejas, pero ${game} está apagado: en Reglas, elige quién firma.`,
       /** Not an error: said beside the allowance, so a scratch event is never one by accident. */
       scratch: 'Con 0 % nadie recibe golpes: se juega scratch.',
       /** Near Guardar and Crear. */
@@ -2148,6 +2191,14 @@ export const t = {
       moduleLabel: 'Nombre en la app',
       pairingRules: 'Reglas de pareja (A-D, B-C)',
       honoreePicks: 'El homenajeado escoge pareja',
+      /** UX-23: who signs a card after the last hole; `pairs` is offered only with the pairs game on. */
+      cardSigning: 'Quién firma las tarjetas',
+      cardSigningOption: { pairs: 'Las parejas, cruzado', marker: 'Otro jugador del grupo', none: 'Nadie firma' } as Record<'pairs' | 'marker' | 'none', string>,
+      cardSigningHint: {
+        pairs: 'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. La firma bloquea la tarjeta: después solo el Comité la corrige, con un motivo.',
+        marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada jugador; nadie firma la suya. La firma bloquea esa tarjeta: después solo el Comité la corrige, con un motivo.',
+        none: 'Nadie firma: el grupo puede corregir sus hoyos mientras el día esté en juego, y el Comité después.',
+      } as Record<'pairs' | 'marker' | 'none', string>,
       snakeThreshold: 'Putts que pasan la víbora',
       perRoundSlope: 'Ajustar hándicap por slope de cada ronda',
       perRoundSlopeHint: 'Apagado: un solo hándicap base para todo el torneo.',

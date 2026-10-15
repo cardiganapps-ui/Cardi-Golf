@@ -376,6 +376,7 @@
     },
     "pickupPuttsForFewestPutts": "s",
     "tieFallback": "s",
+    "cardSigning": "s",
     "spectatorLink": "s",
     "timezone": "s",
     "currency": "s"

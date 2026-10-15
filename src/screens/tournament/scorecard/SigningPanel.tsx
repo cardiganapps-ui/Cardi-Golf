@@ -5,6 +5,7 @@ import { Sheet } from '../../../components/ui'
 import { easeSlow } from '../../../design/motion'
 import type { CardSignature, Pair, Player } from '../../../engine/types'
 import { t } from '../../../i18n/es-MX'
+import { cardSignedFor } from '../../../engine/core/cardSigning'
 import { pairNameIn } from './cardRules'
 import styles from '../ScorecardScreen.module.css'
 
@@ -61,12 +62,63 @@ export const SigningPanel = memo(function SigningPanel(p: {
   )
 })
 
-/** The question before a pair's card is signed: it locks the card. */
-export const SignSheet = memo(function SignSheet(p: { open: boolean; title: string | undefined; onClose: () => void; onSign: () => void }) {
+/**
+ * «Firmar la tarjeta de …» under a marker's rule (UX-23): each player of the group whose card is complete, signed
+ * or not. Another player of the group signs it, never the player himself; the Comité may sign any, his own too
+ * (as under the pairs' rule). A phone outside the group sees the state and no button: the server would refuse it.
+ */
+export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
+  roundId: string
+  /** The group's players with complete cards, in the card's order, with the name the card shows. */
+  players: ReadonlyArray<{ id: string; name: string }>
+  signatures: readonly CardSignature[]
+  /** The tournament's pairs: a card its pair signed under the pairs' rule stays signed. */
+  pairs: readonly Pair[]
+  myPlayerId: string | null
+  /** Whether this phone's player plays in the group. */
+  inGroup: boolean
+  isAdmin: boolean
+  onSign: (playerId: string) => void
+}) {
+  if (!p.players.length) return null
+  return (
+    <div>
+      <p className="help">{S.signMarkerHint}</p>
+      {p.players.map(({ id, name }) => {
+        const isSigned = cardSignedFor({ cardSignatures: p.signatures, pairs: p.pairs }, p.roundId, id)
+        const canSign = p.isAdmin || (p.inGroup && id !== p.myPlayerId)
+        return (
+          <div key={id} className={styles.signRow}>
+            <span className={styles.signText}>
+              <strong>{name}</strong>
+              <span className={`${styles.signState} ${isSigned ? styles.signLocked : ''}`}>
+                {isSigned && <IconLock size={14} />}
+                {isSigned ? S.cardSigned : S.cardUnsigned}
+              </span>
+            </span>
+            {isSigned && (
+              <motion.span className={styles.stamp} aria-hidden="true" initial={{ scale: 1.25, opacity: 0, rotate: -14 }} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={easeSlow}>
+                {S.stamp}
+              </motion.span>
+            )}
+            {!isSigned && canSign && (
+              <button className="btn btn--primary btn--sm" type="button" aria-label={S.signPlayer(name)} onClick={() => p.onSign(id)}>
+                {S.signShort}
+              </button>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+})
+
+/** The question before a card is signed: it locks the card (a pair's, or one player's under a marker's rule). */
+export const SignSheet = memo(function SignSheet(p: { open: boolean; title: string | undefined; confirm?: string; onClose: () => void; onSign: () => void }) {
   return (
     <Sheet open={p.open} onClose={p.onClose} title={p.title}>
       <div className="stack">
-        <p className="help">{S.signConfirm}</p>
+        <p className="help">{p.confirm ?? S.signConfirm}</p>
         <div className="row">
           <button className="btn btn--secondary" type="button" onClick={p.onClose}>
             {t.common.cancel}

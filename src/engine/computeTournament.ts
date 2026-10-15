@@ -30,6 +30,7 @@ import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
 import { handicapChanges, type HandicapChange } from './core/handicapLock'
 import { missingPutts, puttingGames, type MissingPutts } from './core/putts'
+import { cardSignedFor, cardSigningMode } from './core/cardSigning'
 
 /** "$27,500": the engine's one formatter (core/pesos.ts). */
 const peso = pesos
@@ -43,12 +44,18 @@ export interface ModuleStates {
   auction?: AuctionState
 }
 
+/** A card waiting for its signature: a pair's (tarjeta cruzada) or one player's (a marker's). */
+export type UnsignedCard = { roundId: Id; pairId: Id } | { roundId: Id; playerId: Id }
+
 export interface StatusFlags {
   /** Rounds that are live with at least one incomplete card. */
   incompleteRounds: Array<{ roundId: Id; players: Id[] }>
   pendingSnakeTiebreaks: SnakeState['pending']
-  /** Pair cards complete but not signed (only when the pairs module is on). */
-  unsignedCards: Array<{ roundId: Id; pairId: Id }>
+  /**
+   * Cards complete but not signed, by the tournament's signing rule (UX-23): a pair's under `pairs` (only with the
+   * pairs game on), a player's under `marker`, none under `none`.
+   */
+  unsignedCards: UnsignedCard[]
   /** Holes overwritten by a different device with different values (§8). */
   discrepancies: Array<{ roundId: Id; playerId: Id; hole: number }>
   /** Holes played without putts while a game pays on putts (MONEY-18): the Comité captures them, and the close waits. */
@@ -186,7 +193,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     puttsWarnings.push(t.missingPutts.warning([...days].map(([id, d]) => t.missingPutts.who(nameOf(id), d)), puttingGames(settings)))
   }
   const unsignedCards: StatusFlags['unsignedCards'] = []
-  if (modules.pairs) {
+  const signing = cardSigningMode(settings)
+  if (signing === 'pairs' && modules.pairs) {
     for (const rid of core.roundIds) {
       for (const pair of snapshot.pairs) {
         const a = core.rounds[rid]?.[pair.player1Id]
@@ -194,6 +202,13 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
         if (!a?.complete || !b?.complete) continue
         const signed = snapshot.cardSignatures.some((s) => s.roundId === rid && s.pairId === pair.id)
         if (!signed) unsignedCards.push({ roundId: rid, pairId: pair.id })
+      }
+    }
+  } else if (signing === 'marker') {
+    // A marker signs each player's card: every card complete that day and not signed (his own or, from before, his pair's).
+    for (const rid of core.roundIds) {
+      for (const pr of Object.values(core.rounds[rid] ?? {})) {
+        if (pr.complete && !cardSignedFor(snapshot, rid, pr.playerId)) unsignedCards.push({ roundId: rid, playerId: pr.playerId })
       }
     }
   }

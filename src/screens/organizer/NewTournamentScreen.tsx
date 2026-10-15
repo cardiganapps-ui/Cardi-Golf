@@ -22,6 +22,7 @@ import { Wordmark } from '../../components/Wordmark'
 import { IconChevronRight } from '../../components/icons'
 import { CopyButton, Field, ShareButton } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { useViewFocus } from '../../components/viewFocus'
 import { leaveSheetHistory } from '../../components/sheetHistory'
 import { useAuth } from '../../data/auth'
 import { createTournament, upsertRound } from '../../data/api'
@@ -29,6 +30,7 @@ import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
+import { newTournamentCardSigning } from '../../engine/core/cardSigning'
 import { safeParseSettings } from '../../engine/settings/schema'
 import { PlayStep } from './setup/PlayStep'
 import { ReviewCard } from './setup/ReviewCard'
@@ -195,7 +197,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
     try {
       // The organizer's own zone, not the platform's placeholder.
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || parsed.data.timezone
-      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players } })
+      // Who signs the cards (UX-23), written so the tournament never depends on the default rule: the pairs with the pairs game, else a marker.
+      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players, cardSigning: parsed.data.cardSigning ?? newTournamentCardSigning(parsed.data) } })
       // The days asked for on step 2, as rounds (UX-06): «Rondas» used to say «Sin rondas» right after.
       // Course and date come later, in the Comité. If this fails the tournament still exists, and
       // «Para empezar» lists the rounds still to create.
@@ -228,13 +231,17 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
 
   const link = created ? `${window.location.origin}/t/${created.slug}` : ''
   const shown = created ? DONE : step
+  // Each step replaces the last in place, «Siguiente» with it: focus goes to where the new step says what it is
+  // («Paso 2 de 3, Formato»), or to «Torneo creado» (A11Y-12). The step is the person's own move, so always.
+  const progressRef = useRef<HTMLDivElement>(null)
+  useViewFocus(shown, (v) => progressRef.current?.querySelector(v === DONE ? 'h1' : '[data-view-heading]'), { always: true })
 
   return (
     <div className={styles.screen}>
       <Link to="/organizer" className={styles.brand}>
         <Wordmark />
       </Link>
-      <div className={styles.progress}>
+      <div className={styles.progress} ref={progressRef}>
         <h1>{shown === DONE ? W.created : W.title}</h1>
         {/* Created: the steps are behind it, so «Paso 3 de 3» would point back at them. */}
         {shown !== DONE && (
@@ -244,7 +251,7 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
                 <span key={s} className={`${styles.progressSeg} ${i + 1 <= shown ? styles.progressDone : ''}`} />
               ))}
             </div>
-            <span className={styles.progressText}>
+            <span className={styles.progressText} data-view-heading>
               {W.stepOf(step, TOTAL_STEPS)}, <strong>{stepNames[step - 1]}</strong>
             </span>
           </>

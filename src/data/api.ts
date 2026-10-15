@@ -457,6 +457,11 @@ export async function unsignCard(roundId: string, pairId: string) {
   unwrap(await supabase().from('card_signatures').delete().eq('round_id', roundId).eq('pair_id', pairId).select('pair_id'))
 }
 
+/** The Comité takes a marker's signature off one player's card (0054): his card can be edited again. */
+export async function unsignPlayerCard(roundId: string, playerId: string) {
+  unwrap(await supabase().from('card_signatures').delete().eq('round_id', roundId).eq('player_id', playerId).select('player_id'))
+}
+
 // ---------------------------------------------------------------------------
 // Calcutta (M5)
 // ---------------------------------------------------------------------------

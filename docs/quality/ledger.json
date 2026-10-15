@@ -67,9 +67,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 172,
+      "tests": [
+        "src/components/Sheet.focus.test.tsx",
+        "e2e/fixtures/keyboard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -195,9 +198,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 172,
+      "tests": [
+        "src/screens/tournament/viewFocus.test.tsx",
+        "src/screens/organizer/NewTournamentScreen.focus.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -209,9 +215,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 172,
+      "tests": [
+        "src/app/RouteAnnouncer.test.tsx",
+        "e2e/fixtures/keyboard.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -223,9 +232,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 172,
+      "tests": [
+        "src/components/statusRegions.test.tsx",
+        "src/screens/tournament/EnterScreen.a11y.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4105,10 +4117,16 @@
       "workstream": "W4",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 171,
+      "tests": [
+        "supabase/tests/card_signing.sql",
+        "src/engine/core/cardSigning.test.ts",
+        "src/data/outbox.signature.test.ts",
+        "src/data/realtimeApply.signatures.test.ts",
+        "e2e/fixtures/signing.spec.ts"
+      ],
+      "verifiedBy": "Reviewed by hand (the verifier agent could not run): the marker policy, card_is_signed and the keys; P3 left: a group mate can sign an incomplete card on the server, as under the pairs rule",
       "residual": null
     },
     {
