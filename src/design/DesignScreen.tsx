@@ -341,7 +341,8 @@ export function DesignScreen() {
                   figure={seg === 'pts' ? String(r.total) : tp.text}
                   tone={seg === 'pts' ? 'even' : tp.tone}
                   mine={r.playerId === 'p9'}
-                  moved={i === 1 ? 'up' : i === 4 ? 'down' : null}
+                  movedBy={i === 1 ? 3 : i === 4 ? -1 : undefined}
+                  reading={seg}
                 />
               )
             })}
