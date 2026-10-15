@@ -17,6 +17,7 @@
   --accent: #1e6b3b; /* fairway: live, primary action, my row */
   --accent-ink: #ffffff;
   --accent-soft: #e6efe8; /* my-row tint */
+  --accent-wash: #cfddd1; /* a board figure that just changed (MOT-18), and my row pressed: reads on --bg and on --accent-soft */
   --under: #9d1c23; /* under par, red by convention; 7.7:1 on --bg, 7:1 on --surface (AAA); also the only error red */
   --under-soft: #f8e6e6;
   --over: #235380; /* over par, The Open's blue; 7.7:1 on --bg, 7:1 on --surface (AAA); figures only */
@@ -129,6 +130,8 @@
   /* The board surface (TV, Ceremonia) is watched from across a room (MOT-11): its changes take twice the phone's slowest, on a softer landing. */
   --dur-board: 500ms;
   --ease-board: cubic-bezier(0.16, 1, 0.3, 1);
+  /* A changed board figure's wash fades over this (MOT-18): long enough to catch on a glance, gone before the next. */
+  --dur-wash: 1600ms;
 }
 
 /* A11Y-16: on a touch screen a target is 48 px, as the brief promises (§9); a mouse keeps 44. */

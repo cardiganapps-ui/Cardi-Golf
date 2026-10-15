@@ -40,6 +40,12 @@ const PAIRS: Array<[string, string, number]> = [
   ['accent-ink', 'accent', 4.5],
   ['under', 'under-soft', 4.5],
   ['over', 'over-soft', 4.5],
+  // A changed board figure washes for a moment (MOT-18): the row's text, and the figures, which are large text (AAA at 4.5:1).
+  ['ink', 'accent-wash', 7],
+  ['ink-2', 'accent-wash', 4.5],
+  ['under', 'accent-wash', 4.5],
+  ['over', 'accent-wash', 4.5],
+  ['accent', 'accent-wash', 4.5],
   ['caution', 'bg', 4.5],
   ['caution', 'caution-soft', 4.5],
   ['board-ink-2', 'board-bg', 4.5],

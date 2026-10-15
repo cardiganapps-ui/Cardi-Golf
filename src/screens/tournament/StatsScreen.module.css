@@ -206,3 +206,7 @@
   min-height: var(--tap);
   text-align: left;
 }
+/* MOT-12: it opens the player's sheet, so the touch shows on the name first. */
+.rowBtn:active {
+  background: var(--surface);
+}

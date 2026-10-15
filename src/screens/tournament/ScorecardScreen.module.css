@@ -189,6 +189,14 @@
   border-color: var(--ink);
   color: var(--bg);
 }
+/* MOT-12: the toggle shows the touch before it flips, as the steppers beside it do. */
+.pickup:active {
+  background: var(--surface);
+}
+.pickup[aria-pressed='true']:active {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
+}
 .pickup:disabled {
   color: var(--ink-3);
 }
