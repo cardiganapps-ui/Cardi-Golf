@@ -3836,7 +3836,10 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/quick_round_privacy.sql",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
