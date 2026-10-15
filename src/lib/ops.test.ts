@@ -38,7 +38,9 @@ describe('ops', () => {
     expect(bot).toMatch(/vite:\n\s+patterns: \['vite', 'vitest', '@vitest\/\*', '@vitejs\/\*', 'vite-plugin-pwa'\]\n\s+update-types: \[major\]/)
     for (const held of ['typescript', "'@types/node'"]) expect(bot).toMatch(new RegExp(`dependency-name: ${held.replace(/[/.*]/g, '\\$&')}\\n\\s+update-types: \\['version-update:semver-major'\\]`))
     const pkg = JSON.parse(read('package.json')) as { engines: { node: string }; devDependencies: Record<string, string> }
-    expect(pkg.devDependencies['@types/node']!.replace(/^\D*/, '').split('.')[0]).toBe(pkg.engines.node.replace(/^\D*/, ''))
+    // The major only: `engines` holds the toolchain's floor too (Vite 8 and Vitest 5 need 22.12).
+    const major = (range: string) => range.replace(/^\D*/, '').split('.')[0]
+    expect(major(pkg.devDependencies['@types/node']!)).toBe(major(pkg.engines.node))
     const ci = read('.github/workflows/ci.yml')
     expect(ci).toContain('npm audit --omit=dev --audit-level=high')
     // After the preflight, in the same job the merge waits on.
