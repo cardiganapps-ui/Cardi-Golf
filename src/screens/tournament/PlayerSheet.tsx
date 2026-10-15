@@ -91,9 +91,9 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
               {p.tier && <span className="tierBadge">{p.tier}</span>}
               {row && totals ? (
                 <span>
-                  {(team ? (f: string, thru: string) => t.player.positionTeam(row.label, team.name, f, thru) : (f: string, thru: string) => t.player.position(row.label, f, thru))(
+                  {(team ? (f: string, w: string | null) => t.player.positionTeam(row.label, team.name, f, w) : (f: string, w: string | null) => t.player.position(row.label, f, w))(
                     t.common.figure(row.figure.text, row.figure.value, kind),
-                    t.round.thru(totals.thru, rounds.reduce((a, r) => a + r.round.holes, 0) || 18),
+                    whereNow(rounds),
                   )}
                 </span>
               ) : null}
@@ -236,4 +236,13 @@ function Stat({ label, v }: { label: string; v: number }) {
       <span className={styles.statLabel}>{label}</span>
     </div>
   )
+}
+
+/** How far the player is, on the latest day he has played a hole of (COPY-26); null before his first hole. */
+function whereNow(rounds: ReadonlyArray<{ round: { holes: number; number: number }; pr: PlayerRound | undefined }>): string | null {
+  for (let i = rounds.length - 1; i >= 0; i--) {
+    const { round, pr } = rounds[i]!
+    if (pr && pr.thru > 0) return t.player.where(pr.thru, round.holes, round.number, rounds.length, i === rounds.length - 1)
+  }
+  return null
 }

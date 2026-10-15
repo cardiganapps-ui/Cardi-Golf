@@ -179,3 +179,41 @@ describe('entering with a PIN while another tournament\'s writes are still on th
     expect(screen.queryByText(t.account.unsentSignal('Ensayo', 'enter'))).toBeNull()
   })
 })
+
+describe('one message per refusal (COPY-13)', () => {
+  async function refusedWith(answer: Awaited<ReturnType<typeof claimPlayer>>) {
+    vi.mocked(claimPlayer).mockResolvedValueOnce(answer)
+    render(
+      <MemoryRouter>
+        <EnterScreen lookup={lookup} onEntered={vi.fn()} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Mauricio/ }))
+    fireEvent.change(screen.getByLabelText(t.enter.pin), { target: { value: '1234' } })
+  }
+
+  it('a lock says until when, on this phone’s clock: the player’s lock is 15 minutes, not «5»', async () => {
+    const until = new Date(2027, 3, 9, 9, 14)
+    await refusedWith({ ok: false, reason: 'locked', lockedUntil: until.toISOString() })
+    const time = until.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
+    expect(await screen.findByText(t.enter.lockedUntil(time))).toBeTruthy()
+    expect(screen.queryByText(/5 minutos/)).toBeNull()
+  })
+
+  it('a lock with no time still says to wait', async () => {
+    await refusedWith({ ok: false, reason: 'locked' })
+    expect(await screen.findByText(t.enter.lockedUntil(null))).toBeTruthy()
+  })
+
+  it('a player with no PIN is told so, not that the tournament is gone', async () => {
+    await refusedWith({ ok: false, reason: 'no_pin' })
+    expect(await screen.findByText(t.enter.noPin)).toBeTruthy()
+    expect(screen.queryByText(t.enter.notFound)).toBeNull()
+  })
+
+  it('a player deleted meanwhile is that player, not the tournament', async () => {
+    await refusedWith({ ok: false, reason: 'not_found' })
+    expect(await screen.findByText(t.enter.playerGone)).toBeTruthy()
+    expect(screen.queryByText(t.enter.notFound)).toBeNull()
+  })
+})

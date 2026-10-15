@@ -174,7 +174,7 @@ export function AdminScores() {
             ))}
             {disputes.map((d) => {
               const s = snapshot.scores.find((x) => x.roundId === d.roundId && x.playerId === d.playerId && x.hole === d.hole)!
-              const fmt = (strokes: number | null | undefined, putts: number | null | undefined, picked: boolean | null | undefined) => `${picked ? 'L' : (strokes ?? '–')}/${putts ?? '–'}`
+              const who = (id: string | null | undefined) => (id ? name(id) : null)
               return (
                 <div key={`d${d.roundId}${d.playerId}${d.hole}`} className={a.inboxRow}>
                   <span className={a.inboxText}>
@@ -183,7 +183,8 @@ export function AdminScores() {
                       {IB.dispute(name(d.playerId), d.hole)}
                     </span>
                     <span className={a.inboxSub}>
-                      {dayOf(d.roundId)}. {SC.now} {fmt(s.strokes, s.putts, s.pickedUp)} ({name(s.enteredBy ?? '')}), {SC.before} {fmt(s.previous?.strokes, s.previous?.putts, s.previous?.picked_up)} ({name(s.previous?.entered_by ?? '')})
+                      {dayOf(d.roundId)}. {SC.disputeNow(IB.scoreValue(s.strokes, s.putts, s.pickedUp), who(s.enteredBy))}{' '}
+                      {SC.disputeBefore(IB.scoreValue(s.previous?.strokes ?? null, s.previous?.putts ?? null, s.previous?.picked_up ?? false), who(s.previous?.entered_by))}
                     </span>
                   </span>
                   <span className={a.inboxActions}>

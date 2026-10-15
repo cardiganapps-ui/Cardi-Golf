@@ -114,9 +114,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 174,
+      "tests": [
+        "e2e/fixtures/focusClear.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -266,9 +268,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 174,
+      "tests": [
+        "e2e/fixtures/targets.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -817,9 +821,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 174,
+      "tests": [
+        "src/screens/tournament/EnterScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -889,9 +895,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 174,
+      "tests": [
+        "src/screens/admin/AdminScores.disputes.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -961,9 +969,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 174,
+      "tests": [
+        "src/screens/tournament/PlayerSheet.formats.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
