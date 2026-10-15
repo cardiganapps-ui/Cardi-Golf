@@ -202,7 +202,7 @@ create function pg_temp.mark() returns bigint language sql as $$ select coalesce
 create function pg_temp.sent(since bigint, k text) returns text language sql as $$
   select coalesce(string_agg(w, ', ' order by w), '')
   from (
-    select (q.body -> 'notice' ->> 'kind') || ' ' || replace(e ->> 'endpoint', 'https://push.test/', '') as w
+    select (q.body -> 'notice' ->> 'kind') || ' ' || replace(e ->> 'endpoint', 'https://fcm.googleapis.com/fcm/send/', '') as w
     from net.harness_requests q
     cross join lateral jsonb_array_elements(q.body -> 'subscriptions') e
     where q.id > since and q.body -> 'notice' ->> 'kind' = k
@@ -211,10 +211,10 @@ $$;
 create function pg_temp.data_for(since bigint, phone text, k text) returns jsonb language sql as $$
   select q.body -> 'notice' -> 'data'
   from net.harness_requests q cross join lateral jsonb_array_elements(q.body -> 'subscriptions') e
-  where q.id > since and e ->> 'endpoint' = 'https://push.test/' || phone and q.body -> 'notice' ->> 'kind' = k
+  where q.id > since and e ->> 'endpoint' = 'https://fcm.googleapis.com/fcm/send/' || phone and q.body -> 'notice' ->> 'kind' = k
   order by q.id desc limit 1
 $$;
-select pg_temp.as_user(u, format('select public.save_pin_push(%L, %L, %L, %L, %L)::text', :'t_a', 'https://push.test/' || ph, 'k-' || ph, 'a-' || ph, 'harness'))
+select pg_temp.as_user(u, format('select public.save_pin_push(%L, %L, %L, %L, %L)::text', :'t_a', 'https://fcm.googleapis.com/fcm/send/' || ph, 'k-' || ph, 'a-' || ph, 'harness'))
 from (values (:'dev_a'::uuid, 'ana'), (:'dev_beto'::uuid, 'beto'), (:'dev_ceci'::uuid, 'ceci')) v(u, ph) \g /dev/null
 insert into public.rounds (tournament_id, number, holes) values (:'t_a', 2, 9) returning id as r2 \gset
 insert into public.groups (round_id, number, start_hole) values (:'r2', 1, 1) returning id as g3 \gset

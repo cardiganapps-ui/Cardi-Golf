@@ -61,8 +61,10 @@ try {
   const uid = made.user.id
   users.push(uid)
   await admin.from('profiles').insert({ id: uid, handle: `push${rand}`, display_name: 'Push Prueba' })
-  const ok = `https://httpbin.org/status/201?polo=${rand}`
-  const gone = `https://httpbin.org/status/410?polo=${rand}`
+  // Addresses on the push services the server accepts (SEC-03, 0055): Apple answers 400 to an unknown token, so
+  // the subscription stays; Mozilla answers 404, so it is pruned.
+  const ok = `https://web.push.apple.com/QPoloCheck${rand}`
+  const gone = `https://updates.push.services.mozilla.com/wpush/v2/polo-check-${rand}`
   await admin.from('push_subscriptions').insert([
     { profile_id: uid, endpoint: ok, ...keys() },
     { profile_id: uid, endpoint: gone, ...keys() },
@@ -84,8 +86,8 @@ try {
   const { data: p, error: pErr } = await admin.from('players').insert({ tournament_id: t.id, full_name: 'Push Prueba', display_name: 'Push' }).select('id').single()
   if (pErr) throw pErr
   await admin.from('device_sessions').insert({ auth_user_id: phone.user.id, player_id: p.id, tournament_id: t.id })
-  const pinOk = `https://httpbin.org/status/201?polo=pin-${rand}`
-  const pinGone = `https://httpbin.org/status/410?polo=pin-${rand}`
+  const pinOk = `https://web.push.apple.com/QPoloCheckPin${rand}`
+  const pinGone = `https://updates.push.services.mozilla.com/wpush/v2/polo-check-pin-${rand}`
   const { error: subErr } = await admin.from('pin_push_subscriptions').insert([
     { tournament_id: t.id, player_id: p.id, auth_user_id: phone.user.id, endpoint: pinOk, ...keys() },
     { tournament_id: t.id, player_id: p.id, auth_user_id: phone.user.id, endpoint: pinGone, ...keys() },

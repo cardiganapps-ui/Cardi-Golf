@@ -3134,9 +3134,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 180,
+      "tests": [
+        "supabase/tests/push_endpoints.sql",
+        "src/lib/pushEndpoint.test.ts",
+        "src/lib/pushDispatch.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

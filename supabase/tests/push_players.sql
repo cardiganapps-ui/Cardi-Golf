@@ -61,11 +61,11 @@ end $$;
 -- The last request recorded so far.
 create function pg_temp.mark() returns bigint language sql as $$ select coalesce(max(id), 0) from net.harness_requests $$;
 -- What went out since `since`: one «kind phone» per address, sorted; an account's request (it carries the
--- unread count) is marked «acct:». Addresses are https://push.test/<phone>.
+-- unread count) is marked «acct:». Addresses are https://fcm.googleapis.com/fcm/send/<phone>.
 create function pg_temp.sent(since bigint) returns text language sql as $$
   select coalesce(string_agg(w, ', ' order by w), '')
   from (
-    select case when q.body ? 'unread' then 'acct:' else '' end || (q.body -> 'notice' ->> 'kind') || ' ' || replace(e ->> 'endpoint', 'https://push.test/', '') as w
+    select case when q.body ? 'unread' then 'acct:' else '' end || (q.body -> 'notice' ->> 'kind') || ' ' || replace(e ->> 'endpoint', 'https://fcm.googleapis.com/fcm/send/', '') as w
     from net.harness_requests q
     cross join lateral jsonb_array_elements(q.body -> 'subscriptions') e
     where q.id > since
@@ -75,15 +75,15 @@ $$;
 create function pg_temp.data_for(since bigint, phone text, k text) returns jsonb language sql as $$
   select q.body -> 'notice' -> 'data'
   from net.harness_requests q cross join lateral jsonb_array_elements(q.body -> 'subscriptions') e
-  where q.id > since and e ->> 'endpoint' = 'https://push.test/' || phone and q.body -> 'notice' ->> 'kind' = k
+  where q.id > since and e ->> 'endpoint' = 'https://fcm.googleapis.com/fcm/send/' || phone and q.body -> 'notice' ->> 'kind' = k
   order by q.id desc limit 1
 $$;
 -- A phone turns on the notices of the player it holds.
 create function pg_temp.subscribe(uid uuid, t uuid, phone text) returns text language sql as $$
-  select pg_temp.as_user(uid, format('select public.save_pin_push(%L, %L, %L, %L, %L)::text', t, 'https://push.test/' || phone, 'p256dh-' || phone, 'auth-' || phone, 'harness ' || phone))
+  select pg_temp.as_user(uid, format('select public.save_pin_push(%L, %L, %L, %L, %L)::text', t, 'https://fcm.googleapis.com/fcm/send/' || phone, 'p256dh-' || phone, 'auth-' || phone, 'harness ' || phone))
 $$;
 create function pg_temp.on_(uid uuid, t uuid, phone text) returns boolean language sql as $$
-  select pg_temp.as_user(uid, format('select public.pin_push_on(%L, %L)::text', t, 'https://push.test/' || phone))::boolean
+  select pg_temp.as_user(uid, format('select public.pin_push_on(%L, %L)::text', t, 'https://fcm.googleapis.com/fcm/send/' || phone))::boolean
 $$;
 -- A whole hole for the four, as one phone saves it: putts per player, 4 strokes each.
 create function pg_temp.hole(uid uuid, rid uuid, h int, putts jsonb) returns text language sql as $$
@@ -118,21 +118,21 @@ select pg_temp.subscribe(:'dev_x', :'t_a', 'x') as out \gset
 select harness.check(:'out' = '42501 Entra con tu PIN para recibir los avisos del torneo', 'a phone that holds nobody cannot turn them on: ' || :'out');
 select pg_temp.subscribe(:'dev_carla', :'t_a', 'carla') as out \gset
 select harness.check(:'out' like '42501 %' and not exists (select 1 from public.pin_push_subscriptions), 'another tournament''s phone cannot either: ' || :'out');
-select pg_temp.as_user(:'dev_a', format('select public.save_pin_push(%L, %L, %L, %L)::text', :'t_a', 'http://push.test/ana', 'k', 'a')) as out \gset
+select pg_temp.as_user(:'dev_a', format('select public.save_pin_push(%L, %L, %L, %L)::text', :'t_a', 'http://fcm.googleapis.com/fcm/send/ana', 'k', 'a')) as out \gset
 select harness.check(:'out' = '22023 Suscripción inválida', 'an address that is not https is refused: ' || :'out');
 select pg_temp.subscribe(:'dev_a', :'t_a', 'ana') || pg_temp.subscribe(:'dev_beto', :'t_a', 'beto') || pg_temp.subscribe(:'dev_ceci', :'t_a', 'ceci')
   || pg_temp.subscribe(:'dev_dani', :'t_a', 'dani') || pg_temp.subscribe(:'dev_carla', :'t_b', 'carla') as out \gset
 select harness.check(:'out' = ''
-  and (select string_agg(p.display_name || '=' || replace(s.endpoint, 'https://push.test/', ''), ',' order by p.display_name)
+  and (select string_agg(p.display_name || '=' || replace(s.endpoint, 'https://fcm.googleapis.com/fcm/send/', ''), ',' order by p.display_name)
        from public.pin_push_subscriptions s join public.players p on p.id = s.player_id) = 'Ana=ana,Beto=beto,Carla=carla,Ceci=ceci,Dani=dani',
   'each phone turns them on for the player it holds, the claim''s and no other');
 select harness.check(pg_temp.on_(:'dev_a', :'t_a', 'ana') and not pg_temp.on_(:'dev_a', :'t_b', 'ana') and not pg_temp.on_(:'dev_beto', :'t_a', 'ana'),
   'pin_push_on: on for its own address and tournament, not another''s');
-select pg_temp.as_user(:'dev_a', format('select public.pin_push_on(null, %L)::text', 'https://push.test/ana')) || ' '
-  || pg_temp.as_user(:'dev_x', format('select public.pin_push_on(null, %L)::text', 'https://push.test/ana')) as out \gset
+select pg_temp.as_user(:'dev_a', format('select public.pin_push_on(null, %L)::text', 'https://fcm.googleapis.com/fcm/send/ana')) || ' '
+  || pg_temp.as_user(:'dev_x', format('select public.pin_push_on(null, %L)::text', 'https://fcm.googleapis.com/fcm/send/ana')) as out \gset
 select harness.check(:'out' = 'true false', 'with no tournament: whether any player this phone holds uses the address, and only for its own: ' || :'out');
 select pg_temp.as_user(:'dev_a', 'select count(*)::text from public.pin_push_subscriptions') || ' | '
-  || pg_temp.as_user(:'dev_a', format($q$insert into public.pin_push_subscriptions (tournament_id, player_id, auth_user_id, endpoint, p256dh, auth) values (%L, %L, %L, 'https://push.test/forged', 'k', 'a') returning 'in'$q$, :'t_a', :'beto', :'dev_a')) || ' | '
+  || pg_temp.as_user(:'dev_a', format($q$insert into public.pin_push_subscriptions (tournament_id, player_id, auth_user_id, endpoint, p256dh, auth) values (%L, %L, %L, 'https://fcm.googleapis.com/fcm/send/forged', 'k', 'a') returning 'in'$q$, :'t_a', :'beto', :'dev_a')) || ' | '
   || pg_temp.as_user(:'dev_a', 'select count(*)::text from public.player_notices') as out \gset
 select harness.check(:'out' ~ '^42501 .* \| 42501 .* \| 42501 ', 'nobody reads or writes the addresses or the notices directly: ' || :'out');
 select pg_temp.as_user(:'dev_a', format('select public.notify_player(%L, %L, %L, %L)::text', :'beto', 'results', 'x', '{}')) || ' | '
@@ -267,7 +267,7 @@ select harness.check(pg_temp.sent(:m) = '', 'published again: nobody hears it tw
 insert into public.profiles (id, handle, display_name) values (:'acct', 'cecialfa', 'Ceci');
 update public.players set profile_id = :'acct', profile_status = 'confirmed' where id = :'ceci';
 -- The account's two browsers, one of them the phone that also holds Ceci by PIN.
-insert into public.push_subscriptions (profile_id, endpoint, p256dh, auth) values (:'acct', 'https://push.test/acct', 'k', 'a'), (:'acct', 'https://push.test/ceci', 'k', 'a');
+insert into public.push_subscriptions (profile_id, endpoint, p256dh, auth) values (:'acct', 'https://fcm.googleapis.com/fcm/send/acct', 'k', 'a'), (:'acct', 'https://fcm.googleapis.com/fcm/send/ceci', 'k', 'a');
 insert into public.rounds (tournament_id, number, holes) values (:'t_a', 3, 9) returning id as r3 \gset
 insert into public.groups (round_id, number, start_hole) values (:'r3', 1, 1) returning id as g3 \gset
 insert into public.group_members (group_id, player_id) values (:'g3', :'ana'), (:'g3', :'beto'), (:'g3', :'ceci'), (:'g3', :'dani');
@@ -344,19 +344,19 @@ select pg_temp.subscribe(:'dev_eva', :'t_a', 'eva') as out \gset
 select harness.check(:'out' = '' and pg_temp.on_(:'dev_eva', :'t_a', 'eva'), 'Eva''s phone turns them on');
 -- «Cambiar de jugador»
 select pg_temp.as_user(:'dev_ceci', 'select public.release_device()::text') \g /dev/null
-select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/ceci'), '«Cambiar de jugador» on Ceci''s phone: its address is gone');
+select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/ceci'), '«Cambiar de jugador» on Ceci''s phone: its address is gone');
 -- Another player's PIN on the same phone
 select pg_temp.as_user(:'dev_dani', format('select public.claim_player(%L, %L)::text', :'beto', '1234')) as out \gset
-select harness.check(:'out'::jsonb ->> 'ok' = 'true' and not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/dani')
+select harness.check(:'out'::jsonb ->> 'ok' = 'true' and not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/dani')
   and not pg_temp.on_(:'dev_dani', :'t_a', 'dani'),
   'Dani''s phone takes Beto: its address for Dani is gone, and it hears Beto only once it turns them on again');
 -- The Comité takes a phone off
 select id as c_beto from public.pin_claims where player_id = :'beto' and auth_user_id = :'dev_beto' and released_at is null \gset
 select pg_temp.as_user(:'org_a', format('select public.release_pin_claim(%s, %L)::text', :'c_beto', 'No es el teléfono de Beto')) \g /dev/null
-select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/beto'), 'the Comité takes Beto''s phone off: its address is gone');
+select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/beto'), 'the Comité takes Beto''s phone off: its address is gone');
 -- The player deleted
 select pg_temp.as_user(:'org_a', format('delete from public.players where id = %L returning ''gone''', :'eva')) \g /dev/null
-select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/eva'), 'Eva deleted: her phone''s address is gone');
+select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/eva'), 'Eva deleted: her phone''s address is gone');
 -- What is left hears the next day, and only that
 insert into public.rounds (tournament_id, number, holes) values (:'t_a', 4, 18) returning id as r4 \gset
 select pg_temp.mark() as m \gset
@@ -366,8 +366,8 @@ select harness.check(:'out' = 'acct:round_live acct, acct:round_live ceci, round
   'day 4 (no groups yet: the whole tournament): Ana''s phone and Ceci''s account; no released, moved, taken-off or deleted phone: ' || :'out');
 -- The account deleted (the phone's anonymous user)
 delete from auth.users where id = :'dev_a';
-select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/ana'), 'Ana''s phone''s user deleted: its address is gone');
-select harness.check((select string_agg(replace(endpoint, 'https://push.test/', ''), ',') from public.pin_push_subscriptions) = 'carla', 'only Carla''s, in tournament B, is left');
+select harness.check(not exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/ana'), 'Ana''s phone''s user deleted: its address is gone');
+select harness.check((select string_agg(replace(endpoint, 'https://fcm.googleapis.com/fcm/send/', ''), ',') from public.pin_push_subscriptions) = 'carla', 'only Carla''s, in tournament B, is left');
 
 -- ---------------------------------------------------------------------------
 -- 10. A dead address comes back from the route and goes, with the secret only
@@ -386,10 +386,10 @@ exception when others then
   reset role;
   return sqlstate || ' ' || sqlerrm;
 end $$;
-select pg_temp.as_anon($q$select public.push_prune('nope', array['https://push.test/carla'])::text$q$) as out \gset
-select harness.check(:'out' = '42501 No autorizado' and exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://push.test/carla'), 'a wrong secret prunes nothing: ' || :'out');
-select pg_temp.as_anon($q$select public.push_prune('harness-dispatch-secret', array['https://push.test/carla', 'https://push.test/acct'])::text$q$) as pruned \gset
-select harness.check(:'pruned' = '2' and not exists (select 1 from public.pin_push_subscriptions) and not exists (select 1 from public.push_subscriptions where endpoint = 'https://push.test/acct'),
+select pg_temp.as_anon($q$select public.push_prune('nope', array['https://fcm.googleapis.com/fcm/send/carla'])::text$q$) as out \gset
+select harness.check(:'out' = '42501 No autorizado' and exists (select 1 from public.pin_push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/carla'), 'a wrong secret prunes nothing: ' || :'out');
+select pg_temp.as_anon($q$select public.push_prune('harness-dispatch-secret', array['https://fcm.googleapis.com/fcm/send/carla', 'https://fcm.googleapis.com/fcm/send/acct'])::text$q$) as pruned \gset
+select harness.check(:'pruned' = '2' and not exists (select 1 from public.pin_push_subscriptions) and not exists (select 1 from public.push_subscriptions where endpoint = 'https://fcm.googleapis.com/fcm/send/acct'),
   'push_prune with the secret clears a PIN phone''s dead address and an account''s: ' || :'pruned');
 
 -- ---------------------------------------------------------------------------
