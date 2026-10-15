@@ -7,7 +7,7 @@
 import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture, type Fixture } from '../dev/fixtures'
-import { clearCached, clearCachedSlug, hasCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
+import { clearCached, clearCachedSlug, clearPinEntriesExcept, hasCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
 
 const live = getFixture('full12-live')!
 const small = getFixture('minimal4-live')!
@@ -132,5 +132,27 @@ describe('the copy on the phone (audit P0-5)', () => {
     await expect(fresh.saveEntry(entryOf(small))).resolves.toBeUndefined()
     await expect(fresh.saveSnapshot(small.snapshot.tournament.id, small.snapshot)).resolves.toBeUndefined()
     await expect(fresh.readCached(small.snapshot.tournament.slug)).resolves.toBeNull()
+  })
+})
+
+describe('a PIN taken for another player forgets the tournaments held only by PIN (TRUST-15)', () => {
+  it('another tournament held by this phone’s PIN goes; one held by an account or the Comité stays; this one stays', async () => {
+    const as = (slug: string, tournamentId: string, via: 'device' | 'profile', isOrganizer = false) => ({
+      ...entryOf(small),
+      slug,
+      tournamentId,
+      me: { ...small.me, via, isOrganizer },
+    })
+    const entries = [as('por-pin', 't-por-pin', 'device'), as('por-cuenta', 't-por-cuenta', 'profile'), as('comite', 't-comite', 'device', true), as('aqui', 't-aqui', 'device')]
+    for (const e of entries) {
+      await saveEntry(e)
+      await saveSnapshot(e.tournamentId, small.snapshot)
+    }
+    await clearPinEntriesExcept('t-aqui')
+    expect(await readCached('por-pin')).toBeNull()
+    expect(await hasCached('por-pin')).toBe(false)
+    expect((await readCached('por-cuenta'))?.entry.tournamentId).toBe('t-por-cuenta')
+    expect((await readCached('comite'))?.entry.tournamentId).toBe('t-comite')
+    expect((await readCached('aqui'))?.entry.tournamentId).toBe('t-aqui')
   })
 })

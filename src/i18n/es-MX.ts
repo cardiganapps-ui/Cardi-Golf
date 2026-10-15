@@ -946,6 +946,8 @@ export const t = {
     linkTaken: 'Ese jugador ya está en el perfil de otra persona. Pídele al Comité que lo revise.',
     already: 'Tu perfil ya es otro jugador en ese torneo.',
     signOut: 'Cerrar sesión',
+    /** SEC-07: signing out ends every session of the account, so a lost or lent phone is signed out from another. */
+    signOutEverywhere: 'Cierra tu sesión en todos los teléfonos y computadoras donde entraste. Si perdiste o prestaste un teléfono, ciérrala desde otro.',
     /** The sign-out button while it waits for the server (up to 15 s on lie-fi). */
     signingOut: 'Cerrando sesión…',
     /**

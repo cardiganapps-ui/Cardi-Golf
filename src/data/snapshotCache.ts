@@ -128,6 +128,21 @@ export async function clearCached(tournamentId: string): Promise<void> {
     /* ignore */
   }
 }
+/**
+ * A PIN taken for another player (TRUST-15): this phone holds one PIN claim, so the tournaments it was in only by
+ * its PIN are no longer its own. Their saved boards and who-it-was go, so with no signal the phone does not open
+ * one of them as the player it used to be. A tournament it is in by an account (a profile, the Comité) stays.
+ */
+export async function clearPinEntriesExcept(tournamentId: string): Promise<void> {
+  try {
+    const d = getDb()
+    if (!d) return
+    const gone = (await d.entries.toArray()).filter((e) => e.tournamentId !== tournamentId && e.me.via === 'device' && !e.me.isOrganizer).map((e) => e.tournamentId)
+    for (const tid of new Set(gone)) await clearCached(tid)
+  } catch {
+    /* ignore */
+  }
+}
 /** Sign-out: the next person on the phone sees nothing of this one's tournaments. */
 export async function clearAllCached(): Promise<void> {
   cleared(null)

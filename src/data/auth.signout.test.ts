@@ -19,6 +19,8 @@ vi.stubGlobal('localStorage', {
 const sb = vi.hoisted(() => ({
   /** What auth-js's signOut does this time. */
   signOut: async (): Promise<{ error: unknown }> => ({ error: null }),
+  /** What each signOut call asked for. */
+  scopes: [] as unknown[],
   listener: null as null | ((evt: string, session: unknown) => void),
 }))
 vi.mock('../lib/supabase', () => ({
@@ -26,7 +28,10 @@ vi.mock('../lib/supabase', () => ({
   supabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),
-      signOut: () => sb.signOut(),
+      signOut: (opts?: unknown) => {
+        sb.scopes.push(opts)
+        return sb.signOut()
+      },
       onAuthStateChange: (cb: (evt: string, session: unknown) => void) => {
         sb.listener = cb
         return { data: { subscription: { unsubscribe: () => undefined } } }
@@ -48,6 +53,17 @@ beforeEach(() => {
 })
 
 describe('signOut', () => {
+  it('ends every session of the account, so a lost or lent phone is signed out from another (SEC-07)', async () => {
+    sb.scopes.length = 0
+    sb.signOut = async () => {
+      storage.delete(KEY)
+      sb.listener?.('SIGNED_OUT', null)
+      return { error: null }
+    }
+    expect(await signOut()).toBe(true)
+    expect(sb.scopes).toEqual([{ scope: 'global' }])
+  })
+
   it('is done once auth-js removed the stored session, and the identity going away was asked for', async () => {
     sb.signOut = async () => {
       storage.delete(KEY)

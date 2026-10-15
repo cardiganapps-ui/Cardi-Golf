@@ -223,6 +223,7 @@ export function ProfileEditScreen() {
           {signingOut ? t.account.signingOut : t.account.signOut}
         </button>
       </div>
+      <p className="help">{t.account.signOutEverywhere}</p>
     </div>
   )
 }
