@@ -28,7 +28,7 @@ export const BACKUP_TABLES: Record<string, string> = {
   score_mutations: 'mutation_id',
   rejected_writes: 'id',
   snake_tiebreaks: 'round_id,group_id,hole',
-  card_signatures: 'round_id,pair_id',
+  card_signatures: 'round_id,card_id',
   handicap_overrides: 'round_id,player_id',
   calcutta_lots: 'id',
   calcutta_bids: 'id',

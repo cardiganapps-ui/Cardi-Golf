@@ -170,11 +170,11 @@ export interface AwardPayload {
   player_ids: string[]
   decided_by: string | null
 }
-export interface SignaturePayload {
-  round_id: string
-  pair_id: string
-  signed_by: string | null
-}
+/**
+ * A signed card: a pair's (`pair_id`, the tarjeta cruzada) or, under a marker's rule, one player's (`player_id`,
+ * 0054, UX-23). Exactly one of the two.
+ */
+export type SignaturePayload = { round_id: string; pair_id: string; player_id?: undefined; signed_by: string | null } | { round_id: string; pair_id?: undefined; player_id: string; signed_by: string | null }
 
 /** A write the server refused for good (RLS, constraint). Kept so the Comité can re-enter or discard it. */
 export interface RejectedItem {
@@ -763,8 +763,12 @@ function overlayItem(s: Snapshot, it: OutboxItem): void {
   } else if (it.kind === 'signature') {
     const p = it.payload
     // Signed when it was queued: the same moment on every recompute, so the boards that read the same stay the same (PERF-09).
-    if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
-      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id, signedBy: p.signed_by ?? '', signedAt: new Date(it.createdAt).toISOString() })
+    if (p.player_id) {
+      if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.playerId === p.player_id)) {
+        s.cardSignatures.push({ roundId: p.round_id, pairId: null, playerId: p.player_id, signedBy: p.signed_by ?? '', signedAt: new Date(it.createdAt).toISOString() })
+      }
+    } else if (!s.cardSignatures.some((x) => x.roundId === p.round_id && x.pairId === p.pair_id)) {
+      s.cardSignatures.push({ roundId: p.round_id, pairId: p.pair_id ?? null, signedBy: p.signed_by ?? '', signedAt: new Date(it.createdAt).toISOString() })
     }
   }
 }
@@ -1031,7 +1035,9 @@ export function enqueueAward(tournamentId: string, payload: AwardPayload, settle
 }
 export function enqueueSignature(tournamentId: string, payload: SignaturePayload) {
   step('card_signed')
-  return enqueue({ key: `signature:${payload.round_id}:${payload.pair_id}`, kind: 'signature', tournamentId, payload, attempts: 0, createdAt: Date.now() })
+  // A player's card has a key of its own: a pair's id and a player's never meet.
+  const key = payload.player_id ? `signature:${payload.round_id}:player:${payload.player_id}` : `signature:${payload.round_id}:${payload.pair_id}`
+  return enqueue({ key, kind: 'signature', tournamentId, payload, attempts: 0, createdAt: Date.now() })
 }
 
 /** Replaceable for tests. */
@@ -1162,7 +1168,9 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
   }
   if (item.kind === 'signature') {
     // A card the other phone signed first comes back empty: its signature is the one that stands.
-    const { data, error } = await sb.from('card_signatures').upsert(item.payload, { onConflict: 'round_id,pair_id', ignoreDuplicates: true }).select().setHeader('Authorization', auth)
+    // A player's card (0054) meets an earlier signature of it on its own key.
+    const onConflict = item.payload.player_id ? 'round_id,player_id' : 'round_id,pair_id'
+    const { data, error } = await sb.from('card_signatures').upsert(item.payload as Row, { onConflict, ignoreDuplicates: true }).select().setHeader('Authorization', auth)
     if (error) throw new Error(error.message)
     return stored('card_signatures', data)
   }

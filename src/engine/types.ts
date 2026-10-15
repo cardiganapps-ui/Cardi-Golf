@@ -171,9 +171,16 @@ export interface SnakeTiebreak {
   decidedBy?: Id | null
 }
 
+/**
+ * A signed card (§9.3, UX-23): a pair's (`pairId`, the tarjeta cruzada) or one
+ * player's (`playerId`, signed by a marker of his group), never both (0054).
+ */
 export interface CardSignature {
   roundId: Id
-  pairId: Id
+  /** The pair whose card was signed; null on a player's signature. */
+  pairId: Id | null
+  /** The player whose card was signed (0054); absent on a pair's signature. */
+  playerId?: Id | null
   signedBy: Id
   signedAt: string
 }

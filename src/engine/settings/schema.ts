@@ -209,6 +209,17 @@ const TournamentSettingsBase = z.object({
   pickupPuttsForFewestPutts: z.number().int().min(0).max(10),
   /** What happens when countback still ties: split the prizes. */
   tieFallback: z.enum(['split']),
+  /**
+   * Who signs a card after the last hole (UX-23): each pair the other pair's
+   * (`pairs`, the tarjeta cruzada of §5.5), another player of the group each
+   * player's (`marker`), or nobody (`none`). Absent in every tournament stored
+   * before it existed: `cardSigningMode` (core/cardSigning.ts) reads that as
+   * the rule it always had, `pairs` with the pairs game on and `none`
+   * without. A value a later build adds reads the same way instead of failing
+   * the whole parse (a stored tournament that fails is computed on the
+   * defaults).
+   */
+  cardSigning: z.enum(['pairs', 'marker', 'none']).optional().catch(undefined),
   /** Optional read-only public board (no money). */
   spectatorLink: z.boolean(),
   timezone: z.string().min(1),

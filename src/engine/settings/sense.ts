@@ -3,7 +3,8 @@
  * that quietly makes a handicap event scratch, a Calcutta that pays the same
  * place twice or a place no entrant can take, a buyback past half, a house
  * cut bigger than what the entries bring, a currency no screen shows, a
- * day's cut past 18 strokes, a time zone that does not exist.
+ * day's cut past 18 strokes, a time zone that does not exist, cards the pairs
+ * sign in a tournament with no pairs game.
  *
  * Not in the schema on purpose. A stored tournament whose settings fail to
  * parse is computed with DEFAULT_SETTINGS (tournamentStore's `compute`), so a
@@ -16,7 +17,7 @@ import { pesos } from '../core/pesos'
 import { mainEntrants, type FieldShape } from './prizeCheck'
 import type { TournamentSettings } from './schema'
 
-export type SenseKey = 'cap' | 'placeTwice' | 'placeUnreachable' | 'tierTwice' | 'lastTwice' | 'buyback' | 'houseCut' | 'currency' | 'cutMax' | 'timezone'
+export type SenseKey = 'cap' | 'placeTwice' | 'placeUnreachable' | 'tierTwice' | 'lastTwice' | 'buyback' | 'houseCut' | 'currency' | 'cutMax' | 'timezone' | 'signingPairs'
 
 export interface SenseIssue {
   key: SenseKey
@@ -77,6 +78,9 @@ export function settingsSense(s: TournamentSettings, field: FieldShape | null): 
     }
     if (s.auction.buybackMaxPct > BUYBACK_MAX_PCT) out.push({ key: 'buyback', text: S.buyback(BUYBACK_MAX_PCT) })
   }
+
+  // The pairs sign each other's cards only where there are pairs: without the game nobody would sign (UX-23).
+  if (s.cardSigning === 'pairs' && !s.modules.pairs.enabled) out.push({ key: 'signingPairs', text: S.signingPairs(s.modules.pairs.label) })
 
   if (!(CURRENCIES as readonly string[]).includes(s.currency)) out.push({ key: 'currency', text: S.currency(s.currency) })
   if (!validTimeZone(s.timezone)) out.push({ key: 'timezone', text: S.timezone(s.timezone) })

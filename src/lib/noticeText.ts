@@ -28,6 +28,8 @@ export interface NoticeLike {
     teeTime?: string | null
     hole?: number
     game?: string
+    /** card_to_sign under a marker's rule (0054): a teammate's card is the one to sign. */
+    marker?: boolean
   }
   actor: { handle: string; displayName: string } | null
 }
@@ -96,7 +98,9 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       const tournament = n.data.tournament ?? ''
       const round = num(n.data.round) ?? 1
       // The grid, where «Firmar» is.
-      return { text: S.notice.card_to_sign(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta?vista=tarjeta'), title: tournament || undefined, body: S.notice.cardToSignBody(round) }
+      // Under a marker's rule (0054 `marker`) it is a teammate's card, not the other pair's.
+      const body = n.data.marker === true ? S.notice.cardToSignMarkerBody(round) : S.notice.cardToSignBody(round)
+      return { text: S.notice.card_to_sign(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta?vista=tarjeta'), title: tournament || undefined, body }
     }
     case 'snake_tiebreak': {
       const tournament = n.data.tournament ?? ''
