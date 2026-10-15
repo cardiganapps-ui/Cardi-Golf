@@ -11,23 +11,10 @@ import { acceptLegal } from './legal'
 import { entryChanged } from './entryEvents'
 import { clearPinEntriesExcept } from './snapshotCache'
 import { mapTournament, type Row } from './mappers'
+import { ApiError } from './apiError'
+import { fetchAll, withCount } from './paged'
 
-/**
- * A server error with its Postgres code. humanError reads the code: our own
- * raises (42501, 22023, 23505, P0001) keep their Spanish sentence, Postgres's
- * own messages become copy.
- */
-export class ApiError extends Error {
-  code: string | null
-  constructor(message: string, code: string | null) {
-    super(message)
-    this.code = code
-  }
-  /** From a supabase-js error, keeping its code. */
-  static from(error: { message: string; code?: string | null }): ApiError {
-    return new ApiError(error.message, error.code ?? null)
-  }
-}
+export { ApiError }
 
 function unwrap<T>(res: { data: T | null; error: { message: string; code?: string } | null }): T {
   if (res.error) throw ApiError.from(res.error)
@@ -333,7 +320,11 @@ export async function saveCourse(draft: CourseDraft): Promise<string> {
 }
 
 export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null; createdBy: string | null }>> {
-  const rows = unwrap(await supabase().from('courses').select('id, name, location, source, attribution, created_by, tees(id)').order('name')) as Row[]
+  // Every signed-in phone reads the whole shared catalog (courses_read), which outgrows one page as Rondas rápidas add
+  // courses: paged by name, then id, so a page never repeats or skips one (DB-20).
+  const rows = await fetchAll<Row>((from, to, count) =>
+    supabase().from('courses').select('id, name, location, source, attribution, created_by, tees(id)', withCount(count)).order('name').order('id').range(from, to),
+  )
   return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length, attribution: r.attribution ?? null, createdBy: r.created_by ?? null }))
 }
 

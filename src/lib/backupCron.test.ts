@@ -42,6 +42,8 @@ interface World {
   manifest?: Record<string, string> | null
   /** The history's rows; null when the snapshot has none (`auditMaxId` null). */
   history?: number | null
+  /** The project's «Max rows», when set under PostgREST's 1,000 (DB-20). */
+  cap?: number
   /** The request's Authorization header (none when null), and the environment's own changes. */
   auth?: string | null
   env?: Partial<Record<keyof typeof ENV, string>>
@@ -132,13 +134,16 @@ async function run(world: World = {}) {
     const keyset = /and=\(id\.gt\.(\d+),id\.lte\.(\d+)\)&limit=(\d+)/.exec(url)
     if (table === 'audit_log' && keyset) {
       const [after, upTo, limit] = keyset.slice(1).map(Number) as [number, number, number]
-      const n = Math.max(0, Math.min(limit, upTo - after))
+      const n = Math.max(0, Math.min(limit, world.cap ?? 1000, upTo - after))
       return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1 }))))
     }
     if (table === 'audit_log') {
       const from = rangeStart(init)
-      const n = Math.max(0, Math.min(1000, (history ?? 0) - from))
-      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: from + i + 1 }))))
+      const n = Math.max(0, Math.min(1000, world.cap ?? 1000, (history ?? 0) - from))
+      // With `Prefer: count=exact`, PostgREST says the total in Content-Range («0-399/1500»).
+      const counted = ((init?.headers ?? {}) as Record<string, string>).Prefer === 'count=exact'
+      const range = counted ? { 'content-range': `${from}-${from + n - 1}/${history ?? 0}` } : undefined
+      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: from + i + 1 }))), { headers: range })
     }
     return new Response('[]', { status: 200 })
   })
@@ -272,6 +277,26 @@ describe('what the backup answers and where its keys go (QA-14)', () => {
     expect(r.uploads[0]!.url).toBe('https://a.r2.cloudflarestorage.com/d/backups/2026-10-13.json.gz')
     const put = r.requests.find((q) => q.url.includes('/backups/'))!
     expect([put.headers['content-type'], put.headers['content-encoding']]).toEqual(['application/json', 'gzip'])
+  })
+
+  it('a «Max rows» under 1,000 loses no history: by key until the snapshot\'s last row, whatever the page (DB-20)', async () => {
+    const r = await run({ cap: 400 })
+    expect(r.status).toBe(200)
+    expect(r.read).toEqual([0, 400, 800, 1200].map((after) => `audit_log?select=*&order=id&and=(id.gt.${after},id.lte.1500)&limit=1000`))
+    expect(new Set(r.dump.tables.audit_log.map((a: { id: number }) => a.id)).size).toBe(1500)
+  })
+
+  it('a history of exactly one page asks once: its last row is the snapshot\'s (DB-20)', async () => {
+    const r = await run({ history: 1000 })
+    expect(r.read).toEqual(['audit_log?select=*&order=id&and=(id.gt.0,id.lte.1000)&limit=1000'])
+    expect(r.dump.tables.audit_log).toHaveLength(1000)
+  })
+
+  it('without 0039, a «Max rows» under 1,000 still reads every row: the total comes with the first page (DB-20)', async () => {
+    const r = await run({ snapshot: false, cap: 400 })
+    expect(r.status).toBe(200)
+    expect(r.dump.tables.audit_log).toHaveLength(1500)
+    expect(r.read.filter((u) => u.startsWith('audit_log'))).toHaveLength(4)
   })
 
   it('a snapshot with no history reads none', async () => {

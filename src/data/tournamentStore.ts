@@ -25,7 +25,7 @@ import type { Snapshot } from '../engine/types'
 import { humanError, isTransient } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { changeArrived, track } from '../lib/telemetry'
-import { fetchAll } from './paged'
+import { fetchAll, withCount } from './paged'
 import { INBOX_TABLES, liveFilter, REALTIME_TABLES } from './realtimeTables'
 import { inboxChanged } from './rejectedInbox'
 import { APPLIED_TABLES, applyChange, concernsBoards, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
@@ -415,11 +415,11 @@ export function showBoards(tournamentId: string, snapshot: Snapshot, at = Date.n
 
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
-  // Paged (PostgREST caps a response at 1,000 rows), ordered by each table's primary key so pages never overlap.
+  // Paged (PostgREST caps a response at 1,000 rows, or fewer: DB-20), ordered by each table's primary key so pages never overlap.
   const inList = <T = Row>(table: SnapshotTable, col: string, ids: string[]) =>
     ids.length
-      ? fetchAll<T>((from, to) => {
-          let qb = sb.from(table).select('*').in(col, ids)
+      ? fetchAll<T>((from, to, count) => {
+          let qb = sb.from(table).select('*', withCount(count)).in(col, ids)
           for (const c of SNAPSHOT_KEYS[table]) qb = qb.order(c)
           return qb.range(from, to)
         })

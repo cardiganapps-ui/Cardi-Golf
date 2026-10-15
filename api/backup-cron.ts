@@ -46,16 +46,32 @@ function headers(key: string): Record<string, string> {
   return { apikey: key, Authorization: `Bearer ${key}` }
 }
 
+/** «0-999/1234» is 1,234 rows in all; «0-999/*» or none says nothing. */
+function totalOf(range: string | null): number | null {
+  const m = range ? /\/(\d+)$/.exec(range) : null
+  return m ? Number(m[1]) : null
+}
+
+/**
+ * A table page by page. A short page is no proof of the last (DB-20): the
+ * project's «Max rows» can be under PAGE. The first page asks for the total
+ * (Content-Range), each next one starts where the rows read end, and an
+ * empty page ends it; a server that sends no total keeps the old rule.
+ */
 async function readTable(url: string, key: string, table: string, order: string, filter = ''): Promise<Row[]> {
   const rows: Row[] = []
-  for (let from = 0; ; from += PAGE) {
+  let total: number | null = null
+  for (;;) {
+    const from = rows.length
     const r = await fetch(`${url}/rest/v1/${table}?select=*&order=${order}${filter}`, {
-      headers: { ...headers(key), Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items' },
+      headers: { ...headers(key), Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items', ...(from === 0 ? { Prefer: 'count=exact' } : {}) },
     })
     if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`)
     const page = (await r.json()) as Row[]
+    if (from === 0) total = totalOf(r.headers.get('content-range'))
     rows.push(...page)
-    if (page.length < PAGE) return rows
+    if (page.length === 0) return rows
+    if (total !== null ? rows.length >= total : page.length < PAGE) return rows
   }
 }
 
@@ -121,8 +137,10 @@ async function readHistory(url: string, key: string, maxId: number): Promise<Row
     if (!r.ok) throw new Error(`${HISTORY}: HTTP ${r.status}`)
     const page = (await r.json()) as Row[]
     rows.push(...page)
-    if (page.length < PAGE) return rows
+    if (page.length === 0) return rows
     last = Number(page[page.length - 1]!.id)
+    // Done once the snapshot's last row is in; a short page is no proof (DB-20: the server's own cap may be under PAGE).
+    if (last >= maxId) return rows
   }
 }
 
