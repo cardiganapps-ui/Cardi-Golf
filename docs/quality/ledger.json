@@ -3263,8 +3263,8 @@
       "workstream": "W11",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 182,
       "tests": [
         "supabase/tests/player_tenant_keys.sql",
         "supabase/tests/tenant_ids.sql"
