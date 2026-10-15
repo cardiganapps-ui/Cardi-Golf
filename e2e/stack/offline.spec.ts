@@ -115,7 +115,7 @@ test('holes corrected while the phone is still sending them land as corrected, a
   for (const fix of fixes) {
     const toGrid = ana.page.getByRole('button', { name: t.card.grid, exact: true })
     if (await toGrid.isVisible()) await toGrid.click()
-    await ana.page.getByRole('button', { name: String(fix.hole), exact: true }).click()
+    await ana.page.getByRole('button', { name: `${t.player.hole} ${fix.hole}`, exact: true }).click()
     await typeHole(ana.page, fix.hole, fix.entry)
     await saveHole(ana.page, fix.hole)
   }

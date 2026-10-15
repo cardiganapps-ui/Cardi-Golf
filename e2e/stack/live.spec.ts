@@ -140,7 +140,7 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   for (const fix of FIXES) {
     const toGrid = ana.page.getByRole('button', { name: t.card.grid, exact: true })
     if (await toGrid.isVisible()) await toGrid.click()
-    await ana.page.getByRole('button', { name: String(fix.hole), exact: true }).click()
+    await ana.page.getByRole('button', { name: `${t.player.hole} ${fix.hole}`, exact: true }).click()
     const entry = { [fix.name]: { strokes: fix.strokes, putts: fix.putts } }
     await typeHole(ana.page, fix.hole, entry)
     takeTaps(ana.page)
