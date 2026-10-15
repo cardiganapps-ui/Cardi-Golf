@@ -50,6 +50,12 @@ const PAIRS: Array<[string, string, number]> = [
   // The focus ring on a board surface (A11Y-15): 3:1 against both of its greens.
   ['board-accent', 'board-surface', 3],
   ['bg', 'ink', 4.5], // toast text
+  // A control's edge is its only boundary on a white sheet (A11Y-05, WCAG 1.4.11 non-text, 3:1): fields, steppers,
+  // segmented controls, and a switch's track when off, with its white knob on it.
+  ['rule-2', 'bg', 3],
+  ['rule-2', 'surface', 3],
+  ['rule-2', 'surface-2', 3],
+  ['surface-2', 'rule-2', 3],
 ]
 
 describe('tokens.css contrast', () => {
