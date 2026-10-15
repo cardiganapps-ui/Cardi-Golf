@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { saveGroups } from '../../data/api'
 import { withTeeTimes } from '../../lib/teeTimes'
@@ -200,13 +200,7 @@ export function AdminGroups() {
       </div>
       {rounds.length === 0 && <EmptyState title={t.admin.sections.groups} body={t.admin.rounds.empty} />}
       {rounds.length > 0 && (
-        <div className="segmented" role="tablist">
-          {rounds.map((r: Round) => (
-            <button key={r.id} type="button" role="tab" aria-selected={r.id === roundId} onClick={() => switchRound(r.id)}>
-              {t.round.day(r.number)}
-            </button>
-          ))}
-        </div>
+        <Segmented value={roundId} options={rounds.map((r: Round) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={switchRound} label={t.common.whichDay} />
       )}
       {round && (
         <>

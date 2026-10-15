@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { handicapText, t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { deleteHandicapOverride, upsertHandicapOverride } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/TournamentGate'
@@ -62,13 +62,7 @@ export function AdminHandicaps() {
       {rounds.length === 0 && <EmptyState title={t.admin.sections.handicaps} body={H.noRounds} />}
       {rounds.length > 0 && (
         <>
-          <div className="segmented" role="tablist">
-            {rounds.map((r) => (
-              <button key={r.id} type="button" role="tab" aria-selected={r.id === roundId} onClick={() => setRoundId(r.id)}>
-                {t.round.day(r.number)}
-              </button>
-            ))}
-          </div>
+          <Segmented value={roundId} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />
           {snapshot.players.length === 0 && <span className={a.help}>{t.admin.players.empty}</span>}
           <div className={a.rows}>
             {snapshot.players.map((p) => {

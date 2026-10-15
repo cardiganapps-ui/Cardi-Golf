@@ -53,7 +53,8 @@ h1 {
 h2 {
   font-size: var(--fs-xl);
 }
-h3 {
+h3,
+.h3 {
   font-size: var(--fs-lg);
 }
 /* The one serif role: the event name (EventName). */
@@ -526,42 +527,8 @@ textarea {
   gap: var(--s3);
 }
 
-/* Segmented control: tabs on a rule, not pills. */
-.segmented {
-  display: flex;
-  gap: var(--s4);
-  border-bottom: var(--hairline);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.segmented::-webkit-scrollbar {
-  display: none;
-}
-.segmented button {
-  flex: 0 0 auto;
-  min-height: 40px;
-  margin-bottom: -1px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  font-weight: 500;
-  font-size: var(--fs-sm);
-  color: var(--ink-2);
-  cursor: pointer;
-  white-space: nowrap;
-  padding: 0 var(--s1);
-}
-@media (pointer: coarse) {
-  .segmented button {
-    min-height: var(--tap);
-  }
-}
-.segmented button[aria-selected='true'] {
-  color: var(--ink);
-  font-weight: 600;
-  border-bottom-color: var(--ink);
-}
+/* The legacy .segmented tab row is gone (A11Y-17): every choice is the Segmented primitive (primitives.tsx), a radio
+   group or a real tab list. */
 
 .fade-in {
   animation: fadeIn var(--dur) var(--ease);

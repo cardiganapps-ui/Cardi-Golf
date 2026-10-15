@@ -6,7 +6,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { handicapText, hcpFromTo, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { ReasonSheet } from '../../components/ReasonSheet'
@@ -381,19 +381,12 @@ export function AdminPlayers() {
             <span className="label">{P.handicap}</span>
             {locked && E.id && <p className={a.help}>{L.fixedHint}</p>}
             {editingChange && <HandicapChanges change={editingChange} timeZone={tournament.timezone} />}
-            <div className="segmented" role="tablist">
-              {(['manual', 'index', 'estimate'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="tab"
-                  aria-selected={E.handicap_source === s}
-                  onClick={() => setEditing({ ...E, handicap_source: s, estimate_inputs: s === 'estimate' ? (E.estimate_inputs ?? emptyEstimate()) : E.estimate_inputs })}
-                >
-                  {s === 'manual' ? P.sourceManual : s === 'index' ? P.sourceIndex : P.sourceEstimate}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              value={E.handicap_source}
+              options={(['manual', 'index', 'estimate'] as const).map((s) => ({ value: s, label: s === 'manual' ? P.sourceManual : s === 'index' ? P.sourceIndex : P.sourceEstimate }))}
+              onChange={(s) => setEditing({ ...E, handicap_source: s, estimate_inputs: s === 'estimate' ? (E.estimate_inputs ?? emptyEstimate()) : E.estimate_inputs })}
+              label={P.source}
+            />
             {E.handicap_source === 'manual' && (
               <Field label={P.baseHcp}>
                 <OptionalNumberField min={0} max={54} decimals={1} value={E.base_hcp} onChange={(v) => setEditing({ ...E, base_hcp: v })} />

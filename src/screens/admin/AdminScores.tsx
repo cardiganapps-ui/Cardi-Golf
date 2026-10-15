@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
 import { RejectedInbox } from './RejectedInbox'
@@ -271,13 +271,7 @@ export function AdminScores() {
         {rounds.length > 0 && snapshot.players.length === 0 && <EmptyState title={t.admin.sections.scores} body={SC.noPlayers} />}
         {rounds.length > 0 && snapshot.players.length > 0 && (
           <>
-            <div className="segmented" role="tablist">
-              {rounds.map((r) => (
-                <button key={r.id} type="button" role="tab" aria-selected={r.id === roundId} onClick={() => setRoundId(r.id)}>
-                  {t.round.day(r.number)}
-                </button>
-              ))}
-            </div>
+            <Segmented value={roundId} options={rounds.map((r) => ({ value: r.id, label: t.round.day(r.number) }))} onChange={setRoundId} label={t.common.whichDay} />
             <select className="select" value={playerId} onChange={(e) => setPlayerId(e.target.value)} aria-label={SC.player}>
               {groupedPlayers.map((g) => (
                 <optgroup key={g.label} label={g.label}>

@@ -43,8 +43,8 @@ function mount(search: string, edit?: (s: Snapshot) => void) {
 }
 const selected = () =>
   screen
-    .getAllByRole('tab')
-    .filter((x) => x.getAttribute('aria-selected') === 'true')
+    .getAllByRole('radio')
+    .filter((x) => x.getAttribute('aria-checked') === 'true')
     .map((x) => x.textContent)
 const where = () => screen.getByTestId('where').textContent
 
@@ -54,7 +54,7 @@ describe('Grupos: the day in the address', () => {
   it('opens on the day asked for, and switching days replaces ?ronda= with the day shown (N9)', async () => {
     mount('?ronda=r2')
     expect(selected()).toEqual([t.round.day(2)])
-    await act(async () => fireEvent.click(screen.getByRole('tab', { name: t.round.day(1) })))
+    await act(async () => fireEvent.click(screen.getByRole('radio', { name: t.round.day(1) })))
     expect(selected()).toEqual([t.round.day(1)])
     expect(where()).toBe('/t/viaje/admin/grupos?ronda=r1 REPLACE')
   })
@@ -62,7 +62,7 @@ describe('Grupos: the day in the address', () => {
   it('leaving a day with a draft asks first; once confirmed, the address follows too (N9)', async () => {
     mount('?ronda=r2')
     await act(async () => fireEvent.click(screen.getByRole('button', { name: `+ ${t.admin.groups.addGroup}` })))
-    await act(async () => fireEvent.click(screen.getByRole('tab', { name: t.round.day(3) })))
+    await act(async () => fireEvent.click(screen.getByRole('radio', { name: t.round.day(3) })))
     expect(selected()).toEqual([t.round.day(2)])
     await act(async () => fireEvent.click(screen.getByRole('button', { name: t.common.confirm })))
     expect(selected()).toEqual([t.round.day(3)])
@@ -76,7 +76,7 @@ describe('Grupos: the day in the address', () => {
     mount('?ronda=r2', (s) => {
       s.rounds[1]!.status = 'cancelled'
     })
-    expect(screen.queryByRole('tab', { name: t.round.day(2) })).toBeNull()
+    expect(screen.queryByRole('radio', { name: t.round.day(2) })).toBeNull()
     expect(selected()).toEqual([t.round.day(1)])
   })
 

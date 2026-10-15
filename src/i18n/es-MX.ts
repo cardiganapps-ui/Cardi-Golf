@@ -114,6 +114,9 @@ export const t = {
     screenshots: { live: 'La tabla del torneo, en vivo', card: 'La tarjeta: un hoyo en segundos' },
   },
   common: {
+    /** Names of the choice controls a screen reader announces (A11Y-17). */
+    whichDay: 'Qué día',
+    whichTee: 'Qué tee',
     // UX-15: a sheet holding typed work asks before a stray tap, Escape or back throws it away.
     discardTitle: '¿Descartar lo que capturaste?',
     discardBody: 'Si cierras ahora, se pierde lo que escribiste en esta hoja.',
@@ -2158,6 +2161,8 @@ export const t = {
       duplicated: 'Torneo duplicado. Estás en el nuevo.',
     },
     tournament: {
+      statusConfirmTitle: (status: string) => `¿Pasar el torneo a «${status}»?`,
+      statusConfirmBody: 'Todos los teléfonos lo ven al instante.',
       sections: 'Secciones del torneo',
       tabs: {
         brand: 'Marca',
