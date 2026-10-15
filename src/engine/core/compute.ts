@@ -3,7 +3,7 @@
  * player in every round. Modules build on this.
  */
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation, Hole, Id, Player, Round, Snapshot, Tee } from '../types'
+import type { Explanation, Hole, Id, Player, Round, Score, Snapshot, Tee } from '../types'
 import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
@@ -20,6 +20,55 @@ import type { CoreState, HoleResult, PlayerRound } from './types'
 export function nineHoleRanks(holes: Hole[]): Map<number, number> {
   const ranked = [...holes].sort((a, b) => a.strokeIndex - b.strokeIndex || a.number - b.number)
   return new Map(ranked.map((h, i) => [h.number, i + 1]))
+}
+
+/**
+ * How a hole's points came out, from the hole's own figures: its par and
+ * stroke index, the strokes received, the gross, the net and the points.
+ */
+export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>): Explanation {
+  const { par, strokesReceived: sr, gross: g, points: pts } = r
+  return {
+    title: `${pts} pts`,
+    steps: r.played
+      ? r.pickedUp
+        ? ['Levantó: 0 pts']
+        : [
+            `Par ${par}, SI ${r.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
+            `${g} − ${sr} = ${withTrueMinus(r.net ?? 0)} neto`,
+            // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
+            par + sr - (g ?? 0) + 2 < 0
+              ? `${par} + ${sr} − ${g} + 2 = ${withTrueMinus(par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
+              : `${par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
+          ]
+      : ['Sin capturar'],
+  }
+}
+
+/**
+ * PERF-14: every change rebuilt the sentences of every hole of every card
+ * (2,160 explanations at 60 players, half of the core's time), and few of
+ * them differ: they follow from the hole's par, stroke index, strokes
+ * received and gross alone. Each one is built once and shared by every hole
+ * that reads the same, frozen so that no reader can change another's. A
+ * figure outside the usual ranges is built for its hole alone.
+ */
+const HOLE_WHY = new Map<number, Explanation>()
+const small = (n: number, max: number) => Number.isInteger(n) && n >= 0 && n <= max
+
+function sharedHoleWhy(par: number, strokeIndex: number, sr: number, g: number | null, net: number | null, pts: number, pickedUp: boolean, played: boolean): Explanation {
+  const fresh = () => holeWhy({ par, strokeIndex, strokesReceived: sr, gross: g, net, points: pts, pickedUp, played })
+  if (!small(par, 15) || !small(strokeIndex, 63) || !small(sr, 15) || (g != null && !small(g, 62))) return fresh()
+  const key = ((((par * 64 + strokeIndex) * 16 + sr) * 64 + (g == null ? 0 : g + 1)) * 2 + (played ? 1 : 0)) * 2 + (pickedUp ? 1 : 0)
+  let why = HOLE_WHY.get(key)
+  if (!why) {
+    const built = fresh()
+    Object.freeze(built.steps)
+    why = Object.freeze(built)
+    if (HOLE_WHY.size >= 20_000) HOLE_WHY.clear()
+    HOLE_WHY.set(key, why)
+  }
+  return why
 }
 
 function placeholderHoles(n: number): Hole[] {
@@ -84,8 +133,15 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
   for (const p of players) handicaps[p.id] = baseHandicap(p, settings)
 
   const state: CoreState = { roundIds: rounds.map((r) => r.id), rounds: {}, totals: {}, handicaps, warnings }
-  const scoresIdx = new Map<string, (typeof snapshot.scores)[number]>()
-  for (const s of snapshot.scores) scoresIdx.set(`${s.roundId}|${s.playerId}|${s.hole}`, s)
+  // By day, player and hole (a hole's last row wins): a key string per score and per hole cost more than the lookups.
+  const scoresIdx = new Map<Id, Map<Id, Map<number, Score>>>()
+  for (const s of snapshot.scores) {
+    let byPlayer = scoresIdx.get(s.roundId)
+    if (!byPlayer) scoresIdx.set(s.roundId, (byPlayer = new Map()))
+    let byHole = byPlayer.get(s.playerId)
+    if (!byHole) byPlayer.set(s.playerId, (byHole = new Map()))
+    byHole.set(s.hole, s)
+  }
 
   // Cumulative cut per player as rounds go by.
   const cutsSoFar: Record<Id, { total: number; steps: string[] }> = {}
@@ -166,28 +222,14 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       // strokes go round them, the WHS 9-hole allocation (MONEY-03). Before,
       // the half was allocated against 1–18 and about half of it was lost.
       const nineRank = round.holes === 9 ? nineHoleRanks(holes) : null
+      const card = scoresIdx.get(round.id)?.get(p.id)
       for (const h of holes) {
-        const s = scoresIdx.get(`${round.id}|${p.id}|${h.number}`)
+        const s = card?.get(h.number)
         const sr = nineRank ? strokesReceived(roundHalfUp(playingHcp / 2), nineRank.get(h.number)!, 9) : strokesReceived(playingHcp, h.strokeIndex, round.holes)
         const played = !!s && (s.strokes != null || s.pickedUp)
         const g = played && !s.pickedUp ? s.strokes : null
         const pts = played ? stablefordPoints(h.par, sr, g, s.pickedUp) : 0
         const net = g != null ? g - sr : null
-        const why: Explanation = {
-          title: `${pts} pts`,
-          steps: played
-            ? s.pickedUp
-              ? ['Levantó: 0 pts']
-              : [
-                  `Par ${h.par}, SI ${h.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
-                  `${g} − ${sr} = ${withTrueMinus(net ?? 0)} neto`,
-                  // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
-                  h.par + sr - (g ?? 0) + 2 < 0
-                    ? `${h.par} + ${sr} − ${g} + 2 = ${withTrueMinus(h.par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
-                    : `${h.par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
-                ]
-            : ['Sin capturar'],
-        }
         results.push({
           hole: h.number,
           par: h.par,
@@ -202,7 +244,7 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
           played,
           disputed: !!s?.disputed,
           ...(s?.reason ? { correction: s.reason } : {}),
-          why,
+          why: sharedHoleWhy(h.par, h.strokeIndex, sr, g, net, pts, !!s?.pickedUp, played),
         })
         if (played) {
           thru++

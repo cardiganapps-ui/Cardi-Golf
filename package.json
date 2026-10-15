@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
+    "bench:engine": "POLO_ENGINE_BUDGET=1 vitest run src/engine/engine.budget.test.ts",
     "preflight": "bash scripts/preflight.sh",
     "quality": "node scripts/quality/status.mjs",
     "icons": "node scripts/make-icons.mjs",
