@@ -45,3 +45,25 @@ export function quickSettings(o: QuickOptions): TournamentSettings {
     cardSigning: 'none',
   }
 }
+
+/**
+ * COPY-21: what each chosen game asks of everyone, with money on: a buy-in into its own pot, or a stake paid
+ * player to player for each event. The setup screen shows it, and the total each one puts in up front.
+ */
+export interface QuickStake {
+  game: QuickGame
+  /** Each player's buy-in into the game's own pot. */
+  buyIn: number | null
+  /** Paid between players for each birdie or three-putt. */
+  perEvent: number | null
+}
+export function quickStakes(games: QuickGame[]): QuickStake[] {
+  return games.map((game) => {
+    const m = GAME_ENTRIES.find((e) => e.key === game)!.create(game.toLowerCase()).money
+    return { game, buyIn: m.source === 'side' ? m.buyIn : null, perEvent: m.source === 'direct' ? m.stake : null }
+  })
+}
+/** What each player puts in before the first hole: the entry and every buy-in. */
+export function quickUpfront(entryFee: number, games: QuickGame[]): number {
+  return Math.max(0, Math.round(entryFee)) + quickStakes(games).reduce((a, x) => a + (x.buyIn ?? 0), 0)
+}

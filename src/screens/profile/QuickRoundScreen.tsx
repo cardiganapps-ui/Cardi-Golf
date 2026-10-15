@@ -13,7 +13,7 @@ import { listCourses, loadCourseDraft } from '../../data/api'
 import { formatIndex, parseIndex, useMyProfile } from '../../data/profiles'
 import { myFriends, type FriendCard } from '../../data/social'
 import { createQuickRound, type QuickPlayer, type QuickRoundInput } from '../../data/quick'
-import { QUICK_GAMES, quickSettings, quickSplit, type QuickGame } from '../../engine/games/quick'
+import { QUICK_GAMES, quickSettings, quickSplit, quickStakes, quickUpfront, type QuickGame } from '../../engine/games/quick'
 import { formatMoney } from '../../lib/money'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
@@ -102,8 +102,20 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
   const potLine = useMemo(() => {
     if (!money || feeNum <= 0) return null
     const split = quickSplit(count)
-    return Q.potLine(formatMoney(feeNum * count), split.length === 1 ? 'todo al primero' : split.map((x) => `${x}%`).join(' / '))
+    return Q.potLine(formatMoney(feeNum * count), split.length === 1 ? null : split.map((x) => `${x}%`).join(' / '))
   }, [money, feeNum, count])
+  /** COPY-21: with money, each game's stake and what everyone puts in before the first hole. */
+  const stakeLines = useMemo(() => {
+    if (!money || games.length === 0) return []
+    return quickStakes(games).map((x) =>
+      x.buyIn != null
+        ? Q.stakeBuyIn(Q.game[x.game] ?? x.game, formatMoney(x.buyIn), formatMoney(x.buyIn * count))
+        : x.game === 'threePutts'
+          ? Q.stakeThreePutts(formatMoney(x.perEvent ?? 0))
+          : Q.stakeBirdies(formatMoney(x.perEvent ?? 0)),
+    )
+  }, [money, games, count])
+  const upfrontLine = money && (feeNum > 0 || stakeLines.length > 0) ? Q.upfront(count, formatMoney(quickUpfront(feeNum, games)), quickStakes(games).some((x) => x.perEvent != null)) : null
 
   function toggleFriend(f: FriendCard) {
     setPicked((cur) => {
@@ -291,6 +303,14 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
             <input className="input" inputMode="numeric" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^0-9]/g, ''))} />
           </Field>
         )}
+        {stakeLines.length > 0 && (
+          <ul className={styles.help} aria-label={Q.games}>
+            {stakeLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+        {upfrontLine && <p className={styles.help}>{upfrontLine}</p>}
       </section>
 
       <section className={styles.section}>

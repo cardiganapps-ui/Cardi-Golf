@@ -920,9 +920,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 178,
+      "tests": [
+        "src/screens/profile/QuickRoundView.money.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },

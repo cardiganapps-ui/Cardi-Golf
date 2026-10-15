@@ -1083,7 +1083,14 @@ export const t = {
     money: 'Con dinero',
     moneyHint: 'Sin dinero todo es por la gloria. Con dinero, cada uno pone la entrada y el bote se reparte por lugares; los juegos llevan su apuesta y se ajustan en Comité.',
     entryFee: 'Entrada por jugador',
-    potLine: (pot: string, split: string) => `Bote de ${pot}, se reparte ${split}.`,
+    /** `split` null: one place takes it all. */
+    potLine: (pot: string, split: string | null) => (split ? `Bote de ${pot}, se reparte ${split}.` : `Bote de ${pot}, todo para el primero.`),
+    /** COPY-21: each chosen game's money, said before anyone commits to it. */
+    stakeBuyIn: (game: string, each: string, pot: string) => `${game}: ${each} por jugador, bote de ${pot}.`,
+    stakeBirdies: (each: string) => `Birdies: cada birdie o mejor cobra ${each} de cada uno de los demás.`,
+    stakeThreePutts: (each: string) => `Tres putts: cada tres putts le cuesta ${each} a quien los hace, para cada uno de los demás.`,
+    upfront: (players: number, each: string, direct: boolean) =>
+      `Con ${players} ${players === 1 ? 'jugador' : 'jugadores'}, cada uno pone ${each} al empezar${direct ? '; lo de jugador a jugador se paga al final' : ''}.`,
     groups: (n: number) => (n === 1 ? 'Un grupo' : `${n} grupos de hasta 4`),
     start: 'Empezar',
     starting: 'Armando la ronda…',
