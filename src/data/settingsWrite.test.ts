@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest'
 import { getFixture } from '../dev/fixtures'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
-import { changedKeys, mergeOver, sameJson, settingsWrite } from './settingsWrite'
+import { t } from '../i18n/es-MX'
+import { changedKeys, mergeOver, sameJson, SettingsOutdated, settingsWrite } from './settingsWrite'
 
 const fx = getFixture('friends8')!
 const raw = fx.snapshot.tournament.settings as Record<string, unknown>
@@ -30,7 +31,7 @@ describe('values compare by content, as jsonb does', () => {
 describe('settingsWrite', () => {
   it('writes only the keys changed, each seen as the row held it', () => {
     const after = edit((s) => (s.labels.lastPlace = 'La Cuchara de Palo'))
-    const w = settingsWrite(raw, parsed, after, { whole: false, readAll: false })
+    const w = settingsWrite(raw, parsed, after, { readAll: false })
     expect(Object.keys(w.set)).toEqual(['labels'])
     expect(w.set.labels).toEqual(after.labels)
     expect(w.seen).toEqual({ labels: raw.labels })
@@ -41,7 +42,7 @@ describe('settingsWrite', () => {
     const before = parseSettings(row)
     expect(before.houseCut).toBe(0)
     const after = { ...before, entryFee: before.entryFee + 100 }
-    const w = settingsWrite(row, before, after, { whole: false, readAll: true })
+    const w = settingsWrite(row, before, after, { readAll: true })
     expect(Object.keys(w.set)).toEqual(['entryFee'])
     expect(new Set(Object.keys(w.seen))).toEqual(new Set(Object.keys(before)))
     for (const k of Object.keys(row)) expect(w.seen[k]).toEqual(row[k])
@@ -50,20 +51,30 @@ describe('settingsWrite', () => {
 
   it('a key taken out is written as null, which removes it', () => {
     const before = { ...parsed, expectedPlayers: 8 }
-    const w = settingsWrite({ ...raw, expectedPlayers: 8 }, before, parsed, { whole: false, readAll: false })
+    const w = settingsWrite({ ...raw, expectedPlayers: 8 }, before, parsed, { readAll: false })
     expect(w).toEqual({ seen: { expectedPlayers: 8 }, set: { expectedPlayers: null } })
   })
 
-  it('a row that did not parse is written whole, so it parses again', () => {
+  it('a row this build can’t read is never written: it used to be written whole from the defaults (ARCH-04)', () => {
     const after = { ...DEFAULT_SETTINGS, entryFee: 700 }
-    const w = settingsWrite({ prizes: 'roto' }, DEFAULT_SETTINGS, after, { whole: true, readAll: true })
-    expect(parseSettings(w.set)).toEqual(parseSettings(after))
-    expect(w.seen.prizes).toBe('roto')
-    expect(w.seen.entryFee).toBeNull()
+    expect(() => settingsWrite({ prizes: 'roto' }, DEFAULT_SETTINGS, after, { readAll: true })).toThrow(SettingsOutdated)
+    // A newer build's key, nested where this build writes the whole object back: `modules` would lose it.
+    const newer = { ...raw, modules: { ...(raw.modules as object), wolf: { enabled: true, label: 'Wolf' } } }
+    const label = edit((s) => (s.modules.snake.label = 'La Culebra'))
+    expect(() => settingsWrite(newer, parsed, label, { readAll: false })).toThrow(t.outdated.save)
+  })
+
+  it('a game this build doesn’t know stays: the games are not written while the row holds one, the rest is', () => {
+    const wolf = { id: 'wolf-1', type: 'wolf', label: 'Wolf', enabled: true, money: { source: 'direct', stake: 50 } }
+    const row = { ...raw, games: [...(raw.games as unknown[]), wolf] }
+    const games = edit((s) => (s.games[0]!.entrants = s.games[0]!.entrants === 'all' ? 'list' : 'all'))
+    expect(() => settingsWrite(row, parsed, games, { readAll: false })).toThrow(t.outdated.games(['Wolf']))
+    const label = edit((s) => (s.labels.lastPlace = 'La Cuchara de Palo'))
+    expect(settingsWrite(row, parsed, label, { readAll: false }).set).toEqual({ labels: label.labels })
   })
 
   it('nothing changed, nothing written', () => {
-    expect(settingsWrite(raw, parsed, structuredClone(parsed), { whole: false, readAll: false })).toEqual({ seen: {}, set: {} })
+    expect(settingsWrite(raw, parsed, structuredClone(parsed), { readAll: false })).toEqual({ seen: {}, set: {} })
   })
 })
 

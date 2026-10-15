@@ -62,7 +62,8 @@ export function AdminGames() {
     const g = next.games.find((x) => x.id === id)
     if (!g) return
     fn(g)
-    const w = settingsWrite(snapshot.tournament.settings, settings, next, { whole: data.settingsError != null, readAll: false })
+    // Refused while the row holds a game this build doesn't know (ARCH-04): `games` written back would drop it.
+    const w = settingsWrite(snapshot.tournament.settings, settings, next, { readAll: false })
     await updateSettings(tid, { settings: w.seen }, { settings: w.set })
   }
 

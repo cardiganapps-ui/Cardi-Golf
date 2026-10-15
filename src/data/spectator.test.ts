@@ -10,10 +10,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computeTournament } from '../engine/computeTournament'
 import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
-import { LEGACY_SETTINGS_ALIASES, parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
+import { LEGACY_SETTINGS_ALIASES, normalizeLegacySettings, parseSettings, TournamentSettingsSchema } from '../engine/settings/schema'
 import { FIXTURE_NAMES } from '../dev/fixtures'
 import { readdirSync, readFileSync } from 'node:fs'
 import { getFixture } from '../dev/fixtures'
+import { readSettings } from '../engine/settings/read'
 import { SPECTATOR_MONEY_COLUMNS, spectatorAnswer } from './testing/spectatorAnswer'
 
 const rpc = vi.fn()
@@ -31,6 +32,7 @@ vi.mock('./anonRpc', async () => {
 })
 
 const { forSpectators, nextPoll, pickBySpec, POLL, snapshotFromBoard, SPECTATOR_SETTINGS_SPEC, spectatorBoard, spectatorSettings, spectatorStoreId, TOKEN_SHAPE } = await import('./spectator')
+const { dataFromSnapshot } = await import('./tournamentStore')
 type Spec = typeof SPECTATOR_SETTINGS_SPEC
 const withoutMoney = (raw: unknown) => spectatorSettings(raw, false)
 
@@ -94,6 +96,39 @@ describe('settings without money (0053 spectator_settings)', () => {
     }
     // Settings with no custom bet go through «Con dinero» as they are.
     expect(spectatorSettings(FIRST_TOURNAMENT_SETTINGS, true)).toEqual(FIRST_TOURNAMENT_SETTINGS)
+  })
+})
+
+describe('a newer build’s settings on a link (ARCH-04)', () => {
+  const fx = getFixture('friends8')!
+  const friends = fx.snapshot.tournament.settings as Record<string, unknown>
+
+  it('a key this build doesn’t know: nothing of the settings, so the page says to update instead of computing without it', () => {
+    const newer = { ...friends, modules: { ...(friends.modules as object), wolf: { enabled: true, label: 'Wolf' } } }
+    for (const money of [false, true]) expect(spectatorSettings(newer, money)).toBeNull()
+    const snap = forSpectators({ ...fx.snapshot, tournament: { ...fx.snapshot.tournament, settings: newer } }, true, spectatorStoreId(TOKEN))
+    expect(dataFromSnapshot(snap).settingsError).not.toBeNull()
+  })
+
+  it('a side game it doesn’t know goes on by its name alone, for the page to set aside; without money for fun, a side pot left out', () => {
+    const wolf = { id: 'wolf-1', type: 'wolf', label: 'Wolf', enabled: true, money: { source: 'direct', stake: 50 }, options: { note: 'secreto del Comité' } }
+    const pot = { ...wolf, id: 'wolf-2', label: 'Lobo', money: { source: 'side', buyIn: 100 } }
+    const raw = { ...friends, games: [...(friends.games as unknown[]), wolf, pot] }
+    const read = (v: unknown) => {
+      const r = readSettings(v)
+      if (!r.ok) throw new Error(r.detail.join('; '))
+      return r
+    }
+    const shown = spectatorSettings(raw, true)
+    expect(JSON.stringify(shown)).not.toContain('secreto')
+    expect(read(shown).unknownGames).toEqual([
+      { id: 'wolf-1', label: 'Wolf', type: 'wolf', enabled: true, money: true },
+      { id: 'wolf-2', label: 'Lobo', type: 'wolf', enabled: true, money: true },
+    ])
+    expect(read(shown).settings).toEqual(read(spectatorSettings(friends, true)).settings)
+    const none = read(spectatorSettings(raw, false))
+    expect(none.unknownGames).toEqual([{ id: 'wolf-1', label: 'Wolf', type: 'wolf', enabled: true, money: false }])
+    expect(none.settings).toEqual(read(spectatorSettings(friends, false)).settings)
   })
 })
 
@@ -222,15 +257,19 @@ describe('only the keys the settings schema knows (0053 spectator_settings_spec)
       expect(JSON.stringify(shown), `money ${money}`).not.toContain('secreto')
       expect(JSON.stringify(shown)).not.toMatch(/"(junk|nota|nuevo|secretoArriba)"/)
     }
-    // What the schema knows stays as it was; the game and the tier of a kind it doesn't know are empty, so the
-    // settings fail to parse, as they do for the members.
-    const shown = spectatorSettings(raw, true) as { games: unknown[]; tiers: unknown[] }
+    // Keys the schema doesn't know are a newer build's to this one (ARCH-04): nothing of such a row comes through,
+    // and the page says to update instead of computing without them.
+    for (const money of [true, false]) expect(spectatorSettings(raw, money)).toBeNull()
+    // The pick itself, as 0053's spectator_pick: what the schema knows stays as it was; the game and the tier of a
+    // kind it doesn't know are empty, so the settings fail to parse.
+    const shown = pickBySpec(normalizeLegacySettings(raw), SPECTATOR_SETTINGS_SPEC) as { games: unknown[]; tiers: unknown[] }
+    expect(JSON.stringify(shown)).not.toContain('secreto')
     expect(shown.games.at(-1)).toEqual({})
     expect(shown.tiers).toEqual(['A', null])
     expect(TournamentSettingsSchema.safeParse(raw).success).toBe(false)
     expect(TournamentSettingsSchema.safeParse(shown).success).toBe(false)
     const clean = { ...shown, games: shown.games.slice(0, -1), tiers: ['A'] }
-    expect(parseSettings(clean)).toEqual(parseSettings({ ...parseSettings(fx.snapshot.tournament.settings), tiers: ['A'], games: parseSettings(fx.snapshot.tournament.settings).games.map((g) => (g.type === 'custom' ? { ...g, options: { description: '' } } : g)) }))
+    expect(parseSettings(clean)).toEqual(parseSettings({ ...parseSettings(fx.snapshot.tournament.settings), tiers: ['A'] }))
   })
 
   it('a value of another kind than the schema’s is null, and settings that are not an object are null', () => {
