@@ -2371,7 +2371,8 @@ export const t = {
       applyIndex: (idx: string, declared: boolean) => (declared ? `Usar su índice (${idx})` : `Usar índice Polo (${idx})`),
       proposed: 'Listo. Lo confirma desde su perfil.',
       linkedSelf: 'Amarrado a tu perfil',
-      noProfile: 'No encontré ese perfil.',
+      /** TRUST-08: a profile starts out of search, so a hidden one is the usual reason; the player can link it himself. */
+      noProfile: 'No encontré ese perfil. Si lo tiene oculto, que entre al torneo con su PIN y lo guarde en su perfil, o que prenda «Aparecer en búsquedas».',
       profileTaken: 'Este jugador ya tiene un perfil confirmado.',
       profileElsewhere: 'Ese perfil ya es otro jugador de este torneo.',
       linkedTo: (h: string) => `@${h}`,
