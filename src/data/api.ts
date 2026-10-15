@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { step } from '../lib/telemetry'
 import { acceptLegal } from './legal'
 import { entryChanged } from './entryEvents'
+import { clearPinEntriesExcept } from './snapshotCache'
 import { mapTournament, type Row } from './mappers'
 
 /**
@@ -184,6 +185,8 @@ export async function claimPlayer(playerId: string, pin: string): Promise<ClaimR
   step(ok ? 'pin_claimed' : 'pin_refused')
   // The faces and the PIN step show the consent line (TRUST-05).
   if (ok) void acceptLegal('pin')
+  // The phone's one PIN claim moved here: the tournaments it held only by PIN are someone else's now (TRUST-15).
+  if (ok) void clearPinEntriesExcept((res.data as { tournamentId: string }).tournamentId)
   return res.data as ClaimResult
 }
 

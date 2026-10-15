@@ -302,7 +302,8 @@ export function signOut(whenLate?: () => void | Promise<void>): Promise<boolean>
     }
     let call: Promise<unknown>
     try {
-      call = supabase().auth.signOut()
+      // Every session of the account ends, not only this phone's (SEC-07): a phone lost or lent is signed out from any other.
+      call = supabase().auth.signOut({ scope: 'global' })
     } catch (e) {
       call = Promise.reject(e)
     }
