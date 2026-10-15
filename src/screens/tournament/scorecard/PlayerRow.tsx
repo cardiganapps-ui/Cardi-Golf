@@ -26,7 +26,7 @@ export const PlayerRow = memo(function PlayerRow(p: {
   /** The par in the hole's heading: a player whose tee plays it otherwise says so. */
   parOnScreen: number
   locked: boolean
-  /** Untouched defaults on a hole he hasn't played: the badge stays quiet (P2). */
+  /** Untouched defaults on a hole he hasn't played: the badge stays quiet and says «Sin capturar» (COPY-10). */
   untouched: boolean
   ptsLine: string
   good: boolean

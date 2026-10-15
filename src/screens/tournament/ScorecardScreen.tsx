@@ -334,6 +334,9 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
                 const h = holeInfo(id)
                 if (!d || !h) return null
                 const { good, text } = ptsText(h, d)
+                // Nobody has changed him on a hole he hasn't played: the default is no score of his, so the badge
+                // names none. It said «3 pts, birdie neto» for anyone with a stroke on the hole (COPY-10).
+                const untouched = isUntouched(h, initial[id], d)
                 return (
                   <PlayerRow
                     key={id}
@@ -344,9 +347,9 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
                     hole={h}
                     parOnScreen={par}
                     locked={rules.lockedFor(id)}
-                    untouched={isUntouched(h, initial[id], d)}
-                    ptsLine={text}
-                    good={good}
+                    untouched={untouched}
+                    ptsLine={untouched ? S.notCaptured : text}
+                    good={!untouched && good}
                     holdsSnake={snakeHolder === id}
                     snakeLayoutId={`tarjeta-snake-${group.id}`}
                     onDraft={on.draft}

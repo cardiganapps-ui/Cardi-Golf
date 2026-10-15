@@ -790,11 +790,13 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 193,
+      "tests": [
+        "src/screens/tournament/ScorecardScreen.untouched.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The net score names stay in the engine (stableford.ts) until ARCH-05 moves its text to keys; the gender was fixed earlier («águila neta»)."
     },
     {
       "id": "COPY-11",
