@@ -100,8 +100,8 @@ test('Nuevo torneo: each step takes focus where it says which step it is (A11Y-1
   await page.getByPlaceholder(t.organizer.wizard.namePlaceholder).fill('Copa del teclado')
   await page.getByRole('button', { name: t.common.next }).focus()
   await page.keyboard.press('Enter')
-  const said = await page.evaluate(() => document.activeElement?.textContent ?? '')
-  expect(said).toBe(`${t.organizer.wizard.stepOf(2, 3)}, ${t.organizer.wizard.step2}`)
+  // The step moves focus once its view has rendered, a frame after the key: wait for it, as a screen reader does.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.textContent ?? '')).toBe(`${t.organizer.wizard.stepOf(2, 3)}, ${t.organizer.wizard.step2}`)
   // The wizard is its own page.
   await expect(page).toHaveTitle(`${t.titles.newTournament} — Polo`)
 })
