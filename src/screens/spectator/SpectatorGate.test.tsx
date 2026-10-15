@@ -181,8 +181,9 @@ describe('a link «Sin dinero» (the default)', () => {
     expect(from).not.toHaveBeenCalled()
   })
 
-  it('Juegos and each of its games, every explanation opened: not a peso, no way to Dinero or the Reglamento', async () => {
-    for (const fixture of ['full12-live', 'friends8', 'large60']) {
+  // One fixture per test: all three in one ran past Vitest's 5 s on a loaded machine.
+  it.each(['full12-live', 'friends8', 'large60'])('Juegos and each of its games on %s, every explanation opened: not a peso, no way to Dinero or the Reglamento', async (fixture) => {
+    {
       serve(board(fixture, false))
       const router = open(`/v/${TOKEN}/juegos`)
       await screen.findByRole('heading', { level: 1, name: t.nav.games })
@@ -202,7 +203,6 @@ describe('a link «Sin dinero» (the default)', () => {
         await screen.findByRole('heading', { level: 1, name: t.nav.games })
       }
       expect(router.state.location.pathname).toBe(`/v/${TOKEN}/juegos`)
-      cleanup()
     }
     expect(new Set(asked())).toEqual(new Set(['spectator_board']))
     expect(from).not.toHaveBeenCalled()
