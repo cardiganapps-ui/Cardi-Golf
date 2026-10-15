@@ -260,6 +260,14 @@ try {
   const { error: otherDev } = await dev2.from('scores').upsert({ ...scoreRow, strokes: 4, entered_by: p2, client_ts: new Date().toISOString() }, { onConflict: 'round_id,player_id,hole' })
   const { data: disputed } = await A.sb.from('scores').select('strokes, disputed, previous, reason').eq('round_id', r1.id).eq('player_id', A.player.id).eq('hole', 1).single()
   check(!otherDev && disputed.strokes === 4 && disputed.disputed === true && disputed.previous?.strokes === 6 && disputed.reason === null, 'a different device overwriting flags a discrepancy and clears the reason', { otherDev, disputed })
+  // TRUST-14 (0062): every member reads how the card got here, step by step; another tournament's Comité and a browser with no session cannot.
+  const { data: history, error: historyErr } = await dev2.rpc('card_history', { p_tournament_id: A.tournament.id, p_player_id: A.player.id })
+  const hole1 = (history ?? []).filter((s) => s.hole === 1 && s.roundId === r1.id).map((s) => `${s.comite ? 'comité' : 'phone'}:${s.before?.strokes ?? '-'}>${s.after?.strokes ?? '-'}`)
+  const devUid = (await dev.auth.getUser()).data.user?.id
+  check(!historyErr && hole1.join(' ') === 'phone:->5 comité:5>6 phone:6>4' && !!devUid && !JSON.stringify(history).includes(devUid), 'card_history: a teammate reads each step of the card, with no account in it', { historyErr, hole1 })
+  const { error: historyCross } = await B.sb.rpc('card_history', { p_tournament_id: A.tournament.id, p_player_id: A.player.id })
+  const { error: historyAnon } = await client().rpc('card_history', { p_tournament_id: A.tournament.id, p_player_id: A.player.id })
+  check(historyCross?.code === '42501' && !!historyAnon, 'card_history: not another tournament\'s Comité, not a browser with no session', { historyCross, historyAnon })
   const { error: restoreErr } = await A.sb.rpc('resolve_score_dispute', { p_round_id: r1.id, p_player_id: A.player.id, p_hole: 1, p_keep: false })
   const { data: restored } = await A.sb.from('scores').select('strokes, disputed, previous').eq('round_id', r1.id).eq('player_id', A.player.id).eq('hole', 1).single()
   check(!restoreErr && restored.strokes === 6 && restored.disputed === false && restored.previous === null, 'resolve_score_dispute(keep=false) restores the previous values')
