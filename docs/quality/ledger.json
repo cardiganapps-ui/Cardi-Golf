@@ -1222,11 +1222,13 @@
       "workstream": "W12",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 196,
+      "tests": [
+        "src/screens/tournament/PrintScreen.auction.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": "Partly (PR #122): RUNBOOK.md §8b covers a lost or corrupted project (who acts, the restore, the time measured, what each person does). Still open: an outage on Calcutta night that is not data loss (Supabase down for hours), and a warm standby to switch to."
+      "residual": "PR #122 covered a lost project (RUNBOOK §8b) and PR #196 an outage that is not one (§5, the Calcutta on paper). A warm standby to switch to is the staging project, waiting on Diego's yes (docs/handoff.md, item 4); the second person with access is his to name (item 10); the outage rehearsal runs at the Ensayo."
     },
     {
       "id": "DB-20",
@@ -2704,11 +2706,13 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 196,
+      "tests": [
+        "src/lib/ops.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The dev tooling's own advisories (vitest 3, sharp, @vercel/node's tree: 18, 2 critical, none in what ships) need major upgrades; Dependabot proposes them one by one."
     },
     {
       "id": "QA-23",
