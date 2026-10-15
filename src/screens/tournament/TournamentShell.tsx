@@ -34,6 +34,9 @@ function tabsFor({ hasMoney, canScore, more }: { hasMoney: boolean; canScore: bo
   ]
 }
 
+/** Reduced motion jumps to the top instead of gliding there. */
+const prefersReducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 /** The boards a pull brings again (PWA-15): En vivo, Juegos and Dinero. Never the Tarjeta, whose swipes move between holes. */
 const BOARDS = new Set(['', '/juegos', '/dinero'])
 
@@ -52,7 +55,7 @@ export function TournamentShell() {
   const connection = useConnection()
   useOwnConnectionStatus()
   const { refreshing, refresh } = useRefreshBoards()
-  const { pathname } = useLocation()
+  const { pathname, search, hash } = useLocation()
   const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
   const here = pathname.slice(base.length).replace(/\/$/, '')
   const onBoard = BOARDS.has(here)
@@ -96,6 +99,14 @@ export function TournamentShell() {
             key={tab.to}
             to={`${base}${tab.to ? `/${tab.to}` : ''}`}
             end={tab.to === ''}
+            // The open tab, tapped again, takes its screen back to the top (MOT-16, the phones' own convention). A view
+            // inside it (the Tarjeta's grid, a hole a notice opened) is left by the tap as before.
+            onClick={(e) => {
+              const to = `${base}${tab.to ? `/${tab.to}` : ''}`
+              if (search || hash || pathname.replace(/\/+$/, '') !== to.replace(/\/+$/, '')) return
+              e.preventDefault()
+              window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+            }}
             // Stats and Reglamento live under Más but are their own routes, so
             // without this they used to leave no tab lit at all.
             className={({ isActive }) => `${styles.tab} ${isActive || (tab.to === 'mas' && underMore) ? styles.tabActive : ''}`}
