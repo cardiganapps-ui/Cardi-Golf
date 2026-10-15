@@ -3203,8 +3203,8 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 185,
       "tests": [
         "src/data/auth.signout.test.ts",
         "src/data/snapshotCache.test.ts"
@@ -3737,8 +3737,8 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 185,
       "tests": [
         "src/data/snapshotCache.test.ts",
         "src/data/api.claim.test.ts"
