@@ -79,9 +79,9 @@ export function AdminHandicaps() {
                     <span className={a.rowSub}>
                       {H.base} {handicapText(base)}
                       {pr.courseHcp !== base ? `, ${H.course.toLowerCase()} ${handicapText(pr.courseHcp)}` : ''}
-                      {prev ? `, ${t.round.day(prev.roundNumber).toLowerCase()} ${prev.points} pts` : ''}
+                      {prev ? `, ${H.prevDay(prev.points, prev.roundNumber)}` : ''}
                       {pr.cut ? `, ${H.cut.toLowerCase()} −${pr.cut}` : ''}
-                      {pr.overridden ? `, ${H.override.toLowerCase()}` : ''}
+                      {pr.overridden ? `, ${H.overrideInLine}` : ''}
                     </span>
                   </span>
                   <span className={a.fig} aria-label={`${H.plays} ${pr.playingHcp}`}>

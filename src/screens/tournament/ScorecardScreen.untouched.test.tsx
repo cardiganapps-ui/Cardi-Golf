@@ -63,7 +63,7 @@ describe('a player nobody has changed reads «Sin capturar» (COPY-10)', () => {
     expect(['p1', 'p3', 'p4'].some((id) => holeOf(id).strokesReceived > 0)).toBe(true)
     for (const id of ['p1', 'p3', 'p4']) {
       expect(row(id).getByText(S.notCaptured, { exact: false })).toBeTruthy()
-      expect(row(id).queryByText(/pts/)).toBeNull()
+      expect(row(id).queryByText(/\d pts?\b/)).toBeNull()
     }
     const saved = holeOf('p2')
     expect(saved.played).toBe(true)

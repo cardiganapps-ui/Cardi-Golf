@@ -4,6 +4,7 @@
  */
 import { countback, flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
+import { ptsText } from '../../../i18n/es-MX'
 import type { GameModule, PrizeAward } from '../module'
 
 export interface BestRoundDay {
@@ -58,7 +59,7 @@ export const bestRoundModule: GameModule<BestRoundState> = {
           tieWhy.push(...res.steps.map((st) => `${st.label}: ${nameOf(first.members[0]!)} ${st.a} – ${nameOf(second)} ${st.b}`))
         }
         for (const s of splitPrizes(groups.slice(0, 1), [ctx.settings.prizes.bestRoundPerDay], nameOf)) {
-          winners[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${byPlayer[s.item]!.points} pts el día ${roundNumber}`, ...tieWhy, ...s.why.steps] } }
+          winners[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${ptsText(byPlayer[s.item]!.points)} el día ${roundNumber}`, ...tieWhy, ...s.why.steps] } }
         }
       }
       return { roundId: rid, roundNumber, rows, groups, winners, final: ctx.roundFinal[rid] ?? false }

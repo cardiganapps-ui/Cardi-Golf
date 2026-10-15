@@ -62,6 +62,8 @@ interface Step {
   aside?: ListRow[]
   /** The people the step is about, paged to the screen. */
   list?: ListRow[]
+  /** What the list is, when the step's title does not say it (the Calcutta: its places beside, its owners here). */
+  listTitle?: string
 }
 
 /** The narrowest a list column may get, in its own ems: a name and an amount side by side. */
@@ -327,6 +329,7 @@ export function CeremonyScreen() {
         })),
         // Nobody has cashed yet (no scores): the slots alone, not an empty list.
         list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount) })) : undefined,
+        listTitle: C.auctionOwners,
       })
     }
     const people = snapshot.players.map((p) => state.money.people[p.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
@@ -528,6 +531,7 @@ export function CeremonyScreen() {
                     )}
                     {step.list && (
                       <motion.div className={styles.listArea} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ ...ease, delay: at(listsAt) }}>
+                        {step.listTitle && <h3 className={styles.listTitle}>{step.listTitle}</h3>}
                         <PagedList rows={step.list} page={shownPage} onPages={setPages} />
                       </motion.div>
                     )}

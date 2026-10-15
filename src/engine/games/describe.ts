@@ -53,8 +53,8 @@ export function describeGame(g: GameConfig): string[] {
       break
     }
     case 'contest': {
-      const names = { closest: 'más cerca del hoyo', longDrive: 'drive más largo', greenie: 'greenie (en green de salida en par 3 y hace par o mejor)', sandy: 'sandy (sale de la trampa y hace par o mejor)', custom: g.label }
-      const holes = g.options.holes === 'par3' ? 'en todos los par 3' : g.options.holes === 'all' ? 'en todos los hoyos' : `en los hoyos ${t.common.andList(g.options.holes.map(String))}`
+      const names = { closest: 'más cerca del hoyo', longDrive: 'drive más largo', greenie: 'greenie (llega al green desde la salida en un par 3 y hace par o mejor)', sandy: 'sandy (sale de la trampa y hace par o mejor)', custom: g.label }
+      const holes = g.options.holes === 'par3' ? 'en todos los par 3' : g.options.holes === 'all' ? 'en todos los hoyos' : g.options.holes.length === 1 ? `en el hoyo ${g.options.holes[0]}` : `en los hoyos ${t.common.andList(g.options.holes.map(String))}`
       lines.push(`Concurso de ${names[g.options.kind]}, ${holes}. El grupo marca al ganador en la tarjeta.`)
       break
     }

@@ -52,7 +52,7 @@ export function feedText(e: FeedEvent, nameOf: (id: string) => string): string {
     case 'birdie':
       // Points only where the event counts them.
       if (e.scoring !== 'points') return t.feed.underPar(nameOf(e.playerId), e.hole, e.under, e.scoring === 'net')
-      return e.points >= 4 ? t.feed.eagle(nameOf(e.playerId), e.hole, e.points) : t.feed.birdie(nameOf(e.playerId), e.hole, e.points, e.gross)
+      return t.feed.underParPoints(nameOf(e.playerId), e.hole, e.points, e.grossUnder >= e.under)
     case 'leadChange':
       return t.feed.leadChange(nameOf(e.playerId), e.figure)
     case 'snakePass':

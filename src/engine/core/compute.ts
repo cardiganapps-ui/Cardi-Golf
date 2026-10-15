@@ -8,7 +8,7 @@ import { roundHalfUp } from './rounding'
 import { courseHandicap, estimateIndex, nextRoundCut, playingHandicap, strokesReceived } from './handicap'
 import { netScoreName, stablefordPoints } from './stableford'
 import { withTrueMinus } from '../formats/format'
-import { handicapText } from '../../i18n/es-MX'
+import { handicapText, ptsText } from '../../i18n/es-MX'
 import type { CoreState, HoleResult, PlayerRound } from './types'
 
 /** Default 18 holes when no course is loaded: par 4, SI 1..18. Flagged as a warning. */
@@ -29,7 +29,7 @@ export function nineHoleRanks(holes: Hole[]): Map<number, number> {
 export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>): Explanation {
   const { par, strokesReceived: sr, gross: g, points: pts } = r
   return {
-    title: `${pts} pts`,
+    title: ptsText(pts),
     steps: r.played
       ? r.pickedUp
         ? ['Levantó: 0 pts']
@@ -39,7 +39,7 @@ export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesRece
             // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
             par + sr - (g ?? 0) + 2 < 0
               ? `${par} + ${sr} − ${g} + 2 = ${withTrueMinus(par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
-              : `${par} + ${sr} − ${g} + 2 = ${pts} pts (${netScoreName(pts)})`,
+              : `${par} + ${sr} − ${g} + 2 = ${ptsText(pts)} (${netScoreName(pts)})`,
           ]
       : ['Sin capturar'],
   }

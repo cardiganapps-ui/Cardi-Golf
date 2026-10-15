@@ -65,12 +65,12 @@ describe("Comité › Tarjetas in the event's figure (STRAT-03)", () => {
       s.tournament.settings = { ...st, modules: { ...st.modules, bestRound: { enabled: true, label: 'Mejor ronda' } } }
     })
     expect(summary).toBe('+3 neto')
-    expect(tiles.slice(0, 3)).toEqual(['0 pts', '4 pts', '1 pts'])
+    expect(tiles.slice(0, 3)).toEqual(['0 pts', '4 pts', '1 pt'])
   })
 
   it('Stableford: the day in points, and the points on the holes', () => {
     const { summary, tiles } = adminCard((s) => playAs(s, 'stableford'))
     expect(summary).toBe('33 pts')
-    expect(tiles.slice(0, 3)).toEqual(['0 pts', '4 pts', '1 pts'])
+    expect(tiles.slice(0, 3)).toEqual(['0 pts', '4 pts', '1 pt'])
   })
 })

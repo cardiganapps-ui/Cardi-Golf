@@ -940,11 +940,13 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 194,
+      "tests": [
+        "src/lib/copyGrammar.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The panel also asked for a native copy editor's pass over every template with parameters. That needs a person; the cases it found are pinned by copyGrammar.test.tsx and the copy lint."
     },
     {
       "id": "COPY-24",

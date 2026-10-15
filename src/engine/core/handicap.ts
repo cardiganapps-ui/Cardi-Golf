@@ -2,7 +2,7 @@
  * Handicaps (CLAUDE.md §5.2, §13b-D/E). Pure functions; every result
  * carries its explanation for "¿Cómo se calculó?".
  */
-import { handicapText } from '../../i18n/es-MX'
+import { handicapText, ptsText } from '../../i18n/es-MX'
 import type { TournamentSettings } from '../settings/schema'
 import type { Explained } from '../types'
 import { roundHalfUp, roundTo, roundWith } from './rounding'
@@ -121,9 +121,9 @@ export function nextRoundCut(points: number, c: CutSettings): Explained<number> 
   const over = points - c.threshold
   const value = over > 0 ? Math.min(c.maxStrokes, Math.floor(over / c.pointsPerStroke)) : 0
   const steps: string[] = []
-  if (over <= 0) steps.push(`${points} pts no pasa de ${c.threshold}: sin recorte`)
+  if (over <= 0) steps.push(`${ptsText(points)} no pasa de ${c.threshold}: sin recorte`)
   else {
-    steps.push(`${points} − ${c.threshold} = ${over} pts de más`)
+    steps.push(`${points} − ${c.threshold} = ${ptsText(over)} de más`)
     steps.push(`${over} ÷ ${c.pointsPerStroke} = ${over % c.pointsPerStroke ? `${(over / c.pointsPerStroke).toFixed(1)}, ` : ''}${Math.floor(over / c.pointsPerStroke)} golpe${Math.floor(over / c.pointsPerStroke) === 1 ? '' : 's'}`)
     if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(`Máximo ${c.maxStrokes}`)
   }

@@ -50,7 +50,7 @@ describe('feedText', () => {
   })
 
   it('a birdie under strokes says how far under par, not its points', () => {
-    const e: FeedEvent = { ...base, kind: 'birdie', points: 3, gross: false, under: 1, scoring: 'net' }
+    const e: FeedEvent = { ...base, kind: 'birdie', points: 3, grossUnder: 0, under: 1, scoring: 'net' }
     expect(feedText(e, name)).not.toMatch(/pts|punto/)
     expect(feedText(e, name)).toMatch(/birdie/)
     expect(feedText({ ...e, scoring: 'points' }, name)).toMatch(/3 pts/)

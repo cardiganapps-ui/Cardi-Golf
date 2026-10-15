@@ -122,7 +122,7 @@ export const GAME_ENTRIES: GameEntry[] = [
     type: 'contest',
     category: 'specials',
     title: 'Greenies y sandies',
-    blurb: 'Green de salida en par 3 (o salir de la trampa) y hacer par o mejor.',
+    blurb: 'Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.',
     create: (id) => ({ ...base, id, type: 'contest', label: 'Greenies', options: { kind: 'greenie', holes: 'par3' }, money: m({ source: 'direct', stake: 20 }) }),
   },
   {

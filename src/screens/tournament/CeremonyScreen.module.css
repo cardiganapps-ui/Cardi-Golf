@@ -243,6 +243,16 @@
 .aside {
   width: 100%;
 }
+/* What a list is, at the list's own size: the Calcutta's owners beside its places. */
+.listTitle {
+  flex: none;
+  margin: 0 0 0.3em;
+  color: var(--board-ink-2);
+  font-size: clamp(16px, 3.2vh, 44px);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  text-align: start;
+}
 /* The list takes the height left; it pages to it (PagedList), so it never scrolls. */
 .listArea,
 .paged {
