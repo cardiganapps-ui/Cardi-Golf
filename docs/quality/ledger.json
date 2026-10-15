@@ -3834,8 +3834,8 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
+      "status": "fixed",
+      "pr": 186,
       "tests": [
         "supabase/tests/quick_round_privacy.sql",
         "src/screens/legalNotice.test.ts"
