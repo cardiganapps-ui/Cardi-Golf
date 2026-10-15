@@ -88,6 +88,12 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 9. [ ] **El enlace para ver: ¿solo para la tele, o también para el grupo?** (STRAT-05, decisión, gratis). Ya existe y viene apagado: el Comité lo crea en Comité › Torneo › Estado, «Sin dinero» salvo que elija «Con dinero», y lo cambia o lo apaga cuando quiera. La tele de la cena lo necesita «Con dinero» (la subasta son precios). Quien lo tenga ve los tableros sin cuenta ni PIN, con el nombre corto de cada jugador, nunca su nombre completo ni su foto. Tú decides si se comparte más allá de la tele (familia, grupo de WhatsApp); si sí, que sea «Sin dinero», tocando antes «Cambiar enlace» (RUNBOOK §1).
    - Ojo: sin fotos ni nombres completos, en la tele de la Calcutta cada lote sale con sus iniciales y su nombre corto, sin su forma reciente. Si quieres las fotos en el enlace, dime y las agrego (cambia una línea del aviso de privacidad).
    - **Cómo lo verifico:** me dices en el chat «solo la tele» o «también el grupo», y si van las fotos; lo dejo escrito en el RUNBOOK y lo probamos en el ensayo.
+10. [ ] **Una segunda persona con acceso para el viaje** (DB-19, gratis, antes del primer ensayo). Si Supabase se pausa o se cae la noche de la Calcutta, alguien tiene que poder entrar a su panel, y hoy solo tú puedes. Lo ideal es quien lleve el Comité.
+    - **Pasos:**
+      1. Supabase → organización **Cardi-Golf** → **Team** → **Invite** → su correo. Si Supabase dice que hace falta un plan de pago, detente y dime: eso cuesta.
+      2. Cloudflare → tu cuenta → **Manage Account** → **Members** → **Invite** → su correo, con acceso a R2 (para bajar un respaldo). Igual: si pide pagar, detente.
+      3. Vercel no hace falta: la app instalada sigue funcionando sin Vercel (RUNBOOK §5), y en el plan gratis no se puede agregar a nadie al equipo (eso es de pago).
+    - **Cómo lo verifico:** esa persona entra a Supabase y ve el proyecto Cardi-Golf, y a Cloudflare › R2 y ve `cardi-golf-backups`. Me dices quién es y lo anoto en el RUNBOOK.
 
 ---
 

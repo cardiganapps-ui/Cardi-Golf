@@ -2802,6 +2802,8 @@ export const t = {
     noPlayers: 'Primero carga a los jugadores.',
     /** The TV runs on the link to watch «Con dinero» (STRAT-05), never on a player's PIN; the link below is this phone's own TV view. */
     tvHint: 'En la tele, abre el enlace para ver con dinero (Torneo, pestaña Estado): no pide PIN. En este teléfono:',
+    /** The console needs the server for every bid (DB-19): the night goes on on paper, and is entered here afterwards. */
+    paperHint: 'Si se va la señal o el servidor, la subasta sigue en papel:',
   },
   bracket: {
     title: 'Cuadro',
@@ -3304,6 +3306,23 @@ export const t = {
     legend: 'Los puntos (•) son los golpes de ventaja en ese hoyo. Arriba golpes, abajo putts.',
     sign: 'Firmas',
     noGroups: 'Esta ronda todavía no tiene grupos.',
+    /**
+     * The Calcutta on paper (DB-19): the console needs the server for every bid, so a night without it runs on this
+     * sheet and the console takes it afterwards.
+     */
+    cards: 'Tarjetas',
+    auctionSheet: 'Hoja de la Calcutta',
+    auctionRules: (open: string, step: string, max: number, selfCounts: boolean, buyback: number) =>
+      `Cada lote abre en ${open} con el propio jugador y sube de ${step} en ${step}. Cada quien compra hasta ${max} ${max === 1 ? 'jugador' : 'jugadores'}${selfCounts ? ', contándose a sí mismo' : ''}. Al venderse, el jugador puede recomprar hasta el ${buyback} % de sí mismo, pagándole a su dueño esa parte del precio.`,
+    lot: 'Lote',
+    player: 'Jugador',
+    buyer: 'Comprador',
+    price: 'Precio',
+    buyback: 'Recompra',
+    paid: 'Pagó',
+    pot: 'Bolsa de la Calcutta',
+    /** How the night on paper reaches the app once the server is back. */
+    auctionAfter: 'Cuando vuelva la señal, en la consola, lote por lote: «Abrir lote», el comprador, «Otra» con el precio, «¡Vendido!» y la recompra.',
   },
   tv: {
     title: 'Modo TV',

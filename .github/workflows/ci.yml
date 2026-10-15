@@ -28,3 +28,8 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder
+      # QA-21: a known high or critical vulnerability in what ships to phones and
+      # serverless routes (the production dependencies) fails the check. Dev
+      # tooling comes up to date through Dependabot (.github/dependabot.yml).
+      - if: hashFiles('package-lock.json') != ''
+        run: npm audit --omit=dev --audit-level=high
