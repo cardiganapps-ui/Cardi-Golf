@@ -3251,7 +3251,9 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/social_limits.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },
