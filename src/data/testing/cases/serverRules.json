@@ -11104,7 +11104,7 @@
             "round_id": "r9",
             "hole": 1,
             "player_id": "q1",
-            "writer_player_id": "p1",
+            "writer_player_id": "q1",
             "auth_user_id": "uid-p1",
             "payload": {
               "fields": {
