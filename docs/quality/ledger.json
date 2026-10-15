@@ -3294,10 +3294,18 @@
       "workstream": "W5",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
-      "verifiedBy": null,
+      "status": "fixed",
+      "pr": 167,
+      "tests": [
+        "supabase/tests/spectator_link.sql",
+        "src/data/spectator.test.ts",
+        "src/data/spectatorSettings.cases.test.ts",
+        "src/screens/spectator/SpectatorGate.test.tsx",
+        "src/screens/admin/SpectatorLinkCard.test.tsx",
+        "e2e/fixtures/spectator.spec.ts",
+        "e2e/stack/spectator.spec.ts"
+      ],
+      "verifiedBy": "Independent verifier, two rounds: round 1 P2 (outbox and telemetry on /v/) and round 2 P1 (a legacy settings key dropped by the allowlist) fixed in this PR; round 3 reviewed by hand (the verifier agent could not run) and found nothing",
       "residual": null
     },
     {
