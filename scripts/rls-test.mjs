@@ -620,6 +620,20 @@ try {
   const { error: otherAvatar } = await U.sb.storage.from('tournament-assets').upload(`profiles/${S.id}/x-${rand}.png`, png(), { contentType: 'image/png' })
   const { error: anonAvatar } = await lurker.storage.from('tournament-assets').upload(`profiles/${lurkerSession.user.id}/x-${rand}.png`, png(), { contentType: 'image/png' })
   check(!ownAvatar && !!otherAvatar && !!anonAvatar, 'an account writes only its own profiles/ folder', { ownAvatar: ownAvatar?.message })
+  // The app's uploads all upsert, which needs the read on the row it writes (0061): a new file and the same one again.
+  const { error: upsertNew } = await U.sb.storage.from('tournament-assets').upload(`profiles/${U.id}/upsert-${rand}.png`, png(), { contentType: 'image/png', upsert: true })
+  const { error: upsertAgain } = await U.sb.storage.from('tournament-assets').upload(`profiles/${U.id}/upsert-${rand}.png`, png(), { contentType: 'image/png', upsert: true })
+  check(!upsertNew && !upsertAgain, 'an upload with upsert writes a new file and the same file again, as every upload of the app does', { upsertNew: upsertNew?.message, upsertAgain: upsertAgain?.message })
+  await admin.storage.from('tournament-assets').remove([`profiles/${U.id}/upsert-${rand}.png`])
+  // TRUST-07 (0061): the bucket is public by URL, but only its owner lists the folder.
+  const { data: ownList } = await U.sb.storage.from('tournament-assets').list(`profiles/${U.id}`)
+  const { data: strangerList } = await S.sb.storage.from('tournament-assets').list(`profiles/${U.id}`)
+  const { data: anonList } = await client().storage.from('tournament-assets').list(`profiles/${U.id}`)
+  check(
+    (ownList ?? []).some((f) => avatar.endsWith(f.name)) && (strangerList ?? []).length === 0 && (anonList ?? []).length === 0,
+    'only the owner lists his photo folder; a stranger and no session list nothing (TRUST-07, 0061)',
+    { own: ownList?.length, stranger: strangerList?.length, anon: anonList?.length },
+  )
   await admin.storage.from('tournament-assets').remove([avatar])
 
   console.log('results: WHS in SQL, round results, the Polo index, published results:')

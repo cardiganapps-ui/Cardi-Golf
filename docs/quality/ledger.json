@@ -3624,11 +3624,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 187,
+      "tests": [
+        "supabase/tests/storage_listing.sql"
+      ],
       "verifiedBy": null,
-      "residual": "Open, reconciled 2026-10-13: only disclosed (the notice says uploaded files are public and never deleted; legalNotice.test.ts pins the assets_public_read policy so removing it forces the sentence to be re-read). The bucket is still listable, nothing expires uploads or removes a replaced file, and there are no signed URLs or unguessable paths."
+      "residual": "Retention of uploaded files is the operator's call (docs/handoff.md 5e); listing is closed and paths carry the tournament or account id."
     },
     {
       "id": "TRUST-08",
