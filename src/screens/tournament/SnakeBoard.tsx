@@ -11,9 +11,12 @@ import { formatMoney } from '../../lib/money'
 import styles from './SnakeBoard.module.css'
 import { IconSnake } from '../../components/icons'
 import { easeSlow } from '../../design/motion'
+import { useShowMoney } from './tournamentView'
 
 export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
   const data = useTournament((s) => s.data)!
+  // A link to watch «Sin dinero» (STRAT-05): who holds the snake and the passes, never what each one cashes.
+  const showMoney = useShowMoney()
   const { snapshot, state, settings } = data
   const snake = state.modules.snake!
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
@@ -23,7 +26,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className={styles.board}>
-      <p className="help">{t.games.snakeRule(settings.modules.snake.puttsThreshold)}</p>
+      <p className="help">{(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(settings.modules.snake.puttsThreshold)}</p>
       {[...byRound.entries()].map(([rid, groups]) => (
         <section key={rid} className={styles.day}>
           <h3>{t.round.day(groups[0]!.roundNumber)}</h3>
@@ -34,7 +37,15 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                   {t.card.group} {g.groupNumber}
                 </strong>
                 <span className={`${styles.state} ${g.pendingHole != null ? styles.statePending : ''}`}>
-                  {g.pendingHole != null ? t.games.snakePending(g.pendingHole) : g.finished ? t.games.snakeSettled : t.games.inPlay(formatMoney(g.pot))}
+                  {g.pendingHole != null
+                    ? t.games.snakePending(g.pendingHole)
+                    : g.finished
+                      ? showMoney
+                        ? t.games.snakeSettled
+                        : t.games.snakeDone
+                      : showMoney
+                        ? t.games.inPlay(formatMoney(g.pot))
+                        : t.games.snakeInPlay}
                 </span>
               </div>
               <div className={styles.players}>
@@ -52,7 +63,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                         )}
                       </span>
                       <span className={styles.playerName}>{name(pid)}</span>
-                      {payout && <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>{formatMoney(payout.amount)}</span>}
+                      {payout && showMoney && <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>{formatMoney(payout.amount)}</span>}
                     </button>
                   )
                 })}

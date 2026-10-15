@@ -462,3 +462,11 @@
   height: 1em;
 }
 
+/* Calcutta night on a link without money (STRAT-05): what the TV needs, at the room's size. */
+.needsMoney {
+  font-size: var(--tv-name);
+  font-weight: 600;
+  color: var(--board-ink);
+  max-width: 40ch;
+  margin: 0;
+}

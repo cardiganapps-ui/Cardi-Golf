@@ -148,7 +148,8 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const ov = snapshot.handicapOverrides.find((o) => o.roundId === round.id && o.playerId === p.id)
       if (ov) {
         overridden = true
-        steps.push(`Ajuste del Comité: de ${playingHcp} a ${ov.playingHcp} (${ov.reason})`)
+        // A link to watch carries no reason (the Comité's free text stays with the members, STRAT-05).
+        steps.push(`Ajuste del Comité: de ${playingHcp} a ${ov.playingHcp}${ov.reason ? ` (${ov.reason})` : ''}`)
         playingHcp = ov.playingHcp
       }
       if (round.holes === 9) steps.push(`Ronda de 9 hoyos: la mitad, ${roundHalfUp(playingHcp / 2)}, repartida en los nueve hoyos del más difícil al más fácil`)

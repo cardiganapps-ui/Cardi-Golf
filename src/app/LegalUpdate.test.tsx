@@ -110,6 +110,8 @@ describe('LegalUpdate', () => {
   it('never over the Tarjeta, the auction console, a room screen, the documents or the fixtures', async () => {
     for (const p of ['/t/torneo/admin/calcutta', '/t/torneo/admin/parejas', '/organizer/reset', '/t/torneo/tarjeta', '/t/torneo/tv', '/t/torneo/ceremonia', '/t/torneo/imprimir', '/privacidad', '/terminos', '/t/_/full12-live', '/admin/_/salud'])
       expect(QUIET_ROUTE.test(p), p).toBe(true)
+    // A link to watch (STRAT-05): often a TV or a shared screen, never the place for someone's own account.
+    for (const p of ['/v/sSjvTXmU1SDUNaaBFsFGLc7N', '/v/sSjvTXmU1SDUNaaBFsFGLc7N/juegos', '/v/sSjvTXmU1SDUNaaBFsFGLc7N/tv', '/v/_/full12-live']) expect(QUIET_ROUTE.test(p), p).toBe(true)
     for (const p of ['/', '/t/torneo', '/t/torneo/dinero', '/organizer', '/admin']) expect(QUIET_ROUTE.test(p), p).toBe(false)
     rpc.mockResolvedValue(mine('2026-10-01', cur.terms))
     await show('/t/torneo/tarjeta')
