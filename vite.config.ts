@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { APP_MANIFEST } from './src/lib/appManifest'
 import { LAUNCH_SCREENS, launchImageMedia, launchImagePath } from './src/lib/launchImages'
+import { DEV_ONLY, noDevCode } from './src/lib/noDevCode'
 
 /**
  * Which build a phone runs (PWA-03). The id is the build time in seconds:
@@ -55,6 +56,8 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    // A production build carries none of the design fixtures, the style guide or the test builders (ARCH-07).
+    noDevCode(),
     {
       name: 'versioned-icons',
       transformIndexHtml: (html) =>
@@ -122,6 +125,13 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
+    rollupOptions: {
+      // A dev-only module (the fixtures, the style guide, the test builders) does nothing of its own when
+      // imported: it is kept only where something uses what it exports, as the design routes do. The profile
+      // fixtures build their data with calls at the module's top, which the bundler had to keep in every
+      // production build (ARCH-07); `noDevCode` above fails one that still carries any.
+      treeshake: { moduleSideEffects: (id) => !DEV_ONLY.test(id) },
+    },
   },
   test: {
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
