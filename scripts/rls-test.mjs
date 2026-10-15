@@ -494,7 +494,11 @@ try {
   const { data: sProfile } = await S.sb.rpc('ensure_my_profile')
   const { error: anonProfile } = await dev2.rpc('ensure_my_profile')
   check(!!anonProfile, 'an anonymous device has no profile')
-  const { error: bioErr } = await U.sb.from('profiles').update({ bio: 'Pego derecho', home_club: 'Club RLS' }).eq('id', U.id)
+  // TRUST-08 (0058): a new profile starts out of search; U and S turn it on, as the toggle in Editar perfil does.
+  const { data: uFresh } = await U.sb.from('profiles').select('discoverable').eq('id', U.id).single()
+  check(uFresh?.discoverable === false, 'a new profile starts out of search (TRUST-08, 0058)', uFresh)
+  await S.sb.from('profiles').update({ discoverable: true }).eq('id', S.id)
+  const { error: bioErr } = await U.sb.from('profiles').update({ bio: 'Pego derecho', home_club: 'Club RLS', discoverable: true }).eq('id', U.id)
   const { error: indexErr } = await U.sb.from('profiles').update({ polo_index: 1.2 }).eq('id', U.id)
   check(!bioErr && !!indexErr, 'the owner edits the profile but not the computed index', { bioErr: bioErr?.message })
   const { data: sReadsU } = await S.sb.from('profiles').select('id').eq('id', U.id)
@@ -560,7 +564,9 @@ try {
   const { data: lurkerSearch } = await lurker.rpc('search_profiles', { q: 'uriel' })
   check(lurkerCard === null && Array.isArray(lurkerSearch) && lurkerSearch.length === 0, 'an unrelated anonymous device sees no profile and cannot search')
   const { data: found } = await S.sb.rpc('search_profiles', { q: 'Uriel' })
-  check((found ?? []).some((x) => x.handle === uProfile.handle), 'an account finds a discoverable profile by name')
+  const { data: tooShort } = await S.sb.rpc('search_profiles', { q: 'Ur' })
+  check((found ?? []).some((x) => x.handle === uProfile.handle && x.homeClub == null) && !(tooShort ?? []).some((x) => x.handle === uProfile.handle),
+    'an account finds a discoverable stranger from three letters, with no club in the result (TRUST-08)')
   await U.sb.from('profiles').update({ discoverable: false }).eq('id', U.id)
   const { data: hiddenCard } = await S.sb.rpc('profile_card', { p_handle: uProfile.handle })
   const { data: hiddenSearch } = await S.sb.rpc('search_profiles', { q: 'uriel' })

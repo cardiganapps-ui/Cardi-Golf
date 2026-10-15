@@ -112,7 +112,7 @@ export function FriendsScreen({ fixture }: { fixture?: MyFriends }) {
       {hits && (
         <section className={styles.section}>
           {hits.length === 0 ? (
-            <p className={styles.help}>{S.searchNone}</p>
+            <p className={styles.help}>{q.trim().replace(/^@/, '').length < 3 ? S.searchShort : S.searchNone}</p>
           ) : (
             <div className={styles.rows}>
               {hits.map((h) => (

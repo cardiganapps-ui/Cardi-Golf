@@ -111,6 +111,8 @@ try {
   // A player with a hidden profile, confirmed in the tournament.
   const U = await account('u', 'Úrsula Privada')
   const { data: uProfile } = await U.sb.rpc('ensure_my_profile')
+  // A new profile starts out of search (0058, TRUST-08); the Comité proposes only one it can find, so U is found first.
+  await U.sb.from('profiles').update({ discoverable: true }).eq('id', U.id)
   await A.sb.rpc('comite_link_profile', { p_player_id: p0.id, p_handle: uProfile.handle })
   const { data: linked } = await U.sb.rpc('link_my_profile', { p_player_id: p0.id })
   if (!linked?.ok) throw new Error('could not link U')

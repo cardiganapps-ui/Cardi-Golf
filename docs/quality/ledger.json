@@ -3633,9 +3633,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 183,
+      "tests": [
+        "supabase/tests/discovery.sql",
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
