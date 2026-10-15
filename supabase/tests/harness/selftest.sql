@@ -135,7 +135,7 @@ select vault.create_secret('harness-dispatch-secret', 'push_dispatch_secret') \g
 select set_config('request.jwt.claims', harness.claims(:'org_a'), true) \g /dev/null
 set local role authenticated;
 select public.ensure_my_profile() \g /dev/null
-select public.save_push_subscription('https://push.example.test/harness-selftest', 'p256dh-x', 'auth-y', 'selftest') \g /dev/null
+select public.save_push_subscription('https://fcm.googleapis.com/fcm/send/harness-selftest', 'p256dh-x', 'auth-y', 'selftest') \g /dev/null
 reset role;
 select count(*) as n0 from net.harness_requests \gset
 select public.notify(:'org_a', 'harness_probe', 'harness_probe:selftest', null, '{}'::jsonb) \g /dev/null
@@ -143,7 +143,7 @@ select count(*) - :n0 as n_new from net.harness_requests \gset
 select url, headers ->> 'Authorization' as auth, body -> 'subscriptions' -> 0 ->> 'endpoint' as endpoint, body -> 'notice' ->> 'kind' as kind
   from net.harness_requests order by id desc limit 1 \gset
 select harness.check(:n_new = 1 and :'url' = 'https://harness.invalid/api/push-dispatch'
-  and :'auth' = 'Bearer harness-dispatch-secret' and :'endpoint' = 'https://push.example.test/harness-selftest' and :'kind' = 'harness_probe',
+  and :'auth' = 'Bearer harness-dispatch-secret' and :'endpoint' = 'https://fcm.googleapis.com/fcm/send/harness-selftest' and :'kind' = 'harness_probe',
   'notify() → notifications_push trigger → one net.http_post, captured in net.harness_requests');
 
 rollback;

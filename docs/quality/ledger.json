@@ -3134,7 +3134,11 @@
       "tripSafe": false,
       "status": "open",
       "pr": null,
-      "tests": [],
+      "tests": [
+        "supabase/tests/push_endpoints.sql",
+        "src/lib/pushEndpoint.test.ts",
+        "src/lib/pushDispatch.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

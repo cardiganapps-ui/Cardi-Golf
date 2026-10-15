@@ -19,6 +19,7 @@ import webpush from 'web-push'
 import { noticeLine, type NoticeLike } from '../src/lib/noticeText.js'
 import { jsonBody } from '../src/server/body.js'
 import { bearerMatches } from '../src/server/secret.js'
+import { pushEndpointOk } from '../src/lib/pushEndpoint.js'
 
 interface Body {
   subscriptions?: Array<{ endpoint: string; keys: { p256dh: string; auth: string } }>
@@ -44,10 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const badge = typeof body.unread === 'number' && Number.isFinite(body.unread) ? Math.max(0, body.unread) : undefined
   const payload = JSON.stringify({ title: line.title ?? 'Polo', body: line.body ?? line.text, url: line.to, tag: body.notice.id, badge })
 
+  // SEC-03: only a browser push service is called. An endpoint off the list can never be delivered: it is pruned
+  // with the gone ones, and nothing is sent to it.
+  const live: typeof subs = []
   const dead: string[] = []
+  for (const s of subs) {
+    if (pushEndpointOk(s?.endpoint)) live.push(s)
+    else if (typeof s?.endpoint === 'string') dead.push(s.endpoint)
+  }
   let sent = 0
   await Promise.all(
-    subs.map(async (s) => {
+    live.map(async (s) => {
       try {
         await webpush.sendNotification(s, payload, { TTL: 24 * 3600, urgency: 'normal' })
         sent++

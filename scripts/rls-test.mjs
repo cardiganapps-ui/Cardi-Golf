@@ -845,11 +845,13 @@ try {
   check(wGone === null && Array.isArray(wMine) && wMine.length === 0, 'leaving takes the crew away')
 
   console.log('push: subscriptions, the prune secret:')
-  const endpoint = `https://push.example.test/rls-${rand}`
+  const endpoint = `https://fcm.googleapis.com/fcm/send/rls-${rand}`
   const { error: anonSub } = await lurker.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'x', p_auth: 'y' })
   const { error: badSub } = await U.sb.rpc('save_push_subscription', { p_endpoint: 'http://insecure', p_p256dh: 'x', p_auth: 'y' })
   const { error: subErr } = await U.sb.rpc('save_push_subscription', { p_endpoint: endpoint, p_p256dh: 'x', p_auth: 'y', p_user_agent: 'rls' })
+  const { error: offList } = await U.sb.rpc('save_push_subscription', { p_endpoint: `https://httpbin.org/anything/${rand}`, p_p256dh: 'x', p_auth: 'y' })
   check(!!anonSub && !!badSub && !subErr, 'an account saves an https subscription; anonymous devices cannot', { subErr: subErr?.message })
+  check(offList?.code === '22023', 'an address off the browsers’ push services is refused (SEC-03, 0055)', { offList: offList?.code })
   const { data: uSubs } = await U.sb.from('push_subscriptions').select('endpoint')
   const { data: sSubs } = await S.sb.from('push_subscriptions').select('endpoint').eq('endpoint', endpoint)
   const { error: forgeSub } = await S.sb.from('push_subscriptions').insert({ profile_id: S.id, endpoint: `${endpoint}-2`, p256dh: 'x', auth: 'y' })
@@ -867,7 +869,7 @@ try {
   const pinPhone = client()
   const { data: pinSession } = await pinPhone.auth.signInAnonymously()
   created.users.push(pinSession.user.id)
-  const pinEndpoint = `https://push.example.test/rls-pin-${rand}`
+  const pinEndpoint = `https://fcm.googleapis.com/fcm/send/rls-pin-${rand}`
   const pinArgs = { p_tournament_id: C.t.id, p_endpoint: pinEndpoint, p_p256dh: 'x', p_auth: 'y' }
   const { error: unclaimedSub } = await pinPhone.rpc('save_pin_push', pinArgs)
   const { data: pinClaim } = await pinPhone.rpc('claim_player', { p_player_id: C.p1, p_pin: '4321' })
