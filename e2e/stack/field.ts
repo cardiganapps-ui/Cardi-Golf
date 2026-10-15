@@ -25,6 +25,8 @@ export const SLUGS = {
   other: 'e2e-ajeno',
   /** TRUST-24: the phones that hold a PIN, each claim's kind read from the request. */
   phones: 'e2e-telefonos',
+  /** STRAT-05: the link to watch, opened with no session. */
+  spectator: 'e2e-espectador',
   /** QA-17: four phones saving at once, one per group, in four twosomes. */
   fourPhones: 'e2e-cuatro-telefonos',
   /** QA-17: holes corrected while the outbox is sending them. */

@@ -46,7 +46,7 @@ const U = t.unassigned
 export function UnassignedMoney() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
-  const { me, tournamentId } = useTournamentCtx()
+  const { me, tournamentId, spectator } = useTournamentCtx()
   const [deciding, setDeciding] = useState<string | null>(null)
   const [voiding, setVoiding] = useState<Assignment | null>(null)
   const { snapshot, state } = data
@@ -60,7 +60,8 @@ export function UnassignedMoney() {
   return (
     <section className={styles.section} aria-label={U.heading}>
       <h3>{U.heading}</h3>
-      <span className="help">{u.closing ? U.intro : u.openDays ? U.finalOpen(u.openDays.open, u.openDays.missing) : U.waitingIntro}</span>
+      {/* On a link to watch (STRAT-05) nothing says where in the Comité's screens to act: it is not a Comité's to read. */}
+      <span className="help">{u.closing ? U.intro : u.openDays ? (spectator ? U.finalOpenVerdict : U.finalOpen(u.openDays.open, u.openDays.missing)) : U.waitingIntro}</span>
       {u.buckets.length > 0 && (
         <div className={styles.transfers}>
           {u.buckets.map((b) => (
@@ -88,7 +89,7 @@ export function UnassignedMoney() {
             <div key={h.key} className={styles.transfer} data-held>
               <span className={styles.transferText}>
                 <strong>{h.label}</strong>
-                <span className={styles.transferKind}>{h.note}</span>
+                {!spectator && <span className={styles.transferKind}>{h.note}</span>}
                 <HowCalculated why={h.why} />
               </span>
               <span className={styles.amount}>{formatMoney(h.amount)}</span>

@@ -67,11 +67,15 @@ export const BACKUP_TABLES: Record<string, string> = {
 /**
  * Tables the backup leaves out on purpose, each with why. The privacy notice
  * says telemetry is gone after 30 days (devices after 90), and the nightly
- * backups are never deleted, so a backed-up copy would keep it forever.
+ * backups are never deleted, so a backed-up copy would keep it forever. A
+ * link to watch is a key to the boards: a restore must never bring back one
+ * the Comité changed or switched off, and the backups (never deleted) would
+ * keep every token it ever had. After a restore the Comité makes a new one.
  */
 export const NOT_BACKED_UP: Record<string, string> = {
   client_events: 'telemetry, kept 30 days (STRAT-02)',
   device_status: 'telemetry, kept 90 days (STRAT-02)',
+  spectator_links: 'a key to the boards: a restore must not bring back one the Comité changed or switched off (STRAT-05)',
 }
 
 /** R2 object key for a backup taken at `at` (UTC date). */

@@ -101,6 +101,13 @@
   color: var(--ink-2);
   font-size: 12px;
 }
+/* The link to watch, when the card is shared from one (STRAT-05): whoever gets the image can open the boards. */
+.watch {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  color: var(--ink);
+}
 .round {
   display: flex;
   flex-direction: column;

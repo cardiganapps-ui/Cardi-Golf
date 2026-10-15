@@ -1,0 +1,17 @@
+/* The foot of En vivo on a link to watch (STRAT-05). Tokens only. */
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-top: var(--s3);
+  border-top: var(--hairline);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.actions svg {
+  width: 1.1em;
+  height: 1.1em;
+}

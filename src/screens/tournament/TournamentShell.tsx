@@ -3,6 +3,7 @@ import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './TournamentGate'
+import { tournamentBase, useShowMoney } from './tournamentView'
 import { useSavedWhen } from './boardsAge'
 import { useConnection, useRefreshBoards, type Connection } from './connection'
 import { PullToRefresh } from './PullToRefresh'
@@ -21,13 +22,14 @@ import { useOutbox } from '../../data/outbox'
  * Dinero with nothing in it, and someone watching without a player showed a
  * Tarjeta they cannot write on.
  */
-function tabsFor({ hasMoney, canScore }: { hasMoney: boolean; canScore: boolean }) {
+function tabsFor({ hasMoney, canScore, more }: { hasMoney: boolean; canScore: boolean; more: boolean }) {
   return [
     { to: '', label: t.nav.live, icon: <IconFlag /> },
     ...(canScore ? [{ to: 'tarjeta', label: t.nav.card, icon: <IconPencil /> }] : []),
     { to: 'juegos', label: t.nav.games, icon: <IconGames /> },
     ...(hasMoney ? [{ to: 'dinero', label: t.nav.money, icon: <IconCoin /> }] : []),
-    { to: 'mas', label: t.nav.more, icon: <IconMore /> },
+    // Más is the player's own (his session, the Comité, the join code): a link to watch has none of it.
+    ...(more ? [{ to: 'mas', label: t.nav.more, icon: <IconMore /> }] : []),
   ]
 }
 
@@ -39,7 +41,10 @@ const BOARDS = new Set(['', '/juegos', '/dinero'])
  * and the tab bar. Everything else belongs to the screens.
  */
 export function TournamentShell() {
-  const { slug, lookup, me } = useTournamentCtx()
+  const ctx = useTournamentCtx()
+  const { lookup, me, spectator } = ctx
+  const base = tournamentBase(ctx)
+  const showMoney = useShowMoney()
   // The few words the frame shows, not the boards: a score saved elsewhere renders no header and no tab bar (PERF-09).
   const tournament = useTournament((s) => s.data?.snapshot.tournament)
   // The connection, in one place (REL-21): this header. The shell's banner steps aside (MOT-17).
@@ -48,7 +53,7 @@ export function TournamentShell() {
   const { refreshing, refresh } = useRefreshBoards()
   const { pathname } = useLocation()
   const underMore = /\/(stats|reglamento|imprimir|ceremonia)$/.test(pathname)
-  const onBoard = BOARDS.has(pathname.slice(`/t/${slug}`.length).replace(/\/$/, ''))
+  const onBoard = BOARDS.has(pathname.slice(base.length).replace(/\/$/, ''))
   const accent = tournament?.accentColor ?? lookup.accentColor ?? undefined
   const logo = tournament?.logoUrl ?? lookup.logoUrl
   // Money exists if anyone pays anything: the entry pot, a side pot, a direct
@@ -59,7 +64,7 @@ export function TournamentShell() {
     return !s || s.entryFee > 0 || s.modules.auction.enabled || s.games.some((g) => g.money.source !== 'none')
   })
   const canScore = !!me.playerId || me.isAdmin
-  const tabs = tabsFor({ hasMoney, canScore })
+  const tabs = tabsFor({ hasMoney: hasMoney && showMoney, canScore, more: !spectator })
   // Holes still on this phone, and writes the server refused: on the Tarjeta
   // tab from every screen, not only inside the Tarjeta (REL-17).
   const pendingHoles = useOutbox((st) => st.pendingHoles)
@@ -86,7 +91,7 @@ export function TournamentShell() {
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
-            to={`/t/${slug}${tab.to ? `/${tab.to}` : ''}`}
+            to={`${base}${tab.to ? `/${tab.to}` : ''}`}
             end={tab.to === ''}
             // Stats and Reglamento live under Más but are their own routes, so
             // without this they used to leave no tab lit at all.

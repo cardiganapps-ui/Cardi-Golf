@@ -220,7 +220,13 @@ const TournamentSettingsBase = z.object({
    * defaults).
    */
   cardSigning: z.enum(['pairs', 'marker', 'none']).optional().catch(undefined),
-  /** Optional read-only public board (no money). */
+  /**
+   * Wired to nothing. The link to watch without a PIN (STRAT-05) is not a
+   * setting: its token lives in its own table (0053 `spectator_links`), since
+   * every member reads the settings, the export carries them and
+   * `duplicate_tournament` copies them; the Comité makes it in Torneo, pestaña
+   * Estado. Kept so every stored settings object still parses.
+   */
   spectatorLink: z.boolean(),
   timezone: z.string().min(1),
   currency: z.string().length(3),
@@ -260,28 +266,39 @@ export type ModulesSettings = z.infer<typeof ModulesSettings>
 export type PrizeSettings = z.infer<typeof PrizeSettings>
 
 /**
- * Parse raw JSON (e.g. `tournaments.settings`) into validated settings.
- * Accepts the first tournament's historical key `prizes.matrimonios` as an
- * alias of `prizes.pairs` so older rows keep loading.
+ * Keys older rows stored under another name, read as the name the schema
+ * knows: in the object at `path`, a row with `from` and no `to` is read as if
+ * `from` were `to`. The first tournament's `prizes.matrimonios` is
+ * `prizes.pairs`, so older rows keep loading. A link to watch renames them the
+ * same way before it keeps only the keys the schema knows (0053's
+ * `spectator_settings_legacy` carries this same list; a test holds them together).
  */
+export const LEGACY_SETTINGS_ALIASES: ReadonlyArray<{ path: readonly string[]; from: string; to: string }> = [{ path: ['prizes'], from: 'matrimonios', to: 'pairs' }]
+
+/** Parse raw JSON (e.g. `tournaments.settings`) into validated settings, older keys read as today's. */
 export function parseSettings(raw: unknown): TournamentSettings {
-  return TournamentSettingsSchema.parse(normalizeLegacyKeys(raw))
+  return TournamentSettingsSchema.parse(normalizeLegacySettings(raw))
 }
 
 export function safeParseSettings(raw: unknown) {
-  return TournamentSettingsSchema.safeParse(normalizeLegacyKeys(raw))
+  return TournamentSettingsSchema.safeParse(normalizeLegacySettings(raw))
 }
 
-function normalizeLegacyKeys(raw: unknown): unknown {
-  if (!raw || typeof raw !== 'object') return raw
-  const r = raw as Record<string, unknown>
-  const prizes = r.prizes
-  if (prizes && typeof prizes === 'object') {
-    const p = prizes as Record<string, unknown>
-    if (p.pairs === undefined && p.matrimonios !== undefined) {
-      const { matrimonios, ...rest } = p
-      return { ...r, prizes: { ...rest, pairs: matrimonios } }
-    }
+/** `raw` with every legacy key (`LEGACY_SETTINGS_ALIASES`) under the name the schema reads; anything else as it is. */
+export function normalizeLegacySettings(raw: unknown): unknown {
+  return LEGACY_SETTINGS_ALIASES.reduce((v, a) => renameAt(v, a.path, a.from, a.to), raw)
+}
+
+function renameAt(v: unknown, path: readonly string[], from: string, to: string): unknown {
+  if (!v || typeof v !== 'object') return v
+  const o = v as Record<string, unknown>
+  if (path.length === 0) {
+    if (o[to] !== undefined || o[from] === undefined) return v
+    const { [from]: old, ...rest } = o
+    return { ...rest, [to]: old }
   }
-  return raw
+  const [head, ...tail] = path
+  const child = o[head!]
+  const next = renameAt(child, tail, from, to)
+  return next === child ? v : { ...o, [head!]: next }
 }

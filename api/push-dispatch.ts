@@ -18,6 +18,7 @@ import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { timingSafeEqual } from 'node:crypto'
 import { noticeLine, type NoticeLike } from '../src/lib/noticeText.js'
+import { jsonBody } from '../src/server/body.js'
 
 interface Body {
   subscriptions?: Array<{ endpoint: string; keys: { p256dh: string; auth: string } }>
@@ -40,8 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const auth = String(req.headers.authorization ?? '')
   if (!sameSecret(auth, `Bearer ${secret}`)) return res.status(401).json({ error: 'unauthorized' })
 
-  const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) as Body
-  const subs = (body.subscriptions ?? []).slice(0, 20)
+  const body = jsonBody(req) as Body | null
+  if (!body) return res.status(400).json({ error: 'body' })
+  const subs = Array.isArray(body.subscriptions) ? body.subscriptions.slice(0, 20) : []
   if (!body.notice || subs.length === 0) return res.status(200).json({ sent: 0 })
 
   webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? 'mailto:golf@cardigan.mx', pub, priv)
