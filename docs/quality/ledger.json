@@ -100,9 +100,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 179,
+      "tests": [
+        "src/styles/tokens.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -144,6 +144,10 @@ Decisions and rationale for the visual overhaul, so later passes stay consistent
 - **State and action are two words.** «Marcar pagado» is the action. «Pagado», with its check and pressed, is the state, shown in «Ya pagaron»: a folded list of every payment on record. It sits under «Quién debe qué» while the tournament runs, and under the settlement once it is final. Its rows read in the past («Leonel pagó a Banco») and a step quieter (`--ink-2`, the amount at 500).
 - **Taking a payment back.** A tap on «Pagado» writes the same row with paid false, and nothing else. Both directions offer «Deshacer».
 
+## Controls you can see in the sun (2026-10-15, A11Y-05)
+
+- A field on a white sheet has no fill to tell it from the sheet: its edge is its only boundary. `--rule-2`, the line of every control (fields, steppers, segmented controls, a switch's track when off), is #8a8579, 3.3:1 to 3.7:1 on the card stock, a sheet and a ruled panel (WCAG 1.4.11 asks 3:1). It was #bdb9ac, 1.9:1, and about 1.6:1 in glare. Hairlines between rows stay `--rule`: they divide, they are not a control's edge. `tokens.test.ts` holds the pairs.
+
 ## Terms (decided once; `src/i18n/es-MX.ts` follows them)
 
 | Concept | Term | Not |
