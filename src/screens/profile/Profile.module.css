@@ -21,6 +21,10 @@
 .brand {
   text-decoration: none;
   color: inherit;
+  border-radius: var(--r-sm);
+}
+.brand:active {
+  background: var(--surface);
 }
 .iconBtn {
   position: relative;
@@ -535,6 +539,14 @@ button.row {
   background: var(--ink);
   color: var(--bg);
   font-weight: 600;
+}
+/* MOT-12: a badge opens its story; the touch shows on it first. */
+.award:active {
+  background: var(--surface);
+}
+.awardOn:active {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
 }
 .offscreen {
   position: fixed;

@@ -8,8 +8,14 @@
  * tarjeta (never "score"), enlace (never "link"), estadísticas (never "stats").
  */
 /** A figure shown as a dash: a card with nothing yet. */
-function blankFigure(figure: string): boolean {
+export function blankFigure(figure: string): boolean {
   return figure === '–' || figure === '—' || figure === '-'
+}
+
+/** «subió 3 lugares», «bajó 1 lugar»: a board row's movement since this phone last showed the board (MOT-06). */
+function movedWords(by: number): string {
+  const n = Math.abs(by)
+  return `${by > 0 ? 'subió' : 'bajó'} ${n} ${n === 1 ? 'lugar' : 'lugares'}`
 }
 
 /** What each pencil mark on a card says, in words. */
@@ -30,7 +36,8 @@ export interface RowSpeech {
   money?: string | null
   /** «dueños: Iván y Camilo», from `t.live.ownersSpoken`: a string, so an unchanged row stays the same props. */
   owners?: string | null
-  moved?: 'up' | 'down' | null
+  /** Places moved since this phone last showed the board (MOT-06): up is positive. */
+  movedBy?: number
 }
 
 /** «E» is «par», «+3» «3 sobre par», «−2» «2 bajo par»: the board's to-par figures as a voice says them. */
@@ -1674,10 +1681,12 @@ export const t = {
     // A card with nothing yet reads «–» or «—» on screen: spoken, it is left out, not «, —».
     /**
      * A11Y-11: what a screen reader hears for a board row, everything the row shows: «1.º, Camilo (tú), El novio,
-     * categoría A, 60 puntos, hoy 25 puntos, hoyo 11, ganaría $12,200, dueños: Iván y Camilo, sube». It said
-     * «1.º, Camilo, hoy 25, hoyo 11, 60»: no unit, no money, no owners, nothing for «tú» or the arrow.
+     * categoría A, 60 puntos, hoy 25 puntos, hoyo 11, ganaría $12,200, dueños: Iván y Camilo, subió 3 lugares». It
+     * said «1.º, Camilo, hoy 25, hoyo 11, 60»: no unit, no money, no owners, nothing for «tú» or the arrow.
      */
     ownersSpoken: (names: string[]) => `${names.length === 1 ? 'dueño' : 'dueños'}: ${andList(names)}`,
+    /** MOT-06: places moved since this phone last showed the board, beside the position («▲3»), and said. */
+    movedSpoken: movedWords,
     rowLabel: (pos: string, name: string, figure: string, today?: string, thru?: string, x: RowSpeech = {}) =>
       [
         ordinal(pos),
@@ -1690,7 +1699,7 @@ export const t = {
         thru ? (thru === 'F' ? 'terminó' : `hoyo ${thru}`) : '',
         x.money ? `ganaría ${x.money}` : '',
         x.owners ?? '',
-        x.moved === 'up' ? 'sube' : x.moved === 'down' ? 'baja' : '',
+        x.movedBy ? movedWords(x.movedBy) : '',
       ]
         .filter(Boolean)
         .join(', '),

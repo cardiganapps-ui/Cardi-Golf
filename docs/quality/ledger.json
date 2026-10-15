@@ -1719,9 +1719,14 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 204,
+      "tests": [
+        "src/data/boardSeen.test.ts",
+        "src/screens/tournament/LiveScreen.lastLook.test.tsx",
+        "src/i18n/rowLabel.test.ts",
+        "e2e/fixtures/board.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1814,11 +1819,15 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 204,
+      "tests": [
+        "e2e/fixtures/pressed.spec.ts",
+        "e2e/fixtures/board.spec.ts",
+        "src/components/LeaderRow.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The player sheet still renders whole after the tap: at 4× CPU it appeared 505 ms after the touch in board.spec.ts (90 ms of it the finger held down). The row shows the touch 11 ms after it, so the tap no longer reads as missed; drawing the sheet's frame before its body was not done."
     },
     {
       "id": "MOT-13",
@@ -1900,11 +1909,15 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 204,
+      "tests": [
+        "src/components/LeaderRow.test.tsx",
+        "src/screens/tournament/LiveScreen.lastLook.test.tsx",
+        "e2e/fixtures/board.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "No count-up on the total: a hole moves it by a few points, which a count shows in two or three frames, and the wash already marks the change."
     },
     {
       "id": "MOT-19",
@@ -4291,9 +4304,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 204,
+      "tests": [
+        "e2e/fixtures/board.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

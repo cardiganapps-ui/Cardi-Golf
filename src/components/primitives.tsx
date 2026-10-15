@@ -9,20 +9,58 @@ import {
   cloneElement,
   isValidElement,
   useId,
+  useLayoutEffect,
   useRef,
   type ButtonHTMLAttributes,
   type CSSProperties,
   type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
+  type RefObject,
 } from 'react'
-import { t, type RowSpeech } from '../i18n/es-MX'
+import { blankFigure, t, type RowSpeech } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
 import s from './primitives.module.css'
 import { TournamentLogo } from './TournamentLogo'
 import { haptic } from '../lib/haptics'
+
+// ---- Pressed ----
+/*
+ * MOT-12: a control whose tap starts a heavy render (a board row opens the player's sheet, a segment swaps a view)
+ * shows it is pressed from the finger's first touch. Chrome on Android applies `:active` only once it is sure the
+ * touch is not a scroll (its 100 ms tap timeout), so a quick tap got it in the same task as the click, and nothing
+ * was painted until the sheet's render had held the screen for a fifth of a second: it read as a missed tap.
+ * `data-pressed` goes on at pointerdown and paints on the next frame; it stays through the click (it goes on the
+ * frame after the finger lifts, so the render the click starts keeps it on screen) and goes at once when the touch
+ * turns into a scroll, or a drag the page does not scroll for (En vivo's pull to refresh) moves it past a tap's
+ * slop. A mouse has `:active` at once, and no capture to bring its pointerup back here: left to CSS.
+ */
+const pressedAt = new WeakMap<HTMLElement, { x: number; y: number }>()
+const TAP_SLOP = 10
+function pressDown(e: ReactPointerEvent<HTMLElement>) {
+  if (e.pointerType === 'mouse' || !e.isPrimary || (e.currentTarget as HTMLButtonElement).disabled) return
+  e.currentTarget.dataset.pressed = ''
+  pressedAt.set(e.currentTarget, { x: e.clientX, y: e.clientY })
+}
+function pressMove(e: ReactPointerEvent<HTMLElement>) {
+  const at = pressedAt.get(e.currentTarget)
+  if (at && Math.hypot(e.clientX - at.x, e.clientY - at.y) > TAP_SLOP) pressCancel(e)
+}
+function pressUp(e: ReactPointerEvent<HTMLElement>) {
+  const el = e.currentTarget
+  pressedAt.delete(el)
+  if (el.dataset.pressed === undefined) return
+  requestAnimationFrame(() => delete el.dataset.pressed)
+}
+function pressCancel(e: ReactPointerEvent<HTMLElement>) {
+  pressedAt.delete(e.currentTarget)
+  delete e.currentTarget.dataset.pressed
+}
+/** Spread on a control that opens or swaps something heavy: its pressed state shows from the first touch. */
+export const PRESS = { onPointerDown: pressDown, onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressCancel } as const
 
 // ---- Buttons ----
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
@@ -207,6 +245,7 @@ export function Segmented<T extends string>({
           tabIndex={i === current ? 0 : -1}
           disabled={disabled}
           className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`}
+          {...PRESS}
           onClick={() => onChange(o.value)}
           onKeyDown={(e) => onKey(e, i)}
         >
@@ -249,11 +288,45 @@ export interface LeaderRowProps {
   owners?: string
   /** The tournament's honoree: a small ring after the name. */
   honoree?: boolean
-  moved?: 'up' | 'down' | null
+  /** Places moved since this phone last showed the board (MOT-06): up is positive, shown «▲3» under the position. */
+  movedBy?: number
+  /**
+   * The day's figure and the figure as this phone last showed them (MOT-18): one that changed since washes as the
+   * board opens. A figure that changes while the board is on screen washes whatever these say.
+   */
+  seenToday?: string
+  seenFigure?: string
+  /** Which reading of the board the figures are (En vivo's Puntos or Gross): a new reading is not a change. */
+  reading?: string
   dense?: boolean
   /** What else a screen reader hears for the row (A11Y-11): «tú», category, the figure's unit, money, owners. */
   speech?: RowSpeech
   onClick?: () => void
+}
+
+/**
+ * MOT-18: a board figure that changes washes once, the accent's tint fading out over `--dur-wash` (under reduced
+ * motion it keeps a dot instead, until the board goes); one that changed since this phone last showed the board
+ * (`seen`) washes as the board opens. A live score that moved nobody used to swap its figures in one frame and
+ * leave no trace. It is done on the element, before the frame that shows the new figure is painted, so it costs
+ * no render: a board that changes renders only the rows that did (PERF-09). `data-wash` flips between two names of
+ * the same animation, so each change starts it again; React never writes the attribute, so a render keeps it.
+ * There is no count: a hole moves a total by a few points, which a count would show in two or three frames.
+ */
+function useWash(ref: RefObject<HTMLElement | null>, value: string, seen: string | undefined, reading: string | undefined) {
+  const last = useRef<{ value: string; seen: string | undefined; reading: string | undefined } | null>(null)
+  useLayoutEffect(() => {
+    const prev = last.current
+    last.current = { value, seen, reading }
+    const el = ref.current
+    if (!el || !value || blankFigure(value)) return
+    // Puntos to Gross and back: the same board read another way, not a change.
+    if (prev && prev.reading !== reading) return
+    // The board's first showing, or a new look at it: what changed since this phone last showed it.
+    const before = !prev || prev.seen !== seen ? seen : prev.value
+    if (before === undefined || before === value) return
+    el.dataset.wash = el.dataset.wash === 'a' ? 'b' : 'a'
+  }, [ref, value, seen, reading])
 }
 export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?: boolean }) {
   return (
@@ -266,13 +339,44 @@ export function BoardHead({ figureLabel, dense }: { figureLabel: string; dense?:
     </div>
   )
 }
-export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru, figure, tone = 'even', mine, owners, honoree, moved, dense, speech, onClick }: LeaderRowProps) {
+export function LeaderRow({
+  pos,
+  name,
+  sub,
+  today,
+  todayTone,
+  todaySpoken,
+  thru,
+  figure,
+  tone = 'even',
+  mine,
+  owners,
+  honoree,
+  movedBy,
+  seenToday,
+  seenFigure,
+  reading,
+  dense,
+  speech,
+  onClick,
+}: LeaderRowProps) {
   const subLine = [sub, owners].filter(Boolean)
-  const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, { me: mine, moved, ...speech, todaySpoken: !!todaySpoken })
+  const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, { me: mine, movedBy, ...speech, todaySpoken: !!todaySpoken })
+  const todayRef = useRef<HTMLSpanElement>(null)
+  const figureRef = useRef<HTMLSpanElement>(null)
+  useWash(todayRef, today ?? '', seenToday, reading)
+  useWash(figureRef, figure, seenFigure, reading)
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} onClick={onClick} aria-label={label}>
-      {moved && <span className={`${s.moved} ${moved === 'up' ? s.movedUp : s.movedDown}`} aria-hidden="true" />}
-      <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>{pos}</span>
+    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} {...PRESS} onClick={onClick} aria-label={label}>
+      <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>
+        {pos}
+        {/* Since the last look, with how far (MOT-06): a 6 px triangle for half a second said neither. */}
+        {movedBy ? (
+          <span className={`${s.moved} ${movedBy > 0 ? s.movedUp : s.movedDown}`} aria-hidden="true">
+            {Math.abs(movedBy)}
+          </span>
+        ) : null}
+      </span>
       <span className={s.name}>
         <span className={s.nameMain}>
           {name}
@@ -293,9 +397,13 @@ export function LeaderRow({ pos, name, sub, today, todayTone, todaySpoken, thru,
         * were ringed and the mark stopped meaning anything. It stays on the
         * Tarjeta, where the figure it rings is a hole score.
         */}
-      <span className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>{today ?? ''}</span>
+      <span ref={todayRef} className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>
+        {today ?? ''}
+      </span>
       <span className={`${s.fig} ${s.thru}`}>{thru ?? ''}</span>
-      <span className={`${s.fig} ${s.figure} ${s[tone]}`}>{figure}</span>
+      <span ref={figureRef} className={`${s.fig} ${s.figure} ${s[tone]}`}>
+        {figure}
+      </span>
     </button>
   )
 }

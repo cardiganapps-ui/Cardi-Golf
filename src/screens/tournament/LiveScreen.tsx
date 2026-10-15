@@ -13,8 +13,10 @@ import { Avatar } from '../../components/ui'
 import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
 import { IconAlert } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
+import { lastSeen, markSeen, type SeenBoard, type SeenRow } from '../../data/boardSeen'
 import { currentHole, lastPlayedHole } from '../../lib/holes'
 import type { TournamentState } from '../../engine/computeTournament'
+import type { IndividualRow } from '../../engine/modules/individual'
 import { ShareCardButton } from '../../components/ShareCard'
 import { InstallCard } from '../../components/InstallGuide'
 import { FeedTicker } from './FeedTicker'
@@ -44,6 +46,58 @@ function grossToPar(state: TournamentState, playerId: string, roundId?: string):
     }
   }
   return n ? d : null
+}
+
+/** A row's day on the Puntos reading, as the row shows it and as it is said. */
+function pointsDay(r: IndividualRow, roundIdx: number): { today: string | undefined; todayTone: Tone | undefined; todaySpoken: string | undefined } {
+  const day = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
+  let today = day && !day.empty ? day.text : undefined
+  let todayTone: Tone | undefined
+  let todaySpoken: string | undefined
+  // A match result reads the same for both sides: its colour and spoken form say who won it.
+  if (day?.result) {
+    // The side that lost a match that went the distance is «1 abajo», on screen as when spoken.
+    if (day.result === 'lost') today = day.text.replace(/ arriba$/, ' abajo')
+    todayTone = day.result === 'won' ? 'under' : day.result === 'lost' ? 'over' : 'even'
+    todaySpoken = t.live.matchDay(day.result, day.text)
+  }
+  return { today, todayTone, todaySpoken }
+}
+
+/** The board as the Puntos reading shows it: each row with a result, its place and its figures. */
+function boardNow(rows: readonly IndividualRow[], roundIdx: number, roundId: string | null): SeenBoard {
+  const out: Record<string, SeenRow> = {}
+  for (const r of rows) if (!r.figure.empty) out[r.playerId] = { place: r.position, figure: r.figure.text, today: pointsDay(r, roundIdx).today ?? '' }
+  return { round: roundId, rows: out }
+}
+
+/**
+ * MOT-06, MOT-18: the board as this phone showed it the last time it was on screen, kept for as long as it stays:
+ * every row's movement and every changed figure count from it, the ones that arrive while it is on screen too.
+ * Each board shown while the page is visible is the next look's; coming back from the background (the phone in a
+ * pocket between shots) is a new look, from the board shown when it went. With no last look (the phone's first,
+ * or nothing kept), it is the board this screen opened on.
+ */
+function useLastLook(tournamentId: string, now: SeenBoard | null, keep: boolean): SeenBoard | null {
+  const [look, setLook] = useState(() => ({ tournamentId, board: lastSeen(tournamentId, keep) ?? now }))
+  if (look.tournamentId !== tournamentId || (look.board === null && now !== null)) {
+    setLook({ tournamentId, board: (look.tournamentId !== tournamentId ? lastSeen(tournamentId, keep) : null) ?? now })
+  }
+  const latest = useRef(now)
+  useEffect(() => {
+    latest.current = now
+    if (now && document.visibilityState !== 'hidden') markSeen(tournamentId, now, keep)
+  }, [tournamentId, now, keep])
+  useEffect(() => {
+    const onShow = () => {
+      if (document.visibilityState !== 'visible') return
+      setLook({ tournamentId, board: lastSeen(tournamentId, keep) ?? latest.current })
+      if (latest.current) markSeen(tournamentId, latest.current, keep)
+    }
+    document.addEventListener('visibilitychange', onShow)
+    return () => document.removeEventListener('visibilitychange', onShow)
+  }, [tournamentId, keep])
+  return look.tournamentId === tournamentId ? look.board : null
 }
 
 /**
@@ -91,7 +145,12 @@ const BoardRow = memo(function BoardRow(props: {
   figure: string
   tone: Tone
   mine: boolean
-  moved: 'up' | 'down' | null
+  /** Places moved since this phone last showed the board (MOT-06); 0 when it did not, or there is no last look. */
+  movedBy: number
+  /** Its figures as this phone last showed them (MOT-18), on the Puntos reading only. */
+  seenToday: string | undefined
+  seenFigure: string | undefined
+  reading: 'points' | 'gross'
   dense: boolean
   onOpen: (playerId: string) => void
 }) {
@@ -150,25 +209,13 @@ export function LiveScreen() {
   }, [search]) // eslint-disable-line react-hooks/exhaustive-deps -- when the address changes, with whose phone this is then
   const closeSheet = useCallback(() => setOpen(null), [])
   const [view, setView] = useState<'points' | 'gross'>('points')
-  const prevOrder = useRef<Map<string, number>>(new Map())
-  const [moves, setMoves] = useState<Map<string, number>>(new Map())
 
   const rows = useMemo(() => data?.state.modules.individual?.rows ?? [], [data])
-  useEffect(() => {
-    const next = new Map<string, number>()
-    const m = new Map<string, number>()
-    rows.forEach((r, i) => {
-      next.set(r.playerId, i)
-      const before = prevOrder.current.get(r.playerId)
-      if (before != null && before !== i) m.set(r.playerId, before - i)
-    })
-    // Nothing moved and no arrow showing: no second render of the board (PERF-09).
-    if (prevOrder.current.size) setMoves((cur) => (m.size === 0 && cur.size === 0 ? cur : m))
-    prevOrder.current = next
-    // The arrows mark the last re-sort only; clear them once the transition is over.
-    const timer = setTimeout(() => setMoves((cur) => (cur.size ? new Map() : cur)), 600)
-    return () => clearTimeout(timer)
-  }, [rows])
+  // The board as this phone shows it now, on the Puntos reading, and as it showed it last time (MOT-06, MOT-18).
+  const roundId = round?.id ?? null
+  const shownNow = useMemo(() => (data ? boardNow(rows, roundId ? data.state.core.roundIds.indexOf(roundId) : -1, roundId) : null), [data, rows, roundId])
+  // A link to watch keeps nothing of the tournament on the phone (STRAT-05): its last look lasts the visit.
+  const since = useLastLook(ctx.tournamentId, shownNow, !spectator)
 
   const owners = useMemo(() => {
     const m = new Map<string, { initials: string; spoken: string }>()
@@ -357,7 +404,6 @@ export function LiveScreen() {
               const p = byId.get(members[0] ?? '')
               if (!p) return null
               const pr = roundState?.[p.id]
-              const mv = moves.get(r.playerId) ?? 0
               const cash = showMoney ? members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0) : 0
               let figure: string
               let tone: Tone = 'even'
@@ -374,16 +420,10 @@ export function LiveScreen() {
               } else {
                 figure = r.figure.text
                 tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
-                const day = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
-                today = day && !day.empty ? day.text : undefined
-                // A match result reads the same for both sides: its colour and spoken form say who won it.
-                if (day?.result) {
-                  // The side that lost a match that went the distance is «1 abajo», on screen as when spoken.
-                  if (day.result === 'lost') today = day.text.replace(/ arriba$/, ' abajo')
-                  todayTone = day.result === 'won' ? 'under' : day.result === 'lost' ? 'over' : 'even'
-                  todaySpoken = t.live.matchDay(day.result, day.text)
-                }
+                ;({ today, todayTone, todaySpoken } = pointsDay(r, roundIdx))
               }
+              // The last look counts on the board's own reading, the event's figure: Gross is the same rows another way.
+              const seen = grossView ? undefined : since?.rows[r.playerId]
               // A team's "thru" is where its slowest member is.
               const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
               return (
@@ -410,7 +450,10 @@ export function LiveScreen() {
                   figure={figure}
                   tone={tone}
                   mine={!!me.playerId && members.includes(me.playerId)}
-                  moved={mv > 0 ? 'up' : mv < 0 ? 'down' : null}
+                  movedBy={seen && !r.figure.empty ? seen.place - r.position : 0}
+                  seenToday={seen && since?.round === roundId ? seen.today : undefined}
+                  seenFigure={seen?.figure}
+                  reading={grossView ? 'gross' : 'points'}
                   dense={rows.length > 20}
                   onOpen={setOpen}
                 />

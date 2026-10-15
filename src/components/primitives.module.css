@@ -240,6 +240,15 @@
   background: var(--ink);
   color: var(--bg);
 }
+/* MOT-12: pressed, from the first touch (`data-pressed`, PRESS in primitives.tsx) as well as `:active`. */
+.segBtn:active,
+.segBtn[data-pressed] {
+  background: var(--surface);
+}
+.segOn:active,
+.segOn[data-pressed] {
+  background: var(--ink-2);
+}
 
 /* ---- Tab bar ---- */
 .tabbar {
@@ -302,9 +311,22 @@
   color: var(--ink-2);
   border-bottom: var(--hairline);
 }
+/*
+ * VIS-02: the figures stand right under their headers, units over units. The row's half of this rule was
+ * `.leaderRow > .num`, a class no row ever carried, so every figure sat left of its header and «8» and «11»
+ * started in the same place instead of ending in it.
+ */
 .boardHead > span:nth-child(n + 3),
-.leaderRow > .num {
+.leaderRow > .today,
+.leaderRow > .thru,
+.leaderRow > .figure {
   text-align: right;
+}
+/* A label wider than its column («HOYO» over the 32 px one) hangs left into the gap, never past the figures' edge. */
+.boardHead > span:nth-child(n + 3) {
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
 }
 .leaderRow {
   min-height: 52px;
@@ -326,6 +348,15 @@
 .mine {
   background: var(--accent-soft);
 }
+/* MOT-12: pressed from the first touch, before the player's sheet renders (PRESS in primitives.tsx). */
+.leaderRow:active,
+.leaderRow[data-pressed] {
+  background: var(--surface);
+}
+.mine:active,
+.mine[data-pressed] {
+  background: var(--accent-wash);
+}
 .mine::before {
   content: '';
   position: absolute;
@@ -336,7 +367,9 @@
   background: var(--event-accent);
 }
 .pos {
+  position: relative;
   font-size: var(--fs-md);
+  line-height: 1;
   color: var(--ink-2);
   text-align: right;
   padding-right: var(--s1);
@@ -400,22 +433,105 @@
 .leaderRowDense .figure {
   font-size: var(--fs-lg);
 }
+/*
+ * The figures hug their text at the end of their column, so a wash (below) is the figure's and not the whole
+ * column's; the end of the text is where it was, under the header's (VIS-02).
+ */
+.leaderRow > .today,
+.leaderRow > .thru,
+.leaderRow > .figure {
+  justify-self: end;
+}
+/*
+ * MOT-06: how many places the row moved since this phone last showed the board, under its position: «▲3», «▼1».
+ * It was a 6 px triangle, the same for one place or ten, there for half a second after a re-sort and never after
+ * coming back to the board.
+ */
 .moved {
   position: absolute;
-  left: 2px;
-  top: 50%;
+  top: calc(100% + 1px);
+  right: var(--s1);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-2xs);
+  line-height: 1;
+}
+.moved::before {
+  content: '';
   width: 0;
   height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
 }
 .movedUp {
-  border-bottom: 5px solid var(--accent);
-  transform: translateY(-2px);
+  color: var(--accent);
+}
+.movedUp::before {
+  border-bottom: 6px solid currentColor;
 }
 .movedDown {
-  border-top: 5px solid var(--ink-3);
-  transform: translateY(-2px);
+  color: var(--ink-2);
+}
+.movedDown::before {
+  border-top: 6px solid currentColor;
+}
+/*
+ * MOT-18: a figure that changed, while the board is on screen or since this phone last showed it, washes once in
+ * the accent's tint (`useWash` in primitives.tsx). Two names for one animation, so each change starts it again.
+ */
+.today,
+.figure {
+  position: relative;
+  border-radius: var(--r-sm);
+}
+.today[data-wash='a'],
+.figure[data-wash='a'] {
+  animation: washA var(--dur-wash) linear both;
+}
+.today[data-wash='b'],
+.figure[data-wash='b'] {
+  animation: washB var(--dur-wash) linear both;
+}
+@keyframes washA {
+  0%,
+  30% {
+    background-color: var(--accent-wash);
+    box-shadow: 0 0 0 4px var(--accent-wash);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+@keyframes washB {
+  0%,
+  30% {
+    background-color: var(--accent-wash);
+    box-shadow: 0 0 0 4px var(--accent-wash);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+/* Under reduced motion nothing fades: a dot beside the figure says it changed, until the board goes. */
+@media (prefers-reduced-motion: reduce) {
+  .today[data-wash],
+  .figure[data-wash] {
+    animation: none;
+  }
+  .today[data-wash]::after,
+  .figure[data-wash]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -7px;
+    width: 5px;
+    height: 5px;
+    border-radius: var(--r-round);
+    background: var(--accent);
+  }
 }
 
 /* ---- Pencil notation ---- */

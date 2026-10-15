@@ -11,6 +11,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Snapshot } from '../engine/types'
 import type { LookupResult } from './api'
+import { forgetSeen } from './boardSeen'
 import type { Me } from '../screens/tournament/TournamentGate'
 
 export interface CachedEntry {
@@ -117,6 +118,8 @@ export async function cachedTournamentName(tournamentId: string): Promise<string
 /** Forget what this phone saved for a tournament: its entries, under any key, and its boards. */
 export async function clearCached(tournamentId: string): Promise<void> {
   cleared(tournamentId)
+  // What it last showed of the board goes with the board (MOT-06).
+  forgetSeen(tournamentId)
   try {
     const d = getDb()
     if (!d) return
@@ -146,6 +149,7 @@ export async function clearPinEntriesExcept(tournamentId: string): Promise<void>
 /** Sign-out: the next person on the phone sees nothing of this one's tournaments. */
 export async function clearAllCached(): Promise<void> {
   cleared(null)
+  forgetSeen(null)
   try {
     const d = getDb()
     if (!d) return

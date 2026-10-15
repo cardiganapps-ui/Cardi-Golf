@@ -55,8 +55,8 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       # The runner's own Postgres (16 on ubuntu-24.04), with the two stub
