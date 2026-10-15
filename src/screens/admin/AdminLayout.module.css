@@ -25,6 +25,9 @@
   gap: var(--s4);
 }
 .nav {
+  /* It holds what it scrolls: the badges' words for a screen reader are absolutely placed, and without this
+     they escaped the row at their place far to the right, widened the page and the phone zoomed out to fit it. */
+  position: relative;
   display: flex;
   gap: var(--s4);
   border-bottom: var(--hairline);

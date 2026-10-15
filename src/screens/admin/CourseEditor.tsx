@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Segmented } from '../../components/primitives'
+import { Segmented, SiAbbr } from '../../components/primitives'
 import { Field } from '../../components/ui'
 import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
@@ -166,7 +166,9 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
             <tr>
               <th>{C.hole}</th>
               <th>{C.par}</th>
-              <th>{C.si}</th>
+              <th>
+                <SiAbbr />
+              </th>
               <th>{C.yards}</th>
             </tr>
           </thead>
@@ -175,13 +177,13 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
               <tr key={h.number}>
                 <td className="num">{h.number}</td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.par} min={3} max={6} value={h.par === NOT_TYPED ? null : h.par} onChange={(v) => setHole(i, { par: v ?? NOT_TYPED })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.parOf(h.number)} min={3} max={6} value={h.par === NOT_TYPED ? null : h.par} onChange={(v) => setHole(i, { par: v ?? NOT_TYPED })} />
                 </td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.si} min={1} max={18} value={h.strokeIndex === NOT_TYPED ? null : h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v ?? NOT_TYPED })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.siOf(h.number)} min={1} max={18} value={h.strokeIndex === NOT_TYPED ? null : h.strokeIndex} onChange={(v) => setHole(i, { strokeIndex: v ?? NOT_TYPED })} />
                 </td>
                 <td>
-                  <OptionalNumberField inputClassName="input--sm" label={C.yards} value={h.yards} onChange={(v) => setHole(i, { yards: v })} />
+                  <OptionalNumberField inputClassName="input--sm" label={C.yardsOf(h.number)} value={h.yards} onChange={(v) => setHole(i, { yards: v })} />
                 </td>
               </tr>
             ))}

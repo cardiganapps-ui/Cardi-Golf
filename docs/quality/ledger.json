@@ -354,9 +354,15 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 207,
+      "tests": [
+        "src/components/fieldNames.a11y.test.tsx",
+        "src/screens/admin/CourseEditor.test.tsx",
+        "src/screens/tournament/TvScreen.formats.test.tsx",
+        "src/screens/tournament/scorecard/parts.test.tsx",
+        "e2e/fixtures/names.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -368,9 +374,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 207,
+      "tests": [
+        "src/screens/tournament/EnterScreen.a11y.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -382,9 +390,11 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 207,
+      "tests": [
+        "src/components/fieldNames.a11y.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -396,9 +406,13 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 207,
+      "tests": [
+        "src/components/fieldNames.a11y.test.tsx",
+        "src/screens/tournament/MoneyScreen.why.test.tsx",
+        "e2e/fixtures/names.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -69,7 +69,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
                   </span>
                 </span>
-                <HowCalculated why={p.why} label={formatMoney(p.amount)} />
+                <HowCalculated why={p.why} label={formatMoney(p.amount)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${p.label}`} />
               </div>
             ))}
           </div>
