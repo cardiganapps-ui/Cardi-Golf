@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
+import { Segmented } from '../../components/primitives'
 import { Field } from '../../components/ui'
 import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
@@ -126,12 +127,8 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
       </div>
 
       <div className="row row--between">
-        <div className="segmented grow" role="tablist">
-          {d.tees.map((x, i) => (
-            <button key={i} type="button" role="tab" aria-selected={i === teeIdx} onClick={() => setTeeIdx(i)}>
-              {x.name || `Tee ${i + 1}`}
-            </button>
-          ))}
+        <div className="grow">
+          <Segmented value={String(teeIdx)} options={d.tees.map((x, i) => ({ value: String(i), label: x.name || `Tee ${i + 1}` }))} onChange={(v) => setTeeIdx(Number(v))} label={t.common.whichTee} />
         </div>
         <button className="btn btn--ghost btn--sm" type="button" onClick={addTee}>
           + {C.addTee}

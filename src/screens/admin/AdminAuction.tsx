@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { handicapText, t } from '../../i18n/es-MX'
 import { Avatar, Field, Sheet, toast } from '../../components/ui'
-import { EmptyState } from '../../components/primitives'
+import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { createLots, deleteBid, placeBid, reopenLot, resetAuction, sellLot, setBuyback, setLotStatus, updateTournament } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -375,13 +375,12 @@ export function AdminAuction() {
             return (
               <div className="stack">
                 <p className={a.help}>{A.buybackHint(cfg.buybackMaxPct)}</p>
-                <div className="segmented" role="tablist">
-                  {[0, 25, 50].filter((x) => x <= cfg.buybackMaxPct).map((x) => (
-                    <button key={x} type="button" role="tab" aria-selected={bbPct === x} onClick={() => setBbPct(x)}>
-                      {x === 0 ? A.noBuyback : `${x}%`}
-                    </button>
-                  ))}
-                </div>
+                <Segmented
+                  value={String(bbPct)}
+                  options={[0, 25, 50].filter((x) => x <= cfg.buybackMaxPct).map((x) => ({ value: String(x), label: x === 0 ? A.noBuyback : `${x}%` }))}
+                  onChange={(v) => setBbPct(Number(v))}
+                  label={A.buyback}
+                />
                 <Field label={`${A.custom} (%)`}>
                   <NumberField min={0} max={cfg.buybackMaxPct} suffix="%" value={bbPct} onChange={setBbPct} />
                 </Field>

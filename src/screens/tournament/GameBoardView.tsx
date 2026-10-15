@@ -42,7 +42,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
       {g.board.sections.map((sec, i) =>
         sec.rows.length === 0 ? null : (
           <div key={i} className={styles.section}>
-            {sec.title && <h3>{sec.title}</h3>}
+            {sec.title && <h2 className="h3">{sec.title}</h2>}
             <div className={styles.rows}>
               {sec.rows.map((r, j) => (
                 <LeaderLine key={j} row={r} name={name} onOpen={onOpen} />
@@ -58,7 +58,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
       ))}
       {prizes.length > 0 && (
         <>
-          <h3>{t.games.moneyOfGame}</h3>
+          <h2 className="h3">{t.games.moneyOfGame}</h2>
           <div className={styles.rows}>
             {prizes.map((p, i) => (
               <div key={i} className={styles.rowLine}>

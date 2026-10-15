@@ -24,6 +24,8 @@ import { useViewFocus } from '../../components/viewFocus'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import styles from './GamesScreen.module.css'
 
+/** The game boards' panel, which the game tabs control (A11Y-17). */
+const PANEL = 'juegos-panel'
 const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction']
 
 export function GamesScreen() {
@@ -169,7 +171,9 @@ export function GamesScreen() {
             </button>
             <h1 data-view-heading>{tabs.find((x) => x.value === current)?.label}</h1>
           </div>
-          {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} />}
+          {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} panelId={PANEL} />}
+          {/* A11Y-17: the chosen game's board is the tab list's panel. */}
+          <div role={tabs.length > 1 ? 'tabpanel' : undefined} id={PANEL} aria-labelledby={tabs.length > 1 ? `${PANEL}-tab-${current}` : undefined}>
 
           {/* Under match play the bracket is the story; the points table
               below it is the tiebreaker nobody reads first. */}
@@ -248,7 +252,7 @@ export function GamesScreen() {
                   />
                 ))}
               </Board>
-              <h3>{t.games.headToHead}</h3>
+              <h2 className="h3">{t.games.headToHead}</h2>
               {state.core.roundIds.map((rid) => {
                 const rd = snapshot.rounds.find((r) => r.id === rid)!
                 const groups = snapshot.groups.filter((g) => g.roundId === rid)
@@ -291,7 +295,7 @@ export function GamesScreen() {
               {state.modules.bestRound.days.map((d) => (
                 <div key={d.roundId} className={styles.section}>
                   <div className={styles.sectionHead}>
-                    <h3>{t.round.day(d.roundNumber)}</h3>
+                    <h2 className="h3">{t.round.day(d.roundNumber)}</h2>
                     {showMoney && <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay))}</span>}
                   </div>
                   <Board>
@@ -370,7 +374,7 @@ export function GamesScreen() {
                   ))}
                 </div>
               )}
-              <h3>{t.games.owners}</h3>
+              <h2 className="h3">{t.games.owners}</h2>
               {state.modules.auction.portfolios.length === 0 ? (
                 <p className="help">{t.games.noAuctionYet}</p>
               ) : (
@@ -394,6 +398,7 @@ export function GamesScreen() {
               )}
             </div>
           )}
+          </div>
         </>
       )}
 

@@ -37,9 +37,9 @@ test('under way, the card prepares the next day, and its groups line opens Grupo
   await page.getByRole('link', { name: `${R.todoLabel}: ${R.groupsMissing(2)}` }).click()
   await expect(page).toHaveURL(/\/admin\/grupos\?ronda=r2$/)
   // Grupos starts on the current round (day 1) unless told otherwise.
-  await expect(page.getByRole('tab', { name: t.round.day(2) })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('radio', { name: t.round.day(2) })).toHaveAttribute('aria-checked', 'true')
   // Another day: the address follows, in place, so Back returns to Torneo and not to day 2 (N9).
-  await page.getByRole('tab', { name: t.round.day(1) }).click()
+  await page.getByRole('radio', { name: t.round.day(1) }).click()
   await expect(page).toHaveURL(/\/admin\/grupos\?ronda=r1$/)
   await page.goBack()
   await expect(page).toHaveURL(/\/admin\/torneo$/)
