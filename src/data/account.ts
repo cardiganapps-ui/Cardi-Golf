@@ -24,9 +24,15 @@ import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
 import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
 
-/** Only same-app paths are followed after signing in. */
+/**
+ * Only same-app paths are followed after signing in (`?next=`, kept through the code, Google's return and the
+ * first-time profile editor: UX-25). A backslash or a control character is refused too: a browser reads `/\x.com`
+ * as `//x.com`, another site, and drops a tab or newline inside a path before it reads it.
+ */
 export function safeNext(raw: string | null): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '/'
+  for (let i = 0; i < raw.length; i++) if (raw.charCodeAt(i) < 32 || raw.charCodeAt(i) === 127) return '/'
+  return raw
 }
 
 /** `convert`: the anonymous device becomes the account; `signin`: a code for an existing (or brand-new) account. */

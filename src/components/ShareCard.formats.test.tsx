@@ -54,7 +54,7 @@ function secondDay(s: Snapshot, status: Round['status'], players?: string[]) {
   fillRound(s, 'r2', 41, players ? { playerIds: players } : {})
   s.tournament.settings = { ...settingsOf(s), rounds: 2 }
 }
-/** A leaderboard card's row by its name: position, name, days, figure, money. */
+/** A leaderboard card's row by its name: position, name, days, figure (no money since PWA-06: that is the settlement card's). */
 const row = (card: ReturnType<typeof shareCard>, name: string) => Array.from(card.getByText(name).parentElement!.children).map((c) => c.textContent)
 const dayLine = (card: ReturnType<typeof shareCard>) => card.getByText(/^Día 1, /).textContent
 
@@ -65,21 +65,21 @@ describe('the leaderboard card (STRAT-03)', () => {
     // match8, group 1 (off the 1st tee): Fabián beat Elías 4&3. Off the 10th, Matías beat Leonel 4&2 (10 to 18,
     // then 1 to 7): both winners are 4 up, so they tie for 1st and halve 1st and 2nd, (60% + 40%) of $4,800.
     const card = shareCard('match8', { kind: 'leaderboard' })
-    expect(row(card, 'Fabián')).toEqual(['T1', 'Fabián', 'ganó 4&3', '1', '$2,400'])
-    expect(row(card, 'Elías')).toEqual(['T7', 'Elías', 'perdió 4&3', '0', ''])
+    expect(row(card, 'Fabián')).toEqual(['T1', 'Fabián', 'ganó 4&3', '1'])
+    expect(row(card, 'Elías')).toEqual(['T7', 'Elías', 'perdió 4&3', '0'])
   })
 
   it('stroke days are listed, not added: «−11, +1»', () => {
     const card = shareCard('stroke8', { kind: 'leaderboard' }, (s) => secondDay(s, 'finished'))
-    expect(row(card, 'Fabián')).toEqual(['2', 'Fabián', '−11, +1', '−10', '$1,920'])
-    expect(row(card, 'Julián')).toEqual(['4', 'Julián', '−10, +10', 'E', ''])
+    expect(row(card, 'Fabián')).toEqual(['2', 'Fabián', '−11, +1', '−10'])
+    expect(row(card, 'Julián')).toEqual(['4', 'Julián', '−10, +10', 'E'])
   })
 
   it('a day not played yet is left out, not shown as «—»', () => {
     // Day 2 under way: group 1 has played it, group 2 (Iván J. and the rest) has not started.
     const card = shareCard('stroke8', { kind: 'leaderboard' }, (s) => secondDay(s, 'live', ['p1', 'p2', 'p3', 'p4']))
-    expect(row(card, 'Iván J.')).toEqual(['3', 'Iván J.', '−5', '−5', ''])
-    expect(row(card, 'Fabián')).toEqual(['2', 'Fabián', '−11, +1', '−10', '$1,920'])
+    expect(row(card, 'Iván J.')).toEqual(['3', 'Iván J.', '−5', '−5'])
+    expect(row(card, 'Fabián')).toEqual(['2', 'Fabián', '−11, +1', '−10'])
   })
 
   it('points days add up: «41 + 41»', () => {
@@ -87,7 +87,7 @@ describe('the leaderboard card (STRAT-03)', () => {
       playAs(s, 'stableford')
       secondDay(s, 'finished')
     })
-    expect(row(card, 'Iván J.')).toEqual(['1', 'Iván J.', '41 + 41', '82', '$2,880'])
+    expect(row(card, 'Iván J.')).toEqual(['1', 'Iván J.', '41 + 41', '82'])
   })
 })
 

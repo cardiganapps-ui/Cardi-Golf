@@ -79,6 +79,12 @@ export function OrganizerLoginScreen() {
       <header className={styles.head}>
         <h1>{t.auth.title}</h1>
         <p className={styles.lede}>{t.auth.intro}</p>
+        {/* Before any account, a finished tournament to look around in (STRAT-17). */}
+        {!awaiting && (
+          <Link className={styles.demo} to="/demo">
+            {t.demo.open}
+          </Link>
+        )}
         {user && isAnonymous && <p className="help">{t.auth.anonymousWarning}</p>}
       </header>
 
