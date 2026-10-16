@@ -99,16 +99,21 @@ export function HomeScreen() {
       </section>
 
       {/* Everything that is not "I was invited to a tournament", in one row.
-          Ronda rápida needs an account, so it goes through the same door. */}
+          Ronda rápida needs an account, so it goes through the same door, and comes back to the round once the
+          account exists (UX-25: it landed in Mi Polo, a screen away from where the person asked to go). */}
       <nav className={styles.doors} aria-label={t.home.otherWays}>
         <Link className={styles.door} to="/entrar">
           {t.account.enterProfile}
         </Link>
-        <Link className={styles.door} to="/entrar">
+        <Link className={styles.door} to={`/entrar?next=${encodeURIComponent('/ronda')}`}>
           {t.home.quickRound}
         </Link>
         <Link className={styles.door} to={organizerSignedIn ? '/organizer' : '/organizer/login'}>
           {organizerSignedIn ? t.home.myTournaments : t.home.organizerButton}
+        </Link>
+        {/* A finished tournament to look around in before any account (STRAT-17): made-up people, read-only, on the phone only. */}
+        <Link className={styles.door} to="/demo">
+          {t.demo.open}
         </Link>
       </nav>
 

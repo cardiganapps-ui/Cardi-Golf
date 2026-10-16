@@ -609,7 +609,8 @@ describe('the link to watch a tournament (STRAT-05)', () => {
     const telemetry = source('src/lib/telemetry.ts')
     expect(telemetry).toContain("location.pathname.startsWith('/admin/_') || onLinkPage()) return")
     expect(telemetry).toContain('if (!enabled || onLinkPage()) return')
-    expect(source('src/lib/linkPage.ts')).toContain("const LINK_ROUTES = [{ path: '/v/:token/*' }]")
+    // The links to watch, and the example tournament (STRAT-17), which keeps and sends nothing either.
+    expect(source('src/lib/linkPage.ts')).toContain("const LINK_ROUTES = [{ path: '/v/:token/*' }, { path: '/demo/*' }]")
   })
 
   it('anyone with it, no account: the boards answer without a session, and the page never makes a user', () => {

@@ -11,7 +11,7 @@
     },
     "organizador": {
       "launch": true,
-      "what": "Entrar como organizador, Mis torneos y el asistente para crear un torneo."
+      "what": "Entrar como organizador, Mis torneos, el asistente para crear un torneo y el torneo de ejemplo (/demo, STRAT-17)."
     },
     "cuenta": {
       "launch": true,
@@ -76,6 +76,7 @@
       "plataforma"
     ],
     "datos": "comite",
+    "demo": "organizador",
     "design": "dev",
     "dinero": "torneo",
     "entrar": "cuenta",

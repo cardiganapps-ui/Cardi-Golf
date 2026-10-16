@@ -297,6 +297,9 @@ export function MoneyScreen() {
     return lines.join('\n')
   }, [people, settle, money, snapshot.tournament.name, name, words, cur])
 
+  /** The settlement card says who pays whom as the list below does, vía banco or sin banco (PWA-06); one object per choice (PERF-09). */
+  const shareWhat = useMemo(() => ({ kind: 'settlement' as const, settle }), [settle])
+
   /** Vía banco, once final, an admin marks lines paid: the list gets a slot for the button. */
   const markable = me.isComite && settle === 'bank' && state.tournamentFinal
   // Once play is over, money still in the bank is «Por asignar», listed below
@@ -324,7 +327,7 @@ export function MoneyScreen() {
       <div className={styles.head}>
         <h1>{t.nav.money}</h1>
         <span className={styles.headActions}>
-          <ShareCardButton what={{ kind: 'settlement' }} className="btn btn--ghost btn--sm" label={t.common.share} />
+          <ShareCardButton what={shareWhat} className="btn btn--ghost btn--sm" label={t.common.share} />
           <ShareButton text={shareText} url={spectator?.url} title={M.shareTitle(snapshot.tournament.name)} />
         </span>
       </div>

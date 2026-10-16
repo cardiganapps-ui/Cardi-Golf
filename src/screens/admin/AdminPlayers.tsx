@@ -31,6 +31,8 @@ import { clockTime } from '../../lib/freshness'
 import { humanError } from '../../lib/humanError'
 import { phonesOf, pinLocks, playerPhones, releasePhone, unlockPin, type PinLock, type PinPhone } from '../../data/pinPhones'
 import { CorrectionsCard } from './CorrectionsCard'
+import { randomPin } from '../../lib/pins'
+import { InviteBlock, PinTools } from './PinInvites'
 
 const P = t.admin.players
 const L = t.admin.players.lock
@@ -86,7 +88,7 @@ function strokeRanges(strokes: number[]): string {
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export function AdminPlayers() {
-  const { tournamentId } = useTournamentCtx()
+  const { tournamentId, slug } = useTournamentCtx()
   const data = useTournament((s) => s.data)
   const reload = useTournament((s) => s.reload)
   const players = data!.snapshot.players
@@ -100,8 +102,22 @@ export function AdminPlayers() {
     setEditingFrom(JSON.stringify(p))
   }
   const [pins, setPins] = useState<Set<string>>(new Set())
+  /** Whether the server said who has a PIN: before it does, «Generar PINs» would count everyone as missing one. */
+  const [pinsRead, setPinsRead] = useState(false)
   const [pinFor, setPinFor] = useState<Player | null>(null)
   const [pin, setPin] = useState('')
+  /** The PIN just saved in the open sheet, shown with his invite until the sheet closes (UX-20); then gone. */
+  const [savedPin, setSavedPin] = useState<string | null>(null)
+  /** Saving swaps the field for the PIN, and «Guardar» goes with it: focus moves to what took its place (A11Y-12). */
+  const savedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (savedPin) savedRef.current?.focus({ preventScroll: true })
+  }, [savedPin])
+  const closePin = () => {
+    setPinFor(null)
+    setPin('')
+    setSavedPin(null)
+  }
   /** The phones holding each player's PIN (TRUST-24); null while unread or on a server without them. */
   const [phones, setPhones] = useState<PinPhone[] | null>(null)
   /** PINs locked for new phones by wrong guesses (SEC-04); null while unread or on a server without 0056. */
@@ -125,7 +141,12 @@ export function AdminPlayers() {
   const [askReason, setAskReason] = useState<(PlayerInput & { id: string }) | null>(null)
 
   useEffect(() => {
-    playersWithPin(tournamentId).then(setPins).catch(() => undefined)
+    playersWithPin(tournamentId)
+      .then((s) => {
+        setPins(s)
+        setPinsRead(true)
+      })
+      .catch(() => undefined)
   }, [tournamentId, players.length])
   // Read again with the players, and each time the PIN sheet opens: a phone may have entered meanwhile.
   useEffect(() => {
@@ -249,7 +270,8 @@ export function AdminPlayers() {
       await setPlayerPin(pinFor.id, pin)
       setPins(new Set([...pins, pinFor.id]))
       toast(P.pinSet)
-      setPinFor(null)
+      // The sheet stays, with the PIN and his invite: one tap sends both (UX-20).
+      setSavedPin(pin)
       setPin('')
     } catch (e) {
       toast(humanError(e))
@@ -309,6 +331,7 @@ export function AdminPlayers() {
           <p className={a.help}>{locked ? L.fixed(tournament.handicapsLockedAt ? localWhen(tournament.handicapsLockedAt, settings.timezone) : null) : L.open}</p>
         </section>
       )}
+      {players.length > 0 && pinsRead && <PinTools players={players} pins={pins} tournament={tournament.name} slug={slug} onSaved={(ids) => setPins((cur) => new Set([...cur, ...ids]))} />}
       {players.length > SEARCH_FROM && (
         <div className={a.search}>
           <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={P.search} aria-label={P.search} />
@@ -340,6 +363,7 @@ export function AdminPlayers() {
                 onClick={() => {
                   setPinFor(p)
                   setPin('')
+                  setSavedPin(null)
                 }}
               >
                 {pins.has(p.id) ? P.resetPin : P.setPin}
@@ -542,13 +566,30 @@ export function AdminPlayers() {
         onClose={() => setRemoving(null)}
       />
 
-      <Sheet open={!!pinFor} onClose={() => setPinFor(null)} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
+      <Sheet open={!!pinFor} onClose={closePin} title={`${P.pin}, ${pinFor?.displayName ?? ''}`}>
         <div className="stack">
-          <p className={a.help}>{t.enter.pinHint}</p>
-          <input className={`input ${a.pinInput}`} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus placeholder={P.pinInput} aria-label={P.pinInput} />
-          <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void savePin()}>
-            {busy ? t.common.saving : t.common.save}
-          </button>
+          {savedPin ? (
+            <div ref={savedRef} tabIndex={-1} className="stack" role="status">
+              <span className="label">{P.pins.shown}</span>
+              <span className={a.pinShown}>{savedPin}</span>
+              <p className={a.help}>{P.pins.shownHint}</p>
+            </div>
+          ) : (
+            <>
+              <p className={a.help}>{t.enter.pinHint}</p>
+              <input className={`input ${a.pinInput}`} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus placeholder={P.pinInput} aria-label={P.pinInput} />
+              {/* Four random digits, never «1234» or «7777» (UX-20): the Comité need not invent one. */}
+              <div className={a.formActions}>
+                <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => setPin(randomPin())}>
+                  {P.pins.random}
+                </button>
+                <button className="btn btn--primary" type="button" disabled={busy || pin.length !== 4} onClick={() => void savePin()}>
+                  {busy ? t.common.saving : t.common.save}
+                </button>
+              </div>
+            </>
+          )}
+          {pinFor && (pins.has(pinFor.id) || savedPin) && <InviteBlock player={pinFor} tournament={tournament.name} slug={slug} pin={savedPin} />}
           {pinFor && lockOf(pinFor.id) && (
             <div className="stack" role="status">
               <p className={a.warn}>{P.pinLockedLine(lockOf(pinFor.id)!.failed, clockTime(lockOf(pinFor.id)!.lockedUntil))}</p>

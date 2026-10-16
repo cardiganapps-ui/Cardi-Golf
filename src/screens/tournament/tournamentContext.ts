@@ -27,9 +27,10 @@ export interface TournamentCtx {
   /**
    * Opened with a link to watch (STRAT-05, 0053): read-only, no session, no
    * PIN. `money`: the link shows money («Con dinero»); `url`: the link itself,
-   * which what is shared from here carries.
+   * which what is shared from here carries. `demo`: the example tournament on `/demo` (STRAT-17), whose
+   * people and event are made up: its note says so and offers to organize one.
    */
-  spectator?: { money: boolean; url: string }
+  spectator?: { money: boolean; url: string; demo?: boolean }
 }
 
 const Ctx = createContext<TournamentCtx | null>(null)
