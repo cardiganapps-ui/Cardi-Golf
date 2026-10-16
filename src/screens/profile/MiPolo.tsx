@@ -249,11 +249,22 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
         </span>
       </Link>
 
+      {/* Organizing first, as big as the round (STRAT-07, 2026-10-16): the one primary action was Ronda rápida, and a
+          tournament was a small ghost button at the very bottom. The two homes and the doors are Diego's call
+          (docs/strategy/account-and-home.md); this only puts the product's own job where it can be seen. */}
       <div className={styles.cta}>
-        <Link to="/ronda" className={`btn btn--primary ${styles.start}`}>
-          {t.quick.cta}
-        </Link>
-        <span className={styles.help}>{t.quick.ctaHint}</span>
+        <div className={styles.ctaItem}>
+          <Link to="/organizer/new" className="btn btn--primary btn--block">
+            {M.newTournament}
+          </Link>
+          <span className={styles.help}>{M.newTournamentHint}</span>
+        </div>
+        <div className={styles.ctaItem}>
+          <Link to="/ronda" className="btn btn--secondary btn--block">
+            {t.quick.cta}
+          </Link>
+          <span className={styles.help}>{t.quick.ctaHint}</span>
+        </div>
       </div>
 
       {pending.length > 0 && (
@@ -346,9 +357,6 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
               {M.organizerLink}
             </Link>
           )}
-          <Link className="btn btn--ghost btn--sm" to="/organizer/new">
-            {M.newTournament}
-          </Link>
         </div>
       </section>
 

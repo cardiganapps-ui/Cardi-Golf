@@ -30,6 +30,8 @@ export const PrintScreen = lazyScreen(() => import('../screens/tournament/PrintS
 const spectator = lazyGroup(() => import('../screens/spectator/SpectatorGate'))
 export const SpectatorGate = spectator((m) => m.SpectatorGate)
 export const SpectatorMoney = spectator((m) => m.SpectatorMoney)
+/** The example tournament (STRAT-17): its own chunk, loaded only on `/demo`. */
+export const DemoGate = lazyScreen(() => import('../demo/DemoGate'), (m) => m.DemoGate)
 
 export const HomeScreen = lazyScreen(() => import('../screens/HomeScreen'), (m) => m.HomeScreen)
 

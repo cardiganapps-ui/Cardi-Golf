@@ -15,3 +15,14 @@
   width: 1.1em;
   height: 1.1em;
 }
+/* The example tournament's first lines (STRAT-17): a ruled note above the board, never a card. */
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding-bottom: var(--s3);
+  border-bottom: var(--hairline);
+}
+.introLead {
+  font-weight: 600;
+}

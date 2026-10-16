@@ -2344,11 +2344,14 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/components/ShareCard.whatsapp.test.tsx",
+        "e2e/fixtures/product.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Per-tournament Open Graph link previews for /t/<slug> are not built (needs an edge-rendered image)."
     },
     {
       "id": "PWA-07",
@@ -3521,9 +3524,11 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/screens/tournament/SaveResults.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3552,9 +3557,12 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/screens/tournament/PreRound.test.tsx",
+        "src/lib/countdown.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3644,9 +3652,11 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/lib/linkPage.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4284,9 +4294,13 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/screens/admin/AdminPlayers.pins.test.tsx",
+        "src/lib/pins.test.ts",
+        "src/screens/tournament/EnterScreen.invite.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4369,9 +4383,12 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 224,
+      "tests": [
+        "src/screens/HomeScreen.doors.test.tsx",
+        "src/data/account.next.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

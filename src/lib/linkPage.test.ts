@@ -11,17 +11,20 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 const { router } = await import('../app/router')
-const { SpectatorGate } = await import('../app/screens')
+const { DemoGate, SpectatorGate } = await import('../app/screens')
 const { isLinkPage } = await import('./linkPage')
 
 /** The design fixtures' links to watch (src/app/devRoutes.tsx), with and without money. */
 const FIXTURE_LINKS = new Set(['v/_/:name', 'v/_dinero/:name'])
 
-/** Whether the app's router opens a link to watch at `path`: the gate, inside its lazy boundary (PERF-02), or a fixture's. */
+/**
+ * Whether the app's router opens a link to watch at `path`: the gate, inside its lazy boundary (PERF-02), or a
+ * fixture's; or the example tournament (`/demo`, STRAT-17), which keeps and sends nothing either.
+ */
 const routerOpensLink = (path: string) =>
   !!matchRoutes(router.routes as RouteObject[], path)?.some((m) => {
     const el = m.route.element as { props?: { children?: { type?: unknown } } } | undefined
-    return el?.props?.children?.type === SpectatorGate || FIXTURE_LINKS.has(m.route.path ?? '')
+    return el?.props?.children?.type === SpectatorGate || el?.props?.children?.type === DemoGate || FIXTURE_LINKS.has(m.route.path ?? '')
   })
 
 const TOKEN = 'AbCdEfGhIjKlMnOpQrStUv12'
@@ -36,6 +39,12 @@ const PATHS = [
   `/%56/${TOKEN}/tv`,
   '/v/_/full12-live',
   '/V/_DINERO/full12-live/dinero',
+  // The example tournament (STRAT-17).
+  '/demo',
+  '/demo/',
+  '/DEMO/tv',
+  '/demo/juegos',
+  '/demo/dinero',
   // Not links.
   '/',
   '/v',
@@ -44,6 +53,8 @@ const PATHS = [
   `/t/${TOKEN}`,
   `/t/nacho/v/${TOKEN}`,
   `//v/${TOKEN}`,
+  '/demos',
+  '/t/demo',
 ]
 
 describe('a link page is what the router opens as one (STRAT-05)', () => {

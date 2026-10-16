@@ -268,6 +268,13 @@
 }
 
 /* PIN entry. */
+/* A PIN just saved, shown until its sheet closes (UX-20). */
+.pinShown {
+  font-size: var(--fs-3xl);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
 .pinInput {
   font-size: var(--fs-3xl);
   letter-spacing: 0.4em;
