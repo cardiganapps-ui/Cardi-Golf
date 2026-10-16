@@ -116,6 +116,10 @@ export function TvScreen() {
   const reduce = useReducedMotion()
   // From the couch a re-sort has to be seen moving (MOT-11): the board's time, not the phone's.
   const rowMotion = reduce ? {} : { layout: 'position' as const, transition: easeBoard }
+  // The next board rises in as the last one rises out; under reduced motion they only cross-fade (MOT-15). Motion
+  // skips a transform there by setting it at once, so the old board jumped 20 px up before it faded.
+  const boardIn = reduce ? { opacity: 0 } : { opacity: 0, y: 20 }
+  const boardOut = reduce ? { opacity: 0 } : { opacity: 0, y: -20 }
   const boardLabel = (b: Board): string =>
     b === 'individual' ? settings.modules.individual.label
     : b === 'pairs' ? settings.modules.pairs.label
@@ -180,7 +184,7 @@ export function TvScreen() {
             <AuctionBoard />
           </motion.section>
         ) : (
-          <motion.section key={board} className={styles.board} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={easeBoard}>
+          <motion.section key={board} className={styles.board} initial={boardIn} animate={{ opacity: 1, y: 0 }} exit={boardOut} transition={easeBoard}>
             {board === 'individual' && state.modules.individual && (
               <PagedRows
                 title={settings.modules.individual.label}

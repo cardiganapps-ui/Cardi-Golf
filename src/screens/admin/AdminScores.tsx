@@ -24,6 +24,7 @@ import styles from './AdminScores.module.css'
 import a from './Admin.module.css'
 import { NumberField } from '../../components/NumberField'
 import { humanError } from '../../lib/humanError'
+import { scrollBehavior } from '../../lib/reducedMotion'
 
 const SC = t.admin.scores
 const IB = t.admin.inbox
@@ -137,7 +138,8 @@ export function AdminScores() {
   const show = (rid: string, pid?: string) => {
     setRoundId(rid)
     if (pid) setPlayerId(pid)
-    document.getElementById('admin-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // At once under reduced motion (MOT-15).
+    document.getElementById('admin-card')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
   }
 
   return (

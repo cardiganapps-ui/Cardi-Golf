@@ -3,6 +3,10 @@
   flex-direction: column;
   border-top: var(--hairline);
 }
+.slot {
+  /* Motion opens and closes it (FeedTicker.tsx); the line inside keeps its own size. */
+  overflow: hidden;
+}
 .item {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;

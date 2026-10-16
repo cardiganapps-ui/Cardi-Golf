@@ -16,6 +16,7 @@ import { useOwnConnectionStatus } from '../../components/OfflineBanner'
 import { nearestAccent } from '../../design/accents'
 import { PlatformBanner } from './PlatformBanner'
 import { useOutbox } from '../../data/outbox'
+import { scrollBehavior } from '../../lib/reducedMotion'
 
 /**
  * The tabs a tournament actually has. §9 promises the bar shows only the
@@ -33,9 +34,6 @@ function tabsFor({ hasMoney, canScore, more }: { hasMoney: boolean; canScore: bo
     ...(more ? [{ to: 'mas', label: t.nav.more, icon: <IconMore /> }] : []),
   ]
 }
-
-/** Reduced motion jumps to the top instead of gliding there. */
-const prefersReducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** The boards a pull brings again (PWA-15): En vivo, Juegos and Dinero. Never the Tarjeta, whose swipes move between holes. */
 const BOARDS = new Set(['', '/juegos', '/dinero'])
@@ -105,7 +103,7 @@ export function TournamentShell() {
               const to = `${base}${tab.to ? `/${tab.to}` : ''}`
               if (search || hash || pathname.replace(/\/+$/, '') !== to.replace(/\/+$/, '')) return
               e.preventDefault()
-              window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+              window.scrollTo({ top: 0, behavior: scrollBehavior() })
             }}
             // Stats and Reglamento live under Más but are their own routes, so
             // without this they used to leave no tab lit at all.
