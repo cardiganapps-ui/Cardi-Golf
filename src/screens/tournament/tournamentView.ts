@@ -5,7 +5,7 @@
  */
 import { useContext } from 'react'
 import { useTournament } from '../../data/tournamentStore'
-import { TournamentContext, type TournamentCtx } from './TournamentGate'
+import { TournamentContext, type TournamentCtx } from './tournamentContext'
 
 /** The path a tournament's screens hang from: `/t/<slug>`, a fixture's `/t/_/<name>`, or a link to watch's `/v/<token>`. */
 export const tournamentBase = (c: Pick<TournamentCtx, 'base' | 'slug'>) => c.base ?? `/t/${c.slug}`

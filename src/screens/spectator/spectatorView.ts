@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 import type { LookupResult } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
-import type { Me } from '../tournament/TournamentGate'
+import type { Me } from '../tournament/tournamentContext'
 
 /** Who a link to watch is: nobody. No player, not the Comité: every write and every Comité screen stay out of reach. */
 export const SPECTATOR_ME: Me = { playerId: null, isOrganizer: false, isAdmin: false, via: null }

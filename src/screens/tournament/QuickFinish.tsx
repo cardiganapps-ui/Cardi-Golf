@@ -8,7 +8,7 @@ import { toast } from '../../components/ui'
 import { useCloseGate } from '../../components/CloseGate'
 import { finishQuickRound, finishQuickRounds } from '../../data/quick'
 import { useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import { humanError } from '../../lib/humanError'
 
 const Q = t.quick

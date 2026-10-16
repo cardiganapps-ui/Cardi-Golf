@@ -13,6 +13,8 @@ import { listenForInstall } from './lib/install'
 import { listenForNoticeTaps } from './lib/noticeTaps'
 import { startBadgeSync } from './data/push'
 import { useTournament } from './data/tournamentStore'
+import { launchesIntoTournament } from './lib/launch'
+import { TournamentGate } from './app/screens'
 
 // A screen from the build before a deploy loads the new build instead of failing (REL-13).
 startChunkRecovery()
@@ -44,6 +46,10 @@ useTournament.subscribe((s, prev) => {
   setTelemetryTournament(s.tournamentId)
   if (s.tournamentId) step('tournament_open', { once: true })
 })
+
+// An open that goes on into a tournament (its link, a shortcut, the installed app going back to it) starts on the
+// tournament's screens now: Home's chunk and theirs load side by side, not one after the other (PERF-02).
+if (launchesIntoTournament(location.pathname, location.search)) void TournamentGate.preload().catch(() => undefined)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

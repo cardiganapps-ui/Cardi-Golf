@@ -12,7 +12,7 @@ import type { Player, Snapshot } from '../engine/types'
 import type { LookupResult } from '../data/api'
 import type { InboxItem } from '../data/rejectedInbox'
 import type { TournamentDevice } from '../data/tournamentDevices'
-import type { Me } from '../screens/tournament/TournamentGate'
+import type { Me } from '../screens/tournament/tournamentContext'
 
 export interface Fixture {
   name: string

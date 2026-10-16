@@ -21,7 +21,7 @@ import { CopyButton, ErrorBox, Segmented, ShareButton, Spinner, toast } from '..
 import { deleteSpectatorLink, saveSpectatorLink, spectatorLink, spectatorUrl, type SpectatorLink } from '../../data/spectator'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import a from './Admin.module.css'
 
 const S = t.spectator

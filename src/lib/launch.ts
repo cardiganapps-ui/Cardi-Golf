@@ -23,6 +23,25 @@ export function launchTarget(search: string, now = Date.now()): string | null {
   } catch {
     return null
   }
+  return resumeTarget(search, now)
+}
+
+/**
+ * Whether opening this page will go on into a tournament, asked before the router renders and without using up
+ * the launch: the tournament's screens then load beside Home's instead of after them (PERF-02).
+ */
+export function launchesIntoTournament(path: string, search: string, now = Date.now()): boolean {
+  if (/^\/(?:t\/|continuar(?:\/|$))/.test(path)) return true
+  if (path !== '/' || !isStandalone()) return false
+  try {
+    if (sessionStorage.getItem(LAUNCHED)) return false
+  } catch {
+    return false
+  }
+  return resumeTarget(search, now) != null
+}
+
+function resumeTarget(search: string, now: number): string | null {
   const last = getLastTournament()
   // This phone was in a tournament: back to it while it is recent; an old one is Home's to offer.
   if (last) return last.at != null && now - last.at < RESUME_MS ? last.slug : null

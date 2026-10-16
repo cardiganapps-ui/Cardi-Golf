@@ -6,7 +6,7 @@
 import { memo, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ordinal, t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { useShowMoney } from '../screens/tournament/tournamentView'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { shareCard } from './shareAction'

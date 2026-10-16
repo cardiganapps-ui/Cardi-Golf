@@ -9,7 +9,7 @@ import { t } from '../../i18n/es-MX'
 import { CopyButton, ShareButton } from '../../components/ui'
 import { IconTv } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import styles from './SpectatorNote.module.css'
 
 /** Memoized: it reads two words, never the boards, so a score saved elsewhere renders nothing here (PERF-09). */
