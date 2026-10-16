@@ -19,7 +19,7 @@
  */
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { appliedValue, dismissInboxItems, isStaleHole, loadRejectedInbox, resolveInboxItem, sameValue, seenHole, sentValue, useRejectedInbox, type HoleValue, type InboxItem } from '../../data/rejectedInbox'
 import { useTournament } from '../../data/tournamentStore'

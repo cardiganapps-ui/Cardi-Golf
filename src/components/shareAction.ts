@@ -1,6 +1,6 @@
 import { t } from '../i18n/es-MX'
 import { shareNodeAsImage } from '../lib/shareImage'
-import { toast } from './ui'
+import { toast } from './toast'
 
 /**
  * Renders the card and shares it. When the browser shares only inside the tap

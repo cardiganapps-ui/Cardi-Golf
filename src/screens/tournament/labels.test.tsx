@@ -27,7 +27,7 @@ import { MoreScreen } from './MoreScreen'
 import { RulesScreen } from './RulesScreen'
 import { ScorecardScreen } from './ScorecardScreen'
 import { StatsScreen } from './StatsScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 import { TournamentShell } from './TournamentShell'
 import { TvScreen } from './TvScreen'
 

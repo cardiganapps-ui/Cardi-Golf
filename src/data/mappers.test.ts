@@ -195,9 +195,8 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
       status: 'live',
       currentRoundId: ROUND,
       bankerPlayerId: ANA,
+      // The zone and currency are the settings' (ARCH-06): the row's columns of those names are their mirror, unread.
       settings: TOURNAMENT.settings,
-      timezone: 'America/Mazatlan',
-      currency: 'MXN',
       countsForStats: false,
       quick: false,
       crewId: id(90),

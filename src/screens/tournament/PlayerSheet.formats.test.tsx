@@ -21,7 +21,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import { score } from '../../engine/testing/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { PlayerSheet } from './PlayerSheet'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 type Individual = TournamentSettings['modules']['individual']
 

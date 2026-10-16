@@ -9,7 +9,8 @@ import type { PrizeCheck } from '../../engine/settings/prizeCheck'
 import { formatMoney } from '../../lib/money'
 import styles from './PrizeSummary.module.css'
 
-export function PrizeSummary({ check, players, issues }: { check: PrizeCheck | null; players: number; issues?: string[] }) {
+/** The money plan, in the currency being set up (the wizard's draft, or the tournament's settings). */
+export function PrizeSummary({ check, players, issues, currency: cur }: { check: PrizeCheck | null; players: number; issues?: string[]; currency: string }) {
   const A = t.admin.tournament
   return (
     <div className={styles.summary}>
@@ -25,20 +26,20 @@ export function PrizeSummary({ check, players, issues }: { check: PrizeCheck | n
               <span>
                 {l.label} <span className={styles.detail}>{l.detail}</span>
               </span>
-              <span className={styles.amount}>{formatMoney(l.amount)}</span>
+              <span className={styles.amount}>{formatMoney(l.amount, cur)}</span>
             </div>
           ))}
           <div className={`${styles.line} ${styles.total}`}>
             <span>{t.money.prizes}</span>
-            <span className={styles.amount}>{formatMoney(check.prizesTotal)}</span>
+            <span className={styles.amount}>{formatMoney(check.prizesTotal, cur)}</span>
           </div>
           <div className={styles.line}>
             <span>
               {t.money.entryFee}, {players} {t.live.players.toLowerCase()}
             </span>
-            <span className={styles.amount}>{formatMoney(check.entryPot)}</span>
+            <span className={styles.amount}>{formatMoney(check.entryPot, cur)}</span>
           </div>
-          <span className={`${styles.verdict} ${check.balanced ? '' : styles.verdictOff}`}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference)))}</span>
+          <span className={`${styles.verdict} ${check.balanced ? '' : styles.verdictOff}`}>{check.balanced ? A.balanced : A.notBalanced(formatMoney(Math.abs(check.difference), cur))}</span>
           {/* MONEY-09: a balanced pool can still pay a place nobody can occupy. */}
           {check.unreachable.length > 0 && (
             <>
@@ -48,7 +49,7 @@ export function PrizeSummary({ check, players, issues }: { check: PrizeCheck | n
                   <span>
                     {u.label} <span className={styles.detail}>{u.detail}</span>
                   </span>
-                  <span className={`${styles.amount} ${styles.verdictOff}`}>{formatMoney(u.amount)}</span>
+                  <span className={`${styles.amount} ${styles.verdictOff}`}>{formatMoney(u.amount, cur)}</span>
                 </div>
               ))}
             </>
@@ -64,7 +65,7 @@ export function PrizeSummary({ check, players, issues }: { check: PrizeCheck | n
                   <span>
                     {l.label} <span className={styles.detail}>{l.detail}</span>
                   </span>
-                  <span className={styles.amount}>{formatMoney(l.pot)}</span>
+                  <span className={styles.amount}>{formatMoney(l.pot, cur)}</span>
                 </div>
               ))}
             </>

@@ -131,7 +131,7 @@ function minimal(status: 'setup' | 'live', money = true): Fixture {
     truncateRound(snap, 'r1', (pid) => (pid === 'p2' ? 11 : 9))
     stamp(snap)
   }
-  return { name: money ? `minimal4-${status}` : 'gloria4', description: money ? `4 jugadores, 1 ronda, solo Individual, ${status === 'setup' ? 'sin empezar' : 'en juego (hoyo 9–11)'}` : '4 jugadores, sin dinero: se juega por la pura gloria', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: money ? `minimal4-${status}` : 'gloria4', description: money ? `4 jugadores, 1 ronda, solo Individual, ${status === 'setup' ? 'sin empezar' : 'en juego (hoyo 9–11)'}` : '4 jugadores, sin dinero: se juega por la pura gloria', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isComite: true }, lookup: lookupOf(snap) }
 }
 
 /**
@@ -151,7 +151,7 @@ function marker4(): Fixture {
   fillRound(snap, 'r1', 5)
   stamp(snap)
   snap.cardSignatures = [{ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p3', signedAt: '2027-05-15T20:10:00Z' }]
-  return { name: 'firma4', description: '4 jugadores, solo Individual, cada tarjeta la firma otro del grupo: día capturado completo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: false }, lookup: lookupOf(snap) }
+  return { name: 'firma4', description: '4 jugadores, solo Individual, cada tarjeta la firma otro del grupo: día capturado completo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isComite: false }, lookup: lookupOf(snap) }
 }
 
 function sellAuction(snap: Snapshot, seed: number) {
@@ -199,7 +199,7 @@ function auction12(): Fixture {
     name: 'auction12',
     description: 'Noche de la Calcutta: 9 lotes vendidos, el 10 abierto con pujas, 2 por subastar',
     snapshot: snap,
-    me: { playerId: 'p9', isOrganizer: false, isAdmin: true },
+    me: { playerId: 'p9', isOrganizer: false, isComite: true },
     lookup: lookupOf(snap),
   }
 }
@@ -341,7 +341,7 @@ function full12(finished: boolean): Fixture {
     name: `full12-${finished ? 'finished' : 'live'}`,
     description: finished ? '12 jugadores, todos los módulos, torneo terminado (ceremonia, liquidación)' : '12 jugadores, todos los módulos, día 2 en juego; víbora pendiente, hoyo en disputa, tarjeta sin firmar',
     snapshot: snap,
-    me: { playerId: 'p9', isOrganizer: false, isAdmin: true },
+    me: { playerId: 'p9', isOrganizer: false, isComite: true },
     lookup: lookupOf(snap),
   }
 }
@@ -373,7 +373,7 @@ function pairs8(): Fixture {
   fillRound(snap, 'r2', 22)
   truncateRound(snap, 'r2', (pid) => (['p1', 'p5', 'p3', 'p7'].includes(pid) ? 14 : 12))
   stamp(snap)
-  return { name: 'pairs8', description: '8 jugadores, Individual + Parejas + Mejor ronda, sin Calcutta ni víbora', snapshot: snap, me: { playerId: 'p2', isOrganizer: false, isAdmin: false }, lookup: lookupOf(snap) }
+  return { name: 'pairs8', description: '8 jugadores, Individual + Parejas + Mejor ronda, sin Calcutta ni víbora', snapshot: snap, me: { playerId: 'p2', isOrganizer: false, isComite: false }, lookup: lookupOf(snap) }
 }
 
 /** A weekend among friends: percent main pot, house cut, and every computed side game. */
@@ -428,7 +428,7 @@ function friends8(): Fixture {
   fillRound(snap, 'r2', 82)
   truncateRound(snap, 'r2', (pid) => (['p1', 'p2', 'p3', 'p4'].includes(pid) ? 13 : 11))
   stamp(snap)
-  return { name: 'friends8', description: '8 amigos: bolsa 50/30/20 con "para la casa", skins, Nassau, low neto, birdies, tres putts, concursos y apuesta libre', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: 'friends8', description: '8 amigos: bolsa 50/30/20 con "para la casa", skins, Nassau, low neto, birdies, tres putts, concursos y apuesta libre', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isComite: true }, lookup: lookupOf(snap) }
 }
 
 function large60(): Fixture {
@@ -461,7 +461,7 @@ function large60(): Fixture {
   const thru = new Map(players.map((p, i) => [p.id, 6 + Math.floor(i / 4)]))
   truncateRound(snap, 'r2', (pid) => Math.min(18, thru.get(pid) ?? 9))
   stamp(snap)
-  return { name: 'large60', description: '60 jugadores, 15 grupos, 2 rondas, Individual + Víbora + Menos putts, día 2 en juego', snapshot: snap, me: { playerId: 'p17', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: 'large60', description: '60 jugadores, 15 grupos, 2 rondas, Individual + Víbora + Menos putts, día 2 en juego', snapshot: snap, me: { playerId: 'p17', isOrganizer: false, isComite: true }, lookup: lookupOf(snap) }
 }
 
 function longnames(): Fixture {
@@ -475,7 +475,7 @@ function longnames(): Fixture {
   truncateRound(snap, 'r1', () => 13)
   stamp(snap)
   sellAuction(snap, 3)
-  return { name: 'longnames', description: 'Nombres largos por todos lados: jugadores, parejas, torneo y campo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: 'longnames', description: 'Nombres largos por todos lados: jugadores, parejas, torneo y campo', snapshot: snap, me: { playerId: 'p1', isOrganizer: false, isComite: true }, lookup: lookupOf(snap) }
 }
 
 
@@ -534,7 +534,7 @@ function formatFixture(format: 'strokePlay' | 'matchPlay' | 'team', opts: { name
     name: opts.slug,
     description: opts.description,
     snapshot: snap,
-    me: { playerId: 'p1', isOrganizer: true, isAdmin: true },
+    me: { playerId: 'p1', isOrganizer: true, isComite: true },
     lookup: lookupOf(snap),
   }
 }
@@ -552,7 +552,7 @@ function justCreated(): Fixture {
   snap.courses = []
   snap.groups = []
   snap.roundTees = []
-  return { name: 'new-setup', description: 'Recién creado: dos días sin campo ni fecha, sin jugadores todavía', snapshot: snap, me: { playerId: null, isOrganizer: true, isAdmin: true }, lookup: lookupOf(snap) }
+  return { name: 'new-setup', description: 'Recién creado: dos días sin campo ni fecha, sin jugadores todavía', snapshot: snap, me: { playerId: null, isOrganizer: true, isComite: true }, lookup: lookupOf(snap) }
 }
 
 const BUILDERS: Record<string, () => Fixture> = {
@@ -601,7 +601,7 @@ const BUILDERS: Record<string, () => Fixture> = {
       makeGroup('r1', 4, ['p4', 'p5'], 10),
     ]
     fillRound(snap, 'r1', 1)
-    return { name: 'bracket8', description: 'Cuadro de eliminación, cuartos jugados', snapshot: snap, me: { playerId: 'p1', isOrganizer: true, isAdmin: true }, lookup: lookupOf(snap) }
+    return { name: 'bracket8', description: 'Cuadro de eliminación, cuartos jugados', snapshot: snap, me: { playerId: 'p1', isOrganizer: true, isComite: true }, lookup: lookupOf(snap) }
   },
   'scramble8': () =>
     formatFixture('team', {

@@ -6,7 +6,7 @@
  * captured.
  */
 import { puttsMissing } from '../../core/putts'
-import { flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
+import { flattenRanks, isFinal, rankField, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 
@@ -56,7 +56,7 @@ export function puttsTotals(ctx: ModuleContext, playerId: Id) {
   return t
 }
 
-export const fewestPuttsModule: GameModule<FewestPuttsState> = {
+export const fewestPuttsModule: GameModule<FewestPuttsState, 'fewestPutts'> = {
   id: 'fewestPutts',
   defaultLabel: 'Menos putts',
   compute(ctx) {
@@ -68,16 +68,11 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
     // (or who withdrew) ranks after everyone who has played more holes, so
     // the leader is never simply the one with the fewest holes.
     const maxHoles = Math.max(0, ...ids.map((id) => totals.get(id)!.holes))
-    const groups = rankBy(
-      ids,
-      (a, b) => {
-        const ta = totals.get(a)!
-        const tb = totals.get(b)!
-        if (ta.holes !== tb.holes) return tb.holes - ta.holes
-        return ta.putts - tb.putts
-      },
-      (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
-    )
+    const groups = rankField(ids, {
+      keys: [(id) => totals.get(id)!.holes, (id) => -totals.get(id)!.putts],
+      ties: 'share',
+      order: (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
+    })
     const rows: PuttsRow[] = flattenRanks(groups).map((r) => {
       const t = totals.get(r.item)!
       return {
@@ -105,7 +100,7 @@ export const fewestPuttsModule: GameModule<FewestPuttsState> = {
         prizes[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${w.putts} putts en ${w.holes} hoyos`, ...(w.pickedUpHoles ? [`Hoyos levantados: cuentan ${ctx.settings.pickupPuttsForFewestPutts} putts como mínimo`] : []), ...s.why.steps] } }
       }
     }
-    return { rows, groups, prizes, final: ctx.tournamentFinal }
+    return { rows, groups, prizes, final: isFinal(ctx, 'tournament') }
   },
   prizes(state, ctx) {
     const label = ctx.settings.modules.fewestPutts.label

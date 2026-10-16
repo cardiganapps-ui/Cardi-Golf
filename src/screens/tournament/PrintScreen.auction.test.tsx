@@ -13,7 +13,7 @@ import { parseSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { PrintScreen } from './PrintScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 afterEach(() => cleanup())
 const P = t.print
@@ -46,12 +46,12 @@ describe('the Calcutta on paper (DB-19)', () => {
       expect(cells[0]!.textContent).toBe(String(l.lotNumber))
       expect(cells[1]!.textContent).toContain(name(l.playerId))
       expect(cells[2]!.textContent).toBe(l.status === 'sold' ? name(l.ownerId) : '')
-      expect(cells[3]!.textContent).toBe(l.status === 'sold' ? formatMoney(l.price!) : '')
+      expect(cells[3]!.textContent).toBe(l.status === 'sold' ? formatMoney(l.price!, 'MXN') : '')
     })
     expect(lots.filter((l) => l.status !== 'sold').length).toBeGreaterThan(0)
     // Its own rules, and how the console takes it afterwards; no scorecards under it.
     const a = parseSettings(snap.tournament.settings).auction
-    expect(screen.getByText(P.auctionRules(formatMoney(a.openingBid), formatMoney(a.increment), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct))).toBeTruthy()
+    expect(screen.getByText(P.auctionRules(formatMoney(a.openingBid, 'MXN'), formatMoney(a.increment, 'MXN'), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct))).toBeTruthy()
     expect(screen.getByText(P.auctionAfter)).toBeTruthy()
     expect(screen.queryByText(new RegExp(P.sign))).toBeNull()
   })

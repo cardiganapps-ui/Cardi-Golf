@@ -5,7 +5,7 @@
  * generates the next round's groups from the standings.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
-import { flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
+import { flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { pesos } from '../../core/pesos'
@@ -83,7 +83,7 @@ export function generateGroupsFromStandings(rankedPairIds: Id[], pairsPerGroup =
   return groups
 }
 
-export const pairsModule: GameModule<PairsState> = {
+export const pairsModule: GameModule<PairsState, 'pairs'> = {
   id: 'pairs',
   defaultLabel: 'Parejas',
   compute(ctx) {
@@ -93,18 +93,12 @@ export const pairsModule: GameModule<PairsState> = {
     const lastRound = core.roundIds.at(-1)
     const total = (p: Pair) => core.roundIds.reduce((s, rid) => s + pairPoints(ctx, p, rid), 0)
     const byId = new Map(pairs.map((p) => [p.id, p]))
-    const groups = rankBy(
-      pairs.map((p) => p.id),
-      (a, b) => {
-        const pa = byId.get(a)!
-        const pb = byId.get(b)!
-        const d = total(pb) - total(pa)
-        if (d !== 0) return d
-        if (!lastRound) return 0
-        return pairPoints(ctx, pb, lastRound) - pairPoints(ctx, pa, lastRound)
-      },
-      (a, b) => a.localeCompare(b),
-    )
+    // Total, then the better combined last round (§5.5), then the tied share.
+    const groups = rankField(pairs.map((p) => p.id), {
+      keys: [(id) => total(byId.get(id)!), (id) => (lastRound ? pairPoints(ctx, byId.get(id)!, lastRound) : 0)],
+      ties: 'share',
+      order: (a, b) => a.localeCompare(b),
+    })
     const nameOfPair = (id: Id) => {
       const p = byId.get(id)!
       return p.name ?? t.common.andList([p.player1Id, p.player2Id].map((id) => playersById.get(id)?.displayName ?? id))
@@ -133,10 +127,11 @@ export const pairsModule: GameModule<PairsState> = {
     })
     for (const s of anyScores || ctx.tournamentFinal ? splitPrizes(paid, settings.prizes.pairs, nameOfPair) : []) {
       const p = byId.get(s.item)!
-      const each = Math.floor(s.amount / 2)
-      const odd = s.amount - each * 2
+      const [first, second] = splitEven(s.amount, 2)
+      const each = second!.amount
+      const odd = first!.rounding
       const why: Explanation = { title: `${pesos(each)} cada uno`, steps: [...s.why.steps, `El premio es de la pareja: ${pesos(s.amount)} entre los dos = ${pesos(each)} cada uno${odd ? `, más ${pesos(odd)} para ${playersById.get(p.player1Id)?.displayName ?? ''}` : ''}`] }
-      prizes[p.player1Id] = { amount: each + odd, why: odd ? { ...why, title: pesos(each + odd) } : why, pairId: p.id }
+      prizes[p.player1Id] = { amount: first!.amount, why: odd ? { ...why, title: pesos(first!.amount) } : why, pairId: p.id }
       prizes[p.player2Id] = { amount: each, why, pairId: p.id }
     }
     const paired = new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id]))
@@ -149,7 +144,11 @@ export const pairsModule: GameModule<PairsState> = {
       }
     }
     const warnings = ctx.tournamentFinal ? unfilledWarning(settings.modules.pairs.label, unfilledPlaces(paid, settings.prizes.pairs), paid.reduce((n, g) => n + g.members.length, 0), ['pareja', 'parejas']) : []
-    return { rows, groups, prizes, unpaired, groupWarnings, warnings, final: ctx.tournamentFinal }
+    return { rows, groups, prizes, unpaired, groupWarnings, warnings, final: isFinal(ctx, 'tournament') }
+  },
+  /** Its places nobody filled; the groups' composition is a field warning (`groupWarnings`), not its money's. */
+  warnings(state) {
+    return state.warnings
   },
   prizes(state, ctx) {
     const label = ctx.settings.modules.pairs.label

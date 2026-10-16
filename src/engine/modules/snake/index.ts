@@ -5,6 +5,7 @@
  * out last (a stored tiebreak answer), else "pendiente".
  */
 import { playOrder } from '../../core/playOrder'
+import { isFinal, splitEven } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, PrizeAward } from '../module'
 import { pesos } from '../../core/pesos'
@@ -48,7 +49,7 @@ export interface SnakeState {
   holesHeld: Record<Id, number>
 }
 
-export const snakeModule: GameModule<SnakeState> = {
+export const snakeModule: GameModule<SnakeState, 'snake'> = {
   id: 'snake',
   defaultLabel: 'La Víbora',
   compute(ctx) {
@@ -102,8 +103,8 @@ export const snakeModule: GameModule<SnakeState> = {
             pending.push({ roundId: rid, groupId: g.id, hole, candidates })
           }
         })
-        const finished =
-          (ctx.roundFinal[rid] ?? false) || g.playerIds.every((pid) => byPlayer[pid]?.complete)
+        const final = isFinal(ctx, 'rounds', [rid])
+        const finished = final || g.playerIds.every((pid) => byPlayer[pid]?.complete)
         const n = g.playerIds.length
         const pot = perSurvivor * (n - 1)
         const payouts: SnakeGroupState['payouts'] = {}
@@ -123,16 +124,14 @@ export const snakeModule: GameModule<SnakeState> = {
               }
             }
           } else {
-            const each = Math.floor(pot / n)
-            let rem = pot - each * n
-            for (const pid of g.playerIds) {
-              const extra = rem > 0 ? 1 : 0
-              rem -= extra
+            const shares = splitEven(pot, n)
+            g.playerIds.forEach((pid, i) => {
+              const { amount } = shares[i]!
               payouts[pid] = {
-                amount: each + extra,
-                why: { title: pesos(each + extra), steps: [`Nadie del grupo hizo ${threshold} putts o más: los ${pesos(pot)} se reparten entre los ${n}`] },
+                amount,
+                why: { title: pesos(amount), steps: [`Nadie del grupo hizo ${threshold} putts o más: los ${pesos(pot)} se reparten entre los ${n}`] },
               }
-            }
+            })
           }
         }
         groups.push({
@@ -147,7 +146,7 @@ export const snakeModule: GameModule<SnakeState> = {
           finished,
           pot,
           payouts,
-          final: ctx.roundFinal[rid] ?? false,
+          final,
         })
       }
     }

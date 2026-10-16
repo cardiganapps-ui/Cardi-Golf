@@ -13,7 +13,7 @@ import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
 import { LiveStatus } from '../../components/primitives'
 import { TournamentLogo } from '../../components/TournamentLogo'
-import { useOwnConnectionStatus } from '../../components/OfflineBanner'
+import { useOwnConnectionStatus } from '../../components/online'
 import { nearestAccent } from '../../design/accents'
 import { PlatformBanner } from './PlatformBanner'
 import { useOutbox } from '../../data/outbox'
@@ -69,7 +69,7 @@ export function TournamentShell() {
     const s = st.data?.settings
     return !s || s.entryFee > 0 || s.modules.auction.enabled || s.games.some((g) => g.money.source !== 'none')
   })
-  const canScore = !!me.playerId || me.isAdmin
+  const canScore = !!me.playerId || me.isComite
   const tabs = tabsFor({ hasMoney: hasMoney && showMoney, canScore, more: !spectator })
   // Holes still on this phone, and writes the server refused: on the Tarjeta
   // tab from every screen, not only inside the Tarjeta (REL-17).

@@ -130,8 +130,8 @@ function statusValue(table: string, v: string): string {
   return v
 }
 
-/** One column's value, as the Comité reads it. */
-export function fieldValue(key: string, v: unknown, table: string, names: AuditNames, timeZone: string): string {
+/** One column's value, as the Comité reads it: money in the tournament's currency, moments in its zone (ARCH-06). */
+export function fieldValue(key: string, v: unknown, table: string, names: AuditNames, timeZone: string, cur: string): string {
   if (v == null || v === '') return V.none
   const id = typeof v === 'string' ? v : null
   const named = (look: (id: string) => string | null) => (id ? look(id) : null) ?? V.other
@@ -153,7 +153,7 @@ export function fieldValue(key: string, v: unknown, table: string, names: AuditN
     case 'course':
       return named(names.course)
     case 'money':
-      return typeof v === 'number' ? formatMoney(v) : String(v)
+      return typeof v === 'number' ? formatMoney(v, cur) : String(v)
     case 'moment':
       return id ? localWhen(id, timeZone) : String(v)
     case 'clock':

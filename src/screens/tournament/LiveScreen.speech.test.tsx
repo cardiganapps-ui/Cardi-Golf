@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { LiveScreen } from './LiveScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 function mount(fixture: string) {
   const fx = getFixture(fixture)!

@@ -1,4 +1,5 @@
 /** Small helpers shared by the instance games. */
+import { flattenRanks, rankField } from '../core/ranking'
 import type { HoleResult } from '../core/types'
 import type { Id } from '../types'
 import type { GameContext } from './game'
@@ -30,12 +31,9 @@ export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`
 }
 
-/** "1", "T2": positions for a list sorted best first (higher is better). */
-export function rankLabel(values: number[], i: number): string {
-  const v = values[i]!
-  const first = values.indexOf(v)
-  const tied = values.filter((x) => x === v).length > 1
-  return `${tied ? 'T' : ''}${first + 1}`
+/** A count per player (skins, birdies, holes won) ranked by the shared rule: most first, ties share («T2»). */
+export function rankedUnits(entries: Array<[Id, number]>): Array<{ id: Id; units: number; label: string }> {
+  return flattenRanks(rankField(entries, { keys: [([, u]) => u], ties: 'share' })).map((r) => ({ id: r.item[0], units: r.item[1], label: r.label }))
 }
 
 export function moneyByPlayer(prizes: Array<{ playerId: Id; amount: number; payerId?: Id }>): Map<Id, number> {

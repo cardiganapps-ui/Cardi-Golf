@@ -10,9 +10,9 @@ import { describe, expect, it } from 'vitest'
 import { computeTournament, type TournamentState } from '../computeTournament'
 import type { GameConfig, GameMoney } from './games'
 import { checkPrizePool } from './prizeCheck'
-import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_PLAYER_COUNT, FIRST_TOURNAMENT_SETTINGS } from './presets'
+import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './presets'
 import type { TournamentSettings } from './schema'
-import { makeGroup, makePlayer, makeSnapshot, PAR_72, score } from '../testing/fixtures'
+import { FIRST_TOURNAMENT_PLAYER_COUNT, makeGroup, makePlayer, makeSnapshot, PAR_72, score } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 
 type Over = Partial<TournamentSettings> & { format?: TournamentSettings['modules']['individual']['format']; matchMode?: 'singles' | 'fourball' }

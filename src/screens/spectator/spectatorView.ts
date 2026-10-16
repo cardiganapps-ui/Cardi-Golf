@@ -10,7 +10,7 @@ import type { Snapshot } from '../../engine/types'
 import type { Me } from '../tournament/tournamentContext'
 
 /** Who a link to watch is: nobody. No player, not the Comité: every write and every Comité screen stay out of reach. */
-export const SPECTATOR_ME: Me = { playerId: null, isOrganizer: false, isAdmin: false, via: null }
+export const SPECTATOR_ME: Me = { playerId: null, isOrganizer: false, isComite: false, via: null }
 
 /** The few words the frame reads besides the boards: no slug, no join code, no faces to pick. */
 export function spectatorLookup(s: Snapshot): LookupResult {

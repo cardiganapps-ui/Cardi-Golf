@@ -42,9 +42,8 @@ export const mapTournament = (r: Row): TournamentRow => ({
   status: r.status,
   currentRoundId: r.current_round_id ?? null,
   bankerPlayerId: r.banker_player_id ?? null,
+  // `timezone` and `currency` are the settings' (ARCH-06): the columns are their mirror (0074), left unread.
   settings: r.settings,
-  timezone: r.timezone,
-  currency: r.currency,
   countsForStats: r.counts_for_stats ?? true,
   quick: r.quick ?? false,
   crewId: r.crew_id ?? null,

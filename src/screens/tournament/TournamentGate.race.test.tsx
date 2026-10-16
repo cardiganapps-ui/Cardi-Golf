@@ -64,7 +64,8 @@ import { getFixture } from '../../dev/fixtures'
 import { useAuth } from '../../data/auth'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentGate, useTournamentCtx } from './TournamentGate'
+import { TournamentGate } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 
 const fx = getFixture('minimal4-live')!
 const slug = fx.snapshot.tournament.slug

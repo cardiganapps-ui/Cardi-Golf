@@ -13,7 +13,7 @@ import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { OfflineBanner } from '../../components/OfflineBanner'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 import { TvScreen } from './TvScreen'
 
 let snap: Snapshot
@@ -59,7 +59,7 @@ describe('Calcutta night on the TV (MOT-04)', () => {
     expect(screen.getByRole('heading', { name: full(lot(10).playerId) })).toBeTruthy()
     const sale = owner === lot(10).playerId ? t.auction.stampSelf : t.auction.stampTo(short(owner))
     expect(screen.getByText(sale)).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toContain(formatMoney(price))
+    expect(screen.getByRole('status').textContent).toContain(formatMoney(price, 'MXN'))
     act(() => void vi.advanceTimersByTime(4000))
     expect(screen.queryByText(sale)).toBeNull()
     expect(screen.getByRole('heading', { name: full(lot(11).playerId) })).toBeTruthy()
@@ -95,7 +95,7 @@ describe('«Lo que está en juego» shows the pesos each slot pays (MONEY-16)', 
     act(() => load(snap))
     const stakes = Array.from(document.querySelectorAll('[class*="stakeRow"]')).map((r) => r.lastElementChild?.textContent)
     // The TV floored pot × share itself: $6,462 and $587, a peso short of the pot.
-    expect(stakes).toEqual(['$6,463', '$2,350', '$1,175', '$1,175', '$587'].map((x) => formatMoney(Number(x.replace(/[$,]/g, '')))))
+    expect(stakes).toEqual(['$6,463', '$2,350', '$1,175', '$1,175', '$587'].map((x) => formatMoney(Number(x.replace(/[$,]/g, '')), 'MXN')))
   })
 })
 

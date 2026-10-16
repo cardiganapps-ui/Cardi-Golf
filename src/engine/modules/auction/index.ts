@@ -14,6 +14,7 @@ import type { CalcuttaLot, Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { rankIndividual } from '../individual'
 import { pesos, pesosCents } from '../../core/pesos'
+import { isFinal } from '../../core/ranking'
 
 export interface Ownership {
   ownerId: Id
@@ -385,7 +386,7 @@ export function planStakes(ctx: ModuleContext, pot: number): Stake[] {
   return out
 }
 
-export const auctionModule: GameModule<AuctionState> = {
+export const auctionModule: GameModule<AuctionState, 'auction'> = {
   id: 'auction',
   defaultLabel: 'La Calcutta',
   compute(ctx) {
@@ -427,8 +428,25 @@ export const auctionModule: GameModule<AuctionState> = {
       payouts,
       portfolios,
       balanced: slots.length === 0 || paidOut + unfilled === pot,
-      final: ctx.tournamentFinal,
+      final: isFinal(ctx, 'tournament'),
     }
+  },
+  warnings(state, ctx) {
+    const { snapshot, settings, tournamentFinal } = ctx
+    const label = settings.modules.auction.label
+    const out: string[] = []
+    const unfilled = state.slots.filter((s) => s.unfilled)
+    if (unfilled.length) out.push(`${label}: ${pesos(state.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
+    // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
+    if (tournamentFinal && state.pot > 0 && state.slots.length === 0) out.push(`${label}: nadie tiene resultado, así que ningún lugar se ocupa: ${pesos(state.pot)} sin asignar. El Comité decide.`)
+    // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
+    const unsold = state.lots.filter((l) => l.status !== 'sold')
+    const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
+    if (playing && unsold.length && state.soldCount > 0) {
+      const names = t.common.andList(unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))
+      out.push(`${label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender (${names}): no cobra${unsold.length === 1 ? '' : 'n'} la Calcutta.`)
+    }
+    return out
   },
   prizes(state, ctx) {
     const label = ctx.settings.modules.auction.label

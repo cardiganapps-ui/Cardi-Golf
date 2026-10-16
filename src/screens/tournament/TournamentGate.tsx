@@ -30,10 +30,11 @@ import { supabaseConfigured } from '../../lib/supabase'
 import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
 import { TournamentContext as Ctx, type Me } from './tournamentContext'
+import { TournamentCurrency } from '../../components/TournamentCurrency'
 
-// The context lives in its own module, so a screen outside this chunk (the router's SettingsGuard, the install
-// card) can read it without bringing the gate, Entrar and their animation code into every first load (PERF-02).
-export { TournamentContext, useTournamentCtx, type Me, type TournamentCtx } from './tournamentContext'
+// The context lives in its own module (tournamentContext.ts), so a screen outside this chunk (the router's
+// SettingsGuard, the install card) can read it without bringing the gate, Entrar and their animation code into
+// every first load (PERF-02). Import it from there: this file exports the gate alone (QA-15: fast refresh).
 
 /** Until the server has answered and its boards are up, ask again this often. */
 const CACHE_RETRY_MS = 20_000
@@ -179,7 +180,8 @@ export function TournamentGate() {
         const me: Me = {
           playerId: m.playerId,
           isOrganizer: m.isOrganizer,
-          isAdmin: m.isAdmin,
+          // The server's word is `isAdmin` (my_membership); the Comité's rights, not the Admin de Polo (ARCH-20).
+          isComite: m.isAdmin,
           via: m.via,
           protected: !!m.protected,
           unlockedUntil: m.unlockedUntil ?? null,
@@ -305,12 +307,12 @@ export function TournamentGate() {
     }
   }, [resolve])
 
-  // Admin flag for linked players comes from the loaded snapshot (is_admin).
+  // The Comité's rights for linked players come from the loaded snapshot (is_admin).
   useEffect(() => {
     if (phase.kind !== 'in' || !data || !phase.me.playerId) return
     const p = data.snapshot.players.find((x) => x.id === phase.me.playerId)
-    const isAdmin = phase.me.isOrganizer || !!p?.isAdmin
-    if (isAdmin !== phase.me.isAdmin) setPhase({ ...phase, me: { ...phase.me, isAdmin } })
+    const isComite = phase.me.isOrganizer || !!p?.isAdmin
+    if (isComite !== phase.me.isComite) setPhase({ ...phase, me: { ...phase.me, isComite } })
   }, [phase, data])
 
   const tournamentId = phase.kind === 'in' ? phase.lookup.id : null
@@ -382,7 +384,10 @@ export function TournamentGate() {
   }
   return (
     <Ctx.Provider value={{ tournamentId: phase.lookup.id, slug, lookup: phase.lookup, me: phase.me, refresh: resolve, retry: askAgain, leave }}>
-      <Outlet />
+      {/* Every money render reads the tournament's currency (ARCH-06). */}
+      <TournamentCurrency>
+        <Outlet />
+      </TournamentCurrency>
     </Ctx.Provider>
   )
 }

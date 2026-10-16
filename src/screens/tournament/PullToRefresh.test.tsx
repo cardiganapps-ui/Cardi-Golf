@@ -24,7 +24,7 @@ vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 
 const { t } = await import('../../i18n/es-MX')
 const { dataFromSnapshot, useTournament } = await import('../../data/tournamentStore')
-const { TournamentContext } = await import('./TournamentGate')
+const { TournamentContext } = await import('./tournamentContext')
 const { TournamentShell } = await import('./TournamentShell')
 const { LiveScreen } = await import('./LiveScreen')
 const { ScorecardScreen } = await import('./ScorecardScreen')

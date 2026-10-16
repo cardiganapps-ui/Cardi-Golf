@@ -47,8 +47,7 @@ const must = (r, ctx) => {
   return r.data
 }
 
-const t = must(await sb.from('tournaments').select('id, name, settings').eq('slug', slug).single(), 'tournament')
-const S = t.settings
+const t = must(await sb.from('tournaments').select('*').eq('slug', slug).single(), 'tournament')
 const rounds = must(await sb.from('rounds').select('*').eq('tournament_id', t.id).order('number'), 'rounds')
 const round = roundNumber ? rounds.find((r) => r.number === roundNumber) : rounds.find((r) => r.status !== 'finished' && r.status !== 'cancelled')
 if (!round) {
@@ -64,51 +63,48 @@ if (round.status === 'finished' || round.status === 'cancelled') {
   )
   process.exit(1)
 }
-const players = must(await sb.from('players').select('id, display_name, base_hcp, default_tee_id').eq('tournament_id', t.id), 'players')
+const players = must(await sb.from('players').select('*').eq('tournament_id', t.id), 'players')
 const groups = must(await sb.from('groups').select('id, number, start_hole, group_members!group_members_group_id_fkey(player_id)').eq('round_id', round.id).order('number'), 'groups')
 if (!groups.length) {
   console.error('The round has no groups yet: build them in Comité › Grupos first.')
   process.exit(1)
 }
-const tees = round.course_id ? must(await sb.from('tees').select('id, name, holes(number, par, stroke_index)').eq('course_id', round.course_id), 'tees') : []
-if (!tees.length) {
+if (!round.course_id) {
   console.error('The round has no course: load one in Comité › Campos and assign it in Rondas.')
   process.exit(1)
 }
-const roundTees = must(await sb.from('round_tees').select('player_id, tee_id').eq('round_id', round.id), 'round_tees')
-const teeFor = (p) => tees.find((x) => x.id === (roundTees.find((rt) => rt.player_id === p.id)?.tee_id ?? p.default_tee_id)) ?? tees[0]
-
-// Day-1 points for the anti-sandbag cut when simulating a later round.
-const earlier = rounds.filter((r) => r.number < round.number && r.status !== 'cancelled')
-const cutFor = new Map()
-if (earlier.length) {
-  const first = earlier[0]
-  const prev = must(await sb.from('scores').select('player_id, hole, strokes, picked_up').eq('round_id', first.id), 'day1 scores')
-  // Day-1 points are scored on the tee each player had that day (it may differ from today's).
-  const firstTees = must(await sb.from('round_tees').select('player_id, tee_id').eq('round_id', first.id), 'day1 round_tees')
-  const firstRound = rounds.find((r) => r.id === first.id)
-  const firstCourseTees = firstRound?.course_id && firstRound.course_id !== round.course_id ? must(await sb.from('tees').select('id, holes(number, par, stroke_index)').eq('course_id', firstRound.course_id), 'day1 tees') : tees
-  const firstTeeFor = (p) => firstCourseTees.find((x) => x.id === (firstTees.find((rt) => rt.player_id === p.id)?.tee_id ?? p.default_tee_id)) ?? firstCourseTees[0]
-  for (const p of players) {
-    const tee = firstTeeFor(p)
-    const ph = playingHcp(p.base_hcp)
-    let pts = 0
-    for (const s of prev.filter((x) => x.player_id === p.id)) {
-      const h = tee.holes.find((x) => x.number === s.hole)
-      if (!h || s.picked_up || s.strokes == null) continue
-      pts += Math.max(0, h.par + strokesReceived(ph, h.stroke_index) - s.strokes + 2)
-    }
-    const c = S.day2Cut
-    cutFor.set(p.id, pts > c.threshold ? Math.min(c.maxStrokes, Math.floor((pts - c.threshold) / c.pointsPerStroke)) : 0)
+// ARCH-16: each player's strokes on each hole are the engine's own (src/data/testing/simulation.ts, loaded through
+// Vite): his tee, the course handicap, the allowance, the day 2 cut and any override, as the boards will score them.
+// The script used to work them out again in JS.
+const roundIds = rounds.map((r) => r.id)
+const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))]
+const courses = must(await sb.from('courses').select('*').in('id', courseIds), 'courses')
+const tees = must(await sb.from('tees').select('*').in('course_id', courseIds), 'tees')
+const holes = tees.length ? must(await sb.from('holes').select('*').in('tee_id', tees.map((x) => x.id)), 'holes') : []
+if (!tees.some((x) => x.course_id === round.course_id)) {
+  console.error('The round has no course: load one in Comité › Campos and assign it in Rondas.')
+  process.exit(1)
+}
+/**
+ * Every row of the tournament's days, page by page in its primary key's order: a response holds at most the
+ * project's «Max rows» (DB-20), and 60 players' days hold more. It ends on an empty page, never a short one.
+ */
+async function every(table, key) {
+  const rows = []
+  for (;;) {
+    let q = sb.from(table).select('*').in('round_id', roundIds)
+    for (const c of key) q = q.order(c)
+    const page = must(await q.range(rows.length, rows.length + 999), table)
+    if (!page.length) return rows
+    rows.push(...page)
   }
 }
-function playingHcp(base) {
-  const x = S.handicap.allowance * Math.min(base, S.handicap.cap)
-  return Math.floor(x + 0.5)
-}
-function strokesReceived(ph, si) {
-  return Math.floor(ph / 18) + (si <= ph % 18 ? 1 : 0)
-}
+const roundTees = await every('round_tees', ['round_id', 'player_id'])
+const scores = await every('scores', ['id'])
+const overrides = await every('handicap_overrides', ['round_id', 'player_id'])
+const { runnerImport } = await import('vite')
+const { module: simulation } = await runnerImport(new URL('../src/data/testing/simulation.ts', import.meta.url).pathname, { configFile: false, logLevel: 'error' })
+const day = simulation.dayStrokes({ tournament: t, players, rounds, courses, tees, holes, roundTees, scores, overrides }, round.id)
 
 if (reset) {
   must(await sb.from('snake_tiebreaks').delete().eq('round_id', round.id).select('hole'), 'reset tiebreaks')
@@ -133,13 +129,11 @@ for (let i = 0; i < Math.min(maxHoles, holesPerRound); i++) {
     for (const gm of g.group_members) {
       const p = players.find((x) => x.id === gm.player_id)
       if (!p) continue
-      const tee = teeFor(p)
-      const h = tee.holes.find((x) => x.number === hole)
+      const h = day.holes.get(p.id)?.get(hole)
       if (!h) continue
-      const ph = Math.max(0, playingHcp(p.base_hcp) - (cutFor.get(p.id) ?? 0))
-      const sr = strokesReceived(ph, h.stroke_index)
+      const sr = h.strokesReceived
       // Noise: harder holes (low SI) skew worse; better players skew better.
-      const r = rng() + (h.stroke_index <= 6 ? 0.08 : 0) - (p.base_hcp < 10 ? 0.08 : 0)
+      const r = rng() + (h.strokeIndex <= 6 ? 0.08 : 0) - (p.base_hcp < 10 ? 0.08 : 0)
       const noise = r < 0.12 ? -1 : r < 0.5 ? 0 : r < 0.78 ? 1 : r < 0.92 ? 2 : 3
       let strokes = Math.max(1, h.par + sr + noise)
       const r3 = rng()
@@ -149,7 +143,7 @@ for (let i = 0; i < Math.min(maxHoles, holesPerRound); i++) {
       const saved = pickedUp ? null : Math.min(putts, strokes)
       rows.push({ round_id: round.id, player_id: p.id, hole, strokes, putts: saved, picked_up: pickedUp, entered_by: null, client_ts: new Date().toISOString() })
       // Only what was actually saved counts toward the snake (a 3-putt clamped to 2 by a 2-stroke hole is not one).
-      if (saved != null && saved >= S.modules.snake.puttsThreshold) threePutters.push(p.id)
+      if (saved != null && saved >= day.settings.modules.snake.puttsThreshold) threePutters.push(p.id)
     }
     if (rows.length) must(await sb.from('scores').upsert(rows, { onConflict: 'round_id,player_id,hole' }).select('hole'), `scores g${g.number} h${hole}`)
     if (threePutters.length >= 2) {

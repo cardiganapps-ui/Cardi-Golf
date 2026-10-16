@@ -14,7 +14,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import { makeGroup, PAR_72, score } from '../../engine/testing/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { GamesScreen } from './GamesScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 /** match8's Juegos, opened on the main event («Match play»). */
 function matchBoard(edit?: (s: Snapshot) => void) {

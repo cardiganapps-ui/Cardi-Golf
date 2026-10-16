@@ -7,7 +7,8 @@ import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { buildLabel } from '../../lib/build'
 import { InstallRow } from '../../components/InstallGuide'
-import { Avatar, CopyButton, ShareButton, Sheet, Toggle, toast } from '../../components/ui'
+import { Avatar, CopyButton, ShareButton, Sheet, Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
 import { contrastOn, setContrastChoice, setThemeChoice, useAppearance, type ThemeChoice } from '../../lib/theme'
 import { Segmented } from '../../components/primitives'
@@ -104,7 +105,7 @@ export function MoreScreen() {
         </div>
       </div>
 
-      {me.isAdmin && (
+      {me.isComite && (
         <Link className="btn btn--primary btn--block" to={`/t/${slug}/admin`} {...preloadOnIntent(AdminLayout)}>
           {t.more.admin}
         </Link>
@@ -139,7 +140,7 @@ export function MoreScreen() {
         <Link className={styles.link} to={`/t/${slug}/tv`} {...preloadOnIntent(TvScreen)}>
           <IconTv /> {t.more.tv}
         </Link>
-        {me.isAdmin && (
+        {me.isComite && (
           <Link className={styles.link} to={`/t/${slug}/ceremonia`} {...preloadOnIntent(CeremonyScreen)}>
             <IconTrophy /> {t.more.ceremony}
           </Link>

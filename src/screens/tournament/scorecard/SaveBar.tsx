@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from 'react'
 import { IconCheck } from '../../../components/icons'
-import { useOnline } from '../../../components/OfflineBanner'
+import { useOnline } from '../../../components/online'
 import { hasStoredSession, useAuth } from '../../../data/auth'
 import { useOutbox } from '../../../data/outbox'
 import { t } from '../../../i18n/es-MX'

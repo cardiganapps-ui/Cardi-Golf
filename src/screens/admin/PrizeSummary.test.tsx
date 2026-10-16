@@ -19,7 +19,7 @@ afterEach(() => cleanup())
 
 describe('a prize nobody can win, on screen (MONEY-09)', () => {
   it('the statement balances and still lists the 4th place with its $2,000', () => {
-    render(<PrizeSummary check={checkPrizePool(settings, { players: 3 })} players={3} />)
+    render(<PrizeSummary check={checkPrizePool(settings, { players: 3 })} players={3} currency="MXN" />)
     expect(screen.getByText(A.balanced)).toBeTruthy()
     expect(screen.getByText(A.unreachableTitle)).toBeTruthy()
     const line = screen.getByText('4 lugares con premio y 3 jugadores').closest('div')!
@@ -27,7 +27,7 @@ describe('a prize nobody can win, on screen (MONEY-09)', () => {
   })
 
   it('with a 4th player there is nothing to list', () => {
-    render(<PrizeSummary check={checkPrizePool({ ...settings, entryFee: 1500 }, { players: 4 })} players={4} />)
+    render(<PrizeSummary check={checkPrizePool({ ...settings, entryFee: 1500 }, { players: 4 })} players={4} currency="MXN" />)
     expect(screen.queryByText(A.unreachableTitle)).toBeNull()
   })
 

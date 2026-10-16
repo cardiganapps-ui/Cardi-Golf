@@ -8,13 +8,15 @@ import { changedFields } from './auditDiff'
 import { auditNames, fieldLabel, fieldValue, holeValue } from './auditFields'
 import { localWhen } from './localWhen'
 import { formatMoney } from './money'
+import { parseSettings } from '../engine/settings/schema'
 
 const V = t.admin.history.value
 const fx = getFixture('full12-live')!
 const s = fx.snapshot
 const names = auditNames(s)
-const tz = s.tournament.timezone
-const show = (key: string, v: unknown, table = 'scores') => fieldValue(key, v, table, names, tz)
+// The tournament's zone and currency are its settings' (ARCH-06).
+const { timezone: tz, currency } = parseSettings(s.tournament.settings)
+const show = (key: string, v: unknown, table = 'scores') => fieldValue(key, v, table, names, tz, currency)
 const [ana, beto] = s.players
 const round = s.rounds[0]!
 const group = s.groups[0]!
@@ -33,7 +35,7 @@ describe('what an id names', () => {
   it('a pair by its name, or its two players; a team and a lot by what they are', () => {
     const pair = { id: 'pr1', name: null, player1Id: ana!.id, player2Id: beto!.id, kind: 'AD', pickedByHonoree: false, drawnAt: null }
     const named = auditNames({ ...s, pairs: [pair, { ...pair, id: 'pr2', name: 'Los novios' }], teams: [{ id: 'tm1', name: null, number: 3, playerIds: [], drawnAt: null }], calcuttaLots: [{ id: 'l1', playerId: ana!.id, lotNumber: 4, status: 'sold', price: 750, ownerId: beto!.id, soldAt: null }] })
-    const val = (key: string, v: string) => fieldValue(key, v, 'x', named, tz)
+    const val = (key: string, v: string) => fieldValue(key, v, 'x', named, tz, currency)
     expect(val('pair_id', 'pr1')).toBe(t.common.andList([ana!.displayName, beto!.displayName]))
     expect(val('pair_id', 'pr2')).toBe('Los novios')
     expect(val('team_id', 'tm1')).toBe(V.team(3))
@@ -47,7 +49,7 @@ describe('what an id names', () => {
 
 describe('how a value reads', () => {
   it('money, moments in the tournament’s zone, a tee time, flags, images', () => {
-    expect(show('amount', 2500, 'payments')).toBe(formatMoney(2500))
+    expect(show('amount', 2500, 'payments')).toBe(formatMoney(2500, 'MXN'))
     expect(show('signed_at', '2027-04-09T22:15:00Z', 'card_signatures')).toBe(localWhen('2027-04-09T22:15:00Z', tz))
     expect(show('tee_time', '09:10:00', 'groups')).toBe('09:10')
     expect(show('picked_up', true)).toBe(V.yes)

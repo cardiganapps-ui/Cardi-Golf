@@ -22,7 +22,8 @@ import { useTournament } from '../data/tournamentStore'
 import { closeCheck, type CloseCheck } from '../engine/close'
 import { humanError } from '../lib/humanError'
 import { ConfirmSheet } from './ConfirmSheet'
-import { Sheet, toast } from './ui'
+import { Sheet } from './ui'
+import { toast } from './toast'
 
 const C = t.closeGate
 

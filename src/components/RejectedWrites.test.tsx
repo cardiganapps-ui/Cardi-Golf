@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 const toasts = vi.hoisted(() => [] as string[])
-vi.mock('./ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('./ui')>()), toast: vi.fn((msg: string) => void toasts.push(msg)) }))
+vi.mock('./toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('./toast')>()), toast: vi.fn((msg: string) => void toasts.push(msg)) }))
 const outbox = vi.hoisted(() => ({ discarded: [] as string[], resent: [] as string[] }))
 vi.mock('../data/outbox', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../data/outbox')>()),
@@ -32,7 +32,7 @@ import { dataFromSnapshot, useTournament } from '../data/tournamentStore'
 import type { Snapshot } from '../engine/types'
 import { t } from '../i18n/es-MX'
 import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { RejectedWrites } from './RejectedWrites'
 
 const IB = t.admin.inbox
@@ -49,16 +49,16 @@ const hole11: RejectedItem = {
   at: 1,
 }
 
-function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isAdmin?: boolean; rejected?: RejectedItem[]; me?: string } = {}) {
+function mount(ui: 'tarjeta' | 'list', opts: { edit?: (s: Snapshot) => void; isComite?: boolean; rejected?: RejectedItem[]; me?: string } = {}) {
   const fx = getFixture('full12-live')!
   const snapshot = structuredClone(fx.snapshot)
   opts.edit?.(snapshot)
   useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(snapshot) })
-  const me = { playerId: opts.me ?? CAMILO, isOrganizer: false, isAdmin: opts.isAdmin ?? false }
+  const me = { playerId: opts.me ?? CAMILO, isOrganizer: false, isComite: opts.isComite ?? false }
   const view = render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'viaje', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
-        {ui === 'tarjeta' ? <ScorecardScreen /> : <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />}
+        {ui === 'tarjeta' ? <ScorecardScreen /> : <RejectedWrites canResend={me.isComite} playerId={me.playerId} />}
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
@@ -187,7 +187,7 @@ describe('a hole save_hole refused and kept for the Comité (REL-08, 0026)', () 
   })
 
   it('on a Comité device the line is not said: it is the Comité', () => {
-    mount('list', { edit: finishDay2, isAdmin: true, rejected: [{ ...hole11, atServer: true }] })
+    mount('list', { edit: finishDay2, isComite: true, rejected: [{ ...hole11, atServer: true }] })
     expect(list().queryByText(/quedó para el Comité/)).toBeNull()
   })
 })
@@ -293,7 +293,7 @@ describe('the refused list says what stands in the way now, and who can send it 
   })
 
   it('a Comité device resends anything, is not asked to send it to itself, and keeps the server\'s reason', () => {
-    mount('list', { edit: finishDay2, isAdmin: true })
+    mount('list', { edit: finishDay2, isComite: true })
     expect(list().getByText(IB.rejectedHint)).toBeTruthy()
     expect(list().getByRole('button', { name: new RegExp(`^${IB.resend}`) })).toBeTruthy()
     expect(list().queryByRole('button', { name: IB.sendToComite })).toBeNull()

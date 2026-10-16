@@ -23,7 +23,7 @@ import { useRejectedInbox } from '../../data/rejectedInbox'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { QuickFinish } from '../tournament/QuickFinish'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminRounds } from './AdminRounds'
 
 const R = t.admin.rounds
@@ -33,7 +33,7 @@ afterEach(() => {
   useRejectedInbox.setState({ tournamentId: null, items: [], status: 'idle', error: null, fixture: false })
 })
 
-function mount(ui: ReactElement, name = 'full12-live', edit?: (s: Snapshot) => void, me?: { playerId: string | null; isOrganizer: boolean; isAdmin: boolean }) {
+function mount(ui: ReactElement, name = 'full12-live', edit?: (s: Snapshot) => void, me?: { playerId: string | null; isOrganizer: boolean; isComite: boolean }) {
   const fx = getFixture(name)!
   const snapshot = structuredClone(fx.snapshot)
   edit?.(snapshot)
@@ -75,7 +75,7 @@ it('…also when Tarjetas has nothing pending: that is when a phone\'s unsent ho
 })
 
 it('«Terminar y publicar» on a Ronda rápida asks the same', async () => {
-  mount(<QuickFinish />, 'minimal4-live', (s) => void (s.tournament.quick = true), { playerId: 'p1', isOrganizer: true, isAdmin: true })
+  mount(<QuickFinish />, 'minimal4-live', (s) => void (s.tournament.quick = true), { playerId: 'p1', isOrganizer: true, isComite: true })
   fireEvent.click(screen.getByRole('button', { name: t.quick.finishTitle }))
   expect((await screen.findByRole('dialog', { name: t.quick.finishTitle })).textContent).toContain(R.phonesBeforeFinish)
 })

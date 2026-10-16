@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Avatar, CopyButton, ShareButton, Sheet, Spinner, toast } from '../../components/ui'
+import { Avatar, CopyButton, ShareButton, Sheet, Spinner } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Money, ScorecardGrid } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { TournamentLogo } from '../../components/TournamentLogo'
@@ -298,7 +299,7 @@ export function ProfileView({
                     <span className={styles.rowTitle}>{P.moneyTotal}</span>
                   </span>
                   <span className={styles.rowFig}>
-                    <Money amount={net} signed />
+                    <Money amount={net} signed currency={cur} />
                   </span>
                 </div>
               ))}
@@ -308,7 +309,7 @@ export function ProfileView({
                     <span className={styles.rowTitle}>{m.name}</span>
                   </span>
                   <span className={styles.rowFig}>
-                    <Money amount={m.net} signed />
+                    <Money amount={m.net} signed currency={m.currency} />
                   </span>
                 </Link>
               ))}

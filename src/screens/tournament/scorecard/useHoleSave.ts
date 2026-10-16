@@ -12,7 +12,7 @@
  */
 import { burst } from '../../../lib/confetti'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
-import { toast } from '../../../components/ui'
+import { toast } from '../../../components/toast'
 import { useOutbox } from '../../../data/outbox'
 import type { HoleResult } from '../../../engine/core/types'
 import { t } from '../../../i18n/es-MX'

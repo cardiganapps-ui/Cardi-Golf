@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../../data/api', () => api)
 vi.mock('../tournament/tournamentContext', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
-vi.mock('../../components/ui', async (orig) => ({ ...(await orig<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (orig) => ({ ...(await orig<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
 const cancelAnimation = Animation.prototype.cancel

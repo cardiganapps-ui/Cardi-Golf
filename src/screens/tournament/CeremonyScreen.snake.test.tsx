@@ -17,7 +17,7 @@ import { proRata } from '../../engine/core/unassigned'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
 import { CeremonyScreen } from './CeremonyScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const C = t.ceremony
 afterEach(() => cleanup())

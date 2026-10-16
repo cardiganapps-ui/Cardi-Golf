@@ -64,6 +64,43 @@ export default tseslint.config(
     },
   },
   {
+    // ARCH-20: the layers point one way. The engine is pure (its copy from src/i18n, a few helpers from src/lib);
+    // the data layer, src/lib and the copy never reach up into a screen, a component or the app shell. The
+    // session's type lived in a screen and the cache of the boards imported it from there.
+    files: ['src/engine/**/*.{ts,tsx}', 'src/data/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}', 'src/i18n/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/screens/**', '**/components/**', '**/app/**', '**/design/**', '**/dev/**'],
+              message: 'src/engine, src/data, src/lib and src/i18n never import from the screens, components, app, design or dev folders (ARCH-20): move the shared type or helper down.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/engine/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/screens/**', '**/components/**', '**/app/**', '**/design/**', '**/dev/**', '**/data/**'],
+              message: 'The engine is pure (ARCH-20): it never imports the data layer, a screen, a component or the app.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['scripts/**/*.mjs', 'e2e/**/*.mjs', '*.js'],
     extends: [js.configs.recommended],
     languageOptions: { ecmaVersion: 2022, globals: { ...globals.node } },

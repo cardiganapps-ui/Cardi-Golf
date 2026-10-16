@@ -14,6 +14,8 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner, Toggle } from '../../components/ui'
 import { tournamentAudit, type AuditEntry, type AuditFilter } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
+import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
+import { useCurrency } from '../../components/currency'
 import { relTime } from '../../lib/relTime'
 import { changedFields } from '../../lib/auditDiff'
 import { auditNames, fieldLabel, fieldValue } from '../../lib/auditFields'
@@ -37,7 +39,9 @@ export function AdminHistory() {
   const snapshot = useTournament((s) => s.data?.snapshot)
   const players = snapshot?.players
   const rounds = snapshot?.rounds
-  const timeZone = snapshot?.tournament.timezone ?? 'America/Mazatlan'
+  // The tournament's zone and currency are its settings (ARCH-06); the columns of the same names are their mirror.
+  const timeZone = useTournament((s) => s.data?.settings.timezone) ?? DEFAULT_SETTINGS.timezone
+  const currency = useCurrency()
   const [entries, setEntries] = useState<AuditEntry[] | null>(null)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -242,7 +246,7 @@ export function AdminHistory() {
             <span className="label">{H.fields}</span>
             <div className={a.rows}>
               {changedFields(open).map((f) => {
-                const show = (v: unknown) => fieldValue(f.key, v, open.table, names, timeZone)
+                const show = (v: unknown) => fieldValue(f.key, v, open.table, names, timeZone, currency)
                 return (
                   <div key={f.key} className={a.row}>
                     <span className={a.rowText}>

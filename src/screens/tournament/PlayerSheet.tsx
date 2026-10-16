@@ -23,6 +23,7 @@ import { figureKind, holeStrokes, mainScoring, strokesWhy, type Figure } from '.
 import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
+import { useCurrency } from '../../components/currency'
 
 /**
  * Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a
@@ -36,6 +37,7 @@ export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { pl
 })
 
 function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: string; open: boolean; onClose: () => void; onExited: () => void }) {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)
   /** The in-memory fixtures have no server to ask a card's history of (TRUST-14). */
   const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
@@ -126,7 +128,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
             {hc?.estimated ? ` (${t.admin.players.estimated})` : ''}
             {rounds.filter((r) => r.pr).map(({ round, pr }) => `, ${t.player.dayHcp(round.number, pr!.playingHcp, pr!.cut)}${pr!.overridden ? ` (${t.admin.handicaps.override.toLowerCase()})` : ''}`)}
           </p>
-          {hcpChange && <HandicapChanges change={hcpChange} timeZone={snapshot.tournament.timezone} />}
+          {hcpChange && <HandicapChanges change={hcpChange} timeZone={settings.timezone} />}
         </section>
 
         {rounds.map(({ round, pr }, idx) =>
@@ -171,7 +173,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
         )}
 
         {/* TRUST-14: how each hole got to what it holds, for everyone in the tournament; never from a link to watch. */}
-        {!spectator && !fixture && rounds.some((r) => r.pr) && <CardHistory key={p.id} tournamentId={tournamentId} playerId={p.id} timeZone={snapshot.tournament.timezone} />}
+        {!spectator && !fixture && rounds.some((r) => r.pr) && <CardHistory key={p.id} tournamentId={tournamentId} playerId={p.id} timeZone={settings.timezone} />}
 
         {(pair || myLot || owned.length > 0) && (
           <section className={styles.section}>
@@ -187,7 +189,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
               <p className={styles.line}>
                 <span className="label">{settings.modules.auction.label}</span>
                 <br />
-                {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))}, {formatMoney(myLot.price)}
+                {t.player.ownedBy}: {t.common.andList(myLot.owners.map((o) => `${nameOf(o.ownerId)} ${o.pct}%`))}, {formatMoney(myLot.price, cur)}
               </p>
             )}
             {owned.length > 0 && showMoney && (
@@ -210,13 +212,13 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
                       {m.label}
                       {!m.final && <span className="help">{t.money.ifEndedNow}</span>}
                     </span>
-                    <HowCalculated why={m.why} label={formatMoney(m.amount)} about={m.label} />
+                    <HowCalculated why={m.why} label={formatMoney(m.amount, cur)} about={m.label} />
                   </div>
                 ))}
                 {person && (
                   <div className={`${styles.row} ${styles.rowTotal}`}>
                     <span>
-                      {t.money.puts} {formatMoney(person.paid)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives)}
+                      {t.money.puts} {formatMoney(person.paid, cur)}, {t.money.receives.toLowerCase()} {formatMoney(person.receives, cur)}
                     </span>
                     <span className={`${styles.net} ${person.net < 0 ? styles.netNeg : ''}`}>
                       <Money amount={person.net} signed />

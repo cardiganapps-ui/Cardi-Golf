@@ -9,7 +9,8 @@
 import { useContext, useId, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'
-import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
+import { ErrorBox, Sheet, Spinner } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { NoticeNote } from '../../components/LegalLinks'
@@ -22,7 +23,8 @@ import { blobToBase64, extensionFor, prepareImage } from '../../lib/images'
 import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from '../../lib/courseApi'
 import { hitRef, type ProviderCourse, type ProviderSearchHit } from '../../lib/courseProviders/types'
 import { useCourses } from './useCourses'
-import { blankTee, CourseEditor } from './CourseEditor'
+import { CourseEditor } from './CourseEditor'
+import { blankTee } from './courseCells'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
 
@@ -50,7 +52,7 @@ export function AdminCourses() {
   const data = useTournament((s) => s.data)
   const loadedId = useTournament((s) => s.tournamentId)
   const here = ctx && data && loadedId === ctx.tournamentId ? data.snapshot : null
-  const mayVerify = !!here && !!ctx?.me.isAdmin && here.tournament.status === 'finished' && !here.tournament.quick && here.tournament.countsForStats
+  const mayVerify = !!here && !!ctx?.me.isComite && here.tournament.status === 'finished' && !here.tournament.quick && here.tournament.countsForStats
   const played = useMemo(() => new Set((here?.rounds ?? []).map((r) => r.courseId).filter(Boolean)), [here])
   const [verifying, setVerifying] = useState<CatalogCourse | null>(null)
   const uid = useAuth((s) => s.user?.id ?? null)

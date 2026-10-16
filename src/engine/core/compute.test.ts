@@ -98,6 +98,47 @@ describe('computeCore', () => {
     expect(core.rounds.r2!.p1!.courseHcp).toBe(4) // 8.1 + (68 − 72) = 4.1
   })
 
+  // MONEY-21: the finding's case. Index +1.2 on a par-rated tee is a course handicap of −1; at 100% it plays −1 and
+  // gives that stroke back on SI 18, as the Polo index reads the same round. It used to play off 0.
+  it('a plus index gives a stroke back on the easiest hole', () => {
+    const settings = structuredClone(FIRST_TOURNAMENT_SETTINGS)
+    settings.handicap.allowance = 1
+    const course = makeCourse('course1', [makeTee('tee1', 'course1', { rating: 72, slope: 113 })])
+    const snap = makeSnapshot({ players: [makePlayer(1, { handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 })], rounds: 2, courses: [course], settings })
+    const holes = course.tees[0]!.holes
+    const easiest = holes.find((h) => h.strokeIndex === 18)!
+    for (const h of holes) snap.scores.push(score('r1', 'p1', h.number, h.par))
+    const core = computeCore(snap, settings)
+    const pr = core.rounds.r1!.p1!
+    expect(pr.courseHcp).toBe(-1)
+    expect(pr.playingHcp).toBe(-1)
+    expect(pr.playingHcpWhy.title).toBe('Hándicap de juego +1')
+    const easy = pr.holes.find((x) => x.hole === easiest.number)!
+    expect(easy.strokesReceived).toBe(-1)
+    // Par there is a net bogey: 1 point, and 35 on a round of pars.
+    expect(easy.points).toBe(1)
+    expect(easy.net).toBe(easiest.par + 1)
+    expect(easy.why.steps).toEqual([
+      `${easiest.par} golpes en un par ${easiest.par}, dando 1 golpe (hándicap por debajo de 0) en este hoyo (índice de golpe 18): ${easiest.par + 1} neto, bogey neto, 1 pt`,
+      `${easiest.par} + 1 = ${easiest.par + 1} neto`,
+      `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${easiest.par} − 1 − ${easiest.par} + 2 = 1 pt`,
+    ])
+    expect(pr.holes.filter((x) => x.strokesReceived !== 0).map((x) => x.hole)).toEqual([easiest.number])
+    expect(pr.points).toBe(35)
+  })
+
+  it('a cut never moves a plus handicap up to scratch (§5.2: nobody gets strokes added)', () => {
+    const settings = structuredClone(FIRST_TOURNAMENT_SETTINGS)
+    settings.handicap.allowance = 1
+    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: -2 })], rounds: 2, settings })
+    // Gross birdies on every hole: 4 points each, 72 on day 1, so the day 2 cut is the maximum.
+    for (const h of snap.courses[0]!.tees[0]!.holes) snap.scores.push(score('r1', 'p1', h.number, h.par - 1))
+    const core = computeCore(snap, settings)
+    expect(core.rounds.r2!.p1!.cut).toBe(4)
+    expect(core.rounds.r2!.p1!.playingHcp).toBe(-2)
+    expect(core.rounds.r2!.p1!.playingHcpWhy.steps).toContain('Juega con +2: no recibe golpes, así que el recorte no le quita nada')
+  })
+
   it('a manual handicap is used unchanged even with a rated tee', () => {
     const course = makeCourse('course1', [makeTee('tee1', 'course1', { rating: 71.2, slope: 128 })])
     const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 1, courses: [course], settings: FIRST_TOURNAMENT_SETTINGS })

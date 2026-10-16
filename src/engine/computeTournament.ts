@@ -13,19 +13,14 @@ import { computeMoney, type MoneyState } from './core/money'
 import { applyAdjustments, bucketLabel, heldMoney, openDays, unassignedBuckets } from './core/unassigned'
 import { computeStats, type StatsState } from './core/stats'
 import { computeFeed, type FeedEvent } from './core/feed'
-import { ALL_MODULES, type AnyModule } from './modules'
-import type { ModuleContext, PrizeAward } from './modules/module'
-import type { AuctionState } from './modules/auction'
-import type { BestRoundState } from './modules/bestRound'
-import type { FewestPuttsState } from './modules/fewestPutts'
-import type { IndividualState } from './modules/individual'
-import type { PairsState } from './modules/pairs'
+import { ALL_MODULES, type ModuleRegistry, type ModuleStates } from './modules'
 import type { SnakeState } from './modules/snake'
-import { ALL_GAMES, type AnyGame } from './games'
-import type { GameContext, GameResultState } from './games/game'
+import { ALL_GAMES } from './games'
+import type { Game, GameConfigFor, GameContext, GameImpl, GameResultFor, GameResultState, ModuleContext, PrizeAward } from './games/game'
 import { gamePot } from './games/payout'
 import { pesos } from './core/pesos'
-import type { GameType } from './settings/games'
+import { isFinal } from './core/ranking'
+import type { GameConfig, GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
 import { mainScoring, ranksPlayersByTotal } from './formats'
 import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeCheck'
@@ -36,14 +31,7 @@ import { cardSignedFor, cardSigningMode } from './core/cardSigning'
 /** "$27,500": the engine's one formatter (core/pesos.ts). */
 const peso = pesos
 
-export interface ModuleStates {
-  individual?: IndividualState
-  bestRound?: BestRoundState
-  pairs?: PairsState
-  snake?: SnakeState
-  fewestPutts?: FewestPuttsState
-  auction?: AuctionState
-}
+export type { ModuleStates }
 
 /** A card waiting for its signature: a pair's (tarjeta cruzada) or one player's (a marker's). */
 export type UnsignedCard = { roundId: Id; pairId: Id } | { roundId: Id; playerId: Id }
@@ -101,9 +89,25 @@ export interface TournamentState {
 
 export interface ComputeOptions {
   /** Override the module implementations (tests). */
-  modules?: Partial<Record<ModuleId, AnyModule>>
-  /** Override the instance-game implementations (tests). */
-  games?: Partial<Record<GameType, AnyGame>>
+  modules?: Partial<ModuleRegistry>
+  /**
+   * Stand in for instance-game types (tests): a stand-in knows no type's
+   * config and its state is its test's own, so it is typed as neither.
+   */
+  games?: { [K in GameType]?: GameImpl }
+}
+
+/** What running one game gives: its state, its prizes and its warnings. */
+interface GameRun<S> {
+  state: S
+  prizes: PrizeAward[]
+  warnings: string[]
+}
+
+/** The one runner both kinds of game go through (ARCH-15). */
+function run<S, Ctx extends ModuleContext>(game: Game<S, Ctx>, ctx: Ctx): GameRun<S> {
+  const state = game.compute(ctx)
+  return { state, prizes: game.prizes(state, ctx), warnings: game.warnings?.(state, ctx) ?? [] }
 }
 
 export function computeTournament(snapshot: Snapshot, settings: TournamentSettings, opts: ComputeOptions = {}): TournamentState {
@@ -121,56 +125,66 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // prizes are «por asignar» from then on, and the rest is what Terminado pays.
   const tournamentFinal = snapshot.tournament.status === 'finished' || playOver
   const ctx: ModuleContext = { snapshot, settings, core, tournamentFinal, roundFinal }
-  const impls = { ...ALL_MODULES, ...opts.modules }
+  const impls: Partial<ModuleRegistry> = { ...ALL_MODULES, ...opts.modules }
 
   const modules: ModuleStates = {}
   const prizes: PrizeAward[] = []
   const missingModules: ModuleId[] = []
+  /** Each enabled module's warnings, by id: the pairs' group composition is kept apart, see the flags. */
+  const moduleWarnings: Partial<Record<ModuleId, string[]>> = {}
+  const runModule = <K extends ModuleId>(id: K, mod: ModuleRegistry[K]) => {
+    const r = run(mod, ctx)
+    modules[id] = r.state
+    prizes.push(...r.prizes)
+    moduleWarnings[id] = r.warnings
+  }
   for (const id of MODULE_IDS) {
     if (!settings.modules[id].enabled) continue
     const mod = impls[id]
-    if (!mod) {
-      missingModules.push(id)
-      continue
-    }
-    const state = mod.compute(ctx)
-    ;(modules as Record<string, unknown>)[id] = state
-    prizes.push(...mod.prizes(state, ctx))
+    if (mod) runModule(id, mod)
+    else missingModules.push(id)
   }
 
   // Instance games (skins, matches, contests, custom bets...).
   const games: Record<string, GameResultState> = {}
   const missingGames: string[] = []
   const gameWarnings: string[] = []
-  const gameImpls = { ...ALL_GAMES, ...opts.games }
   const roster = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.id)
   const roundNumber = new Map(snapshot.rounds.map((r) => [r.id, r.number]))
-  for (const config of settings.games) {
-    if (!config.enabled) continue
-    const impl = gameImpls[config.type]
-    if (!impl) {
-      missingGames.push(config.id)
-      gameWarnings.push(t.outdated.game(config.label))
-      continue
-    }
-    const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
-    const entrants = config.entrants === 'all' ? roster : roster.filter((id) => listed.has(id))
-    const roundIds = config.rounds === 'all' ? core.roundIds : core.roundIds.filter((rid) => (config.rounds as number[]).includes(roundNumber.get(rid) ?? 0))
-    const final = tournamentFinal || (roundIds.length > 0 && roundIds.every((rid) => roundFinal[rid]))
-    const pot = gamePot(config, entrants.length)
-    const gctx: GameContext = { ...ctx, config, entrants, roundIds, pot, final }
-    const state = impl.compute(gctx)
-    const board = impl.board(state, gctx)
-    games[config.id] = { config, entrants, pot, final, state, board }
-    prizes.push(...impl.prizes(state, gctx))
-    if (impl.warnings) gameWarnings.push(...impl.warnings(state, gctx))
-  }
-  // A newer build's game type: the row keeps it (`readSettings` set it aside), this build can't compute it (ARCH-04).
-  const unknownGames = unknownGamesOf(snapshot.tournament.settings).filter((g) => g.enabled)
-  for (const g of unknownGames) {
+  const outdated = (g: { id: string; label: string }) => {
     missingGames.push(g.id)
     gameWarnings.push(t.outdated.game(g.label))
   }
+  const gameContext = <C extends GameConfig>(config: C): GameContext<C> => {
+    const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
+    const entrants = config.entrants === 'all' ? roster : roster.filter((id) => listed.has(id))
+    const rounds = config.rounds
+    const roundIds = rounds === 'all' ? core.roundIds : core.roundIds.filter((rid) => rounds.includes(roundNumber.get(rid) ?? 0))
+    return { ...ctx, config, entrants, roundIds, pot: gamePot(config, entrants.length), final: isFinal(ctx, 'roundsOrTournament', roundIds) }
+  }
+  const runGame = <S, C extends GameConfig>(impl: GameImpl<S, C>, config: C) => {
+    const gctx = gameContext(config)
+    const r = run(impl, gctx)
+    prizes.push(...r.prizes)
+    gameWarnings.push(...r.warnings)
+    return { config, entrants: gctx.entrants, pot: gctx.pot, final: gctx.final, state: r.state, board: impl.board(r.state, gctx) }
+  }
+  // Each config through its own type's implementation, typed together (GameConfigFor), so the result is that type's.
+  const runShipped = <K extends GameType>(config: GameConfigFor<K>): GameResultFor<K> => runGame(ALL_GAMES[config.type], config)
+  for (const config of settings.games) {
+    if (!config.enabled) continue
+    if (opts.games && config.type in opts.games) {
+      const standIn = opts.games[config.type]
+      // A stand-in's state is its test's own: the record's types speak for the shipped games.
+      if (standIn) games[config.id] = runGame(standIn, config) as GameResultState
+      else outdated(config)
+      continue
+    }
+    games[config.id] = runShipped(config)
+  }
+  // A newer build's game type: the row keeps it (`readSettings` set it aside), this build can't compute it (ARCH-04).
+  const unknownGames = unknownGamesOf(snapshot.tournament.settings).filter((g) => g.enabled)
+  for (const g of unknownGames) outdated(g)
   const moneyUnknown = unknownGames.filter((g) => g.money).map((g) => g.label)
 
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
@@ -226,22 +240,11 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     }
   }
 
-  const discrepancies = snapshot.scores.filter((s) => s.disputed).map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
+  // The games' warnings in module order; a group that is not one pair of each kind (§18.5) is the field's, not the
+  // pairs' money, so it comes before them and never reaches «por asignar».
+  const moduleFlagWarnings = MODULE_IDS.flatMap((id) => [...(id === 'pairs' ? (modules.pairs?.groupWarnings.map((w) => w.message) ?? []) : []), ...(moduleWarnings[id] ?? [])])
 
-  const auctionWarnings: string[] = []
-  if (modules.auction) {
-    const unfilled = modules.auction.slots.filter((s) => s.unfilled)
-    if (unfilled.length) auctionWarnings.push(`${settings.modules.auction.label}: ${peso(modules.auction.unfilled)} sin asignar (${t.common.andList(unfilled.map((s) => s.label))}). El Comité decide.`)
-    // Nobody has a result (every day rained out): no slot is filled, the whole pot waits for the Comité (a refund goes back to each buyer).
-    if (tournamentFinal && modules.auction.pot > 0 && modules.auction.slots.length === 0) auctionWarnings.push(`${settings.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${peso(modules.auction.pot)} sin asignar. El Comité decide.`)
-    // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11): the Comité sells it, or knows he cashes nothing.
-    const unsold = modules.auction.lots.filter((l) => l.status !== 'sold')
-    const playing = tournamentFinal || snapshot.tournament.status === 'live' || snapshot.tournament.status === 'finished'
-    if (playing && unsold.length && modules.auction.soldCount > 0) {
-      const names = t.common.andList(unsold.map((l) => snapshot.players.find((p) => p.id === l.playerId)?.displayName ?? l.playerId))
-      auctionWarnings.push(`${settings.modules.auction.label}: ${unsold.length} lote${unsold.length === 1 ? '' : 's'} sin vender (${names}): no cobra${unsold.length === 1 ? '' : 'n'} la Calcutta.`)
-    }
-  }
+  const discrepancies = snapshot.scores.filter((s) => s.disputed).map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
 
   // The money plan against the real tournament (MONEY-06): settings are
   // checked when saved, but a player who never shows or a round added later
@@ -284,7 +287,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     auction: modules.auction,
     snake: modules.snake,
     games,
-    warnings: [...(modules.individual?.warnings ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings],
+    warnings: [...MODULE_IDS.flatMap((id) => moduleWarnings[id] ?? []), ...gameWarnings],
     closing: settled,
   })
   const applied = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], settled, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing: settled }))
@@ -320,7 +323,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       missingModules,
       missingGames,
       moneyUnknown,
-      warnings: [...poolWarnings, ...core.warnings, ...puttsWarnings, ...(modules.individual?.warnings ?? []), ...(modules.pairs?.groupWarnings.map((w) => w.message) ?? []), ...(modules.pairs?.warnings ?? []), ...auctionWarnings, ...gameWarnings, ...unassignedWarnings],
+      warnings: [...poolWarnings, ...core.warnings, ...puttsWarnings, ...moduleFlagWarnings, ...gameWarnings, ...unassignedWarnings],
       pool,
       poolWarning: poolWarnings[0] ?? null,
       handicapChanges: handicapChanges(snapshot, settings),

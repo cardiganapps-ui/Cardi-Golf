@@ -15,7 +15,7 @@ vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminScores } from './AdminScores'
 
 const IB = t.admin.inbox
@@ -27,7 +27,7 @@ function mount() {
   useTournament.setState({ tournamentId: 'fixture:firma4', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off', reload: async () => undefined } as never)
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/firma4', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/firma4', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminScores />
       </TournamentContext.Provider>
     </MemoryRouter>,

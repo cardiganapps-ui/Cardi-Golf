@@ -33,7 +33,7 @@ import { closeCheck } from '../../engine/close'
 import { t } from '../../i18n/es-MX'
 import { humanError } from '../../lib/humanError'
 import { Toaster } from '../../components/ui'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminData } from './AdminData'
 
 const C = t.closeGate

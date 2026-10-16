@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import cases from './cases/whs.json'
-import { adjustedGross, whsCourseHandicap, whsDiff10, whsIndex10, whsStrokes, type HoleIn } from './whs'
+import { courseHandicap, strokesReceived } from '../core/handicap'
+import { adjustedGross, whsDiff10, type HoleIn } from '../testing/whs'
+import { whsCourseHandicap, whsIndex10 } from './whs'
 
-// The same file is run against the SQL functions by scripts/rls-test.mjs.
+// The same file is run against the SQL functions by scripts/whs-parity.mjs, in the db job (ARCH-16).
 describe('WHS arithmetic (shared cases)', () => {
   it.each(cases.diff)('differential $ags on $rating10/$slope → $expect10 ($why)', (c) => {
     expect(whsDiff10(c.ags, c.rating10, c.slope)).toBe(c.expect10)
@@ -10,8 +12,13 @@ describe('WHS arithmetic (shared cases)', () => {
   it.each(cases.courseHcp)('course handicap of $index10 on $slope/$rating10 → $expect ($why)', (c) => {
     expect(whsCourseHandicap(c.index10, c.slope, c.rating10, c.par)).toBe(c.expect)
   })
+  // ARCH-16: the tournament engine's course handicap is the same arithmetic, explained.
+  it.each(cases.courseHcp)('the engine reads the course handicap of $index10 on $slope/$rating10 as $expect too', (c) => {
+    expect(courseHandicap(c.index10 / 10, { slope: c.slope, rating: c.rating10 / 10, par: c.par }).value).toBe(c.expect)
+  })
+  // One allocation in the product (MONEY-21): the engine's strokes received are the SQL's whs_strokes.
   it.each(cases.strokes)('course handicap $ch on SI $si → $expect strokes', (c) => {
-    expect(whsStrokes(c.ch, c.si)).toBe(c.expect)
+    expect(strokesReceived(c.ch, c.si)).toBe(c.expect)
   })
   it.each(cases.index)('index of $diffs10 → $expect10 ($why)', (c) => {
     const r = whsIndex10(c.diffs10)

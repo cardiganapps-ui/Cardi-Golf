@@ -19,7 +19,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { makeCourse, makeRound, makeTee } from '../../engine/testing/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminRounds } from './AdminRounds'
 
 const R = t.admin.rounds
@@ -32,7 +32,7 @@ function mount(edit: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: 't-rounds', data: dataFromSnapshot(snapshot) })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-rounds', slug: 'viaje', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-rounds', slug: 'viaje', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminRounds />
       </TournamentContext.Provider>
     </MemoryRouter>,

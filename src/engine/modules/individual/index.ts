@@ -8,7 +8,7 @@
  * and split the prizes.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
-import { countback, flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
+import { countback, flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { figureKind, formatFor, toParText, withTrueMinus, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -79,18 +79,13 @@ function rankStandings(ctx: ModuleContext) {
     if (!f || f.empty) return up ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY
     return (f.rank ?? f.value) + missing(id) * INCOMPLETE_OFFSET
   }
-  const compare = (a: Id, b: Id) => {
-    const va = rankValue(a)
-    const vb = rankValue(b)
-    if (va !== vb) return up ? vb - va : va - vb
-    return countback(standings.countback[a] ?? EMPTY_COUNTBACK, standings.countback[b] ?? EMPTY_COUNTBACK).result
-  }
+  // The format's figure, then the countback on the last round (§5.3).
   const order = new Map(standings.entrants.map((e, i) => [e.id, i]))
-  const groups = rankBy(
-    standings.entrants.map((e) => e.id),
-    compare,
-    (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
-  )
+  const groups = rankField(standings.entrants.map((e) => e.id), {
+    keys: [(id) => (up ? rankValue(id) : -rankValue(id))],
+    ties: { countback: (id) => standings.countback[id] ?? EMPTY_COUNTBACK },
+    order: (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
+  })
   return { format, standings, groups, rankValue, incomplete, expectedHoles }
 }
 
@@ -126,7 +121,7 @@ export function rankIndividual(ctx: ModuleContext): Array<RankGroup<Id> & { plac
   return out
 }
 
-export const individualModule: GameModule<IndividualState> = {
+export const individualModule: GameModule<IndividualState, 'individual'> = {
   id: 'individual',
   defaultLabel: 'Individual',
 
@@ -181,9 +176,13 @@ export const individualModule: GameModule<IndividualState> = {
       groups,
       lastPlace: anyScores || ctx.tournamentFinal ? (groups.at(-1)?.members ?? []) : [],
       prizes,
-      final: ctx.tournamentFinal,
+      final: isFinal(ctx, 'tournament'),
       warnings: [...standings.warnings, ...incompleteWarning(standings.entrants.filter((e) => incomplete(e.id)).map((e) => `${e.name} (${standings.thru[e.id] ?? 0} de ${expectedHoles})`)), ...unfilled],
     }
+  },
+
+  warnings(state) {
+    return state.warnings
   },
 
   prizes(state, ctx) {
@@ -198,21 +197,20 @@ export const individualModule: GameModule<IndividualState> = {
       const steps = [where, ...p.why.steps]
       // A team's prize is split between its members, so each is paid their share.
       const members = row.entrant.playerIds
-      const each = Math.floor(p.amount / members.length)
-      let remainder = p.amount - each * members.length
-      for (const playerId of members) {
-        const extra = remainder > 0 ? 1 : 0
-        remainder -= extra
+      const shares = splitEven(p.amount, members.length)
+      members.forEach((playerId, i) => {
+        const { amount, rounding: extra } = shares[i]!
+        const each = amount - extra
         out.push({
           moduleId: 'individual',
           label: `${label}, ${ordinal(row.label)}`,
           playerId,
-          amount: each + extra,
+          amount,
           final: state.final,
           // A member's line is titled with what the member is paid; the team's prize is a step (MONEY-15).
-          why: members.length > 1 ? { title: pesos(each + extra), steps: [...steps, `${row.entrant.name} lo reparte entre ${members.length}: ${pesos(p.amount)} entre ${members.length} = ${pesos(each)} cada uno${extra ? ', más $1 del redondeo' : ''}`] } : { ...p.why, steps },
+          why: members.length > 1 ? { title: pesos(amount), steps: [...steps, `${row.entrant.name} lo reparte entre ${members.length}: ${pesos(p.amount)} entre ${members.length} = ${pesos(each)} cada uno${extra ? ', más $1 del redondeo' : ''}`] } : { ...p.why, steps },
         })
-      }
+      })
     }
     return out
   },

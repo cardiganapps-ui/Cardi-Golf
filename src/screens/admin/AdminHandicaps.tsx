@@ -6,7 +6,8 @@
 import { useState } from 'react'
 import { handicapText, t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
-import { Avatar, Field, Sheet, toast } from '../../components/ui'
+import { Avatar, Field, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { deleteHandicapOverride, upsertHandicapOverride } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -86,12 +87,12 @@ export function AdminHandicaps() {
                   </span>
                   {/* A11Y-22: said with its words; a label on a bare span is dropped by most readers. */}
                   <span className={a.fig}>
-                    <span aria-hidden="true">{pr.playingHcp}</span>
-                    <span className="sr-only">{`${H.plays} ${pr.playingHcp}`}</span>
+                    <span aria-hidden="true">{handicapText(pr.playingHcp)}</span>
+                    <span className="sr-only">{`${H.plays} ${handicapText(pr.playingHcp)}`}</span>
                   </span>
                   <span className={a.rowActions}>
-                    <HowCalculated why={pr.playingHcpWhy} label="?" about={`${p.displayName}, ${H.plays} ${pr.playingHcp}`} />
-                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ playerId: p.id, value: pr.playingHcp, reason: '' })}>
+                    <HowCalculated why={pr.playingHcpWhy} label="?" about={`${p.displayName}, ${H.plays} ${handicapText(pr.playingHcp)}`} />
+                    <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ playerId: p.id, value: Math.max(0, pr.playingHcp), reason: '' })}>
                       {t.common.edit}
                     </button>
                     {pr.overridden && (
@@ -111,6 +112,7 @@ export function AdminHandicaps() {
         {editing && (
           <div className="stack">
             <p className={a.help}>{H.overrideHint}</p>
+            {/* An override is 0 to 60 (handicap_overrides' check): a plus handicap (MONEY-21) is not one it sets. */}
             <Field label={t.live.playingHcp}>
               <NumberField min={0} max={60} value={editing.value} onChange={(v) => setEditing({ ...editing, value: v })} />
             </Field>

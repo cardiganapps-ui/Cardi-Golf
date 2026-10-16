@@ -15,7 +15,7 @@ import { DRAW_STEP } from '../../design/motion'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 import { TvScreen } from './TvScreen'
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
@@ -143,6 +143,6 @@ describe('the pot (MOT-05)', () => {
     const pot = useTournament.getState().data!.state.modules.auction!.pot
     expect(pot).toBeGreaterThan(0)
     const shown = document.querySelector('[class*="_pot_"] [aria-hidden="true"]')!.textContent
-    expect(shown).toBe(formatMoney(pot))
+    expect(shown).toBe(formatMoney(pot, 'MXN'))
   })
 })

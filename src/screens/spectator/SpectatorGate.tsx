@@ -24,6 +24,7 @@ import { humanError } from '../../lib/humanError'
 import { TournamentContext, useTournamentCtx } from '../tournament/tournamentContext'
 import { MoneyScreen } from '../tournament/MoneyScreen'
 import { forgetBoards, SPECTATOR_ME, useNoIndex } from './spectatorView'
+import { TournamentCurrency } from '../../components/TournamentCurrency'
 
 const noop = async () => undefined
 
@@ -168,7 +169,10 @@ export function SpectatorGate() {
   }
   return (
     <TournamentContext.Provider value={value}>
-      <Outlet />
+      {/* Every money render reads the tournament's currency (ARCH-06). */}
+      <TournamentCurrency>
+        <Outlet />
+      </TournamentCurrency>
     </TournamentContext.Provider>
   )
 }

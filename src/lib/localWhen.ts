@@ -14,3 +14,13 @@ export function localWhen(at: string, timeZone: string): string {
     return d.toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', hourCycle: 'h23' })
   }
 }
+
+/** «16 oct 2026»: the day it is now in the tournament's zone (a share card's date, ARCH-06); the phone's for an unknown zone. */
+export function localDay(at: Date, timeZone: string): string {
+  const opts = { day: 'numeric', month: 'short', year: 'numeric' } as const
+  try {
+    return at.toLocaleDateString('es-MX', { ...opts, timeZone })
+  } catch {
+    return at.toLocaleDateString('es-MX', opts)
+  }
+}

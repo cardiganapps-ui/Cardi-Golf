@@ -3,7 +3,7 @@
  * keystroke sequence that the old inputs destroyed.
  */
 import { describe, expect, it } from 'vitest'
-import { keepNumeric } from './NumberField'
+import { keepNumeric } from './numericText'
 
 const whole = (raw: string) => keepNumeric(raw, 0, false)
 const oneDp = (raw: string) => keepNumeric(raw, 1, false)

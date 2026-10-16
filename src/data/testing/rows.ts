@@ -65,8 +65,9 @@ export function snapshotToRows(s: Snapshot): Record<SnapshotTable, Row[]> {
         current_round_id: t.currentRoundId,
         settings: t.settings,
         banker_player_id: t.bankerPlayerId,
-        timezone: t.timezone,
-        currency: t.currency,
+        // As the database keeps them since 0074: the settings' own, mirrored.
+        timezone: (t.settings as { timezone?: string } | null)?.timezone ?? 'America/Mazatlan',
+        currency: (t.settings as { currency?: string } | null)?.currency ?? 'MXN',
         created_by: null,
         created_at: CREATED,
         counts_for_stats: t.countsForStats ?? true,

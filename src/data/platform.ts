@@ -473,7 +473,8 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   return data as T
 }
 
-const TZ = 'America/Mazatlan'
+/** The platform's days are the admin's own (the phone's zone); a browser that names none counts them in UTC (ARCH-06: never the first tournament's zone). */
+const TZ = 'UTC'
 
 export const supabasePlatformApi: PlatformApi = {
   overview: () => rpc<PlatformOverview>('platform_overview'),

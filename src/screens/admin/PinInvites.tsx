@@ -16,7 +16,8 @@
  */
 import { useId, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { CopyButton, Sheet, toast } from '../../components/ui'
+import { CopyButton, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { setPlayerPin } from '../../data/api'
 import type { Player } from '../../engine/types'

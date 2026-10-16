@@ -25,7 +25,7 @@ import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { GamesScreen } from './GamesScreen'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 const cancelAnimation = Animation.prototype.cancel

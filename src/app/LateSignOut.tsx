@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { toast } from '../components/ui'
+import { toast } from '../components/toast'
 import { t } from '../i18n/es-MX'
 import { useLateSignOut } from '../data/account'
 

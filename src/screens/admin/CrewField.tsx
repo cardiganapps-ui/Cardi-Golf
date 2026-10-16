@@ -4,7 +4,8 @@
  */
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Field, toast } from '../../components/ui'
+import { Field } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { myCrews, setTournamentCrew, type MyCrew } from '../../data/crews'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'

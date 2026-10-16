@@ -78,7 +78,7 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
 
       it('prints the settings’ own numbers', () => {
         const S = section(doc, 'summary')!.lines.join(' ')
-        if (settings.entryFee > 0) expect(S).toContain(`${formatMoney(settings.entryFee)} de inscripción`)
+        if (settings.entryFee > 0) expect(S).toContain(`${formatMoney(settings.entryFee, 'MXN')} de inscripción`)
         else expect(S).not.toMatch(/inscripción de \$|paga \$/)
         const hcp = section(doc, 'handicaps')!.lines.join(' ')
         if (settings.handicap.allowance > 0) {
@@ -88,22 +88,22 @@ describe('the Reglamento follows the settings, on every fixture (COPY-11)', () =
         if (m.individual.enabled) {
           const amounts = individualPrizeAmounts(settings, fieldShape(snapshot, settings)).filter((x) => x > 0)
           const ind = section(doc, 'individual')!.lines.join(' ')
-          for (const a of amounts) expect(ind).toContain(formatMoney(a))
+          for (const a of amounts) expect(ind).toContain(formatMoney(a, 'MXN'))
           if (!amounts.length) expect(ind).toContain(R.noPrize)
           expect(ind).not.toContain('Premios: .')
         }
         if (m.snake.enabled) {
           const s = section(doc, 'snake')!.lines.join(' ')
           expect(s).toContain(`${m.snake.puttsThreshold} putts o más`)
-          if (settings.prizes.snakePerSurvivor > 0) expect(s).toContain(`${formatMoney(settings.prizes.snakePerSurvivor)} de la bolsa (${formatMoney(snakePotPerGroup(settings))} por grupo)`)
+          if (settings.prizes.snakePerSurvivor > 0) expect(s).toContain(`${formatMoney(settings.prizes.snakePerSurvivor, 'MXN')} de la bolsa (${formatMoney(snakePotPerGroup(settings), 'MXN')} por grupo)`)
           expect(s).not.toMatch(/entre los cuatro/)
         }
-        if (m.bestRound.enabled && settings.prizes.bestRoundPerDay > 0) expect(section(doc, 'bestRound')!.lines.join(' ')).toContain(formatMoney(settings.prizes.bestRoundPerDay))
+        if (m.bestRound.enabled && settings.prizes.bestRoundPerDay > 0) expect(section(doc, 'bestRound')!.lines.join(' ')).toContain(formatMoney(settings.prizes.bestRoundPerDay, 'MXN'))
         if (m.fewestPutts.enabled) expect(section(doc, 'fewestPutts')!.lines.join(' ')).toContain(`cuenta ${settings.pickupPuttsForFewestPutts} putts`)
         if (m.pairs.enabled) for (const [a, b] of m.pairs.pairing) expect(section(doc, 'pairs')!.lines.join(' ')).toContain(`${a} con ${b}`)
         if (m.auction.enabled) {
           const a = section(doc, 'auction')!.lines.join(' ')
-          expect(a).toContain(`en ${formatMoney(settings.auction.openingBid)} y las pujas suben de ${formatMoney(settings.auction.increment)}`)
+          expect(a).toContain(`en ${formatMoney(settings.auction.openingBid, 'MXN')} y las pujas suben de ${formatMoney(settings.auction.increment, 'MXN')}`)
           expect(a).toContain(`Máximo ${settings.auction.maxPlayersPerOwner} jugadores por dueño`)
           if (settings.auction.buybackMaxPct > 0) expect(a).toContain(`hasta el ${settings.auction.buybackMaxPct}%`)
         }

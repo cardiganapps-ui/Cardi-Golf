@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { computeTournament } from '../computeTournament'
-import { assertPrizePool } from '../settings/prizeCheck'
-import { FIRST_TOURNAMENT_PLAYER_COUNT, FIRST_TOURNAMENT_SETTINGS } from '../settings/presets'
-import { fillRound, makeFirstTournament } from '../testing/fixtures'
+import { checkPrizePool } from '../settings/prizeCheck'
+import { FIRST_TOURNAMENT_SETTINGS } from '../settings/presets'
+import { FIRST_TOURNAMENT_PLAYER_COUNT, fillRound, makeFirstTournament } from '../testing/fixtures'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
 describe('Money', () => {
   it('prize settings must sum to $30,000', () => {
-    expect(assertPrizePool(S, { players: FIRST_TOURNAMENT_PLAYER_COUNT }).prizesTotal).toBe(30000)
+    expect(checkPrizePool(S, { players: FIRST_TOURNAMENT_PLAYER_COUNT })).toMatchObject({ balanced: true, prizesTotal: 30000 })
   })
 
   it('a finished first tournament with a Calcutta nets to zero across all people, banker included', () => {

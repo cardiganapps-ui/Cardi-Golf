@@ -102,7 +102,7 @@ describe('En vivo before the first hole (STRAT-10)', () => {
     })
     expect(within(block()!).getByText(P.noGroup)).toBeTruthy()
     cleanup()
-    open('calcutta12', () => undefined, { me: { playerId: null, isOrganizer: false, isAdmin: false, via: null }, spectator: { money: false, url: 'https://polo.example/v/x' } })
+    open('calcutta12', () => undefined, { me: { playerId: null, isOrganizer: false, isComite: false, via: null }, spectator: { money: false, url: 'https://polo.example/v/x' } })
     const r = within(block()!)
     expect(r.queryByText(P.group)).toBeNull()
     expect(r.queryByText(P.hcp)).toBeNull()

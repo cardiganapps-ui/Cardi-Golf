@@ -15,7 +15,8 @@ import { useOutbox, type RejectedItem } from '../data/outbox'
 import { t } from '../i18n/es-MX'
 import { SaveStatus } from '../screens/tournament/scorecard/SaveBar'
 import { OfflineBanner } from './OfflineBanner'
-import { Toaster, toast } from './ui'
+import { Toaster } from './ui'
+import { toast } from './toast'
 
 afterEach(() => {
   cleanup()

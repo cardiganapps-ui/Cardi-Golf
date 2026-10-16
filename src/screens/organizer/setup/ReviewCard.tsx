@@ -16,6 +16,7 @@ import { reviewGameLines, type ReviewLine } from './reviewLines'
 import styles from './Setup.module.css'
 
 export function ReviewCard({ name, tagline, settings, players, check }: { name: string; tagline: string; settings: TournamentSettings; players: number; check: PrizeCheck | null }) {
+  const cur = settings.currency
   const W = t.organizer.wizard
   const format = formatFor(settings)
   const basics: ReviewLine[] = [
@@ -24,7 +25,7 @@ export function ReviewCard({ name, tagline, settings, players, check }: { name: 
     ...(tagline.trim() ? [{ key: 'tagline', label: t.admin.tournament.tagline, value: tagline.trim() }] : []),
     { key: 'format', label: W.reviewFormat, value: `${format.defaultLabel}, ${format.figureLabel(settings).toLowerCase()}` },
     { key: 'rounds', label: W.rounds, value: `${W.reviewDays(settings.rounds)}, ${W.reviewField(players)}` },
-    { key: 'money', label: W.money, value: settings.entryFee > 0 ? W.reviewMoney(formatMoney(settings.entryFee), formatMoney(settings.entryFee * players)) : W.reviewNoMoney },
+    { key: 'money', label: W.money, value: settings.entryFee > 0 ? W.reviewMoney(formatMoney(settings.entryFee, cur), formatMoney(settings.entryFee * players, cur)) : W.reviewNoMoney },
   ]
   return (
     <div className="stack">

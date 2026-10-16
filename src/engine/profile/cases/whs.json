@@ -1,5 +1,5 @@
 {
-  "_note": "Integer tenths. Run by src/engine/profile/whs.test.ts (TS) and scripts/rls-test.mjs (SQL). Half-way values round up (toward +∞).",
+  "_note": "Integer tenths. Run by src/engine/profile/whs.test.ts (TS) and scripts/whs-parity.mjs (SQL, in the db job and scripts/rls-test.mjs). Half-way values round up (toward +∞).",
   "diff": [
     { "ags": 85, "rating10": 713, "slope": 131, "expect10": 118, "why": "(85 − 71.3) × 113 / 131 = 11.82 → 11.8" },
     { "ags": 78, "rating10": 715, "slope": 130, "expect10": 57, "why": "6.5 × 113 / 130 = 5.65 → 5.7 (half up)" },
@@ -12,7 +12,9 @@
     { "index10": 81, "slope": 128, "rating10": 712, "par": 72, "expect": 8, "why": "8.1 × 128 / 113 − 0.8 = 8.38 → 8" },
     { "index10": 200, "slope": 113, "rating10": 720, "par": 72, "expect": 20, "why": "20 exactly" },
     { "index10": -12, "slope": 113, "rating10": 720, "par": 72, "expect": -1, "why": "plus 1.2 → −1.2 → −1" },
-    { "index10": 5, "slope": 113, "rating10": 720, "par": 72, "expect": 1, "why": "0.5 → 1 (half up)" }
+    { "index10": 5, "slope": 113, "rating10": 720, "par": 72, "expect": 1, "why": "0.5 → 1 (half up)" },
+    { "index10": -5, "slope": 113, "rating10": 720, "par": 72, "expect": 0, "why": "plus 0.5 → −0.5 → 0 (half up, toward +∞)" },
+    { "index10": -28, "slope": 135, "rating10": 734, "par": 72, "expect": -2, "why": "plus 2.8: −2.8 × 135 / 113 + 1.4 = −1.95 → −2" }
   ],
   "strokes": [
     { "ch": 0, "si": 1, "expect": 0 },
@@ -23,7 +25,9 @@
     { "ch": 43, "si": 8, "expect": 2 },
     { "ch": -1, "si": 18, "expect": -1 },
     { "ch": -1, "si": 17, "expect": 0 },
-    { "ch": -2, "si": 17, "expect": -1 }
+    { "ch": -2, "si": 17, "expect": -1 },
+    { "ch": -2, "si": 16, "expect": 0 },
+    { "ch": -18, "si": 1, "expect": -1 }
   ],
   "index": [
     { "diffs10": [152, 104, 120], "expect10": 84, "used": [1], "why": "3 differentials: lowest 10.4 − 2.0 = 8.4" },

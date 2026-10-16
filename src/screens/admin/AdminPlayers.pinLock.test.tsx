@@ -13,7 +13,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { PinLock } from '../../data/pinPhones'
 import { t } from '../../i18n/es-MX'
 import { clockTime } from '../../lib/freshness'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 
 const fx = getFixture('full12-live')!
 const ana = fx.snapshot.players[0]!
@@ -40,7 +40,7 @@ function mount() {
   useTournament.setState({ tournamentId: 't-locks', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-locks', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-locks', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,

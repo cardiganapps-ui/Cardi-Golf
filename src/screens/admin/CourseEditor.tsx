@@ -5,26 +5,13 @@ import { Field } from '../../components/ui'
 import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
 import { OptionalNumberField } from '../../components/NumberField'
-import { NOT_TYPED, untypedHoles } from './courseCells'
+import { blankTee, NOT_TYPED, untypedHoles, validateTee } from './courseCells'
 import { VerifiedBadge } from '../../components/VerifiedBadge'
 
 const C = t.admin.courses
 
-export function validateTee(tee: CourseDraftTee): string[] {
-  const missing = untypedHoles(tee)
-  // The rest can only be judged on a whole card.
-  if (missing.length) return [C.holesUntyped(missing)]
-  const issues: string[] = []
-  const n = tee.holes.length
-  const sis = [...tee.holes.map((h) => h.strokeIndex)].sort((a, b) => a - b)
-  if (sis.some((si, i) => si !== i + 1)) issues.push(C.siNotPermutation)
-  const par = tee.holes.reduce((s, h) => s + h.par, 0)
-  if (n === 18 && (par < 62 || par > 78)) issues.push(C.parSum(par))
-  return issues
-}
-
 /** Parse pasted lines: pars, stroke indexes, optional yards. */
-export function parsePaste(text: string, holes: number): { par: number[]; si: number[]; yards: number[] | null } | null {
+function parsePaste(text: string, holes: number): { par: number[]; si: number[]; yards: number[] | null } | null {
   const lines = text
     .split(/\n+/)
     .map((l) =>
@@ -44,14 +31,6 @@ export function parsePaste(text: string, holes: number): { par: number[]; si: nu
   if (!si.every((s) => s >= 1 && s <= holes)) return null
   return { par, si, yards }
 }
-
-export const blankTee = (name = 'Azules'): CourseDraftTee => ({
-  name,
-  color: null,
-  rating: null,
-  slope: null,
-  holes: Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: NOT_TYPED, strokeIndex: NOT_TYPED, yards: null })),
-})
 
 /** The tees live here (P1 20): adding and removing one is local state, nothing is re-synced from the parent during render. */
 export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onPasting }: { draft: CourseDraft; notes: string[]; busy: boolean; onSave: (d: CourseDraft) => void; onCancel: () => void; onEdit?: (d: CourseDraft) => void; onPasting?: (pending: boolean) => void }) {

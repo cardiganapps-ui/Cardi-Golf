@@ -9,7 +9,8 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { t } from '../../i18n/es-MX'
-import { blankTee, CourseEditor, validateTee } from './CourseEditor'
+import { CourseEditor } from './CourseEditor'
+import { blankTee, validateTee } from './courseCells'
 import { NOT_TYPED } from './courseCells'
 
 const C = t.admin.courses

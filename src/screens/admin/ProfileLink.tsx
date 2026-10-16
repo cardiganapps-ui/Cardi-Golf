@@ -5,7 +5,8 @@
  */
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Sheet, toast } from '../../components/ui'
+import { Avatar, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { formatIndex, handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'

@@ -16,7 +16,7 @@ import { useId } from 'react'
 import { t } from '../i18n/es-MX'
 import { keepTheirs, sendMineAgain, applyFields, baseRow, useOutbox, type ConflictItem } from '../data/outbox'
 import { useTournament } from '../data/tournamentStore'
-import { toast } from './ui'
+import { toast } from './toast'
 import { humanError } from '../lib/humanError'
 import styles from './RejectedWrites.module.css'
 

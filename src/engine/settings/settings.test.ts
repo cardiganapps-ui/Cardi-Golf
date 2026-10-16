@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_SETTINGS,
-  FIRST_TOURNAMENT_PLAYER_COUNT,
-  FIRST_TOURNAMENT_SETTINGS,
-  PrizePoolError,
-  assertPrizePool,
-  checkPrizePool,
-  parseSettings,
-  safeParseSettings,
-} from './index'
+import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS, checkPrizePool, parseSettings, safeParseSettings } from './index'
+import { FIRST_TOURNAMENT_PLAYER_COUNT } from '../testing/fixtures'
 
 describe('settings schema', () => {
   it('accepts the platform defaults (individual only)', () => {
@@ -73,10 +65,10 @@ describe('prize pool check (§5.8)', () => {
     expect(check.difference).toBe(3600)
   })
 
-  it('assertPrizePool throws with the breakdown when unbalanced', () => {
+  it('an unbalanced pool says so, with the breakdown (the engine flags it live: livePool.test.ts)', () => {
     const s = structuredClone(FIRST_TOURNAMENT_SETTINGS)
     s.prizes.fewestPutts = 900
-    expect(() => assertPrizePool(s, { players: 12 })).toThrow(PrizePoolError)
+    expect(checkPrizePool(s, { players: 12 })).toMatchObject({ balanced: false, entryPot: 30000, prizesTotal: 29900, difference: 100 })
   })
 
   it('a minimal tournament balances: 8 players, 1 round, individual only', () => {

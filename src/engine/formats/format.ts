@@ -102,9 +102,6 @@ export interface MainFormat {
   standings(ctx: FormatContext): FormatStandings
 }
 
-/** The blank figure, for a competitor with no card yet. */
-export const NO_FIGURE: Figure = { value: 0, text: '—', empty: true }
-
 /**
  * A whole number as copy: «−2», «0», «3». A true minus sign, never a hyphen:
  * these sit next to tabular numerals and en dashes (DESIGN_DIRECTION.md).

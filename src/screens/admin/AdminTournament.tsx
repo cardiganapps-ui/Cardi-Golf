@@ -12,7 +12,8 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { CopyButton, Field, ShareButton, Toggle, toast } from '../../components/ui'
+import { CopyButton, Field, ShareButton, Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Segmented } from '../../components/primitives'
@@ -501,7 +502,7 @@ export function AdminTournament() {
             </Field>
           )}
           {/* Every player 18 or older, the Comité's word (TRUST-13): asked where the money is set. */}
-          {tab === 'money' && <AdultsCard tournamentId={tournamentId} settings={parsed.success ? parsed.data : null} timeZone={tr.timezone} />}
+          {tab === 'money' && <AdultsCard tournamentId={tournamentId} settings={parsed.success ? parsed.data : null} timeZone={data!.settings.timezone} />}
           <SettingsEditor
             value={settings}
             onChange={(v) => {

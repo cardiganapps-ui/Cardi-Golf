@@ -62,9 +62,6 @@ export const timer = (seconds: number) => ({ duration: Math.max(0, seconds), eas
 /** No transition: the end state at once (reduced motion). */
 export const still = { duration: 0 } as const
 
-/** Delay the nth item of a staggered reveal, without stretching the whole list. */
-export const stagger = (i: number, step = DUR_FAST) => ({ ...ease, delay: i * step })
-
 /**
  * The ceremony's reveal (MOT-23), the one orchestrated moment the direction
  * allows: the faces land, a beat later the name, then the figures count up,

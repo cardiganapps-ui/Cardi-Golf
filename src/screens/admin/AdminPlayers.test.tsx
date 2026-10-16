@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { completePlayer, type PlayerDraft } from './playerDraft'
 
 const api = vi.hoisted(() => ({ upsertPlayer: vi.fn(async () => undefined), playersWithPin: vi.fn(async () => new Set<string>()) }))
@@ -27,7 +27,7 @@ function mount() {
   useTournament.setState({ tournamentId: 't-players', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-players', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-players', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,

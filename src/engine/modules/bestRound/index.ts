@@ -1,8 +1,8 @@
 /**
  * Best round of the day (§5.4): per round, the highest single-round total.
- * Ties: countback within that day, then split.
+ * Ties: countback within that day, then split. Final once that day is finished.
  */
-import { countback, flattenRanks, rankBy, splitPrizes, type RankGroup } from '../../core/ranking'
+import { countback, flattenRanks, isFinal, rankField, splitPrizes, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id } from '../../types'
 import { ptsText } from '../../../i18n/es-MX'
 import type { GameModule, PrizeAward } from '../module'
@@ -20,7 +20,7 @@ export interface BestRoundState {
   days: BestRoundDay[]
 }
 
-export const bestRoundModule: GameModule<BestRoundState> = {
+export const bestRoundModule: GameModule<BestRoundState, 'bestRound'> = {
   id: 'bestRound',
   defaultLabel: 'Mejor ronda',
   compute(ctx) {
@@ -34,11 +34,11 @@ export const bestRoundModule: GameModule<BestRoundState> = {
         for (const h of byPlayer[id]?.holes ?? []) m.set(h.hole, h.points)
         return { pointsByHole: m, holes: byPlayer[id]?.holes.length ?? 18 }
       }
-      const groups = rankBy(
-        ids,
-        (a, b) => (byPlayer[b]!.points - byPlayer[a]!.points) || countback(cb(a), cb(b)).result,
-        (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
-      )
+      const groups = rankField(ids, {
+        keys: [(id) => byPlayer[id]!.points],
+        ties: { countback: cb },
+        order: (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
+      })
       const rows = flattenRanks(groups).map((r) => ({
         playerId: r.item,
         position: r.position,
@@ -62,7 +62,7 @@ export const bestRoundModule: GameModule<BestRoundState> = {
           winners[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${ptsText(byPlayer[s.item]!.points)} el día ${roundNumber}`, ...tieWhy, ...s.why.steps] } }
         }
       }
-      return { roundId: rid, roundNumber, rows, groups, winners, final: ctx.roundFinal[rid] ?? false }
+      return { roundId: rid, roundNumber, rows, groups, winners, final: isFinal(ctx, 'rounds', [rid]) }
     })
     return { days }
   },

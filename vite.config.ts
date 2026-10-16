@@ -204,16 +204,25 @@ export default defineConfig({
     // each handler with the network and the SDKs stubbed; the bars are what they cover today, rounded down.
     // What is left: scorecard-extract's last 500 (an error that is not the SDK's, which nothing upstream
     // throws) and a few `??` fallbacks.
+    //
+    // QA-15: the whole app is measured, not only what has a bar, so the check run says where coverage stands
+    // (scripts/coverage-summary.mjs writes coverage/coverage-summary.json to the run's summary, by area).
     coverage: {
       provider: 'v8',
-      include: ['src/data/outbox.ts', 'api/**', 'src/server/**'],
-      reporter: ['text'],
+      include: ['src/**/*.{ts,tsx}', 'api/**'],
+      exclude: ['**/*.test.{ts,tsx}', '**/testing/**', 'src/dev/**', 'src/design/**', '**/*.d.ts'],
+      reporter: ['text-summary', 'json-summary'],
+      // A red run still says where coverage stands.
+      reportOnFailure: true,
       // Vitest 5 counts each `return`, `.catch` and inline callback on its own (Vitest 3 counted lines), so the same
       // tests measured lower; the paths it found have tests now (src/data/outbox.edges.test.ts and its siblings).
       thresholds: {
         'src/data/outbox.ts': { statements: 99.5, branches: 93, functions: 100, lines: 99.5 },
         'api/**': { statements: 99, branches: 95, functions: 100, lines: 99 },
         'src/server/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        // QA-15: the engine computes every number money moves by; what its tests cover on 2026-10-16 (97.5, 90.3,
+        // 98.5, 98.7), rounded down, so a module that lands without its tests is a red check, not a quiet fall.
+        'src/engine/**': { statements: 97, branches: 89.5, functions: 98, lines: 98 },
       },
     },
   },
