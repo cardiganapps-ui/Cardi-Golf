@@ -60,6 +60,22 @@ export interface PlatformFunnel {
   finished: number
   organizers: number
   steps: Array<{ key: FunnelStep; tournaments: number; organizers: number }>
+  /** How the courses those tournaments play arrived (0075, STRAT-14); absent on a database without it. */
+  courses?: { all: FunnelCourses; first: FunnelCourses }
+}
+
+/** How a course arrived: from a provider's search, a scorecard photo, or typed. */
+export type CourseArrival = 'search' | 'photo' | 'manual'
+/**
+ * Each course a tournament's days play, once per tournament: `found` when it was in the catalog before the
+ * tournament was created, `added` when it came after. `first` counts only each organizer's first tournament.
+ */
+export interface FunnelCourses {
+  tournaments: number
+  /** Those whose days play at least one course. */
+  withCourse: number
+  found: Record<CourseArrival, number>
+  added: Record<CourseArrival, number>
 }
 
 export interface PlatformDay {
@@ -235,7 +251,7 @@ export interface DeletePreview {
   hasProfile: boolean
 }
 
-export type CourseFilter = 'all' | 'unused' | 'dupes' | 'broken'
+export type CourseFilter = 'all' | 'unused' | 'dupes' | 'broken' | 'verified' | 'unverified' | 'corrected'
 
 export interface CourseRow {
   id: string
@@ -251,6 +267,11 @@ export interface CourseRow {
   /** How many other courses look like the same one. */
   dupes: number
   broken: boolean
+  /** A person compared the card with the printed one (0075, STRAT-14); absent on a database without it. */
+  verifiedAt?: string | null
+  verifiedVia?: 'platform' | 'comite' | null
+  /** The last change of what the card already held, after it was first saved. */
+  correctedAt?: string | null
 }
 
 export type TeeProblem = 'holes' | 'par' | 'si'
@@ -277,6 +298,12 @@ export interface PlatformCourse {
   website: string | null
   createdAt: string
   creatorEmail: string | null
+  /** 0075 (STRAT-14): its verification and its last correction, with who; absent on a database without it. */
+  verifiedAt?: string | null
+  verifiedVia?: 'platform' | 'comite' | null
+  verifierEmail?: string | null
+  correctedAt?: string | null
+  correctorEmail?: string | null
   tees: CourseTee[]
   usedBy: Array<{ tournamentId: string; name: string; status: TournamentStatus; protected: boolean; rounds: number }>
   dupes: Array<{ id: string; name: string; location: string | null; rounds: number }>
@@ -418,6 +445,8 @@ export interface PlatformApi {
   refreshCourse(id: string): Promise<number>
   mergeCourses(keepId: string, dropId: string, teeMap: Record<string, string>, reason: string): Promise<{ rounds: number; refreshed: number }>
   deleteCourse(id: string, reason: string): Promise<void>
+  /** Mark the card verified (compared with the printed one) or take the mark off (0075, STRAT-14). */
+  verifyCourse(id: string, on: boolean, reason: string): Promise<void>
   crews(q: { q?: string; limit?: number; offset?: number }): Promise<{ total: number; rows: CrewRow[] }>
   crew(id: string, reason?: string): Promise<PlatformCrew | null>
   removeCrewMember(crewId: string, profileId: string, reason: string): Promise<'removed' | 'handed' | 'deleted'>
@@ -489,6 +518,9 @@ export const supabasePlatformApi: PlatformApi = {
   refreshCourse: (id) => rpc<number>('platform_refresh_course_results', { p_course_id: id }),
   mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }),
   deleteCourse: (id, reason) => rpc<void>('platform_delete_course', { p_course_id: id, p_reason: reason }),
+  verifyCourse: async (id, on, reason) => {
+    await rpc('platform_verify_course', { p_course_id: id, p_on: on, p_reason: reason })
+  },
   crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }),
   crew: (id, reason) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }),
   removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }),

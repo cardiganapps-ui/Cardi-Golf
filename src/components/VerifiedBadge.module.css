@@ -1,0 +1,4 @@
+/* In a row's column of lines it keeps its own width, under the name. */
+.badge {
+  align-self: flex-start;
+}

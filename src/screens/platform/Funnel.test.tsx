@@ -55,4 +55,32 @@ describe('Funnel', () => {
     expect(screen.queryByRole('list')).toBeNull()
     expect(screen.getByText('Ningún organizador ha creado un torneo en este periodo.')).toBeTruthy()
   })
+
+  it('says how the courses arrived: in the catalog already or added, by path, for first tournaments and for all (STRAT-14)', () => {
+    render(
+      <Funnel
+        f={{
+          ...funnel,
+          courses: {
+            first: { tournaments: 3, withCourse: 3, found: { search: 1, photo: 0, manual: 0 }, added: { search: 1, photo: 2, manual: 0 } },
+            all: { tournaments: 4, withCourse: 4, found: { search: 3, photo: 1, manual: 1 }, added: { search: 0, photo: 0, manual: 0 } },
+          },
+        }}
+      />,
+    )
+    const items = within(screen.getByRole('list', { name: 'Cómo llegó cada campo' })).getAllByRole('listitem')
+    expect(items.map((li) => li.textContent)).toEqual([
+      'En su primer torneo1 de 4 ya estaba en Polo (1 de la búsqueda). 3 se agregaron (1 de la búsqueda y 2 de una foto).',
+      'En todos5 de 5 ya estaban en Polo (3 de la búsqueda, 1 de una foto y 1 a mano).',
+    ])
+  })
+
+  it('says nothing of courses on a database without them, and says so when no tournament has one', () => {
+    const { unmount } = render(<Funnel f={funnel} />)
+    expect(screen.queryByText('Cómo llegó cada campo')).toBeNull()
+    unmount()
+    const none = { tournaments: 2, withCourse: 0, found: { search: 0, photo: 0, manual: 0 }, added: { search: 0, photo: 0, manual: 0 } }
+    render(<Funnel f={{ ...funnel, courses: { first: none, all: none } }} />)
+    expect(screen.getAllByText('Ningún torneo tiene campo todavía.')).toHaveLength(2)
+  })
 })

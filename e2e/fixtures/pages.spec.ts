@@ -72,8 +72,9 @@ for (const width of PHONES) {
   })
 }
 
-// Admin de Polo's screens on their in-memory fixture (Salud carries the telemetry, STRAT-02).
-for (const path of ['salud']) {
+// Admin de Polo's screens on their in-memory fixture (Salud carries the telemetry, STRAT-02; Resumen how each course
+// arrived, Campos its verified and corrected cards and one verified card, STRAT-14).
+for (const path of ['salud', 'resumen', 'campos', 'campos/c-quivira']) {
   for (const width of PHONES) {
     test(`admin/${path} at ${width}px`, async ({ page, pageErrors }) => {
       await page.setViewportSize({ width, height: 852 })
