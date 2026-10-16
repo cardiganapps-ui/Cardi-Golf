@@ -31,7 +31,6 @@ const handSpelled = (f: string) => (readFileSync(join(ROOT, f), 'utf8').match(/\
 const STILL: Record<string, number> = {
   'screens/LegalScreen.tsx': 8,
   'screens/admin/AdminAuction.tsx': 21,
-  'screens/admin/AdminCourses.tsx': 10,
   'screens/admin/AdminData.tsx': 6,
   'screens/admin/AdminDraw.tsx': 8,
   'screens/admin/AdminGames.tsx': 8,
@@ -62,7 +61,7 @@ const STILL: Record<string, number> = {
   'screens/platform/AuditScreen.tsx': 3,
   'screens/platform/CatalogCourses.tsx': 1,
   'screens/platform/CatalogCrews.tsx': 9,
-  'screens/platform/CourseDetail.tsx': 14,
+  'screens/platform/CourseDetail.tsx': 2,
   'screens/platform/HealthScreen.tsx': 6,
   'screens/platform/NoticesScreen.tsx': 4,
   'screens/platform/PeopleScreen.tsx': 1,
