@@ -70,6 +70,7 @@ Everything the project is waiting on a human for lives in `docs/handoff.md`. Tha
    - What to try.
    - What comes next.
 5. If you can schedule a check-in (`send_later`), keep one armed about an hour out while a PR is open, and stop once it's merged.
+   - **Previews are on demand** (2026-10-16). Vercel's Hobby plan builds at most 100 deployments a day, and a preview of every push to every `claude/**` and `dependabot/**` branch spent them twice in two days, refusing production's deploy of main for up to 24 hours. `vercel.json` (`git.deploymentEnabled`) builds no preview for those branches; CI never needed one. When Diego should try a branch before it merges, make one deployment of it through the REST API (`POST /v13/deployments` with `gitSource` and its ref) and send that URL; otherwise send production's after the merge. `src/lib/ops.test.ts` holds the rule.
 6. **Don't clean up after a merge.** A merged PR unsubscribes the session by itself, and a check-in that fires after the merge just finds nothing to do. So never call `unsubscribe_pr_activity` or `delete_trigger` on the way out. The Claude app asks Diego before both, whatever `.claude/settings.json` says (2026-09-29).
 
 ### 0.5 Platform, not a one-off: how to read the rest of this brief
