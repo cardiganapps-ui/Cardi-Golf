@@ -54,7 +54,8 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
-          <div ref={ref} className={styles.card} data-share-card={what.kind}>
+          {/* Light in either theme: the image goes to WhatsApp, read on any phone (VIS-11). */}
+          <div ref={ref} className={styles.card} data-share-card={what.kind} data-theme="light">
             <Card what={what} />
           </div>
         </div>
@@ -178,7 +179,7 @@ function Card({ what }: { what: ShareKind }) {
             <span className={styles.small}>
               {t.money.puts} {formatMoney(m.paid)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives)}
             </span>
-            <span className={`${styles.big} ${m.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(m.net)}</span>
+            <span className={`${styles.big} ${m.net < 0 ? styles.neg : ''}`}>{formatSignedMoney(m.net)}</span>
           </div>
         ))}
       </Rows>

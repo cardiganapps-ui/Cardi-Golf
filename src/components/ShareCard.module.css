@@ -86,8 +86,9 @@
   font-variant-numeric: tabular-nums;
 }
 .cash {
+  /* Money is ink with its sign (VIS-16): green was «won» here and nowhere else; red is only what is owed. */
   text-align: right;
-  color: var(--accent);
+  color: var(--ink);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -136,7 +137,7 @@
 }
 .holeNum {
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
 }
 .holeGross {
   font-weight: 600;
@@ -148,11 +149,13 @@
   font-weight: 600;
 }
 .birdie {
-  background: var(--accent-soft);
+  /* A net birdie or better is red, as on the card and the board (VIS-16): it was the accent's green here. */
+  background: var(--under-soft);
 }
 .birdie .holePts {
-  color: var(--accent);
+  color: var(--under);
 }
 .zero {
-  background: var(--under-soft);
+  /* No points: the ruled panel, quiet. It was the red tint, which on the card means a birdie. */
+  background: var(--surface);
 }

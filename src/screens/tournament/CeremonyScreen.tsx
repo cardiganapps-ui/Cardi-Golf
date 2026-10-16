@@ -440,7 +440,7 @@ export function CeremonyScreen() {
   const listsAt = step && step.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
 
   return (
-    <div className={styles.stage} style={{ '--event-accent': nearestAccent(snapshot.tournament.accentColor).hex } as React.CSSProperties}>
+    <div className={styles.stage} data-theme="light" data-accent={nearestAccent(snapshot.tournament.accentColor).id}>
       <header className={styles.header}>
         {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">

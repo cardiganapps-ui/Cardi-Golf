@@ -2005,6 +2005,16 @@ export const t = {
     /** MOT-10: the Tarjeta's vibration, on this phone only. */
     haptics: 'Vibrar al capturar',
     hapticsHint: 'Un toque corto en cada número y al guardar un hoyo, más largo en un birdie o si pasa la víbora. Solo en este teléfono.',
+    /** VIS-11, A11Y-19: light, dark or the phone's setting, and more contrast; on this phone only. */
+    appearance: {
+      title: 'Apariencia',
+      system: 'Sistema',
+      light: 'Claro',
+      dark: 'Oscuro',
+      hint: 'Sistema sigue el ajuste del teléfono. Solo en este teléfono.',
+      contrast: 'Más contraste',
+      contrastHint: 'Textos y líneas más marcados, para leer bajo el sol.',
+    },
     title: 'Más',
     rules: 'Reglamento',
     stats: 'Estadísticas y premios',

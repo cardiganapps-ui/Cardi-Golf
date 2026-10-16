@@ -67,8 +67,26 @@ h3,
 p {
   margin: 0;
 }
-a {
+/*
+  VIS-23: one link. Text that goes somewhere is the accent, underlined a hair below the baseline, in any weight
+  the sentence has; `.link` gives a button or a router link the same look. A row that goes somewhere is a row
+  with its chevron (a ruled list); a button is a button. Grey captions that were links («¿Organizas uno?», the
+  Juegos cross-links, the legal notes) are links now.
+*/
+a,
+.link {
   color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color var(--dur-fast) var(--ease);
+}
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
 }
 ul,
 ol {
@@ -80,7 +98,7 @@ ol {
 .num {
   font-variation-settings: 'wdth' var(--wdth-figure);
   font-variant-numeric: tabular-nums lining-nums;
-  font-weight: 600;
+  font-weight: var(--fig-weight);
   letter-spacing: 0;
 }
 /* Secondary text. One treatment, three legacy names. */
@@ -114,7 +132,15 @@ ol {
   display: block;
   width: 40px;
   height: 3px;
-  background: var(--event-accent);
+  background: var(--accent);
+}
+
+/* A tournament's logo (TournamentLogo): on the dark sheet a paper plate under it, since logos are drawn for paper
+   (VIS-11); none on the card stock. Zero specificity, so a slot's own plate (the TV's, the ceremony's) stays. */
+:where(.tournament-logo) {
+  background-color: var(--logo-plate);
+  border-radius: var(--r-sm);
+  padding: var(--logo-pad);
 }
 
 /* Layout helpers */
@@ -210,8 +236,8 @@ ol {
     filter var(--dur-fast) var(--ease);
 }
 .btn--primary {
-  background: var(--event-accent);
-  color: var(--event-accent-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .btn--primary:active {
   filter: brightness(0.92);
@@ -238,6 +264,11 @@ ol {
 }
 .btn--danger:active {
   background: var(--under-soft);
+}
+/* VIS-23: a quiet button that starts a line sits on the text edge: its padding hangs into the margin, so its
+   label (or the back chevron) lines up with the text above and below it instead of 12 px in. */
+.btn--flush {
+  margin-inline-start: calc(-1 * var(--s3));
 }
 .btn--sm {
   min-height: 36px;
@@ -469,7 +500,7 @@ textarea {
 .avatar--sm {
   width: 32px;
   height: 32px;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
 }
 
 /* Tables */
@@ -554,4 +585,92 @@ textarea {
 .numField__affix {
   color: var(--ink-2);
   font-size: var(--fs-sm);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .btn--primary:not(:disabled):hover {
+    filter: brightness(0.95);
+  }
+  .btn--secondary:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .btn--ghost:not(:disabled):hover {
+    background: var(--accent-soft);
+  }
+  .btn--danger:not(:disabled):hover {
+    background: var(--under-soft);
+  }
+  a:hover,
+  .link:hover {
+    text-decoration-thickness: 2px;
+  }
+  .input:not(:disabled):not(:focus):hover,
+  .select:not(:disabled):not(:focus):hover,
+  .textarea:not(:disabled):not(:focus):hover {
+    border-color: var(--ink-2);
+  }
+  .toggle:hover input:not(:checked):not(:disabled) {
+    background: var(--ink-3);
+  }
+  .toggle:hover input:checked:not(:disabled) {
+    filter: brightness(0.95);
+  }
+  /* What has no transition of its own changes on the fast step, so a pointer moving over a list doesn't flicker. */
+  a,
+  button {
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease);
+  }
+}
+
+/*
+  A11Y-19: Windows' high contrast (forced colors) repaints every fill to the system's Canvas, so whatever said
+  «this one» with a fill alone (the segment chosen, the tab you are on, a pressed toggle, my row) vanished. Each
+  says it with the system's Highlight instead, and the controls keep an edge the system draws.
+*/
+@media (forced-colors: active) {
+  [aria-pressed='true'],
+  [aria-checked='true']:not(input),
+  [aria-selected='true'],
+  [aria-current='page'],
+  [aria-current='true'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+  [aria-pressed='true'] *,
+  [aria-checked='true']:not(input) *,
+  [aria-selected='true'] *,
+  [aria-current='page'] *,
+  [aria-current='true'] * {
+    color: inherit;
+  }
+  .toggle input {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 2px solid CanvasText;
+  }
+  .toggle input::after {
+    top: 1px;
+    left: 1px;
+    background: CanvasText;
+  }
+  .toggle input:checked {
+    background: Highlight;
+    border-color: Highlight;
+  }
+  .toggle input:checked::after {
+    background: HighlightText;
+  }
+  .btn,
+  .chip {
+    border-color: ButtonText;
+  }
+  :focus-visible {
+    outline-color: Highlight;
+  }
 }

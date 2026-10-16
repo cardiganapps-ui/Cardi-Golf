@@ -155,7 +155,7 @@ export function TvScreen() {
   const updatedWhen = useSavedWhen(useTournament((s) => s.updatedAt))
 
   return (
-    <div className={styles.tv} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
+    <div className={styles.tv} data-theme="light" data-accent={nearestAccent(accent).id}>
       <header className={styles.header}>
         {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">
