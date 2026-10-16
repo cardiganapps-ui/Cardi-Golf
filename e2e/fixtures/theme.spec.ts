@@ -30,6 +30,10 @@ const SCREENS = [
   '/p/_/yo/vs',
   '/organizer/nuevo/_',
   '/admin/_/salud',
+  // STRAT-14: the verified badge, «Ya en Polo», how each course arrived, a verified course's detail.
+  '/t/_/full12-live/admin/campos',
+  '/admin/_/resumen',
+  '/admin/_/campos/c-quivira',
 ]
 /** Where the figures are: module classes keep their name in the build (`_figure_x1y2z_12`). */
 const FIGURES = ['[class*="_figure_"]', '[class*="_today_"]', '[class*="_thru_"]', '[class*="_pos_"]', '[class*="_ptsMuted_"]', '[class*="_cellPts_"]', '[class*="_markPickup_"]', '[class*="_bankVerdict"]', '[class*="_fig_"]', '.num']
