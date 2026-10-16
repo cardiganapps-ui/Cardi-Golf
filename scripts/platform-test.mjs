@@ -207,7 +207,8 @@ try {
   const { error: relockedSave } = await P.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 4, p_strokes: 4, p_putts: 2, p_picked_up: false, p_reason: 'x' })
   check(!!relockedSave, 'relocked, he cannot')
   const logged = await query(`select action from public.platform_audit_log where tournament_id = '${uuid(T.id)}' order by at`)
-  check(logged.map((x) => x.action).join(',') === 'unlock,relock', 'unlock and relock are in the platform log', logged)
+  // Since 0068 (TRUST-22) opening the tournament leaves a «view» line too; the writes are unlock then relock.
+  check(logged.filter((x) => x.action !== 'view').map((x) => x.action).join(',') === 'unlock,relock' && logged.some((x) => x.action === 'view'), 'unlock and relock are in the platform log, after the views', logged)
   const { error: offNoReason } = await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false })
   const { error: offOk } = await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false, p_reason: 'Ya terminó' })
   const { data: pmOpen } = await P.sb.rpc('my_membership', { tid: T.id })
@@ -218,8 +219,12 @@ try {
   const { data: hist, error: histErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200 })
   const platformRow = (hist ?? []).find((h) => h.platform && h.table === 'scores')
   check(denied(nAudit) && !histErr && !!platformRow && platformRow.actor === null, "the Comité reads its history, with the admin's changes marked; strangers cannot", { histErr: histErr?.message, n: hist?.length })
-  const page2 = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_before: hist?.[1]?.id, p_limit: 1 })
-  check(page2.data?.length === 1 && page2.data[0].id < hist[1].id, 'and pages by id')
+  // Pages by the history's own ids; the admin's lines merged in since 0068 carry negative ids and are no cursor (the
+  // screen pages by its last history row, historyRows).
+  const own = (hist ?? []).filter((h) => h.id > 0)
+  const page2 = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_before: own[1]?.id, p_limit: 1 })
+  const page2own = (page2.data ?? []).filter((h) => h.id > 0)
+  check(page2own.length === 1 && page2own[0].id < own[1].id, 'and pages by id', { page2: page2.data?.map((h) => h.id), cursor: own[1]?.id })
   // TRUST-19 (0063): narrowed on the server, a player's scores, a hole, the admin's changes; and no account in any image.
   const { data: byHole, error: byHoleErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { player: p0.id, hole: 3 } })
   check(!byHoleErr && byHole?.length > 0 && byHole.every((h) => h.table === 'scores' && (h.after ?? h.before)?.player_id === p0.id && (h.after ?? h.before)?.hole === 3), 'tournament_audit narrows to a player\'s hole (the 3 the admin fixed unlocked)', { byHoleErr: byHoleErr?.message, n: byHole?.length })
@@ -358,7 +363,7 @@ try {
   const { error: delCrew } = await P.sb.rpc('platform_delete_crew', { p_crew_id: c2.id, p_confirm: `Plat crew2 ${rand}`, p_reason: 'Crew de prueba' })
   check(!!wrongName && !delCrew, 'deleting a crew needs its exact name', { wrongName: wrongName?.message, delCrew: delCrew?.message })
   const catalogLog = await query(`select action from public.platform_audit_log where actor_auth_user_id = '${uuid(P.id)}' and target_kind in ('course', 'crew') order by at`)
-  check(catalogLog.map((x) => x.action).join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete', 'every catalog action is in the platform log', catalogLog)
+  check(catalogLog.filter((x) => x.action !== 'view').map((x) => x.action).join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete', 'every catalog action is in the platform log', catalogLog)
 
   console.log('Switches (restored at the end, whatever happens):')
   flagsTouched = true
