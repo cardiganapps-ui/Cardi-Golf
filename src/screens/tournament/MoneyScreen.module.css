@@ -51,6 +51,20 @@
 .bankVerdictOpen {
   color: var(--caution);
 }
+/* «Por asignar: $3,000» carries a figure: ink, AAA (A11Y-09; --caution was 5.7:1), with the caution's dot before it. */
+.bankVerdictPending {
+  color: var(--ink);
+}
+.bankVerdictPending::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--s2);
+  border-radius: var(--r-round);
+  background: var(--caution);
+  vertical-align: 0.05em;
+}
 .bankVerdictOff {
   color: var(--under);
 }
@@ -105,12 +119,14 @@
 
 }
 /* «Quién debe qué: 14 pendientes, $19,625» (COPY-07). */
+/* A count and an amount: ink, AAA (A11Y-09); the heading says it is pending. */
 .checklistCount {
-  color: var(--caution);
+  color: var(--ink);
 }
-/* What is still due today, in caution until «Quién debe qué» is clear (COPY-03). */
+/* What is still due today (COPY-03): what is owed, so the money red (VIS-16), which is also AAA for the figure in it
+   (A11Y-09; the caution brown was 5.7:1). */
 .owes {
-  color: var(--caution);
+  color: var(--under);
   font-weight: 600;
 }
 .net {
@@ -212,4 +228,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .personRow:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

@@ -6,8 +6,39 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#1E6B3B" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#1E6B3B" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131715" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <!--
+      VIS-11, A11Y-19: Más › Apariencia, applied before anything paints (src/lib/theme.ts applyAppearance does the
+      same once the app runs; theme.test.ts runs both). «Claro» or «Oscuro» over the phone's setting, «Más
+      contraste» on or off over its own, and the status bar's colour for the choice. Never throws: a browser that
+      keeps nothing follows the phone.
+    -->
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement
+          var theme = localStorage.getItem('cardi-golf:theme')
+          var contrast = localStorage.getItem('cardi-golf:contrast')
+          if (theme === 'light' || theme === 'dark') {
+            root.setAttribute('data-theme', theme)
+            var metas = document.querySelectorAll('meta[name="theme-color"]')
+            for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', theme === 'dark' ? '#131715' : '#1E6B3B')
+          }
+          if (contrast === 'more' || contrast === 'normal') root.setAttribute('data-contrast', contrast)
+        } catch (e) {}
+      })()
+    </script>
+    <!-- The boot screen below in the dark sheet's colours, where the page is dark (tokens.css --bg, --ink; the mark as --mark-filter draws it). -->
+    <style>
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) #boot { background: #131715 !important; color: #f1efe8 !important }
+        :root:not([data-theme='light']) #boot img { filter: invert(0.93) hue-rotate(180deg) }
+      }
+      :root[data-theme='dark'] #boot { background: #131715 !important; color: #f1efe8 !important }
+      :root[data-theme='dark'] #boot img { filter: invert(0.93) hue-rotate(180deg) }
+    </style>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <!--
       PWA-02: «default» keeps the installed iPhone app below the status bar: the

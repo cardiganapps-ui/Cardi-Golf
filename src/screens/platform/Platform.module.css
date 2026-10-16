@@ -9,7 +9,7 @@
     display: block;
     padding: var(--s4) 0 var(--s1);
     color: var(--ink-3);
-    font-size: var(--fs-2xs);
+    font-size: var(--fs-xs);
     font-weight: 600;
     letter-spacing: var(--track-caps);
     text-transform: uppercase;
@@ -127,7 +127,7 @@
   top: -1.4em;
   right: 0;
   color: var(--ink-3);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 /* The hit target is the whole column, far bigger than the bar. */
@@ -158,7 +158,7 @@
   display: flex;
   justify-content: space-between;
   color: var(--ink-3);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -417,7 +417,7 @@ a.row:active {
 }
 .cardNo {
   color: var(--ink-3);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
 }
 .cardPar {
   font-weight: 600;
@@ -425,7 +425,7 @@ a.row:active {
 }
 .cardSi {
   color: var(--ink-2);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
 }
 .mergePair {
   display: flex;
@@ -542,4 +542,12 @@ a.row:active {
   height: 100%;
   border-radius: 4px;
   background: var(--accent);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  a.row:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

@@ -224,6 +224,10 @@ button.row {
   box-shadow: inset 2px 0 0 var(--accent);
   background: var(--accent-soft);
 }
+/* Its figures on the tint take the ink (A11Y-09): --ink-2 on it is under a figure's AAA. */
+.rowUsed .rowEnd {
+  color: var(--ink);
+}
 .rowEnd {
   composes: rowEndBlock from '../../components/primitives.module.css';
   color: var(--ink-2);
@@ -393,7 +397,7 @@ button.row {
   border-radius: var(--r-round);
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 18px;
   text-align: center;
@@ -636,4 +640,26 @@ button.row {
 /* A notice already read: same row, lighter. */
 .rowTitleRead {
   font-weight: 400;
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .brand:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .iconBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
+  a.row:not(:disabled):hover,
+  button.row:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .award:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .awardOn:not(:disabled):hover {
+    background: var(--ink-2);
+    border-color: var(--ink-2);
+  }
 }

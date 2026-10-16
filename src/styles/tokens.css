@@ -3,65 +3,54 @@
   One source of truth for color, type, spacing (4/8), radius, borders,
   elevation and motion. Nothing outside this file may declare a color;
   src/styles/no-literal-colors.test.ts enforces it.
+
+  Color comes in layers (VIS-09, VIS-10, VIS-11, A11Y-19; DESIGN_NOTES.md «Light, dark and the event's accent»):
+  - The theme: the light card stock below, or the dark sheet under `prefers-color-scheme: dark` or
+    `<html data-theme="dark">` (Más › Apariencia; the boot script in index.html sets it before the first paint).
+    `data-theme="light"` on any element is a light island inside a dark page (the TV, Ceremonia, the share card,
+    the printable cards). Print is always light.
+  - The accent: `--accent` is the platform's fairway; inside a tournament `[data-accent="<id>"]` (the curated set in
+    src/design/accents.ts) redefines it with its own tint, wash and the text that goes on it, in either theme.
+  - Contrast: `prefers-contrast: more` or `<html data-contrast="more">` turns the secondary inks into ink and the
+    rules into control lines, for the sun (last in the file, so it wins over both themes).
+  tokens.test.ts holds every pair in both themes, and the copies of each block to each other.
 */
-:root {
-  /* ---- Color: the card and the pencil ---- */
+/* ---- Color, light: the card and the pencil ---- */
+/* An island's own declarations (the TV's focus ring, an accent scope) win over it: :where() weighs nothing. */
+:root,
+:where([data-theme='light']) {
+  color-scheme: light;
   --bg: #fbfaf7; /* card stock */
   --surface: #f3f1ea; /* ruled area, inset panels, skeletons */
   --surface-2: #ffffff; /* inputs, sheets */
-  --ink: #1b211d; /* graphite */
-  --ink-2: #4f5751; /* secondary ink; 7.4:1 on --bg */
-  --ink-3: #5f6761; /* tertiary, AA (4.5:1) on --bg and on --surface; use sparingly */
+  --ink: #1b211d; /* graphite: every figure, 15.7:1 on --bg */
+  --ink-2: #4f5751; /* secondary ink: labels, 7.1:1 on --bg, 6.6:1 on --surface; a figure only on --bg (A11Y-09) */
+  --ink-3: #5f6761; /* tertiary, AA (5.6:1) on --bg and 5.2:1 on --surface; never a figure; use sparingly */
   --rule: #d8d5cb; /* hairline */
   --rule-2: #8a8579; /* control borders: 3:1 on the card stock, a sheet and a ruled panel (A11Y-05, WCAG 1.4.11); it was #bdb9ac, 1.9:1 */
-  --accent: #1e6b3b; /* fairway: live, primary action, my row */
-  --accent-ink: #ffffff;
-  --accent-soft: #e6efe8; /* my-row tint */
-  --accent-wash: #cfddd1; /* a board figure that just changed (MOT-18), and my row pressed: reads on --bg and on --accent-soft */
-  --under: #9d1c23; /* under par, red by convention; 7.7:1 on --bg, 7:1 on --surface (AAA); also the only error red */
+  --accent: #1e6b3b; /* fairway: the platform's accent; a tournament's [data-accent] replaces it (VIS-10) */
+  --accent-ink: #ffffff; /* text on an accent fill */
+  --accent-soft: #ecf0ea; /* my-row tint: ink 14:1, the red and blue figures 7:1 on it (A11Y-09); it was #e6efe8 */
+  --accent-wash: #dce6dd; /* a board figure that just changed (MOT-18), and my row pressed: reads on --bg and on --accent-soft */
+  --under: #9a1b22; /* under par, red by convention; 7.9:1 on --bg, 7.3:1 on --surface, 7.1:1 on my row (AAA); also what is owed and the only error red */
   --under-soft: #f8e6e6;
-  --over: #235380; /* over par, The Open's blue; 7.7:1 on --bg, 7:1 on --surface (AAA); figures only */
+  --over: #214f7c; /* over par, The Open's blue; 8.1:1 on --bg, 7.5:1 on --surface, 7.4:1 on my row (AAA); figures only */
   --over-soft: #e5ecf4;
-  --caution: #8a5a00; /* pending / unsigned; 6.5:1 on --bg */
+  --caution: #8a5a00; /* pending / unsigned: words and marks, 5.7:1 on --bg; a figure beside it stays ink (A11Y-09) */
   --caution-soft: #f6ecd2;
-  --on-dark: #f6f3ea;
-
-  /* Board surfaces: TV and Ceremonia only. Not a dark mode. */
-  --board-bg: #0f2e22;
-  --board-surface: #163b2c;
-  --board-ink: #f6f3ea;
-  --board-ink-2: #a9bbaf;
-  --board-rule: #2a4d3d;
-  --board-accent: #f2c230; /* leader plate, the snake holder's plate on the TV, and the live mark only */
-  --board-under: #ff6b6b;
-  --board-over: #8fb8e6;
-
+  --on-fill: #f6f3ea; /* text on an ink, caution or red fill (a badge, the offline banner) */
   /* The keyboard focus ring. Board surfaces (TV, Ceremonia, deep cards) set it to
      --board-accent: the graphite ring is 1.1:1 on the board green (A11Y-15). */
   --focus-ring: var(--ink);
-
-  /* Event personalization (curated set in src/design/accents.ts; stored in tournaments.accent_color) */
-  --event-accent: var(--accent);
-  --event-accent-ink: #ffffff;
-
-  /* Categorical series, same lightness band as the accents; 1..6 are the curated event accents (src/design/accents.ts).
-     The race chart has its own six below (VIS-21). */
-  --chart-1: #1e6b3b;
-  --chart-2: #2b5b8c;
-  --chart-3: #b4532a;
-  --chart-4: #8a2e3a;
-  --chart-5: #3f4a54;
-  --chart-6: #7a5a2e;
-  --chart-7: #1f7a72;
-  --chart-8: #6b4a8a;
-  --chart-9: #8a6a00;
-  --chart-10: #5a6b2a;
-  --chart-11: #8a4a6a;
-  --chart-12: #4f5751;
+  /* An image drawn in graphite on transparent (the Polo mark): as it is on the card stock. */
+  --mark-filter: none;
+  /* A tournament's logo sits on the page as drawn; on the dark sheet it gets a paper plate. */
+  --logo-plate: transparent;
+  --logo-pad: 0px;
   /* The race chart (VIS-21): the six lines it draws in colour at once, checked together on the card stock with the
      dataviz palette validator (colour-blind separation 9.1 at worst, normal vision 19.3, every one 3:1 or more).
-     Slot 1 is the accent, this phone's player. The rest of a large field is grey context; the names beside the
-     lines and the table carry who is who, never the colour alone. */
+     Slot 1 is the platform's accent, this phone's player. The rest of a large field is grey context; the names beside
+     the lines and the table carry who is who, never the colour alone. */
   --race-1: #1e6b3b;
   --race-2: #2a66c0;
   --race-3: #c2541f;
@@ -69,6 +58,198 @@
   --race-5: #9a7400;
   --race-6: #c43f6a;
   --race-context: #bdb9ac;
+  /* Borders and elevation are colors too: each scope resolves them against its own ink and rules. */
+  --hairline: 1px solid var(--rule);
+  --rule-heavy: 2px solid var(--ink);
+  --control-border: 1.5px solid var(--rule-2);
+  --elev-sheet: 0 -8px 32px rgba(27, 33, 29, 0.18);
+  --elev-toast: 0 6px 20px rgba(27, 33, 29, 0.22);
+}
+
+/*
+  ---- The curated event accents (VIS-09), light ----
+  Each is 15 or more ΔE2000 from every semantic color (under, over, caution and the three inks) in its theme, white
+  text on it is 5.5:1 or more, and it reads 4.5:1 as text on the card stock, a sheet, its tint and its wash
+  (accents.test.ts). Fairway is :root's own. Values mirror src/design/accents.ts.
+*/
+[data-accent='agua'] {
+  --accent: #086b7c;
+  --accent-soft: #eaf0ee;
+  --accent-wash: #d9e6e6;
+}
+[data-accent='atardecer'] {
+  --accent: #aa4205;
+  --accent-soft: #f5ede6;
+  --accent-wash: #f0e0d5;
+}
+[data-accent='vino'] {
+  --accent: #8a1f66;
+  --accent-soft: #f3ebed;
+  --accent-wash: #ebdbe3;
+}
+[data-accent='pizarra'] {
+  --accent: #5b3f9e;
+  --accent-soft: #f0edf1;
+  --accent-wash: #e5e0eb;
+}
+[data-accent='arena'] {
+  --accent: #565612;
+  --accent-soft: #efefe7;
+  --accent-wash: #e4e3d7;
+}
+
+/*
+  ---- Color, dark: the same sheet at night (VIS-11) ----
+  Written twice, word for word: once for the phone's own setting (unless Más says «Claro») and once for «Oscuro»
+  (tokens.test.ts holds the copies equal). Screen only: a printed card is always the light one.
+*/
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #131715;
+    --surface: #1b201d;
+    --surface-2: #222824;
+    --ink: #f1efe8;
+    --ink-2: #bac1bb;
+    --ink-3: #a3aba5;
+    --rule: #2e3531;
+    --rule-2: #78807a;
+    --accent: #7fcc94;
+    --accent-ink: #101412;
+    --accent-soft: #1f2b23;
+    --accent-wash: #293b2e;
+    --under: #ff9b93;
+    --under-soft: #3b2322;
+    --over: #94bff3;
+    --over-soft: #1d2a3a;
+    --caution: #e5b552;
+    --caution-soft: #33290f;
+    --on-fill: #131715;
+    --mark-filter: invert(0.93) hue-rotate(180deg);
+    --logo-plate: #f3f1ea;
+    --logo-pad: 3px;
+    --race-1: #62c27a;
+    --race-2: #6ea3ff;
+    --race-3: #f08a4f;
+    --race-4: #c493f0;
+    --race-5: #d9b23a;
+    --race-6: #f07fa6;
+    --race-context: #4a514c;
+    --elev-sheet: 0 -8px 32px rgba(0, 0, 0, 0.55);
+    --elev-toast: 0 6px 20px rgba(0, 0, 0, 0.6);
+  }
+  :root:not([data-theme='light']) [data-accent='agua']:not([data-theme='light']) {
+    --accent: #5ec2d1;
+    --accent-soft: #1b2a2a;
+    --accent-wash: #22393b;
+  }
+  :root:not([data-theme='light']) [data-accent='atardecer']:not([data-theme='light']) {
+    --accent: #ec8c4d;
+    --accent-soft: #2b241b;
+    --accent-wash: #3e2e20;
+  }
+  :root:not([data-theme='light']) [data-accent='vino']:not([data-theme='light']) {
+    --accent: #e48ebf;
+    --accent-soft: #2a2428;
+    --accent-wash: #3d2f37;
+  }
+  :root:not([data-theme='light']) [data-accent='pizarra']:not([data-theme='light']) {
+    --accent: #bb9ceb;
+    --accent-soft: #25262d;
+    --accent-wash: #353240;
+  }
+  :root:not([data-theme='light']) [data-accent='arena']:not([data-theme='light']) {
+    --accent: #acb169;
+    --accent-soft: #24281e;
+    --accent-wash: #323626;
+  }
+}
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #131715;
+    --surface: #1b201d;
+    --surface-2: #222824;
+    --ink: #f1efe8;
+    --ink-2: #bac1bb;
+    --ink-3: #a3aba5;
+    --rule: #2e3531;
+    --rule-2: #78807a;
+    --accent: #7fcc94;
+    --accent-ink: #101412;
+    --accent-soft: #1f2b23;
+    --accent-wash: #293b2e;
+    --under: #ff9b93;
+    --under-soft: #3b2322;
+    --over: #94bff3;
+    --over-soft: #1d2a3a;
+    --caution: #e5b552;
+    --caution-soft: #33290f;
+    --on-fill: #131715;
+    --mark-filter: invert(0.93) hue-rotate(180deg);
+    --logo-plate: #f3f1ea;
+    --logo-pad: 3px;
+    --race-1: #62c27a;
+    --race-2: #6ea3ff;
+    --race-3: #f08a4f;
+    --race-4: #c493f0;
+    --race-5: #d9b23a;
+    --race-6: #f07fa6;
+    --race-context: #4a514c;
+    --elev-sheet: 0 -8px 32px rgba(0, 0, 0, 0.55);
+    --elev-toast: 0 6px 20px rgba(0, 0, 0, 0.6);
+  }
+  :root[data-theme='dark'] [data-accent='agua']:not([data-theme='light']) {
+    --accent: #5ec2d1;
+    --accent-soft: #1b2a2a;
+    --accent-wash: #22393b;
+  }
+  :root[data-theme='dark'] [data-accent='atardecer']:not([data-theme='light']) {
+    --accent: #ec8c4d;
+    --accent-soft: #2b241b;
+    --accent-wash: #3e2e20;
+  }
+  :root[data-theme='dark'] [data-accent='vino']:not([data-theme='light']) {
+    --accent: #e48ebf;
+    --accent-soft: #2a2428;
+    --accent-wash: #3d2f37;
+  }
+  :root[data-theme='dark'] [data-accent='pizarra']:not([data-theme='light']) {
+    --accent: #bb9ceb;
+    --accent-soft: #25262d;
+    --accent-wash: #353240;
+  }
+  :root[data-theme='dark'] [data-accent='arena']:not([data-theme='light']) {
+    --accent: #acb169;
+    --accent-soft: #24281e;
+    --accent-wash: #323626;
+  }
+}
+
+:root {
+  /* Board surfaces: TV and Ceremonia only, the same in either theme. Not a dark mode. */
+  --board-bg: #0f2e22;
+  --board-surface: #163b2c;
+  --board-ink: #f6f3ea;
+  --board-ink-2: #b8c8bd; /* 7:1 on --board-surface, 8.4:1 on --board-bg: it carries figures on the TV (A11Y-09); it was #a9bbaf */
+  --board-rule: #2a4d3d;
+  --board-accent: #f2c230; /* leader plate, the snake holder's plate on the TV, and the live mark only */
+  --board-under: #ff6b6b;
+  --board-over: #8fb8e6;
+
+  /* Categorical series, same lightness band as the light accents; 1..6 are the curated event accents (src/design/accents.ts). */
+  --chart-1: #1e6b3b;
+  --chart-2: #086b7c;
+  --chart-3: #aa4205;
+  --chart-4: #8a1f66;
+  --chart-5: #5b3f9e;
+  --chart-6: #565612;
+  --chart-7: #1f7a72;
+  --chart-8: #6b4a8a;
+  --chart-9: #8a6a00;
+  --chart-10: #5a6b2a;
+  --chart-11: #8a4a6a;
+  --chart-12: #4f5751;
 
   /* Google's own colors, only for its sign-in mark (brand guidelines). */
   --google-blue: #4285f4;
@@ -76,13 +257,15 @@
   --google-yellow: #fbbc05;
   --google-red: #ea4335;
 
+  /* Figures' weight: one step heavier when more contrast is asked for (A11Y-19). */
+  --fig-weight: 600;
+
   /* ---- Type ---- */
   --font-text: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-event: 'Fraunces', 'Iowan Old Style', Georgia, serif; /* the event name, nothing else */
   --wdth-text: 100;
   --wdth-figure: 90; /* semi-condensed for numeric columns */
-  --fs-2xs: 0.6875rem; /* 11 */
-  --fs-xs: 0.75rem; /* 12 */
+  --fs-xs: 0.75rem; /* 12: the floor, nothing is set smaller (VIS-24; it was 11 in 19 rules and 10 on the share card) */
   --fs-sm: 0.875rem; /* 14 */
   --fs-md: 1rem; /* 16 */
   --fs-lg: 1.125rem; /* 18 */
@@ -126,13 +309,7 @@
   /* One list-row height for the whole app. It is the tap target plus the
      breathing room a two-line row needs; see Row in primitives.tsx. */
   --row-h: 56px;
-  --hairline: 1px solid var(--rule);
-  --rule-heavy: 2px solid var(--ink);
-  --control-border: 1.5px solid var(--rule-2);
-
-  /* ---- Elevation: only what floats ---- */
-  --elev-sheet: 0 -8px 32px rgba(27, 33, 29, 0.18);
-  --elev-toast: 0 6px 20px rgba(27, 33, 29, 0.22);
+  /* The rules and the shadows (--hairline, --rule-heavy, --control-border, --elev-*) are in the color blocks above. */
 
   /* ---- Motion ---- */
   --dur-fast: 150ms;
@@ -162,4 +339,27 @@
     --dur-slow: 0ms;
     --dur-board: 0ms;
   }
+}
+
+/*
+  ---- More contrast: the sun, or the phone's «Aumentar contraste» (A11Y-19) ----
+  The secondary inks become ink, the hairlines take the controls' line, the controls' line becomes ink at 2 px and
+  figures go one weight up. In either theme: every value here is the theme's own. Más › Apariencia turns it on
+  (`data-contrast="more"`) or off over the phone's setting (`data-contrast="normal"`).
+*/
+@media (prefers-contrast: more) {
+  :root:not([data-contrast='normal']) {
+    --ink-2: var(--ink);
+    --ink-3: var(--ink);
+    --rule: var(--rule-2);
+    --control-border: 2px solid var(--ink);
+    --fig-weight: 700;
+  }
+}
+:root[data-contrast='more'] {
+  --ink-2: var(--ink);
+  --ink-3: var(--ink);
+  --rule: var(--rule-2);
+  --control-border: 2px solid var(--ink);
+  --fig-weight: 700;
 }

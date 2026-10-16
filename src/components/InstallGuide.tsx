@@ -92,7 +92,7 @@ export function InstallCard() {
       <p className="help">{t.install.why}</p>
       <InstallSteps platform={platform} />
       <div className={styles.actions}>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={later}>
+        <button className="btn btn--ghost btn--sm btn--flush" type="button" onClick={later}>
           {t.install.later}
         </button>
         <button className="btn btn--ghost btn--sm" type="button" onClick={have}>

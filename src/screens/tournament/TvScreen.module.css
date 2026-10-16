@@ -41,7 +41,7 @@
   object-fit: contain;
   padding: 0.8vh;
   border-radius: var(--r-md);
-  background: var(--on-dark);
+  background: var(--board-ink);
 }
 .title {
   font-family: var(--font-event);
