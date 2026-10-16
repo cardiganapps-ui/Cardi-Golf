@@ -15,11 +15,20 @@
   gap: var(--s2);
   flex-wrap: wrap;
 }
+/*
+ * VIS-25: one group to a landscape page, the page wide; on paper the rows take the page's height in mm (a score row
+ * 14 mm, its putts 8 mm), the name column holds the handicap and the pair on one line, the stroke dots are large
+ * enough to read in the sun, and everything is ink on white: no grey text, no grey fill. It filled half its page,
+ * had no Ida or Vuelta, and wrapped a name to three or four lines.
+ */
 .card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--ink);
   padding: var(--s3);
   page-break-after: always;
   break-after: page;
+  break-inside: avoid;
 }
 .head {
   display: flex;
@@ -38,15 +47,21 @@
   color: var(--ink);
 }
 .sub {
-  font-size: var(--fs-xs);
-  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  color: var(--ink);
 }
 .table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
+}
+.nameCol {
+  width: 23%;
+}
+.sumCol {
+  width: 5%;
 }
 .table th,
 .table td {
@@ -54,26 +69,41 @@
   text-align: center;
   padding: 2px 0;
   height: 22px;
+  color: var(--ink);
+}
+/* A nine's subtotal and the total: the column a heavier rule sets off. */
+.table .sum {
+  border-left-width: 2px;
+  font-weight: 600;
 }
 .left {
   text-align: left !important;
-  padding-left: var(--s1) !important;
-  width: 92px;
+  padding-left: var(--s2) !important;
 }
 .meta th,
 .meta td {
   font-weight: 400;
-  color: var(--ink-2);
-  height: 16px;
+  height: 18px;
 }
 .player td {
-  height: 26px;
+  height: 14mm;
+}
+.player strong {
+  display: block;
+  font-size: var(--fs-md);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .playerSub {
   display: block;
   font-size: var(--fs-xs);
   font-weight: 400;
-  color: var(--ink-2);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .strokes {
   vertical-align: top;
@@ -81,22 +111,24 @@
 }
 .dots {
   position: absolute;
-  top: 0;
-  right: 2px;
-  font-size: var(--fs-xs);
+  top: 1px;
+  right: 3px;
+  font-size: var(--fs-md);
+  letter-spacing: -0.05em;
   line-height: 1;
   color: var(--ink);
 }
+/* The putts row: a dashed rule over it says it is the same player's second line, no grey fill. */
 .putts td {
-  height: 16px;
-  background: var(--surface);
+  height: 8mm;
+  border-top-style: dashed;
 }
 .foot {
   display: flex;
   justify-content: space-between;
   gap: var(--s2);
   font-size: var(--fs-xs);
-  color: var(--ink-2);
+  color: var(--ink);
   margin-top: var(--s2);
 }
 @page {
@@ -110,7 +142,15 @@
 @media print {
   .page {
     padding: 0;
-    background: white;
+    gap: 0;
+    background: var(--surface-2);
+  }
+  /* The page's height, less the margins: the card is the sheet. */
+  .card {
+    min-height: calc(100vh - 2px);
+  }
+  .card .table {
+    flex: 1;
   }
   :global(.noprint) {
     display: none !important;

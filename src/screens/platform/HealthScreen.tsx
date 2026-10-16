@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner, Toggle } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { useAppFlags, usePlatformApi, type Health, type Telemetry } from '../../data/platform'
 import { PhonesSection, Status } from './PhonesSection'
@@ -83,9 +83,9 @@ export function HealthScreen() {
     <div className={s.screen}>
       <div className={s.sectionHead}>
         <h2>{t.platform.sections.health}</h2>
-        <button className="btn btn--ghost btn--sm" type="button" onClick={() => void load()}>
+        <Button variant="ghost" size="sm" onClick={() => void load()}>
           {H.refresh}
-        </button>
+        </Button>
       </div>
 
       <div className={s.cards}>
@@ -152,18 +152,18 @@ export function HealthScreen() {
           <Input value={banner} maxLength={200} placeholder={H.bannerPlaceholder} onChange={(e) => setBanner(e.target.value)} />
         </Field>
         <div className={s.actions}>
-          <button
-            className="btn btn--secondary btn--sm"
-            type="button"
+          <Button
+            size="sm"
+           
             disabled={!banner.trim() || banner.trim() === (h.flags.maintenanceBanner ?? '')}
             onClick={() => setPending({ key: 'maintenance_banner', value: banner.trim(), label: H.bannerSet })}
           >
             {H.bannerSet}
-          </button>
+          </Button>
           {h.flags.maintenanceBanner && (
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setPending({ key: 'maintenance_banner', value: null, label: H.bannerClear })}>
+            <Button variant="ghost" size="sm" onClick={() => setPending({ key: 'maintenance_banner', value: null, label: H.bannerClear })}>
               {H.bannerClear}
-            </button>
+            </Button>
           )}
         </div>
       </section>

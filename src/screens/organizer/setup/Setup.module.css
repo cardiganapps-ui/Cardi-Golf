@@ -287,3 +287,17 @@
     background: var(--surface);
   }
 }
+
+/* The wizard's preview (VIS-19): a laptop's second column, never a phone's. */
+.preview {
+  display: none;
+}
+@media (min-width: 900px) {
+  .preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s4);
+    padding-left: var(--s8);
+    border-left: var(--hairline);
+  }
+}

@@ -5,7 +5,7 @@
  *
  * No file may spell a `btn--` class by hand, except the ones below, each at most as often as it does now. The list
  * only shrinks: a file that converts some of its buttons lowers its number here, one that converts all of them
- * leaves the list. What it holds is the Comité's, the organizer's, the profile's and the Admin de Polo's screens,
+ * leaves the list. What it holds is the Comité's and the profile's screens,
  * plus two of En vivo's and the Tarjeta's save bar, which other work is changing.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -50,26 +50,6 @@ const STILL: Record<string, number> = {
   'screens/admin/ProfileLink.tsx': 7,
   'screens/admin/RejectedInbox.tsx': 8,
   'screens/admin/SpectatorLinkCard.tsx': 7,
-  'screens/organizer/MyTournamentsScreen.tsx': 7,
-  'screens/organizer/NewTournamentScreen.tsx': 5,
-  'screens/organizer/OrganizerLoginScreen.tsx': 14,
-  'screens/organizer/ResetPasswordScreen.tsx': 3,
-  'screens/organizer/setup/FormatEditor.tsx': 2,
-  'screens/organizer/setup/GameCatalog.tsx': 9,
-  'screens/organizer/setup/MoneyEditor.tsx': 4,
-  'screens/organizer/setup/PlayStep.tsx': 2,
-  'screens/platform/AuditScreen.tsx': 3,
-  'screens/platform/CatalogCourses.tsx': 1,
-  'screens/platform/CatalogCrews.tsx': 9,
-  'screens/platform/CourseDetail.tsx': 2,
-  'screens/platform/HealthScreen.tsx': 6,
-  'screens/platform/NoticesScreen.tsx': 4,
-  'screens/platform/PeopleScreen.tsx': 1,
-  'screens/platform/PersonDetail.tsx': 15,
-  'screens/platform/PlatformLayout.tsx': 2,
-  'screens/platform/TournamentDetail.tsx': 20,
-  'screens/platform/TournamentsScreen.tsx': 1,
-  'screens/platform/ViewReason.tsx': 2,
   'screens/profile/Achievements.tsx': 2,
   'screens/profile/AdminAccesses.tsx': 2,
   'screens/profile/CrewScreen.tsx': 12,

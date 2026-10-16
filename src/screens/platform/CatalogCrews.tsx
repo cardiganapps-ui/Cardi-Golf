@@ -9,7 +9,7 @@ import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Sheet, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { leaveSheetHistory } from '../../components/sheetHistory'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { IconChevronLeft } from '../../components/icons'
 import { usePlatformApi, type CrewRow, type PlatformCrew } from '../../data/platform'
@@ -20,6 +20,7 @@ import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
 import { ViewReasonForm } from './ViewReason'
 import { useAdminView } from './useAdminView'
+import { buttonClass } from '../../components/buttonClass'
 
 const K = t.platform.crews
 
@@ -51,9 +52,9 @@ export function CatalogCrews() {
               ))}
             </div>
             {rows.length < total && (
-              <button className="btn btn--secondary" type="button" disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => void more()}>
                 {t.platform.more}
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -89,7 +90,7 @@ export function CrewDetail() {
 
 
   const back = (
-    <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
+    <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {K.back}
     </Link>
@@ -112,9 +113,9 @@ export function CrewDetail() {
         <h2>{crew.name}</h2>
         <span className={s.help}>{[`/c/${crew.slug}`, relTime(crew.createdAt)].join(', ')}</span>
         <div className={s.actions}>
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setDeleting(true)}>
+          <Button variant="danger" size="sm" onClick={() => setDeleting(true)}>
             {K.delete}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -132,9 +133,9 @@ export function CrewDetail() {
                   <span className={s.rowSub}>{[m.role === 'owner' ? K.owner : K.member, `@${m.handle}`, K.joined(relTime(m.joinedAt))].join(', ')}</span>
                 </span>
               </Link>
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setRemoving(m)}>
+              <Button variant="danger" size="sm" onClick={() => setRemoving(m)}>
                 {K.remove}
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -246,9 +247,9 @@ function DeleteCrewSheet({ open, crew, onClose, onDeleted }: { open: boolean; cr
         <Field label={t.platform.reason} error={error}>
           <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
         </Field>
-        <button className="btn btn--danger btn--block" type="button" disabled={busy || confirm.trim() !== crew.name || reason.trim().length < 3} onClick={() => void go()}>
+        <Button variant="danger" block disabled={busy || confirm.trim() !== crew.name || reason.trim().length < 3} onClick={() => void go()}>
           {busy ? t.common.saving : K.delete}
-        </button>
+        </Button>
       </div>
     </Sheet>
   )

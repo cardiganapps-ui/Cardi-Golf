@@ -8,12 +8,13 @@ import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { Avatar, ErrorBox, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { EmptyState } from '../../components/primitives'
+import { Button, EmptyState } from '../../components/primitives'
 import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { listMyTournaments, type MyTournament } from '../../data/api'
 import styles from './Organizer.module.css'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 const GROUPS: Array<{ key: 'live' | 'setup' | 'finished'; statuses: string[]; label: string; quiet?: boolean }> = [
   { key: 'live', statuses: ['live', 'auction'], label: t.organizer.groupLive },
@@ -60,21 +61,21 @@ export function MyTournamentsScreen() {
   }
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} ${styles.mine}`}>
       <div className={styles.topRow}>
         <Link to="/" className={styles.brand}>
           <Wordmark />
         </Link>
-        <button className="btn btn--ghost btn--sm" type="button" disabled={signingOut} onClick={() => void logout()}>
+        <Button variant="ghost" size="sm" disabled={signingOut} onClick={() => void logout()}>
           {signingOut ? t.account.signingOut : t.common.logout}
-        </button>
+        </Button>
       </div>
       <div className={styles.titleRow}>
         <div>
           <h1>{t.organizer.myTournaments}</h1>
           {user && <span className="help">{user.email}</span>}
         </div>
-        <Link className="btn btn--primary btn--sm" to="/organizer/new">
+        <Link className={buttonClass({ variant: 'primary', size: 'sm' })} to="/organizer/new">
           {t.organizer.newTournament}
         </Link>
       </div>
@@ -85,7 +86,7 @@ export function MyTournamentsScreen() {
           title={t.organizer.empty}
           body={t.organizer.emptyHint}
           action={
-            <Link className="btn btn--primary" to="/organizer/new">
+            <Link className={buttonClass({ variant: 'primary' })} to="/organizer/new">
               {t.organizer.newTournament}
             </Link>
           }
@@ -109,7 +110,7 @@ export function MyTournamentsScreen() {
                       </span>
                     </span>
                   </Link>
-                  <Link className="btn btn--secondary btn--sm" to={`/t/${it.slug}/admin`}>
+                  <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to={`/t/${it.slug}/admin`}>
                     {t.organizer.admin}
                   </Link>
                 </div>

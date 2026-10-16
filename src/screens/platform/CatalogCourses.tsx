@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
-import { Input } from '../../components/primitives'
+import { Button, Input } from '../../components/primitives'
 import { usePlatformApi, type CourseFilter, type CourseRow } from '../../data/platform'
 import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
@@ -56,9 +56,9 @@ export function CatalogCourses() {
               ))}
             </div>
             {rows.length < total && (
-              <button className="btn btn--secondary" type="button" disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={() => void more()}>
                 {t.platform.more}
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -80,9 +80,9 @@ function CourseLine({ r, active }: { r: CourseRow; active: boolean }) {
       <span className={s.rowEnd}>
         <span className={s.chips}>
           {r.verifiedAt && <VerifiedBadge />}
-          {r.correctedAt && <span className="chip">{C.chips.corrected}</span>}
-          {r.dupes > 0 && <span className="chip chip--sun">{C.chips.dupe}</span>}
-          {r.broken && <span className="chip chip--coral">{C.chips.broken}</span>}
+          {r.correctedAt && <span className={s.flag}>{C.chips.corrected}</span>}
+          {r.dupes > 0 && <span className={s.flagCaution}>{C.chips.dupe}</span>}
+          {r.broken && <span className={s.flagDanger}>{C.chips.broken}</span>}
         </span>
       </span>
     </Link>
