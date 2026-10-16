@@ -579,11 +579,13 @@
       "workstream": "W13",
       "phase": 2,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 227,
+      "tests": [
+        "src/engine/games/seam.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Best round vs per-round low score and snake vs three-putt pot remain separate games (stored settings depend on both); the Calcutta owner shares and «Devolver» keep their own split rules."
     },
     {
       "id": "ARCH-16",
