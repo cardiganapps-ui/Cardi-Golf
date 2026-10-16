@@ -6,6 +6,11 @@
  * - QA-21: nothing updated the dependencies (13 majors behind) and nobody ran
  *   an audit. Dependabot proposes updates weekly; CI fails on a known high or
  *   critical vulnerability in the production dependencies.
+ * - Vercel's Hobby plan builds at most 100 deployments a day, and a preview of
+ *   every push to every working branch spent them: on 2026-10-15 and again on
+ *   2026-10-16 production's deploy of main was refused («rate limited, retry
+ *   in 24 hours»). Working branches (claude/**, dependabot/**) build no
+ *   preview; main deploys, and a preview is made on demand (CLAUDE.md §0.4).
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -21,6 +26,11 @@ describe('ops', () => {
     expect(script).toContain('/rest/v1/rpc/app_flags')
     expect(script).toMatch(/"\$code" = "200"/)
     expect(script).toContain('maintenanceBanner')
+  })
+
+  it('working branches build no Vercel preview, so production keeps the daily budget', () => {
+    const vercel = JSON.parse(read('vercel.json')) as { git?: { deploymentEnabled?: Record<string, boolean> } }
+    expect(vercel.git?.deploymentEnabled).toEqual({ 'claude/**': false, 'dependabot/**': false })
   })
 
   it('CI runs on the Node major Vercel uses', () => {
