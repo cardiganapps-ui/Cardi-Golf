@@ -14,8 +14,13 @@ async function openSheet(page: Page) {
   await open(page, '/t/_/full12-live')
   await page.locator(ROW).first().click()
   await expect(page.getByRole('dialog')).toHaveCount(1)
-  // The entry has played.
-  await page.waitForTimeout(400)
+  // The entry has played: wait for its animations, not a fixed time (a busy CI runner starts them late, and a box
+  // measured mid-entry is up to 16 px off where the sheet rests).
+  await page.locator(DIALOG).evaluate(async (d) => {
+    const els = [d, d.parentElement!]
+    await Promise.all(els.flatMap((el) => el.getAnimations()).map((a) => a.finished))
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+  })
 }
 
 type Frame = { at: number; present: boolean; opacity: number; top: number }
