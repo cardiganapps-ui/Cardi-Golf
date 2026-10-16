@@ -1,6 +1,6 @@
 {
   "anon_security_definer_function_executable (WARN)": 4,
-  "authenticated_security_definer_function_executable (WARN)": 148,
+  "authenticated_security_definer_function_executable (WARN)": 150,
   "rls_enabled_no_policy (INFO)": 19,
   "unindexed_foreign_keys (INFO)": 1
 }

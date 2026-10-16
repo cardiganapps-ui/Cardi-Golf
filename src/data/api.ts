@@ -300,6 +300,8 @@ export interface CourseDraft {
   website?: string | null
   latitude?: number | null
   longitude?: number | null
+  /** A person compared the card with the printed one (0075, STRAT-14). Read only: any change to the card takes it off. */
+  verifiedAt?: string | null
   tees: CourseDraftTee[]
 }
 
@@ -332,13 +334,44 @@ export async function saveCourse(draft: CourseDraft): Promise<string> {
   })
 }
 
-export async function listCourses(): Promise<Array<{ id: string; name: string; location: string | null; source: string; tees: number; attribution: string | null; createdBy: string | null }>> {
+export interface CatalogCourse {
+  id: string
+  name: string
+  location: string | null
+  source: string
+  tees: number
+  attribution: string | null
+  createdBy: string | null
+  /** 0075 (STRAT-14): when a person compared its card with the printed one; null otherwise, or on a database without it. */
+  verifiedAt: string | null
+}
+
+export async function listCourses(): Promise<CatalogCourse[]> {
   // Every signed-in phone reads the whole shared catalog (courses_read), which outgrows one page as Rondas rápidas add
-  // courses: paged by name, then id, so a page never repeats or skips one (DB-20).
+  // courses: paged by name, then id, so a page never repeats or skips one (DB-20). Every column (`*`): a database
+  // without 0075 has no `verified_at`, and naming it would fail the whole list.
   const rows = await fetchAll<Row>((from, to, count) =>
-    supabase().from('courses').select('id, name, location, source, attribution, created_by, tees(id)', withCount(count)).order('name').order('id').range(from, to),
+    supabase().from('courses').select('*, tees(id)', withCount(count)).order('name').order('id').range(from, to),
   )
-  return rows.map((r) => ({ id: r.id, name: r.name, location: r.location ?? null, source: r.source, tees: (r.tees ?? []).length, attribution: r.attribution ?? null, createdBy: r.created_by ?? null }))
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    location: r.location ?? null,
+    source: r.source,
+    tees: (r.tees ?? []).length,
+    attribution: r.attribution ?? null,
+    createdBy: r.created_by ?? null,
+    verifiedAt: r.verified_at ?? null,
+  }))
+}
+
+/**
+ * The Comité of a Terminado tournament that played the course marks its card verified (0075, STRAT-14). The server
+ * holds the rule (a finished day there, the card unchanged since its first hole, a sound card) and says which part
+ * failed.
+ */
+export async function verifyCourse(courseId: string, tournamentId: string, reason: string): Promise<void> {
+  await rpc('verify_course', { p_course_id: courseId, p_tournament_id: tournamentId, p_reason: reason })
 }
 
 export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
@@ -356,6 +389,7 @@ export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
     website: course.website ?? null,
     latitude: course.latitude == null ? null : Number(course.latitude),
     longitude: course.longitude == null ? null : Number(course.longitude),
+    verifiedAt: course.verified_at ?? null,
     tees: tees.map((t) => ({
       id: t.id,
       name: t.name,

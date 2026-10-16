@@ -15,6 +15,16 @@ export const OPENGOLF_ATTRIBUTION = '© OpenStreetMap contributors (ODbL 1.0) vi
 
 const num = (v: unknown): number | null => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v))
 
+/**
+ * A whole number from lo to hi as the provider sent it, or null: a par or stroke index the adapter may take as given.
+ * Here, not in types.ts: scripts/seed-courses.mjs runs this file in Node as it is, which imports nothing but types.
+ */
+function given(v: unknown, lo: number, hi: number): number | null {
+  if (v == null || v === '') return null
+  const n = Number(v)
+  return Number.isInteger(n) && n >= lo && n <= hi ? n : null
+}
+
 function locationOf(c: Any): string | null {
   const parts = [c.city, c.state, c.country].filter(Boolean)
   return parts.length ? parts.join(', ') : null
@@ -49,6 +59,10 @@ export function mapCourse(c: Any): ProviderCourse {
         const yards = num(teeKey && y[teeKey]) ?? num(color && y[color]) ?? num(color && y[String(color).toLowerCase()])
         return { number: Number(h.number) || i + 1, par: Number(h.par) || 4, strokeIndex: Number(h.handicap_index) || i + 1, yards }
       })
+    // A par or stroke index the provider didn't give (or gave out of range) is filled in: the tee is `assumed`.
+    const filled = baseHoles.some((h) => given(h.par, 3, 6) == null || given(h.handicap_index, 1, 18) == null)
+    const sisOnce = new Set(baseHoles.map((h, i) => Number(h.handicap_index) || i + 1)).size === baseHoles.length
+    const assumed = filled || !sisOnce
     const fixSi = (hs: ReturnType<typeof mkHoles>) => {
       if (new Set(hs.map((h) => h.strokeIndex)).size !== hs.length) hs.forEach((h, i) => (h.strokeIndex = i + 1))
       return hs
@@ -63,10 +77,11 @@ export function mapCourse(c: Any): ProviderCourse {
           parTotal: num(t.par),
           gender: t.gender ?? null,
           holes: fixSi(mkHoles(t.tee_key ?? null, t.tee_color ?? null)),
+          assumed,
         })
       }
     } else {
-      tees.push({ name: 'Tee', color: null, rating: null, slope: null, parTotal: num(c.par), gender: null, holes: fixSi(mkHoles(null, null)) })
+      tees.push({ name: 'Tee', color: null, rating: null, slope: null, parTotal: num(c.par), gender: null, holes: fixSi(mkHoles(null, null)), assumed })
     }
   }
   return {
