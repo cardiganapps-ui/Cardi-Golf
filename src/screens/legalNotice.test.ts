@@ -45,7 +45,7 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e', '2026-10-15.3': '5fc6344c8bc1e899' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e', '2026-10-15.3': '5fc6344c8bc1e899', '2026-10-16': '2cb9f4b6903d685f' },
   terms: { '2026-10-01': '2f2c15560894de1c' },
 }
 
@@ -66,7 +66,7 @@ describe('each document is pinned to its own version and date', () => {
   }
 
   it('the two documents carry their own date (the terms used to take the notice\'s)', () => {
-    expect(t.legal.privacy.updated).toBe('Última actualización: 15 de octubre de 2026')
+    expect(t.legal.privacy.updated).toBe('Última actualización: 16 de octubre de 2026')
     expect(t.legal.terms.updated).toBe('Última actualización: 1 de octubre de 2026')
     expect(t.legal).not.toHaveProperty('updated')
   })
@@ -96,12 +96,28 @@ describe('the integral notice (TRUST-04)', () => {
     expect(arco).toContain('el correo golf@cardigan.mx todavía no recibe mensajes')
   })
 
-  it('a deleted tournament\'s history stays, and so do anonymous users and sessions', () => {
+  it('each period, as the nightly deletion keeps it (TRUST-18, run_retention in 0069)', () => {
     const kept = sections['Cuánto tiempo los guardamos']!
-    expect(kept).toContain('si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía')
-    expect(kept).toContain('los usuarios anónimos que se crean al mandar un PIN')
+    const run = source('supabase/migrations/0069_retention.sql')
+    expect(kept).toContain('Cada noche, después del respaldo, se borra lo que ya cumplió su plazo.')
+    expect(source('api/backup-cron.ts')).toContain('const deleted = await retention(url, key)')
+    // A deleted tournament's history: 90 days after its last line.
+    expect(kept).toContain('si el torneo se borra, su historial se queda con una copia de todo lo que tenía y se borra 90 días después')
+    expect(run).toContain("having max(d.at) < now() - interval '90 days'")
+    // The inbox's notices, the server's answers, an idle anonymous user that holds nothing.
+    expect(kept).toContain('Los avisos de tu bandeja se borran a los 12 meses.')
+    expect(run).toContain("where created_at < now() - interval '12 months'")
+    expect(kept).toContain('La respuesta que el servidor le dio a cada hoyo guardado sirve para no guardarlo dos veces, y se borra a los 90 días.')
+    expect(run).toContain("from public.score_mutations where created_at < now() - interval '90 days'")
+    expect(kept).toContain('Un usuario anónimo, el que se crea al mandar un PIN, se borra si pasan 180 días sin usarse y no tiene nada en ningún torneo')
+    expect(run).toContain("greatest(u.created_at, u.last_sign_in_at, u.updated_at) < now() - interval '180 days'")
+    expect(kept).toContain('los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente')
+    expect(run).toContain("delete from public.profile_link_tokens where expires_at < now() - interval '1 day'")
+    // What has no date yet is said so; the backups among them (Diego's decision, handoff 5e).
+    expect(kept).toContain('Los campos cargados con sus fotos de tarjeta y los registros de quien opera Polo no tienen fecha de borrado')
     expect(kept).toContain('cerrar sesión no los apaga')
     expect(kept).toContain('tu lugar en tus crews')
+    expect(kept).toContain('y hoy no se borran nunca.')
   })
 
   it('a minor needs a parent\'s permission, and changes show in the date and version', () => {
@@ -159,8 +175,20 @@ describe('who sees a tournament\'s money (TRUST-02)', () => {
 describe('what the operator sees and can do (TRUST-17)', () => {
   it('word for word', () => {
     expect(sections['Quién opera Polo']).toBe(
-      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.',
+      'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews y cuántos amigos tienen; los crews, con sus miembros y sus salidas (nunca su código), para atender un reporte; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta, sacar a alguien de un crew y mandar avisos a todos o a una persona. Para abrir desde su panel un torneo en el que no está, una cuenta o un crew, escribe por qué, y queda registrado: el Comité de ese torneo lo ve en su historial de cambios, con el motivo, y tú ves en Editar perfil, en «Accesos del administrador», cuándo abrió tu cuenta o uno de tus crews, por qué y lo que hizo con ellos. Si entra a un torneo por su enlace, su Comité también lo ve en el historial, sin motivo. Lo que cambia en un torneo queda marcado como suyo. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros. Lo usa para dar soporte y corregir errores.',
     )
+  })
+
+  it('what it rests on: each view asks a reason and logs it, the gate logs a visit by the link, the crew panel has no code (TRUST-22, 0068)', () => {
+    const m = source('supabase/migrations/0068_admin_access.sql')
+    const fn = (name: string) => m.slice(m.indexOf(`create or replace function public.${name}(`)).split('\n$$;')[0]!
+    for (const [name, kind] of [['platform_tournament', 'tournament'], ['platform_person', 'person'], ['platform_crew', 'crew']]) expect(fn(name!)).toContain(`perform public.platform_view('${kind}'`)
+    expect(fn('platform_view')).toContain("raise exception 'Escribe por qué lo abres")
+    expect(fn('platform_crew')).not.toContain('join_code')
+    expect(fn('my_membership')).toContain("perform public.platform_log('view', 'tournament', tid::text, tid, null, jsonb_build_object('via', 'link'))")
+    expect(fn('tournament_audit')).toContain("'table', 'platform_audit_log'")
+    expect(fn('my_admin_accesses')).toContain("l.target_kind = 'person' and l.target_id = me::text")
+    expect(source('src/screens/profile/ProfileEditScreen.tsx')).toContain('<AdminAccesses />')
   })
 
   it('an unlock is to correct a Protegido tournament, not to see it (P3: is_tournament_member vs platform_can_write, 0021)', () => {
@@ -227,12 +255,16 @@ describe('the rest of the verifier\'s list', () => {
     )
   })
 
-  it('6. backups are plain gzipped JSON that only Cloudflare encrypts at rest; Microsoft is among the push services', () => {
+  it('6. backups are plain gzipped JSON that only Cloudflare encrypts at rest, with no secret in them; Microsoft is among the push services', () => {
     const where = sections['Dónde viven']!
     expect(where).not.toContain('cifrados')
     expect(where).toContain('Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido')
-    expect(where).toContain('también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido: nosotros no la ciframos (Cloudflare cifra lo que guarda)')
+    expect(where).toContain('también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido. No lleva ningún PIN, ningún enlace de un solo uso ni la dirección de avisos de ningún navegador.')
+    expect(where).toContain('Nosotros no la ciframos: Cloudflare cifra lo que guarda en sus discos, pero quien tenga las llaves de ese almacenamiento puede leerla.')
     expect(where).toContain('(el de Apple, Google, Microsoft o Mozilla)')
+    // TRUST-10: the tables that hold them are left out, and the route takes their keys out of anything else.
+    for (const table of ['player_pins', 'profile_link_tokens', 'push_subscriptions', 'pin_push_subscriptions']) expect(NOT_BACKED_UP).toHaveProperty(table)
+    expect(source('api/backup-cron.ts')).toContain('tables: withoutSecrets(dump.tables)')
   })
 
   it('7. deletion takes the name off the players the person confirmed (TRUST-03, 0031) and the mailbox does not receive yet (TRUST-01): said as it is', () => {
@@ -252,7 +284,7 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-15.3')
+    expect(t.legal.privacy.version).toBe('2026-10-16')
     expect(t.legal.terms.version).toBe('2026-10-01')
   })
 })
@@ -319,7 +351,7 @@ describe('what deleting an account takes and what it leaves (platform_delete_acc
 
   it('the facts it rests on: when one changes, so does the sentence', () => {
     // The nightly backup copies what the deletion removes from the database…
-    for (const table of ['profiles', 'friendships', 'rivalries', 'notifications', 'push_subscriptions', 'crew_members']) expect(BACKUP_TABLES).toHaveProperty(table)
+    for (const table of ['profiles', 'friendships', 'rivalries', 'notifications', 'crew_members']) expect(BACKUP_TABLES).toHaveProperty(table)
     // …and the route only ever writes its object: no backup is deleted.
     expect(source('api/backup-cron.ts')).not.toMatch(/method:\s*['"]DELETE/)
     // Each new profile photo is a new file, and no code removes a stored file.
@@ -347,7 +379,7 @@ describe('uploaded files: public by their link, never deleted (a public bucket; 
 
   it('no file is ever deleted, and no backup either', () => {
     expect(where()).toContain('La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra.')
-    expect(where()).toContain('nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca.')
+    expect(where()).toContain('pero quien tenga las llaves de ese almacenamiento puede leerla. Hoy esas copias no se borran nunca.')
   })
 
   it('the rules it rests on: a public bucket, so a file opens by its link with no policy; listing it is for those who may write there (TRUST-07)', () => {
@@ -381,7 +413,7 @@ describe('uploaded files: public by their link, never deleted (a public bucket; 
 describe('what the notice left out (P3-6)', () => {
   it('Supabase keeps the IP address and the browser of every session, and the operator can read them', () => {
     expect(sections['Qué datos guardamos']).toContain('Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella.')
-    expect(sections['Quién opera Polo']).toContain('Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión.')
+    expect(sections['Quién opera Polo']).toContain('Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros.')
   })
 
   it('opening a tournament or a profile link creates no user: the PIN does, under its consent line', () => {

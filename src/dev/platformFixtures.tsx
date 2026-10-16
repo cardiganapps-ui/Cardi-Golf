@@ -204,7 +204,7 @@ const api: PlatformApi = {
     const c = CREWS.find((x) => x.id === id)
     if (!c) return null
     return {
-      id: c.id, slug: c.slug, name: c.name, joinCode: 'JUEV3S', createdAt: c.createdAt, ownerId: 'p-mau',
+      id: c.id, slug: c.slug, name: c.name, createdAt: c.createdAt, ownerId: 'p-mau',
       members: [
         { profileId: 'p-mau', handle: 'mau.lozano', displayName: 'Mauricio Lozano', avatarUrl: null, role: 'owner', joinedAt: c.createdAt },
         { profileId: 'p-diego', handle: 'diego', displayName: 'Diego Arámburu', avatarUrl: null, role: 'member', joinedAt: ago(24 * 20) },
@@ -256,6 +256,10 @@ const api: PlatformApi = {
       database: { lastMigration: { name: '0024_platform_ops.sql', at: ago(2) }, notifications24h: 41 },
       people: { blocked: 1, deviceLocks: 1, playerLocks: 0 },
       flags: { newAccountsPaused: false, newTournamentsPaused: false, maintenanceBanner: null },
+      retention: {
+        last: { at: ago(14), ok: true, counts: { anonymous: 4, link_tokens: 2, notifications: 0 }, error: null },
+        week: { anonymous: 31, link_tokens: 9, score_mutations: 0, deleted_tournament_audit: 118 },
+      },
     }
   },
   async telemetry() {

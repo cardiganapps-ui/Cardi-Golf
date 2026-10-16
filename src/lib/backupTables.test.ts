@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { BACKUP_TABLES, NOT_BACKED_UP, backupKey } from './backupTables'
+import { BACKUP_TABLES, NOT_BACKED_UP, SECRET_KEYS, backupKey, withoutSecrets } from './backupTables'
 
 const dir = join(process.cwd(), 'supabase/migrations')
 const sql = readdirSync(dir)
@@ -40,6 +40,26 @@ describe('nightly backup', () => {
       for (const col of order.split(',')) if (!new RegExp(`(^|\\s|,|\\()${col}\\s`, 'm').test(block)) bad.push(`${table}.${col}`)
     }
     expect(bad).toEqual([])
+  })
+
+  it('copies no table with a secret in it: a PIN hash, a link token, a push address or its keys (TRUST-10)', () => {
+    for (const t of ['player_pins', 'profile_link_tokens', 'push_subscriptions', 'pin_push_subscriptions', 'spectator_links']) {
+      expect(BACKUP_TABLES, t).not.toHaveProperty(t)
+      expect(NOT_BACKED_UP, t).toHaveProperty(t)
+    }
+    const bad = Object.keys(BACKUP_TABLES).flatMap((t) =>
+      (blocks.get(t) ?? '')
+        .split(/,|\n/)
+        .map((piece) => piece.trim().split(/\s+/)[0] ?? '')
+        .filter((c) => SECRET_KEYS.has(c))
+        .map((c) => `${t}.${c}`),
+    )
+    expect(bad).toEqual([])
+  })
+
+  it('takes every secret-shaped key out, at any depth, and leaves the rest as it was', () => {
+    expect(withoutSecrets([{ id: 1, pin_hash: 'x', before: { auth: 'k', a: [{ endpoint: 'e', b: 2 }] }, n: null }])).toEqual([{ id: 1, before: { a: [{ b: 2 }] }, n: null }])
+    expect(withoutSecrets('texto')).toBe('texto')
   })
 
   it('names one object per UTC day', () => {

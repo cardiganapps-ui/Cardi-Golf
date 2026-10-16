@@ -67,7 +67,7 @@ const KNOWN = new Map<string, string>([
 ])
 
 /** The SQLSTATEs our own `raise exception … using errcode` use (P0001 is a bare raise). */
-const RAISED = new Set(['42501', '22023', '23505', 'P0001'])
+const RAISED = new Set(['42501', '22023', '23505', 'P0001', 'PV001'])
 
 /** Text no person should read: English from Postgres, PostgREST, the browser or JavaScript. */
 const TECHNICAL =

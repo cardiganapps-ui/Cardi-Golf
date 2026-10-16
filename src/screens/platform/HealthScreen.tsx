@@ -21,6 +21,31 @@ const STALE_MS = 36 * 3600_000
 type Pending = { key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner'; value: boolean | string | null; label: string } | null
 
 
+/** The nightly deletion (0069, TRUST-18): its last night, and what it took over the week, by kind. */
+function RetentionCard({ r }: { r: NonNullable<Health['retention']> }) {
+  const week = Object.entries(r.week).filter(([, n]) => n > 0)
+  return (
+    <div className={s.healthCard}>
+      <Status ok={r.last ? r.last.ok : null}>{H.retention}</Status>
+      {r.last ? <span className={r.last.ok ? undefined : s.problem}>{H.retentionLast(relTime(r.last.at), r.last.ok)}</span> : <span className={s.help}>{H.retentionNever}</span>}
+      {r.last?.error && <span className={s.problem}>{r.last.error}</span>}
+      {week.length ? (
+        <>
+          <span className={s.help}>{H.retentionWeek}</span>
+          {week.map(([k, n]) => (
+            <span key={k} className={s.help}>
+              {H.retentionCount(H.retentionKind[k] ?? k, n)}
+            </span>
+          ))}
+        </>
+      ) : (
+        r.last && <span className={s.help}>{H.retentionNone}</span>
+      )}
+      <span className={s.help}>{H.retentionHint}</span>
+    </div>
+  )
+}
+
 export function HealthScreen() {
   const api = usePlatformApi()
   const [h, setH] = useState<Health | null>(null)
@@ -77,6 +102,8 @@ export function HealthScreen() {
           {lastFailed && <span className={s.problem}>{H.backupFailed(relTime(h.backup.last!.at), h.backup.last!.error ?? '')}</span>}
           <span className={s.help}>{H.backupWeek(h.backup.week.ok, h.backup.week.failed)}</span>
         </div>
+
+        {h.retention && <RetentionCard r={h.retention} />}
 
         <div className={s.healthCard}>
           <Status ok={h.push.configured == null ? null : h.push.configured && !pushFailed}>{H.push}</Status>

@@ -27,6 +27,10 @@ const F = H.filter
 const PAGE = 50
 
 const any = (f: AuditFilter) => !!(f.player || f.round || f.hole || f.corrections || f.platform)
+/** A line of the Admin de Polo's own log, merged in at its moment (0068, TRUST-22): it has no row and no detail. */
+const isOperator = (e: AuditEntry) => e.table === 'platform_audit_log'
+/** The history's own rows page the list: the operator's lines ride along with them (negative ids, another count). */
+const historyRows = (page: AuditEntry[]) => page.filter((e) => !isOperator(e))
 
 export function AdminHistory() {
   const { tournamentId } = useTournamentCtx()
@@ -51,7 +55,7 @@ export function AdminHistory() {
         const page = await tournamentAudit(tournamentId, before, PAGE, filter)
         if (mine !== asked.current) return
         setEntries((prev) => (before ? [...(prev ?? []), ...page] : page))
-        setDone(page.length < PAGE)
+        setDone(historyRows(page).length < PAGE)
       } catch (e) {
         if (mine === asked.current) setError(humanError(e))
       }
@@ -75,6 +79,12 @@ export function AdminHistory() {
 
   /** One line that says what happened, in the tournament's own words. */
   function title(e: AuditEntry): string {
+    if (isOperator(e)) {
+      const O = H.operator
+      if (e.action === 'view' && e.after?.via === 'link') return O.viewLink
+      const line = O.line[e.action] ?? O.other
+      return typeof e.after?.until === 'string' ? `${line}, ${O.until(localWhen(e.after.until, timeZone))}` : line
+    }
     const row = e.after ?? e.before ?? {}
     const verb = H.what[e.action] ?? e.action
     if (e.table === 'scores') {
@@ -183,7 +193,16 @@ export function AdminHistory() {
         <p className={a.help}>{filtered ? F.none : H.empty}</p>
       ) : (
         <div className={a.rows}>
-          {entries.map((e) => (
+          {entries.map((e) =>
+            isOperator(e) ? (
+              <div key={e.id} className={a.row}>
+                <span className={a.rowText}>
+                  <span className={a.rowTitle}>{title(e)}</span>
+                  <span className={a.rowSub}>{[relTime(e.at), e.reason && H.reason(e.reason)].filter(Boolean).join(', ')}</span>
+                </span>
+                <span className="chip chip--coral">{H.byPlatform}</span>
+              </div>
+            ) : (
             <div key={e.id} className={a.row}>
               <button type="button" className={a.rowBtn} onClick={() => setOpen(e)}>
                 <span className={a.rowText}>
@@ -195,7 +214,8 @@ export function AdminHistory() {
                 {e.platform && <span className="chip chip--coral">{H.byPlatform}</span>}
               </button>
             </div>
-          ))}
+            ),
+          )}
         </div>
       )}
       {entries && !done && !error && (
@@ -205,7 +225,7 @@ export function AdminHistory() {
           disabled={loadingMore}
           onClick={async () => {
             setLoadingMore(true)
-            await load(entries[entries.length - 1]?.id)
+            await load(historyRows(entries).at(-1)?.id)
             setLoadingMore(false)
           }}
         >
