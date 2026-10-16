@@ -5,23 +5,9 @@
  */
 import { createContext, useContext } from 'react'
 import type { LookupResult } from '../../data/api'
+import type { Me } from '../../data/session'
 
-export interface Me {
-  playerId: string | null
-  isOrganizer: boolean
-  /** Organizer account or admin player: may use the Comité console. */
-  isAdmin: boolean
-  /**
-   * How this session is in the tournament: its profile's confirmed link, this
-   * device's PIN, or 'platform' — the Polo admin visiting a tournament he does
-   * not belong to (read always; Comité unless it is Protegido and locked).
-   */
-  via?: 'profile' | 'device' | 'platform' | null
-  /** Protegido: nobody deletes it; the platform admin needs an unlock to write. */
-  protected?: boolean
-  /** Platform visits: until when the admin's unlock lasts (ISO), if unlocked. */
-  unlockedUntil?: string | null
-}
+export type { Me }
 
 export interface TournamentCtx {
   tournamentId: string

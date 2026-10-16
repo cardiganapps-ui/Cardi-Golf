@@ -10,7 +10,8 @@ import { hcpFromTo, t, type RowSpeech } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { asksMySheet } from '../../lib/noticeText'
 import { Avatar } from '../../components/ui'
-import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, toPar, type Tone } from '../../components/primitives'
+import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented, type Tone } from '../../components/primitives'
+import { toPar } from '../../components/notation'
 import { IconAlert } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
 import { lastSeen, markSeen, type SeenBoard, type SeenRow } from '../../data/boardSeen'
@@ -36,6 +37,7 @@ import { useActiveRound } from './useMyGroup'
 import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
 import { ease } from '../../design/motion'
+import { useCurrency } from '../../components/currency'
 
 /** Gross strokes to par over the holes actually played (pick-ups excluded). Display only. */
 function grossToPar(state: TournamentState, playerId: string, roundId?: string): number | null {
@@ -158,6 +160,7 @@ const BoardRow = memo(function BoardRow(props: {
   dense: boolean
   onOpen: (playerId: string) => void
 }) {
+  const cur = useCurrency()
   const { playerId, place, animate, teamNames, tier, estimated, cash, ownersSpoken, honoreeLabel, unit, onOpen, ...row } = props
   // A11Y-11: what the row shows, said: the sub line's category and money and the owners' names.
   const speech: RowSpeech = {
@@ -165,7 +168,7 @@ const BoardRow = memo(function BoardRow(props: {
     tier: teamNames == null ? tier : null,
     estimated: teamNames == null && estimated,
     unit,
-    money: cash > 0 ? formatMoney(cash) : null,
+    money: cash > 0 ? formatMoney(cash, cur) : null,
     owners: ownersSpoken,
   }
   const sub = (

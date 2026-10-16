@@ -47,16 +47,17 @@ function lastHoles(ctx: RulesContext): string {
   return R.lastHoles(countbackWindows(ctx.holes.at(-1) ?? 18))
 }
 
-const money = (n: number) => (n > 0 ? formatMoney(n) : null)
-
 /** One module's rules, as the Reglamento writes them. */
 export function moduleRules(id: ModuleId, settings: TournamentSettings, field: FieldShape, honoreeName?: string | null, context?: RulesContext): string[] {
+  // ARCH-06: amounts in the tournament's own currency.
+  const cur = settings.currency
+  const money = (n: number) => (n > 0 ? formatMoney(n, cur) : null)
   const m = settings.modules
   const ctx = context ?? rulesContext(settings)
   switch (id) {
     case 'individual': {
       const amounts = individualPrizeAmounts(settings, field)
-      const prizes = amounts.some((x) => x > 0) ? amounts.map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))) : []
+      const prizes = amounts.some((x) => x > 0) ? amounts.map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x, cur)} (${settings.prizes.stableford[i]}%)` : formatMoney(x, cur))) : []
       return R.individual(
         prizes,
         // The platform's generic label is no trophy: only a name the organizer gave it is.
@@ -70,21 +71,21 @@ export function moduleRules(id: ModuleId, settings: TournamentSettings, field: F
     case 'pairs':
       return R.pairs(
         t.common.andList(m.pairs.pairing.map(([a, b]) => `${a} con ${b}`)),
-        settings.prizes.pairs.some((x) => x > 0) ? settings.prizes.pairs.map((x) => formatMoney(x)) : [],
+        settings.prizes.pairs.some((x) => x > 0) ? settings.prizes.pairs.map((x) => formatMoney(x, cur)) : [],
         m.pairs.honoreePicks ? (honoreeName ?? settings.labels.honoree) : null,
         { auction: m.auction.enabled ? m.auction.label : null, days: ctx.days },
       )
     case 'snake': {
       const paid = settings.prizes.snakePerSurvivor > 0
-      return R.snake(m.snake.puttsThreshold, paid ? formatMoney(settings.prizes.snakePerSurvivor) : null, paid ? formatMoney(snakePotPerGroup(settings)) : null, m.snake.label)
+      return R.snake(m.snake.puttsThreshold, paid ? formatMoney(settings.prizes.snakePerSurvivor, cur) : null, paid ? formatMoney(snakePotPerGroup(settings), cur) : null, m.snake.label)
     }
     case 'fewestPutts':
       return R.fewestPutts(money(settings.prizes.fewestPutts), settings.pickupPuttsForFewestPutts)
     case 'auction': {
       const tiers = settings.auction.payout.flatMap((s) => (s.slot === 'bestOfTier' ? [s.tier] : []))
       return R.auction(
-        formatMoney(settings.auction.openingBid),
-        formatMoney(settings.auction.increment),
+        formatMoney(settings.auction.openingBid, cur),
+        formatMoney(settings.auction.increment, cur),
         settings.auction.maxPlayersPerOwner,
         settings.auction.buybackMaxPct,
         settings.auction.payout.map((s) => R.slot(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, s.share, settings.labels.lastPlace)),

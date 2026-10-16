@@ -44,7 +44,7 @@ import { EntrarScreen } from './profile/EntrarScreen'
 import { PushToggle } from './profile/PushToggle'
 import { expectShown, loadTokens } from './testing/shown'
 import { EnterScreen } from './tournament/EnterScreen'
-import { TournamentContext } from './tournament/TournamentGate'
+import { TournamentContext } from './tournament/tournamentContext'
 import { TournamentPushSwitch } from './tournament/TournamentPush'
 
 beforeAll(loadTokens)

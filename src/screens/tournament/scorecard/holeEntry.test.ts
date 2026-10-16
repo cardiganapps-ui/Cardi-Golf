@@ -113,7 +113,7 @@ describe('cardRules: who may change what (§7)', () => {
   const live = { id: 'r1', status: 'live' as const }
 
   it('a player: a signed card locks the whole card on a live day', () => {
-    const r = cardRules({ snapshot, round: live, playerIds: ['a', 'b', 'c', 'd'], isAdmin: false })
+    const r = cardRules({ snapshot, round: live, playerIds: ['a', 'b', 'c', 'd'], isComite: false })
     expect(r.signed('a')).toBe(true)
     expect(r.signed('c')).toBe(false)
     expect(r.anySigned).toBe(true)
@@ -124,21 +124,21 @@ describe('cardRules: who may change what (§7)', () => {
   })
 
   it('a player on a live day with nothing signed edits everyone; a closed day nobody', () => {
-    const r = cardRules({ snapshot, round: live, playerIds: ['c', 'd'], isAdmin: false })
+    const r = cardRules({ snapshot, round: live, playerIds: ['c', 'd'], isComite: false })
     expect(r.canEdit).toBe(true)
     expect(r.correctsOnServer(['c'])).toBe(false)
-    expect(cardRules({ snapshot, round: { id: 'r1', status: 'finished' }, playerIds: ['c', 'd'], isAdmin: false }).canEdit).toBe(false)
+    expect(cardRules({ snapshot, round: { id: 'r1', status: 'finished' }, playerIds: ['c', 'd'], isComite: false }).canEdit).toBe(false)
   })
 
   it('the Comité edits a signed card with a reason, and corrects on the server what a phone may not write (REL-09, REL-22)', () => {
-    const r = cardRules({ snapshot, round: live, playerIds: ['a', 'b', 'c', 'd'], isAdmin: true })
+    const r = cardRules({ snapshot, round: live, playerIds: ['a', 'b', 'c', 'd'], isComite: true })
     expect(r.canEdit).toBe(true)
     expect(r.editableFor('a')).toBe(true)
     expect(r.lockedFor('a')).toBe(false)
     expect(r.needsReason).toBe(true)
     expect(r.correctsOnServer(['c'])).toBe(false)
     expect(r.correctsOnServer(['c', 'a'])).toBe(true)
-    const closed = cardRules({ snapshot, round: { id: 'r1', status: 'finished' }, playerIds: ['c', 'd'], isAdmin: true })
+    const closed = cardRules({ snapshot, round: { id: 'r1', status: 'finished' }, playerIds: ['c', 'd'], isComite: true })
     expect(closed.needsReason).toBe(false)
     expect(closed.correctsOnServer(['c'])).toBe(true)
   })

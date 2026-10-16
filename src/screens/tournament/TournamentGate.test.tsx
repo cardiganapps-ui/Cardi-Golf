@@ -51,7 +51,8 @@ import { adoptQueuedWrites, rejectGoneRounds, rejectGoneTournament } from '../..
 import { t } from '../../i18n/es-MX'
 import { clearCached, readCached, saveEntry, saveSnapshot } from '../../data/snapshotCache'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
-import { TournamentGate, useTournamentCtx } from './TournamentGate'
+import { TournamentGate } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 
 const fx = getFixture('minimal4-live')!
 const slug = fx.snapshot.tournament.slug

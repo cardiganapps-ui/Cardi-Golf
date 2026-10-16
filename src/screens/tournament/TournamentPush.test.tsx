@@ -24,14 +24,14 @@ vi.mock('../../data/push', async (importOriginal) => {
     disablePush: vi.fn(async () => (browser.state = 'off')),
   }
 })
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
 import { disablePush, enablePush } from '../../data/push'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { getFixture } from '../../dev/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext, type Me } from './TournamentGate'
+import { TournamentContext, type Me } from './tournamentContext'
 import { TournamentPushOffer, TournamentPushSwitch } from './TournamentPush'
 
 const T = t.push.tournament
@@ -116,11 +116,11 @@ describe('the switch in Más', () => {
   })
 
   it('the Comité with no player, and the Admin de Polo, have no player to hear for', async () => {
-    mount(<TournamentPushSwitch />, { me: { playerId: null, isOrganizer: true, isAdmin: true, via: null } })
+    mount(<TournamentPushSwitch />, { me: { playerId: null, isOrganizer: true, isComite: true, via: null } })
     await settle()
     expect(screen.queryByText(T.title)).toBeNull()
     cleanup()
-    mount(<TournamentPushSwitch />, { me: { playerId: null, isOrganizer: true, isAdmin: true, via: 'platform' } })
+    mount(<TournamentPushSwitch />, { me: { playerId: null, isOrganizer: true, isComite: true, via: 'platform' } })
     await settle()
     expect(screen.queryByText(T.title)).toBeNull()
   })

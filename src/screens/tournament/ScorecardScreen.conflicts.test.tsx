@@ -27,7 +27,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 const CAMILO = 'p3'
@@ -49,7 +49,7 @@ function mount(edit: ((s: Snapshot) => void) | null, conflicts: ConflictItem[]) 
   const snapshot = structuredClone(fx.snapshot)
   edit?.(snapshot)
   useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(snapshot) })
-  const me = { playerId: CAMILO, isOrganizer: false, isAdmin: false }
+  const me = { playerId: CAMILO, isOrganizer: false, isComite: false }
   render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'viaje', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>

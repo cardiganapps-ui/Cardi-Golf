@@ -19,10 +19,13 @@ import { getFixture } from '../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../data/tournamentStore'
 import { nearestAccent } from '../design/accents'
 import { t } from '../i18n/es-MX'
-import { formatMoney } from '../lib/money'
+import { formatMoney as formatAmount, PLATFORM_CURRENCY } from '../lib/money'
 import type { TournamentCtx } from '../screens/tournament/tournamentContext'
 import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { CARD_ROWS, ShareCardButton, type ShareKind } from './ShareCard'
+
+/** The fixtures play in the platform's currency. */
+const formatMoney = (amount: number) => formatAmount(amount, PLATFORM_CURRENCY)
 
 function draw(fixture: string, what: ShareKind, ctx: Partial<TournamentCtx> = {}) {
   const fx = getFixture(fixture)!

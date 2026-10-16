@@ -18,7 +18,7 @@
  * header's second line then says how old they are, and En vivo leaves its own «Actualizado» line out.
  */
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useOnline } from '../../components/OfflineBanner'
+import { useOnline } from '../../components/online'
 import { SPECTATOR_PREFIX, useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './tournamentContext'
 

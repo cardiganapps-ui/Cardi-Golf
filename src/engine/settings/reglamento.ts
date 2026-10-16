@@ -82,6 +82,8 @@ export function reglamento(snapshot: Snapshot, settings: TournamentSettings): Ru
 /** «En corto»: what you pay, what can be won and from which pile, who holds the money (COPY-12). */
 function summary(settings: TournamentSettings, players: number, banker: string | null, pool: ReturnType<typeof checkPrizePool>): string[] {
   const S = R.summary
+  // ARCH-06: amounts in the tournament's own currency.
+  const cur = settings.currency
   const fee = settings.entryFee > 0
   const auction = settings.modules.auction.enabled
   const sidePots = pool.sidePots.map((p) => p.label)
@@ -91,9 +93,9 @@ function summary(settings: TournamentSettings, players: number, banker: string |
   const kept = pool.lines.find((l) => l.moduleId === 'house')
   const bank = fee || auction
   return [
-    fee ? S.fee(formatMoney(settings.entryFee), players, formatMoney(pool.entryPot)) : S.noFee,
-    ...(fee && prizes.length ? [S.prizes(prizes.map((l) => S.prize(l.label, formatMoney(l.amount))))] : []),
-    ...(kept ? [S.kept(formatMoney(kept.amount))] : []),
+    fee ? S.fee(formatMoney(settings.entryFee, cur), players, formatMoney(pool.entryPot, cur)) : S.noFee,
+    ...(fee && prizes.length ? [S.prizes(prizes.map((l) => S.prize(l.label, formatMoney(l.amount, cur))))] : []),
+    ...(kept ? [S.kept(formatMoney(kept.amount, cur))] : []),
     ...(auction ? [S.auction(settings.modules.auction.label)] : []),
     ...(sidePots.length ? [S.sidePots(sidePots)] : []),
     ...(bets.length ? [S.bets(bets)] : []),

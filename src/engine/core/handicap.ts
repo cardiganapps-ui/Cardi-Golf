@@ -3,6 +3,7 @@
  * carries its explanation for "¿Cómo se calculó?".
  */
 import { handicapText, ptsText } from '../../i18n/es-MX'
+import { whsCourseHandicap } from '../profile/whs'
 import type { TournamentSettings } from '../settings/schema'
 import type { Explained } from '../types'
 import { roundHalfUp, roundTo, roundWith } from './rounding'
@@ -18,27 +19,42 @@ const fmt = (n: number) => {
 /** A plus handicap's arithmetic is negative; say once how it is written. */
 const written = (n: number) => (n < 0 ? `, se escribe ${handicapText(n)}` : '')
 
+/** What a plus playing handicap does on the card (MONEY-21): it gives strokes back on the easiest holes. */
+function givesBack(ph: number): string {
+  const n = -ph
+  return `Juega con ${handicapText(ph)}: devuelve ${n} golpe${n === 1 ? '' : 's'}, en ${n === 1 ? 'el hoyo más fácil' : `los ${n} hoyos más fáciles`}`
+}
+
 /**
  * Playing handicap from a course handicap: cap, then allowance, then rounding.
  *   base 14 → 11.2 → 11 · base 21.875 → 17.5 → 18 · base 60 → capped 54 → 43
+ * A plus handicap stays below zero (MONEY-21): −1.2 → −1, one stroke given
+ * back on the easiest hole, as WHS allocates it and as the Polo index reads
+ * the same round (`whs_strokes`, 0015). It used to stop at 0, so a plus
+ * player played off scratch in every net game.
  */
 export function playingHandicap(courseHcp: number, h: HandicapSettings): Explained<number> {
   const capped = Math.min(courseHcp, h.cap)
   const raw = h.allowance * capped
-  const rounded = roundWith(raw, h.rounding)
-  const value = Math.max(0, rounded)
+  const value = roundWith(raw, h.rounding)
   const steps: string[] = []
   // COPY-19: each step says what it does before its arithmetic.
   if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}; el tope es ${fmt(h.cap)}, así que cuenta ${fmt(h.cap)}`)
   steps.push(`Se juega con el ${Math.round(h.allowance * 100)}%: ${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
-  if (roundTo(raw, 2) !== rounded) steps.push(`Redondeado al entero: ${fmt(rounded)}`)
-  if (rounded < 0) steps.push('Un hándicap de juego no baja de 0: no recibe golpes')
-  return { value, why: { title: `Hándicap de juego ${value}`, steps } }
+  if (roundTo(raw, 2) !== value) steps.push(`Redondeado al entero: ${fmt(value)}`)
+  if (value < 0) steps.push(givesBack(value))
+  return { value, why: { title: `Hándicap de juego ${handicapText(value)}`, steps } }
 }
+
+/** A figure in tenths, half away from zero, as Postgres's `round(x * 10)` reads it (0015's `round(idx * 10)::int`). */
+const tenths = (x: number) => (x < 0 ? -roundHalfUp(-x * 10) : roundHalfUp(x * 10))
 
 /**
  * WHS course handicap for a tee: round(index × slope / 113 + (rating − par)).
  * A tee without rating/slope behaves like slope 113, rating = par → the index unchanged.
+ * The arithmetic is `whsCourseHandicap`, in integer tenths, the one the Polo
+ * index's SQL (`whs_course_hcp`) runs on the same index and tee: the engine
+ * had a float copy of its own (ARCH-16).
  */
 export function courseHandicap(
   index: number,
@@ -47,7 +63,7 @@ export function courseHandicap(
   const slope = tee.slope ?? 113
   const rating = tee.rating ?? tee.par
   const raw = (index * slope) / 113 + (rating - tee.par)
-  const value = roundHalfUp(raw)
+  const value = whsCourseHandicap(tenths(index), slope, tenths(rating), tee.par)
   const scaled = roundTo((index * slope) / 113, 2)
   const diff = roundTo(rating - tee.par, 1)
   // COPY-19: what each step does, then its arithmetic; the WHS formula in three short sentences.
@@ -140,8 +156,15 @@ export function nextRoundCut(points: number, c: CutSettings): Explained<number> 
 /**
  * Strokes received on a hole: floor(PH / holes) + (SI <= PH % holes ? 1 : 0).
  *   PH 16 → 1 on SI 1–16, 0 on SI 17–18 · PH 43 → 3 on SI 1–7, 2 on SI 8–18
+ * A plus handicap gives them back from the easiest hole up (MONEY-21):
+ *   PH −1 → −1 on SI 18 · PH −2 → −1 on SI 17–18
+ * The one allocation in the product: the Polo index's adjusted gross reads the
+ * same in SQL (`whs_strokes`), and cases/whs.json holds the two to each other.
  */
 export function strokesReceived(playingHcp: number, strokeIndex: number, holes = 18): number {
-  if (playingHcp <= 0) return 0
+  if (playingHcp < 0) {
+    const back = strokesReceived(-playingHcp, holes + 1 - strokeIndex, holes)
+    return back ? -back : 0
+  }
   return Math.floor(playingHcp / holes) + (strokeIndex <= playingHcp % holes ? 1 : 0)
 }

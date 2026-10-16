@@ -7,7 +7,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Toggle, toast } from '../../components/ui'
+import { Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { adultsConfirmedAt, confirmAdults } from '../../data/myData'
 import { moneyInPlay } from '../../engine/settings/moneyInPlay'
 import type { TournamentSettings } from '../../engine/settings/schema'

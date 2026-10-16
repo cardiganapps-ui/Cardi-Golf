@@ -23,7 +23,7 @@ export function SettingsGuard({ children, money = false }: { children: ReactNode
 /** «Actualiza la app», why, and the button that updates; what it doesn't recognize only for the Comité. */
 export function OutdatedNotice({ detail, body = t.outdated.body }: { detail?: string | null; body?: string }) {
   const ctx = useContext(TournamentContext)
-  const comite = !!ctx && !ctx.spectator && (ctx.me.isOrganizer || ctx.me.isAdmin)
+  const comite = !!ctx && !ctx.spectator && (ctx.me.isOrganizer || ctx.me.isComite)
   const [busy, setBusy] = useState(false)
   return (
     <section className={`card card--alert ${styles.notice}`} aria-labelledby="outdated-title">

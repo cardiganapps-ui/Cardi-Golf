@@ -5,6 +5,9 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../settings/presets
 import type { TournamentSettings } from '../settings/schema'
 import type { Course, Group, Hole, Player, Round, Score, Snapshot, Tee } from '../types'
 
+/** Field size of the first tournament, for the prize-sum checks in tests (a tournament's own is its players). */
+export const FIRST_TOURNAMENT_PLAYER_COUNT = 12
+
 /** A par-72 card: pars sum to 72, stroke indexes are a permutation of 1..18. */
 export const PAR_72: Array<[par: number, si: number]> = [
   [4, 7],
@@ -120,8 +123,6 @@ export function makeSnapshot(opts: TournamentOpts = {}): Snapshot {
       currentRoundId: rounds[0]?.id ?? null,
       bankerPlayerId: players[0]?.id ?? null,
       settings,
-      timezone: 'America/Mazatlan',
-      currency: 'MXN',
     },
     players,
     courses: opts.courses ?? [makeCourse()],

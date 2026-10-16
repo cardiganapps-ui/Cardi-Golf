@@ -13,7 +13,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminScores } from './AdminScores'
 
 type Individual = TournamentSettings['modules']['individual']

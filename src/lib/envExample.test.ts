@@ -8,8 +8,8 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = process.cwd()
-/** Set by Vite, Node or Vercel themselves: not configuration anyone has to provide. */
-const PLATFORM = new Set(['DEV', 'PROD', 'MODE', 'BASE_URL', 'SSR', 'NODE_ENV'])
+/** Set by Vite, Node, Vercel or GitHub Actions themselves: not configuration anyone has to provide. */
+const PLATFORM = new Set(['DEV', 'PROD', 'MODE', 'BASE_URL', 'SSR', 'NODE_ENV', 'GITHUB_STEP_SUMMARY'])
 
 function files(dir: string): string[] {
   return readdirSync(join(ROOT, dir)).flatMap((name) => {

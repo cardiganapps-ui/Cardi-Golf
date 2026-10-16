@@ -78,9 +78,9 @@ export function AdminLayout() {
   // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
   const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
   const entry = useEntryInfo(tournamentId, data, { enabled: setup })
-  const isAdmin = me.isAdmin
-  useEffect(() => (isAdmin ? prefetchScreens(Object.values(SECTION_SCREENS)) : undefined), [isAdmin])
-  if (!me.isAdmin) {
+  const isComite = me.isComite
+  useEffect(() => (isComite ? prefetchScreens(Object.values(SECTION_SCREENS)) : undefined), [isComite])
+  if (!me.isComite) {
     return (
       <div className={styles.layout}>
         {/* A Protegido tournament the platform admin has not unlocked: the banner is the way in. */}

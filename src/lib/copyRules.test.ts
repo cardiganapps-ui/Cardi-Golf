@@ -251,8 +251,8 @@ function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
     players: [
       makePlayer(1, { displayName: 'Camilo', baseHcp: 3 }),
       makePlayer(2, { displayName: 'Íñigo', handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 }),
-      makePlayer(3, { displayName: 'Iván', handicapSource: 'estimate', estimateInputs: [{ gross: 66, ...under }, { gross: 69, ...under }, { gross: 73, ...under }] }),
-      makePlayer(4, { displayName: 'Hilario', baseHcp: -2 }),
+      makePlayer(3, { displayName: 'Iván', handicapSource: 'estimate', estimateInputs: [{ gross: 67, ...under }, { gross: 69, ...under }, { gross: 73, ...under }] }),
+      makePlayer(4, { displayName: 'Hilario', baseHcp: -3 }),
     ],
   })
   const holes = snapshot.courses[0]!.tees[0]!.holes
@@ -409,8 +409,8 @@ describe('copy rules: es-MX.ts', () => {
       ['social.resultLine', t.social.resultLine(74, 76, -2)],
       ['quick.rivalryLine', t.quick.rivalryLine('Camilo', -2)],
       ['player.dayHcp', t.player.dayHcp(2, 10, 2)],
-      ['formatMoney', formatMoney(-300)],
-      ['formatSignedMoney', formatSignedMoney(-300)],
+      ['formatMoney', formatMoney(-300, 'MXN')],
+      ['formatSignedMoney', formatSignedMoney(-300, 'MXN')],
       // The handicap functions' own titles and steps, below zero (the Comité's preview shows them as they are).
       ...(['title', 'steps'] as const).flatMap((k) => [
         [`playingHandicap ${k}`, [playingHandicap(-3, DEFAULT_SETTINGS.handicap).why[k]].flat().join(' | ')],
@@ -517,12 +517,15 @@ describe('copy rules: what the engine writes', () => {
     }
     const plus = text('plus handicaps')
     expect(plus).toContain('Índice +1.2')
-    expect(plus).toContain('Índice estimado +1.9')
+    expect(plus).toContain('Índice estimado +1.5')
     expect(plus.some((x) => x.startsWith('El índice se ajusta a la dificultad del tee: índice +1.2, en la cuenta −1.2, × slope 128'))).toBe(true)
-    expect(plus).toContain('Un hándicap de juego no baja de 0: no recibe golpes')
+    // MONEY-21: a plus playing handicap gives strokes back, and says so.
+    expect(plus).toContain('Juega con +3: devuelve 3 golpes, en los 3 hoyos más fáciles')
+    expect(plus.some((x) => /^\d golpes? en un par \d, dando 1 golpe \(hándicap por debajo de 0\) en este hoyo \(índice de golpe 1[678]\)/.test(x))).toBe(true)
+    // The three plus players play off +3 alike (MONEY-21), so they tie.
     expect(plus).toContain('Empatados: Íñigo, Iván e Hilario')
     // A typed plus handicap says once how the arithmetic reads it.
-    expect(plus).toContain('En la cuenta, −2')
+    expect(plus).toContain('En la cuenta, −3')
     // A cut larger than the handicap: never «3 − 4 = 0».
     expect(plus).toContain('Con el recorte: 3 − 4 = −1, no baja de 0: 0')
     const below = text('below zero')

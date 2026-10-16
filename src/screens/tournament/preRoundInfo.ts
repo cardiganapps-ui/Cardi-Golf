@@ -69,7 +69,7 @@ export function preRoundInfo(data: TournamentData, playerId: string | null, show
       const byKind = new Map<PaymentKind, number>()
       for (const a of mineAccounts) if (collectible(a)) byKind.set(a.kind, (byKind.get(a.kind) ?? 0) + a.due)
       const total = [...byKind.values()].reduce((n, x) => n + x, 0)
-      owes = { total, parts: [...byKind].map(([k, n]) => P.part(label(k), formatMoney(n))) }
+      owes = { total, parts: [...byKind].map(([k, n]) => P.part(label(k), formatMoney(n, settings.currency))) }
     }
   }
 

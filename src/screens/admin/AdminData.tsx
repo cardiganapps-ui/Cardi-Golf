@@ -6,7 +6,8 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Field, toast } from '../../components/ui'
+import { Field } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { duplicateTournament } from '../../data/api'
 import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '../../data/backup'
@@ -15,6 +16,7 @@ import { publishFromStore } from '../../data/publish'
 import { useCloseGate } from '../../components/CloseGate'
 import { useTournamentCtx } from '../tournament/tournamentContext'
 import { humanError } from '../../lib/humanError'
+import { localWhen } from '../../lib/localWhen'
 
 const D = t.admin.data
 
@@ -157,7 +159,7 @@ export function AdminData() {
       <ConfirmSheet
         open={!!pendingRestore}
         title={D.restore}
-        body={pendingRestore ? D.restoreConfirm(new Date(pendingRestore.exportedAt ?? 0).toLocaleString('es-MX')) : ''}
+        body={pendingRestore ? D.restoreConfirm(localWhen(pendingRestore.exportedAt ?? new Date(0).toISOString(), data.settings.timezone)) : ''}
         danger
         busy={busy}
         confirmLabel={D.restoreButton}

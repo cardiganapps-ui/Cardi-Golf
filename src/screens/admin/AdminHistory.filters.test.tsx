@@ -14,7 +14,8 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { AuditEntry, AuditFilter } from '../../data/api'
 import { t } from '../../i18n/es-MX'
 import { localWhen } from '../../lib/localWhen'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
+import { parseSettings } from '../../engine/settings/schema'
 
 const audit = vi.hoisted(() => ({ answer: (_f: unknown, _before: unknown): Promise<AuditEntry[]> => Promise.resolve([]) }))
 const tournamentAudit = vi.hoisted(() => vi.fn((_tid: string, before?: number, _limit?: number, filter?: AuditFilter) => audit.answer(filter ?? {}, before)))
@@ -46,7 +47,7 @@ function mount() {
   useTournament.setState({ tournamentId: 't-history', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminHistory />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -153,7 +154,7 @@ describe('a change’s detail reads in Spanish (TRUST-19)', () => {
     expect(sheet.queryByText('device_id')).toBeNull()
     expect(sheet.queryByText(/[0-9a-f]{8}-[0-9a-f]{4}-/)).toBeNull()
     // The moment, in the tournament's own time.
-    expect(sheet.getByText(`${H.byComite}, ${localWhen(correction.at, fx.snapshot.tournament.timezone)}`)).toBeTruthy()
+    expect(sheet.getByText(`${H.byComite}, ${localWhen(correction.at, parseSettings(fx.snapshot.tournament.settings).timezone)}`)).toBeTruthy()
   })
 
   it('«Ver la historia de este hoyo» narrows the history to that player, day and hole', async () => {

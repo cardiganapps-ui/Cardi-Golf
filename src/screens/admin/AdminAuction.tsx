@@ -7,7 +7,8 @@ import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { handicapText, t } from '../../i18n/es-MX'
-import { Avatar, Field, Sheet, toast } from '../../components/ui'
+import { Avatar, Field, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { createLots, deleteBid, placeBid, reopenLot, resetAuction, sellLot, setBuyback, setLotStatus, updateTournament } from '../../data/api'
@@ -18,17 +19,20 @@ import { useTournamentCtx } from '../tournament/tournamentContext'
 import styles from './AdminAuction.module.css'
 import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
-import { NumberField, keepNumeric } from '../../components/NumberField'
+import { NumberField } from '../../components/NumberField'
+import { keepNumeric } from '../../components/numericText'
 import { humanError } from '../../lib/humanError'
 import { handicapsLocked } from '../../engine/core/handicapLock'
 import { bidSteps } from '../../engine/modules/auction/bids'
 import { reorder } from '../../design/motion'
+import { useCurrency } from '../../components/currency'
 
 const A = t.auction
 const SEARCH_FROM = 16
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export function AdminAuction() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { tournamentId, slug } = useTournamentCtx()
@@ -151,13 +155,13 @@ export function AdminAuction() {
     if (!open || !bidder) return
     const amount = delta == null ? Number(custom) : bidAmount + delta
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast(A.minBid(formatMoney(bidAmount)))
+      toast(A.minBid(formatMoney(bidAmount, cur)))
       return
     }
     // Up in the increment from the bid standing (§5.9), as the server checks (MONEY-19).
     const steps = bidSteps(bidAmount, cfg.increment, amount)
     if (steps) {
-      toast(A.offStep(formatMoney(cfg.increment), steps.map((x) => formatMoney(x))))
+      toast(A.offStep(formatMoney(cfg.increment, cur), steps.map((x) => formatMoney(x, cur))))
       return
     }
     // The high bidder never raises himself: the auctioneer picks who shouted (UX-13).
@@ -194,7 +198,7 @@ export function AdminAuction() {
         <h2>{A.console}</h2>
         <span className={styles.potLine}>
           <span className={a.count}>{A.pot}</span>
-          <span className={styles.pot}>{formatMoney(auction?.pot ?? 0)}</span>
+          <span className={styles.pot}>{formatMoney(auction?.pot ?? 0, cur)}</span>
         </span>
       </div>
       <p className={a.help}>
@@ -215,7 +219,7 @@ export function AdminAuction() {
                   <span className={styles.lotName}>{player.fullName}</span>
                   <span className={styles.lotSub}>
                     {player.tier ? `${player.tier}, ` : ''}
-                    {ph != null ? `${t.live.playingHcp.toLowerCase()} ${ph}` : `${t.live.hcp.toLowerCase()} ${handicapText(player.baseHcp)}`}
+                    {ph != null ? `${t.live.playingHcp.toLowerCase()} ${handicapText(ph)}` : `${t.live.hcp.toLowerCase()} ${handicapText(player.baseHcp)}`}
                     {pair ? `, ${A.pair.toLowerCase()}: ${pair.name ?? name(pair.player1Id === player.id ? pair.player2Id : pair.player1Id)}` : ''}
                   </span>
                 </div>
@@ -224,7 +228,7 @@ export function AdminAuction() {
               {open ? (
                 <div className={styles.bidBox}>
                   <span className={styles.lotLabel}>{A.currentBid}</span>
-                  <span className={styles.bidAmount}>{formatMoney(bidAmount)}</span>
+                  <span className={styles.bidAmount}>{formatMoney(bidAmount, cur)}</span>
                   <span>{bidderId === open.playerId ? A.self : name(bidderId ?? '')}</span>
                 </div>
               ) : (
@@ -272,7 +276,7 @@ export function AdminAuction() {
                 <div className={styles.bidControls}>
                 {[cfg.increment, cfg.increment * 2, cfg.increment * 4].map((d) => (
                   <button key={d} className="btn btn--secondary" type="button" disabled={busy || !bidder} onClick={() => void bid(d)}>
-                    {A.bid(formatMoney(d))}
+                    {A.bid(formatMoney(d, cur))}
                   </button>
                 ))}
                 <input
@@ -320,7 +324,7 @@ export function AdminAuction() {
                       {l.buybackPct > 0 && `, ${A.buyback.toLowerCase()} ${l.buybackPct}%`}
                     </span>
                   </span>
-                  <span className={a.fig}>{formatMoney(l.price)}</span>
+                  <span className={a.fig}>{formatMoney(l.price, cur)}</span>
                   <button className="btn btn--ghost btn--sm" type="button" disabled={busy || (!!open && open.lotId !== l.lotId)} title={open ? A.reopenWhileOpen : undefined} onClick={() => setAskReopen(l.lotId)}>
                     <IconUndo /> {A.reopen}
                   </button>
@@ -348,7 +352,7 @@ export function AdminAuction() {
         <ConfirmSheet
           open={askHammer}
           title={A.hammerTitle}
-          body={bidderId === open.playerId ? A.hammerSelf(name(open.playerId), formatMoney(bidAmount)) : A.hammerBody(name(open.playerId), name(bidderId), formatMoney(bidAmount))}
+          body={bidderId === open.playerId ? A.hammerSelf(name(open.playerId), formatMoney(bidAmount, cur)) : A.hammerBody(name(open.playerId), name(bidderId), formatMoney(bidAmount, cur))}
           busy={busy}
           confirmLabel={A.sold}
           onConfirm={() => void hammer()}
@@ -359,7 +363,7 @@ export function AdminAuction() {
         <ConfirmSheet
           open
           title={A.reopenTitle(name(reopening.playerId))}
-          body={A.reopenBody(formatMoney(reopening.price), reopening.ownerId === reopening.playerId ? A.self : name(reopening.ownerId ?? ''), reopening.buybackPct > 0)}
+          body={A.reopenBody(formatMoney(reopening.price, cur), reopening.ownerId === reopening.playerId ? A.self : name(reopening.ownerId ?? ''), reopening.buybackPct > 0)}
           danger
           busy={busy}
           confirmLabel={A.reopen}
@@ -386,7 +390,7 @@ export function AdminAuction() {
                 <Field label={`${A.custom} (%)`}>
                   <NumberField min={0} max={cfg.buybackMaxPct} suffix="%" value={bbPct} onChange={setBbPct} />
                 </Field>
-                {bbPct > 0 && <p>{A.buybackPays(name(lot.playerId), formatMoney(amount), name(lot.ownerId ?? ''))}</p>}
+                {bbPct > 0 && <p>{A.buybackPays(name(lot.playerId), formatMoney(amount, cur), name(lot.ownerId ?? ''))}</p>}
                 <button
                   className="btn btn--primary"
                   type="button"

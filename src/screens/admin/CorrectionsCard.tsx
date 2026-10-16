@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { correctionRequests, resolveCorrection, type CorrectionRequest } from '../../data/myData'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'

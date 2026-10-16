@@ -30,7 +30,7 @@ import { MoreScreen } from './MoreScreen'
 import { RulesScreen } from './RulesScreen'
 import { ScorecardScreen } from './ScorecardScreen'
 import { SettingsGuard } from './SettingsGuard'
-import { TournamentContext, type TournamentCtx } from './TournamentGate'
+import { TournamentContext, type TournamentCtx } from './tournamentContext'
 import { TournamentShell } from './TournamentShell'
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
@@ -111,15 +111,15 @@ describe('settings this build can’t read: nothing computed from them shows', (
   })
 
   it('what it doesn’t recognize, for the Comité only', async () => {
-    await show('', newerKey, { isOrganizer: true, isAdmin: true })
+    await show('', newerKey, { isOrganizer: true, isComite: true })
     expect(screen.getByText(t.outdated.detail('modules.wolf'))).toBeTruthy()
     cleanup()
-    await show('', newerKey, { isOrganizer: false, isAdmin: false })
+    await show('', newerKey, { isOrganizer: false, isComite: false })
     expect(screen.queryByText(t.outdated.detail('modules.wolf'))).toBeNull()
   })
 
   it('the Comité keeps Datos (a backup) and Historial; its setup waits for the update', async () => {
-    const admin = { isOrganizer: true, isAdmin: true }
+    const admin = { isOrganizer: true, isComite: true }
     expect(await show('/admin/torneo', newerKey, admin)).not.toContain('Pantalla de Torneo')
     expect(notice()).toBeTruthy()
     cleanup()
@@ -152,7 +152,7 @@ describe('a side game this build doesn’t know that may move money: no money an
     await show('/dinero', newerGame)
     expect(notice()).toBeTruthy()
     cleanup()
-    await show('/ceremonia', newerGame, { isOrganizer: true, isAdmin: true })
+    await show('/ceremonia', newerGame, { isOrganizer: true, isComite: true })
     expect(notice()).toBeTruthy()
     expect(screen.getByText(t.outdated.money(['Wolf']))).toBeTruthy()
   })

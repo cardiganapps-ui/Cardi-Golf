@@ -16,7 +16,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { CeremonyScreen } from './CeremonyScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const C = t.ceremony
 

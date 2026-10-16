@@ -13,7 +13,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { MoneyScreen } from './MoneyScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const M = t.moneyScreen
 const H = t.money.howCalculated
@@ -26,7 +26,7 @@ function mount() {
   useTournament.setState({ tournamentId: TID, data: dataFromSnapshot(structuredClone(fx.snapshot)) })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isAdmin: false }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite: false }, refresh: async () => undefined, leave: async () => undefined }}>
         <MoneyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -37,7 +37,7 @@ const state = () => useTournament.getState().data!.state
 const party = (id: string | null) => (id ? useTournament.getState().data!.snapshot.players.find((p) => p.id === id)!.displayName : null)
 const banker = () => useTournament.getState().data!.snapshot.tournament.bankerPlayerId
 const bankerSelf = (from: string | null, to: string | null) => !!banker() && ((from === banker() && to === null) || (from === null && to === banker()))
-const lineName = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.pays(party(from), party(to), formatMoney(amount), bankerSelf(from, to)))
+const lineName = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.pays(party(from), party(to), formatMoney(amount, 'MXN'), bankerSelf(from, to)))
 /** Opens the trigger and returns the steps the sheet lists. */
 function open(button: HTMLElement) {
   fireEvent.click(button)
@@ -89,7 +89,7 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
   it('the bank: what comes in, what goes out, and what is left', () => {
     const steps = open(screen.getByRole('button', { name: how(M.bank) }))
     expect(steps).toEqual(state().money.banker.why.steps)
-    expect(steps).toContain(t.settleWhy.bankInTotal(formatMoney(state().money.banker.receives)))
+    expect(steps).toContain(t.settleWhy.bankInTotal(formatMoney(state().money.banker.receives, 'MXN')))
   })
 
   it('Por juego: each amount opens the prize’s own explanation', () => {

@@ -27,7 +27,7 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
 import { applyFields, baseRow, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -37,7 +37,7 @@ import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { PATTERNS } from '../../lib/haptics'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 let clock = 0

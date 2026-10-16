@@ -24,7 +24,7 @@ import { parseSettings, type TournamentSettings } from '../engine/settings/schem
 import type { GameConfig } from '../engine/settings/games'
 import { ptsText, t } from '../i18n/es-MX'
 import { CeremonyScreen } from '../screens/tournament/CeremonyScreen'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { feedText } from './figureText'
 
 afterEach(() => cleanup())

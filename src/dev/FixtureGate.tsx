@@ -15,6 +15,7 @@ import { TournamentContext, type Me } from '../screens/tournament/tournamentCont
 import { EnterScreen } from '../screens/tournament/EnterScreen'
 import { FIXTURE_NAMES, getFixture } from './fixtures'
 import { t } from '../i18n/es-MX'
+import { TournamentCurrency } from '../components/TournamentCurrency'
 
 const noop = async () => undefined
 const PUSH_STATES: readonly string[] = ['unsupported', 'needsInstall', 'denied', 'off', 'on'] satisfies PushState[]
@@ -68,13 +69,16 @@ export function FixtureGate() {
   // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
   const me: Me =
     as === 'platform'
-      ? { playerId: null, isOrganizer: true, isAdmin: true, via: 'platform', protected: false }
+      ? { playerId: null, isOrganizer: true, isComite: true, via: 'platform', protected: false }
       : as === 'platform-locked'
-        ? { playerId: null, isOrganizer: false, isAdmin: false, via: 'platform', protected: true }
+        ? { playerId: null, isOrganizer: false, isComite: false, via: 'platform', protected: true }
         : fixture.me
   return (
     <TournamentContext.Provider value={{ tournamentId: fixture.snapshot.tournament.id, slug: `_/${fixture.name}`, lookup: fixture.lookup, me, refresh: noop, leave: noop }}>
-      <Outlet />
+      {/* Every money render reads the tournament's currency (ARCH-06). */}
+      <TournamentCurrency>
+        <Outlet />
+      </TournamentCurrency>
     </TournamentContext.Provider>
   )
 }

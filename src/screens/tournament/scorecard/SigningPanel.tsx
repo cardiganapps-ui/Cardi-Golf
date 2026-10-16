@@ -47,7 +47,7 @@ export const SigningPanel = memo(function SigningPanel(p: {
   signatures: readonly CardSignature[]
   players: readonly Player[]
   myPairId: string | null
-  isAdmin: boolean
+  isComite: boolean
   onSign: (pairId: string) => void
 }) {
   const pairName = pairNameIn(p.players)
@@ -69,7 +69,7 @@ export const SigningPanel = memo(function SigningPanel(p: {
                 </span>
               </span>
               {isSigned && <SignedStamp landing={arrived(pair.id)} />}
-              {!isSigned && (!mine || p.isAdmin) && (
+              {!isSigned && (!mine || p.isComite) && (
                 <button className="btn btn--primary btn--sm" type="button" onClick={() => p.onSign(pair.id)}>
                   {S.sign}
                 </button>
@@ -96,7 +96,7 @@ export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
   myPlayerId: string | null
   /** Whether this phone's player plays in the group. */
   inGroup: boolean
-  isAdmin: boolean
+  isComite: boolean
   onSign: (playerId: string) => void
 }) {
   const arrived = useArrivals(p.players.filter(({ id }) => cardSignedFor({ cardSignatures: p.signatures, pairs: p.pairs }, p.roundId, id)).map(({ id }) => id))
@@ -106,7 +106,7 @@ export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
       <p className="help">{S.signMarkerHint}</p>
       {p.players.map(({ id, name }) => {
         const isSigned = cardSignedFor({ cardSignatures: p.signatures, pairs: p.pairs }, p.roundId, id)
-        const canSign = p.isAdmin || (p.inGroup && id !== p.myPlayerId)
+        const canSign = p.isComite || (p.inGroup && id !== p.myPlayerId)
         return (
           <div key={id} className={styles.signRow}>
             <span className={styles.signText}>

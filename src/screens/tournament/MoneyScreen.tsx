@@ -16,7 +16,8 @@ import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
 import { IconCheck } from '../../components/icons'
 import { ShareCardButton } from '../../components/ShareCard'
-import { Avatar, Segmented, ShareButton, toast } from '../../components/ui'
+import { Avatar, Segmented, ShareButton } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Money } from '../../components/primitives'
 import { setBuybackPaid, setPaymentPaid } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
@@ -29,10 +30,12 @@ import { tournamentBase } from './tournamentView'
 import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
+import { useCurrency } from '../../components/currency'
 
 const M = t.moneyScreen
 
 export function MoneyScreen() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const patch = useTournament((s) => s.patch)
@@ -211,9 +214,9 @@ export function MoneyScreen() {
       toast(M.unmarkedPaid, { label: t.common.undo, onClick: () => undo([a], n) })
     })
   }
-  const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.payText(words(from, to), formatMoney(amount)))
+  const lineText = (from: string | null, to: string | null, amount: number) => (amount === 0 ? M.squared(party(from), party(to)) : M.payText(words(from, to), formatMoney(amount, cur)))
   /** A row's own name, read out with its button: who, to whom, for what and how much, so no two buttons share one. */
-  const accountText = (a: Account, part: 'due' | 'paid') => `${M.payText(words(a.from, a.to, part === 'paid'))}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid)}`
+  const accountText = (a: Account, part: 'due' | 'paid') => `${M.payText(words(a.from, a.to, part === 'paid'))}, ${accountDetail(a, part)}: ${formatMoney(part === 'due' ? a.due : a.paid, cur)}`
   /** «<b>Leonel</b> le paga al banco», «<b>El banco</b> le paga a <b>Camilo</b>»: the payer in bold, and the payee too when `both`. */
   const payLine = (from: string | null, to: string | null, opts: { paid?: boolean; both?: boolean } = {}) => {
     const w = words(from, to, opts.paid)
@@ -231,8 +234,8 @@ export function MoneyScreen() {
         <span>{payLine(a.from, a.to)}</span>
         <span className={styles.transferKind}>{accountDetail(a)}</span>
       </span>
-      <span className={styles.amount}>{formatMoney(a.due)}</span>
-      {me.isAdmin && (
+      <span className={styles.amount}>{formatMoney(a.due, cur)}</span>
+      {me.isComite && (
         <span className={styles.action}>
           <button className="btn btn--secondary btn--sm" type="button" data-money-action disabled={busy > 0} onClick={(e) => void markPaid([a], e.currentTarget)} aria-label={`${M.markPaid}: ${accountText(a, 'due')}`}>
             {M.markPaid}
@@ -249,7 +252,7 @@ export function MoneyScreen() {
       .map((a) => {
         const sign = a.from === tr.from || a.to === tr.to ? 1 : -1
         const label = a.due < 0 ? M.refund : a.kind === 'payout' ? M.prizes : a.kind === 'entry' ? M.entry : a.kind === 'calcutta' ? M.purchases : a.kind === 'side' ? M.sidePots : a.kind === 'bet' ? M.owesBet : M.owesBuyback
-        return `${label} ${formatSignedMoney(sign * a.due)}`
+        return `${label} ${formatSignedMoney(sign * a.due, cur)}`
       })
 
   /** One payment on record, with «Pagado» for admins: on, with its check, and a tap takes it back (UX-21). */
@@ -259,8 +262,8 @@ export function MoneyScreen() {
         <span>{payLine(a.from, a.to, { paid: true })}</span>
         <span className={styles.transferKind}>{accountDetail(a, 'paid')}</span>
       </span>
-      <span className={styles.amount}>{formatMoney(a.paid)}</span>
-      {me.isAdmin && (
+      <span className={styles.amount}>{formatMoney(a.paid, cur)}</span>
+      {me.isComite && (
         <span className={styles.action}>
           <button className="btn btn--ghost btn--sm" type="button" aria-pressed="true" data-money-action disabled={busy > 0} onClick={(e) => void unmarkPaid(a, e.currentTarget)} aria-label={`${M.paid}: ${accountText(a, 'paid')}`}>
             <IconCheck size={16} />
@@ -274,7 +277,7 @@ export function MoneyScreen() {
   const paidSection = paidAccounts.length > 0 && (
     <details className={styles.section}>
       <summary className={styles.recordSummary}>{M.paidTitle(paidAccounts.length)}</summary>
-      {me.isAdmin && <span className="help">{M.paidHint}</span>}
+      {me.isComite && <span className="help">{M.paidHint}</span>}
       <div className={styles.transfers} data-money-list>{paidAccounts.map(paidRow)}</div>
     </details>
   )
@@ -284,21 +287,21 @@ export function MoneyScreen() {
     for (const p of people) {
       // What friends settle from: what each puts in and gets back, and what of it is still due (COPY-03).
       const due = stillOwes(money.accounts, p.playerId)
-      lines.push(`${name(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid)}${due > 0 ? ` (${t.money.owes(formatMoney(due))})` : ''}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net)}`)
+      lines.push(`${name(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid, cur)}${due > 0 ? ` (${t.money.owes(formatMoney(due, cur))})` : ''}, ${t.money.receives.toLowerCase()} ${formatMoney(p.receives, cur)}, ${t.money.net.toLowerCase()} ${formatSignedMoney(p.net, cur)}`)
     }
     lines.push('', settle === 'bank' ? M.viaBank : M.p2p)
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
-    for (const tr of transfers) if (tr.amount > 0) lines.push(M.payText(words(tr.from, tr.to), formatMoney(tr.amount)))
+    for (const tr of transfers) if (tr.amount > 0) lines.push(M.payText(words(tr.from, tr.to), formatMoney(tr.amount, cur)))
     // TRUST-12: the text travels on its own, so it says what Polo is and is not.
     lines.push('', t.money.disclaimer)
     return lines.join('\n')
-  }, [people, settle, money, snapshot.tournament.name, name, words])
+  }, [people, settle, money, snapshot.tournament.name, name, words, cur])
 
   /** The settlement card says who pays whom as the list below does, vía banco or sin banco (PWA-06); one object per choice (PERF-09). */
   const shareWhat = useMemo(() => ({ kind: 'settlement' as const, settle }), [settle])
 
   /** Vía banco, once final, an admin marks lines paid: the list gets a slot for the button. */
-  const markable = me.isAdmin && settle === 'bank' && state.tournamentFinal
+  const markable = me.isComite && settle === 'bank' && state.tournamentFinal
   // Once play is over, money still in the bank is «Por asignar», listed below
   // with where it comes from (COPY-09); red only for a bank that does not
   // square with that list.
@@ -309,14 +312,14 @@ export function MoneyScreen() {
   const verdict = u.openDays
     ? t.unassigned.finalOpenVerdict
     : u.closing && u.total > 0
-      ? t.unassigned.total(formatMoney(u.total))
+      ? t.unassigned.total(formatMoney(u.total, cur))
       : u.closing && u.heldTotal > 0
-        ? t.unassigned.heldTotal(formatMoney(u.heldTotal))
+        ? t.unassigned.heldTotal(formatMoney(u.heldTotal, cur))
         : money.banker.balanced
           ? M.bankOk
           : u.closing
-            ? M.bankOff(formatSignedMoney(money.banker.difference))
-            : M.bankPending(formatMoney(money.banker.difference))
+            ? M.bankOff(formatSignedMoney(money.banker.difference, cur))
+            : M.bankPending(formatMoney(money.banker.difference, cur))
   const verdictClass = money.banker.balanced && listed === 0 && !u.openDays ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictPending
 
   return (
@@ -344,18 +347,18 @@ export function MoneyScreen() {
         <div className={styles.bankFigures}>
           <span className={styles.bankFigure}>
             <span className="help">{M.bankIn}</span>
-            <span className={styles.bankAmount}>{formatMoney(money.banker.receives)}</span>
+            <span className={styles.bankAmount}>{formatMoney(money.banker.receives, cur)}</span>
           </span>
           <span className={styles.bankFigure}>
             <span className="help">{M.bankOut}</span>
-            <span className={styles.bankAmount}>{formatMoney(money.banker.pays)}</span>
+            <span className={styles.bankAmount}>{formatMoney(money.banker.pays, cur)}</span>
           </span>
           <span className={`${styles.bankVerdict} ${verdictClass}`}>{verdict}</span>
         </div>
         <span className={styles.bankHow}>
           <HowCalculated why={money.banker.why} about={M.bank} />
         </span>
-        {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut))}</span>}
+        {money.banker.houseCut > 0 && <span className={styles.bankNote}>{M.houseCut(formatMoney(money.banker.houseCut, cur))}</span>}
         {/* What the Comité fixes, and where in its screens: not a link to watch's to read (STRAT-05). */}
         {state.flags.poolWarning && !spectator && (
           <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
@@ -370,7 +373,7 @@ export function MoneyScreen() {
         )}
         {!u.closing && !u.openDays && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
         {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
-        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal), settings.modules.snake.label)}</span>}
+        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal, cur), settings.modules.snake.label)}</span>}
       </section>
 
       <UnassignedMoney />
@@ -390,10 +393,10 @@ export function MoneyScreen() {
                   <span className={styles.personText}>
                     <span className={styles.personName}>{player.displayName}</span>
                     <span className={styles.personSub}>
-                      {t.money.puts} {formatMoney(p.paid)}, {t.money.receives.toLowerCase()} {formatMoney(p.receives)}
+                      {t.money.puts} {formatMoney(p.paid, cur)}, {t.money.receives.toLowerCase()} {formatMoney(p.receives, cur)}
                       {(() => {
                         const due = stillOwes(money.accounts, p.playerId)
-                        return due > 0 ? <span className={styles.owes}>, {t.money.owes(formatMoney(due))}</span> : null
+                        return due > 0 ? <span className={styles.owes}>, {t.money.owes(formatMoney(due, cur))}</span> : null
                       })()}
                     </span>
                   </span>
@@ -413,7 +416,7 @@ export function MoneyScreen() {
                           {pr.label.split(',')[0]}, {M.paysTo} {name(pr.playerId)}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount)} about={`${pr.label.split(',')[0]}, ${M.paysTo} ${name(pr.playerId)}`} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(-pr.amount, cur)} about={`${pr.label.split(',')[0]}, ${M.paysTo} ${name(pr.playerId)}`} />
                       </div>
                     ))}
                     {prizes.map((pr, i) => (
@@ -422,7 +425,7 @@ export function MoneyScreen() {
                           {pr.label}
                           {!pr.final ? `, ${t.money.ifEndedNow}` : ''}
                         </span>
-                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount)} about={pr.label} />
+                        <HowCalculated why={pr.why} label={formatSignedMoney(pr.amount, cur)} about={pr.label} />
                       </div>
                     ))}
                     {p.buybacksReceived > 0 && <Line label={M.buybacksReceived} amount={p.buybacksReceived} />}
@@ -441,7 +444,7 @@ export function MoneyScreen() {
             <section key={g.label} className={styles.section}>
               <div className={styles.gameHead}>
                 <strong>{g.label}</strong>
-                <span className={styles.amount}>{formatMoney(g.total)}</span>
+                <span className={styles.amount}>{formatMoney(g.total, cur)}</span>
               </div>
               {!g.final && <span className="help">{t.money.ifEndedNow}</span>}
               <div className={styles.breakdown}>
@@ -451,7 +454,7 @@ export function MoneyScreen() {
                       {name(l.playerId)}
                       {l.label ? `, ${l.label}` : ''}
                     </span>
-                    <HowCalculated why={l.why} label={formatMoney(l.amount)} about={`${g.label}, ${name(l.playerId)}${l.label ? `, ${l.label}` : ''}`} />
+                    <HowCalculated why={l.why} label={formatMoney(l.amount, cur)} about={`${g.label}, ${name(l.playerId)}${l.label ? `, ${l.label}` : ''}`} />
                   </div>
                 ))}
               </div>
@@ -471,7 +474,7 @@ export function MoneyScreen() {
             <section className={styles.section}>
               <h3>
                 {M.checklist}
-                {owed.length > 0 && <span className={styles.checklistCount}>: {M.checklistCount(owed.length, formatMoney(owed.reduce((n, a) => n + a.due, 0)))}</span>}
+                {owed.length > 0 && <span className={styles.checklistCount}>: {M.checklistCount(owed.length, formatMoney(owed.reduce((n, a) => n + a.due, 0), cur))}</span>}
               </h3>
               {owed.length === 0 ? (
                 <span className="help">{M.nothingOwed}</span>
@@ -519,7 +522,7 @@ export function MoneyScreen() {
                       )}
                     </span>
                     <span className={styles.amount}>
-                      <HowCalculated why={tr.why} label={formatMoney(tr.amount)} ariaLabel={t.money.howCalculatedOf(lineText(tr.from, tr.to, tr.amount))} />
+                      <HowCalculated why={tr.why} label={formatMoney(tr.amount, cur)} ariaLabel={t.money.howCalculatedOf(lineText(tr.from, tr.to, tr.amount))} />
                     </span>
                     {/* Every line keeps the slot, so a line with a provisional prize (no button) keeps its amount in the column. */}
                     {markable && (
@@ -540,7 +543,7 @@ export function MoneyScreen() {
           {/* Once final, the settlement already nets every debt. A payment made
               but never marked (cash on Calcutta night, say) is recorded here,
               so the settlement stops counting it. */}
-          {state.tournamentFinal && me.isAdmin && owed.length > 0 && (
+          {state.tournamentFinal && me.isComite && owed.length > 0 && (
             <details className={styles.section}>
               <summary className={styles.recordSummary}>{M.recordPaid}</summary>
               <span className="help">{M.recordPaidHint}</span>
@@ -557,10 +560,11 @@ export function MoneyScreen() {
 }
 
 function Line({ label, amount }: { label: string; amount: number }) {
+  const cur = useCurrency()
   return (
     <div className={styles.line}>
       <span>{label}</span>
-      <span className={`${styles.lineAmount} ${amount < 0 ? styles.lineNeg : ''}`}>{formatSignedMoney(amount)}</span>
+      <span className={`${styles.lineAmount} ${amount < 0 ? styles.lineNeg : ''}`}>{formatSignedMoney(amount, cur)}</span>
     </div>
   )
 }

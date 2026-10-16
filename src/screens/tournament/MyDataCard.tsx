@@ -10,12 +10,13 @@
  */
 import { memo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Field, toast } from '../../components/ui'
+import { Field } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { requestCorrection } from '../../data/myData'
 import { useTournament } from '../../data/tournamentStore'
 import { formatIndex } from '../../data/profiles'
 import { humanError } from '../../lib/humanError'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import styles from '../../components/InstallGuide.module.css'
 
 const M = t.myData

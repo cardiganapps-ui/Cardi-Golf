@@ -14,7 +14,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { useAuth } from '../../data/auth'
 import { linkMyProfile, useMyProfile } from '../../data/profiles'
 import { useTournament } from '../../data/tournamentStore'

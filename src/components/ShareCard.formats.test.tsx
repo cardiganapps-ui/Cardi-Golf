@@ -19,7 +19,7 @@ import { dataFromSnapshot, useTournament } from '../data/tournamentStore'
 import type { TournamentSettings } from '../engine/settings/schema'
 import { fillRound, makeGroup, makeRound } from '../engine/testing/fixtures'
 import type { Round, Snapshot } from '../engine/types'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext } from '../screens/tournament/tournamentContext'
 import { ShareCardButton, type ShareKind } from './ShareCard'
 
 type Individual = TournamentSettings['modules']['individual']

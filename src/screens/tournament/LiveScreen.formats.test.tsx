@@ -16,7 +16,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import { fillRound, makeGroup, makeRound, PAR_72, score } from '../../engine/testing/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { LiveScreen } from './LiveScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 type Individual = TournamentSettings['modules']['individual']
 

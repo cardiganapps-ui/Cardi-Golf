@@ -12,7 +12,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { puttingGames } from '../../engine/core/putts'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminScores } from './AdminScores'
 
 const IB = t.admin.inbox

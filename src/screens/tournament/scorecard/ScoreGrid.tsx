@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { IconAlert, IconPencil } from '../../../components/icons'
-import { ScoreMark, SiAbbr, markFor } from '../../../components/primitives'
+import { ScoreMark, SiAbbr } from '../../../components/primitives'
+import { markFor } from '../../../components/notation'
 import type { HoleResult, PlayerRound } from '../../../engine/core/types'
 import { holeStrokes } from '../../../engine/formats'
 import { t } from '../../../i18n/es-MX'

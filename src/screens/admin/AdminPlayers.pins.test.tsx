@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 
 const fx = getFixture('full12-live')!
 const players = fx.snapshot.players
@@ -31,7 +31,7 @@ vi.mock('../../data/api', async (importOriginal) => ({
 vi.mock('../../data/pinPhones', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/pinPhones')>()), playerPhones: vi.fn(async () => []), pinLocks: vi.fn(async () => []) }))
 vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
 const toast = vi.hoisted(() => vi.fn())
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast }))
 const share = vi.hoisted(() => vi.fn(async (_text: string) => undefined))
 vi.mock('../../lib/pins', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/pins')>()), shareToWhatsApp: share }))
 const { AdminPlayers } = await import('./AdminPlayers')
@@ -43,7 +43,7 @@ function mount() {
   useTournament.setState({ tournamentId: 't-pins', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-pins', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-pins', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminPlayers />
       </TournamentContext.Provider>
     </MemoryRouter>,

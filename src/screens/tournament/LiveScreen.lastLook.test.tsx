@@ -14,7 +14,7 @@ import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import s from '../../components/primitives.module.css'
 import { LiveScreen } from './LiveScreen'
-import { TournamentContext, type TournamentCtx } from './TournamentGate'
+import { TournamentContext, type TournamentCtx } from './tournamentContext'
 
 const NAME = 'full12-live'
 const fx = getFixture(NAME)!

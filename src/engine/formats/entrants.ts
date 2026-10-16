@@ -56,12 +56,6 @@ export function playerRound(ctx: FormatContext, roundId: Id, playerId: Id): Play
   return ctx.core.rounds[roundId]?.[playerId]
 }
 
-/** How many holes an entrant has completed in a round (the least of its members). */
-export function entrantThru(ctx: FormatContext, roundId: Id, e: Entrant): number {
-  const each = e.playerIds.map((id) => playerRound(ctx, roundId, id)?.thru ?? 0)
-  return each.length ? Math.min(...each) : 0
-}
-
 /** An empty countback, for an entrant with no last round. */
 export function emptyCountback(holes = 18): CountbackInput {
   return { pointsByHole: new Map(), holes }

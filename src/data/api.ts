@@ -559,10 +559,6 @@ export async function saveTeams(tournamentId: string, teams: TeamInput[]) {
   return rpc<{ teams: number }>('save_teams', { p_tournament_id: tournamentId, p_teams: teams })
 }
 
-export async function renameTeam(teamId: string, name: string) {
-  return rpc<null>('rename_team', { p_team_id: teamId, p_name: name })
-}
-
 // ---------------------------------------------------------------------------
 // Payments (M5)
 // ---------------------------------------------------------------------------

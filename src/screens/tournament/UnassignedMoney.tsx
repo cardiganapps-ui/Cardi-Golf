@@ -31,7 +31,7 @@ import { HowCalculated } from '../../components/HowCalculated'
 import { NumberField } from '../../components/NumberField'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { Field, Input, Segmented } from '../../components/primitives'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { assignUnassigned, voidAdjustment, type AssignEntry } from '../../data/api'
 import { useTournament } from '../../data/tournamentStore'
 import { proRata, type Assignment } from '../../engine/core/unassigned'
@@ -40,10 +40,12 @@ import { humanError } from '../../lib/humanError'
 import { formatMoney } from '../../lib/money'
 import { useTournamentCtx } from './tournamentContext'
 import styles from './MoneyScreen.module.css'
+import { useCurrency } from '../../components/currency'
 
 const U = t.unassigned
 
 export function UnassignedMoney() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { me, tournamentId, spectator } = useTournamentCtx()
@@ -54,7 +56,7 @@ export function UnassignedMoney() {
   const players = useMemo(() => [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder), [snapshot.players])
   if (u.buckets.length === 0 && u.held.length === 0 && u.assignments.length === 0) return null
   const name = (id: string | null) => (id ? (players.find((p) => p.id === id)?.displayName ?? '?') : U.toHouse)
-  const who = (a: Assignment) => t.common.andList(a.rows.map((r) => (a.rows.length > 1 ? `${name(r.toPlayerId)} ${formatMoney(r.amount)}` : name(r.toPlayerId))))
+  const who = (a: Assignment) => t.common.andList(a.rows.map((r) => (a.rows.length > 1 ? `${name(r.toPlayerId)} ${formatMoney(r.amount, cur)}` : name(r.toPlayerId))))
   const statusNote = (a: Assignment) => (a.status === 'over' ? U.statusOver : a.status === 'orphan' ? U.statusOrphan : a.status === 'waiting' ? U.statusWaiting : null)
 
   return (
@@ -71,10 +73,10 @@ export function UnassignedMoney() {
                 <span className={styles.transferKind}>{U.decides}</span>
                 <HowCalculated why={b.why} />
               </span>
-              <span className={styles.amount}>{formatMoney(b.remaining)}</span>
-              {me.isAdmin && (
+              <span className={styles.amount}>{formatMoney(b.remaining, cur)}</span>
+              {me.isComite && (
                 <span className={styles.action}>
-                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${b.label}, ${formatMoney(b.remaining)}`}>
+                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setDeciding(b.key)} aria-label={`${U.decide}: ${b.label}, ${formatMoney(b.remaining, cur)}`}>
                     {U.decide}
                   </button>
                 </span>
@@ -92,7 +94,7 @@ export function UnassignedMoney() {
                 {!spectator && <span className={styles.transferKind}>{h.note}</span>}
                 <HowCalculated why={h.why} />
               </span>
-              <span className={styles.amount}>{formatMoney(h.amount)}</span>
+              <span className={styles.amount}>{formatMoney(h.amount, cur)}</span>
             </div>
           ))}
         </div>
@@ -116,10 +118,10 @@ export function UnassignedMoney() {
                       </span>
                     )}
                   </span>
-                  <span className={styles.amount}>{formatMoney(a.total)}</span>
-                  {me.isAdmin && (
+                  <span className={styles.amount}>{formatMoney(a.total, cur)}</span>
+                  {me.isComite && (
                     <span className={styles.action}>
-                      <button className="btn btn--ghost btn--sm" type="button" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(a.label, formatMoney(a.total), a.reason)}`}>
+                      <button className="btn btn--ghost btn--sm" type="button" onClick={() => setVoiding(a)} aria-label={`${U.void}: ${U.rowWhat(a.label, formatMoney(a.total, cur), a.reason)}`}>
                         {U.void}
                       </button>
                     </span>
@@ -130,12 +132,12 @@ export function UnassignedMoney() {
           </div>
         </>
       )}
-      {me.isAdmin && <AssignSheet bucketKey={deciding} players={players} tournamentId={tournamentId} onClose={() => setDeciding(null)} onDone={reload} />}
-      {me.isAdmin && (
+      {me.isComite && <AssignSheet bucketKey={deciding} players={players} tournamentId={tournamentId} onClose={() => setDeciding(null)} onDone={reload} />}
+      {me.isComite && (
         <ReasonSheet
           open={!!voiding}
           title={U.voidTitle}
-          body={voiding ? `${U.rowWhat(voiding.label, formatMoney(voiding.total), voiding.reason)}. ${U.voidBody}` : undefined}
+          body={voiding ? `${U.rowWhat(voiding.label, formatMoney(voiding.total, cur), voiding.reason)}. ${U.voidBody}` : undefined}
           confirmLabel={U.void}
           danger
           onConfirm={async (reason) => {
@@ -154,6 +156,7 @@ type Mode = 'give' | 'refund' | 'house'
 
 /** One decision on one line: to whom and how much, with a reason. Never more than the line holds. */
 function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bucketKey: string | null; players: Player[]; tournamentId: string; onClose: () => void; onDone: () => Promise<unknown> }) {
+  const cur = useCurrency()
   // The line as the boards hold it now, not as it was when the sheet opened.
   const bucket = useTournament((s) => (bucketKey ? (s.data?.state.money.unassigned.buckets.find((b) => b.key === bucketKey) ?? null) : null))
   const remaining = bucket?.remaining ?? 0
@@ -202,7 +205,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
     // Another phone's decision came over the channel while the sheet was open: its amounts were chosen against another line.
     if (remaining !== opened) return changed(remaining)
     if (!entries.length) return setError(U.nothing)
-    if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining)))
+    if (sum > remaining) return setError(U.tooMuch(formatMoney(remaining, cur)))
     if (reason.trim().length < 3) return setError(U.reasonShort)
     setBusy(true)
     setError(null)
@@ -224,7 +227,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
   }
 
   return (
-    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(bucket.label) : ''} body={U.available(formatMoney(remaining))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
+    <ConfirmSheet open={!!bucketKey} title={bucket ? U.decideTitle(bucket.label) : ''} body={U.available(formatMoney(remaining, cur))} confirmLabel={U.confirm} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
       <Segmented
         value={mode}
         label={U.decide}
@@ -254,7 +257,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
           {refund.map((c) => (
             <div key={c.playerId} className={styles.line}>
               <span>{nameOf(c.playerId)}</span>
-              <span>{formatMoney(c.amount)}</span>
+              <span>{formatMoney(c.amount, cur)}</span>
             </div>
           ))}
         </div>
@@ -265,7 +268,7 @@ function AssignSheet({ bucketKey, players, tournamentId, onClose, onDone }: { bu
         </Field>
       )}
       <p className="help" role="status">
-        {sum > remaining ? U.tooMuch(formatMoney(remaining)) : U.assigning(formatMoney(sum), formatMoney(remaining - sum))}
+        {sum > remaining ? U.tooMuch(formatMoney(remaining, cur)) : U.assigning(formatMoney(sum, cur), formatMoney(remaining - sum, cur))}
       </p>
       <Field label={U.reason} hint={U.reasonHint} error={error}>
         <Input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />

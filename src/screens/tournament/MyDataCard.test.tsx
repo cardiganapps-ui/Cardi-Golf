@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext, type TournamentCtx } from './TournamentGate'
+import { TournamentContext, type TournamentCtx } from './tournamentContext'
 
 const api = vi.hoisted(() => ({ requestCorrection: vi.fn(async (_tid: string, _m: string) => 1) }))
 vi.mock('../../data/myData', () => api)
@@ -71,7 +71,7 @@ describe('«Esto es lo que el Comité guardó de ti» (TRUST-16)', () => {
     const b = mount({ me: { ...fx.me, via: 'profile' } })
     expect(screen.queryByRole('heading', { name: M.title })).toBeNull()
     b.unmount()
-    mount({ me: { playerId: null, isOrganizer: true, isAdmin: true, via: 'device' } })
+    mount({ me: { playerId: null, isOrganizer: true, isComite: true, via: 'device' } })
     expect(screen.queryByRole('heading', { name: M.title })).toBeNull()
   })
 })

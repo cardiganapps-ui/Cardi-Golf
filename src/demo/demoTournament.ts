@@ -162,8 +162,6 @@ export function demoSnapshot(): Snapshot {
       currentRoundId: 'demo-r2',
       bankerPlayerId: p(5),
       settings,
-      timezone: settings.timezone,
-      currency: 'MXN',
       countsForStats: false,
     },
     players,

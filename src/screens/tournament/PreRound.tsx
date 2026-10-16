@@ -12,6 +12,7 @@
 import { memo, useEffect, useId, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
+import { useCurrency } from '../../components/currency'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { untilDay } from '../../lib/countdown'
@@ -37,12 +38,13 @@ export const PreRound = memo(function PreRound() {
   const data = useTournament((s) => s.data)
   const { me, spectator } = useTournamentCtx()
   const showMoney = useShowMoney()
+  const cur = useCurrency()
   const now = useNow()
   const titleId = useId()
   if (!data) return null
   const info = preRoundInfo(data, spectator ? null : me.playerId, showMoney)
   if (!info) return null
-  const tz = data.snapshot.tournament.timezone
+  const tz = data.settings.timezone
   const countdown = info.at ? countdownText(untilDay(info.at.date, info.at.time, tz, now)) : null
   const where = [info.date, info.course].filter(Boolean).join(', ')
   return (
@@ -100,7 +102,7 @@ export const PreRound = memo(function PreRound() {
         {info.owes && (
           <div className={styles.line}>
             <dt>{info.owes.total > 0 ? P.owes : P.money}</dt>
-            <dd>{info.owes.total > 0 ? P.owesLine(formatMoney(info.owes.total), info.owes.parts) : P.paid}</dd>
+            <dd>{info.owes.total > 0 ? P.owesLine(formatMoney(info.owes.total, cur), info.owes.parts) : P.paid}</dd>
           </div>
         )}
       </dl>

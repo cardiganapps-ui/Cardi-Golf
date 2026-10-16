@@ -14,6 +14,7 @@
  */
 import { t } from '../../i18n/es-MX'
 import { pesos } from '../core/pesos'
+import { PLATFORM_CURRENCY } from '../../lib/money'
 import { mainEntrants, type FieldShape } from './prizeCheck'
 import type { TournamentSettings } from './schema'
 
@@ -25,8 +26,12 @@ export interface SenseIssue {
   text: string
 }
 
-/** The one currency every screen formats (`formatMoney`'s MXN); another would show pesos under its name. */
-export const CURRENCIES = ['MXN'] as const
+/**
+ * The currencies a tournament may use. Every screen formats the tournament's own (`useCurrency`, ARCH-06), but the
+ * engine's «¿Cómo se calculó?» writes amounts as pesos («$2,500», `pesos()`): a second currency needs those to
+ * take it before it goes on this list.
+ */
+export const CURRENCIES = [PLATFORM_CURRENCY] as const
 /** §5.9: the player buys back up to half of himself. */
 export const BUYBACK_MAX_PCT = 50
 /** A day's cut never takes more than a full stroke per hole. */

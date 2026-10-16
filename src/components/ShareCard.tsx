@@ -30,6 +30,8 @@ import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import { TournamentLogo } from './TournamentLogo'
 import styles from './ShareCard.module.css'
+import { useCurrency } from './currency'
+import { localDay } from '../lib/localWhen'
 
 /** `settle`: the settlement as Dinero shows it, vía banco (the default) or sin banco. */
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement'; settle?: 'bank' | 'p2p' }
@@ -96,6 +98,7 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
 })
 
 function Card({ what }: { what: ShareKind }) {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const ctx = useContext(TournamentContext)
   const link = cardLink(ctx?.spectator)
@@ -113,7 +116,7 @@ function Card({ what }: { what: ShareKind }) {
   )
   const footer = (
     <div className={styles.footer}>
-      <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      <span>{localDay(new Date(), settings.timezone)}</span>
       {link.text && <span className={styles.watch} data-card-link>{link.text}</span>}
       <Wordmark size={13} />
     </div>
@@ -219,7 +222,7 @@ function Card({ what }: { what: ShareKind }) {
         {lines.slice(0, CARD_TRANSFERS).map((tr, i) => (
           <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
             <span>{t.moneyScreen.payText(t.moneyScreen.payWords(party(tr.from), party(tr.to), false, !!banker && ((tr.from === banker && tr.to === null) || (tr.from === null && tr.to === banker))))}</span>
-            <span className={styles.amount}>{formatMoney(tr.amount)}</span>
+            <span className={styles.amount}>{formatMoney(tr.amount, cur)}</span>
           </div>
         ))}
       </Rows>
@@ -229,7 +232,7 @@ function Card({ what }: { what: ShareKind }) {
         {nets.map((m) => (
           <div key={m.playerId} className={styles.net}>
             <span className={styles.name}>{nameOf(m.playerId)}</span>
-            <span className={`${styles.amount} ${m.net > 0 ? styles.gain : m.net < 0 ? styles.loss : ''}`}>{formatSignedMoney(m.net)}</span>
+            <span className={`${styles.amount} ${m.net > 0 ? styles.gain : m.net < 0 ? styles.loss : ''}`}>{formatSignedMoney(m.net, cur)}</span>
           </div>
         ))}
       </div>

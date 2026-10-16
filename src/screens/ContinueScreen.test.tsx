@@ -15,6 +15,8 @@ function open(path: string) {
         <Route path="/continuar/tarjeta" element={<ContinueScreen tab="tarjeta" />} />
         <Route path="/t/:slug" element={<p>En vivo del torneo</p>} />
         <Route path="/t/:slug/tarjeta" element={<p>Tarjeta del torneo</p>} />
+        <Route path="/tv" element={<ContinueScreen tab="tv" />} />
+        <Route path="/t/:slug/tv" element={<p>TV del torneo</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -39,5 +41,15 @@ describe('the shortcuts’ page (PWA-14)', () => {
   it('with no tournament on the phone, Home', async () => {
     open('/continuar/tarjeta')
     expect(await screen.findByText('Inicio')).toBeTruthy()
+  })
+
+  // ARCH-19: `/tv` said «Modo TV» was coming (a placeholder) while every tournament has its own TV.
+  it('`/tv` opens the last tournament’s TV, Home with none', async () => {
+    open('/tv')
+    expect(await screen.findByText('Inicio')).toBeTruthy()
+    cleanup()
+    setLastTournament({ slug: 'nachos-bachelor', name: 'Nacho', at: Date.now() })
+    open('/tv')
+    expect(await screen.findByText('TV del torneo')).toBeTruthy()
   })
 })

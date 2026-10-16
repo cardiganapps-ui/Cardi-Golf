@@ -7,8 +7,9 @@
  * signed.
  */
 import { useMemo, useState } from 'react'
-import { t } from '../../i18n/es-MX'
-import { Avatar, Field, Sheet, toast } from '../../components/ui'
+import { handicapText, t } from '../../i18n/es-MX'
+import { Avatar, Field, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { RejectedWrites } from '../../components/RejectedWrites'
@@ -294,7 +295,7 @@ export function AdminScores() {
                     <span className={a.rowText}>
                       <span className={a.rowTitle}>{ownDayText(pr, scoring) ?? '—'}</span>
                       <span className={a.rowSub}>
-                        {t.live.thru} {pr.thru}, {t.live.playingHcp} {pr.playingHcp}
+                        {t.live.thru} {pr.thru}, {t.live.playingHcp} {handicapText(pr.playingHcp)}
                         {signed ? `, ${SC.signedLine}` : `, ${t.card.cardUnsigned.toLowerCase()}`}
                       </span>
                     </span>
