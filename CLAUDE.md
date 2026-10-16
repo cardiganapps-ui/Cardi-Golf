@@ -173,7 +173,7 @@ Cardigan is Diego's clinical practice management app. It stores patient health d
 - **Client state:** a small store (Zustand or TanStack Query) fed by Realtime.
 - **Offline:** `vite-plugin-pwa` (Workbox) for the app shell, and an IndexedDB outbox (Dexie) for writes, with optimistic UI.
 - **Animation:** Motion (framer-motion) for layout and reorder animations; `canvas-confetti` for celebrations.
-- **Charts:** Recharts or visx.
+- **Charts:** hand-written SVG, no chart library (PERF-04, 2026-10-16: recharts and its tree were 98% of Estadísticas' 361 kB chunk, precached on every phone, for one line chart).
 - **Share images:** `html-to-image` plus the Web Share API.
 - **Fonts:** self-host with Fontsource (`@fontsource/fraunces`, `@fontsource/instrument-sans`) so they work offline.
 - **Testing:** Vitest for the engine; Playwright for one end-to-end smoke test (enter a score, see the leaderboard change).
@@ -776,8 +776,15 @@ Tabs: Individual · Matrimonios · Mejor ronda · Víbora · Putts · Calcutta.
 
 ### 9.7 Stats y premios
 - Stats and awards from section 12.
-- A cumulative points "race" chart that replays hole by hole across 36 holes.
-- A pairs race chart.
+- A cumulative "race" chart that replays hole by hole, and the pairs race (the pairs game's own points) behind the switch.
+- **The race chart** (2026-10-16, PERF-04, VIS-21, A11Y-20, MOT-21, MOT-15; `src/screens/tournament/race/`: `raceModel.ts` pure, `RaceChart.tsx`). Hand-drawn SVG; the figures are the engine's (`PlayerStats.race`, `pointsRace` summed per pair, as before), never recomputed.
+  - **Legible from 4 to 60.** Up to six entrants every line is in colour. Past that the first three on the board, this phone's player, the honoree and one picked from «Comparar con» (kept per race in this tab, sessionStorage `cardi-golf:race-pick:<tid>:<players|pairs>`) are in colour and the rest are grey context (`--race-context`). Six colours at most (`--race-1..6`, slot 1 the accent for this phone's player, checked together with the dataviz validator), each line named beside its end in ink, never a legend of sixty. A colour belongs to its entrant, never to a rank: a re-sort or a pick repaints nobody.
+  - **The axis is the days as they are** (`core.roundIds`, 9 or 18 holes each, never 36 assumed): a band per day, the turn and the last hole marked, every line from 0 at the first tee. Under strokes the axis turns over, so the leader is on top.
+  - **Reading it.** A bar (`input type=range`, «Hoyo de la carrera», said as «Hoyo 5 del día 2») or a finger on the drawing reads the race at a hole: the coloured lines' places and figures there, the labels at that hole.
+  - **The replay** paints every path once. A card-stock cover over the race not reached yet (with its own copy of the grid's lines) and the coloured heads move by CSS transforms set on the elements on each animation frame, so the compositor moves them with no repaint and React renders nothing per frame (once a hole, for the readout). «Revivir», «Pausar», «Seguir», «Ver el final». It was a 250 ms re-render of the whole recharts chart per hole. Under reduced motion there is no replay: the race shows whole and the bar jumps.
+  - **For a screen reader** the drawing is one image (`role="img"`, never focusable) named by what the race says («Carrera de puntos: 12 jugadores, 36 hoyos. Va al frente … con 72 puntos; tomó la punta en el hoyo 5 del día 2.»), and «Ver como tabla» is the whole race, a row per entrant and a column per hole, in a focusable scrolling region. It was an unnamed `role="application"` tab stop with twelve lines told apart by colour alone.
+  - **The course strip**: each hole is a button named and shown on a tap («Hoyo 3, par 4: 1.58 pts promedio»); the averages were `title` attributes only.
+  - Measured: the Stats chunk went from 361.2 kB (104.7 kB gzip) to 23.9 kB (8.1 kB gzip), and the precache from 2,934 KiB to 2,608 (production build with CI's placeholders). A replay's first 3 s at 4× CPU in Chromium (rAF timestamps, median of 3): on `large60` 171 of 198 frames painted, the longest 100 ms, «Pausar» answered in 0.3 s (it was 32 frames, the longest 450 ms, «Parar» 1.8 s); on `full12-live` 189 of 198 (126). Tests: `race/raceModel.test.ts`, `race/RaceChart.test.tsx`, `StatsScreen.formats.test.tsx`, `e2e/fixtures/race.spec.ts`.
 
 ### 9.8 Reglamento
 All of section 5, rewritten as friendly Spanish copy. This mirrors the printed rules sheet.

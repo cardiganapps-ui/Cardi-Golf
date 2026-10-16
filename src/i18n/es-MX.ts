@@ -3189,14 +3189,59 @@ export const t = {
     awards: 'Premios automáticos',
     awardsHint: 'Sin dinero en juego.',
     race: 'Carrera de puntos',
-    raceHint: 'Puntos acumulados hoyo por hoyo. Toca «Revivir» para verla de nuevo.',
+    raceHint: 'Puntos acumulados hoyo por hoyo.',
     raceStrokes: 'Carrera de golpes',
-    raceHintStrokes: 'Golpes sobre o bajo par, acumulados hoyo por hoyo: más arriba va mejor. Toca «Revivir» para verla de nuevo.',
+    raceHintStrokes: 'Golpes sobre o bajo par, acumulados hoyo por hoyo: más arriba va mejor.',
     pairsRace: 'Carrera de parejas',
     /** A11Y-22: the switch between the players' race and the pairs'. */
     raceKind: 'Carrera',
     play: 'Revivir',
-    stop: 'Parar',
+    /**
+     * The race chart (PERF-04, VIS-21, A11Y-20, MOT-21, 2026-10-16): a few lines in colour and the rest of a large
+     * field in grey, each named beside its line, a bar to read the race at any hole, and the whole race as a table.
+     */
+    raceChart: {
+      replayHint: 'Toca «Revivir» para verla de nuevo, o mueve la barra para leerla hoyo por hoyo.',
+      scrubHint: 'Mueve la barra para leerla hoyo por hoyo.',
+      /** Past six lines, a few stand out. */
+      colourHint: (pairs: boolean) =>
+        pairs ? 'En color, las tres primeras, la tuya y la que elijas para comparar; en gris, las demás.' : 'En color, los tres primeros, tú y quien elijas para comparar; en gris, los demás.',
+      pause: 'Pausar',
+      resume: 'Seguir',
+      end: 'Ver el final',
+      /** The bar's name; its value is the hole, said as `at`. */
+      cursor: 'Hoyo de la carrera',
+      start: 'En la salida',
+      /** «Hoyo 5», or «Hoyo 5 del día 2» when the event has more than one day. */
+      at: (day: number, hole: number, days: number) => (days > 1 ? `Hoyo ${hole} del día ${day}` : `Hoyo ${hole}`),
+      pick: 'Comparar con',
+      pickNone: 'Nadie más',
+      me: 'Tú',
+      mine: 'La tuya',
+      picked: 'Comparado',
+      others: (n: number, pairs: boolean) => `${pairs ? 'Las demás' : 'Los demás'} (${n})`,
+      /** A place at a hole: «3.º», «T3» when shared. */
+      place: (n: number, tied: boolean) => (tied ? `T${n}` : `${n}.º`),
+      showTable: 'Ver como tabla',
+      hideTable: 'Ocultar la tabla',
+      tableName: (title: string) => `${title}, hoyo por hoyo`,
+      entrant: (pairs: boolean) => (pairs ? 'Pareja' : 'Jugador'),
+      /** The figure as a voice says it: «72 puntos», «11 bajo par», «par». */
+      spoken: (v: number, strokes: boolean) => (strokes ? toParWords(v === 0 ? 'E' : v > 0 ? `+${v}` : `−${-v}`) : `${v} ${Math.abs(v) === 1 ? 'punto' : 'puntos'}`),
+      /**
+       * What the chart says to a screen reader: «Carrera de puntos: 12 jugadores, 36 hoyos. Va al frente Diego A.
+       * con 72 puntos; tomó la punta en el hoyo 5 del día 2.»
+       */
+      summary: (s: { title: string; count: number; pairs: boolean; holes: number; leaders: string[]; value: string; tookLead: string | null; wireToWire: boolean }) => {
+        const who = s.leaders.length === 1 ? `Va al frente ${s.leaders[0]} con ${s.value}` : `Van al frente ${andList(s.leaders)} con ${s.value}`
+        const since = s.tookLead ? `; tomó la punta en el ${s.tookLead.charAt(0).toLowerCase()}${s.tookLead.slice(1)}` : s.wireToWire ? '; va al frente desde el primer hoyo' : ''
+        const noun = s.pairs ? (s.count === 1 ? 'pareja' : 'parejas') : s.count === 1 ? 'jugador' : 'jugadores'
+        return `${s.title}: ${s.count} ${noun}, ${s.holes} ${s.holes === 1 ? 'hoyo' : 'hoyos'}. ${who}${since}.`
+      },
+      /** A hole of the course strip (A11Y-20): its number, par and average, said and shown on a tap. */
+      holeBar: (label: string, par: number, avg: string) => `${label}, par ${par}: ${avg}`,
+      holeBarHint: 'Toca un hoyo para ver su promedio.',
+    },
     course: 'El campo',
     hardest: 'Hoyo más difícil',
     easiest: 'Hoyo más fácil',

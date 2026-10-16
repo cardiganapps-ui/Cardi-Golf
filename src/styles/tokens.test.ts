@@ -71,6 +71,9 @@ describe('tokens.css contrast', () => {
   it('every chart series reads against the card stock (3:1, graphics)', () => {
     for (let i = 1; i <= 12; i++) expect(contrast(hex(`chart-${i}`), hex('bg')), `--chart-${i}`).toBeGreaterThanOrEqual(3)
   })
+  it('every line the race chart draws in colour reads against the card stock and the ruled panel (3:1, graphics; VIS-21)', () => {
+    for (let i = 1; i <= 6; i++) for (const bg of ['bg', 'surface']) expect(contrast(hex(`race-${i}`), hex(bg)), `--race-${i} on --${bg}`).toBeGreaterThanOrEqual(3)
+  })
   it('every curated event accent carries white text (4.5:1)', () => {
     for (let i = 1; i <= 6; i++) expect(contrast(hex(`chart-${i}`), hex('accent-ink')), `--chart-${i}`).toBeGreaterThanOrEqual(4.5)
   })

@@ -44,7 +44,8 @@
   --event-accent: var(--accent);
   --event-accent-ink: #ffffff;
 
-  /* Categorical series for charts (race chart, legend). Same lightness band as the accents. */
+  /* Categorical series, same lightness band as the accents; 1..6 are the curated event accents (src/design/accents.ts).
+     The race chart has its own six below (VIS-21). */
   --chart-1: #1e6b3b;
   --chart-2: #2b5b8c;
   --chart-3: #b4532a;
@@ -57,6 +58,17 @@
   --chart-10: #5a6b2a;
   --chart-11: #8a4a6a;
   --chart-12: #4f5751;
+  /* The race chart (VIS-21): the six lines it draws in colour at once, checked together on the card stock with the
+     dataviz palette validator (colour-blind separation 9.1 at worst, normal vision 19.3, every one 3:1 or more).
+     Slot 1 is the accent, this phone's player. The rest of a large field is grey context; the names beside the
+     lines and the table carry who is who, never the colour alone. */
+  --race-1: #1e6b3b;
+  --race-2: #2a66c0;
+  --race-3: #c2541f;
+  --race-4: #8848b0;
+  --race-5: #9a7400;
+  --race-6: #c43f6a;
+  --race-context: #bdb9ac;
 
   /* Google's own colors, only for its sign-in mark (brand guidelines). */
   --google-blue: #4285f4;

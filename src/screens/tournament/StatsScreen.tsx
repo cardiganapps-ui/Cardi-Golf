@@ -3,29 +3,27 @@
  * that replays hole by hole, the pairs race, course stats and a per-player
  * table. Display only, no money.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useCallback, useMemo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Segmented } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
-import { cssVar } from '../../lib/tokens'
 import { useTournament } from '../../data/tournamentStore'
 import { PlayerSheet } from './PlayerSheet'
+import { useTournamentCtx } from './TournamentGate'
 import styles from './StatsScreen.module.css'
-import { IconPlay, IconStop } from '../../components/icons'
-import { chartSeries } from '../../lib/tokens'
 import { ranksPlayersByTotal, toParText } from '../../engine/formats'
+import { RaceChart } from './race/RaceChart'
+import type { RaceDay, RaceEntrant } from './race/raceModel'
 
 const S = t.stats
 
 export function StatsScreen() {
   const data = useTournament((s) => s.data)
-  const PALETTE = useMemo(() => chartSeries(), [])
-  const ink = useMemo(() => ({ rule: cssVar('--rule'), ink2: cssVar('--ink-2'), surface: cssVar('--surface-2') }), [])
+  const { tournamentId, me } = useTournamentCtx()
   const [open, setOpen] = useState<string | null>(null)
   const [race, setRace] = useState<'players' | 'pairs'>('players')
-  const [playing, setPlaying] = useState(false)
-  const [cursor, setCursor] = useState<number | null>(null)
+  /** The hole of the course strip whose average shows (A11Y-20), by day. */
+  const [bar, setBar] = useState<{ roundId: string; hole: number } | null>(null)
 
   const stats = data?.state.stats
   const players = useMemo(() => data?.snapshot.players ?? [], [data])
@@ -49,57 +47,46 @@ export function StatsScreen() {
   const strokes = stats?.scoring !== undefined && stats.scoring !== 'points'
   const raceKind: 'players' | 'pairs' = playersRace ? race : 'pairs'
 
-  // Race data: one point per hole index (1..N), each series = cumulative points.
+  // Race data: each entrant's cumulative figure after each hole he played, as the engine gives it.
   const series = useMemo(() => {
-    if (!data || !stats) return { rows: [] as Array<Record<string, number>>, keys: [] as Array<{ key: string; label: string }> }
+    const none = { entrants: [] as RaceEntrant[], stable: [] as string[], me: null as string | null, honoree: null as string | null }
+    if (!data || !stats) return none
+    const honoreeId = data.snapshot.players.find((p) => p.isHonoree)?.id ?? null
     if (raceKind === 'pairs' && data.state.modules.pairs) {
       const pairs = data.state.modules.pairs.rows
-      // The pairs game counts Stableford points whatever the main event plays: its own race.
-      const n = Math.max(0, ...pairs.map((pr) => Math.max(stats.players[pr.playerIds[0]]?.pointsRace.length ?? 0, stats.players[pr.playerIds[1]]?.pointsRace.length ?? 0)))
-      const rows: Array<Record<string, number>> = []
-      for (let i = 0; i < n; i++) {
-        const row: Record<string, number> = { hole: i + 1 }
-        for (const pr of pairs) {
-          const a = stats.players[pr.playerIds[0]]?.pointsRace ?? []
-          const b = stats.players[pr.playerIds[1]]?.pointsRace ?? []
-          row[pr.pairId] = (a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0)
-        }
-        rows.push(row)
-      }
-      return { rows, keys: pairs.map((pr) => ({ key: pr.pairId, label: pr.name })) }
-    }
-    const list = Object.values(stats.players)
-    const n = Math.max(0, ...list.map((s) => s.race.length))
-    const rows: Array<Record<string, number>> = []
-    for (let i = 0; i < n; i++) {
-      const row: Record<string, number> = { hole: i + 1 }
-      for (const s of list) if (i < s.race.length) row[s.playerId] = s.race[i]!
-      rows.push(row)
-    }
-    return { rows, keys: order.filter((id) => stats.players[id]).map((id) => ({ key: id, label: nameOf(id) })) }
-  }, [data, stats, raceKind, nameOf, order])
-
-  useEffect(() => {
-    if (!playing) return
-    const timer = setInterval(() => {
-      setCursor((c) => {
-        const next = (c ?? 0) + 1
-        if (next >= series.rows.length) {
-          setPlaying(false)
-          return null
-        }
-        return next
+      // The pairs game counts Stableford points whatever the main event plays: its own race, both partners' points.
+      const entrants = pairs.map((pr) => {
+        const a = stats.players[pr.playerIds[0]]?.pointsRace ?? []
+        const b = stats.players[pr.playerIds[1]]?.pointsRace ?? []
+        const n = Math.max(a.length, b.length)
+        const values: number[] = []
+        for (let i = 0; i < n; i++) values.push((a[Math.min(i, a.length - 1)] ?? 0) + (b[Math.min(i, b.length - 1)] ?? 0))
+        return { id: pr.pairId, label: pr.name, values }
       })
-    }, 250)
-    return () => clearInterval(timer)
-  }, [playing, series.rows.length])
+      const pairOf = (pid: string | null) => (pid ? (pairs.find((pr) => pr.playerIds.includes(pid))?.pairId ?? null) : null)
+      return { entrants, stable: data.snapshot.pairs.map((p) => p.id), me: pairOf(me.playerId), honoree: pairOf(honoreeId) }
+    }
+    const entrants = order.filter((id) => stats.players[id]).map((id) => ({ id, label: nameOf(id), values: stats.players[id]!.race }))
+    return { entrants, stable: players.map((p) => p.id), me: me.playerId, honoree: honoreeId }
+  }, [data, stats, raceKind, nameOf, order, players, me.playerId])
+  /** The event's days on the race's axis, as they are: 1..N of 9 or 18 holes. */
+  const days = useMemo<RaceDay[]>(() => {
+    if (!data) return []
+    const byRound = new Map(data.snapshot.rounds.map((r) => [r.id, r]))
+    return data.state.core.roundIds.flatMap((rid) => {
+      const r = byRound.get(rid)
+      return r ? [{ number: r.number, holes: r.holes }] : []
+    })
+  }, [data])
+  const strokesRace = raceKind === 'players' && strokes
+  const format = useMemo(() => (strokesRace ? (v: number) => toParText(v) : (v: number) => String(v)), [strokesRace])
 
   if (!data || !stats) return null
   const { state, settings } = data
-  const visible = cursor == null ? series.rows : series.rows.slice(0, cursor + 1)
   const hasData = Object.values(stats.players).some((s) => s.holesPlayed > 0)
   const showRace = playersRace || !!state.modules.pairs
   const net = stats.scoring === 'net'
+  const avgText = (h: { avg: number; avgPoints: number }) => (strokes ? S.avgToPar(h.avg) : `${h.avgPoints} ${S.avgPoints}`)
 
   return (
     <div className={styles.screen}>
@@ -152,24 +139,7 @@ export function StatsScreen() {
 
           {showRace && (
           <section className={styles.section}>
-            <div className={styles.sectionHead}>
-              <h2>{raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}</h2>
-              <button
-                className="btn btn--secondary btn--sm"
-                type="button"
-                onClick={() => {
-                  if (playing) {
-                    setPlaying(false)
-                    setCursor(null)
-                  } else {
-                    setCursor(0)
-                    setPlaying(true)
-                  }
-                }}
-              >
-                {playing ? <IconStop size={18} /> : <IconPlay size={18} />} {playing ? S.stop : S.play}
-              </button>
-            </div>
+            <h2>{raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}</h2>
             {state.modules.pairs && playersRace && (
               <Segmented
                 value={raceKind}
@@ -177,48 +147,25 @@ export function StatsScreen() {
                   { value: 'players', label: settings.modules.individual.label },
                   { value: 'pairs', label: settings.modules.pairs.label },
                 ]}
-                onChange={(v) => {
-                  setRace(v)
-                  setCursor(null)
-                  setPlaying(false)
-                }}
+                onChange={setRace}
                 label={S.raceKind}
               />
             )}
-            <p className={styles.help}>{raceKind === 'players' && strokes ? S.raceHintStrokes : S.raceHint}</p>
-            <div className={styles.chart}>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={visible} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                  <CartesianGrid stroke={ink.rule} vertical={false} />
-                  <XAxis dataKey="hole" type="number" domain={[1, Math.max(2, series.rows.length)]} tick={{ fontSize: 11, fill: ink.ink2 }} axisLine={{ stroke: ink.rule }} tickLine={false} allowDecimals={false} />
-                  {/* Under strokes fewer is better, so the axis runs the other way: the leader is on top. */}
-                  <YAxis
-                    reversed={raceKind === 'players' && strokes}
-                    tickFormatter={raceKind === 'players' && strokes ? (v: number) => toParText(v) : undefined}
-                    tick={{ fontSize: 11, fill: ink.ink2 }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: ink.surface, border: `1px solid ${ink.rule}`, borderRadius: 4, fontSize: 12 }}
-                    labelFormatter={(h) => `${t.round.hole(Number(h))}`}
-                    formatter={raceKind === 'players' && strokes ? (v) => toParText(Number(v)) : undefined}
-                  />
-                  {series.keys.map((k, i) => (
-                    <Line key={k.key} type="monotone" dataKey={k.key} name={k.label} stroke={PALETTE[i % PALETTE.length]} strokeWidth={i < 3 ? 3 : 1.5} dot={false} isAnimationActive={false} connectNulls />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className={styles.legend}>
-              {series.keys.map((k, i) => (
-                <span key={k.key} className={styles.legendItem}>
-                  <span className={styles.swatch} style={{ background: PALETTE[i % PALETTE.length] }} />
-                  {k.label}
-                </span>
-              ))}
-            </div>
+            <RaceChart
+              key={raceKind}
+              title={raceKind === 'pairs' ? S.pairsRace : strokes ? S.raceStrokes : S.race}
+              hint={strokesRace ? S.raceHintStrokes : S.raceHint}
+              entrants={series.entrants}
+              stable={series.stable}
+              days={days}
+              strokes={strokesRace}
+              format={format}
+              pairs={raceKind === 'pairs'}
+              me={series.me}
+              honoree={series.honoree}
+              honoreeLabel={settings.labels.honoree}
+              pickKey={`cardi-golf:race-pick:${tournamentId}:${raceKind}`}
+            />
           </section>
           )}
 
@@ -242,15 +189,26 @@ export function StatsScreen() {
                       )}
                     </div>
                   </div>
+                  {/* Each hole's average was a title attribute, out of reach on a phone and of most screen readers (A11Y-20): a tap shows it, and the button says it. */}
                   <div className={styles.holeBars}>
-                    {r.holes.map((h) => (
-                      <div key={h.hole} className={styles.holeBar} title={`${t.round.hole(h.hole)}, par ${h.par}, ${strokes ? S.avgToPar(h.avg) : h.avgPoints}`}>
-                        {/* Taller is easier: more points, or fewer strokes against par (two under reads as four points). */}
-                        <div className={`${styles.bar} ${h.hole === r.hardest?.hole ? styles.barHard : h.hole === r.easiest?.hole ? styles.barEasy : ''}`} style={{ height: `${Math.max(0, Math.min(100, ((strokes ? 2 - h.avg : h.avgPoints) / 4) * 100))}%` }} />
-                        <span className={styles.holeLabel}>{h.hole}</span>
-                      </div>
-                    ))}
+                    {r.holes.map((h) => {
+                      const said = S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h))
+                      const on = bar?.roundId === r.roundId && bar.hole === h.hole
+                      return (
+                        <button key={h.hole} type="button" className={styles.holeBar} aria-label={said} aria-pressed={on} onClick={() => setBar(on ? null : { roundId: r.roundId, hole: h.hole })}>
+                          {/* Taller is easier: more points, or fewer strokes against par (two under reads as four points). */}
+                          <span className={`${styles.bar} ${h.hole === r.hardest?.hole ? styles.barHard : h.hole === r.easiest?.hole ? styles.barEasy : ''}`} style={{ height: `${Math.max(0, Math.min(100, ((strokes ? 2 - h.avg : h.avgPoints) / 4) * 100))}%` }} />
+                          <span className={styles.holeLabel}>{h.hole}</span>
+                        </button>
+                      )
+                    })}
                   </div>
+                  <p className={styles.barReadout}>
+                    {(() => {
+                      const h = bar?.roundId === r.roundId ? r.holes.find((x) => x.hole === bar.hole) : undefined
+                      return h ? S.raceChart.holeBar(t.round.hole(h.hole), h.par, avgText(h)) : S.raceChart.holeBarHint
+                    })()}
+                  </p>
                 </div>
               ))}
             </div>
