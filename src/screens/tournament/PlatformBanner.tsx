@@ -14,7 +14,7 @@ import { toast } from '../../components/ui'
 import { IconLock, IconShield } from '../../components/icons'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { usePlatformApi } from '../../data/platform'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import styles from './PlatformBanner.module.css'
 import { humanError } from '../../lib/humanError'
 

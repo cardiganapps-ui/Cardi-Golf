@@ -9,7 +9,8 @@ import { useEffect, useMemo } from 'react'
 import { Outlet, useParams } from 'react-router'
 import { forSpectators } from '../data/spectator'
 import { showBoards, useTournament } from '../data/tournamentStore'
-import { TournamentContext } from '../screens/tournament/TournamentGate'
+import { TournamentContext } from '../screens/tournament/tournamentContext'
+import { MotionScope } from '../design/MotionScope'
 import { forgetBoards, SPECTATOR_ME, spectatorLookup, useNoIndex } from '../screens/spectator/spectatorView'
 import { FixtureIndex } from './FixtureGate'
 import { getFixture } from './fixtures'
@@ -42,7 +43,9 @@ export function SpectatorFixture({ money = false }: { money?: boolean }) {
   if (!value || !has) return null
   return (
     <TournamentContext.Provider value={value}>
-      <Outlet />
+      <MotionScope>
+        <Outlet />
+      </MotionScope>
     </TournamentContext.Provider>
   )
 }

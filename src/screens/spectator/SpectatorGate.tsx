@@ -21,8 +21,9 @@ import { Wordmark } from '../../components/Wordmark'
 import { nextPoll, spectatorBoard, spectatorPath, spectatorStoreId, spectatorUrl } from '../../data/spectator'
 import { showBoards, useTournament } from '../../data/tournamentStore'
 import { humanError } from '../../lib/humanError'
-import { TournamentContext, useTournamentCtx } from '../tournament/TournamentGate'
+import { TournamentContext, useTournamentCtx } from '../tournament/tournamentContext'
 import { MoneyScreen } from '../tournament/MoneyScreen'
+import { MotionScope } from '../../design/MotionScope'
 import { forgetBoards, SPECTATOR_ME, useNoIndex } from './spectatorView'
 
 const noop = async () => undefined
@@ -168,7 +169,9 @@ export function SpectatorGate() {
   }
   return (
     <TournamentContext.Provider value={value}>
-      <Outlet />
+      <MotionScope>
+        <Outlet />
+      </MotionScope>
     </TournamentContext.Provider>
   )
 }

@@ -148,6 +148,65 @@ describe('what the worker keeps for no signal (QA-16)', () => {
     })
   })
 
+  describe('the subsets Spanish never uses, and the install’s own icons (PERF-05)', () => {
+    const EXT = '@font-face{src:url(/assets/font-ext-d4.woff2) format("woff2");unicode-range:U+0100-02BA,U+1E00-1E9F}'
+    const LATIN = '@font-face{src:url(/assets/font-c3.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131}'
+    const ROUTE = 'e.registerRoute(/\\/assets\\/[^/?#]+\\.woff2$/,new e.CacheFirst({cacheName:"fonts"}),"GET");'
+    const withExt = (f: Record<string, string>) => {
+      f['assets/index-b2.css'] = `${LATIN}${EXT}`
+      f['assets/font-ext-d4.woff2'] = 'font'
+      f['sw.js'] = `${f['sw.js']}${ROUTE}`
+    }
+
+    it('a face whose letters are not Spanish is fetched when a page needs it and kept then, never precached', () => {
+      expect(precacheProblems(build(withExt))).toEqual([])
+      const held = build((f) => {
+        withExt(f)
+        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"assets/font-ext-d4.woff2",revision:"r"},{url:"push-sw.js"')
+      })
+      expect(precacheProblems(held)).toEqual(['assets/font-ext-d4.woff2 is precached, but its letters are not Spanish: the browser asks for it only when a page needs one'])
+    })
+
+    it('left out with no rule to keep it once used, or missing from the build, it is named', () => {
+      const unkept = build((f) => {
+        withExt(f)
+        f['sw.js'] = f['sw.js']!.replace(ROUTE, '')
+      })
+      expect(precacheProblems(unkept)).toEqual(['the worker keeps no font it loads on demand: a face left out of the precache must be cached when used'])
+      const missing = build((f) => {
+        withExt(f)
+        delete f['assets/font-ext-d4.woff2']
+      })
+      expect(precacheProblems(missing)).toEqual([`assets/font-ext-d4.woff2 is a font the styles name but not in ${missing}`])
+    })
+
+    it('the Latin face is still needed, its range or not', () => {
+      const d = build((f) => {
+        withExt(f)
+        f['sw.js'] = f['sw.js']!.replace('{url:"assets/font-c3.woff2",revision:"r"},', '')
+      })
+      expect(precacheProblems(d)).toEqual(['assets/font-c3.woff2 is not precached (assets/index-b2.css uses it)'])
+    })
+
+    it('a 512 px icon ships and is not precached: only the install reads it', () => {
+      const with512 = (f: Record<string, string>) => {
+        f['manifest.webmanifest'] = JSON.stringify({ icons: [{ src: '/icons/icon-192.png?v=abc', sizes: '192x192' }, { src: '/icons/icon-512.png?v=def', sizes: '512x512' }] })
+        f['icons/icon-512.png'] = 'png'
+      }
+      expect(precacheProblems(build(with512))).toEqual([])
+      const held = build((f) => {
+        with512(f)
+        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"icons/icon-512.png",revision:"r"},{url:"push-sw.js"')
+      })
+      expect(precacheProblems(held)).toEqual(['icons/icon-512.png is precached, but only the install reads it'])
+      const missing = build((f) => {
+        with512(f)
+        delete f['icons/icon-512.png']
+      })
+      expect(precacheProblems(missing)).toEqual([`icons/icon-512.png is an icon the manifest names but not in ${missing}`])
+    })
+  })
+
   it('no build at all says so', () => {
     expect(precacheProblems(join(tmpdir(), 'no-such-build'))).toEqual([`${join(tmpdir(), 'no-such-build')}/sw.js is missing: build first`])
   })

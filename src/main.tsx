@@ -1,7 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
-import { MotionConfig } from 'motion/react'
 import { registerSW } from 'virtual:pwa-register'
 import './styles/global.css'
 import { router } from './app/router'
@@ -13,6 +12,8 @@ import { listenForInstall } from './lib/install'
 import { listenForNoticeTaps } from './lib/noticeTaps'
 import { startBadgeSync } from './data/push'
 import { useTournament } from './data/tournamentStore'
+import { launchesIntoTournament } from './lib/launch'
+import { TournamentGate } from './app/screens'
 
 // A screen from the build before a deploy loads the new build instead of failing (REL-13).
 startChunkRecovery()
@@ -45,13 +46,15 @@ useTournament.subscribe((s, prev) => {
   if (s.tournamentId) step('tournament_open', { once: true })
 })
 
+// An open that goes on into a tournament (its link, a shortcut, the installed app going back to it) starts on the
+// tournament's screens now: Home's chunk and theirs load side by side, not one after the other (PERF-02).
+if (launchesIntoTournament(location.pathname, location.search)) void TournamentGate.preload().catch(() => undefined)
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* Every Motion animation honours the system's reduce-motion setting. */}
-    <MotionConfig reducedMotion="user">
-      <RootBoundary>
-        <RouterProvider router={router} />
-      </RootBoundary>
-    </MotionConfig>
+    {/* Motion's reduce-motion setting is the tournament gates' (src/design/MotionScope.tsx): nothing else animates. */}
+    <RootBoundary>
+      <RouterProvider router={router} />
+    </RootBoundary>
   </StrictMode>,
 )

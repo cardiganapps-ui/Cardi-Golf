@@ -11,14 +11,17 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 const { router } = await import('../app/router')
-const { SpectatorGate } = await import('../screens/spectator/SpectatorGate')
+const { SpectatorGate } = await import('../app/screens')
 const { isLinkPage } = await import('./linkPage')
 
-/** Whether the app's router opens a link to watch at `path`. */
+/** The design fixtures' links to watch (src/app/devRoutes.tsx), with and without money. */
+const FIXTURE_LINKS = new Set(['v/_/:name', 'v/_dinero/:name'])
+
+/** Whether the app's router opens a link to watch at `path`: the gate, inside its lazy boundary (PERF-02), or a fixture's. */
 const routerOpensLink = (path: string) =>
   !!matchRoutes(router.routes as RouteObject[], path)?.some((m) => {
-    const el = m.route.element as { type?: unknown } | undefined
-    return el?.type === SpectatorGate || (typeof el?.type === 'function' && el.type.name === 'SpectatorFixture')
+    const el = m.route.element as { props?: { children?: { type?: unknown } } } | undefined
+    return el?.props?.children?.type === SpectatorGate || FIXTURE_LINKS.has(m.route.path ?? '')
   })
 
 const TOKEN = 'AbCdEfGhIjKlMnOpQrStUv12'

@@ -11,7 +11,8 @@ import { useRejectedInbox } from '../data/rejectedInbox'
 import { useTournamentDevices } from '../data/tournamentDevices'
 import { usePushFixture, type PushState } from '../data/push'
 import { dataFromSnapshot } from '../data/tournamentStore'
-import { TournamentContext, type Me } from '../screens/tournament/TournamentGate'
+import { TournamentContext, type Me } from '../screens/tournament/tournamentContext'
+import { MotionScope } from '../design/MotionScope'
 import { EnterScreen } from '../screens/tournament/EnterScreen'
 import { FIXTURE_NAMES, getFixture } from './fixtures'
 import { t } from '../i18n/es-MX'
@@ -63,7 +64,12 @@ export function FixtureGate() {
 
   if (!fixture) return <FixtureIndex />
   // `?as=new-phone`: the same tournament on a phone that has not picked its face yet (the grid, then the PIN).
-  if (as === 'new-phone') return <EnterScreen lookup={fixture.lookup} onEntered={() => navigate(`/t/_/${fixture.name}`)} />
+  if (as === 'new-phone')
+    return (
+      <MotionScope>
+        <EnterScreen lookup={fixture.lookup} onEntered={() => navigate(`/t/_/${fixture.name}`)} />
+      </MotionScope>
+    )
   if (tournamentId !== `fixture:${fixture.name}`) return null
   // `?as=platform` / `?as=platform-locked`: the same tournament seen by the Admin de Polo.
   const me: Me =
@@ -74,7 +80,9 @@ export function FixtureGate() {
         : fixture.me
   return (
     <TournamentContext.Provider value={{ tournamentId: fixture.snapshot.tournament.id, slug: `_/${fixture.name}`, lookup: fixture.lookup, me, refresh: noop, leave: noop }}>
-      <Outlet />
+      <MotionScope>
+        <Outlet />
+      </MotionScope>
     </TournamentContext.Provider>
   )
 }

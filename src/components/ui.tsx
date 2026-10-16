@@ -4,7 +4,7 @@
  * grid, marks) live in ./primitives and are re-exported here so existing
  * imports keep working.
  */
-import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { humanError } from '../lib/humanError'
 import styles from './ui.module.css'
@@ -218,10 +218,6 @@ export function Spinner({ label, rows = 3 }: { label?: string; rows?: number }) 
       ))}
     </div>
   )
-}
-/** Suspense boundary for lazy-loaded screens. */
-export function Lazy({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<Spinner />}>{children}</Suspense>
 }
 
 /** `error`: the caught error, or copy already made from one; it shows as humanError (COPY-04). */
