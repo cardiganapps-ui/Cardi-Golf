@@ -29,6 +29,7 @@ import { OptionalNumberField } from '../../components/NumberField'
 import { clockTime } from '../../lib/freshness'
 import { humanError } from '../../lib/humanError'
 import { phonesOf, pinLocks, playerPhones, releasePhone, unlockPin, type PinLock, type PinPhone } from '../../data/pinPhones'
+import { CorrectionsCard } from './CorrectionsCard'
 
 const P = t.admin.players
 const L = t.admin.players.lock
@@ -282,6 +283,8 @@ export function AdminPlayers() {
         </button>
       </div>
       {players.length === 0 && <EmptyState title={P.empty} body={P.emptyHint} />}
+      {/* What players asked to correct about themselves (TRUST-16). */}
+      <CorrectionsCard tournamentId={tournamentId} />
       {players.length > 0 && (
         <section className={a.section} aria-labelledby={lockId}>
           <div className={a.sectionTitle}>

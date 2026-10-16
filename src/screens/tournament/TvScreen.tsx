@@ -582,6 +582,8 @@ function AuctionBoard() {
               <span className="num">{formatMoney(pesos)}</span>
             </span>
           ))}
+          {/* TRUST-12: the room sees a pot; Polo only keeps its count. */}
+          <span className={styles.small}>{t.money.disclaimer}</span>
         </div>
         <div className={styles.sold}>
           <span className={styles.small}>{t.auction.soldList}</span>

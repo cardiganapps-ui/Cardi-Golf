@@ -35,6 +35,7 @@ import type { SettingsSection } from './SettingsEditor'
 import { CrewField } from './CrewField'
 import { ReadinessCard } from './ReadinessCard'
 import { SpectatorLinkCard } from './SpectatorLinkCard'
+import { AdultsCard } from './AdultsCard'
 import { ACCENTS, DEFAULT_ACCENT, nearestAccent } from '../../design/accents'
 import styles from './AdminTournament.module.css'
 import a from './Admin.module.css'
@@ -499,6 +500,8 @@ export function AdminTournament() {
               />
             </Field>
           )}
+          {/* Every player 18 or older, the Comité's word (TRUST-13): asked where the money is set. */}
+          {tab === 'money' && <AdultsCard tournamentId={tournamentId} settings={parsed.success ? parsed.data : null} timeZone={tr.timezone} />}
           <SettingsEditor
             value={settings}
             onChange={(v) => {

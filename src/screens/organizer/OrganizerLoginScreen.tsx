@@ -2,12 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Field } from '../../components/ui'
+import { Field, Toggle } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
 import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
-import { acceptLegal } from '../../data/legal'
+import { acceptLegal, sayAdult } from '../../data/legal'
 import { LegalConsent } from '../../components/LegalLinks'
 import { humanError, UserError } from '../../lib/humanError'
 
@@ -25,6 +25,8 @@ export function OrganizerLoginScreen() {
   /** Waiting for the emailed code: after sign-up (`signup`) or a magic-link request (`email`). */
   const [awaiting, setAwaiting] = useState<'signup' | 'email' | null>(null)
   const [code, setCode] = useState('')
+  /** A new account's «Confirmo que tengo 18 años o más» (TRUST-13). */
+  const [adult, setAdult] = useState(false)
 
   const signedIn = !!user && !isAnonymous
   useEffect(() => {
@@ -55,6 +57,8 @@ export function OrganizerLoginScreen() {
         void acceptLegal('organizer')
         navigate('/organizer', { replace: true })
       } else {
+        if (!adult) throw new UserError(t.legal.adult.needed)
+        sayAdult()
         const r = await signUpWithPassword(email.trim(), password, name.trim())
         if (r.needsConfirmation) setAwaiting('signup')
         else {
@@ -165,6 +169,8 @@ export function OrganizerLoginScreen() {
           )}
           {/* Before the button that sends the email (TRUST-05). */}
           <LegalConsent />
+          {/* A new account says the person is an adult (TRUST-13); signing in to one is not a new one. */}
+          {mode === 'up' && <Toggle label={t.legal.adult.check} hint={t.legal.adult.hint} checked={adult} onChange={setAdult} />}
           <button className="btn btn--primary btn--block" type="submit" disabled={busy}>
             {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
           </button>

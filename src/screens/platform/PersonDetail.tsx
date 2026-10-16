@@ -64,6 +64,8 @@ export function PersonDetail() {
   const locked = !!p.deviceLock || p.playerLocks.length > 0
   const actionable = !p.isSelf && !p.isAdmin
   const pr = p.profile
+  // «Lo que hizo el admin»: the person's own steps (his download, 0070) share the log but are not the admin's.
+  const adminActivity = p.activity.filter((x) => !x.action.startsWith('self_'))
   const profileLine = pr
     ? [pr.fullName !== pr.displayName ? pr.fullName : null, pr.homeClub, pr.city, pr.index != null ? H.index(formatIndex(pr.index)) : null, pr.discoverable ? null : H.hidden].filter(Boolean).join(', ')
     : ''
@@ -219,11 +221,11 @@ export function PersonDetail() {
         <div className={s.sectionHead}>
           <strong>{H.activity}</strong>
         </div>
-        {p.activity.length === 0 ? (
+        {adminActivity.length === 0 ? (
           <p className={s.help}>{H.noActivity}</p>
         ) : (
           <div className={s.rows}>
-            {p.activity.map((x) => (
+            {adminActivity.map((x) => (
               <div key={x.id} className={s.row}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{H.actions[x.action] ?? x.action}</span>

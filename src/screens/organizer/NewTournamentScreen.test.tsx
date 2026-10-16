@@ -129,8 +129,11 @@ describe('Nuevo torneo: a prize nobody can win (MONEY-09)', () => {
     expect(screen.getByText(W.fixToCreate)).toBeTruthy()
   })
 
-  it('the same split for three players can', () => {
+  it('the same split for three players can, once the organizer says every player is an adult (TRUST-13)', () => {
     const create = review('3')
+    // Money is in play: «Crear» waits for the organizer's word.
+    expect(create.disabled).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(t.money.adults.check) }))
     expect(create.disabled).toBe(false)
     expect(screen.queryByText(W.fixToCreate)).toBeNull()
   })
@@ -183,6 +186,7 @@ describe('Nuevo torneo: the review names every game with its prize (UX-04)', () 
     expect(reviewValue(W.reviewPrizes).textContent).toBe(`$30,000${W.reviewBalanced('$30,000')}`)
     // Nothing says there are no games.
     expect(screen.queryByText(/Ninguno por ahora/)).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(t.money.adults.check) }))
     expect((screen.getByRole('button', { name: W.create }) as HTMLButtonElement).disabled).toBe(false)
   })
 

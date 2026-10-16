@@ -40,10 +40,11 @@ const PROFILE = 'Quién ve tu perfil'
 const DATA = 'Qué datos guardamos'
 const OPERATOR = 'Quién opera Polo'
 const WHERE = 'Dónde viven'
+const ADDED = 'Si alguien te agregó a un torneo'
 
 export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   _migrations: NONE('which migrations ran'),
-  tournaments: T('name, logo and who created it', TOURNAMENT, 'tournament'),
+  tournaments: T('name, logo and who created it, and when its Comité said every player is an adult', TOURNAMENT, 'tournament'),
   tournament_organizers: T('which accounts are its Comité', TOURNAMENT, 'tournament'),
   organizers: T('the organizer account and its display name', DATA, 'account'),
   courses: T('the course and which account loaded it', DATA, 'record'),
@@ -89,18 +90,20 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   rivalry_rounds: T('each round of a rivalry', PROFILE, 'account'),
   crews: T('crews and their codes', PROFILE, 'account'),
   crew_members: T('who is in each crew', PROFILE, 'account'),
+  crew_requests: T('who asked to enter a crew that approves who enters, until the owner answers', DATA, 'account'),
   push_subscriptions: T('the address a browser gives to receive notices, and which browser', DATA, 'push'),
   pin_push_subscriptions: T('the address the browser of a phone that entered with a PIN gives to receive its tournament\'s notices, which browser, and its anonymous user and player', DATA, 'pinPush'),
   player_notices: T('which of its notices a tournament sent each player, and what they said (the day, the group, the hole, a place)', DATA, 'tournament'),
   platform_admins: T('who operates Polo', OPERATOR, 'record'),
   platform_unlocks: T('when the operator unlocked a Protegido tournament, and why', OPERATOR, 'record'),
-  platform_audit_log: T('what the operator did, and why', OPERATOR, 'record'),
+  platform_audit_log: T('what the operator did or opened, and why; and when a person downloaded his data or deleted his account', OPERATOR, 'record'),
   platform_settings: T('the operator\'s switches and banner, and which admin set them', OPERATOR, 'record'),
   backup_runs: NONE('when each nightly backup ran and its size'),
   retention_runs: NONE('when each nightly deletion ran and how many rows of each kind it took (TRUST-18)'),
   client_events: T('errors, sync times, speed and a few steps from each phone', DATA, 'telemetry'),
   device_status: T('each phone\'s app version and what it still has to send', DATA, 'devices'),
-  legal_acceptances: T('which version of the notice and the terms each user accepted, when and where', DATA, 'account'),
+  legal_acceptances: T('which version of the notice and the terms each user accepted, when and where, and that an account said it is 18 or older', DATA, 'account'),
+  player_corrections: T('what a player asked the Comité to correct about him, and when it was done', ADDED, 'tournament'),
   // Keeps nobody's data, but shows a tournament's to whoever has it (STRAT-05): the notice says who sees what through it.
   spectator_links: T('the key of the address anyone can open to watch the boards without a PIN, and whether it shows money', TOURNAMENT, 'tournament'),
 }

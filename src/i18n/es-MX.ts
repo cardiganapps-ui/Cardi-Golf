@@ -149,10 +149,11 @@ function payText(w: PayWords, amount?: string): string {
   return `${w.who} ${w.verb}${w.whom ? ` ${w.whom}` : ''}${amount ? `: ${amount}` : ''}`
 }
 
-export type UnsentAction = 'signOut' | 'switch' | 'enter'
+export type UnsentAction = 'signOut' | 'switch' | 'enter' | 'delete'
 const UNSENT_ACTION: Record<UnsentAction, string> = {
   signOut: 'cerrar sesión',
   switch: 'cambiar de cuenta',
+  delete: 'borrar tu cuenta',
   // A PIN in another tournament: the phone keeps one PIN at a time.
   enter: 'entrar a otro torneo',
 }
@@ -354,7 +355,7 @@ export const t = {
       round_tees: 'Tee', snake_tiebreaks: 'Víbora', card_signatures: 'Firma', calcutta_lots: 'Calcutta',
       calcutta_bids: 'Puja', calcutta_buybacks: 'Recompra', game_entries: 'Juego', hole_awards: 'Premio de hoyo',
       game_results: 'Resultado', courses: 'Campo', tees: 'Tee', holes: 'Hoyo del campo', pin_claims: 'Teléfono',
-      spectator_links: 'Enlace para ver', teams: 'Equipo', team_members: 'Equipo', player_pins: 'PIN',
+      spectator_links: 'Enlace para ver', teams: 'Equipo', team_members: 'Equipo', player_pins: 'PIN', player_corrections: 'Pedido de corrección',
       tournament_results: 'Resultados publicados', photos: 'Foto', course_documents: 'Tarjeta del campo',
       money_adjustments: 'Dinero por asignar', rejected_writes: 'Pendiente de revisar',
     } as Record<string, string>,
@@ -635,6 +636,9 @@ export const t = {
         set_flag: 'Cambió un interruptor',
         /** 0068 (TRUST-22): he opened it from his panel, or a tournament by its link. */
         view: 'Abrió para revisar',
+        /** 0070 (TRUST-09): a person's own steps, logged beside the operator's. */
+        self_export: 'Una persona descargó sus datos',
+        self_delete: 'Una persona borró su cuenta',
       } as Record<string, string>,
       comiteLine: (table: string, op: string) => `${table}, ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
     },
@@ -948,8 +952,9 @@ export const t = {
     splits: { classic: '50/30/20', wta: 'Todo al 1.º', top2: '60/40', top4: '40/30/20/10', amounts: 'Montos fijos' } as Record<string, string>,
     place: (n: number) => ordinal(String(n)),
     addPlace: 'Agregar lugar',
-    houseCut: 'Para la casa',
-    houseCutHint: 'Se aparta de la bolsa: pelotas, cena, trofeos.',
+    /** TRUST-12: what the group spends together, never a «house» that takes a cut. */
+    houseCut: 'Gastos del grupo',
+    houseCutHint: 'Se aparta de la bolsa para lo del grupo: pelotas, cena, trofeos.',
     modulePrizes: 'Premios de la bolsa',
     perDay: 'por día',
     perSurvivor: 'a cada quien sin la víbora',
@@ -1025,6 +1030,28 @@ export const t = {
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },
   profile: {
+    /** Editar perfil (0070, TRUST-09): the person's own data, downloaded, and the account deleted by its owner. */
+    myData: {
+      title: 'Tus datos',
+      download: 'Descargar mis datos',
+      downloadHint: 'Un archivo con todo lo que Polo guarda de ti: tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, y quién entró a tu cuenta.',
+      downloading: 'Preparando el archivo…',
+      downloaded: 'Listo: el archivo está en tus descargas.',
+      file: (day: string) => `polo-mis-datos-${day}.json`,
+      delete: 'Borrar mi cuenta',
+      deleteHint: 'Se borran tu perfil, tus amistades, rivalidades y avisos, y sales de tus crews. Lo que jugaste se queda en sus torneos, sin tu nombre.',
+      deleteTitle: 'Borrar tu cuenta',
+      deleteBody: 'Es para siempre. Se borran tu cuenta, tu perfil, tus amistades, tus rivalidades, tus avisos y los teléfonos donde los activaste, y sales de tus crews. Tus golpes, tu hándicap y tu dinero se quedan en cada torneo, para que los resultados de los demás sigan cuadrando, con tu jugador como «Jugador borrado».',
+      deletePlayers: (n: number, where: string[]) => `${n === 1 ? 'Tu jugador queda' : `Tus ${n} jugadores quedan`} como «Jugador borrado» en ${andList(where)}.`,
+      deleteOrphaned: (names: string[]) =>
+        `Eres todo el Comité de ${andList(names)}: ${names.length === 1 ? 'se queda' : 'se quedan'} sin Comité. Si quieres, antes agrega a alguien a su Comité.`,
+      deleteCrewsHanded: (names: string[]) => `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} ${names.length === 1 ? 'pasa' : 'pasan'} a quien lleva más tiempo en ${names.length === 1 ? 'él' : 'cada uno'}.`,
+      deleteCrewsGone: (names: string[]) => `${names.length === 1 ? 'Tu crew' : 'Tus crews'} ${andList(names)} se ${names.length === 1 ? 'borra' : 'borran'}: no ${names.length === 1 ? 'tiene' : 'tienen'} a nadie más.`,
+      deleteKept: 'Las copias de cada noche de antes del borrado lo siguen guardando, como dice el Aviso de privacidad.',
+      confirmEmail: (email: string) => `Escribe tu correo (${email}) para confirmar`,
+      deleteConfirm: 'Borrar para siempre',
+      deleted: 'Tu cuenta se borró.',
+    },
     /** Editar perfil (0068, TRUST-22): what the Admin de Polo opened or did about this account and its crews, and why. */
     adminAccess: {
       title: 'Accesos del administrador',
@@ -1239,6 +1266,12 @@ export const t = {
       privacy: 'Aviso de privacidad',
       end: '.',
     },
+    /** An account's sign-up (TRUST-13): checked before every way in, recorded with the acceptance (confirm_adult, 0070). */
+    adult: {
+      check: 'Confirmo que tengo 18 años o más',
+      hint: 'Polo es para mayores de edad, y más donde se juega dinero.',
+      needed: 'Para seguir, confirma que tienes 18 años o más.',
+    },
     newTab: '(se abre en otra pestaña)',
     /** Both pages end on it. golf@cardigan.mx only sends the code emails: it has no mailbox yet (TRUST-01). */
     contact: 'Dudas: con Diego Gaxiola, que opera Polo. El correo golf@cardigan.mx todavía no recibe mensajes.',
@@ -1256,36 +1289,43 @@ export const t = {
      */
     privacy: {
       title: 'Aviso de privacidad',
-      version: '2026-10-16',
+      version: '2026-10-16.2',
       updated: 'Última actualización: 16 de octubre de 2026',
       sections: [
         ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
-        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse. Un navegador que solo abre un enlace para ver no manda ninguno.'],
+        ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Al crear tu cuenta guardamos también que confirmaste tener 18 años o más; de un torneo con dinero, cuándo su Comité confirmó que todos sus jugadores son mayores de edad; lo que un jugador le pide al Comité corregir de sus datos; a qué crew pediste entrar, hasta que te contestan; y cuándo descargaste tus datos o borraste tu cuenta, en los registros de quien opera Polo. Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse. Un navegador que solo abre un enlace para ver no manda ninguno.'],
         ['Para qué los usamos', 'Solo para que la app funcione: calcular marcadores, juegos, índices y resultados; mostrarle a cada quien lo que le toca ver; leer las tarjetas de campo que alguien sube; mandarte avisos, y al teléfono solo si los activas; guardar respaldos; y que quien opera Polo pueda dar soporte, corregir errores y saber si la app funciona bien en los teléfonos. Los avisos de un torneo le dicen a cada jugador cuándo empieza un día y de qué hoyo y a qué hora sale su grupo, que le toca firmar una tarjeta, que su grupo tiene pendiente quién embocó al último en un hoyo, que el Comité corrigió su tarjeta (qué cambió y por qué queda en ella, a la vista de todo el torneo) y, al final, en qué lugar quedó: nunca llevan montos ni nombres de otros jugadores. No vendemos ni rentamos datos, no hay publicidad y no los usamos para nada más.'],
-        ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si prendes «Aparecer en búsquedas» en tu perfil: viene apagado. Prendido, te encuentran con tres letras de tu nombre o tu usuario, y la búsqueda muestra tu nombre, tu usuario y tu foto; tu club y tu ciudad solo están en tu tarjeta. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
+        ['Quién ve tu perfil', 'Tu perfil completo (tu nombre completo, lo que escribes sobre ti, tus rondas y tus torneos) lo ven tus amigos, tus crews y quienes están en un torneo donde juegas, jugadores o Comité. Cualquier otra persona con cuenta, salvo quien opera Polo, solo ve tu tarjeta (nombre, usuario, foto, club, ciudad, índice y desde cuándo estás en Polo), y solo si prendes «Aparecer en búsquedas» en tu perfil: viene apagado. Prendido, te encuentran con tres letras de tu nombre o tu usuario, y la búsqueda muestra tu nombre, tu usuario y tu foto; tu club y tu ciudad solo están en tu tarjeta. Quien administra un crew decide si basta su código para entrar o si aprueba a cada quien, puede ponerle fin al código y puede sacar a cualquiera; quien sale o es sacado deja de ver el perfil completo de los demás, y ellos el suyo. Lo que se ve de ti como jugador de un torneo está en la sección que sigue.'],
         ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no; también el historial de cada tarjeta: qué valores tuvo cada hoyo, quién los capturó y cuándo, y el motivo cuando el Comité lo corrigió. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, el tee que juega cada día, el hándicap de juego que le fije el Comité (sin su motivo) y si es el homenajeado; el campo de cada día con sus tees y sus hoyos; sus golpes, putts y resultados, los grupos, las parejas, los equipos, quién firmó cada tarjeta y cuándo, y los juegos, con quién juega cada uno y quién ganó cada concurso. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta, ni los juegos con bote aparte ni quién entró en ellos; con dinero ve también lo que cada quien paga, gana y debe, la Calcutta con sus precios y los botes aparte. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera. Si un amigo te agrega a una Ronda rápida, tu nombre (el corto, no el completo) y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú; tu foto, solo si tu perfil aparece en búsquedas. Si dices «No soy yo», tu foto se quita de ese jugador. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.'],
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código; el nombre corto, la categoría, el tee, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
+        ['Si alguien te agregó a un torneo', 'Si el Comité de un torneo, o un amigo en una Ronda rápida, te agregó como jugador, no creaste ninguna cuenta: lo que guardamos de ti es lo que él escribió (la sección anterior), lo que se captura de ti en el torneo y, si entras con tu PIN, qué teléfono quedó ligado a tu jugador. Quien te agrega se compromete, en los términos, a poder compartir tu nombre, tu foto y lo demás que escriba de ti con quienes ven el torneo, y a avisarte que te agregó. La primera vez que entras con tu PIN, Polo te muestra lo que el Comité guardó de ti y te deja pedirle que lo corrija; tu pedido lo ve el Comité de ese torneo. Para que se borre, o para cualquier otra cosa, está «Cómo pedir algo sobre tus datos».'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo; y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
         ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews y cuántos amigos tienen; los crews, con sus miembros y sus salidas (nunca su código), para atender un reporte; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta, sacar a alguien de un crew y mandar avisos a todos o a una persona. Para abrir desde su panel un torneo en el que no está, una cuenta o un crew, escribe por qué, y queda registrado: el Comité de ese torneo lo ve en su historial de cambios, con el motivo, y tú ves en Editar perfil, en «Accesos del administrador», cuándo abrió tu cuenta o uno de tus crews, por qué y lo que hizo con ellos. Si entra a un torneo por su enlace, su Comité también lo ve en el historial, sin motivo. Lo que cambia en un torneo queda marcado como suyo. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros. Lo usa para dar soporte y corregir errores.'],
         ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido. No lleva ningún PIN, ningún enlace de un solo uso ni la dirección de avisos de ningún navegador. Nosotros no la ciframos: Cloudflare cifra lo que guarda en sus discos, pero quien tenga las llaves de ese almacenamiento puede leerla. Hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
         ['Fuera de México', 'Los servicios que usa Polo son de empresas de Estados Unidos y guardan o procesan ahí lo que les toca: Supabase (las cuentas, la base de datos y los archivos, en Virginia), Vercel (sirve la app), Resend (los correos con código), Cloudflare (los respaldos de cada noche) y Anthropic (las fotos de tarjetas de campo). Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo. Google, si entras con Google, y el servicio de notificaciones de tu navegador (Apple, Google, Microsoft o Mozilla), si activas los avisos, no trabajan para Polo: reciben lo que tu cuenta o tu navegador ya les da, bajo sus propios avisos de privacidad. Fuera de ellos y de lo que este aviso dice que ve cada quien, no compartimos tus datos con nadie.'],
         ['Cuánto tiempo los guardamos', 'Cada noche, después del respaldo, se borra lo que ya cumplió su plazo. Tu perfil, tus amistades y rivalidades, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Los avisos de tu bandeja se borran a los 12 meses. Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan, y su historial de cambios también; si el torneo se borra, su historial se queda con una copia de todo lo que tenía y se borra 90 días después. La respuesta que el servidor le dio a cada hoyo guardado sirve para no guardarlo dos veces, y se borra a los 90 días. Los campos cargados con sus fotos de tarjeta y los registros de quien opera Polo no tienen fecha de borrado, y tampoco lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. Un usuario anónimo, el que se crea al mandar un PIN, se borra si pasan 180 días sin usarse y no tiene nada en ningún torneo (nunca entró como un jugador ni capturó nada); si entró como un jugador, se queda mientras quede rastro de eso en el torneo. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace. Las copias de cada noche guardan lo que había esa noche, salvo los PIN, los enlaces y las direcciones de avisos, y hoy no se borran nunca.'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
-        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, ponerlo o sacarlo de las búsquedas y apagar los avisos en cada teléfono. La app todavía no tiene cómo borrar tu cuenta ni cómo descargar tus datos: borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes, así que hoy hay que pedírselo a él directamente. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
+        ['Tus derechos', 'Puedes editar tu perfil cuando quieras, ponerlo o sacarlo de las búsquedas y apagar los avisos en cada teléfono. En Editar perfil, «Descargar mis datos» te da un archivo con todo lo que Polo guarda de ti (tu cuenta y tu perfil, tus jugadores con sus hoyos, resultados y dinero, tus amigos, crews, rivalidades y avisos, qué aceptaste y cuándo, y los accesos del administrador), y «Borrar mi cuenta» la borra, escribiendo tu correo para confirmar; también puede borrarla quien opera Polo. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
         ['Cómo pedir algo sobre tus datos', 'Puedes pedir saber qué datos tenemos de ti, corregirlos, que los borremos o que dejemos de usarlos para algo (tus derechos de acceso, rectificación, cancelación y oposición), y también retirar tu consentimiento o limitar su uso. Pídeselo a quien opera Polo, Diego Gaxiola, directamente o por medio del Comité de tu torneo, que se lo pasa; el correo golf@cardigan.mx todavía no recibe mensajes. Di tu nombre, el correo de tu cuenta o el torneo y el jugador, qué pides y, si es una corrección, el dato correcto. Antes de hacerlo confirmamos que eres tú: que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta; si juegas sin cuenta, con el Comité de tu torneo. Te contestamos en un máximo de 20 días hábiles y, si procede, lo hacemos en los 15 días hábiles siguientes. Si no quedas conforme, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno, la autoridad de protección de datos personales en México.'],
-        ['Menores de edad', 'Polo está pensado para mayores de 18 años y no le pide la edad a nadie. Si un Comité agrega como jugador a alguien menor de edad, necesita el permiso de su madre, su padre o su tutor, y cualquiera de ellos puede pedirnos corregir o borrar sus datos como dice la sección anterior.'],
+        ['Menores de edad', 'Polo es para mayores de 18 años. Para crear una cuenta confirmas que los tienes, y guardamos que lo confirmaste. Un torneo que juega con dinero le pide a su Comité confirmar que todos sus jugadores son mayores de edad, y lo guarda. Si un Comité agrega como jugador a alguien menor de edad en un torneo sin dinero, necesita el permiso de su madre, su padre o su tutor, y cualquiera de ellos puede pedirnos corregir o borrar sus datos como dice la sección anterior.'],
         ['Cambios a este aviso', 'Cuando este aviso cambie, cambian la fecha y la versión de arriba, y lo que ya guardamos no se usa para algo nuevo sin decirlo aquí antes. Si ya lo habías aceptado, al abrir Polo te lo decimos, con un enlace para leerlo, hasta que toques «Entendido» (nunca mientras capturas un hoyo, en la subasta o en las pantallas de TV).'],
       ] as Array<[string, string]>,
     },
     terms: {
       title: 'Términos de uso',
-      version: '2026-10-01',
-      updated: 'Última actualización: 1 de octubre de 2026',
+      version: '2026-10-16',
+      updated: 'Última actualización: 16 de octubre de 2026',
       sections: [
-        ['El servicio', 'Polo es gratis y se ofrece tal cual, para grupos de amigos. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.'],
-        ['El dinero', 'Polo no cobra ni mueve dinero: solo lleva la cuenta de lo que los jugadores acuerdan entre ellos. Cada grupo es responsable de sus apuestas y de pagarlas, y de que sean legales donde juegan. El Comité de cada torneo decide sus reglas y sus resultados, y quien opera Polo también puede corregir un error en cualquier torneo.'],
-        ['Tu cuenta', 'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Podemos suspender cuentas que lo hagan.'],
+        ['El servicio', 'Polo es gratis y se ofrece tal cual, para grupos de amigos. Lo opera Diego Gaxiola. Puede cambiar o dejar de funcionar; hacemos respaldos cada noche, pero no garantizamos que esté disponible siempre.'],
+        ['Edad', 'Para crear una cuenta en Polo necesitas tener 18 años o más, y lo confirmas al crearla. Un torneo que juega con dinero es solo para mayores de edad, y su Comité lo confirma por todos sus jugadores.'],
+        ['El dinero', 'Polo solo lleva la cuenta: no cobra, no guarda ni mueve dinero. Anota lo que los jugadores acuerdan entre ellos; cada grupo es responsable de lo que se juega, de pagarlo y de que sea legal donde juegan. El Comité de cada torneo decide sus reglas y sus resultados, y quien opera Polo también puede corregir un error en cualquier torneo.'],
+        ['Si organizas', 'Si creas un torneo o una Ronda rápida, o agregas a alguien como jugador, confirmas que puedes compartir su nombre, su foto y lo demás que escribas de él con quienes van a ver el torneo, y que le avisas que lo agregaste y dónde está el aviso de privacidad. Corriges lo que te pida corregir de sus datos. Las reglas, los premios y el dinero de tu torneo son responsabilidad de su Comité.'],
+        ['Tu cuenta', 'Usa tus datos reales, no te hagas pasar por nadie y no uses Polo para molestar a otros. Puedes borrar tu cuenta cuando quieras, en Editar perfil.'],
+        ['Si se suspende una cuenta', 'Quien opera Polo puede bloquear o borrar una cuenta que no cumpla estos términos, y siempre anota el motivo. Si crees que fue un error, díselo a Diego Gaxiola, directamente o por medio del Comité de tu torneo (el correo golf@cardigan.mx todavía no recibe mensajes), y lo revisa.'],
         ['Tu contenido', 'Lo que subes o escribes (fotos, nombres, tarjetas) sigue siendo tuyo. Nos das permiso de guardarlo, de mostrarlo a quien dice el aviso de privacidad y, si es la foto o el PDF de la tarjeta de un campo, de mandarlo a Anthropic para leerlo.'],
+        ['Responsabilidad', 'En lo que la ley lo permita, quien opera Polo no responde por pérdidas que vengan de usar la app, de un error en un marcador o en una cuenta de dinero, o de que no esté disponible. Antes de pagar, revisen los números entre ustedes: cada uno dice «¿Cómo se calculó?».'],
+        ['Cambios', 'Si estos términos cambian, cambian su fecha y su versión de arriba, y la app te lo dice al abrirla, con un enlace para leerlos, hasta que toques «Entendido». Si no estás de acuerdo, puedes dejar de usar Polo y borrar tu cuenta.'],
+        ['Ley y tribunales', 'Estos términos se rigen por las leyes de México, y cualquier desacuerdo se resuelve ante los tribunales de México que correspondan. Los escribió quien opera Polo, sin que un abogado los haya revisado todavía.'],
         ['Privacidad', 'Cómo tratamos tus datos está en el aviso de privacidad.'],
       ] as Array<[string, string]>,
     },
@@ -1398,6 +1438,11 @@ export const t = {
     joinCta: 'Entrar al crew',
     already: 'Ya estás en este crew.',
     joined: (name: string) => `Ya eres de ${name}`,
+    /** A crew that approves who enters (0071, TRUST-11). */
+    joinApprovalLine: (n: number) => `${n === 1 ? '1 miembro' : `${n} miembros`}. Quien lo administra aprueba a quien entra; ya adentro, ven tu perfil completo y tú el suyo.`,
+    joinAsk: 'Pedir entrar',
+    requested: (name: string) => `Listo: quien administra ${name} ya sabe que quieres entrar.`,
+    alreadyAsked: 'Ya pediste entrar: quien lo administra decide.',
     // Crew page
     season: (y: number) => `Temporada ${y}`,
     table: 'Tabla',
@@ -1419,6 +1464,22 @@ export const t = {
     shareText: (name: string) => `Únete a ${name} en Polo`,
     rotate: 'Cambiar código',
     rotateConfirm: 'El código y el enlace de ahora dejan de servir. Los miembros se quedan.',
+    /** The owner's controls (0071, TRUST-11). */
+    rotateFor: 'El código nuevo sirve',
+    rotateDays: { never: 'Sin fin', d7: '7 días', d30: '30 días' } as Record<'never' | 'd7' | 'd30', string>,
+    codeUntil: (when: string) => `El código sirve hasta ${when}.`,
+    codeExpired: 'El código ya no sirve: cambia el código para invitar a alguien.',
+    approval: 'Aprobar solicitudes',
+    approvalHint: 'Con el código, quien quiera entrar te lo pide y tú decides. Apagado, entra cualquiera que lo tenga.',
+    requests: (n: number) => (n === 1 ? '1 solicitud' : `${n} solicitudes`),
+    accept: 'Aceptar',
+    decline: 'Rechazar',
+    accepted: (name: string) => `${name} ya es del crew`,
+    declined: (name: string) => `Rechazaste a ${name}`,
+    remove: 'Sacar',
+    removeTitle: (name: string) => `Sacar a ${name}`,
+    removeBody: (name: string, crew: string) => `${name} deja de estar en ${crew}: ya no ve la tabla, las salidas ni el perfil completo de los demás, y no se le avisa. Puede volver a entrar si tiene el código: cámbialo, o prende «Aprobar solicitudes».`,
+    removed: (name: string) => `${name} ya no es del crew`,
     leave: 'Salir del crew',
     leaveConfirm: (name: string) => `Dejas de ver la tabla y las salidas de ${name}. Si eres el último, el crew se borra.`,
     crewField: 'Crew',
@@ -1511,6 +1572,9 @@ export const t = {
       results: (tournament: string, finish: string | null) => `Resultados de ${tournament}${finish ? `: quedaste ${finish}` : ''}`,
       round_invite: (name: string, tournament: string) => `${name} te agregó a su ronda: ${tournament}`,
       crew_join: (name: string, crew: string) => `${name} entró a ${crew}`,
+      /** A crew that approves who enters (0071, TRUST-11): to its owner, and to whoever it let in. */
+      crew_request: (name: string, crew: string) => `${name} quiere entrar a ${crew}`,
+      crew_accepted: (crew: string) => `Ya eres de ${crew}`,
       platform_notice: (title: string, body: string) => `${title}: ${body}`,
       platformTitle: 'Aviso de Polo',
       /**
@@ -1690,8 +1754,52 @@ export const t = {
     /** A11Y-22: «F» said as a word, never «hoyo efe». */
     thruSpoken: (n: number, holes = 18) => (n === holes ? 'terminó' : `hoyo ${n}`),
   },
+  /**
+   * En vivo, once, after a PIN (TRUST-16): what the Comité typed about this player, who sees it, and «Pedir
+   * corrección», which reaches the Comité in Comité › Jugadores (request_player_correction, 0070).
+   */
+  myData: {
+    title: 'Esto es lo que el Comité guardó de ti',
+    lede: 'Lo ve todo el torneo; tu PIN no. Si algo está mal, pídele al Comité que lo corrija.',
+    name: 'Nombre',
+    shortName: (s: string) => `se ve como ${s}`,
+    photo: 'Foto',
+    photoYes: 'Tiene una foto tuya',
+    photoNo: 'Sin foto',
+    tier: 'Categoría',
+    handicap: 'Hándicap',
+    handicapIndex: (v: string) => `Índice ${v}`,
+    handicapEstimate: (scores: string) => `Estimado con tres rondas: ${scores}`,
+    handicapManual: (v: string) => `${v}, el número que puso el Comité`,
+    form: 'Forma reciente',
+    none: 'Nada',
+    ok: 'Está bien',
+    ask: 'Pedir corrección',
+    what: 'Qué hay que corregir',
+    whatHint: 'Por ejemplo: mi hándicap es 14, o mi nombre lleva acento.',
+    send: 'Mandar al Comité',
+    sent: 'Listo: el Comité ya lo sabe.',
+    /** Comité › Jugadores: the players' requests. */
+    requests: (n: number) => (n === 1 ? '1 pedido de corrección' : `${n} pedidos de corrección`),
+    requestsHint: 'Lo que un jugador pidió corregir de sus datos, desde su teléfono. Corrígelo en su hoja y márcalo hecho.',
+    requestLine: (player: string, when: string) => `${player}, ${when}`,
+    done: 'Hecho',
+    doneAt: (when: string) => `Hecho ${when}`,
+  },
   money: {
     ifEndedNow: 'si terminara ahora',
+    /** TRUST-12: under Dinero, the Calcutta board and the settlement's share. */
+    disclaimer: 'Polo solo lleva la cuenta: no cobra, no guarda ni mueve dinero.',
+    /** TRUST-13: the Comité says every player is 18 or older before a tournament plays for money. */
+    adults: {
+      check: 'Todos los jugadores son mayores de edad',
+      hint: 'Con dinero en juego, el Comité confirma que todos tienen 18 años o más. Queda registrado.',
+      title: 'Mayores de edad',
+      confirmed: (when: string) => `El Comité confirmó el ${when} que todos los jugadores son mayores de edad.`,
+      missing: 'Este torneo juega con dinero y el Comité no ha confirmado que todos los jugadores son mayores de edad.',
+      confirm: 'Confirmar',
+      undo: 'Quitar la confirmación',
+    },
     /**
      * What a person puts in (entry, Calcutta, buybacks, side pots, bets lost),
      * paid or not: «Pone $6,000, recibe $16,000». It used to read «Pagó», a
@@ -2065,7 +2173,7 @@ export const t = {
     sense: {
       cap: 'El tope de hándicap es 0: nadie recibe golpes. Para jugar scratch, pon 0 % de hándicap.',
       cutMax: (max: number) => `El recorte de hándicap llega hasta ${max} golpes por día.`,
-      houseCut: (cut: string, pot: string) => `La casa se queda con ${cut} y las inscripciones suman ${pot}.`,
+      houseCut: (cut: string, pot: string) => `Los gastos del grupo se llevan ${cut} y las inscripciones suman ${pot}.`,
       placeTwice: (place: string) => `Dos casillas de la Calcutta pagan lo mismo: ${place}.`,
       placeUnreachable: (place: string, field: string) => `La Calcutta paga el ${place} lugar y hay ${field}: nadie lo puede ganar.`,
       tierTwice: (tier: string) => `Dos casillas de la Calcutta pagan al mejor de la categoría ${tier}.`,
@@ -2271,6 +2379,9 @@ export const t = {
         crew_id: 'Crew',
         is_protected: 'Protegido',
         handicaps_locked_at: 'Hándicaps fijados',
+        adults_confirmed_at: 'Mayores de edad, confirmado',
+        message: 'Pedido',
+        done_at: 'Hecho',
         platform: 'Teléfono',
         claimed_at: 'Desde',
         released_at: 'Hasta',
@@ -3033,10 +3144,10 @@ export const t = {
     shares: 'Calcutta',
     buybacksReceived: 'Recompras cobradas',
     sidePots: 'Botes',
-    houseCut: (amount: string) => `Para la casa: ${amount}`,
-    viaBank: 'Vía banco',
+    houseCut: (amount: string) => `Gastos del grupo: ${amount}`,
+    viaBank: 'Vía banquero',
     viaBankHint: (banker: string) => `Solo lo que falta por pagar: ${banker} cobra lo que se le debe y paga a cada quien. Lo ya marcado como pagado no se vuelve a pedir.`,
-    p2p: 'Sin banco',
+    p2p: 'Sin banquero',
     p2pHint: (banker: string | null) =>
       `Lista mínima de transferencias entre personas, sobre lo que falta por pagar (el que más debe le paga al que más recibe).${banker ? ` Lo que ya entró al banco lo reparte ${banker}.` : ''}`,
     settlePreview: 'Así quedaría si terminara ahora. Mientras tanto, lo que se cobra se marca en «Quién debe qué».',
@@ -3048,9 +3159,10 @@ export const t = {
     markedPaid: 'Marcado como pagado.',
     unmarkedPaid: 'Ya no cuenta como pagado.',
     refund: 'Devolución',
-    bank: 'Banco',
-    bankIn: 'Entró al banco',
-    bankOut: 'Sale del banco',
+    /** TRUST-12: the banker is one of the players who holds the cash, not an institution. */
+    bank: 'Banquero',
+    bankIn: 'Recibió el banquero',
+    bankOut: 'Paga el banquero',
     bankOk: 'Cuadra al peso',
     /** While play goes on: prizes not decided yet. Once it is over, «Por asignar» is a list (t.unassigned). */
     bankPending: (diff: string) => `Por repartir: ${diff}`,
@@ -3098,12 +3210,12 @@ export const t = {
     owesTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía debe ${amount} en total`,
     getsTotal: (name: string | null, amount: string) => `${name ?? 'El banco'} todavía tiene que recibir ${amount} en total`,
     /** The bank's side, in two parts: the banker holds it, or it stands as itself. */
-    bankCollects: 'Lo que el banco todavía cobra',
-    bankPays: 'Lo que el banco todavía paga',
+    bankCollects: 'Lo que el banquero todavía cobra',
+    bankPays: 'Lo que el banquero todavía paga',
     ruleTitle: 'Cómo se reparte',
     rule: 'Para hacer las menos transferencias, el que más debe le paga al que más tiene que recibir, y así hasta cuadrar.',
     share: (from: string | null, total: string, amount: string, to: string | null) => `De los ${total} que debe ${from ?? 'el banco'}, ${amount} van ${to === null ? 'al banco' : `a ${to}`}.`,
-    bankTitle: 'El banco',
+    bankTitle: 'El banquero',
     bankIn: (label: string, amount: string) => `Entra, ${label}: ${amount}`,
     bankOut: (label: string, amount: string) => `Sale, ${label}: ${amount}`,
     bankInTotal: (amount: string) => `Entra en total: ${amount}`,
@@ -3112,8 +3224,8 @@ export const t = {
     lots: (n: number) => `Calcutta (${n === 1 ? '1 lote' : `${n} lotes`})`,
     mainPrizes: 'premios del torneo',
     calcuttaShares: 'pagos de la Calcutta',
-    houseCut: (amount: string) => `Para la casa: ${amount}`,
-    toHouse: (amount: string) => `El Comité lo dejó a la casa: ${amount}`,
+    houseCut: (amount: string) => `Gastos del grupo: ${amount}`,
+    toHouse: (amount: string) => `El Comité lo dejó para gastos del grupo: ${amount}`,
     squares: 'Lo que entra es lo que sale: cuadra al peso.',
     left: (amount: string) => `Queda en el banco: ${amount}.`,
     short: (amount: string) => `Falta en el banco: ${amount}.`,
@@ -3140,7 +3252,7 @@ export const t = {
     heldTotal: (amount: string) => `Esperando un desempate: ${amount}`,
     heldExtra: (amount: string) => `Además, ${amount} esperan un desempate de la víbora.`,
     title: (amount: string) => `${amount} sin asignar`,
-    decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para la casa.',
+    decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.',
     awardLabel: (label: string) => `${label}, asignado por el Comité`,
     refundLabel: (label: string) => `${label}, devolución`,
     /** The Comité's reason; a link to watch carries none (its free text stays with the members, STRAT-05). */
@@ -3160,9 +3272,9 @@ export const t = {
     giveHint: 'Escoge a quién y cuánto. Lo que no asignes se queda por asignar.',
     refund: 'Devolver',
     refundHint: 'Se devuelve a quienes pusieron el dinero, en proporción a lo que pusieron.',
-    refundNone: 'No se sabe quién puso este dinero: dalo a alguien o déjalo para la casa.',
-    house: 'A la casa',
-    houseHint: 'Se queda con el banquero para gastos del grupo, como la parte de la casa.',
+    refundNone: 'No se sabe quién puso este dinero: dalo a alguien o déjalo para gastos del grupo.',
+    house: 'A gastos del grupo',
+    houseHint: 'Se queda con el banquero para gastos del grupo, como lo que se aparta de la bolsa para eso.',
     amountFor: (name: string) => `Cantidad para ${name}`,
     assigning: (amount: string, left: string) => `Asignas ${amount}; quedan ${left} por asignar.`,
     tooMuch: (left: string) => `Es más de lo que hay: quedan ${left}.`,
@@ -3173,7 +3285,7 @@ export const t = {
     confirm: 'Asignar',
     assigned: 'Asignado.',
     applied: 'Lo que ya decidió el Comité',
-    toHouse: 'A la casa',
+    toHouse: 'A gastos del grupo',
     void: 'Anular',
     voidTitle: 'Anular esta asignación',
     voidBody: 'El dinero vuelve a quedar por asignar. Queda en el historial con el motivo.',

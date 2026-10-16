@@ -49,6 +49,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   rivalry_rounds: 'rivalry_id,round_id',
   crews: 'id',
   crew_members: 'crew_id,profile_id',
+  // Who waits to enter a crew that approves who enters (0071, TRUST-11).
+  crew_requests: 'crew_id,profile_id',
   // What each player was told: kept so a restored database never tells them again.
   player_notices: 'id',
   platform_admins: 'auth_user_id',
@@ -58,6 +60,8 @@ export const BACKUP_TABLES: Record<string, string> = {
   backup_runs: 'id',
   retention_runs: 'id',
   legal_acceptances: 'id',
+  // What a player asked the Comité to correct about him (0070, TRUST-16).
+  player_corrections: 'id',
 }
 
 /**
