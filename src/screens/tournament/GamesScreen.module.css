@@ -139,14 +139,25 @@
   padding-top: var(--s3);
   border-top: var(--hairline);
 }
+/* VIS-23: the one link look (global.css `a`): it was grey text with no underline, a caption, not a way in. */
 .crossLink {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap);
-  color: var(--ink-2);
   font-size: var(--fs-md);
-  text-decoration: none;
 }
 .crossLink:active {
   color: var(--ink);
+  text-decoration-thickness: 2px;
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .gameRow:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .crossLink:not(:disabled):hover {
+    text-decoration-thickness: 2px;
+  }
 }

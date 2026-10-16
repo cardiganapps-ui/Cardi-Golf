@@ -22,7 +22,7 @@
   font-weight: 600;
 }
 .lead .icon {
-  color: var(--event-accent);
+  color: var(--accent);
 }
 .icon {
   display: inline-flex;

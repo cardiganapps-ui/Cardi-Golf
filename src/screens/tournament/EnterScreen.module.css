@@ -51,7 +51,7 @@
 .faceAsk {
   font-size: var(--fs-xs);
   font-weight: 600;
-  color: var(--event-accent);
+  color: var(--accent);
 }
 .gridDense .faceName {
   text-align: left;
@@ -84,4 +84,12 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--s2);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .face:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

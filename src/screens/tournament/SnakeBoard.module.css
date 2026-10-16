@@ -51,7 +51,7 @@
   background: var(--surface);
 }
 .holder {
-  border-color: var(--event-accent);
+  border-color: var(--accent);
 }
 .avatarWrap {
   position: relative;
@@ -63,8 +63,8 @@
   display: inline-flex;
   padding: 2px;
   border-radius: var(--r-round);
-  background: var(--event-accent);
-  color: var(--event-accent-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .playerName {
   font-size: var(--fs-xs);
@@ -94,4 +94,12 @@
 }
 .pending {
   color: var(--caution);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .player:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

@@ -409,7 +409,7 @@ export function AdminTournament() {
                 type="button"
                 className={styles.swatch}
                 aria-pressed={nearestAccent(accent).id === sw.id}
-                style={{ '--swatch': sw.hex } as React.CSSProperties}
+                data-accent={sw.id}
                 onClick={() => {
                   setAccent(sw.hex)
                   setDirty(true)

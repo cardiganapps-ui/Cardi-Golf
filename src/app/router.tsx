@@ -29,6 +29,7 @@ import {
   CrewJoinScreen,
   CrewScreen,
   CrewsScreen,
+  DemoGate,
   EntrarScreen,
   FriendsScreen,
   GamesScreen,
@@ -180,6 +181,8 @@ export const router = createBrowserRouter([
       { path: 't/:slug', element: <Lazy><TournamentGate /></Lazy>, children: tournamentChildren },
       // A link to watch, with no session: the boards, read-only (STRAT-05).
       { path: 'v/:token', element: <Lazy><SpectatorGate /></Lazy>, children: spectatorChildren },
+      // The example tournament, on the same read-only screens, with no session (STRAT-17).
+      { path: 'demo', element: <Lazy><DemoGate /></Lazy>, children: spectatorChildren },
       { path: 'p/:handle', element: <Lazy><ProfileScreen /></Lazy> },
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
       { path: 'c/unirme/:code', element: <Lazy><CrewJoinScreen /></Lazy> },

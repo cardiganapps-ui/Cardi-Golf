@@ -26,8 +26,22 @@
   flex-direction: column;
   border-top: var(--hairline);
 }
+/* VIS-23: a row that goes somewhere is a row, in ink, with its chevron; it was the green underlined text link. */
 .link {
   composes: rowLine from '../../components/primitives.module.css';
+  color: var(--ink);
+  text-decoration: none;
+}
+.link::after {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  margin-right: var(--s1);
+  border-top: 2px solid var(--ink-2);
+  border-right: 2px solid var(--ink-2);
+  transform: rotate(45deg);
 }
 .link:active {
   background: var(--surface);
@@ -72,4 +86,12 @@ button.link {
 .version {
   font-size: var(--fs-xs);
   color: var(--ink-3);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .link:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

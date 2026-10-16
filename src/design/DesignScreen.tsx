@@ -20,8 +20,8 @@ const COLOR_ROLES: Array<{ name: string; role: string; on?: string }> = [
   { name: 'surface', role: 'ruled area, skeletons' },
   { name: 'ink', role: 'graphite, text and figures', on: '--bg' },
   { name: 'ink-2', role: 'secondary text', on: '--bg' },
-  { name: 'accent', role: 'live, primary action, my row', on: '--bg' },
-  { name: 'under', role: 'under par (figures only)', on: '--bg' },
+  { name: 'accent', role: 'live, primary action, links, my row (the event’s inside a tournament)', on: '--bg' },
+  { name: 'under', role: 'under par, what is owed, errors', on: '--bg' },
   { name: 'over', role: 'over par (figures only)', on: '--bg' },
   { name: 'caution', role: 'pending, unsigned', on: '--bg' },
   { name: 'rule', role: 'hairlines' },
@@ -30,8 +30,7 @@ const COLOR_ROLES: Array<{ name: string; role: string; on?: string }> = [
   { name: 'board-accent', role: 'leader plate, live mark', on: '--board-bg' },
 ]
 const SCALE: Array<[string, string, string]> = [
-  ['2xs', '11', 'table headers, captions'],
-  ['xs', '12', 'meta'],
+  ['xs', '12', 'table headers, captions, meta: the floor (VIS-24)'],
   ['sm', '14', 'secondary text, dense rows'],
   ['md', '16', 'body, names'],
   ['lg', '18', 'lead, dense figures'],
@@ -69,7 +68,7 @@ export function DesignScreen() {
   const largeRows = large.state.modules.individual!.rows
 
   return (
-    <div style={{ '--event-accent': accent.hex } as React.CSSProperties}>
+    <div data-accent={accent.id}>
       <div className={s.page}>
         <header className={s.stack}>
           <Wordmark size={22} />
@@ -84,7 +83,7 @@ export function DesignScreen() {
           <div className={s.swatches}>
             {COLORS.map((c) => (
               <div key={c.name} className={s.swatch}>
-                <div className={s.swatchColor} style={{ background: c.hex, color: c.on ? c.on : luminance(c.hex) > 0.4 ? 'var(--ink)' : 'var(--on-dark)' }}>
+                <div className={s.swatchColor} style={{ background: c.hex, color: c.on ? c.on : luminance(c.hex) > 0.4 ? 'var(--ink)' : 'var(--on-fill)' }}>
                   {c.on ? `${ratio(c.hex, c.on)}:1` : ''}
                 </div>
                 <span className={s.swatchName}>--{c.name}</span>
@@ -141,7 +140,7 @@ export function DesignScreen() {
                 <Money amount={-1125} signed />
                 <Money amount={0} signed />
               </div>
-              <span className={s.cap}>MXN sin decimales; signo y color solo en netos.</span>
+              <span className={s.cap}>MXN sin decimales. El dinero es tinta con su signo; el rojo solo marca lo que se debe, en Dinero, Juegos, la TV, la ceremonia y la imagen para compartir. El rojo de un birdie es el del golf; el acento nunca es dinero: es la marca, lo que se toca y lo seleccionado (VIS-16).</span>
             </div>
           </div>
           <div className={s.stack}>
@@ -456,10 +455,10 @@ export function DesignScreen() {
         {/* ---- Event personalization ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Acento del evento</h2>
-          <p className={s.cap}>El organizador elige uno de seis. Se aplica a la regla bajo el nombre, al botón principal y a «mi fila». Nada más cambia.</p>
+          <p className={s.cap}>El organizador elige uno de seis. Dentro del torneo es el único acento: la regla bajo el nombre, el botón principal, «mi fila», los enlaces, los interruptores y lo que está en vivo. Ninguno se parece al rojo, al azul ni al ámbar de los colores con significado, en claro ni en oscuro.</p>
           <div className={s.accents}>
             {ACCENTS.map((a) => (
-              <button key={a.id} type="button" className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`} style={{ '--event-accent': a.hex } as React.CSSProperties} onClick={() => setAccent(a)}>
+              <button key={a.id} type="button" className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`} data-accent={a.id} onClick={() => setAccent(a)}>
                 <EventName name="Copa Tres Marías" small />
                 <span className="wave" aria-hidden="true" />
                 <Button variant="primary" size="sm">

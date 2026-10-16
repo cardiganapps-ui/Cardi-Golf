@@ -98,7 +98,7 @@
   gap: var(--s2);
 }
 .held {
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   color: var(--ink-2);
 }
 .potLine {

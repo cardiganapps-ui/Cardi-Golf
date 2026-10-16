@@ -7,6 +7,14 @@
     min-height: var(--tap);
   }
 }
+/* An amount that opens its explanation: the figure in ink, the dotted rule under it says it opens (VIS-16). */
+.figure {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
 .list {
   display: flex;
   flex-direction: column;

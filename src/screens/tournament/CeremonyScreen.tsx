@@ -32,6 +32,7 @@ import { TournamentLogo } from '../../components/TournamentLogo'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 import { fromLine } from '../../engine/core/unassigned'
+import { SaveResults } from './SaveResults'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -440,7 +441,7 @@ export function CeremonyScreen() {
   const listsAt = step && step.winners.length ? (step.winners.length - 1) * REVEAL.nextWinner + REVEAL.figures : 0
 
   return (
-    <div className={styles.stage} style={{ '--event-accent': nearestAccent(snapshot.tournament.accentColor).hex } as React.CSSProperties}>
+    <div className={styles.stage} data-theme="light" data-accent={nearestAccent(snapshot.tournament.accentColor).id}>
       <header className={styles.header}>
         {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} />}
         <div className="grow">
@@ -543,6 +544,8 @@ export function CeremonyScreen() {
           {idx >= steps.length && (
             <motion.div key="end" className={styles.center} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: easeSlow }} exit={{ opacity: 0, transition: easeFast }} transition={easeSlow}>
               <h2 className={styles.stepTitle}>{C.done}</h2>
+              {/* The end of the trip is when a player on a PIN keeps what he played (STRAT-08). */}
+              {state.tournamentFinal && <SaveResults board />}
             </motion.div>
           )}
         </AnimatePresence>
