@@ -152,6 +152,9 @@ describe('a write taken before its echo is back', () => {
     release([serverWrite({ strokes: 8, putts: 2, entered_by: A, updated_at: '2027-04-09T18:00:03.000000+00:00' })])
     await saving
     await vi.waitFor(() => expect(_outboxTest.queue()).toHaveLength(0))
+    // The queue drops the write before its stored copy is deleted, and the
+    // rows land after that: wait for the push to end, not just the queue.
+    await vi.waitFor(() => expect(useOutbox.getState().syncing).toBe(false))
     // Taken, and no event yet: the server's rows hold it now.
     expect(before).not.toBe(8)
     expect(shown()).toMatchObject({ strokes: 8 })
