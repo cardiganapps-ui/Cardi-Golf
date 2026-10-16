@@ -3341,9 +3341,12 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 211,
+      "tests": [
+        "src/lib/launchScope.test.ts",
+        "docs/strategy/launch-scope.json"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3474,11 +3477,14 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 211,
+      "tests": [
+        "docs/strategy/README.md",
+        "src/lib/launchScope.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Diego approves the strategy page (handoff 11)."
     },
     {
       "id": "STRAT-10",
@@ -3530,11 +3536,13 @@
       "workstream": "W6",
       "phase": 2,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 211,
+      "tests": [
+        "docs/strategy/brand-clearance.md"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The official IMPI/WIPO/USPTO search is Diego’s (handoff 12); a lawyer’s opinion and an own domain cost money (handoff 13)."
     },
     {
       "id": "STRAT-14",

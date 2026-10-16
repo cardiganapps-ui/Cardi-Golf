@@ -1,0 +1,194 @@
+{
+  "$comment": "El alcance del lanzamiento (docs/strategy/README.md). Cada ruta del router y cada migración, con su área. src/lib/launchScope.test.ts falla si aparece una que no está aquí, o si aquí queda una que ya no existe. Agregar superficie es escribirla aquí, con su área, en el mismo cambio.",
+  "areas": {
+    "torneo": {
+      "launch": true,
+      "what": "Entrar, En vivo, Tarjeta, Juegos, Dinero, Más, la tele, la Ceremonia, las tarjetas de papel y el enlace para ver: lo que usan los jugadores del viaje."
+    },
+    "comite": {
+      "launch": true,
+      "what": "La consola del Comité: torneo, jugadores, campos, rondas, grupos, hándicaps, juegos, tarjetas, Calcutta, parejas, equipos, historial y datos."
+    },
+    "organizador": {
+      "launch": true,
+      "what": "Entrar como organizador, Mis torneos y el asistente para crear un torneo."
+    },
+    "cuenta": {
+      "launch": true,
+      "what": "La cuenta de una persona, su perfil y los avisos legales: hace falta para organizar, y para que un jugador guarde su historial."
+    },
+    "shell": {
+      "launch": true,
+      "what": "La entrada de la app y la página que no existe."
+    },
+    "juegos": {
+      "launch": true,
+      "what": "Los juegos y formatos que un torneo activa. Los que el viaje usa están en el alcance; match play y equipos dependen de la decisión 5c de Diego."
+    },
+    "ronda-rapida": {
+      "launch": false,
+      "what": "Ronda rápida y el catálogo de campos fuera de un torneo. Funciona; no cuenta como hecha hasta pasar su criterio en teléfonos."
+    },
+    "social": {
+      "launch": false,
+      "what": "Amigos, rivalidades, avisos personales y crews. Funciona; no cuenta como hecha hasta pasar su criterio en teléfonos."
+    },
+    "plataforma": {
+      "launch": "partial",
+      "what": "Admin de Polo. Dentro del alcance: Salud, Protegido, Historial y «Comité en cualquier torneo». Fuera hasta tener 50 organizadores que no sean Diego: avisos a todos, moderación de personas y crews, fusión de campos (STRAT-12)."
+    },
+    "dev": {
+      "launch": false,
+      "what": "Rutas de diseño y fixtures: solo en builds con VITE_DESIGN_ROUTES (ARCH-07)."
+    }
+  },
+  "routes": {
+    ":id": "plataforma",
+    "*": "shell",
+    "/": "shell",
+    "admin": [
+      "comite",
+      "plataforma"
+    ],
+    "admin/_": "dev",
+    "amigos": "social",
+    "amigos/_": "dev",
+    "auditoria": "plataforma",
+    "avisos": [
+      "social",
+      "plataforma"
+    ],
+    "avisos/_": "dev",
+    "c/_": "dev",
+    "c/:slug": "social",
+    "c/unirme/:code": "social",
+    "calcutta": "comite",
+    "campos": [
+      "comite",
+      "ronda-rapida",
+      "plataforma"
+    ],
+    "ceremonia": "torneo",
+    "continuar": "torneo",
+    "continuar/tarjeta": "torneo",
+    "crews": [
+      "social",
+      "plataforma"
+    ],
+    "datos": "comite",
+    "design": "dev",
+    "dinero": "torneo",
+    "entrar": "cuenta",
+    "equipos": "comite",
+    "fixture": "dev",
+    "grupos": "comite",
+    "handicaps": "comite",
+    "historial": "comite",
+    "imprimir": "torneo",
+    "juegos": [
+      "torneo",
+      "comite"
+    ],
+    "jugadores": "comite",
+    "mas": "torneo",
+    "organizer": "organizador",
+    "organizer/login": "organizador",
+    "organizer/new": "organizador",
+    "organizer/nuevo/_": "dev",
+    "organizer/reset": "organizador",
+    "p/_/:name": "dev",
+    "p/_/:name/anio": "dev",
+    "p/_/:name/vs": "dev",
+    "p/:handle": "cuenta",
+    "p/:handle/vs": "social",
+    "parejas": "comite",
+    "perfil/editar": "cuenta",
+    "perfil/vuelta": "cuenta",
+    "personas": "plataforma",
+    "privacidad": "cuenta",
+    "reglamento": "torneo",
+    "resumen": "plataforma",
+    "ronda": "ronda-rapida",
+    "ronda/_": "dev",
+    "rondas": "comite",
+    "salud": "plataforma",
+    "scores": "comite",
+    "stats": "torneo",
+    "t/_/:name": "dev",
+    "t/:slug": "torneo",
+    "tarjeta": "torneo",
+    "terminos": "cuenta",
+    "torneo": "comite",
+    "torneos": "plataforma",
+    "tv": "torneo",
+    "v/_/:name": "dev",
+    "v/_dinero/:name": "dev",
+    "v/:token": "torneo"
+  },
+  "migrations": {
+    "0000_migrations.sql": "torneo",
+    "0001_schema.sql": "torneo",
+    "0002_functions.sql": "torneo",
+    "0003_rls.sql": "torneo",
+    "0004_pin_search_path.sql": "torneo",
+    "0005_admin_pin.sql": "torneo",
+    "0006_course_provenance.sql": "torneo",
+    "0007_audit_row_id.sql": "torneo",
+    "0008_score_disputes.sql": "torneo",
+    "0009_score_reason.sql": "torneo",
+    "0010_admin_safety.sql": "torneo",
+    "0011_games.sql": "juegos",
+    "0012_storage_guard.sql": "torneo",
+    "0013_identity.sql": "cuenta",
+    "0014_profile_name_hint.sql": "cuenta",
+    "0015_results.sql": "cuenta",
+    "0016_social.sql": "social",
+    "0017_quick_round.sql": "ronda-rapida",
+    "0018_crews.sql": "social",
+    "0019_push.sql": "torneo",
+    "0020_teams.sql": "juegos",
+    "0021_platform_admin.sql": "plataforma",
+    "0022_platform_people.sql": "plataforma",
+    "0023_platform_catalog.sql": "plataforma",
+    "0024_platform_ops.sql": "plataforma",
+    "0025_restore_games.sql": "torneo",
+    "0026_save_hole.sql": "torneo",
+    "0027_money_adjustments.sql": "torneo",
+    "0028_rejected_inbox.sql": "torneo",
+    "0029_close_gate.sql": "torneo",
+    "0030_tenant_ids.sql": "torneo",
+    "0031_anonymize_person.sql": "cuenta",
+    "0032_anonymize_copies.sql": "cuenta",
+    "0033_anonymize_round3.sql": "cuenta",
+    "0034_anonymize_copy_history.sql": "cuenta",
+    "0035_anonymize_every_copy.sql": "cuenta",
+    "0036_person_names.sql": "cuenta",
+    "0037_telemetry.sql": "plataforma",
+    "0038_legal_acceptances.sql": "cuenta",
+    "0039_backup_snapshot.sql": "torneo",
+    "0040_lookup_without_session.sql": "torneo",
+    "0041_round_results_lock.sql": "torneo",
+    "0042_hole_award_rulings.sql": "torneo",
+    "0043_update_settings.sql": "torneo",
+    "0044_one_transaction_games.sql": "torneo",
+    "0045_one_transaction_setup.sql": "torneo",
+    "0046_handicap_lock.sql": "torneo",
+    "0047_results_event_index.sql": "torneo",
+    "0048_calcutta_rules.sql": "torneo",
+    "0049_realtime_filters.sql": "torneo",
+    "0050_pin_phones.sql": "torneo",
+    "0051_admin_save_hole.sql": "torneo",
+    "0052_push_players.sql": "torneo",
+    "0053_spectator_link.sql": "torneo",
+    "0054_card_signing.sql": "torneo",
+    "0055_push_endpoints.sql": "torneo",
+    "0056_pin_lock_and_lookup.sql": "torneo",
+    "0057_player_tenant_keys.sql": "torneo",
+    "0058_discovery_opt_in.sql": "social",
+    "0059_social_limits.sql": "social",
+    "0060_quick_round_privacy.sql": "ronda-rapida",
+    "0061_storage_listing.sql": "torneo",
+    "0062_correction_notice.sql": "torneo",
+    "0063_history_filters.sql": "torneo"
+  }
+}

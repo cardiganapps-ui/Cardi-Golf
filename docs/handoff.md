@@ -94,6 +94,18 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
       2. Cloudflare → tu cuenta → **Manage Account** → **Members** → **Invite** → su correo, con acceso a R2 (para bajar un respaldo). Igual: si pide pagar, detente.
       3. Vercel no hace falta: la app instalada sigue funcionando sin Vercel (RUNBOOK §5), y en el plan gratis no se puede agregar a nadie al equipo (eso es de pago).
     - **Cómo lo verifico:** esa persona entra a Supabase y ve el proyecto Cardi-Golf, y a Cloudflare › R2 y ve `cardi-golf-backups`. Me dices quién es y lo anoto en el RUNBOOK.
+11. [ ] **La estrategia en una página** (STRAT-01, STRAT-09, STRAT-12; decisión, gratis). Está en `docs/strategy/README.md`: para quién es Polo, la métrica que manda («torneos cerrados al peso»), lo que no se hace, y las tres apuestas (el viaje sale perfecto; un organizador que no eres tú corre su torneo solo; la gente vuelve después del viaje).
+    - Dice también que Ronda rápida, amigos, crews y casi todo el Admin de Polo siguen funcionando pero no cuentan como hechos para abril. Si prefieres esconder alguno detrás de un interruptor, es tu decisión 5c.
+    - **Cómo lo verifico:** me dices «de acuerdo» o qué cambias, y lo corrijo en el mismo día.
+12. [ ] **Buscar «Polo» en el IMPI antes de invertir más en la marca** (STRAT-13, 20 minutos, gratis). Ralph Lauren tiene «POLO» y vende golf como «Polo Golf», y se opone a otros que usan la palabra. Lo que encontré y los pasos están en `docs/strategy/brand-clearance.md`.
+    - **Pasos:** en https://marcia.impi.gob.mx busca «POLO» en fonética y anota los registros vigentes en las clases 9, 41 y 42 con su titular; luego lo mismo en https://branddb.wipo.int y en https://tmsearch.uspto.gov.
+    - Si aparece The Polo/Lauren Company o PRL USA Holdings en alguna de esas clases, propongo cambiar de nombre ahora, mientras solo hay un torneo de prueba. Si no, decides tú si seguir o pagar una opinión de un abogado (💰).
+    - Hasta tu respuesta no hago más trabajo de marca (el logo vectorial, las piezas de la dirección de diseño).
+    - **Cómo lo verifico:** me mandas lo que encontraste (una captura basta) y lo anoto en el documento.
+13. [ ] **Un dominio propio** (STRAT-13, 💰, decisión). Polo vive en `golf.cardigan.mx`, el dominio de Cardigan. Comprar uno cuesta, así que solo si quieres; si lo compras, lo conecto sin que nadie pierda su sesión y dejo funcionando el actual.
+14. [ ] **Cinco organizadores que no seas tú** (apuesta 2 de la estrategia, gratis, antes de enero). Amigos que organicen viajes o torneos de golf. Cada uno crea un torneo desde cero en su teléfono, sin ayuda, y luego platicamos 15 minutos.
+    - **Pasos:** les mandas https://golf.cardigan.mx/organizer/login y les pides que creen un torneo de prueba con su grupo, hasta la lista «Para empezar». Que te digan dónde se atoraron.
+    - **Cómo lo verifico:** Salud muestra hasta dónde llegó cada uno; tú me pasas lo que te dijeron, y cada atorón se vuelve un arreglo.
 
 ---
 
