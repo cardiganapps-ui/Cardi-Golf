@@ -128,6 +128,19 @@ const api: PlatformApi = {
   async daily() {
     return daily
   },
+  async funnel(days) {
+    return {
+      days, northStar: 1, finished: 2, organizers: 4,
+      steps: [
+        { key: 'created', tournaments: 6, organizers: 4 },
+        { key: 'field', tournaments: 5, organizers: 4 },
+        { key: 'played', tournaments: 3, organizers: 2 },
+        { key: 'scored', tournaments: 3, organizers: 2 },
+        { key: 'signed', tournaments: 2, organizers: 2 },
+        { key: 'finished', tournaments: 2, organizers: 1 },
+      ],
+    }
+  },
   async tournaments({ q, kind }) {
     const needle = (q ?? '').toLowerCase()
     const rows = ROWS.filter((r) => {

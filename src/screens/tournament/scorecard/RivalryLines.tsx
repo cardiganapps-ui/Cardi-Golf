@@ -3,7 +3,7 @@ import { roundRivalries, type RoundRivalry } from '../../../data/quick'
 import { useTournament } from '../../../data/tournamentStore'
 import type { Group } from '../../../engine/types'
 import { t } from '../../../i18n/es-MX'
-import { useTournamentCtx } from '../TournamentGate'
+import { useTournamentCtx } from '../tournamentContext'
 
 /** My sliding-stroke rivalries with others in this group (0016), one line each. Accounts only. */
 export function RivalryLines({ tournamentId, group }: { tournamentId: string; group: Group }) {

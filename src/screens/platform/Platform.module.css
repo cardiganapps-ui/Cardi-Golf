@@ -506,3 +506,40 @@ a.row:active {
 .dotUnknown {
   background: var(--ink-3);
 }
+
+/* Resumen's funnel (STRAT-12): one row per step, its bar against the tournaments created. */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.funnelStep {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s1) var(--s3);
+  align-items: baseline;
+}
+.funnelLabel {
+  font-weight: 600;
+}
+.funnelLine {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.funnelTrack {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.funnelBar {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+}

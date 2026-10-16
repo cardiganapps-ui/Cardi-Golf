@@ -14,7 +14,7 @@ import { createLots, deleteBid, placeBid, reopenLot, resetAuction, sellLot, setB
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney } from '../../lib/money'
 import { shuffle } from '../../lib/pairing'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import styles from './AdminAuction.module.css'
 import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'

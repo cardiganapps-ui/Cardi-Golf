@@ -12,7 +12,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Snapshot } from '../engine/types'
 import type { LookupResult } from './api'
 import { forgetSeen } from './boardSeen'
-import type { Me } from '../screens/tournament/TournamentGate'
+import type { Me } from '../screens/tournament/tournamentContext'
 
 export interface CachedEntry {
   slug: string

@@ -1,6 +1,8 @@
 /**
- * Resumen: how Polo is doing, at a glance. Stat tiles for the counts, one
- * bar series for the last 30 days (pick which), and what happened last.
+ * Resumen: how Polo is doing, at a glance. First the metric that rules
+ * (docs/strategy/README.md) and how far organizers get (STRAT-12), then stat
+ * tiles for the counts, one bar series for the last 30 days (pick which), and
+ * what happened last.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
@@ -8,7 +10,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { Segmented } from '../../components/primitives'
 import { IconFlag, IconPerson, IconShield } from '../../components/icons'
-import { usePlatformApi, type PlatformDay, type PlatformEvent, type PlatformOverview } from '../../data/platform'
+import { usePlatformApi, type PlatformDay, type PlatformEvent, type PlatformFunnel, type PlatformOverview } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
@@ -17,18 +19,19 @@ const P = t.platform
 const n = (v: number) => v.toLocaleString('es-MX')
 
 type Series = 'scores' | 'accounts' | 'tournaments'
+const FUNNEL_DAYS = 90
 
 export function OverviewScreen() {
   const api = usePlatformApi()
-  const [data, setData] = useState<{ overview: PlatformOverview; daily: PlatformDay[] } | null>(null)
+  const [data, setData] = useState<{ overview: PlatformOverview; daily: PlatformDay[]; funnel: PlatformFunnel | null } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [series, setSeries] = useState<Series>('scores')
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const [overview, daily] = await Promise.all([api.overview(), api.daily(30)])
-      setData({ overview, daily })
+      const [overview, daily, funnel] = await Promise.all([api.overview(), api.daily(30), api.funnel(FUNNEL_DAYS).catch(() => null)])
+      setData({ overview, daily, funnel })
     } catch (e) {
       setError(humanError(e))
     }
@@ -44,6 +47,9 @@ export function OverviewScreen() {
   return (
     <div className={s.screen}>
       <h2>{P.sections.overview}</h2>
+
+      {/* A database without 0067 has no funnel: the rest of Resumen still shows. */}
+      {data.funnel && <Funnel f={data.funnel} />}
 
       <div className={s.kpis}>
         <Kpi label={P.kpi.accounts} value={o.accounts} sub={P.kpi.accounts7d(o.accounts7d)} />
@@ -87,6 +93,40 @@ export function OverviewScreen() {
         )}
       </section>
     </div>
+  )
+}
+
+/** The north star and each step of the organizer's funnel, as figures and bars against the tournaments created. */
+export function Funnel({ f }: { f: PlatformFunnel }) {
+  const created = f.steps.find((x) => x.key === 'created')?.tournaments ?? 0
+  return (
+    <section className={s.section} aria-labelledby="funnel-title">
+      <div className={s.kpi}>
+        <span className={s.kpiLabel}>{P.northStar.title}</span>
+        <span className={s.kpiValue}>{n(f.northStar)}</span>
+        <span className={s.kpiSub}>{P.northStar.finished(f.finished)}</span>
+      </div>
+      <p className={s.help}>{P.northStar.hint(f.days)}</p>
+      <div className={s.sectionHead}>
+        <strong id="funnel-title">{P.funnel.title(f.days)}</strong>
+      </div>
+      <p className={s.help}>{P.funnel.intro}</p>
+      {created === 0 ? (
+        <p className={s.help}>{P.funnel.none}</p>
+      ) : (
+        <ol className={s.funnel}>
+          {f.steps.map((x) => (
+            <li key={x.key} className={s.funnelStep}>
+              <span className={s.funnelLabel}>{P.funnel.step[x.key]}</span>
+              <span className={s.funnelLine}>{P.funnel.line(x.tournaments, x.organizers)}</span>
+              <span className={s.funnelTrack} aria-hidden="true">
+                <span className={s.funnelBar} style={{ width: `${(x.tournaments / created) * 100}%` }} />
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   )
 }
 

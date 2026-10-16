@@ -20,7 +20,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useOnline } from '../../components/OfflineBanner'
 import { SPECTATOR_PREFIX, useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 
 export type ConnectionKind = 'offline' | 'connecting' | 'live'
 export interface Connection {

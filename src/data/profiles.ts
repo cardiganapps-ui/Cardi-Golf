@@ -241,7 +241,8 @@ export async function uploadMyAvatar(id: string, file: File): Promise<string> {
   const { blob, type } = await downscaleImage(file, 512, 0.88)
   const path = `profiles/${id}/avatar-${Date.now()}.${extensionFor(type)}`
   const sb = supabase()
-  const { error } = await sb.storage.from('tournament-assets').upload(path, blob, { upsert: true, contentType: type })
+  // A new file each time, so Storage can let every phone keep it for a year (PERF-13): its default is an hour.
+  const { error } = await sb.storage.from('tournament-assets').upload(path, blob, { upsert: true, contentType: type, cacheControl: '31536000' })
   if (error) throw new Error(error.message)
   return sb.storage.from('tournament-assets').getPublicUrl(path).data.publicUrl
 }

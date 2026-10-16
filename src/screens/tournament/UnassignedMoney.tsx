@@ -38,7 +38,7 @@ import { proRata, type Assignment } from '../../engine/core/unassigned'
 import type { Player } from '../../engine/types'
 import { humanError } from '../../lib/humanError'
 import { formatMoney } from '../../lib/money'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import styles from './MoneyScreen.module.css'
 
 const U = t.unassigned
