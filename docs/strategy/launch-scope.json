@@ -199,6 +199,7 @@
     "0069_retention.sql": "plataforma",
     "0070_self_service.sql": "cuenta",
     "0071_crew_controls.sql": "social",
-    "0074_settings_mirror.sql": "torneo"
+    "0074_settings_mirror.sql": "torneo",
+    "0075_course_catalog.sql": "comite"
   }
 }

@@ -47,7 +47,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   tournaments: T('name, logo and who created it, and when its Comité said every player is an adult', TOURNAMENT, 'tournament'),
   tournament_organizers: T('which accounts are its Comité', TOURNAMENT, 'tournament'),
   organizers: T('the organizer account and its display name', DATA, 'account'),
-  courses: T('the course and which account loaded it', DATA, 'record'),
+  courses: T('the course, which account loaded it, verified its card (0075) and last corrected it', DATA, 'record'),
   course_documents: T('scorecard photos and PDFs someone uploaded', WHERE, 'record'),
   tees: NONE('a course tee: rating, slope, par'),
   holes: NONE('a course hole: par, stroke index, yards'),

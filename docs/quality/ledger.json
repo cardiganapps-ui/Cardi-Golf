@@ -3647,11 +3647,15 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 228,
+      "tests": [
+        "supabase/tests/course_catalog.sql",
+        "src/lib/seedCourses.test.ts",
+        "src/screens/admin/AdminCourses.verified.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The seed itself (scripts/seed-courses.mjs --apply with the GolfCourseAPI key) has not been run; OpenGolfAPI has no full card for any of the 75 listed Mexican courses, so coverage depends on GolfCourseAPI and photos."
     },
     {
       "id": "STRAT-15",

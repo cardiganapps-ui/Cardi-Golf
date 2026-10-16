@@ -402,6 +402,9 @@ a.row:active {
 .card {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
   border-top: var(--hairline);
   border-left: var(--hairline);
   font-variant-numeric: tabular-nums;
@@ -550,4 +553,19 @@ a.row:active {
   a.row:not(:disabled):hover {
     background: var(--surface);
   }
+}
+
+/* How each course arrived (STRAT-14): a label over its sentence, one per scope. */
+.arrivals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.arrival {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
 }

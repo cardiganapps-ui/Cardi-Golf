@@ -16,6 +16,12 @@ export interface ProviderTee {
   parTotal: number | null
   gender: string | null
   holes: ProviderHole[]
+  /**
+   * Some hole's par or stroke index was not the provider's (missing or out of range, or the stroke indexes not each
+   * once) and the adapter filled it in: 4 for a par, the hole's number for the indexes. The organizer fixes it in the
+   * review; scripts/seed-courses.mjs never imports such a tee (STRAT-14).
+   */
+  assumed: boolean
 }
 
 export interface ProviderCourse {
