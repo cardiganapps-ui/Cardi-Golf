@@ -200,6 +200,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
     correctsOnServer: rules.correctsOnServer,
     writer: { tournamentId, roundId: round.id, groupId: group.id, playerIds, groupPlayerIds: group.playerIds, myPlayerId: me.playerId, viaServer: rules.correctsOnServer, rowOf, parOf: (pid, h) => roundState[pid]?.holes[h - 1]?.par ?? par, holeOnScreen: hole, awards: contests.awards },
     threshold,
+    snakeLabel: settings.modules.snake.label,
     answered: snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole),
     entry,
     say: setSaid,
@@ -316,7 +317,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
           {saver.snakeNote && (
             <p className={styles.snakeNote} aria-hidden="true">
               <IconSnake size={18} />
-              {S.snakePasses(saver.snakeNote)}
+              {S.snakePasses(saver.snakeNote, settings.modules.snake.label)}
             </p>
           )}
           {entry.restoredCount > 0 && <p className={styles.restoredNote}>{S.restoredDraft}</p>}
@@ -351,6 +352,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
                     ptsLine={untouched ? S.notCaptured : text}
                     good={!untouched && good}
                     holdsSnake={snakeHolder === id}
+                    snakeLabel={settings.modules.snake.label}
                     snakeLayoutId={`tarjeta-snake-${group.id}`}
                     onDraft={on.draft}
                   />
@@ -375,7 +377,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
         </>
       )}
 
-      <TiebreakSheet candidates={saver.tiebreak?.candidates ?? null} named={named} threshold={threshold} busy={saver.busy} onAnswer={on.answer} onClose={on.closeTiebreak} />
+      <TiebreakSheet candidates={saver.tiebreak?.candidates ?? null} named={named} threshold={threshold} game={settings.modules.snake.label} busy={saver.busy} onAnswer={on.answer} onClose={on.closeTiebreak} />
       <DefaultsSheet open={saver.confirmDefaults} hole={hole} onBack={on.backFromDefaults} onConfirm={on.allPar} />
       <UnusualSheet lines={saver.confirmWeird} onFix={on.fixUnusual} onConfirm={on.saveUnusual} />
       <CorrectionReasonSheet open={saver.askReason} reason={saver.reason} onReason={saver.setReason} busy={saver.busy} onClose={on.closeReason} onSave={on.saveWithReason} />

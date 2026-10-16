@@ -128,11 +128,15 @@ fresh "${P}_drsrc" "${P}_seeded"
 # Taken by a session in local time (its history then carries offsets other than UTC), as the nightly could be if the server's default changed.
 PGTZ=America/Mazatlan PGDATABASE="${P}_drsrc" node "$root/scripts/backup-local.mjs" "$work/backup.json.gz" >"$work/out" 2>&1 || { cat "$work/out"; exit 1; }
 sed 's/^/  /' "$work/out"
+# No secret in the night (TRUST-10): no PIN hash, no sign-in token, no push address, in any row or image.
+node -e 'const z=require("zlib"),f=require("fs");const d=JSON.parse(z.gunzipSync(f.readFileSync(process.argv[1])));const bad=new Set(["pin_hash","token_hash","token","p256dh","auth","endpoint","encrypted_password"]);const hits=[];const walk=(v,p)=>{if(Array.isArray(v))v.forEach((x,i)=>walk(x,p));else if(v&&typeof v==="object")for(const[k,x]of Object.entries(v)){if(bad.has(k))hits.push(p+"."+k);walk(x,p)}};for(const[t,rows]of Object.entries(d.tables))walk(rows,t);for(const t of ["player_pins","profile_link_tokens","push_subscriptions","pin_push_subscriptions"])if(t in d.tables)hits.push(t);if(hits.length){console.error("  ✗ secrets in the backup: "+[...new Set(hits)].join(", "));process.exit(1)}' "$work/backup.json.gz" || exit 1
+echo "  ✓ the night carries no PIN hash, sign-in token or push address"
 # A history page that repeated a row (offset paging while a row committed): the night still restores.
 node -e 'const z=require("zlib"),f=require("fs");const d=JSON.parse(z.gunzipSync(f.readFileSync(process.argv[1])));d.tables.audit_log.splice(1,0,d.tables.audit_log[0]);f.writeFileSync(process.argv[1],z.gzipSync(JSON.stringify(d)))' "$work/backup.json.gz"
 # A laptop whose Postgres speaks local time.
 PGTZ=America/Mexico_City PGDATABASE="${P}_dr" node "$root/scripts/restore-r2.mjs" --from "$work/backup.json.gz" --storage-to https://nuevo.supabase.co >"$work/out" 2>&1 || { cat "$work/out"; echo "  ✗ the restore"; exit 1; }
 sed 's/^/  /' "$work/out"
+grep -q "player(s) have no PIN" "$work/out" || { echo "  ✗ the restore did not say the players have no PIN"; exit 1; }
 want=$("${PSQL[@]}" -d "${P}_drsrc" -Atc "select md5(display_name) from public.players order by id limit 1")
 got=$("${PSQL[@]}" -d "${P}_dr" -Atc "select md5(display_name) || ' ' || avatar_url from public.players order by id limit 1")
 [ "$got" = "$want https://nuevo.supabase.co/storage/v1/object/public/tournament-assets/p/foto.png" ] || { echo "  ✗ the typed text or the rewritten photo did not come back: $got"; exit 1; }

@@ -243,7 +243,7 @@ function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: stri
             {putts && <Stat label={t.player.puttsAvg} v={putts.average} />}
             {putts && <Stat label={t.player.onePutts} v={putts.onePutts} />}
             {putts && <Stat label={t.player.threePutts} v={putts.threePutts} />}
-            {state.modules.snake && <Stat label={t.player.snakeHoles} v={state.modules.snake.holesHeld[p.id] ?? 0} />}
+            {state.modules.snake && <Stat label={t.player.snakeHoles(settings.modules.snake.label)} v={state.modules.snake.holesHeld[p.id] ?? 0} />}
           </div>
         </section>
       </div>

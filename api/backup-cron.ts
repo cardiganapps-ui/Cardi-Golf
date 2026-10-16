@@ -6,9 +6,12 @@
  * migration 0039), reads the history (`audit_log`, too big for one request)
  * up to the snapshot's last row, and writes one gzipped JSON to R2 at
  * backups/YYYY-MM-DD.json.gz (format 2, what scripts/restore-r2.mjs loads).
- * Then it copies the Storage files that changed since the last night to R2
- * (files/<bucket>/<name>, with files/manifest.json), within a time budget:
- * what is left goes the next night. On a database without 0039 it reads
+ * No secret goes in it (TRUST-10): the tables that hold them are not read,
+ * and every secret-shaped key is taken out of what is (withoutSecrets). Once
+ * the night is safe in R2 it runs the nightly deletion (run_retention, 0069,
+ * TRUST-18), then copies the Storage files that changed since the last night
+ * to R2 (files/<bucket>/<name>, with files/manifest.json), within a time
+ * budget: what is left goes the next night. On a database without 0039 it reads
  * each table page by page, as before (format 1), so no night is lost.
  * This is the only code allowed to use SUPABASE_SECRET_KEY, and it never
  * returns row data, only counts. Every run, good or bad, is recorded in
@@ -17,7 +20,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { gzipSync } from 'node:zlib'
 import { AwsClient } from 'aws4fetch'
-import { BACKUP_TABLES, backupKey } from '../src/lib/backupTables.js'
+import { BACKUP_TABLES, backupKey, withoutSecrets } from '../src/lib/backupTables.js'
 import { bearerMatches } from '../src/server/secret.js'
 
 export const config = { maxDuration: 60 }
@@ -29,12 +32,15 @@ const HISTORY = 'audit_log'
  * No file is started after this, counted from the run's start; with the last
  * file's read and write, the last manifest save and the run's record at
  * FILE_TIMEOUT_MS each (34 + 4 × 6 = 58 s), the run ends before Vercel's 60 s
- * (maxDuration). The rest goes the next night, and `backup_runs.files.pending`
- * says how many.
+ * (maxDuration). The nightly deletion runs before the files, inside these
+ * 34 s, so it only ever shortens their time. The rest goes the next night,
+ * and `backup_runs.files.pending` says how many.
  */
 const FILES_DEADLINE_MS = 34_000
 /** Each Storage read and R2 write gives up after this: one stuck file must not take the night's manifest with it. */
 const FILE_TIMEOUT_MS = 6_000
+/** The nightly deletion gives up waiting after this; it runs before the files, so their deadline still holds. */
+const RETENTION_TIMEOUT_MS = 10_000
 /** The manifest is saved every few files, so a run cut short keeps what it copied. */
 const MANIFEST_EVERY = 5
 const MANIFEST = 'files/manifest.json'
@@ -144,6 +150,15 @@ async function readHistory(url: string, key: string, maxId: number): Promise<Row
   }
 }
 
+/** A secret-shaped key never reaches the file, whatever a row, an image or an account holds (TRUST-10). */
+function scrub(dump: Dump): Dump {
+  return {
+    ...dump,
+    tables: withoutSecrets(dump.tables),
+    ...(dump.auth ? { auth: { users: withoutSecrets(dump.auth.users), identities: withoutSecrets(dump.auth.identities) } } : {}),
+  }
+}
+
 async function readPaged(url: string, key: string, at: Date): Promise<Dump> {
   const tables: Record<string, Row[]> = {}
   for (const [table, order] of Object.entries(BACKUP_TABLES)) tables[table] = await readTable(url, key, table, order)
@@ -177,6 +192,27 @@ async function recordFiles(url: string, key: string, id: number, files: { copied
     })
   } catch {
     // As record().
+  }
+}
+
+/**
+ * The nightly deletion (run_retention, 0069): what has done its job, never a tournament that exists. Its counts,
+ * or null when the database has no 0069 yet or does not answer in time. Never fails the backup: the function
+ * records its own night in retention_runs, which Salud shows.
+ */
+async function retention(url: string, key: string): Promise<Record<string, number> | null> {
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/run_retention`, {
+      method: 'POST',
+      headers: { ...headers(key), 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(RETENTION_TIMEOUT_MS),
+    })
+    if (!r.ok) return null
+    const body = (await r.json().catch(() => null)) as { counts?: Record<string, number> } | null
+    return body?.counts && typeof body.counts === 'object' ? body.counts : null
+  } catch {
+    return null
   }
 }
 
@@ -273,7 +309,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const key = env.SUPABASE_SECRET_KEY!
   let dump: Dump
   try {
-    dump = (await readSnapshot(url, key, startedAt)) ?? (await readPaged(url, key, startedAt))
+    dump = scrub((await readSnapshot(url, key, startedAt)) ?? (await readPaged(url, key, startedAt)))
   } catch (e) {
     await record(url, key, { ok: false, error: `read: ${(e as Error).message}`.slice(0, 500) })
     res.status(502).json({ error: 'read failed', detail: (e as Error).message })
@@ -303,6 +339,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   // The night is safe in R2 before any file is copied: a slow copy can't lose it.
   const runId = await record(url, key, { ok: true, key: objectKey, bytes: body.length, tables: Object.keys(counts).length, rows })
+  // Deleted only once the night that still holds it is safe (TRUST-18).
+  const deleted = await retention(url, key)
   const files = dump.storage ? await copyFiles(env, r2, dump.storage.objects, startedAt.getTime() + FILES_DEADLINE_MS) : null
   if (files && runId != null) await recordFiles(url, key, runId, files)
   res.status(200).json({
@@ -312,6 +350,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     bytes: body.length,
     counts,
     accounts: dump.auth?.users.length ?? null,
+    retention: deleted,
     files,
   })
 }

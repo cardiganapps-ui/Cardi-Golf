@@ -36,6 +36,11 @@
 // parsed in one piece on a small instance. Files in Storage are not written: they
 // are in R2 under files/ (RUNBOOK.md §8b says how to put them back).
 //
+// A night carries no secret (TRUST-10, since 2026-10-16): no PIN hash, no
+// sign-in token, no push address. A restored player has no PIN until the
+// Comité sets one, and each phone turns its notices on again; the script
+// says both at the end.
+//
 // R2 needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and
 // R2_BACKUP_BUCKET (the environment, or .env.local). Nothing here prints a
 // row or a secret.
@@ -424,6 +429,11 @@ analyze pg_temp.want;
         `✓ restored ${restored} rows in ${tables.length} tables and ${accounts} accounts into ${db ? 'the --db target' : target}, checked row for row and key by key before it was committed, ${dt} in all`,
       )
     if (dump.storage?.objects?.length) console.log(`  · ${dump.storage.objects.length} file(s) listed in Storage: in R2 under files/ (RUNBOOK.md §8b)`)
+    // A night carries no secret (TRUST-10): no PIN hash and no push address. Said, so nobody is surprised at the gate.
+    const noPin = (dump.tables.players?.length ?? 0) - (dump.tables.player_pins?.length ?? 0)
+    if (!verifyOnly && noPin > 0) console.log(`  ! ${noPin} player(s) have no PIN: backups never carry one. The Comité sets each in Comité › Jugadores, «PIN» (RUNBOOK.md §8b)`)
+    if (!verifyOnly && !dump.tables.push_subscriptions && !dump.tables.pin_push_subscriptions)
+      console.log('  ! no phone gets notices until it turns them on again (Editar perfil or Más › Avisos del torneo): backups never carry a push address')
   } finally {
     // The work folder holds every row and every email: never left behind, the run failed or not.
     rmSync(work, { recursive: true, force: true })

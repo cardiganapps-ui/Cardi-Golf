@@ -51,10 +51,10 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
       <section className="stack">
         <FormatEditor value={value} onChange={onChange} />
         <div className="grid2">
-          <Field label={A.lastPlaceLabel}>
+          <Field label={A.lastPlaceLabel} hint={A.lastPlaceHint}>
             <input className="input" value={value.labels.lastPlace} onChange={(e) => set((d) => (d.labels.lastPlace = e.target.value))} />
           </Field>
-          <Field label={A.honoreeLabel}>
+          <Field label={A.honoreeLabel} hint={A.honoreeHint}>
             <input className="input" value={value.labels.honoree} onChange={(e) => set((d) => (d.labels.honoree = e.target.value))} />
           </Field>
           <Field label={A.trophyLabel} hint={A.trophyHint}>
@@ -80,7 +80,7 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
                 ))}
               </select>
             </Field>
-            <Toggle label={A.honoreePicks} checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
+            <Toggle label={A.honoreePicks(value.labels.honoree)} checked={m.pairs.honoreePicks} onChange={(v) => set((d) => (d.modules.pairs.honoreePicks = v))} />
           </div>
         )}
         <CardSigningField value={value} onChange={(mode) => set((d) => (d.cardSigning = mode))} />
@@ -163,7 +163,7 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
             <NumberField min={0} max={BUYBACK_MAX_PCT} suffix="%" value={value.auction.buybackMaxPct} onChange={(v) => set((d) => (d.auction.buybackMaxPct = v))} />
           </Field>
           <Toggle label={A.selfCounts} checked={value.auction.selfOwnedCountsTowardMax} onChange={(v) => set((d) => (d.auction.selfOwnedCountsTowardMax = v))} />
-          <span className="help">{A.payoutSlots}</span>
+          <span className="help">{A.auctionPayoutSlots}</span>
           <div className="stack">
             {value.auction.payout.map((slot, i) => (
               <div key={i} className="row">
@@ -192,7 +192,7 @@ export function SettingsEditor({ value, onChange, field, section }: Props) {
                 )}
                 <NumberField
                   inputClassName="input--sm"
-                  label={A.payoutSlots}
+                  label={A.auctionPayoutSlots}
                   min={0}
                   max={100}
                   decimals={1}

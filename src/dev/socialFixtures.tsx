@@ -94,7 +94,8 @@ export function QuickFixture() {
 // A crew mid-season: two outings this year (the hand-checked table in season.test.ts) and one last year.
 const res = (tournamentId: string, date: string, handle: string, rank: number) => ({ tournamentId, date, handle, rank, rankLabel: String(rank), field: 4 })
 const crewPageFixture: CrewPage = {
-  crew: { id: 'crew1', slug: 'los-del-sabado', name: 'Los del sábado', joinCode: 'K7Q2MX', role: 'owner', createdAt: '2025-06-01T12:00:00Z' },
+  crew: { id: 'crew1', slug: 'los-del-sabado', name: 'Los del sábado', joinCode: 'K7Q2MX', role: 'owner', createdAt: '2025-06-01T12:00:00Z', approval: true, codeExpiresAt: '2026-10-10T12:00:00Z', codeExpired: false },
+  requests: [{ handle: 'pablo.r', displayName: 'Pablo Ruiz', avatarUrl: null, at: '2026-10-02T18:00:00Z' }],
   members: [
     { handle: 'andrea.solis', displayName: 'Andrea Solís', avatarUrl: null, index: 12.4, role: 'owner', joinedAt: '2025-06-01T12:00:00Z' },
     { handle: 'diego.ortiz', displayName: 'Diego Ortiz', avatarUrl: null, index: 9.8, role: 'member', joinedAt: '2025-06-02T12:00:00Z' },

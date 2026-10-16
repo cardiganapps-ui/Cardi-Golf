@@ -1,7 +1,9 @@
 /**
  * `/perfil/editar`: the photo, the name people know you by, your handle,
  * club, city and a line about you; how your index is set; whether strangers
- * can find you. Signing out lives here too.
+ * can find you. What the Admin de Polo opened of your account, and why
+ * (TRUST-22); your data, downloaded, and deleting the account (TRUST-09).
+ * Signing out lives here too.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
@@ -11,6 +13,8 @@ import { useAuth } from '../../data/auth'
 import { safeNext, signOutSafely } from '../../data/account'
 import { HandleTakenError, handleOk, parseIndex, updateMyProfile, uploadMyAvatar, useMyProfile, type MyProfile, type ProfilePatch } from '../../data/profiles'
 import { PushToggle } from './PushToggle'
+import { AdminAccesses } from './AdminAccesses'
+import { MyDataSection } from './MyDataSection'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
 
@@ -216,6 +220,8 @@ export function ProfileEditScreen() {
       </form>
 
       <PushToggle />
+      <AdminAccesses />
+      {user?.email && <MyDataSection email={user.email} />}
       <div className={styles.session}>
         <Link className="btn btn--ghost" to={`/p/${profile.handle}`}>
           {P.viewProfile}

@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "git": {
+    "deploymentEnabled": {
+      "claude/**": false,
+      "dependabot/**": false
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!api/|assets/).*)",

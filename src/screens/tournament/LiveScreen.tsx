@@ -28,6 +28,7 @@ import { useSavedWhen } from './boardsAge'
 import { useBoardsMayBeOld } from './connection'
 import { QuickFinish } from './QuickFinish'
 import { TournamentPushOffer } from './TournamentPush'
+import { MyDataCard } from './MyDataCard'
 import { useActiveRound } from './useMyGroup'
 import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
@@ -333,6 +334,8 @@ export function LiveScreen() {
       {!spectator && <InstallCard />}
       {/* In the installed app, once this phone's player saved a hole: the tournament's notices (PWA-10). */}
       {!spectator && <TournamentPushOffer />}
+      {/* Once, after the PIN: what the Comité saved about this player, and «Pedir corrección» (TRUST-16). */}
+      {!spectator && <MyDataCard />}
 
       <div className={styles.strip}>
         <span className={styles.stripMain}>{statusLine}</span>
@@ -344,7 +347,7 @@ export function LiveScreen() {
         )}
         {!spectator && state.flags.pendingSnakeTiebreaks.length > 0 && (
           <span className={styles.caution}>
-            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}
+            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length, settings.modules.snake.label)}
           </span>
         )}
         {!spectator && state.flags.warnings.map((w) => (

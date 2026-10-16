@@ -140,7 +140,7 @@ for (const scheme of ['light', 'dark'] as const) {
         return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
       }
       const bg = lum(getComputedStyle(row).backgroundColor)
-      return [...row.querySelectorAll('[class*="_pos_"], [class*="_today_"], [class*="_thru_"]')].map((el) => {
+      return Array.from(row.querySelectorAll('[class*="_pos_"], [class*="_today_"], [class*="_thru_"]')).map((el) => {
         const fg = lum(getComputedStyle(el).color)
         return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05)
       })

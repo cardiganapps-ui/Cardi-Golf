@@ -54,6 +54,8 @@ export interface HoleSaveInput {
   /** The writer for this card, but for the reason, which this hook keeps. */
   writer: Omit<HoleWriter, 'reason'>
   threshold: number
+  /** The snake's label, which names it when it changes hands (STRAT-11). */
+  snakeLabel: string
   /** Whether the group already answered «¿Quién embocó al último?» for the hole on screen. */
   answered: boolean
   entry: ReturnType<typeof useHoleDrafts>
@@ -243,7 +245,7 @@ export function useHoleSave(o: HoleSaveInput) {
       snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
       if (!celebrate) haptic('moment')
       // One message for a screen reader: the hole saved, the snake, and where the card is now.
-      o.say([savedLine, S.snakePasses(passedTo.name), ...(moveOn ? [entry.latest.current.holeSpoken] : [])].join('. '))
+      o.say([savedLine, S.snakePasses(passedTo.name, o.snakeLabel), ...(moveOn ? [entry.latest.current.holeSpoken] : [])].join('. '))
     }
   }
 

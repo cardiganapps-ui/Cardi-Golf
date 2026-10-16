@@ -48,7 +48,7 @@ export const MODULE_ENTRIES: ModuleEntry[] = [
   { kind: 'module', id: 'pairs', category: 'matches', blurb: 'Parejas fijas que suman sus puntos todo el torneo.', later: 'El sorteo de parejas se hace en Comité.' },
   { kind: 'module', id: 'snake', category: 'hole', blurb: 'La tiene el último que hizo tres putts en su grupo; los demás cobran.' },
   { kind: 'module', id: 'fewestPutts', category: 'specials', blurb: 'Premio para quien haga menos putts en todo el torneo.' },
-  { kind: 'module', id: 'auction', category: 'specials', blurb: 'Subasta de jugadores la noche anterior, con su propio bote.', later: 'La subasta se corre en Comité.' },
+  { kind: 'module', id: 'auction', category: 'specials', blurb: 'Subasta de jugadores antes del primer día, con su propio pozo.', later: 'La subasta se corre en Comité.' },
 ]
 
 export const GAME_ENTRIES: GameEntry[] = [
@@ -66,7 +66,7 @@ export const GAME_ENTRIES: GameEntry[] = [
     key: 'birdies',
     type: 'eventPot',
     category: 'hole',
-    title: 'Bote de birdies',
+    title: 'Premio por birdie',
     blurb: 'Cada birdie o mejor cobra. Águilas también se pueden premiar aparte.',
     create: (id) => ({ ...base, id, type: 'eventPot', label: 'Birdies', options: { event: 'birdie', basis: 'gross' }, money: m({ source: 'direct', stake: 50 }) }),
   },

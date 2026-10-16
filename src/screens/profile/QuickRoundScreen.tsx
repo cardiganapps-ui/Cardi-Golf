@@ -97,7 +97,10 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
   const count = 1 + picked.size + guests.length
   const feeNum = Math.max(0, Math.round(Number(fee) || 0))
   const autoName = course ? Q.defaultName(course.name, dayMonth.format(new Date(`${date}T12:00:00Z`))) : Q.title
-  const ready = !!course && !!tee && tee.holes === 18 && count <= MAX && !busy
+  // With money in play the creator says every player is an adult (TRUST-13).
+  const [adults, setAdults] = useState(false)
+  const playsMoney = money && (feeNum > 0 || games.length > 0)
+  const ready = !!course && !!tee && tee.holes === 18 && count <= MAX && !busy && (!playsMoney || adults)
 
   const potLine = useMemo(() => {
     if (!money || feeNum <= 0) return null
@@ -150,6 +153,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
         date,
         players,
         crewId: crewId || null,
+        adults: playsMoney && adults,
       })
     } catch (e) {
       toast(humanError(e))
@@ -311,6 +315,7 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
           </ul>
         )}
         {upfrontLine && <p className={styles.help}>{upfrontLine}</p>}
+        {playsMoney && <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />}
       </section>
 
       <section className={styles.section}>

@@ -249,7 +249,7 @@ describe('golden: the first tournament’s shape (QA-07)', () => {
     const { data } = await loadCabos()
     expect(data.snapshot.players.find((p) => p.id === 'p9')!.baseHcp).toBe(21.9)
     expect(data.state.core.handicaps.p9!.base).toBe(21.9)
-    expect(data.state.core.rounds.r1!.p9!.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', '80% de 21.9 = 17.52', 'Redondeado: 18'])
+    expect(data.state.core.rounds.r1!.p9!.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', 'Se juega con el 80%: 80% de 21.9 = 17.52', 'Redondeado al entero: 18'])
   })
 
   it('the stored answer decides who holds the snake: p4 holed out last on the 5th, so the pass on the 6th counts too', async () => {
