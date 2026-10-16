@@ -11,6 +11,11 @@
  * time it was given. When a version changes, or an account has no record
  * yet, `legalUpdate()` says which, and the shell shows it until «Entendido»
  * (LegalUpdate).
+ *
+ * An account's sign-up also says the person is 18 or older (TRUST-13): the
+ * check under the consent line marks it on the phone (`sayAdult`, kept an
+ * hour, so a Google round trip keeps it), and the acceptance that follows
+ * carries it to the server as a record of its own (`confirm_adult`, 0070).
  */
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
@@ -30,10 +35,14 @@ export interface MyAcceptances {
 const KEY = 'cardi-golf:legal'
 /** An acceptance nobody could send in a week is dropped: the next consent point records it again. */
 const PENDING_MS = 7 * 24 * 60 * 60 * 1000
+/** The age check counts for the sign-in that follows it: an hour covers a code from the email or a Google round trip. */
+const ADULT_MS = 60 * 60 * 1000
 
 interface Stored {
-  /** Accepted on this phone by `uid`, not yet on the server: it goes only under that user. */
-  pending?: { uid: string; context: LegalContext; versions: LegalVersions; at: number }
+  /** Accepted on this phone by `uid`, not yet on the server: it goes only under that user. `adult`: he also said he is 18 or older. */
+  pending?: { uid: string; context: LegalContext; versions: LegalVersions; at: number; adult?: boolean }
+  /** «Confirmo que tengo 18 años o más», checked on this phone before a sign-in that has not happened yet. */
+  adult?: { at: number }
   /**
    * What the server holds for this user, as last read: spares a request on
    * every open. `claimed`: for an anonymous user with no record, whether it
@@ -77,7 +86,7 @@ function read(): Stored {
 /** False when the browser keeps nothing (private mode, storage full). */
 function write(v: Stored): boolean {
   try {
-    if (v.pending || v.seen) localStorage.setItem(KEY, JSON.stringify(v))
+    if (v.pending || v.seen || v.adult) localStorage.setItem(KEY, JSON.stringify(v))
     else localStorage.removeItem(KEY)
     return true
   } catch {
@@ -113,10 +122,22 @@ export async function acceptLegal(context: LegalContext): Promise<boolean> {
   }
 }
 
+/**
+ * The person checked «Confirmo que tengo 18 años o más» before signing in or
+ * up (TRUST-13): the acceptance that follows the sign-in carries it.
+ */
+export function sayAdult() {
+  write({ ...read(), adult: { at: Date.now() } })
+}
+
 async function accept(context: LegalContext): Promise<boolean> {
   const me = await signedIn()
   if (!me) return false
-  const pending = { uid: me.uid, context, versions: currentVersions(), at: Date.now() }
+  const stored = read()
+  const adult = !me.anonymous && !!stored.adult && Date.now() - stored.adult.at < ADULT_MS
+  const pending = { uid: me.uid, context, versions: currentVersions(), at: Date.now(), ...(adult ? { adult: true } : {}) }
+  // Said once, for this sign-in: the next one asks again.
+  if (stored.adult) write({ ...stored, adult: undefined })
   // A browser that keeps nothing: send it now, once, rather than lose it.
   if (!write({ ...read(), pending })) return send(pending)
   return flushLegal()
@@ -137,6 +158,14 @@ async function call(p: NonNullable<Stored['pending']>): Promise<{ mine: MyAccept
     const mine = res.data as MyAcceptances | null
     // An answer this app can't read: try again later.
     if (!mine || typeof mine !== 'object') return { refused: false }
+    // The age, as a record of its own. A server without 0070 has nowhere to keep it: the acceptance still stands.
+    if (p.adult) {
+      try {
+        await supabase().rpc('confirm_adult', { p_terms: p.versions.terms, p_context: p.context, p_age_seconds: Math.max(0, Math.round((Date.now() - p.at) / 1000)), p_user: p.uid })
+      } catch {
+        // No signal now: the acceptance went, and the age was said on the phone; the record waits for none.
+      }
+    }
     return { mine }
   } catch {
     return { refused: false }
@@ -168,7 +197,7 @@ export function flushLegal(): Promise<boolean> {
 function dropPending(p: NonNullable<Stored['pending']>, seen?: Stored['seen']) {
   const now = read()
   const pending = now.pending && now.pending.at !== p.at ? now.pending : undefined
-  write({ pending, seen: seen ?? now.seen })
+  write({ pending, seen: seen ?? now.seen, adult: now.adult })
   return !pending
 }
 

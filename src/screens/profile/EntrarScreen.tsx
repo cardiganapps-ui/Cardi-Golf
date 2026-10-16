@@ -8,7 +8,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
-import { Field } from '../../components/ui'
+import { Field, Toggle } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { IconGoogle } from '../../components/icons'
 import { useAuth } from '../../data/auth'
@@ -17,6 +17,7 @@ import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
 import styles from './Profile.module.css'
 import { LegalConsent } from '../../components/LegalLinks'
+import { sayAdult } from '../../data/legal'
 
 export function EntrarScreen() {
   const navigate = useNavigate()
@@ -33,6 +34,8 @@ export function EntrarScreen() {
   /** "Lo que jugaste como Nico en Ensayo": shown when this device holds a player. */
   const [claimed, setClaimed] = useState<{ name: string; tournament: string } | null>(null)
   const [finishing, setFinishing] = useState(false)
+  /** «Confirmo que tengo 18 años o más» (TRUST-13): every way in waits for it, and the acceptance after the sign-in records it. */
+  const [adult, setAdult] = useState(false)
 
   const signedIn = !!user && !isAnonymous
   useEffect(() => {
@@ -75,8 +78,14 @@ export function EntrarScreen() {
 
   function send(e: FormEvent) {
     e.preventDefault()
+    // Every way in stays in reach (and in the keyboard's order); without the check it says what is missing.
+    if (!adult) {
+      setError(t.legal.adult.needed)
+      return
+    }
     void run(async () => {
       setInfo(null)
+      sayAdult()
       setMode(await sendProfileCode(email.trim()))
     })
   }
@@ -155,9 +164,32 @@ export function EntrarScreen() {
         <div className={styles.form}>
           {/* First, before every way in, in reading and keyboard order (TRUST-05). */}
           <LegalConsent />
+          <Toggle
+            label={t.legal.adult.check}
+            hint={t.legal.adult.hint}
+            checked={adult}
+            onChange={(v) => {
+              setAdult(v)
+              if (v) setError(null)
+            }}
+          />
           {google && (
             <>
-              <button className={`btn btn--secondary btn--block ${styles.google}`} type="button" disabled={busy} onClick={() => void run(() => continueWithGoogle(next))}>
+              <button
+                className={`btn btn--secondary btn--block ${styles.google}`}
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  if (!adult) {
+                    setError(t.legal.adult.needed)
+                    return
+                  }
+                  void run(() => {
+                    sayAdult()
+                    return continueWithGoogle(next)
+                  })
+                }}
+              >
                 <IconGoogle /> {t.account.google}
               </button>
               <span className={styles.divider}>{t.account.or}</span>

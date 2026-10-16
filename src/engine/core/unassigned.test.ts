@@ -89,7 +89,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     const best = st.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
     expect(best.why).toEqual({
       title: '$1,200 sin asignar',
-      steps: ['Mejor ronda reparte $2,400', 'Ya se repartió $1,200', 'Día 2 cancelado: su premio no se jugó', 'Quedan $1,200 sin asignar', 'El Comité decide: darlo a alguien, devolverlo o dejarlo para la casa.'],
+      steps: ['Mejor ronda reparte $2,400', 'Ya se repartió $1,200', 'Día 2 cancelado: su premio no se jugó', 'Quedan $1,200 sin asignar', 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.'],
     })
     // Everyone paid the entry: a refund of entry money goes back to all twelve alike.
     expect(best.contributors).toHaveLength(12)

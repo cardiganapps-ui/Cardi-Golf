@@ -157,7 +157,7 @@ describe('En vivo renders what changed, and nothing when nothing did (PERF-09)',
     // The screen and the board's frame (its status line, header, spotlight, toggle), then six components per row.
     expect(r.total).toBeLessThanOrEqual(10 + 6 * changed)
     // The feed did not change; a closed sheet, the share button and a Ronda rápida's card are not this score's.
-    for (const name of ['FeedTicker', 'PlayerSheet', 'ShareCardButton', 'QuickFinish']) expect(r.byName[name] ?? 0).toBe(0)
+    for (const name of ['FeedTicker', 'PlayerSheet', 'ShareCardButton', 'QuickFinish', 'MyDataCard']) expect(r.byName[name] ?? 0).toBe(0)
   })
 
   it('a birdie reaches the feed: what the feed shows is what the engine says, line for line', async () => {

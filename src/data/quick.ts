@@ -12,6 +12,7 @@ import type { TournamentSettings } from '../engine/settings/schema'
 import { ApiError, setRoundStatus, updateTournament } from './api'
 import { publishFromStore } from './publish'
 import { setTournamentCrew } from './crews'
+import { confirmAdults } from './myData'
 import { useTournament } from './tournamentStore'
 
 export type QuickPlayer = { kind: 'me'; index?: number | null } | { kind: 'friend'; handle: string; index?: number | null } | { kind: 'guest'; name: string; index?: number | null }
@@ -25,9 +26,11 @@ export interface QuickRoundInput {
   players: QuickPlayer[]
   /** The crew the outing counts for (0018), if any. */
   crewId?: string | null
+  /** With money, the creator said every player is 18 or older (TRUST-13): recorded on the tournament. */
+  adults?: boolean
 }
 
-export async function createQuickRound({ crewId, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
+export async function createQuickRound({ crewId, adults, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
   const { data, error } = await supabase().rpc('create_quick_round', { p: input })
   if (error) throw ApiError.from(error)
   const created = data as { id: string; slug: string }
@@ -35,6 +38,8 @@ export async function createQuickRound({ crewId, ...input }: QuickRoundInput): P
   // Created under the consent line (TRUST-05).
   void acceptLegal('quick')
   if (crewId) await setTournamentCrew(created.id, crewId)
+  // Said above «Empezar» when it plays for money (TRUST-13); a server without 0070 has nowhere to keep it.
+  if (adults) await confirmAdults(created.id, true).catch(() => undefined)
   return created
 }
 

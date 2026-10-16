@@ -1,17 +1,19 @@
 /**
  * `/c/:slug`: a crew's home. The season table (points by finish, the leader
  * on top, last year's champion), its outings, a new outing, its members, the
- * invite (code and link), and leaving.
+ * invite (code and link), and leaving. Its owner also decides who is in it
+ * (0071, TRUST-11): «Sacar» a member, «Aprobar solicitudes» (the code then
+ * leaves a request he accepts or declines), and how long a new code lasts.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, CopyButton, Segmented, ShareButton, Spinner, toast } from '../../components/ui'
+import { Avatar, CopyButton, Segmented, ShareButton, Spinner, Toggle, toast } from '../../components/ui'
 import { leaveSheetHistory } from '../../components/sheetHistory'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconChevronLeft, IconChevronRight } from '../../components/icons'
-import { crewPage, leaveCrew, rotateCrewCode, type CrewOuting, type CrewPage } from '../../data/crews'
+import { crewPage, leaveCrew, removeCrewMember, respondCrewRequest, rotateCrewCode, setCrewApproval, type CrewMember, type CrewOuting, type CrewPage } from '../../data/crews'
 import { formatIndex } from '../../data/profiles'
 import { seasons, seasonTable } from '../../engine/profile/season'
 import { useRequireAccount } from './useRequireAccount'
@@ -21,6 +23,10 @@ import { humanError } from '../../lib/humanError'
 const C = t.crews
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 const pts = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+/** How long a new code lasts, as rotate_crew_code takes it (null: no end). */
+const DAYS = { never: null, d7: 7, d30: 30 } as const
+type Days = keyof typeof DAYS
+const longDay = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long' })
 
 function OutingRow({ o }: { o: CrewOuting }) {
   return (
@@ -45,6 +51,10 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
   const rows = useMemo(() => seasonTable(page.results, year), [page.results, year])
   const [ask, setAsk] = useState<'rotate' | 'leave' | null>(null)
   const [busy, setBusy] = useState(false)
+  const [days, setDays] = useState<Days>('never')
+  const [removing, setRemoving] = useState<CrewMember | null>(null)
+  const owner = page.crew.role === 'owner'
+  const requests = page.requests ?? []
   const member = new Map(page.members.map((m) => [m.handle, m]))
   const { crew } = page
   const link = `${window.location.origin}/c/unirme/${crew.joinCode}`
@@ -56,7 +66,7 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
     if (!onChanged) return
     setBusy(true)
     try {
-      if (which === 'rotate') await rotateCrewCode(crew.id)
+      if (which === 'rotate') await rotateCrewCode(crew.id, DAYS[days])
       else {
         await leaveCrew(crew.id)
         // From the confirm sheet: its history entry goes first, so the replace lands on this page's entry (PWA-05).
@@ -70,6 +80,20 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
     } finally {
       setBusy(false)
       setAsk(null)
+    }
+  }
+
+  /** One owner's step, then the page read again; the toast says how it went. */
+  async function own(step: () => Promise<unknown>, done: string) {
+    setBusy(true)
+    try {
+      await step()
+      toast(done)
+      onChanged?.()
+    } catch (e) {
+      toast(humanError(e))
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -152,18 +176,56 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
           <span className="label">{t.crews.members(page.members.length)}</span>
         </div>
         <div className={styles.rows}>
-          {page.members.map((m) => (
-            <Link key={m.handle} to={`/p/${m.handle}`} className={styles.row}>
-              <Avatar name={m.displayName} url={m.avatarUrl} />
-              <span className={styles.rowText}>
-                <span className={styles.rowTitle}>{m.displayName}</span>
-                <span className={styles.rowSub}>{[`@${m.handle}`, m.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}</span>
-              </span>
-              {m.index != null && <span className={styles.rowFig}>{formatIndex(m.index)}</span>}
-            </Link>
-          ))}
+          {page.members.map((m) => {
+            const row = (
+              <Link key={m.handle} to={`/p/${m.handle}`} className={styles.row}>
+                <Avatar name={m.displayName} url={m.avatarUrl} />
+                <span className={styles.rowText}>
+                  <span className={styles.rowTitle}>{m.displayName}</span>
+                  <span className={styles.rowSub}>{[`@${m.handle}`, m.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}</span>
+                </span>
+                {m.index != null && <span className={styles.rowFig}>{formatIndex(m.index)}</span>}
+              </Link>
+            )
+            // The owner takes a member out from his row; never himself (that is «Salir del crew»).
+            if (!owner || m.role === 'owner') return row
+            return (
+              <div key={m.handle} className={styles.memberRow}>
+                {row}
+                <button type="button" className="btn btn--ghost btn--sm" disabled={busy} aria-label={C.removeTitle(m.displayName)} onClick={() => setRemoving(m)}>
+                  {C.remove}
+                </button>
+              </div>
+            )
+          })}
         </div>
       </section>
+
+      {/* Who waits to enter: the owner's to answer (0071). */}
+      {owner && requests.length > 0 && (
+        <section className={styles.section}>
+          <span className="label">{C.requests(requests.length)}</span>
+          <div className={styles.rows}>
+            {requests.map((r) => (
+              <div key={r.handle} className={styles.memberRow}>
+                <span className={styles.row}>
+                  <Avatar name={r.displayName} url={r.avatarUrl} />
+                  <span className={styles.rowText}>
+                    <span className={styles.rowTitle}>{r.displayName}</span>
+                    <span className={styles.rowSub}>{`@${r.handle}`}</span>
+                  </span>
+                </span>
+                <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={() => void own(() => respondCrewRequest(crew.id, r.handle, true), C.accepted(r.displayName))}>
+                  {C.accept}
+                </button>
+                <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={() => void own(() => respondCrewRequest(crew.id, r.handle, false), C.declined(r.displayName))}>
+                  {C.decline}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Invite */}
       <section className={styles.section}>
@@ -172,6 +234,14 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
         <div className={styles.stat}>
           <span className={styles.statFigure}>{crew.joinCode}</span>
         </div>
+        {crew.codeExpired ? (
+          <p className="error">{C.codeExpired}</p>
+        ) : (
+          crew.codeExpiresAt && <p className={styles.help}>{C.codeUntil(longDay.format(new Date(crew.codeExpiresAt)))}</p>
+        )}
+        {owner && crew.approval !== undefined && (
+          <Toggle label={C.approval} hint={C.approvalHint} checked={crew.approval} onChange={(on) => void own(() => setCrewApproval(crew.id, on), t.common.saved)} />
+        )}
         <div className={styles.actions}>
           <CopyButton text={link} label={t.profile.copyLink} />
           <ShareButton text={C.shareText(crew.name)} url={link} title={crew.name} />
@@ -197,6 +267,24 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
         confirmLabel={ask === 'rotate' ? C.rotate : C.leave}
         onConfirm={() => ask && void act(ask)}
         onClose={() => setAsk(null)}
+      >
+        {ask === 'rotate' && crew.approval !== undefined && (
+          <Segmented<Days> value={days} label={C.rotateFor} options={(Object.keys(DAYS) as Days[]).map((d) => ({ value: d, label: C.rotateDays[d] }))} onChange={setDays} />
+        )}
+      </ConfirmSheet>
+      <ConfirmSheet
+        open={!!removing}
+        title={removing ? C.removeTitle(removing.displayName) : ''}
+        body={removing ? C.removeBody(removing.displayName, crew.name) : undefined}
+        danger
+        busy={busy}
+        confirmLabel={C.remove}
+        onConfirm={() => {
+          const m = removing
+          if (!m) return
+          void own(() => removeCrewMember(crew.id, m.handle), C.removed(m.displayName)).then(() => setRemoving(null))
+        }}
+        onClose={() => setRemoving(null)}
       />
     </div>
   )
