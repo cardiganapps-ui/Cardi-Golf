@@ -17,6 +17,8 @@ import type { TournamentsOutlet } from './TournamentsScreen'
 import { usePaged } from './usePaged'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { ViewReasonForm } from './ViewReason'
+import { useAdminView } from './useAdminView'
 
 const K = t.platform.crews
 
@@ -79,23 +81,11 @@ export function CrewDetail() {
   const api = usePlatformApi()
   const navigate = useNavigate()
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
-  const [c, setC] = useState<PlatformCrew | null | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
+  const open = useCallback((reason?: string) => api.crew(id, reason), [api, id])
+  const { data: c, error, asking, load } = useAdminView<PlatformCrew>(open)
   const [removing, setRemoving] = useState<PlatformCrew['members'][number] | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      setC(await api.crew(id))
-    } catch (e) {
-      setError(humanError(e))
-    }
-  }, [api, id])
-  useEffect(() => {
-    setC(undefined)
-    void load()
-  }, [load])
 
   const back = (
     <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
@@ -104,6 +94,7 @@ export function CrewDetail() {
     </Link>
   )
   if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
+  if (asking) return <>{back}<ViewReasonForm kind="crew" onOpen={load} /></>
   if (c === undefined) return <Spinner rows={6} />
   if (c === null) return <>{back}<p className={s.help}>{K.notFound}</p></>
   const crew = c
@@ -118,7 +109,7 @@ export function CrewDetail() {
       {back}
       <div className={s.detailHead}>
         <h2>{crew.name}</h2>
-        <span className={s.help}>{[`${K.code} ${crew.joinCode}`, `/c/${crew.slug}`, relTime(crew.createdAt)].join(', ')}</span>
+        <span className={s.help}>{[`/c/${crew.slug}`, relTime(crew.createdAt)].join(', ')}</span>
         <div className={s.actions}>
           <button className="btn btn--ghost btn--sm" type="button" onClick={() => setDeleting(true)}>
             {K.delete}

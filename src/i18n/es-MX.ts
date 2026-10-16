@@ -377,6 +377,7 @@ export const t = {
       unprotect: 'le quitó la protección a un torneo',
       unlock: 'desbloqueó un torneo',
       relock: 'volvió a bloquear un torneo',
+      view: 'abrió algo para revisarlo',
     } as Record<string, string>,
     // Torneos
     search: 'Nombre, código o correo del organizador',
@@ -454,6 +455,20 @@ export const t = {
     reasonPlaceholder: 'Qué vas a corregir y quién lo pidió',
     unlockedUntil: (time: string) => `Desbloqueado hasta las ${time}`,
     saved: 'Listo',
+    /**
+     * Before a tournament, an account or a crew opens (0068, TRUST-22): his reason goes on the record, and who it is
+     * about sees it. Asked once; for two hours the same one opens again with none.
+     */
+    view: {
+      title: '¿Por qué lo abres?',
+      body: {
+        tournament: 'Queda registrado con tu motivo, y su Comité lo ve en el historial del torneo.',
+        person: 'Queda registrado con tu motivo, y esta persona lo ve en su perfil, en «Accesos del administrador».',
+        crew: 'Queda registrado con tu motivo, y sus miembros lo ven en su perfil, en «Accesos del administrador».',
+      },
+      placeholder: 'Qué pasó y quién lo pidió',
+      open: 'Abrir',
+    },
     // Personas
     people: {
       search: 'Correo, usuario o nombre',
@@ -500,7 +515,7 @@ export const t = {
       clearLockBody: 'El PIN no cambia: solo se borran los intentos fallidos y el bloqueo.',
       activity: 'Lo que hizo el admin',
       noActivity: 'Nada todavía.',
-      actions: { block: 'Bloqueó la cuenta', unblock: 'Desbloqueó la cuenta', delete: 'Borró la cuenta', pin_unlock: 'Quitó un bloqueo de PIN' } as Record<string, string>,
+      actions: { block: 'Bloqueó la cuenta', unblock: 'Desbloqueó la cuenta', delete: 'Borró la cuenta', pin_unlock: 'Quitó un bloqueo de PIN', view: 'Abrió la cuenta' } as Record<string, string>,
       manage: 'Acciones',
       block: 'Bloquear',
       blockTitle: 'Bloquear esta cuenta',
@@ -589,7 +604,6 @@ export const t = {
         [`${members} ${members === 1 ? 'miembro' : 'miembros'}`, `${outings} ${outings === 1 ? 'salida' : 'salidas'}`, owner].filter(Boolean).join(', '),
       lastOuting: (when: string) => `Última salida ${when}`,
       noOutings: 'Sin salidas',
-      code: 'Código',
       members: 'Miembros',
       owner: 'Dueño',
       member: 'Miembro',
@@ -606,7 +620,7 @@ export const t = {
       deleteBody: 'Sus torneos y rondas se quedan, fuera del crew. Sus miembros dejan de verlo.',
       deleteConfirm: (name: string) => `Escribe «${name}» para confirmar`,
       deleted: 'Crew borrado',
-      activity: { crew_remove_member: 'Sacó a alguien', crew_delete: 'Borró el crew' } as Record<string, string>,
+      activity: { crew_remove_member: 'Sacó a alguien', crew_delete: 'Borró el crew', view: 'Abrió el crew' } as Record<string, string>,
       notFound: 'Ese crew ya no existe.',
     },
     // Avisos
@@ -665,6 +679,8 @@ export const t = {
         crew_delete: 'Borró un crew',
         broadcast: 'Mandó un aviso',
         set_flag: 'Cambió un interruptor',
+        /** 0068 (TRUST-22): he opened it from his panel, or a tournament by its link. */
+        view: 'Abrió para revisar',
       } as Record<string, string>,
       comiteLine: (table: string, op: string) => `${table}, ${op === 'INSERT' ? 'alta' : op === 'UPDATE' ? 'cambio' : 'baja'}`,
     },
@@ -678,6 +694,23 @@ export const t = {
       backupSize: (kb: number, tables: number, rows: number) => `${kb.toLocaleString('es-MX')} KB, ${tables} tablas, ${rows.toLocaleString('es-MX')} filas`,
       backupWeek: (ok: number, failed: number) => `Esta semana: ${ok} ${ok === 1 ? 'bueno' : 'buenos'}${failed ? `, ${failed} ${failed === 1 ? 'falló' : 'fallaron'}` : ''}`,
       backupStale: 'Más de 36 horas sin un respaldo bueno. Revisa el cron en Vercel.',
+      /** The nightly deletion (0069, TRUST-18): it runs after a good backup. */
+      retention: 'Borrado de cada noche',
+      retentionHint: 'Después de cada respaldo bueno se borra lo que ya cumplió: nunca nada de un torneo que exista.',
+      retentionNever: 'Todavía no corre: corre después del siguiente respaldo bueno.',
+      retentionLast: (when: string, ok: boolean) => (ok ? `La última noche corrió ${when}` : `La última noche falló ${when}`),
+      retentionWeek: 'Esta semana se borraron',
+      retentionNone: 'Esta semana no hubo nada que borrar.',
+      retentionKind: {
+        anonymous: 'Usuarios anónimos sin usar 180 días',
+        link_tokens: 'Enlaces de un solo uso vencidos',
+        score_mutations: 'Respuestas a hoyos guardados de hace más de 90 días',
+        notifications: 'Avisos de hace más de 12 meses',
+        client_events: 'Datos técnicos de más de 30 días',
+        device_status: 'Teléfonos sin usarse 90 días',
+        deleted_tournament_audit: 'Historial de torneos borrados hace 90 días',
+      } as Record<string, string>,
+      retentionCount: (label: string, n: number) => `${label}: ${n.toLocaleString('es-MX')}`,
       push: 'Notificaciones',
       pushConfigured: 'Configuradas',
       pushMissing: 'Falta configurarlas en Vault (ve docs/handoff.md).',
@@ -1039,6 +1072,27 @@ export const t = {
     enterProfileHint: 'Tu índice y tu historial en todos tus torneos.',
   },
   profile: {
+    /** Editar perfil (0068, TRUST-22): what the Admin de Polo opened or did about this account and its crews, and why. */
+    adminAccess: {
+      title: 'Accesos del administrador',
+      hint: 'Cada vez que quien opera Polo abre tu cuenta o uno de tus crews, o hace algo con ellos, escribe por qué y aparece aquí.',
+      none: 'Nadie de Polo ha abierto tu cuenta ni tus crews.',
+      line: {
+        view: 'Abrió tu cuenta',
+        block: 'Bloqueó tu cuenta',
+        unblock: 'Desbloqueó tu cuenta',
+        pin_unlock: 'Quitó el bloqueo de PIN de tu teléfono',
+      } as Record<string, string>,
+      crewLine: {
+        view: (crew: string) => `Abrió tu crew ${crew}`,
+        crew_remove_member: (crew: string) => `Sacó a alguien de tu crew ${crew}`,
+      } as Record<string, (crew: string) => string>,
+      other: 'Hizo un cambio en tu cuenta',
+      crewOther: (crew: string) => `Hizo un cambio en tu crew ${crew}`,
+      goneCrew: 'un crew que ya no existe',
+      reason: (r: string) => `Motivo: ${r}`,
+      more: 'Ver todos',
+    },
     index: 'Índice Polo',
     indexManual: 'Índice',
     manualNote: 'Declarado por el jugador',
@@ -1250,8 +1304,8 @@ export const t = {
      */
     privacy: {
       title: 'Aviso de privacidad',
-      version: '2026-10-15.3',
-      updated: 'Última actualización: 15 de octubre de 2026',
+      version: '2026-10-16',
+      updated: 'Última actualización: 16 de octubre de 2026',
       sections: [
         ['Quiénes somos', 'Polo es una app para organizar torneos y rondas de golf entre amigos: marcador en vivo, juegos, dinero entre jugadores y perfiles. La opera Diego Gaxiola, en golf.cardigan.mx.'],
         ['Qué datos guardamos', 'Tu correo (o tu cuenta de Google: nombre, correo y foto de perfil) para que entres a tu perfil; lo que escribes en tu perfil (nombre, usuario, foto, club, ciudad, índice, texto sobre ti); los torneos y rondas que juegas (golpes, putts, resultados, hándicap); tus amigos, crews y rivalidades; y, si activas los avisos, la dirección que tu navegador da para mandarte notificaciones y qué navegador es. En cada torneo, también lo que el Comité captura de cada jugador, lo que cada quien paga, gana y debe, a qué jugador quedó ligado cada teléfono que entró con un PIN, desde cuándo y hasta cuándo, y si es iPhone, Android o computadora, y el historial de cambios a sus golpes, jugadores, grupos y pagos. Si un teléfono que entró con un PIN activa los avisos del torneo, guardamos la dirección que su navegador da para mandarle notificaciones y qué navegador es, ligadas a su usuario anónimo y a su jugador; y, de cada torneo, qué avisos le mandó a cada jugador. Cuando aceptas este aviso y los términos (al entrar con tu PIN, al entrar a tu cuenta o crearla, al armar una Ronda rápida o al tocar «Entendido» cuando la app te los muestra), guardamos qué versión de cada uno aceptaste, cuándo y en qué paso; si el teléfono no tiene señal, lo guarda él y lo manda después (si no logra mandarlo en una semana, o cierras sesión antes, se pide otra vez en el siguiente paso). Abrir el enlace de un torneo o de un perfil no crea ningún usuario: en un navegador sin sesión, el usuario anónimo (sin correo ni nombre) se crea cuando mandas un PIN, y queda ligado a tu jugador si el PIN es el correcto. Supabase, donde viven las cuentas, guarda además la dirección IP y el navegador de cada sesión, con cuenta o sin ella. De cada navegador que abre la app guardamos además datos técnicos, ligados a su usuario y al torneo que tiene abierto: un número al azar que lo distingue, la versión de la app, si es iPhone, Android o computadora y si está en la pantalla de inicio; sus errores (el mensaje y la pantalla); cuánto tarda en guardarse un hoyo y en llegar a los demás teléfonos; qué tan rápido carga y responde; cuántos hoyos le faltan por mandar; y cuántas veces se dan algunos pasos (abrir la app o un torneo, entrar con un PIN, guardar un hoyo, firmar una tarjeta, crear un torneo). Nunca nombres, golpes ni montos. Se borran a los 30 días, y los de cada teléfono a los 90 sin usarse. Un navegador que solo abre un enlace para ver no manda ninguno.'],
@@ -1260,10 +1314,10 @@ export const t = {
         ['Lo que se ve de un torneo', 'Sus jugadores, golpes, putts, resultados, hándicaps, grupos y dinero los ve quien está en el torneo: sus jugadores y su Comité, juegue o no; también el historial de cada tarjeta: qué valores tuvo cada hoyo, quién los capturó y cuándo, y el motivo cuando el Comité lo corrigió. Además, cualquiera que abra su enlace o escriba su código de seis caracteres ve, sin cuenta, el nombre y el logo del torneo y el nombre completo, la foto, la categoría y si es el homenajeado de cada jugador, para que cada quien elija quién es. Si su Comité crea un enlace para ver (viene apagado), cualquiera que lo tenga ve, sin cuenta ni PIN, los tableros del torneo: su nombre y su logo; el nombre corto, la categoría y el hándicap de cada jugador, con el índice o las tres rondas de donde sale, el tee que juega cada día, el hándicap de juego que le fije el Comité (sin su motivo) y si es el homenajeado; el campo de cada día con sus tees y sus hoyos; sus golpes, putts y resultados, los grupos, las parejas, los equipos, quién firmó cada tarjeta y cuándo, y los juegos, con quién juega cada uno y quién ganó cada concurso. Nunca su nombre completo, su foto, su forma reciente ni su PIN, ni lo que el Comité escribe como motivo, nota o descripción de una apuesta; desde ahí nadie captura nada y no se crea ningún usuario. Sin dinero, como viene, no ve premios, pagos ni montos, ni la Calcutta, ni los juegos con bote aparte ni quién entró en ellos; con dinero ve también lo que cada quien paga, gana y debe, la Calcutta con sus precios y los botes aparte. El Comité puede cambiar el enlace, y el anterior deja de funcionar al instante, o apagarlo cuando quiera. Si un amigo te agrega a una Ronda rápida, tu nombre (el corto, no el completo) y tu índice pasan a esa ronda como jugador, aunque todavía no confirmes que eres tú; tu foto, solo si tu perfil aparece en búsquedas. Si dices «No soy yo», tu foto se quita de ese jugador. Su Comité ve además qué teléfonos del torneo tienen hoyos sin mandar, de qué jugador son y qué versión de la app tienen. También ve qué teléfonos entraron con el PIN de cada jugador, si son iPhone, Android o computadora y desde cuándo, y puede sacar a uno del torneo; en el historial de cambios, lo que hizo un jugador que entró en más de un teléfono dice desde cuál.'],
         ['Lo que el Comité captura de cada jugador', 'El Comité de un torneo escribe de cada jugador su nombre, su foto, su categoría, su tee, su hándicap (o tres rondas para estimarlo: buen día, día normal y mal día), su forma reciente, si es el homenajeado o puede usar el Comité, y su PIN; en una Ronda rápida, quien la arma escribe el nombre y el índice de sus invitados. Todo eso, salvo el PIN, lo ve quien está en el torneo, y el nombre, la foto, la categoría y si es el homenajeado, también quien tenga su enlace o su código; el nombre corto, la categoría, el tee, el hándicap (con el índice o las tres rondas) y si es el homenajeado, también quien tenga el enlace para ver, si el Comité lo crea. El PIN lo escoge el Comité, que lo escribe y se lo pasa al jugador; se guarda como una huella (hash), así que después nadie puede leerlo en la app, ni el Comité, que solo puede cambiarlo.'],
         ['El dinero de un torneo', 'Lo que cada quien paga, gana y debe en un torneo lo ven todos los que están en él, jugadores y Comité: en Dinero, En vivo, Juegos y la hoja de cada jugador, y en las pantallas de TV y Ceremonia que se ponen para el grupo; y, si el Comité crea un enlace para ver con dinero, también quien tenga ese enlace. Cualquiera de ellos puede compartirlo, por ejemplo por WhatsApp, como texto o como imagen. En tu perfil, Mi dinero junta lo que ganaste o pusiste en cada torneo terminado: ese resumen solo lo ves tú, pero cada cifra la ven en Dinero todos los que están en su torneo. Los avisos que manda la app nunca llevan montos; los que escribe quien opera Polo son texto libre.'],
-        ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews con sus miembros y cuántos amigos tienen; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta y mandar avisos a todos o a una persona. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión. Lo usa para dar soporte y corregir errores.'],
-        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido: nosotros no la ciframos (Cloudflare cifra lo que guarda) y hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
+        ['Quién opera Polo', 'Quien opera Polo puede ver cualquier torneo, dinero incluido, y corregirlo con los mismos permisos que su Comité; para corregir uno Protegido, primero lo desbloquea por un rato y anota el motivo. También ve las cuentas: su correo, si entran con correo o con Google, cuándo se crearon y cuándo entraron por última vez, el nombre, la foto, el club, la ciudad y el índice de su perfil, sus torneos, sus crews y cuántos amigos tienen; los crews, con sus miembros y sus salidas (nunca su código), para atender un reporte; y los teléfonos que entraron sin cuenta, con el jugador que eligieron. También ve los datos técnicos que manda cada teléfono. Puede bloquear o borrar una cuenta, sacar a alguien de un crew y mandar avisos a todos o a una persona. Para abrir desde su panel un torneo en el que no está, una cuenta o un crew, escribe por qué, y queda registrado: el Comité de ese torneo lo ve en su historial de cambios, con el motivo, y tú ves en Editar perfil, en «Accesos del administrador», cuándo abrió tu cuenta o uno de tus crews, por qué y lo que hizo con ellos. Si entra a un torneo por su enlace, su Comité también lo ve en el historial, sin motivo. Lo que cambia en un torneo queda marcado como suyo. Fuera de la app, como administra la base de datos y los respaldos, puede consultar todos los datos, también la dirección IP y el navegador de cada sesión, y eso no queda en esos registros. Lo usa para dar soporte y corregir errores.'],
+        ['Dónde viven', 'En Supabase (cuentas, base de datos y archivos), Vercel (sirve la app, y por sus servidores pasan el respaldo de cada noche, los avisos y las fotos de tarjetas que van a Anthropic) y Resend (los correos con código). Las fotos que se suben a Polo (de perfil, de jugadores, logos y tarjetas) son archivos públicos: cualquiera, aun sin cuenta, puede abrirlos. La app nunca borra un archivo: ni tus fotos de perfil anteriores ni los de una cuenta, un torneo o un campo que se borra. Cada noche, una copia de los datos de la app va a Cloudflare R2 en un archivo JSON comprimido, con lo esencial de cada cuenta (su correo o su teléfono, si es anónima, cuándo se creó y se confirmó, si está bloqueada, su nombre y su foto de perfil, y con qué entra, también el identificador de su cuenta de Google; nunca su contraseña) y una copia de cada archivo subido. No lleva ningún PIN, ningún enlace de un solo uso ni la dirección de avisos de ningún navegador. Nosotros no la ciframos: Cloudflare cifra lo que guarda en sus discos, pero quien tenga las llaves de ese almacenamiento puede leerla. Hoy esas copias no se borran nunca. Si subes la foto o el PDF de la tarjeta de un campo, se la mandamos a Anthropic para que Claude, su modelo, lea el nombre del campo, los pares, los índices de golpe, las yardas, el rating y el slope; recibe esa imagen y nada más. En cada navegador que entra a un torneo se queda una copia de lo último que cargó, dinero incluido, y de lo capturado que falte por mandar, para que funcione sin señal. La copia se borra al cambiar de jugador, al cerrar sesión o si el torneo ya no existe; lo capturado sin mandar se queda en el teléfono hasta que se manda. Un navegador que abre un enlace para ver no guarda nada del torneo: pide los tableros otra vez mientras los tiene en pantalla, y lo único que se queda en él es lo que se queda de cualquier página de Polo, la app misma y las imágenes que muestra (ahí, el logo del torneo), para abrir más rápido. Los avisos pasan por el servicio de notificaciones de tu navegador (el de Apple, Google, Microsoft o Mozilla).'],
         ['Fuera de México', 'Los servicios que usa Polo son de empresas de Estados Unidos y guardan o procesan ahí lo que les toca: Supabase (las cuentas, la base de datos y los archivos, en Virginia), Vercel (sirve la app), Resend (los correos con código), Cloudflare (los respaldos de cada noche) y Anthropic (las fotos de tarjetas de campo). Esos cinco hacen su parte por encargo de Polo y no usan tus datos para lo suyo. Google, si entras con Google, y el servicio de notificaciones de tu navegador (Apple, Google, Microsoft o Mozilla), si activas los avisos, no trabajan para Polo: reciben lo que tu cuenta o tu navegador ya les da, bajo sus propios avisos de privacidad. Fuera de ellos y de lo que este aviso dice que ve cada quien, no compartimos tus datos con nadie.'],
-        ['Cuánto tiempo los guardamos', 'Tu perfil, tus amistades, rivalidades y avisos, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan; si el torneo se borra, su historial de cambios se queda con una copia de todo lo que tenía. Los campos cargados con sus fotos de tarjeta, el historial de cambios de cada torneo y los registros de quien opera Polo no tienen fecha de borrado, y tampoco los usuarios anónimos que se crean al mandar un PIN ni lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace. Las copias de cada noche guardan todo lo anterior y hoy no se borran nunca.'],
+        ['Cuánto tiempo los guardamos', 'Cada noche, después del respaldo, se borra lo que ya cumplió su plazo. Tu perfil, tus amistades y rivalidades, tu lugar en tus crews y qué versión de este aviso y de los términos aceptaste se guardan mientras tengas tu cuenta (si entraste sin cuenta, mientras exista tu usuario anónimo), y se borran al borrarla (lo que queda de ti en los torneos está en «Tus derechos»). Los avisos de tu bandeja se borran a los 12 meses. Lo de un torneo (jugadores, golpes, grupos, Calcutta, pagos, resultados y los avisos que mandó) se guarda mientras exista el torneo, también para quienes ya no juegan, y su historial de cambios también; si el torneo se borra, su historial se queda con una copia de todo lo que tenía y se borra 90 días después. La respuesta que el servidor le dio a cada hoyo guardado sirve para no guardarlo dos veces, y se borra a los 90 días. Los campos cargados con sus fotos de tarjeta y los registros de quien opera Polo no tienen fecha de borrado, y tampoco lo que Supabase guarda de cada sesión (dirección IP y navegador); los de una cuenta se borran al borrarla. Un usuario anónimo, el que se crea al mandar un PIN, se borra si pasan 180 días sin usarse y no tiene nada en ningún torneo (nunca entró como un jugador ni capturó nada); si entró como un jugador, se queda mientras quede rastro de eso en el torneo. La dirección para mandarte avisos se guarda hasta que apagues los avisos en ese teléfono o el navegador la dé de baja: cerrar sesión no los apaga. La de un teléfono que entró con un PIN se borra además en cuanto el teléfono deja de entrar como ese jugador: al cambiar de jugador, al entrar con el PIN de otro, si el Comité lo saca del torneo o si se borra el jugador. Los intentos de PIN sirven unos minutos y después solo quedan como registro, y los enlaces de un solo uso sirven 15 minutos y se borran a partir del día siguiente. Los datos técnicos de los teléfonos se borran a partir de los 30 días, y los de cada teléfono a partir de los 90 días sin usarse. El enlace para ver de un torneo dura hasta que su Comité lo cambia o lo apaga, o se borra el torneo, y no va en las copias de cada noche; el historial de cambios guarda cuándo se creó, se cambió o se apagó, nunca el enlace. Las copias de cada noche guardan lo que había esa noche, salvo los PIN, los enlaces y las direcciones de avisos, y hoy no se borran nunca.'],
         ['Google', 'Si entras con Google, solo pedimos tu nombre, correo y foto de perfil: el correo para reconocer tu cuenta, y el nombre y la foto para empezar tu perfil, que puedes cambiar. Mientras no la cambies, esa foto se sigue cargando desde Google: cada quien que la ve se la pide a Google, que así recibe su dirección IP. El uso de esa información se apega a la Política de Datos de Usuario de los Servicios de API de Google, incluidos sus requisitos de uso limitado.'],
         ['Tus derechos', 'Puedes editar tu perfil cuando quieras, ponerlo o sacarlo de las búsquedas y apagar los avisos en cada teléfono. La app todavía no tiene cómo borrar tu cuenta ni cómo descargar tus datos: borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes, así que hoy hay que pedírselo a él directamente. Al borrarla se quitan de la base de datos tu perfil, tus amistades, tus rivalidades, tus avisos, los navegadores donde los activaste y los datos técnicos de tus teléfonos, y sales de tus crews. En cada torneo donde confirmaste a un jugador como tuyo, ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma, también en su historial de cambios; se quedan sus golpes, su hándicap y su dinero, para que los resultados de los demás sigan cuadrando. También queda así un jugador ligado a tu perfil que nunca confirmaste, si lleva tu nombre o tu foto: el que te agregó un amigo a una Ronda rápida, o la copia de un torneo duplicado; si el Comité le puso otro nombre, se queda con ese nombre, sin tu foto ni tu forma, también en su historial. Se quedan cada foto que subiste, también las anteriores, como archivo público; de tu correo, los registros de quien opera Polo guardan solo una huella, que sirve para reconocerlo si alguien vuelve a escribirlo, no para leerlo; lo que alguien haya escrito a mano en un motivo o una nota, tal como lo escribió; y todo lo de antes del borrado, perfil y amistades incluidos, en los respaldos de cada noche, que hoy no se borran nunca.'],
         ['Cómo pedir algo sobre tus datos', 'Puedes pedir saber qué datos tenemos de ti, corregirlos, que los borremos o que dejemos de usarlos para algo (tus derechos de acceso, rectificación, cancelación y oposición), y también retirar tu consentimiento o limitar su uso. Pídeselo a quien opera Polo, Diego Gaxiola, directamente o por medio del Comité de tu torneo, que se lo pasa; el correo golf@cardigan.mx todavía no recibe mensajes. Di tu nombre, el correo de tu cuenta o el torneo y el jugador, qué pides y, si es una corrección, el dato correcto. Antes de hacerlo confirmamos que eres tú: que entres a tu cuenta frente a nosotros o, cuando golf@cardigan.mx ya reciba mensajes, que nos escribas desde el correo de tu cuenta; si juegas sin cuenta, con el Comité de tu torneo. Te contestamos en un máximo de 20 días hábiles y, si procede, lo hacemos en los 15 días hábiles siguientes. Si no quedas conforme, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno, la autoridad de protección de datos personales en México.'],
@@ -2139,8 +2193,25 @@ export const t = {
       history: 'Historial',
     },
     history: {
-      hint: 'Cada cambio del torneo: quién, cuándo y qué. Lo que corrige el Admin de Polo aparece marcado.',
+      hint: 'Cada cambio del torneo: quién, cuándo y qué. Lo que corrige el Admin de Polo aparece marcado, y también cuándo lo abrió y por qué.',
       empty: 'Sin cambios todavía.',
+      /**
+       * What the Admin de Polo did about the tournament as a whole (0068, TRUST-22): opened it from his panel (with
+       * his reason) or by its link (with none), unlocked or locked it, changed its protection or its Comité.
+       */
+      operator: {
+        line: {
+          view: 'El Admin de Polo abrió este torneo',
+          unlock: 'El Admin de Polo lo desbloqueó para corregirlo',
+          relock: 'El Admin de Polo lo volvió a bloquear',
+          protect: 'El Admin de Polo lo protegió',
+          unprotect: 'El Admin de Polo le quitó la protección',
+          set_organizer: 'El Admin de Polo cambió quién es del Comité',
+        } as Record<string, string>,
+        viewLink: 'El Admin de Polo abrió este torneo desde su enlace, sin escribir motivo',
+        other: 'El Admin de Polo hizo un cambio',
+        until: (time: string) => `hasta las ${time}`,
+      },
       more: 'Ver más',
       platformOnly: 'Solo Admin de Polo',
       byPlatform: 'Admin de Polo',

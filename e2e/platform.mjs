@@ -116,6 +116,9 @@ try {
   await page.getByRole('link', { name: 'Torneos' }).click()
   await page.getByPlaceholder('Nombre, código o correo del organizador').fill(ORG.email)
   await page.getByRole('link', { name: new RegExp(`E2E Plat ${rand}`) }).click({ timeout: T })
+  // Opening it asks why, and the reason goes on the record (TRUST-22).
+  await page.getByPlaceholder('Qué pasó y quién lo pidió').fill('Prueba e2e del panel')
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
   await page.getByText(ORG.email).waitFor({ timeout: T })
   check(true, 'search by the organizer\'s email opens the tournament with its Comité')
   await page.screenshot({ path: `${out}/platform-torneo.jpg`, type: 'jpeg', quality: 80, fullPage: true })
@@ -132,6 +135,8 @@ try {
   await page.goto(`${base}/admin/personas`, { waitUntil: 'domcontentloaded' })
   await page.getByPlaceholder('Correo, usuario o nombre').fill(VIC.email)
   await page.getByRole('link', { name: /Victor Borrable/ }).click({ timeout: T })
+  await page.getByPlaceholder('Qué pasó y quién lo pidió').fill('Prueba e2e del panel')
+  await page.getByRole('button', { name: 'Abrir', exact: true }).click()
   await page.getByRole('button', { name: 'Bloquear', exact: true }).click({ timeout: T })
   await page.getByRole('dialog').getByPlaceholder('Qué vas a corregir y quién lo pidió').fill('Prueba e2e')
   await page.getByRole('dialog').getByRole('button', { name: 'Bloquear' }).click()

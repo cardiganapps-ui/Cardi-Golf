@@ -21,6 +21,8 @@ import type { TournamentsOutlet } from './TournamentsScreen'
 import { clock, personName } from './names'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { ViewReasonForm } from './ViewReason'
+import { useAdminView } from './useAdminView'
 
 const H = t.platform.people
 
@@ -37,23 +39,11 @@ export function PersonDetail() {
   const api = usePlatformApi()
   const navigate = useNavigate()
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
-  const [p, setP] = useState<Person | null | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
+  const open = useCallback((reason?: string) => api.person(id, reason), [api, id])
+  const { data: p, error, asking, load } = useAdminView<Person>(open)
   const [pending, setPending] = useState<Pending>(null)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      setP(await api.person(id))
-    } catch (e) {
-      setError(humanError(e))
-    }
-  }, [api, id])
-  useEffect(() => {
-    setP(undefined)
-    void load()
-  }, [load])
   const changed = async () => {
     await load()
     outlet?.onChanged()
@@ -66,6 +56,7 @@ export function PersonDetail() {
     </Link>
   )
   if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
+  if (asking) return <>{back}<ViewReasonForm kind="person" onOpen={load} /></>
   if (p === undefined) return <Spinner rows={6} />
   if (p === null) return <>{back}<p className={s.help}>{H.notFound}</p></>
 
