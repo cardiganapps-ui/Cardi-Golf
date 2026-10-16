@@ -491,11 +491,15 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "src/screens/tournament/currency.test.tsx",
+        "supabase/tests/settings_mirror.sql",
+        "supabase/tests/upgrade_0074.sh"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "MXN stays the only currency the settings accept; engine explanations still write «$»."
     },
     {
       "id": "ARCH-07",
@@ -593,9 +597,12 @@
       "workstream": "W12",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "scripts/whs-parity.mjs",
+        "src/data/tableRegistry.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -635,9 +642,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "src/lib/deadExports.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -649,9 +658,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "eslint.config.js"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1660,9 +1671,12 @@
       "workstream": "W3",
       "phase": 3,
       "tripSafe": true,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "src/engine/core/handicap.test.ts",
+        "src/engine/profile/cases/whs.json"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2695,9 +2709,11 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 226,
+      "tests": [
+        "src/lib/bundleBudget.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
