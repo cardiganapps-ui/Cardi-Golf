@@ -3770,11 +3770,14 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "src/lib/backupCron.test.ts",
+        "src/lib/backupTables.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Backups taken before this change still hold secrets; deleting old backups is Diego's decision (handoff 5e)."
     },
     {
       "id": "TRUST-11",
@@ -3876,9 +3879,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/platform/ViewReason.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Quién opera Polo», pinned word for word, says what the operator sees and can do (any tournament with its money, a Protegido one unlocked with a reason, every account's email, sign-ins, profile, tournaments, crews with members, friend counts, device players; block, delete, notices). Left: the rule isn't written once: CLAUDE.md §7 says the social graph stays private from the admin, while platform_crew returns every member and the crew's join code and platform_person returns crews and friend counts; drop the join code and say in CLAUDE.md the admin sees crews for moderation, or cut the panels to counts."
     },
@@ -3890,11 +3896,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/retention.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Retention periods on further personal data (audit images, finished tournaments) are proposed to Diego in handoff 5g."
     },
     {
       "id": "TRUST-19",
@@ -3936,11 +3944,15 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/admin/AdminHistory.operator.test.tsx",
+        "src/screens/profile/AdminAccesses.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The operator's reads straight from the database (the dashboard, SQL) are not logged; the notice says so."
     },
     {
       "id": "TRUST-23",
