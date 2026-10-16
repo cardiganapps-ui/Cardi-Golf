@@ -45,7 +45,7 @@
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 .table th,
@@ -71,7 +71,7 @@
 }
 .playerSub {
   display: block;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 400;
   color: var(--ink-2);
 }
@@ -83,7 +83,7 @@
   position: absolute;
   top: 0;
   right: 2px;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   line-height: 1;
   color: var(--ink);
 }
@@ -95,7 +95,7 @@
   display: flex;
   justify-content: space-between;
   gap: var(--s2);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   color: var(--ink-2);
   margin-top: var(--s2);
 }

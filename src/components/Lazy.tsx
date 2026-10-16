@@ -41,7 +41,7 @@ function Late() {
 function Boot() {
   return (
     <div className={styles.boot} role="status">
-      <img src={assetUrl('/brand/boot-mark.png')} width={120} height={120} alt="Polo" />
+      <img className={styles.mark} src={assetUrl('/brand/boot-mark.png')} width={120} height={120} alt="Polo" />
       <p>{t.common.loading}</p>
     </div>
   )

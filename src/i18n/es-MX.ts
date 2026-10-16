@@ -2226,6 +2226,16 @@ export const t = {
     haptics: 'Vibrar al capturar',
     /** `game`: the snake's label when the tournament plays it (STRAT-11). */
     hapticsHint: (game: string | null) => `Un toque corto en cada número y al guardar un hoyo, más largo en un birdie${game ? ` o si pasa ${labelInSentence(game)}` : ''}. Solo en este teléfono.`,
+    /** VIS-11, A11Y-19: light, dark or the phone's setting, and more contrast; on this phone only. */
+    appearance: {
+      title: 'Apariencia',
+      system: 'Sistema',
+      light: 'Claro',
+      dark: 'Oscuro',
+      hint: 'Sistema sigue el ajuste del teléfono. Solo en este teléfono.',
+      contrast: 'Más contraste',
+      contrastHint: 'Textos y líneas más marcados, para leer bajo el sol.',
+    },
     title: 'Más',
     rules: 'Reglamento',
     stats: 'Estadísticas y premios',

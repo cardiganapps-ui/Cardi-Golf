@@ -87,7 +87,8 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
-          <div ref={ref} className={styles.card} data-share-card={what.kind} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
+          {/* Light in either theme: the image goes to WhatsApp, read on any phone (VIS-11). */}
+          <div ref={ref} className={styles.card} data-share-card={what.kind} data-theme="light" data-accent={nearestAccent(accent).id}>
             <Card what={what} />
           </div>
         </div>

@@ -174,7 +174,7 @@ export function GamesScreen() {
       ) : (
         <>
           <div className={styles.detailHead}>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTab(null)} aria-label={t.common.back}>
+            <button type="button" className="btn btn--ghost btn--sm btn--flush" onClick={() => setTab(null)} aria-label={t.common.back}>
               <IconChevronLeft />
             </button>
             <h1 data-view-heading>{tabs.find((x) => x.value === current)?.label}</h1>

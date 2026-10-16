@@ -148,7 +148,8 @@
 }
 /* Defaults nobody has touched yet on an unplayed hole: quiet until a value changes. */
 .ptsMuted {
-  color: var(--ink-3);
+  /* «Sin capturar» and the untouched points: --ink-3 was 5.6:1 for a line players read in the sun (A11Y-09). */
+  color: var(--ink-2);
 }
 .controls {
   display: grid;
@@ -345,7 +346,7 @@
   gap: 1px;
 }
 .cellPts {
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   color: var(--ink-2);
 }
 .missing {
@@ -376,9 +377,13 @@
   background: var(--surface);
   font-weight: 600;
 }
+/* The nine's points on the ruled panel: ink, since --ink-2 on --surface is 6.6:1, under a figure's AAA (A11Y-09). */
+.subtotal .cellPts {
+  color: var(--ink);
+}
 .subCaption {
   display: block;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 400;
   color: var(--ink-2);
   line-height: 1;
@@ -504,4 +509,25 @@
   align-items: center;
   justify-content: center;
   gap: var(--s2);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .holeNav:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .pickup:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .pickup[aria-pressed='true']:not(:disabled):hover {
+    background: var(--ink-2);
+    border-color: var(--ink-2);
+  }
+  .holeBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .groupBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

@@ -619,7 +619,7 @@ export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: 
   const l = lockupFor(tone)
   return (
     <img
-      className={s.logoMark}
+      className={`${s.logoMark} ${tone === 'board' ? '' : s.graphite}`}
       src={assetUrl(l.image)}
       alt=""
       aria-hidden="true"
@@ -653,7 +653,7 @@ export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: nu
       role="img"
       aria-label={t.app.name}
     >
-      {mark && <img className={s.wordmarkMark} src={lockupFor(tone).image} alt="" draggable={false} />}
+      {mark && <img className={`${s.wordmarkMark} ${tone === 'board' ? '' : s.graphite}`} src={lockupFor(tone).image} alt="" draggable={false} />}
       <span aria-hidden="true">{t.app.name}</span>
     </span>
   )

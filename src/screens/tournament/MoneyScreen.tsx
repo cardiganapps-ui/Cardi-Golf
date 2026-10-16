@@ -320,7 +320,7 @@ export function MoneyScreen() {
           : u.closing
             ? M.bankOff(formatSignedMoney(money.banker.difference, cur))
             : M.bankPending(formatMoney(money.banker.difference, cur))
-  const verdictClass = money.banker.balanced && listed === 0 && !u.openDays ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictOpen
+  const verdictClass = money.banker.balanced && listed === 0 && !u.openDays ? '' : u.closing && listed !== money.banker.difference ? styles.bankVerdictOff : styles.bankVerdictPending
 
   return (
     <div className={styles.screen}>

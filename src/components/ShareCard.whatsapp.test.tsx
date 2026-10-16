@@ -66,7 +66,7 @@ describe('the leaderboard card (PWA-06)', () => {
 
   it('carries the event accent on the rule under its name', () => {
     const { node, snap } = draw('large60', { kind: 'leaderboard' })
-    expect(node.style.getPropertyValue('--event-accent')).toBe(nearestAccent(snap.tournament.accentColor).hex)
+    expect(node.dataset.accent).toBe(nearestAccent(snap.tournament.accentColor).id)
   })
 })
 

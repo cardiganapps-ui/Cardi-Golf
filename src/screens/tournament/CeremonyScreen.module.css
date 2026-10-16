@@ -39,7 +39,7 @@
   object-fit: contain;
   padding: clamp(4px, 0.8vh, 10px);
   border-radius: var(--r-md);
-  background: var(--on-dark);
+  background: var(--board-ink);
 }
 .title {
   color: var(--board-ink);
@@ -423,4 +423,15 @@
   background: transparent;
   color: var(--board-rule);
   border-color: var(--board-rule);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  /* On the board: its own raised green, never the phone's light fills. */
+  .footer :global(.btn--ghost:not(:disabled):hover),
+  .footer :global(.btn--secondary:not(:disabled):hover) {
+    background: var(--board-surface);
+    color: var(--board-ink);
+  }
 }

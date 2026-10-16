@@ -45,7 +45,8 @@ export function PrintScreen() {
   }
 
   return (
-    <div className={styles.page}>
+    // Ink on white in either theme: what is on screen is what prints (VIS-11).
+    <div className={styles.page} data-theme="light">
       <div className={`${styles.toolbar} noprint`}>
         <Link to={`/t/${slug}/admin/datos`} className="btn btn--ghost btn--sm">
           {t.common.back}

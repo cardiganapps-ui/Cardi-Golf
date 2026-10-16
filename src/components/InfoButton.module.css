@@ -17,3 +17,12 @@
   background: var(--surface);
   color: var(--ink);
 }
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .info:not(:disabled):hover {
+    background: var(--surface);
+    color: var(--ink);
+  }
+}

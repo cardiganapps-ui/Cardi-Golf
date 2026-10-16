@@ -20,7 +20,8 @@ describe('TournamentLogo', () => {
     expect(img.getAttribute('width')).toBe('222')
     expect(img.getAttribute('height')).toBe('240')
     expect(img.getAttribute('alt')).toBe('')
-    expect(img.className).toBe('x')
+    // Its slot's class, and the plate it takes on the dark sheet (VIS-11).
+    expect(img.className).toBe('tournament-logo x')
   })
 
   it('a logo stored whole has no size to give', () => {

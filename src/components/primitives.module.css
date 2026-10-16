@@ -27,8 +27,8 @@
   transform: translateY(1px);
 }
 .btnPrimary {
-  background: var(--event-accent);
-  color: var(--event-accent-ink);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .btnPrimary:active,
 .btnPrimary.pressed {
@@ -137,7 +137,7 @@
 .fig {
   font-variant-numeric: tabular-nums lining-nums;
   font-variation-settings: 'wdth' var(--wdth-figure);
-  font-weight: 600;
+  font-weight: var(--fig-weight);
   letter-spacing: 0;
 }
 .under {
@@ -266,7 +266,7 @@
   justify-content: center;
   gap: 2px;
   color: var(--ink-2);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 500;
   text-decoration: none;
   background: none;
@@ -304,7 +304,7 @@
 }
 .boardHead {
   min-height: 28px;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: var(--track-caps);
   text-transform: uppercase;
@@ -360,11 +360,18 @@
 .mine::before {
   content: '';
   position: absolute;
-  left: calc(-1 * var(--gutter-left));
+  /* Inside the tinted row, at its own edge (VIS-10): it sat at the screen's edge, 16 px outside the tint. */
+  left: 0;
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--event-accent);
+  background: var(--accent);
+}
+/* On my row's tint the small figures take the ink: --ink-2 on it was 6.4:1, under the AAA a figure gets (A11Y-09). */
+.mine .pos,
+.mine .today,
+.mine .thru {
+  color: var(--ink);
 }
 .pos {
   position: relative;
@@ -411,7 +418,7 @@
   height: 8px;
   margin-left: var(--s1);
   border-radius: var(--r-round);
-  border: 1.5px solid var(--event-accent);
+  border: 1.5px solid var(--accent);
   vertical-align: middle;
 }
 .today,
@@ -449,12 +456,13 @@
  */
 .moved {
   position: absolute;
-  top: calc(100% + 1px);
+  /* Flush under the position: at the 12 px floor (VIS-24) a dense row has no pixel to spare below it. */
+  top: 100%;
   right: var(--s1);
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   line-height: 1;
 }
 .moved::before {
@@ -553,7 +561,8 @@
   stroke-width: 1.5;
 }
 .markPickup {
-  color: var(--ink-3);
+  /* «L» is a figure of the card: --ink-3 was 5.6:1 (A11Y-09). */
+  color: var(--ink-2);
 }
 
 /* ---- Scorecard grid ---- */
@@ -747,7 +756,7 @@
 .eventRule {
   width: 40px;
   height: 3px;
-  background: var(--event-accent);
+  background: var(--accent);
   margin-top: var(--s2);
 }
 .eventTagline {
@@ -780,6 +789,10 @@
 .logoMark {
   display: block;
   flex: none;
+}
+/* The graphite pencil on the dark sheet: drawn light, as chalk (--mark-filter; none on the card stock). The board's gold copy is left as it is. */
+.graphite {
+  filter: var(--mark-filter);
 }
 
 /* ---- Plate (board surface only) ---- */
@@ -891,4 +904,51 @@
 }
 .rowAction > * {
   flex: 1 1 auto;
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .btnPrimary:not(:disabled):hover {
+    filter: brightness(0.95);
+  }
+  .btnSecondary:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .btnQuiet:not(:disabled):hover {
+    background: var(--accent-soft);
+  }
+  .btnDanger:not(:disabled):hover {
+    background: var(--under-soft);
+  }
+  .stepBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .segBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .segOn:not(:disabled):hover {
+    background: var(--ink-2);
+  }
+  .leaderRow:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .mine:not(:disabled):hover {
+    background: var(--accent-wash);
+  }
+  .gridCellBtn:not(:disabled):hover {
+    background: var(--surface);
+  }
+}
+
+/* A11Y-19: in forced colors my row's tint and bar are repainted to Canvas; the system's Highlight edge says it instead. */
+@media (forced-colors: active) {
+  .mine {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .stepper,
+  .segmented {
+    border-color: ButtonText;
+  }
 }
