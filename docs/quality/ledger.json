@@ -830,9 +830,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/settings/reglamento.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -844,9 +846,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/settings/reglamento.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -874,9 +878,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -888,9 +894,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/lib/feedLines.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -918,9 +926,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/core/explanations.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -996,9 +1006,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/screens/admin/settingsLabels.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3554,9 +3566,11 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/screens/tournament/labels.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -183,7 +183,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     const lastLead = feed.find((e) => e.kind === 'leadChange')
     if (top.length === 1 && lastLead && lastLead.playerId !== top[0]!.playerId) {
       const last = snapshot.rounds.filter((r) => core.roundIds.includes(r.id)).at(-1)
-      feed.unshift({ kind: 'leadChange', at: feed[0]?.at ?? null, roundNumber: last?.number ?? 1, hole: last?.holes ?? 18, playerId: top[0]!.playerId, figure: top[0]!.figure.text, scoring: mainScoring(settings), close: true })
+      feed.unshift({ kind: 'leadChange', at: feed[0]?.at ?? null, roundNumber: last?.number ?? 1, hole: last?.holes ?? 18, playerId: top[0]!.playerId, figure: top[0]!.figure.text, scoring: mainScoring(settings), close: true, previous: lastLead.playerId })
     }
   }
 

@@ -91,7 +91,7 @@ export function MoneyEditor({ value, onChange, field }: { value: TournamentSetti
           )}
           {m.snake.enabled && (
             <Field label={m.snake.label}>
-              <NumberField label={m.snake.label} prefix="$" suffix={U.perSurvivor} value={value.prizes.snakePerSurvivor} onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))} />
+              <NumberField label={m.snake.label} prefix="$" suffix={U.perSurvivor(m.snake.label)} value={value.prizes.snakePerSurvivor} onChange={(v) => set((d) => (d.prizes.snakePerSurvivor = v))} />
             </Field>
           )}
           {m.fewestPutts.enabled && (

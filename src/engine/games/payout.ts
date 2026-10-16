@@ -10,9 +10,29 @@ import type { RankGroup } from '../core/ranking'
 import { splitPrizes } from '../core/ranking'
 import { pesos } from '../core/pesos'
 import type { GameContext } from './game'
+import { t } from '../../i18n/es-MX'
 
 /** The engine's peso formatter (core/pesos.ts), under the name the games use. */
 export const fmt = pesos
+
+/**
+ * A game's money in words (COPY-14): «el bote de $1,600» when its entrants put it in, «el premio de $1,600 (sale de
+ * la bolsa)» when it comes from the inscriptions. A «bote» is only ever what a game's own entrants paid.
+ */
+export function potWords(config: GameConfig, pot: number): string {
+  return config.money.source === 'side' ? `el bote de ${fmt(pot)}` : `el premio de ${fmt(pot)} (sale de la bolsa)`
+}
+
+/** The same at the start of a sentence: «El bote de $1,600». */
+export function PotWords(config: GameConfig, pot: number): string {
+  const w = potWords(config, pot)
+  return w.charAt(0).toUpperCase() + w.slice(1)
+}
+
+/** A split by places in words: «60% al 1.º y 40% al 2.º». */
+export function splitWords(split: number[]): string {
+  return t.common.andList(split.map((p, i) => `${p}% al ${i + 1}.º`))
+}
 
 /** The pot a game's money config funds. */
 export function gamePot(config: GameConfig, entrants: number): number {
@@ -52,7 +72,7 @@ function award(ctx: GameContext, playerId: Id, amount: number, why: Explanation,
 export function payPlaces(ctx: GameContext, groups: RankGroup<Id>[], name: (id: Id) => string, labelFor: (id: Id) => string, pot = ctx.pot): PrizeAward[] {
   if (pot <= 0) return []
   const amounts = placeAmounts(pot, ctx.config.money.split)
-  return splitPrizes(groups, amounts, name).map((s) => award(ctx, s.item, s.amount, { ...s.why, steps: [`Bote ${fmt(pot)}: ${ctx.config.money.split.map((p) => `${p}%`).join(' / ')}`, ...s.why.steps] }, labelFor(s.item)))
+  return splitPrizes(groups, amounts, name).map((s) => award(ctx, s.item, s.amount, { ...s.why, steps: [`${PotWords(ctx.config, pot)} se reparte ${splitWords(ctx.config.money.split)}`, ...s.why.steps] }, labelFor(s.item)))
 }
 
 /**
@@ -80,7 +100,10 @@ export function payUnits(ctx: GameContext, units: Map<Id, number>, unitName: [st
       amount,
       {
         title: fmt(amount),
-        steps: [`Bote ${fmt(pot)} ÷ ${total} ${total === 1 ? unitName[0] : unitName[1]} = ${perText} c/u`, `${name(id)}: ${u} ${unit} = ${fmt(amount)}${extra ? ' (con $1 de redondeo)' : ''}`],
+        steps: [
+          `${PotWords(ctx.config, pot)} se reparte entre ${total === 1 ? `el único ${unitName[0]}` : `los ${total} ${unitName[1]}`} que se ganaron: ${perText} cada uno`,
+          `${name(id)} ganó ${u} ${unit}: ${fmt(amount)}${extra ? ', con $1 del redondeo' : ''}`,
+        ],
       },
       `${ctx.config.label}, ${u} ${unit}`,
     )

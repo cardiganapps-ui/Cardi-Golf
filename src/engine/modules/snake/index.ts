@@ -8,6 +8,7 @@ import { playOrder } from '../../core/playOrder'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, PrizeAward } from '../module'
 import { pesos } from '../../core/pesos'
+import { labelInSentence } from '../../../i18n/es-MX'
 
 export interface SnakePass {
   hole: number
@@ -54,6 +55,8 @@ export const snakeModule: GameModule<SnakeState> = {
     const { snapshot, core, settings } = ctx
     const threshold = settings.modules.snake.puttsThreshold
     const perSurvivor = settings.prizes.snakePerSurvivor
+    // The game's own name, in a sentence (STRAT-11): «la Víbora», or whatever the organizer called it.
+    const game = labelInSentence(settings.modules.snake.label)
     const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
     const groups: SnakeGroupState[] = []
     const pending: SnakeState['pending'] = []
@@ -110,12 +113,12 @@ export const snakeModule: GameModule<SnakeState> = {
               if (pid === holderId) {
                 payouts[pid] = {
                   amount: 0,
-                  why: { title: pesos(0), steps: [`Terminó con la víbora (últimos ${threshold} putts o más en el hoyo ${passes.at(-1)?.hole})`] },
+                  why: { title: pesos(0), steps: [`Terminó la ronda con ${game}: fue el último en hacer ${threshold} putts o más, en el hoyo ${passes.at(-1)?.hole}`, `Quien termina con ${game} no cobra`] },
                 }
               } else {
                 payouts[pid] = {
                   amount: perSurvivor,
-                  why: { title: pesos(perSurvivor), steps: [`Sin víbora al final; ${nameOf(holderId)} se la quedó`] },
+                  why: { title: pesos(perSurvivor), steps: [`Terminó la ronda sin ${game}: ${nameOf(holderId)} se quedó con ${game}`, `Cada uno de los demás del grupo cobra ${pesos(perSurvivor)} de la bolsa`] },
                 }
               }
             }
@@ -127,7 +130,7 @@ export const snakeModule: GameModule<SnakeState> = {
               rem -= extra
               payouts[pid] = {
                 amount: each + extra,
-                why: { title: pesos(each + extra), steps: [`Nadie hizo ${threshold} putts: ${pesos(pot)} entre ${n}`] },
+                why: { title: pesos(each + extra), steps: [`Nadie del grupo hizo ${threshold} putts o más: los ${pesos(pot)} se reparten entre los ${n}`] },
               }
             }
           }

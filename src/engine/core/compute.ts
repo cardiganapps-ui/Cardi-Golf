@@ -25,21 +25,25 @@ export function nineHoleRanks(holes: Hole[]): Map<number, number> {
 /**
  * How a hole's points came out, from the hole's own figures: its par and
  * stroke index, the strokes received, the gross, the net and the points.
+ *
+ * COPY-19: a sentence first, in words («5 golpes en un par 4, con 1 golpe de
+ * ventaja: 4 neto, par neto, 2 pts»), then the arithmetic, whose «+ 2» is
+ * said once: a net par is worth two points.
  */
 export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesReceived' | 'gross' | 'net' | 'points' | 'pickedUp' | 'played'>): Explanation {
   const { par, strokesReceived: sr, gross: g, points: pts } = r
+  const golpes = (n: number) => `${n} ${n === 1 ? 'golpe' : 'golpes'}`
+  const raw = par + sr - (g ?? 0) + 2
   return {
     title: ptsText(pts),
     steps: r.played
       ? r.pickedUp
-        ? ['Levantó: 0 pts']
+        ? ['Levantó (dejó el hoyo sin terminarlo): cuenta 0 pts']
         : [
-            `Par ${par}, SI ${r.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
+            `${golpes(g ?? 0)} en un par ${par}, ${sr ? `con ${golpes(sr)} de ventaja` : 'sin golpes de ventaja'} en este hoyo (índice de golpe ${r.strokeIndex}): ${withTrueMinus(r.net ?? 0)} neto, ${netScoreName(pts)}, ${ptsText(pts)}`,
             `${g} − ${sr} = ${withTrueMinus(r.net ?? 0)} neto`,
-            // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
-            par + sr - (g ?? 0) + 2 < 0
-              ? `${par} + ${sr} − ${g} + 2 = ${withTrueMinus(par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
-              : `${par} + ${sr} − ${g} + 2 = ${ptsText(pts)} (${netScoreName(pts)})`,
+            // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, que cuenta 0 pts», never «= 0».
+            `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${par} + ${sr} − ${g} + 2 = ${raw < 0 ? `${withTrueMinus(raw)}, que cuenta 0 pts` : ptsText(pts)}`,
           ]
       : ['Sin capturar'],
   }
@@ -185,20 +189,20 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
       const cuts = cutsSoFar[p.id]!
       if (ri > 0) {
         const prev = prevPoints[p.id]
-        const cut = prev == null ? { value: 0, why: { title: '', steps: ['Sin ronda anterior: sin recorte'] } } : nextRoundCut(prev, settings.day2Cut)
+        const cut = prev == null ? { value: 0, why: { title: '', steps: ['no jugó: sin recorte'] } } : nextRoundCut(prev, settings.day2Cut)
         // Rounds 3+: `previous` recomputes from the last round alone; `cumulative` adds the cuts up (§5.2 only defines Day 2).
         if (settings.day2Cut.mode === 'cumulative') {
           cuts.total += cut.value
-          cuts.steps.push(`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`)
+          cuts.steps.push(`El día ${round.number - 1} ${cut.why.steps.join('; ')}`)
         } else {
           cuts.total = cut.value
-          cuts.steps = [`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`]
+          cuts.steps = [`El día ${round.number - 1} ${cut.why.steps.join('; ')}`]
         }
       }
       let playingHcp = Math.max(0, ph.value - cuts.total)
       // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
       const afterCut = ph.value - cuts.total
-      if (cuts.total > 0) steps.push(...cuts.steps, `${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`)
+      if (cuts.total > 0) steps.push(...cuts.steps, `Con el recorte: ${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`)
       else if (ri > 0) steps.push(...cuts.steps)
       let overridden = false
       const ov = snapshot.handicapOverrides.find((o) => o.roundId === round.id && o.playerId === p.id)

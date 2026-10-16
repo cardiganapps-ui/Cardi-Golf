@@ -41,7 +41,7 @@ describe('a count of points agrees with its number', () => {
   it('on the Tarjeta, the feed, the boards, Estadísticas and the Comité', () => {
     expect(t.card.ptsLine(1, 'bogey neto')).toBe('1 pt, bogey neto')
     expect(t.games.pointsFigure(1)).toBe('1 pt')
-    expect(t.feed.honoreeHole('Nacho', 3, 1)).toBe('Nacho en el 3: 1 pt')
+    for (const line of t.feed.honoreeHole('Nacho', 3, 1, 'El novio')) expect(line).toMatch(/ 1 pt(?!s)/)
     expect(t.common.figure('1', 1, 'points')).toBe('1 pt')
     expect(t.live.spotlight('3', 1, null, 18, 1)).toBe('3.º con 1 pt, hoyo 18: 1 pt')
     expect(t.stats.unit('points', 1)).toBe('+1 pt')
@@ -55,7 +55,8 @@ describe('a count of points agrees with its number', () => {
   it('in the hole’s own explanation', () => {
     const bogey = holeWhy({ par: 4, strokeIndex: 7, strokesReceived: 0, gross: 5, net: 5, points: 1, pickedUp: false, played: true })
     expect(bogey.title).toBe('1 pt')
-    expect(bogey.steps.at(-1)).toBe('4 + 0 − 5 + 2 = 1 pt (bogey neto)')
+    expect(bogey.steps[0]).toBe('5 golpes en un par 4, sin golpes de ventaja en este hoyo (índice de golpe 7): 5 neto, bogey neto, 1 pt')
+    expect(bogey.steps.at(-1)).toBe('Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 0 − 5 + 2 = 1 pt')
   })
 })
 
@@ -80,8 +81,11 @@ describe('the words agree with what happened', () => {
       for (const e of st.feed) {
         if (e.kind !== 'birdie' || e.scoring !== 'points') continue
         const h = st.core.rounds[snap.rounds.find((r) => r.number === e.roundNumber)!.id]![e.playerId]!.holes.find((x) => x.hole === e.hole)!
-        const text = feedText(e, () => 'X')
-        expect(/net[oa] /.test(text), `${name}: ${text}, ${h.strokesReceived} golpes`).toBe(h.strokesReceived > 0)
+        // Every line the event can be read as (COPY-15).
+        for (const v of [0, 1, 2, 3]) {
+          const text = feedText(e, () => 'X', undefined, v)
+          expect(/net[oa][ !,]/.test(text), `${name}: ${text}, ${h.strokesReceived} golpes`).toBe(h.strokesReceived > 0)
+        }
         seen++
       }
     }
@@ -90,11 +94,12 @@ describe('the words agree with what happened', () => {
 
   it('the Day 2 cut counts one point as «1 pt», and the Reglamento says «por cada punto»', () => {
     const cut = { threshold: 36, pointsPerStroke: 1, maxStrokes: 4, mode: 'previous' as const }
-    expect(nextRoundCut(37, cut).why.steps[0]).toBe('37 − 36 = 1 pt de más')
-    expect(nextRoundCut(1, cut).why.steps[0]).toBe('1 pt no pasa de 36: sin recorte')
-    const rules = t.rules.handicaps(80, 54, { ...cut, threshold: 1 }, { rounds: 2, points: true }).join(' ')
+    expect(nextRoundCut(37, cut).why.steps[0]).toBe('hizo 37 pts: 37 − 36 = 1 pt de más')
+    expect(nextRoundCut(37, cut).why.steps[1]).toBe('se recorta 1 golpe por cada punto de más: 1 ÷ 1 = 1 golpe')
+    expect(nextRoundCut(1, cut).why.steps[0]).toBe('hizo 1 pt, no más de 36: sin recorte')
+    const rules = t.rules.handicaps(80, 54, t.rules.rounding.halfUp, { ...cut, threshold: 1 }, { rounds: 2, points: true, nine: false }).join(' ')
     expect(rules).toContain('más de 1 punto, para el día 2 se te recorta 1 golpe por cada punto por encima')
-    expect(t.rules.handicaps(80, 54, { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 }, { rounds: 2, points: false }).join(' ')).toContain(
+    expect(t.rules.handicaps(80, 54, t.rules.rounding.halfUp, { threshold: 36, pointsPerStroke: 2, maxStrokes: 4 }, { rounds: 2, points: false, nine: false }).join(' ')).toContain(
       'más de 36 puntos Stableford, para el día 2 se te recorta 1 golpe por cada 2 puntos por encima',
     )
   })

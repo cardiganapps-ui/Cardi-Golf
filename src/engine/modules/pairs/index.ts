@@ -135,7 +135,7 @@ export const pairsModule: GameModule<PairsState> = {
       const p = byId.get(s.item)!
       const each = Math.floor(s.amount / 2)
       const odd = s.amount - each * 2
-      const why: Explanation = { title: `${pesos(each)} cada uno`, steps: [...s.why.steps, `${pesos(s.amount)} entre los dos = ${pesos(each)} cada uno${odd ? ` (+${pesos(odd)} para ${playersById.get(p.player1Id)?.displayName ?? ''})` : ''}`] }
+      const why: Explanation = { title: `${pesos(each)} cada uno`, steps: [...s.why.steps, `El premio es de la pareja: ${pesos(s.amount)} entre los dos = ${pesos(each)} cada uno${odd ? `, más ${pesos(odd)} para ${playersById.get(p.player1Id)?.displayName ?? ''}` : ''}`] }
       prizes[p.player1Id] = { amount: each + odd, why: odd ? { ...why, title: pesos(each + odd) } : why, pairId: p.id }
       prizes[p.player2Id] = { amount: each, why, pairId: p.id }
     }

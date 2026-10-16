@@ -60,8 +60,8 @@ export function GameCatalog({ value, onChange, field }: { value: TournamentSetti
                     <Toggle label="" ariaLabel={mod.label} checked={mod.enabled} onChange={(v) => set((d) => (d.modules[e.id].enabled = v))} />
                   </div>
                   {mod.enabled && e.id === 'snake' && (
-                    <Field label={U.puttsThreshold}>
-                      <NumberField label={U.puttsThreshold} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
+                    <Field label={U.puttsThreshold(value.modules.snake.label)}>
+                      <NumberField label={U.puttsThreshold(value.modules.snake.label)} value={value.modules.snake.puttsThreshold} min={2} max={10} onChange={(v) => set((d) => (d.modules.snake.puttsThreshold = v))} />
                     </Field>
                   )}
                   {mod.enabled && e.later && <span className="help">{e.later}</span>}

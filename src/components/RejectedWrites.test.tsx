@@ -278,7 +278,7 @@ describe('the refused list says what stands in the way now, and who can send it 
     const award: RejectedItem = { ...hole11, key: 'aw', kind: 'award', payload: { round_id: 'r2', group_id: 'r2g3', hole: 7, game_id: 'closest', player_ids: ['p6', 'p9'], decided_by: CAMILO } }
     mount('list', { rejected: [tiebreak('r2g3', 'p12'), tiebreak('r2g1', 'p1'), award] })
     const resend = list().getAllByRole('button', { name: new RegExp(`^${IB.resend}`) })
-    expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([expect.stringMatching(/^Volver a mandar: Víbora, grupo 3,/), expect.stringMatching(/hoyo 7/)])
+    expect(resend.map((b) => b.getAttribute('aria-label'))).toEqual([expect.stringMatching(/^Volver a mandar: La Víbora, grupo 3,/), expect.stringMatching(/hoyo 7/)])
   })
 
   it('a signature goes again only for the other pair of his group: a pair never signs its own card', () => {
@@ -307,11 +307,11 @@ describe('the refused list says what stands in the way now, and who can send it 
     const signature: RejectedItem = { ...hole11, key: 'sig', kind: 'signature', payload: { round_id: 'r2', pair_id: 'pair1', signed_by: CAMILO } }
     mount('list', { edit: finishDay2, rejected: [picked, tiebreak, award, signature] })
     expect(list().getByText('Camilo, día 1, hoyo 4: levantó, 1 putt')).toBeTruthy()
-    expect(list().getByText(/^Víbora, grupo \d+, día 2, hoyo 5: Camilo$/)).toBeTruthy()
+    expect(list().getByText(/^La Víbora, grupo \d+, día 2, hoyo 5: Camilo$/)).toBeTruthy()
     expect(list().getByText(/, día 2, hoyo 7: Camilo$/)).toBeTruthy()
     expect(list().getByText(/^Firma de .+, día 2$/)).toBeTruthy()
     // The server never refuses a tiebreak for a closed day: no claim that it did.
-    const tbRow = list().getByText(/^Víbora,/).parentElement!
+    const tbRow = list().getByText(/^La Víbora,/).parentElement!
     expect(tbRow.textContent).toContain(t.sync.errDenied)
   })
 
