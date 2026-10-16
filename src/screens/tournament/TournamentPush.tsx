@@ -21,7 +21,7 @@ import { isStandalone } from '../../lib/install'
 import { useTournament } from '../../data/tournamentStore'
 import { pushNote, usePushSwitch } from '../profile/usePushSwitch'
 import { tournamentPushHint } from './pushHint'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import styles from './TournamentPush.module.css'
 
 const P = t.push

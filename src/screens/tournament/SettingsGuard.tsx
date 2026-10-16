@@ -8,7 +8,7 @@ import { useContext, useState, type ReactNode } from 'react'
 import { applyUpdate } from '../../data/appUpdate'
 import { useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 import styles from './SettingsGuard.module.css'
 
 /** `money`: a screen that is money (Dinero, the Ceremonia) also waits while a side game this build doesn't know may move some. */

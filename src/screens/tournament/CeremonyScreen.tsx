@@ -13,7 +13,7 @@
  * the figures counting up, then the champion's trophy line with one burst of
  * confetti.
  */
-import confetti from 'canvas-confetti'
+import { burst } from '../../lib/confetti'
 import { AnimatePresence, motion, useReducedMotionConfig } from 'motion/react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
@@ -21,7 +21,7 @@ import { ordinal, t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { useTournament } from '../../data/tournamentStore'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import styles from './CeremonyScreen.module.css'
 import { IconFlame, IconGavel, IconMedal, IconReceipt, IconRings, IconSnake, IconSpoon, IconTarget, IconTrophy } from '../../components/icons'
 import { celebrationColors } from '../../lib/tokens'
@@ -355,7 +355,7 @@ export function CeremonyScreen() {
   useEffect(() => {
     if (!revealed || !step?.champion || reduce) return
     // One burst, as the trophy line lands.
-    const timer = setTimeout(() => confetti({ particleCount: 200, spread: 100, startVelocity: 45, origin: { y: 0.6 }, colors: celebrationColors() }), REVEAL.trophy * 1000)
+    const timer = setTimeout(() => burst({ particleCount: 200, spread: 100, startVelocity: 45, origin: { y: 0.6 }, colors: celebrationColors() }), REVEAL.trophy * 1000)
     return () => clearTimeout(timer)
   }, [revealed, step?.id, step?.champion, reduce])
 

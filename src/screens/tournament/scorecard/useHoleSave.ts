@@ -10,7 +10,7 @@
  * recompute, a third of a second on a mid-range phone (PERF-10); then the write waited for the frame, and a
  * page closed inside it lost the hole.
  */
-import confetti from 'canvas-confetti'
+import { burst } from '../../../lib/confetti'
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { toast } from '../../../components/ui'
 import { useOutbox } from '../../../data/outbox'
@@ -190,7 +190,7 @@ export function useHoleSave(o: HoleSaveInput) {
     lastSaveAt.current = performance.now()
     setTiebreak(null)
     if (celebrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
+      burst({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: celebrationColors() })
     }
     // The hand feels the save; a birdie or a snake pass a little more (MOT-10). The button says «Guardado» a moment (MOT-02).
     haptic(celebrate ? 'moment' : 'save')

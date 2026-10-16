@@ -15,11 +15,13 @@ import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profile
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { queuedFor, useOutbox } from '../../data/outbox'
 import { useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import { TournamentPushSwitch } from './TournamentPush'
 import { IconBook, IconChart, IconPerson, IconTrophy, IconTv } from '../../components/icons'
 import styles from './MoreScreen.module.css'
 import { humanError } from '../../lib/humanError'
+import { AdminLayout, CeremonyScreen, RulesScreen, StatsScreen, TvScreen } from '../../app/screens'
+import { preloadOnIntent } from '../../app/lazyScreen'
 
 export function MoreScreen() {
   const { me, slug, lookup, leave, refresh } = useTournamentCtx()
@@ -101,7 +103,7 @@ export function MoreScreen() {
       </div>
 
       {me.isAdmin && (
-        <Link className="btn btn--primary btn--block" to={`/t/${slug}/admin`}>
+        <Link className="btn btn--primary btn--block" to={`/t/${slug}/admin`} {...preloadOnIntent(AdminLayout)}>
           {t.more.admin}
         </Link>
       )}
@@ -126,17 +128,17 @@ export function MoreScreen() {
             <IconPerson /> {t.profile.myProfile}
           </Link>
         )}
-        <Link className={styles.link} to={`/t/${slug}/stats`}>
+        <Link className={styles.link} to={`/t/${slug}/stats`} {...preloadOnIntent(StatsScreen)}>
           <IconChart /> {t.more.stats}
         </Link>
-        <Link className={styles.link} to={`/t/${slug}/reglamento`}>
+        <Link className={styles.link} to={`/t/${slug}/reglamento`} {...preloadOnIntent(RulesScreen)}>
           <IconBook /> {t.more.rules}
         </Link>
-        <Link className={styles.link} to={`/t/${slug}/tv`}>
+        <Link className={styles.link} to={`/t/${slug}/tv`} {...preloadOnIntent(TvScreen)}>
           <IconTv /> {t.more.tv}
         </Link>
         {me.isAdmin && (
-          <Link className={styles.link} to={`/t/${slug}/ceremonia`}>
+          <Link className={styles.link} to={`/t/${slug}/ceremonia`} {...preloadOnIntent(CeremonyScreen)}>
             <IconTrophy /> {t.more.ceremony}
           </Link>
         )}

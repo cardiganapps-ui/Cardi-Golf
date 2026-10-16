@@ -18,7 +18,7 @@ import { relTime } from '../../lib/relTime'
 import { changedFields } from '../../lib/auditDiff'
 import { auditNames, fieldLabel, fieldValue } from '../../lib/auditFields'
 import { localWhen } from '../../lib/localWhen'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
 

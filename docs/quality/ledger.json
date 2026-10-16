@@ -1993,11 +1993,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/app/lazyScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Screen-to-screen transitions were not added; the wait no longer flashes."
     },
     {
       "id": "MOT-23",
@@ -2042,9 +2044,12 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "e2e/fixtures/firstLoad.spec.ts",
+        "src/app/lazyScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2056,11 +2061,13 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "e2e/fixtures/firstLoad.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Motion stays in the entry (every sheet animates since PR 213); zod/mini (about 17 kB gzip) would mean rewriting the settings schema stored tournaments are read with."
     },
     {
       "id": "PERF-04",
@@ -2084,9 +2091,12 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/lib/precache.test.ts",
+        "scripts/check-precache.mjs"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2175,9 +2185,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/lib/cacheHeaders.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2745,11 +2757,13 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 217,
+      "tests": [
+        "src/lib/repoWeight.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The 64 MB stay in git history (no rewrite of shared history); new clones and CI checkouts no longer download them."
     },
     {
       "id": "QA-21",
