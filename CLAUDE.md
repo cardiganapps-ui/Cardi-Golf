@@ -85,6 +85,7 @@ Everything from section 2 on is written for the first tournament. Build it so th
 - **One engine, many configurations.** `computeTournament(snapshot, settings)` reads the enabled modules from `settings` and returns state only for those. The section-6 tests run against the first tournament's settings; add at least one test per module that proves it can be *disabled* (state absent, money unaffected) and a "minimal tournament" test (8 players, 1 round, individual Stableford only, no tiers).
 - **Copy stays Spanish (Mexico) in v1.** The platform is built for Diego's circle first; keep strings in one place (`src/i18n/es-MX.ts`) so a second language is a file, not a refactor. Don't build the second language.
 - **Scope discipline.** Generic ≠ bigger. Build exactly the modules and screens the first tournament needs, but built on tournament-scoped data, settings-driven rules and renamable labels. No marketplace, no billing, no public discovery, no multi-org roles beyond organizer / player.
+- **The launch scope is a list** (STRAT-01, STRAT-09, 2026-10-16). `docs/strategy/README.md` is the one-page strategy: who Polo is for, the north-star metric («torneos cerrados al peso»), the non-goals and the three bets, and it wins over this brief on scope. Areas built before the review that the trip doesn't need (Ronda rápida, social, crews, most of Admin de Polo) keep working but don't count as done for the launch. `docs/strategy/launch-scope.json` files every route and every migration under an area, each area in or out of the launch; `src/lib/launchScope.test.ts` fails on a route or migration it doesn't list, so a new one goes there, with its area, in the same change.
 
 When a later section says "the 12 players", "Nacho", "A/B/C/D", "$2,500", read it as "this tournament's players / honoree / tiers / entry fee".
 
@@ -1061,6 +1062,13 @@ The look comes from the tournament's printed rules sheet: beachy, editorial, pre
 **M7: Rehearsal and hardening**
 - The simulator, a full rehearsal tournament, the runbook, backup export, and printable fallback scorecards (PDF, with stroke dots per player).
 - Done when: the rehearsal passes and the runbook is written.
+
+**After M7: how an area is done** (STRAT-09, 2026-10-16). M0–M7 were marked done on their automated checks within two hours, although their «done when» lines need people and phones. From now on an area is done only when (1) its checks pass in CI, (2) its human criterion below is ticked in `docs/handoff.md` by the person named, with the evidence (a video, a timing, a screenshot), and (3) the ledger has nothing open on it above P3. M3, M5 and M6's human criteria are met at Rehearsal 1 and stay on the handoff until then.
+- **The trip path** (Entrar, Tarjeta, En vivo, Juegos, Dinero, the TV, the Ceremonia; area `torneo`): at Rehearsal 1, 12 real phones (iOS and Android) play two simulated days; Salud shows save → other phone p95 under 2 s, no hole left unsent, no rejected write left open; a foursome's hole under 10 s (timed by Diego); one airplane-mode stretch of 3 holes per group lands. Verified by Diego.
+- **Calcutta night** (`comite`: auction console, the TV board, the pairs draw): 12 lots auctioned on a TV at Rehearsal 1, the money balancing to the peso with the real banker. Verified by the banker.
+- **The Comité** (`comite`): a Comité member who is not Diego fixes a wrong score with a reason, closes a day and publishes, using only RUNBOOK.md. Verified by that person.
+- **An organizer who is not Diego** (`organizador`, `cuenta`): five people create a tournament cold (docs/strategy/README.md, bet 2); each gets to «Para empezar» done without help, or the stall is recorded and fixed. Verified by Diego, from the calls and Salud.
+- **Outside the launch** (`ronda-rapida`, `social`, the parts of `plataforma` the list marks out): each needs its own written criterion here, and Diego's yes, before it counts.
 
 ---
 
