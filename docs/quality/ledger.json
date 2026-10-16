@@ -1163,9 +1163,13 @@
       "workstream": "W12",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 214,
+      "tests": [
+        "supabase/tests/audit_gaps.sql",
+        "src/screens/admin/AdminHistory.gaps.test.tsx",
+        "src/lib/auditFields.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1193,9 +1197,11 @@
       "workstream": "W12",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 214,
+      "tests": [
+        "supabase/tests/fk_indexes.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1207,11 +1213,15 @@
       "workstream": "W12",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": 94,
-      "tests": [],
+      "status": "fixed",
+      "pr": 214,
+      "tests": [
+        "supabase/tests/function_grants.sql",
+        "supabase/tests/harness/lint-baseline.json",
+        "docs/db-advisors.md"
+      ],
       "verifiedBy": null,
-      "residual": "Partial (open), reconciled 2026-10-13. Done: the db job runs splinter on the migrated chain and fails when any lint's count goes over lint-baseline.json (#94); set-based RLS with per-command write policies (#111) took multiple_permissive_policies from 92 to 8. Left, held at the baseline: auth_rls_initplan 16, function_search_path_mutable 5, public_bucket_allows_listing 1 (TRUST-07), anon-callable SECURITY DEFINER 86 and authenticated-callable 139; no default-privileges revoke or allow-list of the RPCs the app calls; production's advisors not compared with the harness."
+      "residual": "154 advisor findings remain, each documented in docs/db-advisors.md (definer functions authenticated users must call, tables without client policies on purpose)."
     },
     {
       "id": "DB-17",
@@ -1272,9 +1282,11 @@
       "workstream": "W12",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 214,
+      "tests": [
+        "supabase/tests/results_incremental.sql"
+      ],
       "verifiedBy": null,
       "residual": null
     },
