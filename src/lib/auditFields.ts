@@ -13,7 +13,7 @@ import { formatMoney } from './money'
 const H = t.admin.history
 const V = H.value
 
-type Kind = 'player' | 'round' | 'group' | 'pair' | 'team' | 'lot' | 'tee' | 'course' | 'money' | 'moment' | 'clock' | 'flag' | 'image' | 'previous' | 'opaque' | 'status' | 'source'
+type Kind = 'player' | 'round' | 'group' | 'pair' | 'team' | 'lot' | 'tee' | 'course' | 'money' | 'moment' | 'clock' | 'flag' | 'image' | 'previous' | 'opaque' | 'status' | 'source' | 'pin'
 
 const KIND: Record<string, Kind> = {
   player_id: 'player',
@@ -58,13 +58,16 @@ const KIND: Record<string, Kind> = {
   counts_for_stats: 'flag',
   quick: 'flag',
   is_protected: 'flag',
+  locked: 'flag',
   avatar_url: 'image',
   logo_url: 'image',
+  url: 'image',
   previous: 'previous',
   settings: 'opaque',
   estimate_inputs: 'opaque',
   status: 'status',
   handicap_source: 'source',
+  pin: 'pin',
 }
 
 /** What the ids in a change name, read from the boards on screen. */
@@ -167,6 +170,8 @@ export function fieldValue(key: string, v: unknown, table: string, names: AuditN
       return statusValue(table, String(v))
     case 'source':
       return V.source[String(v)] ?? String(v)
+    case 'pin':
+      return V.pin[String(v)] ?? V.changed
   }
   if (typeof v === 'boolean') return v ? V.yes : V.no
   if (typeof v === 'object') return V.changed

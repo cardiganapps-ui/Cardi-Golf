@@ -189,6 +189,9 @@
     "0060_quick_round_privacy.sql": "ronda-rapida",
     "0061_storage_listing.sql": "torneo",
     "0062_correction_notice.sql": "torneo",
-    "0063_history_filters.sql": "torneo"
+    "0063_history_filters.sql": "torneo",
+    "0064_audit_gaps.sql": "torneo",
+    "0065_indexes_and_advisors.sql": "torneo",
+    "0066_incremental_results.sql": "torneo"
   }
 }
