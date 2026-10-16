@@ -23,7 +23,7 @@ const api = vi.hoisted(() => ({
   updateTournament: vi.fn(async (_tid: string, _patch: Record<string, unknown>) => undefined),
 }))
 vi.mock('../../data/api', () => api)
-vi.mock('../tournament/TournamentGate', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
+vi.mock('../tournament/tournamentContext', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
 vi.mock('../../components/ui', async (orig) => ({ ...(await orig<typeof import('../../components/ui')>()), toast: vi.fn() }))
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.

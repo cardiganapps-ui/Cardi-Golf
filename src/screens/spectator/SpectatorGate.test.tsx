@@ -48,6 +48,9 @@ const { spectatorStoreId } = await import('../../data/spectator')
 const { useTournament } = await import('../../data/tournamentStore')
 const { SpectatorGate } = await import('./SpectatorGate')
 const { spectatorChildren } = await import('./routes')
+// The routes' screens are lazy (PERF-02): loaded here, so each test's waits time the page, not a module's first load.
+const screens = await import('../../app/screens')
+await Promise.all([screens.TournamentShell, screens.LiveScreen, screens.GamesScreen, screens.SpectatorMoney, screens.TvScreen].map((s) => s.preload()))
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
 const cancelAnimation = Animation.prototype.cancel

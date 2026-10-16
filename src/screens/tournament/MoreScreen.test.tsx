@@ -17,7 +17,7 @@ vi.mock('../../data/auth', async () => {
   return { SESSION_TIMEOUT_MS: 8000, useAuth: create(() => ({ ready: true, user: { id: 'uid-a' }, isAnonymous: true })) }
 })
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}), authSettings: async () => null }))
-vi.mock('./TournamentGate', () => ({
+vi.mock('./tournamentContext', () => ({
   useTournamentCtx: () => ({
     me: { playerId: 'p1', isOrganizer: false, isAdmin: false, via: 'device' },
     slug: 'nacho',

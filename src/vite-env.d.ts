@@ -13,3 +13,5 @@ interface ImportMeta {
 declare const __BUILD_ID__: number
 /** Short git commit of the build. */
 declare const __BUILD_SHA__: string
+/** public/ files the app links, each at its fingerprint (`assetUrl`, vite.config.ts). */
+declare const __ASSET_URLS__: Record<string, string>

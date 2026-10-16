@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTournament } from '../../data/tournamentStore'
 import type { Group, Round } from '../../engine/types'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 
 /** The round to score now: the tournament's current round if live, else the first live round, else the next scheduled. */
 export function pickActiveRound(rounds: Round[], currentRoundId: string | null): Round | null {

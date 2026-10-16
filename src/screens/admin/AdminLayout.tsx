@@ -3,17 +3,33 @@
  * as tabs (a side column on a laptop). Sections carry a badge when the engine
  * flags something for them; modules that are off hide their section.
  */
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import { EmptyState } from '../../components/primitives'
 import { PlatformBanner } from '../tournament/PlatformBanner'
 import { SettingsGuard } from '../tournament/SettingsGuard'
 import styles from './AdminLayout.module.css'
 import { useEntryInfo } from './entryInfo'
 import { readiness, setupBadge, teamPlay } from './readiness'
+import {
+  AdminAuction,
+  AdminCourses,
+  AdminData,
+  AdminDraw,
+  AdminGames,
+  AdminGroups,
+  AdminHandicaps,
+  AdminHistory,
+  AdminPlayers,
+  AdminRounds,
+  AdminScores,
+  AdminTeams,
+  AdminTournament,
+} from '../../app/screens'
+import { prefetchScreens, preloadOnIntent, type Preloadable } from '../../app/lazyScreen'
 
 /**
  * On a phone the sections are a row that scrolls sideways: the one open is brought into view, in the middle of the
@@ -34,6 +50,23 @@ function useActiveInView(sectionsFrom: unknown) {
   return nav
 }
 
+/** Each section's screen, loaded on a tap's first touch and, once the Comité is open, when the page is idle (MOT-22). */
+const SECTION_SCREENS: Record<string, Preloadable> = {
+  torneo: AdminTournament,
+  jugadores: AdminPlayers,
+  campos: AdminCourses,
+  rondas: AdminRounds,
+  grupos: AdminGroups,
+  handicaps: AdminHandicaps,
+  scores: AdminScores,
+  calcutta: AdminAuction,
+  parejas: AdminDraw,
+  equipos: AdminTeams,
+  juegos: AdminGames,
+  historial: AdminHistory,
+  datos: AdminData,
+}
+
 /** What the Comité still reaches when this build can't read the settings (ARCH-04): the backup and the history compute nothing. */
 const READS_NO_SETTINGS = /\/admin\/(datos|historial)\/?$/
 
@@ -45,6 +78,8 @@ export function AdminLayout() {
   // While it is being set up, the tab counts what «Para empezar» lists (the same answer the card reads), and each engine warning it does not already cover.
   const setup = !!data && data.snapshot.tournament.status === 'setup' && !data.snapshot.tournament.quick
   const entry = useEntryInfo(tournamentId, data, { enabled: setup })
+  const isAdmin = me.isAdmin
+  useEffect(() => (isAdmin ? prefetchScreens(Object.values(SECTION_SCREENS)) : undefined), [isAdmin])
   if (!me.isAdmin) {
     return (
       <div className={styles.layout}>
@@ -104,7 +139,7 @@ export function AdminLayout() {
           {sections
             .filter((s) => s.show !== false)
             .map((s) => (
-              <NavLink key={s.to} to={`/t/${slug}/admin/${s.to}`} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}>
+              <NavLink key={s.to} to={`/t/${slug}/admin/${s.to}`} {...preloadOnIntent(SECTION_SCREENS[s.to])} className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navActive : ''}`}>
                 {s.label}
                 {s.badge ? (
                   // A11Y-22: the count said with its words, inside the link's name; a label on a bare span is dropped.
