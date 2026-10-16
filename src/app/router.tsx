@@ -1,89 +1,90 @@
-import { lazy } from 'react'
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
-import { Lazy } from '../components/ui'
+import { Lazy } from '../components/Lazy'
 import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
-import { HomeScreen } from '../screens/HomeScreen'
 import { ContinueScreen } from '../screens/ContinueScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
 import { RouteError } from './RouteError'
-import { PlatformGate } from '../screens/platform/PlatformGate'
-import { OrganizerLoginScreen } from '../screens/organizer/OrganizerLoginScreen'
-import { MyTournamentsScreen } from '../screens/organizer/MyTournamentsScreen'
-import { NewTournamentScreen } from '../screens/organizer/NewTournamentScreen'
-import { ResetPasswordScreen } from '../screens/organizer/ResetPasswordScreen'
-import { TournamentGate } from '../screens/tournament/TournamentGate'
-import { EntrarScreen } from '../screens/profile/EntrarScreen'
-import { OAuthReturnScreen } from '../screens/profile/OAuthReturnScreen'
-import { ProfileScreen } from '../screens/profile/ProfileScreen'
-const ProfileEditScreen = lazy(() => import('../screens/profile/ProfileEditScreen').then((m) => ({ default: m.ProfileEditScreen })))
-const FriendsScreen = lazy(() => import('../screens/profile/FriendsScreen').then((m) => ({ default: m.FriendsScreen })))
-const InboxScreen = lazy(() => import('../screens/profile/InboxScreen').then((m) => ({ default: m.InboxScreen })))
-const VersusScreen = lazy(() => import('../screens/profile/VersusScreen').then((m) => ({ default: m.VersusScreen })))
-const QuickRoundScreen = lazy(() => import('../screens/profile/QuickRoundScreen').then((m) => ({ default: m.QuickRoundScreen })))
-const CoursesScreen = lazy(() => import('../screens/profile/CoursesScreen').then((m) => ({ default: m.CoursesScreen })))
-const CrewsScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewsScreen })))
-const CrewJoinScreen = lazy(() => import('../screens/profile/CrewsScreen').then((m) => ({ default: m.CrewJoinScreen })))
-const CrewScreen = lazy(() => import('../screens/profile/CrewScreen').then((m) => ({ default: m.CrewScreen })))
-const LegalScreen = lazy(() => import('../screens/LegalScreen').then((m) => ({ default: m.LegalScreen })))
-import { SpectatorGate } from '../screens/spectator/SpectatorGate'
 import { spectatorChildren } from '../screens/spectator/routes'
-import { TournamentShell } from '../screens/tournament/TournamentShell'
 import { SettingsGuard } from '../screens/tournament/SettingsGuard'
-import { devRoutes } from './devRoutes'
-import { LiveScreen } from '../screens/tournament/LiveScreen'
-import { ScorecardScreen } from '../screens/tournament/ScorecardScreen'
 import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
-import { MoreScreen } from '../screens/tournament/MoreScreen'
-import { GamesScreen } from '../screens/tournament/GamesScreen'
-import { MoneyScreen } from '../screens/tournament/MoneyScreen'
-const TvScreen = lazy(() => import('../screens/tournament/TvScreen').then((m) => ({ default: m.TvScreen })))
-const StatsScreen = lazy(() => import('../screens/tournament/StatsScreen').then((m) => ({ default: m.StatsScreen })))
-import { RulesScreen } from '../screens/tournament/RulesScreen'
-const CeremonyScreen = lazy(() => import('../screens/tournament/CeremonyScreen').then((m) => ({ default: m.CeremonyScreen })))
-import { AdminLayout } from '../screens/admin/AdminLayout'
-const AdminTournament = lazy(() => import('../screens/admin/AdminTournament').then((m) => ({ default: m.AdminTournament })))
-const AdminPlayers = lazy(() => import('../screens/admin/AdminPlayers').then((m) => ({ default: m.AdminPlayers })))
-const AdminCourses = lazy(() => import('../screens/admin/AdminCourses').then((m) => ({ default: m.AdminCourses })))
-const AdminRounds = lazy(() => import('../screens/admin/AdminRounds').then((m) => ({ default: m.AdminRounds })))
-const AdminGroups = lazy(() => import('../screens/admin/AdminGroups').then((m) => ({ default: m.AdminGroups })))
-const AdminGames = lazy(() => import('../screens/admin/AdminGames').then((m) => ({ default: m.AdminGames })))
-const AdminHandicaps = lazy(() => import('../screens/admin/AdminHandicaps').then((m) => ({ default: m.AdminHandicaps })))
-const AdminScores = lazy(() => import('../screens/admin/AdminScores').then((m) => ({ default: m.AdminScores })))
-const AdminAuction = lazy(() => import('../screens/admin/AdminAuction').then((m) => ({ default: m.AdminAuction })))
-const AdminHistory = lazy(() => import('../screens/admin/AdminHistory').then((m) => ({ default: m.AdminHistory })))
-const AdminData = lazy(() => import('../screens/admin/AdminData').then((m) => ({ default: m.AdminData })))
-const PrintScreen = lazy(() => import('../screens/tournament/PrintScreen').then((m) => ({ default: m.PrintScreen })))
+import { devRoutes } from './devRoutes'
+import {
+  AdminAuction,
+  AdminCourses,
+  AdminData,
+  AdminDraw,
+  AdminGames,
+  AdminGroups,
+  AdminHandicaps,
+  AdminHistory,
+  AdminLayout,
+  AdminPlayers,
+  AdminRounds,
+  AdminScores,
+  AdminTeams,
+  AdminTournament,
+  CeremonyScreen,
+  CoursesScreen,
+  CrewJoinScreen,
+  CrewScreen,
+  CrewsScreen,
+  EntrarScreen,
+  FriendsScreen,
+  GamesScreen,
+  HomeScreen,
+  InboxScreen,
+  LegalScreen,
+  LiveScreen,
+  MoneyScreen,
+  MoreScreen,
+  MyTournamentsScreen,
+  NewTournamentScreen,
+  OAuthReturnScreen,
+  OrganizerLoginScreen,
+  PlatformAudit,
+  PlatformCourse,
+  PlatformCourses,
+  PlatformCrew,
+  PlatformCrews,
+  PlatformGate,
+  PlatformHealth,
+  PlatformLayout,
+  PlatformNotices,
+  PlatformOverview,
+  PlatformPeople,
+  PlatformPerson,
+  PlatformTournament,
+  PlatformTournaments,
+  PrintScreen,
+  ProfileEditScreen,
+  ProfileScreen,
+  QuickRoundScreen,
+  ResetPasswordScreen,
+  RulesScreen,
+  ScorecardScreen,
+  SpectatorGate,
+  StatsScreen,
+  TournamentGate,
+  TournamentShell,
+  TvScreen,
+  VersusScreen,
+} from './screens'
 /** `npm run dev`, or a build with VITE_DESIGN_ROUTES=1 (Vercel Preview, design-shots). */
 const DESIGN_ROUTES = import.meta.env.DEV || import.meta.env.VITE_DESIGN_ROUTES === '1'
-const PlatformLayout = lazy(() => import('../screens/platform').then((m) => ({ default: m.PlatformLayout })))
-const PlatformOverview = lazy(() => import('../screens/platform').then((m) => ({ default: m.OverviewScreen })))
-const PlatformTournaments = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentsScreen })))
-const PlatformTournament = lazy(() => import('../screens/platform').then((m) => ({ default: m.TournamentDetail })))
-const PlatformPeople = lazy(() => import('../screens/platform').then((m) => ({ default: m.PeopleScreen })))
-const PlatformPerson = lazy(() => import('../screens/platform').then((m) => ({ default: m.PersonDetail })))
-const PlatformCourses = lazy(() => import('../screens/platform').then((m) => ({ default: m.CatalogCourses })))
-const PlatformCourse = lazy(() => import('../screens/platform').then((m) => ({ default: m.CourseDetail })))
-const PlatformCrews = lazy(() => import('../screens/platform').then((m) => ({ default: m.CatalogCrews })))
-const PlatformCrew = lazy(() => import('../screens/platform').then((m) => ({ default: m.CrewDetail })))
-const PlatformNotices = lazy(() => import('../screens/platform').then((m) => ({ default: m.NoticesScreen })))
-const PlatformAudit = lazy(() => import('../screens/platform').then((m) => ({ default: m.AuditScreen })))
-const PlatformHealth = lazy(() => import('../screens/platform').then((m) => ({ default: m.HealthScreen })))
-const AdminDraw = lazy(() => import('../screens/admin/AdminDraw').then((m) => ({ default: m.AdminDraw })))
-const AdminTeams = lazy(() => import('../screens/admin/AdminTeams').then((m) => ({ default: m.AdminTeams })))
 
 /** Everything under one tournament; shared by the real gate and the fixtures. */
 const tournamentChildren = [
           {
-            element: <TournamentShell />,
+            element: <Lazy><TournamentShell /></Lazy>,
             children: [
-              { index: true, element: <LiveScreen /> },
-              { path: 'tarjeta', element: <ScorecardScreen /> },
-              { path: 'juegos', element: <GamesScreen /> },
-              { path: 'dinero', element: <MoneyScreen /> },
+              { index: true, element: <Lazy><LiveScreen /></Lazy> },
+              { path: 'tarjeta', element: <Lazy><ScorecardScreen /></Lazy> },
+              { path: 'juegos', element: <Lazy><GamesScreen /></Lazy> },
+              { path: 'dinero', element: <Lazy><MoneyScreen /></Lazy> },
               { path: 'stats', element: <Lazy><StatsScreen /></Lazy> },
-              { path: 'reglamento', element: <RulesScreen /> },
-              { path: 'mas', element: <MoreScreen /> },
+              { path: 'reglamento', element: <Lazy><RulesScreen /></Lazy> },
+              { path: 'mas', element: <Lazy><MoreScreen /></Lazy> },
             ],
           },
           // Full screens of their own: each computes from the settings, so each waits for a build that reads them (ARCH-04).
@@ -92,7 +93,7 @@ const tournamentChildren = [
           { path: 'imprimir', element: <SettingsGuard><Lazy><PrintScreen /></Lazy></SettingsGuard> },
           {
             path: 'admin',
-            element: <AdminLayout />,
+            element: <Lazy><AdminLayout /></Lazy>,
             children: [
               { index: true, element: <Navigate to="torneo" replace /> },
               { path: 'torneo', element: <Lazy><AdminTournament /></Lazy> },
@@ -153,18 +154,18 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <HomeScreen /> },
+      { index: true, element: <Lazy><HomeScreen /></Lazy> },
       // The installed app's shortcuts (PWA-14): the last tournament, on En vivo or its Tarjeta.
       { path: 'continuar', element: <ContinueScreen /> },
       { path: 'continuar/tarjeta', element: <ContinueScreen tab="tarjeta" /> },
-      { path: 'organizer/login', element: <OrganizerLoginScreen /> },
-      { path: 'organizer', element: <MyTournamentsScreen /> },
-      { path: 'organizer/new', element: <NewTournamentScreen /> },
-      { path: 'organizer/reset', element: <ResetPasswordScreen /> },
-      { path: 'entrar', element: <EntrarScreen /> },
+      { path: 'organizer/login', element: <Lazy><OrganizerLoginScreen /></Lazy> },
+      { path: 'organizer', element: <Lazy><MyTournamentsScreen /></Lazy> },
+      { path: 'organizer/new', element: <Lazy><NewTournamentScreen /></Lazy> },
+      { path: 'organizer/reset', element: <Lazy><ResetPasswordScreen /></Lazy> },
+      { path: 'entrar', element: <Lazy><EntrarScreen /></Lazy> },
       { path: 'privacidad', element: <Lazy><LegalScreen doc="privacy" /></Lazy> },
       { path: 'terminos', element: <Lazy><LegalScreen doc="terms" /></Lazy> },
-      { path: 'perfil/vuelta', element: <OAuthReturnScreen /> },
+      { path: 'perfil/vuelta', element: <Lazy><OAuthReturnScreen /></Lazy> },
       { path: 'perfil/editar', element: <Lazy><ProfileEditScreen /></Lazy> },
       { path: 'amigos', element: <Lazy><FriendsScreen /></Lazy> },
       { path: 'avisos', element: <Lazy><InboxScreen /></Lazy> },
@@ -175,11 +176,11 @@ export const router = createBrowserRouter([
       // preview builds. Must precede `t/:slug`.
       ...DEV_ROUTES,
       // The Admin de Polo panel: only the platform admin gets past the gate.
-      { path: 'admin', element: <PlatformGate />, children: [{ element: <Lazy><PlatformLayout /></Lazy>, children: platformChildren }] },
-      { path: 't/:slug', element: <TournamentGate />, children: tournamentChildren },
+      { path: 'admin', element: <Lazy><PlatformGate /></Lazy>, children: [{ element: <Lazy><PlatformLayout /></Lazy>, children: platformChildren }] },
+      { path: 't/:slug', element: <Lazy><TournamentGate /></Lazy>, children: tournamentChildren },
       // A link to watch, with no session: the boards, read-only (STRAT-05).
-      { path: 'v/:token', element: <SpectatorGate />, children: spectatorChildren },
-      { path: 'p/:handle', element: <ProfileScreen /> },
+      { path: 'v/:token', element: <Lazy><SpectatorGate /></Lazy>, children: spectatorChildren },
+      { path: 'p/:handle', element: <Lazy><ProfileScreen /></Lazy> },
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
       { path: 'c/unirme/:code', element: <Lazy><CrewJoinScreen /></Lazy> },
       { path: 'c/:slug', element: <Lazy><CrewScreen /></Lazy> },

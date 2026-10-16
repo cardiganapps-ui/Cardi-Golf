@@ -27,7 +27,7 @@ const api = vi.hoisted(() => ({
   updateTournament: vi.fn(async () => undefined),
 }))
 vi.mock('../../data/api', () => api)
-vi.mock('../tournament/TournamentGate', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
+vi.mock('../tournament/tournamentContext', () => ({ useTournamentCtx: () => ({ tournamentId: 'fx-auction', slug: 'fixture-auction12' }) }))
 
 const { AdminAuction } = await import('./AdminAuction')
 const A = t.auction

@@ -11,7 +11,6 @@
  * read leaves that face or image out of this render only: a failed image
  * becomes a transparent pixel, never a URL html-to-image would fetch itself.
  */
-import { toBlob } from 'html-to-image'
 import { cssVar } from './tokens'
 
 export type ShareResult = 'shared' | 'downloaded' | 'cancelled'
@@ -182,6 +181,8 @@ export async function inlineImages(node: HTMLElement, load: Load = fetchAsDataUr
 }
 
 export async function renderNodeToPng(node: HTMLElement): Promise<Blob> {
+  // The library comes with the first card, not with every screen that can share one (PERF-03).
+  const { toBlob } = await import('html-to-image')
   // Fonts still loading would render as fallbacks in the image.
   await document.fonts?.ready
   const [fontCss, restore] = await Promise.all([fontEmbedCss(pageFontFaces(), familiesIn(node), codePointsIn(node.textContent ?? '')), inlineImages(node)])

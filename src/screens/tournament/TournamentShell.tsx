@@ -1,8 +1,9 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import { useSavedWhen } from './boardsAge'
 import { useConnection, useRefreshBoards, type Connection } from './connection'
@@ -17,6 +18,8 @@ import { nearestAccent } from '../../design/accents'
 import { PlatformBanner } from './PlatformBanner'
 import { useOutbox } from '../../data/outbox'
 import { scrollBehavior } from '../../lib/reducedMotion'
+import { GamesScreen, LiveScreen, MoneyScreen, MoreScreen, ScorecardScreen } from '../../app/screens'
+import { prefetchScreens, preloadOnIntent } from '../../app/lazyScreen'
 
 /**
  * The tabs a tournament actually has. §9 promises the bar shows only the
@@ -26,12 +29,12 @@ import { scrollBehavior } from '../../lib/reducedMotion'
  */
 function tabsFor({ hasMoney, canScore, more }: { hasMoney: boolean; canScore: boolean; more: boolean }) {
   return [
-    { to: '', label: t.nav.live, icon: <IconFlag /> },
-    ...(canScore ? [{ to: 'tarjeta', label: t.nav.card, icon: <IconPencil /> }] : []),
-    { to: 'juegos', label: t.nav.games, icon: <IconGames /> },
-    ...(hasMoney ? [{ to: 'dinero', label: t.nav.money, icon: <IconCoin /> }] : []),
+    { to: '', label: t.nav.live, icon: <IconFlag />, screen: LiveScreen },
+    ...(canScore ? [{ to: 'tarjeta', label: t.nav.card, icon: <IconPencil />, screen: ScorecardScreen }] : []),
+    { to: 'juegos', label: t.nav.games, icon: <IconGames />, screen: GamesScreen },
+    ...(hasMoney ? [{ to: 'dinero', label: t.nav.money, icon: <IconCoin />, screen: MoneyScreen }] : []),
     // Más is the player's own (his session, the Comité, the join code): a link to watch has none of it.
-    ...(more ? [{ to: 'mas', label: t.nav.more, icon: <IconMore /> }] : []),
+    ...(more ? [{ to: 'mas', label: t.nav.more, icon: <IconMore />, screen: MoreScreen }] : []),
   ]
 }
 
@@ -72,6 +75,13 @@ export function TournamentShell() {
   // tab from every screen, not only inside the Tarjeta (REL-17).
   const pendingHoles = useOutbox((st) => st.pendingHoles)
   const rejectedCount = useOutbox((st) => st.rejected.length)
+  // Each tab's screen loads while the page is idle, so a tap swaps it in its own frame (MOT-22, PERF-02). Never
+  // on the Tarjeta: its taps are the ones that must land at once, and a tab there loads on the first touch.
+  const tabScreens = tabs.map((tab) => tab.screen)
+  const tabKey = tabs.map((tab) => tab.to).join()
+  const onCard = here === '/tarjeta'
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the tabs, by which ones they are
+  useEffect(() => (onCard ? undefined : prefetchScreens(tabScreens)), [tabKey, onCard])
 
   return (
     <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
@@ -97,6 +107,7 @@ export function TournamentShell() {
             key={tab.to}
             to={`${base}${tab.to ? `/${tab.to}` : ''}`}
             end={tab.to === ''}
+            {...preloadOnIntent(tab.screen)}
             // The open tab, tapped again, takes its screen back to the top (MOT-16, the phones' own convention). A view
             // inside it (the Tarjeta's grid, a hole a notice opened) is left by the tap as before.
             onClick={(e) => {

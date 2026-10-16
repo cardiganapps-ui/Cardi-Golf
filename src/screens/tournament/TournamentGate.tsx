@@ -13,7 +13,7 @@
  * screen the gate keeps trying: on reconnect, on return to the app, soon
  * after an ask that failed, and on a timer (REL-02).
  */
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -29,55 +29,11 @@ import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
+import { TournamentContext as Ctx, type Me } from './tournamentContext'
 
-export interface Me {
-  playerId: string | null
-  isOrganizer: boolean
-  /** Organizer account or admin player: may use the Comité console. */
-  isAdmin: boolean
-  /**
-   * How this session is in the tournament: its profile's confirmed link, this
-   * device's PIN, or 'platform' — the Polo admin visiting a tournament he does
-   * not belong to (read always; Comité unless it is Protegido and locked).
-   */
-  via?: 'profile' | 'device' | 'platform' | null
-  /** Protegido: nobody deletes it; the platform admin needs an unlock to write. */
-  protected?: boolean
-  /** Platform visits: until when the admin's unlock lasts (ISO), if unlocked. */
-  unlockedUntil?: string | null
-}
-
-export interface TournamentCtx {
-  tournamentId: string
-  slug: string
-  lookup: LookupResult
-  me: Me
-  /** Ask the server again who this device is here, and load the tournament: a new ask (after a link changed, say). */
-  refresh(): Promise<void>
-  /**
-   * «Actualizar» before the live tournament is on screen (PWA-15): the ask already under way, or a new one
-   * now. Without it (the design fixtures), `refresh`.
-   */
-  retry?(): Promise<void>
-  leave(): Promise<void>
-  /** Where this tournament's screens live, when not `/t/<slug>`: a link to watch's `/v/<token>`. */
-  base?: string
-  /**
-   * Opened with a link to watch (STRAT-05, 0053): read-only, no session, no
-   * PIN. `money`: the link shows money («Con dinero»); `url`: the link itself,
-   * which what is shared from here carries.
-   */
-  spectator?: { money: boolean; url: string }
-}
-
-const Ctx = createContext<TournamentCtx | null>(null)
-/** Exported for the design fixtures (`src/dev/FixtureGate`), which provide a fake tournament without Supabase. */
-export const TournamentContext = Ctx
-export function useTournamentCtx(): TournamentCtx {
-  const c = useContext(Ctx)
-  if (!c) throw new Error('useTournamentCtx outside TournamentGate')
-  return c
-}
+// The context lives in its own module, so a screen outside this chunk (the router's SettingsGuard, the install
+// card) can read it without bringing the gate, Entrar and their animation code into every first load (PERF-02).
+export { TournamentContext, useTournamentCtx, type Me, type TournamentCtx } from './tournamentContext'
 
 /** Until the server has answered and its boards are up, ask again this often. */
 const CACHE_RETRY_MS = 20_000

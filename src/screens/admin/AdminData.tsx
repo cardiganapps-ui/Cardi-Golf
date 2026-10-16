@@ -13,7 +13,7 @@ import { downloadText, exportBackup, restoreBackup, toCsv, type Backup } from '.
 import { useTournament } from '../../data/tournamentStore'
 import { publishFromStore } from '../../data/publish'
 import { useCloseGate } from '../../components/CloseGate'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import { humanError } from '../../lib/humanError'
 
 const D = t.admin.data

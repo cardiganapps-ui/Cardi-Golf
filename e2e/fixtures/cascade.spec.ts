@@ -31,3 +31,27 @@ test('the first load is one stylesheet, and the app’s own rules come before ev
   expect(order.firstModule, 'a module rule is in the first stylesheet').toBeGreaterThan(0)
   expect(order.card, 'global.css’s .card comes before every module rule').toBeLessThan(order.firstModule)
 })
+
+test('a screen loaded later links its stylesheet after the entry’s, whatever the order the screens are opened in (PERF-02)', async ({ page }) => {
+  // Each screen's rules come with its chunk: they must never land before global.css and the shared modules, or a
+  // `.card` would beat a screen's own class as it did under Rolldown's split.
+  const html = await (await page.request.get('/')).text()
+  const entry = /<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/.exec(html)?.[1]
+  for (const order of [
+    ['', 'juegos', 'dinero', 'mas', 'admin/torneo', 'admin/scores'],
+    ['admin/scores', 'mas', 'dinero', 'juegos', ''],
+  ]) {
+    await open(page, `/t/_/full12-live/${order[0]}`)
+    for (const path of order.slice(1)) {
+      await page.evaluate((to) => {
+        history.pushState(null, '', to)
+        dispatchEvent(new PopStateEvent('popstate'))
+      }, `/t/_/full12-live/${path}`)
+      await page.waitForLoadState('networkidle')
+    }
+    const sheets = await page.evaluate(() => Array.from(document.styleSheets, (s) => (s.href ? new URL(s.href).pathname : null)).filter(Boolean))
+    expect(sheets[0], `the entry's stylesheet is the first (${order.join(' → ')})`).toBe(entry)
+    expect(sheets.length, 'the screens brought stylesheets of their own').toBeGreaterThan(3)
+    expect(new Set(sheets).size, 'no stylesheet twice').toBe(sheets.length)
+  }
+})
