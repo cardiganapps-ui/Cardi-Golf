@@ -19,7 +19,7 @@ vi.mock('../../data/publish', () => ({ publishFromStore: vi.fn(async () => void 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminData } from './AdminData'
 
 const C = t.closeGate

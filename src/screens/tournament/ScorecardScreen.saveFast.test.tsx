@@ -50,16 +50,16 @@ vi.mock('../../data/api', async (importOriginal) => ({
 }))
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { OutboxStorageError, applyFields, baseRow, useOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
 const cancelAnimation = Animation.prototype.cancel
@@ -76,12 +76,12 @@ let commits = 0
 function load(s: Snapshot) {
   useTournament.setState({ tournamentId: `fixture:${s.tournament.slug}`, data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
-function mount(fixture: string, opts: { isAdmin?: boolean; edit?: (s: Snapshot) => void } = {}) {
+function mount(fixture: string, opts: { isComite?: boolean; edit?: (s: Snapshot) => void } = {}) {
   const fx = getFixture(fixture)!
   snap = structuredClone(fx.snapshot)
   opts.edit?.(snap)
   load(snap)
-  const me = { ...fx.me, isAdmin: opts.isAdmin ?? fx.me.isAdmin }
+  const me = { ...fx.me, isComite: opts.isComite ?? fx.me.isComite }
   return render(
     <Profiler id="card" onRender={() => void commits++}>
       <MemoryRouter>
@@ -232,7 +232,7 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
   it('a Comité correction on a closed day waits for the server’s answer before the card moves on', async () => {
     window.history.replaceState(null, '', '/?hoyo=17')
     try {
-      mount('full12-finished', { isAdmin: true, edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')) })
+      mount('full12-finished', { isComite: true, edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')) })
       expect(holeOnScreen()).toBe(17)
       const first = snap.players.find((p) => screen.queryByRole('group', { name: S.puttsOf(p.displayName) }))!
       fireEvent.click(puttsUp(first.id))

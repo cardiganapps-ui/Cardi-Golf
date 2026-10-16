@@ -20,32 +20,33 @@ const R = t.rules
 
 /** One module's rules, as the Reglamento writes them. */
 export function moduleRules(id: ModuleId, settings: TournamentSettings, field: FieldShape, honoreeName?: string | null): string[] {
+  const cur = settings.currency
   const m = settings.modules
   switch (id) {
     case 'individual':
       return R.individual(
-        individualPrizeAmounts(settings, field).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x)} (${settings.prizes.stableford[i]}%)` : formatMoney(x))),
+        individualPrizeAmounts(settings, field).map((x, i) => (settings.prizes.stablefordMode === 'percent' ? `${formatMoney(x, cur)} (${settings.prizes.stableford[i]}%)` : formatMoney(x, cur))),
         // The platform's generic label is no trophy: only a name the organizer gave it is.
         settings.labels.lastPlace.trim() && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace ? settings.labels.lastPlace : null,
         formatFor(settings).describe(settings).steps,
         settings.modules.individual.format === 'matchPlay',
       )
     case 'bestRound':
-      return R.bestRound(formatMoney(settings.prizes.bestRoundPerDay))
+      return R.bestRound(formatMoney(settings.prizes.bestRoundPerDay, cur))
     case 'pairs':
       return R.pairs(
         t.common.andList(m.pairs.pairing.map(([a, b]) => `${a} con ${b}`)),
-        settings.prizes.pairs.map((x) => formatMoney(x)),
+        settings.prizes.pairs.map((x) => formatMoney(x, cur)),
         m.pairs.honoreePicks ? (honoreeName ?? settings.labels.honoree) : null,
       )
     case 'snake':
-      return R.snake(m.snake.puttsThreshold, formatMoney(settings.prizes.snakePerSurvivor), formatMoney(snakePotPerGroup(settings)))
+      return R.snake(m.snake.puttsThreshold, formatMoney(settings.prizes.snakePerSurvivor, cur), formatMoney(snakePotPerGroup(settings), cur))
     case 'fewestPutts':
-      return R.fewestPutts(formatMoney(settings.prizes.fewestPutts), settings.pickupPuttsForFewestPutts)
+      return R.fewestPutts(formatMoney(settings.prizes.fewestPutts, cur), settings.pickupPuttsForFewestPutts)
     case 'auction':
       return R.auction(
-        formatMoney(settings.auction.openingBid),
-        formatMoney(settings.auction.increment),
+        formatMoney(settings.auction.openingBid, cur),
+        formatMoney(settings.auction.increment, cur),
         settings.auction.maxPlayersPerOwner,
         settings.auction.buybackMaxPct,
         settings.auction.payout.map((s) => R.slot(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, s.share, settings.labels.lastPlace)),

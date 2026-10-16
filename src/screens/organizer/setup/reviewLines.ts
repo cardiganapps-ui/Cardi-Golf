@@ -27,6 +27,7 @@ export interface ReviewLine {
 }
 
 export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck | null): ReviewLine[] {
+  const cur = settings.currency
   const W = t.organizer.wizard
   const m = settings.modules
   const out: ReviewLine[] = []
@@ -36,7 +37,7 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
       out.push({
         key: l.moduleId,
         label: l.label,
-        value: l.amount > 0 ? formatMoney(l.amount) : W.reviewNoPrize,
+        value: l.amount > 0 ? formatMoney(l.amount, cur) : W.reviewNoPrize,
         detail: l.amount > 0 ? l.detail : undefined,
         warn: unreachable.get(l.moduleId),
       })
@@ -45,8 +46,8 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
       out.push({
         key: 'total',
         label: W.reviewPrizes,
-        value: formatMoney(check.prizesTotal),
-        detail: check.balanced ? W.reviewBalanced(formatMoney(check.entryPot)) : t.admin.tournament.notBalanced(formatMoney(Math.abs(check.difference))),
+        value: formatMoney(check.prizesTotal, cur),
+        detail: check.balanced ? W.reviewBalanced(formatMoney(check.entryPot, cur)) : t.admin.tournament.notBalanced(formatMoney(Math.abs(check.difference), cur)),
       })
     }
   } else {
@@ -60,7 +61,7 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
     out.push({ key: 'auction', label: m.auction.label, value: W.reviewOwnPot, detail: W.reviewAuction(slots) })
   }
   for (const p of check?.sidePots ?? []) {
-    out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot), detail: W.reviewSidePot(p.detail), warn: unreachable.get(`game:${p.gameId}`) })
+    out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot, cur), detail: W.reviewSidePot(p.detail), warn: unreachable.get(`game:${p.gameId}`) })
   }
   for (const b of check?.bets ?? []) {
     out.push({ key: `bet:${b.gameId}`, label: b.label, value: W.reviewBet, detail: b.detail })

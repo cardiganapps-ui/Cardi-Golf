@@ -41,9 +41,9 @@ vi.mock('../../data/api', async (importOriginal) => ({
   }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { adminSaveHole } from '../../data/api'
 import { useAuth } from '../../data/auth'
 import { enqueueTiebreak, useOutbox } from '../../data/outbox'
@@ -52,7 +52,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 let clock = 0
@@ -72,13 +72,13 @@ function load(s: Snapshot) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
 }
 
-function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isAdmin?: boolean } = {}) {
+function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isComite?: boolean } = {}) {
   const name = opts.fixture ?? 'minimal4-live'
   const fx = getFixture(name)!
   snap = structuredClone(fx.snapshot)
   edit?.(snap)
   load(snap)
-  const me = { ...fx.me, isAdmin: opts.isAdmin ?? fx.me.isAdmin }
+  const me = { ...fx.me, isComite: opts.isComite ?? fx.me.isComite }
   return render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
@@ -528,7 +528,7 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
         const pair = s.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)!
         s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: pair.player1Id, signedAt: '2027-04-10T14:30:00Z' })
       },
-      { fixture: 'full12-live', isAdmin: false },
+      { fixture: 'full12-live', isComite: false },
     )
     expect(strokesOf(pid)).toBe(before)
     expect(screen.queryByText(S.restoredDraft)).toBeNull()
@@ -598,7 +598,7 @@ describe('Tarjeta: a Comité correction on a signed card with a snake tie (the v
     vi.mocked(enqueueTiebreak).mockClear()
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount(undefined, { fixture: 'full12-finished', isAdmin: true })
+      mount(undefined, { fixture: 'full12-finished', isComite: true })
       // Two players take 3 putts: the snake needs to know who holed out last.
       const puttsGroups = screen.getAllByRole('group', { name: new RegExp(`^${S.puttsOf('.+')}$`) })
       const value = (g: HTMLElement) => Number(g.textContent?.replace(/\D+/g, ''))
@@ -713,7 +713,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     admin.saves = []
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isAdmin: true })
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isComite: true })
       await correctFirstAndSave()
       expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
       expect(admin.saves).toHaveLength(1)
@@ -728,7 +728,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     admin.saves = []
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isAdmin: true })
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isComite: true })
       await correctFirstAndSave()
       expect(admin.saves).toHaveLength(1)
       vi.mocked(adminSaveHole).mockRejectedValueOnce(new Error('Failed to fetch'))
@@ -751,7 +751,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
 
   it('a round not started yet: admin_save_score too, never the outbox', async () => {
     admin.saves = []
-    mount((s) => void (s.rounds = s.rounds.map((r) => ({ ...r, status: 'scheduled' as const }))), { isAdmin: true })
+    mount((s) => void (s.rounds = s.rounds.map((r) => ({ ...r, status: 'scheduled' as const }))), { isComite: true })
     await correctFirstAndSave()
     expect(admin.saves.length).toBeGreaterThan(0)
     expect(outbox.scores).toEqual([])
@@ -759,7 +759,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
 
   it('a live round with the card unsigned: the outbox, as any phone of the group', async () => {
     admin.saves = []
-    mount(undefined, { isAdmin: true })
+    mount(undefined, { isComite: true })
     await correctFirstAndSave()
     expect(admin.saves).toEqual([])
     expect(outbox.scores.length).toBeGreaterThan(0)
@@ -770,7 +770,7 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     admin.calls = []
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount(undefined, { fixture: 'full12-finished', isAdmin: true })
+      mount(undefined, { fixture: 'full12-finished', isComite: true })
       const groups = screen.getAllByRole('group', { name: new RegExp(`^${S.strokesOf('.+')}$`) }).slice(0, 2)
       const typed = groups.map((g) => {
         fireEvent.click(screen.getByRole('button', { name: `${g.getAttribute('aria-label')}: ${t.common.stepUp}` }))

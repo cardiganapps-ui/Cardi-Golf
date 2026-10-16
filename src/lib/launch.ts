@@ -50,8 +50,11 @@ function resumeTarget(search: string, now: number): string | null {
   return t && TOURNAMENT_SEGMENT.test(t) ? t : null
 }
 
-/** What a shortcut of the installed app opens in the last tournament (PWA-14): En vivo is its own page. */
-export type ContinueTab = '' | 'tarjeta'
+/**
+ * What a shortcut of the installed app opens in the last tournament (PWA-14): En vivo is its own page. `tv` is
+ * `/tv` typed or bookmarked with no tournament in it (ARCH-19): that tournament's TV.
+ */
+export type ContinueTab = '' | 'tarjeta' | 'tv'
 
 /** The last tournament this phone opened, on that tab; Home when there is none. */
 function continuePath(tab: ContinueTab): string {

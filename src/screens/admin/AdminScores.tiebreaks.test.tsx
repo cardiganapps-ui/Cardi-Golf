@@ -11,7 +11,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 
 const api = vi.hoisted(() => ({ answerTiebreak: vi.fn(async () => undefined) }))
 vi.mock('../../data/api', async (orig) => ({ ...(await orig<typeof import('../../data/api')>()), answerTiebreak: api.answerTiebreak }))

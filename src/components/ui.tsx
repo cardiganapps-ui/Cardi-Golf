@@ -12,6 +12,7 @@ import styles from './ui.module.css'
 import { anySheetOpen, isTopSheet, sheetClosed, sheetOpened } from './sheetHistory'
 import { modalClosed, modalOpened, wrapTab } from './modalFocus'
 import { ease } from '../design/motion'
+import { onToast, toast, type ToastIn, type ToastMsg } from './toast'
 
 export { Field, Segmented } from './primitives'
 
@@ -418,12 +419,6 @@ export function ToastItem({ text, action, onAction }: { text: string; action?: s
   )
 }
 
-/** Tiny toast queue. `toast(msg)` from anywhere; an optional action stays 6 s instead of 2.8 s. */
-type ToastMsg = { id: number; msg: string; action?: string; onAction?: () => void; until: number }
-let listeners: Array<(m: Omit<ToastMsg, 'id' | 'until'>) => void> = []
-export function toast(msg: string, action?: { label: string; onClick: () => void }) {
-  listeners.forEach((l) => l({ msg, action: action?.label, onAction: action?.onClick }))
-}
 /**
  * The toasts' region is always there, empty between toasts (A11Y-14): a live
  * region inserted together with its first message is one VoiceOver and NVDA
@@ -436,16 +431,12 @@ export function Toaster() {
   const [pausedAt, setPausedAt] = useState<number | null>(null)
   const queued = useRef(0)
   useEffect(() => {
-    const l = (m: Omit<ToastMsg, 'id' | 'until'>) => {
+    return onToast((m: ToastIn) => {
       const id = Date.now() + Math.random()
       // Into an empty queue nothing is held: a toast removed under the pointer or the focus sends no leave or blur.
       if (queued.current === 0) setPausedAt(null)
       setMsgs((cur) => [...cur, { id, ...m, until: Date.now() + (m.action ? 6000 : 2800) }])
-    }
-    listeners.push(l)
-    return () => {
-      listeners = listeners.filter((x) => x !== l)
-    }
+    })
   }, [])
   useEffect(() => {
     queued.current = msgs.length

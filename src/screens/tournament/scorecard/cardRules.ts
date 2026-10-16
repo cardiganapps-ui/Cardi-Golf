@@ -10,14 +10,14 @@ export function cardRules(o: {
   snapshot: Pick<Snapshot, 'pairs' | 'cardSignatures'>
   round: Pick<Round, 'id' | 'status'>
   playerIds: readonly string[]
-  isAdmin: boolean
+  isComite: boolean
   /**
    * A marker signs each player's card (UX-23): a signature locks that player's row only, so the rest of the group
    * still finishes its own holes. Under the pairs' rule a signature locks the whole card, as it always did.
    */
   perPlayer?: boolean
 }) {
-  const { snapshot, round, isAdmin } = o
+  const { snapshot, round, isComite } = o
   const pairSigned = (pairId: string) => snapshot.cardSignatures.some((s) => s.roundId === round.id && s.pairId === pairId)
   /** Whether this player's card is signed today: his pair's signature, or his own (a marker's, 0054). */
   const signed = (pid: string) => {
@@ -26,23 +26,23 @@ export function cardRules(o: {
   }
   const anySigned = o.playerIds.some(signed)
   const locksCard = o.perPlayer ? o.playerIds.length > 0 && o.playerIds.every(signed) : anySigned
-  const canEdit = isAdmin || (round.status === 'live' && !locksCard)
+  const canEdit = isComite || (round.status === 'live' && !locksCard)
   return {
     signed,
     pairSigned,
     anySigned,
     canEdit,
     /** Whether this phone may change this player's hole now (a kept draft is restored only then). */
-    editableFor: (pid: string) => canEdit && !(signed(pid) && !isAdmin),
+    editableFor: (pid: string) => canEdit && !(signed(pid) && !isComite),
     /** A player's row is locked on a signed card, except for the Comité. */
-    lockedFor: (pid: string) => signed(pid) && !isAdmin,
+    lockedFor: (pid: string) => signed(pid) && !isComite,
     /** A Comité correction on a signed card needs a reason (§7); it is written through the server RPC, not the outbox. */
-    needsReason: isAdmin && anySigned,
+    needsReason: isComite && anySigned,
     /**
      * Whether writing these players is a Comité correction on the server: a phone's write would be refused (a day
      * no longer live, a signed card, 0026). Then the whole hole goes in one call, every player or none (REL-22).
      */
-    correctsOnServer: (ids: readonly string[]) => isAdmin && ids.some((id) => round.status !== 'live' || signed(id)),
+    correctsOnServer: (ids: readonly string[]) => isComite && ids.some((id) => round.status !== 'live' || signed(id)),
   }
 }
 

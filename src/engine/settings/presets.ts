@@ -1,3 +1,4 @@
+import { PLATFORM_CURRENCY } from '../../lib/money'
 import { DEFAULT_FORMAT_OPTIONS, type TournamentSettings } from './schema'
 
 /**
@@ -52,7 +53,7 @@ export const DEFAULT_SETTINGS: TournamentSettings = {
   spectatorLink: false,
   // The create wizard replaces this with the organizer's own zone.
   timezone: 'America/Mexico_City',
-  currency: 'MXN',
+  currency: PLATFORM_CURRENCY,
 }
 
 /**
@@ -115,6 +116,3 @@ export const FIRST_TOURNAMENT_SETTINGS: TournamentSettings = {
   timezone: 'America/Mazatlan',
   currency: 'MXN',
 }
-
-/** Field size of the first tournament; used by the prize-sum check in tests and seeds. */
-export const FIRST_TOURNAMENT_PLAYER_COUNT = 12

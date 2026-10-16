@@ -16,7 +16,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { t } from '../i18n/es-MX'
 import { anySheetOpen } from './sheetHistory'
 import { _modalFocusTest } from './modalFocus'
-import { Sheet, Toaster, toast } from './ui'
+import { Sheet, Toaster } from './ui'
+import { toast } from './toast'
 
 function Page({ onExited, dirty = false }: { onExited?: () => void; dirty?: boolean }) {
   // The content goes with the open state, as `open={!!edit}` does on the Comité's screens.

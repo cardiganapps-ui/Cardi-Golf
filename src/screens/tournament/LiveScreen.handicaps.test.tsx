@@ -12,7 +12,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { HandicapInputs, Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), useTournamentProfiles: () => [[], () => undefined] }))
 const { LiveScreen } = await import('./LiveScreen')

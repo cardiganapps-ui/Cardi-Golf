@@ -27,7 +27,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 

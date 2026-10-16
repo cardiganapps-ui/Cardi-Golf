@@ -47,7 +47,7 @@ function mount() {
   return { open, leader, name, players: fx.snapshot.players }
 }
 const tiles = () => within(screen.getByRole('radiogroup', { name: A.bidder }))
-const plus = () => screen.getByRole('button', { name: A.bid(formatMoney(250)) })
+const plus = () => screen.getByRole('button', { name: A.bid(formatMoney(250, 'MXN')) })
 
 beforeEach(() => Object.values(api).forEach((f) => f.mockClear()))
 afterEach(() => cleanup())
@@ -76,7 +76,7 @@ describe('Calcutta console at a loud dinner (UX-13)', () => {
     fireEvent.click(screen.getByRole('button', { name: A.sold }))
     expect(api.sellLot).not.toHaveBeenCalled()
     const ask = screen.getByRole('dialog', { name: A.hammerTitle })
-    const price = formatMoney(open.currentBid?.amount ?? 250)
+    const price = formatMoney(open.currentBid?.amount ?? 250, 'MXN')
     expect(within(ask).getByText(leader === open.playerId ? A.hammerSelf(name(open.playerId), price) : A.hammerBody(name(open.playerId), name(leader), price))).toBeTruthy()
     fireEvent.click(within(ask).getByRole('button', { name: t.common.cancel }))
     expect(api.sellLot).not.toHaveBeenCalled()
@@ -137,14 +137,14 @@ describe('a custom bid goes up in the increment (MONEY-19)', () => {
     const { standing } = ready()
     await custom(standing + 120)
     expect(api.placeBid).not.toHaveBeenCalled()
-    expect(screen.getByText(A.offStep(formatMoney(250), [formatMoney(standing + 250)]))).toBeTruthy()
+    expect(screen.getByText(A.offStep(formatMoney(250, 'MXN'), [formatMoney(standing + 250, 'MXN')]))).toBeTruthy()
   })
 
   it('between two steps further up, both are offered', async () => {
     const { standing } = ready()
     await custom(standing + 850)
     expect(api.placeBid).not.toHaveBeenCalled()
-    expect(screen.getByText(A.offStep(formatMoney(250), [formatMoney(standing + 750), formatMoney(standing + 1000)]))).toBeTruthy()
+    expect(screen.getByText(A.offStep(formatMoney(250, 'MXN'), [formatMoney(standing + 750, 'MXN'), formatMoney(standing + 1000, 'MXN')]))).toBeTruthy()
   })
 
   it('on the step, the bid goes as typed', async () => {

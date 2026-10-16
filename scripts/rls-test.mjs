@@ -645,7 +645,8 @@ try {
   await admin.storage.from('tournament-assets').remove([avatar])
 
   console.log('results: WHS in SQL, round results, the Polo index, published results:')
-  // SQL and TS agree on every shared case (src/engine/profile/cases/whs.json).
+  // SQL and TS agree on every shared case (src/engine/profile/cases/whs.json); the db job runs the same cases on a
+  // fresh database (scripts/whs-parity.mjs, ARCH-16), this checks production's own functions.
   const whs = JSON.parse(await readFile(path.join(root, 'src', 'engine', 'profile', 'cases', 'whs.json'), 'utf8'))
   const off = []
   for (const c of whs.diff) {

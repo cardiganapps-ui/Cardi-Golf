@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminScores } from './AdminScores'
 
 const SC = t.admin.scores

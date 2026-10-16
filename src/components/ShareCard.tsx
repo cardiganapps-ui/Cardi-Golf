@@ -15,6 +15,8 @@ import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import { TournamentLogo } from './TournamentLogo'
 import styles from './ShareCard.module.css'
+import { useCurrency } from './currency'
+import { localDay } from '../lib/localWhen'
 
 export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement' }
 
@@ -64,6 +66,7 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
 })
 
 function Card({ what }: { what: ShareKind }) {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   // Shared from a link to watch (STRAT-05): the image carries that link, so whoever gets it can open the boards too.
   const watch = useContext(TournamentContext)?.spectator?.url ?? null
@@ -83,7 +86,7 @@ function Card({ what }: { what: ShareKind }) {
   )
   const footer = (
     <div className={styles.footer}>
-      <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      <span>{localDay(new Date(), settings.timezone)}</span>
       {watch && <span className={styles.watch}>{t.spectator.cardLink(watch.replace(/^https?:\/\//, ''))}</span>}
       <Wordmark size={13} />
     </div>
@@ -109,7 +112,7 @@ function Card({ what }: { what: ShareKind }) {
                 <span className={styles.name}>{r.entrant.isTeam ? r.entrant.name : nameOf(r.playerId)}</span>
                 <span className={styles.small}>{daysText(r.perRound)}</span>
                 <span className={styles.big}>{r.figure.text}</span>
-                <span className={styles.cash}>{cash > 0 ? formatMoney(cash) : ''}</span>
+                <span className={styles.cash}>{cash > 0 ? formatMoney(cash, cur) : ''}</span>
               </div>
             )
           })}
@@ -176,9 +179,9 @@ function Card({ what }: { what: ShareKind }) {
           <div key={m.playerId} className={styles.row}>
             <span className={styles.name}>{nameOf(m.playerId)}</span>
             <span className={styles.small}>
-              {t.money.puts} {formatMoney(m.paid)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives)}
+              {t.money.puts} {formatMoney(m.paid, cur)}, {t.money.receives.toLowerCase()} {formatMoney(m.receives, cur)}
             </span>
-            <span className={`${styles.big} ${m.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(m.net)}</span>
+            <span className={`${styles.big} ${m.net >= 0 ? styles.pos : styles.neg}`}>{formatSignedMoney(m.net, cur)}</span>
           </div>
         ))}
       </Rows>

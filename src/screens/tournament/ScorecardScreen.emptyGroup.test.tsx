@@ -21,7 +21,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 
@@ -43,7 +43,7 @@ function mountEmptyGroup(playerIds: string[]) {
   useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,

@@ -24,7 +24,7 @@ import { getFixture } from '../../dev/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { Toaster } from '../../components/ui'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminGames } from './AdminGames'
 import { AdminTournament } from './AdminTournament'
 
@@ -73,7 +73,7 @@ const stored = () => row().settings as Stored
 function mount(fx: ReturnType<typeof world>['fx'], screenEl: React.ReactNode) {
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         {screenEl}
         <Toaster />
       </TournamentContext.Provider>

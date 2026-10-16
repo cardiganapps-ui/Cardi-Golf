@@ -7,7 +7,9 @@ import { useMemo, useState } from 'react'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { getFixture } from '../dev/fixtures'
 import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from '../components/icons'
-import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, toPar, type GridHole } from '../components/primitives'
+import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, Wordmark, type GridHole } from '../components/primitives'
+import { formatMoney, formatSignedMoney, PLATFORM_CURRENCY } from '../lib/money'
+import { toPar } from '../components/notation'
 import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
 import { contrast as ratio, luminance } from '../lib/contrast'
 import { cssVar } from '../lib/tokens'
@@ -367,7 +369,7 @@ export function DesignScreen() {
             <BoardHead figureLabel="Neto" />
             {fx.data.snapshot.players.slice(0, 3).map((p, i) => {
               const m = fx.data.state.money.people[p.id]!
-              return <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={`Pone ${new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(m.paid)}`} figure={`${m.net < 0 ? '−' : '+'}$${Math.abs(m.net).toLocaleString('es-MX')}`} tone={m.net < 0 ? 'under' : 'even'} />
+              return <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={`Pone ${formatMoney(m.paid, PLATFORM_CURRENCY)}`} figure={formatSignedMoney(m.net, PLATFORM_CURRENCY)} tone={m.net < 0 ? 'under' : 'even'} />
             })}
           </Board>
         </section>

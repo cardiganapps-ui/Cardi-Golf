@@ -32,6 +32,18 @@ describe('the copy on the phone (audit P0-5)', () => {
     })
   })
 
+  // ARCH-20: the Comité's rights were `isAdmin` until this build; a copy an older build kept still opens the Comité.
+  it('an entry an older build saved with `isAdmin` reads as the Comité it was', async () => {
+    const { isComite: _was, ...older } = live.me
+    await saveEntry({ ...entryOf(live), me: { ...older, isAdmin: true } as unknown as typeof live.me })
+    await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
+    const me = (await readCached(live.snapshot.tournament.slug))!.entry.me
+    expect(me.isComite).toBe(true)
+    expect('isAdmin' in me).toBe(false)
+    await saveEntry({ ...entryOf(live), me: { ...older, isAdmin: false } as unknown as typeof live.me })
+    expect((await readCached(live.snapshot.tournament.slug))!.entry.me.isComite).toBe(false)
+  })
+
   it('the newest snapshot replaces the one before', async () => {
     await saveEntry(entryOf(small))
     at(1000)

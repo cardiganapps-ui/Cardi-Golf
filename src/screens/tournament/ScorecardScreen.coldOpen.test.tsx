@@ -20,7 +20,7 @@ vi.mock('../../data/api', async (importOriginal) => ({
   }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
 import { _outboxTest, applyFields, baseRow, enqueueScore, startOutbox } from '../../data/outbox'
 import { getFixture } from '../../dev/fixtures'
@@ -28,7 +28,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 const PIDS = ['p1', 'p2', 'p3', 'p4']
@@ -50,9 +50,9 @@ function seedBoards(s: Snapshot) {
 /** What Tarjeta's save writes through: the outbox overlays it, as the store's compute does. */
 const refresh = () => useTournament.getState().refresh()
 
-function mount(opts: { isAdmin?: boolean } = {}) {
+function mount(opts: { isComite?: boolean } = {}) {
   const f = fx()
-  const me = { ...f.me, isAdmin: opts.isAdmin ?? false }
+  const me = { ...f.me, isComite: opts.isComite ?? false }
   return render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: base.tournament.id, slug: '_/minimal4-live', lookup: f.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
@@ -234,7 +234,7 @@ describe('NEW-11: a cold open with hole 10 queued, then «Guardar»', () => {
     await queueHole(10, TYPED)
     coldRestart()
     seedBoards(base)
-    mount({ isAdmin: true })
+    mount({ isComite: true })
     expect(holeOnScreen()).toBe(10)
     await tapSave(20_000)
     expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()

@@ -13,7 +13,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { AuditEntry } from '../../data/api'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 
 const audit = vi.hoisted(() => ({ entries: [] as AuditEntry[] }))
 vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), tournamentAudit: vi.fn(async () => audit.entries) }))
@@ -43,7 +43,7 @@ function mount() {
   useTournament.setState({ tournamentId: 't-history', data: dataFromSnapshot(structuredClone(fx.snapshot)), reload: async () => undefined })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 't-history', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminHistory />
       </TournamentContext.Provider>
     </MemoryRouter>,

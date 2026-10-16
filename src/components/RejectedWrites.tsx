@@ -23,7 +23,8 @@ import { useTournament } from '../data/tournamentStore'
 import type { Snapshot } from '../engine/types'
 import { cardSignedFor } from '../engine/core/cardSigning'
 import { ConfirmSheet } from './ConfirmSheet'
-import { Sheet, toast } from './ui'
+import { Sheet } from './ui'
+import { toast } from './toast'
 import styles from './RejectedWrites.module.css'
 
 const IB = t.admin.inbox

@@ -4,6 +4,7 @@ name: Database
 # from zero on Postgres with Supabase's stubs, the way scripts/db.mjs applies
 # it to production; db.mjs's checksums; the SQL tests on the two-tenant seed;
 # the test server's rules against the real ones (scripts/server-rules.mjs);
+# the Polo index's SQL against the shared WHS cases (scripts/whs-parity.mjs);
 # Supabase's advisors held at the baseline. Runs on pull requests that are
 # ready for review and touch the database or its scripts, on main, and nightly.
 # Drafts skip it (Actions minutes are budgeted once the repository is private).
@@ -18,6 +19,8 @@ on:
       - 'scripts/lib/**'
       - 'scripts/server-rules.mjs'
       - 'src/data/testing/cases/**'
+      - 'scripts/whs-parity.mjs'
+      - 'src/engine/profile/cases/**'
       - 'scripts/restore-r2.mjs'
       - 'scripts/backup-local.mjs'
       - 'src/lib/backupTables.ts'
@@ -32,6 +35,8 @@ on:
       - 'scripts/lib/**'
       - 'scripts/server-rules.mjs'
       - 'src/data/testing/cases/**'
+      - 'scripts/whs-parity.mjs'
+      - 'src/engine/profile/cases/**'
       - 'scripts/restore-r2.mjs'
       - 'scripts/backup-local.mjs'
       - 'src/lib/backupTables.ts'

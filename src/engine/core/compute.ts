@@ -34,12 +34,15 @@ export function holeWhy(r: Pick<HoleResult, 'par' | 'strokeIndex' | 'strokesRece
       ? r.pickedUp
         ? ['Levantó: 0 pts']
         : [
-            `Par ${par}, SI ${r.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
-            `${g} − ${sr} = ${withTrueMinus(r.net ?? 0)} neto`,
+            // A plus handicap gives a stroke back here (MONEY-21): «da 1 golpe», «5 + 1 = 6 neto», «4 − 1 − 5 + 2».
+            sr < 0
+              ? `Par ${par}, SI ${r.strokeIndex}: da ${-sr} golpe${sr === -1 ? '' : 's'} (hándicap por debajo de 0)`
+              : `Par ${par}, SI ${r.strokeIndex}: ${sr} golpe${sr === 1 ? '' : 's'} de ventaja`,
+            `${g} ${sr < 0 ? '+' : '−'} ${Math.abs(sr)} = ${withTrueMinus(r.net ?? 0)} neto`,
             // Below zero counts as 0: «4 + 0 − 9 + 2 = −3, cuenta 0 pts», never «= 0».
             par + sr - (g ?? 0) + 2 < 0
-              ? `${par} + ${sr} − ${g} + 2 = ${withTrueMinus(par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
-              : `${par} + ${sr} − ${g} + 2 = ${ptsText(pts)} (${netScoreName(pts)})`,
+              ? `${par} ${sr < 0 ? '−' : '+'} ${Math.abs(sr)} − ${g} + 2 = ${withTrueMinus(par + sr - (g ?? 0) + 2)}, cuenta 0 pts (${netScoreName(0)})`
+              : `${par} ${sr < 0 ? '−' : '+'} ${Math.abs(sr)} − ${g} + 2 = ${ptsText(pts)} (${netScoreName(pts)})`,
           ]
       : ['Sin capturar'],
   }
@@ -195,21 +198,29 @@ export function computeCore(snapshot: Snapshot, settings: TournamentSettings): C
           cuts.steps = [`Día ${round.number - 1}: ${cut.why.steps.join('; ')}`]
         }
       }
-      let playingHcp = Math.max(0, ph.value - cuts.total)
-      // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
+      // A cut takes strokes away and never adds one (§5.2): it stops at 0, and a plus handicap (MONEY-21), which
+      // receives none, keeps what it plays off; PH2 = max(0, PH1 − cut) would have moved it up to scratch.
       const afterCut = ph.value - cuts.total
-      if (cuts.total > 0) steps.push(...cuts.steps, `${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`)
+      let playingHcp = ph.value < 0 ? ph.value : Math.max(0, afterCut)
+      // A cut larger than the handicap stops at 0: «2 − 4 = −2, no baja de 0», never «2 − 4 = 0».
+      if (cuts.total > 0)
+        steps.push(
+          ...cuts.steps,
+          ph.value < 0
+            ? `Juega con ${handicapText(ph.value)}: no recibe golpes, así que el recorte no le quita nada`
+            : `${ph.value} − ${cuts.total} = ${afterCut < 0 ? `${withTrueMinus(afterCut)}, no baja de 0: 0` : playingHcp}`,
+        )
       else if (ri > 0) steps.push(...cuts.steps)
       let overridden = false
       const ov = snapshot.handicapOverrides.find((o) => o.roundId === round.id && o.playerId === p.id)
       if (ov) {
         overridden = true
         // A link to watch carries no reason (the Comité's free text stays with the members, STRAT-05).
-        steps.push(`Ajuste del Comité: de ${playingHcp} a ${ov.playingHcp}${ov.reason ? ` (${ov.reason})` : ''}`)
+        steps.push(`Ajuste del Comité: de ${handicapText(playingHcp)} a ${handicapText(ov.playingHcp)}${ov.reason ? ` (${ov.reason})` : ''}`)
         playingHcp = ov.playingHcp
       }
-      if (round.holes === 9) steps.push(`Ronda de 9 hoyos: la mitad, ${roundHalfUp(playingHcp / 2)}, repartida en los nueve hoyos del más difícil al más fácil`)
-      const playingHcpWhy: Explanation = { title: `Hándicap de juego ${playingHcp}`, steps }
+      if (round.holes === 9) steps.push(`Ronda de 9 hoyos: la mitad, ${handicapText(roundHalfUp(playingHcp / 2))}, repartida en los nueve hoyos del más difícil al más fácil`)
+      const playingHcpWhy: Explanation = { title: `Hándicap de juego ${handicapText(playingHcp)}`, steps }
 
       // Holes.
       const results: HoleResult[] = []

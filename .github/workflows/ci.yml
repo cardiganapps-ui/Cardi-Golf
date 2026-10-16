@@ -28,6 +28,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder
+      # QA-15: where coverage stands, by area, on the run's summary (npm test wrote it; the bars are
+      # vite.config.ts's). Lint warnings fail the preflight (`eslint --max-warnings 0`), and the build holds the
+      # first load's JavaScript to its budget (scripts/check-bundle.mjs) beside the precache's.
+      - if: always() && hashFiles('coverage/coverage-summary.json') != ''
+        run: node scripts/coverage-summary.mjs
       # QA-21: a known high or critical vulnerability in what ships to phones and
       # serverless routes (the production dependencies) fails the check. Dev
       # tooling comes up to date through Dependabot (.github/dependabot.yml).

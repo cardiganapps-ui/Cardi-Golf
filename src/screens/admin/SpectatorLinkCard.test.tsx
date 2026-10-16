@@ -14,7 +14,7 @@ import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { AuditEntry } from '../../data/api'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 
 /** The server's link for the tournament, as 0053 keeps it. */
 const server = vi.hoisted(() => ({ link: null as null | { token: string; money: boolean }, n: 0, missing: false }))
@@ -66,7 +66,7 @@ function mount() {
   useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null, realtime: 'off' })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <SpectatorLinkCard />
         <Toaster />
       </TournamentContext.Provider>
@@ -205,7 +205,7 @@ describe('Comité › Historial says each step of the link, never the link (STRA
     useTournament.setState({ tournamentId: 'fx-full', data: dataFromSnapshot(structuredClone(fx.snapshot)) })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider value={{ tournamentId: 'fx-full', slug: 'nacho', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
           <AdminHistory />
         </TournamentContext.Provider>
       </MemoryRouter>,

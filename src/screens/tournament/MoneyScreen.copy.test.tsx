@@ -25,7 +25,7 @@ import type { Snapshot } from '../../engine/types'
 import { formatMoney } from '../../lib/money'
 import { t } from '../../i18n/es-MX'
 import { MoneyScreen } from './MoneyScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const TID = 'fixture:full12-live'
 function mount(edit?: (s: Snapshot) => void) {
@@ -35,7 +35,7 @@ function mount(edit?: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: TID, data: dataFromSnapshot(snapshot) })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <MoneyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -58,15 +58,15 @@ describe('Dinero says what is put in and what is still due (COPY-03)', () => {
     const due = stillOwes(money.accounts, someone.playerId)
     // Nobody has paid anything, so what each still owes today is at least his entry.
     expect(due).toBeGreaterThan(0)
-    expect(screen.getAllByText(`, ${t.money.owes(formatMoney(due))}`).length).toBeGreaterThan(0)
-    expect(document.body.textContent).toContain(`${t.money.puts} ${formatMoney(someone.paid)}`)
+    expect(screen.getAllByText(`, ${t.money.owes(formatMoney(due, 'MXN'))}`).length).toBeGreaterThan(0)
+    expect(document.body.textContent).toContain(`${t.money.puts} ${formatMoney(someone.paid, 'MXN')}`)
   })
 
   it('the WhatsApp text says «pone» and «debe», never «pagó»', () => {
     const money = mount(nothingPaid)
     expect(shared.text).not.toMatch(/pagó/i)
     const someone = Object.values(money.people).find((p) => stillOwes(money.accounts, p.playerId) > 0)!
-    expect(shared.text).toContain(`${t.money.puts.toLowerCase()} ${formatMoney(someone.paid)} (${t.money.owes(formatMoney(stillOwes(money.accounts, someone.playerId)))})`)
+    expect(shared.text).toContain(`${t.money.puts.toLowerCase()} ${formatMoney(someone.paid, 'MXN')} (${t.money.owes(formatMoney(stillOwes(money.accounts, someone.playerId), 'MXN'))})`)
   })
 
   it('a person with everything due today marked paid has no «debe» on his line', () => {
@@ -76,8 +76,8 @@ describe('Dinero says what is put in and what is still due (COPY-03)', () => {
     const clear = Object.values(money.people).filter((p) => p.paid > 0 && stillOwes(money.accounts, p.playerId) === 0)
     const owing = Object.values(money.people).filter((p) => stillOwes(money.accounts, p.playerId) > 0)
     expect(clear.length + owing.length).toBeGreaterThan(0)
-    for (const p of clear) expect(shared.text).toContain(`${nameOf(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid)}, `)
-    for (const p of owing) expect(shared.text).toContain(`${nameOf(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid)} (${t.money.owes(formatMoney(stillOwes(money.accounts, p.playerId)))}), `)
+    for (const p of clear) expect(shared.text).toContain(`${nameOf(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid, 'MXN')}, `)
+    for (const p of owing) expect(shared.text).toContain(`${nameOf(p.playerId)}: ${t.money.puts.toLowerCase()} ${formatMoney(p.paid, 'MXN')} (${t.money.owes(formatMoney(stillOwes(money.accounts, p.playerId), 'MXN'))}), `)
   })
 
   it('«Quién debe qué» says how many debts are still out and how much (COPY-07)', () => {
@@ -86,6 +86,6 @@ describe('Dinero says what is put in and what is still due (COPY-03)', () => {
     const owed = money.accounts.filter(collectible)
     expect(owed.length).toBeGreaterThan(0)
     const heading = screen.getByRole('heading', { name: new RegExp(`^${t.moneyScreen.checklist}`) })
-    expect(heading.textContent).toBe(`${t.moneyScreen.checklist}: ${t.moneyScreen.checklistCount(owed.length, formatMoney(owed.reduce((n, a) => n + a.due, 0)))}`)
+    expect(heading.textContent).toBe(`${t.moneyScreen.checklist}: ${t.moneyScreen.checklistCount(owed.length, formatMoney(owed.reduce((n, a) => n + a.due, 0), 'MXN'))}`)
   })
 })

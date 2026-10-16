@@ -76,7 +76,7 @@ const { LiveScreen } = await import('./LiveScreen')
 const { GamesScreen } = await import('./GamesScreen')
 const { MoneyScreen } = await import('./MoneyScreen')
 const { ScorecardScreen } = await import('./ScorecardScreen')
-const { TournamentContext } = await import('./TournamentGate')
+const { TournamentContext } = await import('./tournamentContext')
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
 const cancelAnimation = Animation.prototype.cancel

@@ -19,7 +19,7 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/ui', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/ui')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
 
 import { enqueueSignature, useOutbox } from '../../data/outbox'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -30,7 +30,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
 import { MarkerSigningPanel } from './scorecard/SigningPanel'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 afterEach(() => {
@@ -38,7 +38,7 @@ afterEach(() => {
   vi.mocked(enqueueSignature).mockClear()
 })
 
-function mount(edit: (s: Snapshot) => void, opts: { isAdmin?: boolean } = {}) {
+function mount(edit: (s: Snapshot) => void, opts: { isComite?: boolean } = {}) {
   const fx = getFixture('minimal4-live')!
   const snap = structuredClone(fx.snapshot)
   const round = snap.rounds.find((r) => r.status === 'live')!
@@ -48,7 +48,7 @@ function mount(edit: (s: Snapshot) => void, opts: { isAdmin?: boolean } = {}) {
   edit(snap)
   useOutbox.setState({ queueRead: true })
   useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
-  const me = { ...fx.me, isAdmin: opts.isAdmin ?? false }
+  const me = { ...fx.me, isComite: opts.isComite ?? false }
   render(
     <MemoryRouter>
       <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
@@ -112,7 +112,7 @@ describe('Tarjeta: a marker signs each player’s card (UX-23)', () => {
   })
 
   it('the Comité signs any card, his own player’s too', () => {
-    const { snap } = mount(rule('marker'), { isAdmin: true })
+    const { snap } = mount(rule('marker'), { isComite: true })
     expect(screen.getAllByRole('button', { name: /^Firmar la tarjeta de / }).map((b) => b.getAttribute('aria-label'))).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => S.signPlayer(nameOf(snap, id))))
   })
 })
@@ -135,19 +135,19 @@ describe('MarkerSigningPanel on its own', () => {
     { id: 'b', name: 'Beto' },
   ]
   it('a phone outside the group sees each card’s state and signs none', () => {
-    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[]} pairs={[]} myPlayerId="z" inGroup={false} isAdmin={false} onSign={() => undefined} />)
+    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[]} pairs={[]} myPlayerId="z" inGroup={false} isComite={false} onSign={() => undefined} />)
     expect(screen.getAllByText(S.cardUnsigned)).toHaveLength(2)
     expect(screen.queryByRole('button')).toBeNull()
   })
   it('a card its pair signed before (another rule) reads as signed', () => {
     const pairs = [{ id: 'pa', name: null, player1Id: 'a', player2Id: 'x', kind: null, pickedByHonoree: false, drawnAt: null }]
-    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[{ roundId: 'r1', pairId: 'pa', signedBy: 'b', signedAt: '' }]} pairs={pairs} myPlayerId="b" inGroup isAdmin={false} onSign={() => undefined} />)
+    render(<MarkerSigningPanel roundId="r1" players={players} signatures={[{ roundId: 'r1', pairId: 'pa', signedBy: 'b', signedAt: '' }]} pairs={pairs} myPlayerId="b" inGroup isComite={false} onSign={() => undefined} />)
     expect(screen.getByText(S.cardSigned)).toBeTruthy()
     expect(screen.queryByRole('button', { name: S.signPlayer('Ana') })).toBeNull()
     expect(screen.queryByRole('button', { name: S.signPlayer('Beto') })).toBeNull()
   })
   it('no complete card yet: nothing at all', () => {
-    const { container } = render(<MarkerSigningPanel roundId="r1" players={[]} signatures={[]} pairs={[]} myPlayerId="b" inGroup isAdmin={false} onSign={() => undefined} />)
+    const { container } = render(<MarkerSigningPanel roundId="r1" players={[]} signatures={[]} pairs={[]} myPlayerId="b" inGroup isComite={false} onSign={() => undefined} />)
     expect(container.textContent).toBe('')
   })
 })

@@ -5,7 +5,8 @@
  */
 import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Sheet, toast } from '../../components/ui'
+import { Avatar, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { adminSetAwards, seedGameEntries, setGameEntry, setGameResults, SettingsChanged, updateSettings } from '../../data/api'
 import { settingsWrite } from '../../data/settingsWrite'
@@ -16,19 +17,21 @@ import type { GameConfig, Match } from '../../engine/settings/games'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
 import a from './Admin.module.css'
+import { useCurrency } from '../../components/currency'
 import { humanError } from '../../lib/humanError'
 
 const G = t.admin.games
 
-export function moneyLine(g: GameConfig): string {
+function moneyLine(g: GameConfig, cur: string): string {
   const m = g.money
-  if (m.source === 'main') return G.money.main(formatMoney(m.amount))
-  if (m.source === 'side') return G.money.side(formatMoney(m.buyIn))
-  if (m.source === 'direct') return G.money.direct(formatMoney(m.stake))
+  if (m.source === 'main') return G.money.main(formatMoney(m.amount, cur))
+  if (m.source === 'side') return G.money.side(formatMoney(m.buyIn, cur))
+  if (m.source === 'direct') return G.money.direct(formatMoney(m.stake, cur))
   return G.money.none
 }
 
 export function AdminGames() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
   const { snapshot, settings } = data
@@ -96,7 +99,7 @@ export function AdminGames() {
             <div className={a.sectionTitle}>
               <span className={a.rowText}>
                 <span className={a.rowTitle}>{g.label}</span>
-                <span className={a.rowSub}>{moneyLine(g)}</span>
+                <span className={a.rowSub}>{moneyLine(g, cur)}</span>
               </span>
               <span className={a.count}>{G.playing(count, snapshot.players.length)}</span>
             </div>

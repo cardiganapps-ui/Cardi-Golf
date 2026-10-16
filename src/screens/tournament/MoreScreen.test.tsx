@@ -19,7 +19,7 @@ vi.mock('../../data/auth', async () => {
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}), authSettings: async () => null }))
 vi.mock('./tournamentContext', () => ({
   useTournamentCtx: () => ({
-    me: { playerId: 'p1', isOrganizer: false, isAdmin: false, via: 'device' },
+    me: { playerId: 'p1', isOrganizer: false, isComite: false, via: 'device' },
     slug: 'nacho',
     lookup: { id: 't1', slug: 'nacho', name: 'Nacho', joinCode: 'NACHO1' },
     leave: gate.leave,

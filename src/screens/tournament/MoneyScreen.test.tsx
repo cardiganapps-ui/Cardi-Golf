@@ -30,8 +30,8 @@ vi.mock('../../data/api', async (importOriginal) => ({
   setBuybackPaid: vi.fn(async () => undefined),
 }))
 const toasts = vi.hoisted(() => [] as Array<{ msg: string; action?: { label: string; onClick: () => void } }>)
-vi.mock('../../components/ui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../components/ui')>()),
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
   toast: vi.fn((msg: string, action?: { label: string; onClick: () => void }) => void toasts.push({ msg, action })),
 }))
 
@@ -40,7 +40,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 import { MoneyScreen } from './MoneyScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const M = t.moneyScreen
 const TID = 'fixture:full12-live'
@@ -52,7 +52,7 @@ function mount(edit?: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: TID, data: dataFromSnapshot(snapshot) })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <MoneyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,

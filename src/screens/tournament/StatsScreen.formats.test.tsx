@@ -16,7 +16,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { StatsScreen } from './StatsScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 function stats(edit?: (s: Snapshot) => void) {
   const fx = getFixture('stroke8')!

@@ -30,7 +30,8 @@ import { noticeLine } from '../../lib/noticeText'
 import { PlayerSheet } from './PlayerSheet'
 import { tournamentPushHint } from './pushHint'
 import { ScoreGrid } from './scorecard/ScoreGrid'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
+import { parseSettings } from '../../engine/settings/schema'
 
 const { LiveScreen } = await import('./LiveScreen')
 
@@ -142,7 +143,7 @@ describe('the player’s sheet', () => {
     expect(vi.mocked(cardHistory)).toHaveBeenCalledWith(snap.tournament.id, who)
     const heading = sheet.getByRole('heading', { name: H.title })
     await waitFor(() => expect(document.activeElement).toBe(heading))
-    const tz = snap.tournament.timezone
+    const tz = parseSettings(snap.tournament.settings).timezone
     expect(sheet.getByText(H.step(localWhen('2027-04-09T16:41:00Z', tz), 'Ana', '6 golpes, 2 putts', null))).toBeTruthy()
     expect(sheet.getByText(H.step(localWhen('2027-04-09T22:02:00Z', tz), 'el Comité', '5 golpes, 1 putt', `«${REASON}»`))).toBeTruthy()
     expect(sheet.queryByText(t.round.hole(4))).toBeNull()

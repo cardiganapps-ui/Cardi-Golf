@@ -5,7 +5,8 @@
  */
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { Field, Sheet, toast } from '../../components/ui'
+import { Field, Sheet } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { deleteRound, setRoundStatus, setRoundTee, updateTournament, upsertRound } from '../../data/api'

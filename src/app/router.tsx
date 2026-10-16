@@ -1,13 +1,11 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { Lazy } from '../components/Lazy'
-import { t } from '../i18n/es-MX'
 import { AppShell } from './AppShell'
 import { ContinueScreen } from '../screens/ContinueScreen'
 import { NotFoundScreen } from '../screens/NotFoundScreen'
 import { RouteError } from './RouteError'
 import { spectatorChildren } from '../screens/spectator/routes'
 import { SettingsGuard } from '../screens/tournament/SettingsGuard'
-import { PlaceholderScreen } from '../screens/tournament/PlaceholderScreen'
 import { devRoutes } from './devRoutes'
 import {
   AdminAuction,
@@ -184,7 +182,8 @@ export const router = createBrowserRouter([
       { path: 'p/:handle/vs', element: <Lazy><VersusScreen /></Lazy> },
       { path: 'c/unirme/:code', element: <Lazy><CrewJoinScreen /></Lazy> },
       { path: 'c/:slug', element: <Lazy><CrewScreen /></Lazy> },
-      { path: 'tv', element: <PlaceholderScreen title={t.tv.title} /> },
+      // `/tv` with no tournament in it (ARCH-19): the last one this device opened, on its TV; Home with none.
+      { path: 'tv', element: <ContinueScreen tab="tv" /> },
       { path: '*', element: <NotFoundScreen /> },
     ],
   },

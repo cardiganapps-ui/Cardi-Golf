@@ -26,10 +26,11 @@ export interface TournamentRow {
   status: TournamentStatus
   currentRoundId: Id | null
   bankerPlayerId: Id | null
-  /** Raw JSON; parse with `parseSettings`. */
+  /**
+   * Raw JSON; parse with `parseSettings`. Its `timezone` and `currency` are the tournament's (ARCH-06): the row's
+   * columns of those names are their mirror for SQL readers (0074), and the app never reads them.
+   */
   settings: unknown
-  timezone: string
-  currency: string
   /** False for practice (the Ensayo): shown in profiles, never in the Polo index. Default true. */
   countsForStats?: boolean
   /** A Ronda rápida (0017): the app offers "Terminar y publicar". */

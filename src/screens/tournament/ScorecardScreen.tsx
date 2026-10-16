@@ -14,7 +14,7 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { useId, useMemo, useRef, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState } from '../../components/primitives'
 import { IconSnake } from '../../components/icons'
 import { enqueueSignature, useOutbox, type HoleFields } from '../../data/outbox'
@@ -71,11 +71,11 @@ export function ScorecardScreen() {
         <h1>{t.nav.card}</h1>
         <EmptyState title={t.live.noRounds} body="" />
         <HoleConflicts roundId={null} myPlayerId={me.playerId} />
-        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
+        <RejectedWrites canResend={me.isComite} playerId={me.playerId} />
       </div>
     )
   }
-  if (round.status !== 'live' && !me.isAdmin) {
+  if (round.status !== 'live' && !me.isComite) {
     return (
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
@@ -97,7 +97,7 @@ export function ScorecardScreen() {
         ) : (
           <>
             <p className="help">{me.playerId ? S.notInGroup : S.pickGroup}</p>
-            {(me.isAdmin || !me.playerId) && (
+            {(me.isComite || !me.playerId) && (
               <div className={styles.groupList}>
                 {groups.map((g) => (
                   <button key={g.id} type="button" className={styles.groupBtn} onClick={() => setGroupId(g.id)}>
@@ -112,7 +112,7 @@ export function ScorecardScreen() {
           </>
         )}
         <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
-        <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
+        <RejectedWrites canResend={me.isComite} playerId={me.playerId} />
       </div>
     )
   }
@@ -181,7 +181,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
     return { pts, good: toPar != null && toPar <= -1, text: t.feed.scoreName(toPar, net) }
   }
   const signingMode = cardSigningMode(settings)
-  const rules = cardRules({ snapshot, round, playerIds, isAdmin: me.isAdmin, perPlayer: signingMode === 'marker' })
+  const rules = cardRules({ snapshot, round, playerIds, isComite: me.isComite, perPlayer: signingMode === 'marker' })
   const holeKey = `${round.id}|${group.id}|${hole}`
   const entry = useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editableFor: rules.editableFor, rowOf, say: setSaid, sayWithNextHole: savedSaid })
   const contests = useContestPicks({ settings, state, holeAwards: snapshot.holeAwards, roundId: round.id, groupId: group.id, hole, players })
@@ -292,9 +292,9 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
         <>
           <ScoreGrid named={named} roundState={roundState} order={order} hole={hole} pointsCount={pointsCount} net={net} onOpen={on.openHole} savedNote={saver.savedNote} onUndo={on.undo} />
           <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
-          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
+          <RejectedWrites canResend={me.isComite} playerId={me.playerId} />
           {signingMode === 'pairs' && pairsOn && complete && (
-            <SigningPanel roundId={round.id} groupPlayerIds={group.playerIds} pairs={snapshot.pairs} signatures={snapshot.cardSignatures} players={snapshot.players} myPairId={myPair?.id ?? null} isAdmin={me.isAdmin} onSign={on.signPair} />
+            <SigningPanel roundId={round.id} groupPlayerIds={group.playerIds} pairs={snapshot.pairs} signatures={snapshot.cardSignatures} players={snapshot.players} myPairId={myPair?.id ?? null} isComite={me.isComite} onSign={on.signPair} />
           )}
           {signingMode === 'marker' && (
             <MarkerSigningPanel
@@ -304,7 +304,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
               pairs={snapshot.pairs}
               myPlayerId={me.playerId}
               inGroup={!!me.playerId && group.playerIds.includes(me.playerId)}
-              isAdmin={me.isAdmin}
+              isComite={me.isComite}
               onSign={on.signPlayer}
             />
           )}
@@ -371,7 +371,7 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
           />
           {/* An iPhone's browser keeps its own holes, apart from the installed app's (PWA-09). */}
           <CaptureFromIcon />
-          <RejectedWrites canResend={me.isAdmin} playerId={me.playerId} />
+          <RejectedWrites canResend={me.isComite} playerId={me.playerId} />
         </>
       )}
 

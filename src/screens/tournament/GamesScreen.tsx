@@ -17,19 +17,22 @@ import { figureKind } from '../../engine/formats'
 import { dayFigureText } from '../../lib/figureText'
 import { PlayerSheet } from './PlayerSheet'
 import { SnakeBoard } from './SnakeBoard'
-import { GameBoardView, gameLeader, gameStake } from './GameBoardView'
+import { GameBoardView } from './GameBoardView'
+import { gameLeader, gameStake } from './gameLines'
 import { useActiveRound } from './useMyGroup'
 import { useTournamentCtx } from './tournamentContext'
 import { useViewFocus } from '../../components/viewFocus'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import { unknownGamesOf } from '../../engine/settings/read'
 import styles from './GamesScreen.module.css'
+import { useCurrency } from '../../components/currency'
 
 /** The game boards' panel, which the game tabs control (A11Y-17). */
 const PANEL = 'juegos-panel'
 const ORDER: ModuleId[] = ['individual', 'pairs', 'bestRound', 'snake', 'fewestPutts', 'auction']
 
 export function GamesScreen() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)
   const round = useActiveRound()
   const ctx = useTournamentCtx()
@@ -78,36 +81,36 @@ export function GamesScreen() {
     const m = state.modules
     if (id.startsWith('game:')) {
       const g = state.games[id.slice(5)]
-      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g && showMoney ? gameStake(g) : stake }
+      return { id, label, leader: g ? gameLeader(g, name) : t.games.outdated, stake: g && showMoney ? gameStake(g, cur) : stake }
     }
     if (id === 'individual' && m.individual) {
       const r = m.individual.rows[0]
       // The board's leader in the board's own figure: a team by its name, strokes against par, match points (STRAT-03).
       if (r && r.thru > 0) leader = t.games.leader(r.entrant.isTeam ? r.entrant.name : name(r.playerId), t.common.figure(r.figure.text, r.figure.value, figureKind(settings)))
       const first = individualPrizeAmounts(settings, fieldShape(snapshot, settings))[0] ?? 0
-      stake = { text: t.games.firstPrize(formatMoney(first)), amount: first }
+      stake = { text: t.games.firstPrize(formatMoney(first, cur)), amount: first }
     } else if (id === 'pairs' && m.pairs) {
       const r = m.pairs.rows[0]
       if (r && r.thru > 0) leader = t.games.leader(r.name, t.games.pointsFigure(r.total))
-      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.pairs[0] ?? 0)), amount: settings.prizes.pairs[0] }
+      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.pairs[0] ?? 0, cur)), amount: settings.prizes.pairs[0] }
     } else if (id === 'bestRound' && m.bestRound) {
       const d = [...m.bestRound.days].reverse().find((x) => x.rows.some((r) => r.thru > 0)) ?? m.bestRound.days.at(-1)
       const r = d?.rows[0]
       if (d && r && r.thru > 0) leader = `${t.round.day(d.roundNumber)}: ${t.games.leader(name(r.playerId), t.games.pointsFigure(r.points))}`
-      stake = { text: t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay)), amount: settings.prizes.bestRoundPerDay }
+      stake = { text: t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay, cur)), amount: settings.prizes.bestRoundPerDay }
     } else if (id === 'snake' && m.snake) {
       const groups = m.snake.groups.filter((g) => !round || g.roundId === round.id)
       const holders = groups.filter((g) => g.holderId).map((g) => name(g.holderId!))
       leader = holders.length ? `${t.games.holders}: ${t.common.andList(holders)}` : groups.length ? t.games.nobodyHolds : t.games.noResults
       const pot = groups[0]?.pot ?? 0
-      stake = { text: t.games.perGroup(formatMoney(pot)), amount: pot }
+      stake = { text: t.games.perGroup(formatMoney(pot, cur)), amount: pot }
     } else if (id === 'fewestPutts' && m.fewestPutts) {
       const r = m.fewestPutts.rows.find((x) => x.holes > 0)
       if (r) leader = t.games.leader(name(r.playerId), t.games.puttsFigure(r.putts))
-      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts)), amount: settings.prizes.fewestPutts }
+      stake = { text: t.games.firstPrize(formatMoney(settings.prizes.fewestPutts, cur)), amount: settings.prizes.fewestPutts }
     } else if (id === 'auction' && m.auction) {
       const s0 = m.auction.slots.find((x) => !x.unfilled)
-      leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.pesos)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
+      leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.pesos, cur)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
       stake = { text: t.games.pot, amount: m.auction.pot }
     }
     return { id, label, leader, stake: showMoney ? stake : { text: '' } }
@@ -139,8 +142,8 @@ export function GamesScreen() {
                   </span>
                   {g.stake.amount ? (
                     <span className={styles.gameStake}>
-                      <strong>{formatMoney(g.stake.amount)}</strong>
-                      <span>{g.stake.text.replace(formatMoney(g.stake.amount), '').replace(/^\s*(al|por)\s*/, '$1 ').trim() || t.games.pot}</span>
+                      <strong>{formatMoney(g.stake.amount, cur)}</strong>
+                      <span>{g.stake.text.replace(formatMoney(g.stake.amount, cur), '').replace(/^\s*(al|por)\s*/, '$1 ').trim() || t.games.pot}</span>
                     </span>
                   ) : g.stake.text ? (
                     <span className={styles.gameStake}>
@@ -301,7 +304,7 @@ export function GamesScreen() {
                 <div key={d.roundId} className={styles.section}>
                   <div className={styles.sectionHead}>
                     <h2 className="h3">{t.round.day(d.roundNumber)}</h2>
-                    {showMoney && <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay))}</span>}
+                    {showMoney && <span className="help">{t.games.perDay(formatMoney(settings.prizes.bestRoundPerDay, cur))}</span>}
                   </div>
                   <Board>
                     <BoardHead figureLabel={t.live.points} dense={d.rows.length > 20} />
@@ -360,7 +363,7 @@ export function GamesScreen() {
                 <span>
                   <span className="label">{t.games.pot}</span>
                   <br />
-                  <span className={styles.pot}>{formatMoney(state.modules.auction.pot)}</span>
+                  <span className={styles.pot}>{formatMoney(state.modules.auction.pot, cur)}</span>
                 </span>
                 <span className="help">{t.games.sold(state.modules.auction.soldCount, snapshot.players.length)}</span>
               </div>
@@ -374,7 +377,7 @@ export function GamesScreen() {
                           {s.unfilled ? t.games.unassigned : t.common.andList(s.playerIds.map(name))}, {Math.round(s.share * 100)}%
                         </span>
                       </span>
-                      <HowCalculated why={s.why} label={formatMoney(s.pesos)} about={s.label} />
+                      <HowCalculated why={s.why} label={formatMoney(s.pesos, cur)} about={s.label} />
                     </div>
                   ))}
                 </div>
@@ -391,9 +394,9 @@ export function GamesScreen() {
                         <span className={styles.rowSub}>{t.common.andList(pf.holdings.map((h) => `${name(h.playerId)}${h.pct < 100 || pf.holdings.length > 1 ? ` ${h.pct}%` : ''}`))}</span>
                       </span>
                       <span className={styles.gameStake}>
-                        <strong>{formatMoney(pf.value)}</strong>
+                        <strong>{formatMoney(pf.value, cur)}</strong>
                         <span>
-                          {t.games.invested} {formatMoney(pf.invested)}
+                          {t.games.invested} {formatMoney(pf.invested, cur)}
                           {pf.roi != null ? `, ${pf.roi >= 0 ? '+' : '−'}${Math.abs(Math.round(pf.roi * 100))}%` : ''}
                         </span>
                       </span>

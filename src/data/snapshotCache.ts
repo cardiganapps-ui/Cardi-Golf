@@ -12,7 +12,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { Snapshot } from '../engine/types'
 import type { LookupResult } from './api'
 import { forgetSeen } from './boardSeen'
-import type { Me } from '../screens/tournament/tournamentContext'
+import type { Me } from './session'
 
 export interface CachedEntry {
   slug: string
@@ -75,6 +75,15 @@ export async function saveSnapshot(tournamentId: string, snapshot: Snapshot): Pr
   }
 }
 /**
+ * Who this phone was there, as a build stored it. Before ARCH-20 the Comité's rights were `isAdmin`: an entry an
+ * older build kept still opens the Comité offline.
+ */
+function storedMe(me: Me & { isAdmin?: boolean }): Me {
+  const { isAdmin, ...rest } = me
+  return { ...rest, isComite: rest.isComite ?? !!isAdmin }
+}
+
+/**
  * The entry a link leads to: by the tournament's slug, or by the join code
  * typed at home. An entry an older build kept under the code is found by its
  * slug too.
@@ -91,7 +100,7 @@ export async function readCached(slugOrCode: string): Promise<{ entry: CachedEnt
     if (!entry) return null
     const snap = await d.snapshots.get(entry.tournamentId)
     if (!snap) return null
-    return { entry, snapshot: snap.snapshot, savedAt: snap.savedAt }
+    return { entry: { ...entry, me: storedMe(entry.me) }, snapshot: snap.snapshot, savedAt: snap.savedAt }
   } catch {
     return null
   }

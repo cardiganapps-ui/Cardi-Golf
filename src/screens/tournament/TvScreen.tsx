@@ -14,7 +14,7 @@ import { useTournamentCtx } from './tournamentContext'
 import { tournamentBase, useShowMoney } from './tournamentView'
 import { useSavedWhen } from './boardsAge'
 import { useConnection } from './connection'
-import { useOwnConnectionStatus } from '../../components/OfflineBanner'
+import { useOwnConnectionStatus } from '../../components/online'
 import { FeedTicker } from './FeedTicker'
 import { useActiveRound } from './useMyGroup'
 import styles from './TvScreen.module.css'
@@ -26,6 +26,7 @@ import { dayFigureText } from '../../lib/figureText'
 import { Plate } from '../../components/primitives'
 import { TournamentLogo } from '../../components/TournamentLogo'
 import { drawOrder } from '../../lib/pairing'
+import { useCurrency } from '../../components/currency'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 /** Each board's time on screen. */
@@ -34,6 +35,7 @@ const ROTATE_MS = 12_000
 const HOLD_MS = 2_000
 
 export function TvScreen() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   const ctx = useTournamentCtx()
   const base = tournamentBase(ctx)
@@ -271,7 +273,7 @@ export function TvScreen() {
                         </span>
                       ))}
                     </span>
-                    <span className={styles.big}>{showMoney ? formatMoney(g.pot) : ''}</span>
+                    <span className={styles.big}>{showMoney ? formatMoney(g.pot, cur) : ''}</span>
                   </div>
                 )}
               />
@@ -285,7 +287,7 @@ export function TvScreen() {
             )}
             {board === 'auction' && state.modules.auction && (
               <PagedRows
-                title={`${settings.modules.auction.label}, ${formatMoney(state.modules.auction.pot)}`}
+                title={`${settings.modules.auction.label}, ${formatMoney(state.modules.auction.pot, cur)}`}
                 turn={turn}
                 items={state.modules.auction.portfolios}
                 columns={{ className: styles.rowOwner, labels: [t.tv.invested, t.tv.worth] }}
@@ -300,11 +302,11 @@ export function TvScreen() {
                     {/* A11Y-22: each figure with its words, which a label on a bare span never gave. */}
                     <span className={`${styles.small} ${styles.figure}`}>
                       <span className="sr-only">{t.tv.invested} </span>
-                      {formatMoney(pf.invested)}
+                      {formatMoney(pf.invested, cur)}
                     </span>
                     <span className={styles.big}>
                       <span className="sr-only">{t.tv.worth} </span>
-                      {formatMoney(pf.value)}
+                      {formatMoney(pf.value, cur)}
                     </span>
                   </div>
                 )}
@@ -323,7 +325,7 @@ export function TvScreen() {
                         <span>{r.title ?? t.common.andList(r.playerIds.map(name))}</span>
                         {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label, r.sub].filter(Boolean).join(', ')}</span>}
                       </span>
-                      <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money) : ''}</span>
+                      <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money, cur) : ''}</span>
                       <span className={styles.big}>{r.figure ? <Plate value={r.figure} leader={r.pos === '1'} /> : null}</span>
                     </div>
                 )}
@@ -463,6 +465,8 @@ function NeedsMoneyBoard() {
 const SOLD_HOLD_MS = 4000
 
 function AuctionBoard() {
+  const cur = useCurrency()
+  const money = (n: number) => formatMoney(n, cur)
   const data = useTournament((s) => s.data)!
   const { snapshot, state, settings } = data
   const auction = state.modules.auction!
@@ -532,7 +536,7 @@ function AuctionBoard() {
             <span className={styles.lotMeta}>
               {player.tier && <span className={styles.lotTier}>{t.tv.tier(player.tier)}</span>}
               {(() => {
-                const hcp = ph != null ? `${t.live.playingHcp} ${ph}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`
+                const hcp = ph != null ? `${t.live.playingHcp} ${handicapText(ph)}` : `${t.live.hcp} ${handicapText(player.baseHcp)}`
                 // After the tier the line goes on in lower case: «Categoría C, hándicap de juego 10».
                 return player.tier ? `, ${hcp.charAt(0).toLowerCase()}${hcp.slice(1)}` : hcp
               })()}
@@ -542,7 +546,7 @@ function AuctionBoard() {
             {open && (
               // Each bid pulses for the board's time: a 150 ms pulse was over before the room looked up (MOT-05).
               <motion.div key={`${bid}-${bidder}`} className={styles.bid} initial={{ scale: 0.85, opacity: 0.4 }} animate={{ scale: 1, opacity: 1 }} transition={easeBoard}>
-                <span className={styles.bidAmount}>{formatMoney(bid)}</span>
+                <span className={styles.bidAmount}>{formatMoney(bid, cur)}</span>
                 <span className={styles.bidder}>{bidder === open.playerId ? t.auction.self : name(bidder ?? '')}</span>
               </motion.div>
             )}
@@ -556,7 +560,7 @@ function AuctionBoard() {
                 animate={{ scale: 1, rotate: -3, opacity: 1 }}
                 transition={easeFast}
               >
-                <span className={styles.bidAmount}>{formatMoney(sold.price)}</span>
+                <span className={styles.bidAmount}>{formatMoney(sold.price, cur)}</span>
                 <span className={styles.bidder}>{sold.ownerId === sold.playerId ? t.auction.stampSelf : t.auction.stampTo(name(sold.ownerId ?? ''))}</span>
               </motion.div>
             )}
@@ -570,7 +574,7 @@ function AuctionBoard() {
           <span className={styles.small}>{t.auction.pot}</span>
           {/* Each sale counts the pot up to its new figure (MOT-05); it opens on the figure, never from $0. */}
           <span className={styles.pot}>
-            <CountUp value={auction.pot} format={formatMoney} seconds={DUR_BOARD} from={auction.pot} />
+            <CountUp value={auction.pot} format={money} seconds={DUR_BOARD} from={auction.pot} />
           </span>
         </div>
         <div className={styles.stake}>
@@ -579,7 +583,7 @@ function AuctionBoard() {
           {auction.stakes.map(({ slot: s, pesos }, i) => (
             <span key={i} className={styles.stakeRow}>
               <span>{t.rules.slotName(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, settings.labels.lastPlace)}</span>
-              <span className="num">{formatMoney(pesos)}</span>
+              <span className="num">{formatMoney(pesos, cur)}</span>
             </span>
           ))}
         </div>
@@ -594,7 +598,7 @@ function AuctionBoard() {
                 <span>
                   {name(l.playerId)} <span className={styles.small}>{l.ownerId === l.playerId ? t.auction.self : name(l.ownerId ?? '')}</span>
                 </span>
-                <span className="num">{formatMoney(l.price)}</span>
+                <span className="num">{formatMoney(l.price, cur)}</span>
               </span>
             ))}
         </div>

@@ -18,6 +18,22 @@ describe('playing handicap (80%, round half up, cap 54)', () => {
     expect(playingHandicap(base, H).value).toBe(ph)
   })
 
+  // MONEY-21: a plus handicap stays below zero; it used to stop at 0 and play off scratch.
+  it.each([
+    [-1, -1],
+    [-1.2, -1],
+    [-3, -2],
+    [-0.5, 0],
+  ])('plus course handicap %s → PH %s (80%%, half up)', (ch, ph) => {
+    expect(playingHandicap(ch, H).value).toBe(ph)
+  })
+
+  it('says a plus playing handicap gives strokes back, written as golfers write it', () => {
+    const r = playingHandicap(-3, H)
+    expect(r.why.title).toBe('Hándicap de juego +2')
+    expect(r.why.steps.at(-1)).toBe('Juega con +2: devuelve 2 golpes, en los 2 hoyos más fáciles')
+  })
+
   it('explains the cap and the rounding', () => {
     const r = playingHandicap(60, H)
     expect(r.why.steps.join(' | ')).toContain('tope 54')
@@ -40,6 +56,18 @@ describe('strokes received', () => {
   it('PH 43 → 3 on SI 1–7, 2 on SI 8–18', () => {
     for (let si = 1; si <= 7; si++) expect(strokesReceived(43, si)).toBe(3)
     for (let si = 8; si <= 18; si++) expect(strokesReceived(43, si)).toBe(2)
+  })
+  // MONEY-21: as WHS allocates it (and the Polo index's whs_strokes), from the easiest hole up.
+  it('PH −1 → −1 on SI 18, 0 elsewhere; PH −2 → −1 on SI 17–18', () => {
+    for (let si = 1; si <= 17; si++) expect(strokesReceived(-1, si)).toBe(0)
+    expect(strokesReceived(-1, 18)).toBe(-1)
+    expect(strokesReceived(-2, 16)).toBe(0)
+    expect(strokesReceived(-2, 17)).toBe(-1)
+    expect(strokesReceived(-2, 18)).toBe(-1)
+  })
+  it('a 9-hole round gives back on its easiest of nine', () => {
+    expect(strokesReceived(-1, 9, 9)).toBe(-1)
+    expect(strokesReceived(-1, 8, 9)).toBe(0)
   })
 })
 
@@ -70,6 +98,13 @@ describe('course handicap (WHS, §13b-D)', () => {
   })
   it('a tee without rating/slope leaves the index unchanged', () => {
     expect(courseHandicap(17, { slope: null, rating: null, par: 72 }).value).toBe(17)
+  })
+  // ARCH-16: one arithmetic with the Polo index's SQL, which reads the index and rating in tenths, half away from zero.
+  it('reads the index and the rating in tenths, as whs_course_hcp does', () => {
+    // −1.25 is −12.5 tenths, −13 in Postgres's round(): −1.3 → −1.3 × 113 / 113 = −1.3 → −1.
+    expect(courseHandicap(-1.25, { slope: 113, rating: 72, par: 72 }).value).toBe(-1)
+    // 0.45 → 5 tenths (not 4): 0.5 → 1, half up.
+    expect(courseHandicap(0.45, { slope: 113, rating: 72, par: 72 }).value).toBe(1)
   })
 })
 

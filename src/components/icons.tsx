@@ -132,11 +132,6 @@ export const IconArrowDown = (p: P) => (
     <path d="M12 5v14M6 13l6 6 6-6" />
   </Svg>
 )
-export const IconArrowRight = (p: P) => (
-  <Svg {...p}>
-    <path d="M5 12h14M13 6l6 6-6 6" />
-  </Svg>
-)
 export const IconPrint = (p: P) => (
   <Svg {...p}>
     <path d="M7 8V4h10v4" />
@@ -153,11 +148,6 @@ export const IconPause = (p: P) => (
   <Svg {...p}>
     <rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
     <rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
-  </Svg>
-)
-export const IconStop = (p: P) => (
-  <Svg {...p}>
-    <rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" stroke="none" />
   </Svg>
 )
 /** Pairs: two interlocking rings. */
@@ -200,12 +190,6 @@ export const IconBook = (p: P) => (
   <Svg {...p}>
     <path d="M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3z" />
     <path d="M5 4v16a3 3 0 0 1 3-3h9" />
-  </Svg>
-)
-export const IconCamera = (p: P) => (
-  <Svg {...p}>
-    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-    <circle cx="12" cy="13" r="3.5" />
   </Svg>
 )
 export const IconLock = (p: P) => (
@@ -296,13 +280,6 @@ export const IconSearch = (p: P) => (
   <Svg {...p}>
     <circle cx="11" cy="11" r="6.5" />
     <path d="M16 16l4.5 4.5" />
-  </Svg>
-)
-/** Upcoming outings. */
-export const IconCalendar = (p: P) => (
-  <Svg {...p}>
-    <rect x="4" y="5.5" width="16" height="15" rx="2" />
-    <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
   </Svg>
 )
 /** Home (Mi Polo). */

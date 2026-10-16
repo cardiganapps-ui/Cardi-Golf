@@ -6,6 +6,7 @@ import { easeSlow } from '../../../design/motion'
 import type { HoleResult } from '../../../engine/core/types'
 import { t } from '../../../i18n/es-MX'
 import { haptic } from '../../../lib/haptics'
+import { strokeMarks } from '../../../lib/strokeMarks'
 import type { Draft } from '../tarjetaDrafts'
 import styles from '../ScorecardScreen.module.css'
 
@@ -50,9 +51,9 @@ export const PlayerRow = memo(function PlayerRow(p: {
               </span>
             )}
             {/* A11Y-22: an image with its words; a label on a bare span is dropped, and the dots were read as «•••». */}
-            {h.strokesReceived > 0 && (
+            {h.strokesReceived !== 0 && (
               <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(h.strokesReceived)}>
-                {'•'.repeat(h.strokesReceived)}
+                {strokeMarks(h.strokesReceived)}
               </span>
             )}
           </span>

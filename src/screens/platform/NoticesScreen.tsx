@@ -6,7 +6,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { ErrorBox, Spinner, toast } from '../../components/ui'
+import { ErrorBox, Spinner } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { Field, Input, Segmented } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { safeNoticeUrl } from '../../lib/noticeText'

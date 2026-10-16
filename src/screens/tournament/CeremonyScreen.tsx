@@ -32,6 +32,7 @@ import { TournamentLogo } from '../../components/TournamentLogo'
 import { figureKind, toParText, type Figure } from '../../engine/formats'
 import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 import { fromLine } from '../../engine/core/unassigned'
+import { useCurrency } from '../../components/currency'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -187,6 +188,7 @@ function Row({ row }: { row: ListRow }) {
 }
 
 export function CeremonyScreen() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)
   const { slug } = useTournamentCtx()
   const [idx, setIdx] = useState(-1)
@@ -196,6 +198,7 @@ export function CeremonyScreen() {
   const [pages, setPages] = useState(1)
 
   const steps = useMemo((): Step[] => {
+    const money = (n: number) => formatMoney(n, cur)
     if (!data) return []
     const { snapshot, state, settings } = data
     const m = state.modules
@@ -228,7 +231,7 @@ export function CeremonyScreen() {
       const totals = new Map<string, number>()
       for (const p of state.prizes) if (p.moduleId === 'adjustment' && p.sourceKey === line) totals.set(p.playerId, (totals.get(p.playerId) ?? 0) + p.amount)
       const rows = [...totals].sort((a, b) => b[1] - a[1])
-      if (rows.length) out.push({ id: `comite-${line}`, title: C.steps.byComite(label), icon, winners: [], list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt) })) })
+      if (rows.length) out.push({ id: `comite-${line}`, title: C.steps.byComite(label), icon, winners: [], list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })) })
     }
     // Last place only where the tournament gave it a name of its own (a trophy, a roast): «Último lugar» is no prize.
     if (m.individual && m.individual.lastPlace.length && settings.labels.lastPlace !== DEFAULT_SETTINGS.labels.lastPlace) {
@@ -238,7 +241,7 @@ export function CeremonyScreen() {
       const ids = Object.keys(m.fewestPutts.prizes)
       if (ids.length) {
         const row = m.fewestPutts.rows.find((r) => r.playerId === ids[0])
-        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: row ? [fig(row.putts, t.games.puttsFigure), fig(m.fewestPutts.prizes[ids[0]!]!.amount, formatMoney)] : undefined }] })
+        out.push({ id: 'putts', title: settings.modules.fewestPutts.label, icon: <IconTarget size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: row ? [fig(row.putts, t.games.puttsFigure), fig(m.fewestPutts.prizes[ids[0]!]!.amount, money)] : undefined }] })
       }
       comiteStep('fewestPutts', settings.modules.fewestPutts.label, <IconTarget size={64} />)
     }
@@ -254,7 +257,7 @@ export function CeremonyScreen() {
           title: C.steps.snake(settings.modules.snake.label),
           icon: <IconSnake size={64} />,
           winners: gold ? [{ playerIds: gold.playerIds, line: andList(gold.playerIds.map(nameOf)), sub: [t.stats.award.snakeGold.name, fig(gold.value, C.holesHeld)] }] : [],
-          list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt) })),
+          list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })),
         })
       }
     }
@@ -263,7 +266,7 @@ export function CeremonyScreen() {
         const ids = Object.keys(day.winners)
         if (!ids.length) continue
         const pts = day.rows.find((r) => r.playerId === ids[0])?.points
-        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? [fig(pts, C.withPoints), fig(day.winners[ids[0]!]!.amount, formatMoney)] : undefined }] })
+        out.push({ id: `best${day.roundNumber}`, title: C.steps.bestRound(settings.modules.bestRound.label, day.roundNumber), icon: <IconFlame size={64} />, winners: [{ playerIds: ids, line: andList(ids.map(nameOf)), sub: pts != null ? [fig(pts, C.withPoints), fig(day.winners[ids[0]!]!.amount, money)] : undefined }] })
       }
       comiteStep('bestRound', settings.modules.bestRound.label, <IconFlame size={64} />)
     }
@@ -282,8 +285,8 @@ export function CeremonyScreen() {
         id: `game-${g.config.id}`,
         title: g.config.label,
         icon: <IconTarget size={64} />,
-        winners: [{ playerIds: top, line: andList(top.map(nameOf)), sub: [fig(rows[0]![1], formatMoney)] }],
-        list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: amt < 0 ? `−${formatMoney(-amt)}` : formatMoney(amt), under: amt < 0 })),
+        winners: [{ playerIds: top, line: andList(top.map(nameOf)), sub: [fig(rows[0]![1], money)] }],
+        list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: amt < 0 ? `−${formatMoney(-amt, cur)}` : formatMoney(amt, cur), under: amt < 0 })),
       })
     }
     if (m.pairs) {
@@ -302,13 +305,13 @@ export function CeremonyScreen() {
       for (let place = places; place >= 2; place--) {
         const rows = m.individual.rows.filter((r) => r.position === place)
         if (!rows.length) continue
-        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
+        out.push({ id: `place${place}`, title: C.steps.place(place), icon: <IconMedal size={64} />, winners: rows.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : [])] })) })
       }
       // Places nobody filled, given by the Comité: before the champion, who closes the night.
       comiteStep('individual', settings.modules.individual.label, <IconMedal size={64} />)
       const champs = m.individual.rows.filter((r) => r.position === 1)
       if (champs.length) {
-        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, formatMoney)] : [])] })) })
+        out.push({ id: 'champion', title: C.steps.place(1), icon: <IconTrophy size={64} />, champion: true, winners: champs.map((r) => ({ playerIds: [...r.entrant.playerIds], line: entrantLine(r.playerId), sub: [mainFig(r.figure), ...(m.individual!.prizes[r.playerId] ? [fig(m.individual!.prizes[r.playerId]!.amount, money)] : [])] })) })
       }
     }
     if (m.auction && m.auction.soldCount > 0) {
@@ -325,10 +328,10 @@ export function CeremonyScreen() {
               {s.label}: <strong>{s.unfilled ? t.games.unassigned : andList(s.playerIds.map(nameOf))}</strong>
             </>
           ),
-          figure: formatMoney(s.pesos),
+          figure: formatMoney(s.pesos, cur),
         })),
         // Nobody has cashed yet (no scores): the slots alone, not an empty list.
-        list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount) })) : undefined,
+        list: payouts.length ? payouts.map((p) => ({ key: p.ownerId, name: nameOf(p.ownerId), figure: formatMoney(p.amount, cur) })) : undefined,
         listTitle: C.auctionOwners,
       })
     }
@@ -339,11 +342,11 @@ export function CeremonyScreen() {
         title: C.steps.money,
         icon: <IconReceipt size={64} />,
         winners: [],
-        list: people.map((p) => ({ key: p.playerId, name: nameOf(p.playerId), figure: formatSignedMoney(p.net), under: p.net < 0 })),
+        list: people.map((p) => ({ key: p.playerId, name: nameOf(p.playerId), figure: formatSignedMoney(p.net, cur), under: p.net < 0 })),
       })
     }
     return out
-  }, [data])
+  }, [data, cur])
 
   const step = idx >= 0 ? steps[idx] : undefined
   const reduce = useReducedMotionConfig()

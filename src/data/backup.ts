@@ -6,7 +6,8 @@
  */
 import { supabase } from '../lib/supabase'
 import { fetchAll, withCount } from './paged'
-import { ApiError } from './api'
+import { ApiError } from './apiError'
+import { SNAPSHOT_KEYS, type SnapshotTable } from './snapshotTables'
 import { entryChanged } from './entryEvents'
 
 type Row = Record<string, unknown>
@@ -31,26 +32,16 @@ const BY_LOT = ['calcutta_bids', 'calcutta_buybacks'] as const
  */
 export const RESTORED_TABLES: readonly string[] = ['tournaments', ...BY_TOURNAMENT, ...BY_ROUND, 'group_members', 'team_members', ...BY_LOT]
 
-/** Primary keys of the tables without an `id` column (paging order). */
-const PK: Record<string, string[]> = {
-  group_members: ['group_id', 'player_id'],
-  team_members: ['team_id', 'player_id'],
-  round_tees: ['round_id', 'player_id'],
-  snake_tiebreaks: ['round_id', 'group_id', 'hole'],
-  card_signatures: ['round_id', 'card_id'],
-  handicap_overrides: ['round_id', 'player_id'],
-  calcutta_buybacks: ['lot_id'],
-  game_entries: ['game_id', 'player_id'],
-  game_results: ['game_id', 'player_id'],
-  hole_awards: ['round_id', 'game_id', 'hole', 'player_id', 'source'],
-  holes: ['tee_id', 'number'],
-}
-
-async function rows(table: string, col: string, ids: string[]): Promise<Row[]> {
+/**
+ * Paged by the boards' own keys (`SNAPSHOT_KEYS`, held to the migrations): the export kept a second list of
+ * keys of its own (ARCH-16). The file carries the tables the boards load, which `tableRegistry.test.ts` holds.
+ */
+async function rows(table: SnapshotTable, col: string, ids: string[]): Promise<Row[]> {
   if (!ids.length) return []
   return fetchAll<Row>((from, to, count) => {
     let qb = supabase().from(table).select('*', withCount(count)).in(col, ids)
-    for (const c of PK[table] ?? ['id']) qb = qb.order(c)
+    // One tournament's rows: its id is the same on every one, so the key need not lead with it.
+    for (const c of SNAPSHOT_KEYS[table]) if (!(col === 'tournament_id' && c === 'tournament_id')) qb = qb.order(c)
     return qb.range(from, to)
   })
 }

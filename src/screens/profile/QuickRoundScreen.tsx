@@ -7,14 +7,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Avatar, Field, Spinner, Toggle, toast } from '../../components/ui'
+import { Avatar, Field, Spinner, Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { IconChevronLeft, IconClose, IconPlus } from '../../components/icons'
 import { listCourses, loadCourseDraft } from '../../data/api'
 import { formatIndex, parseIndex, useMyProfile } from '../../data/profiles'
 import { myFriends, type FriendCard } from '../../data/social'
 import { createQuickRound, type QuickPlayer, type QuickRoundInput } from '../../data/quick'
 import { QUICK_GAMES, quickSettings, quickSplit, quickStakes, quickUpfront, type QuickGame } from '../../engine/games/quick'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, PLATFORM_CURRENCY } from '../../lib/money'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
@@ -60,6 +61,9 @@ const today = () => {
 const dayMonth = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const showIndex = (v: number | null) => (v == null ? '' : formatIndex(v))
 
+// A Ronda rápida plays the platform's settings (quick.ts), so its currency.
+const cur = PLATFORM_CURRENCY
+
 export function QuickRoundView({ me, friends, courses, loadTees, crews = [], initialCrewId = null, onStart }: QuickRoundData) {
   const [date, setDate] = useState(today())
   const [courseId, setCourseId] = useState(courses[0]?.id ?? '')
@@ -102,20 +106,20 @@ export function QuickRoundView({ me, friends, courses, loadTees, crews = [], ini
   const potLine = useMemo(() => {
     if (!money || feeNum <= 0) return null
     const split = quickSplit(count)
-    return Q.potLine(formatMoney(feeNum * count), split.length === 1 ? null : split.map((x) => `${x}%`).join(' / '))
+    return Q.potLine(formatMoney(feeNum * count, cur), split.length === 1 ? null : split.map((x) => `${x}%`).join(' / '))
   }, [money, feeNum, count])
   /** COPY-21: with money, each game's stake and what everyone puts in before the first hole. */
   const stakeLines = useMemo(() => {
     if (!money || games.length === 0) return []
     return quickStakes(games).map((x) =>
       x.buyIn != null
-        ? Q.stakeBuyIn(Q.game[x.game] ?? x.game, formatMoney(x.buyIn), formatMoney(x.buyIn * count))
+        ? Q.stakeBuyIn(Q.game[x.game] ?? x.game, formatMoney(x.buyIn, cur), formatMoney(x.buyIn * count, cur))
         : x.game === 'threePutts'
-          ? Q.stakeThreePutts(formatMoney(x.perEvent ?? 0))
-          : Q.stakeBirdies(formatMoney(x.perEvent ?? 0)),
+          ? Q.stakeThreePutts(formatMoney(x.perEvent ?? 0, cur))
+          : Q.stakeBirdies(formatMoney(x.perEvent ?? 0, cur)),
     )
   }, [money, games, count])
-  const upfrontLine = money && (feeNum > 0 || stakeLines.length > 0) ? Q.upfront(count, formatMoney(quickUpfront(feeNum, games)), quickStakes(games).some((x) => x.perEvent != null)) : null
+  const upfrontLine = money && (feeNum > 0 || stakeLines.length > 0) ? Q.upfront(count, formatMoney(quickUpfront(feeNum, games), cur), quickStakes(games).some((x) => x.perEvent != null)) : null
 
   function toggleFriend(f: FriendCard) {
     setPicked((cur) => {

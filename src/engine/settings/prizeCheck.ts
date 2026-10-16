@@ -294,24 +294,6 @@ function stakeUnit(g: GameConfig): string {
   return 'de cada perdedor'
 }
 
-export class PrizePoolError extends Error {
-  readonly check: PrizeCheck
-  constructor(check: PrizeCheck) {
-    super(
-      `La bolsa no cuadra: entran ${pesos(check.entryPot)} y se reparten ${pesos(check.prizesTotal)}.`,
-    )
-    this.name = 'PrizePoolError'
-    this.check = check
-  }
-}
-
-/** Throws when the pool does not balance. Use at load time. */
-export function assertPrizePool(settings: TournamentSettings, field: FieldShape): PrizeCheck {
-  const check = checkPrizePool(settings, field)
-  if (!check.balanced) throw new PrizePoolError(check)
-  return check
-}
-
 /** The field of a live tournament: players, real group sizes, and game entrants. */
 export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): FieldShape {
   const groupSizes = snapshot.rounds

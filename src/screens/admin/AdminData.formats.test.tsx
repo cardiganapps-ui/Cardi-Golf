@@ -15,7 +15,7 @@ import { downloadText } from '../../data/backup'
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminData } from './AdminData'
 
 /** The results file «Tarjetas y resultados CSV» downloads for a design fixture. */

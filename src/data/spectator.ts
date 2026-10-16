@@ -237,8 +237,6 @@ export function forSpectators(s: Snapshot, money: boolean, id: string): Snapshot
       currentRoundId: t.currentRoundId,
       bankerPlayerId: money ? t.bankerPlayerId : null,
       settings: spectatorSettings(t.settings, money),
-      timezone: t.timezone,
-      currency: t.currency,
     },
     players: s.players.map((p) => ({ ...p, fullName: p.displayName, avatarUrl: null, formGuide: null, isAdmin: false, handicapNote: null })),
     scores: s.scores.map((x) => ({ roundId: x.roundId, playerId: x.playerId, hole: x.hole, strokes: x.strokes, putts: x.putts, pickedUp: x.pickedUp, enteredBy: null, updatedAt: x.updatedAt })),

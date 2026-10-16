@@ -17,7 +17,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { getFixture } from '../../dev/fixtures'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminTournament } from './AdminTournament'
 
 const A = t.admin.tournament
@@ -28,7 +28,7 @@ function mount(fixture: string) {
   useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), reload: async () => undefined, loading: false, error: null, realtime: 'off' })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
         <AdminTournament />
       </TournamentContext.Provider>
     </MemoryRouter>,

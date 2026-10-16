@@ -5,7 +5,8 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { handicapText, hcpFromTo, t } from '../../i18n/es-MX'
-import { Avatar, Field, Sheet, Toggle, toast } from '../../components/ui'
+import { Avatar, Field, Sheet, Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { HowCalculated } from '../../components/HowCalculated'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
@@ -63,18 +64,22 @@ const emptyEstimate = (): [DraftEstimate, DraftEstimate, DraftEstimate] => [
   { gross: null, rating: null, slope: null, par: null },
 ]
 
-/** "2 en SI 1–7, 1 en SI 8–18" from the 18 per-SI stroke counts. */
+/**
+ * "Golpes de ventaja: 2 en SI 1–7, 1 en SI 8–18" from the 18 per-SI stroke counts; a plus handicap's
+ * "Devuelve: 1 en SI 18" (MONEY-21).
+ */
 function strokeRanges(strokes: number[]): string {
   const parts: string[] = []
   let start = 0
   for (let i = 1; i <= strokes.length; i++) {
     if (i === strokes.length || strokes[i] !== strokes[start]) {
       const n = strokes[start]!
-      if (n > 0) parts.push(`${n} en SI ${start + 1}${i - 1 > start ? `–${i}` : ''}`)
+      if (n !== 0) parts.push(`${Math.abs(n)} en SI ${start + 1}${i - 1 > start ? `–${i}` : ''}`)
       start = i
     }
   }
-  return parts.length ? parts.join(', ') : P.strokesOn(0)
+  if (!parts.length) return P.strokesLine(P.strokesOn(0))
+  return strokes.some((n) => n < 0) ? P.givesBackLine(parts.join(', ')) : P.strokesLine(parts.join(', '))
 }
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -298,7 +303,7 @@ export function AdminPlayers() {
               )
             )}
           </div>
-          <p className={a.help}>{locked ? L.fixed(tournament.handicapsLockedAt ? localWhen(tournament.handicapsLockedAt, tournament.timezone) : null) : L.open}</p>
+          <p className={a.help}>{locked ? L.fixed(tournament.handicapsLockedAt ? localWhen(tournament.handicapsLockedAt, settings.timezone) : null) : L.open}</p>
         </section>
       )}
       {players.length > SEARCH_FROM && (
@@ -386,7 +391,7 @@ export function AdminPlayers() {
 
             <span className="label">{P.handicap}</span>
             {locked && E.id && <p className={a.help}>{L.fixedHint}</p>}
-            {editingChange && <HandicapChanges change={editingChange} timeZone={tournament.timezone} />}
+            {editingChange && <HandicapChanges change={editingChange} timeZone={settings.timezone} />}
             <Segmented
               value={E.handicap_source}
               options={(['manual', 'index', 'estimate'] as const).map((s) => ({ value: s, label: s === 'manual' ? P.sourceManual : s === 'index' ? P.sourceIndex : P.sourceEstimate }))}
@@ -447,12 +452,12 @@ export function AdminPlayers() {
                   <HowCalculated why={[preview.estimate?.why, preview.course?.why, preview.ph.why].filter((w) => !!w)} />
                 </div>
                 <div className={a.chipRow}>
-                  <span className={`${a.fig} ${a.figLg}`}>{preview.ph.value}</span>
+                  <span className={`${a.fig} ${a.figLg}`}>{handicapText(preview.ph.value)}</span>
                   <span className={a.rowText}>
                     <span>{P.previewPh(preview.ph.value)}</span>
                     <span className={a.rowSub}>
                       {preview.courseHcp !== preview.base ? `${P.courseHcp(preview.courseHcp)}, ` : ''}
-                      {P.strokesLine(strokeRanges(preview.strokes))}
+                      {strokeRanges(preview.strokes)}
                     </span>
                   </span>
                 </div>
@@ -571,7 +576,7 @@ export function AdminPlayers() {
                 {phonesOf(phones, pinFor.id).map((ph) => (
                   <div key={ph.id} className={a.row}>
                     <span className={a.rowText}>
-                      <span className={a.rowTitle}>{P.phoneLine(ph.n, t.admin.history.kinds[ph.kind] ?? null, localWhen(ph.since, tournament.timezone))}</span>
+                      <span className={a.rowTitle}>{P.phoneLine(ph.n, t.admin.history.kinds[ph.kind] ?? null, localWhen(ph.since, settings.timezone))}</span>
                     </span>
                     <button className="btn btn--ghost btn--sm" type="button" aria-label={P.removePhoneOf(ph.n)} onClick={() => setRemoving(ph)}>
                       {P.removePhone}

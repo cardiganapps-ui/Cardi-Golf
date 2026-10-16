@@ -22,7 +22,7 @@ import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
 import { useRejectedInbox } from '../../data/rejectedInbox'
 import { loadTournamentDevices, useTournamentDevices, type TournamentDevice } from '../../data/tournamentDevices'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminRounds } from './AdminRounds'
 
 const R = t.admin.rounds

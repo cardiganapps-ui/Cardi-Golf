@@ -26,7 +26,10 @@ import { lockups, wordmark as wm } from '../design/logoMark.json'
 import { assetUrl } from '../lib/assetUrl'
 import s from './primitives.module.css'
 import { TournamentLogo } from './TournamentLogo'
+import { markFor, type MarkKind } from './notation'
 import { haptic } from '../lib/haptics'
+import { formatMoney, formatSignedMoney } from '../lib/money'
+import { useCurrency } from './currency'
 
 // ---- Pressed ----
 /*
@@ -61,7 +64,7 @@ function pressCancel(e: ReactPointerEvent<HTMLElement>) {
   delete e.currentTarget.dataset.pressed
 }
 /** Spread on a control that opens or swaps something heavy: its pressed state shows from the first touch. */
-export const PRESS = { onPointerDown: pressDown, onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressCancel } as const
+const PRESS = { onPointerDown: pressDown, onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressCancel } as const
 
 // ---- Buttons ----
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
@@ -157,14 +160,11 @@ export type Tone = 'under' | 'over' | 'even'
 export function Figure({ children, tone, className = '' }: { children: ReactNode; tone?: Tone; className?: string }) {
   return <span className={`${s.fig} ${tone ? s[tone] : ''} ${className}`}>{children}</span>
 }
-/** To-par text: −2, E, +3 (true minus). */
-export function toPar(n: number): { text: string; tone: Tone } {
-  if (n === 0) return { text: 'E', tone: 'even' }
-  return n < 0 ? { text: `−${Math.abs(n)}`, tone: 'under' } : { text: `+${n}`, tone: 'over' }
-}
-const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })
-export function Money({ amount, signed }: { amount: number; signed?: boolean }) {
-  const text = signed && amount !== 0 ? `${amount < 0 ? '−' : '+'}${mxn.format(Math.abs(amount))}` : mxn.format(amount)
+/** An amount in the tournament's currency (`useCurrency`, ARCH-06), or the one given (a profile's nets carry theirs). */
+export function Money({ amount, signed, currency }: { amount: number; signed?: boolean; currency?: string }) {
+  const here = useCurrency()
+  const cur = currency ?? here
+  const text = signed ? formatSignedMoney(amount, cur) : formatMoney(amount, cur)
   return <span className={`${s.money} ${signed && amount < 0 ? s.moneyNeg : ''}`}>{text}</span>
 }
 
@@ -413,16 +413,6 @@ export function Board({ children }: { children: ReactNode }) {
 }
 
 // ---- Pencil notation ----
-export type MarkKind = 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | 'pickup'
-export function markFor(gross: number | null, par: number, pickedUp = false): MarkKind {
-  if (pickedUp || gross == null) return 'pickup'
-  const d = gross - par
-  if (d <= -2) return 'eagle'
-  if (d === -1) return 'birdie'
-  if (d === 0) return 'par'
-  if (d === 1) return 'bogey'
-  return 'double'
-}
 export function ScoreMark({ value, kind }: { value: string | number; kind: MarkKind }) {
   const stroke = kind === 'eagle' || kind === 'birdie' ? 'var(--under)' : 'var(--over)'
   return (

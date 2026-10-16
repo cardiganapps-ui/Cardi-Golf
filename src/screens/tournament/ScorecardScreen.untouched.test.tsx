@@ -28,7 +28,7 @@ import { netScoreName, stablefordPoints } from '../../engine/core/stableford'
 import { parseSettings } from '../../engine/settings/schema'
 import { t } from '../../i18n/es-MX'
 import { ScorecardScreen } from './ScorecardScreen'
-import { TournamentContext } from './TournamentGate'
+import { TournamentContext } from './tournamentContext'
 
 const S = t.card
 const fx = getFixture('minimal4-live')!

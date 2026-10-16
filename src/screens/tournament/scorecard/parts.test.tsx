@@ -92,7 +92,7 @@ describe('SigningPanel and SignSheet', () => {
     { id: 'p3', name: 'Otro grupo', player1Id: 'e', player2Id: 'f', kind: null, pickedByHonoree: false, drawnAt: null },
   ]
   const players = ['a', 'b', 'c', 'd'].map((id) => ({ id, displayName: id.toUpperCase(), fullName: id }) as never)
-  const panel = (o: { myPairId?: string | null; isAdmin?: boolean; signed?: string[]; onSign?: (id: string) => void } = {}) =>
+  const panel = (o: { myPairId?: string | null; isComite?: boolean; signed?: string[]; onSign?: (id: string) => void } = {}) =>
     render(
       <SigningPanel
         roundId="r1"
@@ -101,7 +101,7 @@ describe('SigningPanel and SignSheet', () => {
         signatures={(o.signed ?? []).map((pairId) => ({ roundId: 'r1', pairId, signedBy: 'x', signedAt: '' }))}
         players={players}
         myPairId={o.myPairId ?? 'p1'}
-        isAdmin={o.isAdmin ?? false}
+        isComite={o.isComite ?? false}
         onSign={o.onSign ?? noop}
       />,
     )
@@ -119,7 +119,7 @@ describe('SigningPanel and SignSheet', () => {
   })
 
   it('the Comité may sign either; a signed card says so, with its stamp, and offers nothing', () => {
-    panel({ isAdmin: true, signed: ['p2'] })
+    panel({ isComite: true, signed: ['p2'] })
     expect(screen.getAllByRole('button', { name: S.sign })).toHaveLength(1)
     expect(screen.getByText(S.cardSigned)).toBeTruthy()
     expect(screen.getByText(S.stamp)).toBeTruthy()
@@ -127,7 +127,7 @@ describe('SigningPanel and SignSheet', () => {
 
   it('the stamp lands when a card is signed with the panel up, never again when the panel opens (MOT-14)', () => {
     const sigs = (ids: string[]) => ids.map((pairId) => ({ roundId: 'r1', pairId, signedBy: 'x', signedAt: '' }))
-    const el = (signed: string[]) => <SigningPanel roundId="r1" groupPlayerIds={['a', 'b', 'c', 'd']} pairs={pairs} signatures={sigs(signed)} players={players} myPairId="p1" isAdmin onSign={noop} />
+    const el = (signed: string[]) => <SigningPanel roundId="r1" groupPlayerIds={['a', 'b', 'c', 'd']} pairs={pairs} signatures={sigs(signed)} players={players} myPairId="p1" isComite onSign={noop} />
     // Motion draws a stamp that lands from its first frame (opacity 0); one already there, at rest.
     const stamps = () => screen.queryAllByText(S.stamp).map((x) => (x as HTMLElement).style.opacity)
     // The grid opened on a day whose card was signed long ago: the stamp is simply there.

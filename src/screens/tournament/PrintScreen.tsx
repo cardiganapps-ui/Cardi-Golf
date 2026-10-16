@@ -8,7 +8,7 @@
  */
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { t } from '../../i18n/es-MX'
+import { handicapText, t } from '../../i18n/es-MX'
 import { Segmented } from '../../components/ui'
 import { SiAbbr } from '../../components/primitives'
 import { useTournament } from '../../data/tournamentStore'
@@ -19,7 +19,9 @@ import styles from './PrintScreen.module.css'
 import { IconPrint } from '../../components/icons'
 import { TournamentLogo } from '../../components/TournamentLogo'
 import { formatMoney } from '../../lib/money'
+import { strokeMarks } from '../../lib/strokeMarks'
 import type { TournamentData } from '../../data/tournamentStore'
+import { useCurrency } from '../../components/currency'
 
 const P = t.print
 
@@ -117,7 +119,7 @@ export function PrintScreen() {
                 </thead>
                 <tbody>
                   {members.map(({ p, pr }) => (
-                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr?.playingHcp ?? '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} dots={order.map((h) => pr?.holes.find((x) => x.hole === h)?.strokesReceived ?? 0)} />
+                    <PlayerRows key={p.id} name={p.displayName} sub={`${t.live.playingHcp} ${pr ? handicapText(pr.playingHcp) : '–'}${pairName(p.id) ? `, ${pairName(p.id)}` : ''}`} dots={order.map((h) => pr?.holes.find((x) => x.hole === h)?.strokesReceived ?? 0)} />
                   ))}
                 </tbody>
               </table>
@@ -139,6 +141,7 @@ export function PrintScreen() {
  * write), with what is sold already filled in and a blank line for the rest.
  */
 function AuctionSheet({ data }: { data: TournamentData }) {
+  const cur = useCurrency()
   const { snapshot, settings } = data
   const a = settings.auction
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
@@ -146,7 +149,7 @@ function AuctionSheet({ data }: { data: TournamentData }) {
   const rows = lots.length
     ? lots.map((l) => {
         const sold = l.status === 'sold'
-        return { key: l.id, lot: String(l.lotNumber), player: byId.get(l.playerId), buyer: sold && l.ownerId ? (byId.get(l.ownerId)?.displayName ?? '') : '', price: sold && l.price != null ? formatMoney(l.price) : '' }
+        return { key: l.id, lot: String(l.lotNumber), player: byId.get(l.playerId), buyer: sold && l.ownerId ? (byId.get(l.ownerId)?.displayName ?? '') : '', price: sold && l.price != null ? formatMoney(l.price, cur) : '' }
       })
     : [...snapshot.players].sort((x, y) => x.sortOrder - y.sortOrder).map((p) => ({ key: p.id, lot: '', player: p, buyer: '', price: '' }))
   return (
@@ -158,7 +161,7 @@ function AuctionSheet({ data }: { data: TournamentData }) {
           <div className={styles.sub}>{P.auctionSheet}</div>
         </div>
       </header>
-      <p className={styles.sub}>{P.auctionRules(formatMoney(a.openingBid), formatMoney(a.increment), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct)}</p>
+      <p className={styles.sub}>{P.auctionRules(formatMoney(a.openingBid, cur), formatMoney(a.increment, cur), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct)}</p>
       <table className={`${styles.table} ${styles.sheet}`}>
         <thead>
           <tr>
@@ -205,9 +208,9 @@ function PlayerRows({ name, sub, dots }: { name: string; sub: string; dots: numb
         {dots.map((d, i) => (
           <td key={i} className={styles.strokes}>
             {/* A11Y-22: said as the strokes they are, not «viñeta, viñeta». */}
-            {d > 0 && (
+            {d !== 0 && (
               <span className={styles.dots} role="img" aria-label={t.admin.players.strokesOn(d)}>
-                {'•'.repeat(d)}
+                {strokeMarks(d)}
               </span>
             )}
           </td>

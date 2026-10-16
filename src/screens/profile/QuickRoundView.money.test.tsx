@@ -37,11 +37,11 @@ describe('Ronda rápida «Con dinero» says what each game asks (COPY-21)', () =
     await act(async () => fireEvent.click(screen.getByRole('button', { name: Q.game.threePutts })))
     await act(async () => fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(`^${Q.money}`) })))
     // Skins is on by default: $200 each, a pot of $200 for one player; Tres putts is paid player to player.
-    expect(screen.getByText(Q.stakeBuyIn(Q.game.skins!, formatMoney(200), formatMoney(200)))).toBeTruthy()
-    expect(screen.getByText(Q.stakeThreePutts(formatMoney(20)))).toBeTruthy()
+    expect(screen.getByText(Q.stakeBuyIn(Q.game.skins!, formatMoney(200, 'MXN'), formatMoney(200, 'MXN')))).toBeTruthy()
+    expect(screen.getByText(Q.stakeThreePutts(formatMoney(20, 'MXN')))).toBeTruthy()
     // The entry ($200 by default) and the Skins buy-in, before the first hole.
-    expect(screen.getByText(Q.upfront(1, formatMoney(400), true))).toBeTruthy()
-    expect(screen.getByText(Q.potLine(formatMoney(200), null))).toBeTruthy()
+    expect(screen.getByText(Q.upfront(1, formatMoney(400, 'MXN'), true))).toBeTruthy()
+    expect(screen.getByText(Q.potLine(formatMoney(200, 'MXN'), null))).toBeTruthy()
   })
 
   it('without money, no figure', async () => {

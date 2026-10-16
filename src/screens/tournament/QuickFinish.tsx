@@ -4,7 +4,7 @@
  */
 import { memo, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { useCloseGate } from '../../components/CloseGate'
 import { finishQuickRound, finishQuickRounds } from '../../data/quick'
 import { useTournament } from '../../data/tournamentStore'

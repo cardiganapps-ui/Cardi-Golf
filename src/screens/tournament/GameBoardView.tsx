@@ -10,24 +10,10 @@ import { useTournament } from '../../data/tournamentStore'
 import type { GameResultState } from '../../engine/games/game'
 import { formatMoney } from '../../lib/money'
 import styles from './GamesScreen.module.css'
-
-export function gameStake(g: GameResultState): { text: string; amount?: number } {
-  const m = g.config.money
-  if (m.source === 'side') return { text: t.games.sidePot, amount: g.pot }
-  if (m.source === 'main') return { text: t.games.fromMain, amount: g.pot }
-  if (m.source === 'direct') return { text: t.games.perBet(formatMoney(m.stake)), amount: m.stake }
-  return { text: t.games.justForFun }
-}
-
-export function gameLeader(g: GameResultState, name: (id: string) => string): string {
-  const row = g.board.sections[0]?.rows[0]
-  if (!row) return t.games.noResults
-  const who = t.common.andList(row.playerIds.map(name))
-  if (row.title) return `${row.title}: ${who ? `${who}, ` : ''}${row.figure.toLowerCase()}`
-  return t.games.leader(who, row.label ? `${row.label} ${row.figure}` : row.figure)
-}
+import { useCurrency } from '../../components/currency'
 
 export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (playerId: string) => void }) {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)
   if (!data) return null
   const g = data.state.games[gameId]
@@ -69,7 +55,7 @@ export function GameBoardView({ gameId, onOpen }: { gameId: string; onOpen: (pla
                     {!p.final ? `, ${t.money.ifEndedNow}` : ''}
                   </span>
                 </span>
-                <HowCalculated why={p.why} label={formatMoney(p.amount)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${p.label}`} />
+                <HowCalculated why={p.why} label={formatMoney(p.amount, cur)} about={`${p.payerId ? t.moneyScreen.payText(t.moneyScreen.payWords(name(p.payerId), name(p.playerId))) : name(p.playerId)}, ${p.label}`} />
               </div>
             ))}
           </div>

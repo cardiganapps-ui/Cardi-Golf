@@ -5,7 +5,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
-import { ErrorBox, Spinner, Toggle, toast } from '../../components/ui'
+import { ErrorBox, Spinner, Toggle } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { Field, Input } from '../../components/primitives'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { useAppFlags, usePlatformApi, type Health, type Telemetry } from '../../data/platform'

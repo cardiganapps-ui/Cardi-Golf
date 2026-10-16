@@ -10,7 +10,9 @@
 #   3. The harness self-test and every supabase/tests/*.sql, each on its own
 #      copy of the migrated database with the two-tenant seed; the test
 #      server's rules against the real ones (scripts/server-rules.mjs: every
-#      request in src/data/testing/cases/serverRules.json, QA-06); then every
+#      request in src/data/testing/cases/serverRules.json, QA-06); the Polo
+#      index's SQL against src/engine/profile/cases/whs.json, the cases the TS
+#      runs too (scripts/whs-parity.mjs, ARCH-16); then every
 #      supabase/tests/race_*.sh, which runs two sessions at once; then every
 #      supabase/tests/upgrade_*.sh, which applies a migration to a database at
 #      the one before it, already holding tournaments, and compares.
@@ -95,6 +97,8 @@ done
 # The case file brings its own world: a copy with no seed.
 fresh "${P}_t" "$P"
 PGDATABASE="${P}_t" node "$root/scripts/server-rules.mjs" || exit 1
+# The WHS arithmetic reads nothing: the migrated database as it is.
+PGDATABASE="$P" node "$root/scripts/whs-parity.mjs" || exit 1
 
 step "3b. Races: two sessions at once, on the migrated database (supabase/tests/race_*.sh)"
 for t in "$root"/supabase/tests/race_*.sh; do

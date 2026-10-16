@@ -23,7 +23,7 @@ import { makePlayer, makeRound } from '../../engine/testing/fixtures'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
-import { TournamentContext } from '../tournament/TournamentGate'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { AdminLayout } from './AdminLayout'
 import { ReadinessCard } from './ReadinessCard'
 
@@ -39,7 +39,7 @@ function snapshotOf(name: string, edit?: (s: Snapshot) => void) {
 
 function provider(name: string, tournamentId: string, children: React.ReactNode) {
   return (
-    <TournamentContext.Provider value={{ tournamentId, slug: 'viaje', lookup: getFixture(name)!.lookup, me: { playerId: null, isOrganizer: true, isAdmin: true }, refresh: async () => undefined, leave: async () => undefined }}>
+    <TournamentContext.Provider value={{ tournamentId, slug: 'viaje', lookup: getFixture(name)!.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
       {children}
     </TournamentContext.Provider>
   )

@@ -1992,7 +1992,7 @@ export const t = {
     where: (thru: number, holes: number, day: number, days: number, last: boolean) =>
       thru >= holes ? (days > 1 && !last ? `terminó el día ${day}` : 'terminó') : days > 1 ? `por el ${thru} del día ${day}` : `por el ${thru}`,
     handicapLine: (base: number, source: string) => `${source} ${handicapText(base)}`,
-    dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${ph}${cut ? ` (−${cut})` : ''}`,
+    dayHcp: (day: number, ph: number, cut: number) => `día ${day}: ${handicapText(ph)}${cut ? ` (−${cut})` : ''}`,
     round: (day: number, figure: string) => `Día ${day}: ${figure}`,
     grossPutts: (gross: number | null, putts: number) => `${gross != null ? `${gross} golpes, ` : ''}${putts} putts`,
     whyHole: (n: number) => `Hoyo ${n}`,
@@ -2712,10 +2712,13 @@ export const t = {
       assumed: 'asumido',
       estimated: 'estimado',
       preview: 'Vista previa',
-      previewPh: (ph: number) => `Hándicap de juego ${ph}`,
+      previewPh: (ph: number) => `Hándicap de juego ${handicapText(ph)}`,
       courseHcp: (n: number) => `hándicap de campo ${handicapText(n)}`,
       committee: 'Comité',
-      strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
+      /** A plus handicap gives strokes back on a hole (MONEY-21): «Da 1 golpe». */
+      strokesOn: (n: number) => (n === 0 ? 'Sin golpes de ventaja' : n < 0 ? `Da ${-n} golpe${n === -1 ? '' : 's'}` : `${n} golpe${n === 1 ? '' : 's'} de ventaja`),
+      /** The holes where a plus handicap gives its strokes back: «Devuelve: 1 en SI 18». */
+      givesBackLine: (ranges: string) => `Devuelve: ${ranges}`,
       areYouSure: '¿Seguro? Ese resultado se ve raro.',
       /** Save waits for a handicap someone typed, by the method chosen (UX-16): a new player opened on 18. */
       hcpMissing: { manual: 'Escribe su hándicap para guardarlo.', index: 'Escribe su índice para guardarlo.', estimate: 'Escribe los golpes de sus tres rondas para guardarlo.' },
@@ -2742,6 +2745,8 @@ export const t = {
     },
     courses: {
       title: 'Campos',
+      /** The name a tee started from scratch opens with (ARCH-20: it was a default in code). */
+      defaultTee: 'Azules',
       empty: 'Sin campos. Busca uno, sube una foto de la tarjeta o captúralo a mano.',
       notMine: 'Lo creó otro organizador; solo quien lo creó puede borrarlo.',
       ladies: 'damas',
@@ -3369,7 +3374,7 @@ export const t = {
               ]
       return [
         `Hándicap de juego = ${allowancePct}% del hándicap base (tope ${cap}), redondeado al entero (mitad hacia arriba).`,
-        `Golpes de ventaja por hoyo según el índice de golpe (SI) del tee que juegas.`,
+        `Golpes de ventaja por hoyo según el índice de golpe (SI) del tee que juegas. Un hándicap plus (por debajo de 0) los devuelve, empezando por el hoyo más fácil.`,
         ...cutLine,
         'El Comité puede ajustar un hándicap con razón escrita; todo queda en la bitácora.',
       ]

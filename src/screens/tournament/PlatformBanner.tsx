@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { toast } from '../../components/ui'
+import { toast } from '../../components/toast'
 import { IconLock, IconShield } from '../../components/icons'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { usePlatformApi } from '../../data/platform'

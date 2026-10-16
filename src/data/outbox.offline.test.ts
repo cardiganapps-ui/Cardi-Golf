@@ -16,7 +16,7 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LookupResult } from './api'
-import type { Me } from '../screens/tournament/TournamentGate'
+import type { Me } from '../screens/tournament/tournamentContext'
 import { enterAs, holeScore, installFakePhone, PIN, settle, snakeAnswer, turn, until } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
@@ -39,7 +39,7 @@ interface App {
 let app: App | null = null
 
 const LOOKUP: LookupResult = { id: 't1', slug: 'ensayo', name: 'Ensayo', tagline: null, logoUrl: null, accentColor: null, status: 'live', joinCode: 'ABC123', players: [] }
-const ME: Me = { playerId: 'p1', isOrganizer: false, isAdmin: false, via: 'device' }
+const ME: Me = { playerId: 'p1', isOrganizer: false, isComite: false, via: 'device' }
 
 /**
  * The page goes away, and its timers with it: the outbox's retry and the

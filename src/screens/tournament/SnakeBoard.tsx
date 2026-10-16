@@ -12,8 +12,10 @@ import styles from './SnakeBoard.module.css'
 import { IconSnake } from '../../components/icons'
 import { easeSlow } from '../../design/motion'
 import { useShowMoney } from './tournamentView'
+import { useCurrency } from '../../components/currency'
 
 export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)!
   // A link to watch «Sin dinero» (STRAT-05): who holds the snake and the passes, never what each one cashes.
   const showMoney = useShowMoney()
@@ -44,7 +46,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                         ? t.games.snakeSettled
                         : t.games.snakeDone
                       : showMoney
-                        ? t.games.inPlay(formatMoney(g.pot))
+                        ? t.games.inPlay(formatMoney(g.pot, cur))
                         : t.games.snakeInPlay}
                 </span>
               </div>
@@ -63,7 +65,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                         )}
                       </span>
                       <span className={styles.playerName}>{name(pid)}</span>
-                      {payout && showMoney && <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>{formatMoney(payout.amount)}</span>}
+                      {payout && showMoney && <span className={`${styles.payout} ${payout.amount ? '' : styles.payoutZero}`}>{formatMoney(payout.amount, cur)}</span>}
                     </button>
                   )
                 })}

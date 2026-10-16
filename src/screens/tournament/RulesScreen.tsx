@@ -10,10 +10,12 @@ import { describeGame } from '../../engine/games/describe'
 import { moduleRules } from '../../engine/settings/describeModule'
 import { mainScoring } from '../../engine/formats'
 import styles from './RulesScreen.module.css'
+import { useCurrency } from '../../components/currency'
 
 const R = t.rules
 
 export function RulesScreen() {
+  const cur = useCurrency()
   const data = useTournament((s) => s.data)
   if (!data) return null
   const { snapshot, settings } = data
@@ -24,7 +26,7 @@ export function RulesScreen() {
   const rules = (id: Parameters<typeof moduleRules>[0]) => moduleRules(id, settings, field, honoree?.displayName)
 
   const sections: Array<{ id: string; title: string; lines: string[]; on: boolean }> = [
-    { id: 'field', title: R.sections.field, lines: R.field(n, formatMoney(settings.entryFee), formatMoney(settings.entryFee * n), t.common.andList(settings.tiers)), on: true },
+    { id: 'field', title: R.sections.field, lines: R.field(n, formatMoney(settings.entryFee, cur), formatMoney(settings.entryFee * n, cur), t.common.andList(settings.tiers)), on: true },
     {
       id: 'handicaps',
       title: R.sections.handicaps,
