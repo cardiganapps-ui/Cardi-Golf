@@ -67,7 +67,7 @@ test('the Calcutta template reviews its modules, each with its prize (UX-04)', a
   await page.getByRole('radio', { name: /^Viaje con Calcutta/ }).click()
   await page.getByRole('button', { name: t.common.next }).click()
   const rows = new Map((await reviewRows(page)).map((r) => [r.key, r.value]))
-  expect(rows.get('La Calcutta')).toContain(W.reviewOwnPot)
+  expect(rows.get('La Calcutta')).toContain(W.reviewAuctionPot)
   expect(rows.get('Los Matrimonios')).toBe('$3,000$2,000 + $1,000')
   expect(rows.get('Individual')).toMatch(/^\$20,000/)
   expect(rows.get(W.reviewPrizes)).toBe(`$30,000${W.reviewBalanced('$30,000')}`)

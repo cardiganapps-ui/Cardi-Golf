@@ -11,11 +11,14 @@ function roundsText(g: GameConfig): string {
   return g.rounds.length === 1 ? `Solo el día ${g.rounds[0]}.` : `Días ${t.common.andList(g.rounds.map(String))}.`
 }
 
+/** What a game pays out, at the start of a sentence (COPY-14): its own bote, or its premio from the bolsa. */
+const paidWord = (g: GameConfig) => (g.money.source === 'side' ? 'El bote' : 'El premio')
+
 function moneyText(g: GameConfig): string {
   const m = g.money
   if (m.source === 'none') return 'Sin dinero: por la gloria.'
   if (m.source === 'side') return `Bote aparte: cada quien que entra pone ${fmt(m.buyIn)}; el bote solo le paga a los que entraron.`
-  if (m.source === 'main') return `Sale de la bolsa principal: ${fmt(m.amount)}.`
+  if (m.source === 'main') return `El premio sale de la bolsa principal: ${fmt(m.amount)}.`
   return `Directo entre jugadores: ${fmt(m.stake)}${g.type === 'match' ? ' por apuesta' : ' por cada uno'}.`
 }
 
@@ -26,13 +29,13 @@ export function describeGame(g: GameConfig): string[] {
       const o = g.options
       lines.push(`En cada hoyo, quien hace menos golpes ${o.basis === 'net' ? 'netos' : 'gross'}, solo, gana un skin.`)
       lines.push(o.carryOver ? 'Si hay empate nadie gana y el skin se acumula al siguiente hoyo.' : 'Si hay empate nadie gana ese hoyo.')
-      if (g.money.source === 'side' || g.money.source === 'main') lines.push('El bote se reparte entre los skins ganados.')
+      if (g.money.source === 'side' || g.money.source === 'main') lines.push(`${paidWord(g)} se reparte entre los skins ganados.`)
       break
     }
     case 'lowScore': {
       const o = g.options
       lines.push(o.basis === 'points' ? 'Gana quien hace más puntos Stableford.' : `Gana la tarjeta ${o.basis === 'net' ? 'neta' : 'gross'} más baja contra el par. Levantar cuenta como doble bogey neto.`)
-      lines.push(o.scope === 'perRound' ? 'Un premio por día (el bote se divide entre los días).' : 'Un solo premio sumando todos sus días.')
+      lines.push(o.scope === 'perRound' ? `Un premio por día (${paidWord(g).toLowerCase()} se divide entre los días).` : 'Un solo premio sumando todos sus días.')
       if (g.money.source !== 'none') lines.push(`Reparto: ${t.common.andList(g.money.split.map((p, i) => `${ordinal(String(i + 1))} ${p}%`))}. Empates se reparten.`)
       break
     }
@@ -41,7 +44,7 @@ export function describeGame(g: GameConfig): string[] {
       if (o.event === 'threePutt') lines.push('Cada vez que alguien hace tres putts o más, le paga a cada uno de los demás.')
       else lines.push(`Cada ${o.event === 'eagle' ? 'águila' : 'birdie'} o mejor (${o.basis === 'net' ? 'neto' : 'gross'}) cuenta.`)
       if (o.event !== 'threePutt' && g.money.source === 'direct') lines.push('Cada uno lo cobra de cada uno de los demás.')
-      if (g.money.source === 'side' || g.money.source === 'main') lines.push('El bote se reparte según cuántos hizo cada quien.')
+      if (g.money.source === 'side' || g.money.source === 'main') lines.push(`${paidWord(g)} se reparte según cuántos hizo cada quien.`)
       break
     }
     case 'match': {

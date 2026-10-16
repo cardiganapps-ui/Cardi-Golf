@@ -70,7 +70,7 @@ describe('«Cerrar torneo»', () => {
     for (const s of snap.scores) if (s.roundId === 'r2' && s.hole === 18 && (s.playerId === 'p1' || s.playerId === 'p10')) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
     // Its group's money waits for the answer: not «por asignar», so the tiebreak is the only thing to do.
     expect(kinds(snap)).toEqual(['tiebreaks'])
-    expect(closeCheck(snap, S, { openRejected: 0 }).blockers[0]!.text).toBe('Un desempate de la víbora sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.')
+    expect(closeCheck(snap, S, { openRejected: 0 }).blockers[0]!.text).toBe('Un desempate de la Víbora sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.')
     snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p1' })
     expect(kinds(snap)).toEqual([])
   })

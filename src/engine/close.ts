@@ -67,7 +67,7 @@ export function closeCheck(snapshot: Snapshot, settings: TournamentSettings, opt
   if (missing.length) blockers.push({ kind: 'missingRounds', text: C.missingRounds(missing) })
   if (open.length) blockers.push({ kind: 'openRounds', text: C.openRounds(open) })
   const pending = state.flags.pendingSnakeTiebreaks.length
-  if (pending) blockers.push({ kind: 'tiebreaks', text: C.tiebreaks(pending) })
+  if (pending) blockers.push({ kind: 'tiebreaks', text: C.tiebreaks(pending, settings.modules.snake.label) })
   // A hole without putts would close on a guess: the putting games never read it as 0 (MONEY-18).
   const noPutts = state.flags.missingPutts.reduce((n, m) => n + m.holes.length, 0)
   if (noPutts) blockers.push({ kind: 'missingPutts', text: C.missingPutts(noPutts) })

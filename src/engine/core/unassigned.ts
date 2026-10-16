@@ -118,7 +118,7 @@ export interface UnassignedState {
   awards: PrizeAward[]
   /** What the assignments that fit leave to the house. */
   toHouse: number
-  /** «Asignación de más», «Asignación sin pozo». */
+  /** «Asignación de más», «Asignación sin dinero». */
   warnings: string[]
 }
 
@@ -162,7 +162,7 @@ export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'c
       label: U.heldLabel(label, g.roundNumber, g.groupNumber),
       amount: g.pot,
       note: U.heldNote(g.pendingHole!),
-      why: { title: U.heldTitle(fmt(g.pot)), steps: [U.pendingTiebreak(g.roundNumber, g.groupNumber, g.pendingHole!), U.heldWhy(fmt(g.pot))] },
+      why: { title: U.heldTitle(fmt(g.pot)), steps: [U.pendingTiebreak(g.roundNumber, g.groupNumber, g.pendingHole!), U.heldWhy(fmt(g.pot), label)] },
     }))
 }
 

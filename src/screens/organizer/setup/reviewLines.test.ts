@@ -28,7 +28,7 @@ describe('the review\'s game lines (UX-04)', () => {
       ['La Víbora', '$3,600'],
       ['Menos putts', '$1,000'],
       [W.reviewPrizes, '$30,000'],
-      ['La Calcutta', W.reviewOwnPot],
+      ['La Calcutta', W.reviewAuctionPot],
     ])
     expect(out.at(-1)!.detail).toBe(W.reviewAuction(['Campeón 55%', 'Subcampeón 20%', 'Mejor C 10%', 'Mejor D 10%', 'La Cuchara de Palo 5%']))
   })

@@ -184,12 +184,13 @@ export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (
       remainder -= extra
       const amount = base + extra
       const steps: string[] = []
-      if (n === 1) steps.push(`${ordinal(String(g.position))} lugar: ${pesos(total)}`)
+      // COPY-19: the place and what it pays, in a sentence; a tie says whose prizes it joins and how it splits them.
+      if (n === 1) steps.push(`El ${ordinal(String(g.position))} lugar paga ${pesos(total)}`)
       else {
         steps.push(
-          `Empate a ${n} en el ${ordinal(String(g.position))}: se reparten los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))} (${pesos(total)})`,
+          `Empataron ${n} en el ${ordinal(String(g.position))} lugar: juntan los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))}, ${pesos(total)}`,
         )
-        steps.push(`${pesos(total)} ÷ ${n} = ${pesos(base)}${extra ? ' (+$1 de redondeo)' : ''}`)
+        steps.push(`${pesos(total)} entre ${n} = ${pesos(base)} cada uno${extra ? ', más $1 del redondeo' : ''}`)
         steps.push(`Empatados: ${t.common.andList(g.members.map(name))}`)
       }
       out.push({ item: m, amount, why: { title: pesos(amount), steps } })

@@ -38,7 +38,7 @@ const QUICK: Array<{ id: string; build: () => GameConfig }> = [
   },
   {
     id: 'birdies',
-    build: () => ({ id: 'birdies', type: 'eventPot', label: 'Bote de birdies', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } }),
+    build: () => ({ id: 'birdies', type: 'eventPot', label: 'Premio por birdie', enabled: true, rounds: 'all', entrants: 'all', options: { event: 'birdie', basis: 'gross' }, money: { source: 'direct', buyIn: 0, amount: 0, stake: 50, split: [100] } }),
   },
   {
     id: 'cerca',

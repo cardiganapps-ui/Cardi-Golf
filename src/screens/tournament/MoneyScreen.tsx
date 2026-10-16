@@ -365,7 +365,7 @@ export function MoneyScreen() {
         )}
         {!u.closing && !u.openDays && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
         {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
-        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal))}</span>}
+        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal), settings.modules.snake.label)}</span>}
       </section>
 
       <UnassignedMoney />

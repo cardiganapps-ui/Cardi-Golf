@@ -191,9 +191,9 @@ describe('CorrectionReasonSheet', () => {
 describe('the save’s questions', () => {
   it('«¿Quién embocó al último?» offers each candidate and «No sabemos», which answers nobody (UX-08)', () => {
     const onAnswer = vi.fn()
-    render(<TiebreakSheet candidates={['b', 'a', 'gone']} named={named} threshold={3} busy={false} onAnswer={onAnswer} onClose={noop} />)
+    render(<TiebreakSheet candidates={['b', 'a', 'gone']} named={named} threshold={3} game="La Víbora" busy={false} onAnswer={onAnswer} onClose={noop} />)
     const dialog = screen.getByRole('dialog', { name: S.whoHoledLast })
-    expect(within(dialog).getByText(S.whoHoledLastHint(3))).toBeTruthy()
+    expect(within(dialog).getByText(S.whoHoledLastHint(3, 'La Víbora'))).toBeTruthy()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Beto' }))
     expect(onAnswer).toHaveBeenLastCalledWith('b')
     fireEvent.click(within(dialog).getByRole('button', { name: S.whoHoledLastUnknown }))
@@ -203,7 +203,7 @@ describe('the save’s questions', () => {
   })
 
   it('while a save is on its way the answers wait', () => {
-    render(<TiebreakSheet candidates={['a', 'b']} named={named} threshold={3} busy onAnswer={noop} onClose={noop} />)
+    render(<TiebreakSheet candidates={['a', 'b']} named={named} threshold={3} game="La Víbora" busy onAnswer={noop} onClose={noop} />)
     expect(screen.getByRole('button', { name: 'Ana' })).toHaveProperty('disabled', true)
     expect(screen.getByRole('button', { name: S.whoHoledLastUnknown })).toHaveProperty('disabled', true)
   })
@@ -233,7 +233,7 @@ describe('the save’s questions', () => {
   it('none of them shows while closed', () => {
     render(
       <>
-        <TiebreakSheet candidates={null} named={named} threshold={3} busy={false} onAnswer={noop} onClose={noop} />
+        <TiebreakSheet candidates={null} named={named} threshold={3} game="La Víbora" busy={false} onAnswer={noop} onClose={noop} />
         <DefaultsSheet open={false} hole={7} onBack={noop} onConfirm={noop} />
         <UnusualSheet lines={null} onFix={noop} onConfirm={noop} />
       </>,
@@ -245,7 +245,7 @@ describe('the save’s questions', () => {
 describe('PlayerRow', () => {
   const h = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 7, par: 4, strokeIndex: 3, yards: null, strokesReceived: 2, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: '', steps: [] }, ...o })
   const row = (o: Partial<Parameters<typeof PlayerRow>[0]> = {}) =>
-    render(<PlayerRow id="a" name="Ana" labelId="l-a" draft={{ strokes: 4, putts: 2, pickedUp: false }} hole={h()} parOnScreen={4} locked={false} untouched={false} ptsLine="4 pts" good holdsSnake={false} snakeLayoutId="s" onDraft={noop} {...o} />)
+    render(<PlayerRow id="a" name="Ana" labelId="l-a" draft={{ strokes: 4, putts: 2, pickedUp: false }} hole={h()} parOnScreen={4} locked={false} untouched={false} ptsLine="4 pts" good holdsSnake={false} snakeLabel="La Víbora" snakeLayoutId="s" onDraft={noop} {...o} />)
 
   it('his controls carry his name; a tap changes his draft only, putts never over the strokes', () => {
     const onDraft = vi.fn()
@@ -271,7 +271,7 @@ describe('PlayerRow', () => {
 
   it('the snake’s holder carries its mark', () => {
     row({ holdsSnake: true })
-    expect(screen.getByRole('img', { name: S.snakeHolder })).toBeTruthy()
+    expect(screen.getByRole('img', { name: S.snakeHolder('La Víbora') })).toBeTruthy()
   })
 })
 
