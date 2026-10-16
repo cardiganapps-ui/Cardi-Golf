@@ -3543,11 +3543,15 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 212,
+      "tests": [
+        "supabase/tests/platform_funnel.sql",
+        "src/screens/platform/Funnel.test.tsx",
+        "docs/strategy/launch-scope.json"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Freezing Personas moderation, Avisos broadcast, catalog merge and crew moderation behind a flag is Diego’s decision 5c; until then the launch scope files them outside the launch."
     },
     {
       "id": "STRAT-13",
