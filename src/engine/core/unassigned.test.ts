@@ -13,6 +13,7 @@ import type { TournamentSettings } from '../settings/schema'
 import { fillRound, makeFirstTournament, makePlayer, makeRound, makeSnapshot, PAR_72, score } from '../testing/fixtures'
 import type { HoleAward, MoneyAdjustment, Snapshot } from '../types'
 import { proRata, type UnassignedBucket } from './unassigned'
+import { words } from '../testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 const PARS = PAR_72.map(([p]) => p)
@@ -87,7 +88,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     expect(st.money.unassigned.total).toBe(3000)
     expect(st.money.banker.difference).toBe(3000)
     const best = st.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    expect(best.why).toEqual({
+    expect(words(best.why)).toEqual({
       title: '$1,200 sin asignar',
       steps: ['Mejor ronda reparte $2,400', 'Ya se repartió $1,200', 'Día 2 cancelado: su premio no se jugó', 'Quedan $1,200 sin asignar', 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.'],
     })
@@ -111,7 +112,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     expect(keyed(st)).toEqual({ snake: 1800 })
     const prize = st.prizes.find((p) => p.moduleId === 'adjustment')!
     expect(prize).toMatchObject({ playerId: 'p5', amount: 1200, label: 'Mejor ronda, asignado por el Comité', potId: 'main', final: true, sourceKey: 'bestRound' })
-    expect(prize.why.steps).toEqual(['Mejor ronda: $1,200 sin asignar', 'El Comité decidió: Mejor ronda del día 1 se lleva los dos'])
+    expect(words(prize.why).steps).toEqual(['Mejor ronda: $1,200 sin asignar', 'El Comité decidió: Mejor ronda del día 1 se lleva los dos'])
     expect(st.money.people.p5!.prizes['Mejor ronda, asignado por el Comité']).toBe(1200)
     expect(st.money.banker.difference).toBe(1800)
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['applied'])
@@ -123,7 +124,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     const snap = cancelledDay2()
     const st0 = run(snap)
     const snake = st0.money.unassigned.buckets.find((b) => b.key === 'snake')!
-    expect(snake.why.steps).toContain('Día 2 cancelado: su premio no se jugó')
+    expect(words(snake.why).steps).toContain('Día 2 cancelado: su premio no se jugó')
     const shares = proRata(snake.remaining, snake.contributors!)
     expect(shares.map((s) => s.amount)).toEqual(Array(12).fill(150))
     snap.moneyAdjustments = call('snake', shares.map((s) => ({ kind: 'refund', toPlayerId: s.playerId, amount: s.amount })), 'Día 2 cancelado: se devuelve')
@@ -166,7 +167,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     ])
     expect(keyed(st)).toEqual({ bestRound: 200, snake: 1800 })
     expect(st.prizes.filter((p) => p.moduleId === 'adjustment').map((p) => [p.playerId, p.amount])).toEqual([['p2', 1000]])
-    expect(st.flags.warnings).toContain('Asignación de más en Mejor ronda: el Comité asignó $300 y solo quedan $200. No se paga hasta que se anule.')
+    expect(words(st.flags.warnings)).toContain('Asignación de más en Mejor ronda: el Comité asignó $300 y solo quedan $200. No se paga hasta que se anule.')
     expect(st.money.banker.difference).toBe(2000)
   })
 
@@ -182,7 +183,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     expect(st.flags.pendingSnakeTiebreaks).toHaveLength(1)
     expect(keyed(st)).toEqual({})
     expect(st.money.unassigned.total).toBe(0)
-    expect(st.money.unassigned.held).toEqual([
+    expect(st.money.unassigned.held.map((h) => ({ ...h, why: words(h.why) }))).toEqual([
       {
         key: 'snake:r2:r2g1',
         label: 'La Víbora, día 2, grupo 1',
@@ -193,12 +194,12 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     ])
     // The bank holds it, and the list says so: no mismatch.
     expect(st.money.banker.difference).toBe(600)
-    expect(st.flags.warnings.filter((w) => w.startsWith('El banco tiene'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('El banco tiene'))).toEqual([])
     // An award on the snake's line finds no money there: flagged, never paid.
     snap.moneyAdjustments = call('snake', [{ kind: 'award', toPlayerId: 'p4', amount: 600 }])
     st = run(snap)
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['orphan'])
-    expect(st.flags.warnings).toContain('Asignación sin dinero en La Víbora: hay $600 asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.')
+    expect(words(st.flags.warnings)).toContain('Asignación sin dinero en La Víbora: hay $600 asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.')
     expect(st.prizes.some((p) => p.moduleId === 'adjustment')).toBe(false)
     // Answered: the snake pays its group, and nothing is held or paid twice.
     snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p10' })
@@ -291,7 +292,7 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     const st = run(snap, settings)
     expect(keyed(st)).toEqual({ 'game:skins': 300 })
     const b = st.money.unassigned.buckets[0]!
-    expect(b.why.steps).toContain('Skins: nadie ganó un skin; $300 quedan sin asignar.')
+    expect(words(b.why).steps).toContain('Skins: nadie ganó un skin; $300 quedan sin asignar.')
     expect(b.contributors).toEqual(['p1', 'p2', 'p3', 'p4'].map((playerId) => ({ playerId, amount: 100 })))
   })
 
@@ -308,7 +309,7 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     const b = st.money.unassigned.buckets[0]!
     expect(b.potId).toBe('ctp')
     expect(b.contributors).toEqual(['p1', 'p2', 'p3', 'p4'].map((playerId) => ({ playerId, amount: 100 })))
-    expect(b.why.steps).toContain('Más cerca: un hoyo en disputa (3).')
+    expect(words(b.why).steps).toContain('Más cerca: un hoyo en disputa (3).')
   })
 
   it('a side pot that is fully won leaves no bucket', () => {
@@ -333,7 +334,7 @@ describe('every source the rules leave to the Comité is a bucket with a stable 
     const st = run(snap, settings)
     // 3 players paid $6,000; the 3,000 + 1,500 + 1,000 places are filled, the 4th's $500 is nobody's.
     expect(keyed(st)).toEqual({ individual: 500 })
-    expect(st.money.unassigned.buckets[0]!.why.steps).toContain('Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $500 sin asignar.')
+    expect(words(st.money.unassigned.buckets[0]!.why).steps).toContain('Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $500 sin asignar.')
   })
 
   it('entries no prize claims: «pool»', () => {
@@ -435,7 +436,7 @@ describe('property: assigning every bucket in full empties «Por asignar» and b
     answerAll(snap, settings)
     const after = run(snap, settings)
     expect(after.money.unassigned.assignments.every((a) => a.status === 'applied')).toBe(true)
-    expect(after.flags.warnings.filter((w) => w.startsWith('Asignación'))).toEqual([])
+    expect(words(after.flags.warnings).filter((w) => w.startsWith('Asignación'))).toEqual([])
     expectBalanced(after)
     // What the Comité gave out is exactly what was unassigned, house included.
     const given = after.prizes.filter((p) => p.moduleId === 'adjustment').reduce((s, p) => s + p.amount, 0) + after.money.banker.toHouse

@@ -7,12 +7,15 @@
  */
 import { t } from '../../i18n/es-MX'
 import type { BracketState } from '../../engine/formats/bracket'
+import { useWords } from '../../components/currency'
 import styles from './BracketBoard.module.css'
 
 const B = t.bracket
 
 export function BracketBoard({ bracket }: { bracket: BracketState }) {
-  if (!bracket.rounds.length) return <p className="help">{bracket.warnings[0] ?? B.empty}</p>
+  const words = useWords()
+  const warnings = bracket.warnings.map(words)
+  if (!bracket.rounds.length) return <p className="help">{warnings[0] ?? B.empty}</p>
   return (
     <div className={styles.board}>
       {bracket.champion && (
@@ -36,7 +39,7 @@ export function BracketBoard({ bracket }: { bracket: BracketState }) {
           })}
         </section>
       ))}
-      {bracket.warnings.map((w) => (
+      {warnings.map((w) => (
         <p key={w} className="help">
           {w}
         </p>

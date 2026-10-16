@@ -10,9 +10,10 @@ import type { Draft, KeptDraft } from '../tarjetaDrafts'
 import { cardRules, groupPairs, pairNameIn } from './cardRules'
 import { cardNameIn, isUntouched, keptPlayers, openingDraft, parseDrafts, restoreKept, savedDraft, serverValue, takeServerValues } from './holeEntry'
 import { syncWords } from './syncWords'
+import { label } from '../../../engine/messages'
 
 const d = (strokes: number, putts = 2, pickedUp = false): Draft => ({ strokes, putts, pickedUp })
-const hole = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 1, par: 4, strokeIndex: 1, yards: null, strokesReceived: 0, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: '', steps: [] }, ...o })
+const hole = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 1, par: 4, strokeIndex: 1, yards: null, strokesReceived: 0, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: label(''), steps: [] }, ...o })
 
 describe('what a hole opens on', () => {
   it('the saved values, else par for the player’s own tee and 2 putts', () => {

@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../settings/presets
 import type { ModuleId } from '../settings/schema'
 import { fillRound, makeFirstTournament, makeSnapshot, score } from '../testing/fixtures'
 import { generateGroupsFromStandings } from './pairs'
+import { words } from '../testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
@@ -96,7 +97,7 @@ describe('Los Matrimonios', () => {
     snap.groups[0]!.playerIds = ['p1', 'p10', 'p2', 'p11'] // two A+D pairs
     const st = computeTournament(snap, S)
     expect(st.modules.pairs!.groupWarnings[0]!.groupId).toBe('r1g1')
-    expect(st.flags.warnings.join(' ')).toContain('AD')
+    expect(words(st.flags.warnings).join(' ')).toContain('AD')
   })
 
   it('generates Day 2 groups (5,6), (3,4), (1,2) from the standings', () => {

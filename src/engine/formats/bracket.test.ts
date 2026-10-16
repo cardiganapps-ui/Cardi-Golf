@@ -11,6 +11,7 @@ import { fillRound, makeGroup, makeSnapshot } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 import { advance, bracketState, firstRound, roundName, seed } from './bracket'
 import type { Entrant, FormatContext } from './format'
+import { words } from '../testing/words'
 
 const ent = (id: string, name = id): Entrant => ({ id, playerIds: [id], name, isTeam: false })
 
@@ -123,7 +124,7 @@ describe('bracket over a played tournament', () => {
     fillRound(snap, 'r1', 5)
     snap.rounds[0]!.status = 'finished'
     const st = bracketState(ctxOf(snap, one))
-    expect(st.warnings.some((w) => w.includes('2 rondas') && w.includes('tiene 1'))).toBe(true)
+    expect(words(st.warnings).some((w) => w.includes('2 rondas') && w.includes('tiene 1'))).toBe(true)
   })
 
   it('matches the groups played that the bracket does not list are named, not shown as «—» (STRAT-03)', () => {
@@ -136,16 +137,16 @@ describe('bracket over a played tournament', () => {
     snap.rounds[0]!.status = 'finished'
     const st = bracketState(ctxOf(snap, one))
     expect(st.rounds[0]!.matches.every((m) => m.pending)).toBe(true)
-    expect(st.warnings).toContain('Día 1: 2 partidos de los grupos no son del cuadro (Semifinal). Cuentan en la tabla; el cuadro avanza solo con sus partidos.')
+    expect(words(st.warnings)).toContain('Día 1: 2 partidos de los grupos no son del cuadro (Semifinal). Cuentan en la tabla; el cuadro avanza solo con sus partidos.')
     // Drawn as the bracket says, nothing to add.
     const ok = semisPlayed()
-    expect(bracketState(ctxOf(ok, settings)).warnings.filter((w) => w.includes('no son del cuadro') || w.includes('no es del cuadro'))).toEqual([])
+    expect(words(bracketState(ctxOf(ok, settings)).warnings).filter((w) => w.includes('no son del cuadro') || w.includes('no es del cuadro'))).toEqual([])
   })
 
   it('a field too small for a bracket says so', () => {
     const snap = makeSnapshot({ players: 1, rounds: 1, settings })
     const st = bracketState(ctxOf(snap, settings))
     expect(st.rounds).toEqual([])
-    expect(st.warnings[0]).toMatch(/suficientes/)
+    expect(words(st.warnings)[0]).toMatch(/suficientes/)
   })
 })

@@ -19,6 +19,7 @@ import { SaveBar, SESSION_RECHECK_MS } from './SaveBar'
 import { DefaultsSheet, TiebreakSheet, UnusualSheet } from './SaveSheets'
 import { ScoreGrid } from './ScoreGrid'
 import { SignSheet, SigningPanel } from './SigningPanel'
+import { label } from '../../../engine/messages'
 
 const S = t.card
 afterEach(() => {
@@ -243,7 +244,7 @@ describe('the save’s questions', () => {
 })
 
 describe('PlayerRow', () => {
-  const h = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 7, par: 4, strokeIndex: 3, yards: null, strokesReceived: 2, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: '', steps: [] }, ...o })
+  const h = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 7, par: 4, strokeIndex: 3, yards: null, strokesReceived: 2, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: label(''), steps: [] }, ...o })
   const row = (o: Partial<Parameters<typeof PlayerRow>[0]> = {}) =>
     render(<PlayerRow id="a" name="Ana" labelId="l-a" draft={{ strokes: 4, putts: 2, pickedUp: false }} hole={h()} parOnScreen={4} locked={false} untouched={false} ptsLine="4 pts" good holdsSnake={false} snakeLabel="La Víbora" snakeLayoutId="s" onDraft={noop} {...o} />)
 

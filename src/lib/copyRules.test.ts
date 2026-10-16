@@ -43,6 +43,10 @@ import type { Snapshot } from '../engine/types'
 import { courseHandicap, estimateIndex, playingHandicap } from '../engine/core/handicap'
 import { handicapText, ordinal, t } from '../i18n/es-MX'
 import { formatMoney, formatSignedMoney } from './money'
+import type { Msg } from '../engine/messages'
+import { words } from '../engine/testing/words'
+
+const isMsg = (x: unknown): x is Msg => !!x && typeof x === 'object' && 'code' in x && 'params' in x
 
 const ROOT = process.cwd()
 const SRC = join(ROOT, 'src')
@@ -296,7 +300,9 @@ const COPY_KEYS = new Set(['title', 'steps', 'label', 'text', 'detail', 'figure'
 
 /** Every copy string in a computed state, with its path. `settings` is input, not output. */
 function engineCopy(v: unknown, path: string, out: Array<[string, string]>, copy = false): Array<[string, string]> {
-  if (typeof v === 'string') {
+  // What the engine says is codes (ARCH-05): each in words, as a screen shows it.
+  if (isMsg(v)) out.push([path, words(v)])
+  else if (typeof v === 'string') {
     if (copy) out.push([path, v])
   } else if (Array.isArray(v)) v.forEach((x, i) => engineCopy(x, `${path}[${i}]`, out, copy))
   else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (k !== 'settings') engineCopy(x, `${path}.${k}`, out, copy || COPY_KEYS.has(k))
@@ -413,9 +419,9 @@ describe('copy rules: es-MX.ts', () => {
       ['formatSignedMoney', formatSignedMoney(-300, 'MXN')],
       // The handicap functions' own titles and steps, below zero (the Comité's preview shows them as they are).
       ...(['title', 'steps'] as const).flatMap((k) => [
-        [`playingHandicap ${k}`, [playingHandicap(-3, DEFAULT_SETTINGS.handicap).why[k]].flat().join(' | ')],
-        [`courseHandicap ${k}`, [courseHandicap(-1.2, { slope: 128, rating: 70.4, par: 72 }).why[k]].flat().join(' | ')],
-        [`estimateIndex ${k}`, [estimateIndex([{ gross: 66, rating: 70.4, slope: 128, par: 72 }, { gross: 69, rating: 70.4, slope: 128, par: 72 }, { gross: 73, rating: 70.4, slope: 128, par: 72 }], DEFAULT_SETTINGS.handicap).why[k]].flat().join(' | ')],
+        [`playingHandicap ${k}`, [words(playingHandicap(-3, DEFAULT_SETTINGS.handicap).why)[k]].flat().join(' | ')],
+        [`courseHandicap ${k}`, [words(courseHandicap(-1.2, { slope: 128, rating: 70.4, par: 72 }).why)[k]].flat().join(' | ')],
+        [`estimateIndex ${k}`, [words(estimateIndex([{ gross: 66, rating: 70.4, slope: 128, par: 72 }, { gross: 69, rating: 70.4, slope: 128, par: 72 }, { gross: 73, rating: 70.4, slope: 128, par: 72 }], DEFAULT_SETTINGS.handicap).why)[k]].flat().join(' | ')],
       ] as Array<[string, string]>),
       ['player.handicapLine', t.player.handicapLine(-1.2, 'Índice')],
       ['round.roundFacts', t.profile.roundFacts('Azules', -2)],

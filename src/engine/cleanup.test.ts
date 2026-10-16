@@ -10,6 +10,7 @@ import { checkPrizePool } from './settings/prizeCheck'
 import { safeParseSettings, type TournamentSettings } from './settings/schema'
 import { fillRound, makeCourse, makeFirstTournament, makeHoles, makePlayer, makeRound, makeSnapshot, makeTee, score } from './testing/fixtures'
 import type { Snapshot } from './types'
+import { words } from './testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
@@ -41,7 +42,7 @@ describe('Calcutta slots nobody can fill', () => {
     expect(a.balanced).toBe(true)
     const rounding = Object.values(a.payouts).flatMap((p) => p.lines).filter((l) => l.slotLabel === 'Redondeo')
     expect(rounding.reduce((s, l) => s + l.amount, 0)).toBeLessThan(12)
-    expect(st.flags.warnings.some((w) => w.includes('sin asignar'))).toBe(true)
+    expect(words(st.flags.warnings).some((w) => w.includes('sin asignar'))).toBe(true)
     // The auction pays out exactly the pot minus the unassigned slot; nothing else moves.
     expect(st.prizes.filter((p) => p.moduleId === 'auction').reduce((s, p) => s + p.amount, 0)).toBe(a.pot - a.unfilled)
   })

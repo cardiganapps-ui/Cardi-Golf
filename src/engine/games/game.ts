@@ -20,6 +20,7 @@
  */
 import type { GameConfig, GameOf, GameType } from '../settings/games'
 import type { ModuleId, TournamentSettings } from '../settings/schema'
+import type { Msg } from '../messages'
 import type { Explanation, Id, Snapshot } from '../types'
 import type { CoreState } from '../core/types'
 import type { GameStateMap } from '.'
@@ -69,7 +70,7 @@ export interface Game<S, Ctx extends ModuleContext> {
   /** Prizes this game awards for the given state (empty when it moves no money). */
   prizes(state: S, ctx: Ctx): PrizeAward[]
   /** What the Comité should know about its money (a place nobody fills, a hole in dispute...). */
-  warnings?(state: S, ctx: Ctx): string[]
+  warnings?(state: S, ctx: Ctx): Msg[]
 }
 
 /** A singleton: at most one per tournament, its options under `settings.modules[id]`. */

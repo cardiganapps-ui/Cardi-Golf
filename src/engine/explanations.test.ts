@@ -10,6 +10,7 @@ import { FIXTURE_NAMES, getFixture } from '../dev/fixtures'
 import { computeTournament } from './computeTournament'
 import { pesos } from './core/pesos'
 import { parseSettings } from './settings/schema'
+import { words } from './testing/words'
 
 /** The first amount a text writes, as written. */
 const figure = (text: string) => /−?\$[\d,]+/.exec(text)?.[0] ?? null
@@ -37,7 +38,7 @@ describe('the engine’s explanations (MONEY-15)', () => {
 
     it('titles every prize with what it pays', () => {
       // «$1,000 cada uno», «Camilo paga $300»: the title's figure is the prize's.
-      const wrong = state.prizes.filter((p) => figure(p.why.title) !== pesos(p.amount)).map((p) => `${p.label} (${p.playerId}): paid ${pesos(p.amount)}, titled «${p.why.title}»`)
+      const wrong = state.prizes.filter((p) => figure(words(p.why).title) !== pesos(p.amount)).map((p) => `${p.label} (${p.playerId}): paid ${pesos(p.amount)}, titled «${words(p.why).title}»`)
       expect(wrong).toEqual([])
     })
   })

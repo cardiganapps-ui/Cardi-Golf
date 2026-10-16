@@ -6,6 +6,7 @@ import type { CalcuttaBuyback, Snapshot } from '../../types'
 import { assignSlots, payoutsToOwners } from './index'
 import type { ModuleContext } from '../module'
 import { computeCore } from '../../core/compute'
+import { words } from '../../testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
@@ -413,7 +414,7 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
     expect([cuchara.unfilled, cuchara.amount, a.unfilled]).toEqual([true, 612, 612])
     expect(paid(st) + a.unfilled).toBe(12250)
     expect(a.balanced).toBe(true)
-    expect(st.flags.warnings).toContain('La Calcutta: $612 sin asignar (La Cuchara de Palo). El Comité decide.')
+    expect(words(st.flags.warnings)).toContain('La Calcutta: $612 sin asignar (La Cuchara de Palo). El Comité decide.')
   })
 
   it('the leader’s lot was never sold: he cashes nothing, the champion’s slot goes to the best finisher whose lot was, and the board says so', () => {
@@ -432,10 +433,10 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
       ['La Cuchara de Palo', ['p12']],
     ])
     expect(a.payouts.p1).toBeUndefined()
-    expect(a.slots[0]!.why.steps[0]).toBe('J4 termina 2.º, 1.º entre los lotes vendidos: 55% del pozo')
+    expect(words(a.slots[0]!.why).steps[0]).toBe('J4 termina 2.º, 1.º entre los lotes vendidos: 55% del pozo')
     expect(paid(st)).toBe(11000)
     expect(a.balanced).toBe(true)
-    expect(st.flags.warnings).toContain('La Calcutta: 1 lote sin vender (J1): no cobra la Calcutta.')
+    expect(words(st.flags.warnings)).toContain('La Calcutta: 1 lote sin vender (J1): no cobra la Calcutta.')
   })
 
   it('a lot still unsold while the auction runs is no warning: lots wait their turn', () => {
@@ -443,7 +444,7 @@ describe('La Calcutta closes to the peso and pays only lots that were sold (MONE
     sellAll(snap)
     Object.assign(snap.calcuttaLots[11]!, { status: 'pending', price: null, ownerId: null, soldAt: null })
     snap.tournament.status = 'auction'
-    expect(computeTournament(snap, S).flags.warnings.filter((w) => w.includes('sin vender'))).toEqual([])
+    expect(words(computeTournament(snap, S).flags.warnings).filter((w) => w.includes('sin vender'))).toEqual([])
   })
 })
 
@@ -478,8 +479,8 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(11750)
     // What the bank pays, slot by slot: the champion’s slot carries the $1 of rounding.
     expect([bankPays(st, 'Campeón') + bankPays(st, 'Redondeo'), bankPays(st, 'La Cuchara de Palo')]).toEqual([6463, 587])
-    expect(a.slots[4]!.why.steps).toEqual(['Último lugar: J12', '5% de $11,750 = $587.50', 'En pesos enteros: $587'])
-    expect(a.slots[0]!.why.steps.slice(1)).toEqual(['55% de $11,750 = $6,462.50', 'En pesos enteros: $6,462', 'Más $1 del redondeo de todo el pozo: $6,463'])
+    expect(words(a.slots[4]!.why).steps).toEqual(['Último lugar: J12', '5% de $11,750 = $587.50', 'En pesos enteros: $587'])
+    expect(words(a.slots[0]!.why).steps.slice(1)).toEqual(['55% de $11,750 = $6,462.50', 'En pesos enteros: $6,462', 'Más $1 del redondeo de todo el pozo: $6,463'])
     // Before anyone plays, the TV’s stakes are the same pesos.
     expect(a.stakes.map((s) => s.pesos)).toEqual([6463, 2350, 1175, 1175, 587])
   })
@@ -531,7 +532,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     expect(rounding(st)).toEqual([['p1', 'p7', 1]])
     expect(a.payouts.p7).toBeUndefined()
     const prize = st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!
-    expect([prize.playerId, prize.amount, prize.why.steps]).toEqual(['p1', 1, ['Resto del redondeo al dueño de J7, que cobra el premio más alto']])
+    expect([prize.playerId, prize.amount, words(prize.why).steps]).toEqual(['p1', 1, ['Resto del redondeo al dueño de J7, que cobra el premio más alto']])
     expect(a.stakes.map((s) => s.pesos)).toEqual([6001, 6000])
   })
 
@@ -548,7 +549,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
       ['Campeón', ['p1'], 4801],
     ])
     expect(rounding(st)).toEqual([['p5', 'p1', 1]])
-    expect(st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!.why.steps).toEqual(['Resto del redondeo al dueño del campeón'])
+    expect(words(st.prizes.find((p) => p.label === 'La Calcutta, Redondeo')!.why).steps).toEqual(['Resto del redondeo al dueño del campeón'])
     expect(a.stakes.map((s) => s.pesos)).toEqual([7200, 4801])
   })
 
@@ -561,7 +562,7 @@ describe('Every screen shows what a slot pays, and the rounding pesos go to an o
     const a = computeTournament(snap, S).modules.auction!
     const cuchara = a.slots.find((s) => s.label === 'La Cuchara de Palo')!
     expect([cuchara.unfilled, cuchara.pesos]).toEqual([true, 612])
-    expect(cuchara.why.steps).toEqual(['Quien quedó último ya cobra un lugar mejor', '5% de $12,250 = $612.50', 'En pesos enteros: $612; los centavos van al redondeo', 'Se queda en el banco hasta que el Comité decida'])
+    expect(words(cuchara.why).steps).toEqual(['Quien quedó último ya cobra un lugar mejor', '5% de $12,250 = $612.50', 'En pesos enteros: $612; los centavos van al redondeo', 'Se queda en el banco hasta que el Comité decida'])
     expect(a.slots.reduce((s, x) => s + x.pesos, 0)).toBe(12250)
   })
 })

@@ -10,6 +10,7 @@ import type { TournamentSettings } from '../settings/schema'
 import { makePlayer, makeRound, makeSnapshot, PAR_72, score } from '../testing/fixtures'
 import type { HoleAward, Snapshot } from '../types'
 import type { ContestState } from './contest'
+import { words } from '../testing/words'
 
 const PARS = PAR_72.map(([p]) => p)
 // PAR_72 par 3s: holes 3, 7, 11, 16.
@@ -43,7 +44,7 @@ describe('hole contests', () => {
     let st = run(snap)
     expect((st.games.ctp!.state as ContestState).holes[0]!.status).toBe('disputed')
     expect(st.prizes).toEqual([])
-    expect(st.flags.warnings.some((w) => w.includes('en disputa'))).toBe(true)
+    expect(words(st.flags.warnings).some((w) => w.includes('en disputa'))).toBe(true)
     // The Comité's ruling (no group) wins over the groups' claims; since 0042 it sits beside p3's own claim (DB-04).
     snap.holeAwards.push({ ...award(3, 'p3', null), source: 'comite' })
     st = run(snap)
@@ -98,9 +99,9 @@ describe('a contest nobody won (MONEY-10)', () => {
     over(snap)
     const st = run(snap)
     expect(st.prizes.map((p) => [p.playerId, p.amount, p.label])).toEqual(['p1', 'p2', 'p3', 'p4'].map((id) => [id, 100, 'Más cerca, entrada devuelta']))
-    expect(st.prizes[0]!.why.steps).toEqual(['Nadie ganó un hoyo: se devuelve a cada quien su entrada, $100'])
+    expect(words(st.prizes[0]!.why).steps).toEqual(['Nadie ganó un hoyo: se devuelve a cada quien su entrada, $100'])
     expect(st.money.banker.balanced).toBe(true)
-    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual([])
   })
 
   it('not while a hole is in dispute: the Comité decides it first', () => {
@@ -109,17 +110,17 @@ describe('a contest nobody won (MONEY-10)', () => {
     over(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual(['Más cerca: un hoyo en disputa (3). El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual(['Más cerca: un hoyo en disputa (3). El Comité decide.'])
   })
 
   it('a pot from the inscriptions stays unassigned, and the Comité is told how much', () => {
     const g: GameConfig = { ...ctp(money({ source: 'main', amount: 400 })), label: 'Drive' }
     const snap = setup([g])
-    expect(run(snap).flags.warnings.filter((w) => w.startsWith('Drive'))).toEqual([])
+    expect(words(run(snap).flags.warnings).filter((w) => w.startsWith('Drive'))).toEqual([])
     over(snap)
     const st = run(snap)
     expect(st.prizes).toEqual([])
-    expect(st.flags.warnings.filter((w) => w.startsWith('Drive'))).toEqual(['Drive: nadie ganó un hoyo; $400 quedan sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Drive'))).toEqual(['Drive: nadie ganó un hoyo; $400 quedan sin asignar. El Comité decide.'])
   })
 
   it('direct bets nobody won move no money and need nothing', () => {
@@ -128,7 +129,7 @@ describe('a contest nobody won (MONEY-10)', () => {
     const st = run(snap)
     expect(st.prizes).toEqual([])
     expect(st.money.flows.filter((f) => f.kind === 'bet')).toEqual([])
-    expect(st.flags.warnings.filter((w) => w.startsWith('Más cerca'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Más cerca'))).toEqual([])
   })
 })
 

@@ -31,6 +31,7 @@ import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'
 import { humanError } from '../../lib/humanError'
 import { useCurrency } from '../../components/currency'
+import { renderMsg } from '../../i18n/explain'
 
 const M = t.moneyScreen
 
@@ -362,7 +363,7 @@ export function MoneyScreen() {
         {/* What the Comité fixes, and where in its screens: not a link to watch's to read (STRAT-05). */}
         {state.flags.poolWarning && !spectator && (
           <span className={`${styles.bankNote} ${styles.bankVerdictOpen}`} role="status">
-            {state.flags.poolWarning}
+            {renderMsg(state.flags.poolWarning, cur)}
           </span>
         )}
         {!banker && !spectator && <span className={styles.bankNote}>{M.noBanker}</span>}

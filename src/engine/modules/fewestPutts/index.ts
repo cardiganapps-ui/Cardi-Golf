@@ -7,6 +7,7 @@
  */
 import { puttsMissing } from '../../core/putts'
 import { flattenRanks, isFinal, rankField, splitPrizes, type RankGroup } from '../../core/ranking'
+import { msg } from '../../messages'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 
@@ -97,7 +98,7 @@ export const fewestPuttsModule: GameModule<FewestPuttsState, 'fewestPutts'> = {
       const winners = { ...first, members: first.members.filter((id) => totals.get(id)!.holes === maxHoles) }
       for (const s of splitPrizes([winners], [ctx.settings.prizes.fewestPutts], nameOf)) {
         const w = totals.get(s.item)!
-        prizes[s.item] = { amount: s.amount, why: { ...s.why, steps: [`${w.putts} putts en ${w.holes} hoyos`, ...(w.pickedUpHoles ? [`Hoyos levantados: cuentan ${ctx.settings.pickupPuttsForFewestPutts} putts como mínimo`] : []), ...s.why.steps] } }
+        prizes[s.item] = { amount: s.amount, why: { ...s.why, steps: [msg('putts.total', { putts: w.putts, holes: w.holes }), ...(w.pickedUpHoles ? [msg('putts.pickups', { min: ctx.settings.pickupPuttsForFewestPutts })] : []), ...s.why.steps] } }
       }
     }
     return { rows, groups, prizes, final: isFinal(ctx, 'tournament') }

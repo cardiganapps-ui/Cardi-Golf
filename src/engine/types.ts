@@ -4,6 +4,10 @@
  * anything from another tournament.
  */
 
+import type { Explanation } from './messages'
+
+export type { Explanation, ExplanationText } from './messages'
+
 export type Id = string
 
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
@@ -315,14 +319,6 @@ export interface Snapshot {
   moneyAdjustments?: MoneyAdjustment[]
 }
 
-/**
- * Every computed number carries one of these so the UI can render
- * "¿Cómo se calculó?" (§6). `steps` are short Spanish lines.
- */
-export interface Explanation {
-  title: string
-  steps: string[]
-}
 
 export interface Explained<T> {
   value: T

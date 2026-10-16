@@ -9,10 +9,11 @@ import { t } from '../../../i18n/es-MX'
 import type { Draft } from '../tarjetaDrafts'
 import { afterSave, canUndo, decideSave, entryFields, pickWrites, snakeCandidates, undoSnapshot, unusualValues, type SaveCheck } from './saveDecision'
 import { DOUBLE_SAVE_MS, SETTLE_MS } from './timing'
+import { label } from '../../../engine/messages'
 
 const S = t.card
 const d = (strokes: number, putts = 2, pickedUp = false): Draft => ({ strokes, putts, pickedUp })
-const hole = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 1, par: 4, strokeIndex: 1, yards: null, strokesReceived: 0, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: '', steps: [] }, ...o })
+const hole = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 1, par: 4, strokeIndex: 1, yards: null, strokesReceived: 0, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: label(''), steps: [] }, ...o })
 /** A tap long after the hole changed and the last save, with nothing to ask. */
 const check = (o: Partial<SaveCheck> = {}): SaveCheck => ({
   force: false,

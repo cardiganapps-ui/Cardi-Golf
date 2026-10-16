@@ -37,7 +37,7 @@ import { useActiveRound } from './useMyGroup'
 import { figureKind, holeStrokes, mainScoring } from '../../engine/formats'
 import styles from './LiveScreen.module.css'
 import { ease } from '../../design/motion'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 
 /** Gross strokes to par over the holes actually played (pick-ups excluded). Display only. */
 function grossToPar(state: TournamentState, playerId: string, roundId?: string): number | null {
@@ -202,6 +202,7 @@ export function LiveScreen() {
   const base = tournamentBase(ctx)
   // A link to watch «Sin dinero» (STRAT-05): no money chips, no owners, no «si terminara ahora».
   const showMoney = useShowMoney()
+  const words = useWords()
   const round = useActiveRound()
   // A notice that the Comité corrected this phone's card (TRUST-14) opens its own player's sheet: on arrival, and on
   // a tap that lands while En vivo is already open (the router changes the address, PWA-12).
@@ -357,7 +358,7 @@ export function LiveScreen() {
             <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length, settings.modules.snake.label)}
           </span>
         )}
-        {!spectator && state.flags.warnings.map((w) => (
+        {!spectator && state.flags.warnings.map(words).map((w) => (
           <span key={w} className={styles.caution}>
             <IconAlert size={16} /> {w}
           </span>

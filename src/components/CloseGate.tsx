@@ -22,6 +22,7 @@ import { useTournament } from '../data/tournamentStore'
 import { closeCheck, type CloseCheck } from '../engine/close'
 import { humanError } from '../lib/humanError'
 import { ConfirmSheet } from './ConfirmSheet'
+import { useWords } from './currency'
 import { Sheet } from './ui'
 import { toast } from './toast'
 
@@ -52,6 +53,7 @@ interface Pending extends GateOptions {
 }
 
 export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions, proceed: () => Promise<void>) => Promise<void>; checking: boolean; sheet: ReactNode } {
+  const words = useWords()
   const [pending, setPending] = useState<Pending | null>(null)
   const [checking, setChecking] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -89,7 +91,7 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
   const close = () => setPending(null)
   const sheet = !pending ? null : pending.check.ok ? (
     <ConfirmSheet open title={pending.title ?? C.title} body={pending.body ?? C.ok} confirmLabel={pending.confirmLabel} busy={busy} onConfirm={() => void go()} onClose={close}>
-      {pending.check.warnings.map((w) => (
+      {pending.check.warnings.map(words).map((w) => (
         <p key={w} className="help" role="status">
           {w}
         </p>
@@ -101,10 +103,10 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
         <p>{C.blocked}</p>
         <ul className="stack" data-close-blockers>
           {pending.check.blockers.map((b) => (
-            <li key={b.kind}>{b.text}</li>
+            <li key={b.kind}>{words(b.says)}</li>
           ))}
         </ul>
-        {pending.check.warnings.map((w) => (
+        {pending.check.warnings.map(words).map((w) => (
           <p key={w} className="help">
             {w}
           </p>

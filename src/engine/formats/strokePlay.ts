@@ -9,7 +9,8 @@
  */
 import type { HoleResult } from '../core/types'
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation, Id } from '../types'
+import { msg, say, type Msg } from '../messages'
+import type { Explanation, ExplanationText, Id } from '../types'
 import { countbackFrom, emptyCountback, playerEntrants, playerRound } from './entrants'
 import { toParFigure, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
 
@@ -27,22 +28,17 @@ export function holeStrokes(h: HoleResult, net: boolean): number | null {
  * points, which that event never shows.
  */
 export function strokesWhy(h: HoleResult, net: boolean): Explanation {
-  if (!h.played) return { title: 'Sin capturar', steps: ['Sin capturar'] }
+  if (!h.played) return { title: say('hole.unplayed'), steps: [say('hole.unplayed')] }
   const counted = holeStrokes(h, net)!
-  const d = counted - h.par
-  const rel = d === 0 ? 'par' : d > 0 ? `${d} sobre par` : `${-d} bajo par`
-  const strokes = (n: number) => `${n} golpe${n === 1 ? '' : 's'}`
+  const toPar = counted - h.par
+  const { par, strokesReceived: received, strokeIndex: si } = h
   // COPY-19: the hole in words first, then the arithmetic.
-  const steps: string[] = [
-    h.pickedUp
-      ? `Levantó en un par ${h.par}${net ? `, con ${strokes(h.strokesReceived)} de ventaja en este hoyo (índice de golpe ${h.strokeIndex})` : ''}: cuenta ${strokes(counted)}${net ? ' netos' : ''}, ${rel}`
-      : `${strokes(h.gross!)} en un par ${h.par}${net ? `, con ${strokes(h.strokesReceived)} de ventaja en este hoyo (índice de golpe ${h.strokeIndex}): ${counted} netos, ${rel}` : `: ${rel}`}`,
-  ]
+  const steps: Msg[] = [h.pickedUp ? msg('strokes.pickedUp', { par, net, received, si, counted, toPar }) : msg('strokes.played', { gross: h.gross!, par, net, received, si, counted, toPar })]
   if (h.pickedUp) {
-    steps.push(`Un hoyo levantado cuenta como doble bogey neto: par ${h.par} + ${strokes(h.strokesReceived)} de ventaja + 2 = ${h.par + h.strokesReceived + 2}`)
-    if (net) steps.push(`${h.par + h.strokesReceived + 2} − ${h.strokesReceived} = ${counted} neto`)
-  } else if (net) steps.push(`${h.gross} − ${h.strokesReceived} = ${counted} neto`)
-  return { title: `${strokes(counted)}${net ? ' netos' : ''}`, steps }
+    steps.push(msg('strokes.pickupRule', { par, received }))
+    if (net) steps.push(msg('strokes.pickupNet', { par, received, counted }))
+  } else if (net) steps.push(msg('strokes.net', { gross: h.gross!, received, counted }))
+  return { title: msg('strokes.title', { strokes: counted, net }), steps }
 }
 
 /** Strokes and par over the holes actually played. */
@@ -67,7 +63,7 @@ export const strokePlayFormat: MainFormat = {
   higherIsBetter: () => false,
   figureLabel: (s) => (s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
 
-  describe(settings: TournamentSettings): Explanation {
+  describe(settings: TournamentSettings): ExplanationText {
     const net = settings.modules.individual.formatOptions.scoring !== 'gross'
     const pct = Math.round(settings.handicap.allowance * 100)
     return {

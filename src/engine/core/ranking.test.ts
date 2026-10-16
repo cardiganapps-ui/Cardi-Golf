@@ -17,14 +17,14 @@ describe('countback', () => {
     const b = { pointsByHole: pts(bArr), holes: 18 }
     const r = countback(a, b)
     expect(r.result).toBeLessThan(0)
-    expect(r.steps.map((s) => s.label)).toEqual(['Total', 'Hoyos 10–18'])
+    expect(r.steps.map(({ from, to, total }) => ({ from, to, total }))).toEqual([{ from: 1, to: 18, total: true }, { from: 10, to: 18, total: false }])
   })
   it('equal all the way through hole 18 → tied', () => {
     const a = { pointsByHole: pts(Array(18).fill(2)), holes: 18 }
     const b = { pointsByHole: pts(Array(18).fill(2)), holes: 18 }
     const r = countback(a, b)
     expect(r.result).toBe(0)
-    expect(r.steps.map((s) => s.label)).toEqual(['Total', 'Hoyos 10–18', 'Hoyos 13–18', 'Hoyos 16–18', 'Hoyo 18'])
+    expect(r.steps.map(({ from, to, total }) => (total ? 'total' : `${from}–${to}`))).toEqual(['total', '10–18', '13–18', '16–18', '18–18'])
   })
 })
 

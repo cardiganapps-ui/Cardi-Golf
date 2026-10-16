@@ -8,6 +8,7 @@ import { expect, it } from 'vitest'
 import { getFixture } from '../../../dev/fixtures'
 import { computeTournament } from '../../computeTournament'
 import { parseSettings } from '../../settings/schema'
+import { words } from '../../testing/words'
 
 const rowsOf = (name: string) => {
   const fx = getFixture(name)!
@@ -16,7 +17,7 @@ const rowsOf = (name: string) => {
 
 it('match8: a tie is «Empate», a countback win «Desempate», each told as the last day’s match', () => {
   const rows = rowsOf('match8')
-  const why = (name: string) => rows.find((r) => r.entrant.name === name)!.countbackWhy
+  const why = (name: string) => words(rows.find((r) => r.entrant.name === name)!.countbackWhy)
   // Fabián and Matías: both won 4 up, so they share 1st.
   expect(why('Matías')).toEqual({ title: 'Empate con Fabián', steps: ['Iguales en puntos de partido', 'Día 1, cómo terminó su partido: Fabián 4 arriba contra Matías 4 arriba', 'Iguales: se reparten los premios de los lugares que ocupan.'] })
   // Julián won 2 up: below Matías on the margin, alone in 3rd.
@@ -27,7 +28,7 @@ it('match8: a tie is «Empate», a countback win «Desempate», each told as the
 })
 
 it('bracket8: a last day nobody has played yet is not told as a match that ended', () => {
-  const steps = rowsOf('bracket8').flatMap((r) => r.countbackWhy?.steps ?? [])
+  const steps = rowsOf('bracket8').flatMap((r) => words(r.countbackWhy)?.steps ?? [])
   expect(steps.some((s) => s === 'Día 3: todavía no juegan su partido')).toBe(true)
   expect(steps.some((s) => /cómo terminó/.test(s))).toBe(false)
 })

@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './presets'
 import type { TournamentSettings } from './schema'
 import { FIRST_TOURNAMENT_PLAYER_COUNT, makeGroup, makePlayer, makeSnapshot, PAR_72, score } from '../testing/fixtures'
 import type { Snapshot } from '../types'
+import { words } from '../testing/words'
 
 type Over = Partial<TournamentSettings> & { format?: TournamentSettings['modules']['individual']['format']; matchMode?: 'singles' | 'fourball' }
 
@@ -125,7 +126,7 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'individual')).toEqual({ p1: 2000, p2: 1000, p3: 600 })
-    expect(st.flags.warnings).toContain('Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain('Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.')
     // He still shows on the board, last.
     expect(st.modules.individual!.rows.at(-1)!.playerId).toBe('p4')
   })
@@ -137,7 +138,7 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     card(snap, 'r1', 'p3', {}, 9)
     const st = run(snap)
     expect(Object.keys(paid(st, 'individual')).sort()).toEqual(['p1', 'p2', 'p3'])
-    expect(st.flags.warnings.filter((w) => w.includes('no lo gana nadie'))).toEqual([])
+    expect(words(st.flags.warnings).filter((w) => w.includes('no lo gana nadie'))).toEqual([])
   })
 
   it('a field that shrank below the places: one warning while playing, the game’s own once final', () => {
@@ -146,11 +147,11 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     snap.groups[0]!.playerIds = ['p1', 'p2', 'p3']
     for (const id of ['p1', 'p2', 'p3']) card(snap, 'r1', id, {}, 9)
     let st = run(snap)
-    const live = st.flags.warnings.filter((w) => w.startsWith('Individual:'))
+    const live = words(st.flags.warnings).filter((w) => w.startsWith('Individual:'))
     expect(live).toEqual(['Individual: 4 lugares con premio y 3 jugadores, $400 que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.'])
     finish(snap)
     st = run(snap)
-    expect(st.flags.warnings.filter((w) => w.startsWith('Individual:'))).toEqual(['Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Individual:'))).toEqual(['Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.'])
   })
 
   it('fourball with one side and no match: nobody is paid 1st for a match never played', () => {
@@ -163,7 +164,7 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'individual')).toEqual({})
-    expect(st.flags.warnings).toContain('Individual: los lugares 1.º y 2.º no los gana nadie (nadie tiene resultado): $1,554 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain('Individual: los lugares 1.º y 2.º no los gana nadie (nadie tiene resultado): $1,554 sin asignar. El Comité decide.')
   })
 
   it('the pairs game: a pair neither of whom played is not paid 2nd', () => {
@@ -181,7 +182,7 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'pairs')).toEqual({ p1: 1000, p2: 1000 })
-    expect(st.flags.warnings).toContain('Parejas: el 2.º lugar no lo gana nadie (1 pareja con resultado): $1,000 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain('Parejas: el 2.º lugar no lo gana nadie (1 pareja con resultado): $1,000 sin asignar. El Comité decide.')
   })
 
   it('low score: three places and two cards, once final the 3rd is named with its pesos', () => {
@@ -193,7 +194,7 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'lowScore')).toEqual({ p1: 150, p2: 90 })
-    expect(st.flags.warnings).toContain('Low neto: el 3.º lugar no lo gana nadie (2 jugadores con resultado): $60 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain('Low neto: el 3.º lugar no lo gana nadie (2 jugadores con resultado): $60 sin asignar. El Comité decide.')
   })
 })
 

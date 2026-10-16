@@ -14,6 +14,8 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
 import { checkedText, coveredByChecklist, hrefOf, readiness, setupBadge, type Entry, type ReadinessItem } from './readiness'
 import { t } from '../../i18n/es-MX'
+import { msg, say } from '../../engine/messages'
+import { words } from '../../engine/testing/words'
 
 type Items = Partial<Record<ReadinessItem['id'], ReadinessItem>>
 
@@ -224,7 +226,7 @@ describe('Para empezar: what the first list got wrong', () => {
     expect(team.d.state.flags.warnings.some((w) => coveredByChecklist(w, team.items))).toBe(true)
     expect(setupBadge(team.items, team.d.state.flags.warnings.filter((w) => coveredByChecklist(w, team.items)), 0)).toBe(open(team.items).length)
     // A warning the list does not cover still counts.
-    expect(setupBadge(fresh.items, [...fresh.d.state.flags.warnings, 'La bolsa no cuadra'], 1)).toBe(open(fresh.items).length + 2)
+    expect(setupBadge(fresh.items, [...fresh.d.state.flags.warnings, msg('pool.short', { prizes: 30000, entries: 27500, missing: 2500 })], 1)).toBe(open(fresh.items).length + 2)
   })
 })
 
@@ -244,7 +246,7 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
         s.groups.push({ id: `${rd.id}b`, roundId: rd.id, number: 2, teeTime: null, startHole: 1, playerIds: ['p5', 'p6', 'p7', 'p8'] })
       }
     })
-    expect(drawn.d.state.flags.warnings.filter((w) => /fourball necesita dos parejas/.test(w))).toHaveLength(6)
+    expect(words(drawn.d.state.flags.warnings).filter((w) => /fourball necesita dos parejas/.test(w))).toHaveLength(6)
     expect(drawn.by.pairs).toMatchObject({ done: false })
     expect(drawn.badge).toBe(open(drawn.items).length)
     // Four pairs drawn: two pairs a match, and the line is done.
@@ -296,7 +298,7 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     // 7 players: the top seed has a bye, and the three matches have no group of their own.
     expect(r.by.groups).toMatchObject({ done: false, text: 'Arma los grupos de 3 partidos del día 1', to: 'grupos', roundId: 'r1' })
     // The engine's two «exactamente dos jugadores» warnings are this line, counted once.
-    expect(r.d.state.flags.warnings.filter((w) => /exactamente dos jugadores/.test(w))).toHaveLength(2)
+    expect(words(r.d.state.flags.warnings).filter((w) => /exactamente dos jugadores/.test(w))).toHaveLength(2)
     expect(r.badge).toBe(open(r.items).length)
   })
 
@@ -312,9 +314,9 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
 
   it('a bracket warning is not claimed: none of them reaches the engine\'s warnings, so none is «covered»', () => {
     const r = run('match8', (s) => knockout(s, { players: 1, days: 1 }))
-    expect(r.d.state.bracket!.warnings[0]).toMatch(/suficientes jugadores para armar el cuadro/)
+    expect(words(r.d.state.bracket!.warnings)[0]).toMatch(/suficientes jugadores para armar el cuadro/)
     expect(r.d.state.flags.warnings).not.toContain(r.d.state.bracket!.warnings[0])
-    for (const w of ['Todavía no hay suficientes jugadores para armar el cuadro.', 'El cuadro necesita 3 rondas y el torneo tiene 1.', 'Cuartos de final: hay un partido empatado; el Comité decide quién pasa.']) {
+    for (const w of [say('bracket.tooFew'), msg('bracket.needsRounds', { rounds: 3, have: 1 }), msg('bracket.tied', { round: 'Cuartos de final' })]) {
       expect(coveredByChecklist(w, r.items)).toBe(false)
     }
   })
@@ -335,7 +337,7 @@ describe('Para empezar: tees as the engine plays them (N2)', () => {
 
   it('a tee of another course whose course is not loaded: the engine plays par 4 everywhere; the line says to change it, and covers that warning', () => {
     const r = run('minimal4-setup', (s) => staleTee(s, { otherLoaded: false }))
-    expect(r.d.state.flags.warnings).toEqual(['Día 1: sin campo cargado; se usa par 4 en todos los hoyos.'])
+    expect(words(r.d.state.flags.warnings)).toEqual(['Día 1: sin campo cargado; se usa par 4 en todos los hoyos.'])
     expect(r.by.foreignTees).toMatchObject({ done: false, text: 'Cambia los tees de otro campo: día 1', to: 'rondas', days: [1] })
     expect(r.badge).toBe(1)
   })
@@ -372,13 +374,13 @@ describe('Para empezar: tees as the engine plays them (N2)', () => {
       s.rounds[0]!.courseId = 'ghost'
     })
     expect(open(ghost.items)).toEqual([])
-    expect(ghost.d.state.flags.warnings).toEqual(['Día 1: sin campo cargado; se usa par 4 en todos los hoyos.'])
+    expect(words(ghost.d.state.flags.warnings)).toEqual(['Día 1: sin campo cargado; se usa par 4 en todos los hoyos.'])
     expect(ghost.badge).toBe(1)
     // Day 2's warning is not covered by a line about day 1.
     const items: ReadinessItem[] = [{ id: 'roundSetup', done: false, text: '', to: 'rondas', days: [1] }]
-    expect(coveredByChecklist('Día 1: sin campo cargado; se usa par 4 en todos los hoyos.', items)).toBe(true)
-    expect(coveredByChecklist('Día 2: sin campo cargado; se usa par 4 en todos los hoyos.', items)).toBe(false)
-    expect(coveredByChecklist('Día 1: sin campo cargado; se usa par 4 en todos los hoyos.', [{ ...items[0]!, done: true }])).toBe(false)
+    expect(coveredByChecklist(msg('core.noCourse', { day: 1 }), items)).toBe(true)
+    expect(coveredByChecklist(msg('core.noCourse', { day: 2 }), items)).toBe(false)
+    expect(coveredByChecklist(msg('core.noCourse', { day: 1 }), [{ ...items[0]!, done: true }])).toBe(false)
   })
 })
 

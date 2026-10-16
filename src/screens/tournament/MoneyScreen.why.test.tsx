@@ -14,6 +14,7 @@ import { t } from '../../i18n/es-MX'
 import { formatMoney } from '../../lib/money'
 import { MoneyScreen } from './MoneyScreen'
 import { TournamentContext } from './tournamentContext'
+import { words } from '../../engine/testing/words'
 
 const M = t.moneyScreen
 const H = t.money.howCalculated
@@ -58,7 +59,7 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
     expect(lines.length).toBeGreaterThan(0)
     for (const tr of lines) {
       const steps = open(screen.getByRole('button', { name: how(lineName(tr.from, tr.to, tr.amount)) }))
-      expect(steps).toEqual(tr.why[0]!.steps)
+      expect(steps).toEqual(words(tr.why)[0]!.steps)
       fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
       cleanup()
       mount()
@@ -83,12 +84,12 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
     fireEvent.click(screen.getByRole('radio', { name: M.p2p }))
     const tr = state().money.peerToPeer[0]!
     const steps = open(screen.getByRole('button', { name: how(lineName(tr.from, tr.to, tr.amount)) }))
-    expect(steps).toEqual(tr.why.flatMap((w) => w.steps))
+    expect(steps).toEqual(words(tr.why).flatMap((w) => w.steps))
   })
 
   it('the bank: what comes in, what goes out, and what is left', () => {
     const steps = open(screen.getByRole('button', { name: how(M.bank) }))
-    expect(steps).toEqual(state().money.banker.why.steps)
+    expect(steps).toEqual(words(state().money.banker.why).steps)
     expect(steps).toContain(t.settleWhy.bankInTotal(formatMoney(state().money.banker.receives, 'MXN')))
   })
 
@@ -98,6 +99,6 @@ describe('Dinero › Liquidación: every amount opens its «¿Cómo se calculó?
     const triggers = screen.getAllByRole('button', { name: new RegExp(`: ${H.replace(/[?¿]/g, '\\$&')}$`) }).filter((b) => b.getAttribute('aria-label') !== how(M.bank))
     expect(triggers.length).toBe(state().prizes.length)
     const steps = open(triggers[0]!)
-    expect(state().prizes.some((pr) => JSON.stringify(pr.why.steps) === JSON.stringify(steps))).toBe(true)
+    expect(state().prizes.some((pr) => JSON.stringify(words(pr.why).steps) === JSON.stringify(steps))).toBe(true)
   })
 })
