@@ -6,7 +6,7 @@ Two directions, both grounded in golf's own material culture rather than app aes
 
 - **Product and event.** Polo is the product; every tournament is an event with its own name. The product chrome (tab bar, headers, controls, tables) is consistent and quiet: ink on card stock, one accent. The event name is the only place expressive typography appears, and each event can carry one accent from a curated set. Nothing else changes per event.
 - **Numbers are the hero.** Tabular lining figures everywhere a score or an amount appears. A true minus sign (−) for under par, "E" for even, `T3` for ties. Right-aligned numeric columns that line up to the pixel.
-- **Light mode first**, designed for sunlight: AA everywhere, AAA for figures on the leaderboard and scorecard. TV and Ceremonia use a dedicated board surface (deep green, off-white figures), which is a *surface*, not a dark mode.
+- **Light mode first**, designed for sunlight: AA everywhere, AAA for figures on the leaderboard and scorecard. TV and Ceremonia use a dedicated board surface (deep green, off-white figures), which is a *surface*, not a dark mode. Since 2026-10-16 (VIS-11) the phone screens also have a dark sheet that follows the phone's setting or Más › Apariencia, held to the same contrast; the board surface, the share card and print stay as they are (DESIGN_NOTES.md, «Light, dark and the event's accent»).
 - **Convention over invention:** red for under par, blue for over par (The Open), plain ink for par. Pencil notation on the scorecard: circle = birdie, double circle = eagle or better, square = bogey, double square = double or worse.
 - **Structure from space, alignment and rules.** Cards only for true objects (a lot in the auction, a share image, a sheet). Everything else is a ruled sheet.
 - **No emoji.** One inline SVG icon set on a 24-px grid, one stroke weight, used only where an icon speeds recognition (the tab bar, sync state, a handful of actions).
@@ -28,15 +28,15 @@ Two directions, both grounded in golf's own material culture rather than app aes
 | Background | card stock | `#FBFAF7` | near-white, warm by a hair; not cream |
 | Surface | ruled area | `#F3F1EA` | inset panels, skeletons, table zebra |
 | Ink | graphite | `#1B211D` | 15.7:1 on background |
-| Secondary ink | soft graphite | `#4F5751` | 7.2:1 on background (AAA at any size) |
+| Secondary ink | soft graphite | `#4F5751` | 7.1:1 on background (AAA there only: on the ruled surface 6.6:1, so a figure there is ink) |
 | Accent | fairway | `#1E6B3B` | 6.3:1 on background; white on it 6.5:1 |
-| Under par | red | `#9D1C23` | figures only; 7.7:1 on background, 7.1:1 on the ruled surface (AAA) |
-| Over par | blue | `#235380` | figures only; 7.7:1 on background, 7.1:1 on the ruled surface (AAA) |
+| Under par | red | `#9A1B22` | figures, what is owed, errors; 7.9:1 on background, 7.3:1 on the ruled surface, 7.1:1 on my row (AAA) |
+| Over par | blue | `#214F7C` | figures only; 8.1:1 on background, 7.5:1 on the ruled surface, 7.4:1 on my row (AAA) |
 | Hairline | rule | `#D8D5CB` | 1 px rules; the heavy rule is ink at 2 px |
 
 Board surface (TV, Ceremonia): `#0F2E22` background, `#F6F3EA` figures (13.2:1), `#A9BBAF` secondary, `#F2C230` for the leader plate, the snake holder's plate on the TV, and the live mark only.
 
-**Type.** **Archivo** (variable: weight 100–900, width 62–125) for everything: text at width 100, figures at width 90 so 60-row columns stay tight without a second family, weight 600 for figures, 500 for names, 400 for body. It is a grotesque with newspaper and print heritage, sturdy in sunlight, with tabular lining figures that align. **Fraunces 600** survives for exactly one role: the event name, the way club scorecards set the club's name in a serif above a sans grid. Scale (rem, 4-px rhythm): 11 · 12 · 14 · 16 · 18 · 22 · 28 · 36 · 56. Line-heights 1.1 display, 1.3 UI, 1.5 body. No tracking except 0.04em on tiny table headers.
+**Type.** **Archivo** (variable: weight 100–900, width 62–125) for everything: text at width 100, figures at width 90 so 60-row columns stay tight without a second family, weight 600 for figures, 500 for names, 400 for body. It is a grotesque with newspaper and print heritage, sturdy in sunlight, with tabular lining figures that align. **Fraunces 600** survives for exactly one role: the event name, the way club scorecards set the club's name in a serif above a sans grid. Scale (rem, 4-px rhythm): 12 · 14 · 16 · 18 · 22 · 28 · 36 · 56; 12 is the floor (VIS-24, 2026-10-16: the 11 step is gone). Line-heights 1.1 display, 1.3 UI, 1.5 body. No tracking except 0.04em on tiny table headers.
 
 **Layout concept.** *A ruled sheet you scroll, never a stack of cards.*
 
@@ -75,7 +75,7 @@ TARJETA (score entry, one hole)
 
 **The one memorable thing: the pencil notation.** Circle, double circle, square, double square, drawn with a pencil-like 1.5-px stroke around the figure. It appears on the scorecard grid, in the "hoy" column of the leaderboard (a tiny ring when today has a birdie), on share images, and in the app icon: a bold figure with a red pencil circle around it. Everything else stays quiet so this one mark reads as the brand.
 
-**Anti-slop critique of A.** First draft used a warm cream (`#F7F1E3`) and Fraunces for headings, i.e. the reflexive premium look. Changed: the stock is near-white (`#FBFAF7`), headings are Archivo, Fraunces is confined to the event name with a written rationale (club scorecards), and there is no terracotta anywhere; the only red is the under-par red. Risk of grey-on-grey: secondary ink is 7.2:1, and nothing is set below 12 px. Risk of "cards": the only rounded objects are sheets, auction lots and share images. Risk of reading as generic "clean grotesque": the notation, the ruled grid and the event-name serif are what make it a golf artifact.
+**Anti-slop critique of A.** First draft used a warm cream (`#F7F1E3`) and Fraunces for headings, i.e. the reflexive premium look. Changed: the stock is near-white (`#FBFAF7`), headings are Archivo, Fraunces is confined to the event name with a written rationale (club scorecards), and there is no terracotta anywhere; the only red is the under-par red. Risk of grey-on-grey: secondary ink is 7.1:1, and nothing is set below 12 px. Risk of "cards": the only rounded objects are sheets, auction lots and share images. Risk of reading as generic "clean grotesque": the notation, the ruled grid and the event-name serif are what make it a golf artifact.
 
 ## Direction B — "El tablero" (the hand-operated leaderboard)
 
@@ -132,18 +132,20 @@ TARJETA                                  └────────────
 
 ## Event personalization
 
-Organizers pick one accent from a curated set of six, named after things on a course. It is stored in the existing `accent_color` column (no schema change); any legacy free-form value maps to the nearest swatch, and an unknown value falls back to fairway.
+Organizers pick one accent from a curated set of six, named after things on a course. It is stored in the existing `accent_color` column (no schema change); a value of the first set keeps its name, any other free-form value maps to the nearest swatch as people see color (OKLab), and an unknown value falls back to fairway.
 
-| Name | Hex | White on it |
-|---|---|---|
-| Fairway (default) | `#1E6B3B` | 6.5:1 |
-| Agua | `#2B5B8C` | 7.1:1 |
-| Atardecer | `#B4532A` | 5.0:1 |
-| Vino | `#8A2E3A` | 8.3:1 |
-| Pizarra | `#3F4A54` | 9.1:1 |
-| Arena | `#7A5A2E` | 6.3:1 |
+Re-picked on 2026-10-16 (VIS-09): four of the first six were the semantic colors in another name (Agua was the over-par blue at ΔE2000 2.9, Vino the under-par red at 8.0, Arena the caution brown at 7.5, Pizarra the secondary ink at 10.3). Each now stands 15 or more ΔE2000 from the red, the blue, the caution and the three inks, in both themes, and from the other five (`tokens.test.ts`).
 
-The accent is applied to exactly three things inside that tournament: the rule under the event name, the primary button, and the "my row" marker. The product chrome, the semantic colors (under/over) and the type never change. The logo, when present, is a small mark beside the event name, never the header.
+| Name | Light | White on it | Dark | Its text on it |
+|---|---|---|---|---|
+| Fairway (default) | `#1E6B3B` | 6.5:1 | `#7FCC94` | 9.7:1 |
+| Agua | `#086B7C` | 6.2:1 | `#5EC2D1` | 8.9:1 |
+| Atardecer | `#AA4205` | 6.0:1 | `#EC8C4D` | 7.5:1 |
+| Vino | `#8A1F66` | 8.5:1 | `#E48EBF` | 7.9:1 |
+| Pizarra | `#5B3F9E` | 7.9:1 | `#BB9CEB` | 8.0:1 |
+| Arena | `#565612` | 7.7:1 | `#ACB169` | 8.2:1 |
+
+Inside that tournament the accent is the only one (VIS-10, 2026-10-16): the rule under the event name, the primary button, the "my row" marker and its tint, links, switches, the tab you are on, the live dot. The platform's fairway shows only outside tournaments. The product chrome, the semantic colors (under/over, what is owed) and the type never change. The logo, when present, is a small mark beside the event name, never the header.
 
 ## What this means for phase 2 (preview)
 

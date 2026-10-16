@@ -84,7 +84,7 @@ export function TournamentShell() {
   useEffect(() => (onCard ? undefined : prefetchScreens(tabScreens)), [tabKey, onCard])
 
   return (
-    <div className={styles.wrap} style={{ '--event-accent': nearestAccent(accent).hex } as React.CSSProperties}>
+    <div className={styles.wrap} data-accent={nearestAccent(accent).id}>
       <header className={styles.top}>
         <div className={styles.bar}>
           {logo && <TournamentLogo className={styles.logo} url={logo} />}

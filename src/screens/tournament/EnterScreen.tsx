@@ -133,7 +133,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
     }
   }
 
-  const accent = nearestAccent(lookup.accentColor).hex
+  const accent = nearestAccent(lookup.accentColor).id
   // The faces, the PIN and the two questions swap in place, and the tapped button goes with the old view. The PIN
   // field takes focus itself (autoFocus); a question gets its heading; back on the faces, the face tapped.
   const view = !selected ? 'faces' : askSave ? 'save' : selected.pendingMe ? 'confirm' : 'pin'
@@ -145,7 +145,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   })
 
   return (
-    <div ref={screenRef} className={styles.screen} style={{ '--event-accent': accent } as React.CSSProperties}>
+    <div ref={screenRef} className={styles.screen} data-accent={accent}>
       <EventName name={lookup.name} tagline={lookup.tagline ?? undefined} logoUrl={lookup.logoUrl} heading />
 
       {!selected ? (

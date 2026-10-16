@@ -1,14 +1,14 @@
-/** Links to the privacy notice and the terms: a footer on home, and a consent line where data is collected. */
+/** Links to the privacy notice and the terms: a footer on home, and a consent line where data is collected. Each is the one link look (VIS-23). */
 import { Link } from 'react-router'
 import { t } from '../i18n/es-MX'
 
 export function LegalLinks() {
   return (
     <nav aria-label={t.legal.privacy.title} style={{ display: 'flex', gap: 'var(--s4)', fontSize: 'var(--fs-xs)', paddingBottom: 'var(--s4)' }}>
-      <Link to="/privacidad" style={{ color: 'var(--ink-2)' }}>
+      <Link to="/privacidad">
         {t.legal.privacy.title}
       </Link>
-      <Link to="/terminos" style={{ color: 'var(--ink-2)' }}>
+      <Link to="/terminos">
         {t.legal.terms.title}
       </Link>
     </nav>
@@ -25,7 +25,7 @@ export const FROM_FORM = 'formulario'
 /** A legal page opened beside the form, so a half-typed email, code or PIN survives the read. */
 export function LegalLink({ to, children }: { to: '/privacidad' | '/terminos'; children: string }) {
   return (
-    <a href={`${to}?desde=${FROM_FORM}`} target="_blank" rel="noopener" style={{ color: 'var(--ink-2)' }}>
+    <a href={`${to}?desde=${FROM_FORM}`} target="_blank" rel="noopener">
       {children}
       <span className="sr-only"> {t.legal.newTab}</span>
     </a>

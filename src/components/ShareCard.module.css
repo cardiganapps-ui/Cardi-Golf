@@ -22,7 +22,7 @@
   gap: 16px;
   padding-bottom: 14px;
   /* The event's accent, as on the rule under its name in the app (PWA-06); set on the card from the tournament. */
-  border-bottom: 2px solid var(--event-accent);
+  border-bottom: 2px solid var(--accent);
 }
 .logo {
   width: 56px;
@@ -56,7 +56,7 @@
 }
 /* The sharer's own row: the accent's mark at its edge, as «my row» in the app. */
 .mine {
-  box-shadow: inset 3px 0 0 var(--event-accent);
+  box-shadow: inset 3px 0 0 var(--accent);
   padding-left: 6px;
 }
 /* Between the first ten and the sharer's row further down. */
@@ -190,7 +190,7 @@
 }
 .holeNum {
   color: var(--ink-2);
-  font-size: 10px;
+  font-size: 12px;
 }
 .holeGross {
   font-weight: 600;
@@ -202,11 +202,13 @@
   font-weight: 600;
 }
 .birdie {
-  background: var(--accent-soft);
+  /* A net birdie or better is red, as on the card and the board (VIS-16): it was the accent's green here. */
+  background: var(--under-soft);
 }
 .birdie .holePts {
-  color: var(--accent);
+  color: var(--under);
 }
 .zero {
-  background: var(--under-soft);
+  /* No points: the ruled panel, quiet. It was the red tint, which on the card means a birdie. */
+  background: var(--surface);
 }

@@ -69,8 +69,8 @@
   padding: 0 6px;
   border-radius: var(--r-round);
   background: var(--caution);
-  color: var(--on-dark);
-  font-size: var(--fs-2xs);
+  color: var(--on-fill);
+  font-size: var(--fs-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -107,5 +107,13 @@
   }
   .navActive {
     border-right-color: var(--ink);
+  }
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .navItem:not(:disabled):hover {
+    color: var(--ink);
   }
 }

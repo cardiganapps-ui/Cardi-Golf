@@ -71,7 +71,7 @@
   justify-content: center;
   gap: 2px;
   color: var(--ink-2);
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   font-weight: 500;
   text-decoration: none;
 }
@@ -83,7 +83,7 @@
   font-weight: 600;
 }
 .tabActive .tabIcon {
-  color: var(--event-accent);
+  color: var(--accent);
 }
 .tabIcon {
   position: relative;
@@ -100,7 +100,7 @@
   padding: 0 5px;
   border-radius: 9px;
   background: var(--caution);
-  color: var(--on-dark);
+  color: var(--on-fill);
   font-size: var(--fs-xs);
   font-weight: 700;
   line-height: 18px;
@@ -109,4 +109,12 @@
 }
 .tabBadgeBad {
   background: var(--under);
+}
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .tab:not(:disabled):hover {
+    background: var(--surface);
+  }
 }

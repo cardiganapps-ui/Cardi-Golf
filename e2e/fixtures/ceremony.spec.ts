@@ -127,7 +127,7 @@ for (const [w, h] of ROOMS) {
     // The same tournament on the TV: its name and its accent.
     await page.goto(`/t/_/${FIXTURE}/tv`, { waitUntil: 'networkidle' })
     const eventName = (await page.locator('h1').first().textContent())!.trim()
-    const accent = await page.locator('[style*="--event-accent"]').first().evaluate((el) => getComputedStyle(el).getPropertyValue('--event-accent').trim())
+    const accent = await page.locator('[data-accent]').first().evaluate((el) => getComputedStyle(el).getPropertyValue('--accent').trim())
 
     await page.goto(`/t/_/${FIXTURE}/ceremonia`, { waitUntil: 'networkidle' })
     expect(await px(page, 'h1')).toBeGreaterThanOrEqual(4 * vh)

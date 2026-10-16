@@ -15,16 +15,27 @@
   color: var(--ink);
   font-size: var(--fs-sm);
   cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease);
 }
 .swatch[aria-pressed='true'] {
   border-color: var(--ink);
   font-weight: 600;
 }
+/* Each swatch is its accent's own scope (`data-accent`), so the dot is the value this theme shows. */
 .swatchDot {
   width: 20px;
   height: 20px;
   border-radius: var(--r-round);
-  background: var(--swatch);
+  background: var(--accent);
+}
+/* VIS-12: a swatch answers the pointer with its ring before the click. */
+@media (hover: hover) {
+  .swatch:not([aria-pressed='true']):hover {
+    border-color: var(--ink-2);
+  }
+  .swatch:hover .swatchDot {
+    box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 3.5px var(--accent);
+  }
 }
 
 /* Sub-nav for the sections of Torneo. Same language as the Comité's own tabs

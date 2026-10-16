@@ -71,3 +71,11 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s3);
 }
+
+/* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
+   state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
+@media (hover: hover) {
+  .hole:not(:disabled):hover {
+    background: var(--surface);
+  }
+}

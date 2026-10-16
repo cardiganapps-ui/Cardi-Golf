@@ -9,6 +9,8 @@ import { buildLabel } from '../../lib/build'
 import { InstallRow } from '../../components/InstallGuide'
 import { Avatar, CopyButton, ShareButton, Sheet, Toggle, toast } from '../../components/ui'
 import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
+import { contrastOn, setContrastChoice, setThemeChoice, useAppearance, type ThemeChoice } from '../../lib/theme'
+import { Segmented } from '../../components/primitives'
 import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
@@ -171,6 +173,8 @@ export function MoreScreen() {
         />
       )}
 
+      <Appearance />
+
       <div className={styles.session}>
         {me.playerId && (
           <button
@@ -235,5 +239,42 @@ export function MoreScreen() {
         {t.more.version} {buildLabel()}
       </p>
     </div>
+  )
+}
+
+/**
+ * Apariencia (VIS-11, A11Y-19): light, dark or the phone's own setting, and more contrast for the sun. On this
+ * phone only; applied at once, and before the first paint on the next open (index.html).
+ */
+function Appearance() {
+  const { theme, more } = useAppearance()
+  const A = t.more.appearance
+  return (
+    <section className={styles.join} aria-labelledby="apariencia">
+      <h2 className="label" id="apariencia">
+        {A.title}
+      </h2>
+      <Segmented<ThemeChoice>
+        value={theme}
+        options={[
+          { value: 'system', label: A.system },
+          { value: 'light', label: A.light },
+          { value: 'dark', label: A.dark },
+        ]}
+        onChange={setThemeChoice}
+        label={A.title}
+      />
+      <p className="help">{A.hint}</p>
+      <Toggle
+        label={A.contrast}
+        hint={A.contrastHint}
+        checked={more}
+        onChange={(on) => {
+          // Over the phone's own «Aumentar contraste»: say only what differs from it.
+          const phone = contrastOn('system')
+          setContrastChoice(on ? (phone ? 'system' : 'more') : phone ? 'normal' : 'system')
+        }}
+      />
+    </section>
   )
 }
