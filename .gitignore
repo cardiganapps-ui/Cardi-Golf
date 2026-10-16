@@ -18,3 +18,6 @@ dist-stack
 test-results-stack
 playwright-report-stack
 supabase/.temp/
+# Screenshot sets from scripts/design-shots.mjs stay local (QA-20); only the style guide's set is tracked.
+design/shots/*
+!design/shots/design/

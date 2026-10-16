@@ -3,16 +3,15 @@
  * can add its course (database search, scorecard photo, or by hand) and come
  * back. Same editor as Comité › Campos.
  */
-import { lazy } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
-import { Lazy, Spinner } from '../../components/ui'
+import { Spinner } from '../../components/ui'
+import { Lazy } from '../../components/Lazy'
+import { AdminCourses } from '../../app/screens'
 import { IconChevronLeft } from '../../components/icons'
 import { safeNext } from '../../data/account'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
-
-const AdminCourses = lazy(() => import('../admin/AdminCourses').then((m) => ({ default: m.AdminCourses })))
 
 export function CoursesScreen() {
   const [params] = useSearchParams()

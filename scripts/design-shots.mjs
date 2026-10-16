@@ -2,6 +2,7 @@
 /* global document */
 // Design screenshots (redesign brief, phase 0): every screen in every data
 // state, at 390×844 (and 1024 wide for setup screens), into design/shots/<set>.
+// Git ignores every set but `design` (QA-20): share a set as an artifact, never a commit.
 //   VITE_DESIGN_ROUTES=1 npm run build && npx vite preview --port 4173 &   (the fixture routes exist only in dev and design builds)
 //   node scripts/design-shots.mjs before            # or: after, design
 //   node scripts/design-shots.mjs before --only tarjeta   # filter by name

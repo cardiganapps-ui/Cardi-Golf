@@ -24,7 +24,7 @@ import { applyPaidWrites, collectible, markPaidWrites, restorePaidWrites, stillO
 import type { PrizeAward } from '../../engine/modules/module'
 import { formatMoney, formatSignedMoney } from '../../lib/money'
 import { Link } from 'react-router'
-import { useTournamentCtx } from './TournamentGate'
+import { useTournamentCtx } from './tournamentContext'
 import { tournamentBase } from './tournamentView'
 import styles from './MoneyScreen.module.css'
 import { UnassignedMoney } from './UnassignedMoney'

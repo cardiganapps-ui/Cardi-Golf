@@ -2,25 +2,20 @@
  * A link to watch's screens (STRAT-05): the boards only, read-only. No
  * Tarjeta, no Comité, no Más, no Ceremonia, no Reglamento: any other path
  * under it leads nowhere. Shared by the real gate (`/v/<token>`), its design
- * fixtures (`/v/_/<fixture>`) and the tests.
+ * fixtures (`/v/_/<fixture>`) and the tests. Each screen is the router's own
+ * lazy one (src/app/screens.tsx, PERF-02).
  */
-import { lazy } from 'react'
-import { Lazy } from '../../components/ui'
-import { GamesScreen } from '../tournament/GamesScreen'
-import { LiveScreen } from '../tournament/LiveScreen'
+import { Lazy } from '../../components/Lazy'
+import { GamesScreen, LiveScreen, SpectatorMoney, TournamentShell, TvScreen } from '../../app/screens'
 import { SettingsGuard } from '../tournament/SettingsGuard'
-import { TournamentShell } from '../tournament/TournamentShell'
-import { SpectatorMoney } from './SpectatorGate'
-
-const TvScreen = lazy(() => import('../tournament/TvScreen').then((m) => ({ default: m.TvScreen })))
 
 export const spectatorChildren = [
   {
-    element: <TournamentShell />,
+    element: <Lazy><TournamentShell /></Lazy>,
     children: [
-      { index: true, element: <LiveScreen /> },
-      { path: 'juegos', element: <GamesScreen /> },
-      { path: 'dinero', element: <SpectatorMoney /> },
+      { index: true, element: <Lazy><LiveScreen /></Lazy> },
+      { path: 'juegos', element: <Lazy><GamesScreen /></Lazy> },
+      { path: 'dinero', element: <Lazy><SpectatorMoney /></Lazy> },
     ],
   },
   { path: 'tv', element: <SettingsGuard><Lazy><TvScreen /></Lazy></SettingsGuard> },

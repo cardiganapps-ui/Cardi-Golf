@@ -193,6 +193,7 @@
     "0064_audit_gaps.sql": "torneo",
     "0065_indexes_and_advisors.sql": "torneo",
     "0066_incremental_results.sql": "torneo",
+    "0067_platform_funnel.sql": "plataforma",
     "0068_admin_access.sql": "plataforma",
     "0069_retention.sql": "plataforma",
     "0070_self_service.sql": "cuenta",

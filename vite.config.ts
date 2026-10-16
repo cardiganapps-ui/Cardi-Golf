@@ -34,6 +34,8 @@ function versioned(path: string): string {
   return `${path}?v=${createHash('sha256').update(bytes).digest('hex').slice(0, 10)}`
 }
 const ICON_LINKS = ['/favicon.svg', '/apple-touch-icon.png']
+/** The brand images the app and index.html show, each at its fingerprint (src/lib/assetUrl.ts, PERF-13). */
+const BRAND_IMAGES = ['/brand/boot-mark.png', '/brand/polo-mark.png', '/brand/polo-mark-board.png']
 const versionedIcon = <T extends { src: string }>(icon: T) => ({ ...icon, src: versioned(icon.src) })
 
 /**
@@ -53,6 +55,7 @@ export default defineConfig({
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
     __BUILD_SHA__: JSON.stringify(gitSha()),
+    __ASSET_URLS__: JSON.stringify(Object.fromEntries(BRAND_IMAGES.map((path) => [path, versioned(path)]))),
   },
   plugins: [
     react(),
@@ -61,7 +64,24 @@ export default defineConfig({
     {
       name: 'versioned-icons',
       transformIndexHtml: (html) =>
-        ICON_LINKS.reduce((out, path) => out.replaceAll(`href="${path}"`, `href="${versioned(path)}"`), html),
+        BRAND_IMAGES.reduce(
+          (out, path) => out.replaceAll(`src="${path}"`, `src="${versioned(path)}"`),
+          ICON_LINKS.reduce((out, path) => out.replaceAll(`href="${path}"`, `href="${versioned(path)}"`), html),
+        ),
+    },
+    {
+      // PERF-13: the text font's Latin face, asked for with the page instead of once the app's first screen has
+      // rendered. Every screen sets text in it; it was the last thing the first paint waited for.
+      name: 'preload-text-font',
+      apply: 'build',
+      transformIndexHtml: {
+        order: 'post',
+        handler: (_html, ctx) => {
+          const font = Object.keys(ctx.bundle ?? {}).find((file) => /(?:^|\/)archivo-latin-wdth-normal-[\w-]+\.woff2$/.test(file))
+          if (!font) throw new Error('preload-text-font: no Archivo Latin face in the build')
+          return [{ tag: 'link', attrs: { rel: 'preload', href: `/${font}`, as: 'font', type: 'font/woff2', crossorigin: '' }, injectTo: 'head' as const }]
+        },
+      },
     },
     {
       // The iPhone launch images (PWA-14, src/lib/launchImages.ts): one link per screen, each at its fingerprint.
@@ -76,7 +96,9 @@ export default defineConfig({
     VitePWA({
       // A new deploy is offered, never forced: a reload mid-hole would lose the steppers.
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
+      // What the worker keeps is `globPatterns` below, less `globIgnores`: these two would add the 512 px icons back.
+      includeAssets: [],
+      includeManifestIcons: false,
       // One manifest for the build and for a tournament's own start URL (api/manifest.ts, PWA-09).
       manifest: {
         ...APP_MANIFEST,
@@ -92,7 +114,19 @@ export default defineConfig({
         // Not the iPhone launch images, nor the install sheet's screenshots: iOS and Chrome read them when the
         // app is installed, never through the worker, and every phone would keep them for nothing
         // (scripts/check-precache.mjs).
-        globIgnores: ['**/node_modules/**/*', 'splash/**', 'screenshots/**'],
+        globIgnores: [
+          '**/node_modules/**/*',
+          'splash/**',
+          'screenshots/**',
+          // The 512 px icons are the install's alone: Android draws its splash and home-screen icon from them when
+          // the app is added, online, and keeps its own copy (PERF-05). 176 KB every phone kept for nothing.
+          'icons/icon-512.png',
+          'icons/icon-maskable-512.png',
+          // A font's subsets for letters Spanish never writes (Vietnamese, the Latin Extended block: «ő», «ł»,
+          // «ă»). The browser asks for one only when a name on screen has such a letter (its unicode-range), and
+          // the rule below keeps it for offline from then on (PERF-05). 141 KB every phone kept for nothing.
+          'assets/*-{latin-ext,vietnamese,cyrillic,cyrillic-ext,greek,greek-ext}-*.woff2',
+        ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
@@ -108,6 +142,12 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Logos and avatars from Storage stay available offline (§8).
         runtimeCaching: [
+          // The font subsets left out of the precache, once a page has used one (fingerprinted, so never stale).
+          {
+            urlPattern: /\/assets\/[^/?#]+\.woff2$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'fonts', expiration: { maxEntries: 20 }, cacheableResponse: { statuses: [0, 200] } },
+          },
           {
             urlPattern: /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
             handler: 'CacheFirst',
@@ -135,7 +175,18 @@ export default defineConfig({
       // the entry shares with lazy screens in chunks of their own, whose stylesheets are linked before the
       // entry's: global.css then came after the CSS modules, `.card` beat `.errorBox` on every ErrorBox, and
       // primitives' rules shipped twice (e2e/fixtures/cascade.spec.ts).
-      output: { codeSplitting: { groups: [{ name: 'index', tags: ['$initial'] }] } },
+      //
+      // The screens are lazy (PERF-02, src/app/screens.tsx). Everything they share and the entry doesn't, Rolldown
+      // splits by who uses it, so the landing page loads none of the boards' code.
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'index', tags: ['$initial'], priority: 2 },
+            // Loaded on a share card's first tap (src/lib/shareImage.ts); named, or it would be «es-<hash>.js».
+            { name: 'html-to-image', test: /\/node_modules\/html-to-image\//, priority: 1 },
+          ],
+        },
+      },
     },
   },
   test: {

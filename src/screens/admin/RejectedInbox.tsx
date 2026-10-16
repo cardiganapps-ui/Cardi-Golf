@@ -24,7 +24,7 @@ import { ReasonSheet } from '../../components/ReasonSheet'
 import { appliedValue, dismissInboxItems, isStaleHole, loadRejectedInbox, resolveInboxItem, sameValue, seenHole, sentValue, useRejectedInbox, type HoleValue, type InboxItem } from '../../data/rejectedInbox'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError, UserError } from '../../lib/humanError'
-import { useTournamentCtx } from '../tournament/TournamentGate'
+import { useTournamentCtx } from '../tournament/tournamentContext'
 import a from './Admin.module.css'
 
 const SI = t.admin.serverInbox

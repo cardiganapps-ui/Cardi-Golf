@@ -143,8 +143,8 @@ test('team play: the stats table lists every player of every team', async ({ pag
 
 test('stroke play: the race reads best on top, the fewest strokes against par', async ({ page }) => {
   await open(page, '/t/_/stroke8/stats')
-  // Recharts 3 draws the ticks in their own layer: the Y axis's are the ones written against par.
-  const ticks = page.locator('.recharts-cartesian-axis-tick-value')
+  // The race's figure axis: its labels end at the plot's left edge (text-anchor end), written against par.
+  const ticks = page.locator('[role="img"] text[text-anchor="end"]')
   await expect(ticks.first()).toBeVisible()
   const read = await ticks.evaluateAll((els) => els.map((e) => ({ y: Number(e.getAttribute('y')), text: (e.textContent ?? '').trim() })))
   const values = read

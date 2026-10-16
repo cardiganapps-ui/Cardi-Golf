@@ -323,9 +323,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1898,9 +1901,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/lib/reducedMotion.test.ts",
+        "src/screens/tournament/race/RaceChart.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1979,9 +1985,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1993,11 +2002,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/app/lazyScreen.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Screen-to-screen transitions were not added; the wait no longer flashes."
     },
     {
       "id": "MOT-23",
@@ -2042,9 +2053,12 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "e2e/fixtures/firstLoad.spec.ts",
+        "src/app/lazyScreen.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2056,11 +2070,13 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "e2e/fixtures/firstLoad.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Motion stays in the entry (every sheet animates since PR 213); zod/mini (about 17 kB gzip) would mean rewriting the settings schema stored tournaments are read with."
     },
     {
       "id": "PERF-04",
@@ -2070,9 +2086,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2084,9 +2102,12 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/lib/precache.test.ts",
+        "scripts/check-precache.mjs"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2175,9 +2196,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 215,
+      "tests": [
+        "src/lib/cacheHeaders.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2745,11 +2768,13 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 217,
+      "tests": [
+        "src/lib/repoWeight.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The 64 MB stay in git history (no rewrite of shared history); new clones and CI checkouts no longer download them."
     },
     {
       "id": "QA-21",
@@ -3543,11 +3568,15 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 212,
+      "tests": [
+        "supabase/tests/platform_funnel.sql",
+        "src/screens/platform/Funnel.test.tsx",
+        "docs/strategy/launch-scope.json"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Freezing Personas moderation, Avisos broadcast, catalog merge and crew moderation behind a flag is Diego’s decision 5c; until then the launch scope files them outside the launch."
     },
     {
       "id": "STRAT-13",
@@ -3754,11 +3783,14 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "src/lib/backupCron.test.ts",
+        "src/lib/backupTables.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Backups taken before this change still hold secrets; deleting old backups is Diego's decision (handoff 5e)."
     },
     {
       "id": "TRUST-11",
@@ -3860,9 +3892,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/platform/ViewReason.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Quién opera Polo», pinned word for word, says what the operator sees and can do (any tournament with its money, a Protegido one unlocked with a reason, every account's email, sign-ins, profile, tournaments, crews with members, friend counts, device players; block, delete, notices). Left: the rule isn't written once: CLAUDE.md §7 says the social graph stays private from the admin, while platform_crew returns every member and the crew's join code and platform_person returns crews and friend counts; drop the join code and say in CLAUDE.md the admin sees crews for moderation, or cut the panels to counts."
     },
@@ -3874,11 +3909,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/retention.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Retention periods on further personal data (audit images, finished tournaments) are proposed to Diego in handoff 5g."
     },
     {
       "id": "TRUST-19",
@@ -3920,11 +3957,15 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/admin/AdminHistory.operator.test.tsx",
+        "src/screens/profile/AdminAccesses.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The operator's reads straight from the database (the dashboard, SQL) are not logged; the notice says so."
     },
     {
       "id": "TRUST-23",
@@ -4632,9 +4673,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/raceModel.test.ts",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

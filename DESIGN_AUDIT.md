@@ -1,6 +1,6 @@
 # Cardi-Golf — Design audit (phase 0)
 
-Blunt inventory of every screen before the redesign. Facts point at code (`file:line`) or at a before-shot in `design/shots/before/` (390×844 at 1.5×, plus a 1024-wide pass for setup screens and 1280×720 for TV and Ceremonia). Data states come from the in-memory fixtures in `src/dev/fixtures.ts`, reachable at `/t/_/<fixture>` in any build:
+Blunt inventory of every screen before the redesign. Facts point at code (`file:line`) or at a before-shot in `design/shots/before/` (in git at commit `af36474` since QA-20: https://github.com/cardiganapps-ui/Cardi-Golf/tree/af36474/design/shots/before) (390×844 at 1.5×, plus a 1024-wide pass for setup screens and 1280×720 for TV and Ceremonia). Data states come from the in-memory fixtures in `src/dev/fixtures.ts`, reachable at `/t/_/<fixture>` in any build:
 
 | Fixture | State |
 |---|---|

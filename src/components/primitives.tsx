@@ -23,6 +23,7 @@ import {
 import { blankFigure, t, type RowSpeech } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
+import { assetUrl } from '../lib/assetUrl'
 import s from './primitives.module.css'
 import { TournamentLogo } from './TournamentLogo'
 import { haptic } from '../lib/haptics'
@@ -629,7 +630,7 @@ export function LogoMark({ size = 24, tone = 'color' }: { size?: number; tone?: 
   return (
     <img
       className={s.logoMark}
-      src={l.image}
+      src={assetUrl(l.image)}
       alt=""
       aria-hidden="true"
       draggable={false}
