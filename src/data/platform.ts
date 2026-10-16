@@ -51,6 +51,17 @@ export interface PlatformOverview {
   recent: PlatformEvent[]
 }
 
+/** Resumen's north star and the organizer's funnel (0067, STRAT-12): tournaments by organizers who aren't the admin, outside practice and Ronda rápida. */
+export type FunnelStep = 'created' | 'field' | 'played' | 'scored' | 'signed' | 'finished'
+export interface PlatformFunnel {
+  days: number
+  /** Terminado with 8+ players and holes from 3+ sessions: tournaments closed to the peso. */
+  northStar: number
+  finished: number
+  organizers: number
+  steps: Array<{ key: FunnelStep; tournaments: number; organizers: number }>
+}
+
 export interface PlatformDay {
   day: string
   accounts: number
@@ -376,6 +387,7 @@ export interface Telemetry {
 export interface PlatformApi {
   overview(): Promise<PlatformOverview>
   daily(days: number): Promise<PlatformDay[]>
+  funnel(days: number): Promise<PlatformFunnel>
   tournaments(q: TournamentQuery): Promise<PlatformTournamentList>
   tournament(id: string): Promise<PlatformTournament | null>
   unlock(tournamentId: string, reason: string, minutes?: number): Promise<string>
@@ -422,6 +434,7 @@ const TZ = 'America/Mazatlan'
 
 export const supabasePlatformApi: PlatformApi = {
   overview: () => rpc<PlatformOverview>('platform_overview'),
+  funnel: (days) => rpc<PlatformFunnel>('platform_funnel', { p_days: days }),
   daily: (days) => rpc<PlatformDay[]>('platform_daily', { p_days: days, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ }),
   tournaments: ({ q, status, kind, limit = 50, offset = 0 }) =>
     rpc<PlatformTournamentList>('platform_tournaments', {
