@@ -11,6 +11,7 @@
  */
 import AxeBuilder from '@axe-core/playwright'
 import { expect, open, test } from './base'
+import { t } from '../../src/i18n/es-MX'
 
 const PAGES: Record<string, string[]> = {
   'full12-live': ['', 'tarjeta', 'juegos', 'dinero', 'mas', 'reglamento', 'stats', 'admin/torneo', 'admin/jugadores', 'admin/rondas', 'admin/grupos', 'admin/scores', 'admin/calcutta', 'admin/parejas', 'admin/datos'],
@@ -57,6 +58,18 @@ for (const [fixture, paths] of Object.entries(PAGES)) {
       })
     }
   }
+}
+
+// A crew as its owner sees it (TRUST-11): «Sacar» beside each member, who waits to enter, «Aprobar solicitudes».
+for (const width of PHONES) {
+  test(`crew page (owner) at ${width}px`, async ({ page, pageErrors }) => {
+    await page.setViewportSize({ width, height: 852 })
+    await open(page, '/c/_')
+    await expect(page.getByRole('checkbox', { name: t.crews.approval })).toBeVisible()
+    expect(pageErrors, 'uncaught errors').toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(await seriousViolations(page)).toEqual([])
+  })
 }
 
 // Admin de Polo's screens on their in-memory fixture (Salud carries the telemetry, STRAT-02).

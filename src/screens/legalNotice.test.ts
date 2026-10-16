@@ -45,8 +45,8 @@ const fingerprint = (d: Doc) => createHash('sha256').update(JSON.stringify([d.ti
 
 /** Every version of each document and the fingerprint of its text. A new text adds a line; a line is never edited. */
 const VERSIONS: Record<'privacy' | 'terms', Record<string, string>> = {
-  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e', '2026-10-15.3': '5fc6344c8bc1e899', '2026-10-16': '2cb9f4b6903d685f' },
-  terms: { '2026-10-01': '2f2c15560894de1c' },
+  privacy: { '2026-10-01': '9cac47a410219a93', '2026-10-02': '20af7e1925da41cd', '2026-10-12': 'd8dca65996f3195c', '2026-10-12.2': '0fd82354f53b6280', '2026-10-12.3': 'ff588cf816339e83', '2026-10-12.4': '629cab7be421377a', '2026-10-12.5': '260d053ca82e92fe', '2026-10-13.1': 'a288f2fb6a7bc144', '2026-10-13.2': '24e99ba92d980a2f', '2026-10-13.3': '5a50649a1b8b55ac', '2026-10-13.4': 'eca8bf2ab8940cfb', '2026-10-15': '79d502154cb0a4b1', '2026-10-15.2': 'b63ca2aa916e6d6e', '2026-10-15.3': '5fc6344c8bc1e899', '2026-10-16': '2cb9f4b6903d685f', '2026-10-16.2': '1f7629d06b265830' },
+  terms: { '2026-10-01': '2f2c15560894de1c', '2026-10-16': 'cc9b4dc1a05577ac' },
 }
 
 /** A version is its date, with «.2», «.3»… for a second text the same day. */
@@ -67,7 +67,7 @@ describe('each document is pinned to its own version and date', () => {
 
   it('the two documents carry their own date (the terms used to take the notice\'s)', () => {
     expect(t.legal.privacy.updated).toBe('Última actualización: 16 de octubre de 2026')
-    expect(t.legal.terms.updated).toBe('Última actualización: 1 de octubre de 2026')
+    expect(t.legal.terms.updated).toBe('Última actualización: 16 de octubre de 2026')
     expect(t.legal).not.toHaveProperty('updated')
   })
 })
@@ -120,9 +120,32 @@ describe('the integral notice (TRUST-04)', () => {
     expect(kept).toContain('y hoy no se borran nunca.')
   })
 
-  it('a minor needs a parent\'s permission, and changes show in the date and version', () => {
-    expect(sections['Menores de edad']).toContain('pensado para mayores de 18 años y no le pide la edad a nadie')
+  it('the age: an account says it is 18 or older, a tournament with money has its Comité say it of everyone (TRUST-13, 0070)', () => {
+    const minors = sections['Menores de edad']!
+    expect(minors).toContain('Polo es para mayores de 18 años. Para crear una cuenta confirmas que los tienes, y guardamos que lo confirmaste.')
+    expect(minors).toContain('Un torneo que juega con dinero le pide a su Comité confirmar que todos sus jugadores son mayores de edad, y lo guarda.')
+    expect(minors).toContain('necesita el permiso de su madre, su padre o su tutor')
+    expect(minors).not.toContain('no le pide la edad a nadie')
+    // What it rests on: the check before every way into an account, and the record.
+    for (const f of ['src/screens/profile/EntrarScreen.tsx', 'src/screens/organizer/OrganizerLoginScreen.tsx']) expect(source(f)).toContain('t.legal.adult.check')
+    expect(source('src/data/legal.ts')).toContain("rpc('confirm_adult'")
+    expect(source('src/screens/organizer/NewTournamentScreen.tsx')).toContain('(!withMoney || adults)')
+    expect(source('supabase/migrations/0070_self_service.sql')).toContain("check (document in ('privacy', 'terms', 'adult'))")
+    expect(Object.fromEntries(t.legal.terms.sections)['Edad']).toContain('Para crear una cuenta en Polo necesitas tener 18 años o más')
+  })
+
+  it('changes show in the date and version', () => {
     expect(sections['Cambios a este aviso']).toContain('cambian la fecha y la versión de arriba')
+  })
+
+  it('people a Comité adds are told, and can ask for a correction (TRUST-16)', () => {
+    const added = sections['Si alguien te agregó a un torneo']!
+    expect(added).toContain('no creaste ninguna cuenta')
+    expect(added).toContain('Quien te agrega se compromete, en los términos, a poder compartir tu nombre, tu foto y lo demás que escriba de ti con quienes ven el torneo, y a avisarte que te agregó.')
+    expect(added).toContain('La primera vez que entras con tu PIN, Polo te muestra lo que el Comité guardó de ti y te deja pedirle que lo corrija')
+    expect(Object.fromEntries(t.legal.terms.sections)['Si organizas']).toContain('que le avisas que lo agregaste')
+    expect(source('src/screens/tournament/LiveScreen.tsx')).toContain('<MyDataCard />')
+    expect(source('supabase/migrations/0070_self_service.sql')).toContain('create or replace function public.request_player_correction(')
   })
 })
 
@@ -135,6 +158,7 @@ describe('the sections, in order', () => {
       'Quién ve tu perfil',
       'Lo que se ve de un torneo',
       'Lo que el Comité captura de cada jugador',
+      'Si alguien te agregó a un torneo',
       'El dinero de un torneo',
       'Quién opera Polo',
       'Dónde viven',
@@ -149,7 +173,30 @@ describe('the sections, in order', () => {
   })
 
   it('the terms', () => {
-    expect(t.legal.terms.sections.map(([h]) => h)).toEqual(['El servicio', 'El dinero', 'Tu cuenta', 'Tu contenido', 'Privacidad'])
+    expect(t.legal.terms.sections.map(([h]) => h)).toEqual([
+      'El servicio',
+      'Edad',
+      'El dinero',
+      'Si organizas',
+      'Tu cuenta',
+      'Si se suspende una cuenta',
+      'Tu contenido',
+      'Responsabilidad',
+      'Cambios',
+      'Ley y tribunales',
+      'Privacidad',
+    ])
+  })
+
+  it('the terms say the law, the courts, the limits, the appeal, and that no lawyer has read them yet (TRUST-21)', () => {
+    const terms = Object.fromEntries(t.legal.terms.sections)
+    expect(terms['Ley y tribunales']).toContain('Estos términos se rigen por las leyes de México')
+    expect(terms['Ley y tribunales']).toContain('sin que un abogado los haya revisado todavía')
+    expect(terms['Responsabilidad']).toContain('En lo que la ley lo permita, quien opera Polo no responde por pérdidas')
+    expect(terms['Si se suspende una cuenta']).toContain('siempre anota el motivo')
+    expect(terms['Cambios']).toContain('la app te lo dice al abrirla')
+    // The money disclaimer, word for word where Dinero shows it (TRUST-12).
+    expect(terms['El dinero']).toContain(t.money.disclaimer)
   })
 })
 
@@ -271,7 +318,12 @@ describe('the rest of the verifier\'s list', () => {
     const rights = sections['Tus derechos']!
     // «sin tu nombre» was a false promise until 0031; now it says exactly which players, and what stays.
     expect(rights).toContain('ese jugador queda como «Jugador borrado»: sin tu nombre, tu foto ni tu forma')
-    expect(rights).toContain('borrar una cuenta solo lo puede hacer quien opera Polo, y el correo golf@cardigan.mx todavía no recibe mensajes')
+    // TRUST-09 (0070): the person deletes and downloads it himself now.
+    expect(rights).toContain('«Descargar mis datos» te da un archivo con todo lo que Polo guarda de ti')
+    expect(rights).toContain('«Borrar mi cuenta» la borra, escribiendo tu correo para confirmar; también puede borrarla quien opera Polo')
+    expect(rights).not.toContain('La app todavía no tiene cómo borrar tu cuenta')
+    expect(source('src/screens/profile/ProfileEditScreen.tsx')).toContain('<MyDataSection')
+    expect(source('supabase/migrations/0070_self_service.sql')).toContain('perform public.anonymize_person(me);')
     expect(sections['Quiénes somos']).not.toContain('golf@cardigan.mx')
     expect(t.legal.contact).toContain('todavía no recibe mensajes')
   })
@@ -284,8 +336,8 @@ describe('the rest of the verifier\'s list', () => {
   })
 
   it('10. each document carries its own version', () => {
-    expect(t.legal.privacy.version).toBe('2026-10-16')
-    expect(t.legal.terms.version).toBe('2026-10-01')
+    expect(t.legal.privacy.version).toBe('2026-10-16.2')
+    expect(t.legal.terms.version).toBe('2026-10-16')
   })
 })
 
