@@ -20,6 +20,7 @@ import type { TournamentSettings } from './schema'
 import type { GameConfig } from './games'
 import type { Snapshot } from '../types'
 import { pesos } from '../core/pesos'
+import { splitEven, splitWhole } from '../core/ranking'
 
 export interface PrizeLine {
   /** A module id, `house`, or `game:<id>` for an instance game on the main pot. */
@@ -255,9 +256,8 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
     // The pot as the game splits it: per day, the first day takes the odd pesos.
     const pot = g.money.source === 'main' ? g.money.amount : g.money.buyIn * n
     const days = g.options.scope === 'perRound' ? Math.max(1, rounds) : 1
-    const base = Math.floor(pot / days)
     let amount = 0
-    for (let d = 0; d < days; d++) amount += beyond(percentPlaces(base + (d === 0 ? pot - base * days : 0), g.money.split), n)
+    for (const day of splitEven(pot, days, 'first')) amount += beyond(percentPlaces(day.amount, g.money.split), n)
     out.push({ id: `game:${g.id}`, label: g.label, places, reachable: n, amount, detail: placesText(places, n, ['jugador', 'jugadores']) })
   }
   return out
@@ -265,10 +265,7 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
 
 /** Whole-peso amounts for percent places: floor each, remainder to 1st. */
 export function percentPlaces(pot: number, split: number[]): number[] {
-  const out = split.map((pct) => Math.floor((pot * pct) / 100))
-  const rest = pot - out.reduce((s, x) => s + x, 0)
-  if (out.length && rest > 0) out[0]! += rest
-  return out
+  return splitWhole(pot, split, { of: 100, rest: 'first' }).map((s) => s.amount)
 }
 
 /** The individual game's prizes in pesos for a field, whichever mode it uses. */

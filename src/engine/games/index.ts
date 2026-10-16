@@ -1,17 +1,27 @@
-import type { GameType } from '../settings/games'
+import type { GameOf, GameType } from '../settings/games'
 import type { GameImpl } from './game'
-import { skinsGame } from './skins'
-import { lowScoreGame } from './lowScore'
-import { eventPotGame } from './eventPot'
-import { matchGame } from './match'
-import { contestGame } from './contest'
-import { customGame } from './custom'
+import { skinsGame, type SkinsState } from './skins'
+import { lowScoreGame, type LowScoreState } from './lowScore'
+import { eventPotGame, type EventPotState } from './eventPot'
+import { matchGame, type MatchState } from './match'
+import { contestGame, type ContestState } from './contest'
+import { customGame, type CustomState } from './custom'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyGame = GameImpl<any, any>
+/** Each instance-game type's state, by type (ARCH-15). */
+export interface GameStateMap {
+  skins: SkinsState
+  lowScore: LowScoreState
+  eventPot: EventPotState
+  match: MatchState
+  contest: ContestState
+  custom: CustomState
+}
+
+/** One implementation per type, of that type, each computing its own state from its own config. */
+export type GameRegistry = { [K in GameType]: GameImpl<GameStateMap[K], GameOf<K>> }
 
 /** Implementations of every instance-game type the platform ships. */
-export const ALL_GAMES: Partial<Record<GameType, AnyGame>> = {
+export const ALL_GAMES: GameRegistry = {
   skins: skinsGame,
   lowScore: lowScoreGame,
   eventPot: eventPotGame,
@@ -24,7 +34,7 @@ export * from './game'
 export { gamePot, potIdOf, placeAmounts, payPlaces, payUnits, directUnits, netBets } from './payout'
 export { skinsGame, lowScoreGame, eventPotGame, matchGame, contestGame, customGame }
 export type { ContestState, ContestHole } from './contest'
-export { CONTEST_SINGLE, contestHoles } from './contest'
+export { CONTEST_SINGLE, contestHoles, contestStateOf } from './contest'
 export type { CustomState } from './custom'
 export type { SkinsState, SkinsHole } from './skins'
 export type { LowScoreState, LowScoreTable } from './lowScore'
