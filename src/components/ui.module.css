@@ -9,14 +9,24 @@
 }
 
 .backdrop {
+  /* The tint's strength: a drag down lightens it as the sheet goes (MOT-09). */
+  --sheet-tint: 40%;
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
+  background: color-mix(in srgb, var(--ink) var(--sheet-tint), transparent);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 50;
   animation: fadeIn var(--dur-fast) var(--ease);
+}
+/* Closing (MOT-09): the entry backwards, at the fast step. Inert, so a tap goes to the page it uncovers. */
+.backdrop.leaving {
+  animation: fadeOut var(--dur-fast) var(--ease) forwards;
+  pointer-events: none;
+}
+.leaving > .sheet {
+  animation: sheetOut var(--dur-fast) var(--ease) forwards;
 }
 .sheet {
   --sheet-max: 560px;
@@ -38,14 +48,24 @@
 .sheetWide {
   --sheet-max: 760px;
 }
+.sheetGrab {
+  /* The sheet's top padding and the gap under the bar belong to the strip, so it is a thumb's height (MOT-09). */
+  margin: calc(-1 * var(--s2)) 0 0;
+  padding: var(--s2) 0 var(--s3);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+}
 .sheetHandle {
   width: 36px;
   height: 4px;
   border-radius: var(--r-round);
   background: var(--rule-2);
-  margin: 0 auto var(--s3);
+  margin: 0 auto;
 }
 .sheetHead {
+  touch-action: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -74,12 +94,31 @@
     opacity: 1;
   }
 }
+/* From where a drag let go (--sheet-y, 0 otherwise), the entry's 16 px or the rest of the way down (--sheet-travel). */
+@keyframes sheetOut {
+  from {
+    transform: translateY(var(--sheet-y, 0px));
+    opacity: 1;
+  }
+  to {
+    transform: translateY(calc(var(--sheet-y, 0px) + var(--sheet-travel, 16px)));
+    opacity: 0;
+  }
+}
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
@@ -161,6 +200,26 @@
   font-weight: 500;
   animation: slideUp var(--dur) var(--ease);
   pointer-events: auto;
+}
+/* Its place in the stack, which Motion moves (ui.tsx, ToastSlot). Going, the entry backwards (MOT-09). */
+.toastSlot {
+  max-width: 100%;
+}
+.toastLeaving {
+  animation: toastOut var(--dur-fast) var(--ease) forwards;
+}
+.toastLeaving > .toast {
+  pointer-events: none;
+}
+@keyframes toastOut {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: translateY(16px);
+    opacity: 0;
+  }
 }
 .toastAction {
   color: var(--board-accent);

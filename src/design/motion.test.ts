@@ -81,6 +81,28 @@ describe('motion tokens', () => {
     expect(token('--ease-board')).toBe(`cubic-bezier(${EASE_BOARD.join(', ')})`)
   })
 
+  it('--ease is an ease-out: the first frame after a tap already moves (MOT-13)', () => {
+    // The progress of a cubic-bezier at time x, by bisection on its x(t).
+    const at = ([x1, y1, x2, y2]: readonly number[], x: number) => {
+      const b = (p1: number, p2: number, t: number) => 3 * p1 * t * (1 - t) ** 2 + 3 * p2 * t ** 2 * (1 - t) + t ** 3
+      let lo = 0
+      let hi = 1
+      for (let i = 0; i < 60; i++) {
+        const mid = (lo + hi) / 2
+        if (b(x1!, x2!, mid) < x) lo = mid
+        else hi = mid
+      }
+      return b(y1!, y2!, (lo + hi) / 2)
+    }
+    const frame = 1000 / 60
+    // It leaves at speed: steeper than linear at the start, and never past its end.
+    expect(EASE[1] / EASE[0]).toBeGreaterThan(1)
+    for (let x = 0.05; x < 1; x += 0.05) expect(at(EASE, x)).toBeLessThanOrEqual(1)
+    // A quarter of the way or more on the first frame of a --dur move (the old ease-in-out managed a tenth).
+    expect(at(EASE, frame / (DUR * 1000))).toBeGreaterThanOrEqual(0.25)
+    expect(at([0.2, 0, 0, 1], frame / (DUR * 1000))).toBeLessThan(0.11)
+  })
+
   it('each surface keeps its own range (MOT-11)', () => {
     // The phone: 150–250 ms, a tap confirmed.
     for (const d of [DUR_FAST, DUR, DUR_SLOW]) expect(d).toBeGreaterThanOrEqual(0.15)
@@ -113,8 +135,10 @@ describe('motion tokens', () => {
       if (/type:\s*'spring'/.test(text)) offenders.push(`${rel}: spring`)
       // `duration: 0.4` and friends, inside a transition.
       for (const m of text.matchAll(/duration:\s*([\d.]+)/g)) offenders.push(`${rel}: duration ${m[1]}`)
-      // The raw bezier, which should come from EASE.
-      if (/ease:\s*\[0\.2,\s*0,\s*0,\s*1\]/.test(text)) offenders.push(`${rel}: inline ease`)
+      // The raw bezier, which should come from EASE (the one it replaced too).
+      for (const curve of [EASE, [0.2, 0, 0, 1]]) {
+        if (new RegExp(`ease:\\s*\\[${curve.map((n) => String(n).replace('.', '\\.')).join(',\\s*')}\\]`).test(text)) offenders.push(`${rel}: inline ease`)
+      }
     }
     expect(offenders).toEqual([])
   })

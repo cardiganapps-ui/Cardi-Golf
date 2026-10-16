@@ -125,6 +125,32 @@ describe('SigningPanel and SignSheet', () => {
     expect(screen.getByText(S.stamp)).toBeTruthy()
   })
 
+  it('the stamp lands when a card is signed with the panel up, never again when the panel opens (MOT-14)', () => {
+    const sigs = (ids: string[]) => ids.map((pairId) => ({ roundId: 'r1', pairId, signedBy: 'x', signedAt: '' }))
+    const el = (signed: string[]) => <SigningPanel roundId="r1" groupPlayerIds={['a', 'b', 'c', 'd']} pairs={pairs} signatures={sigs(signed)} players={players} myPairId="p1" isAdmin onSign={noop} />
+    // Motion draws a stamp that lands from its first frame (opacity 0); one already there, at rest.
+    const stamps = () => screen.queryAllByText(S.stamp).map((x) => (x as HTMLElement).style.opacity)
+    // The grid opened on a day whose card was signed long ago: the stamp is simply there.
+    const { rerender, unmount } = render(el(['p2']))
+    expect(stamps()).toEqual(['1'])
+    rerender(el(['p2']))
+    expect(stamps()).toEqual(['1'])
+    unmount()
+    // Open again: still at rest, however often.
+    render(el(['p2']))
+    expect(stamps()).toEqual(['1'])
+    cleanup()
+    // Signed while the panel is up: that one lands.
+    const r = render(el([]))
+    expect(stamps()).toEqual([])
+    r.rerender(el(['p1']))
+    expect(stamps()).toEqual(['0'])
+    // Taken off and signed again while it is up: it lands again.
+    r.rerender(el([]))
+    r.rerender(el(['p1']))
+    expect(stamps()).toEqual(['0'])
+  })
+
   it('the question names the card, and «Firmar» there signs it', () => {
     const onSign = vi.fn()
     const onClose = vi.fn()
