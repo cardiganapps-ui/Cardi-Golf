@@ -38,7 +38,7 @@ function breaks(page: Page) {
     const out: string[] = []
     if (document.documentElement.scrollWidth > vw) out.push(`the page scrolls sideways: ${document.documentElement.scrollWidth} px in ${vw}`)
     const what = (el: Element) => `${el.tagName.toLowerCase()} «${(el.textContent ?? '').trim().slice(0, 40)}»`
-    for (const el of document.querySelectorAll<HTMLElement>('body *')) {
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('body *'))) {
       const r = el.getBoundingClientRect()
       if (r.width === 0 || r.height === 0 || el.closest('.sr-only, [aria-hidden="true"]')) continue
       const cs = getComputedStyle(el)
@@ -157,7 +157,7 @@ test.describe('a 375×667 phone (VIS-20)', () => {
     await open(page, LIVE)
     const m = await page.evaluate(() => {
       const tab = document.querySelector('nav[aria-label="Secciones"]')!.getBoundingClientRect().top
-      const rows = [...document.querySelectorAll('[class*="leaderRow"]')].map((r) => r.getBoundingClientRect())
+      const rows = Array.from(document.querySelectorAll('[class*="leaderRow"]')).map((r) => r.getBoundingClientRect())
       return { first: rows[0]!.top, shown: rows.filter((r) => r.top >= 0 && r.bottom <= tab + 0.5).length }
     })
     expect(m.first).toBeLessThanOrEqual(200)
