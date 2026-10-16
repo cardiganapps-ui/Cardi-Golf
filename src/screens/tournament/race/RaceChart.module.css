@@ -1,0 +1,237 @@
+/* The race chart (§9.7; VIS-21): a ruled plot on the card stock, hairline grid, ink axes, six colours at most. */
+.race {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.help {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  line-height: var(--lh-body);
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.box {
+  border-top: var(--hairline);
+  padding-top: var(--s2);
+  min-width: 0;
+}
+.figureBox {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  /* A sideways drag reads the race; an upward or downward one still scrolls the page. */
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  font-family: var(--font-text);
+}
+/* The race not reached yet: the cover slides right on the compositor, its window keeps it to the plot. */
+.window {
+  position: absolute;
+  overflow: hidden;
+}
+.cover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  will-change: transform;
+}
+.cover svg {
+  display: block;
+}
+.grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.zero {
+  stroke: var(--rule-2);
+  stroke-width: 1;
+}
+.axis {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+}
+.turn {
+  stroke: var(--rule-2);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.tick,
+.day {
+  fill: var(--ink-2);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+}
+.day {
+  font-size: var(--fs-xs);
+}
+.cursor {
+  stroke: var(--ink-2);
+  stroke-width: 1;
+}
+.context {
+  stroke: var(--race-context);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.line {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.mine {
+  stroke-width: 3;
+}
+/* The head of each coloured line, moved by a transform: a 2 px card-stock ring keeps it legible where lines cross. */
+.dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: var(--r-round);
+  box-shadow: 0 0 0 2px var(--bg);
+  will-change: transform;
+  pointer-events: none;
+}
+.dotMine {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+}
+.d1 { background: var(--race-1); }
+.d2 { background: var(--race-2); }
+.d3 { background: var(--race-3); }
+.d4 { background: var(--race-4); }
+.d5 { background: var(--race-5); }
+.d6 { background: var(--race-6); }
+.s1 { stroke: var(--race-1); }
+.s2 { stroke: var(--race-2); }
+.s3 { stroke: var(--race-3); }
+.s4 { stroke: var(--race-4); }
+.s5 { stroke: var(--race-5); }
+.s6 { stroke: var(--race-6); }
+/* Names wear ink, never the line's colour: the stub beside them carries it. A card-stock halo keeps a name
+   legible where it crosses a line or the turn. */
+.label {
+  fill: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  paint-order: stroke fill;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+/* Mid-replay the names would sit on the end of a race not drawn yet; they come back when it stops. */
+.labelsHidden {
+  opacity: 0;
+}
+.scrub {
+  width: 100%;
+  min-height: var(--tap);
+  margin: 0;
+  accent-color: var(--accent);
+}
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.where {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.key {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--hairline);
+}
+.keyRow {
+  display: grid;
+  grid-template-columns: 14px 2.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--s2);
+  min-height: 36px;
+  border-bottom: var(--hairline);
+  font-size: var(--fs-sm);
+}
+.swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+.sw1 { background: var(--race-1); }
+.sw2 { background: var(--race-2); }
+.sw3 { background: var(--race-3); }
+.sw4 { background: var(--race-4); }
+.sw5 { background: var(--race-5); }
+.sw6 { background: var(--race-6); }
+.swGrey {
+  background: var(--race-context);
+  height: 1px;
+}
+.place,
+.figure {
+  font-variant-numeric: tabular-nums;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-weight: 600;
+}
+.place {
+  color: var(--ink-2);
+}
+.figure {
+  text-align: right;
+}
+.name {
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.role {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: var(--s2);
+}
+.table th[scope='row'] {
+  position: sticky;
+  left: 0;
+  background: var(--bg);
+  white-space: nowrap;
+  font-weight: 500;
+  text-align: left;
+}
+.table th[scope='colgroup'] {
+  text-align: left;
+}
+.table td,
+.table th[scope='col'] {
+  white-space: nowrap;
+}

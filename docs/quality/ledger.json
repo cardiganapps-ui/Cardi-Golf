@@ -323,9 +323,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1898,9 +1901,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/lib/reducedMotion.test.ts",
+        "src/screens/tournament/race/RaceChart.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1979,9 +1985,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -2077,9 +2086,11 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/RaceChart.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4650,9 +4661,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 218,
+      "tests": [
+        "src/screens/tournament/race/raceModel.test.ts",
+        "e2e/fixtures/race.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },

@@ -9,12 +9,6 @@
   flex-direction: column;
   gap: var(--s3);
 }
-.sectionHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-}
 .help {
   font-size: var(--fs-sm);
   color: var(--ink-2);
@@ -105,27 +99,6 @@
 .momentLabel {
   font-weight: 600;
 }
-.chart {
-  border-top: var(--hairline);
-  padding-top: var(--s2);
-}
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s1) var(--s3);
-  font-size: var(--fs-xs);
-  color: var(--ink-2);
-}
-.legendItem {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1);
-}
-.swatch {
-  width: 14px;
-  height: 3px;
-  display: inline-block;
-}
 .course {
   display: flex;
   flex-direction: column;
@@ -155,7 +128,7 @@
 }
 .holeBars {
   display: grid;
-  grid-template-columns: repeat(18, 1fr);
+  grid-template-columns: repeat(18, minmax(0, 1fr));
   gap: 2px;
   height: 64px;
   align-items: end;
@@ -167,6 +140,28 @@
   justify-content: flex-end;
   height: 100%;
   gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.holeBar:active,
+.holeBar[aria-pressed='true'] {
+  background: var(--surface);
+}
+.holeBar[aria-pressed='true'] .holeLabel {
+  color: var(--ink);
+  font-weight: 600;
+}
+.barReadout {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  min-height: calc(var(--fs-sm) * var(--lh-body));
 }
 .bar {
   width: 100%;

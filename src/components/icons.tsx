@@ -149,6 +149,12 @@ export const IconPlay = (p: P) => (
     <path d="M7 5v14l11-7z" fill="currentColor" stroke="none" />
   </Svg>
 )
+export const IconPause = (p: P) => (
+  <Svg {...p}>
+    <rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+    <rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor" stroke="none" />
+  </Svg>
+)
 export const IconStop = (p: P) => (
   <Svg {...p}>
     <rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" stroke="none" />
