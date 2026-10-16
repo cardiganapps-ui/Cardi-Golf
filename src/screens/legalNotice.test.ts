@@ -363,7 +363,9 @@ describe('uploaded files: public by their link, never deleted (a public bucket; 
       .map((s) => s.trim().replace(/\s+/g, ' '))
     expect(statements[0]).toBe("create policy assets_public_read on storage.objects for select using (bucket_id = 'tournament-assets')")
     expect(statements.slice(1, 3)).toEqual(['drop policy if exists assets_public_read on storage.objects', expect.stringMatching(/^create policy assets_member_read on storage\.objects for select to authenticated using \( bucket_id = 'tournament-assets' and auth\.uid\(\) is not null and/)])
-    expect(statements).toHaveLength(3)
+    // 0065 (DB-16) asks auth.uid() once per statement, the same rule.
+    expect(statements[3]).toMatch(/^alter policy assets_member_read on storage\.objects using \( bucket_id = 'tournament-assets' and \(select auth\.uid\(\)\) is not null and/)
+    expect(statements).toHaveLength(4)
   })
 })
 

@@ -66,6 +66,14 @@ describe('how a value reads', () => {
     expect(show('status', 'sold', 'calcutta_lots')).toBe(V.lotStatus.sold)
     expect(show('handicap_source', 'estimate', 'players')).toBe(V.source.estimate)
   })
+  it('a PIN line says which PIN, never its digits; an unlock is a flag; a file an image (DB-13)', () => {
+    expect(show('pin', 'old', 'player_pins')).toBe(V.pin.old)
+    expect(show('pin', 'new', 'player_pins')).toBe(V.pin.new)
+    expect(show('pin', '1234', 'player_pins')).toBe(V.changed)
+    expect(show('locked', true, 'player_pins')).toBe(V.yes)
+    expect(show('url', 'https://x.test/a.jpg', 'photos')).toBe(V.image)
+    expect(fieldLabel('nets')).toBe('Netos publicados')
+  })
   it('nothing reads as a dash; a column with no name of its own shows as it is', () => {
     expect(show('reason', null)).toBe(V.none)
     expect(show('note', '', 'payments')).toBe(V.none)

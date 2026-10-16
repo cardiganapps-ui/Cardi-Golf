@@ -13,7 +13,7 @@ tournament (DB-09). Ported from the 2026-09-30 review's harness
 | `seed-two-tenants.sql` | Two organizers, two tournaments, players with PINs, a round, groups, a claimed device: made the way the app makes them, each step as its user. Ids in `harness.seed`. |
 | `selftest.sql` | The harness checking itself on the seed (tenant isolation, PIN claims, impersonation). |
 | `splinter.sql` | Supabase's advisors (the dashboard's «Advisors»), into a temp table `_lint`. |
-| `lint-baseline.json` | The advisors' findings per lint at the last accepted chain. The job fails on any lint over it; when one goes down, lower it (`POLO_LINT_WRITE=1`). |
+| `lint-baseline.json` | The advisors' findings per lint at the last accepted chain. The job fails on any lint over it; when one goes down, lower it (`POLO_LINT_WRITE=1`). `unused_index` is not counted (nothing has queried this database); what remains and why: `docs/db-advisors.md`. |
 
 The job also sends every request in `src/data/testing/cases/serverRules.json`
 to a copy of the migrated database with no seed (`scripts/server-rules.mjs`):

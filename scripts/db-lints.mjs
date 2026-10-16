@@ -6,10 +6,15 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const [csv, baselinePath, flag] = process.argv.slice(2)
+// Lints that say nothing about a database replayed from zero (docs/db-advisors.md). unused_index reads
+// pg_stat_user_indexes, which is empty on a database nothing has queried, so here it counts every plain index:
+// it went up with each index DB-15 added for a foreign key, which is the opposite of what it is for. The live
+// project's advisor (Dashboard › Advisors › Performance) reads real use.
+const IGNORED = new Set(['unused_index'])
 const now = {}
 for (const line of readFileSync(csv, 'utf8').split('\n')) {
   const [name, level, count] = line.trim().split(',')
-  if (name) now[`${name} (${level})`] = Number(count)
+  if (name && !IGNORED.has(name)) now[`${name} (${level})`] = Number(count)
 }
 if (flag === '--write') {
   writeFileSync(baselinePath, JSON.stringify(now, null, 2) + '\n')
