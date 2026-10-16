@@ -28,9 +28,10 @@ export function playingHandicap(courseHcp: number, h: HandicapSettings): Explain
   const rounded = roundWith(raw, h.rounding)
   const value = Math.max(0, rounded)
   const steps: string[] = []
-  if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}, tope ${fmt(h.cap)}`)
-  steps.push(`${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
-  if (roundTo(raw, 2) !== rounded) steps.push(`Redondeado: ${fmt(rounded)}`)
+  // COPY-19: each step says what it does before its arithmetic.
+  if (capped !== courseHcp) steps.push(`Hándicap ${fmt(courseHcp)}; el tope es ${fmt(h.cap)}, así que cuenta ${fmt(h.cap)}`)
+  steps.push(`Se juega con el ${Math.round(h.allowance * 100)}%: ${Math.round(h.allowance * 100)}% de ${fmt(capped)} = ${fmt(roundTo(raw, 2))}`)
+  if (roundTo(raw, 2) !== rounded) steps.push(`Redondeado al entero: ${fmt(rounded)}`)
   if (rounded < 0) steps.push('Un hándicap de juego no baja de 0: no recibe golpes')
   return { value, why: { title: `Hándicap de juego ${value}`, steps } }
 }
@@ -47,10 +48,13 @@ export function courseHandicap(
   const rating = tee.rating ?? tee.par
   const raw = (index * slope) / 113 + (rating - tee.par)
   const value = roundHalfUp(raw)
+  const scaled = roundTo((index * slope) / 113, 2)
+  const diff = roundTo(rating - tee.par, 1)
+  // COPY-19: what each step does, then its arithmetic; the WHS formula in three short sentences.
   const steps = [
-    `Índice ${index < 0 ? `${handicapText(index)}, en la cuenta ${fmt(index)},` : fmt(index)} × slope ${slope} ÷ 113 = ${fmt(roundTo((index * slope) / 113, 2))}`,
-    `+ (rating ${fmt(rating)} − par ${tee.par}) = ${fmt(roundTo(rating - tee.par, 1))}`,
-    `= ${fmt(roundTo(raw, 2))}, redondeado ${fmt(value)}${written(value)}`,
+    `El índice se ajusta a la dificultad del tee: índice ${index < 0 ? `${handicapText(index)}, en la cuenta ${fmt(index)},` : fmt(index)} × slope ${slope} ÷ 113 = ${fmt(scaled)}`,
+    `Se suma lo que el rating del tee pasa del par: rating ${fmt(rating)} − par ${tee.par} = ${fmt(diff)}`,
+    `${fmt(scaled)} ${diff < 0 ? '−' : '+'} ${fmt(Math.abs(diff))} = ${fmt(roundTo(raw, 2))}, redondeado ${fmt(value)}${written(value)}: el hándicap de campo`,
   ]
   return { value, why: { title: `Hándicap de campo ${handicapText(value)}`, steps } }
 }
@@ -120,12 +124,15 @@ export function estimateIndex(
 export function nextRoundCut(points: number, c: CutSettings): Explained<number> {
   const over = points - c.threshold
   const value = over > 0 ? Math.min(c.maxStrokes, Math.floor(over / c.pointsPerStroke)) : 0
+  // COPY-19: sentences that follow «El día 1» in the playing handicap's explanation, hence the lower case.
   const steps: string[] = []
-  if (over <= 0) steps.push(`${ptsText(points)} no pasa de ${c.threshold}: sin recorte`)
+  if (over <= 0) steps.push(`hizo ${ptsText(points)}, no más de ${c.threshold}: sin recorte`)
   else {
-    steps.push(`${points} − ${c.threshold} = ${ptsText(over)} de más`)
-    steps.push(`${over} ÷ ${c.pointsPerStroke} = ${over % c.pointsPerStroke ? `${(over / c.pointsPerStroke).toFixed(1)}, ` : ''}${Math.floor(over / c.pointsPerStroke)} golpe${Math.floor(over / c.pointsPerStroke) === 1 ? '' : 's'}`)
-    if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(`Máximo ${c.maxStrokes}`)
+    steps.push(`hizo ${ptsText(points)}: ${points} − ${c.threshold} = ${ptsText(over)} de más`)
+    steps.push(
+      `se recorta 1 golpe por ${c.pointsPerStroke === 1 ? 'cada punto' : `cada ${c.pointsPerStroke} puntos`} de más: ${over} ÷ ${c.pointsPerStroke} = ${over % c.pointsPerStroke ? `${(over / c.pointsPerStroke).toFixed(1)}, ` : ''}${Math.floor(over / c.pointsPerStroke)} golpe${Math.floor(over / c.pointsPerStroke) === 1 ? '' : 's'}`,
+    )
+    if (Math.floor(over / c.pointsPerStroke) > c.maxStrokes) steps.push(`el máximo es ${c.maxStrokes}`)
   }
   return { value, why: { title: value ? `Recorte de ${value}` : 'Sin recorte', steps } }
 }

@@ -95,6 +95,18 @@ function overParName(d: number, net: boolean): string {
   return net ? `${word} neto` : word
 }
 
+/**
+ * The feed's lines for a score under par (COPY-15): `what` is its name («birdie neto»), `under` how far under, `fig`
+ * the points after a comma or nothing. A run of birdies, then the day's first, then an eagle get lines of their own.
+ */
+function feedUnderPar(name: string, hole: number, what: string, under: number, fig: string, ctx: { first?: boolean; streak?: number }): string[] {
+  const What = what.charAt(0).toUpperCase() + what.slice(1)
+  if (ctx.streak && ctx.streak > 1) return [`${name} no para: ${what} en el ${hole}, ${ctx.streak} hoyos seguidos bajo par${fig}`, `${name} va que vuela: ${what} en el ${hole}, ya van ${ctx.streak} seguidos${fig}`]
+  if (ctx.first) return [`${name} estrena el día con un ${what} en el ${hole}${fig}`, `${name} abre el día: ${what} en el ${hole}${fig}`]
+  if (under >= 2) return [`${name}: ${what} en el ${hole}${fig}`, `¡${What} de ${name} en el ${hole}!${fig ? ` ${fig.slice(2)}` : ''}`, `${name} se luce en el ${hole}: ${what}${fig}`]
+  return [`${name}: ${what} en el ${hole}${fig}`, `${What} de ${name} en el ${hole}${fig}`, `${name} la mete en el ${hole}: ${what}${fig}`, `En el ${hole}, ${what} para ${name}${fig}`]
+}
+
 /** «Camilo y Damián», «Camilo, Damián e Iván»: Spanish conjunctions, no comma before the last. */
 function andList(parts: string[]): string {
   return listWith(parts, (w) => (takesE(w) ? 'e' : 'y'))
@@ -111,6 +123,20 @@ function orList(parts: string[]): string {
  */
 export function ptsText(n: number, text: string | number = n): string {
   return `${text} ${Math.abs(n) === 1 ? 'pt' : 'pts'}`
+}
+
+/**
+ * A game's label inside a sentence (STRAT-11). The organizer names the game («La Víbora», «El Tres Putts»), and a
+ * sentence that names it takes that name with its article in lower case: «Tiene la Víbora», «cargando el Tres
+ * Putts». A label with no article stays as typed.
+ */
+export function labelInSentence(label: string): string {
+  return label.trim().replace(/^(El|La|Los|Las)(?=\s)/u, (a) => a.toLowerCase())
+}
+
+/** A label without its leading article, for a name built on it: «La Víbora» gives «Víbora de Oro» (STRAT-11). */
+export function labelBare(label: string): string {
+  return label.trim().replace(/^(?:El|La|Los|Las)\s+/u, '')
 }
 
 /** A handicap as golfers write it: under zero is a «plus» handicap, +1.2 (the arithmetic in an explanation keeps −1.2). */
@@ -856,7 +882,7 @@ export const t = {
       reviewNoPrize: 'Sin premio',
       reviewPrizes: 'Premios de la bolsa',
       reviewBalanced: (pot: string) => `Cuadra con la bolsa de ${pot}`,
-      reviewOwnPot: 'Pozo aparte',
+      reviewAuctionPot: 'Pozo aparte',
       reviewAuction: (slots: string[]) => `Lo que se pague en la subasta: ${andList(slots)}`,
       reviewSidePot: (detail: string) => `Bote aparte: ${detail}`,
       reviewBet: 'Apuesta directa',
@@ -926,7 +952,8 @@ export const t = {
     holesPick: 'Elegir',
     description: 'De qué se trata',
     descriptionPlaceholder: 'El que coma más tacos en la cena',
-    puttsThreshold: 'Putts que pasan la víbora',
+    /** `game` is the snake's own label (STRAT-11). */
+    puttsThreshold: (game: string) => `Putts que pasan ${labelInSentence(game)}`,
     // Money
     mainPot: 'Bolsa principal',
     entryFee: 'Inscripción por jugador',
@@ -939,7 +966,7 @@ export const t = {
     houseCutHint: 'Se aparta de la bolsa: pelotas, cena, trofeos.',
     modulePrizes: 'Premios de la bolsa',
     perDay: 'por día',
-    perSurvivor: 'a cada quien sin la víbora',
+    perSurvivor: (game: string) => `a cada quien sin ${labelInSentence(game)}`,
     sidePotsTitle: 'Juegos aparte',
     source: { none: 'Sin dinero', side: 'Bote aparte', main: 'De la bolsa', direct: 'Directo' } as Record<string, string>,
     sourceHint: {
@@ -1131,10 +1158,11 @@ export const t = {
     gamesHint: 'Siempre hay Stableford individual con hándicap completo. Suma lo que quieras:',
     game: { skins: 'Skins', closest: 'Más cerca del hoyo', birdies: 'Birdies', threePutts: 'Tres putts', lowNet: 'Low neto' } as Record<string, string>,
     money: 'Con dinero',
-    moneyHint: 'Sin dinero todo es por la gloria. Con dinero, cada uno pone la entrada y el bote se reparte por lugares; los juegos llevan su apuesta y se ajustan en Comité.',
-    entryFee: 'Entrada por jugador',
+    moneyHint: 'Sin dinero todo es por la gloria. Con dinero, cada uno paga la inscripción y la bolsa se reparte por lugares; los juegos llevan su apuesta y se ajustan en Comité.',
+    entryFee: 'Inscripción por jugador',
     /** `split` null: one place takes it all. */
-    potLine: (pot: string, split: string | null) => (split ? `Bote de ${pot}, se reparte ${split}.` : `Bote de ${pot}, todo para el primero.`),
+    /** The inscriptions are the bolsa, here as in a tournament; a «bote» is only what a game's entrants put in (COPY-14). */
+    potLine: (pot: string, split: string | null) => (split ? `Bolsa de ${pot}, se reparte ${split}.` : `Bolsa de ${pot}, todo para el primero.`),
     /** COPY-21: each chosen game's money, said before anyone commits to it. */
     stakeBuyIn: (game: string, each: string, pot: string) => `${game}: ${each} por jugador, bote de ${pot}.`,
     stakeBirdies: (each: string) => `Birdies: cada birdie o mejor cobra ${each} de cada uno de los demás.`,
@@ -1725,7 +1753,8 @@ export const t = {
       ]
         .filter(Boolean)
         .join(', '),
-    pendingSnake: (n: number) => (n === 1 ? '1 víbora pendiente' : `${n} víboras pendientes`),
+    /** `game` is the snake's own label (STRAT-11). */
+    pendingSnake: (n: number, game: string) => `${game}: ${n === 1 ? '1 desempate pendiente' : `${n} desempates pendientes`}`,
     /** UX-28: a handicap changed after they were fixed; tapping it opens the player. */
     hcpChanged: (name: string, fromTo: string) => `El hándicap de ${name} cambió después de fijarlos: ${fromTo}`,
   },
@@ -1800,9 +1829,10 @@ export const t = {
     /** On the button for a moment after a save (MOT-02). */
     savedCheck: 'Guardado',
     /** The snake changed hands with this save (MOT-07). */
-    snakePasses: (name: string) => `La víbora pasa a ${name}`,
+    /** `game` is the snake's own label, which names its object too (STRAT-11). */
+    snakePasses: (name: string, game: string) => `${game} pasa a ${name}`,
     /** The mark on the row of the one who carries it. */
-    snakeHolder: 'Tiene la víbora',
+    snakeHolder: (game: string) => `Tiene ${labelInSentence(game)}`,
     restoredHole: (n: number) => `Hoyo ${n} quedó como estaba`,
     allDefaultsTitle: (n: number) => `¿Guardar el ${n} con todos en par?`,
     allDefaultsHint: 'Acabas de guardar el hoyo anterior y aquí nadie ha cambiado nada. Si fue un doble toque, regresa.',
@@ -1824,10 +1854,10 @@ export const t = {
     next: 'Hoyo siguiente',
     missingHoles: 'Los hoyos sin captura aparecen con un guion.',
     whoHoledLast: '¿Quién embocó al último?',
-    whoHoledLastHint: (threshold: number) => `Dos o más hicieron ${threshold} putts o más en este hoyo. La víbora se la queda el que embocó al último.`,
+    whoHoledLastHint: (threshold: number, game: string) => `Dos o más hicieron ${threshold} putts o más en este hoyo: ${labelInSentence(game)} pasa al que embocó al último.`,
     // UX-08: the group that doesn't remember saves the hole all the same; the snake waits for the Comité (Comité › Tarjetas).
     whoHoledLastUnknown: 'No sabemos: que decida el Comité',
-    whoHoledLastUnknownHint: 'El hoyo se guarda igual. La víbora queda pendiente hasta que el Comité diga quién fue.',
+    whoHoledLastUnknownHint: (game: string) => `El hoyo se guarda igual. ${game} queda pendiente hasta que el Comité diga quién fue.`,
     markName: MARK_NAMES,
     /** A11Y-10: a score mark as a screen reader says it: «7, doble bogey o peor»; a pick-up is «levantó». */
     markSpoken: (value: string | number, kind: string) => (kind === 'pickup' ? 'levantó' : `${value}, ${(MARK_NAMES[kind] ?? kind)}`),
@@ -1922,21 +1952,21 @@ export const t = {
     player: 'Jugador',
     headToHead: 'Cara a cara por grupo',
     unpaired: (names: string) => `Sin pareja: ${names}`,
-    pot: 'Pozo',
+    auctionPot: 'Pozo',
     sold: (n: number, total: number) => `${n} de ${total} vendidos`,
     owners: 'Dueños',
     invested: 'invirtió',
     unassigned: 'Sin asignar',
     noAuctionYet: 'La subasta todavía no empieza.',
-    snakeRule: (n: number) => `La víbora la tiene quien hizo ${n} putts o más por última vez. Al final de la ronda cobran los que no la tienen.`,
+    snakeRule: (n: number, game: string) => `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo. Al final de la ronda cobran todos menos quien se quedó con ${labelInSentence(game)}.`,
     /** The same, on a link to watch «Sin dinero» (STRAT-05): who holds it, never who cashes. */
-    snakeRuleNoMoney: (n: number) => `La víbora la tiene quien hizo ${n} putts o más por última vez, y la carga hasta que otro la pasa o se acaba la ronda.`,
+    snakeRuleNoMoney: (n: number, game: string) => `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${n} putts o más en un hoyo, y se queda con él hasta que otro hace ${n} putts o se acaba la ronda.`,
     snakePending: (hole: number) => `Pendiente en el hoyo ${hole}`,
     snakeSettled: 'Repartida',
     snakeDone: 'Terminada',
     inPlay: (amount: string) => `En juego: ${amount}`,
     snakeInPlay: 'En juego',
-    holder: 'Tiene la víbora',
+    holder: (game: string) => `Tiene ${labelInSentence(game)}`,
     snakeWho: (names: string) => `¿quién embocó al último? (${names})`,
     snakeTo: (name: string) => `pasa a ${name}`,
     noThreePutts: 'Nadie ha hecho tres putts.',
@@ -1979,7 +2009,7 @@ export const t = {
     puttsAvg: 'Putts por hoyo',
     onePutts: 'A un putt',
     threePutts: 'A tres putts',
-    snakeHoles: 'Hoyos con víbora',
+    snakeHoles: (game: string) => `Hoyos con ${labelInSentence(game)}`,
     /** `figure` already carries its unit (`common.figure`). */
     /** `where` is `where()`'s: how far into which day (COPY-26), or null before the first hole. */
     position: (label: string, figure: string, where: string | null) => `${ordinal(label)}, ${figure}${where ? `, ${where}` : ''}`,
@@ -2004,7 +2034,8 @@ export const t = {
   more: {
     /** MOT-10: the Tarjeta's vibration, on this phone only. */
     haptics: 'Vibrar al capturar',
-    hapticsHint: 'Un toque corto en cada número y al guardar un hoyo, más largo en un birdie o si pasa la víbora. Solo en este teléfono.',
+    /** `game`: the snake's label when the tournament plays it (STRAT-11). */
+    hapticsHint: (game: string | null) => `Un toque corto en cada número y al guardar un hoyo, más largo en un birdie${game ? ` o si pasa ${labelInSentence(game)}` : ''}. Solo en este teléfono.`,
     title: 'Más',
     rules: 'Reglamento',
     stats: 'Estadísticas y premios',
@@ -2198,7 +2229,7 @@ export const t = {
         from_player_id: 'Paga',
         to_player_id: 'Recibe',
         note: 'Nota',
-        source_key: 'Bolsa',
+        source_key: 'De qué dinero',
         voided_at: 'Anulada',
         void_reason: 'Por qué se anuló',
         tee_id: 'Tee',
@@ -2280,7 +2311,7 @@ export const t = {
       } as Record<string, string>,
     },
     games: {
-      hint: 'Quién juega cada bote y los partidos. Los juegos se agregan o quitan en Torneo.',
+      hint: 'Quién entra en cada juego y los partidos. Los juegos se agregan o quitan en Torneo.',
       none: 'Este torneo no tiene juegos aparte. Agrégalos en Torneo.',
       who: 'Quién juega',
       everyone: 'Todos',
@@ -2324,14 +2355,14 @@ export const t = {
       /** A tab's badge, to a screen reader. */
       count: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
       none: 'Nada pendiente.',
-      tiebreak: (group: number, hole: number) => `Víbora, grupo ${group}, hoyo ${hole}`,
+      tiebreak: (group: number, hole: number, game: string) => `${game}, grupo ${group}, hoyo ${hole}`,
       // UX-22: an answer given by the wrong thumb can be changed; the change stays in Historial.
-      answeredTitle: 'Desempates de la víbora',
+      answeredTitle: (game: string) => `Desempates de ${labelInSentence(game)}`,
       answeredHint: 'Quién embocó al último en cada empate de 3 putts. Si alguien contestó mal, cámbialo aquí; el cambio queda en el historial.',
       answeredSub: (day: string, who: string, by: string | null) => `${day}. Embocó al último: ${who}. Lo dijo ${by ?? 'el Comité'}.`,
       change: 'Cambiar',
       changeTitle: (group: number, hole: number) => `Grupo ${group}, hoyo ${hole}: ¿quién embocó al último?`,
-      changeHint: 'Toca a quien de verdad embocó al último. La víbora y su dinero se recalculan desde ese hoyo.',
+      changeHint: (game: string) => `Toca a quien de verdad embocó al último. ${game} y su dinero se recalculan desde ese hoyo.`,
       dispute: (name: string, hole: number) => `Discrepancia, ${name}, hoyo ${hole}`,
       unsigned: (pair: string) => `Tarjeta sin firmar, ${pair}`,
       incomplete: (n: number) => `${n} tarjeta${n === 1 ? '' : 's'} sin terminar`,
@@ -2357,7 +2388,7 @@ export const t = {
         const shots = pickedUp ? 'levantó' : strokes === null ? 'sin golpes' : `${strokes} golpe${strokes === 1 ? '' : 's'}`
         return putts === null ? shots : `${shots}, ${putts} putt${putts === 1 ? '' : 's'}`
       },
-      rejectedTiebreak: (group: number, where: string, name: string) => `Víbora, grupo ${group}, ${where}: ${name}`,
+      rejectedTiebreak: (group: number, where: string, name: string, game: string) => `${game}, grupo ${group}, ${where}: ${name}`,
       rejectedSignature: (pair: string, day: number | null) => (day === null ? `Firma de ${pair}, de un día que ya no existe` : `Firma de ${pair}, día ${day}`),
       rejectedAward: (game: string, where: string, names: string) => `${game}, ${where}: ${names}`,
       /** The state of the tournament now (what was true when the server refused it isn't known here). */
@@ -2435,7 +2466,18 @@ export const t = {
       warnIncomplete: 'Este grupo no está formado por parejas completas.',
       warnKinds: (kinds: string) => `Este grupo no es una pareja ${kinds}. Se respeta el orden de la tabla, pero revísalo.`,
       unassigned: (names: string) => `Sin grupo: ${names}`,
-      standingsHint: 'Por defecto: parejas 5 y 6 salen primero, luego 3 y 4, y las dos primeras cierran.',
+      /**
+       * COPY-25: from the groups «Generar por tabla de parejas» makes, by places in the pair standings, in tee order
+       * (`generateGroupsFromStandings`): six pairs give «salen primero las parejas 5.ª y 6.ª, luego 3.ª y 4.ª, y
+       * cierran 1.ª y 2.ª». It said that for every tournament, however many pairs it had.
+       */
+      standingsHint: (groups: number[][]) => {
+        const places = (g: number[]) => andList(g.map((n) => `${n}.ª`))
+        if (groups.length < 2) return `Por la tabla de parejas: ${groups.length ? `${groups[0]!.length === 1 ? 'la pareja' : 'las parejas'} ${places(groups[0]!)} salen juntas` : 'todavía no hay parejas'}.`
+        const middle = groups.slice(1, -1).map((g) => `luego ${places(g)}`)
+        const last = groups.at(-1)!
+        return `Por la tabla de parejas: salen primero ${groups[0]!.length === 1 ? 'la pareja' : 'las parejas'} ${places(groups[0]!)}, ${[...middle, `y ${last.length === 1 ? 'cierra la' : 'cierran'} ${places(last)}`].join(', ')}.`
+      },
       discardDrafts: 'Tienes cambios sin guardar en este día. ¿Descartarlos?',
       unsavedChip: 'Sin guardar',
       unassignedFirst: 'Sin grupo',
@@ -2462,7 +2504,6 @@ export const t = {
       invalidPutts: 'Los putts van de 0 a los golpes.',
       /** A hole tile saved with strokes and no putts (MONEY-18): what to fill. */
       noPutts: 'sin putts',
-      pendingTitle: 'Víboras pendientes',
       disputesTitle: 'Discrepancias',
       disputesHint: 'Dos teléfonos capturaron valores distintos para el mismo hoyo. Vale el último; decide cuál se queda.',
       /** COPY-20: a discrepancy in words, each value with who captured it (nobody named: the Comité's own write). */
@@ -2554,8 +2595,9 @@ export const t = {
       banker: 'Banquero',
       modules: 'Juegos',
       moduleLabel: 'Nombre en la app',
-      pairingRules: 'Reglas de pareja (A-D, B-C)',
-      honoreePicks: 'El homenajeado escoge pareja',
+      /** COPY-25: the first tournament's tiers were in the label; the options name this tournament's. */
+      pairingRules: 'Qué categorías van juntas',
+      honoreePicks: (label: string) => `${label} escoge pareja`,
       /** UX-23: who signs a card after the last hole; `pairs` is offered only with the pairs game on. */
       cardSigning: 'Quién firma las tarjetas',
       cardSigningOption: { pairs: 'Las parejas, cruzado', marker: 'Otro jugador del grupo', none: 'Nadie firma' } as Record<'pairs' | 'marker' | 'none', string>,
@@ -2564,7 +2606,6 @@ export const t = {
         marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada jugador; nadie firma la suya. La firma bloquea esa tarjeta: después solo el Comité la corrige, con un motivo.',
         none: 'Nadie firma: el grupo puede corregir sus hoyos mientras el día esté en juego, y el Comité después.',
       } as Record<'pairs' | 'marker' | 'none', string>,
-      snakeThreshold: 'Putts que pasan la víbora',
       perRoundSlope: 'Ajustar hándicap por slope de cada ronda',
       perRoundSlopeHint: 'Apagado: un solo hándicap base para todo el torneo.',
       rules: 'Reglas',
@@ -2576,13 +2617,13 @@ export const t = {
       stablefordPrizes: 'Premios individuales, por lugar',
       pairsPrizes: 'Premios por pareja, por lugar',
       bestRoundPerDay: 'Mejor ronda, por día',
-      snakePerSurvivor: 'Víbora, por jugador y día',
       fewestPutts: 'Menos putts',
       handicap: 'Hándicap',
       allowance: 'Porcentaje de juego',
       cap: 'Tope',
       cutTitle: 'Recorte del día 2',
-      cutThreshold: 'A partir de (puntos)',
+      /** COPY-25: the cut starts above the threshold (37 with 36), never at it. */
+      cutThreshold: 'Recorte si hace más de (puntos)',
       cutPer: 'Puntos por golpe',
       cutMax: 'Máximo de golpes',
       cutMode: 'A partir del día 3',
@@ -2595,9 +2636,12 @@ export const t = {
       maxPerOwner: 'Jugadores por dueño, máximo',
       selfCounts: 'Comprarse a sí mismo cuenta para el máximo',
       buybackMax: 'Recompra máxima (%)',
-      payoutSlots: 'Reparto del pozo, suma 100%',
-      lastPlaceLabel: 'Nombre del último lugar',
-      honoreeLabel: 'Nombre del homenajeado',
+      auctionPayoutSlots: 'Reparto del pozo, suma 100%',
+      /** COPY-25: these name a prize and a role, never a person: En vivo prints «{label}: {name}». */
+      lastPlaceLabel: 'Premio al último lugar',
+      lastPlaceHint: 'Su nombre, como «La Cuchara de Palo». Con «Último lugar» no hay premio con nombre.',
+      honoreeLabel: 'Cómo le dicen al homenajeado',
+      honoreeHint: 'Su papel, no su nombre, como «El novio». En vivo va antes de su nombre.',
       trophyLabel: 'Trofeo del campeón',
       trophyHint: 'Lo que se lleva el campeón en la ceremonia, como «el Putter». Vacío: sin trofeo.',
       pickupPutts: 'Putts por hoyo levantado',
@@ -3083,11 +3127,11 @@ export const t = {
     // Snake money an unanswered tiebreak holds: the snake pays it once answered; the Comité does not assign it.
     heldLabel: (label: string, day: number, group: number) => `${label}, día ${day}, grupo ${group}`,
     heldTitle: (amount: string) => `${amount} esperan un desempate`,
-    heldWhy: (amount: string) => `En cuanto se responda, la víbora reparte los ${amount} de ese grupo. No es dinero por asignar.`,
+    heldWhy: (amount: string, game: string) => `En cuanto se responda, ${labelInSentence(game)} reparte los ${amount} de ese grupo. No es dinero por asignar.`,
     heldNote: (hole: number) => `Responde el desempate del hoyo ${hole} («¿Quién embocó al último?») en Comité, sección Tarjetas.`,
     heldApart: (amount: string) => `${amount} esperan un desempate y se reparten al responderlo`,
     heldTotal: (amount: string) => `Esperando un desempate: ${amount}`,
-    heldExtra: (amount: string) => `Además, ${amount} esperan un desempate de la víbora.`,
+    heldExtra: (amount: string, game: string) => `Además, ${amount} esperan un desempate de ${labelInSentence(game)}.`,
     title: (amount: string) => `${amount} sin asignar`,
     decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para la casa.',
     awardLabel: (label: string) => `${label}, asignado por el Comité`,
@@ -3095,7 +3139,7 @@ export const t = {
     /** The Comité's reason; a link to watch carries none (its free text stays with the members, STRAT-05). */
     adjustmentWhy: (label: string, amount: string, reason: string) => [`${label}: ${amount} sin asignar`, reason ? `El Comité decidió: ${reason}` : 'Lo decidió el Comité'],
     over: (label: string, assigned: string, left: string) => `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
-    orphan: (label: string, assigned: string) => `Asignación sin pozo en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
+    orphan: (label: string, assigned: string) => `Asignación sin dinero en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
     mismatch: (bank: string, listed: string) => `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
     // Dinero: the list everyone sees, and the Comité's actions.
     heading: 'Por asignar',
@@ -3163,7 +3207,7 @@ export const t = {
     moneyFirstHint: 'La ronda se cierra y en Dinero aparece lo que queda por asignar. Cuando el Comité decida, vuelve aquí para publicar.',
     missingRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} no está creado` : `Los días ${andList(days.map(String))} no están creados`}: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.`,
     openRounds: (days: number[]) => `${days.length === 1 ? `El día ${days[0]} sigue abierto` : `Los días ${andList(days.map(String))} siguen abiertos`}: termínalo o cancélalo en Comité, sección Rondas.`,
-    tiebreaks: (n: number) => `${n === 1 ? 'Un desempate de la víbora' : `${n} desempates de la víbora`} sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.`,
+    tiebreaks: (n: number, game: string) => `${n === 1 ? 'Un desempate' : `${n} desempates`} de ${labelInSentence(game)} sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.`,
     unsoldLots: (names: string) => `Lotes de la Calcutta sin vender: ${names}. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.`,
     unassigned: (amount: string) => `${amount} por asignar: el Comité decide en Dinero, Liquidación.`,
     badAssignments: (n: number) => `${n === 1 ? 'Una asignación no se puede pagar' : `${n} asignaciones no se pueden pagar`}: anúlalas en Dinero, Liquidación.`,
@@ -3183,25 +3227,56 @@ export const t = {
     serverRefusedFinish: 'Todavía no se puede marcar Terminado.',
     serverRefusedPublish: 'Todavía no se pueden publicar los resultados.',
   },
+  /**
+   * The live feed (§9.2), the one place the voice plays (DESIGN_NOTES.md, «Voice»; COPY-15): light, Mexican, never
+   * mean and never about money, the names as the board shows them. Each kind gives a few lines, and `feedLines`
+   * picks one per event from its key, so every phone reads the same line and a recompute never changes it. The
+   * first line of each is the plain one.
+   */
   feed: {
     title: 'Lo último',
     empty: 'Nada todavía. El primer birdie abre el marcador.',
     /**
      * A Stableford hole at 3 points or more, named for its points: 3 a birdie, 4 an eagle, 5 or more an albatross.
      * `plain` when the card itself made it with no stroke received, so the name takes no «neto» (COPY-23: every
-     * 4 or more read «águila neta», a gross eagle too).
+     * 4 or more read «águila neta», a gross eagle too). A run of birdies or the day's first gets its own lines.
      */
-    underParPoints: (name: string, hole: number, pts: number, plain: boolean) => `${name}: ${underParName(pts - 2, !plain)} en el ${hole}, ${ptsText(pts, `+${pts}`)}`,
+    underParPoints: (name: string, hole: number, pts: number, plain: boolean, ctx: { first?: boolean; streak?: number } = {}) => {
+      const what = underParName(pts - 2, !plain)
+      const fig = ptsText(pts, `+${pts}`)
+      return feedUnderPar(name, hole, what, pts - 2, `, ${fig}`, ctx)
+    },
     /** Under strokes: «birdie neto», «águila» (gross), «albatros neto». No points: the event does not count them. */
-    underPar: (name: string, hole: number, under: number, net: boolean) => `${name}: ${underParName(under, net)} en el ${hole}`,
-    /** `figure` as the board writes the total: «34» points, «−3» or «E» against par. */
-    leadChange: (name: string, figure: string) => `¡Cambio de líder! ${name} toma la punta ${figure === 'E' ? 'en par' : `con ${figure}`}`,
-    snakePass: (name: string, hole: number) => `La víbora pasa a ${name} en el ${hole}`,
-    honoreeHole: (name: string, hole: number, pts: number) => (pts === 0 ? `${name} en el ${hole}: cero puntos.` : `${name} en el ${hole}: ${ptsText(pts)}`),
+    underPar: (name: string, hole: number, under: number, net: boolean, ctx: { first?: boolean; streak?: number } = {}) => feedUnderPar(name, hole, underParName(under, net), under, '', ctx),
+    /** `figure` as the board writes the total: «34» points, «−3» or «E» against par; `previous`, who led before. */
+    leadChange: (name: string, figure: string, previous: string | null = null) => {
+      const fig = figure === 'E' ? 'en par' : `con ${figure}`
+      return [`¡Cambio de líder! ${name} toma la punta ${fig}`, previous ? `${name} le quita la punta a ${previous}, ${fig}` : `${name} se pone adelante, ${fig}`, `Nuevo líder: ${name}, ${fig}`]
+    },
+    /** `game` is the snake's own label (STRAT-11). */
+    snakePass: (name: string, hole: number, game: string) => [
+      `${game} pasa a ${name} en el ${hole}`,
+      `${name} se lleva ${labelInSentence(game)} en el ${hole}`,
+      `En el ${hole}, ${labelInSentence(game)} cambia de dueño: ahora es de ${name}`,
+    ],
+    /** `role`: the honoree's label when the organizer gave one («El novio»); null for the platform's own. */
+    honoreeHole: (name: string, hole: number, pts: number, role: string | null = null) =>
+      pts === 0
+        ? [`${name} en el ${hole}: cero puntos.`, `El ${hole} no fue para ${name}: cero puntos.`, `${name}${role ? `, ${labelInSentence(role)},` : ''} en el ${hole}: cero puntos, pero sigue sonriendo.`]
+        : [`${name} en el ${hole}: ${ptsText(pts)}`, `${name}${role ? `, ${labelInSentence(role)},` : ''} suma ${ptsText(pts)} en el ${hole}`, `Reporte de ${name} en el ${hole}: ${ptsText(pts)}`],
     /** A hole named on the score the event counts: «par», «bogey neto», «birdie», «levantó». */
     scoreName: (toPar: number | null, net: boolean) => (toPar == null ? 'levantó' : overParName(toPar, net)),
     /** The honoree's hole under strokes: «par», «bogey neto», «levantó». */
-    honoreeToPar: (name: string, hole: number, toPar: number | null, net: boolean) => `${name} en el ${hole}: ${toPar == null ? 'levantó' : overParName(toPar, net)}.`,
+    honoreeToPar: (name: string, hole: number, toPar: number | null, net: boolean, role: string | null = null) => {
+      const w = toPar == null ? 'levantó' : overParName(toPar, net)
+      return [`${name} en el ${hole}: ${w}.`, role ? `${name}, ${labelInSentence(role)}, en el ${hole}: ${w}.` : `Así va ${name} en el ${hole}: ${w}.`, `Reporte de ${name} en el ${hole}: ${w}.`]
+    },
+    /** Three putts or more where no snake says it: a gentle ribbing about the green, never the player. */
+    threePutt: (name: string, hole: number, putts: number) => [
+      `${name}: ${putts} putts en el ${hole}. El green ganó esta vez.`,
+      `En el ${hole}, ${putts} putts para ${name}: el hoyo se hizo chiquito.`,
+      `${name} pasea la bola en el green del ${hole}: ${putts} putts.`,
+    ],
     day: (n: number) => `Día ${n}`,
   },
   stats: {
@@ -3239,7 +3314,7 @@ export const t = {
     puttsPerHole: 'Putts por hoyo',
     onePutts: 'A un putt',
     threePutts: 'A tres putts',
-    snakeHoles: 'Hoyos con la víbora',
+    snakeHoles: (game: string) => `Hoyos con ${labelInSentence(game)}`,
     bestHole: 'Mejor hoyo',
     worstHole: 'Peor hoyo',
     streak: 'Racha',
@@ -3256,12 +3331,15 @@ export const t = {
       mostThreePutts: { name: 'Mano de Piedra', desc: 'Más hoyos a tres putts' },
       biggestGain: { name: 'El Resucitado', desc: 'Mayor mejora del día 1 al día 2' },
       mostConsistent: { name: 'El Constante', desc: 'Menor varianza de puntos por hoyo' },
+      // The name a profile shows, where no tournament's label is at hand; a tournament's screens use `snakeAward` (STRAT-11).
       snakeGold: { name: 'Víbora de Oro', desc: 'Más hoyos cargando la víbora' },
       bestRoi: { name: 'El Inversionista', desc: 'Mejor retorno en la Calcutta' },
       worstRoi: { name: 'El Filántropo', desc: 'Peor retorno en la Calcutta' },
     },
     /** Under strokes the awards that read the hole figure say so. */
     awardStrokes: { mostConsistent: 'Menor varianza de golpes por hoyo', biggestGain: 'Más golpes menos del día 1 al día 2' } as Partial<Record<string, string>>,
+    /** The snake's award, named for the tournament's own snake: «La Víbora» gives «Víbora de Oro» (STRAT-11). */
+    snakeAward: (game: string) => ({ name: `${labelBare(game)} de Oro`, desc: `Más hoyos cargando ${labelInSentence(game)}` }),
     // Signed figures (a return on the Calcutta, a gain from day 1 to day 2) take a true minus, never a hyphen.
     unit: (unit: 'count' | 'points' | 'strokes' | 'pct' | 'variance', v: number) =>
       unit === 'strokes'
@@ -3283,88 +3361,168 @@ export const t = {
     shareNow: 'Compartir',
     failed: 'No se pudo generar la imagen.',
   },
+  /**
+   * The Reglamento (§9.8, COPY-11, COPY-12): every sentence from the tournament's settings, so it says only what
+   * the engine runs. `src/engine/settings/reglamento.ts` decides which lines a tournament gets; this is their words.
+   * Golf's words are said once in plain Spanish where they first appear, and again in «Palabras de golf».
+   */
   rules: {
     title: 'Reglamento',
-    intro: (name: string) => `Las reglas de ${name}, tal como las corre la app. Si algo no cuadra con la hoja impresa, manda la hoja y el Comité decide.`,
+    intro: (name: string) => `Las reglas de ${name}, tal como las calcula la app.`,
     sections: {
-      field: 'El campo y la inscripción',
+      summary: 'En corto',
+      field: 'El campo',
       handicaps: 'Hándicaps',
-      individual: 'Individual',
-      bestRound: 'Mejor ronda',
-      pairs: 'Parejas',
-      snake: 'La víbora',
-      fewestPutts: 'Menos putts',
-      auction: 'La Calcutta',
+      cards: 'Las tarjetas',
       governance: 'El Comité',
+      glossary: 'Palabras de golf',
     },
-    field: (n: number, fee: string, pot: string, tiers: string) => [`${n} jugadores, ${fee} de inscripción cada uno: bolsa de ${pot}.`, tiers ? `Categorías por hándicap: ${tiers}, asignadas por el Comité.` : 'Sin categorías.'],
+    /** «En corto»: the money first, as a person asks for it (COPY-12). */
+    summary: {
+      fee: (fee: string, n: number, pot: string) => `Cada jugador paga ${fee} de inscripción. Con ${n === 1 ? '1 jugador' : `${n} jugadores`}, la bolsa es de ${pot}.`,
+      noFee: 'No hay inscripción.',
+      noMoney: 'Se juega sin dinero: por la gloria.',
+      /** `prizes`: each game with what it takes from the bolsa, «Individual ($20,000)». */
+      prizes: (prizes: string[]) => `De la bolsa salen los premios: ${andList(prizes)}.`,
+      prize: (label: string, amount: string) => `${label} (${amount})`,
+      kept: (amount: string) => `${amount} de la bolsa no son premio: se apartan para los gastos del torneo.`,
+      auction: (label: string) => `${label} va aparte de la bolsa: se subasta a cada jugador, y lo que pagan los compradores forma su propio pozo, que se reparte completo entre los dueños de los que mejor terminan.`,
+      sidePots: (labels: string[]) => `${andList(labels)} ${labels.length === 1 ? 'tiene su propio bote' : 'tienen su propio bote'}: solo ponen y cobran los que entran.`,
+      bets: (labels: string[]) => `${andList(labels)} se ${labels.length === 1 ? 'paga' : 'pagan'} directo entre jugadores, sin pasar por la bolsa.`,
+      banker: (name: string) => `${name} es el banquero: junta el dinero y paga los premios.`,
+      noBanker: 'El Comité dice quién es el banquero: quien junta el dinero y paga los premios.',
+      settle: 'En Dinero se ve en todo momento lo que cada quien ganaría si el torneo terminara ahora, y al final, quién le paga a quién.',
+    },
+    /** `days` and `holes` describe the days the tournament has; `holes` is null before any day exists. */
+    field: (n: number, days: number, holes: number[] | null, groupSize: number, tiers: string) => [
+      `${n === 1 ? '1 jugador' : `${n} jugadores`}, ${days === 1 ? 'un día' : `${days} días`}${holes && holes.length ? ` de ${orList([...new Set(holes)].sort((a, b) => a - b).map(String))} hoyos` : ''}, en grupos de hasta ${groupSize}.`,
+      ...(tiers ? [`Categorías por hándicap: ${tiers}, asignadas por el Comité.`] : []),
+    ],
+    /** How a rounding mode reads, with an example (MONEY-14: it always said «mitad hacia arriba»). */
+    rounding: {
+      halfUp: 'redondeado al entero, el medio hacia arriba (17.5 queda en 18)',
+      halfDown: 'redondeado al entero, el medio hacia abajo (17.5 queda en 17)',
+      nearestEven: 'redondeado al entero, el medio al par más cercano (17.5 queda en 18 y 16.5 en 16)',
+      floor: 'redondeado hacia abajo (17.9 queda en 17)',
+      ceil: 'redondeado hacia arriba (17.1 queda en 18)',
+    } as Record<'halfUp' | 'halfDown' | 'nearestEven' | 'floor' | 'ceil', string>,
     /**
-     * The cut line only where a cut can happen: more than one day and a
-     * maximum above zero (a one-day event, or a wizard-made one with
-     * `maxStrokes: 0`, read «máximo 0» before, STRAT-03). It is computed on
-     * Stableford points whatever the main event plays, and says so where the
-     * event does not count points.
+     * The cut line only where a cut can happen: more than one day and a maximum above zero (a one-day event, or a
+     * wizard-made one with `maxStrokes: 0`, read «máximo 0» before, STRAT-03). It is computed on Stableford points
+     * whatever the main event plays, and says so where the event does not count points.
      */
     handicaps: (
       allowancePct: number,
       cap: number,
+      rounding: string,
       cut: { threshold: number; pointsPerStroke: number; maxStrokes: number; mode?: 'previous' | 'cumulative' },
-      event: { rounds: number; points: boolean },
+      event: { rounds: number; points: boolean; nine: boolean },
     ) => {
+      if (allowancePct <= 0) return ['Se juega sin hándicap: nadie recibe golpes de ventaja y cuentan los golpes tal cual.']
       /** «36 puntos», «1 punto», with «Stableford» when the event counts strokes and the cut reads the points beside them. */
       const points = (n: number) => `${n} ${n === 1 ? 'punto' : 'puntos'}${event.points ? '' : ' Stableford'}`
       const each = cut.pointsPerStroke === 1 ? 'cada punto' : `cada ${cut.pointsPerStroke} puntos`
       const cutLine =
         event.rounds <= 1 || cut.maxStrokes <= 0
-          ? []
+          ? [event.rounds > 1 ? 'Sin recorte: lo que hagas un día no cambia tu hándicap del siguiente.' : '']
           : event.rounds === 2
             ? [`Recorte del día 2: si en el día 1 haces más de ${points(cut.threshold)}, para el día 2 se te recorta 1 golpe por ${each} por encima, máximo ${cut.maxStrokes}. Nunca se suman golpes.`]
             : [
                 `Recorte de hándicap: si en un día haces más de ${points(cut.threshold)}, al día siguiente se te recorta 1 golpe por ${each} por encima, máximo ${cut.maxStrokes}${cut.mode === 'cumulative' ? ' cada vez; los recortes de los días se acumulan' : '; cada día se calcula solo con el anterior'}. Nunca se suman golpes.`,
               ]
       return [
-        `Hándicap de juego = ${allowancePct}% del hándicap base (tope ${cap}), redondeado al entero (mitad hacia arriba).`,
-        `Golpes de ventaja por hoyo según el índice de golpe (SI) del tee que juegas.`,
-        ...cutLine,
-        'El Comité puede ajustar un hándicap con razón escrita; todo queda en la bitácora.',
+        'El hándicap dice el nivel de cada quien: a más hándicap, más golpes de ventaja, que se le restan a sus golpes para que todos compitan parejo.',
+        'El Comité pone el hándicap base de cada jugador: su índice oficial, un estimado de tres rondas suyas o un número que escribe a mano.',
+        `Se juega con el ${allowancePct}% del hándicap base, con tope de ${cap}, ${rounding}: ese es el hándicap de juego.`,
+        'Los golpes de ventaja se reparten por hoyo según su índice de golpe, del 1 (el más difícil) al 18 (el más fácil), en el tee que juegas: con hándicap de juego 16, recibes un golpe en los hoyos de índice 1 al 16.',
+        ...(event.nine ? ['En una ronda de 9 hoyos cuenta la mitad del hándicap de juego.'] : []),
+        ...cutLine.filter(Boolean),
+        'El Comité puede ajustar un hándicap con un motivo escrito, y queda en el historial que ve todo el torneo.',
       ]
     },
-    /** `how` comes from the format the tournament plays, so this mirrors the engine. */
+    /** «del 10 al 18, del 13 al 18, del 16 al 18 y el 18»: the last holes the tiebreak looks at, from `countbackWindows`. */
+    lastHoles: (windows: Array<[number, number]>) => andList(windows.map(([a, b]) => (a === b ? `el ${a}` : `del ${a} al ${b}`))),
+    /** The tiebreak by the last holes, said once in words (COPY-12); `days` > 1 starts it from the last day. */
+    tiebreak: (lastHoles: string, days: number, prizes: boolean) =>
+      `Desempate por los últimos hoyos: si dos empatan, va adelante quien fue mejor ${days > 1 ? `el último día, luego en los hoyos ${lastHoles}` : `en los hoyos ${lastHoles}`}. Si sigue el empate, ${prizes ? 'se reparten los premios de los lugares que ocupan' : 'comparten el lugar'}.`,
+    noPrize: 'Sin premio en dinero.',
     /**
-     * `lastPlace` is null when the tournament gave last place no name of its
-     * own: «El último lugar gana Último lugar.» named a trophy nobody set up.
-     * Match play breaks a tie on its own countback (holes up in the last
-     * day's match), not on the last holes' scores.
+     * `how` comes from the format the tournament plays, so this mirrors the engine. `lastPlace` is null when the
+     * tournament gave last place no name of its own: «El último lugar gana Último lugar.» named a trophy nobody set
+     * up. Match play breaks a tie on its own countback (holes up in the last day's match), not on the last holes.
      */
-    individual: (prizes: string[], lastPlace: string | null, how: string[], matchPlay = false) => [
+    individual: (prizes: string[], lastPlace: string | null, how: string[], tiebreak: string) => [
       ...how,
-      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.`,
-      matchPlay
-        ? 'Empate en puntos: va adelante quien terminó mejor su partido del último día (más hoyos arriba, o menos abajo). Si sigue el empate, se reparten los premios de los lugares que ocupan.'
-        : 'Desempate por los últimos hoyos: total del último día, luego hoyos 10–18, 13–18, 16–18 y el 18. Si sigue el empate, se reparten los premios de los lugares que ocupan.',
+      prizes.length ? `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}.` : t.rules.noPrize,
+      tiebreak,
       ...(lastPlace ? [`El último lugar gana ${lastPlace}.`] : []),
     ],
-    bestRound: (prize: string) => [`${prize} por día al mejor total Stableford de ese día. Abierto a todos; el día 2 usa el hándicap ajustado. Empate: desempate por los últimos hoyos de ese día y luego se reparte.`],
-    pairs: (rule: string, prizes: string[], honoree: string | null) => [
-      `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas en la cena de la Calcutta.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
-      'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes.',
-      `Premios: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}. Empate: mejor día 2 combinado, luego se reparte.`,
-      'Las parejas juegan juntas los dos días y cada pareja lleva la tarjeta de la otra.',
+    /** Match play breaks a tie on the last match: holes up, not the last holes' scores. */
+    matchTiebreak: (days: number, prizes: boolean) =>
+      `Empate en puntos: va adelante quien terminó mejor su partido${days > 1 ? ' del último día' : ''} (más hoyos arriba, o menos abajo). Si sigue el empate, ${prizes ? 'se reparten los premios de los lugares que ocupan' : 'comparten el lugar'}.`,
+    bestRound: (prize: string | null, days: number, cut: boolean, lastHoles: string) => [
+      days > 1
+        ? `${prize ? `${prize} cada día` : 'Cada día gana'} al mejor total Stableford de ese día. Lo puede ganar cualquiera, también quien gane el individual.`
+        : `${prize ? `${prize} al` : 'Gana el'} mejor total Stableford del día.`,
+      ...(cut ? ['Desde el día 2 cuenta el hándicap ya recortado.'] : []),
+      `Empate: va adelante quien fue mejor en los hoyos ${lastHoles} de ese día; si sigue, se reparte.`,
     ],
-    snake: (threshold: number, perSurvivor: string, pot: string) => [
-      `En cada grupo, la víbora la tiene el último que hizo ${threshold} putts o más. Si dos la hacen en el mismo hoyo, la carga el que embocó al último.`,
-      `Al terminar la ronda, los que no la tienen cobran ${perSurvivor} cada uno de la bolsa (${pot} por grupo). Si nadie hizo ${threshold} putts, se reparte entre los cuatro.`,
+    pairs: (rule: string, prizes: string[], honoree: string | null, o: { auction: string | null; days: number }) => [
+      `Parejas fijas${rule ? ` por categorías (${rule})` : ''}, sorteadas ${o.auction ? `al terminar la noche de ${labelInSentence(o.auction)}` : 'por el Comité'}.${honoree ? ` ${honoree} escoge a su pareja.` : ''}`,
+      'Puntos de la pareja: la suma de los puntos Stableford de los dos en cada hoyo, cada uno con sus propios golpes de ventaja.',
+      prizes.length
+        ? `Premios por pareja: ${andList(prizes.map((p, i) => `${ordinal(String(i + 1))} ${p}`))}, la mitad para cada uno. Empate: ${o.days > 1 ? 'gana la pareja con más puntos el último día; si sigue, se reparte' : 'se reparte'}.`
+        : t.rules.noPrize,
+      `Las parejas juegan juntas${o.days > 1 ? (o.days === 2 ? ' los dos días' : ` los ${o.days} días`) : ''}: cada grupo es de dos parejas.`,
     ],
-    fewestPutts: (prize: string, pickup: number) => [`${prize} al menor total de putts. Solo cuentan los golpes en el green. Un hoyo levantado cuenta ${pickup} putts. Empate: se reparte.`],
-    auction: (opening: string, increment: string, max: number, buyback: number, slots: string[]) => [
-      'La noche antes del día 1 se subasta a cada jugador, en orden sorteado.',
-      `Cada jugador abre su propio lote en ${opening} y las pujas suben de ${increment} en ${increment}. Si nadie puja, se queda con él mismo. Máximo ${max} jugadores por dueño.`,
-      `Tras el martillazo, el jugador puede recomprar hasta el ${buyback}% de sí mismo pagándole a su dueño esa proporción.`,
-      `El pozo es la suma de los martillazos y se reparte completo: ${andList(slots)}.`,
-      'Cada jugador cobra como máximo un lugar: el mejor que le toque. Si un C o D queda 1.º o 2.º, su lugar de categoría pasa al siguiente mejor de esa categoría. Los empates se reparten.',
-      'Todo se paga antes de dormir.',
+    /** `game` is the snake's own label; `perSurvivor` and `pot` null when it plays for no money. */
+    snake: (threshold: number, perSurvivor: string | null, pot: string | null, game: string) => [
+      `En cada grupo, ${labelInSentence(game)} pasa a quien hace ${threshold} putts o más en un hoyo (los putts son los golpes en el green). Si dos o más lo hacen en el mismo hoyo, pasa al que embocó al último.`,
+      perSurvivor && pot
+        ? `Al terminar la ronda, cada uno de los que no tienen ${labelInSentence(game)} cobra ${perSurvivor} de la bolsa (${pot} por grupo). Si nadie hizo ${threshold} putts, los ${pot} se reparten entre todos los del grupo.`
+        : `Es sin dinero: lo que cuenta es no terminar la ronda con ${labelInSentence(game)}.`,
     ],
-    governance: ['El Comité tiene la última palabra. Cada corrección queda registrada con quién, cuándo y por qué.'],
+    fewestPutts: (prize: string | null, pickup: number) => [
+      `${prize ? `${prize} a` : 'Gana'} quien haga menos putts en todo el torneo: solo cuentan los golpes en el green. Un hoyo levantado cuenta ${pickup} putts. Empate: se reparte.`,
+    ],
+    /** `tiers`: the categories with a place of their own in the payout; `game` the auction's label. */
+    auction: (opening: string, increment: string, max: number, buyback: number, slots: string[], o: { game: string; tiers: string[]; selfCounts: boolean }) => [
+      `${o.game} es una subasta: antes del día 1 se subasta a cada jugador, en orden sorteado, y quien lo compra (su dueño) cobra si a ese jugador le va bien.`,
+      `Cada jugador abre la puja por sí mismo en ${opening} y las pujas suben de ${increment} en ${increment}. Si nadie puja más, se queda con él mismo. Máximo ${max} jugadores por dueño${o.selfCounts ? ', contándose a sí mismo' : ''}.`,
+      ...(buyback > 0
+        ? [`Recompra: al caer el martillo, el jugador puede comprarle a su dueño hasta el ${buyback}% de sí mismo pagándole esa parte del precio (el 50% cuesta la mitad), y cobra esa misma parte.`]
+        : []),
+      `El pozo es la suma de lo que se pagó por todos y se reparte completo: ${andList(slots)}.`,
+      `Cada jugador cobra como máximo un lugar, el mejor que le toque${o.tiers.length ? `: si uno de la categoría ${orList(o.tiers)} queda en un lugar mejor, su lugar de categoría pasa al siguiente de su categoría` : ''}. Lo de cada lugar se reparte entre los dueños del jugador según su parte, y los empates se reparten.`,
+      'Al cerrar la subasta, la app muestra quién debe qué.',
+    ],
+    /** Who signs, by the tournament's rule (`cardSigning`, UX-23). */
+    cards: {
+      enter: 'Cada grupo captura sus hoyos en la app: golpes, putts y si alguien levantó.',
+      pairs: 'Al terminar el día, cada pareja firma la tarjeta de la otra pareja de su grupo. Ya firmada, solo el Comité la corrige, con un motivo.',
+      marker: 'Al terminar el día, otro jugador del grupo firma la tarjeta de cada quien; nadie firma la suya. Ya firmada, solo el Comité la corrige, con un motivo.',
+      none: 'Las tarjetas no se firman: el grupo corrige sus hoyos mientras el día está en juego, y después el Comité.',
+    } as Record<'enter' | 'pairs' | 'marker' | 'none', string>,
+    /** COPY-12: «manda la hoja» read as «send the sheet»; the page is what the app computes, and §5 already says it prevails. */
+    governance: [
+      'El Comité tiene la última palabra. Cada corrección queda registrada con quién, cuándo y por qué, y la ve todo el torneo.',
+      'Si una hoja impresa dice otra cosa, vale esta página, que es lo que calcula la app, y el Comité lo aclara.',
+    ],
+    /** «Palabras de golf»: each shown only when the tournament's rules use it (COPY-12). */
+    glossary: {
+      par: 'Par: los golpes que marca cada hoyo. Birdie es uno menos, águila dos menos y albatros tres menos; bogey es uno más y doble bogey, dos más.',
+      handicap: 'Hándicap: el nivel de cada jugador. Le da golpes de ventaja, que se restan de sus golpes en los hoyos más difíciles.',
+      strokeIndex: 'Índice de golpe: el número de cada hoyo del 1 al 18 que dice qué tan difícil es; los golpes de ventaja van primero a los de índice más bajo.',
+      net: 'Gross y neto: gross son los golpes que hiciste; neto, esos golpes menos los de ventaja.',
+      stableford: 'Stableford: cada hoyo da puntos por cómo quedaste contra el par en neto (par neto 2 puntos, cada golpe menos uno más). Gana quien suma más.',
+      pickUp: 'Levantar: recoger la bola y dejar el hoyo cuando ya no vas a sumar.',
+      putts: 'Putts: los golpes en el green, la parte del pasto corto alrededor del hoyo.',
+      tee: 'Tee: el lugar de salida de cada hoyo; hay varios, de más atrás a más adelante, y cada uno tiene su par e índice de golpe.',
+      tiebreak: 'Desempate por los últimos hoyos: entre dos empatados, va adelante el que fue mejor al final de la vuelta.',
+      auction: (game: string) => `${game}: la subasta de jugadores. El dueño de un jugador cobra si a ese jugador le va bien.`,
+      buyback: 'Recompra: el jugador le compra a su dueño una parte de sí mismo y cobra esa parte.',
+      hammer: 'Martillazo: el momento en que se cierra la venta de un jugador.',
+    },
     slotName: (slot: string, place: number | undefined, tier: string | undefined, lastPlace: string) => (slot === 'place' ? (place === 1 ? 'Campeón' : place === 2 ? 'Subcampeón' : ordinal(String(place))) : slot === 'bestOfTier' ? `Mejor ${tier}` : lastPlace),
     slot: (slot: string, place: number | undefined, tier: string | undefined, share: number, lastPlace: string) => `${t.rules.slotName(slot, place, tier, lastPlace)} ${Math.round(share * 100)}%`,
   },
@@ -3427,7 +3585,7 @@ export const t = {
     price: 'Precio',
     buyback: 'Recompra',
     paid: 'Pagó',
-    pot: 'Bolsa de la Calcutta',
+    pot: 'Pozo de la Calcutta',
     /** How the night on paper reaches the app once the server is back. */
     auctionAfter: 'Cuando vuelva la señal, en la consola, lote por lote: «Abrir lote», el comprador, «Otra» con el precio, «¡Vendido!» y la recompra.',
   },
@@ -3472,7 +3630,7 @@ export const t = {
     moneyLabel: 'Qué muestra',
     noMoney: 'Sin dinero',
     withMoney: 'Con dinero',
-    noMoneyHint: 'Sin dinero: los tableros, los juegos y la víbora, sin premios, pagos, montos ni la Calcutta.',
+    noMoneyHint: 'Sin dinero: los tableros y los juegos, sin premios, pagos, montos ni la Calcutta.',
     withMoneyHint: 'Con dinero: también lo que cada quien gana, paga y debe, y la Calcutta con sus precios. La subasta en la tele lo necesita.',
     create: 'Crear enlace para ver',
     rotate: 'Cambiar enlace',

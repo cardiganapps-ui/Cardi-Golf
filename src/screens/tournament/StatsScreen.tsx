@@ -112,21 +112,25 @@ export function StatsScreen() {
             <h2>{S.awards}</h2>
             <p className={styles.help}>{S.awardsHint}</p>
             <div className={styles.awards}>
-              {stats.awards.map((a) => (
-                <div key={a.id} className={styles.award}>
-                  <span className={styles.awardName}>{S.award[a.id].name}</span>
-                  <span className={styles.awardDesc}>{(strokes && S.awardStrokes[a.id]) || S.award[a.id].desc}</span>
-                  <div className={styles.awardWinners}>
-                    {a.playerIds.map((pid) => (
-                      <button key={pid} type="button" className={styles.winner} onClick={() => setOpen(pid)}>
-                        <Avatar name={nameOf(pid)} url={byId.get(pid)?.avatarUrl} size="sm" honoree={byId.get(pid)?.isHonoree} />
-                        <span>{nameOf(pid)}</span>
-                      </button>
-                    ))}
+              {stats.awards.map((a) => {
+                // The snake's award is named for the tournament's own snake (STRAT-11).
+                const award = a.id === 'snakeGold' ? S.snakeAward(settings.modules.snake.label) : S.award[a.id]
+                return (
+                  <div key={a.id} className={styles.award}>
+                    <span className={styles.awardName}>{award.name}</span>
+                    <span className={styles.awardDesc}>{(strokes && S.awardStrokes[a.id]) || award.desc}</span>
+                    <div className={styles.awardWinners}>
+                      {a.playerIds.map((pid) => (
+                        <button key={pid} type="button" className={styles.winner} onClick={() => setOpen(pid)}>
+                          <Avatar name={nameOf(pid)} url={byId.get(pid)?.avatarUrl} size="sm" honoree={byId.get(pid)?.isHonoree} />
+                          <span>{nameOf(pid)}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className={styles.awardValue}>{S.unit(a.unit, a.value)}</span>
                   </div>
-                  <span className={styles.awardValue}>{S.unit(a.unit, a.value)}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
             {(stats.moment || stats.cursedHole) && (
               <div>
@@ -274,7 +278,7 @@ export function StatsScreen() {
                     <th className="num">{S.puttsPerHole}</th>
                     <th className="num">{S.onePutts}</th>
                     <th className="num">{S.threePutts}</th>
-                    {state.modules.snake && <th className="num">{S.snakeHoles}</th>}
+                    {state.modules.snake && <th className="num">{S.snakeHoles(settings.modules.snake.label)}</th>}
                     <th className="num">{S.streak}</th>
                     <th className="num">{strokes ? S.byParStrokes : S.byPar}</th>
                   </tr>

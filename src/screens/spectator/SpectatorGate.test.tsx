@@ -128,7 +128,7 @@ describe('a link «Sin dinero» (the default)', () => {
     expect(screen.getByText(t.spectator.note)).toBeTruthy()
     expect(screen.getByRole('link', { name: new RegExp(t.spectator.viewTv) }).getAttribute('href')).toBe(`/v/${TOKEN}/tv`)
     // The Comité's lines (a tiebreak to answer, a warning) are not a spectator's: the fixture has a pending one.
-    expect(screen.queryByText(t.live.pendingSnake(1))).toBeNull()
+    expect(screen.queryByText(t.live.pendingSnake(1, 'La Víbora'))).toBeNull()
     expect(asked()).toEqual(['spectator_board'])
     expect(rpc.mock.calls[0]![1]).toEqual({ p_token: TOKEN, p_seen: null })
     expect(appClient).not.toHaveBeenCalled()

@@ -32,13 +32,16 @@ export function strokesWhy(h: HoleResult, net: boolean): Explanation {
   const d = counted - h.par
   const rel = d === 0 ? 'par' : d > 0 ? `${d} sobre par` : `${-d} bajo par`
   const strokes = (n: number) => `${n} golpe${n === 1 ? '' : 's'}`
-  const steps: string[] = [`Par ${h.par}, SI ${h.strokeIndex}${net ? `: ${strokes(h.strokesReceived)} de ventaja` : ''}`]
+  // COPY-19: the hole in words first, then the arithmetic.
+  const steps: string[] = [
+    h.pickedUp
+      ? `Levantó en un par ${h.par}${net ? `, con ${strokes(h.strokesReceived)} de ventaja en este hoyo (índice de golpe ${h.strokeIndex})` : ''}: cuenta ${strokes(counted)}${net ? ' netos' : ''}, ${rel}`
+      : `${strokes(h.gross!)} en un par ${h.par}${net ? `, con ${strokes(h.strokesReceived)} de ventaja en este hoyo (índice de golpe ${h.strokeIndex}): ${counted} netos, ${rel}` : `: ${rel}`}`,
+  ]
   if (h.pickedUp) {
-    steps.push(`Levantó: cuenta como doble bogey neto, par ${h.par} + ${strokes(h.strokesReceived)} de ventaja + 2 = ${h.par + h.strokesReceived + 2}`)
+    steps.push(`Un hoyo levantado cuenta como doble bogey neto: par ${h.par} + ${strokes(h.strokesReceived)} de ventaja + 2 = ${h.par + h.strokesReceived + 2}`)
     if (net) steps.push(`${h.par + h.strokesReceived + 2} − ${h.strokesReceived} = ${counted} neto`)
   } else if (net) steps.push(`${h.gross} − ${h.strokesReceived} = ${counted} neto`)
-  else steps.push(`${strokes(h.gross!)}`)
-  steps.push(`${strokes(counted)}${net ? ' netos' : ''}: ${rel}`)
   return { title: `${strokes(counted)}${net ? ' netos' : ''}`, steps }
 }
 

@@ -20,7 +20,7 @@ describe('playing handicap (80%, round half up, cap 54)', () => {
 
   it('explains the cap and the rounding', () => {
     const r = playingHandicap(60, H)
-    expect(r.why.steps.join(' | ')).toContain('tope 54')
+    expect(r.why.steps.join(' | ')).toContain('el tope es 54')
     expect(r.why.steps.join(' | ')).toContain('80% de 54 = 43.2')
   })
 })

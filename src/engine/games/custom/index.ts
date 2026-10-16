@@ -9,7 +9,7 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
-import { directUnits, fmt, payUnits } from '../payout'
+import { directUnits, fmt, PotWords, payUnits } from '../payout'
 import { moneyByPlayer, namer } from '../util'
 
 type Cfg = GameOf<'custom'>
@@ -50,7 +50,7 @@ export const customGame: GameImpl<CustomState, Cfg> = {
     if (ctx.config.options.description) notes.push(ctx.config.options.description)
     notes.push(state.decided ? 'Decidido por el Comité.' : 'El Comité marca a los ganadores en Comité, Juegos.')
     if (ctx.config.money.source === 'direct') notes.push(`Cada uno de los que no ganaron le paga ${fmt(ctx.config.money.stake)} a cada ganador.`)
-    else if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)} para los ganadores.`)
+    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} es para los ganadores.`)
     return { sections: [{ rows }], notes }
   },
 }

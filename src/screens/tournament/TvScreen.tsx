@@ -264,7 +264,7 @@ export function TvScreen() {
                         <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
                           {name(pid)}
                           {g.holderId === pid && (
-                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder}>
+                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder(settings.modules.snake.label)}>
                               <IconSnake />
                             </span>
                           )}

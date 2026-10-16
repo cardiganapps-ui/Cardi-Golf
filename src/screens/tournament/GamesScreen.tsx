@@ -108,7 +108,7 @@ export function GamesScreen() {
     } else if (id === 'auction' && m.auction) {
       const s0 = m.auction.slots.find((x) => !x.unfilled)
       leader = s0 ? t.games.leader(t.common.andList(s0.playerIds.map(name)), formatMoney(s0.pesos)) : m.auction.pot > 0 ? t.games.sold(m.auction.soldCount, snapshot.players.length) : t.games.noAuctionYet
-      stake = { text: t.games.pot, amount: m.auction.pot }
+      stake = { text: t.games.auctionPot, amount: m.auction.pot }
     }
     return { id, label, leader, stake: showMoney ? stake : { text: '' } }
   })
@@ -140,7 +140,7 @@ export function GamesScreen() {
                   {g.stake.amount ? (
                     <span className={styles.gameStake}>
                       <strong>{formatMoney(g.stake.amount)}</strong>
-                      <span>{g.stake.text.replace(formatMoney(g.stake.amount), '').replace(/^\s*(al|por)\s*/, '$1 ').trim() || t.games.pot}</span>
+                      <span>{g.stake.text.replace(formatMoney(g.stake.amount), '').replace(/^\s*(al|por)\s*/, '$1 ').trim()}</span>
                     </span>
                   ) : g.stake.text ? (
                     <span className={styles.gameStake}>
@@ -358,7 +358,7 @@ export function GamesScreen() {
             <div className={styles.section}>
               <div className={styles.potLine}>
                 <span>
-                  <span className="label">{t.games.pot}</span>
+                  <span className="label">{t.games.auctionPot}</span>
                   <br />
                   <span className={styles.pot}>{formatMoney(state.modules.auction.pot)}</span>
                 </span>

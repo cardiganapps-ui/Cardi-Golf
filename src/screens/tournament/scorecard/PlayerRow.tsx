@@ -32,6 +32,8 @@ export const PlayerRow = memo(function PlayerRow(p: {
   good: boolean
   /** He carries the snake: the mark slides from the old holder's row to his (MOT-07). */
   holdsSnake: boolean
+  /** The snake's label, which names its mark (STRAT-11). */
+  snakeLabel: string
   snakeLayoutId: string
   onDraft: (pid: string, patch: Partial<Draft>) => void
 }) {
@@ -58,7 +60,7 @@ export const PlayerRow = memo(function PlayerRow(p: {
           </span>
           {/* Outside the name's clipped box, so it slides from the old holder's row to the new one's (MOT-07). */}
           {p.holdsSnake && (
-            <motion.span layoutId={p.snakeLayoutId} className={styles.snakeMark} role="img" aria-label={S.snakeHolder} transition={easeSlow}>
+            <motion.span layoutId={p.snakeLayoutId} className={styles.snakeMark} role="img" aria-label={S.snakeHolder(p.snakeLabel)} transition={easeSlow}>
               <IconSnake size={16} />
             </motion.span>
           )}

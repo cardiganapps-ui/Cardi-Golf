@@ -15,7 +15,7 @@ import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
 import type { HoleAward, Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
-import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
+import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { holeOf, moneyByPlayer, namer, plural, rankLabel, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'contest'>
@@ -108,7 +108,7 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
     }))
     const notes: string[] = []
     if (ctx.config.money.source === 'direct') notes.push(`Cada hoyo ganado cobra ${fmt(ctx.config.money.stake)} de cada uno de los demás.`)
-    else if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}, se reparte entre los hoyos ganados.`)
+    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte entre los hoyos ganados.`)
     if (state.holes.some((h) => h.status === 'disputed')) notes.push('Hay hoyos en disputa: el Comité decide en Comité, Juegos.')
     return { sections: [{ rows }, { title: 'Hoyo por hoyo', rows: log }], notes }
   },

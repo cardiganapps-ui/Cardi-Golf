@@ -7,7 +7,7 @@
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
-import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
+import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
 import { moneyByPlayer, namer, plural, rankLabel, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'eventPot'>
@@ -26,7 +26,7 @@ const NAMES: Record<Cfg['options']['event'], [string, string]> = {
 
 export const eventPotGame: GameImpl<EventPotState, Cfg> = {
   type: 'eventPot',
-  defaultLabel: 'Bote de birdies',
+  defaultLabel: 'Birdies',
   compute(ctx) {
     const { event, basis } = ctx.config.options
     const counts: Record<Id, number> = Object.fromEntries(ctx.entrants.map((id) => [id, 0]))
@@ -71,7 +71,7 @@ export const eventPotGame: GameImpl<EventPotState, Cfg> = {
     const notes: string[] = []
     const { event, basis } = ctx.config.options
     if (ctx.config.money.source === 'direct') notes.push(event === 'threePutt' ? `Cada tres putts le cuesta ${fmt(ctx.config.money.stake)} a quien los hace, para cada uno de los demás.` : `Cada ${unit[0]} cobra ${fmt(ctx.config.money.stake)} de cada uno de los demás.`)
-    else if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}, se reparte por cada ${unit[0]}.`)
+    else if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte por cada ${unit[0]}.`)
     if (event !== 'threePutt') notes.push(`${basis === 'net' ? 'Neto' : 'Gross'}, ${event === 'eagle' ? 'águila' : 'birdie'} o mejor.`)
     return { sections: [{ rows }, { title: 'Hoyo por hoyo', rows: log }], notes }
   },

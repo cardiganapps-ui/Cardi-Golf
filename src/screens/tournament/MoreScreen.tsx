@@ -159,7 +159,7 @@ export function MoreScreen() {
       {canVibrate() && (
         <Toggle
           label={t.more.haptics}
-          hint={t.more.hapticsHint}
+          hint={t.more.hapticsHint(data?.settings.modules.snake.enabled ? data.settings.modules.snake.label : null)}
           checked={vibrate}
           onChange={(on) => {
             setHapticsOn(on)

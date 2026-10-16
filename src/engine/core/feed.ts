@@ -1,7 +1,12 @@
 /**
- * Derived feed events (§6, §9.2): birdies, lead changes, snake passes and the
- * honoree's holes. Replayed from the scores in the order they were saved so
- * the ticker reads like it happened. Copy is rendered by the UI from `kind`.
+ * Derived feed events (§6, §9.2): birdies, lead changes, snake passes, the
+ * honoree's holes and three-putts. Replayed from the scores in the order they
+ * were saved so the ticker reads like it happened. Copy is rendered by the UI
+ * from `kind` (`feedLines`), which picks among a few lines per kind.
+ *
+ * COPY-15: each event carries what makes it a story: a birdie the day's
+ * first, or the latest of a run on consecutive holes; a lead change whom it
+ * took the lead from; a three-putt where no snake would say it already.
  *
  * The feed speaks the main event's language (STRAT-03). Under Stableford a
  * birdie is worth its points and the leader has the most of them. Under
@@ -36,6 +41,10 @@ export type FeedEvent =
       /** Strokes under par on the score the event counts (1 birdie, 2 eagle, 3 albatross). */
       under: number
       scoring: MainScoring
+      /** The first birdie of its day, by anyone. */
+      firstOfDay?: true
+      /** Birdies on this many consecutive holes, this one the last, each saved before it (2 or more). */
+      streak?: number
     }
   | {
       kind: 'leadChange'
@@ -50,6 +59,8 @@ export type FeedEvent =
       by?: Id
       /** The board's last word at the close (`computeTournament`), not a save's. */
       close?: true
+      /** Who led before it, when someone did. */
+      previous?: Id
     }
   | { kind: 'snakePass'; at: string | null; roundNumber: number; hole: number; playerId: Id; groupNumber: number }
   | {
@@ -63,6 +74,8 @@ export type FeedEvent =
       toPar: number | null
       scoring: MainScoring
     }
+  /** Three putts or more on a hole, where no snake is played to say it (and not a birdie nor the honoree's hole). */
+  | { kind: 'threePutt'; at: string | null; roundNumber: number; hole: number; playerId: Id; putts: number }
 
 export interface FeedOptions {
   /** What the main event counts. */
@@ -124,6 +137,9 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
   const ids: Id[] = []
   const totals: number[] = []
   let leader: Id | null = null
+  // Which saved holes were birdies, by day, player and hole, and the days that have had one (COPY-15).
+  const birdieHoles = new Map<string, boolean>()
+  const birdieDays = new Set<Id>()
   for (const { s, rn, at } of scores) {
     const h = holeOf(core.rounds[s.roundId]?.[s.playerId]?.holes, s.hole)
     if (!h || !h.played) continue
@@ -132,10 +148,17 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     if (isBirdie) {
       const under = points ? h.points - 2 : -toPar!
       const grossUnder = !h.pickedUp && h.gross != null ? Math.max(0, h.par - h.gross) : 0
-      push({ kind: 'birdie', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, grossUnder, under, scoring }, at)
+      let streak = 1
+      while (birdieHoles.get(`${s.roundId}:${s.playerId}:${s.hole - streak}`)) streak++
+      const firstOfDay = !birdieDays.has(s.roundId)
+      birdieDays.add(s.roundId)
+      push({ kind: 'birdie', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, grossUnder, under, scoring, ...(firstOfDay ? { firstOfDay: true as const } : {}), ...(streak > 1 ? { streak } : {}) }, at)
     } else if (honoree && s.playerId === honoree) {
       push({ kind: 'honoreeHole', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, points: h.points, toPar, scoring }, at)
+    } else if (!snake && !h.pickedUp && h.putts != null && h.putts >= 3) {
+      push({ kind: 'threePutt', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: s.playerId, putts: h.putts }, at)
     }
+    birdieHoles.set(`${s.roundId}:${s.playerId}:${s.hole}`, isBirdie)
     if (!opts.leaders) continue
 
     const counted = points ? h.points : (holeStrokes(h, scoring === 'net') ?? h.par) - h.par
@@ -163,8 +186,9 @@ export function computeFeed(snapshot: Snapshot, core: CoreState, snake: SnakeSta
     // was announced already (STRAT-03), so only a new name is a change.
     const real = points ? bestValue > 0 : ids.length > 1
     if (best && !tie && real && best !== leader) {
+      const previous = leader
       leader = best
-      push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, by: s.playerId, figure: points ? String(bestValue) : toParText(bestValue), scoring }, at)
+      push({ kind: 'leadChange', at: s.updatedAt, roundNumber: rn, hole: s.hole, playerId: best, by: s.playerId, figure: points ? String(bestValue) : toParText(bestValue), scoring, ...(previous ? { previous } : {}) }, at)
     }
   }
 

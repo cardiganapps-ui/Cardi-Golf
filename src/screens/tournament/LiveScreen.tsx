@@ -344,7 +344,7 @@ export function LiveScreen() {
         )}
         {!spectator && state.flags.pendingSnakeTiebreaks.length > 0 && (
           <span className={styles.caution}>
-            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length)}
+            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length, settings.modules.snake.label)}
           </span>
         )}
         {!spectator && state.flags.warnings.map((w) => (

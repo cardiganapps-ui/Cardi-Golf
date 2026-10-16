@@ -53,7 +53,7 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     }
     if (r.kind === 'tiebreak') {
       const p = r.payload as TiebreakPayload
-      return IB.rejectedTiebreak(snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, IB.dayHole(day, p.hole), name(p.last_holed_player_id))
+      return IB.rejectedTiebreak(snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, IB.dayHole(day, p.hole), name(p.last_holed_player_id), data.settings.modules.snake.label)
     }
     if (r.kind === 'award') {
       const p = r.payload as AwardPayload

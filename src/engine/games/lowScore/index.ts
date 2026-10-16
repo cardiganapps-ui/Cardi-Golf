@@ -14,7 +14,7 @@ import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { BoardSection, GameContext, GameImpl } from '../game'
-import { fmt, payPlaces, placeAmounts } from '../payout'
+import { payPlaces, placeAmounts, PotWords, splitWords } from '../payout'
 import { moneyByPlayer, namer, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'lowScore'>
@@ -126,7 +126,7 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
       const who = t.common.andList(tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`))
       notes.push(`${day}tarjeta incompleta, hoyos jugados: ${who}. Queda${tb.incomplete.length === 1 ? '' : 'n'} después de las tarjetas completas.`)
     }
-    if (ctx.pot > 0) notes.push(`Bote ${fmt(ctx.pot)}: ${ctx.config.money.split.map((p) => `${p}%`).join(' / ')}.`)
+    if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte ${splitWords(ctx.config.money.split)}.`)
     return { sections, notes }
   },
 }
