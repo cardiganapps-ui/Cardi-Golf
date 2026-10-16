@@ -1,26 +1,15 @@
 // @vitest-environment happy-dom
 /**
- * STRAT-03: the race charts' tooltips on Estadísticas. Under stroke play the
+ * STRAT-03: the race charts' figures on Estadísticas. Under stroke play the
  * players' race is each running total against par («+3», «−11», «E»); the
  * pairs race counts the pairs game's Stableford points whatever the main
  * event plays, both partners' points, written as points («69», never «+69»).
  *
- * The chart is drawn at a fixed size (happy-dom lays nothing out), with its
- * tooltip shown over the 18th as a finger on the last hole would show it.
+ * Read from the race's table (A11Y-20: «Ver como tabla»), the 18th's column.
  */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-
-vi.mock('recharts', async (importOriginal) => {
-  const real = await importOriginal<typeof import('recharts')>()
-  return {
-    ...real,
-    ResponsiveContainer: ({ children }: { children: ReactNode }) => (isValidElement(children) ? cloneElement(children as ReactElement<{ width?: number; height?: number }>, { width: 800, height: 280 }) : null),
-    Tooltip: (props: Record<string, unknown>) => <real.Tooltip {...props} defaultIndex={17} active />,
-  }
-})
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -42,10 +31,17 @@ function stats(edit?: (s: Snapshot) => void) {
     </MemoryRouter>,
   )
 }
-/** The tooltip's lines over the 18th, «name : value». */
-async function tooltip() {
-  await screen.findByText('Hoyo 18')
-  return Array.from(document.querySelectorAll('.recharts-tooltip-item')).map((li) => li.textContent)
+/** Each row's figure at the 18th, «name : value», from the race's table. */
+async function at18() {
+  fireEvent.click(screen.getByRole('button', { name: 'Ver como tabla' }))
+  const table = await screen.findByRole('table', { name: /hoyo por hoyo/ })
+  return within(table)
+    .getAllByRole('row')
+    .slice(1)
+    .map((tr) => {
+      const cells = within(tr).getAllByRole('cell')
+      return `${within(tr).getByRole('rowheader').textContent} : ${cells[17]!.textContent}`
+    })
 }
 
 afterEach(() => cleanup())
@@ -54,7 +50,7 @@ describe('the race charts under stroke play (STRAT-03)', () => {
   it("the players' race reads each running total against par", async () => {
     // stroke8 is net stroke play: Elías finished +3, Fabián −11, Hugo I. level.
     stats()
-    expect(await tooltip()).toEqual(expect.arrayContaining(['Elías : +3', 'Fabián : −11', 'Hugo I. : E']))
+    expect(await at18()).toEqual(expect.arrayContaining(['Elías : +3', 'Fabián : −11', 'Hugo I. : E']))
   })
 
   it("the pairs race adds both partners' Stableford points, written as points", async () => {
@@ -71,6 +67,6 @@ describe('the race charts under stroke play (STRAT-03)', () => {
     })
     fireEvent.click(screen.getByRole('radio', { name: 'Parejas' }))
     expect(screen.getByRole('heading', { name: 'Carrera de parejas' })).toBeTruthy()
-    expect((await tooltip()).sort()).toEqual(['Fore! : 69', 'Los Bogey : 75', 'Los Cuñados : 76', 'Par y Medio : 77'])
+    expect((await at18()).sort()).toEqual(['Fore! : 69', 'Los Bogey : 75', 'Los Cuñados : 76', 'Par y Medio : 77'])
   })
 })
