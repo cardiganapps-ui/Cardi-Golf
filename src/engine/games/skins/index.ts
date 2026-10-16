@@ -11,7 +11,8 @@ import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameContext, GameImpl } from '../game'
 import { directUnits, fmt, payUnits, refundUnwon, unwonWarning } from '../payout'
-import { holeOf, holeScore, moneyByPlayer, namer, plural, rankLabel, roundHoles, roundNumberOf } from '../util'
+import { isFinal } from '../../core/ranking'
+import { holeOf, holeScore, moneyByPlayer, namer, plural, rankedUnits, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'skins'>
 
@@ -45,7 +46,7 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
     let unclaimed = 0
     for (const rid of ctx.roundIds) {
       const n = roundHoles(ctx, rid)
-      const roundFinal = ctx.roundFinal[rid] || ctx.tournamentFinal
+      const roundFinal = isFinal(ctx, 'roundsOrTournament', [rid])
       let carry = 0
       let blocked = false
       for (let hole = 1; hole <= n; hole++) {
@@ -82,14 +83,12 @@ export const skinsGame: GameImpl<SkinsState, Cfg> = {
   },
   board(state, ctx) {
     const money = moneyByPlayer(skinsGame.prizes(state, ctx))
-    const standings = Object.entries(state.units)
-      .sort((a, b) => b[1] - a[1])
-      .map(([id, u], i, arr) => ({
-        playerIds: [id],
-        pos: rankLabel(arr.map((x) => x[1]), i),
-        figure: plural(u, 'skin', 'skins'),
-        money: money.get(id) ?? 0,
-      }))
+    const standings = rankedUnits(Object.entries(state.units)).map(({ id, units: u, label }) => ({
+      playerIds: [id],
+      pos: label,
+      figure: plural(u, 'skin', 'skins'),
+      money: money.get(id) ?? 0,
+    }))
     const log = state.holes
       .filter((h) => h.status === 'won')
       .map((h) => ({

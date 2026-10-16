@@ -14,9 +14,9 @@
 import { t } from '../../../i18n/es-MX'
 import type { GameOf } from '../../settings/games'
 import type { HoleAward, Id } from '../../types'
-import type { GameContext, GameImpl } from '../game'
+import { isGameOf, type GameContext, type GameImpl, type GameResultState } from '../game'
 import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
-import { holeOf, moneyByPlayer, namer, plural, rankLabel, roundHoles, roundNumberOf } from '../util'
+import { holeOf, moneyByPlayer, namer, plural, rankedUnits, roundHoles, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'contest'>
 
@@ -46,6 +46,11 @@ export function contestHoles(ctx: GameContext<Cfg>, roundId: Id): number[] {
   if (Array.isArray(sel)) return sel.filter((h) => h <= n)
   const ref = ctx.entrants.map((id) => ctx.core.rounds[roundId]?.[id]).find(Boolean)
   return (ref?.holes ?? []).filter((h) => h.par === 3).map((h) => h.hole)
+}
+
+/** A game's contest state, when the game is a contest (narrowed by its type: no cast, ARCH-15). */
+export function contestStateOf(g: GameResultState | undefined): ContestState | undefined {
+  return g && isGameOf(g, 'contest') ? g.state : undefined
 }
 
 /** A Comité ruling on a hole contest: it overrides the groups' claims on its hole (0042 keeps the two apart: DB-03, DB-04). */
@@ -96,8 +101,7 @@ export const contestGame: GameImpl<ContestState, Cfg> = {
   board(state, ctx) {
     const name = namer(ctx)
     const money = moneyByPlayer(contestGame.prizes(state, ctx))
-    const sorted = Object.entries(state.units).filter(([, u]) => u > 0).sort((a, b) => b[1] - a[1])
-    const rows = sorted.map(([id, u], i) => ({ playerIds: [id], pos: rankLabel(sorted.map((x) => x[1]), i), figure: plural(u, 'hoyo', 'hoyos'), money: money.get(id) ?? 0 }))
+    const rows = rankedUnits(Object.entries(state.units).filter(([, u]) => u > 0)).map(({ id, units: u, label }) => ({ playerIds: [id], pos: label, figure: plural(u, 'hoyo', 'hoyos'), money: money.get(id) ?? 0 }))
     const multi = ctx.roundIds.length > 1
     const log = state.holes.map((h) => ({
       title: `${multi ? `Día ${h.roundNumber}, ` : ''}hoyo ${h.hole}`,

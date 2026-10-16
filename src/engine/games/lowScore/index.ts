@@ -9,7 +9,7 @@
  * played so far, so players on different holes line up fairly.
  */
 import { ordinal, ptsText, t } from '../../../i18n/es-MX'
-import { flattenRanks, rankBy, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
+import { flattenRanks, isFinal, rankField, splitEven, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import { toParText } from '../../formats/format'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
@@ -65,8 +65,8 @@ function table(ctx: GameContext<Cfg>, rids: Id[], roundId: Id | null): LowScoreT
   const order = new Map(ctx.entrants.map((id, i) => [id, i]))
   const vals = new Map(ctx.entrants.map((id) => [id, playerValue(ctx, rids, id)]))
   const points = ctx.config.options.basis === 'points'
-  const better = points ? (a: number, b: number) => b - a : (a: number, b: number) => a - b
-  const final = ctx.tournamentFinal || rids.every((rid) => ctx.roundFinal[rid])
+  // A table over no rounds at all reads as final: it has nothing left to play.
+  const final = isFinal(ctx, 'roundsOrTournament', rids, true)
   // To par over the holes played is fair while the round is on. At the end a
   // strokes prize goes to a full card: one hole at birdie must not beat 18 at
   // even (MONEY-02). Points need no rule, missing holes already score nothing.
@@ -74,10 +74,19 @@ function table(ctx: GameContext<Cfg>, rids: Id[], roundId: Id | null): LowScoreT
   const played = ctx.entrants.filter((id) => vals.get(id)!.thru > 0)
   const missing = (id: Id) => (!points && final ? Math.max(0, holes - vals.get(id)!.thru) : 0)
   const incomplete = played.filter((id) => missing(id) > 0)
-  // More holes played first, then the score: one hole at −1 is not a better card than 17 at +1.
-  const groups = rankBy(played, (a, b) => missing(a) - missing(b) || better(vals.get(a)!.value, vals.get(b)!.value), (a, b) => order.get(a)! - order.get(b)!)
+  // More holes played first, then the score: one hole at −1 is not a better card than 17 at +1. Ties share (no countback).
+  const groups = rankField(played, {
+    keys: [(id) => -missing(id), (id) => (points ? vals.get(id)!.value : -vals.get(id)!.value)],
+    ties: 'share',
+    order: (a, b) => order.get(a)! - order.get(b)!,
+  })
   const rows = flattenRanks(groups).map((r) => ({ playerId: r.item, label: r.label, ...vals.get(r.item)! }))
   return { roundId, rows, groups, final, incomplete, holes }
+}
+
+/** Per round, the pot splits evenly between the tables, the rounding pesos to the first. */
+function tablePots(state: LowScoreState, ctx: GameContext<Cfg>): number[] {
+  return splitEven(ctx.pot, state.tables.length, 'first').map((s) => s.amount)
 }
 
 export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
@@ -89,11 +98,9 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
   },
   prizes(state, ctx) {
     const name = namer(ctx)
-    const n = state.tables.length
-    if (!n) return []
-    const base = Math.floor(ctx.pot / n)
+    const pots = tablePots(state, ctx)
     return state.tables.flatMap((tb, i) => {
-      const pot = base + (i === 0 ? ctx.pot - base * n : 0)
+      const pot = pots[i]!
       const day = tb.roundId ? `Día ${roundNumberOf(ctx, tb.roundId)}, ` : ''
       const label = (id: Id) => `${ctx.config.label}, ${day}${ordinal(tb.rows.find((r) => r.playerId === id)?.label ?? '')}`
       return payPlaces({ ...ctx, final: tb.final }, tb.groups, name, label, pot)
@@ -101,11 +108,10 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
   },
   warnings(state, ctx) {
     // Once the tournament is over: a place with a prize that no entrant with a card filled (MONEY-09).
-    const n = state.tables.length
-    if (!ctx.tournamentFinal || ctx.pot <= 0 || !n) return []
-    const base = Math.floor(ctx.pot / n)
+    if (!ctx.tournamentFinal || ctx.pot <= 0 || !state.tables.length) return []
+    const pots = tablePots(state, ctx)
     return state.tables.flatMap((tb, i) => {
-      const pot = base + (i === 0 ? ctx.pot - base * n : 0)
+      const pot = pots[i]!
       const day = tb.roundId ? `, Día ${roundNumberOf(ctx, tb.roundId)}` : ''
       return unfilledWarning(`${ctx.config.label}${day}`, unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)), tb.rows.length, ['jugador', 'jugadores'])
     })

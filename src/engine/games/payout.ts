@@ -7,7 +7,8 @@ import type { GameConfig } from '../settings/games'
 import type { Explanation, Id } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { RankGroup } from '../core/ranking'
-import { splitPrizes } from '../core/ranking'
+import { splitPrizes, splitWhole } from '../core/ranking'
+import { percentPlaces } from '../settings/prizeCheck'
 import { pesos } from '../core/pesos'
 import type { GameContext } from './game'
 import { t } from '../../i18n/es-MX'
@@ -46,13 +47,8 @@ export function potIdOf(config: GameConfig): string {
   return config.money.source === 'side' ? config.id : 'main'
 }
 
-/** Whole-peso amounts for percent places: floor each, remainder to 1st. */
-export function placeAmounts(pot: number, split: number[]): number[] {
-  const out = split.map((pct) => Math.floor((pot * pct) / 100))
-  const rest = pot - out.reduce((s, x) => s + x, 0)
-  if (out.length && rest > 0) out[0]! += rest
-  return out
-}
+/** Whole-peso amounts for percent places: floor each, remainder to 1st (the prize check's own rule). */
+export const placeAmounts = percentPlaces
 
 function award(ctx: GameContext, playerId: Id, amount: number, why: Explanation, label: string, payerId?: Id): PrizeAward {
   return {
@@ -85,13 +81,10 @@ export function payUnits(ctx: GameContext, units: Map<Id, number>, unitName: [st
   if (pot <= 0 || total <= 0) return []
   const per = pot / total
   const order = [...units.entries()].filter(([, u]) => u > 0).sort((a, b) => b[1] - a[1])
-  const base = order.map(([, u]) => Math.floor((pot * u) / total))
-  // Floors lose less than a peso each, so the remainder is smaller than the winner count.
-  let rest = pot - base.reduce((s, x) => s + x, 0)
+  // Floors lose less than a peso each, so the remainder is smaller than the winner count: one each, most units first.
+  const shares = splitWhole(pot, order.map(([, u]) => u), { of: total })
   return order.map(([id, u], i) => {
-    const extra = rest > 0 ? 1 : 0
-    rest -= extra
-    const amount = base[i]! + extra
+    const { amount, rounding: extra } = shares[i]!
     const unit = u === 1 ? unitName[0] : unitName[1]
     const perText = Number.isInteger(per) ? fmt(per) : `${fmt(Math.floor(per))} y centavos`
     return award(

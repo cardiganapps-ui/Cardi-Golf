@@ -8,7 +8,7 @@ import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { GameImpl } from '../game'
 import { directUnits, fmt, PotWords, payUnits, refundUnwon, unwonWarning } from '../payout'
-import { moneyByPlayer, namer, plural, rankLabel, roundNumberOf } from '../util'
+import { moneyByPlayer, namer, plural, rankedUnits, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'eventPot'>
 
@@ -64,8 +64,7 @@ export const eventPotGame: GameImpl<EventPotState, Cfg> = {
   board(state, ctx) {
     const unit = NAMES[ctx.config.options.event]
     const money = moneyByPlayer(eventPotGame.prizes(state, ctx))
-    const sorted = Object.entries(state.counts).sort((a, b) => b[1] - a[1])
-    const rows = sorted.map(([id, c], i) => ({ playerIds: [id], pos: rankLabel(sorted.map((x) => x[1]), i), figure: plural(c, unit[0], unit[1]), money: money.get(id) ?? 0 }))
+    const rows = rankedUnits(Object.entries(state.counts)).map(({ id, units: c, label }) => ({ playerIds: [id], pos: label, figure: plural(c, unit[0], unit[1]), money: money.get(id) ?? 0 }))
     const multi = ctx.roundIds.length > 1
     const log = state.events.map((e) => ({ playerIds: [e.playerId], pos: null, label: `${multi ? `Día ${roundNumberOf(ctx, e.roundId)}, ` : ''}hoyo ${e.hole}`, figure: unit[0] }))
     const notes: string[] = []
