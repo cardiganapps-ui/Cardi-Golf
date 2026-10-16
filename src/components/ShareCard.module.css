@@ -21,7 +21,8 @@
   align-items: center;
   gap: 16px;
   padding-bottom: 14px;
-  border-bottom: 2px solid var(--ink);
+  /* The event's accent, as on the rule under its name in the app (PWA-06); set on the card from the tournament. */
+  border-bottom: 2px solid var(--accent);
 }
 .logo {
   width: 56px;
@@ -46,15 +47,71 @@
 }
 .row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto 56px 90px;
+  grid-template-columns: 40px minmax(0, 1fr) auto 56px;
   align-items: center;
   gap: 10px;
   padding: 7px 0;
   border-bottom: 1px solid var(--rule);
   font-size: 16px;
 }
-.rows .row:has(> .name:first-child) {
-  grid-template-columns: minmax(0, 1fr) auto 110px;
+/* The sharer's own row: the accent's mark at its edge, as «my row» in the app. */
+.mine {
+  box-shadow: inset 3px 0 0 var(--accent);
+  padding-left: 6px;
+}
+/* Between the first ten and the sharer's row further down. */
+.gap {
+  height: 10px;
+  border-bottom: 1px dashed var(--rule);
+}
+.more {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+/* A settlement line: who pays whom, and how much. */
+.transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 15px;
+}
+.amount {
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+}
+/* Each person's net, two to a line. */
+.nets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+}
+.net {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 15px;
+}
+/* A winner's net in ink, a loser's in red: the app's own money colours, never the grey of a place number. */
+.gain {
+  color: var(--ink);
+}
+.loss {
+  color: var(--under);
 }
 .pos {
   font-weight: 600;
@@ -62,9 +119,6 @@
   font-size: 16px;
   font-variation-settings: 'wdth' var(--wdth-figure);
   font-variant-numeric: tabular-nums;
-}
-.neg {
-  color: var(--under);
 }
 .name {
   font-weight: 600;
@@ -83,13 +137,6 @@
   font-size: 22px;
   text-align: right;
   font-variation-settings: 'wdth' var(--wdth-figure);
-  font-variant-numeric: tabular-nums;
-}
-.cash {
-  /* Money is ink with its sign (VIS-16): green was «won» here and nowhere else; red is only what is owed. */
-  text-align: right;
-  color: var(--ink);
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .disclaimer {

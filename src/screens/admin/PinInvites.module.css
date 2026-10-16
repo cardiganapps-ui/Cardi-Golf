@@ -1,0 +1,27 @@
+/* PINs and invites (UX-20). Tokens only. */
+.pin {
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-variation-settings: 'wdth' var(--wdth-figure);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* «Imprimir»: the list alone on the page, names and PINs, without its buttons. */
+@media print {
+  :global(body *) {
+    visibility: hidden;
+  }
+  .printable,
+  .printable * {
+    visibility: visible;
+  }
+  .printable {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  .noPrint {
+    display: none;
+  }
+}

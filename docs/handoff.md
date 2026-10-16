@@ -116,6 +116,12 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 14. [ ] **Cinco organizadores que no seas tú** (apuesta 2 de la estrategia, gratis, antes de enero). Amigos que organicen viajes o torneos de golf. Cada uno crea un torneo desde cero en su teléfono, sin ayuda, y luego platicamos 15 minutos.
     - **Pasos:** les mandas https://golf.cardigan.mx/organizer/login y les pides que creen un torneo de prueba con su grupo, hasta la lista «Para empezar». Que te digan dónde se atoraron.
     - **Cómo lo verifico:** Salud muestra hasta dónde llegó cada uno; tú me pasas lo que te dijeron, y cada atorón se vuelve un arreglo.
+15. [ ] **Una puerta y una casa para las cuentas** (STRAT-06, STRAT-07; decisión, gratis, antes del primer ensayo). Hoy una cuenta tiene dos puertas: `/organizer/login` (contraseña, sin Google, siempre lleva a Mis torneos) y `/entrar` (código o Google, lleva a Mi Polo), y dos casas con los mismos torneos. Quien abrió su cuenta con Google y luego toca «Organizar un torneo» llega a una pantalla de contraseña que no tiene. Todo, con capturas, en `docs/strategy/account-and-home.md`.
+    - **A (recomiendo):** una sola puerta (`/entrar`: código, Google y contraseña para quien ya tiene), y Mi Polo como única casa, con «Tus eventos» arriba, un solo «Organizar» que pregunta torneo o ronda, y las acciones de Mis torneos (Comité, código, Duplicar) en cada torneo. `/organizer/login` y `/organizer` siguen funcionando como atajos. 2 a 3 días.
+    - **B:** una sola puerta, pero se quedan las dos casas. 1 día.
+    - **C:** dejarlo y parchar (Google en `/organizer/login`). Medio día; quedan dos puertas y dos listas.
+    - Ya hice solo esto, que se deshace en un commit: en Mi Polo, «Organizar un torneo» es el primer botón, de ancho completo, y «Ronda rápida» va abajo, también de ancho completo. Antes, Ronda rápida era el único botón grande y organizar era un botón chico hasta abajo.
+    - **Cómo lo verifico:** me dices A, B o C en el chat. Lo hago antes del 13 de febrero y el primer ensayo lo prueba con los 12 teléfonos: cada puerta termina en la misma pantalla.
 
 ---
 

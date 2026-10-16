@@ -513,10 +513,16 @@ button.row {
 .cta {
   display: flex;
   flex-direction: column;
-  gap: var(--s2);
+  gap: var(--s4);
   padding: var(--s4) 0;
   border-top: var(--rule-heavy);
   border-bottom: var(--hairline);
+}
+
+.ctaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
 }
 
 /* ---- Crews (0018): the season position, in figure type ---- */

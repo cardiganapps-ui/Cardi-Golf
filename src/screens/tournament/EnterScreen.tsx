@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { animate, useReducedMotion } from 'motion/react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar } from '../../components/ui'
 import { EventName } from '../../components/primitives'
@@ -29,7 +29,10 @@ const DENSE_FROM = 16
  */
 export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEntered: () => void }) {
   const { user, isAnonymous } = useAuth()
-  const [selected, setSelected] = useState<LookupResult['players'][number] | null>(null)
+  // The Comité's invite (UX-20, `?soy=<player>`): Entrar opens on his face, its PIN pad ready. Never a PIN in the link.
+  const [params] = useSearchParams()
+  const invited = useMemo(() => lookup.players.find((p) => p.id === params.get('soy')) ?? null, [lookup.players, params])
+  const [selected, setSelected] = useState<LookupResult['players'][number] | null>(invited)
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +52,7 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const errorId = useId()
   const screenRef = useRef<HTMLDivElement>(null)
   /** The face last tapped: «No soy yo» comes back to it (A11Y-12). */
-  const lastFace = useRef<string | null>(null)
+  const lastFace = useRef<string | null>(invited?.id ?? null)
   usePageTitle(t.titles.inTournament(t.titles.enter, lookup.name))
   // Holes this phone queued before its session lapsed: they go out once the player is back (REL-16).
   const { heldHoles } = queuedFor(lookup.id)
@@ -241,6 +244,8 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
               </p>
             </div>
           </div>
+          {/* An invite skips the faces, where an iPhone's browser is told to install first (PWA-09): it says it here. */}
+          {invited?.id === selected.id && <InstallFirst />}
           {/* Before the field: the fourth digit claims the player (claim_player), so there is no later moment to read it. */}
           <LegalConsent enter id={consentId} />
           <label className="field">

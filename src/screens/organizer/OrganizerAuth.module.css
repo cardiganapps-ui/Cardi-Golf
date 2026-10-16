@@ -19,6 +19,15 @@
   color: var(--ink-2);
   max-width: 36ch;
 }
+/* «Ver un torneo de ejemplo» (STRAT-17): a link in the lede's voice, as tall as a tap. */
+.demo {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: var(--tap);
+  color: var(--accent);
+  font-weight: 600;
+}
 .form {
   display: flex;
   flex-direction: column;
