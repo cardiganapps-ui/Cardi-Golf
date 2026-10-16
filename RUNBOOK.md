@@ -139,7 +139,7 @@ Cada noche del torneo: Comité › **Datos** › "Descargar respaldo (JSON)" y "
 
 Esto es para cuando el proyecto de Supabase ya no está o quedó dañado entero. Si solo un torneo quedó mal, usa la sección 8.
 
-- **Qué hay.** Cada noche, a las 2 de la mañana de Los Cabos, una copia completa de la app va a Cloudflare R2 (`cardi-golf-backups`, en `backups/AAAA-MM-DD.json.gz`). Lleva todos los torneos tomados en el mismo instante, el historial de cambios, las cuentas sin contraseñas y la lista de archivos. Las fotos y tarjetas subidas se copian aparte, en `files/`. Admin de Polo › Salud dice cuándo fue el último.
+- **Qué hay.** Cada noche, a las 2 de la mañana de Los Cabos, una copia completa de la app va a Cloudflare R2 (`cardi-golf-backups`, en `backups/AAAA-MM-DD.json.gz`). Lleva todos los torneos tomados en el mismo instante, el historial de cambios, las cuentas sin contraseñas y la lista de archivos. Desde el 16 de octubre de 2026 no lleva ningún secreto: ni los PIN, ni los enlaces de un solo uso, ni las direcciones de avisos de los teléfonos. Las fotos y tarjetas subidas se copian aparte, en `files/`. Admin de Polo › Salud dice cuándo fue el último.
 - **Quién lo hace.** Claude hace los pasos por la API (1–3 y 5–7), con las llaves de esta sesión. El paso 4 necesita `psql` conectado directo a la base de datos, y la sesión de Claude no puede abrir esa conexión: lo corres tú en tu computadora, con Claude diciéndote cada comando. Crear el proyecto nuevo es gratis, pero tú lo apruebas.
 - **Cuánto tarda.** El ensayo del 12 de octubre de 2026 restauró el respaldo de esa noche (51,889 filas en 51 tablas) en 14 segundos en una base vacía (esquema incluido), revisado fila por fila antes de guardarlo. Con un proyecto nuevo, cuenta 30 a 45 minutos en total, por los pasos de Supabase y Vercel.
 
@@ -166,7 +166,8 @@ Pasos (Claude, salvo el 4, que corres tú):
 6. Vercel: cambia `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` al proyecto nuevo, y vuelve a desplegar. Revisa Google (el ID de cliente y la URL de vuelta) y los avisos (Vault), como dice CLAUDE.md §3. Cambia también la URL y la llave de `.github/workflows/keepalive.yml`: sin eso, el proyecto nuevo se pausa a los 7 días sin uso. Y en el código, el ref de producción que `scripts/restore-r2.mjs` y los demás scripts se niegan a tocar pasa a ser el nuevo.
 7. Avísale a todos:
    - Con cuenta: entran otra vez con su correo y el código, o con Google. Su cuenta, su perfil y sus torneos son los mismos.
-   - Sin cuenta: cada jugador vuelve a entrar con su PIN. Lo que capturó sin señal y no se mandó sigue en su teléfono y se manda al entrar.
+   - Sin cuenta: el respaldo no trae ningún PIN, así que antes el Comité le pone uno nuevo a cada jugador en Comité › Jugadores › «PIN» y se lo pasa (el script dice cuántos jugadores quedaron sin PIN). Con ese PIN cada jugador vuelve a entrar. Lo que capturó sin señal y no se mandó sigue en su teléfono y se manda al entrar.
+   - Los avisos: ningún teléfono los recibe hasta que los vuelve a activar (Editar perfil, o Más › «Avisos del torneo»), porque el respaldo no trae las direcciones de avisos.
 
 Ensayo: `node scripts/restore-r2.mjs --from r2:latest` en una base local vacía con las migraciones (lo que hace el job `db` con datos de prueba en cada cambio). Repítelo antes de cada ensayo con los 12 teléfonos y la víspera del viaje.
 

@@ -60,8 +60,10 @@ export async function deleteTournament(id: string) {
 export interface AuditEntry {
   id: number
   at: string
+  /** 'platform_audit_log' for the Admin de Polo's own lines about the tournament (0068, TRUST-22): no row, a negative id. */
   table: string
-  action: 'INSERT' | 'UPDATE' | 'DELETE'
+  /** A row's change; on the Admin de Polo's lines, what he did ('view', 'unlock', 'relock', 'protect', 'unprotect', 'set_organizer'). */
+  action: 'INSERT' | 'UPDATE' | 'DELETE' | (string & {})
   rowId: string | null
   /** The Admin de Polo, outside a tournament he belongs to. */
   platform: boolean

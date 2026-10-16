@@ -8,12 +8,16 @@
  */
 
 /** How long a kind of data is kept: each has its sentence in «Cuánto tiempo los guardamos». */
-export type Retention = 'account' | 'tournament' | 'record' | 'push' | 'pinPush' | 'short' | 'telemetry' | 'devices'
+export type Retention = 'account' | 'tournament' | 'history' | 'notices' | 'answers' | 'record' | 'push' | 'pinPush' | 'short' | 'telemetry' | 'devices'
 
 /** The words of «Cuánto tiempo los guardamos» that state each retention. */
 export const RETENTION_WORDS: Record<Retention, string> = {
   account: 'mientras tengas tu cuenta',
   tournament: 'mientras exista el torneo',
+  /** A deleted tournament's history, by the nightly deletion (run_retention, 0069, TRUST-18). */
+  history: 'se borra 90 días después',
+  notices: 'Los avisos de tu bandeja se borran a los 12 meses',
+  answers: 'se borra a los 90 días',
   record: 'no tienen fecha de borrado',
   push: 'hasta que apagues los avisos',
   pinPush: 'en cuanto el teléfono deja de entrar como ese jugador',
@@ -59,7 +63,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   groups: T('the groups of each day', TOURNAMENT, 'tournament'),
   group_members: T('who plays in each group', TOURNAMENT, 'tournament'),
   scores: T('strokes, putts and pick-ups per hole, and who entered them', TOURNAMENT, 'tournament'),
-  score_mutations: T('the answer the server gave each phone\'s save', DATA, 'tournament'),
+  score_mutations: T('the answer the server gave each phone\'s save', DATA, 'answers'),
   rejected_writes: T('holes the server refused, with the phone that sent them', DATA, 'tournament'),
   snake_tiebreaks: T('who holed out last', TOURNAMENT, 'tournament'),
   card_signatures: T('who signed each card', TOURNAMENT, 'tournament'),
@@ -73,14 +77,14 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   hole_awards: T('hole contest winners', TOURNAMENT, 'tournament'),
   game_results: T('the result of a custom bet', MONEY, 'tournament'),
   photos: T('photos of a hole', TOURNAMENT, 'tournament'),
-  audit_log: T('every change to holes, players, groups and money, with who made it', DATA, 'record'),
+  audit_log: T('every change to holes, players, groups and money, with who made it', DATA, 'history'),
   profiles: T('the profile: name, handle, photo, club, city, bio, index', PROFILE, 'account'),
   profile_link_tokens: T('a one-time token that carries the player of a phone to an account', DATA, 'short'),
   round_results: T('each finished round\'s result per player', PROFILE, 'tournament'),
   tournament_results: T('each finished tournament\'s place per player', PROFILE, 'tournament'),
   tournament_money: T('what each person won or put in a finished tournament', MONEY, 'tournament'),
   friendships: T('friends', PROFILE, 'account'),
-  notifications: T('the notices the app sent', DATA, 'account'),
+  notifications: T('the notices the app sent', DATA, 'notices'),
   rivalries: T('rivalries between friends', PROFILE, 'account'),
   rivalry_rounds: T('each round of a rivalry', PROFILE, 'account'),
   crews: T('crews and their codes', PROFILE, 'account'),
@@ -93,6 +97,7 @@ export const DATA_INVENTORY: Record<string, InventoryEntry> = {
   platform_audit_log: T('what the operator did, and why', OPERATOR, 'record'),
   platform_settings: T('the operator\'s switches and banner, and which admin set them', OPERATOR, 'record'),
   backup_runs: NONE('when each nightly backup ran and its size'),
+  retention_runs: NONE('when each nightly deletion ran and how many rows of each kind it took (TRUST-18)'),
   client_events: T('errors, sync times, speed and a few steps from each phone', DATA, 'telemetry'),
   device_status: T('each phone\'s app version and what it still has to send', DATA, 'devices'),
   legal_acceptances: T('which version of the notice and the terms each user accepted, when and where', DATA, 'account'),

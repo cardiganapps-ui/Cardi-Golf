@@ -69,6 +69,10 @@ interface World {
   historyHas?: number
   /** How long each Storage read takes, on a clock the test moves. */
   readMs?: number
+  /** Rows that carry secret-shaped keys, in a table and in a history image (TRUST-10). */
+  secrets?: boolean
+  /** The nightly deletion: refused (a status), never answering (throw), absent (0069 not applied), or an answer it can't read. */
+  retention?: number | 'throw' | 'missing' | 'garbage'
 }
 
 function rangeStart(init?: RequestInit): number {
@@ -91,6 +95,8 @@ async function run(world: World = {}) {
   const records: Array<{ ok: boolean; error?: string }> = []
   const patches: Array<{ url: string; body: unknown }> = []
   const rpcBodies: Array<{ p_tables: Record<string, string> }> = []
+  /** What happened, in order: the night's upload and the nightly deletion. */
+  const order: string[] = []
   vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : null
     const url = req ? req.url : String(input)
@@ -105,6 +111,7 @@ async function run(world: World = {}) {
       }
       const refused = outcome(isManifest ? world.manifestWrite : url.includes('/backups/') ? world.r2Backup : world.r2File)
       if (refused) return new Response('', { status: refused })
+      if (url.includes('/backups/')) order.push('upload')
       uploads.push({ url, body: req ? Buffer.from(await req.arrayBuffer()) : Buffer.from(init!.body as ArrayBuffer) })
       return new Response(null, { status: 200 })
     }
@@ -113,12 +120,21 @@ async function run(world: World = {}) {
       if (world.unreadable?.some((n) => url.endsWith(`/${n}`))) return new Response('', { status: 500 })
       return new Response('png', { headers: { 'content-type': 'image/png' } })
     }
+    if (url.includes('/rest/v1/rpc/run_retention')) {
+      order.push('retention')
+      if (world.retention === 'missing') return new Response(JSON.stringify({ code: 'PGRST202' }), { status: 404 })
+      if (world.retention === 'garbage') return new Response('<html>', { status: 200 })
+      const refused = outcome(world.retention)
+      if (refused) return new Response('', { status: refused })
+      return new Response(JSON.stringify({ ok: true, counts: { anonymous: 3, link_tokens: 1 }, errors: [] }))
+    }
     if (url.includes('/rest/v1/rpc/backup_snapshot')) {
       rpcBodies.push(JSON.parse(String(init!.body)))
       if (world.snapshotFails) return new Response(world.snapshotFails.body, { status: world.snapshotFails.status })
       if (!snapshot) return new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function public.backup_snapshot' }), { status: 404 })
       if (absent) return new Response(JSON.stringify({ code: '22023', message: `${absent}: la tabla no existe en esta base de datos.` }), { status: 400 })
       const tables = Object.fromEntries(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log').map((t) => [t, t === 'tournaments' ? [{ id: 't1', name: 'Copa privada' }] : []]))
+      if (world.secrets) (tables as Record<string, unknown[]>).players = [{ id: 'p1', display_name: 'Ana', pin_hash: '$2a$08$hash', extra: { endpoint: 'https://fcm.googleapis.com/x', keep: 1 } }]
       return new Response(JSON.stringify({ snapshotAt: '2026-10-12T09:00:00Z', auditMaxId: history, tables, auth: { users: [{ id: 'u1', email: 'ana@example.com' }], identities: [] }, storage: { objects } }))
     }
     const table = /\/rest\/v1\/([a-z_]+)/.exec(url)![1]!
@@ -141,7 +157,8 @@ async function run(world: World = {}) {
       if (world.historyFails) return new Response('', { status: world.historyFails })
       const [after, upTo, limit] = keyset.slice(1).map(Number) as [number, number, number]
       const n = Math.max(0, Math.min(limit, world.cap ?? 1000, Math.min(upTo, world.historyHas ?? upTo) - after))
-      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1 }))))
+      const image = world.secrets ? { before: { player_id: 'p1', pin_hash: '$2a$08$old', auth: 'k' }, after: { token: 'abc', p256dh: 'BP', ok: true } } : {}
+      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1, ...image }))))
     }
     if (table === 'audit_log') {
       const from = rangeStart(init)
@@ -159,7 +176,7 @@ async function run(world: World = {}) {
   const backup = uploads.find((u) => u.url.includes('/backups/'))
   const dump = backup ? JSON.parse(gunzipSync(backup.body).toString('utf8')) : null
   const body = answer.body as Record<string, unknown>
-  return { status: answer.status, body, answer, requests, read, uploads, records, patches, rpcBodies, dump }
+  return { status: answer.status, body, answer, requests, read, uploads, records, patches, rpcBodies, dump, order }
 }
 
 describe('the nightly backup', () => {
@@ -225,6 +242,49 @@ describe('the nightly backup', () => {
   })
 })
 
+describe('no secret in the night’s file (TRUST-10)', () => {
+  it('the tables that hold them are not asked for', async () => {
+    const r = await run()
+    for (const t of ['player_pins', 'profile_link_tokens', 'push_subscriptions', 'pin_push_subscriptions']) {
+      expect(r.rpcBodies[0]!.p_tables).not.toHaveProperty(t)
+      expect(r.dump.tables).not.toHaveProperty(t)
+    }
+  })
+
+  it('a secret-shaped key in a row or a history image never reaches the file, at any depth; the rest stays', async () => {
+    const r = await run({ secrets: true, history: 3 })
+    const text = JSON.stringify(r.dump.tables)
+    for (const k of ['pin_hash', 'endpoint', 'p256dh', '"auth"', '"token"', '$2a$08$']) expect(text).not.toContain(k)
+    // The accounts' section keeps its name: only keys inside rows are secrets.
+    expect(r.dump.auth.users).toEqual([{ id: 'u1', email: 'ana@example.com' }])
+    expect(r.dump.tables.players).toEqual([{ id: 'p1', display_name: 'Ana', extra: { keep: 1 } }])
+    expect(r.dump.tables.audit_log[0]).toEqual({ id: 1, before: { player_id: 'p1' }, after: { ok: true } })
+  })
+})
+
+describe('the nightly deletion (TRUST-18)', () => {
+  it('runs once the night is safe in R2, and its counts come back', async () => {
+    const r = await run()
+    expect(r.order).toEqual(['upload', 'retention'])
+    expect(r.body.retention).toEqual({ anonymous: 3, link_tokens: 1 })
+  })
+
+  it('never when the night did not reach R2', async () => {
+    const r = await run({ r2Backup: 403 })
+    expect(r.status).toBe(502)
+    expect(r.order).not.toContain('retention')
+  })
+
+  it('a database without 0069, a refusal, no answer or one it can\'t read: the backup stands, its files still copied', async () => {
+    for (const retention of ['missing', 500, 'throw', 'garbage'] as const) {
+      const r = await run({ retention, objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
+      expect(r.status, String(retention)).toBe(200)
+      expect(r.body.retention).toBeNull()
+      expect(r.uploads.some((u) => u.url.endsWith('/files/b/x.png'))).toBe(true)
+    }
+  })
+})
+
 describe('the backup’s gate (QA-14)', () => {
   it('without the cron’s secret, a wrong one or none set on the deploy: 401, and nothing read or written', async () => {
     const worlds: World[] = [
@@ -256,7 +316,7 @@ describe('what the backup answers and where its keys go (QA-14)', () => {
   it('counts only: no row, no account, no key in the answer or the logs', async () => {
     const r = await run({ objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
     expect(r.status).toBe(200)
-    expect(Object.keys(r.body).sort()).toEqual(['accounts', 'bytes', 'counts', 'files', 'key', 'ok', 'version'])
+    expect(Object.keys(r.body).sort()).toEqual(['accounts', 'bytes', 'counts', 'files', 'key', 'ok', 'retention', 'version'])
     expect(r.body.counts).toMatchObject({ tournaments: 1, audit_log: 1500 })
     expect(r.body.accounts).toBe(1)
     expect(r.answer.text).not.toMatch(/Copa privada|ana@example\.com|t1/)
