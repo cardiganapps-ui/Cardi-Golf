@@ -23,10 +23,13 @@ import { FeedTicker } from './FeedTicker'
 import { PlayerSheet } from './PlayerSheet'
 import { useTournamentCtx } from './tournamentContext'
 import { tournamentBase, useShowMoney } from './tournamentView'
-import { SpectatorNote } from '../spectator/SpectatorNote'
+import { DemoIntro, SpectatorNote } from '../spectator/SpectatorNote'
 import { useSavedWhen } from './boardsAge'
 import { useBoardsMayBeOld } from './connection'
 import { QuickFinish } from './QuickFinish'
+import { PreRound } from './PreRound'
+import { isPreRound } from './preRoundInfo'
+import { SaveResults } from './SaveResults'
 import { TournamentPushOffer } from './TournamentPush'
 import { MyDataCard } from './MyDataCard'
 import { useActiveRound } from './useMyGroup'
@@ -320,6 +323,7 @@ export function LiveScreen() {
     <div className={styles.screen}>
       {/* The tournament's home page is named after it, for headings and for focus after a page change (A11Y-13); the header shows the name. */}
       <h1 className="sr-only">{snapshot.tournament.name}</h1>
+      <DemoIntro />
       {/* A side game this build doesn't know may move money: no screen shows any, and this says why (ARCH-04). Settings it can't read at
           all never reach this screen (SettingsGuard). */}
       {state.flags.moneyUnknown.length > 0 && (
@@ -362,6 +366,12 @@ export function LiveScreen() {
           </button>
         ))}
       </div>
+
+      {/* Terminado: a player on a PIN keeps the tournament in a profile (STRAT-08). */}
+      {snapshot.tournament.status === 'finished' && <SaveResults />}
+
+      {/* Before the first hole, the next day and this phone's place in it, above a board of zeros (STRAT-10). */}
+      {isPreRound(data) && <PreRound />}
 
       {honoree && honoreeRow && (
         <button type="button" className={styles.spotlight} onClick={() => setOpen(honoree.id)}>

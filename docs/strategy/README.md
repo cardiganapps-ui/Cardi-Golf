@@ -48,3 +48,4 @@ Los hitos M0 a M7 se marcaron hechos con sus pruebas automáticas, sin las perso
 - `launch-scope.json`: el alcance del lanzamiento, ruta por ruta y migración por migración.
 - `brand-clearance.md`: el nombre «Polo» y qué buscar antes de invertir más en la marca (STRAT-13).
 - `course-catalog.md`: cómo llenar el catálogo de campos de México (STRAT-14).
+- `account-and-home.md`: una puerta y una casa para las cuentas (STRAT-06, STRAT-07), con sus opciones; Diego elige (docs/handoff.md, punto 15).

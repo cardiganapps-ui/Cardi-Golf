@@ -180,3 +180,24 @@ describe('when the profile arrives', () => {
     expect(go.getAttribute('href')).toBe(`/t/${slug}`)
   })
 })
+
+/**
+ * STRAT-07: Mi Polo's one primary action was Ronda rápida, and «Organizar un
+ * torneo» a small ghost button at the very bottom. Organizing now comes first
+ * and as large as the round, with its own line; the round keeps its button.
+ */
+describe('Mi Polo’s first actions (STRAT-07)', () => {
+  it('«Organizar un torneo» first, a full-width primary, then the round', async () => {
+    open()
+    await profileArrives([])
+    const organize = screen.getByRole('link', { name: t.mipolo.newTournament })
+    const round = screen.getByRole('link', { name: t.quick.cta })
+    expect(organize.getAttribute('href')).toBe('/organizer/new')
+    expect(organize.className).toMatch(/btn--primary/)
+    expect(organize.className).toMatch(/btn--block/)
+    expect(round.className).toMatch(/btn--block/)
+    expect(organize.compareDocumentPosition(round) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // One way to it, not a second ghost button at the bottom.
+    expect(screen.getAllByRole('link', { name: t.mipolo.newTournament })).toHaveLength(1)
+  })
+})

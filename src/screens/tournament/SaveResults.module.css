@@ -1,0 +1,51 @@
+/* «Guarda tus rondas» (STRAT-08): a ruled block on En vivo, and the Ceremonia's last words on the board surface. Tokens only. */
+.save {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) 0 var(--s4);
+  border-top: 2px solid var(--event-accent);
+}
+.title {
+  font-size: var(--fs-lg);
+}
+.body,
+.hint {
+  color: var(--ink-2);
+}
+.gets {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+/* At the Ceremonia's end, read from across the room on the board's green. */
+.board {
+  align-items: center;
+  text-align: center;
+  max-width: 42em;
+  gap: 1.6vh;
+  padding: 2vh 0 0;
+  border-top: 2px solid var(--board-rule);
+  color: var(--board-ink);
+  font-size: clamp(16px, 2.6vh, 36px);
+}
+.board .title {
+  font-size: clamp(20px, 3.6vh, 52px);
+  color: var(--board-ink);
+}
+.board .body,
+.board .hint {
+  color: var(--board-ink-2);
+}
+.board .gets {
+  list-style: none;
+  padding: 0;
+  color: var(--board-ink);
+}
+.bigBtn {
+  font-size: clamp(18px, 3.2vh, 44px);
+  padding: 0 clamp(32px, 4vw, 96px);
+  min-height: clamp(60px, 9vh, 120px);
+}

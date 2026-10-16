@@ -19,6 +19,9 @@ export function routeTitle(pathname: string): { page: string; slug: string | nul
   const path = pathname.replace(/\/+$/, '') || '/'
   const tm = /^\/t\/(_\/[^/]+|[^/]+)(?:\/(.*))?$/.exec(path)
   if (tm) return { page: tournamentPage(tm[2] ?? ''), slug: tm[1]! }
+  // The example tournament (STRAT-17): its screens by name, after «Torneo de ejemplo».
+  const dm = /^\/demo(?:\/(.*))?$/.exec(path)
+  if (dm) return { page: T.inTournament(tournamentPage(dm[1] ?? ''), T.demo), slug: null }
   const am = /^\/admin(?:\/_)?(?:\/([^/]+))?/.exec(path)
   if (am) {
     const section = (am[1] && (t.platform.sections as Record<string, string>)[PLATFORM_KEYS[am[1]] ?? '']) || null

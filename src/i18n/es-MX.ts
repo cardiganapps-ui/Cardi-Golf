@@ -293,6 +293,8 @@ export const t = {
     notFound: 'Página no encontrada',
     fixtures: 'Fixtures',
     design: 'Diseño',
+    /** `/demo` (STRAT-17). */
+    demo: 'Torneo de ejemplo',
   },
   boot: {
     slowTitle: 'Polo está tardando en conectar',
@@ -1203,6 +1205,8 @@ export const t = {
     organizer: 'Organizas',
     organizerLink: 'Mis torneos como organizador',
     newTournament: 'Organizar un torneo',
+    /** STRAT-07: under «Organizar un torneo», as the round has its line. */
+    newTournamentHint: 'Un viaje o el torneo del grupo: juegos, Calcutta y las cuentas al peso.',
     empty: 'Cuando juegues un torneo en Polo, aparece aquí.',
     feed: 'Tus amigos',
     feedEmpty: 'Agrega a la gente con la que juegas para ver sus rondas aquí.',
@@ -1919,6 +1923,30 @@ export const t = {
     pendingSnake: (n: number, game: string) => `${game}: ${n === 1 ? '1 desempate pendiente' : `${n} desempates pendientes`}`,
     /** UX-28: a handicap changed after they were fixed; tapping it opens the player. */
     hcpChanged: (name: string, fromTo: string) => `El hándicap de ${name} cambió después de fijarlos: ${fromTo}`,
+    /** STRAT-10: En vivo before anyone has played a hole: the next day, his group, tee and handicap, what he owes, and how long to go. */
+    pre: {
+      title: 'Antes de salir',
+      day: (n: number, of: number) => (of > 1 ? `Día ${n} de ${of}` : `Día ${n}`),
+      /** The countdown to his group's tee time, or the day's first, on the tournament's clock. */
+      days: (n: number) => `Faltan ${n} días`,
+      tomorrow: 'Es mañana',
+      today: 'Es hoy',
+      todayIn: (hours: number, minutes: number) =>
+        `Salen en ${andList([hours > 0 ? `${hours} ${hours === 1 ? 'hora' : 'horas'}` : '', hours === 0 || minutes ? `${minutes} min` : ''].filter(Boolean))}`,
+      group: 'Tu grupo',
+      groupLine: (n: number, time: string | null, hole: number) => `Grupo ${n}${time ? `, a las ${time}` : ''}, salida por el ${hole}`,
+      groupWith: (names: string[]) => `Con ${andList(names)}`,
+      noGroup: 'El Comité todavía no arma los grupos.',
+      firstTee: 'Primera salida',
+      tee: 'Tu tee',
+      hcp: 'Tu hándicap de juego',
+      owes: 'Te falta pagar',
+      money: 'Tus pagos',
+      owesLine: (total: string, parts: string[]) => `${total}: ${parts.join(', ')}`,
+      paid: 'Ya pagaste todo',
+      /** One thing he owes, by kind: «Inscripción $2,500». */
+      part: (label: string, amount: string) => `${label} ${amount}`,
+    },
   },
   card: {
     contest: {
@@ -2901,6 +2929,38 @@ export const t = {
       resetPin: 'Cambiar PIN',
       pinSet: 'PIN guardado. Mándaselo por WhatsApp.',
       pinInput: 'PIN de 4 dígitos',
+      /** UX-20: PINs made by the app, each player's invite, and the list to read aloud. */
+      pins: {
+        title: 'PINs e invitaciones',
+        missing: (n: number) => (n === 1 ? '1 jugador todavía no tiene PIN.' : `${n} jugadores todavía no tienen PIN.`),
+        allSet: 'Todos tienen PIN. Para mandarle la invitación a alguien, toca «Cambiar PIN» en su renglón.',
+        generate: 'Generar PINs',
+        generateTitle: 'Generar los PINs que faltan',
+        generateBody: (n: number) =>
+          `${n === 1 ? 'Un PIN' : `${n} PINs`} de cuatro dígitos al azar, uno para cada jugador sin PIN. Se ven solo en la lista que sale después: al cerrarla ya no se pueden volver a ver. Si alguien olvida el suyo, cámbialo.`,
+        generating: (done: number, of: number) => `Guardando ${done} de ${of}…`,
+        failed: (n: number) => (n === 1 ? 'Un PIN no se guardó: vuelve a intentarlo.' : `${n} PINs no se guardaron: vuelve a intentarlo.`),
+        listOpen: (n: number) => `Lista de PINs (${n})`,
+        list: 'Lista de PINs',
+        listHint: 'Léelos en voz alta o mándale a cada quien el suyo. Al cerrar esta lista ya no se pueden volver a ver.',
+        copyList: 'Copiar la lista',
+        print: 'Imprimir',
+        /** One line of the list as copied: «Ana López: 4821». */
+        listLine: (name: string, pin: string) => `${name}: ${pin}`,
+        random: 'Generar uno',
+        shown: 'Su PIN',
+        shownHint: 'Se ve solo ahora: al cerrar ya no se puede volver a ver.',
+        invite: 'Invitación',
+        inviteHint: 'El enlace abre Entrar con su cara ya elegida. El PIN nunca va en el enlace.',
+        whatsapp: 'Mandar por WhatsApp',
+        /** The list's own button, beside each PIN; it is said with whose («Mandarle a Ana por WhatsApp»). */
+        send: 'Mandar',
+        whatsappTo: (name: string) => `Mandarle a ${name} por WhatsApp`,
+        copyLink: 'Copiar enlace',
+        /** The message the Comité sends: the link, and the PIN when it was just made or typed. */
+        invitation: (name: string, tournament: string, url: string, pin: string | null) =>
+          `Hola, ${name}: ya estás en ${tournament}. Entra aquí, toca tu cara y escribe tu PIN: ${url}\n${pin ? `Tu PIN: ${pin}` : 'Tu PIN te lo manda el Comité.'}`,
+      },
       /** The phones holding a player's PIN (TRUST-24): a row says how many when there are more than one. */
       phonesCount: (n: number) => `en ${n} teléfonos`,
       phones: 'Teléfonos con su PIN',
@@ -3588,6 +3648,10 @@ export const t = {
     saved: 'Imagen lista',
     shareNow: 'Compartir',
     failed: 'No se pudo generar la imagen.',
+    /** What a card left out (PWA-06): it never runs taller than WhatsApp shows whole. */
+    more: (n: number) => (n === 1 ? 'Y 1 más: el resto está en Polo.' : `Y ${n} más: el resto está en Polo.`),
+    /** The footer of a card made on the example tournament (STRAT-17). */
+    demoLink: (url: string) => `Torneo de ejemplo: ${url}`,
   },
   /**
    * The Reglamento (§9.8, COPY-11, COPY-12): every sentence from the tournament's settings, so it says only what
@@ -3851,6 +3915,25 @@ export const t = {
    * The link to watch a tournament without a PIN (STRAT-05, 0053): the Comité's card in Torneo, pestaña Estado, and
    * the page whoever has it opens. Off until the Comité makes it; «Sin dinero» unless it chooses otherwise.
    */
+  /** «Guarda tus rondas» (STRAT-08): a player on a PIN keeps the tournament in a profile once it ends. */
+  saveResults: {
+    title: 'Guarda tus rondas',
+    body: (name: string) => `Lo que jugaste en ${name} se queda en tu perfil, en cualquier teléfono.`,
+    gets: ['Tus tarjetas y tus resultados, torneo por torneo', 'Tu índice Polo, que se calcula con tus rondas', 'Tu lugar listo para el siguiente torneo del grupo'],
+    action: 'Guardar mis rondas',
+    actionHere: 'Guardar en mi perfil',
+    hint: 'Con tu correo y un código, sin contraseña. Este teléfono no pierde nada.',
+  },
+  /** The example tournament on `/demo` (STRAT-17): made-up people, read-only, before any account. */
+  demo: {
+    open: 'Ver un torneo de ejemplo',
+    title: 'Torneo de ejemplo',
+    intro: 'Así se ve un torneo en Polo cuando termina: el tablero, los juegos, la Calcutta y las cuentas cerradas al peso.',
+    introHint: 'Es un ejemplo: los jugadores y los campos son inventados. Toca un nombre o un número para ver cómo se calculó.',
+    foot: 'Aquí nadie captura nada. En un torneo tuyo, cada jugador entra con su cara y un PIN, y todos ven esto en vivo.',
+    organize: 'Organizar un torneo',
+    shareText: 'Mira cómo se ve un torneo de golf en Polo:',
+  },
   spectator: {
     title: 'Enlace para ver',
     hint: 'Quien lo tenga ve los tableros en vivo sin cuenta y sin PIN, y desde ahí nadie captura nada. Sirve para la tele, la familia o el grupo de WhatsApp. Ve el nombre corto de cada jugador, nunca su nombre completo ni su foto.',
