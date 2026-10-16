@@ -1,15 +1,83 @@
 /**
- * The instance-game seam: one `GameImpl` per `GameType`. `computeTournament`
- * runs every enabled `settings.games[]` entry through its implementation and
- * keeps the result under `state.games[config.id]`.
+ * The game seam (CLAUDE.md §4, ARCH-15): one contract for every side game.
  *
- * Every game also returns a `GameBoard`: a plain table any screen (Juegos,
- * TV, Ceremonia) can render without knowing the game.
+ * A game derives its state from the tournament, awards prizes from that
+ * state, and may say what the Comité should know about its money. A
+ * singleton (`settings.modules`: the main event, best round, pairs, the
+ * snake, fewest putts, the Calcutta) is a game a tournament has at most once,
+ * configured under its id; an instance game (`settings.games[]`: skins,
+ * matches, contests...) is one it may have many times, each with its own
+ * config, entrants, rounds and pot, and it also draws a `GameBoard`: a plain
+ * table any screen (Juegos, TV, Ceremonia) can render without knowing the
+ * game. The main event's format (formats/) is not a game: it is how the
+ * individual game ranks.
+ *
+ * What every game shares, ranking with its tie policy, when a result is
+ * final and how pesos split, lives in core/ranking.ts. The registries
+ * (modules/index.ts, games/index.ts) are typed by id and type, so
+ * `state.modules.snake`, and `state.games[id]` once `isGameOf` names its
+ * type, read each game's own state with no cast.
  */
-import type { GameConfig, GameType } from '../settings/games'
-import type { Id } from '../types'
-import type { ModuleContext, PrizeAward } from '../modules/module'
+import type { GameConfig, GameOf, GameType } from '../settings/games'
+import type { ModuleId, TournamentSettings } from '../settings/schema'
+import type { Explanation, Id, Snapshot } from '../types'
+import type { CoreState } from '../core/types'
+import type { GameStateMap } from '.'
 
+/** What every game receives: the raw facts plus the core (handicaps, per-hole scoring). */
+export interface ModuleContext {
+  snapshot: Snapshot
+  settings: TournamentSettings
+  core: CoreState
+  /** Everything finished: tournament status `finished` or every counted round `finished`. */
+  tournamentFinal: boolean
+  /** roundId → the round is `finished`. */
+  roundFinal: Record<Id, boolean>
+}
+
+/** A single prize a game awards (live "si terminara ahora" or final). */
+export interface PrizeAward {
+  /** `adjustment`: the Comité's assignment of unassigned money (MONEY-05). */
+  moduleId: ModuleId | GameType | 'adjustment'
+  /**
+   * Which pot pays it: `main` (the entries), `calcutta`, or a game id for a
+   * side pot. Omitted = `main`.
+   */
+  potId?: string
+  /** Set for a direct bet: this player pays the winner (no bank involved). */
+  payerId?: Id
+  /** The instance game that awarded it (`settings.games[].id`). */
+  gameId?: string
+  /** Copy for the money screens, e.g. «Individual, 1.º» or «La Víbora, día 1, grupo 2». */
+  label: string
+  playerId: Id
+  amount: number
+  /** True once the underlying round(s) are finished, false while provisional. */
+  final: boolean
+  why: Explanation
+  /** An assignment's row (`money_adjustments.id`), and the bucket it came from. */
+  adjustmentId?: Id
+  sourceKey?: string
+}
+
+/** The contract: a state from the context, prizes and warnings from the state. */
+export interface Game<S, Ctx extends ModuleContext> {
+  /** Default label, renamable per tournament. */
+  defaultLabel: string
+  /** Derive this game's state. Only called when the game is enabled. */
+  compute(ctx: Ctx): S
+  /** Prizes this game awards for the given state (empty when it moves no money). */
+  prizes(state: S, ctx: Ctx): PrizeAward[]
+  /** What the Comité should know about its money (a place nobody fills, a hole in dispute...). */
+  warnings?(state: S, ctx: Ctx): string[]
+}
+
+/** A singleton: at most one per tournament, its options under `settings.modules[id]`. */
+export interface GameModule<S, K extends ModuleId = ModuleId> extends Game<S, ModuleContext> {
+  id: K
+}
+
+/** What an instance game receives on top: its own config, entrants, rounds and pot. */
 export interface GameContext<C extends GameConfig = GameConfig> extends ModuleContext {
   config: C
   /** Players in this game (everyone, or the `game_entries` list), in roster order. */
@@ -49,20 +117,32 @@ export interface GameBoard {
   notes: string[]
 }
 
-export interface GameImpl<S = unknown, C extends GameConfig = GameConfig> {
-  type: GameType
-  defaultLabel: string
-  compute(ctx: GameContext<C>): S
-  prizes(state: S, ctx: GameContext<C>): PrizeAward[]
+/** An instance game of one type. */
+export interface GameImpl<S = unknown, C extends GameConfig = GameConfig> extends Game<S, GameContext<C>> {
+  type: C['type']
   board(state: S, ctx: GameContext<C>): GameBoard
-  warnings?(state: S, ctx: GameContext<C>): string[]
 }
 
-export interface GameResultState {
-  config: GameConfig
+/** An enabled instance game of type `K` as the tournament state holds it: its config and its state are that type's. */
+export interface GameResultOf<K extends GameType> {
+  config: GameOf<K>
   entrants: Id[]
   pot: number
   final: boolean
-  state: unknown
+  state: GameStateMap[K]
   board: GameBoard
+}
+
+/** An enabled instance game of one of the types in `K`. */
+export type GameResultFor<K extends GameType> = { [P in K]: GameResultOf<P> }[K]
+
+/** Any enabled instance game: one `GameResultOf` per type, told apart by `config.type` (`isGameOf`). */
+export type GameResultState = GameResultFor<GameType>
+
+/** A config of one of the types in `K`, written so that its type and its implementation line up (TS's correlated unions). */
+export type GameConfigFor<K extends GameType> = { [P in K]: GameOf<P> }[K]
+
+/** The game is of `type`: its config and its state are that type's, with no cast. */
+export function isGameOf<K extends GameType>(g: GameResultState, type: K): g is Extract<GameResultState, { config: { type: K } }> {
+  return g.config.type === type
 }

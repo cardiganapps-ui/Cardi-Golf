@@ -3,7 +3,7 @@
  * What the group picked here and not saved yet, else what the boards hold for the group.
  */
 import { useLayoutEffect, useMemo, useState } from 'react'
-import { CONTEST_SINGLE, type ContestState } from '../../../engine/games/contest'
+import { CONTEST_SINGLE, contestStateOf } from '../../../engine/games/contest'
 import type { TournamentState } from '../../../engine/computeTournament'
 import type { TournamentSettings } from '../../../engine/settings/schema'
 import type { Player, Snapshot } from '../../../engine/types'
@@ -23,7 +23,7 @@ export function useContestPicks(o: { settings: TournamentSettings; state: Tourna
       settings.games.flatMap((g): HoleContest[] => {
         if (g.type !== 'contest' || !g.enabled) return []
         const gs = state.games[g.id]
-        const onHole = (gs?.state as ContestState | undefined)?.holes.some((h) => h.roundId === roundId && h.hole === hole)
+        const onHole = contestStateOf(gs)?.holes.some((h) => h.roundId === roundId && h.hole === hole)
         if (!gs || !onHole) return []
         const eligible = players.filter((p) => gs.entrants.includes(p.id))
         return eligible.length ? [{ id: g.id, label: g.label, kind: g.options.kind, single: CONTEST_SINGLE[g.options.kind], eligible }] : []

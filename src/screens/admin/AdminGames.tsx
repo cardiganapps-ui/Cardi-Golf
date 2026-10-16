@@ -9,7 +9,7 @@ import { Avatar, Sheet, toast } from '../../components/ui'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { adminSetAwards, seedGameEntries, setGameEntry, setGameResults, SettingsChanged, updateSettings } from '../../data/api'
 import { settingsWrite } from '../../data/settingsWrite'
-import { CONTEST_SINGLE, type ContestHole, type ContestState } from '../../engine/games/contest'
+import { CONTEST_SINGLE, contestStateOf, type ContestHole } from '../../engine/games/contest'
 import { useTournamentCtx } from '../tournament/tournamentContext'
 import { useTournament } from '../../data/tournamentStore'
 import type { GameConfig, Match } from '../../engine/settings/games'
@@ -126,7 +126,7 @@ export function AdminGames() {
               <>
                 <span className="label">{G.contestHoles}</span>
                 <div className={a.rows}>
-                  {((data.state.games[g.id]?.state as ContestState | undefined)?.holes ?? []).map((h) => (
+                  {(contestStateOf(data.state.games[g.id])?.holes ?? []).map((h) => (
                     <button key={`${h.roundId}-${h.hole}`} type="button" className={a.rowBtn} onClick={() => setAwardFor({ gameId: g.id, hole: h })}>
                       <span className={a.rowText}>
                         <span className={a.rowTitle}>{G.dayHole(h.roundNumber, h.hole)}</span>

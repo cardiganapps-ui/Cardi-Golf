@@ -1,17 +1,30 @@
 import type { ModuleId } from '../settings/schema'
 import type { GameModule } from './module'
-import { individualModule } from './individual'
-import { bestRoundModule } from './bestRound'
-import { pairsModule } from './pairs'
-import { snakeModule } from './snake'
-import { fewestPuttsModule } from './fewestPutts'
-import { auctionModule } from './auction'
+import { individualModule, type IndividualState } from './individual'
+import { bestRoundModule, type BestRoundState } from './bestRound'
+import { pairsModule, type PairsState } from './pairs'
+import { snakeModule, type SnakeState } from './snake'
+import { fewestPuttsModule, type FewestPuttsState } from './fewestPutts'
+import { auctionModule, type AuctionState } from './auction'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyModule = GameModule<any>
+/** Each singleton's state, by id (ARCH-15). */
+export interface ModuleStateMap {
+  individual: IndividualState
+  bestRound: BestRoundState
+  pairs: PairsState
+  snake: SnakeState
+  fewestPutts: FewestPuttsState
+  auction: AuctionState
+}
+
+/** One implementation per id, under its own id, each computing its own state. */
+export type ModuleRegistry = { [K in ModuleId]: GameModule<ModuleStateMap[K], K> }
+
+/** What `state.modules` holds: only the enabled ones appear. */
+export type ModuleStates = { [K in ModuleId]?: ModuleStateMap[K] }
 
 /** Every module the platform ships. A tournament enables a subset in settings. */
-export const ALL_MODULES: Record<ModuleId, AnyModule> = {
+export const ALL_MODULES: ModuleRegistry = {
   individual: individualModule,
   bestRound: bestRoundModule,
   pairs: pairsModule,

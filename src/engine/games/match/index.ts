@@ -16,6 +16,7 @@
  */
 import { t } from '../../../i18n/es-MX'
 import { playOrder } from '../../core/playOrder'
+import { isFinal } from '../../core/ranking'
 import type { GameOf, Match } from '../../settings/games'
 import type { Explanation, Id } from '../../types'
 import type { BoardRow, BoardSection, GameContext, GameImpl } from '../game'
@@ -90,7 +91,7 @@ function segmentsFor(holes: number, format: Cfg['options']['format']): Array<{ k
 }
 
 function playRound(ctx: GameContext<Cfg>, m: Match, rid: Id): MatchRound {
-  const final = ctx.roundFinal[rid] || ctx.tournamentFinal
+  const final = isFinal(ctx, 'roundsOrTournament', [rid])
   const holes = roundHoles(ctx, rid)
   const group = ctx.snapshot.groups.find((g) => g.roundId === rid && g.playerIds.includes(m.a[0]!))
   const order = playOrder(group?.startHole ?? 1, holes)
