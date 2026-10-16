@@ -116,6 +116,13 @@ for (const theme of ['light', 'dark'] as const) {
     it.each(PAIRS)(`--%s on --%s is at least %s:1`, (fg, bg, min) => {
       expect(contrast(hex(theme, fg), hex(theme, bg))).toBeGreaterThanOrEqual(min)
     })
+    it('a loading screen\'s blocks stand out from the page and a sheet (1.3:1; VIS-13)', () => {
+      for (const bg of ['bg', 'surface-2']) expect(contrast(hex(theme, 'skeleton'), hex(theme, bg)), `--skeleton on --${bg}`).toBeGreaterThanOrEqual(1.3)
+    })
+    it('a monogram\'s initials read at AAA on every tint, and the tints are told apart (VIS-18)', () => {
+      for (let i = 1; i <= 6; i++) expect(contrast(hex(theme, 'ink'), hex(theme, `mono-${i}`)), `--ink on --mono-${i}`).toBeGreaterThanOrEqual(7)
+      for (let i = 1; i <= 6; i++) for (let j = i + 1; j <= 6; j++) expect(deltaE2000(hex(theme, `mono-${i}`), hex(theme, `mono-${j}`)), `--mono-${i} against --mono-${j}`).toBeGreaterThanOrEqual(8)
+    })
     it('every line the race chart draws in colour reads against the page and the ruled panel (3:1, graphics; VIS-21)', () => {
       for (let i = 1; i <= 6; i++) for (const bg of ['bg', 'surface']) expect(contrast(hex(theme, `race-${i}`), hex(theme, bg)), `--race-${i} on --${bg}`).toBeGreaterThanOrEqual(3)
     })

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { savedWhen } from '../../lib/freshness'
 import { useTournament } from '../../data/tournamentStore'
@@ -11,7 +11,7 @@ import { PullToRefresh } from './PullToRefresh'
 import { SettingsGuard } from './SettingsGuard'
 import styles from './TournamentShell.module.css'
 import { IconCoin, IconFlag, IconGames, IconMore, IconPencil } from '../../components/icons'
-import { LiveStatus } from '../../components/primitives'
+import { LiveStatus, TabBar, TabItem } from '../../components/primitives'
 import { TournamentLogo } from '../../components/TournamentLogo'
 import { useOwnConnectionStatus } from '../../components/online'
 import { nearestAccent } from '../../design/accents'
@@ -101,9 +101,9 @@ export function TournamentShell() {
           {here === '/mas' ? <Outlet /> : <SettingsGuard money={here === '/dinero'}><Outlet /></SettingsGuard>}
         </PullToRefresh>
       </div>
-      <nav className={styles.tabbar} aria-label={t.common.sections}>
+      <TabBar>
         {tabs.map((tab) => (
-          <NavLink
+          <TabItem
             key={tab.to}
             to={`${base}${tab.to ? `/${tab.to}` : ''}`}
             end={tab.to === ''}
@@ -118,20 +118,16 @@ export function TournamentShell() {
             }}
             // Stats and Reglamento live under Más but are their own routes, so
             // without this they used to leave no tab lit at all.
-            className={({ isActive }) => `${styles.tab} ${isActive || (tab.to === 'mas' && underMore) ? styles.tabActive : ''}`}
+            active={tab.to === 'mas' && underMore}
+            icon={tab.icon}
+            label={tab.label}
+            badge={tab.to === 'tarjeta' ? { count: rejectedCount > 0 ? rejectedCount : pendingHoles, bad: rejectedCount > 0 } : undefined}
           >
-            <span className={styles.tabIcon} aria-hidden="true">
-              {tab.icon}
-              {tab.to === 'tarjeta' && (rejectedCount > 0 || pendingHoles > 0) && (
-                <span className={`${styles.tabBadge} ${rejectedCount > 0 ? styles.tabBadgeBad : ''}`}>{rejectedCount > 0 ? rejectedCount : pendingHoles}</span>
-              )}
-            </span>
-            <span>{tab.label}</span>
             {tab.to === 'tarjeta' && rejectedCount > 0 && <span className="sr-only">, {t.sync.rejected(rejectedCount)}</span>}
             {tab.to === 'tarjeta' && rejectedCount === 0 && pendingHoles > 0 && <span className="sr-only">, {t.sync.pendingHoles(pendingHoles)}</span>}
-          </NavLink>
+          </TabItem>
         ))}
-      </nav>
+      </TabBar>
     </div>
   )
 }

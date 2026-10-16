@@ -239,7 +239,8 @@ ol {
   background: var(--accent);
   color: var(--accent-ink);
 }
-.btn--primary:active {
+.btn--primary:active,
+.btn--primary[data-pressed] {
   filter: brightness(0.92);
 }
 .btn--secondary {
@@ -247,14 +248,16 @@ ol {
   background: var(--surface-2);
   color: var(--ink);
 }
-.btn--secondary:active {
+.btn--secondary:active,
+.btn--secondary[data-pressed] {
   background: var(--surface);
 }
 .btn--ghost {
   color: var(--accent);
   padding: 0 var(--s3);
 }
-.btn--ghost:active {
+.btn--ghost:active,
+.btn--ghost[data-pressed] {
   background: var(--accent-soft);
 }
 .btn--danger {
@@ -262,7 +265,8 @@ ol {
   color: var(--under);
   background: var(--surface-2);
 }
-.btn--danger:active {
+.btn--danger:active,
+.btn--danger[data-pressed] {
   background: var(--under-soft);
 }
 /* VIS-23: a quiet button that starts a line sits on the text edge: its padding hangs into the margin, so its
@@ -486,6 +490,28 @@ textarea {
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
+}
+/* A monogram on its player's tint (VIS-18; Avatar's `seed`): ink on each is AAA in both themes. */
+.avatar[data-tone] {
+  border-color: transparent;
+}
+.avatar[data-tone='1'] {
+  background: var(--mono-1);
+}
+.avatar[data-tone='2'] {
+  background: var(--mono-2);
+}
+.avatar[data-tone='3'] {
+  background: var(--mono-3);
+}
+.avatar[data-tone='4'] {
+  background: var(--mono-4);
+}
+.avatar[data-tone='5'] {
+  background: var(--mono-5);
+}
+.avatar[data-tone='6'] {
+  background: var(--mono-6);
 }
 .avatar img {
   width: 100%;

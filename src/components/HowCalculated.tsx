@@ -3,6 +3,7 @@ import type { Explanation } from '../engine/types'
 import { t } from '../i18n/es-MX'
 import { Sheet } from './ui'
 import styles from './HowCalculated.module.css'
+import { buttonClass } from './buttonClass'
 
 /** The explanation steps, in a sheet. Controlled, for callers that own the trigger. */
 export function ExplanationSheet({ why, open, onClose, title }: { why: Explanation | Explanation[] | null; open: boolean; onClose: () => void; title?: string }) {
@@ -38,7 +39,7 @@ export function HowCalculated({ why, children, label, about, ariaLabel, title }:
   const spoken = ariaLabel ?? (label != null || about ? t.money.howCalculatedOf(what) : undefined)
   return (
     <>
-      <button type="button" className={`btn btn--ghost btn--sm ${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`} onClick={() => setOpen(true)} aria-label={spoken} aria-haspopup="dialog">
+      <button type="button" className={buttonClass({ variant: 'ghost', size: 'sm' }, `${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`)} onClick={() => setOpen(true)} aria-label={spoken} aria-haspopup="dialog">
         {children ?? (label ?? t.money.howCalculated)}
       </button>
       <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} title={title} />

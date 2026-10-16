@@ -138,9 +138,8 @@ const BoardRow = memo(function BoardRow(props: {
   tier: string | null
   estimated: boolean
   cash: number
+  /** «dueño: Iván», on this phone's own row only (VIS-22): the owners' initials on every row read as noise. */
   owners: string | undefined
-  /** The owners by name, for a screen reader («dueños: Iván y Camilo»); the row shows their initials. */
-  ownersSpoken: string | undefined
   honoree: boolean
   honoreeLabel: string
   unit: RowSpeech['unit']
@@ -161,7 +160,7 @@ const BoardRow = memo(function BoardRow(props: {
   onOpen: (playerId: string) => void
 }) {
   const cur = useCurrency()
-  const { playerId, place, animate, teamNames, tier, estimated, cash, ownersSpoken, honoreeLabel, unit, onOpen, ...row } = props
+  const { playerId, place, animate, teamNames, tier, estimated, cash, owners, honoreeLabel, unit, onOpen, ...row } = props
   // A11Y-11: what the row shows, said: the sub line's category and money and the owners' names.
   const speech: RowSpeech = {
     honoree: row.honoree ? honoreeLabel : null,
@@ -169,7 +168,7 @@ const BoardRow = memo(function BoardRow(props: {
     estimated: teamNames == null && estimated,
     unit,
     money: cash > 0 ? formatMoney(cash, cur) : null,
-    owners: ownersSpoken,
+    owners,
   }
   const sub = (
     <span className={styles.sub}>
@@ -186,6 +185,7 @@ const BoardRow = memo(function BoardRow(props: {
           <Money amount={cash} />
         </span>
       )}
+      {owners && <span>{owners}</span>}
     </span>
   )
   return (
@@ -224,13 +224,14 @@ export function LiveScreen() {
   // A link to watch keeps nothing of the tournament on the phone (STRAT-05): its last look lasts the visit.
   const since = useLastLook(ctx.tournamentId, shownNow, !spectator)
 
+  // Who owns each sold lot, in words; shown on this phone's own row only (VIS-22), and in every player's sheet.
   const owners = useMemo(() => {
-    const m = new Map<string, { initials: string; spoken: string }>()
+    const m = new Map<string, string>()
     if (!data?.state.modules.auction || !showMoney) return m
     for (const lot of data.state.modules.auction.lots) {
       if (lot.status !== 'sold') continue
       const names = lot.owners.map((o) => data.snapshot.players.find((p) => p.id === o.ownerId)?.displayName ?? '?')
-      m.set(lot.playerId, { initials: names.map((n) => (n === '?' ? n : n.slice(0, 2).toUpperCase())).join(' '), spoken: t.live.ownersSpoken(names) })
+      m.set(lot.playerId, t.live.ownersSpoken(names))
     }
     return m
   }, [data, showMoney])
@@ -241,6 +242,9 @@ export function LiveScreen() {
   const board = state.modules.individual
   // A team format ranks teams, so a row covers more than one player.
   const byTeam = board?.byTeam ?? false
+  // VIS-22: the tier is on the board only on Calcutta night, when the room buys by it; every other day it is the
+  // player sheet's. A boxed letter on every row of every board read as noise beside the money it sat with.
+  const tiersOnBoard = snapshot.tournament.status === 'auction'
   const honoree = snapshot.players.find((p) => p.isHonoree)
   const honoreeRow = honoree ? rows.find((r) => r.entrant.playerIds.includes(honoree.id)) : null
   const roundState = round ? state.core.rounds[round.id] : undefined
@@ -440,6 +444,7 @@ export function LiveScreen() {
               }
               // The last look counts on the board's own reading, the event's figure: Gross is the same rows another way.
               const seen = grossView ? undefined : since?.rows[r.playerId]
+              const mineRow = !!me.playerId && members.includes(me.playerId)
               // A team's "thru" is where its slowest member is.
               const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
               return (
@@ -451,11 +456,10 @@ export function LiveScreen() {
                   pos={grossView ? grossLabel(i) : r.label}
                   name={byTeam ? r.entrant.name : p.displayName}
                   teamNames={byTeam ? t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id)) : null}
-                  tier={p.tier ?? null}
+                  tier={tiersOnBoard ? (p.tier ?? null) : null}
                   estimated={!!state.core.handicaps[p.id]?.estimated}
                   cash={cash}
-                  owners={byTeam ? undefined : owners.get(p.id)?.initials}
-                  ownersSpoken={byTeam ? undefined : owners.get(p.id)?.spoken}
+                  owners={!byTeam && mineRow ? owners.get(p.id) : undefined}
                   honoreeLabel={settings.labels.honoree}
                   unit={grossView ? 'toPar' : figureKind(settings)}
                   honoree={!!honoree && members.includes(honoree.id)}
@@ -465,7 +469,7 @@ export function LiveScreen() {
                   thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
                   figure={figure}
                   tone={tone}
-                  mine={!!me.playerId && members.includes(me.playerId)}
+                  mine={mineRow}
                   movedBy={seen && !r.figure.empty ? seen.place - r.position : 0}
                   seenToday={seen && since?.round === roundId ? seen.today : undefined}
                   seenFigure={seen?.figure}

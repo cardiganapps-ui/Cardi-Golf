@@ -10,6 +10,7 @@ import { finishQuickRound, finishQuickRounds } from '../../data/quick'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from './tournamentContext'
 import { humanError } from '../../lib/humanError'
+import { buttonClass } from '../../components/buttonClass'
 
 const Q = t.quick
 
@@ -52,7 +53,7 @@ function QuickFinishCard() {
       <strong>{Q.finishTitle}</strong>
       <p className="help">{missing.size > 0 ? `${Q.finishMissing(missing.size)} ${Q.finishHint}` : Q.finishHint}</p>
       <button
-        className={missing.size > 0 ? 'btn btn--secondary' : 'btn btn--primary'}
+        className={buttonClass({ variant: missing.size > 0 ? 'secondary' : 'primary' })}
         type="button"
         disabled={busy || closeGate.checking}
         onClick={() =>

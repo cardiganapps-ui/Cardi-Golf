@@ -1,79 +1,6 @@
 /* Design primitives. Every value is a token from src/styles/tokens.css. */
 
-/* ---- Buttons ---- */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s2);
-  min-height: var(--tap);
-  padding: 0 var(--s5);
-  border-radius: var(--r-sm);
-  border: 1.5px solid transparent;
-  font: 600 var(--fs-md) / 1 var(--font-text);
-  color: var(--ink);
-  background: transparent;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  user-select: none;
-  transition:
-    background-color var(--dur-fast) var(--ease),
-    border-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-}
-.btn:active,
-.pressed {
-  transform: translateY(1px);
-}
-.btnPrimary {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-.btnPrimary:active,
-.btnPrimary.pressed {
-  filter: brightness(0.92);
-}
-.btnSecondary {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-.btnSecondary:active,
-.btnSecondary.pressed {
-  background: var(--surface);
-}
-.btnQuiet {
-  color: var(--accent);
-  padding: 0 var(--s3);
-}
-.btnQuiet:active,
-.btnQuiet.pressed {
-  background: var(--accent-soft);
-}
-.btnDanger {
-  border-color: var(--under);
-  color: var(--under);
-}
-.btnDanger:active,
-.btnDanger.pressed {
-  background: var(--under-soft);
-}
-.btnSm {
-  min-height: 36px;
-  padding: 0 var(--s3);
-  font-size: var(--fs-sm);
-}
-.btnBlock {
-  width: 100%;
-}
-.btn:disabled,
-.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-.btn:focus-visible,
-.focus,
+/* Buttons are global.css's `.btn` (VIS-17): Button renders it. */
 .input:focus-visible,
 .stepBtn:focus-visible,
 .segBtn:focus-visible,
@@ -250,12 +177,71 @@
   background: var(--ink-2);
 }
 
-/* ---- Tab bar ---- */
-.tabbar {
+/*
+ * ---- In-page tabs (Segmented `tabs`) ----
+ * The one tab style for a set of panels inside a screen (VIS-17, VIS-26): words on a hairline, the chosen one
+ * underlined in ink. The segmented control above is for a value; these are for places. The strip scrolls sideways
+ * when it is wider than the screen, and fades at the edge where more tabs hide (`data-more-start`, `data-more-end`,
+ * set from its scroll in primitives.tsx), never where there is nothing.
+ */
+.tabs {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  position: relative;
   display: flex;
-  border-top: var(--hairline);
+  gap: var(--s4);
+  max-width: 100%;
+  border-bottom: var(--hairline);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, transparent, black var(--fade-start), black calc(100% - var(--fade-end)), transparent);
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tabs[data-more-start] {
+  --fade-start: var(--s8);
+}
+.tabs[data-more-end] {
+  --fade-end: var(--s8);
+}
+.tabItem {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  margin-bottom: -1px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-2);
+  font: 500 var(--fs-md) var(--font-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tabItemOn {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+.tabItem:active,
+.tabItem[data-pressed] {
+  color: var(--ink);
+}
+.tabItem:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* ---- Tab bar (the tournament's; TabBar, TabItem) ---- */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
   background: var(--bg);
+  border-top: var(--hairline);
   padding-bottom: var(--safe-bottom);
+  z-index: 5;
 }
 .tab {
   flex: 1;
@@ -269,15 +255,41 @@
   font-size: var(--fs-xs);
   font-weight: 500;
   text-decoration: none;
-  background: none;
-  border: 0;
-  cursor: pointer;
+}
+.tab:active {
+  background: var(--surface);
 }
 .tabOn {
   color: var(--ink);
+  font-weight: 600;
 }
-.tabOn svg {
+.tabOn .tabIcon {
   color: var(--accent);
+}
+.tabIcon {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+/* Holes waiting on this phone (caution), or refused by the server (under). */
+.tabBadge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--caution);
+  color: var(--on-fill);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tabBadgeBad {
+  background: var(--under);
 }
 
 /* ---- Leaderboard ---- */
@@ -406,11 +418,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.owners {
-  margin-left: var(--s2);
-  font-variation-settings: 'wdth' var(--wdth-figure);
-  letter-spacing: 0.02em;
 }
 .honoreeDot {
   display: inline-block;
@@ -543,14 +550,23 @@
 }
 
 /* ---- Pencil notation ---- */
+/*
+ * VIS-28: the mark is as wide as its column allows, up to 30 px, and always square; the figure is about 0.55 of
+ * it. It was 30 px in the player sheet's 25 px hole columns, so neighbouring squares and circles fused.
+ */
 .mark {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: min(30px, 100%);
+  aspect-ratio: 1;
+  container-type: inline-size;
   font-size: var(--fs-md);
+}
+.markFig {
+  font-size: clamp(12px, 55cqi, var(--fs-md));
+  line-height: 1;
 }
 .markSvg {
   position: absolute;
@@ -637,7 +653,9 @@
   background: none;
   padding: 0;
   min-height: 40px;
-  min-width: 100%;
+  /* A definite width, so the mark inside is sized from the column (VIS-28). */
+  width: 100%;
+  justify-content: center;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -909,18 +927,6 @@
 /* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
    state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
 @media (hover: hover) {
-  .btnPrimary:not(:disabled):hover {
-    filter: brightness(0.95);
-  }
-  .btnSecondary:not(:disabled):hover {
-    background: var(--surface);
-  }
-  .btnQuiet:not(:disabled):hover {
-    background: var(--accent-soft);
-  }
-  .btnDanger:not(:disabled):hover {
-    background: var(--under-soft);
-  }
   .stepBtn:not(:disabled):hover {
     background: var(--surface);
   }
@@ -929,6 +935,12 @@
   }
   .segOn:not(:disabled):hover {
     background: var(--ink-2);
+  }
+  .tabItem:not(:disabled):hover {
+    color: var(--ink);
+  }
+  .tab:not(:disabled):hover {
+    background: var(--surface);
   }
   .leaderRow:not(:disabled):hover {
     background: var(--surface);
@@ -950,5 +962,8 @@
   .stepper,
   .segmented {
     border-color: ButtonText;
+  }
+  .tabs {
+    mask-image: none;
   }
 }

@@ -122,32 +122,41 @@
   }
 }
 
-/* Loading: skeletons, never a spinner. */
+/* Loading: skeletons in the screen's own shapes, never a spinner (VIS-13). */
 .loading {
   display: flex;
   flex-direction: column;
-  gap: var(--s3);
   padding: var(--s4) 0;
+}
+.loading_text {
+  gap: var(--s6);
 }
 .skeleton {
   display: block;
-  background: var(--surface);
+  flex: none;
+  max-width: 100%;
+  background: var(--skeleton);
   border-radius: var(--r-sm);
   position: relative;
   overflow: hidden;
 }
+.skeletonRound {
+  border-radius: var(--r-round);
+}
+/* A slow light crossing each block, a breath rather than a flicker; none under reduced motion. */
 .skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, var(--surface-2), transparent);
-  opacity: 0.6;
-  animation: shimmer 1.4s infinite;
+  background: linear-gradient(90deg, transparent, var(--skeleton-shine), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2.4s var(--ease) infinite;
 }
 @keyframes shimmer {
   from {
     transform: translateX(-100%);
   }
+  70%,
   to {
     transform: translateX(100%);
   }
@@ -155,22 +164,76 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after {
     animation: none;
+    display: none;
   }
 }
-
-.errorBox {
-  background: var(--under-soft);
-  border-color: transparent;
-  color: var(--ink);
+.skRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--row-h);
+  border-bottom: var(--hairline);
+}
+.loading_board .skRow {
+  min-height: 52px;
+}
+.loading_card .skRow {
+  min-height: 72px;
+}
+.skText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  flex: 1;
+  min-width: 0;
+}
+.skBoardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 28px;
+  border-bottom: var(--rule-heavy);
+}
+.skHole {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s3);
+  padding-bottom: var(--s3);
+  border-bottom: var(--rule-heavy);
+}
+.skPara {
   display: flex;
   flex-direction: column;
   gap: var(--s2);
 }
-.errorBox strong {
-  color: var(--under);
+
+/* Something failed (VIS-13): a ruled block, its mark, a sentence, what still works and a retry. Not a pink card. */
+.errorBox {
+  display: flex;
+  gap: var(--s3);
+  padding: var(--s4) 0;
+  border-top: var(--rule-heavy);
+  border-bottom: var(--hairline);
+  color: var(--ink);
 }
-.errorBox button {
-  align-self: flex-start;
+.errorMark {
+  flex: none;
+  color: var(--caution);
+}
+.errorText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+.errorText p {
+  color: var(--ink-2);
+}
+.errorActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
 }
 
 .toaster {

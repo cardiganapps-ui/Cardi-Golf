@@ -24,6 +24,7 @@ import { humanError } from '../lib/humanError'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Sheet } from './ui'
 import { toast } from './toast'
+import { Button } from './primitives'
 
 const C = t.closeGate
 
@@ -112,14 +113,14 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
         {pending.moneyFirst && pending.check.blockers.every((b) => MONEY.has(b.kind)) && (
           <>
             <p className="help">{C.moneyFirstHint}</p>
-            <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void run(pending.moneyFirst!)}>
+            <Button disabled={busy} onClick={() => void run(pending.moneyFirst!)}>
               {C.moneyFirst}
-            </button>
+            </Button>
           </>
         )}
-        <button className="btn btn--primary" type="button" onClick={close}>
+        <Button variant="primary" onClick={close}>
           {C.understood}
-        </button>
+        </Button>
       </div>
     </Sheet>
   )

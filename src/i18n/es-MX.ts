@@ -1681,6 +1681,8 @@ export const t = {
      * tier glued to the name) and nothing of the honoree's ring. The lookup carries no settings, so the honoree is
      * the platform's word, not the tournament's label; a face the Comité proposed for this profile asks «¿Eres tú?».
      */
+    /** Under a face's name (VIS-18): its category, in words; the boxed letter read as noise. */
+    faceTier: (tier: string) => `Categoría ${tier}`,
     faceSpoken: (name: string, tier: string | null, honoree: boolean, askMe: boolean) =>
       [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : ''].filter(Boolean).join(', '),
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,

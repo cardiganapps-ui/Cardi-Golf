@@ -354,12 +354,9 @@ export function AdminTournament() {
       ))}
       <ReadinessCard />
 
-      <div ref={tabsRef} className={styles.tabs} role="tablist" aria-label={A.sections}>
-        {TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => (
-          <button key={x.id} type="button" role="tab" aria-selected={tab === x.id} className={`${styles.tab} ${tab === x.id ? styles.tabOn : ''}`} onClick={() => setTab(x.id)}>
-            {A.tabs[x.id]}
-          </button>
-        ))}
+      {/* The app's one in-page tab style, with its keys and its fades (VIS-17, VIS-26). */}
+      <div ref={tabsRef}>
+        <Segmented<Tab> value={tab} options={TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => ({ value: x.id, label: A.tabs[x.id] }))} onChange={setTab} tabs label={A.sections} />
       </div>
 
       {tab === 'brand' && (

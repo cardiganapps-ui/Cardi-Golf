@@ -31,6 +31,7 @@ import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
 import { TournamentContext as Ctx, type Me } from './tournamentContext'
 import { TournamentCurrency } from '../../components/TournamentCurrency'
+import { buttonClass } from '../../components/buttonClass'
 
 // The context lives in its own module (tournamentContext.ts), so a screen outside this chunk (the router's
 // SettingsGuard, the install card) can read it without bringing the gate, Entrar and their animation code into
@@ -335,7 +336,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <Spinner />
+        <Spinner kind="board" />
       </div>
     )
   }
@@ -347,7 +348,7 @@ export function TournamentGate() {
           title={t.enter.notFound}
           body={phase.dropped ? `${t.enter.goneUnsent} ${t.errors.notFoundHint}` : t.errors.notFoundHint}
           action={
-            <Link className="btn btn--secondary" to="/">
+            <Link className={buttonClass({ variant: 'secondary' })} to="/">
               {t.errors.backHome}
             </Link>
           }
@@ -359,7 +360,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox error={phase.error} onRetry={() => void resolve()} />
+        <ErrorBox error={phase.error} onRetry={() => void resolve()} fallback={<Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to="/">{t.errors.backHome}</Link>} />
       </div>
     )
   }
@@ -378,7 +379,7 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <Spinner />
+        <Spinner kind="board" />
       </div>
     )
   }
