@@ -21,3 +21,6 @@ supabase/.temp/
 # Screenshot sets from scripts/design-shots.mjs stay local (QA-20); only the style guide's set is tracked.
 design/shots/*
 !design/shots/design/
+
+# scripts/seed-courses.mjs writes its report here by default (STRAT-14).
+seed-courses-report.json

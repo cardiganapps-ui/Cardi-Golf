@@ -360,6 +360,23 @@ export const t = {
       line: (tournaments: number, organizers: number) =>
         `${tournaments} ${tournaments === 1 ? 'torneo' : 'torneos'}, ${organizers} ${organizers === 1 ? 'organizador' : 'organizadores'}`,
       none: 'Ningún organizador ha creado un torneo en este periodo.',
+      /** 0075 (STRAT-14): how the courses those tournaments play arrived. */
+      courses: {
+        title: 'Cómo llegó cada campo',
+        intro: 'Cada campo que juegan sus días, una vez por torneo: ya estaba en Polo cuando se creó el torneo, o se agregó después.',
+        first: 'En su primer torneo',
+        all: 'En todos',
+        /** «7 de 9 ya estaban en Polo (5 de la búsqueda y 2 de una foto). 2 se agregaron (2 de una foto).» Each part names how, by its counts. */
+        line: (found: number, total: number, foundHow: string[], added: number, addedHow: string[]) =>
+          [
+            `${found} de ${total} ya ${found === 1 ? 'estaba' : 'estaban'} en Polo${foundHow.length ? ` (${andList(foundHow)})` : ''}.`,
+            added ? `${added} ${added === 1 ? 'se agregó' : 'se agregaron'}${addedHow.length ? ` (${andList(addedHow)})` : ''}.` : null,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        how: (n: number, how: 'search' | 'photo' | 'manual') => `${n} ${{ search: 'de la búsqueda', photo: 'de una foto', manual: 'a mano' }[how]}`,
+        none: 'Ningún torneo tiene campo todavía.',
+      },
     },
     activity: 'Actividad, 30 días',
     series: { scores: 'Hoyos', accounts: 'Cuentas nuevas', tournaments: 'Torneos nuevos' },
@@ -551,7 +568,7 @@ export const t = {
     // Campos
     courses: {
       search: 'Nombre o ciudad',
-      filters: { all: 'Todos', dupes: 'Duplicados', broken: 'Con errores', unused: 'Sin usar' },
+      filters: { all: 'Todos', dupes: 'Duplicados', broken: 'Con errores', unused: 'Sin usar', verified: 'Verificados', unverified: 'Sin verificar', corrected: 'Corregidos' },
       filterLabel: 'Cuáles',
       count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'campo' : 'campos'}` : `${shown} de ${total}`),
       empty: 'Ningún campo coincide.',
@@ -559,10 +576,12 @@ export const t = {
       back: 'Campos',
       rowSub: (tees: number, rounds: number, where: string | null) =>
         [where, `${tees} ${tees === 1 ? 'tee' : 'tees'}`, rounds ? `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}` : 'sin usar'].filter(Boolean).join(', '),
-      chips: { dupe: 'Duplicado', broken: 'Con errores' },
+      chips: { dupe: 'Duplicado', broken: 'Con errores', corrected: 'Corregido' },
       source: { manual: 'A mano', golfcourseapi: 'Base de datos', opengolfapi: 'Base de datos', scorecard_photo: 'Foto de tarjeta' } as Record<string, string>,
       created: (who: string | null, when: string) => `${who ? `Lo agregó ${who}` : 'Agregado'} ${when}`,
       tees: 'Tees',
+      cardOf: (tee: string) => `Tarjeta de ${tee}`,
+      holeLine: (n: number, par: number, si: number) => `Hoyo ${n}: par ${par}, índice de golpe ${si}`,
       teeLine: (par: number | null, rating: number | null, slope: number | null, inUse: number) =>
         [par ? `Par ${par}` : null, rating != null ? `${rating} / ${slope ?? '—'}` : null, inUse ? `en uso (${inUse})` : null].filter(Boolean).join(', '),
       problems: { holes: 'no tiene 9 ni 18 hoyos', par: 'algún par fuera de 3–6', si: 'los índices de golpe se repiten o faltan' } as Record<string, string>,
@@ -593,6 +612,18 @@ export const t = {
       refresh: 'Recalcular resultados',
       refreshed: (n: number) => `Recalculé ${n} ${n === 1 ? 'ronda' : 'rondas'}.`,
       activity: { course_merge: 'Fusionó campos', course_delete: 'Borró un campo', course_refresh: 'Recalculó resultados' } as Record<string, string>,
+      /** 0075 (STRAT-14): who compared the card with the printed one, and its last correction. */
+      verifiedBy: (via: 'platform' | 'comite' | null | undefined, who: string | null | undefined, when: string) =>
+        `Verificada ${via === 'comite' ? 'por el Comité de un torneo que la jugó' : 'por el Admin de Polo'}${who ? ` (${who})` : ''} ${when}`,
+      correctedLine: (who: string | null | undefined, when: string) => `Última corrección de la tarjeta ${when}${who ? `, de ${who}` : ''}`,
+      verify: 'Marcar verificada',
+      verifyTitle: 'Marcar la tarjeta verificada',
+      verifyBody: 'La comparaste con la impresa del club: el par y el índice de golpe de cada hoyo, y el rating y el slope de cada tee. Si alguien la cambia después, deja de estar verificada.',
+      unverify: 'Quitar la marca',
+      unverifyTitle: 'Quitar la marca de verificada',
+      unverifyBody: 'La tarjeta se sigue pudiendo usar; solo deja de verse verificada.',
+      verifyDone: 'Tarjeta verificada',
+      unverifyDone: 'Ya no está verificada',
     },
     // Crews
     crews: {
@@ -676,6 +707,8 @@ export const t = {
         course_merge: 'Fusionó campos',
         course_delete: 'Borró un campo',
         course_refresh: 'Recalculó resultados',
+        course_verify: 'Verificó una tarjeta',
+        course_unverify: 'Quitó la marca de verificada',
         crew_remove_member: 'Sacó a alguien de un crew',
         crew_delete: 'Borró un crew',
         broadcast: 'Mandó un aviso',
@@ -1537,6 +1570,8 @@ export const t = {
   courses: {
     title: 'Campos',
     back: 'Volver',
+    /** 0075 (STRAT-14): a person compared the card with the club's printed one. */
+    verified: 'Tarjeta verificada',
   },
   social: {
     friends: 'Amigos',
@@ -2980,6 +3015,16 @@ export const t = {
       fullCard: 'Tarjeta completa',
       locationOnly: 'Solo ubicación',
       cardUnknown: 'Tarjeta por confirmar',
+      /** STRAT-14: the catalog's own courses that match the search, before the providers'. */
+      inPolo: 'Ya en Polo',
+      inPoloHint: 'Ya los cargó alguien: no hace falta importarlos otra vez.',
+      providers: 'En las bases de campos',
+      verifiedHint: 'Alguien la comparó con la tarjeta impresa del club. Si cambias un hoyo o un tee, deja de estar verificada.',
+      verify: 'Verificar tarjeta',
+      verifyTitle: 'Verificar la tarjeta',
+      verifyBody: (name: string) =>
+        `Confirma que comparaste la tarjeta de ${name} con la impresa del club: el par y el índice de golpe de cada hoyo, y el rating y el slope de cada tee. Todos los organizadores la verán verificada.`,
+      verifyDone: 'Tarjeta verificada',
       locationCreated: 'Campo creado con su ubicación. Ahora sube la foto de la tarjeta.',
       attribution: 'Datos',
       importTees: 'Elige qué tees importar',

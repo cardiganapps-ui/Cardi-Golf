@@ -18,6 +18,16 @@ function locationOf(c: Any): string | null {
 
 const num = (v: unknown): number | null => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v))
 
+/**
+ * A whole number from lo to hi as the provider sent it, or null: a par or stroke index the adapter may take as given.
+ * Here, not in types.ts: scripts/seed-courses.mjs runs this file in Node as it is, which imports nothing but types.
+ */
+function given(v: unknown, lo: number, hi: number): number | null {
+  if (v == null || v === '') return null
+  const n = Number(v)
+  return Number.isInteger(n) && n >= lo && n <= hi ? n : null
+}
+
 export function mapSearchHit(c: Any): ProviderSearchHit {
   const t = c.tees ?? {}
   const count = (v: unknown) => (Array.isArray(v) ? v.length : Number(v) || 0)
@@ -43,9 +53,13 @@ function mapTee(t: Any, gender: string): ProviderTee | null {
     strokeIndex: Number(h.handicap) || i + 1,
     yards: h.yardage != null ? Number(h.yardage) : null,
   }))
+  let assumed = holes.slice(0, 18).some((h: Any) => given(h.par, 3, 6) == null || given(h.handicap, 1, 18) == null)
   // Some cards ship without stroke indexes; fall back to 1..18 and let the organizer fix it.
   const sis = new Set(mapped.map((h) => h.strokeIndex))
-  if (sis.size !== mapped.length) mapped.forEach((h, i) => (h.strokeIndex = i + 1))
+  if (sis.size !== mapped.length) {
+    mapped.forEach((h, i) => (h.strokeIndex = i + 1))
+    assumed = true
+  }
   return {
     name: t.tee_name ?? 'Tee',
     color: null,
@@ -54,6 +68,7 @@ function mapTee(t: Any, gender: string): ProviderTee | null {
     parTotal: num(t.par_total),
     gender,
     holes: mapped,
+    assumed,
   }
 }
 

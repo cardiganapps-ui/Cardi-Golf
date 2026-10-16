@@ -10,7 +10,7 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { Segmented } from '../../components/primitives'
 import { IconFlag, IconPerson, IconShield } from '../../components/icons'
-import { usePlatformApi, type PlatformDay, type PlatformEvent, type PlatformFunnel, type PlatformOverview } from '../../data/platform'
+import { usePlatformApi, type CourseArrival, type FunnelCourses, type PlatformDay, type PlatformEvent, type PlatformFunnel, type PlatformOverview } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
@@ -126,7 +126,41 @@ export function Funnel({ f }: { f: PlatformFunnel }) {
           ))}
         </ol>
       )}
+      {/* A database without 0075 has no courses' split: the funnel shows as before. */}
+      {f.courses && created > 0 && <CourseArrivals c={f.courses} />}
     </section>
+  )
+}
+
+const ARRIVALS: CourseArrival[] = ['search', 'photo', 'manual']
+const F = P.funnel.courses
+
+/** How the courses those tournaments play arrived (STRAT-14): in the catalog already, or added, and by what path. */
+function CourseArrivals({ c }: { c: { all: FunnelCourses; first: FunnelCourses } }) {
+  const line = (x: FunnelCourses) => {
+    const sum = (r: Record<CourseArrival, number>) => ARRIVALS.reduce((acc, k) => acc + r[k], 0)
+    const how = (r: Record<CourseArrival, number>) => ARRIVALS.filter((k) => r[k] > 0).map((k) => F.how(r[k], k))
+    const found = sum(x.found)
+    const added = sum(x.added)
+    return found + added === 0 ? F.none : F.line(found, found + added, how(x.found), added, how(x.added))
+  }
+  return (
+    <>
+      <div className={s.sectionHead}>
+        <strong id="arrivals-title">{F.title}</strong>
+      </div>
+      <p className={s.help}>{F.intro}</p>
+      <ul className={s.arrivals} aria-labelledby="arrivals-title">
+        <li className={s.arrival}>
+          <span className={s.funnelLabel}>{F.first}</span>
+          <span className={s.funnelLine}>{line(c.first)}</span>
+        </li>
+        <li className={s.arrival}>
+          <span className={s.funnelLabel}>{F.all}</span>
+          <span className={s.funnelLine}>{line(c.all)}</span>
+        </li>
+      </ul>
+    </>
   )
 }
 

@@ -17,6 +17,7 @@ import { loadCourseDraft, saveCourse, type CourseDraft } from '../../data/api'
 import { sameCard, suggestTeeMap, usePlatformApi, type CourseTee, type PlatformCourse } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import { CourseEditor } from '../admin/CourseEditor'
+import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
@@ -34,6 +35,7 @@ export function CourseDetail() {
   const [busy, setBusy] = useState(false)
   const [mergeWith, setMergeWith] = useState<string | null>(null)
   const [asking, setAsking] = useState(false)
+  const [marking, setMarking] = useState<'on' | 'off' | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
@@ -113,6 +115,7 @@ export function CourseDetail() {
       <div className={s.detailHead}>
         <h2>{course.name}</h2>
         <span className={s.chips}>
+          {course.verifiedAt && <VerifiedBadge />}
           {course.dupes.length > 0 && <span className="chip chip--sun">{C.chips.dupe}</span>}
           {(course.tees.length === 0 || course.tees.some((x) => x.problems.length > 0)) && <span className="chip chip--coral">{C.chips.broken}</span>}
         </span>
@@ -120,6 +123,8 @@ export function CourseDetail() {
           {[course.location, C.source[course.source] ?? course.source, C.created(course.creatorEmail, relTime(course.createdAt))].filter(Boolean).join(', ')}
         </span>
         {course.attribution && <span className={s.help}>{course.attribution}</span>}
+        {course.verifiedAt && <span className={s.help}>{C.verifiedBy(course.verifiedVia, course.verifierEmail, relTime(course.verifiedAt))}</span>}
+        {course.correctedAt && <span className={s.help}>{C.correctedLine(course.correctorEmail, relTime(course.correctedAt))}</span>}
         <div className={s.actions}>
           <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void edit()}>
             {C.edit}
@@ -127,6 +132,12 @@ export function CourseDetail() {
           {rounds > 0 && (
             <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void refresh()}>
               {C.refresh}
+            </button>
+          )}
+          {/* A database without 0075 says nothing of verification, and offers none. */}
+          {'verifiedAt' in course && (
+            <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => setMarking(course.verifiedAt ? 'off' : 'on')}>
+              {course.verifiedAt ? C.unverify : C.verify}
             </button>
           )}
           {rounds === 0 && (
@@ -193,6 +204,20 @@ export function CourseDetail() {
       )}
 
       <ReasonSheet
+        open={!!marking}
+        title={marking === 'off' ? C.unverifyTitle : C.verifyTitle}
+        body={marking === 'off' ? C.unverifyBody : C.verifyBody}
+        confirmLabel={marking === 'off' ? C.unverify : C.verify}
+        onClose={() => setMarking(null)}
+        onConfirm={async (reason) => {
+          const on = marking === 'on'
+          await api.verifyCourse(course.id, on, reason)
+          toast(on ? C.verifyDone : C.unverifyDone)
+          await load()
+          outlet?.onChanged()
+        }}
+      />
+      <ReasonSheet
         open={asking}
         title={C.deleteTitle}
         body={C.deleteBody}
@@ -234,15 +259,23 @@ function TeeCard({ tee }: { tee: CourseTee }) {
         <span className={s.help}>{C.teeLine(tee.parTotal, tee.rating, tee.slope, tee.inUse)}</span>
       </div>
       {tee.problems.length > 0 && <span className={s.problem}>{t.common.andList(tee.problems.map((p) => C.problems[p] ?? p))}</span>}
-      <div className={s.card} role="table" aria-label={tee.name}>
+      {/* A list of holes, each said in words: it was a table of cells with no rows (axe: aria-required-children). */}
+      <ol className={s.card} aria-label={C.cardOf(tee.name)}>
         {tee.holes.map((h) => (
-          <span key={h.n} className={s.cardCell} role="cell">
-            <span className={s.cardNo}>{h.n}</span>
-            <span className={s.cardPar}>{h.par}</span>
-            <span className={s.cardSi}>{h.si}</span>
-          </span>
+          <li key={h.n} className={s.cardCell}>
+            <span className={s.cardNo} aria-hidden="true">
+              {h.n}
+            </span>
+            <span className={s.cardPar} aria-hidden="true">
+              {h.par}
+            </span>
+            <span className={s.cardSi} aria-hidden="true">
+              {h.si}
+            </span>
+            <span className="sr-only">{C.holeLine(h.n, h.par, h.si)}</span>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   )
 }

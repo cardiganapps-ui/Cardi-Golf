@@ -1,15 +1,22 @@
 /**
  * Courses (§13, §13b): search a provider, read a scorecard photo, or type it
- * by hand. Every path lands in the same review editor before saving.
+ * by hand. Every path lands in the same review editor before saving. A search
+ * lists the catalog's own matches first («Ya en Polo»), so a course someone
+ * already loaded is used instead of imported again, each with its «Tarjeta
+ * verificada» badge (0075, STRAT-14); inside a Terminado tournament the Comité
+ * may verify the cards its days played.
  */
-import { useId, useRef, useState } from 'react'
+import { useContext, useId, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner, toast } from '../../components/ui'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { NoticeNote } from '../../components/LegalLinks'
-import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, type CourseDraft } from '../../data/api'
+import { deleteCourse, loadCourseDraft, saveCourse, uploadAsset, verifyCourse, type CatalogCourse, type CourseDraft } from '../../data/api'
+import { ReasonSheet } from '../../components/ReasonSheet'
+import { VerifiedBadge } from '../../components/VerifiedBadge'
+import { TournamentContext } from '../tournament/tournamentContext'
 import { useTournament } from '../../data/tournamentStore'
 import { blobToBase64, extensionFor, prepareImage } from '../../lib/images'
 import { extractScorecard, fetchProviderCourse, RouteError, searchCourses } from '../../lib/courseApi'
@@ -21,9 +28,31 @@ import { humanError } from '../../lib/humanError'
 
 const C = t.admin.courses
 
+/** A name or place as a search reads it: lower case, no accents. */
+const fold = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+/** The catalog's courses a search names, by every word of it in the name or the place; at most five. */
+function catalogMatches(courses: CatalogCourse[], q: string): CatalogCourse[] {
+  const words = fold(q).split(/[^a-z0-9]+/).filter((w) => w.length >= 2)
+  if (!words.length) return []
+  return courses.filter((c) => c.tees > 0 && words.every((w) => fold(`${c.name} ${c.location ?? ''}`).includes(w))).slice(0, 5)
+}
+
 export function AdminCourses() {
   const { courses, loading, error, refresh } = useCourses()
   const reload = useTournament((s) => s.reload)
+  // Inside a tournament (Comité › Campos), the courses its days play; /campos has no tournament.
+  const ctx = useContext(TournamentContext)
+  const data = useTournament((s) => s.data)
+  const loadedId = useTournament((s) => s.tournamentId)
+  const here = ctx && data && loadedId === ctx.tournamentId ? data.snapshot : null
+  const mayVerify = !!here && !!ctx?.me.isAdmin && here.tournament.status === 'finished' && !here.tournament.quick && here.tournament.countsForStats
+  const played = useMemo(() => new Set((here?.rounds ?? []).map((r) => r.courseId).filter(Boolean)), [here])
+  const [verifying, setVerifying] = useState<CatalogCourse | null>(null)
   const uid = useAuth((s) => s.user?.id ?? null)
   const [draft, setDraft] = useState<CourseDraft | null>(null)
   /**
@@ -43,6 +72,8 @@ export function AdminCourses() {
   const [notes, setNotes] = useState<string[]>([])
   const [mode, setMode] = useState<'none' | 'search' | 'import'>('none')
   const [q, setQ] = useState('')
+  /** What the last search asked: the catalog's matches follow it, not each letter typed. */
+  const [asked, setAsked] = useState('')
   const [hits, setHits] = useState<ProviderSearchHit[] | null>(null)
   const [searchMsg, setSearchMsg] = useState<string | null>(null)
   const [provider, setProvider] = useState<ProviderCourse | null>(null)
@@ -52,15 +83,19 @@ export function AdminCourses() {
   const [askDelete, setAskDelete] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const photoNoteId = useId()
+  const knownId = useId()
+
+  const known = useMemo(() => catalogMatches(courses, asked), [courses, asked])
 
   async function doSearch() {
     setBusy(true)
     setSearchMsg(null)
     setHits(null)
+    setAsked(q.trim())
     try {
       const r = await searchCourses(q.trim())
       setHits(r)
-      if (!r.length) setSearchMsg(C.noResults)
+      if (!r.length && !catalogMatches(courses, q.trim()).length) setSearchMsg(C.noResults)
     } catch (e) {
       setSearchMsg(e instanceof RouteError && e.code === 'no_key' ? C.searchUnavailable : humanError(e))
     } finally {
@@ -136,7 +171,8 @@ export function AdminCourses() {
       // A course created from a location-only hit keeps its name and provenance; the photo fills the tees.
       const base = pendingCourseId.current ? await loadCourseDraft(pendingCourseId.current) : null
       pendingCourseId.current = null
-      const d: CourseDraft = base ? { ...base, tees, source: base.source === 'manual' ? 'scorecard_photo' : base.source } : { name: r.courseName, source: 'scorecard_photo', tees }
+      // The card came from the photo, whatever gave the course its name and place (the funnel counts how cards arrive, STRAT-14).
+      const d: CourseDraft = base ? { ...base, tees, source: 'scorecard_photo' } : { name: r.courseName, source: 'scorecard_photo', tees }
       openDraft(d, true)
       setNotes(issues)
       // Keep the photo for later re-checks (saved once the course exists).
@@ -250,6 +286,7 @@ export function AdminCourses() {
               <button type="button" className={a.rowBtn} onClick={() => void edit(c.id)} disabled={busy}>
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{c.name}</span>
+                  {c.verifiedAt && <VerifiedBadge />}
                   <span className={a.rowSub}>
                     {c.location ? `${c.location}, ` : ''}
                     {c.tees} {C.tees.toLowerCase()}, {C.source[c.source as keyof typeof C.source] ?? c.source}
@@ -261,6 +298,11 @@ export function AdminCourses() {
                   )}
                 </span>
               </button>
+              {mayVerify && played.has(c.id) && !c.verifiedAt && c.tees > 0 && (
+                <button className="btn btn--secondary btn--sm" type="button" onClick={() => setVerifying(c)}>
+                  {C.verify}
+                </button>
+              )}
               {c.createdBy === uid ? (
                 <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAskDelete(c.id)}>
                   {t.common.delete}
@@ -272,6 +314,21 @@ export function AdminCourses() {
           ))}
         </div>
       )}
+
+      <ReasonSheet
+        open={!!verifying}
+        title={C.verifyTitle}
+        body={verifying ? C.verifyBody(verifying.name) : undefined}
+        confirmLabel={C.verify}
+        onClose={() => setVerifying(null)}
+        onConfirm={async (reason) => {
+          if (!verifying || !ctx) return
+          // The server holds the rule and says which part failed; the sheet shows it.
+          await verifyCourse(verifying.id, ctx.tournamentId, reason)
+          refresh()
+          toast(C.verifyDone)
+        }}
+      />
 
       <ConfirmSheet open={!!askDelete} title={t.common.delete} body={t.common.confirmDelete} danger busy={busy} confirmLabel={t.common.delete} onConfirm={() => askDelete && void remove(askDelete)} onClose={() => setAskDelete(null)} />
 
@@ -291,6 +348,35 @@ export function AdminCourses() {
           </form>
           {busy && <Spinner />}
           {searchMsg && <p className={a.help}>{searchMsg}</p>}
+          {known.length > 0 && (
+            <section className="stack" aria-labelledby={knownId}>
+              <span className="label" id={knownId}>
+                {C.inPolo}
+              </span>
+              <p className={a.help}>{C.inPoloHint}</p>
+              <div className={a.rows}>
+                {known.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`${a.row} ${a.rowBtn}`}
+                    disabled={busy}
+                    onClick={() => {
+                      setMode('none')
+                      void edit(c.id)
+                    }}
+                  >
+                    <span className={a.rowText}>
+                      <span className={a.rowTitle}>{c.name}</span>
+                      {c.verifiedAt && <VerifiedBadge />}
+                      <span className={a.rowSub}>{[c.location, `${c.tees} ${C.tees.toLowerCase()}`].filter(Boolean).join(', ')}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          {hits && hits.length > 0 && known.length > 0 && <span className="label">{C.providers}</span>}
           {hits && hits.length > 0 && (
             <div className={a.rows}>
               {hits.map((h) => (

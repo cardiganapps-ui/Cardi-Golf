@@ -41,6 +41,14 @@ describe('OpenGolfAPI adapter', () => {
     expect(c.tees[0]!.holes[0]).toEqual({ number: 1, par: 4, strokeIndex: 18, yards: 400 })
     expect(c.tees[1]!.holes[17]).toEqual({ number: 18, par: 4, strokeIndex: 1, yards: 317 })
     expect(c.tees[0]!.slope).toBe(128)
+    expect(c.tees.map((x) => x.assumed)).toEqual([false, false])
+  })
+
+  it('says when it filled in a par or the stroke indexes (STRAT-14)', () => {
+    const holes = (f: (i: number) => Record<string, unknown>) => Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: 4, handicap_index: 18 - i, ...f(i) }))
+    const tee = { tee_key: 'blue', tee_name: 'Blue', course_rating: 71.2, slope: 128 }
+    expect(mapCourse({ ...searchRow, tees: [tee], holes_data: holes((i) => (i === 3 ? { par: null } : {})) }).tees[0]!.assumed).toBe(true)
+    expect(mapCourse({ ...searchRow, tees: [tee], holes_data: holes(() => ({ handicap_index: 1 })) }).tees[0]!.assumed).toBe(true)
   })
 })
 

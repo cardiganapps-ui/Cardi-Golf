@@ -6,6 +6,7 @@ import type { CourseDraft, CourseDraftTee } from '../../data/api'
 import styles from './CourseEditor.module.css'
 import { OptionalNumberField } from '../../components/NumberField'
 import { NOT_TYPED, untypedHoles } from './courseCells'
+import { VerifiedBadge } from '../../components/VerifiedBadge'
 
 const C = t.admin.courses
 
@@ -107,6 +108,13 @@ export function CourseEditor({ draft, notes, busy, onSave, onCancel, onEdit, onP
 
   return (
     <div className="stack">
+      {/* What was compared with the printed card; saving a change to it takes the mark off (0075, STRAT-14). */}
+      {draft.verifiedAt && (
+        <div className="stack">
+          <VerifiedBadge />
+          <p className="help">{C.verifiedHint}</p>
+        </div>
+      )}
       {notes.length > 0 && (
         <div className="card">
           <strong>{C.issues}</strong>

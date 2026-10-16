@@ -36,4 +36,10 @@ describe('GolfCourseAPI adapter', () => {
     expect(c.tees[1]!.holes.map((h) => h.strokeIndex)).toEqual(Array.from({ length: 18 }, (_, i) => i + 1))
     expect(c.tees[1]!.gender).toBe('female')
   })
+  it('says which tees it filled in (STRAT-14): the Red tee has no stroke indexes, the Black one is as given', () => {
+    const c = mapCourse(sample)
+    expect(c.tees.map((x) => x.assumed)).toEqual([false, true])
+    const noPar = { ...sample, tees: { male: [{ ...sample.tees.male[0]!, holes: sample.tees.male[0]!.holes.map((h, i) => (i === 4 ? { ...h, par: null } : h)) }] } }
+    expect(mapCourse(noPar).tees[0]!.assumed).toBe(true)
+  })
 })

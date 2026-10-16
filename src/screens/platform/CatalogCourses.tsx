@@ -1,7 +1,10 @@
 /**
  * Campos: the course catalog every tournament shares. Anyone with an
  * account can add a course, so this is where duplicates and badly typed
- * cards get found and fixed: filter by Duplicados / Con errores / Sin usar.
+ * cards get found and fixed: filter by Duplicados / Con errores / Sin usar,
+ * and by whether a person compared the card with the printed one
+ * (Verificados / Sin verificar) or corrected it since it was first saved
+ * (Corregidos, the latest first; 0075, STRAT-14).
  */
 import { useCallback, useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
@@ -9,12 +12,13 @@ import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { usePlatformApi, type CourseFilter, type CourseRow } from '../../data/platform'
+import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { usePaged } from './usePaged'
 import s from './Platform.module.css'
 
 const C = t.platform.courses
-const FILTERS: CourseFilter[] = ['all', 'dupes', 'broken', 'unused']
+const FILTERS: CourseFilter[] = ['all', 'dupes', 'broken', 'unused', 'verified', 'unverified', 'corrected']
 
 export function CatalogCourses() {
   const api = usePlatformApi()
@@ -75,6 +79,8 @@ function CourseLine({ r, active }: { r: CourseRow; active: boolean }) {
       </span>
       <span className={s.rowEnd}>
         <span className={s.chips}>
+          {r.verifiedAt && <VerifiedBadge />}
+          {r.correctedAt && <span className="chip">{C.chips.corrected}</span>}
           {r.dupes > 0 && <span className="chip chip--sun">{C.chips.dupe}</span>}
           {r.broken && <span className="chip chip--coral">{C.chips.broken}</span>}
         </span>

@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const server = vi.hoisted(() => ({
-  courses: [] as Array<{ id: string; name: string; location: string | null; source: string; attribution: string | null; created_by: string | null; tees: Array<{ id: string }> }>,
+  courses: [] as Array<{ id: string; name: string; location: string | null; source: string; attribution: string | null; created_by: string | null; verified_at?: string | null; tees: Array<{ id: string }> }>,
   cap: 500,
   requests: [] as Array<{ from: number; to: number; count: boolean; order: string[] }>,
 }))
@@ -60,5 +60,19 @@ describe('the course catalog pages (DB-20)', () => {
       [1000, false],
     ])
     expect(server.requests.every((r) => r.order.join(',') === 'name,id')).toBe(true)
+  })
+
+  it('says which cards a person verified, and reads a database without 0075 as none verified (STRAT-14)', async () => {
+    server.requests = []
+    server.courses = [
+      { id: 'a', name: 'Quivira', location: null, source: 'golfcourseapi', attribution: null, created_by: null, verified_at: '2026-10-16T12:00:00Z', tees: [] },
+      // A database before 0075: the column is not there at all.
+      { id: 'b', name: 'Solmar', location: null, source: 'scorecard_photo', attribution: null, created_by: null, tees: [] },
+    ]
+    const courses = await listCourses()
+    expect(courses.map((c) => [c.id, c.verifiedAt])).toEqual([
+      ['a', '2026-10-16T12:00:00Z'],
+      ['b', null],
+    ])
   })
 })

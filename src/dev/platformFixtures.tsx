@@ -50,9 +50,9 @@ function person(id: string): Person | null {
 }
 
 const COURSES: CourseRow[] = [
-  { id: 'c-quivira', name: 'Quivira Golf Club', location: 'Cabo San Lucas', source: 'golfcourseapi', createdAt: ago(24 * 30), creatorEmail: 'diego@example.com', tees: 5, rounds: 1, tournaments: 1, dupeKey: 'quivira', dupes: 1, broken: false },
+  { id: 'c-quivira', name: 'Quivira Golf Club', location: 'Cabo San Lucas', source: 'golfcourseapi', createdAt: ago(24 * 30), creatorEmail: 'diego@example.com', tees: 5, rounds: 1, tournaments: 1, dupeKey: 'quivira', dupes: 1, broken: false, verifiedAt: ago(24 * 2), verifiedVia: 'platform', correctedAt: null },
   { id: 'c-quivira2', name: 'Quivira Los Cabos', location: null, source: 'manual', createdAt: ago(24 * 3), creatorEmail: 'mau@example.com', tees: 1, rounds: 1, tournaments: 1, dupeKey: 'quiviraloscabos', dupes: 1, broken: false },
-  { id: 'c-solmar', name: 'Solmar Golf Links', location: 'Cabo San Lucas', source: 'scorecard_photo', createdAt: ago(24 * 29), creatorEmail: 'diego@example.com', tees: 2, rounds: 1, tournaments: 1, dupeKey: 'solmar', dupes: 0, broken: true },
+  { id: 'c-solmar', name: 'Solmar Golf Links', location: 'Cabo San Lucas', source: 'scorecard_photo', createdAt: ago(24 * 29), creatorEmail: 'diego@example.com', tees: 2, rounds: 1, tournaments: 1, dupeKey: 'solmar', dupes: 0, broken: true, verifiedAt: null, verifiedVia: null, correctedAt: ago(30) },
   { id: 'c-chapu', name: 'Club de Golf Chapultepec', location: 'CDMX', source: 'manual', createdAt: ago(24 * 10), creatorEmail: 'mau@example.com', tees: 1, rounds: 0, tournaments: 0, dupeKey: 'chapultepec', dupes: 0, broken: false },
 ]
 
@@ -73,6 +73,8 @@ function courseDetail(id: string): PlatformCourse | null {
         : [tee(`${id}-a`, 'Azules', c.rounds ? 12 : 0), tee(`${id}-b`, 'Blancas', 0)]
   return {
     id: c.id, name: c.name, location: c.location, source: c.source, attribution: null, website: null, createdAt: c.createdAt, creatorEmail: c.creatorEmail,
+    verifiedAt: c.verifiedAt ?? null, verifiedVia: c.verifiedVia ?? null, verifierEmail: c.verifiedAt ? 'diego@example.com' : null,
+    correctedAt: c.correctedAt ?? null, correctorEmail: c.correctedAt ? 'mau@example.com' : null,
     tees,
     usedBy: c.rounds ? [{ tournamentId: 'f-nacho', name: "Nacho's Bachelor Invitational", status: 'setup', protected: true, rounds: c.rounds }] : [],
     dupes: COURSES.filter((d) => d.id !== c.id && c.dupes > 0 && d.dupes > 0).map((d) => ({ id: d.id, name: d.name, location: d.location, rounds: d.rounds })),
@@ -139,6 +141,10 @@ const api: PlatformApi = {
         { key: 'signed', tournaments: 2, organizers: 2 },
         { key: 'finished', tournaments: 2, organizers: 1 },
       ],
+      courses: {
+        first: { tournaments: 4, withCourse: 3, found: { search: 1, photo: 0, manual: 0 }, added: { search: 1, photo: 2, manual: 1 } },
+        all: { tournaments: 6, withCourse: 5, found: { search: 3, photo: 1, manual: 0 }, added: { search: 1, photo: 2, manual: 1 } },
+      },
     }
   },
   async tournaments({ q, kind }) {
@@ -195,6 +201,9 @@ const api: PlatformApi = {
       if (filter === 'dupes') return c.dupes > 0
       if (filter === 'broken') return c.broken
       if (filter === 'unused') return c.rounds === 0
+      if (filter === 'verified') return !!c.verifiedAt
+      if (filter === 'unverified') return !c.verifiedAt
+      if (filter === 'corrected') return !!c.correctedAt
       return true
     })
     return { total: rows.length, rows }
@@ -209,6 +218,7 @@ const api: PlatformApi = {
     return { rounds: 1, refreshed: 1 }
   },
   async deleteCourse() {},
+  async verifyCourse() {},
   async crews({ q }) {
     const rows = CREWS.filter((c) => !q || c.name.toLowerCase().includes(q.toLowerCase()))
     return { total: rows.length, rows }
