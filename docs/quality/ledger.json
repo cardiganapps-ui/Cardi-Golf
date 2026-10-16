@@ -160,9 +160,12 @@
       "workstream": "W8",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/tokens.test.ts",
+        "e2e/fixtures/theme.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -309,9 +312,11 @@
       "workstream": "W8",
       "phase": 2,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "e2e/fixtures/theme.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4536,9 +4541,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/tokens.test.ts",
+        "src/design/accents.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4550,9 +4558,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/accent.test.ts",
+        "e2e/fixtures/theme.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4564,9 +4575,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/lib/theme.test.ts",
+        "e2e/fixtures/theme.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4578,9 +4592,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/hover.test.ts",
+        "e2e/fixtures/theme.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4634,9 +4651,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/tokens.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4735,9 +4754,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "e2e/fixtures/pressed.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4749,9 +4770,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 225,
+      "tests": [
+        "src/styles/type-floor.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
