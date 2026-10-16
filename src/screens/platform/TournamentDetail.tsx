@@ -18,6 +18,8 @@ import { relTime } from '../../lib/relTime'
 import { TournamentChips, type TournamentsOutlet } from './TournamentsScreen'
 import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
+import { ViewReasonForm } from './ViewReason'
+import { useAdminView } from './useAdminView'
 
 const P = t.platform
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -26,24 +28,11 @@ export function TournamentDetail() {
   const { id = '' } = useParams()
   const api = usePlatformApi()
   const outlet = useOutletContext<TournamentsOutlet | undefined>()
-  const [data, setData] = useState<PlatformTournament | null | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
+  const open = useCallback((reason?: string) => api.tournament(id, reason), [api, id])
+  const { data, error, asking, load } = useAdminView<PlatformTournament>(open)
   const [sheet, setSheet] = useState<'unlock' | 'unprotect' | 'organizer' | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      setData(await api.tournament(id))
-    } catch (e) {
-      setError(humanError(e))
-    }
-  }, [api, id])
-  useEffect(() => {
-    setData(undefined)
-    void load()
-  }, [load])
 
   const changed = async () => {
     await load()
@@ -70,6 +59,7 @@ export function TournamentDetail() {
     </Link>
   )
   if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
+  if (asking) return <>{back}<ViewReasonForm kind="tournament" onOpen={load} /></>
   if (data === undefined) return <Spinner rows={6} />
   if (data === null) return <>{back}<p className={s.help}>{P.notFound}</p></>
   const d = data

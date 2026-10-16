@@ -266,7 +266,7 @@ export function TvScreen() {
                         <span key={pid} className={`${styles.snakePlayer} ${g.holderId === pid ? styles.holder : ''}`}>
                           {name(pid)}
                           {g.holderId === pid && (
-                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder}>
+                            <span className={styles.snakeIcon} role="img" aria-label={t.games.holder(settings.modules.snake.label)}>
                               <IconSnake />
                             </span>
                           )}
@@ -586,6 +586,8 @@ function AuctionBoard() {
               <span className="num">{formatMoney(pesos, cur)}</span>
             </span>
           ))}
+          {/* TRUST-12: the room sees a pot; Polo only keeps its count. */}
+          <span className={styles.small}>{t.money.disclaimer}</span>
         </div>
         <div className={styles.sold}>
           <span className={styles.small}>{t.auction.soldList}</span>

@@ -160,7 +160,7 @@ export function AdminScores() {
                 <span className={a.inboxText}>
                   <span className={a.inboxTitle}>
                     <span className={`${a.inboxMark} ${a.inboxMarkHot}`} aria-hidden="true" />
-                    {IB.tiebreak(snapshot.groups.find((g) => g.id === q.groupId)?.number ?? 0, q.hole)}
+                    {IB.tiebreak(snapshot.groups.find((g) => g.id === q.groupId)?.number ?? 0, q.hole, settings.modules.snake.label)}
                   </span>
                   <span className={a.inboxSub}>
                     {dayOf(q.roundId)}. {t.card.whoHoledLast}
@@ -414,7 +414,7 @@ function TiebreakAnswers() {
   return (
     <section className={a.section}>
       <div className={a.sectionTitle}>
-        <strong>{IB.answeredTitle}</strong>
+        <strong>{IB.answeredTitle(settings.modules.snake.label)}</strong>
         <span className={a.count}>{answers.length}</span>
       </div>
       <span className={a.help}>{IB.answeredHint}</span>
@@ -422,7 +422,7 @@ function TiebreakAnswers() {
         {answers.map((tb) => (
           <div key={`${tb.roundId}${tb.groupId}${tb.hole}`} className={a.inboxRow}>
             <span className={a.inboxText}>
-              <span className={a.inboxTitle}>{IB.tiebreak(group(tb.groupId)!.number, tb.hole)}</span>
+              <span className={a.inboxTitle}>{IB.tiebreak(group(tb.groupId)!.number, tb.hole, settings.modules.snake.label)}</span>
               <span className={a.inboxSub}>{IB.answeredSub(t.round.day(round(tb.roundId)!.number), name(tb.lastHoledPlayerId) ?? '?', name(tb.decidedBy))}</span>
             </span>
             <span className={a.inboxActions}>
@@ -436,7 +436,7 @@ function TiebreakAnswers() {
       <Sheet open={!!changing && !!current} onClose={() => setChanging(null)} title={changing ? IB.changeTitle(group(changing.groupId)?.number ?? 0, changing.hole) : ''}>
         {changing && (
           <div className="stack">
-            <p className="help">{IB.changeHint}</p>
+            <p className="help">{IB.changeHint(settings.modules.snake.label)}</p>
             {candidates(changing).map((pid) => (
               <button key={pid} type="button" className="btn btn--secondary btn--block" aria-pressed={current?.lastHoledPlayerId === pid} disabled={busy} onClick={() => void pick(pid)}>
                 {name(pid)}

@@ -185,6 +185,8 @@ function Card({ what }: { what: ShareKind }) {
           </div>
         ))}
       </Rows>
+      {/* TRUST-12: the image travels on its own, so it says what Polo is and is not. */}
+      <p className={styles.disclaimer}>{t.money.disclaimer}</p>
       {footer}
     </>
   )

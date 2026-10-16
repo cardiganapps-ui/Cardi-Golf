@@ -13,6 +13,8 @@ export const TiebreakSheet = memo(function TiebreakSheet(p: {
   candidates: readonly string[] | null
   named: ReadonlyArray<{ id: string; name: string }>
   threshold: number
+  /** The snake's label (STRAT-11). */
+  game: string
   busy: boolean
   onAnswer: (lastHoled: string | undefined) => void
   onClose: () => void
@@ -20,7 +22,7 @@ export const TiebreakSheet = memo(function TiebreakSheet(p: {
   return (
     <Sheet open={!!p.candidates} onClose={p.onClose} title={S.whoHoledLast}>
       <div className="stack">
-        <p className="help">{S.whoHoledLastHint(p.threshold)}</p>
+        <p className="help">{S.whoHoledLastHint(p.threshold, p.game)}</p>
         {p.candidates?.map((id) => {
           const name = p.named.find((x) => x.id === id)?.name
           if (name === undefined) return null
@@ -34,7 +36,7 @@ export const TiebreakSheet = memo(function TiebreakSheet(p: {
         <button type="button" className="btn btn--ghost btn--block" disabled={p.busy} onClick={() => p.onAnswer(undefined)}>
           {S.whoHoledLastUnknown}
         </button>
-        <p className="help">{S.whoHoledLastUnknownHint}</p>
+        <p className="help">{S.whoHoledLastUnknownHint(p.game)}</p>
       </div>
     </Sheet>
   )

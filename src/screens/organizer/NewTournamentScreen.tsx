@@ -20,12 +20,14 @@ import { Link, useBlocker, useLocation, useNavigate, useSearchParams, type Block
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { IconChevronRight } from '../../components/icons'
-import { CopyButton, Field, ShareButton } from '../../components/ui'
+import { CopyButton, Field, ShareButton, Toggle } from '../../components/ui'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { useViewFocus } from '../../components/viewFocus'
 import { leaveSheetHistory } from '../../components/sheetHistory'
 import { useAuth } from '../../data/auth'
 import { createTournament, upsertRound } from '../../data/api'
+import { confirmAdults } from '../../data/myData'
+import { moneyInPlay } from '../../engine/settings/moneyInPlay'
 import { PRESETS, type PresetId } from '../../engine/games/presets'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import { checkPrizePool } from '../../engine/settings/prizeCheck'
@@ -92,6 +94,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<{ slug: string; joinCode: string } | null>(null)
+  /** With money in play, the organizer says every player is 18 or older before it exists (TRUST-13). */
+  const [adults, setAdults] = useState(false)
 
   useEffect(() => {
     if (!demo && ready && (!user || isAnonymous)) navigate('/organizer/login', { replace: true })
@@ -125,7 +129,9 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
   // What parses but makes no sense (MONEY-13) holds «Crear» too, named where the button is.
   const sense = useMemo(() => (parsed.success ? settingsSense(parsed.data, field) : []), [parsed, field])
-  const creatable = parsed.success && !!check?.ok && sense.length === 0
+  const withMoney = parsed.success && moneyInPlay(parsed.data)
+  const moneyOk = parsed.success && !!check?.ok && sense.length === 0
+  const creatable = moneyOk && (!withMoney || adults)
   const W = t.organizer.wizard
   const stepNames = [W.step1, W.step2, W.review]
 
@@ -208,6 +214,8 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         } catch (e) {
           console.warn('[wizard] rounds not created', e)
         }
+        // What the organizer said above «Crear». If it doesn't reach the server, Comité › Torneo asks again.
+        if (withMoney) await confirmAdults(row.id, true).catch((e: unknown) => console.warn('[wizard] adults not recorded', e))
       }
       clearDraft(key)
       setCreated({ slug: row.slug, joinCode: row.joinCode })
@@ -289,8 +297,9 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       {shown === 3 && (
         <div className={styles.form}>
           <ReviewCard name={name} tagline={tagline} settings={settings} players={players} check={check} />
+          {withMoney && <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />}
           {error && <p className="error">{error}</p>}
-          {!creatable && <p className="help">{W.fixToCreate}</p>}
+          {!moneyOk && <p className="help">{W.fixToCreate}</p>}
           {sense.length > 0 && (
             <ul className="error">
               {sense.map((x) => (

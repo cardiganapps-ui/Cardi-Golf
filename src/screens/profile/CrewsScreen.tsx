@@ -9,7 +9,7 @@ import { Field, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { EmptyState } from '../../components/primitives'
 import { IconChevronLeft, IconChevronRight } from '../../components/icons'
-import { createCrew, crewPreview, joinCrew, myCrews, type MyCrew } from '../../data/crews'
+import { createCrew, crewPreview, joinCrewRequest, myCrews, type MyCrew } from '../../data/crews'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 import { humanError, UserError } from '../../lib/humanError'
@@ -53,9 +53,13 @@ export function CrewsScreen() {
   const onJoin = (e: FormEvent) => {
     e.preventDefault()
     void run(async () => {
-      const slug = await joinCrew(code)
-      if (slug) navigate(`/c/${slug}`)
-      else toast(C.badCode)
+      // A crew that approves who enters takes a request instead (0071, TRUST-11).
+      const r = await joinCrewRequest(code)
+      if (r.status === 'joined' && r.slug) navigate(`/c/${r.slug}`)
+      else if (r.status === 'requested') {
+        toast(C.alreadyAsked)
+        setCode('')
+      } else toast(C.badCode)
     })
   }
 
@@ -140,24 +144,30 @@ export function CrewJoinScreen() {
     <div className={`${styles.screen} ${styles.narrow}`}>
       <div className={styles.head}>
         <h1>{C.joinTitle(crew.name)}</h1>
-        <p className={styles.lede}>{crew.isMember ? C.already : C.joinLine(crew.members)}</p>
+        <p className={styles.lede}>{crew.isMember ? C.already : crew.requested ? C.alreadyAsked : crew.approval ? C.joinApprovalLine(crew.members) : C.joinLine(crew.members)}</p>
       </div>
       {crew.isMember ? (
         <Link className="btn btn--primary" to={`/c/${crew.slug}`}>
           {crew.name}
         </Link>
-      ) : (
+      ) : crew.requested ? null : (
         <button
           className="btn btn--primary"
           type="button"
           disabled={busy}
           onClick={() => {
             setBusy(true)
-            joinCrew(code)
-              .then((slug) => {
-                if (!slug) throw new UserError(C.badCode)
+            joinCrewRequest(code)
+              .then((r) => {
+                if (r.status === 'requested') {
+                  toast(C.requested(crew.name))
+                  setCrew({ ...crew, requested: true })
+                  setBusy(false)
+                  return
+                }
+                if (r.status !== 'joined' || !r.slug) throw new UserError(C.badCode)
                 toast(C.joined(crew.name))
-                navigate(`/c/${slug}`, { replace: true })
+                navigate(`/c/${r.slug}`, { replace: true })
               })
               .catch((e) => {
                 toast(humanError(e))
@@ -165,7 +175,7 @@ export function CrewJoinScreen() {
               })
           }}
         >
-          {C.joinCta}
+          {crew.approval ? C.joinAsk : C.joinCta}
         </button>
       )}
     </div>

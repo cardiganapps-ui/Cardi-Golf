@@ -9,7 +9,7 @@
  */
 import { ordinal, t } from '../../../i18n/es-MX'
 import { countback, flattenRanks, onlyWithResult, rankBy, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
-import { formatFor, toParText, withTrueMinus, type Entrant, type Figure, type FormatStandings } from '../../formats'
+import { figureKind, formatFor, toParText, withTrueMinus, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
 import { fieldShape, individualPrizeAmounts } from '../../settings/prizeCheck'
@@ -188,10 +188,14 @@ export const individualModule: GameModule<IndividualState> = {
 
   prizes(state, ctx) {
     const label = ctx.settings.modules.individual.label
+    const kind = figureKind(ctx.settings)
     const out: PrizeAward[] = []
     for (const row of state.rows) {
       const p = state.prizes[row.playerId]
       if (!p) continue
+      // COPY-19: where the prize comes from, in words: the place and the figure, and «si terminara ahora» while it runs.
+      const where = `${row.entrant.name} ${state.final ? 'terminó' : 'va'} ${ordinal(row.label)} con ${t.common.figure(row.figure.text, row.figure.value, kind)}${state.final ? '' : ', si el torneo terminara ahora'}`
+      const steps = [where, ...p.why.steps]
       // A team's prize is split between its members, so each is paid their share.
       const members = row.entrant.playerIds
       const each = Math.floor(p.amount / members.length)
@@ -206,7 +210,7 @@ export const individualModule: GameModule<IndividualState> = {
           amount: each + extra,
           final: state.final,
           // A member's line is titled with what the member is paid; the team's prize is a step (MONEY-15).
-          why: members.length > 1 ? { title: pesos(each + extra), steps: [...p.why.steps, `${row.entrant.name}: ${pesos(p.amount)} ÷ ${members.length} = ${pesos(each)}${extra ? ' (+$1 de redondeo)' : ''}`] } : p.why,
+          why: members.length > 1 ? { title: pesos(each + extra), steps: [...steps, `${row.entrant.name} lo reparte entre ${members.length}: ${pesos(p.amount)} entre ${members.length} = ${pesos(each)} cada uno${extra ? ', más $1 del redondeo' : ''}`] } : { ...p.why, steps },
         })
       }
     }

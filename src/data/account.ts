@@ -169,7 +169,7 @@ async function tournamentName(tid: string, queuedAs: string | null): Promise<str
  * on to wait for a PIN), and said «espera a tener señal» even when no signal
  * would ever send them.
  */
-export async function unsentReason(action: 'signOut' | 'switch'): Promise<string | null> {
+export async function unsentReason(action: 'signOut' | 'switch' | 'delete'): Promise<string | null> {
   const u = unsentWrites()
   if (!u) return null
   const name = await tournamentName(u.tournamentId, u.name)
@@ -206,8 +206,8 @@ export type SignOutResult = { done: true } | { done: false; reason: string }
  */
 export const useLateSignOut = create<{ at: number | null }>(() => ({ at: null }))
 
-/** What a signed-out person leaves on the phone goes with them: the profile in memory, «Tu último torneo», the saved boards. */
-async function forgetSignedOut() {
+/** What a signed-out person leaves on the phone goes with them: the profile in memory, «Tu último torneo», the saved boards. Also after deleting the account (myData.ts). */
+export async function forgetSignedOut() {
   useMyProfile.getState().clear()
   setLastTournament(null)
   forgetLegal()

@@ -830,9 +830,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/settings/reglamento.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -844,9 +846,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/settings/reglamento.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -874,9 +878,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/lib/copyRules.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -888,9 +894,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/lib/feedLines.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -918,9 +926,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/engine/core/explanations.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -996,9 +1006,11 @@
       "workstream": "W10",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/screens/admin/settingsLabels.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3554,9 +3566,11 @@
       "workstream": "W6",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 220,
+      "tests": [
+        "src/screens/tournament/labels.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3769,9 +3783,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "supabase/tests/self_service.sql",
+        "src/screens/profile/MyDataSection.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3783,11 +3800,14 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "src/lib/backupCron.test.ts",
+        "src/lib/backupTables.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Backups taken before this change still hold secrets; deleting old backups is Diego's decision (handoff 5e)."
     },
     {
       "id": "TRUST-11",
@@ -3797,9 +3817,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "supabase/tests/crew_controls.sql",
+        "src/screens/profile/CrewScreen.owner.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3811,11 +3834,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/engine/settings/moneyInPlay.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "A Mexican lawyer’s written view on the Ley Federal de Juegos y Sorteos (the Calcutta, the house cut) costs money: Diego’s decision (handoff)."
     },
     {
       "id": "TRUST-13",
@@ -3825,9 +3850,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/profile/EntrarScreen.adult.test.tsx",
+        "src/screens/admin/AdultsCard.test.tsx",
+        "src/data/legal.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3875,9 +3904,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/tournament/MyDataCard.test.tsx",
+        "supabase/tests/self_service.sql"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Lo que el Comité captura de cada jugador» lists what the Comité types and who sees it, and the Comité's player sheet opens on a line saying so, linked there (both pinned by tests). Left: the terms don't make the organizer confirm he may share the people he adds; nobody added by a Comité is told on the face grid or after the PIN; no «Esto es lo que el Comité guardó de ti» view or «Pedir corrección»; estimate_inputs and form_guide are readable by the whole field outside the auction."
     },
@@ -3889,9 +3921,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/platform/ViewReason.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Quién opera Polo», pinned word for word, says what the operator sees and can do (any tournament with its money, a Protegido one unlocked with a reason, every account's email, sign-ins, profile, tournaments, crews with members, friend counts, device players; block, delete, notices). Left: the rule isn't written once: CLAUDE.md §7 says the social graph stays private from the admin, while platform_crew returns every member and the crew's join code and platform_person returns crews and friend counts; drop the join code and say in CLAUDE.md the admin sees crews for moderation, or cut the panels to counts."
     },
@@ -3903,11 +3938,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/retention.sql"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Retention periods on further personal data (audit images, finished tournaments) are proposed to Diego in handoff 5g."
     },
     {
       "id": "TRUST-19",
@@ -3935,11 +3972,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The terms were drafted without counsel; a lawyer’s review costs money (Diego’s decision)."
     },
     {
       "id": "TRUST-22",
@@ -3949,11 +3988,15 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 219,
+      "tests": [
+        "supabase/tests/admin_access.sql",
+        "src/screens/admin/AdminHistory.operator.test.tsx",
+        "src/screens/profile/AdminAccesses.test.tsx"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The operator's reads straight from the database (the dashboard, SQL) are not logged; the notice says so."
     },
     {
       "id": "TRUST-23",

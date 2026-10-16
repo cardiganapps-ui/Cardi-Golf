@@ -15,7 +15,7 @@ const claim = vi.fn(async () => ({ data: null as { player_id: string } | null, e
 const from = vi.fn(() => ({ select: () => ({ maybeSingle: claim }) }))
 vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({ rpc, auth: { getSession }, from }), authSettings: async () => null }))
 
-const { acceptLegal, compareVersions, currentVersions, flushLegal, forgetLegal, legalUpdate } = await import('./legal')
+const { acceptLegal, compareVersions, currentVersions, flushLegal, forgetLegal, legalUpdate, sayAdult } = await import('./legal')
 const { useAuth } = await import('./auth')
 const { claimPlayer } = await import('./api')
 
@@ -45,6 +45,41 @@ describe('versions', () => {
     expect(compareVersions('2026-10-12', '2026-10-12.1')).toBeLessThan(0)
     expect(compareVersions('2026-10-01', '2026-09-30.7')).toBeGreaterThan(0)
     expect(compareVersions(cur.privacy, cur.privacy)).toBe(0)
+  })
+})
+
+describe('18 or older (TRUST-13, confirm_adult in 0070)', () => {
+  it('an account\'s sign-up carries it to the server with the acceptance, once', async () => {
+    signIn('u1', false)
+    sayAdult()
+    rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms)).mockResolvedValueOnce({ data: null, error: null })
+    expect(await acceptLegal('account')).toBe(true)
+    expect(rpc).toHaveBeenCalledWith('confirm_adult', { p_terms: cur.terms, p_context: 'account', p_age_seconds: expect.any(Number), p_user: 'u1' })
+    // Said for that sign-in only.
+    rpc.mockClear()
+    rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms))
+    await acceptLegal('update')
+    expect(rpc).not.toHaveBeenCalledWith('confirm_adult', expect.anything())
+  })
+
+  it('a PIN phone (anonymous) records no age; an old check (over an hour) carries nothing', async () => {
+    sayAdult()
+    rpc.mockResolvedValue(answer(cur.privacy, cur.terms))
+    await acceptLegal('pin')
+    expect(rpc).not.toHaveBeenCalledWith('confirm_adult', expect.anything())
+    signIn('u2', false)
+    localStorage.setItem(KEY, JSON.stringify({ adult: { at: Date.now() - 2 * 3_600_000 } }))
+    await acceptLegal('account')
+    expect(rpc).not.toHaveBeenCalledWith('confirm_adult', expect.anything())
+    rpc.mockReset()
+  })
+
+  it('a server without 0070 refuses the age and the acceptance still stands', async () => {
+    signIn('u1', false)
+    sayAdult()
+    rpc.mockResolvedValueOnce(answer(cur.privacy, cur.terms)).mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'not found' } })
+    expect(await acceptLegal('account')).toBe(true)
+    expect(JSON.parse(localStorage.getItem(KEY)!).pending).toBeUndefined()
   })
 })
 

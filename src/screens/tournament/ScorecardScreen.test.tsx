@@ -297,7 +297,7 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     await tapSave(11_000) // hole 10: three at 2 putts, a tie
     const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
     expect(outbox.holes.some((h) => h.hole === 10)).toBe(false)
-    expect(within(ask).getByText(S.whoHoledLastUnknownHint)).toBeTruthy()
+    expect(within(ask).getByText(S.whoHoledLastUnknownHint('La Víbora'))).toBeTruthy()
     await answer(within(ask).getByRole('button', { name: S.whoHoledLastUnknown }))
     // The scores went in; no answer was sent, so the tiebreak stays «pendiente» for Comité › Tarjetas.
     expect(outbox.holes.find((h) => h.hole === 10)!.entries.length).toBeGreaterThan(0)

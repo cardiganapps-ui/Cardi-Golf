@@ -187,7 +187,7 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
   }
   const entryPot = settings.entryFee * field.players
   const houseCut = entryPot > 0 ? settings.houseCut : 0
-  if (houseCut > 0) lines.push({ moduleId: 'house', label: 'Para la casa', amount: houseCut, detail: fmt(houseCut) })
+  if (houseCut > 0) lines.push({ moduleId: 'house', label: 'Gastos del grupo', amount: houseCut, detail: fmt(houseCut) })
 
   if (percentIndividual) {
     // The individual game takes what is left, split by percentages.

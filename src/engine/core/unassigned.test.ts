@@ -89,7 +89,7 @@ describe('a cancelled day: its prizes are «por asignar», by pot, with what hap
     const best = st.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
     expect(best.why).toEqual({
       title: '$1,200 sin asignar',
-      steps: ['Mejor ronda reparte $2,400', 'Ya se repartió $1,200', 'Día 2 cancelado: su premio no se jugó', 'Quedan $1,200 sin asignar', 'El Comité decide: darlo a alguien, devolverlo o dejarlo para la casa.'],
+      steps: ['Mejor ronda reparte $2,400', 'Ya se repartió $1,200', 'Día 2 cancelado: su premio no se jugó', 'Quedan $1,200 sin asignar', 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.'],
     })
     // Everyone paid the entry: a refund of entry money goes back to all twelve alike.
     expect(best.contributors).toHaveLength(12)
@@ -188,7 +188,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
         label: 'La Víbora, día 2, grupo 1',
         amount: 600,
         note: 'Responde el desempate del hoyo 18 («¿Quién embocó al último?») en Comité, sección Tarjetas.',
-        why: { title: '$600 esperan un desempate', steps: ['Día 2, grupo 1: falta decir quién embocó al último en el hoyo 18', 'En cuanto se responda, la víbora reparte los $600 de ese grupo. No es dinero por asignar.'] },
+        why: { title: '$600 esperan un desempate', steps: ['Día 2, grupo 1: falta decir quién embocó al último en el hoyo 18', 'En cuanto se responda, la Víbora reparte los $600 de ese grupo. No es dinero por asignar.'] },
       },
     ])
     // The bank holds it, and the list says so: no mismatch.
@@ -198,7 +198,7 @@ describe('an assignment its bucket does not cover is flagged, never paid', () =>
     snap.moneyAdjustments = call('snake', [{ kind: 'award', toPlayerId: 'p4', amount: 600 }])
     st = run(snap)
     expect(st.money.unassigned.assignments.map((a) => a.status)).toEqual(['orphan'])
-    expect(st.flags.warnings).toContain('Asignación sin pozo en La Víbora: hay $600 asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.')
+    expect(st.flags.warnings).toContain('Asignación sin dinero en La Víbora: hay $600 asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.')
     expect(st.prizes.some((p) => p.moduleId === 'adjustment')).toBe(false)
     // Answered: the snake pays its group, and nothing is held or paid twice.
     snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p10' })

@@ -17,7 +17,7 @@ describe('computeCore', () => {
     expect(pr.points).toBe(4)
     expect(pr.putts).toBe(3)
     expect(core.totals.p1!.points).toBe(4)
-    expect(pr.holes[4]!.why.steps[0]).toContain('SI 1')
+    expect(pr.holes[4]!.why.steps[0]).toContain('índice de golpe 1')
   })
 
   it('applies the Day 2 cut from Day 1 points', () => {

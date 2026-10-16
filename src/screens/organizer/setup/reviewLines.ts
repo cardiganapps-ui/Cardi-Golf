@@ -58,7 +58,7 @@ export function reviewGameLines(settings: TournamentSettings, check: PrizeCheck 
   }
   if (m.auction.enabled) {
     const slots = settings.auction.payout.map((s) => t.rules.slot(s.slot, 'place' in s ? s.place : undefined, 'tier' in s ? s.tier : undefined, s.share, settings.labels.lastPlace))
-    out.push({ key: 'auction', label: m.auction.label, value: W.reviewOwnPot, detail: W.reviewAuction(slots) })
+    out.push({ key: 'auction', label: m.auction.label, value: W.reviewAuctionPot, detail: W.reviewAuction(slots) })
   }
   for (const p of check?.sidePots ?? []) {
     out.push({ key: `side:${p.gameId}`, label: p.label, value: formatMoney(p.pot, cur), detail: W.reviewSidePot(p.detail), warn: unreachable.get(`game:${p.gameId}`) })

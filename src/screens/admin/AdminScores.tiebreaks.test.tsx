@@ -18,6 +18,9 @@ vi.mock('../../data/api', async (orig) => ({ ...(await orig<typeof import('../..
 const { AdminScores } = await import('./AdminScores')
 const IB = t.admin.inbox
 
+/** full12-live names its snake «La Víbora» (STRAT-11: the copy takes the label). */
+const SNAKE = 'La Víbora'
+
 /** full12-live with a tie on day 1: two of a group 3-putted hole 4, and one of them answered. */
 function mount() {
   const fx = getFixture('full12-live')!
@@ -51,14 +54,14 @@ afterEach(() => cleanup())
 describe('Comité › Tarjetas: answered snake tiebreaks can be changed (UX-22)', () => {
   it('lists the answer with who holed out last and who said so', () => {
     const { group, a, c, name } = mount()
-    const section = screen.getByText(IB.answeredTitle).closest('section')!
-    expect(within(section).getByText(IB.tiebreak(group.number, 4))).toBeTruthy()
+    const section = screen.getByText(IB.answeredTitle(SNAKE)).closest('section')!
+    expect(within(section).getByText(IB.tiebreak(group.number, 4, SNAKE))).toBeTruthy()
     expect(within(section).getByText(IB.answeredSub(t.round.day(1), name(a), name(c)))).toBeTruthy()
   })
 
   it('«Cambiar» offers the two at 3 putts, the current one pressed, and saves the other with the Comité as who decided', async () => {
     const { round, group, a, b, name, me } = mount()
-    fireEvent.click(within(screen.getByText(IB.answeredTitle).closest('section')!).getByRole('button', { name: IB.change }))
+    fireEvent.click(within(screen.getByText(IB.answeredTitle(SNAKE)).closest('section')!).getByRole('button', { name: IB.change }))
     const sheet = screen.getByRole('dialog', { name: IB.changeTitle(group.number, 4) })
     const options = within(sheet).getAllByRole('button').filter((x) => x.getAttribute('aria-pressed') !== null)
     expect(options.map((x) => x.textContent)).toEqual([name(a), name(b)])
@@ -69,7 +72,7 @@ describe('Comité › Tarjetas: answered snake tiebreaks can be changed (UX-22)'
 
   it('tapping the answer it already has changes nothing', async () => {
     const { group, a, name } = mount()
-    fireEvent.click(within(screen.getByText(IB.answeredTitle).closest('section')!).getByRole('button', { name: IB.change }))
+    fireEvent.click(within(screen.getByText(IB.answeredTitle(SNAKE)).closest('section')!).getByRole('button', { name: IB.change }))
     const sheet = screen.getByRole('dialog', { name: IB.changeTitle(group.number, 4) })
     await act(async () => fireEvent.click(within(sheet).getByRole('button', { name: name(a) })))
     expect(api.answerTiebreak).not.toHaveBeenCalled()

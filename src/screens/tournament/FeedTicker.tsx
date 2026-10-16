@@ -1,5 +1,5 @@
 /**
- * Live feed ticker (§9.2): the latest derived events with light commentary.
+ * Live feed ticker (§9.2): the latest derived events with light commentary (COPY-15: `feedLines`).
  */
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { t } from '../../i18n/es-MX'
@@ -7,11 +7,11 @@ import type { FeedEvent } from '../../engine/core/feed'
 import { useBoards } from '../../data/useBoards'
 import styles from './FeedTicker.module.css'
 import { memo, type ReactNode } from 'react'
-import { IconBird, IconFlag, IconRing, IconSnake } from '../../components/icons'
+import { IconBird, IconFlag, IconRing, IconSnake, IconTarget } from '../../components/icons'
 import { ease, easeBoard, still } from '../../design/motion'
-import { feedKey, feedText } from '../../lib/figureText'
+import { feedKey, feedLines, feedWords } from '../../lib/figureText'
 
-const ICON: Record<FeedEvent['kind'], ReactNode> = { birdie: <IconBird size={18} />, leadChange: <IconFlag size={18} />, snakePass: <IconSnake size={18} />, honoreeHole: <IconRing size={18} /> }
+const ICON: Record<FeedEvent['kind'], ReactNode> = { birdie: <IconBird size={18} />, leadChange: <IconFlag size={18} />, snakePass: <IconSnake size={18} />, honoreeHole: <IconRing size={18} />, threePutt: <IconTarget size={18} /> }
 
 /** Memoized: its own lines decide when it renders, not the screen around it (PERF-09). */
 export const FeedTicker = memo(function FeedTicker({ limit = 8, big = false }: { limit?: number; big?: boolean }) {
@@ -19,7 +19,9 @@ export const FeedTicker = memo(function FeedTicker({ limit = 8, big = false }: {
   const lines = useBoards((data) => {
     if (!data) return null
     const nameOf = (id: string) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
-    return data.state.feed.slice(0, limit).map((e) => ({ key: feedKey(e), kind: e.kind, text: feedText(e, nameOf), round: e.roundNumber }))
+    // The lines are picked over the whole feed, so the ones shown read as the TV and every other phone read them (COPY-15).
+    const texts = feedLines(data.state.feed, nameOf, feedWords(data.settings))
+    return data.state.feed.slice(0, limit).map((e, i) => ({ key: feedKey(e), kind: e.kind, text: texts[i]!, round: e.roundNumber }))
   })
   // Under reduced motion the lines take their places at once: a height that grows is movement too.
   const reduce = useReducedMotion()

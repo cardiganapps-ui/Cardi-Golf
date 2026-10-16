@@ -28,7 +28,7 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
 4. [ ] **Decir que sí al proyecto de staging** cuando salga el aviso de permiso.
    - Es un segundo proyecto **gratis** en tu organización Cardi-Golf de Supabase.
    - Sirve para probar cada migración antes de producción, para que las vistas previas no toquen datos reales, y como respaldo en caliente si Supabase falla en el viaje.
-5. [ ] **Seis decisiones** (contesta en el chat):
+5. [ ] **Siete decisiones** (contesta en el chat):
    - **a. Dos teléfonos capturan distinto el mismo hoyo.**
      - Hoy gana el último, sin avisar.
      - Propongo que gane el primero que llegó y que al segundo le pregunte. Ya está hecho así en la PR #106 (sin juntar todavía): el segundo teléfono ve «Hoyo 7: Diego ya capturó a Justo: 6. No se guardó lo tuyo: 5.», con «Guardar el mío» o «Dejar el suyo».
@@ -52,12 +52,22 @@ El plan completo está en `docs/quality/PLAN.md` y el avance en `docs/quality/le
      - Desde la PR #114, al borrar una cuenta, su jugador queda como «Jugador borrado» y el registro ya no guarda su correo. Pero las copias de antes siguen teniendo su nombre y su correo, para siempre.
      - Propongo borrar en automático los respaldos de más de 35 días (una regla de R2, gratis), y decirlo en el aviso. Para el viaje sobran: el de cada noche y los de las 5 semanas anteriores.
      - No lo hago sin tu sí, porque borra datos. Si prefieres otro plazo (90 días, un año), dime cuál.
+     - Desde el 16 de octubre de 2026 (TRUST-10) las copias nuevas ya no llevan ningún PIN, enlace de un solo uso ni dirección de avisos; las de antes sí. Borrarlas también es esta decisión.
      - Ojo al borrar una cuenta desde Admin de Polo: si el Comité propuso ese perfil a un jugador equivocado que se llama igual que la persona, ese jugador también queda como «Jugador borrado». La hoja de borrar dice en qué torneos; si uno no es de esa persona, cámbiale el nombre a mano en el Comité.
    - **f. Tu domicilio para el aviso de privacidad** (TRUST-04).
      - La ley pide que el aviso diga el domicilio de quien es responsable de los datos. Hoy dice tu nombre, pero no un domicilio.
      - Puede ser una dirección para recibir correspondencia (de oficina, por ejemplo); no tiene que ser tu casa.
      - Mándamela en el chat y la agrego. Si prefieres que el responsable sea una empresa tuya, dime su nombre legal y su domicilio.
      - Ojo: el aviso nuevo (versión 2026-10-12.3) lo escribí yo con lo que dice la ley, sin abogado. Si un día quieres que lo revise uno, está en `src/i18n/es-MX.ts` (`legal.privacy`), y cada tabla de la base de datos dice en qué sección del aviso está (`src/lib/dataInventory.ts`).
+     - Desde el 16 de octubre de 2026 (TRUST-21) los términos también son más largos (ley y tribunales de México, límite de responsabilidad, qué toca a quien organiza, edad, suspensión y cómo pedir que se revise), y dicen que no los ha revisado un abogado. Si contratas uno, que vea además si la Calcutta, los botes y los gastos del grupo caen en la Ley Federal de Juegos y Sorteos para ti y para quien organiza (TRUST-12): la app ya dice en Dinero, en la tele de la subasta y en la liquidación que Polo solo lleva la cuenta y no cobra, no guarda ni mueve dinero.
+   - **g. Plazos de borrado que te tocan a ti** (TRUST-18, decisión, gratis).
+     - Desde el 16 de octubre de 2026, cada noche, después del respaldo, se borra solo lo que ya cumplió: enlaces de un solo uso vencidos, respuestas a hoyos guardados de hace más de 90 días, avisos de más de 12 meses, datos técnicos de más de 30 días, usuarios anónimos sin usar 180 días que no tienen nada en ningún torneo, y el historial de un torneo borrado hace 90 días. Nunca nada de un torneo que exista. Admin de Polo › Salud dice qué se borró cada noche.
+     - Lo que sigue sin plazo, y te propongo:
+       - **Las fotos y los nombres dentro del historial de un torneo terminado**: quitarlos a los 12 meses de terminado (el historial se queda, sin los datos de las personas). Los golpes y el dinero no se tocan.
+       - **Los registros de Admin de Polo** (lo que hiciste y abriste): borrar a los 24 meses.
+       - **Los campos y sus fotos de tarjeta**: no borrarlos (los usan otros torneos).
+       - **Lo que Supabase guarda de cada sesión** (IP y navegador): Supabase lo maneja; no lo tocamos.
+     - Dime sí, otro plazo o no, punto por punto. Hasta entonces el aviso dice que no tienen fecha.
 6. [ ] **Que golf@cardigan.mx reciba correos** (TRUST-01, gratis). El aviso de privacidad dice que hoy no recibe mensajes, y por eso las solicitudes sobre datos llegan a ti directo o por el Comité.
    - **Pasos:**
      1. Cloudflare → la zona `cardigan.mx` → **Email** → **Email Routing** → **Get started** / **Enable**.

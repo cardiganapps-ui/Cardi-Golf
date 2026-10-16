@@ -88,7 +88,7 @@ const painted = () =>
   })
 /** Whose row carries the snake's mark. */
 const markedRow = () => {
-  const marks = screen.queryAllByRole('img', { name: S.snakeHolder })
+  const marks = screen.queryAllByRole('img', { name: S.snakeHolder('La Víbora') })
   return marks.map((m) => document.getElementById(m.closest('[role="group"]')!.getAttribute('aria-labelledby')!)!.textContent!.trim())
 }
 const screenEl = () => document.querySelector('[class*="_screen_"]')!
@@ -135,11 +135,11 @@ describe('the snake on the Tarjeta (MOT-07)', () => {
     await tapSave(20_000)
     expect(holeOnScreen()).toBe(11)
     expect(markedRow()).toEqual([nameOf('p3')])
-    expect(screen.getByText(S.snakePasses(nameOf('p3')))).toBeTruthy()
-    expect(document.querySelector('[aria-live="polite"]')?.textContent).toContain(`${S.savedHole(10)}. ${S.snakePasses(nameOf('p3'))}`)
+    expect(screen.getByText(S.snakePasses(nameOf('p3'), 'La Víbora'))).toBeTruthy()
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toContain(`${S.savedHole(10)}. ${S.snakePasses(nameOf('p3'), 'La Víbora')}`)
     // The line goes after a few seconds; the mark stays on his row for the rest of the round.
     act(() => void vi.advanceTimersByTime(5000))
-    expect(screen.queryByText(S.snakePasses(nameOf('p3')))).toBeNull()
+    expect(screen.queryByText(S.snakePasses(nameOf('p3'), 'La Víbora'))).toBeNull()
     expect(markedRow()).toEqual([nameOf('p3')])
   })
 
@@ -151,7 +151,7 @@ describe('the snake on the Tarjeta (MOT-07)', () => {
     await tapSave(30_000)
     expect(holeOnScreen()).toBe(12)
     expect(markedRow()).toEqual([nameOf('p4')])
-    expect(screen.getByText(S.snakePasses(nameOf('p4')))).toBeTruthy()
+    expect(screen.getByText(S.snakePasses(nameOf('p4'), 'La Víbora'))).toBeTruthy()
   })
 
   it('a save that leaves the snake where it was says nothing', async () => {

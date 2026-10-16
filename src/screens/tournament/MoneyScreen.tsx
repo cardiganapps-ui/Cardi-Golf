@@ -292,6 +292,8 @@ export function MoneyScreen() {
     lines.push('', settle === 'bank' ? M.viaBank : M.p2p)
     const transfers = settle === 'bank' ? money.viaBank : money.peerToPeer
     for (const tr of transfers) if (tr.amount > 0) lines.push(M.payText(words(tr.from, tr.to), formatMoney(tr.amount, cur)))
+    // TRUST-12: the text travels on its own, so it says what Polo is and is not.
+    lines.push('', t.money.disclaimer)
     return lines.join('\n')
   }, [people, settle, money, snapshot.tournament.name, name, words, cur])
 
@@ -368,7 +370,7 @@ export function MoneyScreen() {
         )}
         {!u.closing && !u.openDays && !money.banker.balanced && <span className={styles.bankNote}>{M.provisional}</span>}
         {u.closing && u.total > 0 && <span className={styles.bankNote}>{t.unassigned.totalHint}</span>}
-        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal, cur))}</span>}
+        {u.closing && u.total > 0 && u.heldTotal > 0 && <span className={styles.bankNote}>{t.unassigned.heldExtra(formatMoney(u.heldTotal, cur), settings.modules.snake.label)}</span>}
       </section>
 
       <UnassignedMoney />
@@ -548,6 +550,8 @@ export function MoneyScreen() {
           {state.tournamentFinal && paidSection}
         </>
       )}
+      {/* TRUST-12: on the screen that tallies the money, what Polo does and does not do with it. */}
+      <p className="help">{t.money.disclaimer}</p>
     </div>
   )
 }

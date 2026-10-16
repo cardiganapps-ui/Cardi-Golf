@@ -150,6 +150,16 @@
 }
 
 /* ---- Sections and ruled rows ---- */
+/* A row with the owner's buttons beside it (a crew's members and requests, TRUST-11): the row takes the room left. */
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.memberRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
 .section {
   display: flex;
   flex-direction: column;

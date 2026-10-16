@@ -293,11 +293,11 @@ export interface CrewRow {
   lastOutingAt: string | null
 }
 
+/** One crew as the admin sees it: its members and outings, never its join code (TRUST-17, 0068). */
 export interface PlatformCrew {
   id: string
   slug: string
   name: string
-  joinCode: string
   createdAt: string
   ownerId: string
   members: Array<{ profileId: string; handle: string; displayName: string; avatarUrl: string | null; role: 'owner' | 'member'; joinedAt: string }>
@@ -363,6 +363,11 @@ export interface Health {
   database: { lastMigration: { name: string; at: string } | null; notifications24h: number }
   people: { blocked: number; deviceLocks: number; playerLocks: number }
   flags: AppFlags
+  /** The nightly deletion (0069, TRUST-18): its last night, and what it deleted over the week. Absent before 0069. */
+  retention?: {
+    last: { at: string; ok: boolean; counts: Record<string, number>; error: string | null } | null
+    week: Record<string, number>
+  }
 }
 
 /** Salud's telemetry (0037, STRAT-02): what the phones reported over the last hours. */
@@ -389,12 +394,16 @@ export interface PlatformApi {
   daily(days: number): Promise<PlatformDay[]>
   funnel(days: number): Promise<PlatformFunnel>
   tournaments(q: TournamentQuery): Promise<PlatformTournamentList>
-  tournament(id: string): Promise<PlatformTournament | null>
+  /**
+   * Opening a tournament, an account or a crew is logged with the admin's reason (0068, TRUST-22). Without one the
+   * server answers PV001 (`needsViewReason`) unless he gave one for it in the last two hours.
+   */
+  tournament(id: string, reason?: string): Promise<PlatformTournament | null>
   unlock(tournamentId: string, reason: string, minutes?: number): Promise<string>
   relock(tournamentId: string): Promise<void>
   setProtected(tournamentId: string, on: boolean, reason?: string): Promise<void>
   people(q: PeopleQuery): Promise<PeopleList>
-  person(id: string): Promise<Person | null>
+  person(id: string, reason?: string): Promise<Person | null>
   deletePreview(id: string): Promise<DeletePreview>
   block(id: string, reason: string): Promise<void>
   unblock(id: string, reason: string): Promise<void>
@@ -410,7 +419,7 @@ export interface PlatformApi {
   mergeCourses(keepId: string, dropId: string, teeMap: Record<string, string>, reason: string): Promise<{ rounds: number; refreshed: number }>
   deleteCourse(id: string, reason: string): Promise<void>
   crews(q: { q?: string; limit?: number; offset?: number }): Promise<{ total: number; rows: CrewRow[] }>
-  crew(id: string): Promise<PlatformCrew | null>
+  crew(id: string, reason?: string): Promise<PlatformCrew | null>
   removeCrewMember(crewId: string, profileId: string, reason: string): Promise<'removed' | 'handed' | 'deleted'>
   deleteCrew(crewId: string, confirmName: string, reason: string): Promise<void>
   audience(): Promise<Audience>
@@ -422,6 +431,11 @@ export interface PlatformApi {
   /** What the phones reported over the last `hours` (1 to 720). */
   telemetry(hours: number): Promise<Telemetry>
   setFlag(key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner', value: boolean | string | null, reason: string): Promise<AppFlags>
+}
+
+/** The server wants the admin's reason before it opens this (PV001, 0068). */
+export function needsViewReason(e: unknown): boolean {
+  return e instanceof ApiError && e.code === 'PV001'
 }
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -445,14 +459,14 @@ export const supabasePlatformApi: PlatformApi = {
       p_limit: limit,
       p_offset: offset,
     }),
-  tournament: (id) => rpc<PlatformTournament | null>('platform_tournament', { p_tournament_id: id }),
+  tournament: (id, reason) => rpc<PlatformTournament | null>('platform_tournament', { p_tournament_id: id, ...(reason ? { p_reason: reason } : {}) }),
   unlock: (tournamentId, reason, minutes = 30) => rpc<string>('platform_unlock', { p_tournament_id: tournamentId, p_reason: reason, p_minutes: minutes }),
   relock: (tournamentId) => rpc<void>('platform_relock', { p_tournament_id: tournamentId }),
   setProtected: (tournamentId, on, reason) =>
     rpc<void>('set_tournament_protected', { p_tournament_id: tournamentId, p_on: on, p_reason: reason ?? null }),
   people: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
     rpc<PeopleList>('platform_people', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
-  person: (id) => rpc<Person | null>('platform_person', { p_user_id: id }),
+  person: (id, reason) => rpc<Person | null>('platform_person', { p_user_id: id, ...(reason ? { p_reason: reason } : {}) }),
   deletePreview: (id) => rpc<DeletePreview>('platform_delete_preview', { p_user_id: id }),
   block: (id, reason) => rpc<void>('platform_block', { p_user_id: id, p_reason: reason }),
   unblock: (id, reason) => rpc<void>('platform_unblock', { p_user_id: id, p_reason: reason }),
@@ -476,7 +490,7 @@ export const supabasePlatformApi: PlatformApi = {
   mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }),
   deleteCourse: (id, reason) => rpc<void>('platform_delete_course', { p_course_id: id, p_reason: reason }),
   crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }),
-  crew: (id) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id }),
+  crew: (id, reason) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }),
   removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }),
   deleteCrew: (crewId, confirmName, reason) => rpc<void>('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
   audience: () => rpc<Audience>('platform_audience'),

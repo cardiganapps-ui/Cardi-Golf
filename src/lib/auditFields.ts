@@ -48,6 +48,8 @@ const KIND: Record<string, Kind> = {
   released_at: 'moment',
   voided_at: 'moment',
   handicaps_locked_at: 'moment',
+  adults_confirmed_at: 'moment',
+  done_at: 'moment',
   tee_time: 'clock',
   picked_up: 'flag',
   disputed: 'flag',

@@ -256,7 +256,7 @@ export function CeremonyScreen() {
           id: 'snake',
           title: C.steps.snake(settings.modules.snake.label),
           icon: <IconSnake size={64} />,
-          winners: gold ? [{ playerIds: gold.playerIds, line: andList(gold.playerIds.map(nameOf)), sub: [t.stats.award.snakeGold.name, fig(gold.value, C.holesHeld)] }] : [],
+          winners: gold ? [{ playerIds: gold.playerIds, line: andList(gold.playerIds.map(nameOf)), sub: [t.stats.snakeAward(settings.modules.snake.label).name, fig(gold.value, C.holesHeld)] }] : [],
           list: rows.map(([pid, amt]) => ({ key: pid, name: nameOf(pid), figure: formatMoney(amt, cur) })),
         })
       }

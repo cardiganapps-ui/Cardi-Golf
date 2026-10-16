@@ -265,7 +265,7 @@ test('the leader\'s total and the snake\'s holder sit on the yellow plate, the o
   }
   const holder = page.locator('[class*="_holder_"]').first()
   await expect(holder).toBeVisible()
-  await expect(holder.getByRole('img', { name: t.games.holder })).toBeVisible()
+  await expect(holder.getByRole('img', { name: t.games.holder('La Víbora') })).toBeVisible()
   expect(await holder.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(plates.accent)
 })
 

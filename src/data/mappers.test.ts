@@ -284,7 +284,7 @@ describe('mappers: rows as PostgREST returns them → the engine’s types (QA-0
     const st = computeTournament(snap, settings)
     const ana = st.core.rounds[ROUND]![ANA]!
     expect([st.core.handicaps[ANA]!.base, ana.courseHcp, ana.playingHcp]).toEqual([21.9, 21.9, 18])
-    expect(ana.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', '80% de 21.9 = 17.52', 'Redondeado: 18'])
+    expect(ana.playingHcpWhy.steps).toEqual(['Hándicap base 21.9', 'Se juega con el 80%: 80% de 21.9 = 17.52', 'Redondeado al entero: 18'])
   })
 
   it('a course keeps only its own tees, in their saved order, each with only its own holes by number; rating "71.2" → 71.2', () => {

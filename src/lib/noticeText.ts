@@ -87,6 +87,10 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       return { text: S.notice.round_invite(who, n.data.tournament ?? ''), to: '/' }
     case 'crew_join':
       return { text: S.notice.crew_join(who, n.data.crew ?? ''), to: n.data.slug ? `/c/${n.data.slug}` : '/crews' }
+    case 'crew_request':
+      return { text: S.notice.crew_request(who, n.data.crew ?? ''), to: n.data.slug ? `/c/${n.data.slug}` : '/crews' }
+    case 'crew_accepted':
+      return { text: S.notice.crew_accepted(n.data.crew ?? ''), to: n.data.slug ? `/c/${n.data.slug}` : '/crews' }
     case 'platform_notice': {
       const title = n.data.title ?? S.notice.platformTitle
       const body = n.data.body ?? ''

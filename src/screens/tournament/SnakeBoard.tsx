@@ -28,7 +28,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className={styles.board}>
-      <p className="help">{(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(settings.modules.snake.puttsThreshold)}</p>
+      <p className="help">{(showMoney ? t.games.snakeRule : t.games.snakeRuleNoMoney)(settings.modules.snake.puttsThreshold, settings.modules.snake.label)}</p>
       {[...byRound.entries()].map(([rid, groups]) => (
         <section key={rid} className={styles.day}>
           <h2 className="h3">{t.round.day(groups[0]!.roundNumber)}</h2>
@@ -59,7 +59,7 @@ export function SnakeBoard({ onOpen }: { onOpen: (id: string) => void }) {
                       <span className={styles.avatarWrap}>
                         <Avatar name={name(pid)} url={byId.get(pid)?.avatarUrl} />
                         {holder && (
-                          <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder} transition={easeSlow}>
+                          <motion.span layoutId={`snake-${g.groupId}`} className={styles.snake} aria-label={t.games.holder(settings.modules.snake.label)} transition={easeSlow}>
                             <IconSnake size={16} />
                           </motion.span>
                         )}

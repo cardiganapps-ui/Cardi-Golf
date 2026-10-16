@@ -9,6 +9,9 @@ describe('noticeLine (inbox and push share it)', () => {
     expect(noticeLine({ kind: 'friend_request', data: {}, actor })).toEqual({ text: 'Diego Ortiz te quiere agregar como amigo', to: '/amigos' })
     expect(noticeLine({ kind: 'rivalry_round', data: { rivalryId: 'r' }, actor }).to).toBe('/p/diego.ortiz/vs')
     expect(noticeLine({ kind: 'crew_join', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor })).toEqual({ text: 'Diego Ortiz entró a Los del sábado', to: '/c/los-del-sabado' })
+    // A crew that approves who enters (0071, TRUST-11).
+    expect(noticeLine({ kind: 'crew_request', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor })).toEqual({ text: 'Diego Ortiz quiere entrar a Los del sábado', to: '/c/los-del-sabado' })
+    expect(noticeLine({ kind: 'crew_accepted', data: { crew: 'Los del sábado', slug: 'los-del-sabado' }, actor })).toEqual({ text: 'Ya eres de Los del sábado', to: '/c/los-del-sabado' })
   })
   it('reads a finish in lower case mid-sentence and never shows an amount', () => {
     const r = noticeLine({ kind: 'results', data: { tournament: 'Copa Otoño', slug: 'copa', rankLabel: 'T3', field: 16 }, actor: null })

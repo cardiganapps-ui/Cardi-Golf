@@ -35,6 +35,12 @@ interface DraftGroup {
   playerIds: string[]
 }
 
+/** The places in the pair standings each group «Generar por tabla de parejas» makes holds, in tee order (COPY-25). */
+function standingsOrder(pairs: number, groupSize: number): number[][] {
+  const places = Array.from({ length: pairs }, (_, i) => String(i + 1))
+  return generateGroupsFromStandings(places, Math.max(1, Math.floor(groupSize / 2))).map((g) => g.map(Number))
+}
+
 export function AdminGroups() {
   const data = useTournament((s) => s.data)!
   const reload = useTournament((s) => s.reload)
@@ -228,7 +234,7 @@ export function AdminGroups() {
               + {G.addGroup}
             </button>
           </div>
-          {pairsOn && round.number > 1 && <p className={a.help}>{G.standingsHint}</p>}
+          {pairsOn && round.number > 1 && <p className={a.help}>{G.standingsHint(standingsOrder(state.modules.pairs?.rows.length ?? 0, settings.groupSize))}</p>}
 
           <div className={styles.groups}>
             {current.map((g, i) => (
