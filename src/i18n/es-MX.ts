@@ -314,6 +314,26 @@ export const t = {
       crews: 'Crews',
       courses: (n: number) => `${n} ${n === 1 ? 'campo' : 'campos'} en el catálogo`,
     },
+    northStar: {
+      title: 'Torneos cerrados al peso',
+      hint: (days: number) => `En ${days} días: terminados, con 8 o más jugadores y hoyos de 3 o más teléfonos. La métrica que manda.`,
+      finished: (n: number) => (n === 1 ? '1 terminado en total' : `${n} terminados en total`),
+    },
+    funnel: {
+      title: (days: number) => `Organizadores, ${days} días`,
+      intro: 'Torneos de organizadores que no son el admin, sin ensayos ni rondas rápidas. Cada paso cuenta los que llegaron hasta ahí.',
+      step: {
+        created: 'Creados',
+        field: 'Con jugadores',
+        played: 'Con un día en juego',
+        scored: 'Con hoyos capturados',
+        signed: 'Con una tarjeta firmada',
+        finished: 'Terminados',
+      },
+      line: (tournaments: number, organizers: number) =>
+        `${tournaments} ${tournaments === 1 ? 'torneo' : 'torneos'}, ${organizers} ${organizers === 1 ? 'organizador' : 'organizadores'}`,
+      none: 'Ningún organizador ha creado un torneo en este periodo.',
+    },
     activity: 'Actividad, 30 días',
     series: { scores: 'Hoyos', accounts: 'Cuentas nuevas', tournaments: 'Torneos nuevos' },
     seriesLabel: 'Qué mostrar',

@@ -15,7 +15,7 @@ El primer cliente es el viaje de Nacho (Los Cabos, 8 a 11 de abril de 2027). Es 
 ## La métrica que manda
 **Torneos cerrados al peso**: torneos que no son el Ensayo, con al menos 8 jugadores, en los que capturaron al menos 3 teléfonos distintos, que llegaron a Terminado con el dinero sin nada «por asignar». Un torneo así es uno que Polo reemplazó de verdad: la captura, los juegos y las cuentas.
 
-Se mide con datos que ya existen: `tournaments.status = 'finished'`, `counts_for_stats`, los jugadores, los teléfonos que guardaron hoyos (`audit_log` y `device_status`, STRAT-02), y el gate de «Cerrar torneo», que no deja Terminado con dinero por asignar. La consulta va en Admin de Polo › Salud cuando haya más de un torneo real que contar; antes de abril se cuenta a mano.
+Se mide con datos que ya existen: `tournaments.status = 'finished'`, `counts_for_stats`, los jugadores, los teléfonos que guardaron hoyos (`audit_log` y `device_status`, STRAT-02), y el gate de «Cerrar torneo», que no deja Terminado con dinero por asignar. Admin de Polo › Resumen la muestra arriba de todo, con el embudo del organizador debajo (`platform_funnel`, STRAT-12): cuántos torneos y organizadores llegaron a cada paso, de crear el torneo a Terminado, sin contar los tuyos, los ensayos ni las rondas rápidas.
 
 Las métricas que la sostienen (STRAT-02, ya en Salud): de guardar a verse en otro teléfono, p95 menor a 2 s; hoyos que se quedan sin subir, cero; errores por versión; y el embudo del organizador (`tournament_created`, el primer hoyo guardado, `card_signed`, Terminado).
 
