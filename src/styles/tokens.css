@@ -126,7 +126,9 @@
   --dur-fast: 150ms;
   --dur: 200ms;
   --dur-slow: 250ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  /* An ease-out (MOT-13): it leaves at speed and settles, so the first frame after a tap already moves (nearly a
+     third of the way at --dur). It was cubic-bezier(0.2, 0, 0, 1), an ease-in-out that spent its first frame all but still. */
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
   /* The board surface (TV, Ceremonia) is watched from across a room (MOT-11): its changes take twice the phone's slowest, on a softer landing. */
   --dur-board: 500ms;
   --ease-board: cubic-bezier(0.16, 1, 0.3, 1);
