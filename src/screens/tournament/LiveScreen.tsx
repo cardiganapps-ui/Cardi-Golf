@@ -116,7 +116,8 @@ const DetailLine = memo(function DetailLine({ lead }: { lead: string | null }) {
   // failed), the header's second line says how old: once is enough.
   const ageInHeader = useBoardsMayBeOld()
   const line = [lead, updatedWhen == null || ageInHeader ? null : t.live.updated(updatedWhen)].filter(Boolean).join('. ')
-  return line ? <span>{line}</span> : null
+  // It follows the status on the same line (VIS-20): «Día 2, en juego. Grupo puntero en el hoyo 12».
+  return line ? <span>. {line}</span> : null
 })
 
 /** The share target, one object for every render: a new one each time would render the button again (PERF-09). */
@@ -344,37 +345,137 @@ export function LiveScreen() {
       {/* Once, after the PIN: what the Comité saved about this player, and «Pedir corrección» (TRUST-16). */}
       {!spectator && <MyDataCard />}
 
-      <div className={styles.strip}>
-        <span className={styles.stripMain}>{statusLine}</span>
-        <DetailLine lead={lead} />
-        {myHole && (
-          <Link className={`btn btn--primary btn--block ${styles.scoreNow}`} to={`${base}/tarjeta?hoyo=${myHole.hole}`}>
-            {myHole.thru >= (round?.holes ?? 18) ? t.live.scoreDone : t.live.scoreHole(myHole.hole)}
-          </Link>
+      {/*
+        VIS-20: who leads and where am I, above the fold on a 375×667 phone. The status and the lead group are one line,
+        «Anotar el hoyo n» stands where the board's title was, the honoree's card follows the board (his row carries
+        the ring): the first row went from 381 px to under 200, and 8 of 12 rows show instead of 4.
+      */}
+      <div className={styles.top}>
+        <div className={styles.strip}>
+          <p className={styles.status}>
+            <span className={styles.stripMain}>{statusLine}</span>
+            <DetailLine lead={lead} />
+          </p>
+          {!spectator && state.flags.pendingSnakeTiebreaks.length > 0 && (
+            <span className={styles.caution}>
+              <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length, settings.modules.snake.label)}
+            </span>
+          )}
+          {!spectator && state.flags.warnings.map((w) => (
+            <span key={w} className={styles.caution}>
+              <IconAlert size={16} /> {w}
+            </span>
+          ))}
+          {/* A handicap changed after they were fixed (UX-28): everyone sees it, and a tap opens the player with the reason. */}
+          {!spectator && state.flags.handicapChanges.map((c) => (
+            <button key={c.playerId} type="button" className={`${styles.caution} ${styles.cautionLink}`} onClick={() => setOpen(c.playerId)}>
+              <IconAlert size={16} /> {t.live.hcpChanged(byId.get(c.playerId)?.displayName ?? '?', hcpFromTo(c.from, c.to))}
+            </button>
+          ))}
+        </div>
+
+        {/* Terminado: a player on a PIN keeps the tournament in a profile (STRAT-08). */}
+        {snapshot.tournament.status === 'finished' && <SaveResults />}
+
+        {/* Before the first hole, the next day and this phone's place in it, above a board of zeros (STRAT-10). */}
+        {isPreRound(data) && <PreRound />}
+
+        <div className={styles.boardHead}>
+          {/* The one tap that matters on a course, straight to the hole being played, where the title was: the board says what it is. */}
+          <h2 className={myHole ? 'sr-only' : undefined}>{settings.modules.individual.label}</h2>
+          {myHole && (
+            <Link className={`btn btn--primary ${styles.scoreNow}`} to={`${base}/tarjeta?hoyo=${myHole.hole}`}>
+              {myHole.thru >= (round?.holes ?? 18) ? t.live.scoreDone : t.live.scoreHole(myHole.hole)}
+            </Link>
+          )}
+          {canToggleGross ? (
+            <Segmented
+              value={view}
+              options={[
+                { value: 'points', label: t.live.points },
+                { value: 'gross', label: t.live.gross },
+              ]}
+              onChange={setView}
+              label={t.live.boardIn}
+            />
+          ) : (
+            <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />
+          )}
+        </div>
+
+        {rows.length === 0 ? (
+          <EmptyState title={t.enter.noPlayers} body={t.enter.noPlayersHint} />
+        ) : (
+          <Board>
+            <BoardHead figureLabel={grossView ? t.live.gross : board?.figureLabel ?? t.live.points} dense={rows.length > 20} />
+            {list.map((r, i) => {
+                const members = r.entrant.playerIds
+                // The first member stands for a team when a row is tapped.
+                const p = byId.get(members[0] ?? '')
+                if (!p) return null
+                const pr = roundState?.[p.id]
+                const cash = showMoney ? members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0) : 0
+                let figure: string
+                let tone: Tone = 'even'
+                let today: string | undefined
+                let todayTone: Tone | undefined
+                let todaySpoken: string | undefined
+                if (grossView) {
+                  const d = grossToPar(state, p.id)
+                  const tp = d == null ? null : toPar(d)
+                  figure = tp ? tp.text : '–'
+                  tone = tp ? tp.tone : 'even'
+                  const td = round ? grossToPar(state, p.id, round.id) : null
+                  today = td == null ? undefined : toPar(td).text
+                } else {
+                  figure = r.figure.text
+                  tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
+                  ;({ today, todayTone, todaySpoken } = pointsDay(r, roundIdx))
+                }
+                // The last look counts on the board's own reading, the event's figure: Gross is the same rows another way.
+                const seen = grossView ? undefined : since?.rows[r.playerId]
+                // A team's "thru" is where its slowest member is.
+                const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
+                return (
+                  <BoardRow
+                    key={r.playerId}
+                    playerId={p.id}
+                    place={i}
+                    animate={animate}
+                    pos={grossView ? grossLabel(i) : r.label}
+                    name={byTeam ? r.entrant.name : p.displayName}
+                    teamNames={byTeam ? t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id)) : null}
+                    tier={p.tier ?? null}
+                    estimated={!!state.core.handicaps[p.id]?.estimated}
+                    cash={cash}
+                    owners={byTeam ? undefined : owners.get(p.id)?.initials}
+                    ownersSpoken={byTeam ? undefined : owners.get(p.id)?.spoken}
+                    honoreeLabel={settings.labels.honoree}
+                    unit={grossView ? 'toPar' : figureKind(settings)}
+                    honoree={!!honoree && members.includes(honoree.id)}
+                    today={today}
+                    todayTone={todayTone}
+                    todaySpoken={todaySpoken}
+                    thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
+                    figure={figure}
+                    tone={tone}
+                    mine={!!me.playerId && members.includes(me.playerId)}
+                    movedBy={seen && !r.figure.empty ? seen.place - r.position : 0}
+                    seenToday={seen && since?.round === roundId ? seen.today : undefined}
+                    seenFigure={seen?.figure}
+                    reading={grossView ? 'gross' : 'points'}
+                    dense={rows.length > 20}
+                    onOpen={setOpen}
+                  />
+                )
+              })}
+          </Board>
         )}
-        {!spectator && state.flags.pendingSnakeTiebreaks.length > 0 && (
-          <span className={styles.caution}>
-            <IconAlert size={16} /> {t.live.pendingSnake(state.flags.pendingSnakeTiebreaks.length, settings.modules.snake.label)}
-          </span>
-        )}
-        {!spectator && state.flags.warnings.map((w) => (
-          <span key={w} className={styles.caution}>
-            <IconAlert size={16} /> {w}
-          </span>
-        ))}
-        {/* A handicap changed after they were fixed (UX-28): everyone sees it, and a tap opens the player with the reason. */}
-        {!spectator && state.flags.handicapChanges.map((c) => (
-          <button key={c.playerId} type="button" className={`${styles.caution} ${styles.cautionLink}`} onClick={() => setOpen(c.playerId)}>
-            <IconAlert size={16} /> {t.live.hcpChanged(byId.get(c.playerId)?.displayName ?? '?', hcpFromTo(c.from, c.to))}
-          </button>
-        ))}
       </div>
-
-      {/* Terminado: a player on a PIN keeps the tournament in a profile (STRAT-08). */}
-      {snapshot.tournament.status === 'finished' && <SaveResults />}
-
-      {/* Before the first hole, the next day and this phone's place in it, above a board of zeros (STRAT-10). */}
-      {isPreRound(data) && <PreRound />}
+      <div className="row row--between">
+        {showMoney ? <span className="help">{t.money.ifEndedNow}</span> : <span />}
+        {hasHandicaps && <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />}
+      </div>
 
       {honoree && honoreeRow && (
         <button type="button" className={styles.spotlight} onClick={() => setOpen(honoree.id)}>
@@ -391,96 +492,6 @@ export function LiveScreen() {
           </span>
         </button>
       )}
-
-      <div className={styles.boardHead}>
-        <h2>{settings.modules.individual.label}</h2>
-        {canToggleGross ? (
-          <Segmented
-            value={view}
-            options={[
-              { value: 'points', label: t.live.points },
-              { value: 'gross', label: t.live.gross },
-            ]}
-            onChange={setView}
-            label={t.live.boardIn}
-          />
-        ) : (
-          <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />
-        )}
-      </div>
-
-      {rows.length === 0 ? (
-        <EmptyState title={t.enter.noPlayers} body={t.enter.noPlayersHint} />
-      ) : (
-        <Board>
-          <BoardHead figureLabel={grossView ? t.live.gross : board?.figureLabel ?? t.live.points} dense={rows.length > 20} />
-          {list.map((r, i) => {
-              const members = r.entrant.playerIds
-              // The first member stands for a team when a row is tapped.
-              const p = byId.get(members[0] ?? '')
-              if (!p) return null
-              const pr = roundState?.[p.id]
-              const cash = showMoney ? members.reduce((a, id) => a + (state.money.people[id]?.prizesTotal ?? 0), 0) : 0
-              let figure: string
-              let tone: Tone = 'even'
-              let today: string | undefined
-              let todayTone: Tone | undefined
-              let todaySpoken: string | undefined
-              if (grossView) {
-                const d = grossToPar(state, p.id)
-                const tp = d == null ? null : toPar(d)
-                figure = tp ? tp.text : '–'
-                tone = tp ? tp.tone : 'even'
-                const td = round ? grossToPar(state, p.id, round.id) : null
-                today = td == null ? undefined : toPar(td).text
-              } else {
-                figure = r.figure.text
-                tone = r.figure.tone === 'under' ? 'under' : r.figure.tone === 'over' ? 'over' : 'even'
-                ;({ today, todayTone, todaySpoken } = pointsDay(r, roundIdx))
-              }
-              // The last look counts on the board's own reading, the event's figure: Gross is the same rows another way.
-              const seen = grossView ? undefined : since?.rows[r.playerId]
-              // A team's "thru" is where its slowest member is.
-              const thru = round ? Math.min(...members.map((id) => roundState?.[id]?.thru ?? 0)) : 0
-              return (
-                <BoardRow
-                  key={r.playerId}
-                  playerId={p.id}
-                  place={i}
-                  animate={animate}
-                  pos={grossView ? grossLabel(i) : r.label}
-                  name={byTeam ? r.entrant.name : p.displayName}
-                  teamNames={byTeam ? t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id)) : null}
-                  tier={p.tier ?? null}
-                  estimated={!!state.core.handicaps[p.id]?.estimated}
-                  cash={cash}
-                  owners={byTeam ? undefined : owners.get(p.id)?.initials}
-                  ownersSpoken={byTeam ? undefined : owners.get(p.id)?.spoken}
-                  honoreeLabel={settings.labels.honoree}
-                  unit={grossView ? 'toPar' : figureKind(settings)}
-                  honoree={!!honoree && members.includes(honoree.id)}
-                  today={today}
-                  todayTone={todayTone}
-                  todaySpoken={todaySpoken}
-                  thru={round && (pr || byTeam) ? t.round.thru(thru, round.holes) : undefined}
-                  figure={figure}
-                  tone={tone}
-                  mine={!!me.playerId && members.includes(me.playerId)}
-                  movedBy={seen && !r.figure.empty ? seen.place - r.position : 0}
-                  seenToday={seen && since?.round === roundId ? seen.today : undefined}
-                  seenFigure={seen?.figure}
-                  reading={grossView ? 'gross' : 'points'}
-                  dense={rows.length > 20}
-                  onOpen={setOpen}
-                />
-              )
-            })}
-        </Board>
-      )}
-      <div className="row row--between">
-        {showMoney ? <span className="help">{t.money.ifEndedNow}</span> : <span />}
-        {hasHandicaps && <ShareCardButton what={LEADERBOARD} className="btn btn--ghost btn--sm" />}
-      </div>
 
       <h2 className={styles.feedHead}>{t.feed.title}</h2>
       <FeedTicker limit={10} />

@@ -61,6 +61,8 @@
   border-top: var(--hairline);
   padding-bottom: var(--safe-bottom);
   z-index: 5;
+  /* Its labels lay out by how many letters fit across it (A11Y-07): a query container, below. */
+  container: tabbar / inline-size;
 }
 .tab {
   flex: 1;
@@ -109,6 +111,57 @@
 }
 .tabBadgeBad {
   background: var(--under);
+}
+
+/*
+ * A11Y-07: with the text large for the bar (under 20 rem across: 125 % on a 393 px phone) the labels kept their
+ * fifth of the width and broke («En / vivo») under the icons. The bar drops the icons, the words they stand for
+ * take the room they need and break only between words, and the Tarjeta's count sits after its word. The same on
+ * a viewport short for its text (landscape, large text: `data-short`), where the bar gives the screen back its
+ * icons' height.
+ */
+@container tabbar (width < 20rem) {
+  .tab {
+    flex: 1 1 auto;
+    flex-direction: row;
+    gap: var(--s1);
+    min-height: var(--tap);
+    padding: var(--s1);
+    text-align: center;
+    line-height: var(--lh-ui);
+  }
+  .tabIcon {
+    order: 1;
+  }
+  .tabIcon > svg,
+  .tabIcon:not(:has(.tabBadge)) {
+    display: none;
+  }
+  .tabBadge {
+    position: static;
+  }
+  /* The word says which tab is open, in the accent the icon had. */
+  .tabActive {
+    color: var(--accent);
+  }
+}
+:global(:root[data-short]) .tab {
+  flex-direction: row;
+  gap: var(--s1);
+  min-height: var(--tap);
+}
+:global(:root[data-short]) .tabIcon {
+  order: 1;
+}
+:global(:root[data-short]) .tabIcon > svg,
+:global(:root[data-short]) .tabIcon:not(:has(.tabBadge)) {
+  display: none;
+}
+:global(:root[data-short]) .tabBadge {
+  position: static;
+}
+:global(:root[data-short]) .tabActive {
+  color: var(--accent);
 }
 
 /* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed

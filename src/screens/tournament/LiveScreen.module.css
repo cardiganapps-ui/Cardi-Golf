@@ -2,12 +2,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  padding-top: var(--s4);
+  /* Close under the header: the board is what this screen is for (VIS-20). */
+  padding-top: var(--s2);
+}
+/* The status, the board's head and the board, close together under the header (VIS-20). */
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
 }
 .strip {
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
+  /* Its lines read as one paragraph, the status and then its cautions (VIS-20). */
+  gap: 0;
   font-size: var(--fs-sm);
   color: var(--ink-2);
   line-height: var(--lh-ui);
@@ -15,6 +23,9 @@
 .stripMain {
   color: var(--ink);
   font-weight: 500;
+}
+.status {
+  margin: 0;
 }
 .caution {
   display: inline-flex;
@@ -72,7 +83,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s3);
+  /* With large text the toggle goes under the title instead of cutting «Gross» off (A11Y-07). */
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s3);
+}
+/* Its sub line wraps on a board narrow for its text (A11Y-07; the rows' layout is the Board's). */
+@container board (width < 18rem) {
+  .sub {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
 }
 .sub {
   display: inline-flex;
@@ -86,9 +106,9 @@
   margin-top: var(--s2);
 }
 
-/* The one tap that matters on a course: straight to the hole being played. */
+/* The one tap that matters on a course: straight to the hole being played, as wide as the toggle leaves it. */
 .scoreNow {
-  margin-top: var(--s2);
+  flex: 1 1 auto;
 }
 
 /* VIS-12: under a pointer that hovers (a laptop), what can be pressed answers before the click: the pressed
