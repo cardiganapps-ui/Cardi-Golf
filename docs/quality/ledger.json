@@ -3769,9 +3769,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "supabase/tests/self_service.sql",
+        "src/screens/profile/MyDataSection.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3800,9 +3803,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "supabase/tests/crew_controls.sql",
+        "src/screens/profile/CrewScreen.owner.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3814,11 +3820,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/engine/settings/moneyInPlay.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "A Mexican lawyer’s written view on the Ley Federal de Juegos y Sorteos (the Calcutta, the house cut) costs money: Diego’s decision (handoff)."
     },
     {
       "id": "TRUST-13",
@@ -3828,9 +3836,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/profile/EntrarScreen.adult.test.tsx",
+        "src/screens/admin/AdultsCard.test.tsx",
+        "src/data/legal.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -3878,9 +3890,12 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/tournament/MyDataCard.test.tsx",
+        "supabase/tests/self_service.sql"
+      ],
       "verifiedBy": null,
       "residual": "Partial (open), reconciled 2026-10-13. Done (#88): the notice's «Lo que el Comité captura de cada jugador» lists what the Comité types and who sees it, and the Comité's player sheet opens on a line saying so, linked there (both pinned by tests). Left: the terms don't make the organizer confirm he may share the people he adds; nobody added by a Comité is told on the face grid or after the PIN; no «Esto es lo que el Comité guardó de ti» view or «Pedir corrección»; estimate_inputs and form_guide are readable by the whole field outside the auction."
     },
@@ -3943,11 +3958,13 @@
       "workstream": "W11",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 222,
+      "tests": [
+        "src/screens/legalNotice.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The terms were drafted without counsel; a lawyer’s review costs money (Diego’s decision)."
     },
     {
       "id": "TRUST-22",
