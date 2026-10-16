@@ -2757,11 +2757,13 @@
       "workstream": "W14",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 217,
+      "tests": [
+        "src/lib/repoWeight.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "The 64 MB stay in git history (no rewrite of shared history); new clones and CI checkouts no longer download them."
     },
     {
       "id": "QA-21",

@@ -107,10 +107,10 @@ test('a 200 px drag down on the grabber closes the sheet; the sheet follows the 
   const box = (await grab.boundingBox())!
   const top0 = (await dialog.boundingBox())!.y
   const finger = await swipe(page, box.x + box.width / 2, box.y + box.height / 2, 200, 400)
-  // Mid-drag, the sheet is where the finger took it.
-  const mid = (await dialog.boundingBox())!.y
-  expect(mid - top0).toBeGreaterThan(190)
-  expect(mid - top0).toBeLessThan(210)
+  // Mid-drag, the sheet is where the finger took it. Chromium hands pointermove to the page once per frame, so the
+  // last step may land a frame after it was sent: read until it has (it read 11 of 12 steps, 183 px, on CI).
+  await expect.poll(async () => (await dialog.boundingBox())!.y - top0).toBeGreaterThan(190)
+  expect((await dialog.boundingBox())!.y - top0).toBeLessThan(210)
   await finger.lift()
   await expect(page.locator(DIALOG)).toHaveCount(0, { timeout: 2000 })
   await expect(page.getByRole('dialog')).toHaveCount(0)
