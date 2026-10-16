@@ -130,6 +130,8 @@ select harness.check((select count(*) from public.platform_audit_log where actio
   'his visit by the link is one view line, with no reason typed');
 select harness.check(exists (select 1 from jsonb_array_elements((pg_temp.as_user(:'org_b', format('select public.tournament_audit(%L)::text', :'t_b')))::jsonb) e
                              where e ->> 'action' = 'view' and e #>> '{after,via}' = 'link'), 'its Comité sees he came by the link');
+select harness.check(pg_temp.as_user(:'admin', format('select public.platform_tournament(%L)::text', :'t_b')) like 'PV001%',
+  'a visit by the link stands in for no reason: the panel still asks why');
 select harness.check(pg_temp.as_user((select id from harness.seed where key = 'dev_a'), format('select public.my_membership(%L) ->> ''via''', :'t_a')) = 'device'
                      and pg_temp.as_user(:'org_a', format('select public.my_membership(%L) ->> ''role''', :'t_a')) = 'owner',
   'everyone else''s gate answers as before');

@@ -44,8 +44,9 @@ declare
   why text := public.trim_reason(p_reason);
   last public.platform_audit_log;
 begin
+  -- The last reason he gave for it: a visit by a tournament's link (my_membership) logs none, and never stands in for one.
   select * into last from public.platform_audit_log l
-  where l.actor_auth_user_id = auth.uid() and l.action = 'view' and l.target_kind = p_kind and l.target_id = p_target
+  where l.actor_auth_user_id = auth.uid() and l.action = 'view' and l.target_kind = p_kind and l.target_id = p_target and l.reason is not null
   order by l.at desc limit 1;
   if why = '' then
     if last.id is not null and last.at > now() - interval '2 hours' then return; end if;
