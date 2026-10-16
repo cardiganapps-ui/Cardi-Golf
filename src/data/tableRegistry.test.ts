@@ -36,6 +36,7 @@ const NOT_ON_THE_BOARDS: Record<string, string> = {
   pin_push_subscriptions: "a PIN phone's push address",
   player_notices: 'notices sent to players',
   spectator_links: "the link to watch's token: never on a member's boards",
+  player_corrections: 'what a player asked the Comité to correct: Comité › Jugadores reads it (player_corrections)',
 }
 
 /** Every table a migration creates whose rows hang off a tournament: by the tournament, a day, a group or a lot. */

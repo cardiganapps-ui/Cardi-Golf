@@ -118,7 +118,11 @@ describe('computeCore', () => {
     // Par there is a net bogey: 1 point, and 35 on a round of pars.
     expect(easy.points).toBe(1)
     expect(easy.net).toBe(easiest.par + 1)
-    expect(easy.why.steps).toEqual([`Par ${easiest.par}, SI 18: da 1 golpe (hándicap por debajo de 0)`, `${easiest.par} + 1 = ${easiest.par + 1} neto`, `${easiest.par} − 1 − ${easiest.par} + 2 = 1 pt (bogey neto)`])
+    expect(easy.why.steps).toEqual([
+      `${easiest.par} golpes en un par ${easiest.par}, dando 1 golpe (hándicap por debajo de 0) en este hoyo (índice de golpe 18): ${easiest.par + 1} neto, bogey neto, 1 pt`,
+      `${easiest.par} + 1 = ${easiest.par + 1} neto`,
+      `Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: ${easiest.par} − 1 − ${easiest.par} + 2 = 1 pt`,
+    ])
     expect(pr.holes.filter((x) => x.strokesReceived !== 0).map((x) => x.hole)).toEqual([easiest.number])
     expect(pr.points).toBe(35)
   })

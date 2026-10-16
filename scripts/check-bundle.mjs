@@ -13,12 +13,12 @@ import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 
 /**
- * KiB, gzipped, of the JavaScript a first load waits for. The production build held 388 on 2026-10-16
- * (`vite build` with CI's placeholder Supabase env: the entry, 387, and Rolldown's runtime, 1; gzip level 6);
+ * KiB, gzipped, of the JavaScript a first load waits for. The production build held 395 on 2026-10-16, after
+ * PRs 219–223 (`vite build` with CI's placeholder Supabase env: the entry and Rolldown's runtime; gzip level 6);
  * the budget is that and a margin of about 5 %. Raise it only with the reason, in the change that needs it,
  * never to pass.
  */
-export const ENTRY_BUDGET_GZIP_KIB = 408
+export const ENTRY_BUDGET_GZIP_KIB = 415
 
 /** The scripts index.html makes the browser fetch before the app runs: its module entry and what it preloads. */
 export function entryScripts(html) {
