@@ -1784,9 +1784,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 213,
+      "tests": [
+        "src/components/Sheet.motion.test.tsx",
+        "e2e/fixtures/sheet.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1851,9 +1854,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 213,
+      "tests": [
+        "src/design/motion.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1865,9 +1870,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 213,
+      "tests": [
+        "src/screens/tournament/scorecard/parts.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -1944,9 +1951,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 213,
+      "tests": [
+        "src/screens/tournament/FeedTicker.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
