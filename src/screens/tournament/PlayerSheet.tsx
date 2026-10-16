@@ -24,12 +24,18 @@ import type { PlayerRound } from '../../engine/core/types'
 import { dayFigureText, ownDayText } from '../../lib/figureText'
 import styles from './PlayerSheet.module.css'
 
-/** Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a change (PERF-09). */
+/**
+ * Closed, it is nothing: it reads the boards only while a player is open, so a closed sheet renders nothing on a
+ * change (PERF-09). Closing, it keeps the last player until the sheet has left the screen (MOT-09).
+ */
 export const PlayerSheet = memo(function PlayerSheet({ playerId, onClose }: { playerId: string | null; onClose: () => void }) {
-  return playerId ? <PlayerSheetOpen playerId={playerId} onClose={onClose} /> : null
+  const [last, setLast] = useState(playerId)
+  if (playerId && playerId !== last) setLast(playerId)
+  const id = playerId ?? last
+  return id ? <PlayerSheetOpen playerId={id} open={!!playerId} onClose={onClose} onExited={() => setLast(null)} /> : null
 })
 
-function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () => void }) {
+function PlayerSheetOpen({ playerId, open, onClose, onExited }: { playerId: string; open: boolean; onClose: () => void; onExited: () => void }) {
   const data = useTournament((s) => s.data)
   /** The in-memory fixtures have no server to ask a card's history of (TRUST-14). */
   const fixture = useTournament((s) => s.tournamentId?.startsWith('fixture:') ?? false)
@@ -86,7 +92,7 @@ function PlayerSheetOpen({ playerId, onClose }: { playerId: string; onClose: () 
   const hcpChange = state.flags.handicapChanges.find((c) => c.playerId === p.id)
 
   return (
-    <Sheet open={!!playerId} onClose={onClose} title={p.fullName} wide>
+    <Sheet open={open} onClose={onClose} onExited={onExited} title={p.fullName} wide>
       <div className={styles.sheet}>
         <div className={styles.head}>
           <Avatar name={p.displayName} url={p.avatarUrl} size="lg" honoree={p.isHonoree} />

@@ -43,7 +43,9 @@ test('an open sheet keeps Tab inside it, Escape closes it and focus goes back to
   expect(await page.evaluate(() => !!document.querySelector('nav')?.closest('[inert]'))).toBe(true)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(await page.evaluate(() => document.querySelectorAll('[inert]').length)).toBe(0)
+  // At once nothing of the page is inert; the sheet itself, inert while its exit plays (MOT-09), then goes too.
+  expect(await page.evaluate(() => Array.from(document.querySelectorAll('[inert]')).every((el) => el.querySelector('[role="dialog"]')))).toBe(true)
+  await expect.poll(() => page.evaluate(() => document.querySelectorAll('[inert]').length)).toBe(0)
   await expect(row).toBeFocused()
 })
 

@@ -14,8 +14,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * KiB the precache may hold. The production build held 2,925 on 2026-10-16, before PERF-05 left out the font
- * subsets Spanish never uses and the install's 512 px icons; 2,708 after. Every screen stays precached (a
+ * KiB the precache may hold. The production build held 2,930 on 2026-10-16, before PERF-05 left out the font
+ * subsets Spanish never uses and the install's 512 px icons; 2,716 after. Every screen stays precached (a
  * screen left out would 404 after a deploy on a phone still on the old build, whose update waits for
  * «Actualizar»), so splitting the routes (PERF-02) moved bytes between files, not out of the precache.
  */

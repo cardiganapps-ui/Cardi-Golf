@@ -29,7 +29,6 @@ import { useTournament } from '../../data/tournamentStore'
 import { supabaseConfigured } from '../../lib/supabase'
 import { pointManifestAt } from '../../lib/install'
 import { EnterScreen } from './EnterScreen'
-import { MotionScope } from '../../design/MotionScope'
 import { TournamentContext as Ctx, type Me } from './tournamentContext'
 
 // The context lives in its own module, so a screen outside this chunk (the router's SettingsGuard, the install
@@ -363,11 +362,7 @@ export function TournamentGate() {
     )
   }
   if (phase.kind === 'enter') {
-    return (
-      <MotionScope>
-        <EnterScreen lookup={phase.lookup} onEntered={() => void resolve()} />
-      </MotionScope>
-    )
+    return <EnterScreen lookup={phase.lookup} onEntered={() => void resolve()} />
   }
   if (storeError && !data) {
     return (
@@ -387,9 +382,7 @@ export function TournamentGate() {
   }
   return (
     <Ctx.Provider value={{ tournamentId: phase.lookup.id, slug, lookup: phase.lookup, me: phase.me, refresh: resolve, retry: askAgain, leave }}>
-      <MotionScope>
-        <Outlet />
-      </MotionScope>
+      <Outlet />
     </Ctx.Provider>
   )
 }

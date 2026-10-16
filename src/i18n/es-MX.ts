@@ -353,7 +353,9 @@ export const t = {
       round_tees: 'Tee', snake_tiebreaks: 'Víbora', card_signatures: 'Firma', calcutta_lots: 'Calcutta',
       calcutta_bids: 'Puja', calcutta_buybacks: 'Recompra', game_entries: 'Juego', hole_awards: 'Premio de hoyo',
       game_results: 'Resultado', courses: 'Campo', tees: 'Tee', holes: 'Hoyo del campo', pin_claims: 'Teléfono',
-      spectator_links: 'Enlace para ver',
+      spectator_links: 'Enlace para ver', teams: 'Equipo', team_members: 'Equipo', player_pins: 'PIN',
+      tournament_results: 'Resultados publicados', photos: 'Foto', course_documents: 'Tarjeta del campo',
+      money_adjustments: 'Dinero por asignar', rejected_writes: 'Pendiente de revisar',
     } as Record<string, string>,
     practiceCount: (n: number) => `${n} ${n === 1 ? 'ensayo' : 'ensayos'}`,
     count: (shown: number, total: number) => (shown === total ? `${total} ${total === 1 ? 'torneo' : 'torneos'}` : `${shown} de ${total}`),
@@ -2203,6 +2205,12 @@ export const t = {
         released_at: 'Hasta',
         role: 'Papel',
         sort_order: 'Orden',
+        /** DB-13 (0064): a PIN line says a PIN was set, never which; a published result says how many. */
+        pin: 'PIN',
+        locked: 'Bloqueado',
+        players: 'Jugadores',
+        nets: 'Netos publicados',
+        url: 'Archivo',
       } as Record<string, string>,
       /** How a value reads in a change's detail (TRUST-19): names for ids, words for flags. */
       value: {
@@ -2222,6 +2230,8 @@ export const t = {
         previous: (value: string, who: string | null) => `${value}${who ? `, de ${who}` : ''}`,
         lotStatus: { pending: 'por subastar', open: 'en subasta', sold: 'vendido' } as Record<string, string>,
         source: { index: 'su índice', estimate: 'tres rondas', manual: 'a mano' } as Record<string, string>,
+        /** DB-13 (0064): which PIN a line is about, the one before or the one that replaced it. */
+        pin: { old: 'el anterior', new: 'uno nuevo' } as Record<string, string>,
       },
       /**
        * Which of the player's phones made the change, once he has entered with his PIN on more than one (TRUST-24):
@@ -2238,7 +2248,16 @@ export const t = {
         removed: (player: string) => `El Comité sacó del torneo un teléfono que entraba como ${player}`,
         /** SEC-04 (0056): the Comité opened a locked PIN to new phones again, the PIN unchanged. */
         unlocked: (player: string) => `El Comité desbloqueó el PIN de ${player}`,
+        /** DB-13 (0064): a PIN set for the first time, or a new one in place of the last. */
+        pinSet: (player: string) => `${player} ya tiene PIN`,
+        pinChanged: (player: string) => `${player} tiene un PIN nuevo`,
       },
+      /** DB-13 (0064): the results on everyone's profile, published, published again, or withdrawn by leaving Terminado. */
+      results: {
+        INSERT: 'Se publicaron los resultados',
+        UPDATE: 'Se volvieron a publicar los resultados',
+        DELETE: 'Se retiraron los resultados publicados',
+      } as Record<string, string>,
     },
     games: {
       hint: 'Quién juega cada bote y los partidos. Los juegos se agregan o quitan en Torneo.',

@@ -34,7 +34,7 @@ test('the landing page loads none of the tournament’s screens', async ({ page 
   await page.goto('/', { waitUntil: 'networkidle' })
   await expect(page.getByRole('heading', { name: 'Entrar a un torneo' })).toBeVisible()
   expect(asked).toContain('HomeScreen')
-  for (const name of ['player', 'motion-lib', 'GamesScreen', 'MoneyScreen', 'organizer', 'platform']) expect(asked, name).not.toContain(name)
+  for (const name of ['player', 'GamesScreen', 'MoneyScreen', 'organizer', 'platform']) expect(asked, name).not.toContain(name)
 })
 
 test('the text font is asked for with the page, once, from the link index.html preloads it with', async ({ page }) => {

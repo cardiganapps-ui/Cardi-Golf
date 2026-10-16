@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
+import { MotionConfig } from 'motion/react'
 import { registerSW } from 'virtual:pwa-register'
 import './styles/global.css'
 import { router } from './app/router'
@@ -52,9 +53,11 @@ if (launchesIntoTournament(location.pathname, location.search)) void TournamentG
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* Motion's reduce-motion setting is the tournament gates' (src/design/MotionScope.tsx): nothing else animates. */}
-    <RootBoundary>
-      <RouterProvider router={router} />
-    </RootBoundary>
+    {/* Every Motion animation honours the system's reduce-motion setting. */}
+    <MotionConfig reducedMotion="user">
+      <RootBoundary>
+        <RouterProvider router={router} />
+      </RootBoundary>
+    </MotionConfig>
   </StrictMode>,
 )

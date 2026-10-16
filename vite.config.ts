@@ -176,15 +176,12 @@ export default defineConfig({
       // entry's: global.css then came after the CSS modules, `.card` beat `.errorBox` on every ErrorBox, and
       // primitives' rules shipped twice (e2e/fixtures/cascade.spec.ts).
       //
-      // The screens are lazy (PERF-02, src/app/screens.tsx), and only the tournament's screens animate, so Motion
-      // is one chunk of its own that they share (`motion-lib`; it was five), never in the entry: a static import of it there
-      // put all of it in every first load, 40 KB gzip (PERF-03, src/design/MotionScope.tsx). Everything else the
-      // lazy screens share, Rolldown splits by who uses it, so the landing page loads none of the boards' code.
+      // The screens are lazy (PERF-02, src/app/screens.tsx). Everything they share and the entry doesn't, Rolldown
+      // splits by who uses it, so the landing page loads none of the boards' code.
       output: {
         codeSplitting: {
           groups: [
             { name: 'index', tags: ['$initial'], priority: 2 },
-            { name: 'motion-lib', test: /\/node_modules\/(?:motion|framer-motion|motion-dom|motion-utils)\//, priority: 1 },
             // Loaded on a share card's first tap (src/lib/shareImage.ts); named, or it would be «es-<hash>.js».
             { name: 'html-to-image', test: /\/node_modules\/html-to-image\//, priority: 1 },
           ],

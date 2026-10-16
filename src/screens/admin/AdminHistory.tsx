@@ -91,7 +91,12 @@ export function AdminHistory() {
       if (e.action === 'INSERT') return H.claim.took(player, H.claim.from[String(row.platform)] ?? H.claim.from.other!)
       if (e.action === 'UPDATE' && e.before?.released_at == null && e.after?.released_at != null) return e.reason ? H.claim.removed(player) : H.claim.left(player)
     }
-    if (e.table === 'player_pins') return H.claim.unlocked(name(row.player_id) ?? '?')
+    // A PIN unlocked (0056), or set and changed (0064, DB-13): never the PIN itself.
+    if (e.table === 'player_pins') {
+      const player = name(row.player_id) ?? '?'
+      return e.after?.locked === false ? H.claim.unlocked(player) : e.action === 'INSERT' ? H.claim.pinSet(player) : H.claim.pinChanged(player)
+    }
+    if (e.table === 'tournament_results') return H.results[e.action] ?? e.action
     // The link to watch (STRAT-05, 0053): made, given a new token, its money switched, or turned off. Its token is never in the history.
     if (e.table === 'spectator_links') {
       const L = t.spectator.history

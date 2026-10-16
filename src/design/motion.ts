@@ -17,8 +17,12 @@ export const DUR_FAST = 0.15
 export const DUR = 0.2
 export const DUR_SLOW = 0.25
 
-/** The one curve: --ease, cubic-bezier(0.2, 0, 0, 1). */
-export const EASE = [0.2, 0, 0, 1] as const
+/**
+ * The one curve: --ease, cubic-bezier(0.25, 1, 0.5, 1), a true ease-out (MOT-13). Every move on the phone answers
+ * a tap or a change, so it starts at speed and settles: nearly a third of the way on the first frame at --dur, where the
+ * ease-in-out it replaced, (0.2, 0, 0, 1), managed a tenth.
+ */
+export const EASE = [0.25, 1, 0.5, 1] as const
 
 /** A thing arriving or settling: the default. */
 export const ease = { duration: DUR, ease: EASE } as const
