@@ -4,8 +4,7 @@
  * member of the tournament reads every card's; never an account, a phone or a mutation. Online only: a link to
  * watch has no session to ask with, and never asks.
  */
-import { supabase } from '../lib/supabase'
-import { ApiError } from './api'
+import { isMissingFunction, rpc } from './rpc'
 
 export interface HoleValue {
   strokes: number | null
@@ -38,8 +37,6 @@ export interface HoleTrail {
   steps: CardStep[]
 }
 
-/** A database without 0062 answers these: the history is «no está en el servidor», never an error. */
-const MISSING = new Set(['PGRST202', '42883'])
 
 const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
 const text = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null)
@@ -63,10 +60,12 @@ function step(x: unknown): CardStep | null {
 
 /** The card's steps, or 'unavailable' on a database without 0062. */
 export async function cardHistory(tournamentId: string, playerId: string): Promise<CardStep[] | 'unavailable'> {
-  const { data, error } = await supabase().rpc('card_history', { p_tournament_id: tournamentId, p_player_id: playerId })
-  if (error) {
-    if (MISSING.has(error.code ?? '')) return 'unavailable'
-    throw ApiError.from(error)
+  let data: unknown
+  try {
+    data = await rpc('card_history', { p_tournament_id: tournamentId, p_player_id: playerId })
+  } catch (e) {
+    if (isMissingFunction(e)) return 'unavailable'
+    throw e
   }
   return (Array.isArray(data) ? data : []).map(step).filter((s): s is CardStep => s !== null)
 }

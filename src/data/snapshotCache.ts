@@ -9,6 +9,7 @@
  * there. The code still finds them.
  */
 import Dexie, { type EntityTable } from 'dexie'
+import { z } from 'zod'
 import type { Snapshot } from '../engine/types'
 import type { LookupResult } from './api'
 import { forgetSeen } from './boardSeen'
@@ -92,15 +93,47 @@ async function findEntry(d: CacheDb, slugOrCode: string): Promise<CachedEntry | 
   const code = slugOrCode.toUpperCase()
   return (await d.entries.get(slugOrCode)) ?? (await d.entries.filter((e) => e.lookup.slug === slugOrCode || e.lookup.joinCode?.toUpperCase() === code).first())
 }
+
+/** The snapshot's lists. Each is there in what this build saves; one an older build saved before its table existed is not. */
+const LISTS = [
+  'players', 'courses', 'rounds', 'groups', 'roundTees', 'pairs', 'teams', 'scores', 'snakeTiebreaks', 'cardSignatures', 'handicapOverrides',
+  'calcuttaLots', 'calcuttaBids', 'calcuttaBuybacks', 'payments', 'gameEntries', 'holeAwards', 'gameResults', 'moneyAdjustments',
+] as const satisfies ReadonlyArray<keyof Snapshot>
+const SavedSnapshot = z.looseObject({
+  tournament: z.looseObject({ id: z.string(), slug: z.string(), name: z.string() }),
+  ...Object.fromEntries(LISTS.map((k) => [k, z.array(z.unknown()).optional()])),
+})
+const SavedEntry = z.looseObject({
+  slug: z.string(),
+  tournamentId: z.string(),
+  lookup: z.looseObject({ id: z.string(), slug: z.string(), name: z.string(), players: z.array(z.unknown()) }),
+  me: z.looseObject({ playerId: z.string().nullable() }),
+})
+
+/**
+ * A snapshot as this or an older build saved it (ARCH-03), or null when it
+ * can't be read: what isn't the boards' shape is no copy, never a screen that
+ * throws on an offline open. A list saved before its table existed reads as
+ * empty (`teams` before PR 51: a team format's boards threw on it); the
+ * Comité's decisions stay as they were saved, absent included.
+ */
+export function savedSnapshot(v: unknown): Snapshot | null {
+  if (!SavedSnapshot.safeParse(v).success) return null
+  const snap = v as Partial<Snapshot>
+  const missing = LISTS.filter((k) => k !== 'moneyAdjustments' && snap[k] === undefined)
+  return (missing.length ? { ...snap, ...Object.fromEntries(missing.map((k) => [k, []])) } : snap) as Snapshot
+}
+
 export async function readCached(slugOrCode: string): Promise<{ entry: CachedEntry; snapshot: Snapshot; savedAt: number } | null> {
   try {
     const d = getDb()
     if (!d) return null
     const entry = await findEntry(d, slugOrCode)
-    if (!entry) return null
+    if (!entry || !SavedEntry.safeParse(entry).success) return null
     const snap = await d.snapshots.get(entry.tournamentId)
-    if (!snap) return null
-    return { entry: { ...entry, me: storedMe(entry.me) }, snapshot: snap.snapshot, savedAt: snap.savedAt }
+    const snapshot = snap && typeof snap.savedAt === 'number' ? savedSnapshot(snap.snapshot) : null
+    if (!snap || !snapshot) return null
+    return { entry: { ...entry, me: storedMe(entry.me) }, snapshot, savedAt: snap.savedAt }
   } catch {
     return null
   }

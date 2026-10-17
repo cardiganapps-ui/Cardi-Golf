@@ -9,15 +9,15 @@
  * applies the same rules again to whatever it shows (`forSpectators`), so the
  * design fixtures (`/v/_/<fixture>`) render exactly what the server would send.
  */
-import { supabase } from '../lib/supabase'
 import type { Snapshot } from '../engine/types'
-import { ApiError } from './api'
+import { z } from 'zod'
 import { anonRpc } from './anonRpc'
 import type { Row } from './mappers'
 import { SPECTATOR_PREFIX, snapshotFromRows, type SnapshotRows } from './tournamentStore'
 import { SETTINGS_SPEC, type SettingsSpec } from '../engine/settings/spec'
 import { normalizeLegacySettings } from '../engine/settings/schema'
 import { isUnknownGame, newerSettingsKeys, withoutUnknownGames } from '../engine/settings/read'
+import { parseAnswer, rpc } from './rpc'
 
 /** The link as the Comité sees it (0053 `spectator_link`). */
 export interface SpectatorLink {
@@ -30,12 +30,6 @@ export interface SpectatorLink {
   rotatedAt: string | null
 }
 
-async function rpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
-  const res = await supabase().rpc(name, args)
-  if (res.error) throw ApiError.from(res.error)
-  return res.data as T
-}
-
 /** A link as the server answers it, or null for anything else (no link, an answer this build can't read). */
 function asLink(v: unknown): SpectatorLink | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null
@@ -46,7 +40,7 @@ function asLink(v: unknown): SpectatorLink | null {
 
 /** The tournament's link, for its Comité; null when there is none. */
 export async function spectatorLink(tournamentId: string): Promise<SpectatorLink | null> {
-  return asLink(await rpc<unknown>('spectator_link', { p_tournament_id: tournamentId }))
+  return asLink(await rpc('spectator_link', { p_tournament_id: tournamentId }))
 }
 
 /**
@@ -59,7 +53,7 @@ export async function spectatorLink(tournamentId: string): Promise<SpectatorLink
  */
 export async function saveSpectatorLink(tournamentId: string, money: boolean, seen: SpectatorLink | null, newToken = false): Promise<SpectatorLink | null> {
   return asLink(
-    await rpc<unknown>('save_spectator_link', { p_tournament_id: tournamentId, p_money: money, p_seen: seen ? { token: seen.token, money: seen.money } : null, p_new_token: newToken }),
+    await rpc('save_spectator_link', { p_tournament_id: tournamentId, p_money: money, p_seen: seen ? { token: seen.token, money: seen.money } : null, p_new_token: newToken }),
   )
 }
 
@@ -93,8 +87,9 @@ export function spectatorStoreId(token: string): string {
 export async function spectatorBoard(token: string, seen: string | null): Promise<BoardAnswer | null> {
   if (!TOKEN_SHAPE.test(token)) return null
   // As anon with no session, whatever this browser keeps: the page is nobody's (`anonRpc`).
-  const answer = await anonRpc<Row | null>('spectator_board', { p_token: token, p_seen: seen })
-  if (!answer || typeof answer !== 'object') return null
+  const raw = await anonRpc('spectator_board', { p_token: token, p_seen: seen })
+  if (!raw || typeof raw !== 'object') return null
+  const answer = parseAnswer('spectator_board', BoardSchema, raw)
   if (answer.same === true) return { same: true, version: String(answer.version) }
   return { same: false, version: String(answer.version ?? ''), money: answer.money === true, snapshot: snapshotFromBoard(answer, spectatorStoreId(token)) }
 }
@@ -105,6 +100,21 @@ const TABLES = [
   'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'game_entries', 'hole_awards', 'game_results',
   'calcutta_lots', 'calcutta_bids', 'calcutta_buybacks', 'payments', 'money_adjustments',
 ] as const
+
+const boardRow = z.record(z.string(), z.unknown())
+/**
+ * The answer as the page reads it (ARCH-03): the tournament an object and
+ * each table a list of rows, so a malformed answer is an error the page shows
+ * over the boards it has, never a row the mappers can't read. A table the
+ * answer leaves out reads as empty, as before.
+ */
+const BoardSchema = z.looseObject({
+  same: z.unknown().optional(),
+  version: z.unknown().optional(),
+  money: z.unknown().optional(),
+  tournament: boardRow.nullish(),
+  ...Object.fromEntries(TABLES.map((table) => [table, z.array(boardRow).nullish()])),
+})
 
 /** spectator_board's answer as the snapshot the engine reads, under the id the store keeps it by. */
 export function snapshotFromBoard(answer: Row, id: string): Snapshot {

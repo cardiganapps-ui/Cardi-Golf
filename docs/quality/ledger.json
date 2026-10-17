@@ -454,11 +454,16 @@
       "workstream": "W13",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 233,
+      "tests": [
+        "src/data/rpc.test.ts",
+        "src/data/session.test.ts",
+        "src/data/profiles.stash.test.ts",
+        "src/data/snapshotCache.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "About 70 jsonb RPC answers are named with .as<T>() rather than parsed; direct supabase().rpc calls remain in legal, push, telemetry, backup and src/server/auth (typed through the client)."
     },
     {
       "id": "ARCH-04",

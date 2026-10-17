@@ -3,6 +3,8 @@
  * opened (per-device convenience only). `Me` lived in a screen, so the data layer's cache of the boards
  * imported its type from one (ARCH-20); src/data and src/engine never import from the screens.
  */
+import { z } from 'zod'
+
 const KEY = 'cardi-golf:last-tournament'
 
 export interface Me {
@@ -32,10 +34,14 @@ export interface LastTournament {
   at?: number
 }
 
+/** What a build kept: a value that doesn't read (another app's, or a slug that isn't one) is none, never a link to nowhere (ARCH-03). */
+const LastTournamentSchema = z.looseObject({ slug: z.string().min(1), name: z.string(), at: z.number().optional() }) satisfies z.ZodType<LastTournament>
+
 export function getLastTournament(): LastTournament | null {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as LastTournament) : null
+    const read = raw ? LastTournamentSchema.safeParse(JSON.parse(raw)) : null
+    return read?.success ? read.data : null
   } catch {
     return null
   }

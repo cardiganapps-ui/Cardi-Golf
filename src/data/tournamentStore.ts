@@ -25,7 +25,8 @@ import type { Snapshot } from '../engine/types'
 import { humanError, isTransient } from '../lib/humanError'
 import { supabase } from '../lib/supabase'
 import { changeArrived, track } from '../lib/telemetry'
-import { fetchAll, withCount } from './paged'
+import { fetchAll, withCount, type PageOf } from './paged'
+import type { Tables } from './database.types'
 import { INBOX_TABLES, liveFilter, REALTIME_TABLES } from './realtimeTables'
 import { inboxChanged } from './rejectedInbox'
 import { APPLIED_TABLES, applyChange, concernsBoards, inLiveOrder, sameChange, type LiveChange } from './realtimeApply'
@@ -53,6 +54,7 @@ import {
   mapSnakeTiebreak,
   mapTournament,
   type Row,
+  type RowOf,
 } from './mappers'
 
 export interface TournamentData {
@@ -416,18 +418,27 @@ export function showBoards(tournamentId: string, snapshot: Snapshot, at = Date.n
   useTournament.setState({ tournamentId, data: compute(snapshot, undefined, last), updatedAt: at, loading: false, error: null, realtime: 'off', source: 'server', keepOnPhone: false })
 }
 
+/** The part of a select the snapshot's pages use. */
+interface PageQuery<T> {
+  in(col: string, ids: string[]): PageQuery<T>
+  order(col: string): PageQuery<T>
+  range(from: number, to: number): PageOf<T>
+}
+
 async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
   const sb = supabase()
   // Paged (PostgREST caps a response at 1,000 rows, or fewer: DB-20), ordered by each table's primary key so pages never overlap.
-  const inList = <T = Row>(table: SnapshotTable, col: string, ids: string[]) =>
+  // Each table's rows typed as the generated types say (ARCH-03). supabase-js can't follow a table chosen by a type
+  // parameter, so the page's query is built loosely, once, and its rows are the table's.
+  const inList = <K extends SnapshotTable>(table: K, col: string, ids: string[]): Promise<Tables<K>[]> =>
     ids.length
-      ? fetchAll<T>((from, to, count) => {
-          let qb = sb.from(table).select('*', withCount(count)).in(col, ids)
+      ? fetchAll((from, to, count) => {
+          let qb = (sb.from(table).select('*', withCount(count)) as unknown as PageQuery<Tables<K>>).in(col, ids)
           for (const c of SNAPSHOT_KEYS[table]) qb = qb.order(c)
           return qb.range(from, to)
         })
-      : Promise.resolve([] as T[])
-  const q = <T = Row>(table: SnapshotTable) => inList<T>(table, 'tournament_id', [tournamentId])
+      : Promise.resolve([])
+  const q = <K extends SnapshotTable>(table: K) => inList(table, 'tournament_id', [tournamentId])
 
   const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults, adjustments] = await Promise.all([
     sb.from('tournaments').select('*').eq('id', tournamentId).single(),
@@ -504,7 +515,7 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
 }
 
 /** A tournament's rows by table, as PostgREST answers them: the tournament's own row, and every other table's. */
-export type SnapshotRows = { tournament: Row } & Partial<Record<Exclude<SnapshotTable, 'tournaments'>, Row[]>>
+export type SnapshotRows = { tournament: RowOf<'tournaments'> } & { [K in Exclude<SnapshotTable, 'tournaments'>]?: RowOf<K>[] }
 
 /**
  * The snapshot the engine reads, from the rows: a member's fetch and a link to
@@ -513,7 +524,7 @@ export type SnapshotRows = { tournament: Row } & Partial<Record<Exclude<Snapshot
  * collation gave.
  */
 export function snapshotFromRows(r: SnapshotRows): Snapshot {
-  const all = (table: Exclude<SnapshotTable, 'tournaments'>) => r[table] ?? []
+  const all = <K extends Exclude<SnapshotTable, 'tournaments'>>(table: K): RowOf<K>[] => (r[table] as RowOf<K>[] | undefined) ?? []
   const members = all('group_members')
   const tees = all('tees')
   const holes = all('holes')

@@ -10,12 +10,12 @@
  */
 import { createContext, useContext } from 'react'
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
 import { withTimeout } from '../lib/timeout'
 import { ApiError } from './api'
 import { anonRpc } from './anonRpc'
 import { onLinkPage } from '../lib/linkPage'
 import { entryChanged } from './entryEvents'
+import { rpc } from './rpc'
 
 export type TournamentStatus = 'setup' | 'auction' | 'live' | 'finished'
 
@@ -467,72 +467,66 @@ export function needsViewReason(e: unknown): boolean {
   return e instanceof ApiError && e.code === 'PV001'
 }
 
-async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw ApiError.from(error)
-  return data as T
-}
-
 /** The platform's days are the admin's own (the phone's zone); a browser that names none counts them in UTC (ARCH-06: never the first tournament's zone). */
 const TZ = 'UTC'
 
 export const supabasePlatformApi: PlatformApi = {
-  overview: () => rpc<PlatformOverview>('platform_overview'),
-  funnel: (days) => rpc<PlatformFunnel>('platform_funnel', { p_days: days }),
-  daily: (days) => rpc<PlatformDay[]>('platform_daily', { p_days: days, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ }),
+  overview: () => rpc('platform_overview').as<PlatformOverview>(),
+  funnel: (days) => rpc('platform_funnel', { p_days: days }).as<PlatformFunnel>(),
+  daily: (days) => rpc('platform_daily', { p_days: days, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || TZ }).as<PlatformDay[]>(),
   tournaments: ({ q, status, kind, limit = 50, offset = 0 }) =>
-    rpc<PlatformTournamentList>('platform_tournaments', {
+    rpc('platform_tournaments', {
       p_q: q?.trim() || null,
       p_status: status ?? null,
       p_kind: kind ?? null,
       p_limit: limit,
       p_offset: offset,
-    }),
-  tournament: (id, reason) => rpc<PlatformTournament | null>('platform_tournament', { p_tournament_id: id, ...(reason ? { p_reason: reason } : {}) }),
-  unlock: (tournamentId, reason, minutes = 30) => rpc<string>('platform_unlock', { p_tournament_id: tournamentId, p_reason: reason, p_minutes: minutes }),
-  relock: (tournamentId) => rpc<void>('platform_relock', { p_tournament_id: tournamentId }),
+    }).as<PlatformTournamentList>(),
+  tournament: (id, reason) => rpc('platform_tournament', { p_tournament_id: id, ...(reason ? { p_reason: reason } : {}) }).as<PlatformTournament | null>(),
+  unlock: (tournamentId, reason, minutes = 30) => rpc('platform_unlock', { p_tournament_id: tournamentId, p_reason: reason, p_minutes: minutes }),
+  relock: (tournamentId) => rpc('platform_relock', { p_tournament_id: tournamentId }),
   setProtected: (tournamentId, on, reason) =>
-    rpc<void>('set_tournament_protected', { p_tournament_id: tournamentId, p_on: on, p_reason: reason ?? null }),
+    rpc('set_tournament_protected', { p_tournament_id: tournamentId, p_on: on, p_reason: reason ?? null }),
   people: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
-    rpc<PeopleList>('platform_people', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
-  person: (id, reason) => rpc<Person | null>('platform_person', { p_user_id: id, ...(reason ? { p_reason: reason } : {}) }),
-  deletePreview: (id) => rpc<DeletePreview>('platform_delete_preview', { p_user_id: id }),
-  block: (id, reason) => rpc<void>('platform_block', { p_user_id: id, p_reason: reason }),
-  unblock: (id, reason) => rpc<void>('platform_unblock', { p_user_id: id, p_reason: reason }),
+    rpc('platform_people', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }).as<PeopleList>(),
+  person: (id, reason) => rpc('platform_person', { p_user_id: id, ...(reason ? { p_reason: reason } : {}) }).as<Person | null>(),
+  deletePreview: (id) => rpc('platform_delete_preview', { p_user_id: id }).as<DeletePreview>(),
+  block: (id, reason) => rpc('platform_block', { p_user_id: id, p_reason: reason }),
+  unblock: (id, reason) => rpc('platform_unblock', { p_user_id: id, p_reason: reason }),
   deleteAccount: async (id, confirm, reason) => {
     await rpc('platform_delete_account', { p_user_id: id, p_confirm: confirm, p_reason: reason })
     // Its players lose their link (players.profile_id is set null).
     entryChanged()
   },
   resetPinLock: ({ userId, playerId }, reason) =>
-    rpc<void>('platform_reset_pin_lock', { p_user_id: userId ?? null, p_player_id: playerId ?? null, p_reason: reason }),
+    rpc('platform_reset_pin_lock', { p_user_id: userId ?? null, p_player_id: playerId ?? null, p_reason: reason }),
   setOrganizer: (tournamentId, userId, role, reason) =>
-    rpc<void>('platform_set_organizer', { p_tournament_id: tournamentId, p_user_id: userId, p_role: role, p_reason: reason }),
+    rpc('platform_set_organizer', { p_tournament_id: tournamentId, p_user_id: userId, p_role: role, p_reason: reason }),
   unlinkPlayer: async (playerId) => {
-    await rpc<void>('comite_unlink_profile', { p_player_id: playerId })
+    await rpc('comite_unlink_profile', { p_player_id: playerId })
     entryChanged()
   },
   courses: ({ q, filter = 'all', limit = 50, offset = 0 }) =>
-    rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }),
-  course: (id) => rpc<PlatformCourse | null>('platform_course', { p_course_id: id }),
-  refreshCourse: (id) => rpc<number>('platform_refresh_course_results', { p_course_id: id }),
-  mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }),
-  deleteCourse: (id, reason) => rpc<void>('platform_delete_course', { p_course_id: id, p_reason: reason }),
+    rpc('platform_courses', { p_q: q?.trim() || null, p_filter: filter, p_limit: limit, p_offset: offset }).as<{ total: number; rows: CourseRow[] }>(),
+  course: (id) => rpc('platform_course', { p_course_id: id }).as<PlatformCourse | null>(),
+  refreshCourse: (id) => rpc('platform_refresh_course_results', { p_course_id: id }),
+  mergeCourses: (keepId, dropId, teeMap, reason) => rpc('platform_merge_courses', { p_keep: keepId, p_drop: dropId, p_tee_map: teeMap, p_reason: reason }).as<{ rounds: number; refreshed: number }>(),
+  deleteCourse: (id, reason) => rpc('platform_delete_course', { p_course_id: id, p_reason: reason }),
   verifyCourse: async (id, on, reason) => {
     await rpc('platform_verify_course', { p_course_id: id, p_on: on, p_reason: reason })
   },
-  crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }),
-  crew: (id, reason) => rpc<PlatformCrew | null>('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }),
-  removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }),
-  deleteCrew: (crewId, confirmName, reason) => rpc<void>('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
-  audience: () => rpc<Audience>('platform_audience'),
-  broadcast: (title, body, to, url) => rpc<number>('platform_broadcast', { p_title: title, p_body: body, p_to: to, p_url: url }),
+  crews: ({ q, limit = 50, offset = 0 }) => rpc('platform_crews', { p_q: q?.trim() || null, p_limit: limit, p_offset: offset }).as<{ total: number; rows: CrewRow[] }>(),
+  crew: (id, reason) => rpc('platform_crew', { p_crew_id: id, ...(reason ? { p_reason: reason } : {}) }).as<PlatformCrew | null>(),
+  removeCrewMember: (crewId, profileId, reason) => rpc('platform_crew_remove_member', { p_crew_id: crewId, p_profile_id: profileId, p_reason: reason }).as<'removed' | 'handed' | 'deleted'>(),
+  deleteCrew: (crewId, confirmName, reason) => rpc('platform_delete_crew', { p_crew_id: crewId, p_confirm: confirmName, p_reason: reason }),
+  audience: () => rpc('platform_audience').as<Audience>(),
+  broadcast: (title, body, to, url) => rpc('platform_broadcast', { p_title: title, p_body: body, p_to: to, p_url: url }),
   audit: ({ source = 'all', before = null, q, limit = 50 }) =>
-    rpc<AuditItem[]>('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }),
-  auditEntry: (source, id) => rpc<AuditDetail | null>('platform_audit_entry', { p_source: source, p_id: id }),
-  health: () => rpc<Health>('platform_health'),
-  telemetry: (hours) => rpc<Telemetry>('platform_telemetry', { p_hours: hours }),
-  setFlag: (key, value, reason) => rpc<AppFlags>('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }),
+    rpc('platform_audit', { p_source: source, p_before: before, p_q: q?.trim() || null, p_limit: limit }).as<AuditItem[]>(),
+  auditEntry: (source, id) => rpc('platform_audit_entry', { p_source: source, p_id: id }).as<AuditDetail | null>(),
+  health: () => rpc('platform_health').as<Health>(),
+  telemetry: (hours) => rpc('platform_telemetry', { p_hours: hours }).as<Telemetry>(),
+  setFlag: (key, value, reason) => rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: reason }).as<AppFlags>(),
 }
 
 /**
@@ -545,7 +539,7 @@ export const useAppFlags = create<{ flags: AppFlags | null; load(): Promise<void
   async load() {
     try {
       // On a link to watch as anon with no session (STRAT-05): the page is nobody's, whatever this browser keeps.
-      set({ flags: await withTimeout(onLinkPage() ? anonRpc<AppFlags>('app_flags') : rpc<AppFlags>('app_flags'), 5000, 'avisos') })
+      set({ flags: await withTimeout(onLinkPage() ? anonRpc('app_flags').as<AppFlags>() : rpc('app_flags').as<AppFlags>(), 5000, 'avisos') })
     } catch {
       // No banner is better than a stuck app.
     }
@@ -592,7 +586,7 @@ export const usePlatform = create<PlatformState>((set, get) => ({
     // /admin waits instead of saying «no encontrado» for a moment.
     if (get().isAdmin === false) set({ isAdmin: null })
     try {
-      const yes = await withTimeout(rpc<boolean>('is_platform_admin'), 8000, 'admin')
+      const yes = await withTimeout(rpc('is_platform_admin'), 8000, 'admin')
       set({ isAdmin: yes === true })
     } catch {
       set({ isAdmin: false })

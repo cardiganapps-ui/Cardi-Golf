@@ -372,7 +372,7 @@ describe('writes this phone queued wait for the server to confirm the player (RE
 })
 
 describe('a tournament joined with its code: the saved boards follow the tournament, not the link', () => {
-  const code = fx.lookup.joinCode
+  const code = fx.lookup.joinCode!
 
   it('«Tu último torneo» opens the slug, and with no signal finds the boards saved when the code was typed', async () => {
     server.ensureSession.mockResolvedValue({})

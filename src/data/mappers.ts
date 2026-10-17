@@ -27,11 +27,27 @@ import type {
   Tee,
   TournamentRow,
 } from '../engine/types'
+import type { Database, Tables } from './database.types'
 
+/**
+ * A row off the live channel or out of a jsonb payload: no table the types
+ * can name. A mapper takes its table's row (`RowOf`).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>
 
-export const mapTournament = (r: Row): TournamentRow => ({
+type TableName = keyof Database['public']['Tables']
+/**
+ * A table's row as a mapper reads it (ARCH-03): its columns by the names the
+ * generated types give them, so a renamed or misspelled column fails the
+ * typecheck. Each value as it comes, which may be missing (a link's board
+ * leaves columns out, a live change or an older build's row may lack a newer
+ * one) or a number's text: the mapper reads it with its fallback.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type RowOf<T extends TableName> = { [K in keyof Tables<T>]?: any }
+
+export const mapTournament = (r: RowOf<'tournaments'>): TournamentRow => ({
   id: r.id,
   slug: r.slug,
   name: r.name,
@@ -50,7 +66,7 @@ export const mapTournament = (r: Row): TournamentRow => ({
   handicapsLockedAt: r.handicaps_locked_at ?? null,
 })
 
-export const mapPlayer = (r: Row): Player => ({
+export const mapPlayer = (r: RowOf<'players'>): Player => ({
   id: r.id,
   fullName: r.full_name,
   displayName: r.display_name,
@@ -101,14 +117,14 @@ export function mapHandicapNote(v: unknown): HandicapNote | null {
   return { from, changes }
 }
 
-export const mapHole = (r: Row): Hole => ({
+export const mapHole = (r: RowOf<'holes'>): Hole => ({
   number: r.number,
   par: r.par,
   strokeIndex: r.stroke_index,
   yards: r.yards ?? null,
 })
 
-export const mapTee = (r: Row, holes: Row[]): Tee => ({
+export const mapTee = (r: RowOf<'tees'>, holes: RowOf<'holes'>[]): Tee => ({
   id: r.id,
   courseId: r.course_id,
   name: r.name,
@@ -121,7 +137,7 @@ export const mapTee = (r: Row, holes: Row[]): Tee => ({
     .sort((a, b) => a.number - b.number),
 })
 
-export const mapCourse = (r: Row, tees: Row[], holes: Row[]): Course => ({
+export const mapCourse = (r: RowOf<'courses'>, tees: RowOf<'tees'>[], holes: RowOf<'holes'>[]): Course => ({
   id: r.id,
   name: r.name,
   tees: tees
@@ -130,7 +146,7 @@ export const mapCourse = (r: Row, tees: Row[], holes: Row[]): Course => ({
     .map((t) => mapTee(t, holes)),
 })
 
-export const mapRound = (r: Row): Round => ({
+export const mapRound = (r: RowOf<'rounds'>): Round => ({
   id: r.id,
   number: r.number,
   date: r.date ?? null,
@@ -139,7 +155,7 @@ export const mapRound = (r: Row): Round => ({
   status: r.status,
 })
 
-export const mapGroup = (r: Row, members: Row[]): Group => ({
+export const mapGroup = (r: RowOf<'groups'>, members: RowOf<'group_members'>[]): Group => ({
   id: r.id,
   roundId: r.round_id,
   number: r.number,
@@ -148,9 +164,9 @@ export const mapGroup = (r: Row, members: Row[]): Group => ({
   playerIds: members.filter((m) => m.group_id === r.id).map((m) => m.player_id),
 })
 
-export const mapRoundTee = (r: Row): RoundTee => ({ roundId: r.round_id, playerId: r.player_id, teeId: r.tee_id })
+export const mapRoundTee = (r: RowOf<'round_tees'>): RoundTee => ({ roundId: r.round_id, playerId: r.player_id, teeId: r.tee_id })
 
-export const mapPair = (r: Row): Pair => ({
+export const mapPair = (r: RowOf<'pairs'>): Pair => ({
   id: r.id,
   name: r.name ?? null,
   player1Id: r.player1_id,
@@ -160,7 +176,7 @@ export const mapPair = (r: Row): Pair => ({
   drawnAt: r.drawn_at ?? null,
 })
 
-export const mapTeam = (r: Row, members: Row[]): Team => ({
+export const mapTeam = (r: RowOf<'teams'>, members: RowOf<'team_members'>[]): Team => ({
   id: r.id,
   name: r.name ?? null,
   number: r.number,
@@ -168,7 +184,7 @@ export const mapTeam = (r: Row, members: Row[]): Team => ({
   drawnAt: r.drawn_at ?? null,
 })
 
-export const mapScore = (r: Row): Score => ({
+export const mapScore = (r: RowOf<'scores'>): Score => ({
   id: r.id ?? undefined,
   roundId: r.round_id,
   playerId: r.player_id,
@@ -184,7 +200,7 @@ export const mapScore = (r: Row): Score => ({
   ...(typeof r.reason === 'string' && r.reason.trim() ? { reason: r.reason } : {}),
 })
 
-export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({
+export const mapSnakeTiebreak = (r: RowOf<'snake_tiebreaks'>): SnakeTiebreak => ({
   roundId: r.round_id,
   groupId: r.group_id,
   hole: r.hole,
@@ -192,7 +208,7 @@ export const mapSnakeTiebreak = (r: Row): SnakeTiebreak => ({
   ...(r.decided_by != null && { decidedBy: r.decided_by }),
 })
 
-export const mapCardSignature = (r: Row): CardSignature => ({
+export const mapCardSignature = (r: RowOf<'card_signatures'>): CardSignature => ({
   roundId: r.round_id,
   pairId: r.pair_id ?? null,
   // A player's card, signed by a marker of his group (0054); a pair's signature has none.
@@ -201,7 +217,7 @@ export const mapCardSignature = (r: Row): CardSignature => ({
   signedAt: r.signed_at,
 })
 
-export const mapHandicapOverride = (r: Row): HandicapOverride => ({
+export const mapHandicapOverride = (r: RowOf<'handicap_overrides'>): HandicapOverride => ({
   roundId: r.round_id,
   playerId: r.player_id,
   playingHcp: r.playing_hcp,
@@ -210,7 +226,7 @@ export const mapHandicapOverride = (r: Row): HandicapOverride => ({
   at: r.at,
 })
 
-export const mapLot = (r: Row): CalcuttaLot => ({
+export const mapLot = (r: RowOf<'calcutta_lots'>): CalcuttaLot => ({
   id: r.id,
   playerId: r.player_id,
   lotNumber: r.lot_number,
@@ -220,7 +236,7 @@ export const mapLot = (r: Row): CalcuttaLot => ({
   soldAt: r.sold_at ?? null,
 })
 
-export const mapBid = (r: Row): CalcuttaBid => ({
+export const mapBid = (r: RowOf<'calcutta_bids'>): CalcuttaBid => ({
   id: r.id,
   lotId: r.lot_id,
   bidderId: r.bidder_id,
@@ -228,16 +244,16 @@ export const mapBid = (r: Row): CalcuttaBid => ({
   createdAt: r.created_at,
 })
 
-export const mapBuyback = (r: Row): CalcuttaBuyback => ({
+export const mapBuyback = (r: RowOf<'calcutta_buybacks'>): CalcuttaBuyback => ({
   lotId: r.lot_id,
   pct: r.pct,
   amount: r.amount,
   paid: !!r.paid,
 })
 
-export const mapGameEntry = (r: Row): GameEntry => ({ gameId: r.game_id, playerId: r.player_id })
+export const mapGameEntry = (r: RowOf<'game_entries'>): GameEntry => ({ gameId: r.game_id, playerId: r.player_id })
 
-export const mapHoleAward = (r: Row): HoleAward => ({
+export const mapHoleAward = (r: RowOf<'hole_awards'>): HoleAward => ({
   roundId: r.round_id,
   groupId: r.group_id ?? null,
   hole: r.hole,
@@ -247,9 +263,9 @@ export const mapHoleAward = (r: Row): HoleAward => ({
   source: r.source === 'comite' || r.source === 'group' ? r.source : r.group_id == null ? 'comite' : 'group',
 })
 
-export const mapGameResult = (r: Row): GameResult => ({ gameId: r.game_id, playerId: r.player_id, share: Number(r.share) })
+export const mapGameResult = (r: RowOf<'game_results'>): GameResult => ({ gameId: r.game_id, playerId: r.player_id, share: Number(r.share) })
 
-export const mapPayment = (r: Row): Payment => ({
+export const mapPayment = (r: RowOf<'payments'>): Payment => ({
   id: r.id,
   fromPlayerId: r.from_player_id ?? null,
   toPlayerId: r.to_player_id ?? null,
@@ -259,7 +275,7 @@ export const mapPayment = (r: Row): Payment => ({
   note: r.note ?? null,
 })
 
-export const mapMoneyAdjustment = (r: Row): MoneyAdjustment => ({
+export const mapMoneyAdjustment = (r: RowOf<'money_adjustments'>): MoneyAdjustment => ({
   id: r.id,
   sourceKey: r.source_key,
   kind: r.kind,
