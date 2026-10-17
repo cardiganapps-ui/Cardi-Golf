@@ -15,6 +15,7 @@ import type { TournamentSettings } from './settings/schema'
 import { fillRound, makeFirstTournament, makePlayer, makeRound, makeSnapshot, PAR_72, score } from './testing/fixtures'
 import type { Snapshot } from './types'
 import { t } from '../i18n/es-MX'
+import { words } from './testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 const PARS = PAR_72.map(([p]) => p)
@@ -43,7 +44,7 @@ describe('«Cerrar torneo»', () => {
     snap.rounds[1]!.status = 'live'
     const c = closeCheck(snap, S, { openRejected: 0 })
     expect(c.ok).toBe(false)
-    expect(c.blockers).toEqual([{ kind: 'openRounds', text: 'El día 2 sigue abierto: termínalo o cancélalo en Comité, sección Rondas.' }])
+    expect(c.blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toEqual([{ kind: 'openRounds', text: 'El día 2 sigue abierto: termínalo o cancélalo en Comité, sección Rondas.' }])
   })
 
   it('a cancelled day leaves its prizes «por asignar»: blocked until the Comité assigns them', () => {
@@ -51,7 +52,7 @@ describe('«Cerrar torneo»', () => {
     snap.rounds[1]!.status = 'cancelled'
     snap.scores = snap.scores.filter((s) => s.roundId !== 'r2')
     let c = closeCheck(snap, S, { openRejected: 0 })
-    expect(c.blockers).toEqual([{ kind: 'unassigned', text: '$3,000 por asignar: el Comité decide en Dinero, Liquidación.' }])
+    expect(c.blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toEqual([{ kind: 'unassigned', text: '$3,000 por asignar: el Comité decide en Dinero, Liquidación.' }])
     snap.moneyAdjustments = [
       { id: 'a1', callId: 'call-a1', sourceKey: 'bestRound', kind: 'house', toPlayerId: null, amount: 1200, reason: 'Para la cena', createdAt: '2027-04-12T09:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
       { id: 'a2', callId: 'call-a2', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1900, reason: 'Se pasó', createdAt: '2027-04-12T09:01:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null },
@@ -59,7 +60,7 @@ describe('«Cerrar torneo»', () => {
     // The snake's $1,800 cannot take $1,900: still unassigned, and the assignment flagged.
     c = closeCheck(snap, S, { openRejected: 0 })
     expect(c.blockers.map((b) => b.kind)).toEqual(['unassigned', 'badAssignments'])
-    expect(c.blockers[1]!.text).toBe('Una asignación no se puede pagar: anúlalas en Dinero, Liquidación.')
+    expect(words(c.blockers[1]!.says)).toBe('Una asignación no se puede pagar: anúlalas en Dinero, Liquidación.')
     snap.moneyAdjustments[1] = { ...snap.moneyAdjustments[1]!, voidedAt: '2027-04-12T09:02:00+00:00', voidReason: 'Error' }
     snap.moneyAdjustments.push({ id: 'a3', callId: 'call-a3', sourceKey: 'snake', kind: 'award', toPlayerId: 'p1', amount: 1800, reason: 'Ahora sí', createdAt: '2027-04-12T09:03:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null })
     expect(closeCheck(snap, S, { openRejected: 0 }).ok).toBe(true)
@@ -70,7 +71,7 @@ describe('«Cerrar torneo»', () => {
     for (const s of snap.scores) if (s.roundId === 'r2' && s.hole === 18 && (s.playerId === 'p1' || s.playerId === 'p10')) Object.assign(s, { strokes: Math.max(s.strokes ?? 0, 4), putts: 3 })
     // Its group's money waits for the answer: not «por asignar», so the tiebreak is the only thing to do.
     expect(kinds(snap)).toEqual(['tiebreaks'])
-    expect(closeCheck(snap, S, { openRejected: 0 }).blockers[0]!.text).toBe('Un desempate de la Víbora sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.')
+    expect(words(closeCheck(snap, S, { openRejected: 0 }).blockers[0]!.says)).toBe('Un desempate de la Víbora sin responder («¿Quién embocó al último?»): en Comité, sección Tarjetas.')
     snap.snakeTiebreaks.push({ roundId: 'r2', groupId: 'r2g1', hole: 18, lastHoledPlayerId: 'p1' })
     expect(kinds(snap)).toEqual([])
   })
@@ -80,7 +81,7 @@ describe('«Cerrar torneo»', () => {
     snap.players.forEach((p, i) => snap.calcuttaLots.push({ id: `lot${i}`, playerId: p.id, lotNumber: i + 1, status: i === 0 ? 'pending' : 'sold', price: i === 0 ? null : 500, ownerId: i === 0 ? null : p.id, soldAt: null }))
     for (const p of snap.players.slice(1)) snap.payments.push({ id: `cal-${p.id}`, kind: 'calcutta', fromPlayerId: p.id, toPlayerId: null, amount: 500, paid: true, note: null })
     const c = closeCheck(snap, S, { openRejected: 0 })
-    expect(c.warnings).toContain('Lotes de la Calcutta sin vender: J1. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.')
+    expect(words(c.warnings)).toContain('Lotes de la Calcutta sin vender: J1. No cobran nada de la Calcutta; si deben contar, véndelos en Comité, sección Calcutta.')
     // Whatever slot it leaves empty is the Calcutta's «por asignar», decided in Dinero like any other.
     expect(c.blockers.map((b) => b.kind).filter((k) => k !== 'unassigned')).toEqual([])
   })
@@ -94,9 +95,9 @@ describe('«Cerrar torneo»', () => {
   it('a hole the server kept for the Comité holds the close until «Pendientes de revisar» resolves it (REL-08)', () => {
     const c = closeCheck(clean(), S, { openRejected: 2 })
     expect(c.ok).toBe(false)
-    expect(c.blockers).toEqual([{ kind: 'rejectedWrites', text: '2 hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos en Comité, sección Tarjetas, «Pendientes de revisar».' }])
-    expect(c.warnings).toEqual([])
-    expect(closeCheck(clean(), S, { openRejected: 1 }).blockers[0]!.text).toBe('Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar».')
+    expect(c.blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toEqual([{ kind: 'rejectedWrites', text: '2 hoyos que el servidor no tomó siguen sin revisar: aplícalos o descártalos en Comité, sección Tarjetas, «Pendientes de revisar».' }])
+    expect(words(c.warnings)).toEqual([])
+    expect(words(closeCheck(clean(), S, { openRejected: 1 }).blockers[0]!.says)).toBe('Un hoyo que el servidor no tomó sigue sin revisar: aplícalo o descártalo en Comité, sección Tarjetas, «Pendientes de revisar».')
     expect(closeCheck(clean(), S, { openRejected: 0 }).ok).toBe(true)
   })
 
@@ -104,7 +105,7 @@ describe('«Cerrar torneo»', () => {
     const c = closeCheck(clean(), S, { openRejected: null })
     expect(c.ok).toBe(true)
     expect(c.blockers).toEqual([])
-    expect(c.warnings).toEqual([t.closeGate.rejectedUnavailable])
+    expect(words(c.warnings)).toEqual([t.closeGate.rejectedUnavailable])
   })
 
   it('every day rained out: Dinero lists the money the gate blocks on, and once assigned it closes', () => {
@@ -127,7 +128,7 @@ describe('«Cerrar torneo»', () => {
     snap.cardSignatures = snap.cardSignatures.filter((x) => x.roundId === 'r1')
     expect(computeTournament(snap, S).money.unassigned.closing).toBe(false)
     const c = closeCheck(snap, S, { openRejected: 0 })
-    expect(c.blockers).toEqual([
+    expect(c.blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toEqual([
       { kind: 'missingRounds', text: 'El día 2 no está creado: créalo y juégalo o cancélalo en Comité, sección Rondas, o baja el número de rondas en Comité, sección Torneo.' },
     ])
   })
@@ -137,7 +138,7 @@ describe('«Cerrar torneo»', () => {
     snap.payments = snap.payments.filter((p) => p.fromPlayerId !== 'p3' && p.fromPlayerId !== 'p4')
     const c = closeCheck(snap, S, { openRejected: 0 })
     expect(c.ok).toBe(true)
-    expect(c.warnings).toEqual(['2 personas todavía deben $5,000. No impide cerrar: se puede cobrar después en Dinero.'])
+    expect(words(c.warnings)).toEqual(['2 personas todavía deben $5,000. No impide cerrar: se puede cobrar después en Dinero.'])
   })
 
   it('a Ronda rápida closes its live round itself: the open day does not block, its unassigned pot does', () => {

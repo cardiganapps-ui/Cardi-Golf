@@ -17,8 +17,9 @@ import type { AuctionState } from '../modules/auction'
 import type { GameResultState } from '../games/game'
 import type { Id, PaymentKind, Snapshot } from '../types'
 import { computeMoney, markPaidWrites, restorePaidWrites, type MoneyState, type PaidWrite, type Transfer } from './money'
+import { label, type Explanation } from '../messages'
 
-const why = { title: '', steps: [] }
+const why: Explanation = { title: label(''), steps: [] }
 
 function prize(playerId: Id, amount: number, opts: Partial<PrizeAward> = {}): PrizeAward {
   return { moduleId: 'individual', label: 'Individual, 1º', playerId, amount, final: true, why, ...opts }

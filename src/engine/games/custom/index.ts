@@ -37,11 +37,11 @@ export const customGame: GameImpl<CustomState, Cfg> = {
       // Every entrant who did not win pays the stake to each winner.
       const units = new Map(Object.keys(state.winners).map((id) => [id, 1]))
       const losers = ctx.entrants.filter((id) => !units.has(id))
-      return directUnits({ ...c, entrants: [...losers, ...units.keys()] }, units, 'reward', ['apuesta', 'apuestas'], name).filter((p) => !p.payerId || !units.has(p.payerId))
+      return directUnits({ ...c, entrants: [...losers, ...units.keys()] }, units, 'reward', 'bet', name).filter((p) => !p.payerId || !units.has(p.payerId))
     }
     // Shares may be fractional: scale to whole units first.
     const units = new Map(Object.entries(state.winners).map(([id, s]) => [id, Math.round(s * 100)]))
-    return payUnits(c, units, ['parte', 'partes'], name).map((p) => ({ ...p, label: ctx.config.label }))
+    return payUnits(c, units, 'part', name).map((p) => ({ ...p, label: ctx.config.label }))
   },
   board(state, ctx) {
     const money = moneyByPlayer(customGame.prizes(state, ctx))

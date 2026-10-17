@@ -112,8 +112,7 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     const pots = tablePots(state, ctx)
     return state.tables.flatMap((tb, i) => {
       const pot = pots[i]!
-      const day = tb.roundId ? `, Día ${roundNumberOf(ctx, tb.roundId)}` : ''
-      return unfilledWarning(`${ctx.config.label}${day}`, unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)), tb.rows.length, ['jugador', 'jugadores'])
+      return unfilledWarning(ctx.config.label, unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)), tb.rows.length, 'player', tb.roundId ? roundNumberOf(ctx, tb.roundId) : null)
     })
   },
   board(state, ctx) {

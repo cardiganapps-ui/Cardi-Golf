@@ -20,7 +20,8 @@
 import type { CountbackInput } from '../core/ranking'
 import type { CoreState } from '../core/types'
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation, Id, Snapshot } from '../types'
+import type { Msg } from '../messages'
+import type { ExplanationText, Id, Snapshot } from '../types'
 
 export const FORMAT_IDS = ['stableford', 'strokePlay', 'matchPlay', 'team'] as const
 export type FormatId = (typeof FORMAT_IDS)[number]
@@ -82,7 +83,7 @@ export interface FormatStandings {
    */
   countback: Record<Id, CountbackInput>
   /** Anything the organizer should know, e.g. a match format with no matches set. */
-  warnings: string[]
+  warnings: Msg[]
 }
 
 export interface MainFormat {
@@ -98,7 +99,7 @@ export interface MainFormat {
    */
   higherIsBetter(settings: TournamentSettings): boolean
   /** How the format explains itself, for the info sheet and the Reglamento. */
-  describe(settings: TournamentSettings): Explanation
+  describe(settings: TournamentSettings): ExplanationText
   standings(ctx: FormatContext): FormatStandings
 }
 

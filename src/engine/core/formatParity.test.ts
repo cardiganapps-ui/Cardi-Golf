@@ -12,6 +12,7 @@ import { fieldShape } from '../settings/prizeCheck'
 import { holeStrokes, strokesWhy } from '../formats'
 import type { Snapshot } from '../types'
 import type { HoleResult } from './types'
+import { words } from '../testing/words'
 
 function run(name: string, edit?: (s: TournamentSettings, snap: Snapshot) => void) {
   const snap = structuredClone(getFixture(name)!.snapshot)
@@ -116,17 +117,17 @@ describe('feed under strokes', () => {
 
 describe('a hole explained in strokes', () => {
   const h = (over: Partial<HoleResult>): HoleResult =>
-    ({ hole: 3, par: 4, strokeIndex: 5, yards: null, strokesReceived: 1, gross: 5, net: 4, points: 2, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: '', steps: [] }, ...over }) as HoleResult
+    ({ hole: 3, par: 4, strokeIndex: 5, yards: null, strokesReceived: 1, gross: 5, net: 4, points: 2, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: { code: 'label', params: { text: '' } }, steps: [] }, ...over }) as HoleResult
 
   it('net: the strokes received off the gross, and the result against par', () => {
-    expect(strokesWhy(h({}), true).steps).toEqual(['5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): 4 netos, par', '5 − 1 = 4 neto'])
-    expect(strokesWhy(h({}), false).steps).toEqual(['5 golpes en un par 4: 1 sobre par'])
+    expect(words(strokesWhy(h({}), true)).steps).toEqual(['5 golpes en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): 4 netos, par', '5 − 1 = 4 neto'])
+    expect(words(strokesWhy(h({}), false)).steps).toEqual(['5 golpes en un par 4: 1 sobre par'])
   })
 
   it('a pick-up counts as net double bogey, and says what each number is', () => {
-    const why = strokesWhy(h({ pickedUp: true, gross: null }), true)
+    const why = words(strokesWhy(h({ pickedUp: true, gross: null }), true))
     expect(why.steps).toEqual(['Levantó en un par 4, con 1 golpe de ventaja en este hoyo (índice de golpe 5): cuenta 6 golpes netos, 2 sobre par', 'Un hoyo levantado cuenta como doble bogey neto: par 4 + 1 golpe de ventaja + 2 = 7', '7 − 1 = 6 neto'])
-    expect(strokesWhy(h({ pickedUp: true, gross: null }), false).steps[0]).toBe('Levantó en un par 4: cuenta 7 golpes, 3 sobre par')
+    expect(words(strokesWhy(h({ pickedUp: true, gross: null }), false)).steps[0]).toBe('Levantó en un par 4: cuenta 7 golpes, 3 sobre par')
   })
 })
 

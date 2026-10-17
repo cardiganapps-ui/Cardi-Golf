@@ -10,6 +10,7 @@ import 'fake-indexeddb/auto'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Row } from './mappers'
 import { enterAs, installFakePhone } from './testing/fakePhone'
+import { words } from '../engine/testing/words'
 
 const { server } = installFakePhone()
 const { appliedValue, dismissInboxItems, isStaleHole, listOpenRejected, loadRejectedInbox, resolveInboxItem, sameValue, seenHole, sentValue, useRejectedInbox } = await import('./rejectedInbox')
@@ -105,7 +106,7 @@ describe('the list', () => {
     expect(missing).toBeNull()
     const closed = closeCheck(makeSnapshot({ players: 4 }), DEFAULT_SETTINGS, { openRejected: missing })
     expect(closed.blockers.map((b) => b.kind)).not.toContain('rejectedWrites')
-    expect(closed.warnings).toContain(t.closeGate.rejectedUnavailable)
+    expect(words(closed.warnings)).toContain(t.closeGate.rejectedUnavailable)
   })
 
   it('any other failure is the store\'s error, said for people', async () => {

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest'
 import { computeTournament } from '../computeTournament'
 import { FIRST_TOURNAMENT_SETTINGS } from './presets'
 import { makeFirstTournament, makeRound } from '../testing/fixtures'
+import { words } from '../testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
@@ -18,7 +19,7 @@ describe('the pool, against the real tournament (MONEY-06)', () => {
     snap.tournament.status = 'live'
     const st = computeTournament(snap, S)
     expect(st.flags.pool.balanced).toBe(true)
-    expect(st.flags.poolWarning).toBeNull()
+    expect(words(st.flags.poolWarning)).toBeNull()
   })
 
   it('a player who never shows leaves the prizes unfunded, and everyone is told', () => {
@@ -29,8 +30,8 @@ describe('the pool, against the real tournament (MONEY-06)', () => {
     const st = computeTournament(snap, S)
     // 11 × $2,500 = $27,500 in; prizes $30,000 less two snake survivors ($400) for the group of three.
     expect(st.flags.pool).toMatchObject({ entryPot: 27500, prizesTotal: 29600, difference: -2100, balanced: false })
-    expect(st.flags.poolWarning).toContain('faltan $2,100')
-    expect(st.flags.warnings).toContain(st.flags.poolWarning)
+    expect(words(st.flags.poolWarning)).toContain('faltan $2,100')
+    expect(words(st.flags.warnings)).toContain(words(st.flags.poolWarning))
   })
 
   it('a round added beyond the plan counts its best round and snake', () => {
@@ -40,7 +41,7 @@ describe('the pool, against the real tournament (MONEY-06)', () => {
     const st = computeTournament(snap, S)
     // Day 3: $1,200 best round + 3 groups × $600 snake, nobody paid in for it.
     expect(st.flags.pool.difference).toBe(-3000)
-    expect(st.flags.poolWarning).toContain('faltan $3,000')
+    expect(words(st.flags.poolWarning)).toContain('faltan $3,000')
   })
 
   it('during setup the pool is reported but nobody is warned yet: players are still joining', () => {
@@ -51,7 +52,7 @@ describe('the pool, against the real tournament (MONEY-06)', () => {
     snap.groups = []
     const st = computeTournament(snap, S)
     expect(st.flags.pool.balanced).toBe(false)
-    expect(st.flags.poolWarning).toBeNull()
+    expect(words(st.flags.poolWarning)).toBeNull()
   })
 })
 

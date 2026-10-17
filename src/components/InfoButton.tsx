@@ -7,12 +7,11 @@
  * way: a 44px target that says nothing until it is asked.
  */
 import { useState } from 'react'
-import type { Explanation } from '../engine/types'
 import { IconInfo } from './icons'
-import { ExplanationSheet } from './HowCalculated'
+import { ExplanationSheet, type Why } from './HowCalculated'
 import styles from './InfoButton.module.css'
 
-export function InfoButton({ why, label, title }: { why: Explanation | Explanation[]; label: string; title?: string }) {
+export function InfoButton({ why, label, title }: { why: Why | Why[]; label: string; title?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>

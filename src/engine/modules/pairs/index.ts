@@ -5,10 +5,10 @@
  * generates the next round's groups from the standings.
  */
 import { ordinal, t } from '../../../i18n/es-MX'
+import { msg, say, type Msg } from '../../messages'
 import { flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
 import type { Explanation, Id, Pair, Player } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
-import { pesos } from '../../core/pesos'
 
 export interface PairRow {
   pairId: Id
@@ -30,9 +30,9 @@ export interface PairsState {
   /** Players without a pair (warning, not an error). */
   unpaired: Id[]
   /** Groups that are not one pair of each kind (§18.5: keep the order, warn). */
-  groupWarnings: Array<{ roundId: Id; groupId: Id; message: string }>
+  groupWarnings: Array<{ roundId: Id; groupId: Id; message: Msg }>
   /** Once final, the places with a prize no pair with a result filled (MONEY-09). */
-  warnings: string[]
+  warnings: Msg[]
   final: boolean
 }
 
@@ -52,19 +52,19 @@ function pairPoints(ctx: ModuleContext, pair: Pair, roundId: Id): number {
 export function checkGroupComposition(
   ctx: ModuleContext,
   groupPlayerIds: Id[],
-): { ok: boolean; message: string } {
+): { ok: boolean; message: Msg | null } {
   const pairs = ctx.snapshot.pairs
   const kinds = ctx.settings.modules.pairs.pairing.map(([x, y]) => `${x}${y}`)
   const inGroup = new Set(groupPlayerIds)
   const found = pairs.filter((p) => inGroup.has(p.player1Id) && inGroup.has(p.player2Id))
   if (found.length * 2 !== groupPlayerIds.length) {
-    return { ok: false, message: 'El grupo no está formado por parejas completas.' }
+    return { ok: false, message: say('pairs.notPairs') }
   }
   const foundKinds = found.map((p) => p.kind ?? '').sort()
   if (kinds.length && kinds.length === found.length && foundKinds.join(',') !== [...kinds].sort().join(',')) {
-    return { ok: false, message: `El grupo no es ${t.common.andList(kinds.map((k) => `una pareja ${k}`))}.` }
+    return { ok: false, message: msg('pairs.wrongKinds', { kinds }) }
   }
-  return { ok: true, message: '' }
+  return { ok: true, message: null }
 }
 
 /**
@@ -130,8 +130,8 @@ export const pairsModule: GameModule<PairsState, 'pairs'> = {
       const [first, second] = splitEven(s.amount, 2)
       const each = second!.amount
       const odd = first!.rounding
-      const why: Explanation = { title: `${pesos(each)} cada uno`, steps: [...s.why.steps, `El premio es de la pareja: ${pesos(s.amount)} entre los dos = ${pesos(each)} cada uno${odd ? `, más ${pesos(odd)} para ${playersById.get(p.player1Id)?.displayName ?? ''}` : ''}`] }
-      prizes[p.player1Id] = { amount: first!.amount, why: odd ? { ...why, title: pesos(first!.amount) } : why, pairId: p.id }
+      const why: Explanation = { title: msg('pairs.eachTitle', { each }), steps: [...s.why.steps, msg('pairs.split', { total: s.amount, each, odd, to: playersById.get(p.player1Id)?.displayName ?? '' })] }
+      prizes[p.player1Id] = { amount: first!.amount, why: odd ? { ...why, title: msg('amount', { amount: first!.amount }) } : why, pairId: p.id }
       prizes[p.player2Id] = { amount: each, why, pairId: p.id }
     }
     const paired = new Set(pairs.flatMap((p) => [p.player1Id, p.player2Id]))
@@ -140,10 +140,10 @@ export const pairsModule: GameModule<PairsState, 'pairs'> = {
     if (pairs.length) {
       for (const g of snapshot.groups) {
         const c = checkGroupComposition(ctx, g.playerIds)
-        if (!c.ok) groupWarnings.push({ roundId: g.roundId, groupId: g.id, message: c.message })
+        if (!c.ok && c.message) groupWarnings.push({ roundId: g.roundId, groupId: g.id, message: c.message })
       }
     }
-    const warnings = ctx.tournamentFinal ? unfilledWarning(settings.modules.pairs.label, unfilledPlaces(paid, settings.prizes.pairs), paid.reduce((n, g) => n + g.members.length, 0), ['pareja', 'parejas']) : []
+    const warnings = ctx.tournamentFinal ? unfilledWarning(settings.modules.pairs.label, unfilledPlaces(paid, settings.prizes.pairs), paid.reduce((n, g) => n + g.members.length, 0), 'pair') : []
     return { rows, groups, prizes, unpaired, groupWarnings, warnings, final: isFinal(ctx, 'tournament') }
   },
   /** Its places nobody filled; the groups' composition is a field warning (`groupWarnings`), not its money's. */

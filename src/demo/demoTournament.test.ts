@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { forSpectators } from '../data/spectator'
 import { DEMO_ID, demoSnapshot } from './demoTournament'
+import { words } from '../engine/testing/words'
 
 const data = dataFromSnapshot(forSpectators(demoSnapshot(), true, DEMO_ID))
 const { state } = data
@@ -35,7 +36,7 @@ describe('the example tournament (STRAT-17)', () => {
   it('leaves nothing open: no tiebreak, no unsigned card, no warning', () => {
     expect(state.flags.pendingSnakeTiebreaks).toEqual([])
     expect(state.flags.unsignedCards).toEqual([])
-    expect(state.flags.warnings).toEqual([])
+    expect(words(state.flags.warnings)).toEqual([])
     expect(state.flags.missingPutts).toEqual([])
   })
 

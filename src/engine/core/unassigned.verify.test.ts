@@ -14,6 +14,7 @@ import { fillRound, makeFirstTournament, makePlayer, makeRound, makeSnapshot, PA
 import type { MoneyAdjustment, Snapshot } from '../types'
 import { proRata } from './unassigned'
 import { FIXTURE_NAMES, getFixture } from '../../dev/fixtures'
+import { words } from '../testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 const PARS = PAR_72.map(([p]) => p)
@@ -70,7 +71,7 @@ describe('V1: Dinero (closing, not final) and the gate (forced final) agree', ()
     const gate = closeCheck(snap, settings, { openRejected: 0 })
     const gateUnassigned = gate.blockers.find((b) => b.kind === 'unassigned')
     // If the gate blocks on money, Dinero must list it so the Comité can assign it.
-    if (gateUnassigned) expect(dinero.money.unassigned.total, `gate says ${gateUnassigned.text}`).toBeGreaterThan(0)
+    if (gateUnassigned) expect(dinero.money.unassigned.total, `gate says ${words(gateUnassigned.says)}`).toBeGreaterThan(0)
     expect(dinero.money.unassigned.total).toBe(4000)
   })
 
@@ -253,7 +254,7 @@ describe('V3: every dev fixture, play over: assign what Dinero lists, then the g
       expect(after.money.unassigned.heldTotal).toBe(0)
       const gate = closeCheck(snap, settings, { openRejected: 0 })
       const money = gate.blockers.filter((b) => b.kind === 'unassigned' || b.kind === 'badAssignments')
-      expect(money.map((b) => b.text), `Dinero listed ${JSON.stringify(keyed(dinero))}`).toEqual([])
+      expect(money.map((b) => words(b.says)), `Dinero listed ${JSON.stringify(keyed(dinero))}`).toEqual([])
       // And once Terminado, the books stay balanced.
       const fin = run({ ...snap, tournament: { ...snap.tournament, status: 'finished' } }, settings)
       conserved(fin)
@@ -326,7 +327,7 @@ describe('V4: one line, two causes', () => {
     ])
     // The award is the rained-out day's money: it says so, and group 1's $600 is still held.
     const prize = st.prizes.find((p) => p.moduleId === 'adjustment' && p.playerId === 'p4')!
-    expect(prize.why.steps[0]).toBe('La Víbora: $1,800 sin asignar')
+    expect(words(prize.why).steps[0]).toBe('La Víbora: $1,800 sin asignar')
     expect(st.money.unassigned.heldTotal).toBe(600)
     // The flagged refund voided, as the app says.
     snap.moneyAdjustments = [...award, ...refund.map((r) => ({ ...r, voidedAt: '2027-04-13T00:00:00+00:00', voidReason: 'De más' }))]
@@ -448,7 +449,7 @@ describe('N2: every day rained out, nobody has a result', () => {
     expect(auction.pot).toBe(13500)
     expect(auction.slots).toEqual([])
     expect(st.prizes.filter((p) => p.potId === 'calcutta' || p.moduleId === 'individual')).toEqual([])
-    expect(st.flags.warnings).toContain(`${S.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: $13,500 sin asignar. El Comité decide.`)
+    expect(words(st.flags.warnings)).toContain(`${S.modules.auction.label}: nadie tiene resultado, así que ningún lugar se ocupa: $13,500 sin asignar. El Comité decide.`)
     const bucket = st.money.unassigned.buckets.find((b) => b.key === 'calcutta')!
     expect(bucket.remaining).toBe(13500)
     const paidIn = new Map<string, number>()

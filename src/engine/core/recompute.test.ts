@@ -18,6 +18,8 @@ import { makeFirstTournament, score } from '../testing/fixtures'
 import { computeCore, holeWhy } from './compute'
 import { canonicalTime, timeKey } from './time'
 import type { HoleResult } from './types'
+import { say, type Msg } from '../messages'
+import { words } from '../testing/words'
 
 describe('the feed replays saves in time order, whatever form a stamp takes', () => {
   it('a whole second, a space for the T, the phone’s «Z» and the server’s offset: each pair in the order it happened', () => {
@@ -73,7 +75,8 @@ describe('a hole’s explanation is built once per figure (PERF-14)', () => {
       expect(Object.isFrozen(h.why.steps)).toBe(true)
     }
     expect(shared).toBeGreaterThan(holes.length / 2)
-    expect(() => (holes[0]!.why.steps as string[]).push('otra cosa')).toThrow()
+    expect(() => (holes[0]!.why.steps as Msg[]).push(say('hole.unplayed'))).toThrow()
+    expect(() => ((holes[0]!.why.title.params as { n: number }).n = 9)).toThrow()
     // A second compute hands back the same ones.
     const again = holesOf(computeCore(snap, parseSettings(snap.tournament.settings)))
     again.forEach((h, i) => expect(h.why).toBe(holes[i]!.why))
@@ -86,7 +89,7 @@ describe('a hole’s explanation is built once per figure (PERF-14)', () => {
     const [a, b] = [hole(), hole()]
     expect(a.why).not.toBe(b.why)
     expect(a.why).toEqual(holeWhy(a))
-    expect(a.why.steps[1]).toBe(`99 − ${a.strokesReceived} = ${99 - a.strokesReceived} neto`)
+    expect(words(a.why).steps[1]).toBe(`99 − ${a.strokesReceived} = ${99 - a.strokesReceived} neto`)
   })
 })
 

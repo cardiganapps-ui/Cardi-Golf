@@ -30,6 +30,7 @@ import { checkPrizePool, fieldShape } from '../../engine/settings/prizeCheck'
 import { settingsSense } from '../../engine/settings/sense'
 import { LOGO_CACHE_SECONDS, logoPath, logoSize, prepareLogo } from '../../lib/logo'
 import { TournamentLogo } from '../../components/TournamentLogo'
+import { useWords } from '../../components/currency'
 import { useTournamentCtx } from '../tournament/tournamentContext'
 import { SettingsEditor } from './SettingsEditor'
 import type { SettingsSection } from './SettingsEditor'
@@ -126,7 +127,8 @@ export function AdminTournament() {
   const roster = data!.snapshot.players.length
   const players = roster || settings.expectedPlayers || 0
   const fieldKnown = players >= 2
-  const warnings = data!.state.flags.warnings
+  const words = useWords()
+  const warnings = data!.state.flags.warnings.map(words)
   // Real group sizes per round, so the snake pot in the balance follows them (a group of 3 pays two).
   const groupSizes = useMemo(
     () => data!.snapshot.rounds.filter((r) => r.status !== 'cancelled').map((r) => data!.snapshot.groups.filter((g) => g.roundId === r.id).map((g) => g.playerIds.length)),

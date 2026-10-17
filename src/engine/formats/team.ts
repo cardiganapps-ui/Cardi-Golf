@@ -10,7 +10,8 @@
  * A team is a pair the Comité drew. Larger teams arrive with the auto draw.
  */
 import type { TournamentSettings } from '../settings/schema'
-import type { Explanation, Id } from '../types'
+import { say, type Msg } from '../messages'
+import type { ExplanationText, Id } from '../types'
 import { countbackFrom, emptyCountback, teamEntrants } from './entrants'
 import { toParFigure, type Entrant, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
 import { holeStrokes } from './strokePlay'
@@ -49,7 +50,7 @@ export const teamFormat: MainFormat = {
   higherIsBetter: (s) => s.modules.individual.formatOptions.teamScoring === 'stableford',
   figureLabel: (s) => (s.modules.individual.formatOptions.teamScoring === 'stableford' ? 'Puntos' : s.modules.individual.formatOptions.scoring === 'gross' ? 'Gross' : 'Neto'),
 
-  describe(settings: TournamentSettings): Explanation {
+  describe(settings: TournamentSettings): ExplanationText {
     const o = settings.modules.individual.formatOptions
     const mode = (o.teamMode ?? 'bestBall') as Mode
     const points = o.teamScoring === 'stableford'
@@ -75,8 +76,8 @@ export const teamFormat: MainFormat = {
     const points = o.teamScoring === 'stableford'
     const net = o.scoring !== 'gross'
     const entrants = teamEntrants(ctx)
-    const warnings: string[] = []
-    if (entrants.length === 0) warnings.push('Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.')
+    const warnings: Msg[] = []
+    if (entrants.length === 0) warnings.push(say('team.noTeams'))
 
     const totals: FormatStandings['totals'] = {}
     const perRound: FormatStandings['perRound'] = {}

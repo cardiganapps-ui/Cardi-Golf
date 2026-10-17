@@ -5,9 +5,8 @@
  * shared place, which rounds make it final, where the rounding pesos go)
  * instead of writing its own.
  */
-import { ordinal, t } from '../../i18n/es-MX'
+import { msg, type Msg } from '../messages'
 import type { Explanation, Id } from '../types'
-import { pesos } from './pesos'
 
 export interface Ranked<T> {
   item: T
@@ -109,8 +108,14 @@ export interface CountbackInput {
   holes: number
 }
 
-export interface CountbackStep {
-  label: string
+/** The holes a countback step compares: the whole round (`total`), or holes `from`–`to`. */
+export interface CountbackWindow {
+  from: number
+  to: number
+  total: boolean
+}
+
+export interface CountbackStep extends CountbackWindow {
   a: number
   b: number
 }
@@ -129,14 +134,11 @@ export function countback(a: CountbackInput, b: CountbackInput): { result: numbe
     return s
   }
   const holes = Math.max(a.holes, b.holes)
-  const windows: Array<[string, number, number]> = [
-    ['Total', 1, holes],
-    ...countbackWindows(holes).map(([f, t]): [string, number, number] => [f === t ? `Hoyo ${t}` : `Hoyos ${f}–${t}`, f, t]),
-  ]
-  for (const [label, from, to] of windows) {
+  const windows: CountbackWindow[] = [{ from: 1, to: holes, total: true }, ...countbackWindows(holes).map(([from, to]) => ({ from, to, total: false }))]
+  for (const { from, to, total } of windows) {
     const sa = sum(a.pointsByHole, from, to)
     const sb = sum(b.pointsByHole, from, to)
-    steps.push({ label, a: sa, b: sb })
+    steps.push({ from, to, total, a: sa, b: sb })
     if (sa !== sb) return { result: sb - sa, steps }
   }
   return { result: 0, steps }
@@ -228,13 +230,9 @@ export function onlyWithResult<T>(groups: RankGroup<T>[], has: (t: T) => boolean
  * filled (MONEY-09): `count` entrants had a result, in `unit` (singular,
  * plural). The money stays with the bank until the Comité decides.
  */
-export function unfilledWarning(label: string, unfilled: { places: number[]; amount: number }, count: number, unit: [string, string]): string[] {
-  const n = unfilled.places.length
-  if (!n) return []
-  const which = t.common.andList(unfilled.places.map((p) => ordinal(String(p))))
-  const what = n === 1 ? `el ${which} lugar no lo gana nadie` : `los lugares ${which} no los gana nadie`
-  const why = count === 0 ? 'nadie tiene resultado' : `${count} ${count === 1 ? unit[0] : unit[1]} con resultado`
-  return [`${label}: ${what} (${why}): ${pesos(unfilled.amount)} sin asignar. El Comité decide.`]
+export function unfilledWarning(label: string, unfilled: { places: number[]; amount: number }, count: number, unit: 'player' | 'team' | 'pair', day: number | null = null): Msg[] {
+  if (!unfilled.places.length) return []
+  return [msg('rank.unfilled', { label, day, places: unfilled.places, count, unit, amount: unfilled.amount })]
 }
 
 /** The places with a prize that `groups` leave empty, and their pesos (MONEY-09). */
@@ -272,17 +270,15 @@ export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (
     g.members.forEach((m, i) => {
       const { amount, rounding: extra } = shares[i]!
       const base = amount - extra
-      const steps: string[] = []
+      const steps: Msg[] = []
       // COPY-19: the place and what it pays, in a sentence; a tie says whose prizes it joins and how it splits them.
-      if (n === 1) steps.push(`El ${ordinal(String(g.position))} lugar paga ${pesos(total)}`)
+      if (n === 1) steps.push(msg('prize.place', { place: g.position, amount: total }))
       else {
-        steps.push(
-          `Empataron ${n} en el ${ordinal(String(g.position))} lugar: juntan los premios del ${t.common.andList(places.map((p) => ordinal(String(p))))}, ${pesos(total)}`,
-        )
-        steps.push(`${pesos(total)} entre ${n} = ${pesos(base)} cada uno${extra ? ', más $1 del redondeo' : ''}`)
-        steps.push(`Empatados: ${t.common.andList(g.members.map(name))}`)
+        steps.push(msg('prize.tie', { n, place: g.position, places, total }))
+        steps.push(msg('prize.tieSplit', { total, n, each: base, rounding: extra }))
+        steps.push(msg('prize.tied', { names: g.members.map(name) }))
       }
-      out.push({ item: m, amount, why: { title: pesos(amount), steps } })
+      out.push({ item: m, amount, why: { title: msg('amount', { amount }), steps } })
     })
   }
   return out

@@ -6,7 +6,7 @@
 import { MODULE_IDS, type ModuleId, type TournamentSettings } from './settings/schema'
 import { unknownGamesOf } from './settings/read'
 import type { Id, Snapshot } from './types'
-import { t } from '../i18n/es-MX'
+import { msg, type Msg } from './messages'
 import { computeCore } from './core/compute'
 import type { CoreState } from './core/types'
 import { computeMoney, type MoneyState } from './core/money'
@@ -18,7 +18,6 @@ import type { SnakeState } from './modules/snake'
 import { ALL_GAMES } from './games'
 import type { Game, GameConfigFor, GameContext, GameImpl, GameResultFor, GameResultState, ModuleContext, PrizeAward } from './games/game'
 import { gamePot } from './games/payout'
-import { pesos } from './core/pesos'
 import { isFinal } from './core/ranking'
 import type { GameConfig, GameType } from './settings/games'
 import { bracketState, type BracketState } from './formats/bracket'
@@ -27,9 +26,6 @@ import { checkPrizePool, fieldShape, type PrizeCheck } from './settings/prizeChe
 import { handicapChanges, type HandicapChange } from './core/handicapLock'
 import { missingPutts, puttingGames, type MissingPutts } from './core/putts'
 import { cardSignedFor, cardSigningMode } from './core/cardSigning'
-
-/** "$27,500": the engine's one formatter (core/pesos.ts). */
-const peso = pesos
 
 export type { ModuleStates }
 
@@ -58,11 +54,11 @@ export interface StatusFlags {
    * tournament's money, so no screen shows any (`useShowMoney`) and En vivo says why.
    */
   moneyUnknown: string[]
-  warnings: string[]
+  warnings: Msg[]
   /** The main pot against the real field and rounds (MONEY-06); `balanced` false means prizes and entries drifted apart. */
   pool: PrizeCheck
   /** The warning for an unbalanced pool once past setup (also in `warnings`), for the money screens. */
-  poolWarning: string | null
+  poolWarning: Msg | null
   /** Players whose handicap changed after they were fixed (UX-28): En vivo and their sheet say so. */
   handicapChanges: HandicapChange[]
 }
@@ -101,7 +97,7 @@ export interface ComputeOptions {
 interface GameRun<S> {
   state: S
   prizes: PrizeAward[]
-  warnings: string[]
+  warnings: Msg[]
 }
 
 /** The one runner both kinds of game go through (ARCH-15). */
@@ -131,7 +127,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const prizes: PrizeAward[] = []
   const missingModules: ModuleId[] = []
   /** Each enabled module's warnings, by id: the pairs' group composition is kept apart, see the flags. */
-  const moduleWarnings: Partial<Record<ModuleId, string[]>> = {}
+  const moduleWarnings: Partial<Record<ModuleId, Msg[]>> = {}
   const runModule = <K extends ModuleId>(id: K, mod: ModuleRegistry[K]) => {
     const r = run(mod, ctx)
     modules[id] = r.state
@@ -148,12 +144,12 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // Instance games (skins, matches, contests, custom bets...).
   const games: Record<string, GameResultState> = {}
   const missingGames: string[] = []
-  const gameWarnings: string[] = []
+  const gameWarnings: Msg[] = []
   const roster = [...snapshot.players].sort((a, b) => a.sortOrder - b.sortOrder).map((p) => p.id)
   const roundNumber = new Map(snapshot.rounds.map((r) => [r.id, r.number]))
   const outdated = (g: { id: string; label: string }) => {
     missingGames.push(g.id)
-    gameWarnings.push(t.outdated.game(g.label))
+    gameWarnings.push(msg('outdated.game', { label: g.label }))
   }
   const gameContext = <C extends GameConfig>(config: C): GameContext<C> => {
     const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
@@ -212,12 +208,12 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   }
   // Holes played without putts while a game pays on them (MONEY-18): named for the Comité, and the close waits for them.
   const noPutts = missingPutts(core, settings)
-  const puttsWarnings: string[] = []
+  const puttsWarnings: Msg[] = []
   if (noPutts.length) {
     const days = new Map<Id, Array<{ day: number; holes: number[] }>>()
     for (const m of noPutts) days.set(m.playerId, [...(days.get(m.playerId) ?? []), { day: m.roundNumber, holes: m.holes }])
     const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
-    puttsWarnings.push(t.missingPutts.warning([...days].map(([id, d]) => t.missingPutts.who(nameOf(id), d)), puttingGames(settings)))
+    puttsWarnings.push(msg('putts.missing', { who: [...days].map(([id, d]) => ({ name: nameOf(id), days: d })), games: puttingGames(settings) }))
   }
   const unsignedCards: StatusFlags['unsignedCards'] = []
   const signing = cardSigningMode(settings)
@@ -250,19 +246,19 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // checked when saved, but a player who never shows or a round added later
   // moves the pool. Past setup, an imbalance is a warning everyone sees.
   const pool = checkPrizePool(settings, fieldShape(snapshot, settings))
-  const poolWarnings: string[] = []
+  const poolWarnings: Msg[] = []
   const pastSetup = snapshot.tournament.status !== 'setup' || snapshot.rounds.some((r) => r.status === 'live' || r.status === 'finished')
   if (pastSetup && snapshot.players.length > 0 && !pool.balanced) {
     poolWarnings.push(
       pool.difference < 0
-        ? `Los premios suman ${peso(pool.prizesTotal)} y las inscripciones ${peso(pool.entryPot)}: faltan ${peso(-pool.difference)}. El Comité ajusta los premios en Comité, sección Torneo.`
-        : `Las inscripciones suman ${peso(pool.entryPot)} y los premios ${peso(pool.prizesTotal)}: sobran ${peso(pool.difference)} sin premio. El Comité ajusta los premios en Comité, sección Torneo.`,
+        ? msg('pool.short', { prizes: pool.prizesTotal, entries: pool.entryPot, missing: -pool.difference })
+        : msg('pool.surplus', { entries: pool.entryPot, prizes: pool.prizesTotal, left: pool.difference }),
     )
   }
   // A place the field can no longer fill (MONEY-09). Once final, each game
   // says which places went unfilled, those included, so this one stops.
   if (pastSetup && !tournamentFinal) {
-    for (const u of pool.unreachable) poolWarnings.push(`${u.label}: ${u.detail}, ${peso(u.amount)} que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.`)
+    for (const u of pool.unreachable) poolWarnings.push(msg('pool.unreachable', { label: u.label, detail: u.detail, amount: u.amount }))
   }
 
   // «Por asignar» (MONEY-05): once play is over, what the rules leave with
@@ -298,7 +294,7 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // What is left in the bank and what the list says must be the same pesos.
   const unassignedWarnings = [...unassigned.warnings]
   const listed = unassigned.total + unassigned.heldTotal
-  if (closing && money.banker.difference > 0 && money.banker.difference !== listed) unassignedWarnings.push(t.unassigned.mismatch(peso(money.banker.difference), peso(listed)))
+  if (closing && money.banker.difference > 0 && money.banker.difference !== listed) unassignedWarnings.push(msg('unassigned.mismatch', { bank: money.banker.difference, listed }))
 
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.
