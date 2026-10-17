@@ -16,10 +16,25 @@ import { TvScreen } from './TvScreen'
 function tv(fixture: string) {
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <TvScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -37,7 +52,8 @@ const tvRow = (playerId: string) => {
   return [...row.querySelectorAll('[class*="_mid_"]'), row.querySelector('[class*="_big_"]')!].map(shown)
 }
 /** What a screen reader hears for where he is on the course. */
-const thruSaid = (playerId: string) => document.querySelector(`[data-player="${playerId}"] [class*="_mid_"] .sr-only`)?.textContent
+const thruSaid = (playerId: string) =>
+  document.querySelector(`[data-player="${playerId}"] [class*="_mid_"] .sr-only`)?.textContent
 
 afterEach(() => cleanup())
 

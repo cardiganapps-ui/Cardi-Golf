@@ -44,22 +44,34 @@ export function placePoints(rank: number | null, tied: number, table = SEASON_PO
   return sum / tied + bonus
 }
 
-export function seasonTable(results: SeasonResult[], year: number, table = SEASON_POINTS, bonus = PLAY_BONUS): SeasonRow[] {
+export function seasonTable(
+  results: SeasonResult[],
+  year: number,
+  table = SEASON_POINTS,
+  bonus = PLAY_BONUS,
+): SeasonRow[] {
   const inYear = results.filter((r) => Number(r.date.slice(0, 4)) === year)
   const tiedAt = new Map<string, number>()
-  for (const r of inYear) if (r.rank != null) tiedAt.set(`${r.tournamentId}:${r.rank}`, (tiedAt.get(`${r.tournamentId}:${r.rank}`) ?? 0) + 1)
+  for (const r of inYear)
+    if (r.rank != null) tiedAt.set(`${r.tournamentId}:${r.rank}`, (tiedAt.get(`${r.tournamentId}:${r.rank}`) ?? 0) + 1)
 
   const by = new Map<string, Omit<SeasonRow, 'position' | 'label'>>()
   for (const r of inYear) {
     const row = by.get(r.handle) ?? { handle: r.handle, points: 0, events: 0, wins: 0, best: null }
-    row.points += placePoints(r.rank, r.rank == null ? 1 : (r.tied ?? tiedAt.get(`${r.tournamentId}:${r.rank}`)!), table, bonus)
+    row.points += placePoints(
+      r.rank,
+      r.rank == null ? 1 : (r.tied ?? tiedAt.get(`${r.tournamentId}:${r.rank}`)!),
+      table,
+      bonus,
+    )
     row.events += 1
     if (r.rank === 1) row.wins += 1
     if (r.rank != null) row.best = row.best == null ? r.rank : Math.min(row.best, r.rank)
     by.set(r.handle, row)
   }
   // Half points are the only fractions (a two-way tie); compare in tenths to stay exact.
-  const key = (r: Omit<SeasonRow, 'position' | 'label'>) => [Math.round(r.points * 10), r.wins, -(r.best ?? Infinity)] as const
+  const key = (r: Omit<SeasonRow, 'position' | 'label'>) =>
+    [Math.round(r.points * 10), r.wins, -(r.best ?? Infinity)] as const
   const cmp = (a: Omit<SeasonRow, 'position' | 'label'>, b: Omit<SeasonRow, 'position' | 'label'>) => {
     const ka = key(a)
     const kb = key(b)

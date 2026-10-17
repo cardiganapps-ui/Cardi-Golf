@@ -37,7 +37,6 @@ export interface HoleTrail {
   steps: CardStep[]
 }
 
-
 const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
 const text = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null)
 
@@ -55,7 +54,17 @@ function step(x: unknown): CardStep | null {
   const roundId = text(r.roundId)
   const at = text(r.at)
   if (round == null || hole == null || !roundId || !at) return null
-  return { roundId, round, hole, at, before: value(r.before), after: value(r.after), by: text(r.by), comite: r.comite === true, reason: text(r.reason) }
+  return {
+    roundId,
+    round,
+    hole,
+    at,
+    before: value(r.before),
+    after: value(r.after),
+    by: text(r.by),
+    comite: r.comite === true,
+    reason: text(r.reason),
+  }
 }
 
 /** The card's steps, or 'unavailable' on a database without 0062. */

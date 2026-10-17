@@ -43,14 +43,20 @@ for (const [w, name] of Object.entries(ledger.workstreams)) {
 
 const found = ledger.found ?? []
 const foundOpen = found.filter((r) => !closed(r))
-console.log(`\nFound since the review: ${found.length} (${foundOpen.length} open: ${SEV.map((s) => `${s} ${count(foundOpen, (r) => r.severity === s)}`).join(' · ')})`)
-for (const r of foundOpen) console.log(`  ${pad(r.id, 9)} ${r.severity} ${pad(r.workstream, 4)} ${r.pr ? `#${r.pr} ` : ''}${r.title.slice(0, 96)}`)
+console.log(
+  `\nFound since the review: ${found.length} (${foundOpen.length} open: ${SEV.map((s) => `${s} ${count(foundOpen, (r) => r.severity === s)}`).join(' · ')})`,
+)
+for (const r of foundOpen)
+  console.log(
+    `  ${pad(r.id, 9)} ${r.severity} ${pad(r.workstream, 4)} ${r.pr ? `#${r.pr} ` : ''}${r.title.slice(0, 96)}`,
+  )
 
 if (process.argv.includes('--open')) {
   for (const p of [0, 1, 2, 3]) {
     const list = open.filter((r) => r.phase === p)
     if (!list.length) continue
     console.log(`\nPhase ${p}: ${list.length} open`)
-    for (const r of list) console.log(`  ${pad(r.id, 9)} ${r.severity} ${pad(r.workstream, 4)} ${r.title.slice(0, 100)}`)
+    for (const r of list)
+      console.log(`  ${pad(r.id, 9)} ${r.severity} ${pad(r.workstream, 4)} ${r.title.slice(0, 100)}`)
   }
 }

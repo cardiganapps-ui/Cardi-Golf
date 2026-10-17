@@ -60,13 +60,17 @@ function copyIn(file: string, rel: string): string[] {
         ts.isExportDeclaration(p) ||
         ts.isLiteralTypeNode(p) ||
         ((ts.isPropertyAssignment(p) || ts.isPropertySignature(p)) && p.name === node) ||
-        (ts.isBinaryExpression(p) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(p.operatorToken.kind)) ||
+        (ts.isBinaryExpression(p) &&
+          [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(
+            p.operatorToken.kind,
+          )) ||
         ts.isCaseClause(p) ||
         ts.isElementAccessExpression(p))
     if (!code) {
       let text: string | null = null
       if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) text = node.text
-      else if (ts.isTemplateExpression(node)) text = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ')
+      else if (ts.isTemplateExpression(node))
+        text = [node.head.text, ...node.templateSpans.map((s) => s.literal.text)].join(' ')
       if (text != null && COPY.test(text) && !kept(node)) out.push(text)
     }
     ts.forEachChild(node, visit)
@@ -77,7 +81,11 @@ function copyIn(file: string, rel: string): string[] {
 
 const imports = (file: string) => /from '(?:\.\.\/)+i18n\//.test(readFileSync(file, 'utf8'))
 
-const ALL = files(ENGINE).map((f) => ({ file: relative(ROOT, f), copy: copyIn(f, relative(ROOT, f)), i18n: imports(f) }))
+const ALL = files(ENGINE).map((f) => ({
+  file: relative(ROOT, f),
+  copy: copyIn(f, relative(ROOT, f)),
+  i18n: imports(f),
+}))
 const remaining = baseline.remaining as Record<string, number>
 const i18nRemaining = new Set(baseline.i18nImports as string[])
 
@@ -92,14 +100,28 @@ describe('the engine writes no copy (ARCH-05)', () => {
     const under: string[] = []
     for (const f of ALL) {
       const allowed = remaining[f.file] ?? 0
-      if (f.copy.length > allowed) over.push(`${f.file}: ${f.copy.length} (allowed ${allowed}): ${f.copy.slice(0, 5).map((c) => JSON.stringify(c)).join(', ')}`)
+      if (f.copy.length > allowed)
+        over.push(
+          `${f.file}: ${f.copy.length} (allowed ${allowed}): ${f.copy
+            .slice(0, 5)
+            .map((c) => JSON.stringify(c))
+            .join(', ')}`,
+        )
       else if (f.copy.length < allowed) under.push(`${f.file}: ${f.copy.length}, lower its count from ${allowed}`)
     }
     expect(over, 'copy belongs in src/i18n: give it a code in messages.ts and its words in es-MX.ts').toEqual([])
     expect(under).toEqual([])
-    for (const file of [...Object.keys(remaining), ...Object.keys(keep.files)]) expect(ALL.some((f) => f.file === file), `${file} is listed but gone`).toBe(true)
+    for (const file of [...Object.keys(remaining), ...Object.keys(keep.files)])
+      expect(
+        ALL.some((f) => f.file === file),
+        `${file} is listed but gone`,
+      ).toBe(true)
     // What is left says why it is left.
-    for (const file of Object.keys(remaining)) expect((baseline as { residue?: Record<string, string> }).residue?.[file], `${file} has copy left and no reason in residue`).toBeTruthy()
+    for (const file of Object.keys(remaining))
+      expect(
+        (baseline as { residue?: Record<string, string> }).residue?.[file],
+        `${file} has copy left and no reason in residue`,
+      ).toBeTruthy()
   })
 
   it('imports src/i18n only from the files that still write copy', () => {
@@ -109,11 +131,35 @@ describe('the engine writes no copy (ARCH-05)', () => {
 
   it('the files that hold the codes and their figures write none', () => {
     const files = [
-      ...['src/engine/messages.ts', 'src/engine/core/compute.ts', 'src/engine/core/handicap.ts', 'src/engine/core/ranking.ts', 'src/engine/close.ts', 'src/engine/computeTournament.ts', 'src/engine/core/unassigned.ts'],
+      ...[
+        'src/engine/messages.ts',
+        'src/engine/core/compute.ts',
+        'src/engine/core/handicap.ts',
+        'src/engine/core/ranking.ts',
+        'src/engine/close.ts',
+        'src/engine/computeTournament.ts',
+        'src/engine/core/unassigned.ts',
+      ],
       // ARCH-05 stage 2: the rules, the catalog's rules and the settings' checks.
-      ...['src/engine/games/describe.ts', 'src/engine/settings/describeModule.ts', 'src/engine/settings/reglamento.ts', 'src/engine/settings/prizeCheck.ts', 'src/engine/settings/sense.ts', 'src/engine/settings/schema.ts', 'src/engine/settings/games.ts'],
+      ...[
+        'src/engine/games/describe.ts',
+        'src/engine/settings/describeModule.ts',
+        'src/engine/settings/reglamento.ts',
+        'src/engine/settings/prizeCheck.ts',
+        'src/engine/settings/sense.ts',
+        'src/engine/settings/schema.ts',
+        'src/engine/settings/games.ts',
+      ],
       // Stage 3: the computed state's labels and the games' boards.
-      ...['src/engine/core/money.ts', 'src/engine/games/payout.ts', 'src/engine/formats/entrants.ts', 'src/engine/formats/bracket.ts', 'src/engine/modules/auction/index.ts', 'src/engine/games/match/index.ts', 'src/engine/games/skins/index.ts'],
+      ...[
+        'src/engine/core/money.ts',
+        'src/engine/games/payout.ts',
+        'src/engine/formats/entrants.ts',
+        'src/engine/formats/bracket.ts',
+        'src/engine/modules/auction/index.ts',
+        'src/engine/games/match/index.ts',
+        'src/engine/games/skins/index.ts',
+      ],
     ]
     for (const file of files) {
       expect(ALL.find((f) => f.file === file)?.copy, file).toEqual([])

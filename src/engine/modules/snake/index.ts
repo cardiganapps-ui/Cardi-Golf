@@ -115,12 +115,24 @@ export const snakeModule: GameModule<SnakeState, 'snake'> = {
               if (pid === holderId) {
                 payouts[pid] = {
                   amount: 0,
-                  why: { title: msg('amount', { amount: 0 }), steps: [msg('snake.holder', { game, threshold, hole: passes.at(-1)!.hole }), msg('snake.holderPays', { game })] },
+                  why: {
+                    title: msg('amount', { amount: 0 }),
+                    steps: [
+                      msg('snake.holder', { game, threshold, hole: passes.at(-1)!.hole }),
+                      msg('snake.holderPays', { game }),
+                    ],
+                  },
                 }
               } else {
                 payouts[pid] = {
                   amount: perSurvivor,
-                  why: { title: msg('amount', { amount: perSurvivor }), steps: [msg('snake.survivor', { game, holder: nameOf(holderId) }), msg('snake.survivorGets', { amount: perSurvivor })] },
+                  why: {
+                    title: msg('amount', { amount: perSurvivor }),
+                    steps: [
+                      msg('snake.survivor', { game, holder: nameOf(holderId) }),
+                      msg('snake.survivorGets', { amount: perSurvivor }),
+                    ],
+                  },
                 }
               }
             }

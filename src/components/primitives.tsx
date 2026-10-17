@@ -68,11 +68,24 @@ function pressCancel(e: ReactPointerEvent<HTMLElement>) {
   delete e.currentTarget.dataset.pressed
 }
 /** Spread on a control that opens or swaps something heavy: its pressed state shows from the first touch. */
-const PRESS = { onPointerDown: pressDown, onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressCancel } as const
+const PRESS = {
+  onPointerDown: pressDown,
+  onPointerMove: pressMove,
+  onPointerUp: pressUp,
+  onPointerCancel: pressCancel,
+} as const
 
 // ---- Buttons ----
 /** The app's one button: `.btn` and a variant from global.css (VIS-17). A link drawn as a button takes `buttonClass`. */
-export function Button({ variant, size, block, flush, className, type = 'button', ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & ButtonLook) {
+export function Button({
+  variant,
+  size,
+  block,
+  flush,
+  className,
+  type = 'button',
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & ButtonLook) {
   return <button type={type} className={buttonClass({ variant, size, block, flush }, className)} {...rest} />
 }
 
@@ -85,7 +98,17 @@ export function Button({ variant, size, block, flush, className, type = 'button'
  * choices, a segmented switch, a list) is a group named by the label: a label around it handed a tap on its words
  * to the first button in it.
  */
-export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
+export function Field({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  hint?: string
+  error?: string | null
+  children: ReactNode
+}) {
   const id = useId()
   const hintId = hint && !error ? `${id}-hint` : undefined
   const errorId = error ? `${id}-error` : undefined
@@ -132,10 +155,19 @@ export function Field({ label, hint, error, children }: { label: string; hint?: 
 /** One field a label names: a native input, select or textarea, or a component that renders one (`labelable`). */
 function isLabelable(node: ReactNode): node is ReactElement {
   if (!isValidElement(node)) return false
-  return typeof node.type === 'string' ? ['input', 'select', 'textarea'].includes(node.type) : !!(node.type as { labelable?: boolean }).labelable
+  return typeof node.type === 'string'
+    ? ['input', 'select', 'textarea'].includes(node.type)
+    : !!(node.type as { labelable?: boolean }).labelable
 }
-export function Input({ error, code, className = '', ...rest }: InputHTMLAttributes<HTMLInputElement> & { error?: boolean; code?: boolean }) {
-  return <input className={`${s.input} ${error ? s.inputError : ''} ${code ? s.codeInput : ''} ${className}`} {...rest} />
+export function Input({
+  error,
+  code,
+  className = '',
+  ...rest
+}: InputHTMLAttributes<HTMLInputElement> & { error?: boolean; code?: boolean }) {
+  return (
+    <input className={`${s.input} ${error ? s.inputError : ''} ${code ? s.codeInput : ''} ${className}`} {...rest} />
+  )
 }
 Input.labelable = true
 
@@ -169,21 +201,60 @@ export function Money({ amount, signed, currency }: { amount: number; signed?: b
  * itself, with whose score it is, sets it (the Tarjeta); otherwise a hole change
  * reads out eight bare figures.
  */
-export function Stepper({ value, par, onChange, min = 1, max = 15, size = 'md', label, disabled, quiet }: { value: number; par?: number; onChange: (v: number) => void; min?: number; max?: number; size?: 'md' | 'lg'; label: string; disabled?: boolean; quiet?: boolean }) {
+export function Stepper({
+  value,
+  par,
+  onChange,
+  min = 1,
+  max = 15,
+  size = 'md',
+  label,
+  disabled,
+  quiet,
+}: {
+  value: number
+  par?: number
+  onChange: (v: number) => void
+  min?: number
+  max?: number
+  size?: 'md' | 'lg'
+  label: string
+  disabled?: boolean
+  quiet?: boolean
+}) {
   // Each tick is felt, where the phone can vibrate (MOT-10).
   const step = (v: number) => {
     haptic('tick')
     onChange(v)
   }
   return (
-    <div className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''} ${disabled ? s.stepperOff : ''}`} role="group" aria-label={label}>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepDown}`} disabled={disabled || value <= min} onClick={() => step(value - 1)}>
+    <div
+      className={`${s.stepper} ${size === 'lg' ? s.stepperLg : ''} ${disabled ? s.stepperOff : ''}`}
+      role="group"
+      aria-label={label}
+    >
+      <button
+        type="button"
+        className={s.stepBtn}
+        aria-label={`${label}: ${t.common.stepDown}`}
+        disabled={disabled || value <= min}
+        onClick={() => step(value - 1)}
+      >
         <IconMinus />
       </button>
-      <span className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`} aria-live={quiet ? undefined : 'polite'}>
+      <span
+        className={`${s.fig} ${s.stepValue} ${par !== undefined && value === par ? s.stepPar : ''}`}
+        aria-live={quiet ? undefined : 'polite'}
+      >
         {value}
       </span>
-      <button type="button" className={s.stepBtn} aria-label={`${label}: ${t.common.stepUp}`} disabled={disabled || value >= max} onClick={() => step(value + 1)}>
+      <button
+        type="button"
+        className={s.stepBtn}
+        aria-label={`${label}: ${t.common.stepUp}`}
+        disabled={disabled || value >= max}
+        onClick={() => step(value + 1)}
+      >
         <IconPlus />
       </button>
     </div>
@@ -216,7 +287,10 @@ export function Segmented<T extends string>({
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([])
   const strip = useRef<HTMLDivElement>(null)
-  const current = Math.max(0, options.findIndex((o) => o.value === value))
+  const current = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  )
   // VIS-26: a tab strip wider than the screen fades at the edge where more tabs hide, and keeps the chosen tab in
   // view. It cut labels mid-word at both edges with no sign of more, and the chosen game could sit off screen.
   useLayoutEffect(() => {
@@ -249,14 +323,33 @@ export function Segmented<T extends string>({
   }, [tabs, current])
   function onKey(e: ReactKeyboardEvent<HTMLButtonElement>, i: number) {
     const last = options.length - 1
-    const to = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : null
+    const to =
+      e.key === 'ArrowRight' || e.key === 'ArrowDown'
+        ? i === last
+          ? 0
+          : i + 1
+        : e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+          ? i === 0
+            ? last
+            : i - 1
+          : e.key === 'Home'
+            ? 0
+            : e.key === 'End'
+              ? last
+              : null
     if (to === null) return
     e.preventDefault()
     refs.current[to]?.focus()
     onChange(options[to]!.value)
   }
   return (
-    <div ref={strip} className={tabs ? s.tabs : s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label} aria-disabled={disabled || undefined}>
+    <div
+      ref={strip}
+      className={tabs ? s.tabs : s.segmented}
+      role={tabs ? 'tablist' : 'radiogroup'}
+      aria-label={label}
+      aria-disabled={disabled || undefined}
+    >
       {options.map((o, i) => (
         <button
           key={o.value}
@@ -271,7 +364,11 @@ export function Segmented<T extends string>({
           aria-checked={tabs ? undefined : o.value === value}
           tabIndex={i === current ? 0 : -1}
           disabled={disabled}
-          className={tabs ? `${s.tabItem} ${o.value === value ? s.tabItemOn : ''}` : `${s.segBtn} ${o.value === value ? s.segOn : ''}`}
+          className={
+            tabs
+              ? `${s.tabItem} ${o.value === value ? s.tabItemOn : ''}`
+              : `${s.segBtn} ${o.value === value ? s.segOn : ''}`
+          }
           {...PRESS}
           onClick={() => onChange(o.value)}
           onKeyDown={(e) => onKey(e, i)}
@@ -296,12 +393,27 @@ export function TabBar({ children, ref }: { children: ReactNode; ref?: Ref<HTMLE
     </nav>
   )
 }
-export function TabItem({ icon, label, badge, active, children, ...link }: NavLinkProps & { icon: ReactNode; label: string; badge?: { count: number; bad?: boolean }; active?: boolean; children?: ReactNode }) {
+export function TabItem({
+  icon,
+  label,
+  badge,
+  active,
+  children,
+  ...link
+}: NavLinkProps & {
+  icon: ReactNode
+  label: string
+  badge?: { count: number; bad?: boolean }
+  active?: boolean
+  children?: ReactNode
+}) {
   return (
     <NavLink {...link} className={({ isActive }) => `${s.tab} ${isActive || active ? s.tabOn : ''}`}>
       <span className={s.tabIcon} aria-hidden="true">
         {icon}
-        {badge && badge.count > 0 && <span className={`${s.tabBadge} ${badge.bad ? s.tabBadgeBad : ''}`}>{badge.count}</span>}
+        {badge && badge.count > 0 && (
+          <span className={`${s.tabBadge} ${badge.bad ? s.tabBadgeBad : ''}`}>{badge.count}</span>
+        )}
       </span>
       <span>{label}</span>
       {children}
@@ -350,7 +462,12 @@ export interface LeaderRowProps {
  * the same animation, so each change starts it again; React never writes the attribute, so a render keeps it.
  * There is no count: a hole moves a total by a few points, which a count would show in two or three frames.
  */
-function useWash(ref: RefObject<HTMLElement | null>, value: string, seen: string | undefined, reading: string | undefined) {
+function useWash(
+  ref: RefObject<HTMLElement | null>,
+  value: string,
+  seen: string | undefined,
+  reading: string | undefined,
+) {
   const last = useRef<{ value: string; seen: string | undefined; reading: string | undefined } | null>(null)
   useLayoutEffect(() => {
     const prev = last.current
@@ -396,13 +513,24 @@ export function LeaderRow({
   speech,
   onClick,
 }: LeaderRowProps) {
-  const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, { me: mine, movedBy, ...speech, todaySpoken: !!todaySpoken })
+  const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, {
+    me: mine,
+    movedBy,
+    ...speech,
+    todaySpoken: !!todaySpoken,
+  })
   const todayRef = useRef<HTMLSpanElement>(null)
   const figureRef = useRef<HTMLSpanElement>(null)
   useWash(todayRef, today ?? '', seenToday, reading)
   useWash(figureRef, figure, seenFigure, reading)
   return (
-    <button type="button" className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`} {...PRESS} onClick={onClick} aria-label={label}>
+    <button
+      type="button"
+      className={`${s.leaderRow} ${dense ? s.leaderRowDense : ''} ${mine ? s.mine : ''}`}
+      {...PRESS}
+      onClick={onClick}
+      aria-label={label}
+    >
       <span className={`${s.fig} ${s.pos} ${pos === '1' ? s.posTop : ''}`}>
         {pos}
         {/* Since the last look, with how far (MOT-06): a 6 px triangle for half a second said neither. */}
@@ -417,20 +545,16 @@ export function LeaderRow({
           {name}
           {honoree && <span className={s.honoreeDot} aria-hidden="true" />}
         </span>
-        {sub && !dense && (
-          <span className={s.nameSub}>
-            {sub}
-          </span>
-        )}
+        {sub && !dense && <span className={s.nameSub}>{sub}</span>}
       </span>
       {/*
-        * No pencil ring here, though DESIGN_DIRECTION.md asks for one: this
-        * column holds the day's TOTAL, and the ring means "this figure is a
-        * birdie". Circling 25 points says something false, and on a real
-        * field almost every round contains a birdie, so ten of twelve rows
-        * were ringed and the mark stopped meaning anything. It stays on the
-        * Tarjeta, where the figure it rings is a hole score.
-        */}
+       * No pencil ring here, though DESIGN_DIRECTION.md asks for one: this
+       * column holds the day's TOTAL, and the ring means "this figure is a
+       * birdie". Circling 25 points says something false, and on a real
+       * field almost every round contains a birdie, so ten of twelve rows
+       * were ringed and the mark stopped meaning anything. It stays on the
+       * Tarjeta, where the figure it rings is a hole score.
+       */}
       <span ref={todayRef} className={`${s.fig} ${s.today} ${todayTone && todayTone !== 'even' ? s[todayTone] : ''}`}>
         {today ?? ''}
       </span>
@@ -451,7 +575,11 @@ export function ScoreMark({ value, kind }: { value: string | number; kind: MarkK
   return (
     // A11Y-10: one image named with the figure and what it is («7, doble bogey o peor»); a label on a plain span
     // replaced the figure for some readers and was dropped by others.
-    <span className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`} role="img" aria-label={t.card.markSpoken(value, kind)}>
+    <span
+      className={`${s.mark} ${s.fig} ${kind === 'pickup' ? s.markPickup : ''}`}
+      role="img"
+      aria-label={t.card.markSpoken(value, kind)}
+    >
       <svg className={s.markSvg} viewBox="0 0 30 30" style={{ stroke }} aria-hidden="true">
         {(kind === 'birdie' || kind === 'eagle') && <circle cx="15" cy="15" r="12" />}
         {kind === 'eagle' && <circle cx="15" cy="15" r="9" />}
@@ -481,7 +609,19 @@ export interface GridHole {
   pts?: number
   putts?: number | null
 }
-export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHole }: { holes: GridHole[]; playerLabel: string; showPoints?: boolean; showPutts?: boolean; onHole?: (n: number) => void }) {
+export function ScorecardGrid({
+  holes,
+  playerLabel,
+  showPoints,
+  showPutts,
+  onHole,
+}: {
+  holes: GridHole[]
+  playerLabel: string
+  showPoints?: boolean
+  showPutts?: boolean
+  onHole?: (n: number) => void
+}) {
   // Two stacked nines: each fits a phone screen without scrolling, and the totals are labelled.
   const front = holes.filter((h) => h.n <= 9)
   const back = holes.filter((h) => h.n > 9)
@@ -492,7 +632,17 @@ export function ScorecardGrid({ holes, playerLabel, showPoints, showPutts, onHol
   const mark = (h: GridHole) =>
     h.gross != null || h.pickedUp ? (
       onHole ? (
-        <button type="button" className={s.gridCellBtn} onClick={() => onHole(h.n)} aria-label={t.player.holeSpoken(h.n, h.pickedUp ? null : h.gross, markFor(h.gross, h.par, h.pickedUp), showPoints ? (h.pts ?? null) : null)}>
+        <button
+          type="button"
+          className={s.gridCellBtn}
+          onClick={() => onHole(h.n)}
+          aria-label={t.player.holeSpoken(
+            h.n,
+            h.pickedUp ? null : h.gross,
+            markFor(h.gross, h.par, h.pickedUp),
+            showPoints ? (h.pts ?? null) : null,
+          )}
+        >
           <ScoreMark value={h.pickedUp ? 'L' : h.gross!} kind={markFor(h.gross, h.par, h.pickedUp)} />
         </button>
       ) : (
@@ -607,7 +757,19 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
  * (PWA-15): `label` is its whole name, the words shown first. `busy` while the refresh is under way: a tap
  * then does nothing.
  */
-export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text: string; live?: boolean; onRefresh?: () => void; busy?: boolean; label?: string }) {
+export function LiveStatus({
+  text,
+  live = true,
+  onRefresh,
+  busy,
+  label,
+}: {
+  text: string
+  live?: boolean
+  onRefresh?: () => void
+  busy?: boolean
+  label?: string
+}) {
   const inner = (
     <>
       <span className={`${s.liveDot} ${live ? '' : s.liveDotOff}`} aria-hidden="true" />
@@ -616,7 +778,13 @@ export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text
   )
   if (!onRefresh) return <span className={s.live}>{inner}</span>
   return (
-    <button type="button" className={`${s.live} ${s.liveButton}`} aria-label={label} aria-busy={busy || undefined} onClick={() => !busy && onRefresh()}>
+    <button
+      type="button"
+      className={`${s.live} ${s.liveButton}`}
+      aria-label={label}
+      aria-busy={busy || undefined}
+      onClick={() => !busy && onRefresh()}
+    >
       {inner}
       <IconRefresh size={16} className={`${s.liveIcon} ${busy ? s.liveIconBusy : ''}`} />
     </button>
@@ -625,7 +793,19 @@ export function LiveStatus({ text, live = true, onRefresh, busy, label }: { text
 
 // ---- Event name, wordmark, plate ----
 /** `heading`: the name is the screen's h1 (Entrar, A11Y-13); its class sets every property the h1 would change. */
-export function EventName({ name, tagline, logoUrl, small, heading }: { name: string; tagline?: string; logoUrl?: string | null; small?: boolean; heading?: boolean }) {
+export function EventName({
+  name,
+  tagline,
+  logoUrl,
+  small,
+  heading,
+}: {
+  name: string
+  tagline?: string
+  logoUrl?: string | null
+  small?: boolean
+  heading?: boolean
+}) {
   const Name = heading ? 'h1' : 'div'
   return (
     <div className={s.event}>
@@ -678,7 +858,15 @@ function lockupStyle(tone: LogoTone, size: number): CSSProperties {
   } as CSSProperties
 }
 /** The lockup as on the sheet: the symbol, then "Polo". `mark={false}` gives the bare wordmark. */
-export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: number; tone?: LogoTone; mark?: boolean }) {
+export function Wordmark({
+  size = 24,
+  tone = 'color',
+  mark = true,
+}: {
+  size?: number
+  tone?: LogoTone
+  mark?: boolean
+}) {
   return (
     <span
       className={`${s.wordmark} ${tone === 'board' ? s.wordmarkBoard : ''}`}
@@ -686,7 +874,14 @@ export function Wordmark({ size = 24, tone = 'color', mark = true }: { size?: nu
       role="img"
       aria-label={t.app.name}
     >
-      {mark && <img className={`${s.wordmarkMark} ${tone === 'board' ? '' : s.graphite}`} src={lockupFor(tone).image} alt="" draggable={false} />}
+      {mark && (
+        <img
+          className={`${s.wordmarkMark} ${tone === 'board' ? '' : s.graphite}`}
+          src={lockupFor(tone).image}
+          alt=""
+          draggable={false}
+        />
+      )}
       <span aria-hidden="true">{t.app.name}</span>
     </span>
   )

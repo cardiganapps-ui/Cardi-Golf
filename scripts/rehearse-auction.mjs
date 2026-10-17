@@ -48,7 +48,10 @@ const must = (r, ctx) => {
 
 const t = must(await sb.from('tournaments').select('id, name, settings').eq('slug', slug).single(), 'tournament')
 const cfg = t.settings.auction
-const players = must(await sb.from('players').select('id, display_name').eq('tournament_id', t.id).order('sort_order'), 'players')
+const players = must(
+  await sb.from('players').select('id, display_name').eq('tournament_id', t.id).order('sort_order'),
+  'players',
+)
 const nameOf = (id) => players.find((p) => p.id === id)?.display_name ?? id
 
 // Clean slate for the rehearsal auction (Ensayo only).
@@ -62,7 +65,11 @@ const summary = []
 for (const player of shuffle(players)) {
   lotNumber++
   const lot = must(
-    await sb.from('calcutta_lots').insert({ tournament_id: t.id, player_id: player.id, lot_number: lotNumber, status: 'open' }).select('id').single(),
+    await sb
+      .from('calcutta_lots')
+      .insert({ tournament_id: t.id, player_id: player.id, lot_number: lotNumber, status: 'open' })
+      .select('id')
+      .single(),
     'lot',
   )
   // 0–6 bids, each from an eligible bidder, strictly increasing.
@@ -75,14 +82,23 @@ for (const player of shuffle(players)) {
     if (eligible.length === 0) break
     amount += cfg.increment * (1 + Math.floor(rng() * 3))
     bidder = pick(eligible).id
-    bids.push({ lot_id: lot.id, bidder_id: bidder, amount, created_at: new Date(Date.now() - (nBids - i) * 1000).toISOString() })
+    bids.push({
+      lot_id: lot.id,
+      bidder_id: bidder,
+      amount,
+      created_at: new Date(Date.now() - (nBids - i) * 1000).toISOString(),
+    })
   }
   if (bids.length) must(await sb.from('calcutta_bids').insert(bids).select('id'), 'bids')
   if (bidder === player.id && !canBid(player.id) && cfg.selfOwnedCountsTowardMax) {
     // Owner at the limit buys himself anyway (rule: the player always opens his own lot).
   }
   must(
-    await sb.from('calcutta_lots').update({ status: 'sold', price: amount, owner_id: bidder, sold_at: new Date().toISOString() }).eq('id', lot.id).select('id'),
+    await sb
+      .from('calcutta_lots')
+      .update({ status: 'sold', price: amount, owner_id: bidder, sold_at: new Date().toISOString() })
+      .eq('id', lot.id)
+      .select('id'),
     'sell',
   )
   holdings.set(bidder, holdings.get(bidder) + 1)
@@ -90,9 +106,18 @@ for (const player of shuffle(players)) {
   let buyback = 0
   if (bidder !== player.id && rng() < 0.4) {
     buyback = pick([25, 50].filter((x) => x <= cfg.buybackMaxPct))
-    if (buyback) must(await sb.from('calcutta_buybacks').upsert({ lot_id: lot.id, pct: buyback, amount: Math.round((amount * buyback) / 100), paid: false }).select('lot_id'), 'buyback')
+    if (buyback)
+      must(
+        await sb
+          .from('calcutta_buybacks')
+          .upsert({ lot_id: lot.id, pct: buyback, amount: Math.round((amount * buyback) / 100), paid: false })
+          .select('lot_id'),
+        'buyback',
+      )
   }
-  summary.push(`${String(lotNumber).padStart(2)}. ${player.display_name.padEnd(10)} → ${bidder === player.id ? 'él mismo' : nameOf(bidder).padEnd(10)} $${amount}${buyback ? ` (recompra ${buyback}%)` : ''}`)
+  summary.push(
+    `${String(lotNumber).padStart(2)}. ${player.display_name.padEnd(10)} → ${bidder === player.id ? 'él mismo' : nameOf(bidder).padEnd(10)} $${amount}${buyback ? ` (recompra ${buyback}%)` : ''}`,
+  )
 }
 
 console.log(`Calcutta de ${t.name}: ${lotNumber} lotes, pozo $${pot}`)

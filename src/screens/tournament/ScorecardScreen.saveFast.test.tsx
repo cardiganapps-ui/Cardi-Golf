@@ -15,7 +15,11 @@ import { Profiler } from 'react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-interface HoleWrite { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }
+interface HoleWrite {
+  round_id: string
+  hole: number
+  entries: import('../../data/outbox').HoleEntry[]
+}
 const outbox = vi.hoisted(() => ({
   /** Hold each hole's storage write until the test lets it land (or fail). */
   hold: false,
@@ -31,7 +35,9 @@ vi.mock('../../data/outbox', async (importOriginal) => {
     // Like the outbox: the hole goes into storage at the call; the boards take it once `settle` resolves.
     enqueueHole: vi.fn((_tid: string, h: HoleWrite, settle?: Promise<unknown>) => {
       outbox.started.push(h)
-      const stored = outbox.hold ? new Promise<void>((resolve, reject) => outbox.pending.push({ land: resolve, fail: reject })) : Promise.resolve()
+      const stored = outbox.hold
+        ? new Promise<void>((resolve, reject) => outbox.pending.push({ land: resolve, fail: reject }))
+        : Promise.resolve()
       return stored.then(async () => {
         await settle
         outbox.apply?.(h)
@@ -50,7 +56,10 @@ vi.mock('../../data/api', async (importOriginal) => ({
 }))
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { toast } from '../../components/toast'
 import { OutboxStorageError, applyFields, baseRow, useOutbox } from '../../data/outbox'
@@ -65,7 +74,7 @@ import { TournamentContext } from './tournamentContext'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 
 const S = t.card
@@ -74,7 +83,13 @@ let snap: Snapshot
 let commits = 0
 
 function load(s: Snapshot) {
-  useTournament.setState({ tournamentId: `fixture:${s.tournament.slug}`, data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${s.tournament.slug}`,
+    data: dataFromSnapshot(structuredClone(s)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
 }
 function mount(fixture: string, opts: { isComite?: boolean; edit?: (s: Snapshot) => void } = {}) {
   const fx = getFixture(fixture)!
@@ -85,7 +100,16 @@ function mount(fixture: string, opts: { isComite?: boolean; edit?: (s: Snapshot)
   return render(
     <Profiler id="card" onRender={() => void commits++}>
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: `_/${fixture}`,
+            lookup: fx.lookup,
+            me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <ScorecardScreen />
         </TournamentContext.Provider>
       </MemoryRouter>
@@ -94,9 +118,14 @@ function mount(fixture: string, opts: { isComite?: boolean; edit?: (s: Snapshot)
 }
 const holeOnScreen = () => Number(document.querySelector('[class*="holeNum"]')?.textContent)
 const nameOf = (playerId: string) => snap.players.find((p) => p.id === playerId)!.displayName
-const puttsUp = (playerId: string) => screen.getByRole('button', { name: `${S.puttsOf(nameOf(playerId))}: ${t.common.stepUp}` })
-const puttsShown = (playerId: string) => Number(screen.getByRole('group', { name: S.puttsOf(nameOf(playerId)) }).querySelector('[class*="stepValue"]')?.textContent)
-const saveButton = () => screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast}|${t.common.saving})`) })
+const puttsUp = (playerId: string) =>
+  screen.getByRole('button', { name: `${S.puttsOf(nameOf(playerId))}: ${t.common.stepUp}` })
+const puttsShown = (playerId: string) =>
+  Number(
+    screen.getByRole('group', { name: S.puttsOf(nameOf(playerId)) }).querySelector('[class*="stepValue"]')?.textContent,
+  )
+const saveButton = () =>
+  screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast}|${t.common.saving})`) })
 /** A tap on «Guardar hoyo», past the settle guard, with nothing flushed after it but React's own commit. */
 function tapSave(at: number) {
   clock = at
@@ -126,8 +155,19 @@ beforeEach(() => {
   outbox.apply = (h) => {
     for (const e of h.entries) {
       const row = applyFields(baseRow(e.base), e.fields)
-      snap.scores = snap.scores.filter((x) => !(x.roundId === h.round_id && x.playerId === e.player_id && x.hole === h.hole))
-      snap.scores.push({ roundId: h.round_id, playerId: e.player_id, hole: h.hole, strokes: row.strokes ?? null, putts: row.putts ?? null, pickedUp: !!row.picked_up, enteredBy: 'p1', updatedAt: '2027-05-15T16:00:00Z' })
+      snap.scores = snap.scores.filter(
+        (x) => !(x.roundId === h.round_id && x.playerId === e.player_id && x.hole === h.hole),
+      )
+      snap.scores.push({
+        roundId: h.round_id,
+        playerId: e.player_id,
+        hole: h.hole,
+        strokes: row.strokes ?? null,
+        putts: row.putts ?? null,
+        pickedUp: !!row.picked_up,
+        enteredBy: 'p1',
+        updatedAt: '2027-05-15T16:00:00Z',
+      })
     }
     load(snap)
   }
@@ -232,7 +272,10 @@ describe('«Guardar hoyo» answers in the tap’s frame (PERF-10)', () => {
   it('a Comité correction on a closed day waits for the server’s answer before the card moves on', async () => {
     window.history.replaceState(null, '', '/?hoyo=17')
     try {
-      mount('full12-finished', { isComite: true, edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')) })
+      mount('full12-finished', {
+        isComite: true,
+        edit: (s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')),
+      })
       expect(holeOnScreen()).toBe(17)
       const first = snap.players.find((p) => screen.queryByRole('group', { name: S.puttsOf(p.displayName) }))!
       fireEvent.click(puttsUp(first.id))

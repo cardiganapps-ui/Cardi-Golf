@@ -33,7 +33,12 @@ export function HoleConflicts({ roundId, myPlayerId }: { roundId: string | null;
   const round = (id: string) => rounds?.find((r) => r.id === id)
   // A day deleted since has no number: the line says so instead of passing for the day on screen.
   const day = (c: ConflictItem) => (c.round_id === roundId ? null : (round(c.round_id)?.number ?? 'gone'))
-  const sorted = [...items].sort((a, b) => (round(a.round_id)?.number ?? 0) - (round(b.round_id)?.number ?? 0) || a.hole - b.hole || a.player_id.localeCompare(b.player_id))
+  const sorted = [...items].sort(
+    (a, b) =>
+      (round(a.round_id)?.number ?? 0) - (round(b.round_id)?.number ?? 0) ||
+      a.hole - b.hole ||
+      a.player_id.localeCompare(b.player_id),
+  )
   const closed = sorted.some((c) => round(c.round_id)?.status !== 'live')
   const name = (id: unknown) => players.find((p) => p.id === id)?.displayName ?? null
   const line = (c: ConflictItem) => {
@@ -41,10 +46,24 @@ export function HoleConflicts({ roundId, myPlayerId }: { roundId: string | null;
     const withPutts = !puttsOnly && c.clash.includes('putts')
     const mine = applyFields(baseRow(c.base), c.fields)
     const s = c.server
-    const theirs = S.conflictValue((s?.strokes as number | null) ?? null, (s?.putts as number | null) ?? null, s?.picked_up === true, withPutts, puttsOnly)
+    const theirs = S.conflictValue(
+      (s?.strokes as number | null) ?? null,
+      (s?.putts as number | null) ?? null,
+      s?.picked_up === true,
+      withPutts,
+      puttsOnly,
+    )
     const player = name(c.player_id) ?? '?'
     const who = s ? name(s.entered_by) : null
-    return S.conflictLine(c.hole, who, player, theirs, S.conflictValue(mine.strokes, mine.putts, mine.picked_up, withPutts, puttsOnly), !!s && s.entered_by === c.player_id, day(c))
+    return S.conflictLine(
+      c.hole,
+      who,
+      player,
+      theirs,
+      S.conflictValue(mine.strokes, mine.putts, mine.picked_up, withPutts, puttsOnly),
+      !!s && s.entered_by === c.player_id,
+      day(c),
+    )
   }
   const act = (fn: () => Promise<void>) => void fn().catch((e: unknown) => toast(humanError(e)))
   return (
@@ -58,10 +77,19 @@ export function HoleConflicts({ roundId, myPlayerId }: { roundId: string | null;
           <div key={c.key} className={styles.row}>
             <span className={styles.text}>{line(c)}</span>
             <span className={styles.actions}>
-              <Button size="sm" onClick={() => act(() => sendMineAgain(c.key, myPlayerId))} aria-label={S.conflictAction(S.keepMine, c.hole, name(c.player_id) ?? '?', day(c))}>
+              <Button
+                size="sm"
+                onClick={() => act(() => sendMineAgain(c.key, myPlayerId))}
+                aria-label={S.conflictAction(S.keepMine, c.hole, name(c.player_id) ?? '?', day(c))}
+              >
                 {S.keepMine}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => act(() => keepTheirs(c.key))} aria-label={S.conflictAction(S.keepTheirs, c.hole, name(c.player_id) ?? '?', day(c))}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => act(() => keepTheirs(c.key))}
+                aria-label={S.conflictAction(S.keepTheirs, c.hole, name(c.player_id) ?? '?', day(c))}
+              >
                 {S.keepTheirs}
               </Button>
             </span>

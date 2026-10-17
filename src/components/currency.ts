@@ -16,7 +16,6 @@ export function useCurrency(): string {
   return useContext(CurrencyContext) ?? PLATFORM_CURRENCY
 }
 
-
 /** What the engine says, in words (ARCH-05): a warning or an explanation's line, money in this tournament's currency. */
 export function useWords(): (m: Msg) => string {
   const currency = useCurrency()

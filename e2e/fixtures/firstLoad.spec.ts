@@ -20,13 +20,27 @@ function scripts(page: Page): string[] {
   return names
 }
 
-test('a player’s link loads the tournament’s screens and none of the organizer’s, the Comité’s or the admin’s', async ({ page }) => {
+test('a player’s link loads the tournament’s screens and none of the organizer’s, the Comité’s or the admin’s', async ({
+  page,
+}) => {
   const asked = scripts(page)
   await open(page, '/t/_/full12-live')
   await expect(page.getByRole('navigation', { name: 'Secciones' })).toBeVisible()
   expect(asked).toContain('index')
   expect(asked).toContain('player')
-  for (const name of ['organizer', 'platform', 'HomeScreen', 'AdminLayout', 'AdminTournament', 'StatsScreen', 'TvScreen', 'CeremonyScreen', 'confetti.module', 'html-to-image']) expect(asked, name).not.toContain(name)
+  for (const name of [
+    'organizer',
+    'platform',
+    'HomeScreen',
+    'AdminLayout',
+    'AdminTournament',
+    'StatsScreen',
+    'TvScreen',
+    'CeremonyScreen',
+    'confetti.module',
+    'html-to-image',
+  ])
+    expect(asked, name).not.toContain(name)
 })
 
 test('the landing page loads none of the tournament’s screens', async ({ page }) => {
@@ -34,12 +48,16 @@ test('the landing page loads none of the tournament’s screens', async ({ page 
   await page.goto('/', { waitUntil: 'networkidle' })
   await expect(page.getByRole('heading', { name: 'Entrar a un torneo' })).toBeVisible()
   expect(asked).toContain('HomeScreen')
-  for (const name of ['player', 'GamesScreen', 'MoneyScreen', 'organizer', 'platform']) expect(asked, name).not.toContain(name)
+  for (const name of ['player', 'GamesScreen', 'MoneyScreen', 'organizer', 'platform'])
+    expect(asked, name).not.toContain(name)
 })
 
 test('the text font is asked for with the page, once, from the link index.html preloads it with', async ({ page }) => {
   const html = await (await page.request.get('/')).text()
-  const href = /<link rel="preload" href="(\/assets\/archivo-latin-wdth-normal-[\w-]+\.woff2)" as="font" type="font\/woff2" crossorigin="">/.exec(html)?.[1]
+  const href =
+    /<link rel="preload" href="(\/assets\/archivo-latin-wdth-normal-[\w-]+\.woff2)" as="font" type="font\/woff2" crossorigin="">/.exec(
+      html,
+    )?.[1]
   expect(href, 'index.html preloads the Archivo Latin face').toBeTruthy()
   const fonts: string[] = []
   page.on('request', (r) => {

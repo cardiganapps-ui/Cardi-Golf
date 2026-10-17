@@ -11,7 +11,17 @@ import { buttonClass } from './buttonClass'
 export type Why = Explanation
 
 /** The explanation steps, in a sheet. Controlled, for callers that own the trigger. */
-export function ExplanationSheet({ why, open, onClose, title }: { why: Why | Why[] | null; open: boolean; onClose: () => void; title?: string }) {
+export function ExplanationSheet({
+  why,
+  open,
+  onClose,
+  title,
+}: {
+  why: Why | Why[] | null
+  open: boolean
+  onClose: () => void
+  title?: string
+}) {
   const currency = useCurrency()
   const list = (why ? (Array.isArray(why) ? why : [why]) : []).map((w) => renderExplanation(w, currency))
   return (
@@ -39,14 +49,37 @@ export function ExplanationSheet({ why, open, onClose, title }: { why: Why | Why
  * it whole. A figure is ink with a dotted underline, as every amount is (VIS-16): in the accent, money read green on
  * Juegos and nowhere else.
  */
-export function HowCalculated({ why, children, label, about, ariaLabel, title }: { why: Why | Why[]; children?: ReactNode; label?: string; about?: string; ariaLabel?: string; title?: string }) {
+export function HowCalculated({
+  why,
+  children,
+  label,
+  about,
+  ariaLabel,
+  title,
+}: {
+  why: Why | Why[]
+  children?: ReactNode
+  label?: string
+  about?: string
+  ariaLabel?: string
+  title?: string
+}) {
   const [open, setOpen] = useState(false)
   const what = [about, label === '?' ? null : label].filter(Boolean).join(', ')
   const spoken = ariaLabel ?? (label != null || about ? t.money.howCalculatedOf(what) : undefined)
   return (
     <>
-      <button type="button" className={buttonClass({ variant: 'ghost', size: 'sm' }, `${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`)} onClick={() => setOpen(true)} aria-label={spoken} aria-haspopup="dialog">
-        {children ?? (label ?? t.money.howCalculated)}
+      <button
+        type="button"
+        className={buttonClass(
+          { variant: 'ghost', size: 'sm' },
+          `${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`,
+        )}
+        onClick={() => setOpen(true)}
+        aria-label={spoken}
+        aria-haspopup="dialog"
+      >
+        {children ?? label ?? t.money.howCalculated}
       </button>
       <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} title={title} />
     </>

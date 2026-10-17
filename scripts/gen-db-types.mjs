@@ -33,7 +33,27 @@
 import { rows } from './lib/local.mjs'
 
 const NUMBER = new Set(['int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'oid'])
-const STRING = new Set(['text', 'varchar', 'bpchar', 'char', 'name', 'citext', 'uuid', 'date', 'time', 'timetz', 'timestamp', 'timestamptz', 'interval', 'bytea', 'inet', 'cidr', 'macaddr', 'tsvector', 'money'])
+const STRING = new Set([
+  'text',
+  'varchar',
+  'bpchar',
+  'char',
+  'name',
+  'citext',
+  'uuid',
+  'date',
+  'time',
+  'timetz',
+  'timestamp',
+  'timestamptz',
+  'interval',
+  'bytea',
+  'inet',
+  'cidr',
+  'macaddr',
+  'tsvector',
+  'money',
+])
 
 const types = new Map(
   rows(`
@@ -154,7 +174,9 @@ function table(rel, writable, indent) {
     }
     emit(indent + 2, '}')
   }
-  const fks = fkeys.filter((k) => k.rel === rel.oid).sort((a, b) => byName(a.name, b.name) || byName(a.referenced, b.referenced))
+  const fks = fkeys
+    .filter((k) => k.rel === rel.oid)
+    .sort((a, b) => byName(a.name, b.name) || byName(a.referenced, b.referenced))
   if (!fks.length) emit(indent + 2, 'Relationships: []')
   else {
     emit(indent + 2, 'Relationships: [')
@@ -197,7 +219,10 @@ function definition(f) {
   let returns
   let setof = null
   if (outs.length) {
-    returns = `{ ${[...outs].sort((a, b) => byName(a.name, b.name)).map((a) => `${key(a.name)}: ${ts(a.type)} | null`).join('; ')} }`
+    returns = `{ ${[...outs]
+      .sort((a, b) => byName(a.name, b.name))
+      .map((a) => `${key(a.name)}: ${ts(a.type)} | null`)
+      .join('; ')} }`
     if (f.setof) returns += '[]'
   } else {
     const t = types.get(f.returns)
@@ -223,7 +248,10 @@ emit(0, '')
 emit(0, 'export type Database = {')
 emit(2, 'public: {')
 emit(4, 'Tables: {')
-for (const r of relations.filter((r) => r.kind === 'r' || r.kind === 'p' || r.kind === 'f').sort((a, b) => byName(a.name, b.name))) table(r, true, 6)
+for (const r of relations
+  .filter((r) => r.kind === 'r' || r.kind === 'p' || r.kind === 'f')
+  .sort((a, b) => byName(a.name, b.name)))
+  table(r, true, 6)
 emit(4, '}')
 emit(4, 'Views: {')
 const views = relations.filter((r) => r.kind === 'v' || r.kind === 'm').sort((a, b) => byName(a.name, b.name))
@@ -234,7 +262,10 @@ emit(4, 'Functions: {')
 const fnNames = [...new Set(functions.map((f) => f.name))].sort(byName)
 if (!fnNames.length) never(6)
 for (const name of fnNames) {
-  const defs = functions.filter((f) => f.name === name).sort((a, b) => byName(a.signature, b.signature)).map(definition)
+  const defs = functions
+    .filter((f) => f.name === name)
+    .sort((a, b) => byName(a.signature, b.signature))
+    .map(definition)
   const body = (d) => `{ Args: ${d.args}; Returns: ${d.returns}${d.setof ? `; SetofOptions: ${d.setof}` : ''} }`
   if (defs.length === 1) emit(6, `${key(name)}: ${body(defs[0])}`)
   else {
@@ -260,7 +291,7 @@ emit(0, '}')
 emit(0, '')
 emit(0, 'type PublicSchema = Database["public"]')
 emit(0, '')
-emit(0, '/** A table\'s row as the server answers it. */')
+emit(0, "/** A table's row as the server answers it. */")
 emit(0, 'export type Tables<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Row"]')
 emit(0, '/** What an update of the table may send. */')
 emit(0, 'export type TablesUpdate<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Update"]')

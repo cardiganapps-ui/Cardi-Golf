@@ -36,7 +36,11 @@ describe('a screen loaded when first needed (PERF-02, MOT-22)', () => {
     markScreenShown()
     const m = deferredModule()
     const Stats = lazyScreen(m.load, (x) => x.Stats)
-    render(<Lazy><Stats /></Lazy>)
+    render(
+      <Lazy>
+        <Stats />
+      </Lazy>,
+    )
     expect(screen.queryByRole('status')).toBeNull()
     await act(async () => void vi.advanceTimersByTime(LATE_MS - 1))
     expect(screen.queryByRole('status')).toBeNull()
@@ -51,7 +55,11 @@ describe('a screen loaded when first needed (PERF-02, MOT-22)', () => {
     markScreenShown()
     const m = deferredModule()
     const Stats = lazyScreen(m.load, (x) => x.Stats)
-    render(<Lazy><Stats /></Lazy>)
+    render(
+      <Lazy>
+        <Stats />
+      </Lazy>,
+    )
     await act(async () => void vi.advanceTimersByTime(LATE_MS / 2))
     await act(async () => m.settle())
     await act(async () => void vi.advanceTimersByTime(LATE_MS))
@@ -66,7 +74,11 @@ describe('a screen loaded when first needed (PERF-02, MOT-22)', () => {
     const intent = preloadOnIntent(Stats)
     intent.onPointerDown()
     await act(async () => m.settle())
-    render(<Lazy><Stats /></Lazy>)
+    render(
+      <Lazy>
+        <Stats />
+      </Lazy>,
+    )
     // No await, no timer: it is on the page in the render's own commit.
     expect(screen.getByRole('heading', { name: 'Estadísticas' })).toBeTruthy()
     expect(m.load).toHaveBeenCalledTimes(1)
@@ -81,7 +93,11 @@ describe('a screen loaded when first needed (PERF-02, MOT-22)', () => {
     void Stats.preload()
     void Rules.preload()
     await act(async () => m.settle())
-    render(<Lazy><Rules /></Lazy>)
+    render(
+      <Lazy>
+        <Rules />
+      </Lazy>,
+    )
     expect(screen.getByRole('heading', { name: 'Reglamento' })).toBeTruthy()
     expect(m.load).toHaveBeenCalledTimes(1)
   })
@@ -89,15 +105,24 @@ describe('a screen loaded when first needed (PERF-02, MOT-22)', () => {
   it('before any screen has shown, the wait is the boot screen index.html paints, not an empty page', async () => {
     const m = deferredModule()
     const Stats = lazyScreen(m.load, (x) => x.Stats)
-    render(<Lazy><Stats /></Lazy>)
+    render(
+      <Lazy>
+        <Stats />
+      </Lazy>,
+    )
     expect(screen.getByRole('status').textContent).toBe('Cargando…')
-    expect(screen.getByRole('img', { name: 'Polo' }).getAttribute('src')).toMatch(/^\/brand\/boot-mark\.png\?v=[0-9a-f]{10}$/)
+    expect(screen.getByRole('img', { name: 'Polo' }).getAttribute('src')).toMatch(
+      /^\/brand\/boot-mark\.png\?v=[0-9a-f]{10}$/,
+    )
     await act(async () => m.settle())
     expect(screen.getByRole('heading', { name: 'Estadísticas' })).toBeTruthy()
   })
 
   it('a load that failed is tried again by the next intent', async () => {
-    const load = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ Stats: () => <h1>Estadísticas</h1> })
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ Stats: () => <h1>Estadísticas</h1> })
     const Stats = lazyScreen(load, (x: { Stats: () => React.JSX.Element }) => x.Stats)
     await expect(Stats.preload()).rejects.toThrow('offline')
     await Stats.preload()
@@ -113,7 +138,11 @@ describe('the idle prefetch (MOT-22)', () => {
       return 1
     })
     const page = (controller: object | null) =>
-      ({ navigator: { serviceWorker: { controller } }, requestIdleCallback: idle, cancelIdleCallback: vi.fn() }) as unknown as Window
+      ({
+        navigator: { serviceWorker: { controller } },
+        requestIdleCallback: idle,
+        cancelIdleCallback: vi.fn(),
+      }) as unknown as Window
     prefetchScreens(screens, page(null))
     expect(screens[0]!.preload).not.toHaveBeenCalled()
     prefetchScreens(screens, page({}))
@@ -140,7 +169,11 @@ describe('the idle prefetch (MOT-22)', () => {
 
   it('says nothing when a chunk can’t load', async () => {
     const failing = { preload: vi.fn(() => Promise.reject(new Error('offline'))) }
-    const page = { navigator: { serviceWorker: { controller: {} } }, setTimeout: (run: () => void) => (run(), 1), clearTimeout: vi.fn() } as unknown as Window
+    const page = {
+      navigator: { serviceWorker: { controller: {} } },
+      setTimeout: (run: () => void) => (run(), 1),
+      clearTimeout: vi.fn(),
+    } as unknown as Window
     prefetchScreens([failing], page)
     await Promise.resolve()
     expect(failing.preload).toHaveBeenCalledTimes(1)

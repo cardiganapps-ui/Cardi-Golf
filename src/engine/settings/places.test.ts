@@ -16,18 +16,50 @@ import { FIRST_TOURNAMENT_PLAYER_COUNT, makeGroup, makePlayer, makeSnapshot, PAR
 import type { Snapshot } from '../types'
 import { words } from '../testing/words'
 
-type Over = Partial<TournamentSettings> & { format?: TournamentSettings['modules']['individual']['format']; matchMode?: 'singles' | 'fourball' }
+type Over = Partial<TournamentSettings> & {
+  format?: TournamentSettings['modules']['individual']['format']
+  matchMode?: 'singles' | 'fourball'
+}
 
 function settings(over: Over = {}): TournamentSettings {
   const { format, matchMode, ...rest } = over
   const s: TournamentSettings = { ...structuredClone(DEFAULT_SETTINGS), ...rest }
-  if (format) s.modules.individual = { ...s.modules.individual, format, formatOptions: { ...s.modules.individual.formatOptions, ...(matchMode ? { matchMode } : {}) } }
+  if (format)
+    s.modules.individual = {
+      ...s.modules.individual,
+      format,
+      formatOptions: { ...s.modules.individual.formatOptions, ...(matchMode ? { matchMode } : {}) },
+    }
   return s
 }
-const prizes = (over: Partial<TournamentSettings['prizes']>): TournamentSettings['prizes'] => ({ ...DEFAULT_SETTINGS.prizes, ...over })
-const money = (over: Partial<GameMoney>): GameMoney => ({ source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100], ...over })
-const low = (m: GameMoney, scope: 'overall' | 'perRound' = 'overall', entrants: 'all' | 'list' = 'all'): GameConfig => ({ id: 'low', type: 'lowScore', label: 'Low neto', enabled: true, rounds: 'all', entrants, options: { basis: 'net', scope }, money: m })
-const strip = (c: ReturnType<typeof checkPrizePool>) => c.unreachable.map(({ id, places, reachable, amount }) => ({ id, places, reachable, amount }))
+const prizes = (over: Partial<TournamentSettings['prizes']>): TournamentSettings['prizes'] => ({
+  ...DEFAULT_SETTINGS.prizes,
+  ...over,
+})
+const money = (over: Partial<GameMoney>): GameMoney => ({
+  source: 'none',
+  buyIn: 0,
+  amount: 0,
+  stake: 0,
+  split: [100],
+  ...over,
+})
+const low = (
+  m: GameMoney,
+  scope: 'overall' | 'perRound' = 'overall',
+  entrants: 'all' | 'list' = 'all',
+): GameConfig => ({
+  id: 'low',
+  type: 'lowScore',
+  label: 'Low neto',
+  enabled: true,
+  rounds: 'all',
+  entrants,
+  options: { basis: 'net', scope },
+  money: m,
+})
+const strip = (c: ReturnType<typeof checkPrizePool>) =>
+  c.unreachable.map(({ id, places, reachable, amount }) => ({ id, places, reachable, amount }))
 
 describe('the prize check: places nobody can occupy (MONEY-09)', () => {
   it('3 players and a 4th prize: balanced, but not ok; the $2,000 of the 4th has no taker', () => {
@@ -44,7 +76,9 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
   it('percent places: 3 places for 2 players leave the 3rd share', () => {
     const s = settings({ entryFee: 1000, prizes: prizes({ stableford: [50, 30, 20], stablefordMode: 'percent' }) })
     // $2,000 → $1,000 / $600 / $400.
-    expect(strip(checkPrizePool(s, { players: 2 }))).toEqual([{ id: 'individual', places: 3, reachable: 2, amount: 400 }])
+    expect(strip(checkPrizePool(s, { players: 2 }))).toEqual([
+      { id: 'individual', places: 3, reachable: 2, amount: 400 },
+    ])
   })
 
   it('a team format counts teams: drawn ones, else half the field at most', () => {
@@ -52,12 +86,21 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
     // 8 players can make 4 teams of two: nothing to say before the draw.
     expect(checkPrizePool(s, { players: 8 }).ok).toBe(true)
     // Drawn as 3 teams: the 4th prize has no team.
-    expect(strip(checkPrizePool(s, { players: 8, teams: 3 }))).toEqual([{ id: 'individual', places: 4, reachable: 3, amount: 500 }])
-    expect(words(checkPrizePool(s, { players: 8, teams: 3 }).unreachable[0]!.detail)).toBe('4 lugares con premio y 3 equipos')
+    expect(strip(checkPrizePool(s, { players: 8, teams: 3 }))).toEqual([
+      { id: 'individual', places: 4, reachable: 3, amount: 500 },
+    ])
+    expect(words(checkPrizePool(s, { players: 8, teams: 3 }).unreachable[0]!.detail)).toBe(
+      '4 lugares con premio y 3 equipos',
+    )
   })
 
   it('fourball match play with two players is one side: its 2nd prize has nobody (the panel’s case)', () => {
-    const s = settings({ format: 'matchPlay', matchMode: 'fourball', entryFee: 777, prizes: prizes({ stableford: [1117, 437] }) })
+    const s = settings({
+      format: 'matchPlay',
+      matchMode: 'fourball',
+      entryFee: 777,
+      prizes: prizes({ stableford: [1117, 437] }),
+    })
     const c = checkPrizePool(s, { players: 2 })
     expect(c.balanced).toBe(true)
     expect(strip(c)).toEqual([{ id: 'individual', places: 2, reachable: 1, amount: 437 }])
@@ -84,9 +127,15 @@ describe('the prize check: places nobody can occupy (MONEY-09)', () => {
   })
 
   it('a low score from the inscriptions, per day: each day’s pot strands its own share', () => {
-    const s = settings({ rounds: 2, entryFee: 400, games: [low(money({ source: 'main', amount: 400, split: [60, 40] }), 'perRound', 'list')] })
+    const s = settings({
+      rounds: 2,
+      entryFee: 400,
+      games: [low(money({ source: 'main', amount: 400, split: [60, 40] }), 'perRound', 'list')],
+    })
     // $200 a day, 60/40 → $120 / $80; one entrant leaves $80 a day.
-    expect(strip(checkPrizePool(s, { players: 1, entrants: { low: 1 } }))).toEqual([{ id: 'game:low', places: 2, reachable: 1, amount: 160 }])
+    expect(strip(checkPrizePool(s, { players: 1, entrants: { low: 1 } }))).toEqual([
+      { id: 'game:low', places: 2, reachable: 1, amount: 160 },
+    ])
   })
 
   it('nothing to say with no players yet, or for the first tournament as planned', () => {
@@ -107,12 +156,17 @@ function finish(snap: Snapshot) {
   snap.tournament.status = 'finished'
 }
 const run = (snap: Snapshot): TournamentState => computeTournament(snap, snap.tournament.settings as TournamentSettings)
-const paid = (st: TournamentState, moduleId: string) => Object.fromEntries(st.prizes.filter((p) => p.moduleId === moduleId).map((p) => [p.playerId, p.amount]))
+const paid = (st: TournamentState, moduleId: string) =>
+  Object.fromEntries(st.prizes.filter((p) => p.moduleId === moduleId).map((p) => [p.playerId, p.amount]))
 
 describe('the boards: an entrant with no result takes no paid place (MONEY-09)', () => {
   function four(prizeList: number[]) {
     const s = settings({ entryFee: 1000, prizes: prizes({ stableford: prizeList }) })
-    const snap = makeSnapshot({ settings: s, players: [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: 1 })
+    const snap = makeSnapshot({
+      settings: s,
+      players: [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 })),
+      rounds: 1,
+    })
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
     return snap
   }
@@ -126,7 +180,9 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'individual')).toEqual({ p1: 2000, p2: 1000, p3: 600 })
-    expect(words(st.flags.warnings)).toContain('Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain(
+      'Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.',
+    )
     // He still shows on the board, last.
     expect(st.modules.individual!.rows.at(-1)!.playerId).toBe('p4')
   })
@@ -148,33 +204,74 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     for (const id of ['p1', 'p2', 'p3']) card(snap, 'r1', id, {}, 9)
     let st = run(snap)
     const live = words(st.flags.warnings).filter((w) => w.startsWith('Individual:'))
-    expect(live).toEqual(['Individual: 4 lugares con premio y 3 jugadores, $400 que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.'])
+    expect(live).toEqual([
+      'Individual: 4 lugares con premio y 3 jugadores, $400 que nadie puede ganar. El Comité ajusta los premios en Comité, sección Torneo.',
+    ])
     finish(snap)
     st = run(snap)
-    expect(words(st.flags.warnings).filter((w) => w.startsWith('Individual:'))).toEqual(['Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.'])
+    expect(words(st.flags.warnings).filter((w) => w.startsWith('Individual:'))).toEqual([
+      'Individual: el 4.º lugar no lo gana nadie (3 jugadores con resultado): $400 sin asignar. El Comité decide.',
+    ])
   })
 
   it('fourball with one side and no match: nobody is paid 1st for a match never played', () => {
-    const s = settings({ format: 'matchPlay', matchMode: 'fourball', entryFee: 777, prizes: prizes({ stableford: [1117, 437] }) })
+    const s = settings({
+      format: 'matchPlay',
+      matchMode: 'fourball',
+      entryFee: 777,
+      prizes: prizes({ stableford: [1117, 437] }),
+    })
     const snap = makeSnapshot({ settings: s, players: [1, 2].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: 1 })
-    snap.pairs = [{ id: 'A', name: 'Pareja A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null }]
+    snap.pairs = [
+      {
+        id: 'A',
+        name: 'Pareja A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+    ]
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2'])]
     card(snap, 'r1', 'p1')
     card(snap, 'r1', 'p2')
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'individual')).toEqual({})
-    expect(words(st.flags.warnings)).toContain('Individual: los lugares 1.º y 2.º no los gana nadie (nadie tiene resultado): $1,554 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain(
+      'Individual: los lugares 1.º y 2.º no los gana nadie (nadie tiene resultado): $1,554 sin asignar. El Comité decide.',
+    )
   })
 
   it('the pairs game: a pair neither of whom played is not paid 2nd', () => {
     const s = settings({ entryFee: 750, prizes: prizes({ stableford: [], pairs: [2000, 1000] }) })
     s.modules.individual = { ...s.modules.individual, enabled: false }
     s.modules.pairs = { ...s.modules.pairs, enabled: true }
-    const snap = makeSnapshot({ settings: s, players: [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 })), rounds: 1 })
+    const snap = makeSnapshot({
+      settings: s,
+      players: [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 })),
+      rounds: 1,
+    })
     snap.pairs = [
-      { id: 'A', name: 'Pareja A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
-      { id: 'B', name: 'Pareja B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+      {
+        id: 'A',
+        name: 'Pareja A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+      {
+        id: 'B',
+        name: 'Pareja B',
+        player1Id: 'p3',
+        player2Id: 'p4',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
     ]
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
     card(snap, 'r1', 'p1')
@@ -182,7 +279,9 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'pairs')).toEqual({ p1: 1000, p2: 1000 })
-    expect(words(st.flags.warnings)).toContain('Parejas: el 2.º lugar no lo gana nadie (1 pareja con resultado): $1,000 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain(
+      'Parejas: el 2.º lugar no lo gana nadie (1 pareja con resultado): $1,000 sin asignar. El Comité decide.',
+    )
   })
 
   it('low score: three places and two cards, once final the 3rd is named with its pesos', () => {
@@ -194,7 +293,8 @@ describe('the boards: an entrant with no result takes no paid place (MONEY-09)',
     finish(snap)
     const st = run(snap)
     expect(paid(st, 'lowScore')).toEqual({ p1: 150, p2: 90 })
-    expect(words(st.flags.warnings)).toContain('Low neto: el 3.º lugar no lo gana nadie (2 jugadores con resultado): $60 sin asignar. El Comité decide.')
+    expect(words(st.flags.warnings)).toContain(
+      'Low neto: el 3.º lugar no lo gana nadie (2 jugadores con resultado): $60 sin asignar. El Comité decide.',
+    )
   })
 })
-

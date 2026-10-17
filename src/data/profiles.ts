@@ -145,7 +145,9 @@ export interface MoneyLine {
   practice: boolean
 }
 
-export type LinkResult = { ok: true; playerId: string; tournamentId: string; status?: 'pending' | 'confirmed' } | { ok: false; reason: 'not_found' | 'taken' | 'already_linked' | 'not_yours' | 'expired'; playerId?: string }
+export type LinkResult =
+  | { ok: true; playerId: string; tournamentId: string; status?: 'pending' | 'confirmed' }
+  | { ok: false; reason: 'not_found' | 'taken' | 'already_linked' | 'not_yours' | 'expired'; playerId?: string }
 
 /** Editable columns (the index itself is computed). */
 export interface ProfilePatch {
@@ -196,7 +198,9 @@ export interface NameHint {
 
 /** The signed-in account's profile, created on first call. */
 export async function ensureMyProfile(hint?: NameHint | null): Promise<MyProfile> {
-  return mapProfile(await rpc('ensure_my_profile', hint ? { p_display_name: hint.displayName, p_full_name: hint.fullName } : undefined))
+  return mapProfile(
+    await rpc('ensure_my_profile', hint ? { p_display_name: hint.displayName, p_full_name: hint.fullName } : undefined),
+  )
 }
 
 /** The signed-in account's profile if it has one (no create). */
@@ -213,7 +217,8 @@ export async function updateMyProfile(id: string, patch: ProfilePatch): Promise<
   const { data, error } = await supabase().from('profiles').update(patch).eq('id', id).select('*').single()
   if (error) {
     // Taken (unique) or reserved (the handle check); other columns are length-limited in the form.
-    if (error.code === '23505' || (error.code === '23514' && error.message.includes('handle'))) throw new HandleTakenError(error.message)
+    if (error.code === '23505' || (error.code === '23514' && error.message.includes('handle')))
+      throw new HandleTakenError(error.message)
     throw ApiError.from(error)
   }
   return mapProfile(data)
@@ -224,7 +229,9 @@ export async function uploadMyAvatar(id: string, file: File): Promise<string> {
   const path = `profiles/${id}/avatar-${Date.now()}.${extensionFor(type)}`
   const sb = supabase()
   // A new file each time, so Storage can let every phone keep it for a year (PERF-13): its default is an hour.
-  const { error } = await sb.storage.from('tournament-assets').upload(path, blob, { upsert: true, contentType: type, cacheControl: '31536000' })
+  const { error } = await sb.storage
+    .from('tournament-assets')
+    .upload(path, blob, { upsert: true, contentType: type, cacheControl: '31536000' })
   if (error) throw new Error(error.message)
   return sb.storage.from('tournament-assets').getPublicUrl(path).data.publicUrl
 }
@@ -232,25 +239,33 @@ export async function uploadMyAvatar(id: string, file: File): Promise<string> {
 export const profileCard = (handle: string) => rpc('profile_card', { p_handle: handle }).as<ProfileCard | null>()
 export const searchProfiles = (q: string) => rpc('search_profiles', { q }).as<ProfileHit[]>()
 export const myLinks = () => rpc('my_links').as<MyLink[]>()
-export const tournamentProfiles = (tournamentId: string) => rpc('tournament_profiles', { tid: tournamentId }).as<TournamentProfile[]>()
+export const tournamentProfiles = (tournamentId: string) =>
+  rpc('tournament_profiles', { tid: tournamentId }).as<TournamentProfile[]>()
 /** A write that links or unlinks a player: who can get in without a PIN changed, so «Para empezar» asks again. */
 async function linked<T>(answer: Promise<T>): Promise<T> {
   const data = await answer
   entryChanged()
   return data
 }
-export const linkMyProfile = (playerId: string) => linked(rpc('link_my_profile', { p_player_id: playerId }).as<LinkResult>())
-export const unlinkMyProfile = (playerId: string) => linked(rpc('unlink_my_profile', { p_player_id: playerId }).as<boolean>())
-export const comiteLinkProfile = (playerId: string, handle: string) => linked(rpc('comite_link_profile', { p_player_id: playerId, p_handle: handle }).as<LinkResult>())
+export const linkMyProfile = (playerId: string) =>
+  linked(rpc('link_my_profile', { p_player_id: playerId }).as<LinkResult>())
+export const unlinkMyProfile = (playerId: string) =>
+  linked(rpc('unlink_my_profile', { p_player_id: playerId }).as<boolean>())
+export const comiteLinkProfile = (playerId: string, handle: string) =>
+  linked(rpc('comite_link_profile', { p_player_id: playerId, p_handle: handle }).as<LinkResult>())
 export const comiteUnlinkProfile = (playerId: string) => linked(rpc('comite_unlink_profile', { p_player_id: playerId }))
 export const redeemLinkToken = (token: string) => linked(rpc('redeem_link_token', { p_token: token }).as<LinkResult>())
 export const profileRounds = (handle: string) => rpc('profile_rounds', { p_handle: handle }).as<RoundResult[]>()
-export const profileTournaments = (handle: string) => rpc('profile_tournaments', { p_handle: handle }).as<ProfileTournament[]>()
+export const profileTournaments = (handle: string) =>
+  rpc('profile_tournaments', { p_handle: handle }).as<ProfileTournament[]>()
 export const myMoney = () => rpc('my_money').as<MoneyLine[]>()
 
 /** The Comité publishes a finished tournament's results to its players' profiles. */
 export function publishTournamentResults(tournamentId: string, rows: PublishRow[], currency: string) {
-  return rpc('publish_tournament_results', { p_tournament_id: tournamentId, p_rows: rows, p_currency: currency }).as<{ players: number; field: number }>()
+  return rpc('publish_tournament_results', { p_tournament_id: tournamentId, p_rows: rows, p_currency: currency }).as<{
+    players: number
+    field: number
+  }>()
 }
 
 export interface IndexBreakdown {
@@ -284,7 +299,7 @@ export async function myDeviceClaim(): Promise<{ playerId: string; tournamentId:
 /** The names of this device's player, to start a profile with. */
 export async function claimNameHint(playerId: string): Promise<NameHint | null> {
   const { data } = await supabase().from('players').select('display_name, full_name').eq('id', playerId).maybeSingle()
-  return data ? { displayName: data.display_name, fullName: (data.full_name) ?? null } : null
+  return data ? { displayName: data.display_name, fullName: data.full_name ?? null } : null
 }
 
 // ---------------------------------------------------------------------------
@@ -383,7 +398,11 @@ export const useMyProfile = create<MyProfileState>((set) => ({
     try {
       // Mi Polo waits on this to render; a stalled read must end in an error
       // with a retry, not a spinner that never stops.
-      const [profile, links] = await withTimeout(Promise.all([create ? ensureMyProfile() : getMyProfile(), myLinks()]), 10000, 'perfil')
+      const [profile, links] = await withTimeout(
+        Promise.all([create ? ensureMyProfile() : getMyProfile(), myLinks()]),
+        10000,
+        'perfil',
+      )
       if (seq === loadSeq) set({ profile, links, loading: false })
     } catch (e) {
       if (seq === loadSeq) set({ loading: false, error: humanError(e) })

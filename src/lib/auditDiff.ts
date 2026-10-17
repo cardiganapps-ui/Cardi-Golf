@@ -9,9 +9,26 @@ import type { AuditEntry } from '../data/api'
 // A score's version, device and mutation (0026), the row's tournament (0030), a signature's generated card (0054),
 // a contest claim's generated source (0042) and a decision's call (0027) are bookkeeping too (TRUST-19).
 // A tournament's `timezone` and `currency` columns are its settings' mirror (0074, ARCH-06): the settings say the change.
-const NOISE = new Set(['updated_at', 'client_ts', 'created_at', 'id', 'handicap_note', 'version', 'device_id', 'mutation_id', 'tournament_id', 'card_id', 'source', 'call_id', 'timezone', 'currency'])
+const NOISE = new Set([
+  'updated_at',
+  'client_ts',
+  'created_at',
+  'id',
+  'handicap_note',
+  'version',
+  'device_id',
+  'mutation_id',
+  'tournament_id',
+  'card_id',
+  'source',
+  'call_id',
+  'timezone',
+  'currency',
+])
 
-export function changedFields(e: Pick<AuditEntry, 'action' | 'before' | 'after'>): Array<{ key: string; before: unknown; after: unknown }> {
+export function changedFields(
+  e: Pick<AuditEntry, 'action' | 'before' | 'after'>,
+): Array<{ key: string; before: unknown; after: unknown }> {
   const b = e.before ?? {}
   const af = e.after ?? {}
   const keys = [...new Set([...Object.keys(b), ...Object.keys(af)])].filter((k) => !NOISE.has(k))

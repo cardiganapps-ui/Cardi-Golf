@@ -19,9 +19,19 @@ it('match8: a tie is «Empate», a countback win «Desempate», each told as the
   const rows = rowsOf('match8')
   const why = (name: string) => words(rows.find((r) => words(r.entrant.name) === name)!.countbackWhy)
   // Fabián and Matías: both won 4 up, so they share 1st.
-  expect(why('Matías')).toEqual({ title: 'Empate con Fabián', steps: ['Iguales en puntos de partido', 'Día 1, cómo terminó su partido: Fabián 4 arriba contra Matías 4 arriba', 'Iguales: se reparten los premios de los lugares que ocupan.'] })
+  expect(why('Matías')).toEqual({
+    title: 'Empate con Fabián',
+    steps: [
+      'Iguales en puntos de partido',
+      'Día 1, cómo terminó su partido: Fabián 4 arriba contra Matías 4 arriba',
+      'Iguales: se reparten los premios de los lugares que ocupan.',
+    ],
+  })
   // Julián won 2 up: below Matías on the margin, alone in 3rd.
-  expect(why('Julián')).toEqual({ title: 'Desempate con Matías', steps: ['Iguales en puntos de partido', 'Día 1, cómo terminó su partido: Matías 4 arriba contra Julián 2 arriba'] })
+  expect(why('Julián')).toEqual({
+    title: 'Desempate con Matías',
+    steps: ['Iguales en puntos de partido', 'Día 1, cómo terminó su partido: Matías 4 arriba contra Julián 2 arriba'],
+  })
   // Elías lost 4 down: below Iván J. (2 down), and tied in 7th with Leonel, not with Iván J.
   expect(why('Elías')!.title).toBe('Desempate con Iván J.')
   expect(why('Leonel')!.title).toBe('Empate con Elías')

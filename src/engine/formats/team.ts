@@ -13,7 +13,14 @@ import type { TournamentSettings } from '../settings/schema'
 import { msg, say, type Msg } from '../messages'
 import type { Explanation, Id } from '../types'
 import { countbackFrom, emptyCountback, teamEntrants } from './entrants'
-import { toParFigure, type Entrant, type Figure, type FormatContext, type FormatStandings, type MainFormat } from './format'
+import {
+  toParFigure,
+  type Entrant,
+  type Figure,
+  type FormatContext,
+  type FormatStandings,
+  type MainFormat,
+} from './format'
 import { holeStrokes } from './strokePlay'
 
 /**
@@ -23,7 +30,14 @@ import { holeStrokes } from './strokePlay'
  * par. (Taking the fewest strokes against whichever par came last made the
  * result depend on the order the team was listed in.)
  */
-function teamHole(ctx: FormatContext, roundId: Id, team: Entrant, hole: number, net: boolean, points: boolean): { strokes: number; par: number } | { points: number } | null {
+function teamHole(
+  ctx: FormatContext,
+  roundId: Id,
+  team: Entrant,
+  hole: number,
+  net: boolean,
+  points: boolean,
+): { strokes: number; par: number } | { points: number } | null {
   let bestPoints: number | null = null
   let best: { strokes: number; par: number } | null = null
   for (const playerId of team.playerIds) {
@@ -44,7 +58,15 @@ export const teamFormat: MainFormat = {
   defaultLabel: 'Por equipos',
   // Points count up, strokes count down.
   higherIsBetter: (s) => s.modules.individual.formatOptions.teamScoring === 'stableford',
-  figureLabel: (s) => msg('figure.label', { unit: s.modules.individual.formatOptions.teamScoring === 'stableford' ? 'points' : s.modules.individual.formatOptions.scoring === 'gross' ? 'gross' : 'net' }),
+  figureLabel: (s) =>
+    msg('figure.label', {
+      unit:
+        s.modules.individual.formatOptions.teamScoring === 'stableford'
+          ? 'points'
+          : s.modules.individual.formatOptions.scoring === 'gross'
+            ? 'gross'
+            : 'net',
+    }),
 
   describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions
@@ -52,7 +74,13 @@ export const teamFormat: MainFormat = {
     const points = o.teamScoring === 'stableford'
     return {
       title: msg('format.team', { mode }),
-      steps: [msg('format.teamHow', { mode }), msg('format.teamBall', { points }), msg('format.teamStrokes', { net: o.scoring !== 'gross' }), msg('format.teamWins', { points }), ...(points ? [] : [say('format.teamIncomplete')])],
+      steps: [
+        msg('format.teamHow', { mode }),
+        msg('format.teamBall', { points }),
+        msg('format.teamStrokes', { net: o.scoring !== 'gross' }),
+        msg('format.teamWins', { points }),
+        ...(points ? [] : [say('format.teamIncomplete')]),
+      ],
     }
   },
 
@@ -94,7 +122,12 @@ export const teamFormat: MainFormat = {
           // Countback on strokes compares each hole to par, so holes on different tees line up.
           if (rid === lastRound) lastHoles.push({ hole, value: 'points' in h ? h.points : h.strokes - h.par })
         }
-        byRound[rid] = rPlayed === 0 ? { value: 0, text: '—', empty: true } : points ? { value: rTotal, text: String(rTotal) } : toParFigure(rTotal, rPar)
+        byRound[rid] =
+          rPlayed === 0
+            ? { value: 0, text: '—', empty: true }
+            : points
+              ? { value: rTotal, text: String(rTotal) }
+              : toParFigure(rTotal, rPar)
         total += rTotal
         par += rPar
         played += rPlayed
@@ -102,7 +135,12 @@ export const teamFormat: MainFormat = {
 
       perRound[e.id] = byRound
       thru[e.id] = played
-      totals[e.id] = played === 0 ? { value: 0, text: '—', empty: true } : points ? { value: total, text: String(total) } : toParFigure(total, par)
+      totals[e.id] =
+        played === 0
+          ? { value: 0, text: '—', empty: true }
+          : points
+            ? { value: total, text: String(total) }
+            : toParFigure(total, par)
       // Over the last round's own holes: a nine breaks its ties on 5–9, 7–9 and 9, as the other formats do.
       const lastLength = ctx.snapshot.rounds.find((r) => r.id === lastRound)?.holes ?? 18
       countback[e.id] = lastHoles.length ? countbackFrom(lastHoles, lastLength, points) : emptyCountback(lastLength)

@@ -27,7 +27,11 @@ export interface PublishRow {
 }
 
 /** `words` writes a prize's label as the profile shows it (src/i18n/explain.ts's `renderMsg`, ARCH-05). */
-export function buildTournamentResults(state: TournamentState, players: Player[], words: (m: Msg) => string): PublishRow[] {
+export function buildTournamentResults(
+  state: TournamentState,
+  players: Player[],
+  words: (m: Msg) => string,
+): PublishRow[] {
   // A row covers its entrant's players: one in an individual format, the team in a team format.
   const rows = new Map<Id, IndividualRow>()
   for (const r of state.modules.individual?.rows ?? []) for (const id of r.entrant.playerIds) rows.set(id, r)
@@ -37,9 +41,7 @@ export function buildTournamentResults(state: TournamentState, players: Player[]
     const money = state.money.people[p.id]
     const awards = [
       ...state.stats.awards.filter((a) => a.playerIds.includes(p.id)).map((a) => `award:${a.id}`),
-      ...(money?.prizes ?? [])
-        .filter((x) => x.amount > 0)
-        .map((x) => `prize:${words(x.label)}`),
+      ...(money?.prizes ?? []).filter((x) => x.amount > 0).map((x) => `prize:${words(x.label)}`),
     ]
     return {
       playerId: p.id,

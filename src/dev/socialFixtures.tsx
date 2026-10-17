@@ -14,10 +14,21 @@ import { RecapCard } from '../screens/profile/Achievements'
 import { recapYears, yearRecap } from '../engine/profile/achievements'
 import { PROFILE_FIXTURES } from './profileFixtures'
 
-const person = (displayName: string, handle: string, extra: Partial<FriendCard> = {}): FriendCard => ({ handle, displayName, avatarUrl: null, homeClub: null, index: null, ...extra })
+const person = (displayName: string, handle: string, extra: Partial<FriendCard> = {}): FriendCard => ({
+  handle,
+  displayName,
+  avatarUrl: null,
+  homeClub: null,
+  index: null,
+  ...extra,
+})
 
 const friends: MyFriends = {
-  friends: [person('Diego Ortiz', 'diego.ortiz', { homeClub: 'Bosque Real', index: 9.8 }), person('Mauricio Lozano', 'mau', { index: 21.3 }), person('René Nosti', 'rene.n', { homeClub: 'Chapultepec', index: 14.0 })],
+  friends: [
+    person('Diego Ortiz', 'diego.ortiz', { homeClub: 'Bosque Real', index: 9.8 }),
+    person('Mauricio Lozano', 'mau', { index: 21.3 }),
+    person('René Nosti', 'rene.n', { homeClub: 'Chapultepec', index: 14.0 }),
+  ],
   incoming: [person('Justo Fernández', 'justo', { homeClub: 'Club Campestre', index: 17.2 })],
   outgoing: [person('Rodrigo Vega', 'rodrigo.v')],
   suggestions: [person('Martín Álvarez', 'martin.a', { shared: 2 }), person('Emiliano Garzón', 'emi.g', { shared: 1 })],
@@ -26,10 +37,38 @@ const friends: MyFriends = {
 const ago = (h: number) => new Date(Date.UTC(2026, 8, 28, 18) - h * 3_600_000).toISOString()
 const actor = (displayName: string, handle: string) => ({ displayName, handle, avatarUrl: null })
 const notices: Notice[] = [
-  { id: 'n1', kind: 'friend_request', data: {}, read: false, createdAt: ago(1), actor: actor('Justo Fernández', 'justo') },
-  { id: 'n2', kind: 'rivalry_round', data: { rivalryId: 'r1' }, read: false, createdAt: ago(5), actor: actor('Diego Ortiz', 'diego.ortiz') },
-  { id: 'n3', kind: 'results', data: { tournament: 'Copa Otoño', slug: 'copa-otono', rankLabel: 'T3', field: 16 }, read: true, createdAt: ago(30), actor: null },
-  { id: 'n4', kind: 'link_pending', data: { tournament: 'Sábado en Chapultepec', player: 'Andrea' }, read: true, createdAt: ago(50), actor: null },
+  {
+    id: 'n1',
+    kind: 'friend_request',
+    data: {},
+    read: false,
+    createdAt: ago(1),
+    actor: actor('Justo Fernández', 'justo'),
+  },
+  {
+    id: 'n2',
+    kind: 'rivalry_round',
+    data: { rivalryId: 'r1' },
+    read: false,
+    createdAt: ago(5),
+    actor: actor('Diego Ortiz', 'diego.ortiz'),
+  },
+  {
+    id: 'n3',
+    kind: 'results',
+    data: { tournament: 'Copa Otoño', slug: 'copa-otono', rankLabel: 'T3', field: 16 },
+    read: true,
+    createdAt: ago(30),
+    actor: null,
+  },
+  {
+    id: 'n4',
+    kind: 'link_pending',
+    data: { tournament: 'Sábado en Chapultepec', player: 'Andrea' },
+    read: true,
+    createdAt: ago(50),
+    actor: null,
+  },
   { id: 'n5', kind: 'friend_accepted', data: {}, read: true, createdAt: ago(80), actor: actor('René Nosti', 'rene.n') },
 ]
 
@@ -48,7 +87,13 @@ const round = (i: number, myAgs: number, theirAgs: number, myCh: number, theirCh
   myNet: myAgs - myCh,
   theirNet: theirAgs - theirCh,
 })
-const sharedRounds = [round(0, 86, 80, 12, 8), round(1, 84, 83, 12, 8), round(2, 90, 81, 13, 8, true), round(3, 85, 84, 13, 9), round(4, 88, 79, 13, 9)]
+const sharedRounds = [
+  round(0, 86, 80, 12, 8),
+  round(1, 84, 83, 12, 8),
+  round(2, 90, 81, 13, 8, true),
+  round(3, 85, 84, 13, 9),
+  round(4, 88, 79, 13, 9),
+]
 
 const active: HeadToHead = {
   rounds: sharedRounds,
@@ -72,7 +117,10 @@ const active: HeadToHead = {
 
 const VERSUS: Record<string, HeadToHead> = {
   rivalidad: active,
-  propuesta: { ...active, rivalry: { ...active.rivalry!, status: 'pending', iProposed: false, history: [], startedAt: null, myStrokes: 3 } },
+  propuesta: {
+    ...active,
+    rivalry: { ...active.rivalry!, status: 'pending', iProposed: false, history: [], startedAt: null, myStrokes: 3 },
+  },
   amigos: { ...active, rivalry: null },
   nuevo: { rounds: [], suggestion: null, friends: true, rivalry: null },
 }
@@ -88,24 +136,104 @@ const quickTees = async (): Promise<QuickTee[]> => [
 
 export function QuickFixture() {
   const me = PROFILE_FIXTURES.yo!.card
-  return <QuickRoundView me={{ displayName: me.displayName, avatarUrl: me.avatarUrl, index: me.index }} friends={friends.friends} courses={quickCourses} loadTees={quickTees} onStart={async () => undefined} />
+  return (
+    <QuickRoundView
+      me={{ displayName: me.displayName, avatarUrl: me.avatarUrl, index: me.index }}
+      friends={friends.friends}
+      courses={quickCourses}
+      loadTees={quickTees}
+      onStart={async () => undefined}
+    />
+  )
 }
 
 // A crew mid-season: two outings this year (the hand-checked table in season.test.ts) and one last year.
-const res = (tournamentId: string, date: string, handle: string, rank: number) => ({ tournamentId, date, handle, rank, rankLabel: String(rank), field: 4 })
+const res = (tournamentId: string, date: string, handle: string, rank: number) => ({
+  tournamentId,
+  date,
+  handle,
+  rank,
+  rankLabel: String(rank),
+  field: 4,
+})
 const crewPageFixture: CrewPage = {
-  crew: { id: 'crew1', slug: 'los-del-sabado', name: 'Los del sábado', joinCode: 'K7Q2MX', role: 'owner', createdAt: '2025-06-01T12:00:00Z', approval: true, codeExpiresAt: '2026-10-10T12:00:00Z', codeExpired: false },
+  crew: {
+    id: 'crew1',
+    slug: 'los-del-sabado',
+    name: 'Los del sábado',
+    joinCode: 'K7Q2MX',
+    role: 'owner',
+    createdAt: '2025-06-01T12:00:00Z',
+    approval: true,
+    codeExpiresAt: '2026-10-10T12:00:00Z',
+    codeExpired: false,
+  },
   requests: [{ handle: 'pablo.r', displayName: 'Pablo Ruiz', avatarUrl: null, at: '2026-10-02T18:00:00Z' }],
   members: [
-    { handle: 'andrea.solis', displayName: 'Andrea Solís', avatarUrl: null, index: 12.4, role: 'owner', joinedAt: '2025-06-01T12:00:00Z' },
-    { handle: 'diego.ortiz', displayName: 'Diego Ortiz', avatarUrl: null, index: 9.8, role: 'member', joinedAt: '2025-06-02T12:00:00Z' },
-    { handle: 'mau', displayName: 'Mauricio Lozano', avatarUrl: null, index: 21.3, role: 'member', joinedAt: '2025-06-03T12:00:00Z' },
-    { handle: 'rene.n', displayName: 'René Nosti', avatarUrl: null, index: 14.0, role: 'member', joinedAt: '2025-06-04T12:00:00Z' },
+    {
+      handle: 'andrea.solis',
+      displayName: 'Andrea Solís',
+      avatarUrl: null,
+      index: 12.4,
+      role: 'owner',
+      joinedAt: '2025-06-01T12:00:00Z',
+    },
+    {
+      handle: 'diego.ortiz',
+      displayName: 'Diego Ortiz',
+      avatarUrl: null,
+      index: 9.8,
+      role: 'member',
+      joinedAt: '2025-06-02T12:00:00Z',
+    },
+    {
+      handle: 'mau',
+      displayName: 'Mauricio Lozano',
+      avatarUrl: null,
+      index: 21.3,
+      role: 'member',
+      joinedAt: '2025-06-03T12:00:00Z',
+    },
+    {
+      handle: 'rene.n',
+      displayName: 'René Nosti',
+      avatarUrl: null,
+      index: 14.0,
+      role: 'member',
+      joinedAt: '2025-06-04T12:00:00Z',
+    },
   ],
   outings: [
-    { tournamentId: 'o3', slug: 'sabado-oct', name: 'Sábado en Bosque Real', status: 'live', quick: true, practice: false, date: '2026-10-03', players: 4 },
-    { tournamentId: 'o2', slug: 'sabado-sep', name: 'Sábado en Chapultepec', status: 'finished', quick: true, practice: false, date: '2026-09-19', players: 3 },
-    { tournamentId: 'o1', slug: 'sabado-ago', name: 'Copa Agosto', status: 'finished', quick: false, practice: false, date: '2026-08-22', players: 4 },
+    {
+      tournamentId: 'o3',
+      slug: 'sabado-oct',
+      name: 'Sábado en Bosque Real',
+      status: 'live',
+      quick: true,
+      practice: false,
+      date: '2026-10-03',
+      players: 4,
+    },
+    {
+      tournamentId: 'o2',
+      slug: 'sabado-sep',
+      name: 'Sábado en Chapultepec',
+      status: 'finished',
+      quick: true,
+      practice: false,
+      date: '2026-09-19',
+      players: 3,
+    },
+    {
+      tournamentId: 'o1',
+      slug: 'sabado-ago',
+      name: 'Copa Agosto',
+      status: 'finished',
+      quick: false,
+      practice: false,
+      date: '2026-08-22',
+      players: 4,
+    },
   ],
   results: [
     res('o1', '2026-08-22', 'andrea.solis', 1),
@@ -135,8 +263,18 @@ export function InboxFixture() {
 export function VersusFixtureScreen() {
   const { name = 'rivalidad' } = useParams()
   const me = PROFILE_FIXTURES.yo!.card
-  const them = { ...PROFILE_FIXTURES.extrano!.card, displayName: 'Diego Ortiz', handle: 'diego.ortiz', related: true, isMe: false }
-  const fixture: VersusFixture = { me: { displayName: me.displayName, avatarUrl: me.avatarUrl }, them, h2h: VERSUS[name] ?? active }
+  const them = {
+    ...PROFILE_FIXTURES.extrano!.card,
+    displayName: 'Diego Ortiz',
+    handle: 'diego.ortiz',
+    related: true,
+    isMe: false,
+  }
+  const fixture: VersusFixture = {
+    me: { displayName: me.displayName, avatarUrl: me.avatarUrl },
+    them,
+    h2h: VERSUS[name] ?? active,
+  }
   return <VersusScreen fixture={fixture} />
 }
 

@@ -6,7 +6,11 @@ import { words } from '../testing/words'
 
 describe('computeCore', () => {
   it('computes per-hole points, thru and totals', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 1, settings: FIRST_TOURNAMENT_SETTINGS })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 20 })],
+      rounds: 1,
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
     // PH = 80% of 20 = 16 → 1 stroke on SI 1–16. Hole 5 is par 4, SI 1.
     snap.scores.push(score('r1', 'p1', 5, 5, 2), score('r1', 'p1', 3, 3, 1)) // hole 3: par 3, SI 17 → 0 strokes → par = 2 pts
     const core = computeCore(snap, FIRST_TOURNAMENT_SETTINGS)
@@ -22,7 +26,11 @@ describe('computeCore', () => {
   })
 
   it('applies the Day 2 cut from Day 1 points', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 2, settings: FIRST_TOURNAMENT_SETTINGS })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 20 })],
+      rounds: 2,
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
     // 42 points on Day 1: 18 holes × 2 + 6 birdies. Give net birdie on 6 holes.
     for (let h = 1; h <= 18; h++) {
       const hole = snap.courses[0]!.tees[0]!.holes[h - 1]!
@@ -38,7 +46,11 @@ describe('computeCore', () => {
   })
 
   it('never adds strokes and floors at 0', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 2 })], rounds: 2, settings: FIRST_TOURNAMENT_SETTINGS })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 2 })],
+      rounds: 2,
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
     for (let h = 1; h <= 18; h++) {
       const hole = snap.courses[0]!.tees[0]!.holes[h - 1]!
       snap.scores.push(score('r1', 'p1', h, hole.par - (h <= 8 ? 1 : 0)))
@@ -51,7 +63,11 @@ describe('computeCore', () => {
   })
 
   it('§6 exactly: PH1 2, P1 44 → PH2 0', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 2 })], rounds: 2, settings: FIRST_TOURNAMENT_SETTINGS })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 2 })],
+      rounds: 2,
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
     let birdies = 0
     for (let h = 1; h <= 18; h++) {
       const hole = snap.courses[0]!.tees[0]!.holes[h - 1]!
@@ -70,8 +86,19 @@ describe('computeCore', () => {
   })
 
   it('an override replaces the playing handicap and is explained', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 1, settings: FIRST_TOURNAMENT_SETTINGS })
-    snap.handicapOverrides.push({ roundId: 'r1', playerId: 'p1', playingHcp: 14, reason: 'Jugó de azules', by: null, at: '' })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 20 })],
+      rounds: 1,
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
+    snap.handicapOverrides.push({
+      roundId: 'r1',
+      playerId: 'p1',
+      playingHcp: 14,
+      reason: 'Jugó de azules',
+      by: null,
+      at: '',
+    })
     const core = computeCore(snap, FIRST_TOURNAMENT_SETTINGS)
     expect(core.rounds.r1!.p1!.playingHcp).toBe(14)
     expect(core.rounds.r1!.p1!.overridden).toBe(true)
@@ -105,7 +132,12 @@ describe('computeCore', () => {
     const settings = structuredClone(FIRST_TOURNAMENT_SETTINGS)
     settings.handicap.allowance = 1
     const course = makeCourse('course1', [makeTee('tee1', 'course1', { rating: 72, slope: 113 })])
-    const snap = makeSnapshot({ players: [makePlayer(1, { handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 })], rounds: 2, courses: [course], settings })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 })],
+      rounds: 2,
+      courses: [course],
+      settings,
+    })
     const holes = course.tees[0]!.holes
     const easiest = holes.find((h) => h.strokeIndex === 18)!
     for (const h of holes) snap.scores.push(score('r1', 'p1', h.number, h.par))
@@ -137,12 +169,19 @@ describe('computeCore', () => {
     const core = computeCore(snap, settings)
     expect(core.rounds.r2!.p1!.cut).toBe(4)
     expect(core.rounds.r2!.p1!.playingHcp).toBe(-2)
-    expect(words(core.rounds.r2!.p1!.playingHcpWhy).steps).toContain('Juega con +2: no recibe golpes, así que el recorte no le quita nada')
+    expect(words(core.rounds.r2!.p1!.playingHcpWhy).steps).toContain(
+      'Juega con +2: no recibe golpes, así que el recorte no le quita nada',
+    )
   })
 
   it('a manual handicap is used unchanged even with a rated tee', () => {
     const course = makeCourse('course1', [makeTee('tee1', 'course1', { rating: 71.2, slope: 128 })])
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: 1, courses: [course], settings: FIRST_TOURNAMENT_SETTINGS })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 20 })],
+      rounds: 1,
+      courses: [course],
+      settings: FIRST_TOURNAMENT_SETTINGS,
+    })
     expect(computeCore(snap, FIRST_TOURNAMENT_SETTINGS).rounds.r1!.p1!.courseHcp).toBe(20)
   })
 

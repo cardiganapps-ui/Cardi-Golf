@@ -21,7 +21,13 @@ export const stablefordFormat: MainFormat = {
     // COPY-12: the whole table, albatross included (§5.3), and one hole worked through.
     return {
       title: say('format.stableford'),
-      steps: [say('format.stablefordPoints'), say('format.stablefordTable'), say('format.stablefordExample'), say('format.stablefordPickUp'), msg('format.stablefordWins', { pct: Math.round(settings.handicap.allowance * 100) })],
+      steps: [
+        say('format.stablefordPoints'),
+        say('format.stablefordTable'),
+        say('format.stablefordExample'),
+        say('format.stablefordPickUp'),
+        msg('format.stablefordWins', { pct: Math.round(settings.handicap.allowance * 100) }),
+      ],
     }
   },
 
@@ -43,7 +49,8 @@ export const stablefordFormat: MainFormat = {
       const byRound: Record<string, Figure> = {}
       for (const rid of ctx.core.roundIds) {
         const pr = playerRound(ctx, rid, playerId)
-        byRound[rid] = pr && pr.thru > 0 ? { value: pr.points, text: String(pr.points) } : { value: 0, text: '—', empty: true }
+        byRound[rid] =
+          pr && pr.thru > 0 ? { value: pr.points, text: String(pr.points) } : { value: 0, text: '—', empty: true }
       }
       perRound[e.id] = byRound
 

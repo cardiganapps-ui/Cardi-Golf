@@ -19,7 +19,11 @@ const days = [
 ]
 /** `n` players over 36 holes, two points a hole, each a point behind the one before him. */
 function field(n: number, holes = 36): RaceEntrant[] {
-  return Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, label: `Jugador ${i + 1}`, values: Array.from({ length: holes }, (_, h) => (h + 1) * 2 - i) }))
+  return Array.from({ length: n }, (_, i) => ({
+    id: `p${i + 1}`,
+    label: `Jugador ${i + 1}`,
+    values: Array.from({ length: holes }, (_, h) => (h + 1) * 2 - i),
+  }))
 }
 function chart(props: Partial<RaceChartProps> = {}, reduce = false) {
   const entrants = props.entrants ?? field(4)
@@ -46,8 +50,12 @@ function chart(props: Partial<RaceChartProps> = {}, reduce = false) {
 }
 const svg = () => screen.getByRole('img')
 /** Where the cover over the race not reached yet stands, in px from its window's left edge. */
-const revealAt = () => Number(/translateX\(([-\d.]+)px\)/.exec((document.querySelector('[data-reveal]') as HTMLElement).style.transform)![1])
-const labels = () => Array.from(svg().querySelectorAll('text')).map((x) => x.textContent).filter((x) => /Jugador/.test(x ?? ''))
+const revealAt = () =>
+  Number(/translateX\(([-\d.]+)px\)/.exec((document.querySelector('[data-reveal]') as HTMLElement).style.transform)![1])
+const labels = () =>
+  Array.from(svg().querySelectorAll('text'))
+    .map((x) => x.textContent)
+    .filter((x) => /Jugador/.test(x ?? ''))
 
 beforeEach(() => sessionStorage.clear())
 afterEach(() => {
@@ -59,7 +67,9 @@ describe('what a screen reader and a keyboard meet (A11Y-20)', () => {
   it('one image, named by what the race says, never a tab stop or an application', () => {
     chart({ me: 'p2' })
     const img = svg()
-    expect(img.getAttribute('aria-label')).toBe('Carrera de puntos: 4 jugadores, 36 hoyos. Va al frente Jugador 1 con 72 puntos; va al frente desde el primer hoyo.')
+    expect(img.getAttribute('aria-label')).toBe(
+      'Carrera de puntos: 4 jugadores, 36 hoyos. Va al frente Jugador 1 con 72 puntos; va al frente desde el primer hoyo.',
+    )
     expect(img.hasAttribute('tabindex')).toBe(false)
     expect(document.querySelector('[role="application"]')).toBeNull()
   })
@@ -74,7 +84,9 @@ describe('what a screen reader and a keyboard meet (A11Y-20)', () => {
     const rows = within(table).getAllByRole('row')
     // Two header rows (the days, then the holes), then one per player.
     expect(rows).toHaveLength(5)
-    const first = within(rows[2]!).getAllByRole('cell').map((c) => c.textContent)
+    const first = within(rows[2]!)
+      .getAllByRole('cell')
+      .map((c) => c.textContent)
     expect(first).toHaveLength(20)
     expect(first.slice(0, 3)).toEqual(['2', '4', '6'])
     // The 19th column is the first hole of day 2, said as such.
@@ -100,7 +112,17 @@ describe('reading it with a finger', () => {
   it('a tap reads the hole under it; a touch that moves down (a scroll) reads nothing', () => {
     chart()
     const img = svg()
-    img.getBoundingClientRect = () => ({ left: 0, top: 0, width: 343, height: 280, right: 343, bottom: 280, x: 0, y: 0, toJSON: () => ({}) })
+    img.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 343,
+      height: 280,
+      right: 343,
+      bottom: 280,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
     const bar = screen.getByRole('slider')
     // A scroll: down the page, the bar stays at the end.
     fireEvent.pointerDown(img, { clientX: 100, clientY: 100, pointerId: 1 })
@@ -161,7 +183,18 @@ describe('the replay (MOT-21, MOT-15)', () => {
     render(
       <MotionConfig reducedMotion="never">
         <Profiler id="race" onRender={() => commits++}>
-          <RaceChart title="Carrera de puntos" entrants={entrants} stable={entrants.map((e) => e.id)} days={days} strokes={false} format={String} pairs={false} honoreeLabel="El novio" pickKey="k" hint="" />
+          <RaceChart
+            title="Carrera de puntos"
+            entrants={entrants}
+            stable={entrants.map((e) => e.id)}
+            days={days}
+            strokes={false}
+            format={String}
+            pairs={false}
+            honoreeLabel="El novio"
+            pickKey="k"
+            hint=""
+          />
         </Profiler>
       </MotionConfig>,
     )

@@ -17,7 +17,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, enqueueHole, flush, startOutbox, useOutbox, OutboxStorageError } = await import('./outbox')
@@ -27,7 +36,16 @@ const score = (hole: number, player = 'p1') => ({
   key: `score:r1:${player}:${hole}`,
   kind: 'score' as const,
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: player, hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  payload: {
+    round_id: 'r1',
+    player_id: player,
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'x',
+  },
   attempts: 0,
   createdAt: Date.now(),
 })
@@ -56,7 +74,14 @@ describe('the phone keeps the write first (REL-18)', () => {
       throw new Error('TypeError: Failed to fetch')
     })
     vi.spyOn(_outboxTest.db()!.items, 'put').mockRejectedValue(new DOMException('quota', 'QuotaExceededError'))
-    await expect(enqueueHole('t1', { round_id: 'r1', hole: 4, entered_by: 'p1', entries: [{ player_id: 'p1', fields: { strokes: 5 }, base: {} }] })).rejects.toBeInstanceOf(OutboxStorageError)
+    await expect(
+      enqueueHole('t1', {
+        round_id: 'r1',
+        hole: 4,
+        entered_by: 'p1',
+        entries: [{ player_id: 'p1', fields: { strokes: 5 }, base: {} }],
+      }),
+    ).rejects.toBeInstanceOf(OutboxStorageError)
     expect(_outboxTest.queue()).toEqual([])
     expect(useOutbox.getState().pending).toBe(0)
   })
@@ -65,7 +90,12 @@ describe('the phone keeps the write first (REL-18)', () => {
     _outboxTest.setPush(async () => {
       throw new Error('TypeError: Failed to fetch')
     })
-    const newer = { ...score(3), payload: { ...score(3).payload, strokes: 7 }, seq: Date.now() * 1000 + 1e12, actingUid: 'uid-a' }
+    const newer = {
+      ...score(3),
+      payload: { ...score(3).payload, strokes: 7 },
+      seq: Date.now() * 1000 + 1e12,
+      actingUid: 'uid-a',
+    }
     await _outboxTest.db()!.items.put(newer)
     await _outboxTest.enqueue(score(3))
     const stored = await _outboxTest.stored()

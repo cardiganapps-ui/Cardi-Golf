@@ -48,10 +48,35 @@ describe('Salud › Teléfonos', () => {
             { name: 'apply_lag', count: 400, p50: 740, p95: 2_300, over2s: 30 },
             { name: 'save_ack', count: 100, p50: 310, p95: 980, over2s: 0 },
           ],
-          vitals: [{ name: 'lcp', count: 10, p75: 2_100 }, { name: 'cls', count: 10, p75: 0.04 }],
-          errors: [{ name: 'window.error', summary: 'TypeError: Load failed', route: '/t/:slug/tarjeta', build: 1, buildSha: 'abc1234', count: 7, devices: 3, first_at: '2026-10-11T06:00:00Z', last_at: '2026-10-11T06:00:00Z' }],
+          vitals: [
+            { name: 'lcp', count: 10, p75: 2_100 },
+            { name: 'cls', count: 10, p75: 0.04 },
+          ],
+          errors: [
+            {
+              name: 'window.error',
+              summary: 'TypeError: Load failed',
+              route: '/t/:slug/tarjeta',
+              build: 1,
+              buildSha: 'abc1234',
+              count: 7,
+              devices: 3,
+              first_at: '2026-10-11T06:00:00Z',
+              last_at: '2026-10-11T06:00:00Z',
+            },
+          ],
           funnel: [{ name: 'hole_saved', count: 1_200, people: 6 }],
-          devices: { seen: 14, withPending: 2, pending: 5, rejected: 1, oldestPendingAt: null, builds: [{ build: 1, buildSha: 'abc1234', count: 12 }, { build: null, buildSha: null, count: 2 }] },
+          devices: {
+            seen: 14,
+            withPending: 2,
+            pending: 5,
+            rejected: 1,
+            oldestPendingAt: null,
+            builds: [
+              { build: 1, buildSha: 'abc1234', count: 12 },
+              { build: null, buildSha: null, count: 2 },
+            ],
+          },
         }}
       />,
     )
@@ -66,7 +91,9 @@ describe('Salud › Teléfonos', () => {
     expect(screen.getByText('Carga: 2.1 s')).toBeTruthy()
     expect(screen.getByText('Saltos de la pantalla: 0.04')).toBeTruthy()
     expect(screen.getByText('TypeError: Load failed')).toBeTruthy()
-    expect(screen.getByText(/^En \/t\/:slug\/tarjeta, 7 veces en 3 teléfonos, la última .+, versión abc1234$/)).toBeTruthy()
+    expect(
+      screen.getByText(/^En \/t\/:slug\/tarjeta, 7 veces en 3 teléfonos, la última .+, versión abc1234$/),
+    ).toBeTruthy()
     expect(screen.getByText('Hoyos guardados: 1,200 (6 personas)')).toBeTruthy()
   })
 })

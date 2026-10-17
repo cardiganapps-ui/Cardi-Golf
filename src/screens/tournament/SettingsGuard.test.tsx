@@ -14,8 +14,14 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
 vi.mock('../../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
-vi.mock('../../data/quick', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/quick')>()), roundRivalries: vi.fn(async () => []) }))
-vi.mock('../../data/appUpdate', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/appUpdate')>()), applyUpdate: vi.fn(async () => undefined) }))
+vi.mock('../../data/quick', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/quick')>()),
+  roundRivalries: vi.fn(async () => []),
+}))
+vi.mock('../../data/appUpdate', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/appUpdate')>()),
+  applyUpdate: vi.fn(async () => undefined),
+}))
 
 import { applyUpdate } from '../../data/appUpdate'
 import { getFixture } from '../../dev/fixtures'
@@ -37,14 +43,27 @@ import { TournamentShell } from './TournamentShell'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 
 const FX = 'full12-live'
 type Raw = Record<string, unknown>
-const WOLF = { id: 'wolf-1', type: 'wolf', label: 'Wolf', enabled: true, money: { source: 'direct', stake: 50 }, options: {} }
-const newerKey = (raw: unknown): Raw => ({ ...(raw as Raw), modules: { ...((raw as Raw).modules as Raw), wolf: { enabled: true, label: 'Wolf' } } })
-const newerGame = (raw: unknown): Raw => ({ ...(raw as Raw), games: [...(((raw as Raw).games as unknown[]) ?? []), WOLF] })
+const WOLF = {
+  id: 'wolf-1',
+  type: 'wolf',
+  label: 'Wolf',
+  enabled: true,
+  money: { source: 'direct', stake: 50 },
+  options: {},
+}
+const newerKey = (raw: unknown): Raw => ({
+  ...(raw as Raw),
+  modules: { ...((raw as Raw).modules as Raw), wolf: { enabled: true, label: 'Wolf' } },
+})
+const newerGame = (raw: unknown): Raw => ({
+  ...(raw as Raw),
+  games: [...(((raw as Raw).games as unknown[]) ?? []), WOLF],
+})
 
 const TABS: Array<[string, ReactNode]> = [
   ['', <LiveScreen key="live" />],
@@ -63,17 +82,39 @@ async function show(path: string, edit: ((raw: unknown) => Raw) | null, me: Part
   const fx = getFixture(FX)!
   const snap = structuredClone(fx.snapshot)
   if (edit) snap.tournament.settings = edit(snap.tournament.settings)
-  useTournament.setState({ tournamentId: `fixture:${FX}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
-  const ctx: TournamentCtx = { tournamentId: snap.tournament.id, slug: `_/${FX}`, lookup: fx.lookup, me: { ...fx.me, ...me }, refresh: async () => undefined, leave: async () => undefined }
+  useTournament.setState({
+    tournamentId: `fixture:${FX}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
+  const ctx: TournamentCtx = {
+    tournamentId: snap.tournament.id,
+    slug: `_/${FX}`,
+    lookup: fx.lookup,
+    me: { ...fx.me, ...me },
+    refresh: async () => undefined,
+    leave: async () => undefined,
+  }
   await act(async () => {
     render(
       <MemoryRouter initialEntries={[`/t/_/${FX}${path}`]}>
         <TournamentContext.Provider value={ctx}>
           <Routes>
             <Route path="/t/_/:name" element={<TournamentShell />}>
-              {TABS.map(([p, el]) => (p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />))}
+              {TABS.map(([p, el]) =>
+                p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />,
+              )}
             </Route>
-            <Route path="/t/_/:name/ceremonia" element={<SettingsGuard money><CeremonyScreen /></SettingsGuard>} />
+            <Route
+              path="/t/_/:name/ceremonia"
+              element={
+                <SettingsGuard money>
+                  <CeremonyScreen />
+                </SettingsGuard>
+              }
+            />
             <Route path="/t/_/:name/admin" element={<AdminLayout />}>
               <Route path="torneo" element={<p>Pantalla de Torneo</p>} />
               <Route path="datos" element={<p>Pantalla de Datos</p>} />
@@ -92,12 +133,15 @@ const notice = () => screen.queryByRole('heading', { level: 1, name: t.outdated.
 const someone = () => getFixture(FX)!.snapshot.players[0]!.displayName
 
 describe('settings this build can’t read: nothing computed from them shows', () => {
-  it.each(TABS.filter(([p]) => p !== 'mas').map(([p]) => p))('«%s» says to update, with no board under it', async (p) => {
-    const text = await show(p ? `/${p}` : '', newerKey)
-    expect(notice()).toBeTruthy()
-    expect(text).not.toContain(someone())
-    expect(text).not.toMatch(/\$\d/)
-  })
+  it.each(TABS.filter(([p]) => p !== 'mas').map(([p]) => p))(
+    '«%s» says to update, with no board under it',
+    async (p) => {
+      const text = await show(p ? `/${p}` : '', newerKey)
+      expect(notice()).toBeTruthy()
+      expect(text).not.toContain(someone())
+      expect(text).not.toMatch(/\$\d/)
+    },
+  )
 
   it('Más stays: the player’s session, the join code, the Comité are none of the settings', async () => {
     await show('/mas', newerKey)
@@ -168,7 +212,8 @@ describe('the app’s own routes wait for the settings too', () => {
   it('TV, the Ceremonia (money too) and the printable cards, and a link’s TV', async () => {
     const { router } = await import('../../app/router')
     const guardAt = (path: string) => {
-      const el = matchRoutes(router.routes as RouteObject[], path)?.at(-1)?.route.element as { type?: unknown; props?: { money?: boolean } } | undefined
+      const el = matchRoutes(router.routes as RouteObject[], path)?.at(-1)?.route.element as
+        { type?: unknown; props?: { money?: boolean } } | undefined
       return el?.type === SettingsGuard ? { money: !!el.props?.money } : null
     }
     expect(guardAt('/t/x/tv')).toEqual({ money: false })

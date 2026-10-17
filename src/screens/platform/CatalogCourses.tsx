@@ -27,13 +27,24 @@ export function CatalogCourses() {
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('all')
-  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('courses'), { q, filter }, (p, offset) => api.courses({ ...p, limit: 50, offset }), !!q)
+  const { rows, total, error, loadingMore, reload, more } = usePaged(
+    usePlatformKey('courses'),
+    { q, filter },
+    (p, offset) => api.courses({ ...p, limit: 50, offset }),
+    !!q,
+  )
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
       <div className={s.listPane}>
         <h2>{t.platform.sections.courses}</h2>
-        <Input type="search" value={q} placeholder={C.search} aria-label={C.search} onChange={(e) => setQ(e.target.value)} />
+        <Input
+          type="search"
+          value={q}
+          placeholder={C.search}
+          aria-label={C.search}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <div className={s.filters} role="group" aria-label={C.filterLabel}>
           {FILTERS.map((f) => (
             <button key={f} type="button" className={s.filter} aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -64,7 +75,11 @@ export function CatalogCourses() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => reload() } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{C.pickOne}</p>}
+        {outlet ? (
+          <Outlet context={{ onChanged: () => reload() } satisfies TournamentsOutlet} />
+        ) : (
+          <p className={s.placeholder}>{C.pickOne}</p>
+        )}
       </div>
     </div>
   )

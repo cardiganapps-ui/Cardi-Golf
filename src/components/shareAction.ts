@@ -12,7 +12,9 @@ export async function shareCard(node: HTMLElement, filename: string, title: stri
     if (!(e instanceof Error && e.name === 'AbortError')) toast(t.share.failed)
   }
   try {
-    await shareNodeAsImage(node, filename, title, text, (again) => toast(t.share.saved, { label: t.share.shareNow, onClick: () => void again().catch(failed) }))
+    await shareNodeAsImage(node, filename, title, text, (again) =>
+      toast(t.share.saved, { label: t.share.shareNow, onClick: () => void again().catch(failed) }),
+    )
   } catch (e) {
     failed(e)
   }

@@ -27,7 +27,13 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
       {(state === 'off' || state === 'on') && (
         <div className={styles.askActions}>
           {state === 'off' ? (
-            <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void enable()} aria-describedby={noteId}>
+            <button
+              className="btn btn--primary btn--sm"
+              type="button"
+              disabled={busy}
+              onClick={() => void enable()}
+              aria-describedby={noteId}
+            >
               {P.enable}
             </button>
           ) : (

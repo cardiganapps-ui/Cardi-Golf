@@ -16,7 +16,18 @@ import { snapshotToRows } from './rows'
 
 /** spectator_board's columns by table, as the migration builds them. */
 export const SPECTATOR_COLUMNS: Record<string, string[]> = {
-  players: ['id', 'display_name', 'tier', 'base_hcp', 'handicap_source', 'handicap_index', 'estimate_inputs', 'default_tee_id', 'is_honoree', 'sort_order'],
+  players: [
+    'id',
+    'display_name',
+    'tier',
+    'base_hcp',
+    'handicap_source',
+    'handicap_index',
+    'estimate_inputs',
+    'default_tee_id',
+    'is_honoree',
+    'sort_order',
+  ],
   courses: ['id', 'name'],
   tees: ['id', 'course_id', 'name', 'color', 'rating', 'slope', 'sort_order'],
   holes: ['tee_id', 'number', 'par', 'stroke_index', 'yards'],
@@ -69,7 +80,8 @@ export function spectatorAnswer(s: Snapshot, money: boolean, version = 'v1'): Ro
   // «Sin dinero»: a side pot's entries, claims and results stay out with it (who is in one paid into it).
   const games = (t.settings as { games?: Array<{ id?: string; money?: { source?: string } }> } | null)?.games ?? []
   const hidden = new Set(money ? [] : games.filter((g) => g.money?.source === 'side').map((g) => g.id))
-  const kept = (table: string, r: Row) => !['game_entries', 'hole_awards', 'game_results'].includes(table) || !hidden.has(r.game_id as string)
+  const kept = (table: string, r: Row) =>
+    !['game_entries', 'hole_awards', 'game_results'].includes(table) || !hidden.has(r.game_id as string)
   for (const [table, columns] of Object.entries({ ...SPECTATOR_COLUMNS, ...(money ? SPECTATOR_MONEY_COLUMNS : {}) }))
     answer[table] = (rows[table] ?? []).filter((r) => kept(table, r)).map((r) => pick(r, columns))
   return answer

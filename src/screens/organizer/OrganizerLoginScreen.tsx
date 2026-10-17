@@ -4,7 +4,15 @@ import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { Field, Toggle } from '../../components/ui'
 import { Button, Input } from '../../components/primitives'
-import { requestPasswordReset, resendEmailCode, signInWithMagicLink, signInWithPassword, signUpWithPassword, useAuth, verifyEmailCode } from '../../data/auth'
+import {
+  requestPasswordReset,
+  resendEmailCode,
+  signInWithMagicLink,
+  signInWithPassword,
+  signUpWithPassword,
+  useAuth,
+  verifyEmailCode,
+} from '../../data/auth'
 import { refuseWithUnsent } from '../../data/account'
 import styles from './OrganizerAuth.module.css'
 import { acceptLegal, sayAdult } from '../../data/legal'
@@ -105,7 +113,15 @@ export function OrganizerLoginScreen() {
             {info ?? (awaiting === 'signup' ? t.auth.needsConfirmation : t.auth.magicSent)}
           </p>
           <Field label={t.auth.code} hint={t.auth.codeHint}>
-            <Input code value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" autoComplete="one-time-code" autoFocus required />
+            <Input
+              code
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+            />
           </Field>
           <p className="help">{t.auth.codeSentTo(email.trim())}</p>
           {error && (
@@ -118,8 +134,9 @@ export function OrganizerLoginScreen() {
           </Button>
           <div className={styles.quiet}>
             <Button
-              variant="ghost" size="sm"
-             
+              variant="ghost"
+              size="sm"
+
               disabled={busy}
               onClick={() =>
                 void attempt(async () => {
@@ -131,8 +148,9 @@ export function OrganizerLoginScreen() {
               {t.auth.resend}
             </Button>
             <Button
-              variant="ghost" size="sm"
-             
+              variant="ghost"
+              size="sm"
+
               onClick={() => {
                 setAwaiting(null)
                 setCode('')
@@ -148,14 +166,36 @@ export function OrganizerLoginScreen() {
         <form className={styles.form} onSubmit={submit}>
           {mode === 'up' && (
             <Field label={t.auth.displayName}>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                required
+              />
             </Field>
           )}
           <Field label={t.auth.email}>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" required />
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+              required
+            />
           </Field>
           <Field label={t.auth.password} hint={mode === 'up' ? t.auth.passwordHint : undefined}>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} minLength={8} required />
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'up' ? 'new-password' : 'current-password'}
+              minLength={8}
+              required
+            />
           </Field>
           {error && (
             <p className="error" role="alert">
@@ -170,15 +210,24 @@ export function OrganizerLoginScreen() {
           {/* Before the button that sends the email (TRUST-05). */}
           <LegalConsent />
           {/* A new account says the person is an adult (TRUST-13); signing in to one is not a new one. */}
-          {mode === 'up' && <Toggle label={t.legal.adult.check} hint={t.legal.adult.hint} checked={adult} onChange={setAdult} />}
+          {mode === 'up' && (
+            <Toggle label={t.legal.adult.check} hint={t.legal.adult.hint} checked={adult} onChange={setAdult} />
+          )}
           <Button variant="primary" block type="submit" disabled={busy}>
-            {busy ? (mode === 'in' ? t.auth.signingIn : t.auth.creating) : mode === 'in' ? t.auth.signIn : t.auth.signUp}
+            {busy
+              ? mode === 'in'
+                ? t.auth.signingIn
+                : t.auth.creating
+              : mode === 'in'
+                ? t.auth.signIn
+                : t.auth.signUp}
           </Button>
           {mode === 'in' && (
             <div className={styles.quiet}>
               <Button
-                variant="ghost" size="sm"
-               
+                variant="ghost"
+                size="sm"
+
                 onClick={() =>
                   void attempt(async () => {
                     await refuseWithUnsent('switch')
@@ -191,8 +240,9 @@ export function OrganizerLoginScreen() {
                 {t.auth.magicLink}
               </Button>
               <Button
-                variant="ghost" size="sm"
-               
+                variant="ghost"
+                size="sm"
+
                 onClick={() =>
                   void attempt(async () => {
                     await requestPasswordReset(email.trim())

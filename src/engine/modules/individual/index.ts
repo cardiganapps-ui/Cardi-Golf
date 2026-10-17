@@ -8,7 +8,18 @@
  * and split the prizes.
  */
 import { label, msg, say, type MatchSide, type Msg } from '../../messages'
-import { countback, flattenRanks, isFinal, onlyWithResult, rankField, splitEven, splitPrizes, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
+import {
+  countback,
+  flattenRanks,
+  isFinal,
+  onlyWithResult,
+  rankField,
+  splitEven,
+  splitPrizes,
+  unfilledPlaces,
+  unfilledWarning,
+  type RankGroup,
+} from '../../core/ranking'
 import { figureKind, formatFor, type Entrant, type Figure, type FormatStandings } from '../../formats'
 import type { Explanation, Id } from '../../types'
 import type { GameModule, ModuleContext, PrizeAward } from '../module'
@@ -68,8 +79,14 @@ function rankStandings(ctx: ModuleContext) {
   // tournament is final, an entrant who did not finish every hole ranks after
   // everyone who did (MONEY-02). Points formats need no rule, the missing
   // holes already score nothing.
-  const expectedHoles = ctx.core.roundIds.reduce((sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18), 0)
-  const missing = (id: Id) => (!up && ctx.tournamentFinal && !standings.totals[id]?.empty ? Math.max(0, expectedHoles - (standings.thru[id] ?? 0)) : 0)
+  const expectedHoles = ctx.core.roundIds.reduce(
+    (sum, rid) => sum + (ctx.snapshot.rounds.find((r) => r.id === rid)?.holes ?? 18),
+    0,
+  )
+  const missing = (id: Id) =>
+    !up && ctx.tournamentFinal && !standings.totals[id]?.empty
+      ? Math.max(0, expectedHoles - (standings.thru[id] ?? 0))
+      : 0
   const incomplete = (id: Id) => missing(id) > 0
   // An entrant with no card yet sorts last whichever way the figure counts.
   // Among incomplete cards, more holes played ranks first: one hole at −1 is
@@ -81,11 +98,14 @@ function rankStandings(ctx: ModuleContext) {
   }
   // The format's figure, then the countback on the last round (§5.3).
   const order = new Map(standings.entrants.map((e, i) => [e.id, i]))
-  const groups = rankField(standings.entrants.map((e) => e.id), {
-    keys: [(id) => (up ? rankValue(id) : -rankValue(id))],
-    ties: { countback: (id) => standings.countback[id] ?? EMPTY_COUNTBACK },
-    order: (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
-  })
+  const groups = rankField(
+    standings.entrants.map((e) => e.id),
+    {
+      keys: [(id) => (up ? rankValue(id) : -rankValue(id))],
+      ties: { countback: (id) => standings.countback[id] ?? EMPTY_COUNTBACK },
+      order: (a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0),
+    },
+  )
   return { format, standings, groups, rankValue, incomplete, expectedHoles }
 }
 
@@ -138,7 +158,15 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
       let countbackWhy: Explanation | null = null
       if (neighbour && rankValue(neighbour.item) === rankValue(r.item)) {
         // Tied with the row above only when they share its place: a T2 row below a 1st won on countback is «Desempate».
-        countbackWhy = explainCountback(ctx, standings, neighbour.item, r.item, nameOf, neighbour.position === r.position, format.higherIsBetter(ctx.settings))
+        countbackWhy = explainCountback(
+          ctx,
+          standings,
+          neighbour.item,
+          r.item,
+          nameOf,
+          neighbour.position === r.position,
+          format.higherIsBetter(ctx.settings),
+        )
       }
       return {
         playerId: r.item,
@@ -147,7 +175,9 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
         tied: r.tied,
         label: r.label,
         figure,
-        perRound: ctx.core.roundIds.map((rid) => standings.perRound[r.item]?.[rid] ?? { value: 0, text: '—', empty: true }),
+        perRound: ctx.core.roundIds.map(
+          (rid) => standings.perRound[r.item]?.[rid] ?? { value: 0, text: '—', empty: true },
+        ),
         thru: standings.thru[r.item] ?? 0,
         countbackWhy,
         total: figure.value,
@@ -165,7 +195,12 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
     for (const s of prizeShares) prizes[s.item] = { amount: s.amount, why: s.why }
     const byTeam = standings.entrants.some((e) => e.isTeam)
     const unfilled = ctx.tournamentFinal
-      ? unfilledWarning(ctx.settings.modules.individual.label, unfilledPlaces(paid, amounts), paid.reduce((n, g) => n + g.members.length, 0), byTeam ? 'team' : 'player')
+      ? unfilledWarning(
+          ctx.settings.modules.individual.label,
+          unfilledPlaces(paid, amounts),
+          paid.reduce((n, g) => n + g.members.length, 0),
+          byTeam ? 'team' : 'player',
+        )
       : []
 
     return {
@@ -177,7 +212,15 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
       lastPlace: anyScores || ctx.tournamentFinal ? (groups.at(-1)?.members ?? []) : [],
       prizes,
       final: isFinal(ctx, 'tournament'),
-      warnings: [...standings.warnings, ...incompleteWarning(standings.entrants.filter((e) => incomplete(e.id)).map((e) => ({ name: e.name, thru: standings.thru[e.id] ?? 0, of: expectedHoles }))), ...unfilled],
+      warnings: [
+        ...standings.warnings,
+        ...incompleteWarning(
+          standings.entrants
+            .filter((e) => incomplete(e.id))
+            .map((e) => ({ name: e.name, thru: standings.thru[e.id] ?? 0, of: expectedHoles })),
+        ),
+        ...unfilled,
+      ],
     }
   },
 
@@ -193,7 +236,14 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
       const p = state.prizes[row.playerId]
       if (!p) continue
       // COPY-19: where the prize comes from, in words: the place and the figure, and «si terminara ahora» while it runs.
-      const where = msg('individual.where', { name: row.entrant.name, final: state.final, place: row.label, figure: row.figure.text, value: row.figure.value, kind })
+      const where = msg('individual.where', {
+        name: row.entrant.name,
+        final: state.final,
+        place: row.label,
+        figure: row.figure.text,
+        value: row.figure.value,
+        kind,
+      })
       const steps = [where, ...p.why.steps]
       // A team's prize is split between its members, so each is paid their share.
       const members = row.entrant.playerIds
@@ -208,7 +258,22 @@ export const individualModule: GameModule<IndividualState, 'individual'> = {
           amount,
           final: state.final,
           // A member's line is titled with what the member is paid; the team's prize is a step (MONEY-15).
-          why: members.length > 1 ? { title: msg('amount', { amount }), steps: [...steps, msg('individual.teamSplit', { team: row.entrant.name, n: members.length, total: p.amount, each, rounding: extra })] } : { ...p.why, steps },
+          why:
+            members.length > 1
+              ? {
+                  title: msg('amount', { amount }),
+                  steps: [
+                    ...steps,
+                    msg('individual.teamSplit', {
+                      team: row.entrant.name,
+                      n: members.length,
+                      total: p.amount,
+                      each,
+                      rounding: extra,
+                    }),
+                  ],
+                }
+              : { ...p.why, steps },
         })
       })
     }
@@ -250,13 +315,29 @@ function explainCountback(
     const notPlayed = (d: typeof dayA) => !d || d.empty
     const over = lastRound?.status === 'finished'
     // Each side on its own when they differ: one match over or not started is not the other's «empatado».
-    const side = (d: typeof dayA): MatchSide => (notPlayed(d) ? (over ? 'notPlayed' : 'notOut') : d!.result ? 'done' : 'going')
+    const side = (d: typeof dayA): MatchSide =>
+      notPlayed(d) ? (over ? 'notPlayed' : 'notOut') : d!.result ? 'done' : 'going'
     const match =
       notPlayed(dayA) && notPlayed(dayB)
         ? msg('countback.matchNone', { day: lastN, over })
         : !notPlayed(dayA) && !notPlayed(dayB) && !!dayA!.result === !!dayB!.result
-          ? msg('countback.matchSame', { day: lastN, done: !!dayA!.result, aName: nameOf(aboveId), a, bName: nameOf(id), b })
-          : msg('countback.matchSides', { day: lastN, aName: nameOf(aboveId), aSide: side(dayA), a, bName: nameOf(id), bSide: side(dayB), b })
+          ? msg('countback.matchSame', {
+              day: lastN,
+              done: !!dayA!.result,
+              aName: nameOf(aboveId),
+              a,
+              bName: nameOf(id),
+              b,
+            })
+          : msg('countback.matchSides', {
+              day: lastN,
+              aName: nameOf(aboveId),
+              aSide: side(dayA),
+              a,
+              bName: nameOf(id),
+              bSide: side(dayB),
+              b,
+            })
     return {
       title,
       steps: [say('countback.matchPoints'), match, ...(a === b ? [say('countback.matchShare')] : [])],
@@ -264,7 +345,17 @@ function explainCountback(
   }
   const why: Explanation = {
     title,
-    steps: cb.steps.map((s) => msg('countback.line', { day: lastN, window: { from: s.from, to: s.to, total: s.total }, aName: nameOf(aboveId), a: s.a, bName: nameOf(id), b: s.b, up })),
+    steps: cb.steps.map((s) =>
+      msg('countback.line', {
+        day: lastN,
+        window: { from: s.from, to: s.to, total: s.total },
+        aName: nameOf(aboveId),
+        a: s.a,
+        bName: nameOf(id),
+        b: s.b,
+        up,
+      }),
+    ),
   }
   if (cb.result === 0) why.steps.push(msg('countback.equalTo', { hole: lastHole }))
   return why

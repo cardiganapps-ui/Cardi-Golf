@@ -55,16 +55,32 @@ describe('a count of points agrees with its number', () => {
   })
 
   it('in the hole’s own explanation', () => {
-    const bogey = words(holeWhy({ par: 4, strokeIndex: 7, strokesReceived: 0, gross: 5, net: 5, points: 1, pickedUp: false, played: true }))
+    const bogey = words(
+      holeWhy({
+        par: 4,
+        strokeIndex: 7,
+        strokesReceived: 0,
+        gross: 5,
+        net: 5,
+        points: 1,
+        pickedUp: false,
+        played: true,
+      }),
+    )
     expect(bogey.title).toBe('1 pt')
-    expect(bogey.steps[0]).toBe('5 golpes en un par 4, sin golpes de ventaja en este hoyo (índice de golpe 7): 5 neto, bogey neto, 1 pt')
-    expect(bogey.steps.at(-1)).toBe('Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 0 − 5 + 2 = 1 pt')
+    expect(bogey.steps[0]).toBe(
+      '5 golpes en un par 4, sin golpes de ventaja en este hoyo (índice de golpe 7): 5 neto, bogey neto, 1 pt',
+    )
+    expect(bogey.steps.at(-1)).toBe(
+      'Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 0 − 5 + 2 = 1 pt',
+    )
   })
 })
 
 describe('the words agree with what happened', () => {
   const base = { at: null, roundNumber: 1, hole: 7, playerId: 'p4', scoring: 'points' } as const
-  const line = (points: number, grossUnder: number) => feedText({ ...base, kind: 'birdie', points, grossUnder, under: points - 2 }, () => 'Nacho')
+  const line = (points: number, grossUnder: number) =>
+    feedText({ ...base, kind: 'birdie', points, grossUnder, under: points - 2 }, () => 'Nacho')
 
   it('four points is an eagle, five or more an albatross; «neto» only when a stroke made it', () => {
     expect(line(3, 1)).toBe('Nacho: birdie en el 7, +3 pts')
@@ -82,7 +98,9 @@ describe('the words agree with what happened', () => {
       const st = computeTournament(snap, parseSettings(snap.tournament.settings))
       for (const e of st.feed) {
         if (e.kind !== 'birdie' || e.scoring !== 'points') continue
-        const h = st.core.rounds[snap.rounds.find((r) => r.number === e.roundNumber)!.id]![e.playerId]!.holes.find((x) => x.hole === e.hole)!
+        const h = st.core.rounds[snap.rounds.find((r) => r.number === e.roundNumber)!.id]![e.playerId]!.holes.find(
+          (x) => x.hole === e.hole,
+        )!
         // Every line the event can be read as (COPY-15).
         for (const v of [0, 1, 2, 3]) {
           const text = feedText(e, () => 'X', undefined, v)
@@ -101,9 +119,9 @@ describe('the words agree with what happened', () => {
     expect(words(nextRoundCut(1, cut).why).steps[0]).toBe('hizo 1 pt, no más de 36: sin recorte')
     const rules = words(msg('rules.cut', { days: 2, threshold: 1, per: 1, max: 4, cumulative: false, points: true }))
     expect(rules).toContain('más de 1 punto, para el día 2 se te recorta 1 golpe por cada punto por encima')
-    expect(words(msg('rules.cut', { days: 2, threshold: 36, per: 2, max: 4, cumulative: false, points: false }))).toContain(
-      'más de 36 puntos Stableford, para el día 2 se te recorta 1 golpe por cada 2 puntos por encima',
-    )
+    expect(
+      words(msg('rules.cut', { days: 2, threshold: 36, per: 2, max: 4, cumulative: false, points: false })),
+    ).toContain('más de 36 puntos Stableford, para el día 2 se te recorta 1 golpe por cada 2 puntos por encima')
   })
 
   it('a side of two wins in the plural, one player in the singular', () => {
@@ -111,7 +129,14 @@ describe('the words agree with what happened', () => {
     const st = computeTournament(snap, parseSettings(snap.tournament.settings))
     const lines: string[] = []
     // The board's texts are codes (ARCH-05): each in words, as Juegos shows it.
-    const walk = (v: unknown): unknown => (typeof v === 'string' ? lines.push(v) : v && typeof v === 'object' ? ('code' in v && 'params' in v ? lines.push(words(v as Msg)) : Object.values(v).forEach(walk)) : undefined)
+    const walk = (v: unknown): unknown =>
+      typeof v === 'string'
+        ? lines.push(v)
+        : v && typeof v === 'object'
+          ? 'code' in v && 'params' in v
+            ? lines.push(words(v as Msg))
+            : Object.values(v).forEach(walk)
+          : undefined
     for (const g of Object.values(st.games)) if (g.config.type === 'match') walk(g.board)
     const pairs = lines.filter((l) => / (y|e) [^,]+ ganan? \d/.test(l))
     expect(pairs.length).toBeGreaterThan(0)
@@ -123,16 +148,28 @@ describe('the words agree with what happened', () => {
       .flatMap((g) => g.board.sections.flatMap((s) => s.rows))
       .filter((r) => /^Ganan? /.test(words(r.figure)))
     expect(new Set(figures.map((r) => r.playerIds.length))).toEqual(new Set([1, 2]))
-    for (const r of figures) expect(words(r.figure), words(r.figure)).toMatch(r.playerIds.length > 1 ? /^Ganan / : /^Gana /)
+    for (const r of figures)
+      expect(words(r.figure), words(r.figure)).toMatch(r.playerIds.length > 1 ? /^Ganan / : /^Gana /)
   })
 
   it('a contest on one hole says «el hoyo»; the greenie has its verb', () => {
-    const closest = GAME_ENTRIES.find((e) => e.key === 'closest')!.create('g1') as Extract<GameConfig, { type: 'contest' }>
-    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [14] } })).join(' ')).toContain('en el hoyo 14.')
-    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [3, 7] } })).join(' ')).toContain('en los hoyos 3 y 7.')
+    const closest = GAME_ENTRIES.find((e) => e.key === 'closest')!.create('g1') as Extract<
+      GameConfig,
+      { type: 'contest' }
+    >
+    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [14] } })).join(' ')).toContain(
+      'en el hoyo 14.',
+    )
+    expect(words(describeGame({ ...closest, options: { ...closest.options, holes: [3, 7] } })).join(' ')).toContain(
+      'en los hoyos 3 y 7.',
+    )
     const greenie = GAME_ENTRIES.find((e) => e.key === 'greenies')!
-    expect(words(describeGame(greenie.create('g2'))).join(' ')).toContain('llega al green desde la salida en un par 3 y hace par o mejor')
-    expect(t.setup.catalog.games[greenie.key]!.blurb).toBe('Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.')
+    expect(words(describeGame(greenie.create('g2'))).join(' ')).toContain(
+      'llega al green desde la salida en un par 3 y hace par o mejor',
+    )
+    expect(t.setup.catalog.games[greenie.key]!.blurb).toBe(
+      'Llegar al green desde la salida en un par 3 (o salir de la trampa) y hacer par o mejor.',
+    )
     expect(t.admin.tournament.selfCounts).toBe('Comprarse a sí mismo cuenta para el máximo')
   })
 })
@@ -141,10 +178,25 @@ describe('the Ceremonia’s Calcutta says whose the list is', () => {
   it('«Lo que cobra cada dueño» over the owners', () => {
     const fx = getFixture('full12-finished')!
     const snap = structuredClone(fx.snapshot)
-    useTournament.setState({ tournamentId: 'fixture:full12-finished', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+    useTournament.setState({
+      tournamentId: 'fixture:full12-finished',
+      data: dataFromSnapshot(snap),
+      loading: false,
+      error: null,
+      realtime: 'off',
+    })
     render(
       <MemoryRouter>
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-finished', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: '_/full12-finished',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <CeremonyScreen />
         </TournamentContext.Provider>
       </MemoryRouter>,
@@ -152,7 +204,8 @@ describe('the Ceremonia’s Calcutta says whose the list is', () => {
     const C = t.ceremony
     const title = C.steps.auction((snap.tournament.settings as TournamentSettings).modules.auction.label)
     fireEvent.click(screen.getByRole('button', { name: C.start }))
-    for (let i = 0; i < 40 && screen.getByRole('region').getAttribute('aria-label') !== title; i++) fireEvent.click(screen.getByRole('button', { name: C.next }))
+    for (let i = 0; i < 40 && screen.getByRole('region').getAttribute('aria-label') !== title; i++)
+      fireEvent.click(screen.getByRole('button', { name: C.next }))
     expect(screen.getByRole('region').getAttribute('aria-label')).toBe(title)
     fireEvent.click(screen.getByRole('button', { name: C.next }))
     expect(screen.getByRole('heading', { level: 3, name: C.auctionOwners })).toBeTruthy()

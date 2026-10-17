@@ -20,13 +20,26 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const renders = vi.hoisted(() => {
-  interface Fiber { tag: number; flags: number; type: unknown; elementType: unknown; child: Fiber | null; sibling: Fiber | null; alternate: Fiber | null }
+  interface Fiber {
+    tag: number
+    flags: number
+    type: unknown
+    elementType: unknown
+    child: Fiber | null
+    sibling: Fiber | null
+    alternate: Fiber | null
+  }
   const out = { commits: 0, total: 0, byName: new Map<string, number>() }
   // FunctionComponent, ClassComponent, ForwardRef, MemoComponent, SimpleMemoComponent.
   const COMPONENT = new Set([0, 1, 11, 14, 15])
   const PERFORMED_WORK = 1
   const nameOf = (f: Fiber): string => {
-    const t = (f.type ?? f.elementType) as { displayName?: string; name?: string; render?: { name?: string }; type?: { name?: string } } | null
+    const t = (f.type ?? f.elementType) as {
+      displayName?: string
+      name?: string
+      render?: { name?: string }
+      type?: { name?: string }
+    } | null
     return t?.displayName ?? t?.name ?? t?.render?.name ?? t?.type?.name ?? 'Anonymous'
   }
   const walk = (f: Fiber, prev: Fiber | null) => {
@@ -82,7 +95,7 @@ const { TournamentContext } = await import('./tournamentContext')
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 
 const fx = getFixture('full12-live')!
@@ -95,7 +108,16 @@ async function mountLive(screen: React.ReactNode = <LiveScreen />) {
   expect(store().error).toBeNull()
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'full12', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: TID,
+          slug: 'full12',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         {screen}
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -114,7 +136,16 @@ afterEach(() => {
   cleanup()
   store().unsubscribe()
   vi.useRealTimers()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 /** What a row shows, per player: a row re-renders when this changes, or when it moved. */
@@ -125,7 +156,8 @@ const shown = () =>
       return [r.playerId, `${i}|${r.label}|${r.figure.text}|${day && !day.empty ? day.text : ''}`] as const
     }),
   )
-const rowRenders = (byName: Record<string, number>) => Object.entries(byName).reduce((n, [k, v]) => n + (k.startsWith('BoardRow') ? v : 0), 0)
+const rowRenders = (byName: Record<string, number>) =>
+  Object.entries(byName).reduce((n, [k, v]) => n + (k.startsWith('BoardRow') ? v : 0), 0)
 
 describe('En vivo renders what changed, and nothing when nothing did (PERF-09)', () => {
   it('a reload that brings nothing new: one line renders, the boards’ age, at most 5 components', async () => {
@@ -157,13 +189,16 @@ describe('En vivo renders what changed, and nothing when nothing did (PERF-09)',
     // The screen and the board's frame (its status line, header, spotlight, toggle), then six components per row.
     expect(r.total).toBeLessThanOrEqual(10 + 6 * changed)
     // The feed did not change; a closed sheet, the share button and a Ronda rápida's card are not this score's.
-    for (const name of ['FeedTicker', 'PlayerSheet', 'ShareCardButton', 'QuickFinish', 'MyDataCard']) expect(r.byName[name] ?? 0).toBe(0)
+    for (const name of ['FeedTicker', 'PlayerSheet', 'ShareCardButton', 'QuickFinish', 'MyDataCard'])
+      expect(r.byName[name] ?? 0).toBe(0)
   })
 
   it('a birdie reaches the feed: what the feed shows is what the engine says, line for line', async () => {
     await mountLive()
     const live = fx.snapshot.rounds.find((r) => r.status === 'live')!
-    const latest = server.tables.scores!.filter((x) => x.round_id === live.id).reduce((a, b) => ((a.updated_at as string) > (b.updated_at as string) ? a : b))
+    const latest = server.tables
+      .scores!.filter((x) => x.round_id === live.id)
+      .reduce((a, b) => ((a.updated_at as string) > (b.updated_at as string) ? a : b))
     const row = server.tables.scores!.find((x) => x.round_id === live.id && x.strokes != null && !x.picked_up)!
     row.strokes = 1
     row.updated_at = new Date(Date.parse(latest.updated_at as string) + 60_000).toISOString()

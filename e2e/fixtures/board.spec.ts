@@ -29,7 +29,10 @@ function misaligned(page: Page) {
           const label = textRight(head.children[i])
           if (fig == null || label == null) continue
           measured++
-          if (Math.abs(fig - label) > 1) off.push(`${row.getAttribute('aria-label')?.slice(0, 24)} column ${i}: ${fig.toFixed(1)} vs ${label.toFixed(1)}`)
+          if (Math.abs(fig - label) > 1)
+            off.push(
+              `${row.getAttribute('aria-label')?.slice(0, 24)} column ${i}: ${fig.toFixed(1)} vs ${label.toFixed(1)}`,
+            )
         }
       }
     }
@@ -65,7 +68,9 @@ for (const width of [375, 393]) {
 async function rewriteLook(page: Page, edit: string) {
   await page.evaluate((edit) => {
     const key = Object.keys(localStorage).find((k) => k.startsWith('cardi-golf:board-seen:'))!
-    const look = JSON.parse(localStorage.getItem(key)!) as { rows: Record<string, { place: number; figure: string; today: string }> }
+    const look = JSON.parse(localStorage.getItem(key)!) as {
+      rows: Record<string, { place: number; figure: string; today: string }>
+    }
     const byPlace = Object.entries(look.rows).sort((a, b) => a[1].place - b[1].place)
     new Function('byPlace', edit)(byPlace)
     localStorage.setItem(key, JSON.stringify(look))
@@ -79,7 +84,10 @@ async function rowAt(page: Page, place: number) {
 test('back from the Tarjeta: who moved, by how much, and which figures changed (MOT-06, MOT-18)', async ({ page }) => {
   await open(page, '/t/_/full12-live')
   // As if, the last time this phone showed the board, the 2nd was 5th with 3 points fewer and the 4th was 3rd.
-  await rewriteLook(page, `byPlace[1][1].place = 5; byPlace[1][1].figure = String(Number(byPlace[1][1].figure) - 3); byPlace[3][1].place = 3`)
+  await rewriteLook(
+    page,
+    `byPlace[1][1].place = 5; byPlace[1][1].figure = String(Number(byPlace[1][1].figure) - 3); byPlace[3][1].place = 3`,
+  )
   await page.getByRole('link', { name: new RegExp(`^${t.nav.card}`) }).click()
   await expect(page).toHaveURL(/\/tarjeta/)
   await page.getByRole('link', { name: new RegExp(`^${t.nav.live}`) }).click()
@@ -145,8 +153,10 @@ test('a touch shows the row pressed on the next frame, before the sheet, at 4× 
     const rest = getComputedStyle(el).backgroundColor
     el.addEventListener('pointerdown', () => (w.downAt = performance.now()), { once: true })
     const tick = () => {
-      if (w.downAt != null && w.pressedAt == null && getComputedStyle(el).backgroundColor !== rest) w.pressedAt = performance.now()
-      if (w.downAt != null && w.sheetAt == null && document.querySelector('[role="dialog"]')) w.sheetAt = performance.now()
+      if (w.downAt != null && w.pressedAt == null && getComputedStyle(el).backgroundColor !== rest)
+        w.pressedAt = performance.now()
+      if (w.downAt != null && w.sheetAt == null && document.querySelector('[role="dialog"]'))
+        w.sheetAt = performance.now()
       if (w.sheetAt == null) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
@@ -162,7 +172,10 @@ test('a touch shows the row pressed on the next frame, before the sheet, at 4× 
     return { downAt: w.downAt, pressedAt: w.pressedAt, sheetAt: w.sheetAt }
   })
   expect(downAt).toBeDefined()
-  test.info().annotations.push({ type: 'MOT-12, 4× CPU', description: `row pressed ${Math.round(pressedAt! - downAt!)} ms after the touch, the sheet ${Math.round(sheetAt! - downAt!)} ms` })
+  test.info().annotations.push({
+    type: 'MOT-12, 4× CPU',
+    description: `row pressed ${Math.round(pressedAt! - downAt!)} ms after the touch, the sheet ${Math.round(sheetAt! - downAt!)} ms`,
+  })
   expect(pressedAt! - downAt!, 'touch to the row pressed').toBeLessThan(50)
   expect(pressedAt!).toBeLessThan(sheetAt!)
 })

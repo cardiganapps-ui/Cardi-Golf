@@ -20,7 +20,15 @@ import { haptic } from '../../../lib/haptics'
 import { humanError, isTransient } from '../../../lib/humanError'
 import { celebrationColors } from '../../../lib/tokens'
 import { writeKept, type Draft } from '../tarjetaDrafts'
-import { afterSave, canUndo, decideSave, pickWrites, snakeCandidates, undoSnapshot, unusualValues } from './saveDecision'
+import {
+  afterSave,
+  canUndo,
+  decideSave,
+  pickWrites,
+  snakeCandidates,
+  undoSnapshot,
+  unusualValues,
+} from './saveDecision'
 import { afterPaint, SAVED_CHECK_MS, SAVED_NOTE_MS, SETTLE_MS, SNAKE_NOTE_MS } from './timing'
 import type { useHoleDrafts } from './useHoleDrafts'
 import type { HoleNav } from './useHoleNav'
@@ -104,7 +112,8 @@ export function useHoleSave(o: HoleSaveInput) {
   )
 
   const playerIds = o.named.map((p) => p.id)
-  const write = (values: Record<string, Draft>, hole: number, more?: Parameters<typeof writeHole>[3]) => writeHole({ ...o.writer, reason }, values, hole, more)
+  const write = (values: Record<string, Draft>, hole: number, more?: Parameters<typeof writeHole>[3]) =>
+    writeHole({ ...o.writer, reason }, values, hole, more)
 
   /** `confirmedPar`: the player answered «Sí, todos par»: those pars are his capture, not untouched defaults (REL-08). */
   async function save(force = false, confirmedPar = false) {
@@ -155,7 +164,12 @@ export function useHoleSave(o: HoleSaveInput) {
     const holderBefore = o.snakeHolder
     const { correcting, backTo, target } = afterSave({ order: o.order, savedHole, playerIds, played: o.playedOn })
     const writes = pickWrites(playerIds, entry.drafts, entry.touched.current, (id) => !!o.holeInfo(id)?.played)
-    const { before, wasPlayed, celebrate } = undoSnapshot({ writes, holeOf: o.holeInfo, fallbackPar: o.par, myPlayerId: o.myPlayerId })
+    const { before, wasPlayed, celebrate } = undoSnapshot({
+      writes,
+      holeOf: o.holeInfo,
+      fallbackPar: o.par,
+      myPlayerId: o.myPlayerId,
+    })
     const viaServer = o.correctsOnServer(Object.keys(writes))
     const seen = new Map(entry.bases.current)
     // Untouched defaults say so (`auto`), unless the player confirmed them: «Sí, todos par» is a person's capture.
@@ -201,7 +215,12 @@ export function useHoleSave(o: HoleSaveInput) {
     // already had values (they are written back), "Corregir" when it was new. It lives in
     // the save bar: a toast there sat on «Guardar hoyo» and ate the next tap (PWA-01).
     const written = Object.keys(writes)
-    showSaved({ hole: savedHole, idx: savedIdx, canUndo: canUndo(written, wasPlayed), ...(correcting ? { corrected: backTo } : {}) })
+    showSaved({
+      hole: savedHole,
+      idx: savedIdx,
+      canUndo: canUndo(written, wasPlayed),
+      ...(correcting ? { corrected: backTo } : {}),
+    })
     // Where the card goes: after a correction, back to where the group is (the grid when it has played every hole);
     // after a new hole, the next one (the grid after the last).
     const moveOn = target != null
@@ -245,7 +264,13 @@ export function useHoleSave(o: HoleSaveInput) {
       snakeTimer.current = setTimeout(() => setSnakeNote(null), SNAKE_NOTE_MS)
       if (!celebrate) haptic('moment')
       // One message for a screen reader: the hole saved, the snake, and where the card is now.
-      o.say([savedLine, S.snakePasses(passedTo.name, o.snakeLabel), ...(moveOn ? [entry.latest.current.holeSpoken] : [])].join('. '))
+      o.say(
+        [
+          savedLine,
+          S.snakePasses(passedTo.name, o.snakeLabel),
+          ...(moveOn ? [entry.latest.current.holeSpoken] : []),
+        ].join('. '),
+      )
     }
   }
 

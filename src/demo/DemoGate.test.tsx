@@ -10,7 +10,10 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const auth = vi.hoisted(() => ({ ensureSession: vi.fn(), init: vi.fn() }))
-vi.mock('../data/auth', async (orig) => ({ ...(await orig<typeof import('../data/auth')>()), ensureSession: auth.ensureSession }))
+vi.mock('../data/auth', async (orig) => ({
+  ...(await orig<typeof import('../data/auth')>()),
+  ensureSession: auth.ensureSession,
+}))
 
 import { t } from '../i18n/es-MX'
 import { useTournament } from '../data/tournamentStore'

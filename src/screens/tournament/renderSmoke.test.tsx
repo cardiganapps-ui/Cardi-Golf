@@ -12,7 +12,10 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../data/quick', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/quick')>()), roundRivalries: vi.fn(async () => []) }))
+vi.mock('../../data/quick', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/quick')>()),
+  roundRivalries: vi.fn(async () => []),
+}))
 
 import { FIXTURE_NAMES, getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -32,7 +35,7 @@ import { TvScreen } from './TvScreen'
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 
 const TABS: Array<[string, ReactNode]> = [
@@ -63,15 +66,30 @@ afterEach(() => {
 
 async function show(name: string, path: string) {
   const fx = getFixture(name)!
-  useTournament.setState({ tournamentId: `fixture:${name}`, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null, realtime: 'off' })
-  const ctx = { tournamentId: fx.snapshot.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }
+  useTournament.setState({
+    tournamentId: `fixture:${name}`,
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
+  const ctx = {
+    tournamentId: fx.snapshot.tournament.id,
+    slug: `_/${name}`,
+    lookup: fx.lookup,
+    me: fx.me,
+    refresh: async () => undefined,
+    leave: async () => undefined,
+  }
   await act(async () => {
     render(
       <MemoryRouter initialEntries={[`/t/_/${name}/${path}`]}>
         <TournamentContext.Provider value={ctx}>
           <Routes>
             <Route path="/t/_/:name" element={<TournamentShell />}>
-              {TABS.map(([p, el]) => (p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />))}
+              {TABS.map(([p, el]) =>
+                p ? <Route key={p} path={p} element={el} /> : <Route key="index" index element={el} />,
+              )}
             </Route>
             {ROOMS.map(([p, el]) => (
               <Route key={p} path={`/t/_/:name/${p}`} element={el} />

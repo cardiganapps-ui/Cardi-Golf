@@ -19,7 +19,11 @@ interface Seeded {
 
 export default function globalSetup() {
   assertLocal()
-  execFileSync('psql', [DB_URL, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-f', fileURLToPath(new URL('seed.sql', import.meta.url))], { stdio: 'inherit' })
+  execFileSync(
+    'psql',
+    [DB_URL, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-f', fileURLToPath(new URL('seed.sql', import.meta.url))],
+    { stdio: 'inherit' },
+  )
 
   const seeded = sql<Seeded[]>(`
     select coalesce(json_agg(x order by x.slug), '[]') from (
@@ -42,10 +46,18 @@ export default function globalSetup() {
       slug,
       tournament: 'live',
       round: 'live',
-      players: PLAYERS.map((p) => ({ name: p.name, fullName: p.fullName, base: p.base, group: groupOf(slug, p.name), pin: true })),
+      players: PLAYERS.map((p) => ({
+        name: p.name,
+        fullName: p.fullName,
+        base: p.base,
+        group: groupOf(slug, p.name),
+        pin: true,
+      })),
       holes: CARD,
     }))
   if (JSON.stringify(seeded) !== JSON.stringify(want)) {
-    throw new Error(`e2e/stack/seed.sql and e2e/stack/field.ts disagree.\nseeded: ${JSON.stringify(seeded)}\nfield:  ${JSON.stringify(want)}`)
+    throw new Error(
+      `e2e/stack/seed.sql and e2e/stack/field.ts disagree.\nseeded: ${JSON.stringify(seeded)}\nfield:  ${JSON.stringify(want)}`,
+    )
   }
 }

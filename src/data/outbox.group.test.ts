@@ -49,10 +49,26 @@ describe('who entered a hole', () => {
 
   it('replacing what another phone entered, the server flags the hole and keeps the old values', async () => {
     // p2's own phone entered his hole first.
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p2', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p2', client_ts: null }])
+    server.seed('scores', [
+      {
+        round_id: 'r1',
+        player_id: 'p2',
+        hole: 4,
+        strokes: 4,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p2',
+        client_ts: null,
+      },
+    ])
     await enqueueScore('t1', holeScore('p2', 4, 6))
     await until(() => useOutbox.getState().pending === 0, 'the hole to land')
-    expect(server.score('p2', 4)).toMatchObject({ strokes: 6, entered_by: 'p1', disputed: true, previous: { strokes: 4, entered_by: 'p2' } })
+    expect(server.score('p2', 4)).toMatchObject({
+      strokes: 6,
+      entered_by: 'p1',
+      disputed: true,
+      previous: { strokes: 4, entered_by: 'p2' },
+    })
     expect(useOutbox.getState().rejected).toEqual([])
   })
 
@@ -60,17 +76,24 @@ describe('who entered a hole', () => {
     await useTournament.getState().reload()
     phone.goOffline()
     await enqueueScore('t1', holeScore('p3', 4, 5))
-    expect(boards().scores.find((s) => s.playerId === 'p3' && s.hole === 4)).toMatchObject({ strokes: 5, enteredBy: 'p1' })
+    expect(boards().scores.find((s) => s.playerId === 'p3' && s.hole === 4)).toMatchObject({
+      strokes: 5,
+      enteredBy: 'p1',
+    })
   })
 })
 
 describe('a hole’s winners and a card’s signature', () => {
   it('the winners saved replace the server’s earlier winners on the boards at once', async () => {
-    server.seed('hole_awards', [{ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p1', decided_by: 'p1' }])
+    server.seed('hole_awards', [
+      { round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p1', decided_by: 'p1' },
+    ])
     await useTournament.getState().reload()
     phone.goOffline()
     await enqueueAward('t1', holeAward(5, ['p2']))
-    const winners = (boards().holeAwards ?? []).filter((a) => a.hole === 5 && a.gameId === 'closest').map((a) => a.playerId)
+    const winners = (boards().holeAwards ?? [])
+      .filter((a) => a.hole === 5 && a.gameId === 'closest')
+      .map((a) => a.playerId)
     expect(winners).toEqual(['p2'])
   })
 
@@ -78,7 +101,9 @@ describe('a hole’s winners and a card’s signature', () => {
     await useTournament.getState().reload()
     phone.goOffline()
     await enqueueSignature('t1', { round_id: 'r1', pair_id: 'pb', signed_by: 'p1' })
-    expect(boards().cardSignatures.filter((x) => x.pairId === 'pb')).toEqual([expect.objectContaining({ roundId: 'r1', signedBy: 'p1' })])
+    expect(boards().cardSignatures.filter((x) => x.pairId === 'pb')).toEqual([
+      expect.objectContaining({ roundId: 'r1', signedBy: 'p1' }),
+    ])
   })
 
   it('a card the other phone already signed keeps that signature, and this phone’s is not refused', async () => {

@@ -21,10 +21,26 @@ const fx = getFixture(NAME)!
 const TID = fx.snapshot.tournament.id
 
 function show(snap: Snapshot, spectator?: TournamentCtx['spectator']) {
-  useTournament.setState({ tournamentId: `fixture:${NAME}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${NAME}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: `_/${NAME}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined, spectator }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: TID,
+          slug: `_/${NAME}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+          spectator,
+        }}
+      >
         <LiveScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -32,7 +48,8 @@ function show(snap: Snapshot, spectator?: TournamentCtx['spectator']) {
 }
 const rowsNow = () => useTournament.getState().data!.state.modules.individual!.rows
 const nameOf = (id: string) => fx.snapshot.players.find((p) => p.id === id)!.displayName
-const rowOf = (id: string) => screen.getAllByRole('button').find((b) => b.getAttribute('aria-label')?.includes(`, ${nameOf(id)}`))!
+const rowOf = (id: string) =>
+  screen.getAllByRole('button').find((b) => b.getAttribute('aria-label')?.includes(`, ${nameOf(id)}`))!
 const markOf = (id: string) => rowOf(id).querySelector(`.${s.moved}`)
 const washOf = (id: string) => rowOf(id).querySelector<HTMLElement>(`.${s.figure}`)!.dataset.wash
 
@@ -118,6 +135,10 @@ describe('the board counts from the last look (MOT-06, MOT-18)', () => {
     const who = climb(snap)
     show(snap, link)
     expect(markOf(who)).not.toBeNull()
-    expect(Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).some((k) => k?.startsWith('cardi-golf:board-seen:'))).toBe(false)
+    expect(
+      Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).some((k) =>
+        k?.startsWith('cardi-golf:board-seen:'),
+      ),
+    ).toBe(false)
   })
 })

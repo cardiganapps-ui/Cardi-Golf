@@ -88,7 +88,10 @@ let firstLaunch = true
  * Where a launch into the open app goes (PWA-14): a shortcut's tournament and tab, or the page it names; null
  * for another site's, none, or the page already on screen.
  */
-export function launchPath(target: string | undefined, here: { origin: string; pathname: string; search: string; hash: string }): string | null {
+export function launchPath(
+  target: string | undefined,
+  here: { origin: string; pathname: string; search: string; hash: string },
+): string | null {
   if (!target) return null
   let url: URL
   try {
@@ -98,7 +101,9 @@ export function launchPath(target: string | undefined, here: { origin: string; p
   }
   if (url.origin !== here.origin) return null
   const shortcut = /^\/continuar(?:\/(tarjeta))?\/?$/.exec(url.pathname)
-  const to = shortcut ? continuePath(shortcut[1] === 'tarjeta' ? 'tarjeta' : '') : `${url.pathname}${url.search}${url.hash}`
+  const to = shortcut
+    ? continuePath(shortcut[1] === 'tarjeta' ? 'tarjeta' : '')
+    : `${url.pathname}${url.search}${url.hash}`
   return to === `${here.pathname}${here.search}${here.hash}` ? null : to
 }
 

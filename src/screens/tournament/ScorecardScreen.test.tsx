@@ -14,17 +14,28 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter, useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const outbox = vi.hoisted(() => ({ scores: [] as Array<Record<string, unknown>>, holes: [] as Array<{ round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }> }))
+const outbox = vi.hoisted(() => ({
+  scores: [] as Array<Record<string, unknown>>,
+  holes: [] as Array<{ round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }>,
+}))
 vi.mock('../../data/outbox', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/outbox')>()
   return {
     ...real,
     enqueueScore: vi.fn(async (_tid: string, row: Record<string, unknown>) => void outbox.scores.push(row)),
     // A group's hole (REL-05): recorded as the call, and each player as the row it makes over what the phone saw.
-    enqueueHole: vi.fn(async (_tid: string, h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => {
-      outbox.holes.push(structuredClone(h))
-      for (const e of h.entries) outbox.scores.push({ round_id: h.round_id, player_id: e.player_id, hole: h.hole, ...real.applyFields(real.baseRow(e.base), e.fields) })
-    }),
+    enqueueHole: vi.fn(
+      async (_tid: string, h: { round_id: string; hole: number; entries: import('../../data/outbox').HoleEntry[] }) => {
+        outbox.holes.push(structuredClone(h))
+        for (const e of h.entries)
+          outbox.scores.push({
+            round_id: h.round_id,
+            player_id: e.player_id,
+            hole: h.hole,
+            ...real.applyFields(real.baseRow(e.base), e.fields),
+          })
+      },
+    ),
     enqueueAward: vi.fn(async () => undefined),
     enqueueTiebreak: vi.fn(async () => undefined),
     enqueueSignature: vi.fn(async () => undefined),
@@ -32,7 +43,10 @@ vi.mock('../../data/outbox', async (importOriginal) => {
 })
 vi.mock('../../data/quick', () => ({ roundRivalries: vi.fn(async () => []) }))
 /** The Comité's corrections: each call (one per hole, REL-22) and each player's row in it, with the reason. */
-const admin = vi.hoisted(() => ({ calls: [] as Array<{ hole: number; players: string[] }>, saves: [] as Array<{ row: Record<string, unknown>; reason: string }> }))
+const admin = vi.hoisted(() => ({
+  calls: [] as Array<{ hole: number; players: string[] }>,
+  saves: [] as Array<{ row: Record<string, unknown>; reason: string }>,
+}))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
   adminSaveHole: vi.fn(async (roundId: string, hole: number, rows: Array<Record<string, unknown>>, reason: string) => {
@@ -41,7 +55,10 @@ vi.mock('../../data/api', async (importOriginal) => ({
   }),
 }))
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { toast } from '../../components/toast'
 import { adminSaveHole } from '../../data/api'
@@ -64,12 +81,18 @@ let clock = 0
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 let snap: Snapshot
 
 function load(s: Snapshot) {
-  useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(s)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:minimal4-live',
+    data: dataFromSnapshot(structuredClone(s)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
 }
 
 function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isComite?: boolean } = {}) {
@@ -81,7 +104,16 @@ function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isComite?
   const me = { ...fx.me, isComite: opts.isComite ?? fx.me.isComite }
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${name}`, lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${name}`,
+          lookup: fx.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -91,15 +123,26 @@ function mount(edit?: (s: Snapshot) => void, opts: { fixture?: string; isComite?
 /** The other phone's save landing through Realtime. */
 function remoteSave(playerId: string, hole: number, strokes: number, putts: number) {
   snap.scores = snap.scores.filter((x) => !(x.playerId === playerId && x.hole === hole && x.roundId === 'r1'))
-  snap.scores.push({ roundId: 'r1', playerId, hole, strokes, putts, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
+  snap.scores.push({
+    roundId: 'r1',
+    playerId,
+    hole,
+    strokes,
+    putts,
+    pickedUp: false,
+    enteredBy: 'p4',
+    updatedAt: '2027-05-15T15:00:00Z',
+  })
   act(() => load(snap))
 }
 
 const holeOnScreen = () => Number(document.querySelector('[class*="holeNum"]')?.textContent)
 const nameOf = (playerId: string) => snap.players.find((p) => p.id === playerId)!.displayName
 /** A player's strokes stepper, found by his name the way a screen reader finds it. */
-const strokesOf = (playerId: string) => Number(screen.getByRole('group', { name: S.strokesOf(nameOf(playerId)) }).textContent?.replace(/\D+/g, ''))
-const strokesUp = (playerId: string) => screen.getByRole('button', { name: `${S.strokesOf(nameOf(playerId))}: ${t.common.stepUp}` })
+const strokesOf = (playerId: string) =>
+  Number(screen.getByRole('group', { name: S.strokesOf(nameOf(playerId)) }).textContent?.replace(/\D+/g, ''))
+const strokesUp = (playerId: string) =>
+  screen.getByRole('button', { name: `${S.strokesOf(nameOf(playerId))}: ${t.common.stepUp}` })
 const saveButton = () => screen.getByRole('button', { name: new RegExp(`^(${S.save}|${S.saveLast})$`) })
 async function tapSave(at: number) {
   clock = at
@@ -117,7 +160,8 @@ async function answer(button: HTMLElement) {
   })
   await painted()
 }
-const written = () => outbox.scores.map((r) => `${String(r.player_id)}@${String(r.hole)}=${String(r.strokes)}/${String(r.putts)}`)
+const written = () =>
+  outbox.scores.map((r) => `${String(r.player_id)}@${String(r.hole)}=${String(r.strokes)}/${String(r.putts)}`)
 
 beforeEach(() => {
   localStorage.clear()
@@ -176,7 +220,13 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     expect(outbox.holes[0]!.hole).toBe(10)
     // p2 already saved by the other phone: not in the call at all.
     expect(outbox.holes[0]!.entries.map((e) => e.player_id).sort()).toEqual(['p1', 'p3', 'p4'])
-    expect(entry('p1')).toEqual({ player_id: 'p1', fields: { strokes: par + 1, putts: 2 }, base: {}, auto: false, dflt: { strokes: par, putts: 2, picked_up: false } })
+    expect(entry('p1')).toEqual({
+      player_id: 'p1',
+      fields: { strokes: par + 1, putts: 2 },
+      base: {},
+      auto: false,
+      dflt: { strokes: par, putts: 2, picked_up: false },
+    })
     // An untouched default: a conflict on it takes the other phone's value without asking.
     expect(entry('p4')).toMatchObject({ fields: { strokes: par, putts: 2 }, base: {}, auto: true })
   })
@@ -190,7 +240,13 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     await tapSave(11_000)
     expect(outbox.holes).toHaveLength(1)
     expect(outbox.holes[0]!.entries).toEqual([
-      { player_id: 'p1', fields: { strokes: saved.strokes! + 1 }, base: { strokes: saved.strokes, putts: saved.putts, picked_up: false }, auto: false, dflt: expect.objectContaining({ putts: 2, picked_up: false }) },
+      {
+        player_id: 'p1',
+        fields: { strokes: saved.strokes! + 1 },
+        base: { strokes: saved.strokes, putts: saved.putts, picked_up: false },
+        auto: false,
+        dflt: expect.objectContaining({ putts: 2, picked_up: false }),
+      },
     ])
   })
 
@@ -200,15 +256,26 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     fireEvent.click(strokesUp('p3'))
     remoteSave('p3', 10, 7, 3)
     await tapSave(11_000)
-    expect(entry('p3')).toEqual({ player_id: 'p3', fields: { strokes: par + 1, putts: 2 }, base: {}, auto: false, dflt: { strokes: par, putts: 2, picked_up: false } })
+    expect(entry('p3')).toEqual({
+      player_id: 'p3',
+      fields: { strokes: par + 1, putts: 2 },
+      base: {},
+      auto: false,
+      dflt: { strokes: par, putts: 2, picked_up: false },
+    })
   })
 
-  it('each player\'s default is par for his own tee: an untouched par 5 from the forward tees is that, not the lead player\'s par 4', async () => {
+  it("each player's default is par for his own tee: an untouched par 5 from the forward tees is that, not the lead player's par 4", async () => {
     // p4 plays the forward tees, where hole 10 is a par 5 (the others' is a 4).
     mount((s) => {
       const course = s.courses.find((c) => c.id === 'course1')!
       const back = course.tees.find((x) => x.id === 'tee1')!
-      course.tees.push({ ...structuredClone(back), id: 'tee2', name: 'Rojas', holes: back.holes.map((h) => (h.number === 10 ? { ...h, par: 5 } : { ...h })) })
+      course.tees.push({
+        ...structuredClone(back),
+        id: 'tee2',
+        name: 'Rojas',
+        holes: back.holes.map((h) => (h.number === 10 ? { ...h, par: 5 } : { ...h })),
+      })
       s.players = s.players.map((p) => (p.id === 'p4' ? { ...p, defaultTeeId: 'tee2' } : p))
     })
     expect(holeOnScreen()).toBe(10)
@@ -218,7 +285,11 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     await tapSave(11_000)
     // What another phone's untouched save of each would be, the value this phone may go over without asking.
     expect(entry('p1')!.dflt).toEqual({ strokes: 4, putts: 2, picked_up: false })
-    expect(entry('p4')).toMatchObject({ fields: { strokes: 5, putts: 2 }, auto: true, dflt: { strokes: 5, putts: 2, picked_up: false } })
+    expect(entry('p4')).toMatchObject({
+      fields: { strokes: 5, putts: 2 },
+      auto: true,
+      dflt: { strokes: 5, putts: 2, picked_up: false },
+    })
   })
 
   it('a pick-up sends the pick-up and the strokes it clears, over the row seen', async () => {
@@ -228,7 +299,13 @@ describe('Tarjeta: a hole goes out as one save, over what the phone saw (REL-05,
     fireEvent.click(screen.getByRole('button', { name: S.pickedUpOf(nameOf('p3')) }))
     await tapSave(11_000)
     expect(outbox.holes[0]!.entries).toEqual([
-      { player_id: 'p3', fields: { strokes: null, picked_up: true }, base: { strokes: saved.strokes, putts: saved.putts, picked_up: false }, auto: false, dflt: expect.objectContaining({ putts: 2 }) },
+      {
+        player_id: 'p3',
+        fields: { strokes: null, picked_up: true },
+        base: { strokes: saved.strokes, putts: saved.putts, picked_up: false },
+        auto: false,
+        dflt: expect.objectContaining({ putts: 2 }),
+      },
     ])
   })
 })
@@ -268,15 +345,26 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     vi.mocked(enqueueTiebreak).mockClear()
     mount((s) => {
       const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
-      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+      s.tournament.settings = {
+        ...settings,
+        modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } },
+      }
     })
     await tapSave(11_000) // hole 10: p1, p3 and p4 at 2 putts, a tie
-    await answer(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    await answer(
+      within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }),
+    )
     await tapSave(20_000) // hole 11 (p2 had it already): the same tie
-    await answer(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    await answer(
+      within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }),
+    )
     expect(holeOnScreen()).toBe(12)
     await tapSave(21_000)
-    await answer(within(screen.getByRole('dialog', { name: S.allDefaultsTitle(12) })).getByRole('button', { name: S.allDefaultsConfirm }))
+    await answer(
+      within(screen.getByRole('dialog', { name: S.allDefaultsTitle(12) })).getByRole('button', {
+        name: S.allDefaultsConfirm,
+      }),
+    )
     // The four at 2 putts: who holed out last? Nothing saved until the answer.
     const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
     expect(outbox.holes.some((h) => h.hole === 12)).toBe(false)
@@ -285,14 +373,21 @@ describe('Tarjeta: a double tap saves one hole (UX-02)', () => {
     expect(h12.entries).toHaveLength(4)
     expect(h12.entries.map((e) => e.auto)).toEqual([false, false, false, false])
     // With the hole: kept on the phone at once, on the boards with it.
-    expect(enqueueTiebreak).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }), expect.any(Promise))
+    expect(enqueueTiebreak).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ hole: 12, last_holed_player_id: 'p4' }),
+      expect.any(Promise),
+    )
   })
 
   it('«No sabemos: que decida el Comité» saves the hole with no answer, and the snake waits for the Comité (UX-08)', async () => {
     vi.mocked(enqueueTiebreak).mockClear()
     mount((s) => {
       const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
-      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+      s.tournament.settings = {
+        ...settings,
+        modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } },
+      }
     })
     await tapSave(11_000) // hole 10: three at 2 putts, a tie
     const ask = screen.getByRole('dialog', { name: S.whoHoledLast })
@@ -392,14 +487,20 @@ describe('Tarjeta: the confirmation lives in the save bar (PWA-01)', () => {
 describe('Tarjeta: a screen reader knows whose control it is and where it is (A11Y-01)', () => {
   const live = () => document.querySelector('[aria-live="polite"][aria-atomic="true"]')?.textContent ?? ''
 
-  it('every control on the hole has its own name, and each player\'s controls carry his name', () => {
+  it("every control on the hole has its own name, and each player's controls carry his name", () => {
     mount()
     const names = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent ?? '')
     expect(new Set(names).size).toBe(names.length)
     for (const id of ['p1', 'p2', 'p3', 'p4']) {
       const name = nameOf(id)
       const row = screen.getByRole('group', { name })
-      for (const label of [`${S.strokesOf(name)}: ${t.common.stepDown}`, `${S.strokesOf(name)}: ${t.common.stepUp}`, `${S.puttsOf(name)}: ${t.common.stepDown}`, `${S.puttsOf(name)}: ${t.common.stepUp}`, S.pickedUpOf(name)]) {
+      for (const label of [
+        `${S.strokesOf(name)}: ${t.common.stepDown}`,
+        `${S.strokesOf(name)}: ${t.common.stepUp}`,
+        `${S.puttsOf(name)}: ${t.common.stepDown}`,
+        `${S.puttsOf(name)}: ${t.common.stepUp}`,
+        S.pickedUpOf(name),
+      ]) {
         expect(within(row).getByRole('button', { name: label })).toBeTruthy()
       }
     }
@@ -444,7 +545,16 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
   /** The other phone's save on hole 10, in the snapshot this phone loads. */
   const savedElsewhere = (playerId: string, strokes: number) => (s: Snapshot) => {
     s.scores = s.scores.filter((x) => !(x.playerId === playerId && x.hole === 10 && x.roundId === 'r1'))
-    s.scores.push({ roundId: 'r1', playerId, hole: 10, strokes, putts: 3, pickedUp: false, enteredBy: 'p4', updatedAt: '2027-05-15T15:00:00Z' })
+    s.scores.push({
+      roundId: 'r1',
+      playerId,
+      hole: 10,
+      strokes,
+      putts: 3,
+      pickedUp: false,
+      enteredBy: 'p4',
+      updatedAt: '2027-05-15T15:00:00Z',
+    })
   }
 
   it('what was typed comes back when the card opens again, and says it is not saved yet', () => {
@@ -526,7 +636,12 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
     mount(
       (s) => {
         const pair = s.pairs.find((p) => p.player1Id === pid || p.player2Id === pid)!
-        s.cardSignatures.push({ roundId: 'r2', pairId: pair.id, signedBy: pair.player1Id, signedAt: '2027-04-10T14:30:00Z' })
+        s.cardSignatures.push({
+          roundId: 'r2',
+          pairId: pair.id,
+          signedBy: pair.player1Id,
+          signedAt: '2027-04-10T14:30:00Z',
+        })
       },
       { fixture: 'full12-live', isComite: false },
     )
@@ -557,7 +672,8 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
       await tapSave(11_000)
       // The save lands for all four, and «Corregir» brings the hole back.
       const saved = Object.fromEntries(outbox.scores.map((r) => [r.player_id as string, r]))
-      for (const pid of ['p1', 'p2', 'p3', 'p4']) remoteSave(pid, 18, saved[pid]!.strokes as number, saved[pid]!.putts as number)
+      for (const pid of ['p1', 'p2', 'p3', 'p4'])
+        remoteSave(pid, 18, saved[pid]!.strokes as number, saved[pid]!.putts as number)
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: S.correct }))
       })
@@ -567,7 +683,17 @@ describe('Tarjeta: a half-entered hole survives leaving the card (PWA-05)', () =
       // Leaving and coming back keeps the correction: it was made after the save.
       first.unmount()
       mount((s) => {
-        for (const pid of ['p1', 'p2', 'p3', 'p4']) s.scores.push({ roundId: 'r1', playerId: pid, hole: 18, strokes: saved[pid]!.strokes as number, putts: saved[pid]!.putts as number, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+        for (const pid of ['p1', 'p2', 'p3', 'p4'])
+          s.scores.push({
+            roundId: 'r1',
+            playerId: pid,
+            hole: 18,
+            strokes: saved[pid]!.strokes as number,
+            putts: saved[pid]!.putts as number,
+            pickedUp: false,
+            enteredBy: 'p1',
+            updatedAt: '2027-05-15T15:00:00Z',
+          })
       })
       expect(strokesOf('p1')).toBe(par + 2)
       expect(screen.getByText(S.restoredDraft)).toBeTruthy()
@@ -604,8 +730,10 @@ describe('Tarjeta: a Comité correction on a signed card with a snake tie (the v
       const value = (g: HTMLElement) => Number(g.textContent?.replace(/\D+/g, ''))
       for (const g of puttsGroups.slice(0, 2)) {
         const name = g.getAttribute('aria-label')!
-        for (let i = 0; i < 6 && value(g) < 3; i++) fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepUp}` }))
-        for (let i = 0; i < 6 && value(g) > 3; i++) fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepDown}` }))
+        for (let i = 0; i < 6 && value(g) < 3; i++)
+          fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepUp}` }))
+        for (let i = 0; i < 6 && value(g) > 3; i++)
+          fireEvent.click(screen.getByRole('button', { name: `${name}: ${t.common.stepDown}` }))
         expect(value(g)).toBe(3)
       }
       await tapSave(11_000)
@@ -641,7 +769,17 @@ describe('Tarjeta: opened before the phone read its queued holes (NEW-11)', () =
   }
   const withTen = (s: Snapshot) => {
     queuedTen(s)
-    for (const pid of ['p1', 'p2', 'p3', 'p4']) s.scores.push({ roundId: 'r1', playerId: pid, hole: 10, strokes: 7, putts: 3, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+    for (const pid of ['p1', 'p2', 'p3', 'p4'])
+      s.scores.push({
+        roundId: 'r1',
+        playerId: pid,
+        hole: 10,
+        strokes: 7,
+        putts: 3,
+        pickedUp: false,
+        enteredBy: 'p1',
+        updatedAt: '2027-05-15T15:00:00Z',
+      })
   }
   /** The outbox reads its queue: the boards recompute with it, then it says so (outbox.ts, loadQueue). */
   const queueIsRead = () =>
@@ -713,7 +851,10 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     admin.saves = []
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isComite: true })
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), {
+        fixture: 'full12-finished',
+        isComite: true,
+      })
       await correctFirstAndSave()
       expect(screen.queryByRole('dialog', { name: S.signedReasonTitle })).toBeNull()
       expect(admin.saves).toHaveLength(1)
@@ -728,7 +869,10 @@ describe('Tarjeta: an admin player writes where a phone may not through the Comi
     admin.saves = []
     window.history.replaceState(null, '', '/?hoyo=18')
     try {
-      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), { fixture: 'full12-finished', isComite: true })
+      mount((s) => void (s.cardSignatures = s.cardSignatures.filter((c) => c.roundId !== 'r2')), {
+        fixture: 'full12-finished',
+        isComite: true,
+      })
       await correctFirstAndSave()
       expect(admin.saves).toHaveLength(1)
       vi.mocked(adminSaveHole).mockRejectedValueOnce(new Error('Failed to fetch'))
@@ -812,7 +956,9 @@ describe('Tarjeta: a correction goes back to where the group is (UX-19)', () => 
     // Back on hole 10, where the group is, not on 8 after the hole corrected; the note names both.
     expect(holeOnScreen()).toBe(10)
     expect(screen.getAllByText(S.correctedHole(7, 10)).length).toBeGreaterThan(0)
-    expect(written()).toContain(`p1@7=${before + 1}/${snap.scores.find((x) => x.roundId === 'r1' && x.playerId === 'p1' && x.hole === 7)!.putts}`)
+    expect(written()).toContain(
+      `p1@7=${before + 1}/${snap.scores.find((x) => x.roundId === 'r1' && x.playerId === 'p1' && x.hole === 7)!.putts}`,
+    )
   })
 
   it('a new hole still moves to the next one', async () => {
@@ -828,7 +974,17 @@ describe('Tarjeta: a correction goes back to where the group is (UX-19)', () => 
     mount((s) => {
       for (const pid of ['p1', 'p2', 'p3', 'p4'])
         for (let h = 1; h <= 18; h++)
-          if (!s.scores.some((x) => x.roundId === 'r1' && x.playerId === pid && x.hole === h)) s.scores.push({ roundId: 'r1', playerId: pid, hole: h, strokes: 5, putts: 2, pickedUp: false, enteredBy: 'p1', updatedAt: '2027-05-15T15:00:00Z' })
+          if (!s.scores.some((x) => x.roundId === 'r1' && x.playerId === pid && x.hole === h))
+            s.scores.push({
+              roundId: 'r1',
+              playerId: pid,
+              hole: h,
+              strokes: 5,
+              putts: 2,
+              pickedUp: false,
+              enteredBy: 'p1',
+              updatedAt: '2027-05-15T15:00:00Z',
+            })
     })
     expect(holeOnScreen()).toBe(18)
     fireEvent.click(screen.getByRole('button', { name: new RegExp(S.prev) }))
@@ -853,12 +1009,14 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
    * the check is what the screen shows once the click's task and its microtasks
    * are done, outside act (which would flush everything first).
    */
-  it('from the grid: no task ever sees the new hole under the last one\'s figures', async () => {
+  it("from the grid: no task ever sees the new hole under the last one's figures", async () => {
     mount()
     expect(holeOnScreen()).toBe(10)
     // A hole whose saved strokes for p1 differ from what the card shows now.
     const shown = strokesOf('p1')
-    const target = snap.scores.find((x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown)!
+    const target = snap.scores.find(
+      (x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown,
+    )!
     fireEvent.click(screen.getByRole('button', { name: S.grid, exact: true } as never))
     const actEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     const was = actEnv.IS_REACT_ACT_ENVIRONMENT
@@ -876,10 +1034,12 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
 
   // Worse than a lost tap: on main «más» there counted from the last hole's figure, and the save wrote that ±1 as
   // this hole's score (PR 107's verifier).
-  it('a tap right after the grid opens a hole counts from that hole\'s own figure, and that is what the save writes', async () => {
+  it("a tap right after the grid opens a hole counts from that hole's own figure, and that is what the save writes", async () => {
     mount()
     const shown = strokesOf('p1')
-    const target = snap.scores.find((x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown && x.strokes < 14)!
+    const target = snap.scores.find(
+      (x) => x.playerId === 'p1' && x.roundId === 'r1' && x.strokes != null && x.strokes !== shown && x.strokes < 14,
+    )!
     fireEvent.click(screen.getByRole('button', { name: S.grid, exact: true } as never))
     const actEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     const was = actEnv.IS_REACT_ACT_ENVIRONMENT
@@ -895,14 +1055,14 @@ describe('Tarjeta: a hole opened shows its own values in the same task as its he
       await act(async () => undefined)
     }
     expect(holeOnScreen()).toBe(target.hole)
-    expect(strokesOf('p1')).toBe((target.strokes!) + 1)
+    expect(strokesOf('p1')).toBe(target.strokes! + 1)
     await tapSave(20_000)
     const p1 = written().filter((r) => r.startsWith(`p1@${target.hole}=`))
-    expect(p1).toEqual([`p1@${target.hole}=${(target.strokes!) + 1}/${Math.min(target.putts!, (target.strokes!) + 1)}`])
+    expect(p1).toEqual([`p1@${target.hole}=${target.strokes! + 1}/${Math.min(target.putts!, target.strokes! + 1)}`])
   })
 })
 
-describe('Tarjeta: a player the Comité adds to the group while a hole is open (PR 107\'s verifier)', () => {
+describe("Tarjeta: a player the Comité adds to the group while a hole is open (PR 107's verifier)", () => {
   it('gets a draft on the open hole, and «Guardar hoyo» saves him with the others instead of throwing', async () => {
     mount()
     expect(holeOnScreen()).toBe(10)
@@ -951,7 +1111,16 @@ describe('Tarjeta: a notice tapped while the card is open goes where it says (PW
     return render(
       <MemoryRouter>
         <Router />
-        <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+        <TournamentContext.Provider
+          value={{
+            tournamentId: snap.tournament.id,
+            slug: '_/minimal4-live',
+            lookup: fx.lookup,
+            me: fx.me,
+            refresh: async () => undefined,
+            leave: async () => undefined,
+          }}
+        >
           <ScorecardScreen />
         </TournamentContext.Provider>
       </MemoryRouter>,
@@ -985,13 +1154,18 @@ describe('Tarjeta: a notice tapped while the card is open goes where it says (PW
   it('never under an open question: its answer is the hole on screen’s', async () => {
     mountRouted((s) => {
       const settings = s.tournament.settings as import('../../engine/settings/schema').TournamentSettings
-      s.tournament.settings = { ...settings, modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } } }
+      s.tournament.settings = {
+        ...settings,
+        modules: { ...settings.modules, snake: { ...settings.modules.snake, enabled: true, puttsThreshold: 2 } },
+      }
     })
     await tapSave(11_000) // hole 10: three at 2 putts, a tie
     expect(screen.getByRole('dialog', { name: S.whoHoledLast })).toBeTruthy()
     act(() => go('/?hoyo=4'))
     expect(holeOnScreen()).toBe(10)
-    await answer(within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }))
+    await answer(
+      within(screen.getByRole('dialog', { name: S.whoHoledLast })).getByRole('button', { name: nameOf('p3') }),
+    )
     expect(outbox.holes.map((h) => h.hole)).toEqual([10])
   })
 })

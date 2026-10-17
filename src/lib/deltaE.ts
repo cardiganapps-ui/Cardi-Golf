@@ -46,8 +46,14 @@ export function deltaE2000(hexA: string, hexB: string): number {
   const Lm = (L1 + L2) / 2
   const Cmp = (C1p + C2p) / 2
   let hm = h1p + h2p
-  if (C1p * C2p !== 0) hm = Math.abs(h1p - h2p) > 180 ? (h1p + h2p < 360 ? (h1p + h2p + 360) / 2 : (h1p + h2p - 360) / 2) : (h1p + h2p) / 2
-  const T = 1 - 0.17 * Math.cos((hm - 30) * rad) + 0.24 * Math.cos(2 * hm * rad) + 0.32 * Math.cos((3 * hm + 6) * rad) - 0.2 * Math.cos((4 * hm - 63) * rad)
+  if (C1p * C2p !== 0)
+    hm = Math.abs(h1p - h2p) > 180 ? (h1p + h2p < 360 ? (h1p + h2p + 360) / 2 : (h1p + h2p - 360) / 2) : (h1p + h2p) / 2
+  const T =
+    1 -
+    0.17 * Math.cos((hm - 30) * rad) +
+    0.24 * Math.cos(2 * hm * rad) +
+    0.32 * Math.cos((3 * hm + 6) * rad) -
+    0.2 * Math.cos((4 * hm - 63) * rad)
   const dTheta = 30 * Math.exp(-(((hm - 275) / 25) ** 2))
   const RC = 2 * Math.sqrt(Cmp ** 7 / (Cmp ** 7 + 25 ** 7))
   const SL = 1 + (0.015 * (Lm - 50) ** 2) / Math.sqrt(20 + (Lm - 50) ** 2)

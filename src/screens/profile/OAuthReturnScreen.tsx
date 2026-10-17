@@ -48,7 +48,11 @@ export function OAuthReturnScreen() {
       return
     }
     finishProfileSignIn()
-      .then((done) => navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, { replace: true }))
+      .then((done) =>
+        navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, {
+          replace: true,
+        }),
+      )
       .catch((e: unknown) => {
         setState('error')
         setMessage(accountError(e))

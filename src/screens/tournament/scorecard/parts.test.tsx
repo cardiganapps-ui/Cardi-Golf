@@ -41,14 +41,33 @@ describe('ScoreGrid', () => {
   const roundState = data.state.core.rounds[round.id]!
   const players = group.playerIds.map((id) => ({ id, name: fx.snapshot.players.find((p) => p.id === id)!.displayName }))
   const order = Array.from({ length: 18 }, (_, i) => ((group.startHole - 1 + i) % 18) + 1)
-  const mount = (o: Partial<Parameters<typeof ScoreGrid>[0]> = {}) => render(<ScoreGrid named={players} roundState={roundState} order={order} hole={10} pointsCount net onOpen={noop} savedNote={null} onUndo={noop} {...o} />)
+  const mount = (o: Partial<Parameters<typeof ScoreGrid>[0]> = {}) =>
+    render(
+      <ScoreGrid
+        named={players}
+        roundState={roundState}
+        order={order}
+        hole={10}
+        pointsCount
+        net
+        onOpen={noop}
+        savedNote={null}
+        onUndo={noop}
+        {...o}
+      />,
+    )
 
   it('a row per hole, each nine and the day summed, a column per player', () => {
     mount()
     const table = screen.getByRole('table')
     // Each header by its accessible name: «SI» is said «índice de golpe» (A11Y-22), and shown as «SI».
     const heads = within(table).getAllByRole('columnheader')
-    expect(heads.map((h) => h.querySelector('[aria-hidden="true"]')?.textContent ?? h.textContent)).toEqual([t.player.hole, t.player.par, t.player.si, ...players.map((p) => p.name)])
+    expect(heads.map((h) => h.querySelector('[aria-hidden="true"]')?.textContent ?? h.textContent)).toEqual([
+      t.player.hole,
+      t.player.par,
+      t.player.si,
+      ...players.map((p) => p.name),
+    ])
     expect(within(table).getByRole('columnheader', { name: t.player.siSpoken })).toBe(heads[2])
     expect(within(table).getAllByRole('row')).toHaveLength(1 + 18 + 3)
     // Each player's day in points is the engine's.
@@ -93,7 +112,9 @@ describe('SigningPanel and SignSheet', () => {
     { id: 'p3', name: 'Otro grupo', player1Id: 'e', player2Id: 'f', kind: null, pickedByHonoree: false, drawnAt: null },
   ]
   const players = ['a', 'b', 'c', 'd'].map((id) => ({ id, displayName: id.toUpperCase(), fullName: id }) as never)
-  const panel = (o: { myPairId?: string | null; isComite?: boolean; signed?: string[]; onSign?: (id: string) => void } = {}) =>
+  const panel = (
+    o: { myPairId?: string | null; isComite?: boolean; signed?: string[]; onSign?: (id: string) => void } = {},
+  ) =>
     render(
       <SigningPanel
         roundId="r1"
@@ -128,9 +149,20 @@ describe('SigningPanel and SignSheet', () => {
 
   it('the stamp lands when a card is signed with the panel up, never again when the panel opens (MOT-14)', () => {
     const sigs = (ids: string[]) => ids.map((pairId) => ({ roundId: 'r1', pairId, signedBy: 'x', signedAt: '' }))
-    const el = (signed: string[]) => <SigningPanel roundId="r1" groupPlayerIds={['a', 'b', 'c', 'd']} pairs={pairs} signatures={sigs(signed)} players={players} myPairId="p1" isComite onSign={noop} />
+    const el = (signed: string[]) => (
+      <SigningPanel
+        roundId="r1"
+        groupPlayerIds={['a', 'b', 'c', 'd']}
+        pairs={pairs}
+        signatures={sigs(signed)}
+        players={players}
+        myPairId="p1"
+        isComite
+        onSign={noop}
+      />
+    )
     // Motion draws a stamp that lands from its first frame (opacity 0); one already there, at rest.
-    const stamps = () => screen.queryAllByText(S.stamp).map((x) => (x).style.opacity)
+    const stamps = () => screen.queryAllByText(S.stamp).map((x) => x.style.opacity)
     // The grid opened on a day whose card was signed long ago: the stamp is simply there.
     const { rerender, unmount } = render(el(['p2']))
     expect(stamps()).toEqual(['1'])
@@ -168,12 +200,16 @@ describe('CorrectionReasonSheet', () => {
   it('«Guardar» waits for a reason of three characters, trimmed', () => {
     const onSave = vi.fn()
     const onReason = vi.fn()
-    const { rerender } = render(<CorrectionReasonSheet open reason="  ab " onReason={onReason} busy={false} onClose={noop} onSave={onSave} />)
+    const { rerender } = render(
+      <CorrectionReasonSheet open reason="  ab " onReason={onReason} busy={false} onClose={noop} onSave={onSave} />,
+    )
     const save = () => screen.getByRole('button', { name: S.save })
     expect(save()).toHaveProperty('disabled', true)
     fireEvent.change(screen.getByRole('textbox', { name: t.admin.scores.reason }), { target: { value: 'tarjeta mal' } })
     expect(onReason).toHaveBeenCalledWith('tarjeta mal')
-    rerender(<CorrectionReasonSheet open reason="abc" onReason={onReason} busy={false} onClose={noop} onSave={onSave} />)
+    rerender(
+      <CorrectionReasonSheet open reason="abc" onReason={onReason} busy={false} onClose={noop} onSave={onSave} />,
+    )
     fireEvent.click(save())
     expect(onSave).toHaveBeenCalledOnce()
   })
@@ -192,7 +228,17 @@ describe('CorrectionReasonSheet', () => {
 describe('the save’s questions', () => {
   it('«¿Quién embocó al último?» offers each candidate and «No sabemos», which answers nobody (UX-08)', () => {
     const onAnswer = vi.fn()
-    render(<TiebreakSheet candidates={['b', 'a', 'gone']} named={named} threshold={3} game="La Víbora" busy={false} onAnswer={onAnswer} onClose={noop} />)
+    render(
+      <TiebreakSheet
+        candidates={['b', 'a', 'gone']}
+        named={named}
+        threshold={3}
+        game="La Víbora"
+        busy={false}
+        onAnswer={onAnswer}
+        onClose={noop}
+      />,
+    )
     const dialog = screen.getByRole('dialog', { name: S.whoHoledLast })
     expect(within(dialog).getByText(S.whoHoledLastHint(3, 'La Víbora'))).toBeTruthy()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Beto' }))
@@ -200,11 +246,25 @@ describe('the save’s questions', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: S.whoHoledLastUnknown }))
     expect(onAnswer).toHaveBeenLastCalledWith(undefined)
     // A candidate no longer in the group is no button.
-    expect(within(dialog).getAllByRole('button').map((b) => b.textContent)).toEqual([t.common.close, 'Beto', 'Ana', S.whoHoledLastUnknown])
+    expect(
+      within(dialog)
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual([t.common.close, 'Beto', 'Ana', S.whoHoledLastUnknown])
   })
 
   it('while a save is on its way the answers wait', () => {
-    render(<TiebreakSheet candidates={['a', 'b']} named={named} threshold={3} game="La Víbora" busy onAnswer={noop} onClose={noop} />)
+    render(
+      <TiebreakSheet
+        candidates={['a', 'b']}
+        named={named}
+        threshold={3}
+        game="La Víbora"
+        busy
+        onAnswer={noop}
+        onClose={noop}
+      />,
+    )
     expect(screen.getByRole('button', { name: 'Ana' })).toHaveProperty('disabled', true)
     expect(screen.getByRole('button', { name: S.whoHoledLastUnknown })).toHaveProperty('disabled', true)
   })
@@ -234,7 +294,15 @@ describe('the save’s questions', () => {
   it('none of them shows while closed', () => {
     render(
       <>
-        <TiebreakSheet candidates={null} named={named} threshold={3} game="La Víbora" busy={false} onAnswer={noop} onClose={noop} />
+        <TiebreakSheet
+          candidates={null}
+          named={named}
+          threshold={3}
+          game="La Víbora"
+          busy={false}
+          onAnswer={noop}
+          onClose={noop}
+        />
         <DefaultsSheet open={false} hole={7} onBack={noop} onConfirm={noop} />
         <UnusualSheet lines={null} onFix={noop} onConfirm={noop} />
       </>,
@@ -244,9 +312,42 @@ describe('the save’s questions', () => {
 })
 
 describe('PlayerRow', () => {
-  const h = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 7, par: 4, strokeIndex: 3, yards: null, strokesReceived: 2, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: label(''), steps: [] }, ...o })
+  const h = (o: Partial<HoleResult> = {}): HoleResult => ({
+    hole: 7,
+    par: 4,
+    strokeIndex: 3,
+    yards: null,
+    strokesReceived: 2,
+    gross: null,
+    net: null,
+    points: 0,
+    putts: null,
+    pickedUp: false,
+    played: false,
+    disputed: false,
+    why: { title: label(''), steps: [] },
+    ...o,
+  })
   const row = (o: Partial<Parameters<typeof PlayerRow>[0]> = {}) =>
-    render(<PlayerRow id="a" name="Ana" labelId="l-a" draft={{ strokes: 4, putts: 2, pickedUp: false }} hole={h()} parOnScreen={4} locked={false} untouched={false} ptsLine="4 pts" good holdsSnake={false} snakeLabel="La Víbora" snakeLayoutId="s" onDraft={noop} {...o} />)
+    render(
+      <PlayerRow
+        id="a"
+        name="Ana"
+        labelId="l-a"
+        draft={{ strokes: 4, putts: 2, pickedUp: false }}
+        hole={h()}
+        parOnScreen={4}
+        locked={false}
+        untouched={false}
+        ptsLine="4 pts"
+        good
+        holdsSnake={false}
+        snakeLabel="La Víbora"
+        snakeLayoutId="s"
+        onDraft={noop}
+        {...o}
+      />,
+    )
 
   it('his controls carry his name; a tap changes his draft only, putts never over the strokes', () => {
     const onDraft = vi.fn()
@@ -277,7 +378,20 @@ describe('PlayerRow', () => {
 })
 
 describe('SaveBar', () => {
-  const bar = (o: Partial<Parameters<typeof SaveBar>[0]> = {}) => render(<SaveBar label={S.save} busy={false} disabled={false} justSaved={false} onSave={noop} locked={null} savedNote={null} onUndo={noop} {...o} />)
+  const bar = (o: Partial<Parameters<typeof SaveBar>[0]> = {}) =>
+    render(
+      <SaveBar
+        label={S.save}
+        busy={false}
+        disabled={false}
+        justSaved={false}
+        onSave={noop}
+        locked={null}
+        savedNote={null}
+        onUndo={noop}
+        {...o}
+      />,
+    )
 
   it('«Guardar hoyo» saves, with nothing passed: a tap is never an answer to a question', () => {
     const onSave = vi.fn()

@@ -9,8 +9,15 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const api = vi.hoisted(() => ({ unsignPlayerCard: vi.fn(async () => undefined), unsignCard: vi.fn(async () => undefined) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), unsignPlayerCard: api.unsignPlayerCard, unsignCard: api.unsignCard }))
+const api = vi.hoisted(() => ({
+  unsignPlayerCard: vi.fn(async () => undefined),
+  unsignCard: vi.fn(async () => undefined),
+}))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  unsignPlayerCard: api.unsignPlayerCard,
+  unsignCard: api.unsignCard,
+}))
 
 import { getFixture } from '../../dev/fixtures'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -24,10 +31,26 @@ const SC = t.admin.scores
 function mount() {
   const fx = getFixture('firma4')!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: 'fixture:firma4', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off', reload: async () => undefined } as never)
+  useTournament.setState({
+    tournamentId: 'fixture:firma4',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+    reload: async () => undefined,
+  } as never)
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/firma4', lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/firma4',
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminScores />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -46,7 +69,9 @@ describe('Comité › Tarjetas under a marker’s rule (UX-23)', () => {
     const name = mount()
     for (const id of ['p1', 'p3', 'p4']) expect(screen.getByText(IB.unsigned(name(id)))).toBeTruthy()
     expect(screen.queryByText(IB.unsigned(name('p2')))).toBeNull()
-    fireEvent.click(within(screen.getByText(IB.unsigned(name('p3'))).closest('div')!).getByRole('button', { name: IB.view }))
+    fireEvent.click(
+      within(screen.getByText(IB.unsigned(name('p3'))).closest('div')!).getByRole('button', { name: IB.view }),
+    )
     expect((screen.getByRole('combobox', { name: SC.player }) as HTMLSelectElement).value).toBe('p3')
   })
 

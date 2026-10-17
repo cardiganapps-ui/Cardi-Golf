@@ -28,12 +28,24 @@ const reads = () => server.requests.filter((r) => r.table === 'tournaments').len
 /** Every request the server saw, any table. */
 const requests = () => server.requests.length
 const channel = () => server.channels.at(-1)!
-const emitOn = (ch: FakeSupabase['channels'][number], table: string, payload: Record<string, unknown>) => ch.bindings.get(table)!(payload)
+const emitOn = (ch: FakeSupabase['channels'][number], table: string, payload: Record<string, unknown>) =>
+  ch.bindings.get(table)!(payload)
 const emit = (table: string, payload: Record<string, unknown>) => emitOn(channel(), table, payload)
 const round = fx.snapshot.rounds.find((r) => r.status === 'live')!
 const group = fx.snapshot.groups.find((g) => g.roundId === round.id)!
-const scoreOf = (playerId: string, hole: number) => store().data!.snapshot.scores.find((x) => x.roundId === round.id && x.playerId === playerId && x.hole === hole)
-const scoreRow = (playerId: string, hole: number, strokes: number) => ({ id: `live-${playerId}-${hole}`, round_id: round.id, player_id: playerId, hole, strokes, putts: 1, picked_up: false, updated_at: '2027-04-09T12:00:00Z', disputed: false })
+const scoreOf = (playerId: string, hole: number) =>
+  store().data!.snapshot.scores.find((x) => x.roundId === round.id && x.playerId === playerId && x.hole === hole)
+const scoreRow = (playerId: string, hole: number, strokes: number) => ({
+  id: `live-${playerId}-${hole}`,
+  round_id: round.id,
+  player_id: playerId,
+  hole,
+  strokes,
+  putts: 1,
+  picked_up: false,
+  updated_at: '2027-04-09T12:00:00Z',
+  disputed: false,
+})
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const ready = async () => {
   const n = reads()
@@ -48,7 +60,14 @@ const ready = async () => {
 function remap(rows: Record<string, Row[]>, pfx: string): Record<string, Row[]> {
   const out: Record<string, Row[]> = {}
   for (const [table, list] of Object.entries(rows)) {
-    out[table] = list.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && (k === 'id' || (k.endsWith('_id') && k !== 'game_id')) ? pfx + v : v])))
+    out[table] = list.map((r) =>
+      Object.fromEntries(
+        Object.entries(r).map(([k, v]) => [
+          k,
+          typeof v === 'string' && (k === 'id' || (k.endsWith('_id') && k !== 'game_id')) ? pfx + v : v,
+        ]),
+      ),
+    )
   }
   return out
 }
@@ -60,13 +79,24 @@ function merge(a: Record<string, Row[]>, b: Record<string, Row[]>): Record<strin
 const Y = 'Y:' + getFixture('minimal4-live')!.snapshot.tournament.id
 
 beforeEach(async () => {
-  server = fakeSupabase(merge(snapshotToRows(fx.snapshot), remap(snapshotToRows(getFixture('minimal4-live')!.snapshot), 'Y:')))
+  server = fakeSupabase(
+    merge(snapshotToRows(fx.snapshot), remap(snapshotToRows(getFixture('minimal4-live')!.snapshot), 'Y:')),
+  )
   await ready()
 })
 afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 describe('a hole saved on another phone', () => {
@@ -74,7 +104,8 @@ describe('a hole saved on another phone', () => {
     vi.useFakeTimers()
     const before = requests()
     const shown = store().data
-    for (const playerId of group.playerIds) emit('scores', { eventType: 'UPDATE', new: scoreRow(playerId, 18, 3), old: {} })
+    for (const playerId of group.playerIds)
+      emit('scores', { eventType: 'UPDATE', new: scoreRow(playerId, 18, 3), old: {} })
     // Taken together: nothing moves until the four are in.
     expect(store().data).toBe(shown)
     await vi.advanceTimersByTimeAsync(40)
@@ -115,16 +146,25 @@ describe('a hole saved on another phone', () => {
     await sleep(1700)
     const db = new Dexie('cardi-golf-cache')
     db.version(1).stores({ entries: 'slug, tournamentId', snapshots: 'tournamentId' })
-    const kept = (await db.table('snapshots').get(TID)) as { snapshot: { scores: Array<{ roundId: string; playerId: string; hole: number; strokes: number }> } } | undefined
+    const kept = (await db.table('snapshots').get(TID)) as
+      { snapshot: { scores: Array<{ roundId: string; playerId: string; hole: number; strokes: number }> } } | undefined
     db.close()
-    expect(kept?.snapshot.scores.find((x) => x.roundId === round.id && x.playerId === group.playerIds[2] && x.hole === 14)?.strokes).toBe(7)
+    expect(
+      kept?.snapshot.scores.find((x) => x.roundId === round.id && x.playerId === group.playerIds[2] && x.hole === 14)
+        ?.strokes,
+    ).toBe(7)
   })
 
   it('a payload that comes with errors is not applied: the tournament reloads', async () => {
     vi.useFakeTimers()
     const before = reads()
     const was = scoreOf(group.playerIds[0]!, 13)?.strokes ?? null
-    emit('scores', { eventType: 'UPDATE', new: scoreRow(group.playerIds[0]!, 13, 9), old: {}, errors: ['Error 401: Unauthorized'] })
+    emit('scores', {
+      eventType: 'UPDATE',
+      new: scoreRow(group.playerIds[0]!, 13, 9),
+      old: {},
+      errors: ['Error 401: Unauthorized'],
+    })
     await vi.advanceTimersByTimeAsync(250)
     expect(reads()).toBe(before + 1)
     expect(scoreOf(group.playerIds[0]!, 13)?.strokes ?? null).toBe(was)
@@ -143,13 +183,22 @@ describe('a hole saved on another phone', () => {
 })
 
 describe('a team draw (teams and team_members, published by 0025)', () => {
-  it("one saved here reaches the boards: its rows arrive one event each and the tournament reloads once", async () => {
+  it('one saved here reaches the boards: its rows arrive one event each and the tournament reloads once', async () => {
     vi.useFakeTimers()
     const before = reads()
     const [a, b] = fx.snapshot.players
-    const team = { id: 'team-live', tournament_id: TID, number: 1, name: 'Los de arriba', drawn_at: '2027-04-08T22:00:00Z' }
+    const team = {
+      id: 'team-live',
+      tournament_id: TID,
+      number: 1,
+      name: 'Los de arriba',
+      drawn_at: '2027-04-08T22:00:00Z',
+    }
     ;(server.tables.teams ??= []).push(team)
-    ;(server.tables.team_members ??= []).push({ team_id: team.id, player_id: a!.id }, { team_id: team.id, player_id: b!.id })
+    ;(server.tables.team_members ??= []).push(
+      { team_id: team.id, player_id: a!.id },
+      { team_id: team.id, player_id: b!.id },
+    )
     emit('teams', { eventType: 'INSERT', new: team, old: {} })
     emit('team_members', { eventType: 'INSERT', new: { team_id: team.id, player_id: a!.id }, old: {} })
     emit('team_members', { eventType: 'INSERT', new: { team_id: team.id, player_id: b!.id }, old: {} })
@@ -162,11 +211,19 @@ describe('a team draw (teams and team_members, published by 0025)', () => {
     vi.useFakeTimers()
     const before = requests()
     const shown = store().data
-    emit('team_members', { eventType: 'DELETE', new: {}, old: { team_id: 'elsewhere-team', player_id: 'elsewhere-player' } })
+    emit('team_members', {
+      eventType: 'DELETE',
+      new: {},
+      old: { team_id: 'elsewhere-team', player_id: 'elsewhere-player' },
+    })
     emit('teams', { eventType: 'DELETE', new: {}, old: { id: 'elsewhere-team' } })
     emit('teams', { eventType: 'INSERT', new: { id: 'elsewhere-team-2', tournament_id: 'other', number: 1 }, old: {} })
     emit('players', { eventType: 'DELETE', new: {}, old: { id: 'elsewhere-player' } })
-    emit('groups', { eventType: 'UPDATE', new: { id: 'elsewhere-group', tournament_id: 'other', round_id: 'other-round', number: 1 }, old: {} })
+    emit('groups', {
+      eventType: 'UPDATE',
+      new: { id: 'elsewhere-group', tournament_id: 'other', round_id: 'other-round', number: 1 },
+      old: {},
+    })
     await vi.advanceTimersByTimeAsync(1_000)
     expect(requests()).toBe(before)
     expect(store().data).toBe(shown)
@@ -204,8 +261,20 @@ describe('a day or lot this phone has not loaded', () => {
   it('its score waits instead of reloading, and lands with the day when the day’s own change brings it', async () => {
     vi.useFakeTimers()
     const before = reads()
-    const r3 = { id: 'r3-new', tournament_id: TID, number: 3, date: '2027-04-11', course_id: round.courseId, holes: 18, status: 'live' }
-    emit('scores', { eventType: 'INSERT', new: { ...scoreRow(group.playerIds[0]!, 1, 4), id: 'r3-score', round_id: r3.id }, old: {} })
+    const r3 = {
+      id: 'r3-new',
+      tournament_id: TID,
+      number: 3,
+      date: '2027-04-11',
+      course_id: round.courseId,
+      holes: 18,
+      status: 'live',
+    }
+    emit('scores', {
+      eventType: 'INSERT',
+      new: { ...scoreRow(group.playerIds[0]!, 1, 4), id: 'r3-score', round_id: r3.id },
+      old: {},
+    })
     await vi.advanceTimersByTimeAsync(250)
     expect(reads()).toBe(before)
     server.tables.rounds!.push(r3)
@@ -220,7 +289,21 @@ describe('a day or lot this phone has not loaded', () => {
     const before = requests()
     const shown = store().data
     for (let i = 0; i < 5; i++) {
-      emit('scores', { eventType: 'UPDATE', new: { id: `o-${i}`, round_id: 'other-round', player_id: 'other-player', hole: i + 1, strokes: 4, putts: 2, picked_up: false, updated_at: '2027-04-09T12:00:00+00:00', disputed: false }, old: {} })
+      emit('scores', {
+        eventType: 'UPDATE',
+        new: {
+          id: `o-${i}`,
+          round_id: 'other-round',
+          player_id: 'other-player',
+          hole: i + 1,
+          strokes: 4,
+          putts: 2,
+          picked_up: false,
+          updated_at: '2027-04-09T12:00:00+00:00',
+          disputed: false,
+        },
+        old: {},
+      })
       await vi.advanceTimersByTimeAsync(1000)
     }
     expect(requests()).toBe(before)
@@ -238,14 +321,30 @@ describe('a day or lot this phone has not loaded', () => {
     emit('scores', { eventType: 'DELETE', new: {}, old: { id: ours.id } })
     await vi.advanceTimersByTimeAsync(1000)
     expect(requests()).toBe(before)
-    expect(store().data!.snapshot.scores.some((x) => x.roundId === ours.roundId && x.playerId === ours.playerId && x.hole === ours.hole)).toBe(false)
+    expect(
+      store().data!.snapshot.scores.some(
+        (x) => x.roundId === ours.roundId && x.playerId === ours.playerId && x.hole === ours.hole,
+      ),
+    ).toBe(false)
   })
 
   it('a payment of another tournament changes nothing and asks for nothing', async () => {
     vi.useFakeTimers()
     const before = requests()
     const shown = store().data
-    emit('payments', { eventType: 'INSERT', new: { id: 'elsewhere', tournament_id: 'other', from_player_id: 'x', to_player_id: null, amount: 100, kind: 'entry', paid: true }, old: {} })
+    emit('payments', {
+      eventType: 'INSERT',
+      new: {
+        id: 'elsewhere',
+        tournament_id: 'other',
+        from_player_id: 'x',
+        to_player_id: null,
+        amount: 100,
+        kind: 'entry',
+        paid: true,
+      },
+      old: {},
+    })
     await vi.advanceTimersByTimeAsync(1_000)
     expect(store().data).toBe(shown)
     expect(requests()).toBe(before)
@@ -336,7 +435,15 @@ describe('a fetch on its way when a change lands', () => {
 
   it('a card unsigned while a reload is out, on a day this phone had not loaded, does not come back signed', async () => {
     const pair = fx.snapshot.pairs[0]!
-    const r3 = { id: 'r3-new', tournament_id: TID, number: 3, date: '2027-04-11', course_id: round.courseId, holes: 18, status: 'live' }
+    const r3 = {
+      id: 'r3-new',
+      tournament_id: TID,
+      number: 3,
+      date: '2027-04-11',
+      course_id: round.courseId,
+      holes: 18,
+      status: 'live',
+    }
     const sig = { round_id: r3.id, pair_id: pair.id, signed_by: pair.player1Id, signed_at: '2027-04-11T20:00:00+00:00' }
     server.tables.rounds!.push(r3)
     server.tables.card_signatures!.push(sig)
@@ -400,8 +507,20 @@ describe('leaving a tournament', () => {
   it('a change that waited for its day is forgotten with the channel: coming back, it never takes back what the fetch brings', async () => {
     vi.useFakeTimers()
     const playerId = group.playerIds[0]!
-    const r3 = { id: 'r3-new', tournament_id: TID, number: 3, date: '2027-04-11', course_id: round.courseId, holes: 18, status: 'live' }
-    emit('scores', { eventType: 'INSERT', new: { ...scoreRow(playerId, 1, 4), id: 'r3-score', round_id: r3.id }, old: {} })
+    const r3 = {
+      id: 'r3-new',
+      tournament_id: TID,
+      number: 3,
+      date: '2027-04-11',
+      course_id: round.courseId,
+      holes: 18,
+      status: 'live',
+    }
+    emit('scores', {
+      eventType: 'INSERT',
+      new: { ...scoreRow(playerId, 1, 4), id: 'r3-score', round_id: r3.id },
+      old: {},
+    })
     await vi.advanceTimersByTimeAsync(100)
     store().unsubscribe()
     // While the phone was away, the day was created and that hole saved again.
@@ -443,7 +562,20 @@ describe('leaving a tournament', () => {
     const slow = server.hold()
     const loading = store().load(Y)
     await slow.received
-    emitOn(xChannel, 'payments', { eventType: 'INSERT', new: { id: 'late-x', tournament_id: TID, from_player_id: 'p1', to_player_id: null, amount: 100, kind: 'other', paid: true, note: null }, old: {} })
+    emitOn(xChannel, 'payments', {
+      eventType: 'INSERT',
+      new: {
+        id: 'late-x',
+        tournament_id: TID,
+        from_player_id: 'p1',
+        to_player_id: null,
+        amount: 100,
+        kind: 'other',
+        paid: true,
+        note: null,
+      },
+      old: {},
+    })
     await sleep(400)
     slow.release()
     await loading
@@ -451,7 +583,11 @@ describe('leaving a tournament', () => {
     const s = store()
     expect(s.data!.snapshot.tournament.id).toBe(Y)
     expect(s.data!.snapshot.payments.some((p) => p.id === 'late-x')).toBe(false)
-    expect({ channels: server.channels.length - before, realtime: s.realtime, loading: s.loading }).toEqual({ channels: 1, realtime: 'connecting', loading: false })
+    expect({ channels: server.channels.length - before, realtime: s.realtime, loading: s.loading }).toEqual({
+      channels: 1,
+      realtime: 'connecting',
+      loading: false,
+    })
   })
 
   it('a tournament the phone forgot is not written back by a change that lands just before', async () => {
@@ -489,13 +625,14 @@ describe('the same boards on every phone', () => {
     useTournament.setState({ tournamentId: null, data: null, source: null })
     // A collation that sorts differently: the payments come back reversed.
     const orig = server.client.from.bind(server.client)
-    server.client.from = ((t: string) => {
+    server.client.from = (t: string) => {
       const q = orig(t)
       if (t !== 'payments') return q
       const then = q.then.bind(q)
-      ;(q as unknown as { then: typeof then }).then = ((ok, err) => then((res) => ok!(Array.isArray(res.data) ? { ...res, data: [...res.data].reverse() } : res), err))
+      ;(q as unknown as { then: typeof then }).then = (ok, err) =>
+        then((res) => ok!(Array.isArray(res.data) ? { ...res, data: [...res.data].reverse() } : res), err)
       return q
-    })
+    }
     await store().load(TID)
     const ids = store().data!.base.payments.map((p) => p.id)
     expect(ids.length).toBeGreaterThan(1)
@@ -506,7 +643,13 @@ describe('the same boards on every phone', () => {
     store().unsubscribe()
     const s = structuredClone(getFixture('friends8')!.snapshot)
     const settings = s.tournament.settings as { games: Array<{ id: string; money: Record<string, unknown> }> }
-    settings.games.find((g) => g.id === 'tacos')!.money = { source: 'side', buyIn: 100, amount: 0, stake: 0, split: [100] }
+    settings.games.find((g) => g.id === 'tacos')!.money = {
+      source: 'side',
+      buyIn: 100,
+      amount: 0,
+      stake: 0,
+      split: [100],
+    }
     s.gameResults = []
     const id = s.tournament.id
     server = fakeSupabase(snapshotToRows(s))
@@ -515,7 +658,13 @@ describe('the same boards on every phone', () => {
     channel().status!('SUBSCRIBED')
     await vi.waitFor(() => expect(reads()).toBe(2))
     for (const pid of ['p7', 'p3', 'p1']) {
-      const row = { tournament_id: id, game_id: 'tacos', player_id: pid, share: '1', created_at: '2027-04-10T22:00:00+00:00' }
+      const row = {
+        tournament_id: id,
+        game_id: 'tacos',
+        player_id: pid,
+        share: '1',
+        created_at: '2027-04-10T22:00:00+00:00',
+      }
       server.tables.game_results!.push(row)
       emit('game_results', { eventType: 'INSERT', new: structuredClone(row), old: {} })
     }

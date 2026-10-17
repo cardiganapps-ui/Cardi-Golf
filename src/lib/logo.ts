@@ -32,7 +32,13 @@ export const LOGO_MIN_SIDE = 160
 const RENDITION = /\/logo-(\d+)x(\d+)-\d+\.(?:webp|png|jpg|gif)(?:[?#]|$)/
 
 export function prepareLogo(file: File): Promise<PreparedImage> {
-  return prepareImage(file, { maxWidth: LOGO_BOX.width, maxHeight: LOGO_BOX.height, quality: 0.85, maxBytes: LOGO_MAX_BYTES, minSide: LOGO_MIN_SIDE })
+  return prepareImage(file, {
+    maxWidth: LOGO_BOX.width,
+    maxHeight: LOGO_BOX.height,
+    quality: 0.85,
+    maxBytes: LOGO_MAX_BYTES,
+    minSide: LOGO_MIN_SIDE,
+  })
 }
 
 /**
@@ -40,9 +46,15 @@ export function prepareLogo(file: File): Promise<PreparedImage> {
  * stays, since a duplicated tournament (and the history) may still point at it.
  * A logo the browser could not redraw goes up as it came, with no size.
  */
-export function logoPath(tournamentId: string, prep: Pick<PreparedImage, 'type' | 'width' | 'height'>, stamp = Date.now()): string {
+export function logoPath(
+  tournamentId: string,
+  prep: Pick<PreparedImage, 'type' | 'width' | 'height'>,
+  stamp = Date.now(),
+): string {
   const ext = extensionFor(prep.type)
-  return prep.width && prep.height ? `${tournamentId}/logo-${prep.width}x${prep.height}-${stamp}.${ext}` : `${tournamentId}/logo-${stamp}.${ext}`
+  return prep.width && prep.height
+    ? `${tournamentId}/logo-${prep.width}x${prep.height}-${stamp}.${ext}`
+    : `${tournamentId}/logo-${stamp}.${ext}`
 }
 
 /** The rendition's size from its URL; null for a logo stored before renditions (shown as it is). */

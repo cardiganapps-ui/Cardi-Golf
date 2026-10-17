@@ -24,7 +24,10 @@ vi.mock('../../data/push', async (importOriginal) => {
     disablePush: vi.fn(async () => (browser.state = 'off')),
   }
 })
-vi.mock('../../components/toast', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../components/toast')>()), toast: vi.fn() }))
+vi.mock('../../components/toast', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../components/toast')>()),
+  toast: vi.fn(),
+}))
 
 import { disablePush, enablePush } from '../../data/push'
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -36,24 +39,51 @@ import { TournamentPushOffer, TournamentPushSwitch } from './TournamentPush'
 
 const T = t.push.tournament
 const fx = getFixture('full12-live')!
-const PIN_NOTE = 'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el Aviso de privacidad (se abre en otra pestaña).'
-const ACCOUNT_NOTE = 'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'
+const PIN_NOTE =
+  'Al activarlos, Polo guarda la dirección de avisos de este navegador, ligada a tu jugador, hasta que este teléfono deje de entrar como él, como dice el Aviso de privacidad (se abre en otra pestaña).'
+const ACCOUNT_NOTE =
+  'Al activarlos, Polo guarda la dirección de avisos de este navegador, como dice el Aviso de privacidad (se abre en otra pestaña).'
 
 function mount(node: React.ReactNode, o: { me?: Partial<Me>; edit?: (s: Snapshot) => void } = {}) {
   const snap = structuredClone(fx.snapshot)
   o.edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:full12-live', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:full12-live',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   const me: Me = { ...fx.me, via: 'device', ...o.me }
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/full12-live', lookup: fx.lookup, me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/full12-live',
+          lookup: fx.lookup,
+          me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         {node}
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
 }
 /** A hole this phone's player saved: what the offer waits for. */
-const holeByMe = (s: Snapshot) => void s.scores.push({ roundId: s.rounds[0]!.id, playerId: fx.me.playerId!, hole: 18, strokes: 4, putts: 2, pickedUp: false, enteredBy: fx.me.playerId!, updatedAt: '2027-04-09T16:00:00Z' })
+const holeByMe = (s: Snapshot) =>
+  void s.scores.push({
+    roundId: s.rounds[0]!.id,
+    playerId: fx.me.playerId!,
+    hole: 18,
+    strokes: 4,
+    putts: 2,
+    pickedUp: false,
+    enteredBy: fx.me.playerId!,
+    updatedAt: '2027-04-09T16:00:00Z',
+  })
 const settle = () => act(() => new Promise((r) => setTimeout(r, 0)))
 
 beforeEach(() => {
@@ -112,7 +142,11 @@ describe('the switch in Más', () => {
         settings.modules.snake!.enabled = false
       },
     })
-    expect(await screen.findByText('Te avisamos en este teléfono cuando empiece cada día, cuando el Comité corrija tu tarjeta y cuando salgan los resultados. Nunca llevan montos.')).toBeTruthy()
+    expect(
+      await screen.findByText(
+        'Te avisamos en este teléfono cuando empiece cada día, cuando el Comité corrija tu tarjeta y cuando salgan los resultados. Nunca llevan montos.',
+      ),
+    ).toBeTruthy()
   })
 
   it('the Comité with no player, and the Admin de Polo, have no player to hear for', async () => {

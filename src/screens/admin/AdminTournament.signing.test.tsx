@@ -9,8 +9,18 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const api = vi.hoisted(() => ({ updateSettings: vi.fn(async (_tid: string, _seen: unknown, _set: unknown) => ({ settings: {}, name: 'x', tagline: null, accent_color: null })) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), updateSettings: api.updateSettings }))
+const api = vi.hoisted(() => ({
+  updateSettings: vi.fn(async (_tid: string, _seen: unknown, _set: unknown) => ({
+    settings: {},
+    name: 'x',
+    tagline: null,
+    accent_color: null,
+  })),
+}))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  updateSettings: api.updateSettings,
+}))
 vi.mock('./entryInfo', () => ({ useEntryInfo: () => null }))
 
 import { dataFromSnapshot, useTournament } from '../../data/tournamentStore'
@@ -27,10 +37,26 @@ function mount(fixture: string, edit: (s: TournamentSettings) => void = () => un
   const fx = getFixture(fixture)!
   const snap: Snapshot = structuredClone(fx.snapshot)
   edit(snap.tournament.settings as TournamentSettings)
-  useTournament.setState({ tournamentId: snap.tournament.id, data: dataFromSnapshot(snap), reload: async () => undefined, loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: snap.tournament.id,
+    data: dataFromSnapshot(snap),
+    reload: async () => undefined,
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: snap.tournament.slug, lookup: fx.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: snap.tournament.slug,
+          lookup: fx.lookup,
+          me: { playerId: null, isOrganizer: true, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminTournament />
       </TournamentContext.Provider>
     </MemoryRouter>,

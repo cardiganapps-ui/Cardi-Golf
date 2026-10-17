@@ -36,7 +36,13 @@ const hex = (theme: Theme, name: string) => {
   return v
 }
 const accentBlock = (theme: Theme, id: string) =>
-  colors(block(theme === 'light' ? `\n[data-accent='${id}']` : `  :root[data-theme='dark'] [data-accent='${id}']:not([data-theme='light'])`))
+  colors(
+    block(
+      theme === 'light'
+        ? `\n[data-accent='${id}']`
+        : `  :root[data-theme='dark'] [data-accent='${id}']:not([data-theme='light'])`,
+    ),
+  )
 /** An accent's own values in a theme: Fairway is :root's. */
 function accent(theme: Theme, id: string) {
   const own = id === 'fairway' ? THEMES[theme] : accentBlock(theme, id)
@@ -116,52 +122,82 @@ for (const theme of ['light', 'dark'] as const) {
     it.each(PAIRS)(`--%s on --%s is at least %s:1`, (fg, bg, min) => {
       expect(contrast(hex(theme, fg), hex(theme, bg))).toBeGreaterThanOrEqual(min)
     })
-    it('a loading screen\'s blocks stand out from the page and a sheet (1.3:1; VIS-13)', () => {
-      for (const bg of ['bg', 'surface-2']) expect(contrast(hex(theme, 'skeleton'), hex(theme, bg)), `--skeleton on --${bg}`).toBeGreaterThanOrEqual(1.3)
+    it("a loading screen's blocks stand out from the page and a sheet (1.3:1; VIS-13)", () => {
+      for (const bg of ['bg', 'surface-2'])
+        expect(contrast(hex(theme, 'skeleton'), hex(theme, bg)), `--skeleton on --${bg}`).toBeGreaterThanOrEqual(1.3)
     })
-    it('a monogram\'s initials read at AAA on every tint, and the tints are told apart (VIS-18)', () => {
-      for (let i = 1; i <= 6; i++) expect(contrast(hex(theme, 'ink'), hex(theme, `mono-${i}`)), `--ink on --mono-${i}`).toBeGreaterThanOrEqual(7)
-      for (let i = 1; i <= 6; i++) for (let j = i + 1; j <= 6; j++) expect(deltaE2000(hex(theme, `mono-${i}`), hex(theme, `mono-${j}`)), `--mono-${i} against --mono-${j}`).toBeGreaterThanOrEqual(8)
+    it("a monogram's initials read at AAA on every tint, and the tints are told apart (VIS-18)", () => {
+      for (let i = 1; i <= 6; i++)
+        expect(contrast(hex(theme, 'ink'), hex(theme, `mono-${i}`)), `--ink on --mono-${i}`).toBeGreaterThanOrEqual(7)
+      for (let i = 1; i <= 6; i++)
+        for (let j = i + 1; j <= 6; j++)
+          expect(
+            deltaE2000(hex(theme, `mono-${i}`), hex(theme, `mono-${j}`)),
+            `--mono-${i} against --mono-${j}`,
+          ).toBeGreaterThanOrEqual(8)
     })
     it('every line the race chart draws in colour reads against the page and the ruled panel (3:1, graphics; VIS-21)', () => {
-      for (let i = 1; i <= 6; i++) for (const bg of ['bg', 'surface']) expect(contrast(hex(theme, `race-${i}`), hex(theme, bg)), `--race-${i} on --${bg}`).toBeGreaterThanOrEqual(3)
+      for (let i = 1; i <= 6; i++)
+        for (const bg of ['bg', 'surface'])
+          expect(contrast(hex(theme, `race-${i}`), hex(theme, bg)), `--race-${i} on --${bg}`).toBeGreaterThanOrEqual(3)
     })
   })
 
   describe(`the curated event accents, ${theme} (VIS-09)`, () => {
-    it.each(ACCENTS.map((a) => [a.name, a.id]))('%s carries its text and reads on every surface it meets', (_name, id) => {
-      const a = accent(theme, id)
-      const t = (k: string) => hex(theme, k)
-      expect(contrast(a.ink, a.accent), 'text on the accent').toBeGreaterThanOrEqual(5)
-      for (const bg of ['bg', 'surface', 'surface-2']) expect(contrast(a.accent, t(bg)), `accent on --${bg}`).toBeGreaterThanOrEqual(4.5)
-      expect(contrast(a.accent, a.soft), 'accent on its tint').toBeGreaterThanOrEqual(4.5)
-      expect(contrast(a.accent, a.wash), 'accent on its wash').toBeGreaterThanOrEqual(4.5)
-      // My row's tint carries figures (AAA) and its labels (AA); the wash is a moment, large figures (4.5).
-      for (const fg of ['ink', 'under', 'over']) expect(contrast(t(fg), a.soft), `--${fg} on its tint`).toBeGreaterThanOrEqual(7)
-      expect(contrast(t('ink-2'), a.soft), '--ink-2 on its tint').toBeGreaterThanOrEqual(4.5)
-      for (const fg of ['ink-2', 'under', 'over']) expect(contrast(t(fg), a.wash), `--${fg} on its wash`).toBeGreaterThanOrEqual(4.5)
-    })
-    it.each(ACCENTS.map((a) => [a.name, a.id]))(`%s is ${APART} or more ΔE2000 from every semantic color`, (_name, id) => {
-      const a = accent(theme, id).accent
-      for (const s of SEMANTIC) expect(deltaE2000(a, hex(theme, s)), `${id} against --${s}`).toBeGreaterThanOrEqual(APART)
-    })
+    it.each(ACCENTS.map((a) => [a.name, a.id]))(
+      '%s carries its text and reads on every surface it meets',
+      (_name, id) => {
+        const a = accent(theme, id)
+        const t = (k: string) => hex(theme, k)
+        expect(contrast(a.ink, a.accent), 'text on the accent').toBeGreaterThanOrEqual(5)
+        for (const bg of ['bg', 'surface', 'surface-2'])
+          expect(contrast(a.accent, t(bg)), `accent on --${bg}`).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(a.accent, a.soft), 'accent on its tint').toBeGreaterThanOrEqual(4.5)
+        expect(contrast(a.accent, a.wash), 'accent on its wash').toBeGreaterThanOrEqual(4.5)
+        // My row's tint carries figures (AAA) and its labels (AA); the wash is a moment, large figures (4.5).
+        for (const fg of ['ink', 'under', 'over'])
+          expect(contrast(t(fg), a.soft), `--${fg} on its tint`).toBeGreaterThanOrEqual(7)
+        expect(contrast(t('ink-2'), a.soft), '--ink-2 on its tint').toBeGreaterThanOrEqual(4.5)
+        for (const fg of ['ink-2', 'under', 'over'])
+          expect(contrast(t(fg), a.wash), `--${fg} on its wash`).toBeGreaterThanOrEqual(4.5)
+      },
+    )
+    it.each(ACCENTS.map((a) => [a.name, a.id]))(
+      `%s is ${APART} or more ΔE2000 from every semantic color`,
+      (_name, id) => {
+        const a = accent(theme, id).accent
+        for (const s of SEMANTIC)
+          expect(deltaE2000(a, hex(theme, s)), `${id} against --${s}`).toBeGreaterThanOrEqual(APART)
+      },
+    )
     it('the six are told apart from each other', () => {
       const values = ACCENTS.map((a) => accent(theme, a.id).accent)
-      for (let i = 0; i < values.length; i++) for (let j = i + 1; j < values.length; j++) expect(deltaE2000(values[i]!, values[j]!), `${ACCENTS[i]!.id} and ${ACCENTS[j]!.id}`).toBeGreaterThanOrEqual(APART)
+      for (let i = 0; i < values.length; i++)
+        for (let j = i + 1; j < values.length; j++)
+          expect(deltaE2000(values[i]!, values[j]!), `${ACCENTS[i]!.id} and ${ACCENTS[j]!.id}`).toBeGreaterThanOrEqual(
+            APART,
+          )
     })
   })
 }
 
 describe('the dark theme, written twice (VIS-11)', () => {
-  it('the phone\'s setting and «Oscuro» declare the same sheet, word for word', () => {
+  it("the phone's setting and «Oscuro» declare the same sheet, word for word", () => {
     expect(block("  :root:not([data-theme='light'])")).toBe(block("  :root[data-theme='dark']"))
-    for (const a of ACCENTS.slice(1)) expect(block(`  :root:not([data-theme='light']) [data-accent='${a.id}']:not([data-theme='light'])`), a.id).toBe(block(`  :root[data-theme='dark'] [data-accent='${a.id}']:not([data-theme='light'])`))
+    for (const a of ACCENTS.slice(1))
+      expect(block(`  :root:not([data-theme='light']) [data-accent='${a.id}']:not([data-theme='light'])`), a.id).toBe(
+        block(`  :root[data-theme='dark'] [data-accent='${a.id}']:not([data-theme='light'])`),
+      )
   })
   it('redefines every color the light theme has', () => {
     expect([...LIGHT.keys()].filter((k) => !DARK.has(k))).toEqual([])
   })
   it('more contrast is written twice too, after both themes (A11Y-19)', () => {
-    const lines = (b: string) => b.split('\n').map((l) => l.trim()).filter(Boolean)
+    const lines = (b: string) =>
+      b
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
     expect(lines(block("  :root:not([data-contrast='normal'])"))).toEqual(lines(block(":root[data-contrast='more']")))
     expect(css.lastIndexOf(':root[data-contrast')).toBeGreaterThan(css.lastIndexOf("[data-theme='dark']"))
   })
@@ -172,7 +208,8 @@ describe('tokens.css, the board and the accents’ mirrors', () => {
     expect(contrast(hex('light', fg), hex('light', bg))).toBeGreaterThanOrEqual(min)
   })
   it('every chart series reads against the card stock (3:1, graphics)', () => {
-    for (let i = 1; i <= 12; i++) expect(contrast(hex('light', `chart-${i}`), hex('light', 'bg')), `--chart-${i}`).toBeGreaterThanOrEqual(3)
+    for (let i = 1; i <= 12; i++)
+      expect(contrast(hex('light', `chart-${i}`), hex('light', 'bg')), `--chart-${i}`).toBeGreaterThanOrEqual(3)
   })
   it('accents.ts, [data-accent] and --chart-1..6 hold the same light values', () => {
     ACCENTS.forEach((a, i) => {

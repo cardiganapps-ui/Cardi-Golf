@@ -24,7 +24,13 @@ for (const [width, height] of [
         const s = getComputedStyle(name)
         const avatar = el.querySelector<HTMLElement>('.avatar')!
         const a = avatar.getBoundingClientRect()
-        return { size: parseFloat(s.fontSize), weight: Number(s.fontWeight), nameHeight: name.getBoundingClientRect().height, avatar: Math.max(a.width, a.height), fill: getComputedStyle(avatar).backgroundColor }
+        return {
+          size: parseFloat(s.fontSize),
+          weight: Number(s.fontWeight),
+          nameHeight: name.getBoundingClientRect().height,
+          avatar: Math.max(a.width, a.height),
+          fill: getComputedStyle(avatar).backgroundColor,
+        }
       }),
     )
     for (const l of looks) {

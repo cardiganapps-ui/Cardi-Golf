@@ -51,21 +51,35 @@ export function preRoundInfo(data: TournamentData, playerId: string | null, show
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const groups = snapshot.groups.filter((g) => g.roundId === round.id).sort((a, b) => a.number - b.number)
   const mine = playerId ? groups.find((g) => g.playerIds.includes(playerId)) : undefined
-  const times = groups.map((g) => g.teeTime).filter((x): x is string => !!x).sort()
+  const times = groups
+    .map((g) => g.teeTime)
+    .filter((x): x is string => !!x)
+    .sort()
   const firstTee = times[0] ?? null
   const course = snapshot.courses.find((c) => c.id === round.courseId)?.name ?? null
   const pr = playerId ? state.core.rounds[round.id]?.[playerId] : undefined
   const base = playerId ? state.core.handicaps[playerId] : undefined
   // His handicap for the day, once the tournament has handicaps at all: from the base to the day's playing handicap.
   const hasHandicaps = Object.values(state.core.handicaps).some((h) => h.base > 0)
-  const hcp = pr && hasHandicaps ? { value: pr.playingHcp, why: [base?.why, pr.playingHcpWhy].filter((w): w is Explanation => !!w) } : null
+  const hcp =
+    pr && hasHandicaps
+      ? { value: pr.playingHcp, why: [base?.why, pr.playingHcpWhy].filter((w): w is Explanation => !!w) }
+      : null
 
   let owes: PreRoundInfo['owes'] = null
   if (playerId && showMoney) {
     const mineAccounts = state.money.accounts.filter((a) => a.from === playerId && a.owed > 0)
     if (mineAccounts.length) {
       const label = (k: PaymentKind) =>
-        k === 'entry' ? t.moneyScreen.owesEntry : k === 'calcutta' ? settings.modules.auction.label : k === 'buyback' ? t.moneyScreen.owesBuyback : k === 'side' ? t.moneyScreen.owesSide : t.moneyScreen.owesBet
+        k === 'entry'
+          ? t.moneyScreen.owesEntry
+          : k === 'calcutta'
+            ? settings.modules.auction.label
+            : k === 'buyback'
+              ? t.moneyScreen.owesBuyback
+              : k === 'side'
+                ? t.moneyScreen.owesSide
+                : t.moneyScreen.owesBet
       const byKind = new Map<PaymentKind, number>()
       for (const a of mineAccounts) if (collectible(a)) byKind.set(a.kind, (byKind.get(a.kind) ?? 0) + a.due)
       const total = [...byKind.values()].reduce((n, x) => n + x, 0)
@@ -77,10 +91,20 @@ export function preRoundInfo(data: TournamentData, playerId: string | null, show
     roundId: round.id,
     day: round.number,
     days: Math.max(settings.rounds, playing.length),
-    date: round.date && /^\d{4}-\d{2}-\d{2}$/.test(round.date) ? dayFormat.format(new Date(`${round.date}T12:00:00Z`)) : null,
+    date:
+      round.date && /^\d{4}-\d{2}-\d{2}$/.test(round.date)
+        ? dayFormat.format(new Date(`${round.date}T12:00:00Z`))
+        : null,
     course,
     at: round.date ? { date: round.date, time: mine?.teeTime ?? firstTee } : null,
-    group: mine ? { number: mine.number, teeTime: mine.teeTime, startHole: mine.startHole, with: mine.playerIds.filter((id) => id !== playerId).map((id) => byId.get(id)?.displayName ?? '?') } : null,
+    group: mine
+      ? {
+          number: mine.number,
+          teeTime: mine.teeTime,
+          startHole: mine.startHole,
+          with: mine.playerIds.filter((id) => id !== playerId).map((id) => byId.get(id)?.displayName ?? '?'),
+        }
+      : null,
     noGroup: !!playerId && !mine && !!byId.get(playerId),
     firstTee: mine ? null : firstTee,
     tee: pr?.tee?.name ?? null,

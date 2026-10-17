@@ -13,7 +13,19 @@ import { Lines } from './ReviewCard'
 import styles from './Setup.module.css'
 import { useWide } from '../../../lib/useWide'
 
-export function WizardPreview({ name, tagline, settings, check, step }: { name: string; tagline: string; settings: TournamentSettings; check: PrizeCheck | null; step: number }) {
+export function WizardPreview({
+  name,
+  tagline,
+  settings,
+  check,
+  step,
+}: {
+  name: string
+  tagline: string
+  settings: TournamentSettings
+  check: PrizeCheck | null
+  step: number
+}) {
   const W = t.organizer.wizard
   if (!useWide()) return null
   return (

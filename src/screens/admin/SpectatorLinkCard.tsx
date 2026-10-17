@@ -18,7 +18,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { CopyButton, ErrorBox, Segmented, ShareButton, Spinner } from '../../components/ui'
-import { deleteSpectatorLink, saveSpectatorLink, spectatorLink, spectatorUrl, type SpectatorLink } from '../../data/spectator'
+import {
+  deleteSpectatorLink,
+  saveSpectatorLink,
+  spectatorLink,
+  spectatorUrl,
+  type SpectatorLink,
+} from '../../data/spectator'
 import { useTournament } from '../../data/tournamentStore'
 import { useTournamentCtx } from '../tournament/tournamentContext'
 import a from './Admin.module.css'
@@ -29,7 +35,11 @@ const S = t.spectator
 const MISSING = new Set(['PGRST202', '42883'])
 
 type Money = 'none' | 'money'
-type Load = { status: 'loading' } | { status: 'ready'; link: SpectatorLink | null } | { status: 'unavailable' } | { status: 'error'; error: unknown }
+type Load =
+  | { status: 'loading' }
+  | { status: 'ready'; link: SpectatorLink | null }
+  | { status: 'unavailable' }
+  | { status: 'error'; error: unknown }
 
 export function SpectatorLinkCard() {
   const { tournamentId } = useTournamentCtx()
@@ -43,7 +53,11 @@ export function SpectatorLinkCard() {
     try {
       setLoad({ status: 'ready', link: await spectatorLink(tournamentId) })
     } catch (e) {
-      setLoad(MISSING.has((e as { code?: string } | null)?.code ?? '') ? { status: 'unavailable' } : { status: 'error', error: e })
+      setLoad(
+        MISSING.has((e as { code?: string } | null)?.code ?? '')
+          ? { status: 'unavailable' }
+          : { status: 'error', error: e },
+      )
     }
   }, [tournamentId])
   useEffect(() => {
@@ -87,7 +101,10 @@ export function SpectatorLinkCard() {
               { value: 'money', label: S.withMoney },
             ]}
             onChange={(v) => {
-              if (!link) { setChoice(v); return; }
+              if (!link) {
+                setChoice(v)
+                return
+              }
               if (busy || v === shown) return
               // Money on: whoever already has the link sees it from now on, so it asks first.
               if (v === 'money') setAsk('money')
@@ -106,7 +123,12 @@ export function SpectatorLinkCard() {
                 </a>
               </div>
               <div className={a.chipRow}>
-                <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setAsk('rotate')}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAsk('rotate')}
+                >
                   {S.rotate}
                 </button>
                 <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => setAsk('off')}>
@@ -117,7 +139,12 @@ export function SpectatorLinkCard() {
           ) : (
             <>
               <p className={a.help}>{S.none}</p>
-              <button className="btn btn--secondary" type="button" disabled={busy} onClick={() => void save(() => saveSpectatorLink(tournamentId, choice === 'money', null), S.created)}>
+              <button
+                className="btn btn--secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => void save(() => saveSpectatorLink(tournamentId, choice === 'money', null), S.created)}
+              >
                 {S.create}
               </button>
             </>
@@ -148,7 +175,15 @@ export function SpectatorLinkCard() {
         }
         onClose={() => setAsk(null)}
       />
-      <ConfirmSheet open={ask === 'money'} title={S.moneyOnTitle} body={S.moneyOnBody} confirmLabel={S.withMoney} busy={busy} onConfirm={() => void save(() => saveSpectatorLink(tournamentId, true, link), S.moneyOn)} onClose={() => setAsk(null)} />
+      <ConfirmSheet
+        open={ask === 'money'}
+        title={S.moneyOnTitle}
+        body={S.moneyOnBody}
+        confirmLabel={S.withMoney}
+        busy={busy}
+        onConfirm={() => void save(() => saveSpectatorLink(tournamentId, true, link), S.moneyOn)}
+        onClose={() => setAsk(null)}
+      />
     </section>
   )
 }

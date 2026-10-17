@@ -91,13 +91,33 @@ function storedMe(me: Me & { isAdmin?: boolean }): Me {
  */
 async function findEntry(d: CacheDb, slugOrCode: string): Promise<CachedEntry | undefined> {
   const code = slugOrCode.toUpperCase()
-  return (await d.entries.get(slugOrCode)) ?? (await d.entries.filter((e) => e.lookup.slug === slugOrCode || e.lookup.joinCode?.toUpperCase() === code).first())
+  return (
+    (await d.entries.get(slugOrCode)) ??
+    (await d.entries.filter((e) => e.lookup.slug === slugOrCode || e.lookup.joinCode?.toUpperCase() === code).first())
+  )
 }
 
 /** The snapshot's lists. Each is there in what this build saves; one an older build saved before its table existed is not. */
 const LISTS = [
-  'players', 'courses', 'rounds', 'groups', 'roundTees', 'pairs', 'teams', 'scores', 'snakeTiebreaks', 'cardSignatures', 'handicapOverrides',
-  'calcuttaLots', 'calcuttaBids', 'calcuttaBuybacks', 'payments', 'gameEntries', 'holeAwards', 'gameResults', 'moneyAdjustments',
+  'players',
+  'courses',
+  'rounds',
+  'groups',
+  'roundTees',
+  'pairs',
+  'teams',
+  'scores',
+  'snakeTiebreaks',
+  'cardSignatures',
+  'handicapOverrides',
+  'calcuttaLots',
+  'calcuttaBids',
+  'calcuttaBuybacks',
+  'payments',
+  'gameEntries',
+  'holeAwards',
+  'gameResults',
+  'moneyAdjustments',
 ] as const satisfies ReadonlyArray<keyof Snapshot>
 const SavedSnapshot = z.looseObject({
   tournament: z.looseObject({ id: z.string(), slug: z.string(), name: z.string() }),
@@ -124,7 +144,9 @@ export function savedSnapshot(v: unknown): Snapshot | null {
   return (missing.length ? { ...snap, ...Object.fromEntries(missing.map((k) => [k, []])) } : snap) as Snapshot
 }
 
-export async function readCached(slugOrCode: string): Promise<{ entry: CachedEntry; snapshot: Snapshot; savedAt: number } | null> {
+export async function readCached(
+  slugOrCode: string,
+): Promise<{ entry: CachedEntry; snapshot: Snapshot; savedAt: number } | null> {
   try {
     const d = getDb()
     if (!d) return null
@@ -182,7 +204,9 @@ export async function clearPinEntriesExcept(tournamentId: string): Promise<void>
   try {
     const d = getDb()
     if (!d) return
-    const gone = (await d.entries.toArray()).filter((e) => e.tournamentId !== tournamentId && e.me.via === 'device' && !e.me.isOrganizer).map((e) => e.tournamentId)
+    const gone = (await d.entries.toArray())
+      .filter((e) => e.tournamentId !== tournamentId && e.me.via === 'device' && !e.me.isOrganizer)
+      .map((e) => e.tournamentId)
     for (const tid of new Set(gone)) await clearCached(tid)
   } catch {
     /* ignore */

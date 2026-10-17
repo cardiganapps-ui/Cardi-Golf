@@ -36,7 +36,10 @@ export async function requireCourseManager(req: VercelRequest, res: VercelRespon
     res.status(401).json({ error: 'Inicia sesión para usar esta función.', code: 'unauthorized' })
     return false
   }
-  const sb = createClient<Database>(url, anon, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${token}` } } })
+  const sb = createClient<Database>(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  })
   const { data, error } = await sb.rpc('can_manage_courses')
   if (error || data !== true) {
     res.status(403).json({ error: 'Solo el Comité puede cargar campos.', code: 'forbidden' })

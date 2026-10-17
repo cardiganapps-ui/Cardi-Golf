@@ -20,9 +20,18 @@ const SHOTS = [
 
 mkdirSync('public/screenshots', { recursive: true })
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined })
-const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: SCALE, isMobile: true, hasTouch: true, reducedMotion: 'reduce', serviceWorkers: 'block' })
+const context = await browser.newContext({
+  viewport: PHONE,
+  deviceScaleFactor: SCALE,
+  isMobile: true,
+  hasTouch: true,
+  reducedMotion: 'reduce',
+  serviceWorkers: 'block',
+})
 // No server: every Supabase call is answered empty, as in the browser suite (e2e/fixtures/base.ts).
-await context.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+await context.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) =>
+  r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+)
 // The install card is for a phone that has not installed the app: the shots are of the app installed.
 await context.addInitScript(() => localStorage.setItem('cardi-golf:installed', '1'))
 const page = await context.newPage()

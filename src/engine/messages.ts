@@ -66,7 +66,15 @@ export interface MsgParams {
   // ---- A hole in strokes (formats/strokePlay.ts) -------------------------
   'strokes.title': { strokes: number; net: boolean }
   'strokes.pickedUp': { par: number; net: boolean; received: number; si: number; counted: number; toPar: number }
-  'strokes.played': { gross: number; par: number; net: boolean; received: number; si: number; counted: number; toPar: number }
+  'strokes.played': {
+    gross: number
+    par: number
+    net: boolean
+    received: number
+    si: number
+    counted: number
+    toPar: number
+  }
   'strokes.pickupRule': { par: number; received: number }
   'strokes.pickupNet': { par: number; received: number; counted: number }
   'strokes.net': { gross: number; received: number; counted: number }
@@ -119,7 +127,14 @@ export interface MsgParams {
 
   // ---- Places and prizes (core/ranking.ts, modules/individual) -----------
   /** A game's places with a prize nobody filled, once it is over: `count` entrants (of `unit`) had a result. */
-  'rank.unfilled': { label: Name; day: number | null; places: number[]; count: number; unit: 'player' | 'team' | 'pair'; amount: number }
+  'rank.unfilled': {
+    label: Name
+    day: number | null
+    places: number[]
+    count: number
+    unit: 'player' | 'team' | 'pair'
+    amount: number
+  }
   'prize.place': { place: number; amount: number }
   'prize.tie': { n: number; place: number; places: number[]; total: number }
   'prize.tieSplit': { total: number; n: number; each: number; rounding: number }
@@ -135,7 +150,15 @@ export interface MsgParams {
   'countback.matchShare': Record<string, never>
   'countback.matchNone': { day: number; over: boolean }
   'countback.matchSame': { day: number; done: boolean; aName: Msg; a: number; bName: Msg; b: number }
-  'countback.matchSides': { day: number; aName: Msg; aSide: MatchSide; a: number; bName: Msg; bSide: MatchSide; b: number }
+  'countback.matchSides': {
+    day: number
+    aName: Msg
+    aSide: MatchSide
+    a: number
+    bName: Msg
+    bSide: MatchSide
+    b: number
+  }
 
   // ---- The side games (modules/*) ----------------------------------------
   'pairs.notPairs': Record<string, never>
@@ -193,7 +216,16 @@ export interface MsgParams {
   'bet.net': { gross: number; back: number; winner: Name; amount: number }
   'bet.pays': { payer: Name; amount: number }
   /** A match's bet: `segment` its label («Ida»), `day` when the game covers several. */
-  'match.bet': { day: number | null; segment: Msg; press: number; from: number; side: Name[]; up: number; decided: boolean; stake: number }
+  'match.bet': {
+    day: number | null
+    segment: Msg
+    press: number
+    from: number
+    side: Name[]
+    up: number
+    decided: boolean
+    stake: number
+  }
   'match.invalid': { label: Name; n: number }
   'contest.disputed': { label: Name; holes: number[] }
 
@@ -381,7 +413,12 @@ export interface MsgParams {
   'rules.auctionOne': { tiers: string[] }
   'rules.auctionOwed': Record<string, never>
   /** A Calcutta slot's name: a place, the best of a tier, or last place (its label). */
-  'rules.slot': { slot: 'place' | 'bestOfTier' | 'lastPlace'; place: number | null; tier: string | null; lastPlace: Name }
+  'rules.slot': {
+    slot: 'place' | 'bestOfTier' | 'lastPlace'
+    place: number | null
+    tier: string | null
+    lastPlace: Name
+  }
   'rules.cardsEnter': Record<string, never>
   'rules.cards': { mode: 'pairs' | 'marker' | 'none' }
   'rules.governance': Record<string, never>
@@ -400,7 +437,13 @@ export interface MsgParams {
   'pool.rest': { split: Array<{ pct: number; amount: number }> }
   'pool.house': Record<string, never>
   /** A side pot: `n` × buy-in, and how it pays (`split` for a game paid by places). */
-  'pool.side': { n: number; buyIn: number; pot: number; type: 'skins' | 'lowScore' | 'eventPot' | 'match' | 'contest' | 'custom'; split: number[] }
+  'pool.side': {
+    n: number
+    buyIn: number
+    pot: number
+    type: 'skins' | 'lowScore' | 'eventPot' | 'match' | 'contest' | 'custom'
+    split: number[]
+  }
   /** A bet's stake and what it is per. */
   'pool.bet': { stake: number; per: StakeUnit }
   'pool.places': { places: number; reachable: number; unit: 'player' | 'team' | 'pair' }
@@ -460,7 +503,12 @@ export interface MsgParams {
   'unassigned.held': { game: Name; day: number; group: number }
   'unassigned.heldNote': { hole: number }
   /** A Calcutta slot as its payout names it: «Campeón», «3.º lugar», «Mejor C», last place's label; or the pot's rounding. */
-  'auction.slot': { slot: 'place' | 'bestOfTier' | 'lastPlace' | 'rounding'; place: number | null; tier: string | null; lastPlace: Name }
+  'auction.slot': {
+    slot: 'place' | 'bestOfTier' | 'lastPlace' | 'rounding'
+    place: number | null
+    tier: string | null
+    lastPlace: Name
+  }
   /** Slots a tie across places shares: «Campeón + Subcampeón». */
   'auction.slots': { slots: Msg[] }
   /** An entrant with no name of its own: a team by its number, a pair by its two players. */
@@ -524,7 +572,8 @@ export type ContestKind = 'closest' | 'longDrive' | 'greenie' | 'sandy' | 'custo
 /** How a handicap is rounded. */
 export type Rounding = 'halfUp' | 'halfDown' | 'nearestEven' | 'floor' | 'ceil'
 /** The golf words the Reglamento explains. */
-export type GlossaryWord = 'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford' | 'pickUp' | 'putts' | 'tee' | 'tiebreak' | 'buyback'
+export type GlossaryWord =
+  'par' | 'handicap' | 'strokeIndex' | 'net' | 'stableford' | 'pickUp' | 'putts' | 'tee' | 'tiebreak' | 'buyback'
 /** What a direct bet's stake is per: a Nassau's segment, a match, a skin, a three-putt, each event, a hole won, a loser. */
 export type StakeUnit = 'segment' | 'match' | 'skin' | 'threePutt' | 'each' | 'holeWon' | 'loser'
 

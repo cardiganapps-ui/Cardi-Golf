@@ -61,7 +61,13 @@ export const PlayerRow = memo(function PlayerRow(p: {
           </span>
           {/* Outside the name's clipped box, so it slides from the old holder's row to the new one's (MOT-07). */}
           {p.holdsSnake && (
-            <motion.span layoutId={p.snakeLayoutId} className={styles.snakeMark} role="img" aria-label={S.snakeHolder(p.snakeLabel)} transition={easeSlow}>
+            <motion.span
+              layoutId={p.snakeLayoutId}
+              className={styles.snakeMark}
+              role="img"
+              aria-label={S.snakeHolder(p.snakeLabel)}
+              transition={easeSlow}
+            >
               <IconSnake size={16} />
             </motion.span>
           )}
@@ -72,8 +78,25 @@ export const PlayerRow = memo(function PlayerRow(p: {
         </span>
       </div>
       <div className={styles.controls}>
-        <Stepper label={S.strokesOf(name)} quiet value={d.strokes} par={h.par} min={1} max={15} disabled={p.locked || d.pickedUp} onChange={(v) => p.onDraft(id, { strokes: v, putts: Math.min(d.putts, v) })} />
-        <Stepper label={S.puttsOf(name)} quiet value={d.putts} min={0} max={d.pickedUp ? 15 : d.strokes} disabled={p.locked} onChange={(v) => p.onDraft(id, { putts: v })} />
+        <Stepper
+          label={S.strokesOf(name)}
+          quiet
+          value={d.strokes}
+          par={h.par}
+          min={1}
+          max={15}
+          disabled={p.locked || d.pickedUp}
+          onChange={(v) => p.onDraft(id, { strokes: v, putts: Math.min(d.putts, v) })}
+        />
+        <Stepper
+          label={S.puttsOf(name)}
+          quiet
+          value={d.putts}
+          min={0}
+          max={d.pickedUp ? 15 : d.strokes}
+          disabled={p.locked}
+          onChange={(v) => p.onDraft(id, { putts: v })}
+        />
         <button
           type="button"
           className={styles.pickup}

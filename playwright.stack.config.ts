@@ -21,7 +21,9 @@ import { PHONE } from './e2e/stack/phone'
 assertLocal()
 
 // The sandbox ships its own Chromium; CI installs Playwright's.
-const chromium = process.env.CHROMIUM || (!process.env.CI && existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined)
+const chromium =
+  process.env.CHROMIUM ||
+  (!process.env.CI && existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined)
 
 export default defineConfig({
   testDir: 'e2e/stack',
@@ -34,7 +36,9 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   outputDir: 'test-results-stack',
   // In CI, `github` turns every failure into an annotation on the check run: readable through the API without the logs.
-  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never', outputFolder: 'playwright-report-stack' }]] : 'list',
+  reporter: process.env.CI
+    ? [['list'], ['github'], ['html', { open: 'never', outputFolder: 'playwright-report-stack' }]]
+    : 'list',
   use: {
     ...PHONE,
     launchOptions: { executablePath: chromium },

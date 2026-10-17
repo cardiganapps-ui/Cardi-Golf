@@ -95,8 +95,12 @@ function mapHandicapInputs(v: unknown): HandicapInputs | null {
   return {
     handicapSource: source,
     baseHcp: base,
-    handicapIndex: x.handicap_index == null || !Number.isFinite(Number(x.handicap_index)) ? null : Number(x.handicap_index),
-    estimateInputs: Array.isArray(x.estimate_inputs) && x.estimate_inputs.length === 3 ? (x.estimate_inputs as Player['estimateInputs']) : null,
+    handicapIndex:
+      x.handicap_index == null || !Number.isFinite(Number(x.handicap_index)) ? null : Number(x.handicap_index),
+    estimateInputs:
+      Array.isArray(x.estimate_inputs) && x.estimate_inputs.length === 3
+        ? (x.estimate_inputs as Player['estimateInputs'])
+        : null,
   }
 }
 
@@ -164,7 +168,11 @@ export const mapGroup = (r: RowOf<'groups'>, members: RowOf<'group_members'>[]):
   playerIds: members.filter((m) => m.group_id === r.id).map((m) => m.player_id),
 })
 
-export const mapRoundTee = (r: RowOf<'round_tees'>): RoundTee => ({ roundId: r.round_id, playerId: r.player_id, teeId: r.tee_id })
+export const mapRoundTee = (r: RowOf<'round_tees'>): RoundTee => ({
+  roundId: r.round_id,
+  playerId: r.player_id,
+  teeId: r.tee_id,
+})
 
 export const mapPair = (r: RowOf<'pairs'>): Pair => ({
   id: r.id,
@@ -263,7 +271,11 @@ export const mapHoleAward = (r: RowOf<'hole_awards'>): HoleAward => ({
   source: r.source === 'comite' || r.source === 'group' ? r.source : r.group_id == null ? 'comite' : 'group',
 })
 
-export const mapGameResult = (r: RowOf<'game_results'>): GameResult => ({ gameId: r.game_id, playerId: r.player_id, share: Number(r.share) })
+export const mapGameResult = (r: RowOf<'game_results'>): GameResult => ({
+  gameId: r.game_id,
+  playerId: r.player_id,
+  share: Number(r.share),
+})
 
 export const mapPayment = (r: RowOf<'payments'>): Payment => ({
   id: r.id,

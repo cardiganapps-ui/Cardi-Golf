@@ -3,7 +3,14 @@
  * instead of freezing every queued score behind it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchWithTimeout, REQUEST_TIMEOUT_MS, RequestTimeoutError, serverAnswering, timeoutFor, UPLOAD_TIMEOUT_MS } from './fetchWithTimeout'
+import {
+  fetchWithTimeout,
+  REQUEST_TIMEOUT_MS,
+  RequestTimeoutError,
+  serverAnswering,
+  timeoutFor,
+  UPLOAD_TIMEOUT_MS,
+} from './fetchWithTimeout'
 
 /** A fetch that never answers, but rejects with the abort reason like browsers do. */
 function hangingFetch() {
@@ -30,13 +37,20 @@ describe('fetchWithTimeout', () => {
   })
 
   it('lets storage uploads take longer', async () => {
-    expect(timeoutFor('https://x.supabase.co/storage/v1/object/tournament-assets/t/logo.png', 'POST')).toBe(UPLOAD_TIMEOUT_MS)
-    expect(timeoutFor('https://x.supabase.co/storage/v1/object/public/tournament-assets/t/logo.png', 'GET')).toBe(REQUEST_TIMEOUT_MS)
+    expect(timeoutFor('https://x.supabase.co/storage/v1/object/tournament-assets/t/logo.png', 'POST')).toBe(
+      UPLOAD_TIMEOUT_MS,
+    )
+    expect(timeoutFor('https://x.supabase.co/storage/v1/object/public/tournament-assets/t/logo.png', 'GET')).toBe(
+      REQUEST_TIMEOUT_MS,
+    )
     expect(timeoutFor('https://x.supabase.co/rest/v1/rpc/claim_player', 'POST')).toBe(REQUEST_TIMEOUT_MS)
   })
 
   it('passes a normal answer through and clears its timer', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('[]', { status: 200 })),
+    )
     const res = await fetchWithTimeout('https://x.supabase.co/rest/v1/scores')
     expect(res.status).toBe(200)
     expect(vi.getTimerCount()).toBe(0)
@@ -65,8 +79,16 @@ describe('serverAnswering', () => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
-  const answers = (status: number) => vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status })))
-  const lost = () => vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))))
+  const answers = (status: number) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status })),
+    )
+  const lost = () =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))),
+    )
 
   it('an answer of any status is the server answering: a refusal, or a 500 from an auth server that is down', async () => {
     for (const status of [401, 500]) {
@@ -83,7 +105,9 @@ describe('serverAnswering', () => {
     answers(200)
     await fetchWithTimeout('https://x.supabase.co/rest/v1/scores')
     vi.stubGlobal('fetch', hangingFetch())
-    const stalled = expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores')).rejects.toBeInstanceOf(RequestTimeoutError)
+    const stalled = expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores')).rejects.toBeInstanceOf(
+      RequestTimeoutError,
+    )
     await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS)
     await stalled
     expect(serverAnswering()).toBe(false)
@@ -97,7 +121,9 @@ describe('serverAnswering', () => {
     await fetchWithTimeout('https://x.supabase.co/rest/v1/scores')
     vi.stubGlobal('fetch', hangingFetch())
     const ctrl = new AbortController()
-    const p = expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores', { signal: ctrl.signal })).rejects.toBe('stop')
+    const p = expect(fetchWithTimeout('https://x.supabase.co/rest/v1/scores', { signal: ctrl.signal })).rejects.toBe(
+      'stop',
+    )
     ctrl.abort('stop')
     await p
     expect(serverAnswering()).toBe(true)

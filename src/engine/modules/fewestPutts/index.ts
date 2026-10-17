@@ -99,7 +99,17 @@ export const fewestPuttsModule: GameModule<FewestPuttsState, 'fewestPutts'> = {
       const winners = { ...first, members: first.members.filter((id) => totals.get(id)!.holes === maxHoles) }
       for (const s of splitPrizes([winners], [ctx.settings.prizes.fewestPutts], nameOf)) {
         const w = totals.get(s.item)!
-        prizes[s.item] = { amount: s.amount, why: { ...s.why, steps: [msg('putts.total', { putts: w.putts, holes: w.holes }), ...(w.pickedUpHoles ? [msg('putts.pickups', { min: ctx.settings.pickupPuttsForFewestPutts })] : []), ...s.why.steps] } }
+        prizes[s.item] = {
+          amount: s.amount,
+          why: {
+            ...s.why,
+            steps: [
+              msg('putts.total', { putts: w.putts, holes: w.holes }),
+              ...(w.pickedUpHoles ? [msg('putts.pickups', { min: ctx.settings.pickupPuttsForFewestPutts })] : []),
+              ...s.why.steps,
+            ],
+          },
+        }
       }
     }
     return { rows, groups, prizes, final: isFinal(ctx, 'tournament') }

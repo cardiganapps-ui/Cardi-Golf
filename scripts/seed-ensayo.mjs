@@ -57,7 +57,9 @@ let ownerId = null
 }
 
 // Tournament.
-const settings = JSON.parse(await readFile(path.join(root, 'scripts', 'fixtures', 'settings-first-tournament.json'), 'utf8'))
+const settings = JSON.parse(
+  await readFile(path.join(root, 'scripts', 'fixtures', 'settings-first-tournament.json'), 'utf8'),
+)
 let { data: t } = await sb.from('tournaments').select('*').eq('slug', 'ensayo').maybeSingle()
 if (t && reset) {
   await sb.from('tournaments').delete().eq('id', t.id)
@@ -94,9 +96,14 @@ await sb.from('tournament_organizers').upsert({ tournament_id: t.id, auth_user_i
 try {
   const { default: sharp } = await import('sharp')
   const png = await readFile(path.join(root, 'assets', 'nacho-logo.png'))
-  const { data: webp, info } = await sharp(png).resize({ width: 720, height: 240, fit: 'inside', withoutEnlargement: true }).webp({ quality: 85 }).toBuffer({ resolveWithObject: true })
+  const { data: webp, info } = await sharp(png)
+    .resize({ width: 720, height: 240, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 85 })
+    .toBuffer({ resolveWithObject: true })
   const p = `${t.id}/logo-${info.width}x${info.height}-${Date.now()}.webp`
-  const { error } = await sb.storage.from('tournament-assets').upload(p, webp, { upsert: true, contentType: 'image/webp', cacheControl: '31536000' })
+  const { error } = await sb.storage
+    .from('tournament-assets')
+    .upload(p, webp, { upsert: true, contentType: 'image/webp', cacheControl: '31536000' })
   if (error) throw error
   const { data } = sb.storage.from('tournament-assets').getPublicUrl(p)
   await sb.from('tournaments').update({ logo_url: data.publicUrl }).eq('id', t.id)
@@ -107,19 +114,75 @@ try {
 
 // Course (placeholder until the real scorecards arrive).
 const PAR_72 = [
-  [4, 7], [4, 11], [3, 17], [5, 3], [4, 1], [4, 13], [3, 15], [4, 9], [5, 5],
-  [4, 8], [3, 18], [4, 2], [5, 12], [4, 4], [4, 10], [3, 16], [4, 6], [5, 14],
+  [4, 7],
+  [4, 11],
+  [3, 17],
+  [5, 3],
+  [4, 1],
+  [4, 13],
+  [3, 15],
+  [4, 9],
+  [5, 5],
+  [4, 8],
+  [3, 18],
+  [4, 2],
+  [5, 12],
+  [4, 4],
+  [4, 10],
+  [3, 16],
+  [4, 6],
+  [5, 14],
 ]
-let { data: course } = await sb.from('courses').select('id').eq('name', 'Campo de ensayo (par 72)').eq('created_by', ownerId).maybeSingle()
+let { data: course } = await sb
+  .from('courses')
+  .select('id')
+  .eq('name', 'Campo de ensayo (par 72)')
+  .eq('created_by', ownerId)
+  .maybeSingle()
 if (!course) {
-  const { data, error } = await sb.from('courses').insert({ name: 'Campo de ensayo (par 72)', location: 'Los Cabos (placeholder)', source: 'manual', created_by: ownerId }).select('id').single()
+  const { data, error } = await sb
+    .from('courses')
+    .insert({
+      name: 'Campo de ensayo (par 72)',
+      location: 'Los Cabos (placeholder)',
+      source: 'manual',
+      created_by: ownerId,
+    })
+    .select('id')
+    .single()
   if (error) die(error, 'insert course')
   course = data
-  const { data: tee, error: e2 } = await sb.from('tees').insert({ course_id: course.id, name: 'Azules', color: 'blue', rating: 72.0, slope: 125, par_total: 72, sort_order: 0 }).select('id').single()
+  const { data: tee, error: e2 } = await sb
+    .from('tees')
+    .insert({
+      course_id: course.id,
+      name: 'Azules',
+      color: 'blue',
+      rating: 72.0,
+      slope: 125,
+      par_total: 72,
+      sort_order: 0,
+    })
+    .select('id')
+    .single()
   if (e2) die(e2, 'insert tee')
-  const { data: tee2 } = await sb.from('tees').insert({ course_id: course.id, name: 'Rojas', color: 'red', rating: 68.5, slope: 115, par_total: 72, sort_order: 1 }).select('id').single()
+  const { data: tee2 } = await sb
+    .from('tees')
+    .insert({
+      course_id: course.id,
+      name: 'Rojas',
+      color: 'red',
+      rating: 68.5,
+      slope: 115,
+      par_total: 72,
+      sort_order: 1,
+    })
+    .select('id')
+    .single()
   for (const tid of [tee.id, tee2.id]) {
-    await sb.from('holes').insert(PAR_72.map(([par, si], i) => ({ tee_id: tid, number: i + 1, par, stroke_index: si, yards: 320 + i * 7 })))
+    await sb
+      .from('holes')
+      .insert(PAR_72.map(([par, si], i) => ({ tee_id: tid, number: i + 1, par, stroke_index: si, yards: 320 + i * 7 })))
   }
   console.log('course created')
 }
@@ -146,7 +209,18 @@ const { data: existing } = await sb.from('players').select('id, full_name').eq('
 const byName = new Map(existing.map((p) => [p.full_name, p.id]))
 const ids = []
 for (const [i, [full, short, tier, hcp]] of PLAYERS.entries()) {
-  const row = { tournament_id: t.id, full_name: full, display_name: short, tier, base_hcp: hcp, handicap_source: 'manual', default_tee_id: tier === 'D' ? red : blue, is_honoree: full === 'Diego Arámburu' ? false : false, is_admin: i === 8, sort_order: i }
+  const row = {
+    tournament_id: t.id,
+    full_name: full,
+    display_name: short,
+    tier,
+    base_hcp: hcp,
+    handicap_source: 'manual',
+    default_tee_id: tier === 'D' ? red : blue,
+    is_honoree: full === 'Diego Arámburu' ? false : false,
+    is_admin: i === 8,
+    sort_order: i,
+  }
   const id = byName.get(full)
   if (id) {
     await sb.from('players').update(row).eq('id', id)
@@ -179,7 +253,14 @@ for (const [n, date] of [
   [1, '2027-04-09'],
   [2, '2027-04-10'],
 ]) {
-  const { data, error } = await sb.from('rounds').upsert({ tournament_id: t.id, number: n, date, course_id: course.id, holes: 18, status: 'scheduled' }, { onConflict: 'tournament_id,number' }).select('id').single()
+  const { data, error } = await sb
+    .from('rounds')
+    .upsert(
+      { tournament_id: t.id, number: n, date, course_id: course.id, holes: 18, status: 'scheduled' },
+      { onConflict: 'tournament_id,number' },
+    )
+    .select('id')
+    .single()
   if (error) die(error, 'upsert round')
   rounds.push(data.id)
 }
@@ -190,7 +271,10 @@ const must = (r, ctx) => {
   if (r.error) die(r.error, ctx)
   return r.data
 }
-const { count: pairCount } = await sb.from('pairs').select('*', { count: 'exact', head: true }).eq('tournament_id', t.id)
+const { count: pairCount } = await sb
+  .from('pairs')
+  .select('*', { count: 'exact', head: true })
+  .eq('tournament_id', t.id)
 if (!pairCount) {
   const pairs = [
     ['Los Uno', P(0), P(9), 'AD'],
@@ -200,7 +284,19 @@ if (!pairCount) {
     ['Los Cinco', P(4), P(7), 'BC'],
     ['Los Seis', P(5), P(8), 'BC'],
   ]
-  must(await sb.from('pairs').insert(pairs.map(([name, a, b, kind]) => ({ tournament_id: t.id, name, player1_id: a, player2_id: b, kind, drawn_at: new Date().toISOString() }))), 'insert pairs')
+  must(
+    await sb.from('pairs').insert(
+      pairs.map(([name, a, b, kind]) => ({
+        tournament_id: t.id,
+        name,
+        player1_id: a,
+        player2_id: b,
+        kind,
+        drawn_at: new Date().toISOString(),
+      })),
+    ),
+    'insert pairs',
+  )
   console.log('pairs created')
 }
 for (const rid of rounds) {
@@ -214,10 +310,21 @@ for (const rid of rounds) {
   for (const [g, members] of plan) {
     let grp = groups.find((x) => x.number === g)
     if (!grp) {
-      grp = must(await sb.from('groups').insert({ round_id: rid, number: g, tee_time: `09:${String((g - 1) * 10).padStart(2, '0')}`, start_hole: 1 }).select('id, number').single(), 'insert group')
+      grp = must(
+        await sb
+          .from('groups')
+          .insert({ round_id: rid, number: g, tee_time: `09:${String((g - 1) * 10).padStart(2, '0')}`, start_hole: 1 })
+          .select('id, number')
+          .single(),
+        'insert group',
+      )
     }
     const { count } = await sb.from('group_members').select('*', { count: 'exact', head: true }).eq('group_id', grp.id)
-    if (!count) must(await sb.from('group_members').insert(members.map((pid) => ({ group_id: grp.id, player_id: pid }))), 'insert group members')
+    if (!count)
+      must(
+        await sb.from('group_members').insert(members.map((pid) => ({ group_id: grp.id, player_id: pid }))),
+        'insert group members',
+      )
   }
 }
 console.log('groups ready')

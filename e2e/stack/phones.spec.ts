@@ -16,9 +16,13 @@ const claims = (name: string) =>
     join public.players p on p.id = c.player_id join public.tournaments t on t.id = p.tournament_id
     where t.slug = ${lit(SLUGS.phones)} and p.display_name = ${lit(name)} and c.released_at is null`)
 
-test('two phones with Ana’s PIN are two claims of hers, each its kind from the request, and the history names the phone that wrote', async ({ join }) => {
+test('two phones with Ana’s PIN are two claims of hers, each its kind from the request, and the history names the phone that wrote', async ({
+  join,
+}) => {
   const first = await join(SLUGS.phones, 'Ana')
-  expect(claims('Ana'), 'the PIN typed on the first phone, read as the computer Chromium says it is').toEqual(['desktop'])
+  expect(claims('Ana'), 'the PIN typed on the first phone, read as the computer Chromium says it is').toEqual([
+    'desktop',
+  ])
   const second = await join(SLUGS.phones, 'Ana')
   expect(claims('Ana'), 'a second phone with her PIN is a second claim').toEqual(['desktop', 'desktop'])
   const uid = (await storedSession(second.page))?.user?.id

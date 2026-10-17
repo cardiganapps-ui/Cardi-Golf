@@ -17,10 +17,17 @@ const SIZES: Array<[string, number, number]> = [
 ]
 const sound = async (page: import('@playwright/test').Page, pageErrors: string[], width: number) => {
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   expect(await page.evaluate(() => window.innerWidth)).toBe(width)
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  expect(results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)).toEqual([])
+  expect(
+    results.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`),
+  ).toEqual([])
 }
 /** The widest line any paragraph on the page sets, in its own font's «0»s. */
 const widestMeasure = (page: import('@playwright/test').Page) =>
@@ -71,7 +78,10 @@ for (const [what, width, height] of SIZES) {
       expect(f.x, 'the feed stands beside the board').toBeGreaterThanOrEqual(b.x + b.width - 1)
       expect(f.y, 'the feed starts near the top, not under the board').toBeLessThan(b.y + b.height / 2)
       // The tabs sit together, not spread across the screen.
-      const tabs = await page.getByRole('navigation', { name: 'Secciones' }).getByRole('link').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()))
+      const tabs = await page
+        .getByRole('navigation', { name: 'Secciones' })
+        .getByRole('link')
+        .evaluateAll((els) => els.map((e) => e.getBoundingClientRect()))
       const span = tabs.at(-1)!.right - tabs[0].left
       expect(span, 'the tab bar spans').toBeLessThanOrEqual(720)
       expect(await widestMeasure(page)).toBeLessThanOrEqual(72)

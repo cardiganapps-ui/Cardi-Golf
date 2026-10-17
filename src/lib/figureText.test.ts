@@ -8,7 +8,22 @@ import type { FeedEvent } from '../engine/core/feed'
 import { feedText, holeMark } from './figureText'
 
 const hole = (over: Partial<HoleResult>): HoleResult =>
-  ({ hole: 7, par: 4, strokeIndex: 3, yards: null, strokesReceived: 1, gross: 4, net: 3, points: 3, putts: 2, pickedUp: false, played: true, disputed: false, why: { title: '', steps: [] }, ...over }) as HoleResult
+  ({
+    hole: 7,
+    par: 4,
+    strokeIndex: 3,
+    yards: null,
+    strokesReceived: 1,
+    gross: 4,
+    net: 3,
+    points: 3,
+    putts: 2,
+    pickedUp: false,
+    played: true,
+    disputed: false,
+    why: { title: '', steps: [] },
+    ...over,
+  }) as HoleResult
 
 describe('holeMark', () => {
   it('Stableford marks on points: three or more is good, none is bad', () => {
@@ -56,7 +71,7 @@ describe('feedText', () => {
     expect(feedText({ ...e, scoring: 'points' }, name)).toMatch(/3 pts/)
   })
 
-  it('a new leader is announced with the board\'s own figure', () => {
+  it("a new leader is announced with the board's own figure", () => {
     const e: FeedEvent = { ...base, kind: 'leadChange', figure: '−3', scoring: 'net' }
     expect(feedText(e, name)).toBe('¡Cambio de líder! Nacho toma la punta con −3')
   })

@@ -22,7 +22,10 @@ import { words } from '../testing/words'
 function played(edit?: (snap: Snapshot) => void, settings: TournamentSettings = S) {
   const snap = makeFirstTournament()
   const holes = snap.courses[0]!.tees[0]!.holes
-  for (const rid of ['r1', 'r2']) for (const p of snap.players) for (const h of holes) snap.scores.push(score(rid, p.id, h.number, h.par + 1, p.id === 'p5' && h.number === 1 ? 1 : 2))
+  for (const rid of ['r1', 'r2'])
+    for (const p of snap.players)
+      for (const h of holes)
+        snap.scores.push(score(rid, p.id, h.number, h.par + 1, p.id === 'p5' && h.number === 1 ? 1 : 2))
   snap.rounds.forEach((r) => (r.status = 'finished'))
   edit?.(snap)
   return { snap, st: computeTournament(snap, settings) }
@@ -49,12 +52,17 @@ describe('a hole played without putts (MONEY-18)', () => {
     const { st } = played(noPutts)
     expect(st.flags.missingPutts).toEqual([{ roundId: 'r1', roundNumber: 1, playerId: 'p2', holes: TEN }])
     expect(puttingGames(S)).toEqual(['La Víbora', 'Menos putts'])
-    expect(words(st.flags.warnings)).toContain('Faltan putts: J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10). Hasta que el Comité los capture en Tarjetas, La Víbora y Menos putts no los cuentan.')
+    expect(words(st.flags.warnings)).toContain(
+      'Faltan putts: J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10). Hasta que el Comité los capture en Tarjetas, La Víbora y Menos putts no los cuentan.',
+    )
   })
 
   it('the tournament does not close on a guess, and closes once the putts are captured', () => {
     const { snap } = played(noPutts)
-    expect(close(snap).blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toContainEqual({ kind: 'missingPutts', text: 'Faltan los putts de 10 hoyos: captúralos en Comité, sección Tarjetas.' })
+    expect(close(snap).blockers.map((b) => ({ kind: b.kind, text: words(b.says) }))).toContainEqual({
+      kind: 'missingPutts',
+      text: 'Faltan los putts de 10 hoyos: captúralos en Comité, sección Tarjetas.',
+    })
     for (const s of snap.scores) s.putts ??= 2
     const st = computeTournament(snap, S)
     expect(st.flags.missingPutts).toEqual([])
@@ -90,7 +98,9 @@ describe('a hole played without putts (MONEY-18)', () => {
     const { snap, st } = played(noPutts, settings)
     expect(puttingGames(settings)).toEqual(['Tres putts'])
     expect(st.flags.missingPutts.map((m) => m.holes)).toEqual([TEN])
-    expect(words(st.flags.warnings)).toContain(t.missingPutts.warning(['J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10)'], ['Tres putts']))
+    expect(words(st.flags.warnings)).toContain(
+      t.missingPutts.warning(['J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10)'], ['Tres putts']),
+    )
     expect(close(snap, settings).blockers.map((b) => b.kind)).toContain('missingPutts')
   })
 
@@ -99,6 +109,8 @@ describe('a hole played without putts (MONEY-18)', () => {
       noPutts(snap)
       snap.scores.find((x) => x.roundId === 'r2' && x.playerId === 'p2' && x.hole === 18)!.putts = null
     })
-    expect(words(st.flags.warnings)).toContain('Faltan putts: J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10; día 2: hoyo 18). Hasta que el Comité los capture en Tarjetas, La Víbora y Menos putts no los cuentan.')
+    expect(words(st.flags.warnings)).toContain(
+      'Faltan putts: J2 (día 1: hoyos 1, 2, 3, 4, 5, 6, 7, 8, 9 y 10; día 2: hoyo 18). Hasta que el Comité los capture en Tarjetas, La Víbora y Menos putts no los cuentan.',
+    )
   })
 })

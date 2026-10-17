@@ -21,7 +21,14 @@ function Harness({ tabs }: { tabs?: boolean }) {
   const [v, setV] = useState<'a' | 'b' | 'c'>('a')
   return (
     <>
-      <Segmented value={v} options={[...OPTIONS]} onChange={setV} tabs={tabs} label="Qué día" panelId={tabs ? 'panel' : undefined} />
+      <Segmented
+        value={v}
+        options={[...OPTIONS]}
+        onChange={setV}
+        tabs={tabs}
+        label="Qué día"
+        panelId={tabs ? 'panel' : undefined}
+      />
       {tabs && <div role="tabpanel" id="panel" aria-labelledby={`panel-tab-${v}`} />}
     </>
   )
@@ -65,7 +72,15 @@ describe('Segmented (A11Y-17)', () => {
     it(`as tabs, brings the chosen tab into view${reduce ? ', at once under reduced motion' : ''}`, async () => {
       const scrollTo = vi.fn()
       const spy = vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(scrollTo)
-      const media = vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: reduce && q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList)
+      const media = vi.spyOn(window, 'matchMedia').mockImplementation(
+        (q: string) =>
+          ({
+            matches: reduce && q.includes('reduce'),
+            media: q,
+            addEventListener() {},
+            removeEventListener() {},
+          }) as unknown as MediaQueryList,
+      )
       render(<Harness tabs />)
       expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ behavior: 'auto' }))
       await act(async () => fireEvent.click(screen.getAllByRole('tab')[2]!))

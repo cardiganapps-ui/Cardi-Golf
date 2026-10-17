@@ -12,8 +12,14 @@ const account = vi.hoisted(() => ({
   sendProfileCode: vi.fn(async (_email: string) => 'signin' as const),
   continueWithGoogle: vi.fn(async (_next: string) => undefined),
 }))
-vi.mock('../../data/account', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/account')>()), ...account }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), myDeviceClaim: async () => null }))
+vi.mock('../../data/account', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/account')>()),
+  ...account,
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  myDeviceClaim: async () => null,
+}))
 
 import { useAuth } from '../../data/auth'
 import { t } from '../../i18n/es-MX'

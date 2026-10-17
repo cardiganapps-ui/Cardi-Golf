@@ -42,10 +42,25 @@ const row = (id: string) => within(screen.getByRole('group', { name: nameOf(id) 
 beforeEach(() => {
   useOutbox.setState({ queueRead: true })
   vi.spyOn(performance, 'now').mockImplementation(() => 100_000)
-  useTournament.setState({ tournamentId: 'fixture:minimal4-live', data: dataFromSnapshot(structuredClone(snap)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:minimal4-live',
+    data: dataFromSnapshot(structuredClone(snap)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/minimal4-live', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/minimal4-live',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <ScorecardScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -67,7 +82,11 @@ describe('a player nobody has changed reads «Sin capturar» (COPY-10)', () => {
     }
     const saved = holeOf('p2')
     expect(saved.played).toBe(true)
-    expect(row('p2').getByText(S.ptsLine(saved.points, saved.points > 0 ? netScoreName(saved.points) : null), { exact: false })).toBeTruthy()
+    expect(
+      row('p2').getByText(S.ptsLine(saved.points, saved.points > 0 ? netScoreName(saved.points) : null), {
+        exact: false,
+      }),
+    ).toBeTruthy()
     expect(screen.getAllByText(S.notCaptured, { exact: false })).toHaveLength(3)
   })
 

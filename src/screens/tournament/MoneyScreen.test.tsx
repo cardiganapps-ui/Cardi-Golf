@@ -19,7 +19,13 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-interface Write { from_player_id: string | null; to_player_id: string | null; amount: number; kind: string; paid: boolean }
+interface Write {
+  from_player_id: string | null
+  to_player_id: string | null
+  amount: number
+  kind: string
+  paid: boolean
+}
 const api = vi.hoisted(() => ({ writes: [] as Write[], gate: null as Promise<void> | null }))
 vi.mock('../../data/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../data/api')>()),
@@ -52,7 +58,16 @@ function mount(edit?: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: TID, data: dataFromSnapshot(snapshot) })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: TID,
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: { playerId: 'p9', isOrganizer: false, isComite: true },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <MoneyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -61,7 +76,16 @@ function mount(edit?: (s: Snapshot) => void) {
 }
 
 /** Leonel paid his first lot ($750) before buying two more ($500 and $1,000). */
-const paidFirstLot = (s: Snapshot) => void s.payments.push({ id: 'pay-cal-p11', fromPlayerId: 'p11', toPlayerId: null, amount: 750, kind: 'calcutta', paid: true, note: null })
+const paidFirstLot = (s: Snapshot) =>
+  void s.payments.push({
+    id: 'pay-cal-p11',
+    fromPlayerId: 'p11',
+    toPlayerId: null,
+    amount: 750,
+    kind: 'calcutta',
+    paid: true,
+    note: null,
+  })
 
 // The heading carries the count and total once something is owed (COPY-07): «Quién debe qué: 3 pendientes, $5,250».
 const owedList = () => within(screen.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }).closest('section')!)
@@ -74,11 +98,13 @@ function paidList() {
 const markButtons = () => owedList().getAllByRole('button', { name: new RegExp(`^${M.markPaid}: `) })
 /** «Leonel le paga al banco» (COPY-08: the bank is no one's name). */
 const toBank = (who: string, paid = false) => M.payText(M.payWords(who, null, paid))
-const leonelOwes = (amount: string) => owedList().queryByRole('button', { name: new RegExp(`^${M.markPaid}: ${toBank('Leonel')}, .*: \\${amount}$`) })
+const leonelOwes = (amount: string) =>
+  owedList().queryByRole('button', { name: new RegExp(`^${M.markPaid}: ${toBank('Leonel')}, .*: \\${amount}$`) })
 /** Every promise the screen chained, settled. */
-const settle = () => act(async () => {
-  for (let i = 0; i < 10; i++) await Promise.resolve()
-})
+const settle = () =>
+  act(async () => {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  })
 const lastToast = (msg: string) => [...toasts].reverse().find((x) => x.msg === msg)!
 
 beforeEach(() => {
@@ -93,15 +119,25 @@ describe('Dinero: a payment made in parts (UX-21)', () => {
     mount(paidFirstLot)
     expect(leonelOwes('$1,500')).toBeTruthy()
     // «Ya pagaron» lists what he paid, even though he still owes the rest.
-    const toggle = paidList().getByRole('button', { name: new RegExp(`^${M.paid}: ${toBank('Leonel', true)}, .*: \\$750$`) })
+    const toggle = paidList().getByRole('button', {
+      name: new RegExp(`^${M.paid}: ${toBank('Leonel', true)}, .*: \\$750$`),
+    })
     fireEvent.click(toggle)
     await settle()
-    expect(api.writes).toEqual([{ from_player_id: 'p11', to_player_id: null, amount: 750, kind: 'calcutta', paid: false }])
+    expect(api.writes).toEqual([
+      { from_player_id: 'p11', to_player_id: null, amount: 750, kind: 'calcutta', paid: false },
+    ])
     expect(leonelOwes('$2,250')).toBeTruthy()
 
     act(() => lastToast(M.unmarkedPaid).action!.onClick())
     await settle()
-    expect(api.writes[1]).toEqual({ from_player_id: 'p11', to_player_id: null, amount: 750, kind: 'calcutta', paid: true })
+    expect(api.writes[1]).toEqual({
+      from_player_id: 'p11',
+      to_player_id: null,
+      amount: 750,
+      kind: 'calcutta',
+      paid: true,
+    })
     expect(leonelOwes('$1,500')).toBeTruthy()
   })
 
@@ -109,11 +145,19 @@ describe('Dinero: a payment made in parts (UX-21)', () => {
     mount(paidFirstLot)
     fireEvent.click(leonelOwes('$1,500')!)
     await settle()
-    expect(api.writes).toEqual([{ from_player_id: 'p11', to_player_id: null, amount: 2250, kind: 'calcutta', paid: true }])
+    expect(api.writes).toEqual([
+      { from_player_id: 'p11', to_player_id: null, amount: 2250, kind: 'calcutta', paid: true },
+    ])
     expect(leonelOwes('$1,500')).toBeNull()
     act(() => lastToast(M.markedPaid).action!.onClick())
     await settle()
-    expect(api.writes[1]).toEqual({ from_player_id: 'p11', to_player_id: null, amount: 750, kind: 'calcutta', paid: true })
+    expect(api.writes[1]).toEqual({
+      from_player_id: 'p11',
+      to_player_id: null,
+      amount: 750,
+      kind: 'calcutta',
+      paid: true,
+    })
     expect(leonelOwes('$1,500')).toBeTruthy()
   })
 })

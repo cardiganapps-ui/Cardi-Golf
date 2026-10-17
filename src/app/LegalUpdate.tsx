@@ -72,8 +72,9 @@ export function LegalUpdate() {
         {changed.terms && <LegalLink to="/terminos">{t.legal.terms.title}</LegalLink>}
       </p>
       <Button
-        variant="primary" block
-       
+        variant="primary"
+        block
+
         disabled={busy}
         onClick={() => {
           setBusy(true)

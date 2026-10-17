@@ -37,7 +37,12 @@ describe('anonRpc: a public function as anon, with no session (STRAT-05)', () =>
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('https://polo.example.supabase.co/rest/v1/rpc/spectator_board')
     expect(init?.method).toBe('POST')
-    expect(init?.headers).toEqual({ apikey: 'anon-key', Authorization: 'Bearer anon-key', 'Content-Type': 'application/json', Accept: 'application/json' })
+    expect(init?.headers).toEqual({
+      apikey: 'anon-key',
+      Authorization: 'Bearer anon-key',
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    })
     expect(JSON.parse(String(init?.body))).toEqual({ p_token: 'x', p_seen: null })
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain('the-user-jwt')
     expect([reads.mock.calls.length, writes.mock.calls.length]).toEqual([0, 0])
@@ -50,8 +55,14 @@ describe('anonRpc: a public function as anon, with no session (STRAT-05)', () =>
   })
 
   it('a refusal keeps its code and status, so the page says it as it says any other', async () => {
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function' }), { status: 404 }))
-    await expect(anonRpc('spectator_board', { p_token: 'x' })).rejects.toMatchObject({ code: 'PGRST202', status: 404, message: 'Could not find the function' })
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function' }), { status: 404 }),
+    )
+    await expect(anonRpc('spectator_board', { p_token: 'x' })).rejects.toMatchObject({
+      code: 'PGRST202',
+      status: 404,
+      message: 'Could not find the function',
+    })
     fetchMock.mockResolvedValue(new Response('<html>Bad gateway</html>', { status: 502, statusText: 'Bad Gateway' }))
     const e = await anonRpc('spectator_board', { p_token: 'x' }).catch((x: unknown) => x)
     expect(e).toMatchObject({ status: 502 })

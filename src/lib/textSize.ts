@@ -96,7 +96,8 @@ export function watchTextSize(doc: Document = document): () => void {
   if (typeof win.ResizeObserver === 'function') {
     ruler = doc.createElement('div')
     ruler.setAttribute('aria-hidden', 'true')
-    ruler.style.cssText = 'position: absolute; width: 1rem; height: 1rem; visibility: hidden; pointer-events: none; top: 0; left: 0'
+    ruler.style.cssText =
+      'position: absolute; width: 1rem; height: 1rem; visibility: hidden; pointer-events: none; top: 0; left: 0'
     const host = doc.body ?? doc.documentElement
     host.appendChild(ruler)
     observer = new win.ResizeObserver(onResize)

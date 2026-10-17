@@ -28,7 +28,20 @@ const ids = Array.from({ length: 12 }, (_, i) => `p${i + 1}`)
  * Bases 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 33:
  * 4.8 → 5 · 6.4 → 6 · 8 · 9.6 → 10 · 11.2 → 11 · 12.8 → 13 · 14.4 → 14 · 16 · 17.6 → 18 · 20 · 22.4 → 22 · 26.4 → 26.
  */
-const PH1: Record<string, number> = { p1: 5, p2: 6, p3: 8, p4: 10, p5: 11, p6: 13, p7: 14, p8: 16, p9: 18, p10: 20, p11: 22, p12: 26 }
+const PH1: Record<string, number> = {
+  p1: 5,
+  p2: 6,
+  p3: 8,
+  p4: 10,
+  p5: 11,
+  p6: 13,
+  p7: 14,
+  p8: 16,
+  p9: 18,
+  p10: 20,
+  p11: 22,
+  p12: 26,
+}
 
 /** Day 1: net birdies (+1) and net bogeys (−1) by hole. */
 const DAY1: Record<string, Record<number, 1 | -1>> = {
@@ -42,13 +55,39 @@ const DAY1: Record<string, Record<number, 1 | -1>> = {
   p10: { 5: 1, 12: 1, 14: 1, 17: 1 }, // 40
   p12: { 6: -1, 7: -1, 8: -1 }, // 33
 } // p1, p8 and p11: 36
-const POINTS1: Record<string, number> = { p1: 36, p2: 39, p3: 34, p4: 37, p5: 38, p6: 39, p7: 37, p8: 36, p9: 42, p10: 40, p11: 36, p12: 33 }
+const POINTS1: Record<string, number> = {
+  p1: 36,
+  p2: 39,
+  p3: 34,
+  p4: 37,
+  p5: 38,
+  p6: 39,
+  p7: 37,
+  p8: 36,
+  p9: 42,
+  p10: 40,
+  p11: 36,
+  p12: 33,
+}
 
 /**
  * The Day 2 cut (§5.2): above 36, (P1 − 36) / 2 rounded down, at most 4.
  * p2 39 → 1 · p4 37 → 0 · p5 38 → 1 · p6 39 → 1 · p7 37 → 0 · p9 42 → 3 · p10 40 → 2; nobody else is above 36.
  */
-const CUT: Record<string, number> = { p1: 0, p2: 1, p3: 0, p4: 0, p5: 1, p6: 1, p7: 0, p8: 0, p9: 3, p10: 2, p11: 0, p12: 0 }
+const CUT: Record<string, number> = {
+  p1: 0,
+  p2: 1,
+  p3: 0,
+  p4: 0,
+  p5: 1,
+  p6: 1,
+  p7: 0,
+  p8: 0,
+  p9: 3,
+  p10: 2,
+  p11: 0,
+  p12: 0,
+}
 /** PH2 = PH1 − cut: 5 · 5 · 8 · 10 · 10 · 12 · 14 · 16 · 15 · 18 · 22 · 26. */
 const PH2: Record<string, number> = Object.fromEntries(ids.map((p) => [p, PH1[p]! - CUT[p]!]))
 
@@ -67,9 +106,35 @@ const DAY2: Record<string, Record<number, 1 | -1>> = {
   p11: { 8: 1 }, // 37
   p12: { 1: -1, 2: -1, 3: -1 }, // 33
 }
-const POINTS2: Record<string, number> = { p1: 35, p2: 38, p3: 35, p4: 37, p5: 40, p6: 38, p7: 37, p8: 34, p9: 40, p10: 41, p11: 37, p12: 33 }
+const POINTS2: Record<string, number> = {
+  p1: 35,
+  p2: 38,
+  p3: 35,
+  p4: 37,
+  p5: 40,
+  p6: 38,
+  p7: 37,
+  p8: 34,
+  p9: 40,
+  p10: 41,
+  p11: 37,
+  p12: 33,
+}
 /** Day 1 + Day 2. */
-const TOTAL: Record<string, number> = { p1: 71, p2: 77, p3: 69, p4: 74, p5: 78, p6: 77, p7: 74, p8: 70, p9: 82, p10: 81, p11: 73, p12: 66 }
+const TOTAL: Record<string, number> = {
+  p1: 71,
+  p2: 77,
+  p3: 69,
+  p4: 74,
+  p5: 78,
+  p6: 77,
+  p7: 74,
+  p8: 70,
+  p9: 82,
+  p10: 81,
+  p11: 73,
+  p12: 66,
+}
 
 /**
  * Putts other than 2. Day 1: in group 1 p10 three-putts hole 3, then p4 and p7 both three-putt hole 9 (p7 holed
@@ -106,7 +171,10 @@ const LOTS: Array<[player: string, price: number, owner: string]> = [
 
 function tournament() {
   const snap = makeFirstTournament()
-  for (const [rid, days] of [['r1', DAY1], ['r2', DAY2]] as const) {
+  for (const [rid, days] of [
+    ['r1', DAY1],
+    ['r2', DAY2],
+  ] as const) {
     for (const pid of ids) {
       const ph = rid === 'r1' ? PH1[pid]! : PH2[pid]!
       PAR_72.forEach(([par, si], i) => {
@@ -119,11 +187,38 @@ function tournament() {
   snap.snakeTiebreaks.push({ roundId: 'r1', groupId: 'r1g1', hole: 9, lastHoledPlayerId: 'p7' })
   snap.rounds.forEach((r) => (r.status = 'finished'))
   snap.tournament.status = 'finished'
-  LOTS.forEach(([playerId, price, ownerId], i) => snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId, lotNumber: i + 1, status: 'sold', price, ownerId, soldAt: '' }))
+  LOTS.forEach(([playerId, price, ownerId], i) =>
+    snap.calcuttaLots.push({
+      id: `lot${i + 1}`,
+      playerId,
+      lotNumber: i + 1,
+      status: 'sold',
+      price,
+      ownerId,
+      soldAt: '',
+    }),
+  )
   snap.calcuttaBuybacks.push({ lotId: 'lot9', pct: 50, amount: 750, paid: false })
   // Everyone but p12 paid the entry on Calcutta night, and p6 paid his lot.
-  for (const pid of ids.slice(0, 11)) snap.payments.push({ id: `entry-${pid}`, fromPlayerId: pid, toPlayerId: null, amount: 2500, kind: 'entry', paid: true, note: null })
-  snap.payments.push({ id: 'lot-p6', fromPlayerId: 'p6', toPlayerId: null, amount: 1250, kind: 'calcutta', paid: true, note: null })
+  for (const pid of ids.slice(0, 11))
+    snap.payments.push({
+      id: `entry-${pid}`,
+      fromPlayerId: pid,
+      toPlayerId: null,
+      amount: 2500,
+      kind: 'entry',
+      paid: true,
+      note: null,
+    })
+  snap.payments.push({
+    id: 'lot-p6',
+    fromPlayerId: 'p6',
+    toPlayerId: null,
+    amount: 1250,
+    kind: 'calcutta',
+    paid: true,
+    note: null,
+  })
   return snap
 }
 
@@ -157,7 +252,20 @@ describe('the first tournament, worked out by hand (QA-18)', () => {
     // p7 and p4: 37 each on Day 2, but Day 2's holes 10–18 are 19 for p7 (his birdie on 11) and 18 for p4 (his on 6).
     // p2 and p6: 38 each on Day 2, 18 on holes 10–18, 12 on 13–18, 6 on 16–18, 2 on 18: tied.
     const rows = st.modules.individual!.rows
-    expect(rows.map((r) => r.playerId)).toEqual(['p9', 'p10', 'p5', 'p2', 'p6', 'p7', 'p4', 'p11', 'p1', 'p8', 'p3', 'p12'])
+    expect(rows.map((r) => r.playerId)).toEqual([
+      'p9',
+      'p10',
+      'p5',
+      'p2',
+      'p6',
+      'p7',
+      'p4',
+      'p11',
+      'p1',
+      'p8',
+      'p3',
+      'p12',
+    ])
     expect(rows.map((r) => [r.position, r.tied])).toEqual([
       [1, false],
       [2, false],
@@ -188,7 +296,20 @@ describe('the first tournament, worked out by hand (QA-18)', () => {
     //   Day 1, group 3: p12 on 14 → p3, p6, p9.
     //   Day 2, group 1: p1 on 5 → p10, p4, p7. Group 2: p8 on 18 → p2, p11, p5. Group 3: p3 on 2, p6 on 17 → p3, p12, p9.
     // 6 × 600 = 3,600.
-    expect(paidBy('snake')).toEqual({ p1: 200, p2: 350, p3: 400, p4: 400, p5: 350, p6: 200, p7: 200, p8: 150, p9: 400, p10: 400, p11: 350, p12: 200 })
+    expect(paidBy('snake')).toEqual({
+      p1: 200,
+      p2: 350,
+      p3: 400,
+      p4: 400,
+      p5: 350,
+      p6: 200,
+      p7: 200,
+      p8: 150,
+      p9: 400,
+      p10: 400,
+      p11: 350,
+      p12: 200,
+    })
     // Putts: 72 for everyone, plus a stroke for each three-putt (two for p8's four-putt), less p3's three one-putts.
     // p3 72 − 3 + 1 = 70 is alone at the top; the next best is 72. 1,000.
     expect(paidBy('fewestPutts')).toEqual({ p3: 1000 })
@@ -239,7 +360,13 @@ describe('the first tournament, worked out by hand (QA-18)', () => {
     // The nets add up to nothing: 11,687 + 6,188 = 17,875 = what the other ten are down.
     expect(st.money.netSum).toBe(0)
     // The bank takes 12 × 2,500 + 8,500 = 38,500 and pays the 30,000 of prizes and the 8,500 of the Calcutta.
-    expect(st.money.banker).toMatchObject({ playerId: 'p1', receives: 38500, pays: 38500, difference: 0, balanced: true })
+    expect(st.money.banker).toMatchObject({
+      playerId: 'p1',
+      receives: 38500,
+      pays: 38500,
+      difference: 0,
+      balanced: true,
+    })
     expect(st.prizes.every((p) => p.final)).toBe(true)
     expect(st.money.unassigned.total).toBe(0)
     expect(words(st.flags.warnings)).toEqual([])

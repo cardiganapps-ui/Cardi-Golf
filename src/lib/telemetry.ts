@@ -81,14 +81,20 @@ const once = new Set<string>()
 /** The JavaScript engine's own errors: their messages name code, never a person. Not SyntaxError: a JSON one quotes its input. */
 const BUILTIN = new Set(['TypeError', 'RangeError', 'ReferenceError', 'EvalError', 'URIError', 'AggregateError'])
 
-interface Env { PROD?: boolean; MODE?: string; VITE_DESIGN_ROUTES?: string }
+interface Env {
+  PROD?: boolean
+  MODE?: string
+  VITE_DESIGN_ROUTES?: string
+}
 /** Telemetry is on in a production build with Supabase configured, off in tests, dev and the fixtures build. */
 export function telemetryAllowed(env: Env = import.meta.env): boolean {
   return !!env.PROD && env.MODE !== 'test' && env.VITE_DESIGN_ROUTES !== '1' && supabaseConfigured
 }
 
 function newId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : '00000000-0000-4000-8000-000000000000'.replace(/0/g, () => Math.floor(Math.random() * 16).toString(16))
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : '00000000-0000-4000-8000-000000000000'.replace(/0/g, () => Math.floor(Math.random() * 16).toString(16))
 }
 
 /** A random id per install, kept on the phone. It names no one: it tells two phones of one account apart. */
@@ -108,7 +114,11 @@ export function getDeviceId(): string {
 function stored(): ClientEvent[] {
   try {
     const kept: unknown = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
-    return Array.isArray(kept) ? (kept as Array<Partial<ClientEvent> | null>).filter((e): e is ClientEvent => !!e && typeof e.name === 'string' && typeof e.id === 'string') : []
+    return Array.isArray(kept)
+      ? (kept as Array<Partial<ClientEvent> | null>).filter(
+          (e): e is ClientEvent => !!e && typeof e.name === 'string' && typeof e.id === 'string',
+        )
+      : []
   } catch {
     return []
   }
@@ -236,12 +246,19 @@ export function notePushed(keys: string[]) {
  * A replayed answer is the first attempt's, stored before this call went out:
  * no sample.
  */
-export function saveAnswered(sentAt: number, answeredAt: number, rows: Array<Record<string, unknown>> | undefined, replayed = false) {
+export function saveAnswered(
+  sentAt: number,
+  answeredAt: number,
+  rows: Array<Record<string, unknown>> | undefined,
+  replayed = false,
+) {
   const rtt = answeredAt - sentAt
   if (!(rtt >= 0)) return
   track('sync', 'save_ack', rtt)
   if (replayed) return
-  const stamp = rows?.map((r) => (typeof r.updated_at === 'string' ? Date.parse(r.updated_at) : NaN)).find((t) => Number.isFinite(t))
+  const stamp = rows
+    ?.map((r) => (typeof r.updated_at === 'string' ? Date.parse(r.updated_at) : NaN))
+    .find((t) => Number.isFinite(t))
   if (stamp != null && (offset == null || rtt < offset.rtt)) offset = { ms: (sentAt + answeredAt) / 2 - stamp, rtt }
 }
 
@@ -279,14 +296,19 @@ function scheduleFlush(ms = FLUSH_MS) {
 
 /** A session to send with: nobody signed in (a visitor before Entrar) sends nothing and is asked again later. */
 async function signedIn(): Promise<boolean> {
-  const { data } = await withTimeout(supabase().auth.getSession(), 5000, 'sesión').catch(() => ({ data: { session: null } }))
+  const { data } = await withTimeout(supabase().auth.getSession(), 5000, 'sesión').catch(() => ({
+    data: { session: null },
+  }))
   return !!data.session
 }
 
 /** Send what is queued, 50 at a time. Kept for the next try if the network or the session fails. */
 export async function flush(): Promise<void> {
   if (!enabled || flushing || !queue.length) return
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) { scheduleFlush(); return; }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    scheduleFlush()
+    return
+  }
   flushing = true
   try {
     if (!(await signedIn())) return
@@ -315,14 +337,21 @@ export async function flush(): Promise<void> {
 
 function platform(): 'ios' | 'android' | 'desktop' | 'other' {
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1)) return 'ios'
+  if (
+    /iPhone|iPad|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1)
+  )
+    return 'ios'
   if (/Android/.test(ua)) return 'android'
   if (/Windows|Macintosh|Linux|CrOS/.test(ua)) return 'desktop'
   return 'other'
 }
 function standalone(): boolean {
   if (typeof window === 'undefined') return false
-  return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
+  return (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as { standalone?: boolean }).standalone === true
+  )
 }
 
 /** This phone's build and outbox, for Salud and the Comité. */
@@ -332,7 +361,15 @@ export async function heartbeat(): Promise<void> {
     if (!(await signedIn())) return
     const s = snapshot()
     const { error } = await supabase().rpc('heartbeat', {
-      p: { deviceId: getDeviceId(), tournamentId, build: BUILD.id, buildSha: BUILD.sha, platform: platform(), standalone: standalone(), ...s },
+      p: {
+        deviceId: getDeviceId(),
+        tournamentId,
+        build: BUILD.id,
+        buildSha: BUILD.sha,
+        platform: platform(),
+        standalone: standalone(),
+        ...s,
+      },
     })
     // Only a beat the server took counts: a failed one leaves the next change free to say it.
     if (!error) {
@@ -352,10 +389,13 @@ export function outboxChanged() {
   if (!enabled || beatTimer) return
   const s = snapshot()
   if (lastBeat?.pending === s.pending && lastBeat.rejected === s.rejected) return
-  beatTimer = setTimeout(() => {
-    beatTimer = null
-    void heartbeat()
-  }, Math.max(2_000, BEAT_MIN_MS - (Date.now() - lastBeatAt)))
+  beatTimer = setTimeout(
+    () => {
+      beatTimer = null
+      void heartbeat()
+    },
+    Math.max(2_000, BEAT_MIN_MS - (Date.now() - lastBeatAt)),
+  )
 }
 
 /** Start: listeners, the restored queue, vitals, the heartbeat. Once, from main.tsx. */
@@ -380,7 +420,8 @@ export function startTelemetry(env?: Env) {
   }, HEARTBEAT_MS)
   void import('web-vitals')
     .then(({ onLCP, onINP, onCLS, onFCP, onTTFB }) => {
-      const send = (m: { name: string; value: number; rating?: string }) => track('vital', m.name.toLowerCase(), m.value, { rating: m.rating ?? null, route: routeOf(location.pathname) })
+      const send = (m: { name: string; value: number; rating?: string }) =>
+        track('vital', m.name.toLowerCase(), m.value, { rating: m.rating ?? null, route: routeOf(location.pathname) })
       onLCP(send)
       onINP(send)
       onCLS(send)

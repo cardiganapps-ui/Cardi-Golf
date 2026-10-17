@@ -5,7 +5,14 @@
  * before anything waits: the app may be closed the moment the card moves on (PERF-10).
  */
 import { adminSaveHole } from '../../../data/api'
-import { enqueueAward, enqueueHole, enqueueScore, enqueueTiebreak, type HoleEntry, type HoleFields } from '../../../data/outbox'
+import {
+  enqueueAward,
+  enqueueHole,
+  enqueueScore,
+  enqueueTiebreak,
+  type HoleEntry,
+  type HoleFields,
+} from '../../../data/outbox'
 import type { Draft } from '../tarjetaDrafts'
 import { entryFields } from './saveDecision'
 
@@ -58,11 +65,26 @@ export async function writeHole(w: HoleWriter, values: Record<string, Draft>, ho
   for (const pid of w.playerIds) {
     const d = values[pid]
     if (!d) continue
-    const payload = { round_id: w.roundId, player_id: pid, hole: holeNumber, strokes: d.pickedUp ? null : d.strokes, putts: d.putts, picked_up: d.pickedUp }
+    const payload = {
+      round_id: w.roundId,
+      player_id: pid,
+      hole: holeNumber,
+      strokes: d.pickedUp ? null : d.strokes,
+      putts: d.putts,
+      picked_up: d.pickedUp,
+    }
     // A Comité correction where a phone's write is refused: every player of the hole to the server, as one correction.
     // One by one, a refusal or a lost signal on the second came after the first was saved: half a hole (REL-22).
-    if (viaServer) corrections.push({ player_id: pid, strokes: payload.strokes, putts: payload.putts, picked_up: payload.picked_up })
-    else if (!ofGroup) queued.push(enqueueScore(w.tournamentId, { ...payload, entered_by: w.myPlayerId, client_ts: new Date().toISOString() }, o.settle))
+    if (viaServer)
+      corrections.push({ player_id: pid, strokes: payload.strokes, putts: payload.putts, picked_up: payload.picked_up })
+    else if (!ofGroup)
+      queued.push(
+        enqueueScore(
+          w.tournamentId,
+          { ...payload, entered_by: w.myPlayerId, client_ts: new Date().toISOString() },
+          o.settle,
+        ),
+      )
     else {
       const base = o.seen?.get(pid) ?? w.rowOf(pid, holeNumber)
       // What this phone would have saved for him untouched: another phone's save of exactly that is no one's claim.
@@ -70,12 +92,45 @@ export async function writeHole(w: HoleWriter, values: Record<string, Draft>, ho
       entries.push({ player_id: pid, fields: entryFields(payload, base), base, auto: !!o.auto?.has(pid), dflt })
     }
   }
-  if (entries.length) queued.push(enqueueHole(w.tournamentId, { round_id: w.roundId, hole: holeNumber, entered_by: w.myPlayerId, entries }, o.settle))
+  if (entries.length)
+    queued.push(
+      enqueueHole(
+        w.tournamentId,
+        { round_id: w.roundId, hole: holeNumber, entered_by: w.myPlayerId, entries },
+        o.settle,
+      ),
+    )
   if (holeNumber === w.holeOnScreen) {
-    for (const a of w.awards) queued.push(enqueueAward(w.tournamentId, { round_id: w.roundId, group_id: w.groupId, hole: holeNumber, game_id: a.gameId, player_ids: a.playerIds, decided_by: w.myPlayerId }, o.settle))
+    for (const a of w.awards)
+      queued.push(
+        enqueueAward(
+          w.tournamentId,
+          {
+            round_id: w.roundId,
+            group_id: w.groupId,
+            hole: holeNumber,
+            game_id: a.gameId,
+            player_ids: a.playerIds,
+            decided_by: w.myPlayerId,
+          },
+          o.settle,
+        ),
+      )
   }
   if (o.lastHoled) {
-    queued.push(enqueueTiebreak(w.tournamentId, { round_id: w.roundId, group_id: w.groupId, hole: holeNumber, last_holed_player_id: o.lastHoled, decided_by: w.myPlayerId }, o.settle))
+    queued.push(
+      enqueueTiebreak(
+        w.tournamentId,
+        {
+          round_id: w.roundId,
+          group_id: w.groupId,
+          hole: holeNumber,
+          last_holed_player_id: o.lastHoled,
+          decided_by: w.myPlayerId,
+        },
+        o.settle,
+      ),
+    )
   }
   // The server's correction, in one call, once the phone's own writes (winners, the snake's answer) are on their way; then those, failed or not.
   const stored = Promise.all(queued)

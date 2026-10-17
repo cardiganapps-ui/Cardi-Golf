@@ -60,7 +60,7 @@ beforeEach(() => {
 afterEach(() => cleanup())
 
 describe('Nuevo torneo (UX-06)', () => {
-  it('the days asked for become the tournament\'s rounds, numbered, with no course or date yet', async () => {
+  it("the days asked for become the tournament's rounds, numbered, with no course or date yet", async () => {
     await createWithDays('2')
     expect(api.upsertRound.mock.calls).toEqual([
       ['t-new', { number: 1, date: null, course_id: null, holes: 18 }],
@@ -87,7 +87,7 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(screen.getByText(W.shareLater).closest('summary')!.querySelector('svg')).toBeTruthy()
   })
 
-  it('the code\'s hint says whom to wait for: the players (N10)', async () => {
+  it("the code's hint says whom to wait for: the players (N10)", async () => {
     await createWithDays('1')
     const later = screen.getByText(W.shareLater).closest('details')!
     expect(within(later).getByText(/^Compártelo cuando los jugadores ya estén dados de alta: /)).toBeTruthy()
@@ -103,7 +103,7 @@ describe('Nuevo torneo (UX-06)', () => {
     expect(screen.getByText(/Las parejas se arman en Equipos, en la consola del Comité\.$/)).toBeTruthy()
   })
 
-  it('if the rounds can\'t be created the tournament still is, and the Comité lists what is missing', async () => {
+  it("if the rounds can't be created the tournament still is, and the Comité lists what is missing", async () => {
     api.upsertRound.mockRejectedValue(new Error('sin señal'))
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     await createWithDays('2')
@@ -199,10 +199,15 @@ describe('Nuevo torneo: the review names every game with its prize (UX-04)', () 
     expect(reviewValue('Individual').textContent).toBe(W.reviewNoPrize)
   })
 
-  it('the labels are the tournament\'s own', () => {
-    sessionStorage.setItem('cardi-golf:wizard-draft', JSON.stringify(draftWith((s) => {
-      s.modules.individual.label = 'La Copa'
-    })))
+  it("the labels are the tournament's own", () => {
+    sessionStorage.setItem(
+      'cardi-golf:wizard-draft',
+      JSON.stringify(
+        draftWith((s) => {
+          s.modules.individual.label = 'La Copa'
+        }),
+      ),
+    )
     renderWizard('/organizer/new?paso=3')
     expect(reviewValue('La Copa').textContent).toBe(W.reviewNoPrize)
   })
@@ -257,7 +262,7 @@ describe('Nuevo torneo: the system back goes back a step, and nothing typed is l
     expect(reviewValue(W.rounds).textContent).toContain(W.reviewField(14))
   })
 
-  it('a step the draft can\'t be on yet opens on the first it can, and the address says so', () => {
+  it("a step the draft can't be on yet opens on the first it can, and the address says so", () => {
     const router = renderWizard('/organizer/new?paso=3')
     expect(screen.getByPlaceholderText(W.namePlaceholder)).toBeTruthy()
     expect(router.state.location.search).toBe('')

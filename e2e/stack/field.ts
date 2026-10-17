@@ -64,12 +64,29 @@ export function groupOf(slug: string, name: string): number {
   return TWOSOMES.has(slug) ? Math.floor(i / 2) + 1 : PLAYERS[i].group
 }
 /** The players of group `group` in `slug`, in sort order. */
-export const groupNames = (slug: string, group: number) => PLAYERS.filter((p) => groupOf(slug, p.name) === group).map((p) => p.name)
+export const groupNames = (slug: string, group: number) =>
+  PLAYERS.filter((p) => groupOf(slug, p.name) === group).map((p) => p.name)
 
 /** «Campo E2E»: [par, stroke index] for holes 1 to 18 (par 72). */
 export const CARD: Array<[par: number, si: number]> = [
-  [4, 7], [4, 11], [3, 17], [5, 3], [4, 1], [4, 13], [3, 15], [4, 9], [5, 5],
-  [4, 8], [3, 18], [4, 2], [5, 12], [4, 4], [4, 10], [3, 16], [4, 6], [5, 14],
+  [4, 7],
+  [4, 11],
+  [3, 17],
+  [5, 3],
+  [4, 1],
+  [4, 13],
+  [3, 15],
+  [4, 9],
+  [5, 5],
+  [4, 8],
+  [3, 18],
+  [4, 2],
+  [5, 12],
+  [4, 4],
+  [4, 10],
+  [3, 16],
+  [4, 6],
+  [5, 14],
 ]
 export const par = (hole: number) => CARD[hole - 1][0]
 export const strokeIndex = (hole: number) => CARD[hole - 1][1]
@@ -101,7 +118,12 @@ export interface Entry {
 export type HoleEntry = Record<string, Entry>
 
 const e = (strokes: number, putts = 2): Entry => ({ strokes, putts })
-const four = (ana: Entry, beto: Entry, caro: Entry, dani: Entry): HoleEntry => ({ Ana: ana, Beto: beto, Caro: caro, Dani: dani })
+const four = (ana: Entry, beto: Entry, caro: Entry, dani: Entry): HoleEntry => ({
+  Ana: ana,
+  Beto: beto,
+  Caro: caro,
+  Dani: dani,
+})
 
 /**
  * Hole 1 as the smoke test plays it, worked out by hand (par 4, stroke index 7):

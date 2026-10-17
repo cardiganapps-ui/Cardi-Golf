@@ -16,13 +16,30 @@ const sample = {
         holes: Array.from({ length: 18 }, (_, i) => ({ par: i % 3 === 0 ? 5 : 4, yardage: 400 + i, handicap: 18 - i })),
       },
     ],
-    female: [{ tee_name: 'Red', course_rating: 68.2, slope_rating: 118, par_total: 72, holes: Array.from({ length: 18 }, () => ({ par: 4 })) }],
+    female: [
+      {
+        tee_name: 'Red',
+        course_rating: 68.2,
+        slope_rating: 118,
+        par_total: 72,
+        holes: Array.from({ length: 18 }, () => ({ par: 4 })),
+      },
+    ],
   },
 }
 
 describe('GolfCourseAPI adapter', () => {
   it('maps a search hit', () => {
-    expect(mapSearchHit(sample)).toEqual({ provider: 'golfcourseapi', externalId: '1234', name: 'Quivira Los Cabos', clubName: 'Quivira Golf Club', location: 'Cabo San Lucas, BCS, Mexico', latitude: null, longitude: null, hasCard: true })
+    expect(mapSearchHit(sample)).toEqual({
+      provider: 'golfcourseapi',
+      externalId: '1234',
+      name: 'Quivira Los Cabos',
+      clubName: 'Quivira Golf Club',
+      location: 'Cabo San Lucas, BCS, Mexico',
+      latitude: null,
+      longitude: null,
+      hasCard: true,
+    })
     // The live search payload carries tee COUNTS, not arrays.
     expect(mapSearchHit({ ...sample, tees: { male: 5, female: 0 } }).hasCard).toBe(true)
     expect(mapSearchHit({ ...sample, tees: { male: 0, female: 0 } }).hasCard).toBe(false)
@@ -39,7 +56,17 @@ describe('GolfCourseAPI adapter', () => {
   it('says which tees it filled in (STRAT-14): the Red tee has no stroke indexes, the Black one is as given', () => {
     const c = mapCourse(sample)
     expect(c.tees.map((x) => x.assumed)).toEqual([false, true])
-    const noPar = { ...sample, tees: { male: [{ ...sample.tees.male[0]!, holes: sample.tees.male[0]!.holes.map((h, i) => (i === 4 ? { ...h, par: null } : h)) }] } }
+    const noPar = {
+      ...sample,
+      tees: {
+        male: [
+          {
+            ...sample.tees.male[0]!,
+            holes: sample.tees.male[0]!.holes.map((h, i) => (i === 4 ? { ...h, par: null } : h)),
+          },
+        ],
+      },
+    }
     expect(mapCourse(noPar).tees[0]!.assumed).toBe(true)
   })
 })

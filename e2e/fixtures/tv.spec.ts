@@ -18,7 +18,9 @@ const ROOMS: Array<[number, number]> = [
 
 for (const fixture of ['full12-finished', 'large60']) {
   for (const [w, h] of ROOMS) {
-    test(`${fixture} at ${w}×${h}: every player appears on some page of the Individual board (VIS-03)`, async ({ page }) => {
+    test(`${fixture} at ${w}×${h}: every player appears on some page of the Individual board (VIS-03)`, async ({
+      page,
+    }) => {
       // At the room's type (VIS-05) a 1080p page holds six rows: sixty players are ten pages, one per rotation.
       test.setTimeout(240_000)
       // The rotation runs on a fake clock. Only the Individual board is read, and
@@ -38,10 +40,19 @@ for (const fixture of ['full12-finished', 'large60']) {
           els.map((el) => {
             const box = el.parentElement!.getBoundingClientRect()
             const r = el.getBoundingClientRect()
-            return { id: el.getAttribute('data-player')!, bottom: r.bottom, limit: Math.min(box.bottom, window.innerHeight), inside: r.bottom <= Math.min(box.bottom, window.innerHeight) + 0.5 }
+            return {
+              id: el.getAttribute('data-player')!,
+              bottom: r.bottom,
+              limit: Math.min(box.bottom, window.innerHeight),
+              inside: r.bottom <= Math.min(box.bottom, window.innerHeight) + 0.5,
+            }
           }),
         )
-        for (const r of rows) expect(r.inside, `row ${r.id} fully on screen (bottom ${Math.round(r.bottom)} of ${Math.round(r.limit)})`).toBe(true)
+        for (const r of rows)
+          expect(
+            r.inside,
+            `row ${r.id} fully on screen (bottom ${Math.round(r.bottom)} of ${Math.round(r.limit)})`,
+          ).toBe(true)
         rows.forEach((r) => seen.add(r.id))
         await page.clock.runFor(12_000)
         await page.waitForTimeout(100)
@@ -67,7 +78,9 @@ test('Matrimonios and Calcutta boards: names in full, totals at the right edge (
         const big = cells[cells.length - 1]
         return {
           nameLeft: name.getBoundingClientRect().left - box.left,
-          clipped: Array.from(name.children).some((c) => (c as HTMLElement).scrollWidth > (c as HTMLElement).clientWidth + 1),
+          clipped: Array.from(name.children).some(
+            (c) => (c as HTMLElement).scrollWidth > (c as HTMLElement).clientWidth + 1,
+          ),
           gapRight: box.right - big.getBoundingClientRect().right,
         }
       }),
@@ -105,10 +118,23 @@ for (const [w, h] of ROOMS) {
  * settles). The title wraps there once it takes its range («1–3 de 12»), the rows' box shrank, and the board measured
  * itself again from scratch for the new box, which dropped the range, which grew the box, on every render.
  */
-for (const [path, w, h] of [['/t/_/full12-live/tv', 393, 852], ['/t/_/full12-live/tv', 375, 667], ['/t/_/large60/tv', 768, 1024], ['/t/_/draw12/tv', 393, 852]] as const) {
-  test(`${path} on a screen held upright, ${w}×${h}: the board opens and pages, it never stops the page`, async ({ page }) => {
+for (const [path, w, h] of [
+  ['/t/_/full12-live/tv', 393, 852],
+  ['/t/_/full12-live/tv', 375, 667],
+  ['/t/_/large60/tv', 768, 1024],
+  ['/t/_/draw12/tv', 393, 852],
+] as const) {
+  test(`${path} on a screen held upright, ${w}×${h}: the board opens and pages, it never stops the page`, async ({
+    page,
+  }) => {
     const reactErrors: string[] = []
-    page.on('console', (m) => m.type() === 'error' && /React error|Maximum update depth/.test(m.text()) && reactErrors.push(m.text().slice(0, 120)))
+    page.on(
+      'console',
+      (m) =>
+        m.type() === 'error' &&
+        /React error|Maximum update depth/.test(m.text()) &&
+        reactErrors.push(m.text().slice(0, 120)),
+    )
     await page.setViewportSize({ width: w, height: h })
     await page.goto(path, { waitUntil: 'networkidle' })
     await expect(page.getByRole('link', { name: t.tv.exit })).toBeVisible()
@@ -125,7 +151,9 @@ test('Más, Modo TV on a phone: the TV opens', async ({ page }) => {
   await expect(page.getByText(t.boot.crashTitle)).toHaveCount(0)
 })
 
-test('under the board, a rule fills toward the next board and names it; the next one is the one named (MOT-08)', async ({ page }) => {
+test('under the board, a rule fills toward the next board and names it; the next one is the one named (MOT-08)', async ({
+  page,
+}) => {
   // Real time, as the VIS-04 test: the rotation and its transitions run on the browser's own clock.
   test.setTimeout(60_000)
   await page.setViewportSize({ width: 1920, height: 1080 })
@@ -193,12 +221,15 @@ for (const [w, h] of ROOMS) {
     await page.setViewportSize({ width: w, height: h })
     await page.goto('/t/_/full12-live/tv', { waitUntil: 'networkidle' })
     await page.waitForTimeout(500)
-    const names = await page.locator('[data-player] [class*="_name_"]').evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
+    const names = await page
+      .locator('[data-player] [class*="_name_"]')
+      .evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
     expect(names.length).toBeGreaterThan(0)
     for (const size of names) expect(size).toBeGreaterThanOrEqual(h * 0.045 - 0.5)
     const boards = new Set<string>()
     for (let i = 0; i < 8; i++) {
-      for (const title of await page.locator('section h2').allTextContents()) boards.add(title.replace(/\s*\d+–\d+ de \d+$/, '').trim())
+      for (const title of await page.locator('section h2').allTextContents())
+        boards.add(title.replace(/\s*\d+–\d+ de \d+$/, '').trim())
       expect(await underFloor(page), `boards ${[...boards].join(', ')}`).toEqual([])
       await page.clock.runFor(12_000)
       await page.waitForTimeout(300)
@@ -231,7 +262,9 @@ test('each figure sits under its column label: hoyo, hoy, total (VIS-05)', async
   for (const g of gaps.gaps) expect(g).toBeLessThan(4)
 })
 
-test('the leader\'s total and the snake\'s holder sit on the yellow plate, the other totals on the board plate (VIS-05)', async ({ page }) => {
+test("the leader's total and the snake's holder sit on the yellow plate, the other totals on the board plate (VIS-05)", async ({
+  page,
+}) => {
   test.setTimeout(120_000)
   await page.clock.install()
   await page.setViewportSize({ width: 1920, height: 1080 })
@@ -279,20 +312,29 @@ for (const [w, h] of ROOMS) {
     await page.goto('/t/_/hat12/tv', { waitUntil: 'networkidle' })
     const items = page.locator('[class*="_hatItem_"]')
     await expect(items).toHaveCount(12)
-    for (const box of await items.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect))) {
+    for (const box of await items.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
+    )) {
       expect(box.bottom).toBeLessThanOrEqual(h)
       expect(box.right).toBeLessThanOrEqual(w)
     }
     expect(await underFloor(page)).toEqual([])
   })
 
-  test(`the pairs draw at ${w}×${h}: every pair with both faces and the rings, nothing under 3.5vh (UX-17)`, async ({ page }) => {
+  test(`the pairs draw at ${w}×${h}: every pair with both faces and the rings, nothing under 3.5vh (UX-17)`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: w, height: h })
     await page.goto('/t/_/draw12/tv', { waitUntil: 'networkidle' })
     const rows = page.locator('[data-pair]')
     await expect(rows).toHaveCount(6)
     const shapes = await rows.evaluateAll((els) =>
-      els.map((row) => ({ faces: row.querySelectorAll('.avatar').length, rings: row.querySelectorAll('svg').length, bottom: row.getBoundingClientRect().bottom, inside: row.parentElement!.getBoundingClientRect().bottom })),
+      els.map((row) => ({
+        faces: row.querySelectorAll('.avatar').length,
+        rings: row.querySelectorAll('svg').length,
+        bottom: row.getBoundingClientRect().bottom,
+        inside: row.parentElement!.getBoundingClientRect().bottom,
+      })),
     )
     for (const r of shapes) {
       expect(r.faces).toBe(2)
@@ -320,4 +362,3 @@ test('Space holds the board until «Seguir», which gives it its 12 s again (A11
   await page.clock.runFor(1_500)
   await expect(next).not.toHaveText(before)
 })
-

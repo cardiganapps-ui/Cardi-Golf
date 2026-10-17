@@ -20,10 +20,20 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Row } from './mappers'
-import { enterAs, gate, holeScore, installFakePhone, settle, snakeAnswer, until, type Outcome } from './testing/fakePhone'
+import {
+  enterAs,
+  gate,
+  holeScore,
+  installFakePhone,
+  settle,
+  snakeAnswer,
+  until,
+  type Outcome,
+} from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, sendMineAgain, startOutbox, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, sendMineAgain, startOutbox, useOutbox } =
+  await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 const { supabase } = await import('../lib/supabase')
@@ -45,13 +55,15 @@ beforeEach(async () => {
 afterEach(() => _outboxTest.reset())
 
 const boards = () => useTournament.getState().data!.snapshot
-const onBoards = (player: string, hole: number) => boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
+const onBoards = (player: string, hole: number) =>
+  boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
 const seen = (player: string, hole: number) => {
   const s = onBoards(player, hole)!
   return { strokes: s.strokes, putts: s.putts, picked_up: s.pickedUp }
 }
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
-const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') => enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
+const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') =>
+  enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
 const played = (strokes: number, putts = 2): HoleEntry['fields'] => ({ strokes, putts })
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const roundGone = () => useOutbox.getState().rejected.filter((r) => r.message === t.sync.errRoundGone)
@@ -72,7 +84,8 @@ async function reloadWithoutFlushing() {
     server.reachable = reachable
   }
 }
-const withoutRound = (id: string) => (server.tables.rounds = (server.tables.rounds ?? []).filter((r: Row) => r.id !== id))
+const withoutRound = (id: string) =>
+  (server.tables.rounds = (server.tables.rounds ?? []).filter((r: Row) => r.id !== id))
 
 describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
   it('boards read across a lost membership (tournament in, rounds empty): the held hole goes, nothing rejected', async () => {
@@ -163,7 +176,9 @@ describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
     withoutRound('r1')
     await reloadWithoutFlushing()
     const before = server.wire.length
-    const getSession = vi.spyOn(supabase().auth, 'getSession').mockResolvedValue({ data: { session: null }, error: null })
+    const getSession = vi
+      .spyOn(supabase().auth, 'getSession')
+      .mockResolvedValue({ data: { session: null }, error: null })
     const reachable = server.reachable
     server.reachable = () => true
     phone.online = true
@@ -246,11 +261,17 @@ describe('NEW-1: adopting never rejects a hole of a round that exists', () => {
 describe('NEW-2: the Comité’s own direct write is a claim', () => {
   it('par and 2 with no player behind it (an organizer who plays nobody): this phone is asked, and the 4 stands', async () => {
     // What a direct write by an organizer with no player leaves: entered_by null (scores_00_writer), no reason.
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p3', hole: 8, strokes: 4, putts: 2, picked_up: false, entered_by: null }])
-    await saveHole(8, [{ player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } }])
+    server.seed('scores', [
+      { round_id: 'r1', player_id: 'p3', hole: 8, strokes: 4, putts: 2, picked_up: false, entered_by: null },
+    ])
+    await saveHole(8, [
+      { player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } },
+    ])
     await until(() => useOutbox.getState().pending === 0, 'the save')
     await settle(useOutbox)
-    expect(useOutbox.getState().conflicts).toMatchObject([{ player_id: 'p3', hole: 8, fields: { strokes: 6, putts: 2 } }])
+    expect(useOutbox.getState().conflicts).toMatchObject([
+      { player_id: 'p3', hole: 8, fields: { strokes: 6, putts: 2 } },
+    ])
     expect(server.score('p3', 8)).toMatchObject({ strokes: 4, putts: 2, entered_by: null })
     // One call for this hole: nothing re-sent over the Comité's 4.
     expect(calls().filter((r) => (r.body as { p: { hole: number } }).p.hole === 8)).toHaveLength(1)
@@ -261,7 +282,16 @@ describe('NEW-4: a correction never overtakes an older build’s capture that wa
   it('a held legacy score item and a newer hole of the same player: the legacy one goes first, the correction lands', async () => {
     phone.goOffline()
     // Queued by an older build (one player's direct write), before the session was confirmed.
-    const legacy = { key: 'score:r1:p2:7', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p2', 7, 6), attempts: 0, createdAt: 1, seq: 1000, actingUid: null }
+    const legacy = {
+      key: 'score:r1:p2:7',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p2', 7, 6),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: null,
+    }
     await _outboxTest.db()!.items.put(legacy)
     await _outboxTest.load()
     // The correction to 5, typed over the 6 the boards show.
@@ -282,7 +312,16 @@ describe('NEW-4: a correction never overtakes an older build’s capture that wa
 
   it('an older held write of another kind (a snake answer) holds no hole back', async () => {
     phone.goOffline()
-    const answer = { key: 'tiebreak:r1:g1:7', kind: 'tiebreak' as const, tournamentId: 't1', payload: snakeAnswer(7, 'p2'), attempts: 0, createdAt: 1, seq: 1000, actingUid: null }
+    const answer = {
+      key: 'tiebreak:r1:g1:7',
+      kind: 'tiebreak' as const,
+      tournamentId: 't1',
+      payload: snakeAnswer(7, 'p2'),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: null,
+    }
     await _outboxTest.db()!.items.put(answer)
     await _outboxTest.load()
     await saveHole(7, [{ player_id: 'p2', fields: played(5), base: {} }])
@@ -295,8 +334,26 @@ describe('NEW-4: a correction never overtakes an older build’s capture that wa
 
   it('a held legacy item of another player, or another hole, holds nothing back', async () => {
     phone.goOffline()
-    const legacy = { key: 'score:r1:p3:7', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p3', 7, 6), attempts: 0, createdAt: 1, seq: 1000, actingUid: null }
-    const other = { key: 'score:r1:p2:6', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p2', 6, 6), attempts: 0, createdAt: 1, seq: 1001, actingUid: null }
+    const legacy = {
+      key: 'score:r1:p3:7',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p3', 7, 6),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: null,
+    }
+    const other = {
+      key: 'score:r1:p2:6',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p2', 6, 6),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1001,
+      actingUid: null,
+    }
     await _outboxTest.db()!.items.bulkPut([legacy, other])
     await _outboxTest.load()
     await saveHole(7, [{ player_id: 'p2', fields: played(5), base: {} }])
@@ -310,7 +367,9 @@ describe('NEW-4: a correction never overtakes an older build’s capture that wa
 
 describe('«Guardar el mío» over a row that is gone', () => {
   it('sends the whole hole the player saw: his putts are not lost with the row', async () => {
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 3, picked_up: false, entered_by: 'p3' }])
+    server.seed('scores', [
+      { round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 3, picked_up: false, entered_by: 'p3' },
+    ])
     await useTournament.getState().reload()
     phone.goOffline()
     // This phone corrects p2's strokes only, over the 5 and 3 it saw.

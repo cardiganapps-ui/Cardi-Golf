@@ -46,7 +46,12 @@ export const FormatOptions = z.object({
 })
 
 /** What a format falls back to when the tournament says nothing. */
-export const DEFAULT_FORMAT_OPTIONS = { scoring: 'net', matchMode: 'singles', teamMode: 'bestBall', teamScoring: 'strokes' } as const
+export const DEFAULT_FORMAT_OPTIONS = {
+  scoring: 'net',
+  matchMode: 'singles',
+  teamMode: 'bestBall',
+  teamScoring: 'strokes',
+} as const
 
 export const IndividualModuleSettings = z.object({
   ...moduleBase,
@@ -60,20 +65,18 @@ export const BestRoundModuleSettings = z.object({ ...moduleBase })
 export const PairsModuleSettings = z.object({
   ...moduleBase,
   /** Which tiers pair with which, e.g. [["A","D"],["B","C"]]. Each tier appears at most once. */
-  pairing: z
-    .array(z.tuple([z.string().trim().min(1), z.string().trim().min(1)]))
-    .refine(
-      (rules) => {
-        const seen = new Set<string>()
-        for (const [a, b] of rules) {
-          if (a === b || seen.has(a) || seen.has(b)) return false
-          seen.add(a)
-          seen.add(b)
-        }
-        return true
-      },
-      refusal(say('settings.pairingTiers')),
-    ),
+  pairing: z.array(z.tuple([z.string().trim().min(1), z.string().trim().min(1)])).refine(
+    (rules) => {
+      const seen = new Set<string>()
+      for (const [a, b] of rules) {
+        if (a === b || seen.has(a) || seen.has(b)) return false
+        seen.add(a)
+        seen.add(b)
+      }
+      return true
+    },
+    refusal(say('settings.pairingTiers')),
+  ),
   /** The honoree picks his partner instead of being drawn. */
   honoreePicks: z.boolean(),
 })
@@ -175,16 +178,20 @@ export const AuctionSettings = z.object({
    * parsing it: a stored tournament keeps loading as it was.
    */
   buybackMaxPct: z.number().int().min(0).max(100),
-  payout: z.array(AuctionPayoutSlot).refine(
-    (slots) => Math.abs(slots.reduce((s, x) => s + x.share, 0) - 1) < 1e-9,
-    refusal(say('settings.payoutShares')),
-  ),
+  payout: z
+    .array(AuctionPayoutSlot)
+    .refine(
+      (slots) => Math.abs(slots.reduce((s, x) => s + x.share, 0) - 1) < 1e-9,
+      refusal(say('settings.payoutShares')),
+    ),
 })
 
 const TournamentSettingsBase = z.object({
   modules: ModulesSettings,
   /** Ordered best → worst, e.g. ["A","B","C","D"]. Empty = no tiers. */
-  tiers: z.array(z.string().trim().min(1)).refine((t) => new Set(t).size === t.length, refusal(say('settings.tiersUnique'))),
+  tiers: z
+    .array(z.string().trim().min(1))
+    .refine((t) => new Set(t).size === t.length, refusal(say('settings.tiersUnique'))),
   /** Number of rounds (days). Rounds are 1..N. */
   rounds: z.number().int().min(1).max(10),
   /** Players per group; groups are 2–4. Used to plan groups and to check the prize pot. */
@@ -245,24 +252,40 @@ export const TournamentSettingsSchema = TournamentSettingsBase.superRefine((v, c
   if (v.modules.auction.enabled) {
     v.auction.payout.forEach((slot, i) => {
       if (slot.slot === 'bestOfTier' && !tiers.has(slot.tier)) {
-        ctx.addIssue({ code: 'custom', path: ['auction', 'payout', i, 'tier'], ...refusal(msg('settings.payoutTier', { tier: slot.tier })) })
+        ctx.addIssue({
+          code: 'custom',
+          path: ['auction', 'payout', i, 'tier'],
+          ...refusal(msg('settings.payoutTier', { tier: slot.tier })),
+        })
       }
     })
   }
   const gameIds = new Set<string>()
   v.games.forEach((g, i) => {
-    if (gameIds.has(g.id)) ctx.addIssue({ code: 'custom', path: ['games', i, 'id'], ...refusal(msg('settings.gameId', { id: g.id })) })
+    if (gameIds.has(g.id))
+      ctx.addIssue({ code: 'custom', path: ['games', i, 'id'], ...refusal(msg('settings.gameId', { id: g.id })) })
     gameIds.add(g.id)
-    for (const issue of gameIssues(g)) ctx.addIssue({ code: 'custom', path: ['games', i, ...issue.path], ...refusal(issue.says) })
+    for (const issue of gameIssues(g))
+      ctx.addIssue({ code: 'custom', path: ['games', i, ...issue.path], ...refusal(issue.says) })
   })
   if (v.prizes.stablefordMode === 'percent' && v.modules.individual.enabled) {
     const sum = v.prizes.stableford.reduce((s, x) => s + x, 0)
-    if (sum !== 100) ctx.addIssue({ code: 'custom', path: ['prizes', 'stableford'], ...refusal(msg('settings.individualSplit', { sum })) })
+    if (sum !== 100)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['prizes', 'stableford'],
+        ...refusal(msg('settings.individualSplit', { sum })),
+      })
   }
   if (v.modules.pairs.enabled) {
     v.modules.pairs.pairing.forEach((rule, i) => {
       for (const tier of rule) {
-        if (!tiers.has(tier)) ctx.addIssue({ code: 'custom', path: ['modules', 'pairs', 'pairing', i], ...refusal(msg('settings.pairingTier', { tier })) })
+        if (!tiers.has(tier))
+          ctx.addIssue({
+            code: 'custom',
+            path: ['modules', 'pairs', 'pairing', i],
+            ...refusal(msg('settings.pairingTier', { tier })),
+          })
       }
     })
   }
@@ -280,7 +303,9 @@ export type PrizeSettings = z.infer<typeof PrizeSettings>
  * same way before it keeps only the keys the schema knows (0053's
  * `spectator_settings_legacy` carries this same list; a test holds them together).
  */
-export const LEGACY_SETTINGS_ALIASES: ReadonlyArray<{ path: readonly string[]; from: string; to: string }> = [{ path: ['prizes'], from: 'matrimonios', to: 'pairs' }]
+export const LEGACY_SETTINGS_ALIASES: ReadonlyArray<{ path: readonly string[]; from: string; to: string }> = [
+  { path: ['prizes'], from: 'matrimonios', to: 'pairs' },
+]
 
 /** Parse raw JSON (e.g. `tournaments.settings`) into validated settings, older keys read as today's. */
 export function parseSettings(raw: unknown): TournamentSettings {

@@ -161,7 +161,14 @@ export interface MoneyState {
 const partText = (p: MoneyPart): Msg => msg('settle.part', { label: p.label, amount: p.amount, of: p.of ?? null })
 
 /** The payment kinds the settlement reads; `other` is a note, not a debt. */
-const SETTLED_KINDS: ReadonlySet<PaymentKind> = new Set<PaymentKind>(['entry', 'side', 'calcutta', 'buyback', 'payout', 'bet'])
+const SETTLED_KINDS: ReadonlySet<PaymentKind> = new Set<PaymentKind>([
+  'entry',
+  'side',
+  'calcutta',
+  'buyback',
+  'payout',
+  'bet',
+])
 const accountKey = (kind: PaymentKind, from: Id | null, to: Id | null) => `${kind}|${from ?? ''}|${to ?? ''}`
 
 export function computeMoney(
@@ -198,7 +205,17 @@ export function computeMoney(
   for (const g of Object.values(games)) {
     if (g.config.money.source !== 'side' || g.config.money.buyIn <= 0) continue
     for (const id of g.entrants) {
-      flows.push({ from: id, to: null, amount: g.config.money.buyIn, kind: 'side', label: label(g.config.label), paid: false, final: true, potId: g.config.id, outstanding: g.config.money.buyIn })
+      flows.push({
+        from: id,
+        to: null,
+        amount: g.config.money.buyIn,
+        kind: 'side',
+        label: label(g.config.label),
+        paid: false,
+        final: true,
+        potId: g.config.id,
+        outstanding: g.config.money.buyIn,
+      })
     }
   }
 
@@ -281,7 +298,9 @@ export function computeMoney(
       f.paid = f.amount > 0 && f.outstanding === 0
     }
   }
-  const accounts: Account[] = [...byKey.values()].filter((a) => a.owed !== 0 || a.paid !== 0).map(({ flows: _flows, ...a }) => a)
+  const accounts: Account[] = [...byKey.values()]
+    .filter((a) => a.owed !== 0 || a.paid !== 0)
+    .map(({ flows: _flows, ...a }) => a)
 
   // «¿Cómo se calculó?» of what people pay by (MONEY-07): an account's part of
   // an amount is each of its flows still due, or what was paid beyond it.
@@ -294,7 +313,11 @@ export function computeMoney(
     return byKey
       .get(accountKey(a.kind, a.from, a.to))!
       .flows.filter((f) => f.outstanding > 0)
-      .map((f) => ({ label: f.label, amount: sign * f.outstanding, ...(f.outstanding < f.amount ? { of: f.amount } : {}) }))
+      .map((f) => ({
+        label: f.label,
+        amount: sign * f.outstanding,
+        ...(f.outstanding < f.amount ? { of: f.amount } : {}),
+      }))
   }
 
   // Per person.
@@ -367,11 +390,26 @@ export function computeMoney(
   const open = accounts.filter((a) => a.due !== 0)
   const line = (from: Id | null, to: Id | null, amount: number, settles: Account[]): Transfer => {
     // From the payer's side: what he owes first, then what nets against it.
-    const parts = settles.flatMap((a) => accountParts(a, a.from === from ? 1 : -1)).sort((x, y) => Number(x.amount < 0) - Number(y.amount < 0))
+    const parts = settles
+      .flatMap((a) => accountParts(a, a.from === from ? 1 : -1))
+      .sort((x, y) => Number(x.amount < 0) - Number(y.amount < 0))
     // The banker with his own bank is his money in or out of what he holds, never a payment to himself.
     const bankerSelf = !!bankerId && ((from === bankerId && to === null) || (from === null && to === bankerId))
-    const title = amount === 0 ? msg('settle.squared', { from: nameOf(from), to: nameOf(to) }) : msg('settle.pays', { from: nameOf(from), to: nameOf(to), amount, bankerSelf })
-    return { from, to, amount, settles, final: settles.every((a) => a.final), parts, why: [{ title, steps: [...parts.map(partText), amount === 0 ? say('settle.nets') : msg('settle.total', { amount })] }] }
+    const title =
+      amount === 0
+        ? msg('settle.squared', { from: nameOf(from), to: nameOf(to) })
+        : msg('settle.pays', { from: nameOf(from), to: nameOf(to), amount, bankerSelf })
+    return {
+      from,
+      to,
+      amount,
+      settles,
+      final: settles.every((a) => a.final),
+      parts,
+      why: [
+        { title, steps: [...parts.map(partText), amount === 0 ? say('settle.nets') : msg('settle.total', { amount })] },
+      ],
+    }
   }
   for (const p of players) {
     const settles = open.filter((a) => (a.from === p.id && a.to === null) || (a.from === null && a.to === p.id))
@@ -382,7 +420,9 @@ export function computeMoney(
     // line is how both accounts get closed.
     else if (settles.length) viaBank.push(line(p.id, null, 0, settles))
   }
-  for (const a of open) if (a.kind === 'buyback' && a.from && a.to) viaBank.push(a.due > 0 ? line(a.from, a.to, a.due, [a]) : line(a.to, a.from, -a.due, [a]))
+  for (const a of open)
+    if (a.kind === 'buyback' && a.from && a.to)
+      viaBank.push(a.due > 0 ? line(a.from, a.to, a.due, [a]) : line(a.to, a.from, -a.due, [a]))
   // Direct bets settle between the two players, netted across every game.
   const betNet = new Map<string, { net: number; settles: Account[] }>()
   for (const a of open) {
@@ -435,13 +475,34 @@ export function computeMoney(
   const positionOf = new Map(positionList.map((x) => [x.party, x]))
   const positionWhy = (party: Id | null): Explanation => {
     const x = positionOf.get(party)!
-    return { title: x.amount < 0 ? msg('settle.owesTotal', { name: nameOf(party), amount: -x.amount }) : msg('settle.getsTotal', { name: nameOf(party), amount: x.amount }), steps: x.parts.map(partText) }
+    return {
+      title:
+        x.amount < 0
+          ? msg('settle.owesTotal', { name: nameOf(party), amount: -x.amount })
+          : msg('settle.getsTotal', { name: nameOf(party), amount: x.amount }),
+      steps: x.parts.map(partText),
+    }
   }
   // Each minimized transfer, explained by both positions and the share of the payer's debt it carries.
   const explainP2P = (list: Transfer[]): Transfer[] =>
     list.map((tr) => ({
       ...tr,
-      why: [positionWhy(tr.from), positionWhy(tr.to), { title: say('settle.ruleTitle'), steps: [say('settle.rule'), msg('settle.share', { from: nameOf(tr.from), total: -positionOf.get(tr.from)!.amount, amount: tr.amount, to: nameOf(tr.to) })] }],
+      why: [
+        positionWhy(tr.from),
+        positionWhy(tr.to),
+        {
+          title: say('settle.ruleTitle'),
+          steps: [
+            say('settle.rule'),
+            msg('settle.share', {
+              from: nameOf(tr.from),
+              total: -positionOf.get(tr.from)!.amount,
+              amount: tr.amount,
+              to: nameOf(tr.to),
+            }),
+          ],
+        },
+      ],
     }))
 
   // The bank's two figures, by what moves them: one line per kind of money (the inscriptions, the lots) or per pot.
@@ -456,7 +517,8 @@ export function computeMoney(
   const lotCount = flows.filter((f) => f.kind === 'calcutta').length
   for (const f of flows) {
     if (f.to === null) {
-      if (f.kind === 'entry') add(bankIn, 'entries', () => msg('settle.entries', { n: entryCount, fee: settings.entryFee }), f.amount)
+      if (f.kind === 'entry')
+        add(bankIn, 'entries', () => msg('settle.entries', { n: entryCount, fee: settings.entryFee }), f.amount)
       else if (f.kind === 'calcutta') add(bankIn, 'lots', () => msg('settle.lots', { n: lotCount }), f.amount)
       else add(bankIn, `label:${JSON.stringify(f.label)}`, () => f.label, f.amount)
     }
@@ -480,7 +542,11 @@ export function computeMoney(
       msg('settle.bankOutTotal', { amount: bankerPays }),
       ...(houseCut > 0 ? [msg('settle.houseCut', { amount: houseCut })] : []),
       ...(toHouse > 0 ? [msg('settle.toHouse', { amount: toHouse })] : []),
-      difference === 0 ? say('settle.squares') : difference > 0 ? msg('settle.left', { amount: difference }) : msg('settle.short', { amount: -difference }),
+      difference === 0
+        ? say('settle.squares')
+        : difference > 0
+          ? msg('settle.left', { amount: difference })
+          : msg('settle.short', { amount: -difference }),
     ],
   }
 
@@ -488,7 +554,16 @@ export function computeMoney(
     flows,
     accounts,
     people,
-    banker: { playerId: bankerId, receives: bankerReceives, pays: bankerPays, houseCut, toHouse, difference, balanced, why: bankWhy },
+    banker: {
+      playerId: bankerId,
+      receives: bankerReceives,
+      pays: bankerPays,
+      houseCut,
+      toHouse,
+      difference,
+      balanced,
+      why: bankWhy,
+    },
     netSum: Math.round(netSum),
     viaBank,
     peerToPeer: tournamentFinal || balanced ? explainP2P(minimizeTransfers(positions)) : [],
@@ -508,9 +583,7 @@ export function minimizeTransfers(positions: ReadonlyMap<Id | null, number>): Tr
     .filter((m) => m.amt < 0)
     .map((m) => ({ id: m.id, amt: -m.amt }))
     .sort((a, b) => b.amt - a.amt)
-  const creditors = all
-    .filter((m) => m.amt > 0)
-    .sort((a, b) => b.amt - a.amt)
+  const creditors = all.filter((m) => m.amt > 0).sort((a, b) => b.amt - a.amt)
   const out: Transfer[] = []
   let i = 0
   let j = 0
@@ -531,7 +604,8 @@ export function minimizeTransfers(positions: ReadonlyMap<Id | null, number>): Tr
  * One write that records an account as paid: a `payments` row upserted on
  * its key (`set_payment_paid`), or a buyback marked on its lot.
  */
-export type PaidWrite = { lotId: Id; paid: boolean } | { kind: PaymentKind; from: Id | null; to: Id | null; amount: number; paid: boolean }
+export type PaidWrite =
+  { lotId: Id; paid: boolean } | { kind: PaymentKind; from: Id | null; to: Id | null; amount: number; paid: boolean }
 
 /**
  * What «Marcar pagado» records for a settlement line or a checklist row:
@@ -545,7 +619,15 @@ export type PaidWrite = { lotId: Id; paid: boolean } | { kind: PaymentKind; from
  * already decided (a bet still in play is no debt yet).
  */
 export function collectible(a: Account): boolean {
-  return a.due > 0 && a.from !== null && (a.kind === 'entry' || a.kind === 'calcutta' || a.kind === 'buyback' || a.kind === 'side' || (a.kind === 'bet' && a.final))
+  return (
+    a.due > 0 &&
+    a.from !== null &&
+    (a.kind === 'entry' ||
+      a.kind === 'calcutta' ||
+      a.kind === 'buyback' ||
+      a.kind === 'side' ||
+      (a.kind === 'bet' && a.final))
+  )
 }
 
 /**
@@ -557,7 +639,11 @@ export function stillOwes(accounts: readonly Account[], playerId: Id): number {
 }
 
 export function markPaidWrites(settles: readonly Account[]): PaidWrite[] {
-  return settles.map((a) => (a.lotId ? { lotId: a.lotId, paid: true } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.owed), paid: a.owed > 0 }))
+  return settles.map((a) =>
+    a.lotId
+      ? { lotId: a.lotId, paid: true }
+      : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.owed), paid: a.owed > 0 },
+  )
 }
 
 /**
@@ -565,7 +651,11 @@ export function markPaidWrites(settles: readonly Account[]): PaidWrite[] {
  * to what it held before (pass the accounts as they were before the tap).
  */
 export function restorePaidWrites(settles: readonly Account[]): PaidWrite[] {
-  return settles.map((a) => (a.lotId ? { lotId: a.lotId, paid: a.paid > 0 } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: a.paid > 0 }))
+  return settles.map((a) =>
+    a.lotId
+      ? { lotId: a.lotId, paid: a.paid > 0 }
+      : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: a.paid > 0 },
+  )
 }
 
 /**
@@ -576,7 +666,11 @@ export function restorePaidWrites(settles: readonly Account[]): PaidWrite[] {
  * exactly as it was before the mark.
  */
 export function unmarkPaidWrites(paid: readonly Account[]): PaidWrite[] {
-  return paid.map((a) => (a.lotId ? { lotId: a.lotId, paid: false } : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: false }))
+  return paid.map((a) =>
+    a.lotId
+      ? { lotId: a.lotId, paid: false }
+      : { kind: a.kind, from: a.from, to: a.to, amount: Math.max(0, a.paid), paid: false },
+  )
 }
 
 /**
@@ -594,6 +688,15 @@ export function applyPaidWrites(snapshot: Snapshot, writes: readonly PaidWrite[]
     }
     const row = snapshot.payments.find((p) => p.kind === w.kind && p.fromPlayerId === w.from && p.toPlayerId === w.to)
     if (row) Object.assign(row, { amount: w.amount, paid: w.paid, note: null })
-    else snapshot.payments.push({ id: `local:${accountKey(w.kind, w.from, w.to)}`, kind: w.kind, fromPlayerId: w.from, toPlayerId: w.to, amount: w.amount, paid: w.paid, note: null })
+    else
+      snapshot.payments.push({
+        id: `local:${accountKey(w.kind, w.from, w.to)}`,
+        kind: w.kind,
+        fromPlayerId: w.from,
+        toPlayerId: w.to,
+        amount: w.amount,
+        paid: w.paid,
+        note: null,
+      })
   }
 }

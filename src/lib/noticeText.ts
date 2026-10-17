@@ -80,7 +80,10 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       return { text: S.notice.link_pending(n.data.player ?? '', n.data.tournament ?? ''), to: '/' }
     case 'results': {
       const finish = n.data.rankLabel ? t.profile.finish(n.data.rankLabel, n.data.field ?? null) : null
-      return { text: S.notice.results(n.data.tournament ?? '', finish && finish.charAt(0).toLowerCase() + finish.slice(1)), to: n.data.slug ? `/t/${n.data.slug}` : '/' }
+      return {
+        text: S.notice.results(n.data.tournament ?? '', finish && finish.charAt(0).toLowerCase() + finish.slice(1)),
+        to: n.data.slug ? `/t/${n.data.slug}` : '/',
+      }
     }
     case 'round_invite':
       // Mi Polo carries the "¿Eres tú?" that confirms the player.
@@ -101,7 +104,12 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       const tournament = n.data.tournament ?? ''
       const round = num(n.data.round) ?? 1
       const body = S.notice.roundLiveBody(round, num(n.data.group), num(n.data.startHole), clock(n.data.teeTime))
-      return { text: S.notice.round_live(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta'), title: tournament || undefined, body }
+      return {
+        text: S.notice.round_live(tournament, round),
+        to: tournamentPage(n.data.slug, '/tarjeta'),
+        title: tournament || undefined,
+        body,
+      }
     }
     case 'card_to_sign': {
       const tournament = n.data.tournament ?? ''
@@ -109,7 +117,12 @@ export function noticeLine(n: NoticeLike): { text: string; to: string; title?: s
       // The grid, where «Firmar» is.
       // Under a marker's rule (0054 `marker`) it is a teammate's card, not the other pair's.
       const body = n.data.marker === true ? S.notice.cardToSignMarkerBody(round) : S.notice.cardToSignBody(round)
-      return { text: S.notice.card_to_sign(tournament, round), to: tournamentPage(n.data.slug, '/tarjeta?vista=tarjeta'), title: tournament || undefined, body }
+      return {
+        text: S.notice.card_to_sign(tournament, round),
+        to: tournamentPage(n.data.slug, '/tarjeta?vista=tarjeta'),
+        title: tournament || undefined,
+        body,
+      }
     }
     case 'snake_tiebreak': {
       const tournament = n.data.tournament ?? ''

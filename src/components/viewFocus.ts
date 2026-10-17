@@ -37,7 +37,11 @@ export function focusQuietly(el: Element | null | undefined): boolean {
  * it. `always`: the view changed on the person's own step (the wizard's
  * «Siguiente»), so its heading is where they are now.
  */
-export function useViewFocus(view: string | number | null, target: (view: string | number | null, from: string | number | null) => Element | null | undefined, opts: { always?: boolean } = {}) {
+export function useViewFocus(
+  view: string | number | null,
+  target: (view: string | number | null, from: string | number | null) => Element | null | undefined,
+  opts: { always?: boolean } = {},
+) {
   const seen = useRef(view)
   const latest = useRef(target)
   latest.current = target

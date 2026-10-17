@@ -12,7 +12,14 @@ export function canonicalTime(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?(Z|[+-]\d{2}(?::?\d{2})?)?$/.exec(v)
   if (!m) return v
-  const tz = !m[4] || m[4] === 'Z' ? '+00:00' : m[4].length === 3 ? `${m[4]}:00` : m[4].includes(':') ? m[4] : `${m[4].slice(0, 3)}:${m[4].slice(3)}`
+  const tz =
+    !m[4] || m[4] === 'Z'
+      ? '+00:00'
+      : m[4].length === 3
+        ? `${m[4]}:00`
+        : m[4].includes(':')
+          ? m[4]
+          : `${m[4].slice(0, 3)}:${m[4].slice(3)}`
   return `${m[1]}T${m[2]}.${(m[3] ?? '').padEnd(6, '0').slice(0, 6)}${tz}`
 }
 

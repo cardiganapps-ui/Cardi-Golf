@@ -21,7 +21,19 @@ import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/toast'
 import { ReasonSheet } from '../../components/ReasonSheet'
-import { appliedValue, dismissInboxItems, isStaleHole, loadRejectedInbox, resolveInboxItem, sameValue, seenHole, sentValue, useRejectedInbox, type HoleValue, type InboxItem } from '../../data/rejectedInbox'
+import {
+  appliedValue,
+  dismissInboxItems,
+  isStaleHole,
+  loadRejectedInbox,
+  resolveInboxItem,
+  sameValue,
+  seenHole,
+  sentValue,
+  useRejectedInbox,
+  type HoleValue,
+  type InboxItem,
+} from '../../data/rejectedInbox'
 import { useTournament } from '../../data/tournamentStore'
 import { humanError, UserError } from '../../lib/humanError'
 import { useTournamentCtx } from '../tournament/tournamentContext'
@@ -53,7 +65,11 @@ export function RejectedInbox() {
     if (!p) return null
     return snapshot.players.some((o) => o.id !== p.id && o.displayName === p.displayName) ? p.fullName : p.displayName
   }
-  const where = (it: InboxItem) => SI.where(name(it.playerId) ?? '?', IB.dayHole(snapshot.rounds.find((r) => r.id === it.roundId)?.number ?? null, it.hole))
+  const where = (it: InboxItem) =>
+    SI.where(
+      name(it.playerId) ?? '?',
+      IB.dayHole(snapshot.rounds.find((r) => r.id === it.roundId)?.number ?? null, it.hole),
+    )
   const value = (v: HoleValue) => IB.scoreValue(v.strokes, v.putts, v.pickedUp)
   // A few rows against the day's scores: read on each render, like the engine's own flags.
   const rows = items.map((it) => {
@@ -131,20 +147,32 @@ export function RejectedInbox() {
                   {where(it)}
                 </span>
                 <span className={a.inboxSub}>
-                  {sent ? SI.sent(value(sent), name(it.writerPlayerId)) : SI.sentUnreadable} {SI.why[it.reason] ?? SI.why.invalid}
+                  {sent ? SI.sent(value(sent), name(it.writerPlayerId)) : SI.sentUnreadable}{' '}
+                  {SI.why[it.reason] ?? SI.why.invalid}
                   {it.auto ? ` ${SI.untouched}` : ''}
                 </span>
                 <span className={a.inboxSub}>
-                  {current ? SI.now(value(current)) : SI.nowEmpty} {matches ? SI.matches : applied ? SI.wouldBe(value(applied)) : SI.cannotApply}
+                  {current ? SI.now(value(current)) : SI.nowEmpty}{' '}
+                  {matches ? SI.matches : applied ? SI.wouldBe(value(applied)) : SI.cannotApply}
                 </span>
               </span>
               <span className={a.inboxActions}>
                 {applied && !matches && (
-                  <button className="btn btn--secondary btn--sm" type="button" onClick={() => setAsk({ kind: 'apply', item: it })} aria-label={`${SI.apply}: ${where(it)}`}>
+                  <button
+                    className="btn btn--secondary btn--sm"
+                    type="button"
+                    onClick={() => setAsk({ kind: 'apply', item: it })}
+                    aria-label={`${SI.apply}: ${where(it)}`}
+                  >
                     {SI.apply}
                   </button>
                 )}
-                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setAsk({ kind: 'dismiss', item: it })} aria-label={`${SI.dismiss}: ${where(it)}`}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  onClick={() => setAsk({ kind: 'dismiss', item: it })}
+                  aria-label={`${SI.dismiss}: ${where(it)}`}
+                >
                   {SI.dismiss}
                 </button>
               </span>
@@ -154,7 +182,9 @@ export function RejectedInbox() {
       )}
       <ReasonSheet
         open={!!ask}
-        title={ask?.kind === 'apply' ? SI.applyTitle : ask?.kind === 'dismiss' ? SI.dismissTitle : SI.dismissMatchingTitle}
+        title={
+          ask?.kind === 'apply' ? SI.applyTitle : ask?.kind === 'dismiss' ? SI.dismissTitle : SI.dismissMatchingTitle
+        }
         body={
           ask?.kind === 'matching'
             ? SI.dismissMatchingBody(matching.length)
@@ -165,7 +195,9 @@ export function RejectedInbox() {
               : undefined
         }
         confirmLabel={ask?.kind === 'apply' ? SI.apply : SI.dismiss}
-        initialReason={ask?.kind === 'matching' || (askRow?.matches && ask?.kind === 'dismiss') ? SI.matchingReason : ''}
+        initialReason={
+          ask?.kind === 'matching' || (askRow?.matches && ask?.kind === 'dismiss') ? SI.matchingReason : ''
+        }
         onConfirm={async (reason) => {
           if (!ask) return
           // The rows as they are now: one another phone resolved since the sheet opened is not sent again.

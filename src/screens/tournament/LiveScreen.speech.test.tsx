@@ -15,10 +15,25 @@ import { TournamentContext } from './tournamentContext'
 function mount(fixture: string) {
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <LiveScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -31,7 +46,10 @@ afterEach(() => cleanup())
 describe('En vivo rows say what they show (A11Y-11)', () => {
   it('money, owners by name, my row and the unit', () => {
     const { fx, data } = mount('full12-live')
-    const labels = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? '').filter((l) => /^(empatado en )?\d+\.º, /.test(l))
+    const labels = screen
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label') ?? '')
+      .filter((l) => /^(empatado en )?\d+\.º, /.test(l))
     expect(labels.length).toBeGreaterThan(5)
     // Someone wins money if it ended now, and the board says how much.
     expect(labels.some((l) => /, ganaría \$[\d,]+/.test(l))).toBe(true)

@@ -60,7 +60,9 @@ export function PlatformBanner() {
       </span>
       <span className={styles.text}>
         <strong>{P.banner}</strong>
-        <span className={styles.sub}>{locked ? P.bannerProtected : until ? P.bannerUnlocked(clock(until)) : P.bannerBody}</span>
+        <span className={styles.sub}>
+          {locked ? P.bannerProtected : until ? P.bannerUnlocked(clock(until)) : P.bannerBody}
+        </span>
       </span>
       <span className={styles.actions}>
         {locked && (

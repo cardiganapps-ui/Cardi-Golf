@@ -17,17 +17,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot } from '../../engine/types'
 import { t } from '../../i18n/es-MX'
 
-interface Answer { data: unknown; error: { message: string; code?: string } | null }
+interface Answer {
+  data: unknown
+  error: { message: string; code?: string } | null
+}
 const rpc = vi.fn<(name: string, args: Record<string, unknown>) => Promise<Answer>>()
 const from = vi.fn(() => {
   throw new Error('a link to watch reads and writes no table')
 })
-const auth = new Proxy({}, { get: () => () => { throw new Error('a link to watch starts no session') } })
+const auth = new Proxy(
+  {},
+  {
+    get: () => () => {
+      throw new Error('a link to watch starts no session')
+    },
+  },
+)
 // The app's client is never used on a link: its asks go as anon with no session (`anonRpc`), which answers from `rpc`.
 const appClient = vi.fn(() => {
   throw new Error('a link to watch asks nothing with the app’s client (its session)')
 })
-vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc: appClient, from, auth, channel: from, removeChannel: from }), supabaseConfigured: true }))
+vi.mock('../../lib/supabase', () => ({
+  supabase: () => ({ rpc: appClient, from, auth, channel: from, removeChannel: from }),
+  supabaseConfigured: true,
+}))
 vi.mock('../../data/anonRpc', async () => {
   const { asCall } = await import('../../data/rpc')
   const { ApiError } = await import('../../data/api')
@@ -55,13 +68,17 @@ const { SpectatorGate } = await import('./SpectatorGate')
 const { spectatorChildren } = await import('./routes')
 // The routes' screens are lazy (PERF-02): loaded here, so each test's waits time the page, not a module's first load.
 const screens = await import('../../app/screens')
-await Promise.all([screens.TournamentShell, screens.LiveScreen, screens.GamesScreen, screens.SpectatorMoney, screens.TvScreen].map((s) => s.preload()))
+await Promise.all(
+  [screens.TournamentShell, screens.LiveScreen, screens.GamesScreen, screens.SpectatorMoney, screens.TvScreen].map(
+    (s) => s.preload(),
+  ),
+)
 
 // happy-dom rejects a running animation's `finished` when the test unmounts it; nothing here waits on it.
 const cancelAnimation = Animation.prototype.cancel
 Animation.prototype.cancel = function (this: Animation) {
   this.finished.catch(() => undefined)
-  cancelAnimation.call(this);
+  cancelAnimation.call(this)
 }
 
 const TOKEN = 'sSjvTXmU1SDUNaaBFsFGLc7N'
@@ -91,7 +108,9 @@ afterEach(() => {
 })
 
 function open(path = `/v/${TOKEN}`) {
-  const router = createMemoryRouter([{ path: '/v/:token', element: <SpectatorGate />, children: spectatorChildren }], { initialEntries: [path] })
+  const router = createMemoryRouter([{ path: '/v/:token', element: <SpectatorGate />, children: spectatorChildren }], {
+    initialEntries: [path],
+  })
   render(<RouterProvider router={router} />)
   return router
 }
@@ -111,7 +130,8 @@ async function readEveryExplanation(inside: ParentNode = document) {
 }
 /** Copy that sends the reader to a Comité screen: never on a link to watch, which is nobody's to act on. */
 const comiteSteps = () => (document.body.textContent ?? '').match(/[^.]*en Comité, sección[^.]*\./g) ?? []
-const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'
 /** The calls the page made: only ever the boards. */
 const asked = () => rpc.mock.calls.map(([name]) => name)
 /**
@@ -128,13 +148,18 @@ describe('a link «Sin dinero» (the default)', () => {
     expect(pesos()).toEqual([])
     expect(screen.queryByText(t.money.ifEndedNow)).toBeNull()
     // The tabs it has: En vivo and Juegos. No Tarjeta, no Dinero, no Más.
-    const tabs = within(screen.getByRole('navigation', { name: t.common.sections })).getAllByRole('link').map((a) => a.textContent)
+    const tabs = within(screen.getByRole('navigation', { name: t.common.sections }))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
     expect(tabs).toEqual([t.nav.live, t.nav.games])
     // Every link stays on the link to watch: none leads to the tournament's own pages (Entrar, the PIN).
-    for (const a of document.querySelectorAll('a[href]')) expect(a.getAttribute('href')).toMatch(new RegExp(`^/v/${TOKEN}(/|$)`))
+    for (const a of document.querySelectorAll('a[href]'))
+      expect(a.getAttribute('href')).toMatch(new RegExp(`^/v/${TOKEN}(/|$)`))
     // What the page is, and the TV.
     expect(screen.getByText(t.spectator.note)).toBeTruthy()
-    expect(screen.getByRole('link', { name: new RegExp(t.spectator.viewTv) }).getAttribute('href')).toBe(`/v/${TOKEN}/tv`)
+    expect(screen.getByRole('link', { name: new RegExp(t.spectator.viewTv) }).getAttribute('href')).toBe(
+      `/v/${TOKEN}/tv`,
+    )
     // The Comité's lines (a tiebreak to answer, a warning) are not a spectator's: the fixture has a pending one.
     expect(screen.queryByText(t.live.pendingSnake(1, 'La Víbora'))).toBeNull()
     expect(asked()).toEqual(['spectator_board'])
@@ -190,31 +215,38 @@ describe('a link «Sin dinero» (the default)', () => {
   })
 
   // One fixture per test: all three in one ran past Vitest's 5 s on a loaded machine.
-  it.each(['full12-live', 'friends8', 'large60'])('Juegos and each of its games on %s, every explanation opened: not a peso, no way to Dinero or the Reglamento', async (fixture) => {
-    {
-      serve(board(fixture, false))
-      const router = open(`/v/${TOKEN}/juegos`)
-      await screen.findByRole('heading', { level: 1, name: t.nav.games })
-      expect(pesos(), fixture).toEqual([])
-      expect(screen.queryByText(t.games.seeMoney)).toBeNull()
-      expect(screen.queryByText(t.games.seeRules)).toBeNull()
-      const games = Array.from(document.querySelectorAll<HTMLButtonElement>('button[class*="gameRow"]')).map((b) => b.querySelector('[class*="gameLabel"]')?.textContent ?? '')
-      expect(games.length, fixture).toBeGreaterThan(0)
-      // The Calcutta is all money: it is not one of them.
-      expect(games).not.toContain('La Calcutta')
-      for (const label of games) {
-        fireEvent.click(screen.getAllByRole('button').find((b) => b.querySelector('[class*="gameLabel"]')?.textContent === label)!)
-        await screen.findByRole('heading', { level: 1, name: label })
-        expect(pesos(), `${fixture}: ${label}`).toEqual([])
-        await readEveryExplanation()
-        fireEvent.click(screen.getByRole('button', { name: t.common.back }))
+  it.each(['full12-live', 'friends8', 'large60'])(
+    'Juegos and each of its games on %s, every explanation opened: not a peso, no way to Dinero or the Reglamento',
+    async (fixture) => {
+      {
+        serve(board(fixture, false))
+        const router = open(`/v/${TOKEN}/juegos`)
         await screen.findByRole('heading', { level: 1, name: t.nav.games })
+        expect(pesos(), fixture).toEqual([])
+        expect(screen.queryByText(t.games.seeMoney)).toBeNull()
+        expect(screen.queryByText(t.games.seeRules)).toBeNull()
+        const games = Array.from(document.querySelectorAll<HTMLButtonElement>('button[class*="gameRow"]')).map(
+          (b) => b.querySelector('[class*="gameLabel"]')?.textContent ?? '',
+        )
+        expect(games.length, fixture).toBeGreaterThan(0)
+        // The Calcutta is all money: it is not one of them.
+        expect(games).not.toContain('La Calcutta')
+        for (const label of games) {
+          fireEvent.click(
+            screen.getAllByRole('button').find((b) => b.querySelector('[class*="gameLabel"]')?.textContent === label)!,
+          )
+          await screen.findByRole('heading', { level: 1, name: label })
+          expect(pesos(), `${fixture}: ${label}`).toEqual([])
+          await readEveryExplanation()
+          fireEvent.click(screen.getByRole('button', { name: t.common.back }))
+          await screen.findByRole('heading', { level: 1, name: t.nav.games })
+        }
+        expect(router.state.location.pathname).toBe(`/v/${TOKEN}/juegos`)
       }
-      expect(router.state.location.pathname).toBe(`/v/${TOKEN}/juegos`)
-    }
-    expect(new Set(asked())).toEqual(new Set(['spectator_board']))
-    expect(from).not.toHaveBeenCalled()
-  })
+      expect(new Set(asked())).toEqual(new Set(['spectator_board']))
+      expect(from).not.toHaveBeenCalled()
+    },
+  )
 
   it('Dinero is not there, and its address leads back to En vivo', async () => {
     serve(board('full12-live', false))
@@ -231,7 +263,8 @@ describe('a link «Sin dinero» (the default)', () => {
     const seen = new Set<string>()
     for (let i = 0; i < 8; i++) {
       // The board leaving and the one coming in can share the screen a moment (MOT-01): both are read.
-      for (const h of document.querySelectorAll('section h2')) seen.add((h.textContent ?? '').replace(/\s*\d+–\d+ de \d+$/, ''))
+      for (const h of document.querySelectorAll('section h2'))
+        seen.add((h.textContent ?? '').replace(/\s*\d+–\d+ de \d+$/, ''))
       expect(pesos(), `board ${i}`).toEqual([])
       await act(async () => {
         fireEvent.keyDown(window, { key: 'ArrowRight' })
@@ -265,7 +298,9 @@ describe('a link «Con dinero»', () => {
     open()
     await waitFor(() => expect(rows().length).toBe(12))
     expect(pesos().length).toBeGreaterThan(0)
-    const tabs = within(screen.getByRole('navigation', { name: t.common.sections })).getAllByRole('link').map((a) => a.textContent)
+    const tabs = within(screen.getByRole('navigation', { name: t.common.sections }))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
     expect(tabs).toEqual([t.nav.live, t.nav.games, t.nav.money])
     fireEvent.click(screen.getByRole('link', { name: t.nav.money }))
     await screen.findByRole('heading', { level: 1, name: t.nav.money })
@@ -282,10 +317,12 @@ describe('a link «Con dinero»', () => {
 
   it('nothing sends the reader to a Comité screen, on any tab, even with a pot that doesn’t square and no banker', async () => {
     // The verifier's case: «El Comité ajusta los premios en Comité, sección Torneo» on a link's Dinero.
-    serve(board('full12-live', true, 'v1', (s) => {
-      ;(s.tournament.settings as { entryFee: number }).entryFee = 100
-      s.tournament.bankerPlayerId = null
-    }))
+    serve(
+      board('full12-live', true, 'v1', (s) => {
+        ;(s.tournament.settings as { entryFee: number }).entryFee = 100
+        s.tournament.bankerPlayerId = null
+      }),
+    )
     open()
     await waitFor(() => expect(rows().length).toBe(12))
     expect(comiteSteps()).toEqual([])
@@ -373,11 +410,19 @@ describe('polling', () => {
     serve(board('full12-live', false, 'v1'), moved)
     open()
     await waitFor(() => expect(rows().length).toBe(12))
-    const before = Array.from(rows()).map((r) => r.getAttribute('aria-label')).join('|')
+    const before = Array.from(rows())
+      .map((r) => r.getAttribute('aria-label'))
+      .join('|')
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000)
     })
-    await waitFor(() => expect(Array.from(rows()).map((r) => r.getAttribute('aria-label')).join('|')).not.toBe(before))
+    await waitFor(() =>
+      expect(
+        Array.from(rows())
+          .map((r) => r.getAttribute('aria-label'))
+          .join('|'),
+      ).not.toBe(before),
+    )
   })
 
   it('out of sight it asks nothing; back on screen it asks at once', async () => {
@@ -423,7 +468,10 @@ describe('polling', () => {
 
   it('keeps nothing on the phone: no boards saved, no entry, nothing in storage (the notice’s «no guarda nada»)', async () => {
     fakeTimers()
-    serve(board('full12-live', true, 'v1'), board('full12-live', true, 'v2', (s) => void (s.scores = s.scores.slice(1))))
+    serve(
+      board('full12-live', true, 'v1'),
+      board('full12-live', true, 'v2', (s) => void (s.scores = s.scores.slice(1))),
+    )
     open()
     await waitFor(() => expect(rows().length).toBe(12))
     await act(async () => {

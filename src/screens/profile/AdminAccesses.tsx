@@ -51,7 +51,9 @@ export function AdminAccesses() {
             <div key={e.id} className={styles.row}>
               <span className={styles.rowText}>
                 <span className={styles.rowTitle}>{line(e)}</span>
-                <span className={styles.rowSub}>{[relTime(e.at), e.reason && A.reason(e.reason)].filter(Boolean).join(', ')}</span>
+                <span className={styles.rowSub}>
+                  {[relTime(e.at), e.reason && A.reason(e.reason)].filter(Boolean).join(', ')}
+                </span>
               </span>
             </div>
           ))}

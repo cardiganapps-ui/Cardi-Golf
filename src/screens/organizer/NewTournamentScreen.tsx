@@ -16,7 +16,15 @@
  * (`wizardDraft.ts`), and leaving the wizard with something typed asks first.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, NavigationType, useBlocker, useLocation, useNavigate, useSearchParams, type BlockerFunction } from 'react-router'
+import {
+  Link,
+  NavigationType,
+  useBlocker,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+  type BlockerFunction,
+} from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Wordmark } from '../../components/Wordmark'
 import { IconChevronRight } from '../../components/icons'
@@ -114,7 +122,10 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   }, [created, step, asked, params, setParams])
   const forward = (next: Step) => setParams(withStep(params, next), { state: { [FROM_STEP]: true } })
   // «Atrás» is the system back when this entry was pushed from the step before, so history stays one entry per step.
-  const back = (prev: Step) => ((location.state as Record<string, unknown> | null)?.[FROM_STEP] ? void navigate(-1) : setParams(withStep(params, prev), { replace: true }))
+  const back = (prev: Step) =>
+    (location.state as Record<string, unknown> | null)?.[FROM_STEP]
+      ? void navigate(-1)
+      : setParams(withStep(params, prev), { replace: true })
 
   const edit = (s: TournamentSettings) => {
     setSettings(s)
@@ -140,7 +151,12 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   const stepNames = [W.step1, W.step2, W.review]
 
   // Anything typed or chosen: kept for a reload, and asked about before leaving.
-  const dirty = !created && (name.trim() !== '' || tagline.trim() !== '' || players !== BLANK.players || JSON.stringify(parsed.success ? parsed.data : settings) !== BLANK_SETTINGS)
+  const dirty =
+    !created &&
+    (name.trim() !== '' ||
+      tagline.trim() !== '' ||
+      players !== BLANK.players ||
+      JSON.stringify(parsed.success ? parsed.data : settings) !== BLANK_SETTINGS)
   useEffect(() => {
     if (created) return
     if (dirty) writeDraft(key, { name, tagline, players, settings, pristine })
@@ -208,18 +224,31 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       // The organizer's own zone, not the platform's placeholder.
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || parsed.data.timezone
       // Who signs the cards (UX-23), written so the tournament never depends on the default rule: the pairs with the pairs game, else a marker.
-      const row = demo ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' } : await createTournament({ name: name.trim(), tagline: tagline.trim() || undefined, settings: { ...parsed.data, timezone, expectedPlayers: players, cardSigning: parsed.data.cardSigning ?? newTournamentCardSigning(parsed.data) } })
+      const row = demo
+        ? { id: '', slug: 'ejemplo', joinCode: 'EJEMPL' }
+        : await createTournament({
+            name: name.trim(),
+            tagline: tagline.trim() || undefined,
+            settings: {
+              ...parsed.data,
+              timezone,
+              expectedPlayers: players,
+              cardSigning: parsed.data.cardSigning ?? newTournamentCardSigning(parsed.data),
+            },
+          })
       // The days asked for on step 2, as rounds (UX-06): «Rondas» used to say «Sin rondas» right after.
       // Course and date come later, in the Comité. If this fails the tournament still exists, and
       // «Para empezar» lists the rounds still to create.
       if (!demo) {
         try {
-          for (let n = 1; n <= parsed.data.rounds; n++) await upsertRound(row.id, { number: n, date: null, course_id: null, holes: 18 })
+          for (let n = 1; n <= parsed.data.rounds; n++)
+            await upsertRound(row.id, { number: n, date: null, course_id: null, holes: 18 })
         } catch (e) {
           console.warn('[wizard] rounds not created', e)
         }
         // What the organizer said above «Crear». If it doesn't reach the server, Comité › Torneo asks again.
-        if (withMoney) await confirmAdults(row.id, true).catch((e: unknown) => console.warn('[wizard] adults not recorded', e))
+        if (withMoney)
+          await confirmAdults(row.id, true).catch((e: unknown) => console.warn('[wizard] adults not recorded', e))
       }
       clearDraft(key)
       setCreated({ slug: row.slug, joinCode: row.joinCode })
@@ -230,11 +259,15 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
     }
   }
 
-  const nav = (prev: Step, next: Step | null, nextLabel: string = t.common.next, disabled = false, onNext?: () => void) => (
+  const nav = (
+    prev: Step,
+    next: Step | null,
+    nextLabel: string = t.common.next,
+    disabled = false,
+    onNext?: () => void,
+  ) => (
     <div className={styles.actions}>
-      <Button onClick={() => back(prev)}>
-        {t.common.back}
-      </Button>
+      <Button onClick={() => back(prev)}>{t.common.back}</Button>
       <Button variant="primary" disabled={disabled} onClick={() => (onNext ? onNext() : next && forward(next))}>
         {nextLabel}
       </Button>
@@ -246,7 +279,9 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
   // Each step replaces the last in place, «Siguiente» with it: focus goes to where the new step says what it is
   // («Paso 2 de 3, Formato»), or to «Torneo creado» (A11Y-12). The step is the person's own move, so always.
   const progressRef = useRef<HTMLDivElement>(null)
-  useViewFocus(shown, (v) => progressRef.current?.querySelector(v === DONE ? 'h1' : '[data-view-heading]'), { always: true })
+  useViewFocus(shown, (v) => progressRef.current?.querySelector(v === DONE ? 'h1' : '[data-view-heading]'), {
+    always: true,
+  })
 
   return (
     <div className={`${styles.screen} ${shown === DONE ? '' : styles.wizard}`}>
@@ -280,10 +315,20 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
         >
           <Field label={W.name}>
             {/* No autoFocus: the keyboard covering the screen you just opened is not a welcome. */}
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={W.namePlaceholder} />
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={W.namePlaceholder}
+            />
           </Field>
           <Field label={W.tagline}>
-            <input className="input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder={W.taglinePlaceholder} />
+            <input
+              className="input"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
+              placeholder={W.taglinePlaceholder}
+            />
           </Field>
           <Button variant="primary" type="submit" disabled={name.trim().length < 3}>
             {t.common.next}
@@ -293,7 +338,13 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
 
       {shown === 2 && (
         <div className={styles.form}>
-          <PlayStep value={settings} onChange={edit} players={players} onPlayers={setPlayers} onPreset={(id) => (pristine ? applyPreset(id) : setAskPreset(id))} />
+          <PlayStep
+            value={settings}
+            onChange={edit}
+            players={players}
+            onPlayers={setPlayers}
+            onPreset={(id) => (pristine ? applyPreset(id) : setAskPreset(id))}
+          />
           {nav(1, 3, t.common.next, players < 2)}
         </div>
       )}
@@ -301,7 +352,9 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
       {shown === 3 && (
         <div className={styles.form}>
           <ReviewCard name={name} tagline={tagline} settings={settings} players={players} check={check} />
-          {withMoney && <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />}
+          {withMoney && (
+            <Toggle label={t.money.adults.check} hint={t.money.adults.hint} checked={adults} onChange={setAdults} />
+          )}
           {error && <p className="error">{error}</p>}
           {!moneyOk && <p className="help">{W.fixToCreate}</p>}
           {sense.length > 0 && (
@@ -317,8 +370,24 @@ export function NewTournamentScreen({ demo = false }: { demo?: boolean } = {}) {
 
       {shown !== DONE && <WizardPreview name={name} tagline={tagline} settings={settings} check={check} step={shown} />}
 
-      <ConfirmSheet open={!!askPreset} title={W.replaceTitle} body={W.replaceBody} confirmLabel={W.replaceConfirm} onConfirm={() => askPreset && applyPreset(askPreset)} onClose={() => setAskPreset(null)} />
-      <ConfirmSheet open={blocker.state === 'blocked' && !restoring} title={W.leaveTitle} body={W.leaveBody} confirmLabel={W.leaveConfirm} cancelLabel={W.leaveStay} danger onConfirm={leave} onClose={() => blocker.state === 'blocked' && blocker.reset()} />
+      <ConfirmSheet
+        open={!!askPreset}
+        title={W.replaceTitle}
+        body={W.replaceBody}
+        confirmLabel={W.replaceConfirm}
+        onConfirm={() => askPreset && applyPreset(askPreset)}
+        onClose={() => setAskPreset(null)}
+      />
+      <ConfirmSheet
+        open={blocker.state === 'blocked' && !restoring}
+        title={W.leaveTitle}
+        body={W.leaveBody}
+        confirmLabel={W.leaveConfirm}
+        cancelLabel={W.leaveStay}
+        danger
+        onConfirm={leave}
+        onClose={() => blocker.state === 'blocked' && blocker.reset()}
+      />
 
       {shown === DONE && created && (
         <div className={`${styles.created} fade-in`}>

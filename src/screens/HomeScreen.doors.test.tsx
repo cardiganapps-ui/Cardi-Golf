@@ -10,7 +10,10 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../data/auth', () => ({ useAuth: () => ({ ready: true, user: null, isAnonymous: false, bootError: null }), hasStoredSession: () => false }))
+vi.mock('../data/auth', () => ({
+  useAuth: () => ({ ready: true, user: null, isAnonymous: false, bootError: null }),
+  hasStoredSession: () => false,
+}))
 vi.mock('../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
 
 import { t } from '../i18n/es-MX'

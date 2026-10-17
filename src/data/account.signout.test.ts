@@ -23,7 +23,9 @@ const auth = vi.hoisted(() => ({
   otp: 0,
   verifies: 0,
   /** What updateUser({ email }) answers: by default the address has an account already. */
-  updateUser: async (): Promise<{ error: unknown }> => ({ error: Object.assign(new Error('already registered'), { code: 'email_exists' }) }),
+  updateUser: async (): Promise<{ error: unknown }> => ({
+    error: Object.assign(new Error('already registered'), { code: 'email_exists' }),
+  }),
 }))
 vi.mock('../lib/supabase', () => ({
   supabaseConfigured: true,
@@ -34,7 +36,9 @@ vi.mock('../lib/supabase', () => ({
         auth.signOuts++
         return auth.signOut()
       },
-      getSession: async () => ({ data: { session: auth.session === 'none' ? null : { user: { id: 'uid-a', is_anonymous: auth.anonymous } } } }),
+      getSession: async () => ({
+        data: { session: auth.session === 'none' ? null : { user: { id: 'uid-a', is_anonymous: auth.anonymous } } },
+      }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
       // By default the address already has an account: the device signs in to it instead of converting.
       updateUser: () => auth.updateUser(),
@@ -62,10 +66,26 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't-open', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't-open',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
-const { confirmProfileCode, continueWithGoogle, sendProfileCode, signInWithGoogleInstead, signOutSafely, useLateSignOut } = await import('./account')
+const {
+  confirmProfileCode,
+  continueWithGoogle,
+  sendProfileCode,
+  signInWithGoogleInstead,
+  signOutSafely,
+  useLateSignOut,
+} = await import('./account')
 const { useAuth } = await import('./auth')
 const { useMyProfile } = await import('./profiles')
 const { t } = await import('../i18n/es-MX')
@@ -127,7 +147,16 @@ describe('signing out of a shared phone', () => {
       key: 'score:r9:p1:4',
       kind: 'score',
       tournamentId: 't-otro',
-      payload: { round_id: 'r9', player_id: 'p1', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+      payload: {
+        round_id: 'r9',
+        player_id: 'p1',
+        hole: 4,
+        strokes: 4,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p1',
+        client_ts: 'x',
+      },
       attempts: 0,
       createdAt: 1,
     })
@@ -144,7 +173,16 @@ function holeOfSaved() {
     key: 'score:r1:p1:4',
     kind: 'score',
     tournamentId: id,
-    payload: { round_id: 'r1', player_id: 'p1', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+    payload: {
+      round_id: 'r1',
+      player_id: 'p1',
+      hole: 4,
+      strokes: 4,
+      putts: 2,
+      picked_up: false,
+      entered_by: 'p1',
+      client_ts: 'x',
+    },
     attempts: 0,
     createdAt: 1,
   })
@@ -171,7 +209,16 @@ describe('what the refusal says', () => {
       tournamentId: id,
       tournamentName: name,
       actingUid: 'uid-viejo',
-      payload: { round_id: 'r1', player_id: 'p1', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+      payload: {
+        round_id: 'r1',
+        player_id: 'p1',
+        hole: 4,
+        strokes: 4,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p1',
+        client_ts: 'x',
+      },
       attempts: 0,
       createdAt: 1,
     })
@@ -181,7 +228,9 @@ describe('what the refusal says', () => {
 
 describe('signing out with no signal and an expired token', () => {
   it('auth-js keeps the session: not done, and the saved boards and «Tu último torneo» stay', async () => {
-    auth.signOut = async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }) })
+    auth.signOut = async () => ({
+      error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError' }),
+    })
     expect(await signOutSafely()).toEqual({ done: false, reason: t.account.signOutUnconfirmed })
     expect(auth.signOuts).toBe(1)
     expect(await readCached(slug)).not.toBeNull()
@@ -273,7 +322,9 @@ describe('changing account with a write of another tournament on the phone', () 
     expect(await sendProfileCode('otro@example.com')).toBe('signin')
     expect(auth.otp).toBe(1)
     await holeOfSaved()
-    await expect(confirmProfileCode('otro@example.com', '123456', 'signin')).rejects.toThrow(t.account.unsentSignal(name, 'switch'))
+    await expect(confirmProfileCode('otro@example.com', '123456', 'signin')).rejects.toThrow(
+      t.account.unsentSignal(name, 'switch'),
+    )
     expect(auth.verifies).toBe(0)
     // Converting in place keeps the uid: its code goes ahead.
     await confirmProfileCode('nuevo@example.com', '123456', 'convert')

@@ -8,7 +8,15 @@
  * the same cap Stableford uses. Standings compare "to par" over the holes
  * played so far, so players on different holes line up fairly.
  */
-import { flattenRanks, isFinal, rankField, splitEven, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
+import {
+  flattenRanks,
+  isFinal,
+  rankField,
+  splitEven,
+  unfilledPlaces,
+  unfilledWarning,
+  type RankGroup,
+} from '../../core/ranking'
 import { msg, type Msg } from '../../messages'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
@@ -111,22 +119,47 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     const pots = tablePots(state, ctx)
     return state.tables.flatMap((tb, i) => {
       const pot = pots[i]!
-      return unfilledWarning(ctx.config.label, unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)), tb.rows.length, 'player', tb.roundId ? roundNumberOf(ctx, tb.roundId) : null)
+      return unfilledWarning(
+        ctx.config.label,
+        unfilledPlaces(tb.groups, placeAmounts(pot, ctx.config.money.split)),
+        tb.rows.length,
+        'player',
+        tb.roundId ? roundNumberOf(ctx, tb.roundId) : null,
+      )
     })
   },
   board(state, ctx) {
     const money = moneyByPlayer(lowScoreGame.prizes(state, ctx))
-    const fig = (v: number): Msg => (ctx.config.options.basis === 'points' ? msg('pts', { n: v }) : msg('board.toPar', { n: v }))
+    const fig = (v: number): Msg =>
+      ctx.config.options.basis === 'points' ? msg('pts', { n: v }) : msg('board.toPar', { n: v })
     const sections: BoardSection[] = state.tables.map((tb) => ({
-      title: tb.roundId && state.tables.length > 1 ? msg('board.day', { day: roundNumberOf(ctx, tb.roundId) }) : undefined,
-      rows: tb.rows.map((r) => ({ playerIds: [r.playerId], pos: r.label, figure: fig(r.value), sub: msg('board.holes', { n: r.thru }), money: money.get(r.playerId) ?? 0 })),
+      title:
+        tb.roundId && state.tables.length > 1 ? msg('board.day', { day: roundNumberOf(ctx, tb.roundId) }) : undefined,
+      rows: tb.rows.map((r) => ({
+        playerIds: [r.playerId],
+        pos: r.label,
+        figure: fig(r.value),
+        sub: msg('board.holes', { n: r.thru }),
+        money: money.get(r.playerId) ?? 0,
+      })),
     }))
-    const notes: Msg[] = [msg('board.lowRule', { basis: ctx.config.options.basis, perRound: ctx.config.options.scope === 'perRound' })]
+    const notes: Msg[] = [
+      msg('board.lowRule', { basis: ctx.config.options.basis, perRound: ctx.config.options.scope === 'perRound' }),
+    ]
     const names = namer(ctx)
     for (const tb of state.tables) {
       if (!tb.incomplete.length) continue
       const day = tb.roundId && state.tables.length > 1 ? roundNumberOf(ctx, tb.roundId) : null
-      notes.push(msg('board.lowIncomplete', { day, who: tb.incomplete.map((id) => ({ name: names(id), thru: tb.rows.find((r) => r.playerId === id)?.thru ?? 0 })), holes: tb.holes }))
+      notes.push(
+        msg('board.lowIncomplete', {
+          day,
+          who: tb.incomplete.map((id) => ({
+            name: names(id),
+            thru: tb.rows.find((r) => r.playerId === id)?.thru ?? 0,
+          })),
+          holes: tb.holes,
+        }),
+      )
     }
     if (ctx.pot > 0) notes.push(potNote(ctx.config, ctx.pot, { places: ctx.config.money.split }))
     return { sections, notes }

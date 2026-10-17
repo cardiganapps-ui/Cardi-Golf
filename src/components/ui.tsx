@@ -23,9 +23,25 @@ export { Field, Segmented } from './primitives'
  * A face: the photo, or the initials (a placeholder name's number, «Jugador 12» is «12»). `seed` (the player's id)
  * gives the initials a tint of his own, the same on every phone (VIS-18); without it they sit on the ruled grey.
  */
-export function Avatar({ name, url, size, honoree, seed }: { name: string; url?: string | null; size?: 'sm' | 'lg'; honoree?: boolean; seed?: string }) {
+export function Avatar({
+  name,
+  url,
+  size,
+  honoree,
+  seed,
+}: {
+  name: string
+  url?: string | null
+  size?: 'sm' | 'lg'
+  honoree?: boolean
+  seed?: string
+}) {
   return (
-    <span className={`avatar ${size === 'lg' ? 'avatar--lg' : size === 'sm' ? 'avatar--sm' : ''}`} data-tone={!url && seed !== undefined ? monogramTone(seed) : undefined} aria-hidden="true">
+    <span
+      className={`avatar ${size === 'lg' ? 'avatar--lg' : size === 'sm' ? 'avatar--sm' : ''}`}
+      data-tone={!url && seed !== undefined ? monogramTone(seed) : undefined}
+      aria-hidden="true"
+    >
       {url ? <img src={url} alt="" loading="lazy" /> : initials(name)}
       {honoree && <span className={styles.honoreeMark} />}
     </span>
@@ -36,7 +52,19 @@ export function Avatar({ name, url, size, honoree, seed }: { name: string; url?:
  * A switch with its words. The whole row is its label, so a tap anywhere on it flips it; it is named by its words
  * alone and the hint describes it (A11Y-24): inside the label, the hint was part of its name.
  */
-export function Toggle({ label, checked, onChange, hint, ariaLabel }: { label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; ariaLabel?: string }) {
+export function Toggle({
+  label,
+  checked,
+  onChange,
+  hint,
+  ariaLabel,
+}: {
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  hint?: string
+  ariaLabel?: string
+}) {
   const id = useId()
   return (
     <label className="toggle">
@@ -65,7 +93,23 @@ export function Toggle({ label, checked, onChange, hint, ariaLabel }: { label: s
  * `onGrab`: a press on the grabber or the header (never on its «Cerrar») that
  * may become a drag down (MOT-09); the body has none, so a drag there scrolls.
  */
-export function SheetFrame({ title, onClose, children, wide, className = '', frameRef, onGrab }: { title?: string; onClose?: () => void; children: ReactNode; wide?: boolean; className?: string; frameRef?: React.Ref<HTMLDivElement>; onGrab?: (e: React.PointerEvent<HTMLElement>) => void }) {
+export function SheetFrame({
+  title,
+  onClose,
+  children,
+  wide,
+  className = '',
+  frameRef,
+  onGrab,
+}: {
+  title?: string
+  onClose?: () => void
+  children: ReactNode
+  wide?: boolean
+  className?: string
+  frameRef?: React.Ref<HTMLDivElement>
+  onGrab?: (e: React.PointerEvent<HTMLElement>) => void
+}) {
   const titleId = useId()
   // The dialog is named by its visible heading. A sheet you can close always
   // shows «Cerrar»: a phone has no Escape key, and the strip of backdrop above
@@ -100,7 +144,6 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
   )
 }
 
-
 /** A drag down past this share of the sheet's height closes it (MOT-09). */
 export const SHEET_DISMISS_SHARE = 0.25
 /** …and so does a flick down faster than this, in px/ms, over the last SHEET_FLICK_MS of the drag. */
@@ -111,7 +154,8 @@ const SHEET_FLICK_MS = 100
 function animationMs(el: Element): number {
   const s = getComputedStyle(el)
   if (!s.animationName || s.animationName === 'none') return 0
-  const ms = (v: string) => v.split(',').map((x) => (x.trim().endsWith('ms') ? parseFloat(x) : parseFloat(x) * 1000) || 0)
+  const ms = (v: string) =>
+    v.split(',').map((x) => (x.trim().endsWith('ms') ? parseFloat(x) : parseFloat(x) * 1000) || 0)
   const durations = ms(s.animationDuration ?? '')
   const delays = ms(s.animationDelay ?? '')
   return Math.max(0, ...durations.map((d, i) => d + (delays[i] ?? delays[0] ?? 0)))
@@ -155,7 +199,23 @@ function springBack(el: HTMLElement, bd: HTMLElement) {
  * release past a quarter of its height, or a flick down, closes it as the
  * backdrop would; anything less springs back.
  */
-export function Sheet({ open, onClose, title, children, wide, dirty, onExited }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; wide?: boolean; dirty?: boolean; onExited?: () => void }) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  wide,
+  dirty,
+  onExited,
+}: {
+  open: boolean
+  onClose: () => void
+  title?: string
+  children: ReactNode
+  wide?: boolean
+  dirty?: boolean
+  onExited?: () => void
+}) {
   const id = useId()
   const backdrop = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLDivElement>(null)
@@ -202,7 +262,10 @@ export function Sheet({ open, onClose, title, children, wide, dirty, onExited }:
    */
   useLayoutEffect(() => {
     if (!open) return
-    opener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
+    opener.current =
+      document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+        ? document.activeElement
+        : null
     const el = backdrop.current
     if (!el) return
     // Reopened while leaving, or after a drag: from where it rests.
@@ -349,18 +412,23 @@ export function Sheet({ open, onClose, title, children, wide, dirty, onExited }:
       aria-hidden={leaving || undefined}
       inert={leaving || undefined}
     >
-      <SheetFrame title={view.title} onClose={tryClose} wide={view.wide} frameRef={frame} onGrab={leaving ? undefined : grab}>
+      <SheetFrame
+        title={view.title}
+        onClose={tryClose}
+        wide={view.wide}
+        frameRef={frame}
+        onGrab={leaving ? undefined : grab}
+      >
         {view.children}
         <Sheet open={asking} onClose={() => setAsking(false)} title={t.common.discardTitle}>
           <div className="stack">
             <p className="help">{t.common.discardBody}</p>
             <div className="row">
-              <Button onClick={() => setAsking(false)}>
-                {t.common.keepEditing}
-              </Button>
+              <Button onClick={() => setAsking(false)}>{t.common.keepEditing}</Button>
               <Button
-                variant="danger" className="grow"
-               
+                variant="danger"
+                className="grow"
+
                 onClick={() => {
                   setAsking(false)
                   close.current()
@@ -378,7 +446,13 @@ export function Sheet({ open, onClose, title, children, wide, dirty, onExited }:
 
 /** A loading placeholder: a block on the skeleton fill (1.3:1 or more against the page, VIS-13). */
 export function Skeleton({ w = '100%', h = 16, round }: { w?: string | number; h?: number; round?: boolean }) {
-  return <span className={`${styles.skeleton} ${round ? styles.skeletonRound : ''}`} style={{ width: w, height: h }} aria-hidden="true" />
+  return (
+    <span
+      className={`${styles.skeleton} ${round ? styles.skeletonRound : ''}`}
+      style={{ width: w, height: h }}
+      aria-hidden="true"
+    />
+  )
 }
 
 /**
@@ -396,7 +470,11 @@ export function Spinner({ label, rows, kind = 'list' }: { label?: string; rows?:
   const n = rows ?? (kind === 'card' ? 4 : kind === 'text' ? 3 : 6)
   const w = (i: number) => WIDTHS[i % WIDTHS.length]!
   return (
-    <div className={`${styles.loading} ${styles[`loading_${kind}`] ?? ''}`} role="status" aria-label={label ?? t.common.loading}>
+    <div
+      className={`${styles.loading} ${styles[`loading_${kind}`] ?? ''}`}
+      role="status"
+      aria-label={label ?? t.common.loading}
+    >
       {kind === 'card' && (
         <div className={styles.skHole}>
           <Skeleton w={56} h={48} />
@@ -447,7 +525,17 @@ export function Spinner({ label, rows, kind = 'list' }: { label?: string; rows?:
  * home) and «Reintentar». It was a pink card with «Algo salió mal» over the raw message.
  * `error`: the caught error, or copy already made from one.
  */
-export function ErrorBox({ error, onRetry, title, fallback }: { error: unknown; onRetry?: () => void; title?: string; fallback?: ReactNode }) {
+export function ErrorBox({
+  error,
+  onRetry,
+  title,
+  fallback,
+}: {
+  error: unknown
+  onRetry?: () => void
+  title?: string
+  fallback?: ReactNode
+}) {
   return (
     <div className={styles.errorBox} role="alert">
       <IconAlert size={24} className={styles.errorMark} />
@@ -506,7 +594,9 @@ export function Toaster() {
     queued.current = msgs.length
     if (pausedAt != null || !msgs.length) return
     const now = Date.now()
-    const timers = msgs.map((m) => setTimeout(() => setMsgs((cur) => cur.filter((x) => x.id !== m.id)), Math.max(0, m.until - now)))
+    const timers = msgs.map((m) =>
+      setTimeout(() => setMsgs((cur) => cur.filter((x) => x.id !== m.id)), Math.max(0, m.until - now)),
+    )
     return () => timers.forEach(clearTimeout)
   }, [msgs, pausedAt])
   const pause = () => setPausedAt((at) => at ?? Date.now())
@@ -610,7 +700,7 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
   return (
     <Button
       size="sm"
-     
+
       onClick={() =>
         void (async () => {
           try {
@@ -631,7 +721,11 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
 export function ShareButton({ text, url, title }: { text: string; url?: string; title?: string }) {
   if (typeof navigator === 'undefined' || !navigator.share) return null
   return (
-    <Button variant="primary" size="sm" onClick={() => void navigator.share({ text, url, title }).catch(() => undefined)}>
+    <Button
+      variant="primary"
+      size="sm"
+      onClick={() => void navigator.share({ text, url, title }).catch(() => undefined)}
+    >
       {t.common.share}
     </Button>
   )

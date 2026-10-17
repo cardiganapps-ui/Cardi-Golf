@@ -14,7 +14,9 @@ test('the app asks iOS for the default status bar (PWA-02)', async ({ page }) =>
 })
 
 for (const path of ['', 'tarjeta', 'juegos', 'dinero', 'mas']) {
-  test(`with a 59 px top inset, nothing scrolls under the status bar: ${path || 'envivo'} (PWA-02)`, async ({ page }) => {
+  test(`with a 59 px top inset, nothing scrolls under the status bar: ${path || 'envivo'} (PWA-02)`, async ({
+    page,
+  }) => {
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 59, bottom: 34 } })
     await open(page, `/t/_/full12-live/${path}`)
@@ -38,7 +40,9 @@ for (const path of ['', 'tarjeta', 'juegos', 'dinero', 'mas']) {
 }
 
 for (const path of ['tv', 'ceremonia']) {
-  test(`with a 59 px top inset, the ${path} board stays above the band and below the bar (PWA-02)`, async ({ page }) => {
+  test(`with a 59 px top inset, the ${path} board stays above the band and below the bar (PWA-02)`, async ({
+    page,
+  }) => {
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 59, bottom: 34 } })
     await page.setViewportSize({ width: 393, height: 852 })
@@ -48,7 +52,10 @@ for (const path of ['tv', 'ceremonia']) {
     const box = (await heading.boundingBox())!
     expect(Math.round(box.y), 'heading top').toBeGreaterThanOrEqual(59)
     // What is drawn at the heading's centre is the heading: the band does not cover the board.
-    const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('h1, h2') !== null, { x: box.x + Math.min(20, box.width / 2), y: box.y + box.height / 2 })
+    const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('h1, h2') !== null, {
+      x: box.x + Math.min(20, box.width / 2),
+      y: box.y + box.height / 2,
+    })
     expect(hit).toBe(true)
   })
 }

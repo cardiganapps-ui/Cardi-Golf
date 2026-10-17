@@ -12,8 +12,10 @@ import { useInstallOffer } from '../lib/install'
 import { CaptureFromIcon, InstallCard, InstallFirst, InstallRow } from './InstallGuide'
 
 const UA = {
-  iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
-  android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36',
+  iphone:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+  android:
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36',
   laptop: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
 }
 function device(ua: string) {
@@ -21,7 +23,12 @@ function device(ua: string) {
   Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
 }
 function standalone(on: boolean) {
-  window.matchMedia = ((q: string) => ({ matches: on && q === '(display-mode: standalone)', media: q, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: on && q === '(display-mode: standalone)',
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
+  })) as unknown as typeof window.matchMedia
 }
 
 beforeEach(() => {
@@ -49,7 +56,12 @@ describe('the card where players arrive (PWA-08)', () => {
     expect(screen.getByText(t.install.android)).toBeTruthy()
     unmount()
     const prompt = vi.fn(async () => undefined)
-    useInstallOffer.setState({ offer: Object.assign(new Event('beforeinstallprompt'), { prompt, userChoice: Promise.resolve({ outcome: 'accepted' as const }) }) })
+    useInstallOffer.setState({
+      offer: Object.assign(new Event('beforeinstallprompt'), {
+        prompt,
+        userChoice: Promise.resolve({ outcome: 'accepted' as const }),
+      }),
+    })
     render(<InstallCard />)
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: t.install.installButton }))

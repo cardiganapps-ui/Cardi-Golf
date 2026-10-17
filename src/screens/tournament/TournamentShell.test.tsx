@@ -25,14 +25,29 @@ import { useRefreshBoards } from './connection'
 
 function mount() {
   const fx = getFixture('minimal4-live')!
-  useTournament.setState({ tournamentId: fx.snapshot.tournament.id, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null, realtime: 'live' })
+  useTournament.setState({
+    tournamentId: fx.snapshot.tournament.id,
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    error: null,
+    realtime: 'live',
+  })
   return render(
     <MemoryRouter initialEntries={['/t/x/juegos']}>
       <Routes>
         <Route
           path="/t/:slug/*"
           element={
-            <TournamentContext.Provider value={{ tournamentId: fx.snapshot.tournament.id, slug: 'x', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+            <TournamentContext.Provider
+              value={{
+                tournamentId: fx.snapshot.tournament.id,
+                slug: 'x',
+                lookup: fx.lookup,
+                me: fx.me,
+                refresh: async () => undefined,
+                leave: async () => undefined,
+              }}
+            >
               <TournamentShell />
             </TournamentContext.Provider>
           }
@@ -66,7 +81,12 @@ describe('the Tarjeta tab says what is still on the phone (REL-17)', () => {
 
   it('a refused write wins over the waiting count', () => {
     mount()
-    act(() => useOutbox.setState({ pendingHoles: 3, rejected: [{ key: 'k', kind: 'score', tournamentId: 't', payload: {} as never, message: 'x', at: 0 }] }))
+    act(() =>
+      useOutbox.setState({
+        pendingHoles: 3,
+        rejected: [{ key: 'k', kind: 'score', tournamentId: 't', payload: {} as never, message: 'x', at: 0 }],
+      }),
+    )
     expect(within(cardTab()).getByText('1').className).toMatch(/tabBadgeBad/)
     expect(cardTab().textContent).toContain(t.sync.rejected(1))
   })
@@ -74,14 +94,36 @@ describe('the Tarjeta tab says what is still on the phone (REL-17)', () => {
 
 /** The boards on screen, from the phone or the server, saved `minutesAgo`. `ctx`: the gate's asks, for the chip's tap. */
 function showBoards(
-  state: { source: 'cache' | 'server'; realtime?: 'off' | 'connecting' | 'live' | 'error'; minutesAgo: number; error?: string },
+  state: {
+    source: 'cache' | 'server'
+    realtime?: 'off' | 'connecting' | 'live' | 'error'
+    minutesAgo: number
+    error?: string
+  },
   ctx: { refresh?: () => Promise<void>; retry?: () => Promise<void> } = {},
 ) {
   const fx = getFixture('minimal4-live')!
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: state.realtime ?? 'off', updatedAt: Date.now() - state.minutesAgo * 60_000, error: state.error ?? null })
+  useTournament.setState({
+    tournamentId: 't-real',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    source: state.source,
+    realtime: state.realtime ?? 'off',
+    updatedAt: Date.now() - state.minutesAgo * 60_000,
+    error: state.error ?? null,
+  })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: ctx.refresh ?? (async () => undefined), retry: ctx.retry, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-real',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: ctx.refresh ?? (async () => undefined),
+          retry: ctx.retry,
+          leave: async () => undefined,
+        }}
+      >
         <TournamentShell />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -100,7 +142,7 @@ async function noSignal() {
 }
 
 describe('the header says what the boards are (REL-02, REL-04)', () => {
-  it('with signal, the phone\'s copy while the live tournament is on its way: «Conectando…», and how old it is', () => {
+  it("with signal, the phone's copy while the live tournament is on its way: «Conectando…», and how old it is", () => {
     showBoards({ source: 'cache', minutesAgo: 5 })
     expect(chip()).toBe(t.sync.connecting)
     expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
@@ -135,7 +177,7 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     expect(header()).not.toContain('hace un momento')
   })
 
-  it('the server\'s boards with the channel down never read «Sin señal», and need no age', () => {
+  it("the server's boards with the channel down never read «Sin señal», and need no age", () => {
     showBoards({ source: 'server', realtime: 'off', minutesAgo: 0 })
     expect(header()).not.toContain(t.sync.offlineShort)
     expect(age()).toBeNull()
@@ -146,7 +188,7 @@ describe('the header says what the boards are (REL-02, REL-04)', () => {
     expect(age()).toBeNull()
   })
 
-  it('the server\'s boards after a fetch of them failed: «Conectando…» while it is tried again, and how old they are (REL-10)', () => {
+  it("the server's boards after a fetch of them failed: «Conectando…» while it is tried again, and how old they are (REL-10)", () => {
     // It read «En vivo» with no age while every fetch failed.
     showBoards({ source: 'server', realtime: 'live', minutesAgo: 7, error: t.errors.network })
     expect(chip()).toBe(t.sync.connecting)
@@ -261,7 +303,10 @@ describe('the chip is «Actualizar» while the boards are not live (PWA-15)', ()
   })
 
   it('over the phone’s copy, or with no channel, the gate asks again (session, boards and channel), not the store', async () => {
-    for (const state of [{ source: 'cache' as const, minutesAgo: 5 }, { source: 'server' as const, realtime: 'off' as const, minutesAgo: 0 }]) {
+    for (const state of [
+      { source: 'cache' as const, minutesAgo: 5 },
+      { source: 'server' as const, realtime: 'off' as const, minutesAgo: 0 },
+    ]) {
       const retry = vi.fn(async () => undefined)
       const refresh = vi.fn(async () => undefined)
       showBoards(state, { retry, refresh })
@@ -288,10 +333,27 @@ describe('the chip is «Actualizar» while the boards are not live (PWA-15)', ()
   it('two asks in the same moment (the chip, and a pull let go) are one refresh, and both get it', async () => {
     const run = deferred()
     const fx = getFixture('minimal4-live')!
-    useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: 'server', realtime: 'error', error: null })
+    useTournament.setState({
+      tournamentId: 't-real',
+      data: dataFromSnapshot(structuredClone(fx.snapshot)),
+      source: 'server',
+      realtime: 'error',
+      error: null,
+    })
     setRefresh(() => run.promise)
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>{children}</TournamentContext.Provider>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: 't-real',
+          slug: 'nacho',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
+        {children}
+      </TournamentContext.Provider>
     )
     const { result } = renderHook(() => useRefreshBoards(), { wrapper })
     let first: Promise<void> | undefined
@@ -322,14 +384,30 @@ describe('the chip is «Actualizar» while the boards are not live (PWA-15)', ()
 /** En vivo inside the shell, as the app shows it. */
 function showLive(state: { source: 'cache' | 'server'; minutesAgo: number; error?: string }) {
   const fx = getFixture('minimal4-live')!
-  useTournament.setState({ tournamentId: 't-real', data: dataFromSnapshot(structuredClone(fx.snapshot)), source: state.source, realtime: 'off', updatedAt: Date.now() - state.minutesAgo * 60_000, error: state.error ?? null })
+  useTournament.setState({
+    tournamentId: 't-real',
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    source: state.source,
+    realtime: 'off',
+    updatedAt: Date.now() - state.minutesAgo * 60_000,
+    error: state.error ?? null,
+  })
   return render(
     <MemoryRouter initialEntries={['/t/nacho']}>
       <Routes>
         <Route
           path="/t/:slug"
           element={
-            <TournamentContext.Provider value={{ tournamentId: 't-real', slug: 'nacho', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+            <TournamentContext.Provider
+              value={{
+                tournamentId: 't-real',
+                slug: 'nacho',
+                lookup: fx.lookup,
+                me: fx.me,
+                refresh: async () => undefined,
+                leave: async () => undefined,
+              }}
+            >
               <TournamentShell />
             </TournamentContext.Provider>
           }
@@ -343,7 +421,7 @@ function showLive(state: { source: 'cache' | 'server'; minutesAgo: number; error
 const times = (text: string) => (document.body.textContent ?? '').split(text).length - 1
 
 describe('En vivo says how old the boards are once (REL-04)', () => {
-  it('the phone\'s copy: the header says it, the status line does not repeat it', () => {
+  it("the phone's copy: the header says it, the status line does not repeat it", () => {
     showLive({ source: 'cache', minutesAgo: 5 })
     expect(age()).toBe(t.sync.boardsAge('hace 5 min'))
     expect(times('hace 5 min')).toBe(1)
@@ -355,7 +433,7 @@ describe('En vivo says how old the boards are once (REL-04)', () => {
     expect(times('hace 5 min')).toBe(1)
   })
 
-  it('the server\'s boards: no age in the header, so the status line gives it, once', () => {
+  it("the server's boards: no age in the header, so the status line gives it, once", () => {
     showLive({ source: 'server', minutesAgo: 5 })
     expect(age()).toBeNull()
     expect(times(t.live.updated('hace 5 min'))).toBe(1)

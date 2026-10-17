@@ -13,7 +13,17 @@ import { Input } from '../../components/primitives'
 import { IconGoogle } from '../../components/icons'
 import { useAuth } from '../../data/auth'
 import { useServerMutation } from '../../components/useServerMutation'
-import { accountError, confirmProfileCode, continueWithGoogle, finishProfileSignIn, googleAvailable, resendProfileCode, safeNext, sendProfileCode, type CodeMode } from '../../data/account'
+import {
+  accountError,
+  confirmProfileCode,
+  continueWithGoogle,
+  finishProfileSignIn,
+  googleAvailable,
+  resendProfileCode,
+  safeNext,
+  sendProfileCode,
+  type CodeMode,
+} from '../../data/account'
 import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
 import styles from './Profile.module.css'
@@ -104,7 +114,9 @@ export function EntrarScreen() {
         throw err
       }
       const done = await finishProfileSignIn()
-      navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, { replace: true })
+      navigate(done.firstTime ? `/perfil/editar?bienvenida=1&next=${encodeURIComponent(next)}` : next, {
+        replace: true,
+      })
     })
   }
 
@@ -124,7 +136,15 @@ export function EntrarScreen() {
             {info ?? t.account.codeSent(email.trim())}
           </p>
           <Field label={t.auth.code} hint={t.auth.codeHint}>
-            <Input code value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" autoComplete="one-time-code" autoFocus required />
+            <Input
+              code
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+            />
           </Field>
           {error && (
             <p className="error" role="alert">
@@ -199,7 +219,15 @@ export function EntrarScreen() {
           )}
           <form className={styles.form} onSubmit={send}>
             <Field label={t.account.email}>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" required />
+              <input
+                className="input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
+                required
+              />
             </Field>
             {error && (
               <p className="error" role="alert">

@@ -61,7 +61,10 @@ export function ScorecardScreen() {
   const round = useActiveRound()
   const myGroup = useMyGroup(round)
   const [groupId, setGroupId] = useState<string | null>(null)
-  const groups = useMemo(() => (data && round ? data.snapshot.groups.filter((g) => g.roundId === round.id) : []), [data, round])
+  const groups = useMemo(
+    () => (data && round ? data.snapshot.groups.filter((g) => g.roundId === round.id) : []),
+    [data, round],
+  )
   const group = myGroup ?? groups.find((g) => g.id === groupId) ?? null
 
   if (!data) return null
@@ -79,7 +82,10 @@ export function ScorecardScreen() {
     return (
       <div className={styles.screen}>
         <h1>{t.nav.card}</h1>
-        <EmptyState title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)} body="" />
+        <EmptyState
+          title={round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)}
+          body=""
+        />
         {/* A question about a hole another phone saved first outlives the day: «Guardar el mío» then goes to the Comité (REL-08). */}
         <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
         {/* Holes this phone couldn't send before the day closed: the only place a player sees them (REL-08). */}
@@ -116,10 +122,22 @@ export function ScorecardScreen() {
       </div>
     )
   }
-  return <GroupCard key={`${round.id}:${group.id}`} data={data} round={round} group={group} tournamentId={tournamentId} />
+  return (
+    <GroupCard key={`${round.id}:${group.id}`} data={data} round={round} group={group} tournamentId={tournamentId} />
+  )
 }
 
-function GroupCard({ data, round, group, tournamentId }: { data: TournamentData; round: Round; group: Group; tournamentId: string }) {
+function GroupCard({
+  data,
+  round,
+  group,
+  tournamentId,
+}: {
+  data: TournamentData
+  round: Round
+  group: Group
+  tournamentId: string
+}) {
   const { me } = useTournamentCtx()
   const queueRead = useOutbox((s) => s.queueRead)
   const reduce = useReducedMotion()
@@ -141,7 +159,10 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const playedOn = (pid: string, h: number) => !!roundState[pid]?.holes[h - 1]?.played
   const threshold = settings.modules.snake.enabled ? settings.modules.snake.puttsThreshold : Infinity
   /** Who carries the snake in this group today, marked on his row (MOT-07). */
-  const holderOf = (st: TournamentState) => (settings.modules.snake.enabled ? (st.modules.snake?.groups.find((g) => g.roundId === round.id && g.groupId === group.id)?.holderId ?? null) : null)
+  const holderOf = (st: TournamentState) =>
+    settings.modules.snake.enabled
+      ? (st.modules.snake?.groups.find((g) => g.roundId === round.id && g.groupId === group.id)?.holderId ?? null)
+      : null
   const snakeHolder = holderOf(state)
   const scoring = mainScoring(settings)
   /** Whether anything this tournament plays counts Stableford points (STRAT-03). */
@@ -176,15 +197,33 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
    */
   const ptsText = (h: { par: number; strokesReceived: number }, d: Draft) => {
     const pts = stablefordPoints(h.par, h.strokesReceived, d.pickedUp ? null : d.strokes, d.pickedUp)
-    if (pointsCount) return { pts, good: pts >= 3, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
+    if (pointsCount)
+      return { pts, good: pts >= 3, text: S.ptsLine(pts, d.pickedUp ? null : pts > 0 ? netScoreName(pts) : null) }
     const toPar = d.pickedUp ? null : (net ? d.strokes - h.strokesReceived : d.strokes) - h.par
     return { pts, good: toPar != null && toPar <= -1, text: t.feed.scoreName(toPar, net) }
   }
   const signingMode = cardSigningMode(settings)
   const rules = cardRules({ snapshot, round, playerIds, isComite: me.isComite, perPlayer: signingMode === 'marker' })
   const holeKey = `${round.id}|${group.id}|${hole}`
-  const entry = useHoleDrafts({ holeKey, playerIds, holeInfo, holeSpoken, editableFor: rules.editableFor, rowOf, say: setSaid, sayWithNextHole: savedSaid })
-  const contests = useContestPicks({ settings, state, holeAwards: snapshot.holeAwards, roundId: round.id, groupId: group.id, hole, players })
+  const entry = useHoleDrafts({
+    holeKey,
+    playerIds,
+    holeInfo,
+    holeSpoken,
+    editableFor: rules.editableFor,
+    rowOf,
+    say: setSaid,
+    sayWithNextHole: savedSaid,
+  })
+  const contests = useContestPicks({
+    settings,
+    state,
+    holeAwards: snapshot.holeAwards,
+    roundId: round.id,
+    groupId: group.id,
+    hole,
+    players,
+  })
   useHoleSlide(hole, reduce, nav.slide, [titleRef, bodyRef])
   const saver = useHoleSave({
     nav,
@@ -198,10 +237,24 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
     canEdit: rules.canEdit,
     needsReason: rules.needsReason,
     correctsOnServer: rules.correctsOnServer,
-    writer: { tournamentId, roundId: round.id, groupId: group.id, playerIds, groupPlayerIds: group.playerIds, myPlayerId: me.playerId, viaServer: rules.correctsOnServer, rowOf, parOf: (pid, h) => roundState[pid]?.holes[h - 1]?.par ?? par, holeOnScreen: hole, awards: contests.awards },
+    writer: {
+      tournamentId,
+      roundId: round.id,
+      groupId: group.id,
+      playerIds,
+      groupPlayerIds: group.playerIds,
+      myPlayerId: me.playerId,
+      viaServer: rules.correctsOnServer,
+      rowOf,
+      parOf: (pid, h) => roundState[pid]?.holes[h - 1]?.par ?? par,
+      holeOnScreen: hole,
+      awards: contests.awards,
+    },
     threshold,
     snakeLabel: settings.modules.snake.label,
-    answered: snapshot.snakeTiebreaks.some((tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole),
+    answered: snapshot.snakeTiebreaks.some(
+      (tb) => tb.roundId === round.id && tb.groupId === group.id && tb.hole === hole,
+    ),
     entry,
     say: setSaid,
     sayWithNextHole: savedSaid,
@@ -213,7 +266,13 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   })
   const sheetOpen = saver.asking || !!signing
   useFollowHole({ nav, order, firstOpen, queueRead, touched: entry.touched, sheetOpen, busy: saver.busy })
-  const swipe = useHoleSwipe({ active: view === 'hole' && !sheetOpen, idx, count: order.length, goto: nav.goto, reduce })
+  const swipe = useHoleSwipe({
+    active: view === 'hole' && !sheetOpen,
+    idx,
+    count: order.length,
+    goto: nav.goto,
+    reduce,
+  })
   // The hole and the grid swap in place, and an arrow goes disabled under the finger at the first or last hole.
   // When focus went with them (A11Y-12): from a dead arrow to the other one (the new hole is said already), else to
   // the new view's heading, the hole's sentence or the grid's name.
@@ -230,7 +289,12 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
 
   async function sign(card: { pairId: string } | { playerId: string }) {
     setSigning(null)
-    await enqueueSignature(tournamentId, 'pairId' in card ? { round_id: round.id, pair_id: card.pairId, signed_by: me.playerId } : { round_id: round.id, player_id: card.playerId, signed_by: me.playerId })
+    await enqueueSignature(
+      tournamentId,
+      'pairId' in card
+        ? { round_id: round.id, pair_id: card.pairId, signed_by: me.playerId }
+        : { round_id: round.id, player_id: card.playerId, signed_by: me.playerId },
+    )
     toast(S.signed)
   }
   const on = useStableHandlers({
@@ -241,7 +305,15 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
       const d = entry.drafts[pid]
       if (h && p && d) {
         const next = { ...d, ...patch }
-        setSaid(S.said(cardName(p), next.strokes, next.putts, next.pickedUp, `${ptsText(h, next).text}${h.par !== par ? `, ${S.parHere(h.par)}` : ''}`))
+        setSaid(
+          S.said(
+            cardName(p),
+            next.strokes,
+            next.putts,
+            next.pickedUp,
+            `${ptsText(h, next).text}${h.par !== par ? `, ${S.parHere(h.par)}` : ''}`,
+          ),
+        )
       }
     },
     prev: () => nav.goto(idx - 1),
@@ -274,7 +346,13 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
   const complete = players.every((p) => roundState[p.id]?.complete)
   // Under a marker's rule each card is signed as soon as it is complete (UX-23): a player who stops early never holds the rest back.
   const completeNamed = useMemo(() => named.filter((x) => roundState[x.id]?.complete), [named, roundState])
-  const locked = rules.canEdit ? null : rules.anySigned ? S.lockedSigned : round.status === 'scheduled' ? S.roundNotLive(round.number) : S.roundFinished(round.number)
+  const locked = rules.canEdit
+    ? null
+    : rules.anySigned
+      ? S.lockedSigned
+      : round.status === 'scheduled'
+        ? S.roundNotLive(round.number)
+        : S.roundFinished(round.number)
 
   return (
     <div ref={cardRef} className={styles.screen} {...swipe.handlers}>
@@ -291,11 +369,30 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
 
       {view === 'grid' ? (
         <>
-          <ScoreGrid named={named} roundState={roundState} order={order} hole={hole} pointsCount={pointsCount} net={net} onOpen={on.openHole} savedNote={saver.savedNote} onUndo={on.undo} />
+          <ScoreGrid
+            named={named}
+            roundState={roundState}
+            order={order}
+            hole={hole}
+            pointsCount={pointsCount}
+            net={net}
+            onOpen={on.openHole}
+            savedNote={saver.savedNote}
+            onUndo={on.undo}
+          />
           <HoleConflicts roundId={round.id} myPlayerId={me.playerId} />
           <RejectedWrites canResend={me.isComite} playerId={me.playerId} />
           {signingMode === 'pairs' && pairsOn && complete && (
-            <SigningPanel roundId={round.id} groupPlayerIds={group.playerIds} pairs={snapshot.pairs} signatures={snapshot.cardSignatures} players={snapshot.players} myPairId={myPair?.id ?? null} isComite={me.isComite} onSign={on.signPair} />
+            <SigningPanel
+              roundId={round.id}
+              groupPlayerIds={group.playerIds}
+              pairs={snapshot.pairs}
+              signatures={snapshot.cardSignatures}
+              players={snapshot.players}
+              myPairId={myPair?.id ?? null}
+              isComite={me.isComite}
+              onSign={on.signPair}
+            />
           )}
           {signingMode === 'marker' && (
             <MarkerSigningPanel
@@ -312,7 +409,19 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
         </>
       ) : (
         <>
-          <HoleHeader hole={hole} par={par} strokeIndex={lead?.strokeIndex} yards={lead?.yards} spoken={holeSpoken} canPrev={idx > 0} canNext={idx < order.length - 1} onPrev={on.prev} onNext={on.next} dragX={swipe.dragX} titleRef={titleRef} />
+          <HoleHeader
+            hole={hole}
+            par={par}
+            strokeIndex={lead?.strokeIndex}
+            yards={lead?.yards}
+            spoken={holeSpoken}
+            canPrev={idx > 0}
+            canNext={idx < order.length - 1}
+            onPrev={on.prev}
+            onNext={on.next}
+            dragX={swipe.dragX}
+            titleRef={titleRef}
+          />
           {/* The snake changed hands with this save (MOT-07); the screen reader hears it with the saved hole. */}
           {saver.snakeNote && (
             <p className={styles.snakeNote} aria-hidden="true">
@@ -360,7 +469,16 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
               })}
             </div>
           </motion.div>
-          {contests.contests.length > 0 && <HoleContests contests={contests.contests} pickOf={contests.pickOf} picks={contests.picks} canEdit={rules.canEdit} nameOf={cardName} onToggle={contests.togglePick} />}
+          {contests.contests.length > 0 && (
+            <HoleContests
+              contests={contests.contests}
+              pickOf={contests.pickOf}
+              picks={contests.picks}
+              canEdit={rules.canEdit}
+              nameOf={cardName}
+              onToggle={contests.togglePick}
+            />
+          )}
           <SaveBar
             label={idx === order.length - 1 ? S.saveLast : S.save}
             busy={saver.busy}
@@ -377,10 +495,25 @@ function GroupCard({ data, round, group, tournamentId }: { data: TournamentData;
         </>
       )}
 
-      <TiebreakSheet candidates={saver.tiebreak?.candidates ?? null} named={named} threshold={threshold} game={settings.modules.snake.label} busy={saver.busy} onAnswer={on.answer} onClose={on.closeTiebreak} />
+      <TiebreakSheet
+        candidates={saver.tiebreak?.candidates ?? null}
+        named={named}
+        threshold={threshold}
+        game={settings.modules.snake.label}
+        busy={saver.busy}
+        onAnswer={on.answer}
+        onClose={on.closeTiebreak}
+      />
       <DefaultsSheet open={saver.confirmDefaults} hole={hole} onBack={on.backFromDefaults} onConfirm={on.allPar} />
       <UnusualSheet lines={saver.confirmWeird} onFix={on.fixUnusual} onConfirm={on.saveUnusual} />
-      <CorrectionReasonSheet open={saver.askReason} reason={saver.reason} onReason={saver.setReason} busy={saver.busy} onClose={on.closeReason} onSave={on.saveWithReason} />
+      <CorrectionReasonSheet
+        open={saver.askReason}
+        reason={saver.reason}
+        onReason={saver.setReason}
+        busy={saver.busy}
+        onClose={on.closeReason}
+        onSave={on.saveWithReason}
+      />
       <SignSheet
         open={!!signing}
         title={signingPair ? S.signTitle(pairName(signingPair)) : signingName ? S.signPlayer(signingName) : undefined}

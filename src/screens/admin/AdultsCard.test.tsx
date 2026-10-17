@@ -14,7 +14,9 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 const api = vi.hoisted(() => ({
   adultsConfirmedAt: vi.fn(async (_tid: string): Promise<string | null | undefined> => null),
   confirmAdults: vi.fn(async (_tid: string, on: boolean) => (on ? '2026-10-16T18:00:00Z' : null)),
-  correctionRequests: vi.fn(async (_tid: string) => [{ id: 7, playerId: 'p1', text: 'Mi hándicap es 14', at: '2026-10-16T17:00:00Z', doneAt: null as string | null }]),
+  correctionRequests: vi.fn(async (_tid: string) => [
+    { id: 7, playerId: 'p1', text: 'Mi hándicap es 14', at: '2026-10-16T17:00:00Z', doneAt: null as string | null },
+  ]),
   resolveCorrection: vi.fn(async (_id: number) => undefined),
 }))
 vi.mock('../../data/myData', () => api)
@@ -31,7 +33,13 @@ afterEach(cleanup)
 
 describe('«Mayores de edad» (TRUST-13)', () => {
   it('with money and no word yet, it warns; the toggle records the word, and takes it back', async () => {
-    render(<AdultsCard tournamentId="t" settings={fx.snapshot.tournament.settings as TournamentSettings} timeZone="America/Mazatlan" />)
+    render(
+      <AdultsCard
+        tournamentId="t"
+        settings={fx.snapshot.tournament.settings as TournamentSettings}
+        timeZone="America/Mazatlan"
+      />,
+    )
     expect(await screen.findByText(M.missing)).toBeTruthy()
     await act(async () => fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(M.check) })))
     expect(api.confirmAdults).toHaveBeenCalledWith('t', true)
@@ -42,7 +50,13 @@ describe('«Mayores de edad» (TRUST-13)', () => {
 
   it('a database without 0070 shows nothing', async () => {
     api.adultsConfirmedAt.mockResolvedValueOnce(undefined)
-    const { container } = render(<AdultsCard tournamentId="t" settings={fx.snapshot.tournament.settings as TournamentSettings} timeZone="America/Mazatlan" />)
+    const { container } = render(
+      <AdultsCard
+        tournamentId="t"
+        settings={fx.snapshot.tournament.settings as TournamentSettings}
+        timeZone="America/Mazatlan"
+      />,
+    )
     await act(async () => undefined)
     expect(container.textContent).toBe('')
   })

@@ -31,12 +31,29 @@ vi.mock('./tournamentStore', () => ({
   },
 }))
 
-const { _outboxTest, enqueueAward, enqueueHole, enqueueTiebreak, useOutbox, OutboxStorageError } = await import('./outbox')
+const { _outboxTest, enqueueAward, enqueueHole, enqueueTiebreak, useOutbox, OutboxStorageError } =
+  await import('./outbox')
 
 type OutboxItem = import('./outbox').OutboxItem
-const hole = (n: number, strokes = 5) => ({ round_id: 'r1', hole: n, entered_by: 'p1', entries: [{ player_id: 'p1', fields: { strokes }, base: {} }] })
+const hole = (n: number, strokes = 5) => ({
+  round_id: 'r1',
+  hole: n,
+  entered_by: 'p1',
+  entries: [{ player_id: 'p1', fields: { strokes }, base: {} }],
+})
 /** The row another phone saved for p1 on hole `n`: a real value, so meeting it is a question for this phone. */
-const theirs = (n: number) => ({ id: `s${n}`, round_id: 'r1', player_id: 'p1', hole: n, strokes: 7, putts: 2, picked_up: false, entered_by: 'p3', updated_at: new Date().toISOString(), version: 1 })
+const theirs = (n: number) => ({
+  id: `s${n}`,
+  round_id: 'r1',
+  player_id: 'p1',
+  hole: n,
+  strokes: 7,
+  putts: 2,
+  picked_up: false,
+  entered_by: 'p3',
+  updated_at: new Date().toISOString(),
+  version: 1,
+})
 let pushes = 0
 
 beforeEach(async () => {
@@ -83,8 +100,16 @@ describe('a save is on the phone before the frame it waits for', () => {
     const f = frame()
     const saving = Promise.all([
       enqueueHole('t1', hole(7), f.drawn),
-      enqueueAward('t1', { round_id: 'r1', group_id: 'g1', hole: 7, game_id: 'closest', player_ids: ['p1'], decided_by: 'p1' }, f.drawn),
-      enqueueTiebreak('t1', { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p2', decided_by: 'p1' }, f.drawn),
+      enqueueAward(
+        't1',
+        { round_id: 'r1', group_id: 'g1', hole: 7, game_id: 'closest', player_ids: ['p1'], decided_by: 'p1' },
+        f.drawn,
+      ),
+      enqueueTiebreak(
+        't1',
+        { round_id: 'r1', group_id: 'g1', hole: 7, last_holed_player_id: 'p2', decided_by: 'p1' },
+        f.drawn,
+      ),
     ])
     await vi.waitFor(async () => expect(await storedKinds()).toEqual(['award', 'hole', 'tiebreak']))
     expect(store.refreshes).toBe(0)
@@ -118,7 +143,10 @@ describe('a holeâ€™s first save is one write, committed before the page takes it
     const of = (tx: IDBTransaction) => events.get(tx) ?? events.set(tx, { kind: '', seen: [] }).get(tx)!
     const put = IDBObjectStore.prototype.put
     const commit = IDBTransaction.prototype.commit
-    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args: Parameters<IDBObjectStore['put']>) {
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: Parameters<IDBObjectStore['put']>
+    ) {
       const req = put.apply(this, args)
       if (this.name === 'items') {
         of(req.transaction!).kind = (args[0] as { kind: string }).kind
@@ -128,7 +156,7 @@ describe('a holeâ€™s first save is one write, committed before the page takes it
     })
     vi.spyOn(IDBTransaction.prototype, 'commit').mockImplementation(function (this: IDBTransaction) {
       if (this.objectStoreNames.contains('items') && !of(this).seen.includes('commit')) of(this).seen.push('commit')
-      commit.call(this);
+      commit.call(this)
     })
     return () => Object.fromEntries([...events.values()].filter((e) => e.kind).map((e) => [e.kind, e.seen]))
   }
@@ -140,8 +168,16 @@ describe('a holeâ€™s first save is one write, committed before the page takes it
     const f = frame()
     const saving = Promise.all([
       enqueueHole('t1', hole(6), f.drawn),
-      enqueueAward('t1', { round_id: 'r1', group_id: 'g1', hole: 6, game_id: 'closest', player_ids: ['p1'], decided_by: 'p1' }, f.drawn),
-      enqueueTiebreak('t1', { round_id: 'r1', group_id: 'g1', hole: 6, last_holed_player_id: 'p2', decided_by: 'p1' }, f.drawn),
+      enqueueAward(
+        't1',
+        { round_id: 'r1', group_id: 'g1', hole: 6, game_id: 'closest', player_ids: ['p1'], decided_by: 'p1' },
+        f.drawn,
+      ),
+      enqueueTiebreak(
+        't1',
+        { round_id: 'r1', group_id: 'g1', hole: 6, last_holed_player_id: 'p2', decided_by: 'p1' },
+        f.drawn,
+      ),
     ])
     await vi.waitFor(async () => expect(await storedKinds()).toEqual(['award', 'hole', 'tiebreak']))
     // The hole goes under its own key, so there is nothing to merge or keep: no read of the queue.
@@ -181,7 +217,9 @@ describe('what waits for the frame never undoes what happened meanwhile (PR 155â
     await vi.waitFor(() => expect(pushed).toEqual([3]))
     const f = frame()
     const saving = enqueueHole('t1', hole(4), f.drawn)
-    await vi.waitFor(async () => expect((await _outboxTest.stored()).some((x) => x.kind === 'hole' && x.payload.hole === 4)).toBe(true))
+    await vi.waitFor(async () =>
+      expect((await _outboxTest.stored()).some((x) => x.kind === 'hole' && x.payload.hole === 4)).toBe(true),
+    )
     // Hole 3's answer comes: the same pass takes hole 4 from the queue, and the server asks about it.
     answerFirst()
     await vi.waitFor(() => expect(pushed).toEqual([3, 4]))
@@ -202,9 +240,15 @@ describe('what waits for the frame never undoes what happened meanwhile (PR 155â
     await new Promise((resolve) => setTimeout(resolve, 20))
     const stored = await _outboxTest.stored()
     expect(stored).toHaveLength(1)
-    expect((stored[0]!.payload as { entries: Array<{ fields: { strokes: number } }> }).entries[0]!.fields.strokes).toBe(6)
+    expect((stored[0]!.payload as { entries: Array<{ fields: { strokes: number } }> }).entries[0]!.fields.strokes).toBe(
+      6,
+    )
     // This tab's queue holds the merged one, whichever save finished storing first.
-    expect(_outboxTest.queue().map((x) => (x.payload as { entries: Array<{ fields: { strokes: number } }> }).entries[0]!.fields.strokes)).toEqual([6])
+    expect(
+      _outboxTest
+        .queue()
+        .map((x) => (x.payload as { entries: Array<{ fields: { strokes: number } }> }).entries[0]!.fields.strokes),
+    ).toEqual([6])
     f2.draw()
     f1.draw()
     await Promise.all([a, b])
@@ -238,14 +282,31 @@ describe('what waits for the frame never undoes what happened meanwhile (PR 155â
 
   it('â€¦unless what was read holds a newer version of its key: another tabâ€™s newer answer stays', async () => {
     _outboxTest.setPush(() => new Promise<never>(() => undefined))
-    const answer = (last: string) => ({ round_id: 'r1', group_id: 'g1', hole: 12, last_holed_player_id: last, decided_by: 'p1' })
+    const answer = (last: string) => ({
+      round_id: 'r1',
+      group_id: 'g1',
+      hole: 12,
+      last_holed_player_id: last,
+      decided_by: 'p1',
+    })
     // Another tab's answer for the hole, newer than any this tab will make.
-    await _outboxTest.db()!.items.put({ key: 'tiebreak:r1:g1:12', kind: 'tiebreak', tournamentId: 't1', payload: answer('p4'), attempts: 0, createdAt: Date.now(), seq: Date.now() * 1000 + 1e12, actingUid: 'uid-a' })
+    await _outboxTest.db()!.items.put({
+      key: 'tiebreak:r1:g1:12',
+      kind: 'tiebreak',
+      tournamentId: 't1',
+      payload: answer('p4'),
+      attempts: 0,
+      createdAt: Date.now(),
+      seq: Date.now() * 1000 + 1e12,
+      actingUid: 'uid-a',
+    })
     const release = holdNextRead()
     const reading = _outboxTest.load()
     await enqueueTiebreak('t1', answer('p3'))
     release()
     await reading
-    expect(_outboxTest.queue().map((x) => (x.payload as { last_holed_player_id: string }).last_holed_player_id)).toEqual(['p4'])
+    expect(
+      _outboxTest.queue().map((x) => (x.payload as { last_holed_player_id: string }).last_holed_player_id),
+    ).toEqual(['p4'])
   })
 })

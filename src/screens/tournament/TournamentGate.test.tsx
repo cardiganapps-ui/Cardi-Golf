@@ -43,7 +43,12 @@ vi.mock('../../data/api', () => ({
   releaseDevice: server.releaseDevice,
 }))
 vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}) }))
-vi.mock('../../data/outbox', () => ({ adoptQueuedWrites: vi.fn(async () => undefined), refreshOutboxCounters: vi.fn(), rejectGoneTournament: vi.fn(async () => 0), rejectGoneRounds: vi.fn(async () => 0) }))
+vi.mock('../../data/outbox', () => ({
+  adoptQueuedWrites: vi.fn(async () => undefined),
+  refreshOutboxCounters: vi.fn(),
+  rejectGoneTournament: vi.fn(async () => 0),
+  rejectGoneRounds: vi.fn(async () => 0),
+}))
 vi.mock('./EnterScreen', () => ({ EnterScreen: () => <p>Entrar</p> }))
 
 import { getFixture } from '../../dev/fixtures'
@@ -103,7 +108,14 @@ function serverLoads(name: string, fail = 0) {
     const snapshot = structuredClone(fx.snapshot)
     snapshot.tournament.name = name
     // As the store's load does: the boards, then the live channel opened (it joins later).
-    useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot), updatedAt: Date.now(), source: 'server', error: null, realtime: 'connecting' })
+    useTournament.setState({
+      tournamentId: tid,
+      data: dataFromSnapshot(snapshot),
+      updatedAt: Date.now(),
+      source: 'server',
+      error: null,
+      realtime: 'connecting',
+    })
   })
   useTournament.setState({ load })
   return load
@@ -141,7 +153,7 @@ describe('opening from the phone first', () => {
     expect(await screen.findByText('En vivo del servidor: server')).toBeTruthy()
   })
 
-  it('the server\'s boards replace the saved ones when they arrive', async () => {
+  it("the server's boards replace the saved ones when they arrive", async () => {
     await saveOnPhone('Guardado en el teléfono')
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
@@ -153,7 +165,7 @@ describe('opening from the phone first', () => {
 })
 
 describe('recovering when the signal comes back (REL-02)', () => {
-  it('keeps trying after the session is back but the snapshot is not, until the server\'s boards are up', async () => {
+  it("keeps trying after the session is back but the snapshot is not, until the server's boards are up", async () => {
     await saveOnPhone('Guardado en el teléfono')
     // Opened with no signal: the session can't be confirmed, the phone's copy shows.
     server.ensureSession.mockRejectedValueOnce(new Error('sin señal'))
@@ -280,8 +292,12 @@ describe('saved boards that no longer belong here', () => {
    * tournament's (the phone was nobody there, and its holes still on the
    * phone were refused). Only this tournament's claim goes.
    */
-  it('«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one\'s (as before when the server can\'t say where it is)', async () => {
-    for (const [claimIn, released] of [['t-otro', false], [id, true], [null, true]] as const) {
+  it("«No soy yo» here by the profile leaves the PIN of another tournament alone, and drops this one's (as before when the server can't say where it is)", async () => {
+    for (const [claimIn, released] of [
+      ['t-otro', false],
+      [id, true],
+      [null, true],
+    ] as const) {
       server.releaseDevice.mockClear()
       if (claimIn) server.myDeviceClaim.mockResolvedValue({ playerId: 'p-otro', tournamentId: claimIn })
       else server.myDeviceClaim.mockRejectedValue(new Error('TypeError: Failed to fetch'))
@@ -347,7 +363,15 @@ describe('writes this phone queued wait for the server to confirm the player (RE
   it('never for the Polo admin visiting a Protegido tournament he has not unlocked; nor is it kept on his phone', async () => {
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
-    server.myMembership.mockResolvedValue({ playerId: null, role: 'platform', isOrganizer: false, isAdmin: false, via: 'platform', protected: true, unlockedUntil: null })
+    server.myMembership.mockResolvedValue({
+      playerId: null,
+      role: 'platform',
+      isOrganizer: false,
+      isAdmin: false,
+      via: 'platform',
+      protected: true,
+      unlockedUntil: null,
+    })
     const load = serverLoads('En vivo del servidor')
     open()
     await screen.findByText('En vivo del servidor: server')
@@ -360,7 +384,15 @@ describe('writes this phone queued wait for the server to confirm the player (RE
   it('for the Polo admin with Comité rights (platform_can_write) as for the Comité, but the tournament is not kept on his phone', async () => {
     server.ensureSession.mockResolvedValue({})
     server.lookupTournament.mockResolvedValue(fx.lookup)
-    server.myMembership.mockResolvedValue({ playerId: null, role: 'platform', isOrganizer: true, isAdmin: true, via: 'platform', protected: false, unlockedUntil: null })
+    server.myMembership.mockResolvedValue({
+      playerId: null,
+      role: 'platform',
+      isOrganizer: true,
+      isAdmin: true,
+      via: 'platform',
+      protected: false,
+      unlockedUntil: null,
+    })
     const load = serverLoads('En vivo del servidor')
     open()
     await screen.findByText('En vivo del servidor: server')
@@ -385,7 +417,14 @@ describe('a tournament joined with its code: the saved boards follow the tournam
     await saveSnapshot(id, fx.snapshot)
     cleanup()
     // The next morning, no signal: home's «Tu último torneo» opens /t/<slug>.
-    useTournament.setState({ tournamentId: null, data: null, source: null, error: null, realtime: 'off', load: realLoad })
+    useTournament.setState({
+      tournamentId: null,
+      data: null,
+      source: null,
+      error: null,
+      realtime: 'off',
+      load: realLoad,
+    })
     server.ensureSession.mockImplementation(never)
     open(slug)
     expect(await screen.findByText(`${fx.snapshot.tournament.name}: cache`, {}, { timeout: 500 })).toBeTruthy()
@@ -409,7 +448,7 @@ describe('a tournament joined with its code: the saved boards follow the tournam
   })
 })
 
-describe('the store never puts the phone\'s copy over the server\'s', () => {
+describe("the store never puts the phone's copy over the server's", () => {
   it('a saved snapshot that lands after the live one is ignored', () => {
     const live = structuredClone(fx.snapshot)
     live.tournament.name = 'En vivo'

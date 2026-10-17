@@ -4,13 +4,12 @@ import { t } from '../i18n/es-MX'
 
 export function LegalLinks() {
   return (
-    <nav aria-label={t.legal.privacy.title} style={{ display: 'flex', gap: 'var(--s4)', fontSize: 'var(--fs-xs)', paddingBottom: 'var(--s4)' }}>
-      <Link to="/privacidad">
-        {t.legal.privacy.title}
-      </Link>
-      <Link to="/terminos">
-        {t.legal.terms.title}
-      </Link>
+    <nav
+      aria-label={t.legal.privacy.title}
+      style={{ display: 'flex', gap: 'var(--s4)', fontSize: 'var(--fs-xs)', paddingBottom: 'var(--s4)' }}
+    >
+      <Link to="/privacidad">{t.legal.privacy.title}</Link>
+      <Link to="/terminos">{t.legal.terms.title}</Link>
     </nav>
   )
 }

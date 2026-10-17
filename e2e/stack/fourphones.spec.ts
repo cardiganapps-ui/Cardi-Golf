@@ -57,7 +57,9 @@ interface Sample {
   ms: number
 }
 
-test('four phones save the same hole at once on 4G: every twosome’s hole shows on the other phones within 2 s', async ({ join }, testInfo) => {
+test('four phones save the same hole at once on 4G: every twosome’s hole shows on the other phones within 2 s', async ({
+  join,
+}, testInfo) => {
   test.setTimeout(480_000)
   const slug = SLUGS.fourPhones
   const scorers: Scorer[] = []
@@ -82,7 +84,11 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
         return typeHole(s.phone.page, hole, entry)
       }),
     )
-    for (const w of watchers) await watchEach(w.page, Object.fromEntries(scorers.map((s) => [s.name, { board: boardAfter(s.card, hole, s.names) }])))
+    for (const w of watchers)
+      await watchEach(
+        w.page,
+        Object.fromEntries(scorers.map((s) => [s.name, { board: boardAfter(s.card, hole, s.names) }])),
+      )
     // The four taps, together.
     await Promise.all(scorers.map((s) => saveHole(s.phone.page, hole)))
     const tapped = new Map(await Promise.all(scorers.map(async (s) => [s.name, await savedAt(s.phone.page)] as const)))
@@ -103,31 +109,52 @@ test('four phones save the same hole at once on 4G: every twosome’s hole shows
         console.log(`::error::${detail.replace(/\n/g, '%0A')}`)
         throw new Error(detail, { cause: e })
       }
-      for (const s of scorers) samples.push({ hole, group: s.group, on: w.name, ms: Math.round(at[s.name] - tapped.get(s.name)!) })
+      for (const s of scorers)
+        samples.push({ hole, group: s.group, on: w.name, ms: Math.round(at[s.name] - tapped.get(s.name)!) })
     }
     const now = samples.filter((x) => x.hole === hole).map((x) => `${x.on}←${scorers[x.group - 1].name} ${x.ms}`)
     console.log(`[e2e-stack] 4 phones on 4G: hole ${hole}: ${now.join(', ')} ms`)
   }
 
   const ms = samples.map((x) => x.ms)
-  const stats = { saves: HOLES * scorers.length, shown: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
+  const stats = {
+    saves: HOLES * scorers.length,
+    shown: ms.length,
+    min: Math.min(...ms),
+    p50: percentile(ms, 0.5),
+    p95: percentile(ms, 0.95),
+    max: Math.max(...ms),
+  }
   // No comma in the title: the workflow command reads one as the end of it.
-  console.log(`::notice title=save-to-shown (4 phones at once on 4G)::${stats.saves} saves, each on ${watchers.length} phones: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
-  keepMetrics(testInfo.project.outputDir, 'save-to-shown-4-phones', { budgetMs: BUDGET_MS, network: FOUR_G, stats, samples }, [
-    '### Four phones saving at once → shown on two others (e2e-stack, 4G)',
-    '',
-    `${stats.saves} saves (four twosomes, ${HOLES} holes, the four taps together), each timed on ${watchers.length} watching phones: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). All six phones on ${FOUR_G.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up.`,
-    '',
-    '| Hole | Twosome | Shown on | ms |',
-    '|---:|---|---|---:|',
-    ...samples.map((x) => `| ${x.hole} | ${scorers[x.group - 1].names.join(' y ')} | ${x.on} | ${x.ms} |`),
-  ].join('\n'))
+  console.log(
+    `::notice title=save-to-shown (4 phones at once on 4G)::${stats.saves} saves, each on ${watchers.length} phones: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`,
+  )
+  keepMetrics(
+    testInfo.project.outputDir,
+    'save-to-shown-4-phones',
+    { budgetMs: BUDGET_MS, network: FOUR_G, stats, samples },
+    [
+      '### Four phones saving at once → shown on two others (e2e-stack, 4G)',
+      '',
+      `${stats.saves} saves (four twosomes, ${HOLES} holes, the four taps together), each timed on ${watchers.length} watching phones: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). All six phones on ${FOUR_G.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up.`,
+      '',
+      '| Hole | Twosome | Shown on | ms |',
+      '|---:|---|---|---:|',
+      ...samples.map((x) => `| ${x.hole} | ${scorers[x.group - 1].names.join(' y ')} | ${x.on} | ${x.ms} |`),
+    ].join('\n'),
+  )
 
-  expect(samples.filter((x) => x.ms >= BUDGET_MS), `saves that took ${BUDGET_MS} ms or more to show on another phone`).toEqual([])
+  expect(
+    samples.filter((x) => x.ms >= BUDGET_MS),
+    `saves that took ${BUDGET_MS} ms or more to show on another phone`,
+  ).toEqual([])
   // Every phone's live channel was on the link, and nobody was signed in again behind the player's back.
   const phones = [...scorers.map((s) => s.phone), ...watchers]
-  for (const p of phones) expect(await slowFrames(p.page), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
+  for (const p of phones)
+    expect(await slowFrames(p.page), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
   for (const p of phones) expect(p.signUps, `${p.name}: anonymous sign-ins`).toBe(1)
   // The server holds each twosome's card as its phone typed it: 72 rows, each entered by that phone, no discrepancy.
-  expect(serverScores(slug)).toEqual(expectedScoresOf(scorers.map((s) => ({ card: s.card, names: s.names, by: s.name }))))
+  expect(serverScores(slug)).toEqual(
+    expectedScoresOf(scorers.map((s) => ({ card: s.card, names: s.names, by: s.name }))),
+  )
 })

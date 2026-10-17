@@ -14,9 +14,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const gate = vi.hoisted(() => ({ leave: vi.fn(async () => undefined) }))
 vi.mock('../../data/auth', async () => {
   const { create } = await import('zustand')
-  return { SESSION_TIMEOUT_MS: 8000, useAuth: create(() => ({ ready: true, user: { id: 'uid-a' }, isAnonymous: true })) }
+  return {
+    SESSION_TIMEOUT_MS: 8000,
+    useAuth: create(() => ({ ready: true, user: { id: 'uid-a' }, isAnonymous: true })),
+  }
 })
-vi.mock('../../lib/supabase', () => ({ supabaseConfigured: true, supabase: () => ({}), authSettings: async () => null }))
+vi.mock('../../lib/supabase', () => ({
+  supabaseConfigured: true,
+  supabase: () => ({}),
+  authSettings: async () => null,
+}))
 vi.mock('./tournamentContext', () => ({
   useTournamentCtx: () => ({
     me: { playerId: 'p1', isOrganizer: false, isComite: false, via: 'device' },
@@ -53,7 +60,14 @@ afterEach(() => {
 
 describe('«Cambiar de jugador» with writes still on the phone', () => {
   it('a card signature still queued blocks the switch, like a hole', async () => {
-    await _outboxTest.enqueue({ key: 'signature:r1:pair1', kind: 'signature', tournamentId: 't1', payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    await _outboxTest.enqueue({
+      key: 'signature:r1:pair1',
+      kind: 'signature',
+      tournamentId: 't1',
+      payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' },
+      attempts: 0,
+      createdAt: Date.now(),
+    })
     open()
     fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
     expect(await screen.findByText(t.sync.unsentWritesBeforeSwitch)).toBeTruthy()
@@ -65,7 +79,16 @@ describe('«Cambiar de jugador» with writes still on the phone', () => {
       key: 'score:r1:p1:4',
       kind: 'score',
       tournamentId: 't1',
-      payload: { round_id: 'r1', player_id: 'p1', hole: 4, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+      payload: {
+        round_id: 'r1',
+        player_id: 'p1',
+        hole: 4,
+        strokes: 4,
+        putts: 2,
+        picked_up: false,
+        entered_by: 'p1',
+        client_ts: 'x',
+      },
       attempts: 0,
       createdAt: Date.now(),
     })
@@ -76,7 +99,14 @@ describe('«Cambiar de jugador» with writes still on the phone', () => {
   })
 
   it('a write of another tournament does not block this one, and nothing queued lets the player go once confirmed', async () => {
-    await _outboxTest.enqueue({ key: 'signature:r9:pair9', kind: 'signature', tournamentId: 't-otro', payload: { round_id: 'r9', pair_id: 'pair9', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    await _outboxTest.enqueue({
+      key: 'signature:r9:pair9',
+      kind: 'signature',
+      tournamentId: 't-otro',
+      payload: { round_id: 'r9', pair_id: 'pair9', signed_by: 'p1' },
+      attempts: 0,
+      createdAt: Date.now(),
+    })
     open()
     fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
     // One tap at the bottom of Más asks first (UX-09).
@@ -99,14 +129,21 @@ describe('«Cambiar de jugador» with writes still on the phone', () => {
     open()
     fireEvent.click(screen.getByRole('button', { name: t.enter.switchPlayer }))
     const dialog = await screen.findByRole('dialog')
-    await _outboxTest.enqueue({ key: 'signature:r1:pair1', kind: 'signature', tournamentId: 't1', payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, attempts: 0, createdAt: Date.now() })
+    await _outboxTest.enqueue({
+      key: 'signature:r1:pair1',
+      kind: 'signature',
+      tournamentId: 't1',
+      payload: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' },
+      attempts: 0,
+      createdAt: Date.now(),
+    })
     fireEvent.click(within(dialog).getByRole('button', { name: t.enter.switchPlayer }))
     expect(await screen.findByText(t.sync.unsentWritesBeforeSwitch)).toBeTruthy()
     expect(gate.leave).not.toHaveBeenCalled()
   })
 })
 
-describe('the Tarjeta\'s vibration, switched on this phone (MOT-10)', () => {
+describe("the Tarjeta's vibration, switched on this phone (MOT-10)", () => {
   afterEach(() => {
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
     localStorage.clear()
@@ -125,7 +162,7 @@ describe('the Tarjeta\'s vibration, switched on this phone (MOT-10)', () => {
     expect(navigator.vibrate).toHaveBeenCalledTimes(1)
   })
 
-  it('not offered where it can\'t (an iPhone): a switch that does nothing would be a lie', () => {
+  it("not offered where it can't (an iPhone): a switch that does nothing would be a lie", () => {
     Object.defineProperty(navigator, 'vibrate', { configurable: true, value: undefined })
     open()
     expect(screen.queryByRole('checkbox', { name: new RegExp(t.more.haptics) })).toBeNull()

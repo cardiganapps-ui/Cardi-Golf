@@ -17,7 +17,8 @@ const srv = vi.hoisted(() => {
         const req = {
           select: () => req,
           setHeader: () => req,
-          then: <A>(ok: (v: { data: unknown[]; error: null }) => A) => Promise.resolve({ data: [], error: null }).then(ok),
+          then: <A>(ok: (v: { data: unknown[]; error: null }) => A) =>
+            Promise.resolve({ data: [], error: null }).then(ok),
         }
         return req
       },
@@ -31,7 +32,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 1,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, reload: async () => undefined, landChanges: () => undefined, pushesDone: () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      reload: async () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, enqueueSignature, flush, overlayPending } = await import('./outbox')
@@ -55,7 +65,9 @@ describe('a marker’s signature in the outbox', () => {
     await enqueueSignature('t1', { round_id: 'r1', player_id: 'p2', signed_by: 'p1' })
     const s = makeSnapshot({ players: 4, rounds: 1 })
     overlayPending(s)
-    expect(s.cardSignatures).toEqual([{ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p1', signedAt: expect.any(String) }])
+    expect(s.cardSignatures).toEqual([
+      { roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p1', signedAt: expect.any(String) },
+    ])
     // Twice over the same boards still one signature.
     overlayPending(s)
     expect(s.cardSignatures).toHaveLength(1)
@@ -66,8 +78,16 @@ describe('a marker’s signature in the outbox', () => {
     await enqueueSignature('t1', { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' })
     await flush()
     expect(srv.upserts).toEqual([
-      { table: 'card_signatures', row: { round_id: 'r1', player_id: 'p2', signed_by: 'p1' }, opts: { onConflict: 'round_id,player_id', ignoreDuplicates: true } },
-      { table: 'card_signatures', row: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' }, opts: { onConflict: 'round_id,pair_id', ignoreDuplicates: true } },
+      {
+        table: 'card_signatures',
+        row: { round_id: 'r1', player_id: 'p2', signed_by: 'p1' },
+        opts: { onConflict: 'round_id,player_id', ignoreDuplicates: true },
+      },
+      {
+        table: 'card_signatures',
+        row: { round_id: 'r1', pair_id: 'pair1', signed_by: 'p1' },
+        opts: { onConflict: 'round_id,pair_id', ignoreDuplicates: true },
+      },
     ])
     expect(_outboxTest.queue()).toEqual([])
   })

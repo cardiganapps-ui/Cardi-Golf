@@ -19,11 +19,36 @@
  * tabla» is the whole race, hole by hole.
  */
 import { useReducedMotionConfig } from 'motion/react'
-import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { t } from '../../../i18n/es-MX'
 import { Button, Field } from '../../../components/primitives'
 import { IconPause, IconPlay } from '../../../components/icons'
-import { ALL_IN_COLOUR, axisLength, highlights, holeOf, layoutRace, placeLabels, placesAt, pointAt, summarize, valueAt, type Highlight, type RaceDay, type RaceEntrant, type RaceLayout } from './raceModel'
+import {
+  ALL_IN_COLOUR,
+  axisLength,
+  highlights,
+  holeOf,
+  layoutRace,
+  placeLabels,
+  placesAt,
+  pointAt,
+  summarize,
+  valueAt,
+  type Highlight,
+  type RaceDay,
+  type RaceEntrant,
+  type RaceLayout,
+} from './raceModel'
 import styles from './RaceChart.module.css'
 
 const R = t.stats.raceChart
@@ -61,7 +86,12 @@ const REVEAL_PAD = 2
 /** The part of the drawing the cover slides in: the plot and the lines' widths around it. */
 function coverWindow(layout: RaceLayout) {
   const { plot } = layout
-  return { left: plot.left - 3, top: plot.top - 3, width: plot.right - plot.left + 6, height: plot.bottom - plot.top + 5 }
+  return {
+    left: plot.left - 3,
+    top: plot.top - 3,
+    width: plot.right - plot.left + 6,
+    height: plot.bottom - plot.top + 5,
+  }
 }
 const MIN_MS = 2500
 const MAX_MS = 8000
@@ -84,7 +114,20 @@ function writePick(key: string, id: string | null) {
 
 const short = (s: string) => (s.length > 14 ? `${s.slice(0, 13)}…` : s)
 
-export function RaceChart({ title, entrants, stable, days, strokes, format, pairs, me, honoree, honoreeLabel, pickKey, hint }: RaceChartProps) {
+export function RaceChart({
+  title,
+  entrants,
+  stable,
+  days,
+  strokes,
+  format,
+  pairs,
+  me,
+  honoree,
+  honoreeLabel,
+  pickKey,
+  hint,
+}: RaceChartProps) {
   const reduce = useReducedMotionConfig() ?? false
   const id = useId()
   const [width, setWidth] = useState(343)
@@ -117,8 +160,15 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
   const n = axisLength(days, entrants)
   const played = Math.max(0, ...entrants.map((e) => e.values.length))
   const k = Math.min(cursor ?? played, played)
-  const labelWidth = useMemo(() => Math.min(104, Math.max(48, 18 + 6.4 * Math.max(0, ...lit.map((h) => short(byId.get(h.id)?.label ?? '').length)))), [lit, byId])
-  const layout = useMemo(() => layoutRace({ entrants, days, lowerIsBetter: strokes, width, height: HEIGHT, labelWidth, axisWidth: AXIS }), [entrants, days, strokes, width, labelWidth])
+  const labelWidth = useMemo(
+    () =>
+      Math.min(104, Math.max(48, 18 + 6.4 * Math.max(0, ...lit.map((h) => short(byId.get(h.id)?.label ?? '').length)))),
+    [lit, byId],
+  )
+  const layout = useMemo(
+    () => layoutRace({ entrants, days, lowerIsBetter: strokes, width, height: HEIGHT, labelWidth, axisWidth: AXIS }),
+    [entrants, days, strokes, width, labelWidth],
+  )
 
   // The replay: the cover's and the coloured heads' transforms, set on the elements themselves.
   const coverRef = useRef<HTMLDivElement>(null)
@@ -219,7 +269,12 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
     return c
   }, [places])
   const labelY = useMemo(
-    () => placeLabels(lit.map((h) => ({ id: h.id, y: layout.y(valueAt(byId.get(h.id)?.values ?? [], k)) })), layout.plot.top + 4, layout.plot.bottom - 2),
+    () =>
+      placeLabels(
+        lit.map((h) => ({ id: h.id, y: layout.y(valueAt(byId.get(h.id)?.values ?? [], k)) })),
+        layout.plot.top + 4,
+        layout.plot.bottom - 2,
+      ),
     [lit, layout, byId, k],
   )
 
@@ -227,16 +282,30 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
     const s = summarize(entrants, days, strokes)
     if (!s) return title
     const at = s.tookLead ? R.at(s.tookLead.day, s.tookLead.hole, days.length) : null
-    return R.summary({ title, count: entrants.length, pairs, holes: s.holes, leaders: s.leaders.map((x) => byId.get(x)?.label ?? ''), value: R.spoken(s.value, strokes), tookLead: at, wireToWire: s.wireToWire })
+    return R.summary({
+      title,
+      count: entrants.length,
+      pairs,
+      holes: s.holes,
+      leaders: s.leaders.map((x) => byId.get(x)?.label ?? ''),
+      value: R.spoken(s.value, strokes),
+      tookLead: at,
+      wireToWire: s.wireToWire,
+    })
   }, [entrants, days, strokes, title, pairs, byId])
 
-  const where = k === 0 ? R.start : (() => {
-    const h = holeOf(days, k)
-    return R.at(h.day, h.hole, days.length)
-  })()
+  const where =
+    k === 0
+      ? R.start
+      : (() => {
+          const h = holeOf(days, k)
+          return R.at(h.day, h.hole, days.length)
+        })()
   const roleWords = (h: Highlight) =>
     h.roles
-      .map((r) => (r === 'me' ? (pairs ? R.mine : R.me) : r === 'honoree' ? honoreeLabel : r === 'picked' ? R.picked : ''))
+      .map((r) =>
+        r === 'me' ? (pairs ? R.mine : R.me) : r === 'honoree' ? honoreeLabel : r === 'picked' ? R.picked : '',
+      )
       .filter(Boolean)
       .join(', ')
   const others = entrants.filter((e) => !lit.some((h) => h.id === e.id))
@@ -252,7 +321,8 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
         {canPlay && (
           <div className={styles.controls}>
             <Button size="sm" onClick={playing ? pause : play}>
-              {playing ? <IconPause size={18} /> : <IconPlay size={18} />} {playing ? R.pause : cursor == null ? t.stats.play : R.resume}
+              {playing ? <IconPause size={18} /> : <IconPlay size={18} />}{' '}
+              {playing ? R.pause : cursor == null ? t.stats.play : R.resume}
             </Button>
             {(playing || cursor != null) && (
               <Button variant="ghost" size="sm" onClick={toEnd}>
@@ -301,7 +371,14 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
             <div ref={coverRef} className={styles.cover} data-reveal="">
               <svg width={win.width} height={win.height}>
                 {layout.yTicks.map((tk) => (
-                  <line key={tk.value} className={tk.value === 0 ? styles.zero : styles.grid} x1={0} x2={win.width} y1={tk.y - win.top} y2={tk.y - win.top} />
+                  <line
+                    key={tk.value}
+                    className={tk.value === 0 ? styles.zero : styles.grid}
+                    x1={0}
+                    x2={win.width}
+                    y1={tk.y - win.top}
+                    y2={tk.y - win.top}
+                  />
                 ))}
               </svg>
             </div>
@@ -309,7 +386,15 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
           {/* Over it: the days and the hole axis, the hole being read, the heads and the names. */}
           <svg className={styles.layer} width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`}>
             <HoleAxis layout={layout} days={days} />
-            {!playing && k > 0 && k < played && <line className={styles.cursor} x1={layout.x(k)} x2={layout.x(k)} y1={layout.plot.top} y2={layout.plot.bottom} />}
+            {!playing && k > 0 && k < played && (
+              <line
+                className={styles.cursor}
+                x1={layout.x(k)}
+                x2={layout.x(k)}
+                y1={layout.plot.top}
+                y2={layout.plot.bottom}
+              />
+            )}
             <g className={playing ? styles.labelsHidden : undefined}>
               {lit.map((h) => {
                 const y = labelY[h.id] ?? 0
@@ -405,11 +490,19 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
       )}
 
       <div>
-        <Button variant="ghost" size="sm" aria-expanded={table} aria-controls={`${id}-table`} onClick={() => setTable((v) => !v)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={table}
+          aria-controls={`${id}-table`}
+          onClick={() => setTable((v) => !v)}
+        >
           {table ? R.hideTable : R.showTable}
         </Button>
         <div id={`${id}-table`} hidden={!table}>
-          {table && <RaceTable title={title} entrants={entrants} days={days} played={played} format={format} pairs={pairs} />}
+          {table && (
+            <RaceTable title={title} entrants={entrants} days={days} played={played} format={format} pairs={pairs} />
+          )}
         </div>
       </div>
     </div>
@@ -423,7 +516,13 @@ const Grid = memo(function Grid({ layout, format }: { layout: RaceLayout; format
     <g>
       {layout.yTicks.map((tk) => (
         <g key={tk.value}>
-          <line className={tk.value === 0 ? styles.zero : styles.grid} x1={plot.left} x2={plot.right} y1={tk.y} y2={tk.y} />
+          <line
+            className={tk.value === 0 ? styles.zero : styles.grid}
+            x1={plot.left}
+            x2={plot.right}
+            y1={tk.y}
+            y2={tk.y}
+          />
           <text className={styles.tick} x={plot.left - 6} y={tk.y} dy="0.35em" textAnchor="end">
             {format(tk.value)}
           </text>
@@ -462,7 +561,15 @@ const HoleAxis = memo(function HoleAxis({ layout, days }: { layout: RaceLayout; 
 })
 
 /** Every entrant's path: the grey ones under the coloured. Drawn once per size and data, never per frame of a replay. */
-const Lines = memo(function Lines({ layout, entrants, lit }: { layout: RaceLayout; entrants: readonly RaceEntrant[]; lit: readonly Highlight[] }) {
+const Lines = memo(function Lines({
+  layout,
+  entrants,
+  lit,
+}: {
+  layout: RaceLayout
+  entrants: readonly RaceEntrant[]
+  lit: readonly Highlight[]
+}) {
   const slot = new Map(lit.map((h) => [h.id, h]))
   return (
     <g fill="none">
@@ -472,15 +579,36 @@ const Lines = memo(function Lines({ layout, entrants, lit }: { layout: RaceLayou
           <path key={e.id} className={styles.context} d={layout.paths[e.id]} />
         ))}
       {/* This phone's own on top of the others, the rest in reverse so the first stand above the later. */}
-      {[...lit].reverse().sort((a, b) => Number(a.roles.includes('me')) - Number(b.roles.includes('me'))).map((h) => (
-        <path key={h.id} className={`${styles.line} ${styles[`s${h.slot}`]} ${h.roles.includes('me') ? styles.mine : ''}`} d={layout.paths[h.id]} />
-      ))}
+      {[...lit]
+        .reverse()
+        .sort((a, b) => Number(a.roles.includes('me')) - Number(b.roles.includes('me')))
+        .map((h) => (
+          <path
+            key={h.id}
+            className={`${styles.line} ${styles[`s${h.slot}`]} ${h.roles.includes('me') ? styles.mine : ''}`}
+            d={layout.paths[h.id]}
+          />
+        ))}
     </g>
   )
 })
 
 /** The whole race as a table: one row per entrant in the board's order, one column per hole played. */
-function RaceTable({ title, entrants, days, played, format, pairs }: { title: string; entrants: readonly RaceEntrant[]; days: readonly RaceDay[]; played: number; format: (v: number) => string; pairs: boolean }) {
+function RaceTable({
+  title,
+  entrants,
+  days,
+  played,
+  format,
+  pairs,
+}: {
+  title: string
+  entrants: readonly RaceEntrant[]
+  days: readonly RaceDay[]
+  played: number
+  format: (v: number) => string
+  pairs: boolean
+}) {
   const cols = Array.from({ length: played }, (_, i) => ({ k: i + 1, ...holeOf(days, i + 1) }))
   const groups: Array<{ day: number; span: number }> = []
   for (const c of cols) {

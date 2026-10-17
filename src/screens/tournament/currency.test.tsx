@@ -27,7 +27,16 @@ function mount(screen: 'dinero' | 'juegos' | 'vivo', currency?: string) {
   const ui = screen === 'dinero' ? <MoneyScreen /> : screen === 'juegos' ? <GamesScreen /> : <LiveScreen />
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite: false }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: TID,
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: { playerId: 'p9', isOrganizer: false, isComite: false },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <TournamentCurrency>{ui}</TournamentCurrency>
       </TournamentContext.Provider>
     </MemoryRouter>,

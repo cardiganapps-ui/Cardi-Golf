@@ -18,17 +18,26 @@ for (const width of [360, 375, 393]) {
       for (const table of Array.from(root.querySelectorAll('table'))) {
         const marks = Array.from(table.querySelectorAll<HTMLElement>('[role="img"][class*="_mark_"]'))
         out.marks += marks.length
-        const boxes = marks.map((m) => ({ m, r: m.getBoundingClientRect(), cell: m.closest('td')!.getBoundingClientRect() }))
+        const boxes = marks.map((m) => ({
+          m,
+          r: m.getBoundingClientRect(),
+          cell: m.closest('td')!.getBoundingClientRect(),
+        }))
         for (const { m, r, cell } of boxes) {
-          if (Math.abs(r.width - r.height) > 0.5) out.notSquare.push(`${m.getAttribute('aria-label')}: ${r.width.toFixed(1)}×${r.height.toFixed(1)}`)
-          if (r.left < cell.left - 0.5 || r.right > cell.right + 0.5) out.outside.push(`${m.getAttribute('aria-label')}`)
+          if (Math.abs(r.width - r.height) > 0.5)
+            out.notSquare.push(`${m.getAttribute('aria-label')}: ${r.width.toFixed(1)}×${r.height.toFixed(1)}`)
+          if (r.left < cell.left - 0.5 || r.right > cell.right + 0.5)
+            out.outside.push(`${m.getAttribute('aria-label')}`)
         }
         for (let i = 1; i < boxes.length; i++) {
           const a = boxes[i - 1].r
           const b = boxes[i].r
           if (Math.abs(a.top - b.top) > 2) continue
           out.pairs++
-          if (b.left - a.right < 0) out.touching.push(`${(b.left - a.right).toFixed(1)} px between ${boxes[i - 1].m.getAttribute('aria-label')} and ${boxes[i].m.getAttribute('aria-label')}`)
+          if (b.left - a.right < 0)
+            out.touching.push(
+              `${(b.left - a.right).toFixed(1)} px between ${boxes[i - 1].m.getAttribute('aria-label')} and ${boxes[i].m.getAttribute('aria-label')}`,
+            )
         }
       }
       return out

@@ -17,8 +17,20 @@ import { readSettings, unknownSettingsKeys } from './read'
 import { words } from '../testing/words'
 
 type Raw = Record<string, unknown>
-const WOLF = { id: 'wolf-1', type: 'wolf', label: 'Wolf', enabled: true, rounds: 'all', entrants: 'all', money: { source: 'main', amount: 1000 }, options: { rotation: 'fixed' } }
-const withGame = (raw: unknown, g: Raw): Raw => ({ ...(raw as Raw), games: [...(((raw as Raw).games as unknown[]) ?? []), g] })
+const WOLF = {
+  id: 'wolf-1',
+  type: 'wolf',
+  label: 'Wolf',
+  enabled: true,
+  rounds: 'all',
+  entrants: 'all',
+  money: { source: 'main', amount: 1000 },
+  options: { rotation: 'fixed' },
+}
+const withGame = (raw: unknown, g: Raw): Raw => ({
+  ...(raw as Raw),
+  games: [...(((raw as Raw).games as unknown[]) ?? []), g],
+})
 const at = (raw: unknown, path: string[], key: string, value: unknown): Raw => {
   const out = structuredClone(raw) as Raw
   const parent = path.reduce<Raw>((o, k) => o[k] as Raw, out)
@@ -64,14 +76,19 @@ describe('a side game of a type this build doesn’t know is set aside', () => {
   it('one that doesn’t say counts as money; one switched off says nothing', () => {
     const snap = structuredClone(getFixture('full12-live')!.snapshot)
     const { money: _m, ...bare } = WOLF
-    snap.tournament.settings = withGame(withGame(snap.tournament.settings, { ...bare, id: 'wolf-2', label: 'Lobo' }), { ...WOLF, enabled: false })
+    snap.tournament.settings = withGame(withGame(snap.tournament.settings, { ...bare, id: 'wolf-2', label: 'Lobo' }), {
+      ...WOLF,
+      enabled: false,
+    })
     const st = computeTournament(snap, read(snap.tournament.settings).settings)
     expect(st.flags.missingGames).toEqual(['wolf-2'])
     expect(st.flags.moneyUnknown).toEqual(['Lobo'])
   })
 
   it('a game of a known type that the schema refuses is no newer build’s: the row is not read', () => {
-    const r = readSettings(withGame(FIRST_TOURNAMENT_SETTINGS, { ...WOLF, type: 'skins', options: { basis: 'stroke' } }))
+    const r = readSettings(
+      withGame(FIRST_TOURNAMENT_SETTINGS, { ...WOLF, type: 'skins', options: { basis: 'stroke' } }),
+    )
     expect(r.ok).toBe(false)
   })
 })
@@ -98,8 +115,12 @@ describe('a key this build doesn’t know: the row is not read', () => {
 
   it('a legacy key reads as today’s name, alone or left beside it', () => {
     const { pairs, ...prizes } = FIRST_TOURNAMENT_SETTINGS.prizes
-    expect(read({ ...FIRST_TOURNAMENT_SETTINGS, prizes: { ...prizes, matrimonios: pairs } }).settings.prizes.pairs).toEqual(pairs)
-    expect(read({ ...FIRST_TOURNAMENT_SETTINGS, prizes: { ...prizes, pairs, matrimonios: [1, 2] } }).settings.prizes.pairs).toEqual(pairs)
+    expect(
+      read({ ...FIRST_TOURNAMENT_SETTINGS, prizes: { ...prizes, matrimonios: pairs } }).settings.prizes.pairs,
+    ).toEqual(pairs)
+    expect(
+      read({ ...FIRST_TOURNAMENT_SETTINGS, prizes: { ...prizes, pairs, matrimonios: [1, 2] } }).settings.prizes.pairs,
+    ).toEqual(pairs)
   })
 })
 

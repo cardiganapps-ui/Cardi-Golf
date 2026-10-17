@@ -13,10 +13,31 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { Snapshot } from '../engine/types'
 import { t } from '../i18n/es-MX'
-import { enterAs, holeAward, holeScore, installFakePhone, isAwardCall, isWrite, refusedByRls, settle, snakeAnswer } from './testing/fakePhone'
+import {
+  enterAs,
+  holeAward,
+  holeScore,
+  installFakePhone,
+  isAwardCall,
+  isWrite,
+  refusedByRls,
+  settle,
+  snakeAnswer,
+} from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, discardRejected, enqueueAward, enqueueScore, enqueueSignature, enqueueTiebreak, overlayPending, retryRejected, startOutbox, useOutbox } = await import('./outbox')
+const {
+  _outboxTest,
+  discardRejected,
+  enqueueAward,
+  enqueueScore,
+  enqueueSignature,
+  enqueueTiebreak,
+  overlayPending,
+  retryRejected,
+  startOutbox,
+  useOutbox,
+} = await import('./outbox')
 const { useTournament } = await import('./tournamentStore')
 
 beforeAll(async () => {
@@ -52,7 +73,9 @@ describe('bars but no data: a write the network loses stays queued, and on the p
   })
 
   it('a hole’s winners, when the call is lost: it stays queued, and the claim on the server is as it was', async () => {
-    server.seed('hole_awards', [{ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' }])
+    server.seed('hole_awards', [
+      { round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' },
+    ])
     server.decide = (req) => (isAwardCall(req) ? 'offline' : 'answer')
     await enqueueAward('t1', holeAward(5, ['p2']))
     await settle(useOutbox)
@@ -74,17 +97,23 @@ describe('what the server says about them', () => {
 
   it('a hole’s winner the server refuses leaves the claim it would have replaced (ARCH-13)', async () => {
     // It was a delete and then an insert: the insert refused, the hole lost its claim for good.
-    server.seed('hole_awards', [{ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' }])
+    server.seed('hole_awards', [
+      { round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' },
+    ])
     server.tables.group_members = server.tables.group_members!.filter((m) => m.player_id !== 'p2')
     await enqueueAward('t1', holeAward(5, ['p2']))
     await settle(useOutbox)
-    expect(useOutbox.getState().rejected.map((r) => [r.key, r.message])).toEqual([['award:r1:g1:closest:5', t.sync.errInvalid]])
+    expect(useOutbox.getState().rejected.map((r) => [r.key, r.message])).toEqual([
+      ['award:r1:g1:closest:5', t.sync.errInvalid],
+    ])
     expect(server.tables.hole_awards!.map((a) => a.player_id)).toEqual(['p3'])
   })
 
   it('two phones name the same winner at once: the second call replaces the first one’s row, and nothing is refused (0044)', async () => {
     // The group's other phone got there first. Two requests met halfway on a duplicate key (23505); one call takes the hole's lock.
-    server.seed('hole_awards', [{ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p2', decided_by: 'p3' }])
+    server.seed('hole_awards', [
+      { round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p2', decided_by: 'p3' },
+    ])
     await enqueueAward('t1', holeAward(5, ['p2']))
     await settle(useOutbox)
     expect(useOutbox.getState().rejected).toEqual([])
@@ -95,13 +124,21 @@ describe('what the server says about them', () => {
     server.decide = (req) => (isAwardCall(req) ? 'offline' : 'answer')
     await enqueueAward('t1', holeAward(5, ['p2']))
     await settle(useOutbox)
-    const boards = { tournament: { id: 't1' }, scores: [], snakeTiebreaks: [], cardSignatures: [], holeAwards: [{ roundId: 'r1', groupId: 'g2', hole: 5, gameId: 'closest', playerId: 'p7' }] } as unknown as Snapshot
+    const boards = {
+      tournament: { id: 't1' },
+      scores: [],
+      snakeTiebreaks: [],
+      cardSignatures: [],
+      holeAwards: [{ roundId: 'r1', groupId: 'g2', hole: 5, gameId: 'closest', playerId: 'p7' }],
+    } as unknown as Snapshot
     overlayPending(boards)
     expect(boards.holeAwards.map((a) => `${a.groupId}:${a.playerId}`).sort()).toEqual(['g1:p2', 'g2:p7'])
   })
 
   it('«nadie» as a contest’s answer takes the old winners away on the server', async () => {
-    server.seed('hole_awards', [{ round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' }])
+    server.seed('hole_awards', [
+      { round_id: 'r1', group_id: 'g1', hole: 5, game_id: 'closest', player_id: 'p3', decided_by: 'p1' },
+    ])
     await enqueueAward('t1', holeAward(5, []))
     await settle(useOutbox)
     expect(server.tables.hole_awards).toEqual([])
@@ -149,6 +186,11 @@ describe('the refused list across a restart', () => {
     await settle(useOutbox)
     _outboxTest.reset()
     await _outboxTest.load()
-    expect(useOutbox.getState().rejected.map((r) => r.key).sort()).toEqual(['score:r1:p4:10', 'score:r1:p4:9'])
+    expect(
+      useOutbox
+        .getState()
+        .rejected.map((r) => r.key)
+        .sort(),
+    ).toEqual(['score:r1:p4:10', 'score:r1:p4:9'])
   })
 })

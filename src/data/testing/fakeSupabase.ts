@@ -114,7 +114,10 @@ export interface FakeRequest {
   single: boolean
 }
 
-interface Result { data: unknown; error: FakeError | null }
+interface Result {
+  data: unknown
+  error: FakeError | null
+}
 
 export interface Hold {
   /** Resolves once the server has read the tables for the held request. */
@@ -291,12 +294,23 @@ const AMBIGUOUS_EMBEDS = new Set(['tournaments/rounds'])
 /** What the server answers to a read, read now. Over the network, `visible` is the row-level security the caller meets. */
 function read(server: FakeSupabase, q: ReadSpec, visible?: (r: Row) => boolean): Result {
   const { table } = q
-  server.requests.push({ table, filters: q.filters.map((f) => f.label), order: q.order.map((o) => o.column), range: q.range, single: q.single })
+  server.requests.push({
+    table,
+    filters: q.filters.map((f) => f.label),
+    order: q.order.map((o) => o.column),
+    range: q.range,
+    single: q.single,
+  })
   if (server.down) return { data: null, error: server.down }
   const all = server.tables[table]
-  if (!all) return { data: null, error: { message: `Could not find the table 'public.${table}' in the schema cache`, code: 'PGRST205' } }
+  if (!all)
+    return {
+      data: null,
+      error: { message: `Could not find the table 'public.${table}' in the schema cache`, code: 'PGRST205' },
+    }
   const missing = all.length ? q.order.find((o) => !(o.column in all[0]!)) : undefined
-  if (missing) return { data: null, error: { message: `column ${table}.${missing.column} does not exist`, code: '42703' } }
+  if (missing)
+    return { data: null, error: { message: `column ${table}.${missing.column} does not exist`, code: '42703' } }
   const rows = all.filter((r) => (!visible || visible(r)) && q.filters.every((f) => f.test(r)))
   if (q.order.length) {
     rows.sort((a, b) => {
@@ -310,7 +324,9 @@ function read(server: FakeSupabase, q: ReadSpec, visible?: (r: Row) => boolean):
   const [from, to] = q.range ?? [0, Number.MAX_SAFE_INTEGER]
   const page = rows.slice(from, Math.min(to + 1, from + server.maxRows))
   if (q.single) {
-    return page.length === 1 ? { data: structuredClone(page[0]), error: null } : { data: null, error: { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' } }
+    return page.length === 1
+      ? { data: structuredClone(page[0]), error: null }
+      : { data: null, error: { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' } }
   }
   return { data: structuredClone(page), error: null }
 }
@@ -350,7 +366,10 @@ class Query implements PromiseLike<Result> {
     return this
   }
 
-  then<A = Result, B = never>(onFulfilled?: ((value: Result) => A | PromiseLike<A>) | null, onRejected?: ((reason: unknown) => B | PromiseLike<B>) | null): PromiseLike<A | B> {
+  then<A = Result, B = never>(
+    onFulfilled?: ((value: Result) => A | PromiseLike<A>) | null,
+    onRejected?: ((reason: unknown) => B | PromiseLike<B>) | null,
+  ): PromiseLike<A | B> {
     const result = read(this.server, this.spec)
     const gate = this.spec.table === 'tournaments' ? this.gates.shift() : undefined
     if (!gate) return Promise.resolve(result).then(onFulfilled, onRejected)
@@ -388,8 +407,27 @@ const UNIQUE_KEYS: Record<string, Array<{ name: string; columns: string[] }>> = 
   hole_awards: [{ name: 'hole_awards_pkey', columns: ['round_id', 'game_id', 'hole', 'player_id', 'source'] }],
 }
 /** What a session may insert and update in `scores` (0010): the flags and the Comité's reason are not a phone's to send. */
-const SCORE_INSERT = new Set(['id', 'round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
-const SCORE_UPDATE = new Set(['round_id', 'player_id', 'hole', 'strokes', 'putts', 'picked_up', 'entered_by', 'client_ts'])
+const SCORE_INSERT = new Set([
+  'id',
+  'round_id',
+  'player_id',
+  'hole',
+  'strokes',
+  'putts',
+  'picked_up',
+  'entered_by',
+  'client_ts',
+])
+const SCORE_UPDATE = new Set([
+  'round_id',
+  'player_id',
+  'hole',
+  'strokes',
+  'putts',
+  'picked_up',
+  'entered_by',
+  'client_ts',
+])
 /** Each table's NOT NULL columns in the table's order, the order Postgres checks them in (a primary key is one). */
 const NOT_NULL: Record<string, string[]> = {
   scores: ['id', 'round_id', 'player_id', 'hole', 'picked_up'],
@@ -411,7 +449,10 @@ const CHECKS: Record<string, Array<[string, (r: Row) => boolean]>> = {
   // 0054: a pair's card or a player's, never both.
   card_signatures: [['card_signatures_one_card', (r) => (r.pair_id == null) !== (r.player_id == null)]],
   hole_awards: [
-    ['hole_awards_game_id_check', (r) => r.game_id == null || (typeof r.game_id === 'string' && /^[a-z0-9-]{1,32}$/.test(r.game_id))],
+    [
+      'hole_awards_game_id_check',
+      (r) => r.game_id == null || (typeof r.game_id === 'string' && /^[a-z0-9-]{1,32}$/.test(r.game_id)),
+    ],
     ['hole_awards_hole_check', (r) => between(r.hole, 1, 18)],
   ],
 }
@@ -436,18 +477,47 @@ const COLUMNS: Record<string, Record<string, ColumnType>> = {
     device_id: 'uuid',
     mutation_id: 'uuid',
   },
-  snake_tiebreaks: { round_id: 'uuid', group_id: 'uuid', hole: 'int', last_holed_player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz' },
-  card_signatures: { round_id: 'uuid', pair_id: 'uuid', player_id: 'uuid', signed_by: 'uuid', signed_at: 'timestamptz', card_id: 'uuid' },
-  hole_awards: { round_id: 'uuid', group_id: 'uuid', hole: 'int', game_id: 'text', player_id: 'uuid', decided_by: 'uuid', created_at: 'timestamptz', source: 'text' },
+  snake_tiebreaks: {
+    round_id: 'uuid',
+    group_id: 'uuid',
+    hole: 'int',
+    last_holed_player_id: 'uuid',
+    decided_by: 'uuid',
+    created_at: 'timestamptz',
+  },
+  card_signatures: {
+    round_id: 'uuid',
+    pair_id: 'uuid',
+    player_id: 'uuid',
+    signed_by: 'uuid',
+    signed_at: 'timestamptz',
+    card_id: 'uuid',
+  },
+  hole_awards: {
+    round_id: 'uuid',
+    group_id: 'uuid',
+    hole: 'int',
+    game_id: 'text',
+    player_id: 'uuid',
+    decided_by: 'uuid',
+    created_at: 'timestamptz',
+    source: 'text',
+  },
 }
 /** Generated columns (0042 `hole_awards.source`): PostgREST knows them, and Postgres refuses any value written to one. */
 const GENERATED: Record<string, string[]> = { hole_awards: ['source'], card_signatures: ['card_id'] }
 /** What a generated column holds, from the row's own values (0054 `card_signatures.card_id`: the pair's id, or the player's). */
 const generate = (table: string, row: Row): Row =>
-  table === 'hole_awards' ? { ...row, source: row.group_id == null ? 'comite' : 'group' } : table === 'card_signatures' ? { ...row, card_id: row.pair_id ?? row.player_id ?? null } : row
+  table === 'hole_awards'
+    ? { ...row, source: row.group_id == null ? 'comite' : 'group' }
+    : table === 'card_signatures'
+      ? { ...row, card_id: row.pair_id ?? row.player_id ?? null }
+      : row
 /** Tables as the database holds them: a generated column always has its value, whatever world a test starts from. */
 const asStored = (tables: Record<string, Row[]>): Record<string, Row[]> =>
-  Object.fromEntries(Object.entries(structuredClone(tables)).map(([table, rows]) => [table, rows.map((r) => generate(table, r))]))
+  Object.fromEntries(
+    Object.entries(structuredClone(tables)).map(([table, rows]) => [table, rows.map((r) => generate(table, r))]),
+  )
 /** Each phone table's foreign keys, as the migrations name them. Ids here are names, so a uuid's shape is not checked; that it exists is. */
 const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: string; tenant?: boolean }>> = {
   scores: [
@@ -475,13 +545,27 @@ const FOREIGN_KEYS: Record<string, Array<{ name: string; column: string; table: 
     { name: 'hole_awards_decided_by_fkey', column: 'decided_by', table: 'players' },
   ],
 }
-const BOOL_TEXT: Record<string, boolean> = { t: true, true: true, y: true, yes: true, on: true, '1': true, f: false, false: false, n: false, no: false, off: false, '0': false }
+const BOOL_TEXT: Record<string, boolean> = {
+  t: true,
+  true: true,
+  y: true,
+  yes: true,
+  on: true,
+  '1': true,
+  f: false,
+  false: false,
+  n: false,
+  no: false,
+  off: false,
+  '0': false,
+}
 /** The spaces Postgres's input functions skip around a value (C's isspace): a no-break or an em space is not one, and fails the cast. */
 const trimC = (s: string) => s.replace(/^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g, '')
 /** An integer as int4in reads one: digits after an optional sign. A JSON number is read from its text, so `1e+21` or `5.5` is none (22P02). */
 const INTEGER = /^[\t\n\v\f\r ]*[+-]?\d+[\t\n\v\f\r ]*$/
 /** A timestamp as Postgres reads one off the wire (ISO 8601, a space for the T): the date, the time of day and its fraction, the offset. */
-const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?)?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?$/i
+const TIMESTAMP =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(\.\d+)?)?)?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?$/i
 /**
  * What is out of range in a timestamp's fields, in the order Postgres meets
  * them. The time of day first (`time_overflows`): an hour up to 24, a minute
@@ -494,7 +578,8 @@ const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(\.\
 function timeError(m: RegExpExecArray): '22008' | '22009' | null {
   const n = (i: number) => Number(m[i] ?? 0)
   const day = (n(4) * 60 + n(5)) * 60 + n(6)
-  if (n(4) > 24 || n(5) > 59 || n(6) > 60 || day > 86_400 || (day === 86_400 && Number(`0${m[7] ?? ''}`) * 1e6 > 0.5)) return '22008'
+  if (n(4) > 24 || n(5) > 59 || n(6) > 60 || day > 86_400 || (day === 86_400 && Number(`0${m[7] ?? ''}`) * 1e6 > 0.5))
+    return '22008'
   if (m[8] && (n(9) > 15 || n(10) > 59)) return '22009'
   const y = n(1)
   const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)
@@ -520,22 +605,35 @@ function cast(table: string, row: Row): { row: Row } | { error: FakeError } {
     // The value as the body spells it: Postgres reads a JSON number from its text too.
     const text = typeof v === 'string' ? v : JSON.stringify(v)
     if (type === 'int') {
-      if (!INTEGER.test(text)) return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
+      if (!INTEGER.test(text))
+        return { error: { code: '22P02', message: `invalid input syntax for type integer: "${text}"` } }
       const n = Number(text)
-      if (n < INT4[0] || n > INT4[1]) return { error: { code: '22003', message: `value "${text}" is out of range for type integer` } }
+      if (n < INT4[0] || n > INT4[1])
+        return { error: { code: '22003', message: `value "${text}" is out of range for type integer` } }
       out[column] = n
     } else if (type === 'bool') {
       const b = typeof v === 'boolean' ? v : BOOL_TEXT[trimC(text).toLowerCase()]
-      if (b === undefined) return { error: { code: '22P02', message: `invalid input syntax for type boolean: "${text}"` } }
+      if (b === undefined)
+        return { error: { code: '22P02', message: `invalid input syntax for type boolean: "${text}"` } }
       out[column] = b
     } else if (type === 'timestamptz') {
       const m = typeof v === 'string' ? TIMESTAMP.exec(trimC(v)) : null
-      if (!m) return { error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` } }
+      if (!m)
+        return {
+          error: { code: '22007', message: `invalid input syntax for type timestamp with time zone: "${text}"` },
+        }
       const code = timeError(m)
-      if (code) return { error: { code, message: `${code === '22009' ? 'time zone displacement' : 'date/time field value'} out of range: "${text}"` } }
+      if (code)
+        return {
+          error: {
+            code,
+            message: `${code === '22009' ? 'time zone displacement' : 'date/time field value'} out of range: "${text}"`,
+          },
+        }
       out[column] = v
     } else if (type === 'uuid') {
-      if (typeof v !== 'string') return { error: { code: '22P02', message: `invalid input syntax for type uuid: "${text}"` } }
+      if (typeof v !== 'string')
+        return { error: { code: '22P02', message: `invalid input syntax for type uuid: "${text}"` } }
       out[column] = v
     } else out[column] = typeof v === 'string' ? v : text
   }
@@ -548,7 +646,15 @@ const distinct = (a: unknown, b: unknown) => (a ?? null) !== (b ?? null)
 const isPlainObject = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v)
 /** JSON with every object's keys in order, at any depth. */
 const sortedJson = (v: unknown): unknown =>
-  Array.isArray(v) ? v.map(sortedJson) : isPlainObject(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortedJson(v[k])])) : v
+  Array.isArray(v)
+    ? v.map(sortedJson)
+    : isPlainObject(v)
+      ? Object.fromEntries(
+          Object.keys(v)
+            .sort()
+            .map((k) => [k, sortedJson(v[k])]),
+        )
+      : v
 /** Two jsonb values are equal: by content, whatever order an object's keys come in. */
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(sortedJson(a)) === JSON.stringify(sortedJson(b))
 /** The order jsonb keeps an object's keys in: shorter first, then by their bytes (ASCII keys here). */
@@ -561,7 +667,8 @@ function json(status: number, body: unknown, headers: Record<string, string> = {
 /** `a,"b,c",d` → [a, b,c, d]: PostgREST's list inside `in.(…)`. */
 function splitList(list: string): string[] {
   const out: string[] = []
-  for (const m of list.matchAll(/"((?:[^"\\]|\\.)*)"|([^,]+)/g)) out.push(m[1] !== undefined ? m[1].replace(/\\(.)/g, '$1') : m[2]!)
+  for (const m of list.matchAll(/"((?:[^"\\]|\\.)*)"|([^,]+)/g))
+    out.push(m[1] !== undefined ? m[1].replace(/\\(.)/g, '$1') : m[2]!)
   return out
 }
 
@@ -592,7 +699,8 @@ function selectWithEmbeds(table: string, select: string): Pick<ReadSpec, 'column
     if (AMBIGUOUS_EMBEDS.has(key)) ambiguous ??= m[1]
     const known = EMBEDS[key]
     if (!known && !AMBIGUOUS_EMBEDS.has(key)) return `unsupported embed ${key}`
-    if (known) embeds.push({ name: m[1]!, table: known.table, column: known.column, columns: m[3]!.split(','), filters: [] })
+    if (known)
+      embeds.push({ name: m[1]!, table: known.table, column: known.column, columns: m[3]!.split(','), filters: [] })
   }
   return { columns, embeds, ambiguous }
 }
@@ -605,7 +713,10 @@ function filterOf(label: string, column: string, filter: string): Filter | null 
   }
   if (filter.startsWith('in.(') && filter.endsWith(')')) {
     const values = splitList(filter.slice(4, -1))
-    return { label: `${label}=in.(${values.length})`, test: (r) => r[column] != null && values.includes(String(r[column])) }
+    return {
+      label: `${label}=in.(${values.length})`,
+      test: (r) => r[column] != null && values.includes(String(r[column])),
+    }
   }
   return null
 }
@@ -616,7 +727,8 @@ function readFromUrl(table: string, params: URLSearchParams, headers: Headers): 
   const shape = select?.includes('(') ? selectWithEmbeds(table, select) : { columns: selectedColumns(params) }
   if (typeof shape === 'string') return shape
   // PostgREST places the embeds before it reads a filter: an ambiguous one is refused whatever else the URL says.
-  if ('ambiguous' in shape && shape.ambiguous) return { table, filters: [], order: [], range: null, single: false, ambiguous: shape.ambiguous }
+  if ('ambiguous' in shape && shape.ambiguous)
+    return { table, filters: [], order: [], range: null, single: false, ambiguous: shape.ambiguous }
   const filters: Filter[] = []
   for (const [column, filter] of params) {
     if (NOT_FILTERS.has(column)) continue
@@ -638,13 +750,15 @@ function readFromUrl(table: string, params: URLSearchParams, headers: Headers): 
   const offset = params.get('offset')
   const limit = params.get('limit')
   const from = Number(offset ?? 0)
-  const range: [number, number] | null = offset == null && limit == null ? null : [from, limit == null ? Number.MAX_SAFE_INTEGER : from + Number(limit) - 1]
+  const range: [number, number] | null =
+    offset == null && limit == null ? null : [from, limit == null ? Number.MAX_SAFE_INTEGER : from + Number(limit) - 1]
   return { table, filters, order, range, single: (headers.get('accept') ?? '').includes('vnd.pgrst.object'), ...shape }
 }
 
 /** A PostgREST error body, at the status PostgREST gives its code. */
 function restError(error: FakeError): Response {
-  const status = error.code === 'PGRST205' ? 404 : error.code === 'PGRST116' ? 406 : error.code?.startsWith('PGRST3') ? 401 : 400
+  const status =
+    error.code === 'PGRST205' ? 404 : error.code === 'PGRST116' ? 406 : error.code?.startsWith('PGRST3') ? 401 : 400
   return json(status, { code: error.code ?? null, details: null, hint: null, message: error.message })
 }
 
@@ -676,11 +790,29 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   function withDefaults(table: string, row: Row): Row {
     const keys: readonly string[] = SNAPSHOT_KEYS[table as keyof typeof SNAPSHOT_KEYS] ?? []
     const id = keys.length === 1 && keys[0] === 'id' && row.id == null ? { id: `${table}-${++serial}` } : {}
-    if (table === 'scores') return { ...id, picked_up: false, version: 1, device_id: null, mutation_id: null, ...row, updated_at: stamp(), disputed: false, previous: null, reason: null }
+    if (table === 'scores')
+      return {
+        ...id,
+        picked_up: false,
+        version: 1,
+        device_id: null,
+        mutation_id: null,
+        ...row,
+        updated_at: stamp(),
+        disputed: false,
+        previous: null,
+        reason: null,
+      }
     if (table === 'hole_awards') return generate(table, { ...id, created_at: stamp(), ...row })
     if (table === 'snake_tiebreaks') return { ...id, created_at: stamp(), ...row }
     // 0030 `card_signatures_tenant`: the tournament comes from the round when the writer leaves it out.
-    if (table === 'card_signatures') return generate(table, { ...id, signed_at: stamp(), ...row, tournament_id: row.tournament_id ?? roundTournament(row.round_id) ?? null })
+    if (table === 'card_signatures')
+      return generate(table, {
+        ...id,
+        signed_at: stamp(),
+        ...row,
+        tournament_id: row.tournament_id ?? roundTournament(row.round_id) ?? null,
+      })
     return { ...id, ...row }
   }
 
@@ -692,10 +824,22 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    */
   function scoreUpdated(old: Row, next: Row): Row {
     const row: Row = { ...next, reason: null, disputed: old.disputed, previous: old.previous ?? null }
-    const changed = distinct(row.strokes, old.strokes) || distinct(row.putts, old.putts) || row.picked_up !== old.picked_up
-    if (changed && row.entered_by != null && distinct(row.entered_by, old.entered_by) && (old.entered_by != null || old.reason != null)) {
+    const changed =
+      distinct(row.strokes, old.strokes) || distinct(row.putts, old.putts) || row.picked_up !== old.picked_up
+    if (
+      changed &&
+      row.entered_by != null &&
+      distinct(row.entered_by, old.entered_by) &&
+      (old.entered_by != null || old.reason != null)
+    ) {
       row.disputed = true
-      row.previous = { strokes: old.strokes ?? null, putts: old.putts ?? null, picked_up: old.picked_up, entered_by: old.entered_by ?? null, updated_at: old.updated_at ?? null }
+      row.previous = {
+        strokes: old.strokes ?? null,
+        putts: old.putts ?? null,
+        picked_up: old.picked_up,
+        entered_by: old.entered_by ?? null,
+        updated_at: old.updated_at ?? null,
+      }
     }
     row.updated_at = stamp()
     // 0026 `scores_version`: every change of a hole bumps it.
@@ -719,11 +863,21 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   function session(uid: string) {
     const now = Math.floor(Date.now() / 1000)
     const expiresAt = now + server.auth.lifetime
-    const token = jwt({ sub: uid, aud: 'authenticated', role: 'authenticated', is_anonymous: true, iat: now, exp: expiresAt }, ++serial)
+    const token = jwt(
+      { sub: uid, aud: 'authenticated', role: 'authenticated', is_anonymous: true, iat: now, exp: expiresAt },
+      ++serial,
+    )
     const refreshToken = `refresh-${uid}-${++serial}`
     access.set(token, { uid, until: expiresAt * 1000 })
     refresh.set(refreshToken, uid)
-    return { access_token: token, token_type: 'bearer', expires_in: server.auth.lifetime, expires_at: expiresAt, refresh_token: refreshToken, user: user(uid) }
+    return {
+      access_token: token,
+      token_type: 'bearer',
+      expires_in: server.auth.lifetime,
+      expires_at: expiresAt,
+      refresh_token: refreshToken,
+      user: user(uid),
+    }
   }
   /** Who a request is, by the Authorization header it carries. */
   function callerOf(authorization: string | null): string {
@@ -742,8 +896,12 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    */
   function myPlayer(uid: string, tid: unknown): unknown {
     if (tid == null) return undefined
-    const linked = rowsOf('players').find((p) => p.tournament_id === tid && p.profile_id === uid && p.profile_status === 'confirmed')
-    return linked ? linked.id : rowsOf('device_sessions').find((d) => d.auth_user_id === uid && d.tournament_id === tid)?.player_id
+    const linked = rowsOf('players').find(
+      (p) => p.tournament_id === tid && p.profile_id === uid && p.profile_status === 'confirmed',
+    )
+    return linked
+      ? linked.id
+      : rowsOf('device_sessions').find((d) => d.auth_user_id === uid && d.tournament_id === tid)?.player_id
   }
   /** `is_tournament_organizer(tid)` (0021, platform admins aside): on the tournament's Comité, or holding a player the Comité made admin. */
   function organizes(uid: string, tid: unknown): boolean {
@@ -753,7 +911,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     return me != null && rowsOf('players').some((p) => p.id === me && p.is_admin === true)
   }
   const roundTournament = (rid: unknown) => rowsOf('rounds').find((r) => r.id === rid)?.tournament_id
-  const inGroup = (gid: unknown, pid: unknown) => pid != null && rowsOf('group_members').some((m) => m.group_id === gid && m.player_id === pid)
+  const inGroup = (gid: unknown, pid: unknown) =>
+    pid != null && rowsOf('group_members').some((m) => m.group_id === gid && m.player_id === pid)
   const groupOfRound = (gid: unknown, rid: unknown) => rowsOf('groups').some((g) => g.id === gid && g.round_id === rid)
   /** `shares_group(rid, pid)`: the caller's player and `pid` play in one group of the round. */
   function sharesGroup(uid: string, rid: unknown, pid: unknown): boolean {
@@ -764,7 +923,10 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   /** `card_is_signed(rid, pid)` (0054): the card of the player's pair, or his own, is signed for the round. */
   const cardIsSigned = (rid: unknown, pid: unknown) =>
     rowsOf('card_signatures').some(
-      (s) => s.round_id === rid && ((s.player_id != null && s.player_id === pid) || rowsOf('pairs').some((p) => p.id === s.pair_id && (p.player1_id === pid || p.player2_id === pid))),
+      (s) =>
+        s.round_id === rid &&
+        ((s.player_id != null && s.player_id === pid) ||
+          rowsOf('pairs').some((p) => p.id === s.pair_id && (p.player1_id === pid || p.player2_id === pid))),
     )
   /** 0054 `card_signing_mode(settings)`: the tournament's signing rule, read from its stored settings. */
   const signingMode = (tid: unknown) => cardSigningModeOf(rowsOf('tournaments').find((x) => x.id === tid)?.settings)
@@ -805,10 +967,14 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     deletes(uid: string, row: Row): boolean
   }
   /** The group's own rows (0026): the Comité, or a player of the row's group while the round is live. */
-  const groupRow = (uid: string, r: Row) => organizes(uid, roundTournament(r.round_id)) || (roundIsLive(r.round_id) && inGroup(r.group_id, myPlayer(uid, roundTournament(r.round_id))))
+  const groupRow = (uid: string, r: Row) =>
+    organizes(uid, roundTournament(r.round_id)) ||
+    (roundIsLive(r.round_id) && inGroup(r.group_id, myPlayer(uid, roundTournament(r.round_id))))
   /** 0026 `score_writable`: while the round is live and the player's card unsigned, a phone of his group or the Comité (REL-09). */
   const scoreRule = (uid: string, r: Row) =>
-    roundIsLive(r.round_id) && !cardIsSigned(r.round_id, r.player_id) && (sharesGroup(uid, r.round_id, r.player_id) || organizes(uid, roundTournament(r.round_id)))
+    roundIsLive(r.round_id) &&
+    !cardIsSigned(r.round_id, r.player_id) &&
+    (sharesGroup(uid, r.round_id, r.player_id) || organizes(uid, roundTournament(r.round_id)))
   const RULES: Record<string, WriteRule> = {
     // 0026 `scores_delete`: deleting a hole is the Comité's.
     scores: { check: scoreRule, using: scoreRule, deletes: (uid, r) => organizes(uid, roundTournament(r.round_id)) },
@@ -817,7 +983,15 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       check(uid, r) {
         const tid = roundTournament(r.round_id)
         const me = myPlayer(uid, tid)
-        return organizes(uid, tid) || (roundIsLive(r.round_id) && groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.last_holed_player_id) && me != null && r.decided_by === me)
+        return (
+          organizes(uid, tid) ||
+          (roundIsLive(r.round_id) &&
+            groupOfRound(r.group_id, r.round_id) &&
+            inGroup(r.group_id, me) &&
+            inGroup(r.group_id, r.last_holed_player_id) &&
+            me != null &&
+            r.decided_by === me)
+        )
       },
       using: groupRow,
       deletes: groupRow,
@@ -828,7 +1002,15 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         const tid = roundTournament(r.round_id)
         const me = myPlayer(uid, tid)
         const winnerHere = rowsOf('players').some((p) => p.id === r.player_id && p.tournament_id === tid)
-        return (organizes(uid, tid) && winnerHere) || (roundIsLive(r.round_id) && groupOfRound(r.group_id, r.round_id) && inGroup(r.group_id, me) && inGroup(r.group_id, r.player_id) && me != null && r.decided_by === me)
+        return (
+          (organizes(uid, tid) && winnerHere) ||
+          (roundIsLive(r.round_id) &&
+            groupOfRound(r.group_id, r.round_id) &&
+            inGroup(r.group_id, me) &&
+            inGroup(r.group_id, r.player_id) &&
+            me != null &&
+            r.decided_by === me)
+        )
       },
       using: groupRow,
       deletes: groupRow,
@@ -842,7 +1024,14 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         if (organizes(uid, tid)) return true
         const me = myPlayer(uid, tid)
         if (r.pair_id == null && r.player_id != null) {
-          return me != null && roundIsLive(r.round_id) && r.signed_by === me && me !== r.player_id && sharesGroup(uid, r.round_id, r.player_id) && signingMode(tid) === 'marker'
+          return (
+            me != null &&
+            roundIsLive(r.round_id) &&
+            r.signed_by === me &&
+            me !== r.player_id &&
+            sharesGroup(uid, r.round_id, r.player_id) &&
+            signingMode(tid) === 'marker'
+          )
         }
         const pair = rowsOf('pairs').find((p) => p.id === r.pair_id && p.tournament_id === tid)
         return (
@@ -864,9 +1053,22 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   /** The first NOT NULL column or check the row breaks, as PostgREST answers it. */
   function constraintError(table: string, row: Row): Response | null {
     const empty = (NOT_NULL[table] ?? []).find((c) => row[c] == null)
-    if (empty) return json(400, { code: '23502', details: null, hint: null, message: `null value in column "${empty}" of relation "${table}" violates not-null constraint` })
+    if (empty)
+      return json(400, {
+        code: '23502',
+        details: null,
+        hint: null,
+        message: `null value in column "${empty}" of relation "${table}" violates not-null constraint`,
+      })
     const broken = (CHECKS[table] ?? []).find(([, holds]) => !holds(row))
-    return broken ? json(400, { code: '23514', details: null, hint: null, message: `new row for relation "${table}" violates check constraint "${broken[0]}"` }) : null
+    return broken
+      ? json(400, {
+          code: '23514',
+          details: null,
+          hint: null,
+          message: `new row for relation "${table}" violates check constraint "${broken[0]}"`,
+        })
+      : null
   }
 
   function unsupported(req: Exchange, why: string): never {
@@ -885,20 +1087,27 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   function write(req: Exchange, headers: Headers): Response {
     const table = req.target
     const caller = req.as
-    const refused = (message: string) => json(caller === 'anon' ? 401 : 403, { code: '42501', details: null, hint: null, message })
+    const refused = (message: string) =>
+      json(caller === 'anon' ? 401 : 403, { code: '42501', details: null, hint: null, message })
     // 0027: nobody writes the Comité's assignments but its two functions.
     if (table === 'money_adjustments') return refused(`permission denied for table ${table}`)
     // The Comité's status change (0003 `tournaments_update`, 0029's close gate): the only tournament write served.
-    if (req.method === 'PATCH') return table === 'tournaments' ? patchTournament(req, headers) : unsupported(req, `PATCH ${table} is not served`)
+    if (req.method === 'PATCH')
+      return table === 'tournaments' ? patchTournament(req, headers) : unsupported(req, `PATCH ${table} is not served`)
     const rule = RULES[table]
     if (!rule) return unsupported(req, `${table} is not a table a phone writes`)
-    const policy = (usingClause = false) => refused(`new row violates row-level security policy${usingClause ? ' (USING expression)' : ''} for table "${table}"`)
+    const policy = (usingClause = false) =>
+      refused(
+        `new row violates row-level security policy${usingClause ? ' (USING expression)' : ''} for table "${table}"`,
+      )
     const rows = rowsOf(table)
     if (req.method === 'DELETE') {
       const spec = readFromUrl(table, req.params, headers)
       if (typeof spec === 'string') return unsupported(req, spec)
       // Row-level security hides the rows a caller may not delete: they stay, and nothing says so.
-      server.tables[table] = rows.filter((r) => !(spec.filters.every((f) => f.test(r)) && mayRead(table, r, caller) && rule.deletes(caller, r)))
+      server.tables[table] = rows.filter(
+        (r) => !(spec.filters.every((f) => f.test(r)) && mayRead(table, r, caller) && rule.deletes(caller, r)),
+      )
       return new Response(null, { status: 204 })
     }
     if (req.method !== 'POST') return unsupported(req, 'only GET, POST and DELETE are served')
@@ -906,21 +1115,45 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const resolution = /resolution=(merge|ignore)-duplicates/.exec(headers.get('prefer') ?? '')?.[1]
     // The columns written: PostgREST's `columns` when it is sent (supabase-js names every key of a list's
     // rows), and then only those keys of the body are read; else the body's keys.
-    const listed = req.params.get('columns')?.split(',').map((c) => c.replace(/"/g, '').trim())
+    const listed = req.params
+      .get('columns')
+      ?.split(',')
+      .map((c) => c.replace(/"/g, '').trim())
     const columns = listed ?? [...new Set(incoming.flatMap((r) => Object.keys(r)))]
     // In the order they are met. PostgREST refuses a column its schema cache doesn't know before the database sees the request.
     const unknown = columns.find((c) => !(c in (COLUMNS[table] ?? {})))
-    if (unknown) return json(400, { code: 'PGRST204', details: null, hint: null, message: `Could not find the '${unknown}' column of '${table}' in the schema cache` })
+    if (unknown)
+      return json(400, {
+        code: 'PGRST204',
+        details: null,
+        hint: null,
+        message: `Could not find the '${unknown}' column of '${table}' in the schema cache`,
+      })
     const generated = columns.find((c) => GENERATED[table]?.includes(c))
-    if (generated) return json(400, { code: '428C9', details: `Column "${generated}" is a generated column.`, hint: null, message: `cannot insert a non-DEFAULT value into column "${generated}"` })
+    if (generated)
+      return json(400, {
+        code: '428C9',
+        details: `Column "${generated}" is a generated column.`,
+        hint: null,
+        message: `cannot insert a non-DEFAULT value into column "${generated}"`,
+      })
     // Planning: the ON CONFLICT target must be a unique key.
     const keys = UNIQUE_KEYS[table]!
     const target = resolution ? (req.params.get('on_conflict')?.split(',') ?? keys[0]!.columns) : null
     if (target && !keys.some((k) => k.columns.length === target.length && k.columns.every((c) => target.includes(c)))) {
-      return json(400, { code: '42P10', details: null, hint: null, message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification' })
+      return json(400, {
+        code: '42P10',
+        details: null,
+        hint: null,
+        message: 'there is no unique or exclusion constraint matching the ON CONFLICT specification',
+      })
     }
     // Then the columns' privileges: 0010 revoked `scores` from sessions but for the card's own columns (the publishable key's grants were left whole).
-    if (table === 'scores' && caller !== 'anon' && columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))) {
+    if (
+      table === 'scores' &&
+      caller !== 'anon' &&
+      columns.some((c) => !SCORE_INSERT.has(c) || (resolution === 'merge' && !SCORE_UPDATE.has(c)))
+    ) {
       return refused(`permission denied for table ${table}`)
     }
     // The body is cast to the columns' types whole (json_populate_recordset) before any row meets a
@@ -937,19 +1170,31 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const stored: Row[] = []
     /** Rows of `next` this statement wrote: DO UPDATE may not reach one of them again (21000). */
     const written = new Set<Row>()
-    const meets = (cols: string[], row: Row) => next.findIndex((r) => cols.every((c) => r[c] != null && r[c] === row[c]))
+    const meets = (cols: string[], row: Row) =>
+      next.findIndex((r) => cols.every((c) => r[c] != null && r[c] === row[c]))
     for (const proposed of typedRows) {
       // Then row by row: the defaults and insert triggers, the policy, the checks, the keys.
       const row = withDefaults(table, proposed)
       // 0026 `scores_00_writer`: the writer is the session's player, whatever the body says (SEC-02), and a direct write names no device or mutation.
-      if (table === 'scores') Object.assign(row, { entered_by: myPlayer(caller, roundTournament(row.round_id)) ?? null, device_id: null, mutation_id: null })
+      if (table === 'scores')
+        Object.assign(row, {
+          entered_by: myPlayer(caller, roundTournament(row.round_id)) ?? null,
+          device_id: null,
+          mutation_id: null,
+        })
       if (!rule.check(caller, row)) return policy()
       const bad = constraintError(table, row)
       if (bad) return bad
       const at = target ? meets(target, row) : -1
       if (at < 0) {
         const taken = keys.find((k) => meets(k.columns, row) >= 0)
-        if (taken) return json(409, { code: '23505', details: null, hint: null, message: `duplicate key value violates unique constraint "${taken.name}"` })
+        if (taken)
+          return json(409, {
+            code: '23505',
+            details: null,
+            hint: null,
+            message: `duplicate key value violates unique constraint "${taken.name}"`,
+          })
         next.push(row)
         stored.push(row)
         written.add(row)
@@ -958,11 +1203,21 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (resolution === 'ignore') continue
       const old = next[at]!
       if (written.has(old)) {
-        return json(500, { code: '21000', details: null, hint: 'Ensure that no rows proposed for insertion within the same command have duplicate constrained values.', message: 'ON CONFLICT DO UPDATE command cannot affect row a second time' })
+        return json(500, {
+          code: '21000',
+          details: null,
+          hint: 'Ensure that no rows proposed for insertion within the same command have duplicate constrained values.',
+          message: 'ON CONFLICT DO UPDATE command cannot affect row a second time',
+        })
       }
       if (!mayRead(table, old, caller) || !rule.using(caller, old)) return policy(true)
       const merged = { ...old, ...Object.fromEntries(Object.entries(proposed).filter(([c]) => columns.includes(c))) }
-      if (table === 'scores') Object.assign(merged, { entered_by: myPlayer(caller, roundTournament(merged.round_id)) ?? null, device_id: null, mutation_id: null })
+      if (table === 'scores')
+        Object.assign(merged, {
+          entered_by: myPlayer(caller, roundTournament(merged.round_id)) ?? null,
+          device_id: null,
+          mutation_id: null,
+        })
       const updated = table === 'scores' ? scoreUpdated(old, merged) : generate(table, merged)
       if (!rule.check(caller, updated)) return policy()
       const badUpdate = constraintError(table, updated)
@@ -974,9 +1229,21 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     // At the statement's end, the foreign keys (checked by the table's owner: no policy hides the row they point to).
     for (const row of stored) {
       const broken = (FOREIGN_KEYS[table] ?? []).find(
-        (fk) => row[fk.column] != null && !rowsOf(fk.table).some((r) => r.id === row[fk.column] && (!fk.tenant || row.tournament_id == null || r.tournament_id === row.tournament_id)),
+        (fk) =>
+          row[fk.column] != null &&
+          !rowsOf(fk.table).some(
+            (r) =>
+              r.id === row[fk.column] &&
+              (!fk.tenant || row.tournament_id == null || r.tournament_id === row.tournament_id),
+          ),
       )
-      if (broken) return json(409, { code: '23503', details: null, hint: null, message: `insert or update on table "${table}" violates foreign key constraint "${broken.name}"` })
+      if (broken)
+        return json(409, {
+          code: '23503',
+          details: null,
+          hint: null,
+          message: `insert or update on table "${table}" violates foreign key constraint "${broken.name}"`,
+        })
     }
     server.tables[table] = next
     // 0026 `card_signature_settles`: a card signed settles its pair's discrepancies in the round (NEW-01); 0054, a player's his own.
@@ -1002,7 +1269,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * nobody created, as many as the count falls short; the open ones are live
    * or scheduled; the kept holes are the ones the inbox lists.
    */
-  function closeBlockers(tid: unknown): Array<{ kind: 'missingRounds' | 'openRounds'; days: number[] } | { kind: 'rejectedWrites'; count: number }> {
+  function closeBlockers(
+    tid: unknown,
+  ): Array<{ kind: 'missingRounds' | 'openRounds'; days: number[] } | { kind: 'rejectedWrites'; count: number }> {
     const tr = rowsOf('tournaments').find((x) => x.id === tid)
     if (!tr) return []
     const raw = (tr.settings as Row | null | undefined)?.rounds
@@ -1015,7 +1284,10 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       for (let d = 1; d <= planned && missing.length < planned - rounds.length; d++) if (!made.has(d)) missing.push(d)
       out.push({ kind: 'missingRounds', days: missing })
     }
-    const open = rounds.filter((r) => r.status === 'live' || r.status === 'scheduled').map((r) => Number(r.number)).sort((a, b) => a - b)
+    const open = rounds
+      .filter((r) => r.status === 'live' || r.status === 'scheduled')
+      .map((r) => Number(r.number))
+      .sort((a, b) => a - b)
     if (open.length) out.push({ kind: 'openRounds', days: open })
     const kept = rowsOf('rejected_writes').filter((w) => w.tournament_id === tid && listed(w)).length
     if (kept) out.push({ kind: 'rejectedWrites', count: kept })
@@ -1024,7 +1296,13 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
   /** 0029 `close_blockers_text`: what was refused, then the phone's own sentence for each item. */
   function closeRefusal(blockers: ReturnType<typeof closeBlockers>, publish: boolean): string {
     const C = t.closeGate
-    const parts = blockers.map((b) => (b.kind === 'rejectedWrites' ? C.rejectedWrites(b.count) : b.kind === 'missingRounds' ? C.missingRounds(b.days) : C.openRounds(b.days)))
+    const parts = blockers.map((b) =>
+      b.kind === 'rejectedWrites'
+        ? C.rejectedWrites(b.count)
+        : b.kind === 'missingRounds'
+          ? C.missingRounds(b.days)
+          : C.openRounds(b.days),
+    )
     return [publish ? C.serverRefusedPublish : C.serverRefusedFinish, ...parts].join(' ')
   }
 
@@ -1040,22 +1318,34 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const spec = readFromUrl('tournaments', req.params, headers)
     if (typeof spec === 'string') return unsupported(req, spec)
     const body = (req.body ?? {}) as Row
-    if (Array.isArray(body) || Object.keys(body).some((k) => k !== 'status')) return unsupported(req, 'only a tournament\'s status is patched here')
+    if (Array.isArray(body) || Object.keys(body).some((k) => k !== 'status'))
+      return unsupported(req, "only a tournament's status is patched here")
     const caller = req.as
-    const targets = rowsOf('tournaments').filter((r) => spec.filters.every((f) => f.test(r)) && mayRead('tournaments', r, caller) && organizes(caller, r.id))
+    const targets = rowsOf('tournaments').filter(
+      (r) => spec.filters.every((f) => f.test(r)) && mayRead('tournaments', r, caller) && organizes(caller, r.id),
+    )
     // The check constraint meets only the rows the policy lets the statement change.
     if (targets.length && !['setup', 'auction', 'live', 'finished'].includes(String(body.status))) {
-      return json(400, { code: '23514', details: null, hint: null, message: 'new row for relation "tournaments" violates check constraint "tournaments_status_check"' })
+      return json(400, {
+        code: '23514',
+        details: null,
+        hint: null,
+        message: 'new row for relation "tournaments" violates check constraint "tournaments_status_check"',
+      })
     }
     for (const r of targets) {
       if (body.status !== 'finished' || r.status === 'finished') continue
       const blockers = closeBlockers(r.id)
-      if (blockers.length) return json(400, { code: '22023', details: null, hint: null, message: closeRefusal(blockers, false) })
+      if (blockers.length)
+        return json(400, { code: '22023', details: null, hint: null, message: closeRefusal(blockers, false) })
     }
     for (const r of targets) r.status = body.status
     if (!req.params.get('select')) return new Response(null, { status: 204 })
     const cols = spec.columns ?? null
-    return json(200, targets.map((r) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : { ...r })))
+    return json(
+      200,
+      targets.map((r) => (cols ? Object.fromEntries(cols.map((c) => [c, r[c] ?? null])) : { ...r })),
+    )
   }
 
   /**
@@ -1065,7 +1355,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * published and how many have a place; the results tables are not kept here.
    */
   function publishResults(args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     const tr = rowsOf('tournaments').find((x) => x.id === args.p_tournament_id)
     if (!tr || as === 'anon' || !organizes(as, tr.id)) return fail('42501', 'Solo el Comité publica resultados')
     if (tr.status !== 'finished') return fail('22023', 'El torneo todavía no termina')
@@ -1073,7 +1364,15 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (blockers.length) return fail('22023', closeRefusal(blockers, true))
     const rows = args.p_rows
     if (!Array.isArray(rows)) return fail('22023', 'Resultados inválidos')
-    if (rows.some((r) => !r || typeof r !== 'object' || !rowsOf('players').some((p) => p.id === (r as Row).playerId && p.tournament_id === tr.id))) return fail('22023', 'Un jugador no es de este torneo')
+    if (
+      rows.some(
+        (r) =>
+          !r ||
+          typeof r !== 'object' ||
+          !rowsOf('players').some((p) => p.id === (r as Row).playerId && p.tournament_id === tr.id),
+      )
+    )
+      return fail('22023', 'Un jugador no es de este torneo')
     return json(200, { players: rows.length, field: rows.filter((r) => (r as Row).rank != null).length })
   }
 
@@ -1086,19 +1385,28 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    */
   function saveHole(p: unknown, as: string): Response {
     const invalidCall = (message: string) => json(400, { code: '22023', details: null, hint: null, message })
-    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function save_hole' })
+    if (as === 'anon')
+      return json(401, {
+        code: '42501',
+        details: null,
+        hint: null,
+        message: 'permission denied for function save_hole',
+      })
     const call = (p ?? null) as Record<string, unknown> | null
-    if (new TextEncoder().encode(JSON.stringify(p ?? null)).length > 16384) return invalidCall('El hoyo que llegó trae demasiados datos; vuelve a guardarlo')
+    if (new TextEncoder().encode(JSON.stringify(p ?? null)).length > 16384)
+      return invalidCall('El hoyo que llegó trae demasiados datos; vuelve a guardarlo')
     const text = (v: unknown) => (v == null ? null : typeof v === 'string' ? v : JSON.stringify(v))
     const obj = call && typeof call === 'object' && !Array.isArray(call) ? call : null
     const rid = text(obj?.round_id)
     const holeText = text(obj?.hole)
     const mid = text(obj?.mutation_id)
     const dev = text(obj?.device_id) || null
-    if (holeText != null && !INTEGER.test(holeText)) return invalidCall('El hoyo que llegó no se entiende; vuelve a guardarlo')
+    if (holeText != null && !INTEGER.test(holeText))
+      return invalidCall('El hoyo que llegó no se entiende; vuelve a guardarlo')
     const h = holeText == null ? null : Number(holeText)
     const entries = obj?.entries
-    if (rid == null || h == null || mid == null || !Array.isArray(entries)) return invalidCall('Al hoyo que llegó le faltan datos; vuelve a guardarlo')
+    if (rid == null || h == null || mid == null || !Array.isArray(entries))
+      return invalidCall('Al hoyo que llegó le faltan datos; vuelve a guardarlo')
     if (entries.length > 8) return invalidCall('Un hoyo se guarda con 8 jugadores a lo más')
     if (h < 1 || h > 18) return invalidCall('Ese hoyo no existe: van del 1 al 18')
     const tid = roundTournament(rid)
@@ -1106,11 +1414,13 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (me == null) return json(200, { status: 'not_member' })
     const prior = rowsOf('score_mutations').find((m) => m.mutation_id === mid)
     if (prior) {
-      if (prior.auth_user_id !== as || prior.tournament_id !== tid || prior.round_id !== rid || prior.hole !== h) return invalidCall('Ese guardado ya llegó antes con otros datos; vuelve a guardarlo')
+      if (prior.auth_user_id !== as || prior.tournament_id !== tid || prior.round_id !== rid || prior.hole !== h)
+        return invalidCall('Ese guardado ya llegó antes con otros datos; vuelve a guardarlo')
       return json(200, { ...(prior.result as Row), replayed: true })
     }
     const playerTournament = (pid: unknown) => rowsOf('players').find((x) => x.id === pid)?.tournament_id
-    const scoreRow = (pid: unknown) => rowsOf('scores').find((r) => r.round_id === rid && r.player_id === pid && r.hole === h)
+    const scoreRow = (pid: unknown) =>
+      rowsOf('scores').find((r) => r.round_id === rid && r.player_id === pid && r.hole === h)
     const writes: Array<{ pid: unknown; nxt: Row }> = []
     const rowsOut: Row[] = []
     const conflicts: Row[] = []
@@ -1147,7 +1457,14 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       let cur: Row | null = null
       let nxt: Row = {}
       const clash: string[] = []
-      if (pid == null || dup || playerTournament(pid) !== tid || !isObject(fields) || (base !== undefined && !isObject(base)) || Object.keys(fields).some((f) => !['strokes', 'putts', 'picked_up'].includes(f))) {
+      if (
+        pid == null ||
+        dup ||
+        playerTournament(pid) !== tid ||
+        !isObject(fields) ||
+        (base !== undefined && !isObject(base)) ||
+        Object.keys(fields).some((f) => !['strokes', 'putts', 'picked_up'].includes(f))
+      ) {
         reason = 'invalid'
       } else if (!roundIsLive(rid)) reason = 'round_not_live'
       else if (!sharesGroup(as, rid, pid)) reason = 'not_in_group'
@@ -1163,7 +1480,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         const pickOr = (k: string, fallback: unknown) => (k in f ? f[k] : (cur?.[k] ?? fallback))
         nxt = { strokes: pickOr('strokes', null), putts: pickOr('putts', null), picked_up: pickOr('picked_up', false) }
         if (nxt.picked_up === true) nxt.strokes = null
-        const whole = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi
+        const whole = (v: unknown, lo: number, hi: number) =>
+          typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi
         const st = nxt.strokes
         const pt = nxt.putts
         if (
@@ -1193,14 +1511,27 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       } else if (clash.length) {
         conflicts.push({ player_id: pid, fields: clash, server: cur })
         keep({ ...entry, server: cur }, pid, 'conflict')
-      } else if (cur && (cur.strokes ?? null) === nxt.strokes && (cur.putts ?? null) === nxt.putts && cur.picked_up === nxt.picked_up) {
+      } else if (
+        cur &&
+        (cur.strokes ?? null) === nxt.strokes &&
+        (cur.putts ?? null) === nxt.putts &&
+        cur.picked_up === nxt.picked_up
+      ) {
         unchanged.push(pid)
         rowsOut.push(cur)
       } else writes.push({ pid, nxt })
     }
     // One statement for the hole, through the update triggers (the discrepancy, the version).
     for (const { pid, nxt } of writes) {
-      const values = { strokes: nxt.strokes, putts: nxt.putts, picked_up: nxt.picked_up, entered_by: me, client_ts: stamp(), device_id: dev, mutation_id: mid }
+      const values = {
+        strokes: nxt.strokes,
+        putts: nxt.putts,
+        picked_up: nxt.picked_up,
+        entered_by: me,
+        client_ts: stamp(),
+        device_id: dev,
+        mutation_id: mid,
+      }
       const old = scoreRow(pid)
       let row: Row
       if (old) {
@@ -1213,9 +1544,24 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       server.writes.push({ table: 'scores', row: { ...row }, by: as })
       rowsOut.push(structuredClone(row))
     }
-    const status = !rejected.length && !conflicts.length ? 'ok' : writes.length || unchanged.length ? 'partial' : conflicts.length ? 'conflict' : 'rejected'
+    const status =
+      !rejected.length && !conflicts.length
+        ? 'ok'
+        : writes.length || unchanged.length
+          ? 'partial'
+          : conflicts.length
+            ? 'conflict'
+            : 'rejected'
     const result = { status, rows: rowsOut, conflicts, rejected, unchanged }
-    ;(server.tables.score_mutations ??= []).push({ mutation_id: mid, tournament_id: tid, round_id: rid, hole: h, auth_user_id: as, result: structuredClone(result), created_at: stamp() })
+    ;(server.tables.score_mutations ??= []).push({
+      mutation_id: mid,
+      tournament_id: tid,
+      round_id: rid,
+      hole: h,
+      auth_user_id: as,
+      result: structuredClone(result),
+      created_at: stamp(),
+    })
     return json(200, result)
   }
 
@@ -1224,18 +1570,30 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     server.rpcCalls.push({ name, args: structuredClone(args) })
     if (name === 'save_hole') return saveHole(args.p, as)
     if (name === 'claim_player') {
-      if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function claim_player' })
+      if (as === 'anon')
+        return json(401, {
+          code: '42501',
+          details: null,
+          hint: null,
+          message: 'permission denied for function claim_player',
+        })
       const player = (server.tables.players ?? []).find((p) => p.id === args.p_player_id)
       if (!player) return json(200, { ok: false, reason: 'not_found' })
       // An account confirmed as another player of the tournament plays as him (0014).
-      const linked = rowsOf('players').find((p) => p.tournament_id === player.tournament_id && p.profile_id === as && p.profile_status === 'confirmed')
-      if (linked && linked.id !== player.id) return json(200, { ok: false, reason: 'already_linked', playerId: linked.id })
+      const linked = rowsOf('players').find(
+        (p) => p.tournament_id === player.tournament_id && p.profile_id === as && p.profile_status === 'confirmed',
+      )
+      if (linked && linked.id !== player.id)
+        return json(200, { ok: false, reason: 'already_linked', playerId: linked.id })
       const pin = server.auth.pins[String(player.id)]
       if (!pin) return json(200, { ok: false, reason: 'no_pin' })
       if (pin !== args.p_pin) return json(200, { ok: false, reason: 'wrong_pin', attemptsLeft: 4 })
       const tid = player.tournament_id
       // One claim per user (device_sessions' key): claiming here ends the claim it held anywhere else.
-      server.tables.device_sessions = [...rowsOf('device_sessions').filter((d) => d.auth_user_id !== as), { auth_user_id: as, player_id: player.id, tournament_id: tid }]
+      server.tables.device_sessions = [
+        ...rowsOf('device_sessions').filter((d) => d.auth_user_id !== as),
+        { auth_user_id: as, player_id: player.id, tournament_id: tid },
+      ]
       return json(200, { ok: true, playerId: player.id, tournamentId: tid })
     }
     if (name === 'my_membership') {
@@ -1243,7 +1601,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       const tid = String(args.tid)
       const playerId = (myPlayer(as, tid) as string | undefined) ?? null
       const seat = rowsOf('tournament_organizers').find((o) => o.tournament_id === tid && o.auth_user_id === as)
-      const byProfile = rowsOf('players').some((p) => p.tournament_id === tid && p.profile_id === as && p.profile_status === 'confirmed')
+      const byProfile = rowsOf('players').some(
+        (p) => p.tournament_id === tid && p.profile_id === as && p.profile_status === 'confirmed',
+      )
       const adminPlayer = playerId != null && rowsOf('players').some((p) => p.id === playerId && p.is_admin === true)
       const t = rowsOf('tournaments').find((x) => x.id === tid)
       return json(200, {
@@ -1277,7 +1637,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * own sentences; amounts against a bucket are the engine's to judge.
    */
   function adjust(name: string, args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     const reasonError = (r: unknown) => {
       const why = typeof r === 'string' ? r.trim() : ''
       if (why.length < 3) return 'Escribe el motivo, al menos 3 letras'
@@ -1286,7 +1647,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const rows = (server.tables.money_adjustments ??= [])
     if (name === 'void_adjustment') {
       const row = rows.find((r) => r.id === args.p_id)
-      if (!row || as === 'anon' || !organizes(as, row.tournament_id)) return fail('42501', 'Solo el Comité puede anular una asignación')
+      if (!row || as === 'anon' || !organizes(as, row.tournament_id))
+        return fail('42501', 'Solo el Comité puede anular una asignación')
       if (row.voided_at != null) return fail('22023', 'Esa asignación ya estaba anulada')
       const bad = reasonError(args.p_reason)
       if (bad) return fail('22023', bad)
@@ -1294,38 +1656,64 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       let voided = 0
       for (const r of rows) {
         // Its call, and no other: the same line, account and moment are another decision.
-        if (r.tournament_id !== row.tournament_id || (r.call_id ?? r.id) !== (row.call_id ?? row.id) || r.voided_at != null) continue
+        if (
+          r.tournament_id !== row.tournament_id ||
+          (r.call_id ?? r.id) !== (row.call_id ?? row.id) ||
+          r.voided_at != null
+        )
+          continue
         Object.assign(r, { voided_at: at, voided_by: as, void_reason: String(args.p_reason).trim() })
         voided++
       }
       return json(200, { voided })
     }
     const tid = args.p_tournament_id
-    if (tid == null || as === 'anon' || !organizes(as, tid)) return fail('42501', 'Solo el Comité puede asignar el dinero por asignar')
+    if (tid == null || as === 'anon' || !organizes(as, tid))
+      return fail('42501', 'Solo el Comité puede asignar el dinero por asignar')
     const bad = reasonError(args.p_reason)
     if (bad) return fail('22023', bad)
     const source = typeof args.p_source_key === 'string' ? args.p_source_key.trim() : ''
     if (!source) return fail('22023', 'Falta de qué dinero sale la asignación')
-    if (!/^([A-Za-z]{1,40}|game:[a-z0-9-]{1,32})$/.test(source)) return fail('22023', 'Ese dinero no es una línea por asignar')
+    if (!/^([A-Za-z]{1,40}|game:[a-z0-9-]{1,32})$/.test(source))
+      return fail('22023', 'Ese dinero no es una línea por asignar')
     const entries = args.p_entries
     if (!Array.isArray(entries) || entries.length === 0) return fail('22023', 'No hay nada que asignar')
     if (entries.length > 200) return fail('22023', 'Demasiadas líneas en una sola asignación')
     for (const e of entries as unknown[]) {
-      if (!e || typeof e !== 'object' || Array.isArray(e)) return fail('22023', 'Cada línea de la asignación lleva tipo, jugador y cantidad')
+      if (!e || typeof e !== 'object' || Array.isArray(e))
+        return fail('22023', 'Cada línea de la asignación lleva tipo, jugador y cantidad')
       const { kind, amount, to_player_id: to } = e as Row
-      if (kind !== 'award' && kind !== 'refund' && kind !== 'house') return fail('22023', 'Cada línea se da a un jugador, se devuelve o va a la casa')
-      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0 || amount > 10_000_000) return fail('22023', 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo')
+      if (kind !== 'award' && kind !== 'refund' && kind !== 'house')
+        return fail('22023', 'Cada línea se da a un jugador, se devuelve o va a la casa')
+      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0 || amount > 10_000_000)
+        return fail('22023', 'Cada cantidad es un número entero de pesos, mayor que cero y de $10,000,000 como máximo')
       if (kind === 'house') {
         if (to != null) return fail('22023', 'Lo que va a la casa no lleva jugador')
-      } else if (!rowsOf('players').some((p) => p.id === to && p.tournament_id === tid)) return fail('22023', 'Ese jugador no es de este torneo')
+      } else if (!rowsOf('players').some((p) => p.id === to && p.tournament_id === tid))
+        return fail('22023', 'Ese jugador no es de este torneo')
     }
-    if ((entries as Row[]).reduce((s, e) => s + (e.amount as number), 0) > 10_000_000) return fail('22023', 'Una asignación suma $10,000,000 como máximo')
+    if ((entries as Row[]).reduce((s, e) => s + (e.amount as number), 0) > 10_000_000)
+      return fail('22023', 'Una asignación suma $10,000,000 como máximo')
     const at = stamp()
     const reason = String(args.p_reason).trim()
     const call = `money_adjustments-call-${++serial}`
     for (const e of entries as Row[]) {
       const to = e.kind === 'house' ? null : e.to_player_id
-      rows.push({ id: `money_adjustments-${++serial}`, tournament_id: tid, source_key: source, kind: e.kind, to_player_id: to, amount: e.amount, reason, call_id: call, created_by: as, created_at: at, voided_at: null, voided_by: null, void_reason: null })
+      rows.push({
+        id: `money_adjustments-${++serial}`,
+        tournament_id: tid,
+        source_key: source,
+        kind: e.kind,
+        to_player_id: to,
+        amount: e.amount,
+        reason,
+        call_id: call,
+        created_by: as,
+        created_at: at,
+        voided_at: null,
+        voided_by: null,
+        void_reason: null,
+      })
     }
     return json(200, { assigned: entries.length })
   }
@@ -1339,7 +1727,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * lock on the hole is moot.
    */
   function holeAwards(name: string, args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     const rid = args.p_round_id
     const tid = roundTournament(rid)
     const game = args.p_game_id
@@ -1347,11 +1736,23 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const winners = args.p_player_ids
     const me = myPlayer(as, tid)
     const organizer = tid != null && as !== 'anon' && organizes(as, tid)
-    const shape = typeof game === 'string' && /^[a-z0-9-]{1,32}$/.test(game) && typeof hole === 'number' && Number.isInteger(hole) && hole >= 1 && hole <= 18
+    const shape =
+      typeof game === 'string' &&
+      /^[a-z0-9-]{1,32}$/.test(game) &&
+      typeof hole === 'number' &&
+      Number.isInteger(hole) &&
+      hole >= 1 &&
+      hole <= 18
     const ofTournament = (x: unknown) => rowsOf('players').some((p) => p.id === x && p.tournament_id === tid)
     const twice = (xs: unknown[]) => new Set(xs).size !== xs.length
     const onHole = (r: Row) => r.round_id === rid && r.game_id === game && r.hole === hole
-    const key = (r: Row) => ({ round_id: r.round_id, game_id: r.game_id, hole: r.hole, player_id: r.player_id, source: r.source })
+    const key = (r: Row) => ({
+      round_id: r.round_id,
+      game_id: r.game_id,
+      hole: r.hole,
+      player_id: r.player_id,
+      source: r.source,
+    })
     const rows = rowsOf('hole_awards')
     if (name === 'save_group_awards') {
       const gid = args.p_group_id
@@ -1367,38 +1768,74 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       if (twice(winners)) return fail('22023', 'Cada ganador va una sola vez')
       if (!organizer && winners.some((x) => !inGroup(gid, x))) return fail('22023', 'Ese jugador no está en este grupo')
       const gone = rows.filter((r) => onHole(r) && r.group_id === gid)
-      const made = winners.map((x) => withDefaults('hole_awards', { round_id: rid, group_id: gid, hole, game_id: game, player_id: x, decided_by: me ?? args.p_decided_by ?? null }))
+      const made = winners.map((x) =>
+        withDefaults('hole_awards', {
+          round_id: rid,
+          group_id: gid,
+          hole,
+          game_id: game,
+          player_id: x,
+          decided_by: me ?? args.p_decided_by ?? null,
+        }),
+      )
       server.tables.hole_awards = [...rows.filter((r) => !gone.includes(r)), ...made]
       return json(200, { deleted: gone.map(key), rows: made })
     }
     // set_hole_ruling: null clears the ruling; an empty list is «nadie», which takes the groups' claims too.
     if (!organizer) return fail('42501', 'Solo el Comité decide un concurso')
-    if (!shape || (winners != null && !Array.isArray(winners))) return fail('22023', 'Ese concurso no se puede guardar así')
+    if (!shape || (winners != null && !Array.isArray(winners)))
+      return fail('22023', 'Ese concurso no se puede guardar así')
     const list = winners as unknown[] | null | undefined
     if (list?.some((x) => !ofTournament(x))) return fail('22023', 'Ese jugador no es de este torneo')
     if (list && twice(list)) return fail('22023', 'Cada ganador va una sola vez')
-    const gone = rows.filter((r) => onHole(r) && (r.group_id == null || (list?.length === 0)))
-    const made = list?.length ? list.map((x) => withDefaults('hole_awards', { round_id: rid, group_id: null, hole, game_id: game, player_id: x, decided_by: args.p_decided_by ?? null })) : []
+    const gone = rows.filter((r) => onHole(r) && (r.group_id == null || list?.length === 0))
+    const made = list?.length
+      ? list.map((x) =>
+          withDefaults('hole_awards', {
+            round_id: rid,
+            group_id: null,
+            hole,
+            game_id: game,
+            player_id: x,
+            decided_by: args.p_decided_by ?? null,
+          }),
+        )
+      : []
     server.tables.hole_awards = [...rows.filter((r) => !gone.includes(r)), ...made]
     return json(200, { deleted: gone.map(key), rows: made })
   }
 
   /** 0044 `set_game_results`: a custom bet's winners and shares, replaced in one statement, after the checks the migration makes in its order. */
   function gameResults(args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     const tid = args.p_tournament_id
-    if (tid == null || as === 'anon' || !organizes(as, tid)) return fail('42501', 'Solo el Comité registra el resultado de una apuesta')
+    if (tid == null || as === 'anon' || !organizes(as, tid))
+      return fail('42501', 'Solo el Comité registra el resultado de una apuesta')
     const game = args.p_game_id
-    if (typeof game !== 'string' || !/^[a-z0-9-]{1,32}$/.test(game)) return fail('22023', 'Ese juego no se puede guardar así')
+    if (typeof game !== 'string' || !/^[a-z0-9-]{1,32}$/.test(game))
+      return fail('22023', 'Ese juego no se puede guardar así')
     const winners = args.p_winners
     if (!Array.isArray(winners)) return fail('22023', 'El resultado lleva la lista de ganadores')
     for (const w of winners as unknown[]) {
-      if (!isPlainObject(w) || typeof w.player_id !== 'string' || typeof w.share !== 'number' || !(w.share > 0)) return fail('22023', 'Cada ganador lleva su jugador y una parte mayor que cero')
-      if (!rowsOf('players').some((p) => p.id === w.player_id && p.tournament_id === tid)) return fail('22023', 'Ese jugador no es de este torneo')
+      if (!isPlainObject(w) || typeof w.player_id !== 'string' || typeof w.share !== 'number' || !(w.share > 0))
+        return fail('22023', 'Cada ganador lleva su jugador y una parte mayor que cero')
+      if (!rowsOf('players').some((p) => p.id === w.player_id && p.tournament_id === tid))
+        return fail('22023', 'Ese jugador no es de este torneo')
     }
-    if (new Set((winners as Row[]).map((w) => w.player_id)).size !== winners.length) return fail('22023', 'Cada ganador va una sola vez')
-    const made = (winners as Row[]).map((w) => ({ tournament_id: tid, game_id: game, player_id: w.player_id, share: w.share, created_at: stamp() }))
-    server.tables.game_results = [...rowsOf('game_results').filter((r) => !(r.tournament_id === tid && r.game_id === game)), ...made]
+    if (new Set((winners as Row[]).map((w) => w.player_id)).size !== winners.length)
+      return fail('22023', 'Cada ganador va una sola vez')
+    const made = (winners as Row[]).map((w) => ({
+      tournament_id: tid,
+      game_id: game,
+      player_id: w.player_id,
+      share: w.share,
+      created_at: stamp(),
+    }))
+    server.tables.game_results = [
+      ...rowsOf('game_results').filter((r) => !(r.tournament_id === tid && r.game_id === game)),
+      ...made,
+    ]
     return json(200, made)
   }
 
@@ -1411,7 +1848,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * as jsonb does: by content, key order aside; a key the row lacks is null.
    */
   function updateSettings(args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     const denied = 'Solo el Comité puede cambiar la configuración del torneo'
     const unreadable = 'No pudimos leer ese cambio; abre la configuración otra vez y repítelo'
     const tid = args.p_tournament_id
@@ -1425,7 +1863,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     if (!isPlainObject(seenS) || !isPlainObject(setS)) return fail('22023', unreadable)
     const KEYS = ['settings', 'name', 'tagline', 'accent_color']
     const COLUMNS = ['name', 'tagline', 'accent_color']
-    const text = (o: Row, k: string, orNull: boolean) => !(k in o) || typeof o[k] === 'string' || (orNull && o[k] === null)
+    const text = (o: Row, k: string, orNull: boolean) =>
+      !(k in o) || typeof o[k] === 'string' || (orNull && o[k] === null)
     if (
       Object.keys(seen).some((k) => !KEYS.includes(k)) ||
       Object.keys(set).some((k) => !KEYS.includes(k)) ||
@@ -1441,7 +1880,12 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const t = rowsOf('tournaments').find((x) => x.id === tid)
     if (!t) return fail('42501', denied)
     const cur: Row = isPlainObject(t.settings) ? t.settings : {}
-    const now = () => ({ settings: t.settings ?? {}, name: t.name, tagline: t.tagline ?? null, accent_color: t.accent_color ?? null })
+    const now = () => ({
+      settings: t.settings ?? {},
+      name: t.name,
+      tagline: t.tagline ?? null,
+      accent_color: t.accent_color ?? null,
+    })
     const changed = [
       ...Object.keys(seenS)
         .sort(jsonbKeyOrder)
@@ -1476,17 +1920,46 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     w.reason !== 'conflict' &&
     (typed(w) ||
       (!rowsOf('scores').some((s) => s.round_id === w.round_id && s.player_id === w.player_id && s.hole === w.hole) &&
-        !rowsOf('rejected_writes').some((o) => o !== w && o.status === 'open' && o.round_id === w.round_id && o.player_id === w.player_id && o.hole === w.hole && typed(o))))
+        !rowsOf('rejected_writes').some(
+          (o) =>
+            o !== w &&
+            o.status === 'open' &&
+            o.round_id === w.round_id &&
+            o.player_id === w.player_id &&
+            o.hole === w.hole &&
+            typed(o),
+        )))
 
   /** 0028 `rejected_inbox(p_tournament_id)`: the Comité's open rows to decide, oldest first. */
   function rejectedInbox(args: Record<string, unknown>, as: string): Response {
-    if (as === 'anon') return json(401, { code: '42501', details: null, hint: null, message: 'permission denied for function rejected_inbox' })
+    if (as === 'anon')
+      return json(401, {
+        code: '42501',
+        details: null,
+        hint: null,
+        message: 'permission denied for function rejected_inbox',
+      })
     const tid = args.p_tournament_id
-    if (tid == null || !organizes(as, tid)) return json(403, { code: '42501', details: null, hint: null, message: 'Solo el Comité ve los pendientes de revisar' })
+    if (tid == null || !organizes(as, tid))
+      return json(403, {
+        code: '42501',
+        details: null,
+        hint: null,
+        message: 'Solo el Comité ve los pendientes de revisar',
+      })
     const rows = rowsOf('rejected_writes')
       .filter((w) => w.tournament_id === tid && w.status === 'open' && listed(w))
       .sort((a, b) => compareValues(a.created_at, b.created_at) || compareValues(a.id, b.id))
-      .map((w) => ({ id: w.id, round_id: w.round_id, hole: w.hole, player_id: w.player_id, writer_player_id: w.writer_player_id ?? null, reason: w.reason, payload: structuredClone(w.payload), created_at: w.created_at ?? null }))
+      .map((w) => ({
+        id: w.id,
+        round_id: w.round_id,
+        hole: w.hole,
+        player_id: w.player_id,
+        writer_player_id: w.writer_player_id ?? null,
+        reason: w.reason,
+        payload: structuredClone(w.payload),
+        created_at: w.created_at ?? null,
+      }))
     return json(200, rows)
   }
 
@@ -1501,10 +1974,12 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
    * written as admin_save_score writes it.
    */
   function resolveRejected(args: Record<string, unknown>, as: string): Response {
-    const fail = (code: '42501' | '22023', message: string) => json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
+    const fail = (code: '42501' | '22023', message: string) =>
+      json(code === '42501' ? (as === 'anon' ? 401 : 403) : 400, { code, details: null, hint: null, message })
     if (as === 'anon') return fail('42501', 'permission denied for function resolve_rejected_write')
     const w = rowsOf('rejected_writes').find((r) => r.id === args.p_id)
-    if (!w || !organizes(as, w.tournament_id)) return fail('42501', 'Solo el Comité puede resolver una captura rechazada')
+    if (!w || !organizes(as, w.tournament_id))
+      return fail('42501', 'Solo el Comité puede resolver una captura rechazada')
     const apply = args.p_action === 'apply'
     if (!apply && args.p_action !== 'dismiss') return fail('22023', 'Una captura rechazada se aplica o se descarta')
     if (w.status !== 'open') return fail('22023', 'Esa captura ya estaba resuelta')
@@ -1514,32 +1989,68 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     const f = (w.payload as Row | null)?.fields as Row | undefined
     if (apply) {
       if (w.reason === 'conflict') return fail('22023', 'Ese choque lo resolvió el teléfono que lo mandó; descártalo')
-      if (rowsOf('rounds').find((r) => r.id === w.round_id)?.status === 'cancelled') return fail('22023', 'Ese día está cancelado: no se le aplica nada; descártala o reabre el día')
+      if (rowsOf('rounds').find((r) => r.id === w.round_id)?.status === 'cancelled')
+        return fail('22023', 'Ese día está cancelado: no se le aplica nada; descártala o reabre el día')
       const known = ['strokes', 'putts', 'picked_up']
-      if (!f || typeof f !== 'object' || Array.isArray(f) || Object.keys(f).some((k) => !known.includes(k)) || !Object.keys(f).length) return fail('22023', 'Esa captura no trae golpes ni putts que aplicar; descártala')
+      if (
+        !f ||
+        typeof f !== 'object' ||
+        Array.isArray(f) ||
+        Object.keys(f).some((k) => !known.includes(k)) ||
+        !Object.keys(f).length
+      )
+        return fail('22023', 'Esa captura no trae golpes ni putts que aplicar; descártala')
       const numOrNull = (v: unknown) => v === null || typeof v === 'number'
-      if (('strokes' in f && !numOrNull(f.strokes)) || ('putts' in f && !numOrNull(f.putts)) || ('picked_up' in f && typeof f.picked_up !== 'boolean')) return fail('22023', 'Los valores de esa captura no se entienden; descártala')
+      if (
+        ('strokes' in f && !numOrNull(f.strokes)) ||
+        ('putts' in f && !numOrNull(f.putts)) ||
+        ('picked_up' in f && typeof f.picked_up !== 'boolean')
+      )
+        return fail('22023', 'Los valores de esa captura no se entienden; descártala')
     }
-    const old = rowsOf('scores').find((r) => r.round_id === w.round_id && r.player_id === w.player_id && r.hole === w.hole)
+    const old = rowsOf('scores').find(
+      (r) => r.round_id === w.round_id && r.player_id === w.player_id && r.hole === w.hole,
+    )
     // A dismissal says what it saw only when it sends p_expect (null, as PostgREST passes it, is not sent).
     if (apply || args.p_expect != null) {
       const expect = args.p_expect
-      if (!expect || typeof expect !== 'object' || Array.isArray(expect)) return fail('22023', 'Falta lo que viste en la tarjeta; vuelve a abrir la lista')
-      if (apply && !listed(w)) return fail('22023', 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo')
+      if (!expect || typeof expect !== 'object' || Array.isArray(expect))
+        return fail('22023', 'Falta lo que viste en la tarjeta; vuelve a abrir la lista')
+      if (apply && !listed(w))
+        return fail('22023', 'Nadie capturó ese valor: era el que la Tarjeta pone sola; descártalo')
       // What the Comité saw and what stands, read the same way: a key left out, or no row, is no strokes, no putts, not picked up.
       const seen = expect as Row
       const same = (k: string, dflt: unknown) => (seen[k] ?? dflt) === (old?.[k] ?? dflt)
-      if (!same('strokes', null) || !same('putts', null) || !same('picked_up', false)) return fail('22023', 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo')
+      if (!same('strokes', null) || !same('putts', null) || !same('picked_up', false))
+        return fail('22023', 'El hoyo cambió mientras lo revisabas; vuelve a mirarlo')
     }
     if (apply && f) {
       let st = ('strokes' in f ? f.strokes : (old?.strokes ?? null)) as number | null
       const pt = ('putts' in f ? f.putts : (old?.putts ?? null)) as number | null
-      const picked = 'picked_up' in f ? (f.picked_up as boolean) : typeof f.strokes === 'number' ? false : old?.picked_up === true
+      const picked =
+        'picked_up' in f ? (f.picked_up as boolean) : typeof f.strokes === 'number' ? false : old?.picked_up === true
       if (picked) st = null
-      if (!picked && (st === null || !Number.isInteger(st) || st < 1 || st > 15)) return fail('22023', 'Con esa captura el hoyo no queda con golpes de 1 a 15; descártala o corrige el hoyo en Tarjetas')
-      if (pt !== null && (!Number.isInteger(pt) || pt < 0 || pt > 15 || (st !== null && pt > st))) return fail('22023', 'Con esa captura los putts quedan fuera de rango; descártala o corrige el hoyo en Tarjetas')
+      if (!picked && (st === null || !Number.isInteger(st) || st < 1 || st > 15))
+        return fail(
+          '22023',
+          'Con esa captura el hoyo no queda con golpes de 1 a 15; descártala o corrige el hoyo en Tarjetas',
+        )
+      if (pt !== null && (!Number.isInteger(pt) || pt < 0 || pt > 15 || (st !== null && pt > st)))
+        return fail(
+          '22023',
+          'Con esa captura los putts quedan fuera de rango; descártala o corrige el hoyo en Tarjetas',
+        )
       // admin_save_score's row: the Comité's player as the writer, the reason on the row, no discrepancy (the Comité's switch).
-      const values = { strokes: st, putts: pt, picked_up: picked, entered_by: myPlayer(as, w.tournament_id) ?? null, client_ts: stamp(), reason: why, disputed: false, previous: null }
+      const values = {
+        strokes: st,
+        putts: pt,
+        picked_up: picked,
+        entered_by: myPlayer(as, w.tournament_id) ?? null,
+        client_ts: stamp(),
+        reason: why,
+        disputed: false,
+        previous: null,
+      }
       let row: Row
       if (old) {
         row = { ...old, ...values, updated_at: stamp(), version: Number(old.version ?? 1) + 1 }
@@ -1569,7 +2080,11 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       const token = String((req.body as { refresh_token?: unknown } | undefined)?.refresh_token ?? '')
       const uid = refresh.get(token)
       if (!uid) {
-        const body = { code: 'refresh_token_not_found', error_code: 'refresh_token_not_found', msg: 'Invalid Refresh Token: Refresh Token Not Found' }
+        const body = {
+          code: 'refresh_token_not_found',
+          error_code: 'refresh_token_not_found',
+          msg: 'Invalid Refresh Token: Refresh Token Not Found',
+        }
         return json(400, body, { 'x-supabase-api-version': '2024-01-01' })
       }
       // A refresh token is good once: the next one comes with the new session.
@@ -1577,7 +2092,9 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       return json(200, session(uid))
     }
     if (endpoint === 'user' && req.method === 'GET') {
-      return ['anon', 'unknown', 'lapsed'].includes(req.as) ? json(401, { code: 'bad_jwt', msg: 'invalid JWT' }) : json(200, user(req.as))
+      return ['anon', 'unknown', 'lapsed'].includes(req.as)
+        ? json(401, { code: 'bad_jwt', msg: 'invalid JWT' })
+        : json(200, user(req.as))
     }
     if (endpoint === 'logout' && req.method === 'POST') {
       for (const [t, uid] of refresh) if (uid === req.as) refresh.delete(t)
@@ -1594,13 +2111,20 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
     }
     // PostgREST checks the token before anything else.
     if (req.as === 'lapsed') return json(401, { code: 'PGRST303', details: null, hint: null, message: 'JWT expired' })
-    if (req.as === 'unknown') return json(401, { code: 'PGRST301', details: null, hint: null, message: 'No suitable key or wrong key type' })
-    if (req.target.startsWith('rpc/')) return rpc(req.target.slice('rpc/'.length), (req.body ?? {}) as Record<string, unknown>, req.as)
+    if (req.as === 'unknown')
+      return json(401, { code: 'PGRST301', details: null, hint: null, message: 'No suitable key or wrong key type' })
+    if (req.target.startsWith('rpc/'))
+      return rpc(req.target.slice('rpc/'.length), (req.body ?? {}) as Record<string, unknown>, req.as)
     if (req.method !== 'GET') return write(req, headers)
     const spec = readFromUrl(req.target, req.params, headers)
     if (typeof spec === 'string') return unsupported(req, spec)
     if (spec.ambiguous) {
-      return json(300, { code: 'PGRST201', details: null, hint: null, message: `Could not embed because more than one relationship was found for '${spec.table}' and '${spec.ambiguous}'` })
+      return json(300, {
+        code: 'PGRST201',
+        details: null,
+        hint: null,
+        message: `Could not embed because more than one relationship was found for '${spec.table}' and '${spec.ambiguous}'`,
+      })
     }
     const result = read(server, spec, (r) => mayRead(spec.table, r, req.as))
     // The embeds, in the same statement as their parents: read now, under the same caller, before any hold.
@@ -1730,7 +2254,8 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
         const outcome = await Promise.race([Promise.resolve(server.decide(req)), aborted])
         if (outcome === 'stall') await aborted
         if (outcome === 'offline') throw new TypeError('Failed to fetch')
-        const res = typeof outcome === 'object' ? json(outcome.status, outcome.body) : await answer(req, headers, aborted)
+        const res =
+          typeof outcome === 'object' ? json(outcome.status, outcome.body) : await answer(req, headers, aborted)
         req.result = res.status
         return res
       } catch (e) {
@@ -1765,7 +2290,11 @@ export function fakeSupabase(tables: Record<string, Row[]>): FakeSupabase {
       return (server.tables.scores ?? []).find((r) => r.round_id === round && r.player_id === player && r.hole === hole)
     },
     strokesWritten(player, hole, round = 'r1') {
-      return server.writes.filter((w) => w.table === 'scores' && w.row.round_id === round && w.row.player_id === player && w.row.hole === hole).map((w) => w.row.strokes)
+      return server.writes
+        .filter(
+          (w) => w.table === 'scores' && w.row.round_id === round && w.row.player_id === player && w.row.hole === hole,
+        )
+        .map((w) => w.row.strokes)
     },
   }
   return server

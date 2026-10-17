@@ -101,7 +101,10 @@ async function run(world: World = {}) {
     const req = input instanceof Request ? input : null
     const url = req ? req.url : String(input)
     const method = req ? req.method : (init?.method ?? 'GET')
-    requests.push({ url, headers: req ? Object.fromEntries(req.headers) : ((init?.headers ?? {}) as Record<string, string>) })
+    requests.push({
+      url,
+      headers: req ? Object.fromEntries(req.headers) : ((init?.headers ?? {}) as Record<string, string>),
+    })
     if (url.includes('r2.cloudflarestorage.com')) {
       const isManifest = url.endsWith('/files/manifest.json')
       if (method === 'GET') {
@@ -109,7 +112,9 @@ async function run(world: World = {}) {
         if (refused) return new Response('', { status: refused })
         return manifest ? new Response(JSON.stringify(manifest)) : new Response('', { status: 404 })
       }
-      const refused = outcome(isManifest ? world.manifestWrite : url.includes('/backups/') ? world.r2Backup : world.r2File)
+      const refused = outcome(
+        isManifest ? world.manifestWrite : url.includes('/backups/') ? world.r2Backup : world.r2File,
+      )
       if (refused) return new Response('', { status: refused })
       if (url.includes('/backups/')) order.push('upload')
       uploads.push({ url, body: req ? Buffer.from(await req.arrayBuffer()) : Buffer.from(init!.body as ArrayBuffer) })
@@ -131,11 +136,39 @@ async function run(world: World = {}) {
     if (url.includes('/rest/v1/rpc/backup_snapshot')) {
       rpcBodies.push(JSON.parse(String(init!.body)))
       if (world.snapshotFails) return new Response(world.snapshotFails.body, { status: world.snapshotFails.status })
-      if (!snapshot) return new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function public.backup_snapshot' }), { status: 404 })
-      if (absent) return new Response(JSON.stringify({ code: '22023', message: `${absent}: la tabla no existe en esta base de datos.` }), { status: 400 })
-      const tables = Object.fromEntries(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log').map((t) => [t, t === 'tournaments' ? [{ id: 't1', name: 'Copa privada' }] : []]))
-      if (world.secrets) (tables as Record<string, unknown[]>).players = [{ id: 'p1', display_name: 'Ana', pin_hash: '$2a$08$hash', extra: { endpoint: 'https://fcm.googleapis.com/x', keep: 1 } }]
-      return new Response(JSON.stringify({ snapshotAt: '2026-10-12T09:00:00Z', auditMaxId: history, tables, auth: { users: [{ id: 'u1', email: 'ana@example.com' }], identities: [] }, storage: { objects } }))
+      if (!snapshot)
+        return new Response(
+          JSON.stringify({ code: 'PGRST202', message: 'Could not find the function public.backup_snapshot' }),
+          { status: 404 },
+        )
+      if (absent)
+        return new Response(
+          JSON.stringify({ code: '22023', message: `${absent}: la tabla no existe en esta base de datos.` }),
+          { status: 400 },
+        )
+      const tables = Object.fromEntries(
+        Object.keys(BACKUP_TABLES)
+          .filter((t) => t !== 'audit_log')
+          .map((t) => [t, t === 'tournaments' ? [{ id: 't1', name: 'Copa privada' }] : []]),
+      )
+      if (world.secrets)
+        (tables as Record<string, unknown[]>).players = [
+          {
+            id: 'p1',
+            display_name: 'Ana',
+            pin_hash: '$2a$08$hash',
+            extra: { endpoint: 'https://fcm.googleapis.com/x', keep: 1 },
+          },
+        ]
+      return new Response(
+        JSON.stringify({
+          snapshotAt: '2026-10-12T09:00:00Z',
+          auditMaxId: history,
+          tables,
+          auth: { users: [{ id: 'u1', email: 'ana@example.com' }], identities: [] },
+          storage: { objects },
+        }),
+      )
     }
     const table = /\/rest\/v1\/([a-z_]+)/.exec(url)![1]!
     if (method === 'POST' && table === 'backup_runs') {
@@ -150,14 +183,23 @@ async function run(world: World = {}) {
       return new Response(null, { status: 204 })
     }
     read.push(url.replace('https://db.invalid/rest/v1/', ''))
-    if (table === absent) return new Response(JSON.stringify({ code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` }), { status: 404 })
+    if (table === absent)
+      return new Response(
+        JSON.stringify({ code: 'PGRST205', message: `Could not find the table 'public.${table}' in the schema cache` }),
+        { status: 404 },
+      )
     // The history by key (format 2): the page after the last id read, up to the snapshot's.
     const keyset = /and=\(id\.gt\.(\d+),id\.lte\.(\d+)\)&limit=(\d+)/.exec(url)
     if (table === 'audit_log' && keyset) {
       if (world.historyFails) return new Response('', { status: world.historyFails })
       const [after, upTo, limit] = keyset.slice(1).map(Number) as [number, number, number]
       const n = Math.max(0, Math.min(limit, world.cap ?? 1000, Math.min(upTo, world.historyHas ?? upTo) - after))
-      const image = world.secrets ? { before: { player_id: 'p1', pin_hash: '$2a$08$old', auth: 'k' }, after: { token: 'abc', p256dh: 'BP', ok: true } } : {}
+      const image = world.secrets
+        ? {
+            before: { player_id: 'p1', pin_hash: '$2a$08$old', auth: 'k' },
+            after: { token: 'abc', p256dh: 'BP', ok: true },
+          }
+        : {}
       return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: after + i + 1, ...image }))))
     }
     if (table === 'audit_log') {
@@ -166,7 +208,9 @@ async function run(world: World = {}) {
       // With `Prefer: count=exact`, PostgREST says the total in Content-Range («0-399/1500»).
       const counted = ((init?.headers ?? {}) as Record<string, string>).Prefer === 'count=exact'
       const range = counted ? { 'content-range': `${from}-${from + n - 1}/${history ?? 0}` } : undefined
-      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: from + i + 1 }))), { headers: range })
+      return new Response(JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: from + i + 1 }))), {
+        headers: range,
+      })
     }
     return new Response('[]', { status: 200 })
   })
@@ -185,7 +229,10 @@ describe('the nightly backup', () => {
     expect(r.status).toBe(200)
     expect(Object.keys(r.rpcBodies[0]!.p_tables)).toEqual(Object.keys(BACKUP_TABLES).filter((t) => t !== 'audit_log'))
     // By key, never by offset: a row committed mid-read can't repeat one (PR 122's verifier).
-    expect(r.read).toEqual(['audit_log?select=*&order=id&and=(id.gt.0,id.lte.1500)&limit=1000', 'audit_log?select=*&order=id&and=(id.gt.1000,id.lte.1500)&limit=1000'])
+    expect(r.read).toEqual([
+      'audit_log?select=*&order=id&and=(id.gt.0,id.lte.1500)&limit=1000',
+      'audit_log?select=*&order=id&and=(id.gt.1000,id.lte.1500)&limit=1000',
+    ])
     expect(new Set(r.dump.tables.audit_log.map((a: { id: number }) => a.id)).size).toBe(1500)
     expect(r.dump.version).toBe(2)
     expect(Object.keys(r.dump.tables).sort()).toEqual(Object.keys(BACKUP_TABLES).sort())
@@ -199,15 +246,22 @@ describe('the nightly backup', () => {
   it('a table missing on the database fails the whole run, by name, and uploads nothing (never a backup without it)', async () => {
     const r = await run({ absent: 'money_adjustments' })
     expect(r.status).toBe(502)
-    expect(r.body).toEqual({ error: 'read failed', detail: 'snapshot: money_adjustments: la tabla no existe en esta base de datos.' })
+    expect(r.body).toEqual({
+      error: 'read failed',
+      detail: 'snapshot: money_adjustments: la tabla no existe en esta base de datos.',
+    })
     expect(r.uploads).toEqual([])
-    expect(r.records).toEqual([{ ok: false, error: 'read: snapshot: money_adjustments: la tabla no existe en esta base de datos.' }])
+    expect(r.records).toEqual([
+      { ok: false, error: 'read: snapshot: money_adjustments: la tabla no existe en esta base de datos.' },
+    ])
   })
 
   it('on a database without 0039 it reads every table page by page, as before, and still fails by name', async () => {
     const r = await run({ snapshot: false })
     expect(r.status).toBe(200)
-    expect(r.read.map((u) => u.split('?')[0])).toEqual(Object.keys(BACKUP_TABLES).flatMap((t) => (t === 'audit_log' ? ['audit_log', 'audit_log'] : [t])))
+    expect(r.read.map((u) => u.split('?')[0])).toEqual(
+      Object.keys(BACKUP_TABLES).flatMap((t) => (t === 'audit_log' ? ['audit_log', 'audit_log'] : [t])),
+    )
     expect(r.dump.version).toBe(1)
     expect(r.dump.auth).toBeUndefined()
     const missing = await run({ snapshot: false, absent: 'money_adjustments' })
@@ -224,7 +278,9 @@ describe('the nightly backup', () => {
       ],
       manifest: { 'tournament-assets/profiles/u1/foto.png': '2026-10-02' },
     })
-    const files = r.uploads.filter((u) => !u.url.includes('/backups/')).map((u) => u.url.replace('https://a.r2.cloudflarestorage.com/d/', ''))
+    const files = r.uploads
+      .filter((u) => !u.url.includes('/backups/'))
+      .map((u) => u.url.replace('https://a.r2.cloudflarestorage.com/d/', ''))
     expect(files).toEqual(['files/tournament-assets/courses/c1/tarjeta%20del%20campo.jpg', 'files/manifest.json'])
     expect(r.body.files).toEqual({ copied: 1, pending: 0, failed: 0 })
     // And on the night's row, for Salud.
@@ -275,7 +331,7 @@ describe('the nightly deletion (TRUST-18)', () => {
     expect(r.order).not.toContain('retention')
   })
 
-  it('a database without 0069, a refusal, no answer or one it can\'t read: the backup stands, its files still copied', async () => {
+  it("a database without 0069, a refusal, no answer or one it can't read: the backup stands, its files still copied", async () => {
     for (const retention of ['missing', 500, 'throw', 'garbage'] as const) {
       const r = await run({ retention, objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
       expect(r.status, String(retention)).toBe(200)
@@ -306,7 +362,10 @@ describe('the backup’s gate (QA-14)', () => {
 
   it('a deploy missing a setting: 503 naming the settings, never their values, and nothing read', async () => {
     const r = await run({ env: { SUPABASE_SECRET_KEY: '', R2_BACKUP_BUCKET: '' } })
-    expect([r.status, r.body]).toEqual([503, { error: 'backup not configured', missing: ['SUPABASE_SECRET_KEY', 'R2_BACKUP_BUCKET'] }])
+    expect([r.status, r.body]).toEqual([
+      503,
+      { error: 'backup not configured', missing: ['SUPABASE_SECRET_KEY', 'R2_BACKUP_BUCKET'] },
+    ])
     expect(r.requests).toEqual([])
     expect(leaked(r.answer, SECRETS)).toEqual([])
   })
@@ -316,7 +375,16 @@ describe('what the backup answers and where its keys go (QA-14)', () => {
   it('counts only: no row, no account, no key in the answer or the logs', async () => {
     const r = await run({ objects: [{ bucket_id: 'b', name: 'x.png', updated_at: '1' }] })
     expect(r.status).toBe(200)
-    expect(Object.keys(r.body).sort()).toEqual(['accounts', 'bytes', 'counts', 'files', 'key', 'ok', 'retention', 'version'])
+    expect(Object.keys(r.body).sort()).toEqual([
+      'accounts',
+      'bytes',
+      'counts',
+      'files',
+      'key',
+      'ok',
+      'retention',
+      'version',
+    ])
     expect(r.body.counts).toMatchObject({ tournaments: 1, audit_log: 1500 })
     expect(r.body.accounts).toBe(1)
     expect(r.answer.text).not.toMatch(/Copa privada|ana@example\.com|t1/)
@@ -332,7 +400,8 @@ describe('what the backup answers and where its keys go (QA-14)', () => {
       expect(JSON.stringify(q.headers)).not.toContain(ENV.R2_SECRET_ACCESS_KEY)
       expect(q.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=r2-access-666\//)
     }
-    for (const q of r.requests.filter((q) => !q.url.includes('r2.cloudflarestorage.com'))) expect(q.url.startsWith('https://db.invalid/')).toBe(true)
+    for (const q of r.requests.filter((q) => !q.url.includes('r2.cloudflarestorage.com')))
+      expect(q.url.startsWith('https://db.invalid/')).toBe(true)
   })
 
   it('the night’s file is gzipped JSON at its date', async () => {
@@ -345,14 +414,16 @@ describe('what the backup answers and where its keys go (QA-14)', () => {
     expect([put.headers['content-type'], put.headers['content-encoding']]).toEqual(['application/json', 'gzip'])
   })
 
-  it('a «Max rows» under 1,000 loses no history: by key until the snapshot\'s last row, whatever the page (DB-20)', async () => {
+  it("a «Max rows» under 1,000 loses no history: by key until the snapshot's last row, whatever the page (DB-20)", async () => {
     const r = await run({ cap: 400 })
     expect(r.status).toBe(200)
-    expect(r.read).toEqual([0, 400, 800, 1200].map((after) => `audit_log?select=*&order=id&and=(id.gt.${after},id.lte.1500)&limit=1000`))
+    expect(r.read).toEqual(
+      [0, 400, 800, 1200].map((after) => `audit_log?select=*&order=id&and=(id.gt.${after},id.lte.1500)&limit=1000`),
+    )
     expect(new Set(r.dump.tables.audit_log.map((a: { id: number }) => a.id)).size).toBe(1500)
   })
 
-  it('a history of exactly one page asks once: its last row is the snapshot\'s (DB-20)', async () => {
+  it("a history of exactly one page asks once: its last row is the snapshot's (DB-20)", async () => {
     const r = await run({ history: 1000 })
     expect(r.read).toEqual(['audit_log?select=*&order=id&and=(id.gt.0,id.lte.1000)&limit=1000'])
     expect(r.dump.tables.audit_log).toHaveLength(1000)
@@ -409,7 +480,7 @@ describe('when the backup fails (QA-14)', () => {
     expect(r.uploads).toEqual([])
   })
 
-  it('history rows gone before the read (the snapshot\'s last id never comes): it ends at the empty page, never asks forever', async () => {
+  it("history rows gone before the read (the snapshot's last id never comes): it ends at the empty page, never asks forever", async () => {
     const r = await run({ history: 1500, historyHas: 1200 })
     expect(r.status).toBe(200)
     expect(r.dump.tables.audit_log).toHaveLength(1200)
@@ -439,7 +510,8 @@ describe('when the backup fails (QA-14)', () => {
 })
 
 describe('the night’s Storage files (QA-14)', () => {
-  const files = (n: number) => Array.from({ length: n }, (_, i) => ({ bucket_id: 'b', name: `f${i}.png`, updated_at: '1' }))
+  const files = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ bucket_id: 'b', name: `f${i}.png`, updated_at: '1' }))
 
   it('a manifest that can’t be read: no file copied, every one counted failed, and the backup stands', async () => {
     for (const manifestRead of [403, 'throw'] as const) {
@@ -461,7 +533,9 @@ describe('the night’s Storage files (QA-14)', () => {
 
   it('the manifest is saved every five files and at the end, so a night cut short keeps what it copied', async () => {
     const r = await run({ objects: files(7) })
-    const saves = r.uploads.filter((u) => u.url.endsWith('/files/manifest.json')).map((u) => Object.keys(JSON.parse(u.body.toString('utf8'))).length)
+    const saves = r.uploads
+      .filter((u) => u.url.endsWith('/files/manifest.json'))
+      .map((u) => Object.keys(JSON.parse(u.body.toString('utf8'))).length)
     expect(saves).toEqual([5, 7])
     expect(r.body.files).toEqual({ copied: 7, pending: 0, failed: 0 })
   })
@@ -490,4 +564,3 @@ describe('the night’s Storage files (QA-14)', () => {
     expect(saves).toHaveLength(1)
   })
 })
-

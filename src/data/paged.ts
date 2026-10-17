@@ -16,7 +16,11 @@ import { ApiError } from './apiError'
 export const PAGE = 1000
 
 /** One page's answer, as supabase-js gives it. */
-export type PageOf<T> = PromiseLike<{ data: T[] | null; error: { message: string; code?: string } | null; count?: number | null }>
+export type PageOf<T> = PromiseLike<{
+  data: T[] | null
+  error: { message: string; code?: string } | null
+  count?: number | null
+}>
 
 /** `build(from, to, count)` returns the query for one page (inclusive range); `count`: ask for the total with it. */
 export async function fetchAll<T>(build: (from: number, to: number, count: boolean) => PageOf<T>): Promise<T[]> {

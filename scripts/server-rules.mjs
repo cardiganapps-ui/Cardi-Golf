@@ -29,7 +29,11 @@ const spec = JSON.parse(await readFile(path.join(root, 'src', 'data', 'testing',
 const print = process.argv.includes('--print')
 
 function psql(sql) {
-  const r = spawnSync('psql', ['-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], { input: sql, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const r = spawnSync('psql', ['-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1'], {
+    input: sql,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  })
   if (r.error) throw r.error
   if (r.status !== 0) throw new Error((r.stderr || r.stdout || `psql exited ${r.status}`).trim().slice(0, 4000))
   return r.stdout.trim()
@@ -43,7 +47,9 @@ function ident(name) {
 
 // Where a name stands for a uuid.
 const uuidColumns = new Map()
-for (const line of psql(`select table_schema || '.' || table_name || ' ' || column_name from information_schema.columns where table_schema in ('public', 'auth') and data_type = 'uuid'`).split('\n')) {
+for (const line of psql(
+  `select table_schema || '.' || table_name || ' ' || column_name from information_schema.columns where table_schema in ('public', 'auth') and data_type = 'uuid'`,
+).split('\n')) {
   const [table, column] = line.split(' ')
   if (!uuidColumns.has(table)) uuidColumns.set(table, new Set())
   uuidColumns.get(table).add(column)
@@ -58,7 +64,9 @@ function uuid(name) {
 const isUuid = (table, column) => uuidColumns.get(table.includes('.') ? table : `public.${table}`)?.has(column) ?? false
 // Each table's columns, as PostgREST's schema cache knows them: a body naming another is refused before the database sees it.
 const tableColumns = new Map()
-for (const line of psql(`select table_name || ' ' || column_name from information_schema.columns where table_schema = 'public'`).split('\n')) {
+for (const line of psql(
+  `select table_name || ' ' || column_name from information_schema.columns where table_schema = 'public'`,
+).split('\n')) {
   const [table, column] = line.split(' ')
   if (!tableColumns.has(table)) tableColumns.set(table, new Set())
   tableColumns.get(table).add(column)
@@ -67,7 +75,8 @@ for (const line of psql(`select table_name || ' ' || column_name from informatio
  * The columns a POST writes: its `columns` when the case gives them (PostgREST reads only those keys of
  * the body), else every key of the body's rows, as supabase-js names them for a list.
  */
-const columnsOf = (req) => req.columns ?? [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
+const columnsOf = (req) =>
+  req.columns ?? [...new Set((Array.isArray(req.body) ? req.body : [req.body]).flatMap((r) => Object.keys(r)))]
 /** PGRST204, PostgREST's own answer to a column the table doesn't have. */
 function unknownColumn(req) {
   if (req.method !== 'POST' && req.method !== 'PATCH') return null
@@ -76,20 +85,24 @@ function unknownColumn(req) {
   return col ? `PGRST204 Could not find the '${col}' column of '${req.table}' in the schema cache` : null
 }
 function toDb(table, row) {
-  return Object.fromEntries(Object.entries(row).map(([k, v]) => [ident(k), typeof v === 'string' && isUuid(table, k) ? uuid(v) : v]))
+  return Object.fromEntries(
+    Object.entries(row).map(([k, v]) => [ident(k), typeof v === 'string' && isUuid(table, k) ? uuid(v) : v]),
+  )
 }
 /** Every uuid the script wrote for a name, back to the name, however deep (an RPC's jsonb answer holds rows). */
 function fromDb(value) {
   if (typeof value === 'string') return names.has(value) ? names.get(value) : value
   if (Array.isArray(value)) return value.map(fromDb)
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromDb(v)]))
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, fromDb(v)]))
   return value
 }
 /** A jsonb argument's names as uuids: a string under a key that names an id (`round_id`, `player_id`, `mutation_id`…). */
 function idsToDb(value, key = '') {
   if (typeof value === 'string') return /_id$/.test(key) ? uuid(value) : value
   if (Array.isArray(value)) return value.map((v) => idsToDb(v, key))
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, idsToDb(v, k)]))
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, idsToDb(v, k)]))
   return value
 }
 /** A JSON literal SQL can read, whatever the text holds. */
@@ -111,7 +124,9 @@ function insertRows(table, rows) {
 
 /** Equality on each column, as text: `eq.` filters arrive as text and PostgREST casts them to the column's type. */
 function whereSql(table, where) {
-  const parts = Object.entries(toDb(ident(table), where)).map(([k, v]) => (v === null ? `${k} is null` : `${k}::text = (${jsonLiteral([v])} ->> 0)`))
+  const parts = Object.entries(toDb(ident(table), where)).map(([k, v]) =>
+    v === null ? `${k} is null` : `${k}::text = (${jsonLiteral([v])} ->> 0)`,
+  )
   return parts.length ? parts.join(' and ') : 'true'
 }
 
@@ -158,8 +173,14 @@ function relationship(parent, embed) {
       return { name, child: child.replace(/^public\./, ''), column, key }
     })
     .filter((fk) => !embed.hint || fk.name === embed.hint)
-  if (!fks.length) return { refused: `PGRST200 Could not find a relationship between '${parent}' and '${embed.name}' in the schema cache` }
-  if (fks.length > 1) return { refused: `PGRST201 Could not embed because more than one relationship was found for '${parent}' and '${embed.name}'` }
+  if (!fks.length)
+    return {
+      refused: `PGRST200 Could not find a relationship between '${parent}' and '${embed.name}' in the schema cache`,
+    }
+  if (fks.length > 1)
+    return {
+      refused: `PGRST201 Could not embed because more than one relationship was found for '${parent}' and '${embed.name}'`,
+    }
   const [fk] = fks
   if (fk.child !== embed.name) throw new Error(`only a to-many embed is run here: ${parent} → ${embed.name}`)
   return { column: ident(fk.column), key: ident(fk.key) }
@@ -177,7 +198,9 @@ function refusedBeforeDb(req) {
 
 /** Each public function's arguments, as PostgREST reads them from the catalog: `fn arg` → its type (`uuid[]`, `integer`…). */
 const argTypes = new Map()
-for (const line of psql(`select p.proname || ' ' || a.name || ' ' || format_type(a.typ, null) from pg_proc p cross join lateral unnest(p.proargnames[1:p.pronargs], p.proargtypes::oid[]) a(name, typ) where p.pronamespace = 'public'::regnamespace and p.proargnames is not null`).split('\n')) {
+for (const line of psql(
+  `select p.proname || ' ' || a.name || ' ' || format_type(a.typ, null) from pg_proc p cross join lateral unnest(p.proargnames[1:p.pronargs], p.proargtypes::oid[]) a(name, typ) where p.pronamespace = 'public'::regnamespace and p.proargnames is not null`,
+).split('\n')) {
   const [fn, arg, ...type] = line.split(' ')
   if (fn && arg) argTypes.set(`${fn} ${arg}`, type.join(' '))
 }
@@ -188,9 +211,11 @@ for (const line of psql(`select p.proname || ' ' || a.name || ' ' || format_type
  */
 function argSql(fn, k, v) {
   const type = argTypes.get(`${fn} ${k}`)
-  if (type === 'uuid[]') return v === null ? 'null::uuid[]' : `array[${v.map((x) => `'${uuid(x)}'`).join(', ')}]::uuid[]`
+  if (type === 'uuid[]')
+    return v === null ? 'null::uuid[]' : `array[${v.map((x) => `'${uuid(x)}'`).join(', ')}]::uuid[]`
   if (type === 'uuid' && v === null) return 'null::uuid'
-  if (type && /^(integer|bigint|smallint|numeric|boolean)$/.test(type)) return v === null ? `null::${type}` : `(${jsonLiteral([v])} ->> 0)::${type}`
+  if (type && /^(integer|bigint|smallint|numeric|boolean)$/.test(type))
+    return v === null ? `null::${type}` : `(${jsonLiteral([v])} ->> 0)::${type}`
   if (v !== null && typeof v === 'object') return `(${jsonLiteral(idsToDb(v))})::jsonb`
   // By name only when the catalog doesn't say (`p_game_id` is text).
   if (typeof v === 'string' && (type ? type === 'uuid' : /_id$/.test(k) || k === 'tid')) return `'${uuid(v)}'::uuid`
@@ -211,7 +236,9 @@ function argSql(fn, k, v) {
  */
 function requestSql(req) {
   if (req.method === 'RPC') {
-    const args = Object.entries(req.args ?? {}).map(([k, v]) => `${ident(k)} => ${argSql(req.fn, k, v)}`).join(', ')
+    const args = Object.entries(req.args ?? {})
+      .map(([k, v]) => `${ident(k)} => ${argSql(req.fn, k, v)}`)
+      .join(', ')
     return `perform set_config('polo.result', json_build_array((select public.${ident(req.fn)}(${args})))::text, true)`
   }
   const t = ident(req.table)
@@ -223,11 +250,18 @@ function requestSql(req) {
     const items = columns.map((c) => `p.${c}`)
     for (const e of embeds) {
       const rel = relationship(t, e)
-      const own = filters.filter(([k]) => k.startsWith(`${e.name}.`)).map(([k, v]) => inSql(e.name, k.slice(e.name.length + 1), v, 'c.'))
+      const own = filters
+        .filter(([k]) => k.startsWith(`${e.name}.`))
+        .map(([k, v]) => inSql(e.name, k.slice(e.name.length + 1), v, 'c.'))
       const where = [`c.${rel.column} = p.${rel.key}`, ...own].join(' and ')
-      items.push(`coalesce((select json_agg(x) from (select ${e.columns.map((c) => `c.${c}`).join(', ')} from public.${e.name} c where ${where}) x), '[]'::json) as ${e.name}`)
+      items.push(
+        `coalesce((select json_agg(x) from (select ${e.columns.map((c) => `c.${c}`).join(', ')} from public.${e.name} c where ${where}) x), '[]'::json) as ${e.name}`,
+      )
     }
-    const where = [whereSql(t, req.eq ?? {}), ...filters.filter(([k]) => !k.includes('.')).map(([k, v]) => inSql(t, k, v, 'p.'))].join(' and ')
+    const where = [
+      whereSql(t, req.eq ?? {}),
+      ...filters.filter(([k]) => !k.includes('.')).map(([k, v]) => inSql(t, k, v, 'p.')),
+    ].join(' and ')
     return `perform set_config('polo.result', (select coalesce(json_agg(q), '[]'::json)::text from (select ${items.join(', ')} from public.${t} p where ${where}) q), true)`
   }
   if (req.method === 'DELETE') return `delete from public.${t} where ${whereSql(t, req.eq ?? {})}`
@@ -249,7 +283,10 @@ function requestSql(req) {
   const resolution = /resolution=(merge|ignore)-duplicates/.exec(req.prefer ?? '')?.[1]
   if (resolution) {
     const target = (req.onConflict ?? primaryKey(t)).split(',').map(ident).join(', ')
-    sql += resolution === 'merge' ? ` on conflict (${target}) do update set ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}` : ` on conflict (${target}) do nothing`
+    sql +=
+      resolution === 'merge'
+        ? ` on conflict (${target}) do update set ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}`
+        : ` on conflict (${target}) do nothing`
   }
   return sql
 }
@@ -287,14 +324,22 @@ function statusOf(state, anon) {
 
 function runCase(c) {
   const anon = c.as === 'anon'
-  const claims = anon ? { role: 'anon' } : { sub: uuid(c.as), role: 'authenticated', aud: 'authenticated', is_anonymous: true }
+  const claims = anon
+    ? { role: 'anon' }
+    : { sub: uuid(c.as), role: 'authenticated', aud: 'authenticated', is_anonymous: true }
   let sql = 'begin;\n'
-  const users = spec.world.users.map((u) => ({ id: uuid(u), is_anonymous: true, raw_app_meta_data: { provider: 'anonymous', providers: ['anonymous'] }, raw_user_meta_data: {} }))
+  const users = spec.world.users.map((u) => ({
+    id: uuid(u),
+    is_anonymous: true,
+    raw_app_meta_data: { provider: 'anonymous', providers: ['anonymous'] },
+    raw_user_meta_data: {},
+  }))
   sql += `insert into auth.users (id, is_anonymous, raw_app_meta_data, raw_user_meta_data) select id, is_anonymous, raw_app_meta_data, raw_user_meta_data from json_populate_recordset(null::auth.users, ${jsonLiteral(users)});\n`
   for (const [table, rows] of Object.entries(spec.world.tables)) sql += insertRows(table, rows)
   for (const [table, rows] of Object.entries(c.given ?? {})) sql += insertRows(table, rows)
   // The players whose PIN the case's phone knows: 1234, as claim_player checks it.
-  for (const p of c.pins ?? []) sql += `insert into public.player_pins (player_id, pin_hash) values ('${uuid(p)}', extensions.crypt('1234', extensions.gen_salt('bf')));\n`
+  for (const p of c.pins ?? [])
+    sql += `insert into public.player_pins (player_id, pin_hash) values ('${uuid(p)}', extensions.crypt('1234', extensions.gen_salt('bf')));\n`
   sql += `set local role ${anon ? 'anon' : 'authenticated'};\n`
   sql += `set local request.jwt.claims to '${JSON.stringify(claims)}';\n`
   // Earlier requests of the same phone: each must go through.
@@ -314,16 +359,40 @@ function runCase(c) {
   sql += `select json_build_object('outcome', current_setting('polo.outcome'), 'read', current_setting('polo.result')::json, 'after', json_build_array(${checks.join(', ')}))::jsonb::text;\nrollback;\n`
   const out = JSON.parse(psql(sql).split('\n').at(-1))
   const [state, ...message] = out.outcome.split(' ')
-  return { state, message: message.join(' '), status: statusOf(state, anon), read: out.read.map(fromDb), after: out.after.map((rows) => rows.map(fromDb)) }
+  return {
+    state,
+    message: message.join(' '),
+    status: statusOf(state, anon),
+    read: out.read.map(fromDb),
+    after: out.after.map((rows) => rows.map(fromDb)),
+  }
 }
 
 /** The status a request answered with when it went through: a PATCH answers its rows (200) only when it asks for them. */
 const okStatus = (req) => ({ GET: 200, POST: 201, DELETE: 204, RPC: 200, PATCH: req.select ? 200 : 204 })[req.method]
 
 /** A value with every object's keys in order, at any depth: jsonb keeps keys in an order of its own. */
-const sorted = (v) => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v)
+const sorted = (v) =>
+  Array.isArray(v)
+    ? v.map(sorted)
+    : v && typeof v === 'object'
+      ? Object.fromEntries(
+          Object.keys(v)
+            .sort()
+            .map((k) => [k, sorted(v[k])]),
+        )
+      : v
 /** Rows as a multiset, compared on their columns; a jsonb column by its content. */
-const sortRows = (rows) => rows.map((r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, sorted(r[k])]))).sort()
+const sortRows = (rows) =>
+  rows
+    .map((r) =>
+      JSON.stringify(
+        Object.keys(r)
+          .sort()
+          .map((k) => [k, sorted(r[k])]),
+      ),
+    )
+    .sort()
 /**
  * `expect.answer`: an RPC's answer holds at least what the case writes. An object, the keys it names; a list, as
  * many items, each matching a different one in any order (the database's order of a set is none), or in the order
@@ -341,7 +410,13 @@ function holds(actual, want, ordered = false) {
       return true
     })
   }
-  if (want && typeof want === 'object') return !!actual && typeof actual === 'object' && !Array.isArray(actual) && Object.entries(want).every(([k, v]) => holds(actual[k] ?? null, v))
+  if (want && typeof want === 'object')
+    return (
+      !!actual &&
+      typeof actual === 'object' &&
+      !Array.isArray(actual) &&
+      Object.entries(want).every(([k, v]) => holds(actual[k] ?? null, v))
+    )
   return actual === want
 }
 let failed = 0
@@ -351,25 +426,41 @@ for (const c of spec.cases) {
     got = runCase(c)
   } catch (/** @type {any} */ e) {
     failed++
-    console.log(`  ✗ ${c.name}\n      ${String(e.message ?? e).split('\n').join('\n      ')}`)
+    console.log(
+      `  ✗ ${c.name}\n      ${String(e.message ?? e)
+        .split('\n')
+        .join('\n      ')}`,
+    )
     continue
   }
   const want = c.expect
   const problems = []
   const status = got.status ?? okStatus(c.request)
-  if (want.status !== status) problems.push(`status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`)
-  else if (want.code && want.code !== got.state) problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
+  if (want.status !== status)
+    problems.push(
+      `status ${status} (${got.state} ${got.message}), expected ${want.status}${want.code ? ` ${want.code}` : ''}`,
+    )
+  else if (want.code && want.code !== got.state)
+    problems.push(`code ${got.state} (${got.message}), expected ${want.code}`)
   // The refusal as people read it, when the case pins it (a sentence of our own raises).
-  if (want.message !== undefined && want.message !== got.message) problems.push(`message «${got.message}», expected «${want.message}»`)
-  if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows))) problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
-  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer, !!want.ordered))) problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
+  if (want.message !== undefined && want.message !== got.message)
+    problems.push(`message «${got.message}», expected «${want.message}»`)
+  if (want.rows && JSON.stringify(sortRows(got.read)) !== JSON.stringify(sortRows(want.rows)))
+    problems.push(`read ${JSON.stringify(got.read)}, expected ${JSON.stringify(want.rows)}`)
+  if (want.answer && !(got.read.length === 1 && holds(got.read[0], want.answer, !!want.ordered)))
+    problems.push(`answered ${JSON.stringify(got.read)}, expected at least ${JSON.stringify(want.answer)}`)
   ;(c.then ?? []).forEach((t, i) => {
     const expected = t.rows.map((r) => Object.fromEntries(Object.entries(r)))
     const actual = got.after[i].map((r) => (Object.keys(r).length === 1 && 'present' in r ? {} : r))
-    if (JSON.stringify(sortRows(actual)) !== JSON.stringify(sortRows(expected))) problems.push(`${t.table} where ${JSON.stringify(t.where ?? {})}: ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`)
+    if (JSON.stringify(sortRows(actual)) !== JSON.stringify(sortRows(expected)))
+      problems.push(
+        `${t.table} where ${JSON.stringify(t.where ?? {})}: ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`,
+      )
   })
   if (print) {
-    console.log(`${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(['GET', 'RPC', 'PATCH'].includes(c.request.method) ? got.read : got.after)}`)
+    console.log(
+      `${problems.length ? '≠' : '='} ${c.name}\n    ${status} ${got.state} ${got.message}\n    ${JSON.stringify(['GET', 'RPC', 'PATCH'].includes(c.request.method) ? got.read : got.after)}`,
+    )
   } else if (problems.length) {
     failed++
     console.log(`  ✗ ${c.name}\n      ${problems.join('\n      ')}`)
@@ -377,8 +468,12 @@ for (const c of spec.cases) {
 }
 if (!print) {
   if (failed) {
-    console.log(`  ✗ ${failed} of ${spec.cases.length} cases: the database disagrees with the case file (and so with the test server)`)
+    console.log(
+      `  ✗ ${failed} of ${spec.cases.length} cases: the database disagrees with the case file (and so with the test server)`,
+    )
     process.exit(1)
   }
-  console.log(`  ✓ ${spec.cases.length} requests: the database answers each as the case file (and the test server) does`)
+  console.log(
+    `  ✓ ${spec.cases.length} requests: the database answers each as the case file (and the test server) does`,
+  )
 }

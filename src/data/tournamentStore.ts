@@ -132,7 +132,13 @@ interface StoreState {
    * the server at an unknown point around the write: then nothing lands and
    * one more fetch says what the server holds.
    */
-  landChanges: (tournamentId: string, changes: LiveChange[], since: number, sentAt: number, opts?: { flushing?: boolean; fetch?: boolean }) => void
+  landChanges: (
+    tournamentId: string,
+    changes: LiveChange[],
+    since: number,
+    sentAt: number,
+    opts?: { flushing?: boolean; fetch?: boolean },
+  ) => void
   /** The outbox's flush ended: the one more fetch its landings asked for goes now, once. */
   pushesDone: () => void
 }
@@ -209,7 +215,11 @@ function receive(change: LiveChange) {
  * the delete must lose it too); park what waits for its day or lot.
  * Returns how many applied and whether one needs a reload.
  */
-function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number; t?: number; change: LiveChange; landed?: boolean }>) {
+function applyAll(
+  s: Snapshot,
+  tournamentId: string,
+  changes: Array<{ at: number; t?: number; change: LiveChange; landed?: boolean }>,
+) {
   let applied = 0
   let reload = false
   let stale = 0
@@ -219,7 +229,8 @@ function applyAll(s: Snapshot, tournamentId: string, changes: Array<{ at: number
     if (r === 'applied') applied++
     if (change.eventType === 'DELETE') unpark(change)
     // A delete of a row the boards do not hold matters only to a fetch on its way, which may have read the row before it.
-    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE' && fetching > 0)) changeLog.push({ seq: ++changeSeq, t, change, ...(landed ? { landed } : {}) })
+    if (r === 'applied' || (r === 'ignored' && change.eventType === 'DELETE' && fetching > 0))
+      changeLog.push({ seq: ++changeSeq, t, change, ...(landed ? { landed } : {}) })
     else if (r === 'unknown') park(change, at, landed, first)
     else if (r === 'reload') reload = true
     else if (r === 'stale') stale++
@@ -245,14 +256,20 @@ function flushChanges() {
   const st = useTournament.getState()
   const d = st.data
   const id = st.tournamentId
-  if (!d || !id) { scheduleReload(); return; }
+  if (!d || !id) {
+    scheduleReload()
+    return
+  }
   const next = structuredClone(d.base)
   const now = Date.now()
   // What waited for its day or lot goes first, in the order it came: a lot just sold places its bids.
   const { applied, reload } = applyAll(next, id, [...takeParked(now), ...batch.map((change) => ({ at: now, change }))])
   if (applied) {
     // The players are untouched, so their key stays; the boards are as fresh as the server's last change.
-    useTournament.setState({ data: compute(next, d.playersKey, d), ...(st.source === 'server' ? { updatedAt: now } : {}) })
+    useTournament.setState({
+      data: compute(next, d.playersKey, d),
+      ...(st.source === 'server' ? { updatedAt: now } : {}),
+    })
     if (st.keepOnPhone) saveSoon(id)
   }
   if (reload) scheduleReload()
@@ -264,7 +281,8 @@ function flushChanges() {
  * one twice changes nothing), then whatever waited for a day or lot it brings.
  */
 function catchUp(snapshot: Snapshot, tournamentId: string, since: number) {
-  for (const { seq, change, landed } of changeLog) if (seq > since) applyChange(snapshot, tournamentId, change, { landed })
+  for (const { seq, change, landed } of changeLog)
+    if (seq > since) applyChange(snapshot, tournamentId, change, { landed })
   applyAll(snapshot, tournamentId, takeParked(Date.now()))
 }
 
@@ -281,10 +299,22 @@ export function liveSeq(): number {
  * tab says how long ago its push went out, never when (outbox `listen`).
  */
 export function liveClock(): number {
-  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.timeOrigin + performance.now() : Date.now()
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.timeOrigin + performance.now()
+    : Date.now()
 }
 /** For tests: how much the log and the parked list hold, and the fetches on their way. */
-export const _liveTest = { logSize: () => changeLog.length, parkedSize: () => parked.length, fetching: () => fetching, refetchAsked: () => refetch, fetchAfterPushesAsked: () => fetchAfterPushes, isOpen: () => open, LOG_MAX, PARK_MAX, LOG_MS }
+export const _liveTest = {
+  logSize: () => changeLog.length,
+  parkedSize: () => parked.length,
+  fetching: () => fetching,
+  refetchAsked: () => refetch,
+  fetchAfterPushesAsked: () => fetchAfterPushes,
+  isOpen: () => open,
+  LOG_MAX,
+  PARK_MAX,
+  LOG_MS,
+}
 
 /** When the boards last came from a fetch: a long quiet stretch on a live channel is checked against the server (`HEAL_MS`). */
 let lastFetchAt = 0
@@ -336,7 +366,8 @@ function ensureListeners() {
   if (listenersOn || typeof window === 'undefined') return
   listenersOn = true
   const kick = () => {
-    if (open && useTournament.getState().tournamentId && !useTournament.getState().tournamentId!.startsWith('fixture:')) void useTournament.getState().reload()
+    if (open && useTournament.getState().tournamentId && !useTournament.getState().tournamentId!.startsWith('fixture:'))
+      void useTournament.getState().reload()
   }
   window.addEventListener('online', kick)
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && kick())
@@ -373,10 +404,22 @@ const playersKeyOf = (snapshot: Snapshot) => fetchedPlayers.get(snapshot) ?? has
 function compute(raw: Snapshot, playersKey = playersKeyOf(raw), last: TournamentData | null = null): TournamentData {
   const prev = last?.base.tournament.id === raw.tournament.id ? last : null
   // A snapshot cached by an older build has no instance-game tables.
-  const base = shareSnapshot(prev?.base, { ...raw, gameEntries: raw.gameEntries ?? [], holeAwards: raw.holeAwards ?? [], gameResults: raw.gameResults ?? [], moneyAdjustments: raw.moneyAdjustments ?? [] })
+  const base = shareSnapshot(prev?.base, {
+    ...raw,
+    gameEntries: raw.gameEntries ?? [],
+    holeAwards: raw.holeAwards ?? [],
+    gameResults: raw.gameResults ?? [],
+    moneyAdjustments: raw.moneyAdjustments ?? [],
+  })
   // The overlays write into lists of their own: the server's rows stay the server's.
   const laid: Snapshot = overlays.length
-    ? { ...base, scores: [...base.scores], snakeTiebreaks: [...base.snakeTiebreaks], cardSignatures: [...base.cardSignatures], holeAwards: [...base.holeAwards] }
+    ? {
+        ...base,
+        scores: [...base.scores],
+        snakeTiebreaks: [...base.snakeTiebreaks],
+        cardSignatures: [...base.cardSignatures],
+        holeAwards: [...base.holeAwards],
+      }
     : base
   for (const fn of overlays) fn(laid)
   const snapshot = shareSnapshot(prev?.snapshot, laid)
@@ -417,7 +460,16 @@ export function showBoards(tournamentId: string, snapshot: Snapshot, at = Date.n
   // Another tournament's channel and checks stop with it, as when the gate leaves one.
   if (st.tournamentId !== tournamentId) st.unsubscribe()
   const last = st.tournamentId === tournamentId ? st.data : null
-  useTournament.setState({ tournamentId, data: compute(snapshot, undefined, last), updatedAt: at, loading: false, error: null, realtime: 'off', source: 'server', keepOnPhone: false })
+  useTournament.setState({
+    tournamentId,
+    data: compute(snapshot, undefined, last),
+    updatedAt: at,
+    loading: false,
+    error: null,
+    realtime: 'off',
+    source: 'server',
+    keepOnPhone: false,
+  })
 }
 
 /** The part of a select the snapshot's pages use. */
@@ -442,41 +494,42 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
       : Promise.resolve([])
   const q = <K extends SnapshotTable>(table: K) => inList(table, 'tournament_id', [tournamentId])
 
-  const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults, adjustments] = await Promise.all([
-    sb.from('tournaments').select('*').eq('id', tournamentId).single(),
-    q('players'),
-    q('rounds'),
-    q('pairs'),
-    q('teams'),
-    q('calcutta_lots'),
-    q('payments'),
-    inList('game_entries', 'tournament_id', [tournamentId]),
-    inList('game_results', 'tournament_id', [tournamentId]),
-    // A database without 0027 has no such table yet: nothing assigned, rather than a tournament that won't open.
-    q('money_adjustments').catch((e: unknown) => {
-      if ((e as { code?: string } | null)?.code === 'PGRST205') return [] as Row[]
-      throw e
-    }),
-  ])
+  const [tRes, players, rounds, pairs, teams, lots, payments, gameEntries, gameResults, adjustments] =
+    await Promise.all([
+      sb.from('tournaments').select('*').eq('id', tournamentId).single(),
+      q('players'),
+      q('rounds'),
+      q('pairs'),
+      q('teams'),
+      q('calcutta_lots'),
+      q('payments'),
+      inList('game_entries', 'tournament_id', [tournamentId]),
+      inList('game_results', 'tournament_id', [tournamentId]),
+      // A database without 0027 has no such table yet: nothing assigned, rather than a tournament that won't open.
+      q('money_adjustments').catch((e: unknown) => {
+        if ((e as { code?: string } | null)?.code === 'PGRST205') return [] as Row[]
+        throw e
+      }),
+    ])
   if (tRes.error) throw tRes.error
   const roundIds = rounds.map((r) => r.id)
   const lotIds = lots.map((l) => l.id)
   const courseIds = [...new Set(rounds.map((r) => r.course_id).filter(Boolean))] as string[]
 
-
-  const [groups, roundTees, scores, tiebreaks, signatures, overrides, bids, buybacks, courses, tees, holeAwards] = await Promise.all([
-    inList('groups', 'round_id', roundIds),
-    inList('round_tees', 'round_id', roundIds),
-    inList('scores', 'round_id', roundIds),
-    inList('snake_tiebreaks', 'round_id', roundIds),
-    inList('card_signatures', 'round_id', roundIds),
-    inList('handicap_overrides', 'round_id', roundIds),
-    inList('calcutta_bids', 'lot_id', lotIds),
-    inList('calcutta_buybacks', 'lot_id', lotIds),
-    inList('courses', 'id', courseIds),
-    inList('tees', 'course_id', courseIds),
-    inList('hole_awards', 'round_id', roundIds),
-  ])
+  const [groups, roundTees, scores, tiebreaks, signatures, overrides, bids, buybacks, courses, tees, holeAwards] =
+    await Promise.all([
+      inList('groups', 'round_id', roundIds),
+      inList('round_tees', 'round_id', roundIds),
+      inList('scores', 'round_id', roundIds),
+      inList('snake_tiebreaks', 'round_id', roundIds),
+      inList('card_signatures', 'round_id', roundIds),
+      inList('handicap_overrides', 'round_id', roundIds),
+      inList('calcutta_bids', 'lot_id', lotIds),
+      inList('calcutta_buybacks', 'lot_id', lotIds),
+      inList('courses', 'id', courseIds),
+      inList('tees', 'course_id', courseIds),
+      inList('hole_awards', 'round_id', roundIds),
+    ])
   const groupIds = groups.map((g) => g.id)
   const teeIds = tees.map((t) => t.id)
   const teamIds = teams.map((x) => x.id)
@@ -517,7 +570,9 @@ async function fetchSnapshot(tournamentId: string): Promise<Snapshot> {
 }
 
 /** A tournament's rows by table, as PostgREST answers them: the tournament's own row, and every other table's. */
-export type SnapshotRows = { tournament: RowOf<'tournaments'> } & { [K in Exclude<SnapshotTable, 'tournaments'>]?: RowOf<K>[] }
+export type SnapshotRows = { tournament: RowOf<'tournaments'> } & {
+  [K in Exclude<SnapshotTable, 'tournaments'>]?: RowOf<K>[]
+}
 
 /**
  * The snapshot the engine reads, from the rows: a member's fetch and a link to
@@ -526,20 +581,29 @@ export type SnapshotRows = { tournament: RowOf<'tournaments'> } & { [K in Exclud
  * collation gave.
  */
 export function snapshotFromRows(r: SnapshotRows): Snapshot {
-  const all = <K extends Exclude<SnapshotTable, 'tournaments'>>(table: K): RowOf<K>[] => (r[table] as RowOf<K>[] | undefined) ?? []
+  const all = <K extends Exclude<SnapshotTable, 'tournaments'>>(table: K): RowOf<K>[] =>
+    (r[table] as RowOf<K>[] | undefined) ?? []
   const members = all('group_members')
   const tees = all('tees')
   const holes = all('holes')
   const teamMembers = all('team_members')
   return inLiveOrder({
     tournament: mapTournament(r.tournament),
-    players: all('players').map(mapPlayer).sort((a, b) => a.sortOrder - b.sortOrder),
+    players: all('players')
+      .map(mapPlayer)
+      .sort((a, b) => a.sortOrder - b.sortOrder),
     courses: all('courses').map((c) => mapCourse(c, tees, holes)),
-    rounds: all('rounds').map(mapRound).sort((a, b) => a.number - b.number),
-    groups: all('groups').map((g) => mapGroup(g, members)).sort((a, b) => a.number - b.number),
+    rounds: all('rounds')
+      .map(mapRound)
+      .sort((a, b) => a.number - b.number),
+    groups: all('groups')
+      .map((g) => mapGroup(g, members))
+      .sort((a, b) => a.number - b.number),
     roundTees: all('round_tees').map(mapRoundTee),
     pairs: all('pairs').map(mapPair),
-    teams: all('teams').map((x) => mapTeam(x, teamMembers)).sort((a, b) => a.number - b.number),
+    teams: all('teams')
+      .map((x) => mapTeam(x, teamMembers))
+      .sort((a, b) => a.number - b.number),
     scores: all('scores').map(mapScore),
     snakeTiebreaks: all('snake_tiebreaks').map(mapSnakeTiebreak),
     cardSignatures: all('card_signatures').map(mapCardSignature),
@@ -646,7 +710,8 @@ export const useTournament = create<StoreState>((set, get) => ({
         // and the one more fetch a write asked for while both were out (#92's fourth verifier, N2).
         if (get().data) set({ loading: false })
         if (leaves === leavesAtStart) get().subscribe()
-        afterFetch(); return;
+        afterFetch()
+        return
       }
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, tournamentId, since)
@@ -655,14 +720,21 @@ export const useTournament = create<StoreState>((set, get) => ({
       baseReadAt = readAt
       healWait = 0
       stopReloadRetry()
-      set({ data: compute(snapshot, undefined, get().data), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      set({
+        data: compute(snapshot, undefined, get().data),
+        updatedAt: Date.now(),
+        loading: false,
+        error: null,
+        source: 'server',
+      })
       if (get().keepOnPhone) void saveSnapshot(tournamentId, snapshot)
       afterFetch()
       if (leaves === leavesAtStart) get().subscribe()
     } catch (e) {
       if (seq !== fetchSeq) {
         if (get().tournamentId === tournamentId && get().data) set({ loading: false })
-        afterFetch(); return;
+        afterFetch()
+        return
       }
       set({ loading: false, error: humanError(e) })
       // Over the phone's copy the gate keeps asking; over the server's boards, the store does.
@@ -689,7 +761,10 @@ export const useTournament = create<StoreState>((set, get) => ({
       const snapshot = await out
       if (get().tournamentId !== id) return
       // Superseded: the newer fetch brings the boards, and the one more fetch asked for while both were out still goes (N2).
-      if (seq !== fetchSeq) { afterFetch(); return; }
+      if (seq !== fetchSeq) {
+        afterFetch()
+        return
+      }
       // A live change that landed while this was on its way may be newer than what it read.
       catchUp(snapshot, id, since)
       lastFetchAt = Date.now()
@@ -697,13 +772,22 @@ export const useTournament = create<StoreState>((set, get) => ({
       baseReadAt = readAt
       healWait = 0
       stopReloadRetry()
-      set({ data: compute(snapshot, undefined, get().data), updatedAt: Date.now(), loading: false, error: null, source: 'server' })
+      set({
+        data: compute(snapshot, undefined, get().data),
+        updatedAt: Date.now(),
+        loading: false,
+        error: null,
+        source: 'server',
+      })
       if (get().keepOnPhone) void saveSnapshot(id, snapshot)
       afterFetch()
     } catch (e) {
       // The heal waits longer after each fetch that failed (a released device, a deleted tournament, a server down).
       healWait = Math.min(Math.max(healWait * 2, HEAL_MS * 2), HEAL_MAX_MS)
-      if (seq !== fetchSeq) { afterFetch(); return; }
+      if (seq !== fetchSeq) {
+        afterFetch()
+        return
+      }
       set({ error: humanError(e) })
       if (isTransient(e)) retryReloadSoon()
       // A failed fetch read nothing: the one more fetch a landing asked for still goes, once (V22).
@@ -738,7 +822,16 @@ export const useTournament = create<StoreState>((set, get) => ({
     // Entering it from the copy: the reloads a cold open needs are this tournament's, not a left one's.
     left = false
     // A copy on the phone is of a tournament the phone keeps.
-    set({ tournamentId, data: compute(snapshot, undefined, get().data), updatedAt: savedAt, loading: false, error: null, realtime: 'off', source: 'cache', keepOnPhone: true })
+    set({
+      tournamentId,
+      data: compute(snapshot, undefined, get().data),
+      updatedAt: savedAt,
+      loading: false,
+      error: null,
+      realtime: 'off',
+      source: 'cache',
+      keepOnPhone: true,
+    })
   },
   subscribe() {
     const id = get().tournamentId
@@ -753,19 +846,47 @@ export const useTournament = create<StoreState>((set, get) => ({
     let ch = sb.channel(`tournament:${id}`, { config: { postgres_changes_options: { wait: true } } })
     for (const table of REALTIME_TABLES) {
       // This tournament's rows only: the server matches each change to its own tournament's phones, deletes included (DB-05).
-      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table, filter: liveFilter(table, id) }, (payload: { eventType?: LiveChange['eventType']; new?: Record<string, unknown>; old?: Record<string, unknown>; errors?: unknown }) => {
-        // A channel that was left still delivers until the server takes the leave: its tournament is not on screen.
-        if (channel !== ch) return
-        // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
-        const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
-        // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
-        if (INBOX.has(table)) { inboxChanged(payload?.eventType && !errors ? { eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) } : null); return; }
-        // How long another phone's hole took to get here (STRAT-02).
-        if (table === 'scores' && payload?.eventType && payload.eventType !== 'DELETE' && payload.new) changeArrived(payload.new)
-        if (APPLIED.has(table) && payload?.eventType && !errors) receive({ table, eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) })
-        // A structural row reloads, unless it is plainly another tournament's (DB-05: the filter keeps them away, and this holds without it).
-        else if (errors || !payload?.eventType || concernsBoards(get().data?.base, id, { table, eventType: payload.eventType, new: (payload.new ?? {}), old: (payload.old ?? {}) }, fetching > 0)) scheduleReload()
-      })
+      ch = ch.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: liveFilter(table, id) },
+        (payload: {
+          eventType?: LiveChange['eventType']
+          new?: Record<string, unknown>
+          old?: Record<string, unknown>
+          errors?: unknown
+        }) => {
+          // A channel that was left still delivers until the server takes the leave: its tournament is not on screen.
+          if (channel !== ch) return
+          // A row the event carries is applied where it belongs; anything else reloads (REL-11, PERF-07).
+          const errors = Array.isArray(payload?.errors) ? payload.errors.length > 0 : !!payload?.errors
+          // Not the boards': the Comité's inbox reads its list again (`rejectedInbox.ts`).
+          if (INBOX.has(table)) {
+            inboxChanged(
+              payload?.eventType && !errors
+                ? { eventType: payload.eventType, new: payload.new ?? {}, old: payload.old ?? {} }
+                : null,
+            )
+            return
+          }
+          // How long another phone's hole took to get here (STRAT-02).
+          if (table === 'scores' && payload?.eventType && payload.eventType !== 'DELETE' && payload.new)
+            changeArrived(payload.new)
+          if (APPLIED.has(table) && payload?.eventType && !errors)
+            receive({ table, eventType: payload.eventType, new: payload.new ?? {}, old: payload.old ?? {} })
+          // A structural row reloads, unless it is plainly another tournament's (DB-05: the filter keeps them away, and this holds without it).
+          else if (
+            errors ||
+            !payload?.eventType ||
+            concernsBoards(
+              get().data?.base,
+              id,
+              { table, eventType: payload.eventType, new: payload.new ?? {}, old: payload.old ?? {} },
+              fetching > 0,
+            )
+          )
+            scheduleReload()
+        },
+      )
     }
     const degrade = () => {
       if (channel !== ch) return
@@ -792,13 +913,20 @@ export const useTournament = create<StoreState>((set, get) => ({
     // Belt and braces for a server that answers the join before its bindings
     // are up, or that drops the channel later (extension 'system').
     ch = ch.on('system', {}, (payload: { extension?: string; status?: string }) => {
-      if ((payload?.extension === 'postgres_changes' || payload?.extension === 'system') && payload.status === 'error') degrade()
+      if ((payload?.extension === 'postgres_changes' || payload?.extension === 'system') && payload.status === 'error')
+        degrade()
     })
     let wasLive = false
     channel = ch
     healTimer ??= setInterval(() => {
       const st = get()
-      if (st.realtime !== 'live' || !st.data || fetching > 0 || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return
+      if (
+        st.realtime !== 'live' ||
+        !st.data ||
+        fetching > 0 ||
+        (typeof document !== 'undefined' && document.visibilityState !== 'visible')
+      )
+        return
       const now = Date.now()
       // A clock set back counts as time gone by: the check comes, instead of waiting for the clock to catch up.
       const quiet = now - lastFetchAt
@@ -814,7 +942,11 @@ export const useTournament = create<StoreState>((set, get) => ({
         stopDegraded()
         retryDelay = RETRY_MIN_MS
         set({ realtime: 'live' })
-      } else if (status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR || status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT || status === REALTIME_SUBSCRIBE_STATES.CLOSED) {
+      } else if (
+        status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR ||
+        status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT ||
+        status === REALTIME_SUBSCRIBE_STATES.CLOSED
+      ) {
         // CLOSED here means the server dropped a channel we still want (e.g. a
         // token that expired while the app was hidden): realtime-js won't
         // rejoin it, so treat it as an outage. Our own removals clear
@@ -889,7 +1021,10 @@ export const useTournament = create<StoreState>((set, get) => ({
     const overlap = lastFetchMono >= sentAt || liveClock() - sentAt > LOG_MS
     // Events come in commit order: once a row's echo is in, what came after it is newer, and is in too. Only what came
     // since the push went out counts: an identical earlier row is not this write's echo (N3). Parked echoes count (N7).
-    const heard = [...changeLog.filter((x) => x.seq > since && x.t >= sentAt).map((x) => x.change), ...parked.filter((p) => !p.landed && p.t >= sentAt).map((p) => p.change)]
+    const heard = [
+      ...changeLog.filter((x) => x.seq > since && x.t >= sentAt).map((x) => x.change),
+      ...parked.filter((p) => !p.landed && p.t >= sentAt).map((p) => p.change),
+    ]
     const fresh = changes.filter((c) => !heard.some((h) => sameChange(h, c)))
     if (fresh.length) {
       // A fetch on its way replays the write over what it read, which may be later: one more fetch after it.
@@ -900,7 +1035,11 @@ export const useTournament = create<StoreState>((set, get) => ({
       }
       const next = structuredClone(d.base)
       const now = Date.now()
-      const { reload, stale } = applyAll(next, tournamentId, fresh.map((change) => ({ at: now, change, landed: true })))
+      const { reload, stale } = applyAll(
+        next,
+        tournamentId,
+        fresh.map((change) => ({ at: now, change, landed: true })),
+      )
       set({ data: compute(next, d.playersKey, d) })
       if (st.keepOnPhone && !tournamentId.startsWith('fixture:')) saveSoon(tournamentId)
       if (reload) scheduleReload()

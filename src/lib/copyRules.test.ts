@@ -38,7 +38,16 @@ import { moduleRules } from '../engine/settings/describeModule'
 import { checkPrizePool, fieldShape } from '../engine/settings/prizeCheck'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from '../engine/settings/presets'
 import { MODULE_IDS, parseSettings, type TournamentSettings } from '../engine/settings/schema'
-import { fillRound, makeCourse, makeFirstTournament, makeGroup, makePlayer, makeSnapshot, makeTee, score } from '../engine/testing/fixtures'
+import {
+  fillRound,
+  makeCourse,
+  makeFirstTournament,
+  makeGroup,
+  makePlayer,
+  makeSnapshot,
+  makeTee,
+  score,
+} from '../engine/testing/fixtures'
 import type { Snapshot } from '../engine/types'
 import { courseHandicap, estimateIndex, playingHandicap } from '../engine/core/handicap'
 import { handicapText, ordinal, t } from '../i18n/es-MX'
@@ -116,15 +125,29 @@ function pieces(file: string): Piece[] {
 
 function parse(file: string): Piece[] {
   const code = readFileSync(file, 'utf8')
-  const sf = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+  const sf = ts.createSourceFile(
+    file,
+    code,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  )
   const out: Piece[] = []
   const keys = (node: ts.Node) => {
     const names: string[] = []
-    for (let n: ts.Node | undefined = node.parent; n; n = n.parent) if (ts.isPropertyAssignment(n)) names.unshift(n.name.getText(sf))
+    for (let n: ts.Node | undefined = node.parent; n; n = n.parent)
+      if (ts.isPropertyAssignment(n)) names.unshift(n.name.getText(sf))
     return names.join('.')
   }
   const add = (node: ts.Node, text: string, afterValue: boolean, beforeValue: boolean, jsx = false) =>
-    out.push({ text, line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1, afterValue, beforeValue, jsx, path: keys(node) })
+    out.push({
+      text,
+      line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+      afterValue,
+      beforeValue,
+      jsx,
+      path: keys(node),
+    })
   const visit = (node: ts.Node): void => {
     const p = node.parent
     // Code, not copy: module names, types, object keys and values compared against.
@@ -134,13 +157,20 @@ function parse(file: string): Piece[] {
         ts.isExportDeclaration(p) ||
         ts.isLiteralTypeNode(p) ||
         (ts.isPropertyAssignment(p) && p.name === node) ||
-        (ts.isBinaryExpression(p) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(p.operatorToken.kind)) ||
+        (ts.isBinaryExpression(p) &&
+          [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(
+            p.operatorToken.kind,
+          )) ||
         ts.isCaseClause(p) ||
         ts.isElementAccessExpression(p))
     if (!code) {
       // A string the JSX renders as it is ({'vs'}, aria-label="…", title, alt, placeholder) is copy, like JSX text.
-      const shown = !!p && (ts.isJsxExpression(p) || (ts.isJsxAttribute(p) && /^(aria-label|title|alt|placeholder|label)$/.test(p.name.getText(sf))))
-      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) add(node, node.text, false, false, shown)
+      const shown =
+        !!p &&
+        (ts.isJsxExpression(p) ||
+          (ts.isJsxAttribute(p) && /^(aria-label|title|alt|placeholder|label)$/.test(p.name.getText(sf))))
+      if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+        add(node, node.text, false, false, shown)
       else if (ts.isTemplateHead(node)) add(node, node.text, false, true)
       else if (ts.isTemplateMiddle(node)) add(node, node.text, true, true)
       else if (ts.isTemplateTail(node)) add(node, node.text, true, false)
@@ -155,11 +185,14 @@ function parse(file: string): Piece[] {
 /** Rules that only show in a template's pieces: what sits next to a `${…}`. */
 function templateRules(where: string, pc: Piece, out: Hit[]) {
   // `${n}º`: an ordinal built from a number, without its period.
-  if (pc.afterValue && pc.text.startsWith('º')) out.push(`${where}: ordinal without its period («1.º», as ordinal() writes it): ${JSON.stringify(pc.text)}`)
+  if (pc.afterValue && pc.text.startsWith('º'))
+    out.push(`${where}: ordinal without its period («1.º», as ordinal() writes it): ${JSON.stringify(pc.text)}`)
   // `-${n}`, `(-${n})`: a hyphen in front of a number. (`${a}-${b}` joins two values: a key, a date, a file name.)
-  if (pc.beforeValue && (pc.afterValue ? /[\s(:,=]-$/ : /(?:^|[\s(:,=])-$/).test(pc.text)) out.push(`${where}: hyphen used as a minus sign (a true minus: −2): ${JSON.stringify(pc.text)}`)
+  if (pc.beforeValue && (pc.afterValue ? /[\s(:,=]-$/ : /(?:^|[\s(:,=])-$/).test(pc.text))
+    out.push(`${where}: hyphen used as a minus sign (a true minus: −2): ${JSON.stringify(pc.text)}`)
   // `${n} p`: "p" for putts.
-  if (pc.afterValue && /^ ?p(?![\p{L}.])/u.test(pc.text)) out.push(`${where}: "p" for putts: putts: ${JSON.stringify(pc.text)}`)
+  if (pc.afterValue && /^ ?p(?![\p{L}.])/u.test(pc.text))
+    out.push(`${where}: "p" for putts: putts: ${JSON.stringify(pc.text)}`)
 }
 
 /** `${a} y ${b}`, `.join(' & ')`: a list joined by hand instead of t.common.andList («e» before an i sound). */
@@ -168,7 +201,8 @@ const HAND_JOIN = /^\s+(?:y|e|&)\s+$/
 /** A list joined with commas or slashes, in any quotes: `.join(', ')`, `.join(" / ")`. */
 const COMMA_JOIN = /\.join\(\s*(['"`])\s*[,/]\s*\1\s*\)/
 /** On the same line, names: a name lookup, a display or full name, or a list of people by its usual names. */
-const NAMES_ON_LINE = /\bname(?:Of|For)?\(|\.map\(\s*(?:name|nameOf)\s*\)|\b(?:displayName|fullName)\b|\b(?:names|holders|winners|members|owners|claims|candidates|people)\b/
+const NAMES_ON_LINE =
+  /\bname(?:Of|For)?\(|\.map\(\s*(?:name|nameOf)\s*\)|\b(?:displayName|fullName)\b|\b(?:names|holders|winners|members|owners|claims|candidates|people)\b/
 /** A line of separate facts (`[club, city].filter(Boolean).join(', ')`) is commas by design, not a list of names. */
 const FACTS_LINE = /\]\.filter\(Boolean\)\.join\(/
 /** Names listed with commas only: `.map(name).join(', ')`, `…displayName).join(", ")`, `names.join(' / ')`. */
@@ -195,8 +229,16 @@ function commaNameLists(text: string, names: string[]): string[] {
  * source line they sit on. Each says why it is not the mistake its rule looks for.
  */
 const ALLOW: Array<{ file: string; line: RegExp; why: string }> = [
-  { file: 'src/i18n/es-MX.ts', line: /`\$\{wins\} \$\{n\} y \$\{remaining\}`/, why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names' },
-  { file: 'api/scorecard-extract.ts', line: /índice de dificultad \(handicap\/SI, 1–18\)/, why: 'the prompt that tells the model what a printed card calls the stroke index; nobody reads it in the app' },
+  {
+    file: 'src/i18n/es-MX.ts',
+    line: /`\$\{wins\} \$\{n\} y \$\{remaining\}`/,
+    why: '«Gana 3 y 2» is how match play writes a result (3 up with 2 to play), not a list of names',
+  },
+  {
+    file: 'api/scorecard-extract.ts',
+    line: /índice de dificultad \(handicap\/SI, 1–18\)/,
+    why: 'the prompt that tells the model what a printed card calls the stroke index; nobody reads it in the app',
+  },
 ]
 
 function walk(dir: string, keep: (name: string) => boolean, out: string[] = []): string[] {
@@ -220,13 +262,27 @@ function golden(): Snapshot {
   snap.rounds.forEach((r) => (r.status = 'finished'))
   snap.tournament.status = 'finished'
   snap.players.forEach((p, i) => {
-    snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: 250 + 250 * (i % 4), ownerId: snap.players[(i + 1) % 12]!.id, soldAt: '' })
+    snap.calcuttaLots.push({
+      id: `lot${i + 1}`,
+      playerId: p.id,
+      lotNumber: i + 1,
+      status: 'sold',
+      price: 250 + 250 * (i % 4),
+      ownerId: snap.players[(i + 1) % 12]!.id,
+      soldAt: '',
+    })
   })
   snap.calcuttaBuybacks.push({ lotId: 'lot1', pct: 50, amount: 125, paid: false })
   for (let i = 0; i < 20; i++) {
     const pending = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS).flags.pendingSnakeTiebreaks
     if (!pending.length) break
-    for (const q of pending) snap.snakeTiebreaks.push({ roundId: q.roundId, groupId: q.groupId, hole: q.hole, lastHoledPlayerId: q.candidates[0]! })
+    for (const q of pending)
+      snap.snakeTiebreaks.push({
+        roundId: q.roundId,
+        groupId: q.groupId,
+        hole: q.hole,
+        lastHoledPlayerId: q.candidates[0]!,
+      })
   }
   return snap
 }
@@ -255,7 +311,15 @@ function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
     players: [
       makePlayer(1, { displayName: 'Camilo', baseHcp: 3 }),
       makePlayer(2, { displayName: 'Íñigo', handicapSource: 'index', handicapIndex: -1.2, baseHcp: -1.2 }),
-      makePlayer(3, { displayName: 'Iván', handicapSource: 'estimate', estimateInputs: [{ gross: 67, ...under }, { gross: 69, ...under }, { gross: 73, ...under }] }),
+      makePlayer(3, {
+        displayName: 'Iván',
+        handicapSource: 'estimate',
+        estimateInputs: [
+          { gross: 67, ...under },
+          { gross: 69, ...under },
+          { gross: 73, ...under },
+        ],
+      }),
       makePlayer(4, { displayName: 'Hilario', baseHcp: -3 }),
     ],
   })
@@ -263,7 +327,11 @@ function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
   for (const r of ['r1', 'r2']) {
     snapshot.groups.push(makeGroup(r, 1, ['p1', 'p2', 'p3', 'p4']))
     // Day 1: Camilo birdies five holes he gets no stroke on.
-    for (const p of snapshot.players) for (const h of holes) snapshot.scores.push(score(r, p.id, h.number, h.par - (r === 'r1' && p.id === 'p1' && h.strokeIndex > 3 && h.number <= 7 ? 1 : 0)))
+    for (const p of snapshot.players)
+      for (const h of holes)
+        snapshot.scores.push(
+          score(r, p.id, h.number, h.par - (r === 'r1' && p.id === 'p1' && h.strokeIndex > 3 && h.number <= 7 ? 1 : 0)),
+        )
   }
   snapshot.rounds[0]!.status = 'finished'
   return { snapshot, settings }
@@ -274,13 +342,27 @@ function plusHandicaps(): { snapshot: Snapshot; settings: TournamentSettings } {
  * (net −2) and a twelve on a par 4 (points below zero count 0).
  */
 function belowZero(): { snapshot: Snapshot; settings: TournamentSettings } {
-  const settings: TournamentSettings = { ...DEFAULT_SETTINGS, entryFee: 0, prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] } }
-  const snapshot = makeSnapshot({ settings, rounds: 1, players: [makePlayer(1, { displayName: 'Camilo', baseHcp: 54 }), makePlayer(2, { displayName: 'Damián', baseHcp: 0 })] })
+  const settings: TournamentSettings = {
+    ...DEFAULT_SETTINGS,
+    entryFee: 0,
+    prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [] },
+  }
+  const snapshot = makeSnapshot({
+    settings,
+    rounds: 1,
+    players: [
+      makePlayer(1, { displayName: 'Camilo', baseHcp: 54 }),
+      makePlayer(2, { displayName: 'Damián', baseHcp: 0 }),
+    ],
+  })
   snapshot.groups.push(makeGroup('r1', 1, ['p1', 'p2']))
   const holes = snapshot.courses[0]!.tees[0]!.holes
   const par3 = holes.find((h) => h.par === 3)!.number
   for (const h of holes) {
-    snapshot.scores.push(score('r1', 'p1', h.number, h.number === par3 ? 1 : h.par), score('r1', 'p2', h.number, h.number === 1 ? 12 : h.par))
+    snapshot.scores.push(
+      score('r1', 'p1', h.number, h.number === par3 ? 1 : h.par),
+      score('r1', 'p2', h.number, h.number === 1 ? 12 : h.par),
+    )
   }
   return { snapshot, settings }
 }
@@ -296,7 +378,23 @@ const TOURNAMENTS: Array<{ name: string; snapshot: Snapshot; settings: Tournamen
 ]
 
 /** Keys whose strings are copy (the rest are ids, kinds and tones). */
-const COPY_KEYS = new Set(['title', 'steps', 'label', 'text', 'detail', 'figure', 'sub', 'notes', 'warnings', 'name', 'figureLabel', 'slotLabel', 'pos', 'message', 'poolWarning'])
+const COPY_KEYS = new Set([
+  'title',
+  'steps',
+  'label',
+  'text',
+  'detail',
+  'figure',
+  'sub',
+  'notes',
+  'warnings',
+  'name',
+  'figureLabel',
+  'slotLabel',
+  'pos',
+  'message',
+  'poolWarning',
+])
 
 /** Every copy string in a computed state, with its path. `settings` is input, not output. */
 function engineCopy(v: unknown, path: string, out: Array<[string, string]>, copy = false): Array<[string, string]> {
@@ -305,7 +403,9 @@ function engineCopy(v: unknown, path: string, out: Array<[string, string]>, copy
   else if (typeof v === 'string') {
     if (copy) out.push([path, v])
   } else if (Array.isArray(v)) v.forEach((x, i) => engineCopy(x, `${path}[${i}]`, out, copy))
-  else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (k !== 'settings') engineCopy(x, `${path}.${k}`, out, copy || COPY_KEYS.has(k))
+  else if (v && typeof v === 'object')
+    for (const [k, x] of Object.entries(v))
+      if (k !== 'settings') engineCopy(x, `${path}.${k}`, out, copy || COPY_KEYS.has(k))
   return out
 }
 
@@ -313,10 +413,16 @@ function engineCopy(v: unknown, path: string, out: Array<[string, string]>, copy
 function rulesCopy(name: string, settings: TournamentSettings, snapshot?: Snapshot): Array<[string, string]> {
   const out: Array<[string, string]> = []
   const field = snapshot ? fieldShape(snapshot, settings) : { players: 12 }
-  for (const id of MODULE_IDS) words(moduleRules(id, settings, field, 'Nacho')).forEach((s, i) => out.push([`${name} Reglamento ${id}[${i}]`, s]))
-  for (const g of settings.games) words(describeGame(g)).forEach((s, i) => out.push([`${name} Reglamento ${g.id}[${i}]`, s]))
+  for (const id of MODULE_IDS)
+    words(moduleRules(id, settings, field, 'Nacho')).forEach((s, i) => out.push([`${name} Reglamento ${id}[${i}]`, s]))
+  for (const g of settings.games)
+    words(describeGame(g)).forEach((s, i) => out.push([`${name} Reglamento ${g.id}[${i}]`, s]))
   const pool = checkPrizePool(settings, field)
-  for (const l of [...pool.lines, ...pool.sidePots, ...pool.bets]) out.push([`${name} prize statement`, `${typeof l.label === 'string' ? l.label : words(l.label)}: ${words(l.detail)}`])
+  for (const l of [...pool.lines, ...pool.sidePots, ...pool.bets])
+    out.push([
+      `${name} prize statement`,
+      `${typeof l.label === 'string' ? l.label : words(l.label)}: ${words(l.detail)}`,
+    ])
   return out
 }
 
@@ -327,7 +433,16 @@ const FORMAT_VARIANTS: TournamentSettings[] = [
       { scoring: 'net', matchMode: 'singles', teamMode: 'bestBall', teamScoring: 'strokes' },
       { scoring: 'gross', matchMode: 'fourball', teamMode: 'scramble', teamScoring: 'stableford' },
       { scoring: 'net', matchMode: 'fourball', teamMode: 'shamble', teamScoring: 'strokes' },
-    ].map((formatOptions) => ({ ...DEFAULT_SETTINGS, modules: { ...DEFAULT_SETTINGS.modules, individual: { ...DEFAULT_SETTINGS.modules.individual, format, formatOptions } } }) as TournamentSettings),
+    ].map(
+      (formatOptions) =>
+        ({
+          ...DEFAULT_SETTINGS,
+          modules: {
+            ...DEFAULT_SETTINGS.modules,
+            individual: { ...DEFAULT_SETTINGS.modules.individual, format, formatOptions },
+          },
+        }) as TournamentSettings,
+    ),
   ),
 ]
 
@@ -338,9 +453,11 @@ function catalogCopy(): Array<[string, string]> {
     for (const line of [d.title, ...d.steps]) out.push([`format ${s.modules.individual.format}`, line])
   }
   const C = t.setup.catalog
-  for (const m of MODULE_ENTRIES) for (const line of [C.modules[m.id].blurb, C.modules[m.id].later]) if (line) out.push([`catalog ${m.id}`, line])
+  for (const m of MODULE_ENTRIES)
+    for (const line of [C.modules[m.id].blurb, C.modules[m.id].later]) if (line) out.push([`catalog ${m.id}`, line])
   for (const g of GAME_ENTRIES) {
-    for (const line of [C.games[g.key]!.title, C.games[g.key]!.blurb, C.games[g.key]!.later]) if (line) out.push([`catalog ${g.key}`, line])
+    for (const line of [C.games[g.key]!.title, C.games[g.key]!.blurb, C.games[g.key]!.later])
+      if (line) out.push([`catalog ${g.key}`, line])
     words(describeGame(g.create(g.key))).forEach((line) => out.push([`catalog ${g.key} rules`, line]))
   }
   for (const p of PRESETS) {
@@ -348,7 +465,9 @@ function catalogCopy(): Array<[string, string]> {
     out.push(...rulesCopy(`preset ${p.id}`, p.build()))
   }
   for (const label of Object.values(C.category)) out.push(['catalog category', label])
-  out.push(...rulesCopy('quick round', quickSettings({ games: [...QUICK_GAMES], money: true, entryFee: 300, players: 8 })))
+  out.push(
+    ...rulesCopy('quick round', quickSettings({ games: [...QUICK_GAMES], money: true, entryFee: 300, players: 8 })),
+  )
   return out
 }
 
@@ -361,11 +480,19 @@ function catalogCopy(): Array<[string, string]> {
 function pileWords(text: string, path: string): string[] {
   const out: string[] = []
   const calcuttaPath = /auction|calcutta/i.test(path)
-  if (word('pozos?').test(text) && !calcuttaPath && !/Calcutta|subasta/.test(text)) out.push('«pozo» is the Calcutta’s word')
-  if (/bolsas? de la (?:Calcutta|subasta)/i.test(text) || (word('bolsas?').test(text) && calcuttaPath && !/aparte de la bolsa/.test(text))) out.push('the Calcutta’s money is its pozo, never the bolsa')
+  if (word('pozos?').test(text) && !calcuttaPath && !/Calcutta|subasta/.test(text))
+    out.push('«pozo» is the Calcutta’s word')
+  if (
+    /bolsas? de la (?:Calcutta|subasta)/i.test(text) ||
+    (word('bolsas?').test(text) && calcuttaPath && !/aparte de la bolsa/.test(text))
+  )
+    out.push('the Calcutta’s money is its pozo, never the bolsa')
   // A sentence that says «bote» beside the inscriptions or the Calcutta must say it is the one apart («bote aparte»).
-  const mixed = text.split(/[.;:]\s/).some((s) => word('botes?').test(s) && /inscripci|\bla entrada\b|Calcutta|subasta/i.test(s) && !/aparte/.test(s))
-  if ((word('botes?').test(text) && calcuttaPath) || mixed) out.push('a «bote» is only a side pot; the inscriptions are the bolsa, the Calcutta’s is its pozo')
+  const mixed = text
+    .split(/[.;:]\s/)
+    .some((s) => word('botes?').test(s) && /inscripci|\bla entrada\b|Calcutta|subasta/i.test(s) && !/aparte/.test(s))
+  if ((word('botes?').test(text) && calcuttaPath) || mixed)
+    out.push('a «bote» is only a side pot; the inscriptions are the bolsa, the Calcutta’s is its pozo')
   return out
 }
 
@@ -391,8 +518,11 @@ describe('copy rules: es-MX.ts', () => {
 
   it('joins names with t.common.andList, never by hand', () => {
     const source = readFileSync(file, 'utf8').split('\n')
-    const allowed = (line: number) => ALLOW.some((x) => x.file === 'src/i18n/es-MX.ts' && x.line.test(source[line - 1] ?? ''))
-    const hits = all.filter((pc) => HAND_JOIN.test(pc.text) && !allowed(pc.line)).map((pc) => `es-MX.ts:${pc.line}: ${JSON.stringify(pc.text)}`)
+    const allowed = (line: number) =>
+      ALLOW.some((x) => x.file === 'src/i18n/es-MX.ts' && x.line.test(source[line - 1] ?? ''))
+    const hits = all
+      .filter((pc) => HAND_JOIN.test(pc.text) && !allowed(pc.line))
+      .map((pc) => `es-MX.ts:${pc.line}: ${JSON.stringify(pc.text)}`)
     expect(hits).toEqual([])
   })
 
@@ -421,11 +551,33 @@ describe('copy rules: es-MX.ts', () => {
       ['formatMoney', formatMoney(-300, 'MXN')],
       ['formatSignedMoney', formatSignedMoney(-300, 'MXN')],
       // The handicap functions' own titles and steps, below zero (the Comité's preview shows them as they are).
-      ...(['title', 'steps'] as const).flatMap((k) => [
-        [`playingHandicap ${k}`, [words(playingHandicap(-3, DEFAULT_SETTINGS.handicap).why)[k]].flat().join(' | ')],
-        [`courseHandicap ${k}`, [words(courseHandicap(-1.2, { slope: 128, rating: 70.4, par: 72 }).why)[k]].flat().join(' | ')],
-        [`estimateIndex ${k}`, [words(estimateIndex([{ gross: 66, rating: 70.4, slope: 128, par: 72 }, { gross: 69, rating: 70.4, slope: 128, par: 72 }, { gross: 73, rating: 70.4, slope: 128, par: 72 }], DEFAULT_SETTINGS.handicap).why)[k]].flat().join(' | ')],
-      ] as Array<[string, string]>),
+      ...(['title', 'steps'] as const).flatMap(
+        (k) =>
+          [
+            [`playingHandicap ${k}`, [words(playingHandicap(-3, DEFAULT_SETTINGS.handicap).why)[k]].flat().join(' | ')],
+            [
+              `courseHandicap ${k}`,
+              [words(courseHandicap(-1.2, { slope: 128, rating: 70.4, par: 72 }).why)[k]].flat().join(' | '),
+            ],
+            [
+              `estimateIndex ${k}`,
+              [
+                words(
+                  estimateIndex(
+                    [
+                      { gross: 66, rating: 70.4, slope: 128, par: 72 },
+                      { gross: 69, rating: 70.4, slope: 128, par: 72 },
+                      { gross: 73, rating: 70.4, slope: 128, par: 72 },
+                    ],
+                    DEFAULT_SETTINGS.handicap,
+                  ).why,
+                )[k],
+              ]
+                .flat()
+                .join(' | '),
+            ],
+          ] as Array<[string, string]>,
+      ),
       ['player.handicapLine', t.player.handicapLine(-1.2, 'Índice')],
       ['round.roundFacts', t.profile.roundFacts('Azules', -2)],
       ['admin courseHcp', t.admin.players.courseHcp(-2)],
@@ -452,7 +604,8 @@ describe('copy rules: es-MX.ts', () => {
     expect(andList(['Camilo'])).toBe('Camilo')
     expect(andList(['Camilo', 'Damián'])).toBe('Camilo y Damián')
     expect(andList(['Camilo', 'Damián', 'Ernesto'])).toBe('Camilo, Damián y Ernesto')
-    for (const n of ['Iván', 'Íñigo', 'Ignacio', 'Hilario', 'Híjar', 'Ítalo']) expect(andList(['Camilo', n])).toBe(`Camilo e ${n}`)
+    for (const n of ['Iván', 'Íñigo', 'Ignacio', 'Hilario', 'Híjar', 'Ítalo'])
+      expect(andList(['Camilo', n])).toBe(`Camilo e ${n}`)
     // A diphthong keeps «y»: agua y hielo; and so does a consonant y.
     for (const n of ['Hielo', 'Hiago', 'Ian', 'Yolanda']) expect(andList(['Camilo', n])).toBe(`Camilo y ${n}`)
     // Spaces and blanks never reach the copy; a quoted name is read by its first letter.
@@ -466,17 +619,31 @@ describe('copy rules: es-MX.ts', () => {
   })
 
   it('says each pile of money with its own word: pozo, bolsa, bote (COPY-14)', () => {
-    const hits = all.flatMap((pc) => pileWords(pc.text, pc.path).map((rule) => `es-MX.ts:${pc.line} (${pc.path}): ${rule}: ${JSON.stringify(pc.text)}`))
+    const hits = all.flatMap((pc) =>
+      pileWords(pc.text, pc.path).map(
+        (rule) => `es-MX.ts:${pc.line} (${pc.path}): ${rule}: ${JSON.stringify(pc.text)}`,
+      ),
+    )
     expect(hits).toEqual([])
   })
 
   it('the pile rule catches the words the review found (COPY-14)', () => {
     // What es-MX.ts and the catalog said before, each in the place it said it.
-    expect(pileWords('Cada uno pone la entrada y el bote se reparte por lugares; los juegos llevan su apuesta.', 'quick.moneyHint')).not.toEqual([])
+    expect(
+      pileWords(
+        'Cada uno pone la entrada y el bote se reparte por lugares; los juegos llevan su apuesta.',
+        'quick.moneyHint',
+      ),
+    ).not.toEqual([])
     expect(pileWords('Bolsa de la Calcutta', 'print.pot')).not.toEqual([])
     expect(pileWords('Pozo', 'games.pot')).not.toEqual([])
     expect(pileWords('Subasta de jugadores la noche anterior, con su propio bote.', 'catalog.auction')).not.toEqual([])
-    expect(pileWords('Al terminar la ronda, los que no la tienen cobran $200 cada uno del pozo ($600 por grupo).', 'rules.snake')).not.toEqual([])
+    expect(
+      pileWords(
+        'Al terminar la ronda, los que no la tienen cobran $200 cada uno del pozo ($600 por grupo).',
+        'rules.snake',
+      ),
+    ).not.toEqual([])
     // And what they say now.
     expect(pileWords('Sin dinero, no ve la Calcutta, ni los juegos con bote aparte.', 'legal.privacy')).toEqual([])
     expect(pileWords('La Calcutta va aparte de la bolsa: forma su propio pozo.', 'rules.summary.auction')).toEqual([])
@@ -489,7 +656,12 @@ describe('copy rules: es-MX.ts', () => {
 })
 
 describe('copy rules: what the engine writes', () => {
-  const states = TOURNAMENTS.map(({ name, snapshot, settings }) => ({ name, snapshot, settings, state: computeTournament(snapshot, settings) }))
+  const states = TOURNAMENTS.map(({ name, snapshot, settings }) => ({
+    name,
+    snapshot,
+    settings,
+    state: computeTournament(snapshot, settings),
+  }))
 
   it('covers every fixture and finds the explanations', () => {
     expect(states.length).toBe(FIXTURE_NAMES.length + 3)
@@ -527,10 +699,20 @@ describe('copy rules: what the engine writes', () => {
     const plus = text('plus handicaps')
     expect(plus).toContain('Índice +1.2')
     expect(plus).toContain('Índice estimado +1.5')
-    expect(plus.some((x) => x.startsWith('El índice se ajusta a la dificultad del tee: índice +1.2, en la cuenta −1.2, × slope 128'))).toBe(true)
+    expect(
+      plus.some((x) =>
+        x.startsWith('El índice se ajusta a la dificultad del tee: índice +1.2, en la cuenta −1.2, × slope 128'),
+      ),
+    ).toBe(true)
     // MONEY-21: a plus playing handicap gives strokes back, and says so.
     expect(plus).toContain('Juega con +3: devuelve 3 golpes, en los 3 hoyos más fáciles')
-    expect(plus.some((x) => /^\d golpes? en un par \d, dando 1 golpe \(hándicap por debajo de 0\) en este hoyo \(índice de golpe 1[678]\)/.test(x))).toBe(true)
+    expect(
+      plus.some((x) =>
+        /^\d golpes? en un par \d, dando 1 golpe \(hándicap por debajo de 0\) en este hoyo \(índice de golpe 1[678]\)/.test(
+          x,
+        ),
+      ),
+    ).toBe(true)
     // The three plus players play off +3 alike (MONEY-21), so they tie.
     expect(plus).toContain('Empatados: Íñigo, Iván e Hilario')
     // A typed plus handicap says once how the arithmetic reads it.
@@ -539,8 +721,16 @@ describe('copy rules: what the engine writes', () => {
     expect(plus).toContain('Con el recorte: 3 − 4 = −1, no baja de 0: 0')
     const below = text('below zero')
     expect(below).toContain('1 − 3 = −2 neto')
-    expect(below).toContain('Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 0 − 12 + 2 = −6, que cuenta 0 pts')
-    expect(below.some((x) => x.startsWith('12 golpes en un par 4, sin golpes de ventaja en este hoyo (índice de golpe ') && x.endsWith('): 12 neto, doble bogey neto o peor, 0 pts'))).toBe(true)
+    expect(below).toContain(
+      'Un par neto vale 2 pts y cada golpe de diferencia suma o resta uno: 4 + 0 − 12 + 2 = −6, que cuenta 0 pts',
+    )
+    expect(
+      below.some(
+        (x) =>
+          x.startsWith('12 golpes en un par 4, sin golpes de ventaja en este hoyo (índice de golpe ') &&
+          x.endsWith('): 12 neto, doble bogey neto o peor, 0 pts'),
+      ),
+    ).toBe(true)
   })
 
   it('lists names with t.common.andList, never with commas only', () => {
@@ -548,7 +738,8 @@ describe('copy rules: what the engine writes', () => {
     for (const s of states) {
       const names = s.snapshot.players.map((p) => p.displayName)
       const copy = [...engineCopy(s.state, s.name, []), ...rulesCopy(s.name, s.settings, s.snapshot)]
-      for (const [path, text] of copy) for (const run of commaNameLists(text, names)) hits.push(`${path}: «${run}» in ${JSON.stringify(text)}`)
+      for (const [path, text] of copy)
+        for (const run of commaNameLists(text, names)) hits.push(`${path}: «${run}» in ${JSON.stringify(text)}`)
     }
     expect([...new Set(hits)]).toEqual([])
   })
@@ -556,33 +747,52 @@ describe('copy rules: what the engine writes', () => {
   it('says each pile of money with its own word: «pozo» only in the Calcutta’s, «bote» only in a side pot’s (COPY-14)', () => {
     const hits: Hit[] = []
     for (const s of states) {
-      const side = (id: string | undefined) => !!id && s.settings.games.find((g) => g.id === id)?.money.source === 'side'
+      const side = (id: string | undefined) =>
+        !!id && s.settings.games.find((g) => g.id === id)?.money.source === 'side'
       const { auction, ...modules } = s.state.modules
       // Each part of the state under the pile it speaks of: the Calcutta's, a side pot's, or the rest (the bolsa, bets, words).
       const parts: Array<[string, unknown]> = [
         ['calcutta', auction],
         ['calcutta', s.state.prizes.filter((p) => p.moduleId === 'auction')],
-        ...Object.entries(s.state.games).map(([id, g]): [string, unknown] => [side(id) ? `side:${id}` : `game:${id}`, g]),
-        ...s.state.prizes.filter((p) => p.moduleId !== 'auction').map((p): [string, unknown] => [side(p.gameId) ? `side:${p.gameId}` : 'rest', p]),
+        ...Object.entries(s.state.games).map(([id, g]): [string, unknown] => [
+          side(id) ? `side:${id}` : `game:${id}`,
+          g,
+        ]),
+        ...s.state.prizes
+          .filter((p) => p.moduleId !== 'auction')
+          .map((p): [string, unknown] => [side(p.gameId) ? `side:${p.gameId}` : 'rest', p]),
         ['rest', { ...s.state, modules, prizes: [], games: {} }],
       ]
       for (const [pile, v] of parts) {
         for (const [path, text] of engineCopy(v, `${s.name}.${pile}`, [], pile !== 'rest')) {
-          if (word('pozos?').test(text) && pile !== 'calcutta' && !/Calcutta|subasta/.test(text)) hits.push(`${path}: «pozo» is the Calcutta’s word: ${JSON.stringify(text)}`)
-          if (word('botes?').test(text) && !pile.startsWith('side:')) hits.push(`${path}: a «bote» is a side pot’s word: ${JSON.stringify(text)}`)
-          if (word('bolsas?').test(text) && pile === 'calcutta') hits.push(`${path}: the Calcutta’s money is its pozo: ${JSON.stringify(text)}`)
+          if (word('pozos?').test(text) && pile !== 'calcutta' && !/Calcutta|subasta/.test(text))
+            hits.push(`${path}: «pozo» is the Calcutta’s word: ${JSON.stringify(text)}`)
+          if (word('botes?').test(text) && !pile.startsWith('side:'))
+            hits.push(`${path}: a «bote» is a side pot’s word: ${JSON.stringify(text)}`)
+          if (word('bolsas?').test(text) && pile === 'calcutta')
+            hits.push(`${path}: the Calcutta’s money is its pozo: ${JSON.stringify(text)}`)
         }
       }
     }
     // The catalog, the format sheets and the Reglamento's lines, each placed by its own section («snake[1]», «catalog auction»).
-    for (const [where, text] of [...catalogCopy(), ...states.flatMap((s) => rulesCopy(s.name, s.settings, s.snapshot))]) for (const rule of pileWords(text, where.replace(/^.* Reglamento /, ''))) hits.push(`${where}: ${rule}: ${JSON.stringify(text)}`)
+    for (const [where, text] of [...catalogCopy(), ...states.flatMap((s) => rulesCopy(s.name, s.settings, s.snapshot))])
+      for (const rule of pileWords(text, where.replace(/^.* Reglamento /, '')))
+        hits.push(`${where}: ${rule}: ${JSON.stringify(text)}`)
     expect([...new Set(hits)]).toEqual([])
   })
 
   it('never calls the snake’s money «pozo»', () => {
     const hits: Hit[] = []
     for (const s of states) {
-      const snake = [...engineCopy(s.state.modules.snake ?? {}, `${s.name}.modules.snake`, [], true), ...engineCopy(s.state.prizes.filter((p) => p.moduleId === 'snake'), `${s.name}.prizes(snake)`, [], true)]
+      const snake = [
+        ...engineCopy(s.state.modules.snake ?? {}, `${s.name}.modules.snake`, [], true),
+        ...engineCopy(
+          s.state.prizes.filter((p) => p.moduleId === 'snake'),
+          `${s.name}.prizes(snake)`,
+          [],
+          true,
+        ),
+      ]
       for (const [path, text] of snake) if (word('pozo').test(text)) hits.push(`${path}: ${JSON.stringify(text)}`)
     }
     expect(hits).toEqual([])
@@ -593,12 +803,17 @@ describe('copy rules: the rest of src, the API routes and the push worker', () =
   // Not product copy: the style guide (/design) and the design fixtures only
   // exist in dev and preview builds (VITE_DESIGN_ROUTES); es-MX.ts is read whole above.
   const SKIP = ['src/design/', 'src/dev/', 'src/i18n/es-MX.ts']
-  const files = [...walk(SRC, code), ...walk(join(ROOT, 'api'), code), join(ROOT, 'public/push-sw.js')].filter((f) => !SKIP.some((s) => relative(ROOT, f).startsWith(s)))
-  const allowed = (rel: string, lines: string[], n: number) => ALLOW.some((a) => a.file === rel && a.line.test(lines[n - 1] ?? ''))
+  const files = [...walk(SRC, code), ...walk(join(ROOT, 'api'), code), join(ROOT, 'public/push-sw.js')].filter(
+    (f) => !SKIP.some((s) => relative(ROOT, f).startsWith(s)),
+  )
+  const allowed = (rel: string, lines: string[], n: number) =>
+    ALLOW.some((a) => a.file === rel && a.line.test(lines[n - 1] ?? ''))
 
   it('reads the API routes and the push worker too', () => {
     const rels = files.map((f) => relative(ROOT, f))
-    expect(rels).toEqual(expect.arrayContaining(['api/scorecard-extract.ts', 'api/course-search.ts', 'public/push-sw.js']))
+    expect(rels).toEqual(
+      expect.arrayContaining(['api/scorecard-extract.ts', 'api/course-search.ts', 'public/push-sw.js']),
+    )
   })
 
   it('has no middle dots, arrows, ampersand joins or hand-made ordinals in strings and JSX text', () => {
@@ -614,21 +829,23 @@ describe('copy rules: the rest of src, the API routes and the push worker', () =
         // The term table on anything with a space in it: a bare word is a table, a key or a class name; a phrase is copy.
         if (pc.jsx || pc.text.includes(' ')) check(where, pc.text, TERMS, hits)
         templateRules(where, pc, hits)
-        if (HAND_JOIN.test(pc.text)) hits.push(`${where}: names joined by hand (t.common.andList): ${JSON.stringify(pc.text)}`)
+        if (HAND_JOIN.test(pc.text))
+          hits.push(`${where}: names joined by hand (t.common.andList): ${JSON.stringify(pc.text)}`)
       }
     }
     expect(hits).toEqual([])
     // Every file in src, api and the push worker, parsed once: give it room on a loaded machine.
   }, 30_000)
 
-  it('lists names with t.common.andList, never .join(\', \')', () => {
+  it("lists names with t.common.andList, never .join(', ')", () => {
     const hits: Hit[] = []
     for (const f of files) {
       const rel = relative(ROOT, f)
       readFileSync(f, 'utf8')
         .split('\n')
         .forEach((l, i, lines) => {
-          if (commaNames(l) && !allowed(rel, lines, i + 1)) hits.push(`${rel}:${i + 1}: names listed with commas only (t.common.andList): ${l.trim()}`)
+          if (commaNames(l) && !allowed(rel, lines, i + 1))
+            hits.push(`${rel}:${i + 1}: names listed with commas only (t.common.andList): ${l.trim()}`)
         })
     }
     expect(hits).toEqual([])
@@ -641,13 +858,22 @@ describe('copy rules: the rest of src, the API routes and the push worker', () =
       const rel = relative(ROOT, f)
       const lines = readFileSync(f, 'utf8').split('\n')
       // A message has a space in it; a bare word is a table, a header or a key.
-      for (const pc of pieces(f)) if (pc.text.includes(' ') && !allowed(rel, lines, pc.line)) check(`${rel}:${pc.line}`, pc.text, TERMS, hits)
+      for (const pc of pieces(f))
+        if (pc.text.includes(' ') && !allowed(rel, lines, pc.line)) check(`${rel}:${pc.line}`, pc.text, TERMS, hits)
     }
     expect(hits).toEqual([])
   })
 
   it('keeps the allowlist honest (every entry still matches its line)', () => {
-    const stale = ALLOW.filter((a) => !readFileSync(join(ROOT, a.file), 'utf8').split('\n').some((l) => a.line.test(l)))
-    expect(stale.map((a) => a.file), 'remove these from ALLOW; the line is gone').toEqual([])
+    const stale = ALLOW.filter(
+      (a) =>
+        !readFileSync(join(ROOT, a.file), 'utf8')
+          .split('\n')
+          .some((l) => a.line.test(l)),
+    )
+    expect(
+      stale.map((a) => a.file),
+      'remove these from ALLOW; the line is gone',
+    ).toEqual([])
   })
 })

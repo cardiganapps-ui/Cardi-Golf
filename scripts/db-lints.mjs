@@ -18,16 +18,21 @@ for (const line of readFileSync(csv, 'utf8').split('\n')) {
 }
 if (flag === '--write') {
   writeFileSync(baselinePath, JSON.stringify(now, null, 2) + '\n')
-  console.log(`  baseline written: ${Object.values(now).reduce((a, b) => a + b, 0)} findings in ${Object.keys(now).length} lints`)
+  console.log(
+    `  baseline written: ${Object.values(now).reduce((a, b) => a + b, 0)} findings in ${Object.keys(now).length} lints`,
+  )
   process.exit(0)
 }
 const base = JSON.parse(readFileSync(baselinePath, 'utf8'))
 const worse = Object.entries(now).filter(([k, n]) => n > (base[k] ?? 0))
 const better = Object.entries(base).filter(([k, n]) => (now[k] ?? 0) < n)
 for (const [k, n] of worse) console.log(`  ✗ ${k}: ${base[k] ?? 0} → ${n}`)
-for (const [k, n] of better) console.log(`  ↓ ${k}: ${n} → ${now[k] ?? 0} (lower the baseline: POLO_LINT_WRITE=1 scripts/db-test.sh)`)
+for (const [k, n] of better)
+  console.log(`  ↓ ${k}: ${n} → ${now[k] ?? 0} (lower the baseline: POLO_LINT_WRITE=1 scripts/db-test.sh)`)
 if (worse.length) {
-  console.log('  New advisor findings: fix them in the migration (or, if one is deliberate, say why in the PR and raise the baseline).')
+  console.log(
+    '  New advisor findings: fix them in the migration (or, if one is deliberate, say why in the PR and raise the baseline).',
+  )
   process.exit(1)
 }
 console.log(`  ✓ ${Object.values(now).reduce((a, b) => a + b, 0)} findings, none over the baseline`)

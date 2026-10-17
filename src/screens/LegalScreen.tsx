@@ -58,7 +58,11 @@ export function LegalScreen({ doc }: { doc: 'privacy' | 'terms' }) {
       ))}
       <p className={styles.help}>{L.contact}</p>
       <div className={styles.quiet}>
-        <Link className="btn btn--ghost btn--sm" to={fromForm ? `${other}?desde=${FROM_FORM}` : other} replace={fromForm}>
+        <Link
+          className="btn btn--ghost btn--sm"
+          to={fromForm ? `${other}?desde=${FROM_FORM}` : other}
+          replace={fromForm}
+        >
           {doc === 'privacy' ? L.terms.title : L.privacy.title}
         </Link>
         {fromForm ? (

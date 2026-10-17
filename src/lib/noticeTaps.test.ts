@@ -17,7 +17,9 @@ function page(at = '/t/nachos-bachelor') {
   vi.stubGlobal('window', { location: { origin: ORIGIN, pathname: u.pathname, search: u.search, hash: u.hash } })
   const send = (data: unknown) => {
     const answers: unknown[] = []
-    sw.dispatchEvent(Object.assign(new Event('message'), { data, ports: [{ postMessage: (x: unknown) => answers.push(x) }] }))
+    sw.dispatchEvent(
+      Object.assign(new Event('message'), { data, ports: [{ postMessage: (x: unknown) => answers.push(x) }] }),
+    )
     return answers
   }
   return { sw, send }

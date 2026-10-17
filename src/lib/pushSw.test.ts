@@ -26,7 +26,10 @@ interface Win {
 
 /** A message channel whose ports talk in a microtask, as a browser's do. */
 class Channel {
-  port1: { onmessage: ((e: { data: unknown }) => void) | null; close: () => void } = { onmessage: null, close: () => undefined }
+  port1: { onmessage: ((e: { data: unknown }) => void) | null; close: () => void } = {
+    onmessage: null,
+    close: () => undefined,
+  }
   port2 = { postMessage: (data: unknown) => queueMicrotask(() => this.port1.onmessage?.({ data })) }
 }
 
@@ -63,7 +66,11 @@ function worker(opts: { badges?: boolean; windows?: Win[] } = {}) {
   })
   const self = {
     addEventListener: (type: string, fn: Handler) => void (handlers[type] = fn),
-    registration: { showNotification: vi.fn(async (title: string, options: Record<string, unknown>) => void shown.push([title, options])) },
+    registration: {
+      showNotification: vi.fn(
+        async (title: string, options: Record<string, unknown>) => void shown.push([title, options]),
+      ),
+    },
     navigator: opts.badges === false ? {} : { setAppBadge: badge.set, clearAppBadge: badge.clear },
     location: { origin: ORIGIN },
     clients: {
@@ -72,7 +79,12 @@ function worker(opts: { badges?: boolean; windows?: Win[] } = {}) {
     },
   }
   const setTimeout = (fn: () => void) => timers.push(fn)
-  new Function('self', 'MessageChannel', 'setTimeout', 'clearTimeout', SOURCE)(self, Channel, setTimeout, () => undefined)
+  new Function('self', 'MessageChannel', 'setTimeout', 'clearTimeout', SOURCE)(
+    self,
+    Channel,
+    setTimeout,
+    () => undefined,
+  )
   return { handlers, shown, badge, opened, focused, navigated, asked, timers, self }
 }
 
@@ -89,17 +101,39 @@ function push(body?: string) {
 function tap(url?: unknown) {
   let wait: Promise<unknown> = Promise.resolve()
   const close = vi.fn()
-  const event = { notification: { close, data: url === undefined ? undefined : { url } }, waitUntil: (p: Promise<unknown>) => void (wait = p) }
+  const event = {
+    notification: { close, data: url === undefined ? undefined : { url } },
+    waitUntil: (p: Promise<unknown>) => void (wait = p),
+  }
   return { event, close, settled: () => wait }
 }
 
 describe('a notice arriving (QA-16)', () => {
   it('shows its title, text and page, and puts the unread count on the icon', async () => {
     const w = worker()
-    const p = push(JSON.stringify({ title: 'Solicitud de amistad', body: 'Ana quiere ser tu amiga en Polo.', url: '/avisos', tag: 'n1', badge: 3 }))
+    const p = push(
+      JSON.stringify({
+        title: 'Solicitud de amistad',
+        body: 'Ana quiere ser tu amiga en Polo.',
+        url: '/avisos',
+        tag: 'n1',
+        badge: 3,
+      }),
+    )
     w.handlers.push!(p.event)
     await p.settled()
-    expect(w.shown).toEqual([['Solicitud de amistad', { body: 'Ana quiere ser tu amiga en Polo.', tag: 'n1', icon: '/icons/icon-192.png', badge: '/icons/badge-96.png', data: { url: '/avisos' } }]])
+    expect(w.shown).toEqual([
+      [
+        'Solicitud de amistad',
+        {
+          body: 'Ana quiere ser tu amiga en Polo.',
+          tag: 'n1',
+          icon: '/icons/icon-192.png',
+          badge: '/icons/badge-96.png',
+          data: { url: '/avisos' },
+        },
+      ],
+    ])
     expect(w.badge.set).toHaveBeenCalledWith(3)
   })
 
@@ -118,10 +152,19 @@ describe('a notice arriving (QA-16)', () => {
 
   it('a PIN phone’s notice carries no count: the icon keeps what it shows (PWA-10)', async () => {
     const w = worker()
-    const p = push(JSON.stringify({ title: 'Nacho’s Bachelor', body: 'Empezó el día 1.', url: '/t/nachos-bachelor/tarjeta', tag: 'n2' }))
+    const p = push(
+      JSON.stringify({
+        title: 'Nacho’s Bachelor',
+        body: 'Empezó el día 1.',
+        url: '/t/nachos-bachelor/tarjeta',
+        tag: 'n2',
+      }),
+    )
     w.handlers.push!(p.event)
     await p.settled()
-    expect(w.shown.map(([title, o]) => [title, o.body, (o.data as { url: string }).url])).toEqual([['Nacho’s Bachelor', 'Empezó el día 1.', '/t/nachos-bachelor/tarjeta']])
+    expect(w.shown.map(([title, o]) => [title, o.body, (o.data as { url: string }).url])).toEqual([
+      ['Nacho’s Bachelor', 'Empezó el día 1.', '/t/nachos-bachelor/tarjeta'],
+    ])
     expect(w.badge.set).not.toHaveBeenCalled()
     expect(w.badge.clear).not.toHaveBeenCalled()
   })
@@ -158,13 +201,22 @@ describe('a notice arriving (QA-16)', () => {
 
 describe('a tap on a notice (QA-16, PWA-12)', () => {
   it('asks the open app to go there with its own router: no reload, no new window', async () => {
-    const w = worker({ windows: [{ url: `${ORIGIN}/t/nachos-bachelor/tarjeta`, focused: true, visibilityState: 'visible', answers: true }] })
+    const w = worker({
+      windows: [
+        { url: `${ORIGIN}/t/nachos-bachelor/tarjeta`, focused: true, visibilityState: 'visible', answers: true },
+      ],
+    })
     const t1 = tap('/t/nachos-bachelor/tarjeta?vista=tarjeta')
     w.handlers.notificationclick!(t1.event)
     await t1.settled()
     expect(t1.close).toHaveBeenCalled()
     expect(w.focused).toEqual([`${ORIGIN}/t/nachos-bachelor/tarjeta`])
-    expect(w.asked).toEqual([{ to: `${ORIGIN}/t/nachos-bachelor/tarjeta`, message: { type: 'navigate', url: `${ORIGIN}/t/nachos-bachelor/tarjeta?vista=tarjeta` } }])
+    expect(w.asked).toEqual([
+      {
+        to: `${ORIGIN}/t/nachos-bachelor/tarjeta`,
+        message: { type: 'navigate', url: `${ORIGIN}/t/nachos-bachelor/tarjeta?vista=tarjeta` },
+      },
+    ])
     expect(w.navigated).toEqual([])
     expect(w.opened).toEqual([])
   })
@@ -194,12 +246,20 @@ describe('a tap on a notice (QA-16, PWA-12)', () => {
   })
 
   it('of several windows, the one in front, else one on screen', async () => {
-    const front = worker({ windows: [{ url: `${ORIGIN}/a` }, { url: `${ORIGIN}/b`, visibilityState: 'visible', answers: true }, { url: `${ORIGIN}/c`, focused: true, answers: true }] })
+    const front = worker({
+      windows: [
+        { url: `${ORIGIN}/a` },
+        { url: `${ORIGIN}/b`, visibilityState: 'visible', answers: true },
+        { url: `${ORIGIN}/c`, focused: true, answers: true },
+      ],
+    })
     const t1 = tap('/avisos')
     front.handlers.notificationclick!(t1.event)
     await t1.settled()
     expect(front.asked.map((a) => a.to)).toEqual([`${ORIGIN}/c`])
-    const visible = worker({ windows: [{ url: `${ORIGIN}/a` }, { url: `${ORIGIN}/b`, visibilityState: 'visible', answers: true }] })
+    const visible = worker({
+      windows: [{ url: `${ORIGIN}/a` }, { url: `${ORIGIN}/b`, visibilityState: 'visible', answers: true }],
+    })
     const t2 = tap('/avisos')
     visible.handlers.notificationclick!(t2.event)
     await t2.settled()

@@ -41,7 +41,13 @@ export function AdminRounds() {
   const rounds = data!.snapshot.rounds
   const players = data!.snapshot.players
   const flags = data!.state.flags
-  const [editing, setEditing] = useState<{ id?: string; number: number; date: string; course_id: string; holes: 9 | 18 } | null>(null)
+  const [editing, setEditing] = useState<{
+    id?: string
+    number: number
+    date: string
+    course_id: string
+    holes: 9 | 18
+  } | null>(null)
   const [teesFor, setTeesFor] = useState<Round | null>(null)
   const [busy, setBusy] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -51,17 +57,29 @@ export function AdminRounds() {
   useEffect(() => {
     void loadRejectedInbox(tournamentId)
   }, [tournamentId])
-  const inboxFor = (rid: string) => (inbox.tournamentId === tournamentId ? inbox.items.filter((x) => x.roundId === rid).length : 0)
+  const inboxFor = (rid: string) =>
+    inbox.tournamentId === tournamentId ? inbox.items.filter((x) => x.roundId === rid).length : 0
   // Phones that still report holes to send (STRAT-02): «Terminar ronda» names them.
   const devices = useTournamentDevices()
   const behind = devices.tournamentId === tournamentId ? withPending(devices.items) : []
-  const behindText = behind.length ? R.devicesBeforeFinish(behind.reduce((n, d) => n + d.pending, 0), behind.map((d) => d.player ?? t.admin.devices.noPlayer)) : ''
+  const behindText = behind.length
+    ? R.devicesBeforeFinish(
+        behind.reduce((n, d) => n + d.pending, 0),
+        behind.map((d) => d.player ?? t.admin.devices.noPlayer),
+      )
+    : ''
 
   async function save() {
     if (!editing) return
     setBusy(true)
     try {
-      await upsertRound(tournamentId, { id: editing.id, number: editing.number, date: editing.date || null, course_id: editing.course_id || null, holes: editing.holes })
+      await upsertRound(tournamentId, {
+        id: editing.id,
+        number: editing.number,
+        date: editing.date || null,
+        course_id: editing.course_id || null,
+        holes: editing.holes,
+      })
       await reload()
       setEditing(null)
     } catch (e) {
@@ -89,7 +107,8 @@ export function AdminRounds() {
     try {
       await setRoundStatus(r.id, s)
       if (s === 'live') await updateTournament(tournamentId, { current_round_id: r.id, status: 'live' })
-      if (s === 'scheduled' && data!.snapshot.tournament.currentRoundId === r.id) await updateTournament(tournamentId, { current_round_id: null })
+      if (s === 'scheduled' && data!.snapshot.tournament.currentRoundId === r.id)
+        await updateTournament(tournamentId, { current_round_id: null })
       await reload()
       setAsk(null)
       toast(t.common.saved)
@@ -116,9 +135,13 @@ export function AdminRounds() {
   const courseTees = (courseId: string | null) => data!.snapshot.courses.find((c) => c.id === courseId)?.tees ?? []
   // A tee chosen for the day stays when the round's course changes: «Tees» shows while any is set, so it can be put back to «Por defecto».
   const hasRoundTees = (rid: string) => data!.snapshot.roundTees.some((x) => x.roundId === rid)
-  const teeName = (teeId: string) => data!.snapshot.courses.flatMap((c) => c.tees).find((tee) => tee.id === teeId)?.name ?? null
+  const teeName = (teeId: string) =>
+    data!.snapshot.courses.flatMap((c) => c.tees).find((tee) => tee.id === teeId)?.name ?? null
   const pendingFor = (rid: string) =>
-    flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length + flags.discrepancies.filter((d) => d.roundId === rid).length + flags.unsignedCards.filter((u) => u.roundId === rid).length + flags.missingPutts.filter((m) => m.roundId === rid).length
+    flags.pendingSnakeTiebreaks.filter((q) => q.roundId === rid).length +
+    flags.discrepancies.filter((d) => d.roundId === rid).length +
+    flags.unsignedCards.filter((u) => u.roundId === rid).length +
+    flags.missingPutts.filter((m) => m.roundId === rid).length
 
   const askBody = ask
     ? ask.kind === 'finish'
@@ -134,7 +157,18 @@ export function AdminRounds() {
     <div className={a.screen}>
       <div className={a.head}>
         <h2>{t.admin.sections.rounds}</h2>
-        <button className="btn btn--primary btn--sm" type="button" onClick={() => setEditing({ number: rounds.reduce((m, r) => Math.max(m, r.number), 0) + 1, date: '', course_id: courses[0]?.id ?? '', holes: 18 })}>
+        <button
+          className="btn btn--primary btn--sm"
+          type="button"
+          onClick={() =>
+            setEditing({
+              number: rounds.reduce((m, r) => Math.max(m, r.number), 0) + 1,
+              date: '',
+              course_id: courses[0]?.id ?? '',
+              holes: 18,
+            })
+          }
+        >
           {R.add}
         </button>
       </div>
@@ -156,7 +190,11 @@ export function AdminRounds() {
                   {dateEs(r.date)}, {course?.name ?? R.noCourse}, {r.holes} {R.holes.toLowerCase()}
                 </span>
               </span>
-              <span className={`chip ${r.status === 'live' ? 'chip--teal' : r.status === 'cancelled' ? 'chip--coral' : ''}`}>{t.roundStatus[r.status]}</span>
+              <span
+                className={`chip ${r.status === 'live' ? 'chip--teal' : r.status === 'cancelled' ? 'chip--coral' : ''}`}
+              >
+                {t.roundStatus[r.status]}
+              </span>
             </div>
             {incomplete && <span className={a.warn}>{t.admin.inbox.incomplete(incomplete.players.length)}</span>}
             {inboxFor(r.id) > 0 && <span className={a.warn}>{R.inboxCount(inboxFor(r.id))}</span>}
@@ -181,11 +219,28 @@ export function AdminRounds() {
                 </button>
               )}
               {(r.status === 'finished' || r.status === 'cancelled') && (
-                <button className="btn btn--secondary btn--sm" type="button" disabled={rb} onClick={() => void status(r, isCurrent ? 'live' : 'scheduled')}>
+                <button
+                  className="btn btn--secondary btn--sm"
+                  type="button"
+                  disabled={rb}
+                  onClick={() => void status(r, isCurrent ? 'live' : 'scheduled')}
+                >
                   {rb ? t.common.saving : isCurrent ? R.reopen : R.reschedule}
                 </button>
               )}
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing({ id: r.id, number: r.number, date: r.date ?? '', course_id: r.courseId ?? '', holes: r.holes })}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                onClick={() =>
+                  setEditing({
+                    id: r.id,
+                    number: r.number,
+                    date: r.date ?? '',
+                    course_id: r.courseId ?? '',
+                    holes: r.holes,
+                  })
+                }
+              >
                 {t.common.edit}
               </button>
               {(courseTees(r.courseId).length > 1 || hasRoundTees(r.id)) && (
@@ -194,11 +249,21 @@ export function AdminRounds() {
                 </button>
               )}
               {r.status !== 'cancelled' && (
-                <button className="btn btn--ghost btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'cancel', round: r })}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  type="button"
+                  disabled={rb}
+                  onClick={() => setAsk({ kind: 'cancel', round: r })}
+                >
                   {R.cancel}
                 </button>
               )}
-              <button className="btn btn--ghost btn--sm" type="button" disabled={rb} onClick={() => setAsk({ kind: 'delete', round: r })}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                disabled={rb}
+                onClick={() => setAsk({ kind: 'delete', round: r })}
+              >
                 {t.common.delete}
               </button>
             </div>
@@ -210,12 +275,37 @@ export function AdminRounds() {
 
       <ConfirmSheet
         open={!!ask}
-        title={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : ask.kind === 'start' ? R.start : t.common.delete) : ''}
+        title={
+          ask
+            ? ask.kind === 'finish'
+              ? R.finish
+              : ask.kind === 'cancel'
+                ? R.cancel
+                : ask.kind === 'start'
+                  ? R.start
+                  : t.common.delete
+            : ''
+        }
         body={askBody}
         danger={ask?.kind === 'cancel' || ask?.kind === 'delete'}
         busy={!!busyId}
-        confirmLabel={ask ? (ask.kind === 'finish' ? R.finish : ask.kind === 'cancel' ? R.cancel : ask.kind === 'start' ? R.start : t.common.delete) : undefined}
-        onConfirm={() => ask && (ask.kind === 'delete' ? void remove(ask.round) : void status(ask.round, ask.kind === 'finish' ? 'finished' : ask.kind === 'start' ? 'live' : 'cancelled'))}
+        confirmLabel={
+          ask
+            ? ask.kind === 'finish'
+              ? R.finish
+              : ask.kind === 'cancel'
+                ? R.cancel
+                : ask.kind === 'start'
+                  ? R.start
+                  : t.common.delete
+            : undefined
+        }
+        onConfirm={() =>
+          ask &&
+          (ask.kind === 'delete'
+            ? void remove(ask.round)
+            : void status(ask.round, ask.kind === 'finish' ? 'finished' : ask.kind === 'start' ? 'live' : 'cancelled'))
+        }
         onClose={() => setAsk(null)}
       />
 
@@ -227,17 +317,30 @@ export function AdminRounds() {
                 <NumberField min={1} value={editing.number} onChange={(v) => setEditing({ ...editing, number: v })} />
               </Field>
               <Field label={R.holes}>
-                <select className="select" value={editing.holes} onChange={(e) => setEditing({ ...editing, holes: Number(e.target.value) === 9 ? 9 : 18 })}>
+                <select
+                  className="select"
+                  value={editing.holes}
+                  onChange={(e) => setEditing({ ...editing, holes: Number(e.target.value) === 9 ? 9 : 18 })}
+                >
                   <option value={18}>18</option>
                   <option value={9}>9</option>
                 </select>
               </Field>
             </div>
             <Field label={R.date}>
-              <input className="input" type="date" value={editing.date} onChange={(e) => setEditing({ ...editing, date: e.target.value })} />
+              <input
+                className="input"
+                type="date"
+                value={editing.date}
+                onChange={(e) => setEditing({ ...editing, date: e.target.value })}
+              />
             </Field>
             <Field label={R.course}>
-              <select className="select" value={editing.course_id} onChange={(e) => setEditing({ ...editing, course_id: e.target.value })}>
+              <select
+                className="select"
+                value={editing.course_id}
+                onChange={(e) => setEditing({ ...editing, course_id: e.target.value })}
+              >
                 <option value="">{R.noCourse}</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -253,7 +356,11 @@ export function AdminRounds() {
         )}
       </Sheet>
 
-      <Sheet open={!!teesFor} onClose={() => setTeesFor(null)} title={teesFor ? `${R.tees}, ${t.round.day(teesFor.number)}` : ''}>
+      <Sheet
+        open={!!teesFor}
+        onClose={() => setTeesFor(null)}
+        title={teesFor ? `${R.tees}, ${t.round.day(teesFor.number)}` : ''}
+      >
         {teesFor && (
           <div className={a.rows}>
             {players.map((p) => {
@@ -275,7 +382,9 @@ export function AdminRounds() {
                           try {
                             await setRoundTee(teesFor.id, p.id, teeId)
                             patch((s) => {
-                              s.roundTees = s.roundTees.filter((x) => !(x.roundId === teesFor.id && x.playerId === p.id))
+                              s.roundTees = s.roundTees.filter(
+                                (x) => !(x.roundId === teesFor.id && x.playerId === p.id),
+                              )
                               if (teeId) s.roundTees.push({ roundId: teesFor.id, playerId: p.id, teeId })
                             })
                             toast(R.teeSaved)
@@ -286,7 +395,9 @@ export function AdminRounds() {
                       }
                     >
                       <option value="">{R.teeDefault}</option>
-                      {otherCourse && <option value={otherCourse.teeId}>{R.teeOtherCourse(teeName(otherCourse.teeId))}</option>}
+                      {otherCourse && (
+                        <option value={otherCourse.teeId}>{R.teeOtherCourse(teeName(otherCourse.teeId))}</option>
+                      )}
                       {courseTees(teesFor.courseId).map((tee) => (
                         <option key={tee.id} value={tee.id}>
                           {tee.name}

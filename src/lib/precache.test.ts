@@ -18,17 +18,28 @@ const made: string[] = []
 function build(edit: (files: Record<string, string>) => void = () => undefined) {
   const dir = mkdtempSync(join(tmpdir(), 'precache-'))
   made.push(dir)
-  const listed = ['index.html', 'assets/index-a1.js', 'assets/index-b2.css', 'assets/font-c3.woff2', 'manifest.webmanifest', 'icons/icon-192.png', 'push-sw.js']
+  const listed = [
+    'index.html',
+    'assets/index-a1.js',
+    'assets/index-b2.css',
+    'assets/font-c3.woff2',
+    'manifest.webmanifest',
+    'icons/icon-192.png',
+    'push-sw.js',
+  ]
   const files: Record<string, string> = {
-    'index.html': '<script type="module" src="/assets/index-a1.js"></script><link rel="stylesheet" href="/assets/index-b2.css"><link rel="manifest" href="/manifest.webmanifest">',
+    'index.html':
+      '<script type="module" src="/assets/index-a1.js"></script><link rel="stylesheet" href="/assets/index-b2.css"><link rel="manifest" href="/manifest.webmanifest">',
     'assets/index-a1.js': 'console.log(1)',
-    'assets/index-b2.css': '@font-face{src:url(/assets/font-c3.woff2) format("woff2"),url(/assets/font-c3.woff) format("woff")}',
+    'assets/index-b2.css':
+      '@font-face{src:url(/assets/font-c3.woff2) format("woff2"),url(/assets/font-c3.woff) format("woff")}',
     'assets/font-c3.woff2': 'font',
     'manifest.webmanifest': JSON.stringify({ icons: [{ src: '/icons/icon-192.png?v=abc' }] }),
     'icons/icon-192.png': 'png',
     'push-sw.js': PUSH,
   }
-  files['sw.js'] = `importScripts("/push-sw.js?v=${fp(PUSH)}");e.precacheAndRoute([${listed.map((u) => `{url:"${u}",revision:"r"}`).join(',')},{url:"index.html",revision:"r"}],{})`
+  files['sw.js'] =
+    `importScripts("/push-sw.js?v=${fp(PUSH)}");e.precacheAndRoute([${listed.map((u) => `{url:"${u}",revision:"r"}`).join(',')},{url:"index.html",revision:"r"}],{})`
   edit(files)
   for (const [path, body] of Object.entries(files)) {
     mkdirSync(join(dir, path, '..'), { recursive: true })
@@ -42,7 +53,10 @@ afterEach(() => {
 
 describe('what the worker keeps for no signal (QA-16)', () => {
   it('reads the precache list once per file', () => {
-    expect(precached('[{url:"a.js",revision:null},{url:"b.css",revision:"x"},{url:"a.js",revision:null}]')).toEqual(['a.js', 'b.css'])
+    expect(precached('[{url:"a.js",revision:null},{url:"b.css",revision:"x"},{url:"a.js",revision:null}]')).toEqual([
+      'a.js',
+      'b.css',
+    ])
   })
 
   it('a whole build passes', () => {
@@ -55,7 +69,13 @@ describe('what the worker keeps for no signal (QA-16)', () => {
   })
 
   it('so are the shell, what it loads, the manifest and its icons', () => {
-    const d = build((f) => void (f['sw.js'] = f['sw.js']!.replace(/\{url:"(index\.html|assets\/index-a1\.js|icons\/icon-192\.png)",revision:"r"\},?/g, '')))
+    const d = build(
+      (f) =>
+        void (f['sw.js'] = f['sw.js']!.replace(
+          /\{url:"(index\.html|assets\/index-a1\.js|icons\/icon-192\.png)",revision:"r"\},?/g,
+          '',
+        )),
+    )
     expect(precacheProblems(d)).toEqual([
       'index.html is not precached (every route opens it)',
       'assets/index-a1.js is not precached (index.html loads it)',
@@ -65,7 +85,11 @@ describe('what the worker keeps for no signal (QA-16)', () => {
 
   it('a push handler changed without the worker importing it anew would stay old on every phone', () => {
     const d = build((f) => void (f['push-sw.js'] = `${PUSH}\n// changed`))
-    expect(precacheProblems(d)).toEqual([expect.stringMatching(/^the worker imports push-sw\.js at \?v=[0-9a-f]{10}, but the file's is [0-9a-f]{10}: phones would keep the old handler$/)])
+    expect(precacheProblems(d)).toEqual([
+      expect.stringMatching(
+        /^the worker imports push-sw\.js at \?v=[0-9a-f]{10}, but the file's is [0-9a-f]{10}: phones would keep the old handler$/,
+      ),
+    ])
   })
 
   it('an image a notice shows (its icon, the badge) is precached with it (PWA-12)', () => {
@@ -78,7 +102,10 @@ describe('what the worker keeps for no signal (QA-16)', () => {
     expect(precacheProblems(d)).toEqual(['icons/badge-96.png is not precached (a notice shows it)'])
     const listed = build((f) => {
       f['push-sw.js'] = shows
-      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`).replace('{url:"push-sw.js"', '{url:"icons/badge-96.png",revision:"r"},{url:"push-sw.js"')
+      f['sw.js'] = f['sw.js']!.replace(/push-sw\.js\?v=[0-9a-f]+/, `push-sw.js?v=${fp(shows)}`).replace(
+        '{url:"push-sw.js"',
+        '{url:"icons/badge-96.png",revision:"r"},{url:"push-sw.js"',
+      )
       f['icons/badge-96.png'] = 'png'
     })
     expect(precacheProblems(listed)).toEqual([])
@@ -92,7 +119,8 @@ describe('what the worker keeps for no signal (QA-16)', () => {
   })
 
   describe('the iPhone launch images (PWA-14)', () => {
-    const LINK = '<link rel="apple-touch-startup-image" media="screen and (device-width: 393px)" href="/splash/iphone-1179x2556.png?v=abc">'
+    const LINK =
+      '<link rel="apple-touch-startup-image" media="screen and (device-width: 393px)" href="/splash/iphone-1179x2556.png?v=abc">'
     const withLaunch = (f: Record<string, string>) => {
       f['index.html'] = `${f['index.html']}${LINK}`
       f['splash/iphone-1179x2556.png'] = 'png'
@@ -113,9 +141,14 @@ describe('what the worker keeps for no signal (QA-16)', () => {
     it('one precached is refused: every phone would keep it for nothing', () => {
       const d = build((f) => {
         withLaunch(f)
-        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"splash/iphone-1179x2556.png",revision:"r"},{url:"push-sw.js"')
+        f['sw.js'] = f['sw.js']!.replace(
+          '{url:"push-sw.js"',
+          '{url:"splash/iphone-1179x2556.png",revision:"r"},{url:"push-sw.js"',
+        )
       })
-      expect(precacheProblems(d)).toEqual(['splash/iphone-1179x2556.png is precached, but iOS reads launch images only when the app is added to the home screen'])
+      expect(precacheProblems(d)).toEqual([
+        'splash/iphone-1179x2556.png is precached, but iOS reads launch images only when the app is added to the home screen',
+      ])
     })
 
     it('any other image index.html loads is still needed in the precache', () => {
@@ -126,7 +159,10 @@ describe('what the worker keeps for no signal (QA-16)', () => {
 
   describe('the install sheet’s screenshots (PWA-14)', () => {
     const withShot = (f: Record<string, string>) => {
-      f['manifest.webmanifest'] = JSON.stringify({ icons: [{ src: '/icons/icon-192.png?v=abc' }], screenshots: [{ src: '/screenshots/envivo.webp?v=def' }] })
+      f['manifest.webmanifest'] = JSON.stringify({
+        icons: [{ src: '/icons/icon-192.png?v=abc' }],
+        screenshots: [{ src: '/screenshots/envivo.webp?v=def' }],
+      })
       f['screenshots/envivo.webp'] = 'webp'
     }
 
@@ -139,12 +175,19 @@ describe('what the worker keeps for no signal (QA-16)', () => {
         withShot(f)
         delete f['screenshots/envivo.webp']
       })
-      expect(precacheProblems(missing)).toEqual([`screenshots/envivo.webp is a screenshot the manifest names but not in ${missing}`])
+      expect(precacheProblems(missing)).toEqual([
+        `screenshots/envivo.webp is a screenshot the manifest names but not in ${missing}`,
+      ])
       const held = build((f) => {
         withShot(f)
-        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"screenshots/envivo.webp",revision:"r"},{url:"push-sw.js"')
+        f['sw.js'] = f['sw.js']!.replace(
+          '{url:"push-sw.js"',
+          '{url:"screenshots/envivo.webp",revision:"r"},{url:"push-sw.js"',
+        )
       })
-      expect(precacheProblems(held)).toEqual(['screenshots/envivo.webp is precached, but only the install sheet shows it'])
+      expect(precacheProblems(held)).toEqual([
+        'screenshots/envivo.webp is precached, but only the install sheet shows it',
+      ])
     })
   })
 
@@ -162,9 +205,14 @@ describe('what the worker keeps for no signal (QA-16)', () => {
       expect(precacheProblems(build(withExt))).toEqual([])
       const held = build((f) => {
         withExt(f)
-        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"assets/font-ext-d4.woff2",revision:"r"},{url:"push-sw.js"')
+        f['sw.js'] = f['sw.js']!.replace(
+          '{url:"push-sw.js"',
+          '{url:"assets/font-ext-d4.woff2",revision:"r"},{url:"push-sw.js"',
+        )
       })
-      expect(precacheProblems(held)).toEqual(['assets/font-ext-d4.woff2 is precached, but its letters are not Spanish: the browser asks for it only when a page needs one'])
+      expect(precacheProblems(held)).toEqual([
+        'assets/font-ext-d4.woff2 is precached, but its letters are not Spanish: the browser asks for it only when a page needs one',
+      ])
     })
 
     it('left out with no rule to keep it once used, or missing from the build, it is named', () => {
@@ -172,12 +220,16 @@ describe('what the worker keeps for no signal (QA-16)', () => {
         withExt(f)
         f['sw.js'] = f['sw.js']!.replace(ROUTE, '')
       })
-      expect(precacheProblems(unkept)).toEqual(['the worker keeps no font it loads on demand: a face left out of the precache must be cached when used'])
+      expect(precacheProblems(unkept)).toEqual([
+        'the worker keeps no font it loads on demand: a face left out of the precache must be cached when used',
+      ])
       const missing = build((f) => {
         withExt(f)
         delete f['assets/font-ext-d4.woff2']
       })
-      expect(precacheProblems(missing)).toEqual([`assets/font-ext-d4.woff2 is a font the styles name but not in ${missing}`])
+      expect(precacheProblems(missing)).toEqual([
+        `assets/font-ext-d4.woff2 is a font the styles name but not in ${missing}`,
+      ])
     })
 
     it('the Latin face is still needed, its range or not', () => {
@@ -190,24 +242,36 @@ describe('what the worker keeps for no signal (QA-16)', () => {
 
     it('a 512 px icon ships and is not precached: only the install reads it', () => {
       const with512 = (f: Record<string, string>) => {
-        f['manifest.webmanifest'] = JSON.stringify({ icons: [{ src: '/icons/icon-192.png?v=abc', sizes: '192x192' }, { src: '/icons/icon-512.png?v=def', sizes: '512x512' }] })
+        f['manifest.webmanifest'] = JSON.stringify({
+          icons: [
+            { src: '/icons/icon-192.png?v=abc', sizes: '192x192' },
+            { src: '/icons/icon-512.png?v=def', sizes: '512x512' },
+          ],
+        })
         f['icons/icon-512.png'] = 'png'
       }
       expect(precacheProblems(build(with512))).toEqual([])
       const held = build((f) => {
         with512(f)
-        f['sw.js'] = f['sw.js']!.replace('{url:"push-sw.js"', '{url:"icons/icon-512.png",revision:"r"},{url:"push-sw.js"')
+        f['sw.js'] = f['sw.js']!.replace(
+          '{url:"push-sw.js"',
+          '{url:"icons/icon-512.png",revision:"r"},{url:"push-sw.js"',
+        )
       })
       expect(precacheProblems(held)).toEqual(['icons/icon-512.png is precached, but only the install reads it'])
       const missing = build((f) => {
         with512(f)
         delete f['icons/icon-512.png']
       })
-      expect(precacheProblems(missing)).toEqual([`icons/icon-512.png is an icon the manifest names but not in ${missing}`])
+      expect(precacheProblems(missing)).toEqual([
+        `icons/icon-512.png is an icon the manifest names but not in ${missing}`,
+      ])
     })
   })
 
   it('no build at all says so', () => {
-    expect(precacheProblems(join(tmpdir(), 'no-such-build'))).toEqual([`${join(tmpdir(), 'no-such-build')}/sw.js is missing: build first`])
+    expect(precacheProblems(join(tmpdir(), 'no-such-build'))).toEqual([
+      `${join(tmpdir(), 'no-such-build')}/sw.js is missing: build first`,
+    ])
   })
 })

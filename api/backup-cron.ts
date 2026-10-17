@@ -70,7 +70,12 @@ async function readTable(url: string, key: string, table: string, order: string,
   for (;;) {
     const from = rows.length
     const r = await fetch(`${url}/rest/v1/${table}?select=*&order=${order}${filter}`, {
-      headers: { ...headers(key), Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items', ...(from === 0 ? { Prefer: 'count=exact' } : {}) },
+      headers: {
+        ...headers(key),
+        Range: `${from}-${from + PAGE - 1}`,
+        'Range-Unit': 'items',
+        ...(from === 0 ? { Prefer: 'count=exact' } : {}),
+      },
     })
     if (!r.ok) throw new Error(`${table}: HTTP ${r.status}`)
     const page = (await r.json()) as Row[]
@@ -139,7 +144,10 @@ async function readHistory(url: string, key: string, maxId: number): Promise<Row
   const rows: Row[] = []
   let last = 0
   for (;;) {
-    const r = await fetch(`${url}/rest/v1/${HISTORY}?select=*&order=id&and=(id.gt.${last},id.lte.${maxId})&limit=${PAGE}`, { headers: headers(key) })
+    const r = await fetch(
+      `${url}/rest/v1/${HISTORY}?select=*&order=id&and=(id.gt.${last},id.lte.${maxId})&limit=${PAGE}`,
+      { headers: headers(key) },
+    )
     if (!r.ok) throw new Error(`${HISTORY}: HTTP ${r.status}`)
     const page = (await r.json()) as Row[]
     rows.push(...page)
@@ -155,7 +163,9 @@ function scrub(dump: Dump): Dump {
   return {
     ...dump,
     tables: withoutSecrets(dump.tables),
-    ...(dump.auth ? { auth: { users: withoutSecrets(dump.auth.users), identities: withoutSecrets(dump.auth.identities) } } : {}),
+    ...(dump.auth
+      ? { auth: { users: withoutSecrets(dump.auth.users), identities: withoutSecrets(dump.auth.identities) } }
+      : {}),
   }
 }
 
@@ -166,7 +176,11 @@ async function readPaged(url: string, key: string, at: Date): Promise<Dump> {
 }
 
 /** Tell Admin › Salud how this run went; its row's id, to add the files to. Never fails the backup. */
-async function record(url: string, key: string, run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string }): Promise<number | null> {
+async function record(
+  url: string,
+  key: string,
+  run: { ok: boolean; key?: string; bytes?: number; tables?: number; rows?: number; error?: string },
+): Promise<number | null> {
   try {
     const r = await fetch(`${url}/rest/v1/backup_runs`, {
       method: 'POST',
@@ -182,7 +196,12 @@ async function record(url: string, key: string, run: { ok: boolean; key?: string
 }
 
 /** The night's files, on its backup_runs row (0039's `files`). Never fails the backup. */
-async function recordFiles(url: string, key: string, id: number, files: { copied: number; pending: number; failed: number }) {
+async function recordFiles(
+  url: string,
+  key: string,
+  id: number,
+  files: { copied: number; pending: number; failed: number },
+) {
   try {
     await fetch(`${url}/rest/v1/backup_runs?id=eq.${id}`, {
       method: 'PATCH',
@@ -266,10 +285,13 @@ async function copyFiles(env: Env, r2: AwsClient, objects: Row[], deadline: numb
       continue
     }
     try {
-      const got = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(name)}`, {
-        headers: headers(env.SUPABASE_SECRET_KEY!),
-        signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
-      })
+      const got = await fetch(
+        `${env.SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodePath(name)}`,
+        {
+          headers: headers(env.SUPABASE_SECRET_KEY!),
+          signal: AbortSignal.timeout(FILE_TIMEOUT_MS),
+        },
+      )
       if (!got.ok) throw new Error(String(got.status))
       const put = await r2.fetch(`${base}/files/${encodeURIComponent(bucket)}/${encodePath(name)}`, {
         method: 'PUT',
@@ -297,9 +319,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({ error: 'unauthorized' })
     return
   }
-  const missing = ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BACKUP_BUCKET'].filter(
-    (k) => !env[k],
-  )
+  const missing = [
+    'SUPABASE_URL',
+    'SUPABASE_SECRET_KEY',
+    'R2_ACCOUNT_ID',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_BACKUP_BUCKET',
+  ].filter((k) => !env[k])
   if (missing.length) {
     res.status(503).json({ error: 'backup not configured', missing })
     return
@@ -320,7 +347,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = gzipSync(JSON.stringify(dump))
   const objectKey = backupKey(startedAt)
-  const r2 = new AwsClient({ accessKeyId: env.R2_ACCESS_KEY_ID!, secretAccessKey: env.R2_SECRET_ACCESS_KEY!, service: 's3', region: 'auto' })
+  const r2 = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY!,
+    service: 's3',
+    region: 'auto',
+  })
   // A request that never answers (R2 unreachable) throws: it is a failed night like a refusal, recorded for
   // Salud, never an unhandled 500 that leaves no row behind (QA-14).
   const put = await r2
@@ -339,10 +371,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
   // The night is safe in R2 before any file is copied: a slow copy can't lose it.
-  const runId = await record(url, key, { ok: true, key: objectKey, bytes: body.length, tables: Object.keys(counts).length, rows })
+  const runId = await record(url, key, {
+    ok: true,
+    key: objectKey,
+    bytes: body.length,
+    tables: Object.keys(counts).length,
+    rows,
+  })
   // Deleted only once the night that still holds it is safe (TRUST-18).
   const deleted = await retention(url, key)
-  const files = dump.storage ? await copyFiles(env, r2, dump.storage.objects, startedAt.getTime() + FILES_DEADLINE_MS) : null
+  const files = dump.storage
+    ? await copyFiles(env, r2, dump.storage.objects, startedAt.getTime() + FILES_DEADLINE_MS)
+    : null
   if (files && runId != null) await recordFiles(url, key, runId, files)
   res.status(200).json({
     ok: true,

@@ -4,9 +4,15 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const rpc = vi.fn(async (_fn: string, _args?: unknown) => ({ data: {} as unknown, error: null as null | { message: string; code: string } }))
+const rpc = vi.fn(async (_fn: string, _args?: unknown) => ({
+  data: {} as unknown,
+  error: null as null | { message: string; code: string },
+}))
 vi.mock('../lib/supabase', () => ({ supabase: () => ({ rpc }) }))
-const account = vi.hoisted(() => ({ unsentReason: vi.fn(async (_a: string): Promise<string | null> => null), forgetSignedOut: vi.fn(async () => undefined) }))
+const account = vi.hoisted(() => ({
+  unsentReason: vi.fn(async (_a: string): Promise<string | null> => null),
+  forgetSignedOut: vi.fn(async () => undefined),
+}))
 vi.mock('./account', () => account)
 const auth = vi.hoisted(() => ({ signOut: vi.fn(async () => true) }))
 vi.mock('./auth', () => auth)
@@ -22,7 +28,10 @@ beforeEach(() => {
 describe('deleteMyAccount (TRUST-09)', () => {
   it('refused while writes wait: no call goes out, the reason comes back', async () => {
     account.unsentReason.mockResolvedValueOnce('Lo capturado en Ensayo aún no se sube.')
-    expect(await deleteMyAccount('ana@polo.test')).toEqual({ done: false, reason: 'Lo capturado en Ensayo aún no se sube.' })
+    expect(await deleteMyAccount('ana@polo.test')).toEqual({
+      done: false,
+      reason: 'Lo capturado en Ensayo aún no se sube.',
+    })
     expect(account.unsentReason).toHaveBeenCalledWith('delete')
     expect(rpc).not.toHaveBeenCalled()
   })

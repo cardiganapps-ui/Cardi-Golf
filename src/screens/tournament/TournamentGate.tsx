@@ -55,7 +55,12 @@ const STEP_TIMEOUT_MS = REQUEST_TIMEOUT_MS + 3_000
 const LOAD_TIMEOUT_MS = 2 * REQUEST_TIMEOUT_MS + 6_000
 
 /** `dropped`: writes this phone still had for the tournament that is gone, moved to the rejected list. */
-type Phase = { kind: 'loading' } | { kind: 'notFound'; dropped: number } | { kind: 'error'; error: unknown } | { kind: 'enter'; lookup: LookupResult } | { kind: 'in'; lookup: LookupResult; me: Me }
+type Phase =
+  | { kind: 'loading' }
+  | { kind: 'notFound'; dropped: number }
+  | { kind: 'error'; error: unknown }
+  | { kind: 'enter'; lookup: LookupResult }
+  | { kind: 'in'; lookup: LookupResult; me: Me }
 
 export function TournamentGate() {
   const { slug = '' } = useParams()
@@ -105,7 +110,9 @@ export function TournamentGate() {
     if (!cached || settled.current || openSlug.current !== slug) return false
     useTournament.getState().seed(cached.entry.tournamentId, cached.snapshot, cached.savedAt)
     refreshOutboxCounters()
-    setPhase((p) => (p.kind === 'loading' || p.kind === 'error' ? { kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me } : p))
+    setPhase((p) =>
+      p.kind === 'loading' || p.kind === 'error' ? { kind: 'in', lookup: cached.entry.lookup, me: cached.entry.me } : p,
+    )
     return true
   }, [slug])
 
@@ -140,7 +147,10 @@ export function TournamentGate() {
   const askSoon = useCallback(() => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) return
     clearTimeout(soon.current)
-    soon.current = setTimeout(() => retryNow.current(), Math.min(CACHE_RETRY_MS, RETRY_SOON_MS * 2 ** failures.current++))
+    soon.current = setTimeout(
+      () => retryNow.current(),
+      Math.min(CACHE_RETRY_MS, RETRY_SOON_MS * 2 ** failures.current++),
+    )
   }, [])
 
   const ask = useCallback(async () => {
@@ -217,7 +227,8 @@ export function TournamentGate() {
         if (stale()) return
         // The boards as a confirmed member reads them: a hole of a day the Comité deleted can never go out (V2).
         // Not waited for: it asks the server again before it rejects anything (NEW-1), and publishes what it moved.
-        if ((m.playerId || m.isOrganizer) && useTournament.getState().source === 'server') void rejectGoneRounds(lookup.id).catch(() => 0)
+        if ((m.playerId || m.isOrganizer) && useTournament.getState().source === 'server')
+          void rejectGoneRounds(lookup.id).catch(() => 0)
         refreshOutboxCounters()
         // The boards came: the asking is over. They didn't: ask again soon.
         if (useTournament.getState().source === 'server') failures.current = 0
@@ -225,7 +236,8 @@ export function TournamentGate() {
         // The lookup worked but the snapshot did not: still better to show what we have.
         if (!useTournament.getState().data && !platform) {
           const cached = await readCached(slug)
-          if (cached?.entry.tournamentId === lookup.id && !stale()) useTournament.getState().seed(lookup.id, cached.snapshot, cached.savedAt)
+          if (cached?.entry.tournamentId === lookup.id && !stale())
+            useTournament.getState().seed(lookup.id, cached.snapshot, cached.savedAt)
         }
       } else {
         // Not in this tournament any more (the device was released, the link removed): its saved boards go too.
@@ -301,7 +313,10 @@ export function TournamentGate() {
       if (signOutsAsked() !== signOutsAtOpen.current && signedOutOnPurpose()) return
       const p = phaseNow.current
       const st = useTournament.getState()
-      const waiting = p.kind === 'loading' || p.kind === 'error' || (p.kind === 'in' && (recheck.current || st.source !== 'server' || st.realtime === 'off'))
+      const waiting =
+        p.kind === 'loading' ||
+        p.kind === 'error' ||
+        (p.kind === 'in' && (recheck.current || st.source !== 'server' || st.realtime === 'off'))
       if (asking.current > 0 || !waiting) return
       if (typeof navigator !== 'undefined' && !navigator.onLine) return
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
@@ -373,7 +388,15 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox error={phase.error} onRetry={() => void resolve()} fallback={<Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to="/">{t.errors.backHome}</Link>} />
+        <ErrorBox
+          error={phase.error}
+          onRetry={() => void resolve()}
+          fallback={
+            <Link className={buttonClass({ variant: 'ghost', size: 'sm' })} to="/">
+              {t.errors.backHome}
+            </Link>
+          }
+        />
       </div>
     )
   }
@@ -384,7 +407,10 @@ export function TournamentGate() {
     return (
       <div className="screen">
         <Wordmark />
-        <ErrorBox error={storeError} onRetry={() => void load(phase.lookup.id, { keepOnPhone: phase.me.via !== 'platform' })} />
+        <ErrorBox
+          error={storeError}
+          onRetry={() => void load(phase.lookup.id, { keepOnPhone: phase.me.via !== 'platform' })}
+        />
       </div>
     )
   }
@@ -397,7 +423,17 @@ export function TournamentGate() {
     )
   }
   return (
-    <Ctx.Provider value={{ tournamentId: phase.lookup.id, slug, lookup: phase.lookup, me: phase.me, refresh: resolve, retry: askAgain, leave }}>
+    <Ctx.Provider
+      value={{
+        tournamentId: phase.lookup.id,
+        slug,
+        lookup: phase.lookup,
+        me: phase.me,
+        refresh: resolve,
+        retry: askAgain,
+        leave,
+      }}
+    >
       {/* Every money render reads the tournament's currency (ARCH-06). */}
       <TournamentCurrency>
         <Outlet />

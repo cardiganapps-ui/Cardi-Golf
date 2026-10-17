@@ -15,7 +15,10 @@ import { setTournamentCrew } from './crews'
 import { confirmAdults } from './myData'
 import { useTournament } from './tournamentStore'
 
-export type QuickPlayer = { kind: 'me'; index?: number | null } | { kind: 'friend'; handle: string; index?: number | null } | { kind: 'guest'; name: string; index?: number | null }
+export type QuickPlayer =
+  | { kind: 'me'; index?: number | null }
+  | { kind: 'friend'; handle: string; index?: number | null }
+  | { kind: 'guest'; name: string; index?: number | null }
 
 export interface QuickRoundInput {
   name: string
@@ -30,7 +33,11 @@ export interface QuickRoundInput {
   adults?: boolean
 }
 
-export async function createQuickRound({ crewId, adults, ...input }: QuickRoundInput): Promise<{ id: string; slug: string }> {
+export async function createQuickRound({
+  crewId,
+  adults,
+  ...input
+}: QuickRoundInput): Promise<{ id: string; slug: string }> {
   const created = await rpc('create_quick_round', { p: input }).as<{ id: string; slug: string }>()
   step('quick_round_created')
   // Created under the consent line (TRUST-05).

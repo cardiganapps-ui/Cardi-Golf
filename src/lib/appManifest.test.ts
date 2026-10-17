@@ -15,7 +15,9 @@ import { LAUNCH_MARK_PX } from './launchImages'
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 function token(name: string): string | undefined {
-  return read('../styles/tokens.css').match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})\\b`))?.[1]?.toLowerCase()
+  return read('../styles/tokens.css')
+    .match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})\\b`))?.[1]
+    ?.toLowerCase()
 }
 /** A PNG's own size, from its header. */
 function pngSize(path: string): { width: number; height: number } {
@@ -58,7 +60,8 @@ describe('a tournament’s manifest (PWA-09)', () => {
   })
 
   it('anything that is not a slug gets the app’s own start URL', () => {
-    for (const t of ['', '_/full12-live', '../admin', 'a b', 'x', ['a', 'b']]) expect(call({ t }).json.start_url).toBe('/')
+    for (const t of ['', '_/full12-live', '../admin', 'a b', 'x', ['a', 'b']])
+      expect(call({ t }).json.start_url).toBe('/')
   })
 })
 

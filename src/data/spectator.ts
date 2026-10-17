@@ -35,7 +35,12 @@ function asLink(v: unknown): SpectatorLink | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null
   const x = v as Record<string, unknown>
   if (typeof x.token !== 'string' || !TOKEN_SHAPE.test(x.token)) return null
-  return { token: x.token, money: x.money === true, createdAt: typeof x.createdAt === 'string' ? x.createdAt : '', rotatedAt: typeof x.rotatedAt === 'string' ? x.rotatedAt : null }
+  return {
+    token: x.token,
+    money: x.money === true,
+    createdAt: typeof x.createdAt === 'string' ? x.createdAt : '',
+    rotatedAt: typeof x.rotatedAt === 'string' ? x.rotatedAt : null,
+  }
 }
 
 /** The tournament's link, for its Comité; null when there is none. */
@@ -51,9 +56,19 @@ export async function spectatorLink(tournamentId: string): Promise<SpectatorLink
  * Comité phone made it, changed it or switched it off meanwhile), so a stale
  * card never shows the money on a link already shared without asking first.
  */
-export async function saveSpectatorLink(tournamentId: string, money: boolean, seen: SpectatorLink | null, newToken = false): Promise<SpectatorLink | null> {
+export async function saveSpectatorLink(
+  tournamentId: string,
+  money: boolean,
+  seen: SpectatorLink | null,
+  newToken = false,
+): Promise<SpectatorLink | null> {
   return asLink(
-    await rpc('save_spectator_link', { p_tournament_id: tournamentId, p_money: money, p_seen: seen ? { token: seen.token, money: seen.money } : null, p_new_token: newToken }),
+    await rpc('save_spectator_link', {
+      p_tournament_id: tournamentId,
+      p_money: money,
+      p_seen: seen ? { token: seen.token, money: seen.money } : null,
+      p_new_token: newToken,
+    }),
   )
 }
 
@@ -64,13 +79,15 @@ export async function deleteSpectatorLink(tournamentId: string): Promise<void> {
 
 /** Where a link opens, on this host (never a hard-coded one, CLAUDE.md §3). */
 export const spectatorPath = (token: string) => `/v/${token}`
-export const spectatorUrl = (token: string) => `${typeof window === 'undefined' ? '' : window.location.origin}${spectatorPath(token)}`
+export const spectatorUrl = (token: string) =>
+  `${typeof window === 'undefined' ? '' : window.location.origin}${spectatorPath(token)}`
 
 /** The shape of a token: anything else is no link, and is never sent. */
 export const TOKEN_SHAPE = /^[A-Za-z0-9_-]{24}$/
 
 /** What the page polls: the boards, or the version it already holds when nothing changed. */
-export type BoardAnswer = { same: true; version: string } | { same: false; version: string; money: boolean; snapshot: Snapshot }
+export type BoardAnswer =
+  { same: true; version: string } | { same: false; version: string; money: boolean; snapshot: Snapshot }
 
 /** The store's id for one link's boards: a short hash of the token (a key, not a secret: the token is in the address). */
 export function spectatorStoreId(token: string): string {
@@ -91,14 +108,39 @@ export async function spectatorBoard(token: string, seen: string | null): Promis
   if (!raw || typeof raw !== 'object') return null
   const answer = parseAnswer('spectator_board', BoardSchema, raw)
   if (answer.same === true) return { same: true, version: String(answer.version) }
-  return { same: false, version: typeof answer.version === 'string' ? answer.version : '', money: answer.money === true, snapshot: snapshotFromBoard(answer, spectatorStoreId(token)) }
+  return {
+    same: false,
+    version: typeof answer.version === 'string' ? answer.version : '',
+    money: answer.money === true,
+    snapshot: snapshotFromBoard(answer, spectatorStoreId(token)),
+  }
 }
 
 /** The tables the answer carries, by name: the snapshot's own. */
 const TABLES = [
-  'players', 'courses', 'tees', 'holes', 'rounds', 'groups', 'group_members', 'round_tees', 'pairs', 'teams', 'team_members', 'scores',
-  'snake_tiebreaks', 'card_signatures', 'handicap_overrides', 'game_entries', 'hole_awards', 'game_results',
-  'calcutta_lots', 'calcutta_bids', 'calcutta_buybacks', 'payments', 'money_adjustments',
+  'players',
+  'courses',
+  'tees',
+  'holes',
+  'rounds',
+  'groups',
+  'group_members',
+  'round_tees',
+  'pairs',
+  'teams',
+  'team_members',
+  'scores',
+  'snake_tiebreaks',
+  'card_signatures',
+  'handicap_overrides',
+  'game_entries',
+  'hole_awards',
+  'game_results',
+  'calcutta_lots',
+  'calcutta_bids',
+  'calcutta_buybacks',
+  'payments',
+  'money_adjustments',
 ] as const
 
 const boardRow = z.record(z.string(), z.unknown())
@@ -118,7 +160,9 @@ const BoardSchema = z.looseObject({
 
 /** spectator_board's answer as the snapshot the engine reads, under the id the store keeps it by. */
 export function snapshotFromBoard(answer: Row, id: string): Snapshot {
-  const rows: SnapshotRows = { tournament: { ...((answer.tournament as Row | undefined) ?? {}), id, slug: '', join_code: '' } }
+  const rows: SnapshotRows = {
+    tournament: { ...((answer.tournament as Row | undefined) ?? {}), id, slug: '', join_code: '' },
+  }
   for (const table of TABLES) if (Array.isArray(answer[table])) rows[table] = answer[table] as Row[]
   return forSpectators(snapshotFromRows(rows), answer.money === true, id)
 }
@@ -167,13 +211,20 @@ const sidePot = (g: unknown) => isObject(g) && isObject(g.money) && g.money.sour
 /** The side pots' ids: «Sin dinero» leaves them out, with who is in them, their claims and results. */
 function sidePotIds(raw: unknown): Set<string> {
   const games = isObject(raw) && Array.isArray(raw.games) ? raw.games : []
-  return new Set(games.filter(sidePot).map((g) => (g as { id?: unknown }).id).filter((id): id is string => typeof id === 'string'))
+  return new Set(
+    games
+      .filter(sidePot)
+      .map((g) => (g as { id?: unknown }).id)
+      .filter((id): id is string => typeof id === 'string'),
+  )
 }
 
 /** A side game as a link shows it: a custom bet without its description (the Comité's free text), and without money just for fun. */
 function spectatorGame(g: unknown, money: boolean): unknown {
   if (!isObject(g)) return g
-  const out: Record<string, unknown> = money ? { ...g } : { ...g, money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } }
+  const out: Record<string, unknown> = money
+    ? { ...g }
+    : { ...g, money: { source: 'none', buyIn: 0, amount: 0, stake: 0, split: [100] } }
   if (g.type === 'custom' && isObject(g.options)) out.options = { ...g.options, description: '' }
   return out
 }
@@ -208,16 +259,36 @@ export function spectatorSettings(input: unknown, money: boolean): unknown {
   const raw = pickBySpec(normalizeLegacySettings(withoutUnknownGames(input)), SPECTATOR_SETTINGS_SPEC)
   if (!isObject(raw)) return raw
   const known = Array.isArray(raw.games) ? raw.games : []
-  if (money) return Array.isArray(raw.games) || placeholders.length ? { ...raw, games: [...known.map((g) => spectatorGame(g, true)), ...placeholders] } : raw
+  if (money)
+    return Array.isArray(raw.games) || placeholders.length
+      ? { ...raw, games: [...known.map((g) => spectatorGame(g, true)), ...placeholders] }
+      : raw
   const modules = isObject(raw.modules) ? raw.modules : null
   return {
     ...raw,
     entryFee: 0,
     houseCut: 0,
-    prizes: { stableford: [], stablefordMode: 'amount', pairs: [], bestRoundPerDay: 0, snakePerSurvivor: 0, fewestPutts: 0 },
-    auction: { openingBid: 1, increment: 1, maxPlayersPerOwner: 1, selfOwnedCountsTowardMax: true, guestsCanBid: false, buybackMaxPct: 0, payout: [{ slot: 'place', place: 1, share: 1 }] },
+    prizes: {
+      stableford: [],
+      stablefordMode: 'amount',
+      pairs: [],
+      bestRoundPerDay: 0,
+      snakePerSurvivor: 0,
+      fewestPutts: 0,
+    },
+    auction: {
+      openingBid: 1,
+      increment: 1,
+      maxPlayersPerOwner: 1,
+      selfOwnedCountsTowardMax: true,
+      guestsCanBid: false,
+      buybackMaxPct: 0,
+      payout: [{ slot: 'place', place: 1, share: 1 }],
+    },
     games: [...known.filter((g) => !sidePot(g)).map((g) => spectatorGame(g, false)), ...placeholders],
-    ...(modules && isObject(modules.auction) ? { modules: { ...modules, auction: { ...modules.auction, enabled: false } } } : {}),
+    ...(modules && isObject(modules.auction)
+      ? { modules: { ...modules, auction: { ...modules.auction, enabled: false } } }
+      : {}),
   }
 }
 
@@ -248,9 +319,30 @@ export function forSpectators(s: Snapshot, money: boolean, id: string): Snapshot
       bankerPlayerId: money ? t.bankerPlayerId : null,
       settings: spectatorSettings(t.settings, money),
     },
-    players: s.players.map((p) => ({ ...p, fullName: p.displayName, avatarUrl: null, formGuide: null, isAdmin: false, handicapNote: null })),
-    scores: s.scores.map((x) => ({ roundId: x.roundId, playerId: x.playerId, hole: x.hole, strokes: x.strokes, putts: x.putts, pickedUp: x.pickedUp, enteredBy: null, updatedAt: x.updatedAt })),
-    snakeTiebreaks: s.snakeTiebreaks.map((x) => ({ roundId: x.roundId, groupId: x.groupId, hole: x.hole, lastHoledPlayerId: x.lastHoledPlayerId })),
+    players: s.players.map((p) => ({
+      ...p,
+      fullName: p.displayName,
+      avatarUrl: null,
+      formGuide: null,
+      isAdmin: false,
+      handicapNote: null,
+    })),
+    scores: s.scores.map((x) => ({
+      roundId: x.roundId,
+      playerId: x.playerId,
+      hole: x.hole,
+      strokes: x.strokes,
+      putts: x.putts,
+      pickedUp: x.pickedUp,
+      enteredBy: null,
+      updatedAt: x.updatedAt,
+    })),
+    snakeTiebreaks: s.snakeTiebreaks.map((x) => ({
+      roundId: x.roundId,
+      groupId: x.groupId,
+      hole: x.hole,
+      lastHoledPlayerId: x.lastHoledPlayerId,
+    })),
     handicapOverrides: s.handicapOverrides.map((x) => ({ ...x, reason: '', by: null })),
     gameEntries: s.gameEntries.filter((x) => !hidden.has(x.gameId)),
     holeAwards: s.holeAwards.filter((x) => !hidden.has(x.gameId)),
@@ -259,7 +351,9 @@ export function forSpectators(s: Snapshot, money: boolean, id: string): Snapshot
     calcuttaBids: money ? s.calcuttaBids : [],
     calcuttaBuybacks: money ? s.calcuttaBuybacks : [],
     payments: money ? s.payments.map((x) => ({ ...x, note: null })) : [],
-    moneyAdjustments: money ? (s.moneyAdjustments ?? []).map((x) => ({ ...x, reason: '', createdBy: null, voidReason: null })) : [],
+    moneyAdjustments: money
+      ? (s.moneyAdjustments ?? []).map((x) => ({ ...x, reason: '', createdBy: null, voidReason: null }))
+      : [],
   }
 }
 
@@ -281,7 +375,12 @@ export const POLL = {
  * day, nothing), slower once nothing has moved for a while, and longer after
  * each failure in a row, so a TV left on all night never hammers the server.
  */
-export function nextPoll(s: { status: string | null; anyRoundLive: boolean; quietMs: number; failures: number }): number {
+export function nextPoll(s: {
+  status: string | null
+  anyRoundLive: boolean
+  quietMs: number
+  failures: number
+}): number {
   const base = s.status === 'auction' ? POLL.auction : s.anyRoundLive ? POLL.live : POLL.quiet
   const idle = s.quietMs >= POLL.idleAfter ? Math.max(base, POLL.quiet) : base
   return s.failures > 0 ? Math.min(POLL.maxBackoff, idle * 2 ** s.failures) : idle

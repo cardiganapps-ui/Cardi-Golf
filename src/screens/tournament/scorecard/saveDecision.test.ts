@@ -7,13 +7,38 @@ import { describe, expect, it } from 'vitest'
 import type { HoleResult } from '../../../engine/core/types'
 import { t } from '../../../i18n/es-MX'
 import type { Draft } from '../tarjetaDrafts'
-import { afterSave, canUndo, decideSave, entryFields, pickWrites, snakeCandidates, undoSnapshot, unusualValues, type SaveCheck } from './saveDecision'
+import {
+  afterSave,
+  canUndo,
+  decideSave,
+  entryFields,
+  pickWrites,
+  snakeCandidates,
+  undoSnapshot,
+  unusualValues,
+  type SaveCheck,
+} from './saveDecision'
 import { DOUBLE_SAVE_MS, SETTLE_MS } from './timing'
 import { label } from '../../../engine/messages'
 
 const S = t.card
 const d = (strokes: number, putts = 2, pickedUp = false): Draft => ({ strokes, putts, pickedUp })
-const hole = (o: Partial<HoleResult> = {}): HoleResult => ({ hole: 1, par: 4, strokeIndex: 1, yards: null, strokesReceived: 0, gross: null, net: null, points: 0, putts: null, pickedUp: false, played: false, disputed: false, why: { title: label(''), steps: [] }, ...o })
+const hole = (o: Partial<HoleResult> = {}): HoleResult => ({
+  hole: 1,
+  par: 4,
+  strokeIndex: 1,
+  yards: null,
+  strokesReceived: 0,
+  gross: null,
+  net: null,
+  points: 0,
+  putts: null,
+  pickedUp: false,
+  played: false,
+  disputed: false,
+  why: { title: label(''), steps: [] },
+  ...o,
+})
 /** A tap long after the hole changed and the last save, with nothing to ask. */
 const check = (o: Partial<SaveCheck> = {}): SaveCheck => ({
   force: false,
@@ -52,7 +77,9 @@ describe('decideSave: whether a tap saves, and what it asks first', () => {
   })
 
   it('untouched defaults seconds after the last save ask «¿todos par?»; later they save', () => {
-    expect(decideSave(check({ allDefaults: true, sinceLastSave: DOUBLE_SAVE_MS - 1 }))).toEqual({ kind: 'confirmDefaults' })
+    expect(decideSave(check({ allDefaults: true, sinceLastSave: DOUBLE_SAVE_MS - 1 }))).toEqual({
+      kind: 'confirmDefaults',
+    })
     expect(decideSave(check({ allDefaults: true, sinceLastSave: DOUBLE_SAVE_MS }))).toEqual({ kind: 'commit' })
     // The first save of the card: nothing came before it.
     expect(decideSave(check({ allDefaults: true, sinceLastSave: Infinity }))).toEqual({ kind: 'commit' })
@@ -63,8 +90,13 @@ describe('decideSave: whether a tap saves, and what it asks first', () => {
   it('unusual values ask «¿Seguro?» with their lines, after the defaults question and before everything else', () => {
     const lines = ['Ana: 11 golpes']
     expect(decideSave(check({ unusual: lines }))).toEqual({ kind: 'confirmUnusual', lines })
-    expect(decideSave(check({ unusual: lines, allDefaults: true, sinceLastSave: 0 }))).toEqual({ kind: 'confirmDefaults' })
-    expect(decideSave(check({ unusual: lines, needsReason: true, candidates: ['a', 'b'] }))).toEqual({ kind: 'confirmUnusual', lines })
+    expect(decideSave(check({ unusual: lines, allDefaults: true, sinceLastSave: 0 }))).toEqual({
+      kind: 'confirmDefaults',
+    })
+    expect(decideSave(check({ unusual: lines, needsReason: true, candidates: ['a', 'b'] }))).toEqual({
+      kind: 'confirmUnusual',
+      lines,
+    })
     expect(decideSave(check({ unusual: lines, force: true }))).toEqual({ kind: 'commit' })
   })
 
@@ -82,7 +114,10 @@ describe('decideSave: whether a tap saves, and what it asks first', () => {
     expect(decideSave(check({ candidates: ['a', 'b'], answered: true }))).toEqual({ kind: 'commit' })
     // The reason first: the question used to open under the reason sheet (PR 81's verifier).
     expect(decideSave(check({ candidates: ['a', 'b'], needsReason: true }))).toEqual({ kind: 'askReason' })
-    expect(decideSave(check({ candidates: ['a', 'b'], needsReason: true, reason: 'abc', force: true }))).toEqual({ kind: 'askTiebreak', candidates: ['a', 'b'] })
+    expect(decideSave(check({ candidates: ['a', 'b'], needsReason: true, reason: 'abc', force: true }))).toEqual({
+      kind: 'askTiebreak',
+      candidates: ['a', 'b'],
+    })
   })
 })
 
@@ -121,31 +156,56 @@ describe('afterSave: a correction goes back to where the group is (UX-19); a new
   const order = [1, 2, 3, 4]
   it('a new hole: the next one, and after the last the grid', () => {
     const played = (_id: string, h: number) => h < 2
-    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played })).toEqual({ correcting: false, backTo: null, target: 2 })
-    expect(afterSave({ order, savedHole: 4, playerIds: ['a', 'b'], played: (_id, h) => h !== 4 })).toEqual({ correcting: false, backTo: null, target: null })
+    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played })).toEqual({
+      correcting: false,
+      backTo: null,
+      target: 2,
+    })
+    expect(afterSave({ order, savedHole: 4, playerIds: ['a', 'b'], played: (_id, h) => h !== 4 })).toEqual({
+      correcting: false,
+      backTo: null,
+      target: null,
+    })
   })
 
   it('a hole the whole group had played: back to the first hole someone still has to play', () => {
     // a played 1–3, b played 1 and 2: hole 2 corrected goes back to 3.
     const played = (id: string, h: number) => (id === 'a' ? h <= 3 : h <= 2)
-    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played })).toEqual({ correcting: true, backTo: 3, target: 2 })
+    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played })).toEqual({
+      correcting: true,
+      backTo: 3,
+      target: 2,
+    })
   })
 
   it('a group that played every hole: the grid', () => {
-    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played: () => true })).toEqual({ correcting: true, backTo: null, target: null })
+    expect(afterSave({ order, savedHole: 2, playerIds: ['a', 'b'], played: () => true })).toEqual({
+      correcting: true,
+      backTo: null,
+      target: null,
+    })
   })
 
   it('a group that starts on 10 goes back in its own order', () => {
     const tenFirst = [10, 11, 1, 2]
     const played = (_id: string, h: number) => h >= 10
-    expect(afterSave({ order: tenFirst, savedHole: 10, playerIds: ['a'], played })).toEqual({ correcting: true, backTo: 1, target: 2 })
+    expect(afterSave({ order: tenFirst, savedHole: 10, playerIds: ['a'], played })).toEqual({
+      correcting: true,
+      backTo: 1,
+      target: 2,
+    })
   })
 })
 
 describe('undoSnapshot and canUndo: what an undo puts back', () => {
   it('a player who had values gets them back; one who had none keeps the draft, and the hole offers «Corregir»', () => {
     const holes: Record<string, HoleResult> = { a: hole({ played: true, gross: 5, putts: 2 }), b: hole() }
-    const u = undoSnapshot({ writes: { a: d(4), b: d(6) }, holeOf: (id) => holes[id], fallbackPar: 4, myPlayerId: null })
+    const u = undoSnapshot({
+      writes: { a: d(4), b: d(6) },
+      holeOf: (id) => holes[id],
+      fallbackPar: 4,
+      myPlayerId: null,
+    })
     expect(u.before).toEqual({ a: d(5, 2), b: d(6) })
     expect(u.wasPlayed).toEqual({ a: true, b: false })
     expect(canUndo(['a', 'b'], u.wasPlayed)).toBe(false)
@@ -154,7 +214,12 @@ describe('undoSnapshot and canUndo: what an undo puts back', () => {
   })
 
   it('a pick-up comes back as one, its strokes at par', () => {
-    const u = undoSnapshot({ writes: { a: d(5) }, holeOf: () => hole({ played: true, pickedUp: true, gross: null, putts: null }), fallbackPar: 4, myPlayerId: null })
+    const u = undoSnapshot({
+      writes: { a: d(5) },
+      holeOf: () => hole({ played: true, pickedUp: true, gross: null, putts: null }),
+      fallbackPar: 4,
+      myPlayerId: null,
+    })
     expect(u.before.a).toEqual({ strokes: 4, putts: 2, pickedUp: true })
   })
 
@@ -163,17 +228,23 @@ describe('undoSnapshot and canUndo: what an undo puts back', () => {
     expect(undoSnapshot({ writes: { me: d(4) }, holeOf, fallbackPar: 4, myPlayerId: 'me' }).celebrate).toBe(true)
     expect(undoSnapshot({ writes: { other: d(3) }, holeOf, fallbackPar: 4, myPlayerId: 'me' }).celebrate).toBe(false)
     expect(undoSnapshot({ writes: { me: d(5) }, holeOf, fallbackPar: 4, myPlayerId: 'me' }).celebrate).toBe(false)
-    expect(undoSnapshot({ writes: { me: d(1, 0, true) }, holeOf, fallbackPar: 4, myPlayerId: 'me' }).celebrate).toBe(false)
+    expect(undoSnapshot({ writes: { me: d(1, 0, true) }, holeOf, fallbackPar: 4, myPlayerId: 'me' }).celebrate).toBe(
+      false,
+    )
   })
 })
 
 describe('entryFields: only what differs from the row the phone saw (REL-05)', () => {
   it('a new hole sends every field; a correction only the one changed', () => {
     expect(entryFields({ strokes: 5, putts: 2, picked_up: false }, {})).toEqual({ strokes: 5, putts: 2 })
-    expect(entryFields({ strokes: 5, putts: 3, picked_up: false }, { strokes: 5, putts: 2, picked_up: false })).toEqual({ putts: 3 })
+    expect(entryFields({ strokes: 5, putts: 3, picked_up: false }, { strokes: 5, putts: 2, picked_up: false })).toEqual(
+      { putts: 3 },
+    )
   })
 
   it('a pick-up sends the pick-up and the strokes it clears', () => {
-    expect(entryFields({ strokes: null, putts: 2, picked_up: true }, { strokes: 6, putts: 2, picked_up: false })).toEqual({ strokes: null, picked_up: true })
+    expect(
+      entryFields({ strokes: null, putts: 2, picked_up: true }, { strokes: 6, putts: 2, picked_up: false }),
+    ).toEqual({ strokes: null, picked_up: true })
   })
 })

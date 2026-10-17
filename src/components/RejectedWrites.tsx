@@ -18,7 +18,16 @@
  */
 import { useId, useState } from 'react'
 import { t } from '../i18n/es-MX'
-import { discardRejected, retryRejected, useOutbox, type AwardPayload, type RejectedItem, type ScorePayload, type SignaturePayload, type TiebreakPayload } from '../data/outbox'
+import {
+  discardRejected,
+  retryRejected,
+  useOutbox,
+  type AwardPayload,
+  type RejectedItem,
+  type ScorePayload,
+  type SignaturePayload,
+  type TiebreakPayload,
+} from '../data/outbox'
 import { useTournament } from '../data/tournamentStore'
 import type { Snapshot } from '../engine/types'
 import { cardSignedFor } from '../engine/core/cardSigning'
@@ -52,19 +61,35 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     const day = roundOf(r)?.number ?? null
     if (r.kind === 'score') {
       const p = r.payload as ScorePayload
-      return IB.rejectedScore(name(p.player_id), IB.dayHole(day, p.hole), IB.scoreValue(p.strokes, p.putts, p.picked_up))
+      return IB.rejectedScore(
+        name(p.player_id),
+        IB.dayHole(day, p.hole),
+        IB.scoreValue(p.strokes, p.putts, p.picked_up),
+      )
     }
     if (r.kind === 'tiebreak') {
       const p = r.payload as TiebreakPayload
-      return IB.rejectedTiebreak(snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0, IB.dayHole(day, p.hole), name(p.last_holed_player_id), data.settings.modules.snake.label)
+      return IB.rejectedTiebreak(
+        snapshot.groups.find((g) => g.id === p.group_id)?.number ?? 0,
+        IB.dayHole(day, p.hole),
+        name(p.last_holed_player_id),
+        data.settings.modules.snake.label,
+      )
     }
     if (r.kind === 'award') {
       const p = r.payload as AwardPayload
       const label = data.settings.games.find((g) => g.id === p.game_id)?.label ?? p.game_id
-      return IB.rejectedAward(label, IB.dayHole(day, p.hole), t.common.andList(p.player_ids.map(name)) || t.card.contest.nobody)
+      return IB.rejectedAward(
+        label,
+        IB.dayHole(day, p.hole),
+        t.common.andList(p.player_ids.map(name)) || t.card.contest.nobody,
+      )
     }
     const pair = snapshot.pairs.find((x) => x.id === (r.payload as SignaturePayload).pair_id)
-    return IB.rejectedSignature(pair?.name ?? (pair ? t.common.andList([name(pair.player1Id), name(pair.player2Id)]) : '?'), day)
+    return IB.rejectedSignature(
+      pair?.name ?? (pair ? t.common.andList([name(pair.player1Id), name(pair.player2Id)]) : '?'),
+      day,
+    )
   }
   /**
    * What stands in the way now, said as it is now: a player's score or
@@ -96,7 +121,9 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     if (r.kind === 'score') return together((r.payload as ScorePayload).player_id)
     if (r.kind === 'signature') {
       const pair = snapshot.pairs.find((x) => x.id === (r.payload as SignaturePayload).pair_id)
-      return !!pair && pair.player1Id !== playerId && pair.player2Id !== playerId && together(pair.player1Id, pair.player2Id)
+      return (
+        !!pair && pair.player1Id !== playerId && pair.player2Id !== playerId && together(pair.player1Id, pair.player2Id)
+      )
     }
     const p = r.payload as TiebreakPayload | AwardPayload
     const group = groups.find((g) => g.id === p.group_id)
@@ -104,7 +131,8 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     return !!group && named.every((id) => group.playerIds.includes(id))
   }
   /** Whose hole went to the Comité: usually another player's (the phone keeps the other pair's card), else this phone's own. */
-  const leftForComite = (p: ScorePayload) => IB.leftForComite(p.hole, p.player_id === playerId ? null : name(p.player_id))
+  const leftForComite = (p: ScorePayload) =>
+    IB.leftForComite(p.hole, p.player_id === playerId ? null : name(p.player_id))
   /** A Comité device always can; a player's phone, what it could write now. */
   const resendable = (r: RejectedItem) => canResend || writable(r)
   /** What the card holds now for a refused hole, when it differs: a resend would replace it. */
@@ -115,10 +143,19 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
     if (!now || (now.strokes === p.strokes && now.putts === p.putts && now.pickedUp === p.picked_up)) return null
     return IB.nowOnCard(IB.scoreValue(now.strokes, now.putts, now.pickedUp))
   }
-  const text = [IB.sendHeader(snapshot.tournament.name, playerId ? name(playerId) : null), ...rejected.map(describe)].join('\n')
+  const text = [
+    IB.sendHeader(snapshot.tournament.name, playerId ? name(playerId) : null),
+    ...rejected.map(describe),
+  ].join('\n')
   // Per state: a list where some lines can go again and some can't says both, so neither instruction is lost.
   const again = rejected.filter(resendable).length
-  const hint = canResend ? IB.rejectedHint : again === rejected.length ? IB.rejectedHintResend : again ? IB.rejectedHintMixed : IB.rejectedHintPlayer
+  const hint = canResend
+    ? IB.rejectedHint
+    : again === rejected.length
+      ? IB.rejectedHintResend
+      : again
+        ? IB.rejectedHintMixed
+        : IB.rejectedHintPlayer
 
   return (
     <section className={styles.box} aria-labelledby={titleId}>
@@ -127,7 +164,11 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
       </strong>
       <span className={styles.hint}>{hint}</span>
       {!canResend && (
-        <button className={buttonClass({ size: 'sm' }, styles.send)} type="button" onClick={() => void sendToComite(text, setManual)}>
+        <button
+          className={buttonClass({ size: 'sm' }, styles.send)}
+          type="button"
+          onClick={() => void sendToComite(text, setManual)}
+        >
           {IB.sendToComite}
         </button>
       )}
@@ -137,7 +178,9 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
             <span className={styles.text}>
               <span>{describe(r)}</span>
               <span className={styles.reason}>{reason(r)}</span>
-              {!canResend && r.atServer && <span className={styles.reason}>{leftForComite(r.payload as ScorePayload)}</span>}
+              {!canResend && r.atServer && (
+                <span className={styles.reason}>{leftForComite(r.payload as ScorePayload)}</span>
+              )}
               {resendable(r) && onCard(r) && <span className={styles.reason}>{onCard(r)}</span>}
             </span>
             <span className={styles.actions}>
@@ -146,7 +189,12 @@ export function RejectedWrites({ canResend, playerId = null }: { canResend: bool
                   {IB.resend}
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setDiscarding(r)} aria-label={`${IB.discard}: ${describe(r)}`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDiscarding(r)}
+                aria-label={`${IB.discard}: ${describe(r)}`}
+              >
                 {IB.discard}
               </Button>
             </span>

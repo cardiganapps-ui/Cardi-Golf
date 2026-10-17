@@ -44,7 +44,9 @@ test('a screen of the build before a deploy: the page loads the new build and op
   await expect(page.getByText(t.boot.crashTitle)).toHaveCount(0)
 })
 
-test('a screen that fails again right after that reload is something else: the error shows, with its way out, and no loop (REL-13)', async ({ page }) => {
+test('a screen that fails again right after that reload is something else: the error shows, with its way out, and no loop (REL-13)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live')
   await page.route(STATS_CHUNK, (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' }))
   let loads = 0

@@ -22,7 +22,17 @@ import { setLastTournament } from './session'
 import { acceptLegal, forgetLegal } from './legal'
 import { cachedTournamentName, clearAllCached } from './snapshotCache'
 import { useTournament } from './tournamentStore'
-import { claimNameHint, ensureMyProfile, linkMyProfile, myDeviceClaim, redeemStashedToken, stashLinkToken, stashedNameHint, useMyProfile, type LinkResult } from './profiles'
+import {
+  claimNameHint,
+  ensureMyProfile,
+  linkMyProfile,
+  myDeviceClaim,
+  redeemStashedToken,
+  stashLinkToken,
+  stashedNameHint,
+  useMyProfile,
+  type LinkResult,
+} from './profiles'
 import { forgetServerState } from './serverCache'
 
 /**
@@ -78,7 +88,11 @@ export async function resendProfileCode(email: string, mode: CodeMode) {
 export async function confirmProfileCode(email: string, code: string, mode: CodeMode) {
   // A sign-in code is what switches the phone: anything saved since it was sent counts too. Converting in place keeps the uid.
   if (mode === 'signin') await refuseWithUnsent('switch')
-  const { error } = await supabase().auth.verifyOtp({ email, token: code.trim(), type: mode === 'convert' ? 'email_change' : 'email' })
+  const { error } = await supabase().auth.verifyOtp({
+    email,
+    token: code.trim(),
+    type: mode === 'convert' ? 'email_change' : 'email',
+  })
   if (error) throw error
 }
 
@@ -153,7 +167,10 @@ export async function continueWithGoogle(next: string) {
 export async function signInWithGoogleInstead(next: string) {
   await refuseWithUnsent('switch')
   await stashLinkToken()
-  const { error } = await supabase().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: oauthReturn(next) } })
+  const { error } = await supabase().auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: oauthReturn(next) },
+  })
   if (error) throw error
 }
 
@@ -240,7 +257,8 @@ export async function signOutSafely(): Promise<SignOutResult> {
     useLateSignOut.setState({ at: Date.now() })
   }
   // Not done: auth-js kept the session (it could not confirm it), or it is still working on it and may yet end it.
-  if (!(await signOut(late))) return { done: false, reason: signOutRunning() ? t.account.signOutPending : t.account.signOutUnconfirmed }
+  if (!(await signOut(late)))
+    return { done: false, reason: signOutRunning() ? t.account.signOutPending : t.account.signOutUnconfirmed }
   await forgetSignedOut()
   return { done: true }
 }

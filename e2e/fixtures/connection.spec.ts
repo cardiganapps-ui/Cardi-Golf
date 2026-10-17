@@ -20,21 +20,35 @@ const SCREENS = ['', 'tarjeta', 'juegos', 'dinero', 'mas']
 
 async function expectSound(page: Page, pageErrors: string[]) {
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  expect(results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)).toEqual([])
+  expect(
+    results.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`),
+  ).toEqual([])
 }
 /** The header's chip as the button it is when the boards are not live. */
-const chip = (page: Page, says: string) => page.locator('header').getByRole('button', { name: t.sync.refreshLabel(says) })
+const chip = (page: Page, says: string) =>
+  page.locator('header').getByRole('button', { name: t.sync.refreshLabel(says) })
 /** Its words fit one line: no taller than one line of its own text. */
 async function oneLine(page: Page, says: string) {
-  const box = await chip(page, says).getByText(says, { exact: true }).evaluate((el) => ({ h: el.getBoundingClientRect().height, font: parseFloat(getComputedStyle(el).fontSize) }))
+  const box = await chip(page, says)
+    .getByText(says, { exact: true })
+    .evaluate((el) => ({ h: el.getBoundingClientRect().height, font: parseFloat(getComputedStyle(el).fontSize) }))
   expect(box.h, `«${says}» on one line`).toBeLessThan(box.font * 1.8)
 }
 
 for (const width of PHONES) {
   for (const path of SCREENS) {
-    test(`no signal on ${path || 'envivo'} at ${width}px: «Sin señal» once, on one line, as «Actualizar»`, async ({ page, context, pageErrors }) => {
+    test(`no signal on ${path || 'envivo'} at ${width}px: «Sin señal» once, on one line, as «Actualizar»`, async ({
+      page,
+      context,
+      pageErrors,
+    }) => {
       await page.setViewportSize({ width, height: 852 })
       // The longest event name the fixtures have: the chip keeps its line, the name gives way.
       await open(page, `/t/_/longnames/${path}`)
@@ -48,7 +62,10 @@ for (const width of PHONES) {
     })
   }
 
-  test(`the phone’s copy at ${width}px: «Conectando…» once, on one line, and how old the boards are`, async ({ page, pageErrors }) => {
+  test(`the phone’s copy at ${width}px: «Conectando…» once, on one line, and how old the boards are`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width, height: 852 })
     await open(page, '/t/_/longnames?net=cache')
     await expect(chip(page, t.sync.connecting)).toBeVisible()
@@ -67,7 +84,11 @@ for (const width of PHONES) {
   })
 }
 
-test('the TV with no signal says so in its own line, at the room’s size, and shows no banner', async ({ page, context, pageErrors }) => {
+test('the TV with no signal says so in its own line, at the room’s size, and shows no banner', async ({
+  page,
+  context,
+  pageErrors,
+}) => {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto('/t/_/full12-live/tv', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
@@ -75,7 +96,10 @@ test('the TV with no signal says so in its own line, at the room’s size, and s
   await expect(page.locator('header').getByText(new RegExp(`\\. ${t.sync.offlineShort}`))).toBeVisible()
   await expect(page.getByText(t.sync.offline)).toHaveCount(0)
   // As large as the line it is in: the TV's text is sized for the room (VIS-05: 3.5vh, to the half pixel as tv.spec.ts reads it).
-  const size = await page.locator('header').getByText(new RegExp(t.sync.offlineShort)).evaluate((el) => ({ px: parseFloat(getComputedStyle(el).fontSize), floor: window.innerHeight * 0.035 - 0.5 }))
+  const size = await page
+    .locator('header')
+    .getByText(new RegExp(t.sync.offlineShort))
+    .evaluate((el) => ({ px: parseFloat(getComputedStyle(el).fontSize), floor: window.innerHeight * 0.035 - 0.5 }))
   expect(size.px).toBeGreaterThanOrEqual(size.floor)
   await expectSound(page, pageErrors)
   await context.setOffline(false)
@@ -84,7 +108,8 @@ test('the TV with no signal says so in its own line, at the room’s size, and s
 /** A finger on the touch screen, through Chromium's own input: real touch events, and the page's real scroll. */
 async function finger(page: Page) {
   const cdp: CDPSession = await page.context().newCDPSession(page)
-  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', y = 0) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 190, y }] })
+  const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', y = 0) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 190, y }] })
   return {
     /** From `from` to `to`, a step at a time; `before` runs before it lets go. */
     async drag(from: number, to: number, before?: () => Promise<void>) {
@@ -145,14 +170,26 @@ test('the build links a launch image per iPhone screen, and serves each', async 
     const res = await page.request.get(href)
     expect(res.status(), href).toBe(200)
     expect(res.headers()['content-type'], href).toBe('image/png')
-    const screen = LAUNCH_SCREENS.find((s) => media.includes(`device-width: ${s.width}px`) && media.includes(`device-height: ${s.height}px`) && media.includes(`ratio: ${s.ratio}`))!
+    const screen = LAUNCH_SCREENS.find(
+      (s) =>
+        media.includes(`device-width: ${s.width}px`) &&
+        media.includes(`device-height: ${s.height}px`) &&
+        media.includes(`ratio: ${s.ratio}`),
+    )!
     expect(href).toContain(`iphone-${launchPixels(screen).width}x${launchPixels(screen).height}.png?v=`)
   }
 })
 
 test('the «Mi tarjeta» shortcut opens the last tournament’s Tarjeta', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('cardi-golf:last-tournament', JSON.stringify({ slug: '_/full12-live', name: 'Fixture', at: Date.now() })))
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'cardi-golf:last-tournament',
+      JSON.stringify({ slug: '_/full12-live', name: 'Fixture', at: Date.now() }),
+    ),
+  )
   await page.goto('/continuar/tarjeta', { waitUntil: 'networkidle' })
   await expect(page).toHaveURL(/\/t\/_\/full12-live\/tarjeta$/)
-  await expect(page.getByRole('button', { name: new RegExp(`^(${t.card.save}|${t.card.saveLast})`) }).first()).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: new RegExp(`^(${t.card.save}|${t.card.saveLast})`) }).first(),
+  ).toBeVisible()
 })

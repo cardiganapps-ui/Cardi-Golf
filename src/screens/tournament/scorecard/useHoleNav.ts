@@ -19,7 +19,9 @@ export function useHoleNav(order: readonly number[], firstOpen: number) {
   /** The player chose a hole (a swipe, the grid, a save): the card stops following the first open one. */
   const chose = useRef(false)
   // The notice that a card is ready to sign opens the whole card (`?vista=tarjeta`), where «Firmar» is (PWA-10).
-  const [view, setView] = useState<'hole' | 'grid'>(() => (new URLSearchParams(window.location.search).get('vista') === 'tarjeta' ? 'grid' : 'hole'))
+  const [view, setView] = useState<'hole' | 'grid'>(() =>
+    new URLSearchParams(window.location.search).get('vista') === 'tarjeta' ? 'grid' : 'hole',
+  )
   /** Which way the last hole change went (+1 next, -1 back, 0 neither): the hole comes in from that side (MOT-02). */
   const slide = useRef(0)
   const idx = order.indexOf(hole)
@@ -45,7 +47,12 @@ export type HoleNav = ReturnType<typeof useHoleNav>
  * The new hole comes in from the side the card moved, as a page turns (MOT-02); under reduced motion it fades
  * in. The rows stay mounted, so a stepper keeps its focus and the snake's mark can slide between them.
  */
-export function useHoleSlide(hole: number, reduce: boolean | null, slide: RefObject<number>, els: ReadonlyArray<RefObject<HTMLElement | null>>) {
+export function useHoleSlide(
+  hole: number,
+  reduce: boolean | null,
+  slide: RefObject<number>,
+  els: ReadonlyArray<RefObject<HTMLElement | null>>,
+) {
   const shownFor = useRef(hole)
   useLayoutEffect(() => {
     if (shownFor.current === hole) return
@@ -68,13 +75,29 @@ export function useHoleSlide(hole: number, reduce: boolean | null, slide: RefObj
  * snake's question, or the whole card, where «Firmar» is). What was typed here stays on the phone, as when
  * the card moves on (PWA-05). Never under an open question or a save on its way: its answer is this hole's.
  */
-export function useFollowHole(o: { nav: HoleNav; order: readonly number[]; firstOpen: number; queueRead: boolean; touched: RefObject<Set<string>>; sheetOpen: boolean; busy: boolean }) {
+export function useFollowHole(o: {
+  nav: HoleNav
+  order: readonly number[]
+  firstOpen: number
+  queueRead: boolean
+  touched: RefObject<Set<string>>
+  sheetOpen: boolean
+  busy: boolean
+}) {
   const { nav, order, firstOpen, queueRead, touched, sheetOpen, busy } = o
   const followQueue = useRef(!useOutbox.getState().queueRead)
   useEffect(() => {
     if (!followQueue.current || !queueRead) return
     followQueue.current = false
-    if (nav.chose.current || order.includes(nav.asked) || touched.current.size > 0 || sheetOpen || busy || nav.hole === firstOpen) return
+    if (
+      nav.chose.current ||
+      order.includes(nav.asked) ||
+      touched.current.size > 0 ||
+      sheetOpen ||
+      busy ||
+      nav.hole === firstOpen
+    )
+      return
     nav.slide.current = 0
     nav.setHole(firstOpen)
   }, [queueRead]) // eslint-disable-line react-hooks/exhaustive-deps -- once, when the queue has been read
@@ -100,7 +123,13 @@ export function useFollowHole(o: { nav: HoleNav; order: readonly number[]; first
  * page scrolling. Only the hole view takes it, and never under a sheet: a drag inside one must never change the
  * hole under it.
  */
-export function useHoleSwipe(o: { active: boolean; idx: number; count: number; goto: (i: number) => void; reduce: boolean | null }) {
+export function useHoleSwipe(o: {
+  active: boolean
+  idx: number
+  count: number
+  goto: (i: number) => void
+  reduce: boolean | null
+}) {
   const dragX = useMotionValue(0)
   const swipe = useRef<{ x: number; y: number; at: number; intent: Intent } | null>(null)
   const back = () => {
@@ -123,7 +152,10 @@ export function useHoleSwipe(o: { active: boolean; idx: number; count: number; g
       const sw = swipe.current
       swipe.current = null
       const t0 = e.changedTouches[0]
-      const to = sw && t0 && o.active && sw.intent !== 'scroll' ? swipeEnd(t0.clientX - sw.x, t0.clientY - sw.y, performance.now() - sw.at, o.idx > 0, o.idx < o.count - 1) : 0
+      const to =
+        sw && t0 && o.active && sw.intent !== 'scroll'
+          ? swipeEnd(t0.clientX - sw.x, t0.clientY - sw.y, performance.now() - sw.at, o.idx > 0, o.idx < o.count - 1)
+          : 0
       if (to) {
         dragX.set(0)
         o.goto(o.idx + to)

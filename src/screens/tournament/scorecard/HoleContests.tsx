@@ -30,11 +30,24 @@ export function HoleContests(p: {
             </span>
             <div className={styles.contestPicks}>
               {c.eligible.map((pl) => (
-                <button key={pl.id} type="button" className={styles.pickup} aria-pressed={chosen.includes(pl.id)} disabled={!p.canEdit} onClick={() => p.onToggle(c, pl.id)}>
+                <button
+                  key={pl.id}
+                  type="button"
+                  className={styles.pickup}
+                  aria-pressed={chosen.includes(pl.id)}
+                  disabled={!p.canEdit}
+                  onClick={() => p.onToggle(c, pl.id)}
+                >
                   {p.nameOf(pl)}
                 </button>
               ))}
-              <button type="button" className={styles.pickup} aria-pressed={p.picks[c.id] !== undefined && chosen.length === 0} disabled={!p.canEdit} onClick={() => p.onToggle(c, null)}>
+              <button
+                type="button"
+                className={styles.pickup}
+                aria-pressed={p.picks[c.id] !== undefined && chosen.length === 0}
+                disabled={!p.canEdit}
+                onClick={() => p.onToggle(c, null)}
+              >
                 {S.contest.nobody}
               </button>
             </div>

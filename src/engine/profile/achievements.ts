@@ -73,7 +73,8 @@ export interface Badge {
   slug?: string
 }
 
-export type RecordId = 'bestGross' | 'bestDifferential' | 'mostBirdies' | 'fewestPutts' | 'longestParStreak' | 'bestFinish'
+export type RecordId =
+  'bestGross' | 'bestDifferential' | 'mostBirdies' | 'fewestPutts' | 'longestParStreak' | 'bestFinish'
 
 export interface PersonalRecord {
   id: RecordId
@@ -101,12 +102,15 @@ export function parStreak(detail: HoleDetail[]): number {
 }
 
 /** Every hole at bogey or better, none picked up. */
-export const noDoubles = (detail: HoleDetail[]) => detail.length > 0 && detail.every((h) => played(h) && h[3]! <= h[1] + 1)
+export const noDoubles = (detail: HoleDetail[]) =>
+  detail.length > 0 && detail.every((h) => played(h) && h[3]! <= h[1] + 1)
 /** Putts recorded on every hole, none over two. */
-export const noThreePutts = (detail: HoleDetail[]) => detail.length > 0 && detail.every((h) => h[4] != null && h[4] <= 2)
+export const noThreePutts = (detail: HoleDetail[]) =>
+  detail.length > 0 && detail.every((h) => h[4] != null && h[4] <= 2)
 export const hasAce = (detail: HoleDetail[]) => detail.some((h) => played(h) && h[3] === 1)
 
-const byDate = <T>(list: T[], date: (x: T) => string | null) => [...list].sort((a, b) => (date(a) ?? '9999').localeCompare(date(b) ?? '9999'))
+const byDate = <T>(list: T[], date: (x: T) => string | null) =>
+  [...list].sort((a, b) => (date(a) ?? '9999').localeCompare(date(b) ?? '9999'))
 
 function counting(rounds: AchRound[]) {
   return byDate(
@@ -123,8 +127,18 @@ export function badges(rounds: AchRound[], tournaments: AchTournament[]): Badge[
     (t) => t.startsOn,
   )
   const out = new Map<BadgeId, Badge>()
-  const fromRound = (id: BadgeId, r: AchRound | undefined) => out.set(id, r ? { id, earned: true, unlockedAt: r.playedOn ?? '', roundId: r.roundId, slug: r.slug } : { id, earned: false, unlockedAt: null })
-  const fromTournament = (id: BadgeId, t: AchTournament | undefined) => out.set(id, t ? { id, earned: true, unlockedAt: t.startsOn ?? '', slug: t.slug } : { id, earned: false, unlockedAt: null })
+  const fromRound = (id: BadgeId, r: AchRound | undefined) =>
+    out.set(
+      id,
+      r
+        ? { id, earned: true, unlockedAt: r.playedOn ?? '', roundId: r.roundId, slug: r.slug }
+        : { id, earned: false, unlockedAt: null },
+    )
+  const fromTournament = (id: BadgeId, t: AchTournament | undefined) =>
+    out.set(
+      id,
+      t ? { id, earned: true, unlockedAt: t.startsOn ?? '', slug: t.slug } : { id, earned: false, unlockedAt: null },
+    )
 
   fromRound('firstRound', complete[0])
   fromRound('rounds10', complete[9])
@@ -202,7 +216,9 @@ export function records(rounds: AchRound[], tournaments: AchTournament[]): Perso
     }
     return pick ? { r: pick, v } : null
   }
-  const push = (id: RecordId, hit: { r: AchRound; v: number } | null) => hit && out.push({ id, value: hit.v, roundId: hit.r.roundId, slug: hit.r.slug, where: where(hit.r), date: hit.r.playedOn })
+  const push = (id: RecordId, hit: { r: AchRound; v: number } | null) =>
+    hit &&
+    out.push({ id, value: hit.v, roundId: hit.r.roundId, slug: hit.r.slug, where: where(hit.r), date: hit.r.playedOn })
 
   const f18 = rs.filter(full18)
   push(
@@ -235,7 +251,8 @@ export function records(rounds: AchRound[], tournaments: AchTournament[]): Perso
   )
   let top: AchTournament | null = null
   for (const t of finishes) if (!top || t.rank! < top.rank!) top = t
-  if (top) out.push({ id: 'bestFinish', value: top.rank!, of: top.field, slug: top.slug, where: top.name, date: top.startsOn })
+  if (top)
+    out.push({ id: 'bestFinish', value: top.rank!, of: top.field, slug: top.slug, where: top.name, date: top.startsOn })
   return out
 }
 
@@ -259,7 +276,8 @@ export interface YearRecap {
 export function recapYears(rounds: AchRound[], tournaments: AchTournament[]): number[] {
   const ys = new Set<number>()
   for (const r of rounds) if (!r.practice && r.complete && r.playedOn) ys.add(Number(r.playedOn.slice(0, 4)))
-  for (const t of tournaments) if (!t.practice && t.status === 'finished' && t.startsOn) ys.add(Number(t.startsOn.slice(0, 4)))
+  for (const t of tournaments)
+    if (!t.practice && t.status === 'finished' && t.startsOn) ys.add(Number(t.startsOn.slice(0, 4)))
   return [...ys].sort((a, b) => b - a)
 }
 
@@ -267,13 +285,19 @@ export function yearRecap(rounds: AchRound[], tournaments: AchTournament[], year
   const inYear = (d: string | null) => !!d && Number(d.slice(0, 4)) === year
   const rs = counting(rounds).filter((r) => r.complete && inYear(r.playedOn))
   const ts = tournaments.filter((t) => !t.practice && t.status === 'finished' && inYear(t.startsOn))
-  const grosses = rs.filter(full18).map((r) => r.gross).filter((g): g is number => g != null)
+  const grosses = rs
+    .filter(full18)
+    .map((r) => r.gross)
+    .filter((g): g is number => g != null)
   const diffs = rs.map((r) => r.differential).filter((d): d is number => d != null)
   const courseCount = new Map<string, number>()
   for (const r of rs) if (r.course) courseCount.set(r.course, (courseCount.get(r.course) ?? 0) + 1)
   // The favorite is the course played more than any other; a tie at the top has none.
   const counts = [...courseCount.entries()].sort((a, b) => b[1] - a[1])
-  const favorite = counts.length > 0 && counts[0]![1] > 1 && (counts.length === 1 || counts[0]![1] > counts[1]![1]) ? counts[0]![0] : null
+  const favorite =
+    counts.length > 0 && counts[0]![1] > 1 && (counts.length === 1 || counts[0]![1] > counts[1]![1])
+      ? counts[0]![0]
+      : null
   return {
     year,
     rounds: rs.length,

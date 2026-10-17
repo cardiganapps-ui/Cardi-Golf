@@ -51,11 +51,18 @@ describe('shareToWhatsApp', () => {
     vi.stubGlobal('navigator', { ...navigator, share: undefined })
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
     await shareToWhatsApp('Hola, Ana: entra aquí')
-    expect(open).toHaveBeenCalledWith(`https://wa.me/?text=${encodeURIComponent('Hola, Ana: entra aquí')}`, '_blank', 'noopener')
+    expect(open).toHaveBeenCalledWith(
+      `https://wa.me/?text=${encodeURIComponent('Hola, Ana: entra aquí')}`,
+      '_blank',
+      'noopener',
+    )
   })
 
   it('a share the person closed opens nothing else', async () => {
-    vi.stubGlobal('navigator', { ...navigator, share: vi.fn(async () => Promise.reject(Object.assign(new Error('x'), { name: 'AbortError' }))) })
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      share: vi.fn(async () => Promise.reject(Object.assign(new Error('x'), { name: 'AbortError' }))),
+    })
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
     await shareToWhatsApp('Hola')
     expect(open).not.toHaveBeenCalled()

@@ -33,7 +33,11 @@ export function BracketBoard({ bracket }: { bracket: BracketState }) {
               <div key={`${a.id}-${b?.id ?? i}`} className={styles.match}>
                 <span className={`${styles.side} ${match.winner?.id === a.id ? styles.won : ''}`}>{words(a.name)}</span>
                 <span className={styles.result}>{b ? match.text : B.bye}</span>
-                <span className={`${styles.side} ${styles.sideRight} ${match.winner && match.winner.id === b?.id ? styles.won : ''}`}>{b ? words(b.name) : '—'}</span>
+                <span
+                  className={`${styles.side} ${styles.sideRight} ${match.winner && match.winner.id === b?.id ? styles.won : ''}`}
+                >
+                  {b ? words(b.name) : '—'}
+                </span>
               </div>
             )
           })}

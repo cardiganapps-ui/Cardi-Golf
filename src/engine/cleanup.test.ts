@@ -8,14 +8,34 @@ import { computeCore, nineHoleRanks } from './core/compute'
 import { DEFAULT_SETTINGS, FIRST_TOURNAMENT_SETTINGS } from './settings/presets'
 import { checkPrizePool } from './settings/prizeCheck'
 import { safeParseSettings, type TournamentSettings } from './settings/schema'
-import { fillRound, makeCourse, makeFirstTournament, makeHoles, makePlayer, makeRound, makeSnapshot, makeTee, score } from './testing/fixtures'
+import {
+  fillRound,
+  makeCourse,
+  makeFirstTournament,
+  makeHoles,
+  makePlayer,
+  makeRound,
+  makeSnapshot,
+  makeTee,
+  score,
+} from './testing/fixtures'
 import type { Snapshot } from './types'
 import { words } from './testing/words'
 
 const S = FIRST_TOURNAMENT_SETTINGS
 
 function sellAll(snap: Snapshot, price = 1000) {
-  snap.players.forEach((p, i) => snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price, ownerId: p.id, soldAt: '' }))
+  snap.players.forEach((p, i) =>
+    snap.calcuttaLots.push({
+      id: `lot${i + 1}`,
+      playerId: p.id,
+      lotNumber: i + 1,
+      status: 'sold',
+      price,
+      ownerId: p.id,
+      soldAt: '',
+    }),
+  )
 }
 
 describe('Calcutta slots nobody can fill', () => {
@@ -40,7 +60,9 @@ describe('Calcutta slots nobody can fill', () => {
     const paid = Object.values(a.payouts).reduce((s, p) => s + p.amount, 0)
     expect(paid + a.unfilled).toBe(a.pot)
     expect(a.balanced).toBe(true)
-    const rounding = Object.values(a.payouts).flatMap((p) => p.lines).filter((l) => words(l.slotLabel) === 'Redondeo')
+    const rounding = Object.values(a.payouts)
+      .flatMap((p) => p.lines)
+      .filter((l) => words(l.slotLabel) === 'Redondeo')
     expect(rounding.reduce((s, l) => s + l.amount, 0)).toBeLessThan(12)
     expect(words(st.flags.warnings).some((w) => w.includes('sin asignar'))).toBe(true)
     // The auction pays out exactly the pot minus the unassigned slot; nothing else moves.
@@ -85,7 +107,8 @@ describe('Menos putts', () => {
 
   it('a player who withdrew after nine holes does not lead on fewest putts', () => {
     const snap = makeSnapshot({ players: 3, rounds: 1, settings: S })
-    for (const pid of ['p1', 'p2']) for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', pid, h, 4, pid === 'p1' ? 2 : 1))
+    for (const pid of ['p1', 'p2'])
+      for (let h = 1; h <= 18; h++) snap.scores.push(score('r1', pid, h, 4, pid === 'p1' ? 2 : 1))
     for (let h = 1; h <= 9; h++) snap.scores.push(score('r1', 'p3', h, 4, 1))
     const fp = computeTournament(snap, S).modules.fewestPutts!
     expect(fp.rows.map((r) => r.playerId)).toEqual(['p2', 'p1', 'p3'])
@@ -103,7 +126,15 @@ describe('Money', () => {
       { id: 'l2', playerId: 'p2', lotNumber: 2, status: 'sold', price: 500, ownerId: 'p4', soldAt: '' },
       { id: 'l3', playerId: 'p3', lotNumber: 3, status: 'sold', price: 250, ownerId: 'p4', soldAt: '' },
     )
-    snap.payments.push({ id: 'pay1', fromPlayerId: 'p4', toPlayerId: null, amount: 1000, kind: 'calcutta', paid: true, note: null })
+    snap.payments.push({
+      id: 'pay1',
+      fromPlayerId: 'p4',
+      toPlayerId: null,
+      amount: 1000,
+      kind: 'calcutta',
+      paid: true,
+      note: null,
+    })
     let st = computeTournament(snap, S)
     const lots = () => st.money.flows.filter((f) => f.kind === 'calcutta' && f.from === 'p4')
     expect(lots()).toHaveLength(3)
@@ -112,7 +143,11 @@ describe('Money', () => {
       [false, 500],
       [false, 250],
     ])
-    expect(st.money.accounts.find((a) => a.kind === 'calcutta' && a.from === 'p4')).toMatchObject({ owed: 1750, paid: 1000, due: 750 })
+    expect(st.money.accounts.find((a) => a.kind === 'calcutta' && a.from === 'p4')).toMatchObject({
+      owed: 1750,
+      paid: 1000,
+      due: 750,
+    })
     snap.payments[0]!.amount = 1750
     st = computeTournament(snap, S)
     expect(lots().every((f) => f.paid)).toBe(true)
@@ -131,7 +166,13 @@ describe('Money', () => {
   it('the prize check uses the real group sizes once groups exist', () => {
     const planned = checkPrizePool(S, { players: 11 })
     expect(planned.lines.find((l) => l.moduleId === 'snake')!.amount).toBe(3600)
-    const real = checkPrizePool(S, { players: 11, groupSizes: [[4, 4, 3], [4, 4, 3]] })
+    const real = checkPrizePool(S, {
+      players: 11,
+      groupSizes: [
+        [4, 4, 3],
+        [4, 4, 3],
+      ],
+    })
     expect(real.lines.find((l) => l.moduleId === 'snake')!.amount).toBe(3200)
   })
 })
@@ -169,7 +210,11 @@ describe('Handicap rules beyond the rules sheet', () => {
   })
 
   it('a 9-hole round plays half the playing handicap over the nine, ranked by stroke index (MONEY-03)', () => {
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 20 })], rounds: [makeRound(1, { holes: 9 })], settings: S })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 20 })],
+      rounds: [makeRound(1, { holes: 9 })],
+      settings: S,
+    })
     const pr = computeCore(snap, S).rounds.r1!.p1!
     // PH 16 → 8 over the nine. The front nine's SIs are 7, 11, 17, 3, 1, 13, 15, 9, 5:
     // ranked 1–9, the eight hardest get one each and the 17 (hole 3) none.
@@ -180,10 +225,23 @@ describe('Handicap rules beyond the rules sheet', () => {
 
   it('a real 9-hole card (SI 1–9) gives every stroke due, more than one a hole when needed (MONEY-03)', () => {
     const nine = makeHoles([
-      [4, 1], [4, 2], [3, 3], [5, 4], [4, 5], [4, 6], [3, 7], [5, 8], [4, 9],
+      [4, 1],
+      [4, 2],
+      [3, 3],
+      [5, 4],
+      [4, 5],
+      [4, 6],
+      [3, 7],
+      [5, 8],
+      [4, 9],
     ])
     const course = makeCourse('nine', [makeTee('t9', 'nine', { holes: nine })])
-    const snap = makeSnapshot({ players: [makePlayer(1, { baseHcp: 37.5, defaultTeeId: 't9' })], rounds: [makeRound(1, { holes: 9, courseId: 'nine' })], courses: [course], settings: S })
+    const snap = makeSnapshot({
+      players: [makePlayer(1, { baseHcp: 37.5, defaultTeeId: 't9' })],
+      rounds: [makeRound(1, { holes: 9, courseId: 'nine' })],
+      courses: [course],
+      settings: S,
+    })
     const pr = computeCore(snap, S).rounds.r1!.p1!
     // base 37.5 → PH 30 → 15 over the nine: one each, and one more on the six hardest.
     expect(pr.playingHcp).toBe(30)
@@ -192,7 +250,19 @@ describe('Handicap rules beyond the rules sheet', () => {
   })
 
   it('nine holes are ranked by stroke index, ties by hole number', () => {
-    const ranks = nineHoleRanks(makeHoles([[4, 7], [4, 11], [3, 17], [4, 3], [4, 1], [5, 13], [3, 15], [4, 9], [5, 5]]))
+    const ranks = nineHoleRanks(
+      makeHoles([
+        [4, 7],
+        [4, 11],
+        [3, 17],
+        [4, 3],
+        [4, 1],
+        [5, 13],
+        [3, 15],
+        [4, 9],
+        [5, 5],
+      ]),
+    )
     expect([...ranks.entries()].sort((a, b) => a[0] - b[0]).map(([, r]) => r)).toEqual([4, 6, 9, 2, 1, 7, 8, 5, 3])
   })
 })

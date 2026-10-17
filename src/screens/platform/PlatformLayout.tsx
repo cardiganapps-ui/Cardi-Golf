@@ -57,7 +57,11 @@ export function PlatformLayout() {
               {g.group}
             </span>,
             ...g.items.map((it) => (
-              <NavLink key={it.to} to={it.to} className={({ isActive }) => `${a.navItem} ${isActive ? a.navActive : ''}`}>
+              <NavLink
+                key={it.to}
+                to={it.to}
+                className={({ isActive }) => `${a.navItem} ${isActive ? a.navActive : ''}`}
+              >
                 {it.label}
               </NavLink>
             )),

@@ -11,7 +11,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const startOutbox = vi.hoisted(() => vi.fn(async () => undefined))
-vi.mock('../data/outbox', async (importOriginal) => ({ ...(await importOriginal<typeof import('../data/outbox')>()), startOutbox }))
+vi.mock('../data/outbox', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/outbox')>()),
+  startOutbox,
+}))
 const flags = vi.hoisted(() => vi.fn(async () => undefined))
 
 const { AppShell } = await import('./AppShell')
@@ -29,13 +32,22 @@ afterEach(() => {
 })
 
 function open(at: string) {
-  const router = createMemoryRouter([{ element: <AppShell />, children: [{ path: '*', element: <p>pantalla</p> }] }], { initialEntries: [at] })
+  const router = createMemoryRouter([{ element: <AppShell />, children: [{ path: '*', element: <p>pantalla</p> }] }], {
+    initialEntries: [at],
+  })
   render(<RouterProvider router={router} />)
   return router
 }
 
 describe('the shell on a link to watch (STRAT-05)', () => {
-  for (const at of ['/v/0EGCoHWzowIk4PgecAWI9b15', '/V/0EGCoHWzowIk4PgecAWI9b15', '/v/0EGCoHWzowIk4PgecAWI9b15/', '/v/0EGCoHWzowIk4PgecAWI9b15/tv', '/v/_/full12-live/juegos', '/v/_dinero/full12-live/dinero']) {
+  for (const at of [
+    '/v/0EGCoHWzowIk4PgecAWI9b15',
+    '/V/0EGCoHWzowIk4PgecAWI9b15',
+    '/v/0EGCoHWzowIk4PgecAWI9b15/',
+    '/v/0EGCoHWzowIk4PgecAWI9b15/tv',
+    '/v/_/full12-live/juegos',
+    '/v/_dinero/full12-live/dinero',
+  ]) {
     it(`${at}: no outbox and no session, only the app's switches`, () => {
       open(at)
       expect(startOutbox).not.toHaveBeenCalled()

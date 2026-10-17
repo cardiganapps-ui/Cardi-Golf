@@ -81,7 +81,12 @@ export function MyDataSection({ email }: { email: string }) {
       </span>
       <span className={styles.help}>{D.downloadHint}</span>
       <div className={styles.askActions}>
-        <button className="btn btn--secondary btn--sm" type="button" disabled={downloading} onClick={() => void download()}>
+        <button
+          className="btn btn--secondary btn--sm"
+          type="button"
+          disabled={downloading}
+          onClick={() => void download()}
+        >
           {downloading ? D.downloading : D.download}
         </button>
       </div>
@@ -91,14 +96,38 @@ export function MyDataSection({ email }: { email: string }) {
           {D.delete}
         </button>
       </div>
-      <ConfirmSheet open={asking} title={D.deleteTitle} body={D.deleteBody} confirmLabel={D.deleteConfirm} danger busy={busy} onConfirm={() => void remove()} onClose={() => setAsking(false)}>
-        {preview && preview.anonymizedPlayers > 0 && <p className={styles.help}>{D.deletePlayers(preview.anonymizedPlayers, preview.anonymizedIn)}</p>}
-        {preview && preview.orphaned.length > 0 && <p className="error">{D.deleteOrphaned(preview.orphaned.map((o) => o.name))}</p>}
-        {preview && preview.crewsHanded.length > 0 && <p className={styles.help}>{D.deleteCrewsHanded(preview.crewsHanded)}</p>}
-        {preview && preview.crewsDeleted.length > 0 && <p className={styles.help}>{D.deleteCrewsGone(preview.crewsDeleted)}</p>}
+      <ConfirmSheet
+        open={asking}
+        title={D.deleteTitle}
+        body={D.deleteBody}
+        confirmLabel={D.deleteConfirm}
+        danger
+        busy={busy}
+        onConfirm={() => void remove()}
+        onClose={() => setAsking(false)}
+      >
+        {preview && preview.anonymizedPlayers > 0 && (
+          <p className={styles.help}>{D.deletePlayers(preview.anonymizedPlayers, preview.anonymizedIn)}</p>
+        )}
+        {preview && preview.orphaned.length > 0 && (
+          <p className="error">{D.deleteOrphaned(preview.orphaned.map((o) => o.name))}</p>
+        )}
+        {preview && preview.crewsHanded.length > 0 && (
+          <p className={styles.help}>{D.deleteCrewsHanded(preview.crewsHanded)}</p>
+        )}
+        {preview && preview.crewsDeleted.length > 0 && (
+          <p className={styles.help}>{D.deleteCrewsGone(preview.crewsDeleted)}</p>
+        )}
         <p className={styles.help}>{D.deleteKept}</p>
         <Field label={D.confirmEmail(email)} error={error}>
-          <Input value={typed} type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} onChange={(e) => setTyped(e.target.value)} />
+          <Input
+            value={typed}
+            type="email"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            onChange={(e) => setTyped(e.target.value)}
+          />
         </Field>
       </ConfirmSheet>
     </section>

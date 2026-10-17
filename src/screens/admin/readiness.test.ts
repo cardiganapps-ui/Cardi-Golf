@@ -12,7 +12,15 @@ import { nextRoundGroups } from '../../engine/formats/bracket'
 import { makeCourse, makeRound, makeTee } from '../../engine/testing/fixtures'
 import type { TournamentSettings } from '../../engine/settings/schema'
 import type { Snapshot } from '../../engine/types'
-import { checkedText, coveredByChecklist, hrefOf, readiness, setupBadge, type Entry, type ReadinessItem } from './readiness'
+import {
+  checkedText,
+  coveredByChecklist,
+  hrefOf,
+  readiness,
+  setupBadge,
+  type Entry,
+  type ReadinessItem,
+} from './readiness'
 import { t } from '../../i18n/es-MX'
 import { msg, say } from '../../engine/messages'
 import { words } from '../../engine/testing/words'
@@ -23,12 +31,17 @@ function run(name: string, edit?: (s: Snapshot) => void, entry?: (s: Snapshot) =
   const snapshot = structuredClone(getFixture(name)!.snapshot)
   edit?.(snapshot)
   const d = dataFromSnapshot(snapshot)
-  const e: Entry = { pins: new Set(d.snapshot.players.map((p) => p.id)), bracket: d.state.bracket, ...entry?.(d.snapshot) }
+  const e: Entry = {
+    pins: new Set(d.snapshot.players.map((p) => p.id)),
+    bracket: d.state.bracket,
+    ...entry?.(d.snapshot),
+  }
   const items = readiness(d.snapshot, d.settings, e)
   const badge = setupBadge(items, d.state.flags.warnings, d.state.flags.missingModules.length)
   return { d, items, badge, by: Object.fromEntries(items.map((i) => [i.id, i])) as Items }
 }
-const check = (name: string, edit?: (s: Snapshot) => void, entry?: (s: Snapshot) => Partial<Entry>) => run(name, edit, entry).by
+const check = (name: string, edit?: (s: Snapshot) => void, entry?: (s: Snapshot) => Partial<Entry>) =>
+  run(name, edit, entry).by
 const open = (items: ReadinessItem[]) => items.filter((i) => !i.done)
 /** The fixture's settings as stored (jsonb), to edit in place. */
 const settingsOf = (s: Snapshot) => s.tournament.settings as TournamentSettings
@@ -39,19 +52,32 @@ function knockout(s: Snapshot, opts: { players?: number; days: number; rounds?: 
   s.tournament.status = 'setup'
   s.tournament.handicapsLockedAt = '2027-06-01T00:00:00Z'
   s.tournament.settings = { ...settingsOf(s), rounds: opts.days }
-  s.rounds = Array.from({ length: opts.rounds ?? opts.days }, (_, i) => makeRound(i + 1, { status: 'scheduled', date: `2027-06-1${i + 2}` }))
+  s.rounds = Array.from({ length: opts.rounds ?? opts.days }, (_, i) =>
+    makeRound(i + 1, { status: 'scheduled', date: `2027-06-1${i + 2}` }),
+  )
   s.groups = []
   s.scores = []
 }
 /** The bracket's own first-round matches as groups (what Grupos' «Armar los grupos» writes). */
 function groupTheBracket(s: Snapshot) {
   const first = dataFromSnapshot(s).state.bracket!.rounds[0]!
-  first.matches.filter((m) => m.sides[1]).forEach((m, i) => s.groups.push({ id: `g${i}`, roundId: first.roundId!, number: i + 1, teeTime: null, startHole: 1, playerIds: [...m.sides[0].playerIds, ...m.sides[1]!.playerIds] }))
+  first.matches
+    .filter((m) => m.sides[1])
+    .forEach((m, i) =>
+      s.groups.push({
+        id: `g${i}`,
+        roundId: first.roundId!,
+        number: i + 1,
+        teeTime: null,
+        startHole: 1,
+        playerIds: [...m.sides[0].playerIds, ...m.sides[1]!.playerIds],
+      }),
+    )
   return first
 }
 
 describe('Para empezar', () => {
-  it('a tournament seconds after «Crear torneo»: players and the rounds\' course and date are missing', () => {
+  it("a tournament seconds after «Crear torneo»: players and the rounds' course and date are missing", () => {
     const r = check('new-setup')
     expect(r.players).toMatchObject({ done: false, text: 'Da de alta a los jugadores (al menos 2)', to: 'jugadores' })
     expect(r.rounds).toMatchObject({ done: true, text: '2 rondas creadas' })
@@ -77,7 +103,10 @@ describe('Para empezar', () => {
   })
 
   it('players without a PIN are counted; with the PINs unknown the line is left out', () => {
-    expect(check('minimal4-setup', undefined, () => ({ pins: new Set(['p1', 'p2']) })).pins).toMatchObject({ done: false, text: 'A 2 jugadores les falta su PIN' })
+    expect(check('minimal4-setup', undefined, () => ({ pins: new Set(['p1', 'p2']) })).pins).toMatchObject({
+      done: false,
+      text: 'A 2 jugadores les falta su PIN',
+    })
     expect(check('minimal4-setup', undefined, () => ({ pins: null })).pins).toBeUndefined()
   })
 
@@ -86,7 +115,11 @@ describe('Para empezar', () => {
       s.courses[0]!.tees.push(makeTee('tee2', s.courses[0]!.id, { name: 'Blancas' }))
       s.players.find((p) => p.id === 'p3')!.defaultTeeId = null
     })
-    expect(r.tees).toMatchObject({ done: false, text: '1 jugador sin tee para el día 1: saldría desde Azules', to: 'rondas' })
+    expect(r.tees).toMatchObject({
+      done: false,
+      text: '1 jugador sin tee para el día 1: saldría desde Azules',
+      to: 'rondas',
+    })
     const two = check('minimal4-setup', (s) => {
       s.courses[0]!.tees.push(makeTee('tee2', s.courses[0]!.id, { name: 'Blancas' }))
       for (const id of ['p3', 'p4']) s.players.find((p) => p.id === id)!.defaultTeeId = null
@@ -95,8 +128,16 @@ describe('Para empezar', () => {
   })
 
   it('groups: none for the next round, or someone left out; the line opens Grupos on that day', () => {
-    expect(check('minimal4-setup', (s) => (s.groups = [])).groups).toMatchObject({ done: false, text: 'Arma los grupos del día 1', to: 'grupos', roundId: 'r1' })
-    expect(check('minimal4-setup', (s) => (s.groups[0]!.playerIds = ['p1', 'p2', 'p3'])).groups).toMatchObject({ done: false, text: '1 jugador sin grupo el día 1' })
+    expect(check('minimal4-setup', (s) => (s.groups = [])).groups).toMatchObject({
+      done: false,
+      text: 'Arma los grupos del día 1',
+      to: 'grupos',
+      roundId: 'r1',
+    })
+    expect(check('minimal4-setup', (s) => (s.groups[0]!.playerIds = ['p1', 'p2', 'p3'])).groups).toMatchObject({
+      done: false,
+      text: '1 jugador sin grupo el día 1',
+    })
   })
 
   it('«Listo para jugar» names what was checked, and nothing else', () => {
@@ -105,17 +146,27 @@ describe('Para empezar', () => {
       s.courses[0]!.tees.push(makeTee('tee2', s.courses[0]!.id, { name: 'Blancas' }))
     })
     expect(checkedText(twoTees.items)).toBe('jugadores, PIN, hándicaps, rondas, campo, tees y grupos')
-    expect(checkedText(run('team8', (s) => (s.tournament.status = 'setup')).items)).toBe('jugadores, PIN, hándicaps, rondas, campo, equipos y grupos')
+    expect(checkedText(run('team8', (s) => (s.tournament.status = 'setup')).items)).toBe(
+      'jugadores, PIN, hándicaps, rondas, campo, equipos y grupos',
+    )
   })
 
   it('the handicaps fixed before anything is bought or played on them (UX-28)', () => {
     // In setup with nothing fixed: open, and it goes to Jugadores, where «Fijar hándicaps» is.
     const free = check('minimal4-setup', (s) => (s.tournament.handicapsLockedAt = null))
-    expect(free.handicaps).toEqual({ id: 'handicaps', done: false, text: t.admin.ready.handicapsMissing, to: 'jugadores' })
+    expect(free.handicaps).toEqual({
+      id: 'handicaps',
+      done: false,
+      text: t.admin.ready.handicapsMissing,
+      to: 'jugadores',
+    })
     expect(check('minimal4-setup').handicaps).toMatchObject({ done: true, text: t.admin.ready.handicaps })
     // Under way they are fixed, moment or not.
     expect(check('minimal4-live').handicaps).toMatchObject({ done: true })
-    expect(check('minimal4-setup', (s) => ((s.tournament.status = 'auction'), (s.tournament.handicapsLockedAt = null))).handicaps).toMatchObject({ done: true })
+    expect(
+      check('minimal4-setup', (s) => ((s.tournament.status = 'auction'), (s.tournament.handicapsLockedAt = null)))
+        .handicaps,
+    ).toMatchObject({ done: true })
     // With nobody to fix, there is no line.
     expect(check('minimal4-setup', (s) => (s.players = s.players.slice(0, 1))).handicaps).toBeUndefined()
   })
@@ -144,7 +195,16 @@ describe('Para empezar: what the first list got wrong', () => {
     const r = check('bracket8', (s) => {
       const { state } = dataFromSnapshot(s)
       const semis = nextRoundGroups(state.bracket!)!
-      semis.groups.forEach((ids, i) => s.groups.push({ id: `semi${i}`, roundId: semis.round.roundId!, number: i + 1, teeTime: null, startHole: 1, playerIds: ids }))
+      semis.groups.forEach((ids, i) =>
+        s.groups.push({
+          id: `semi${i}`,
+          roundId: semis.round.roundId!,
+          number: i + 1,
+          teeTime: null,
+          startHole: 1,
+          playerIds: ids,
+        }),
+      )
     })
     expect(r.groups).toMatchObject({ done: true, text: 'Grupos del día 2 listos', roundId: 'r2' })
   })
@@ -161,7 +221,12 @@ describe('Para empezar: what the first list got wrong', () => {
     const r = check('new-setup', (s) => {
       s.rounds.push({ ...s.rounds[1]!, id: 'r3', number: 3 })
     })
-    expect(r.rounds).toMatchObject({ done: false, text: '3 rondas para un torneo de 2 días: sube los días en Reglas o borra la que sobra', to: 'torneo', tab: 'reglas' })
+    expect(r.rounds).toMatchObject({
+      done: false,
+      text: '3 rondas para un torneo de 2 días: sube los días en Reglas o borra la que sobra',
+      to: 'torneo',
+      tab: 'reglas',
+    })
     // Reglas is a tab of Torneo: the line opens it.
     expect(hrefOf('viaje', r.rounds!)).toBe('/t/viaje/admin/torneo?pestana=reglas')
   })
@@ -169,24 +234,38 @@ describe('Para empezar: what the first list got wrong', () => {
   it('the card is checked on the tee each player plays, not on any tee (P3)', () => {
     const r = check('minimal4-setup', (s) => {
       // A second tee with only nine holes loaded, and one player on it.
-      s.courses[0]!.tees.push(makeTee('tee9', s.courses[0]!.id, { name: 'Rojas', holes: s.courses[0]!.tees[0]!.holes.slice(0, 9) }))
+      s.courses[0]!.tees.push(
+        makeTee('tee9', s.courses[0]!.id, { name: 'Rojas', holes: s.courses[0]!.tees[0]!.holes.slice(0, 9) }),
+      )
       s.players.find((p) => p.id === 'p4')!.defaultTeeId = 'tee9'
     })
-    expect(r.card).toMatchObject({ done: false, text: 'Falta la tarjeta del campo (par e índice de golpe): día 1', to: 'campos' })
+    expect(r.card).toMatchObject({
+      done: false,
+      text: 'Falta la tarjeta del campo (par e índice de golpe): día 1',
+      to: 'campos',
+    })
   })
 
   it('a card still as «Capturar a mano» left it (par 4 everywhere) is not a card, and the line says to capture it (P3, N10)', () => {
     const r = check('minimal4-setup', (s) => {
       s.courses[0]!.tees[0]!.holes = s.courses[0]!.tees[0]!.holes.map((h) => ({ ...h, par: 4, strokeIndex: h.number }))
     })
-    expect(r.card).toMatchObject({ done: false, text: 'Captura la tarjeta (sigue en par 4 en todos los hoyos): día 1', to: 'campos' })
+    expect(r.card).toMatchObject({
+      done: false,
+      text: 'Captura la tarjeta (sigue en par 4 en todos los hoyos): día 1',
+      to: 'campos',
+    })
   })
 
   it('an 18-hole round on a 9-hole course sends you to Rondas, saying what to change there (P3, N10)', () => {
     const r = check('minimal4-setup', (s) => {
       s.courses[0]!.tees[0]!.holes = s.courses[0]!.tees[0]!.holes.slice(0, 9)
     })
-    expect(r.card).toMatchObject({ done: false, text: 'Cambia la ronda a 9 hoyos (el campo tiene 9): día 1', to: 'rondas' })
+    expect(r.card).toMatchObject({
+      done: false,
+      text: 'Cambia la ronda a 9 hoyos (el campo tiene 9): día 1',
+      to: 'rondas',
+    })
     // Set the round to nine holes and the card is complete.
     expect(
       check('minimal4-setup', (s) => {
@@ -224,9 +303,21 @@ describe('Para empezar: what the first list got wrong', () => {
       s.pairs = []
     })
     expect(team.d.state.flags.warnings.some((w) => coveredByChecklist(w, team.items))).toBe(true)
-    expect(setupBadge(team.items, team.d.state.flags.warnings.filter((w) => coveredByChecklist(w, team.items)), 0)).toBe(open(team.items).length)
+    expect(
+      setupBadge(
+        team.items,
+        team.d.state.flags.warnings.filter((w) => coveredByChecklist(w, team.items)),
+        0,
+      ),
+    ).toBe(open(team.items).length)
     // A warning the list does not cover still counts.
-    expect(setupBadge(fresh.items, [...fresh.d.state.flags.warnings, msg('pool.short', { prizes: 30000, entries: 27500, missing: 2500 })], 1)).toBe(open(fresh.items).length + 2)
+    expect(
+      setupBadge(
+        fresh.items,
+        [...fresh.d.state.flags.warnings, msg('pool.short', { prizes: 30000, entries: 27500, missing: 2500 })],
+        1,
+      ),
+    ).toBe(open(fresh.items).length + 2)
   })
 })
 
@@ -242,8 +333,22 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     const drawn = run('match8', (s) => {
       fourball(s)
       for (const rd of s.rounds) {
-        s.groups.push({ id: `${rd.id}a`, roundId: rd.id, number: 1, teeTime: null, startHole: 1, playerIds: ['p1', 'p2', 'p3', 'p4'] })
-        s.groups.push({ id: `${rd.id}b`, roundId: rd.id, number: 2, teeTime: null, startHole: 1, playerIds: ['p5', 'p6', 'p7', 'p8'] })
+        s.groups.push({
+          id: `${rd.id}a`,
+          roundId: rd.id,
+          number: 1,
+          teeTime: null,
+          startHole: 1,
+          playerIds: ['p1', 'p2', 'p3', 'p4'],
+        })
+        s.groups.push({
+          id: `${rd.id}b`,
+          roundId: rd.id,
+          number: 2,
+          teeTime: null,
+          startHole: 1,
+          playerIds: ['p5', 'p6', 'p7', 'p8'],
+        })
       }
     })
     expect(words(drawn.d.state.flags.warnings).filter((w) => /fourball necesita dos parejas/.test(w))).toHaveLength(6)
@@ -252,7 +357,13 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     // Four pairs drawn: two pairs a match, and the line is done.
     const paired = check('match8', (s) => {
       fourball(s)
-      s.teams = [0, 1, 2, 3].map((i) => ({ id: `tm${i}`, name: null, number: i + 1, playerIds: [`p${2 * i + 1}`, `p${2 * i + 2}`], drawnAt: null }))
+      s.teams = [0, 1, 2, 3].map((i) => ({
+        id: `tm${i}`,
+        name: null,
+        number: i + 1,
+        playerIds: [`p${2 * i + 1}`, `p${2 * i + 2}`],
+        drawnAt: null,
+      }))
     })
     expect(paired.pairs).toMatchObject({ done: true, text: '4 parejas armadas' })
   })
@@ -265,16 +376,35 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     // Two teams of 4 from a scramble: two «teams», no pairs.
     const fours = check('match8', (s) => {
       fourball(s)
-      s.teams = [0, 1].map((i) => ({ id: `tm${i}`, name: null, number: i + 1, playerIds: [1, 2, 3, 4].map((k) => `p${4 * i + k}`), drawnAt: null }))
+      s.teams = [0, 1].map((i) => ({
+        id: `tm${i}`,
+        name: null,
+        number: i + 1,
+        playerIds: [1, 2, 3, 4].map((k) => `p${4 * i + k}`),
+        drawnAt: null,
+      }))
     })
-    expect(fours.pairs).toMatchObject({ done: false, text: '2 equipos no son parejas: el fourball se juega en parejas de 2', to: 'equipos' })
+    expect(fours.pairs).toMatchObject({
+      done: false,
+      text: '2 equipos no son parejas: el fourball se juega en parejas de 2',
+      to: 'equipos',
+    })
     // Seven players drawn in Equipos: 2, 2, 2 and 1.
     const odd = check('match8', (s) => {
       fourball(s)
       s.players = s.players.slice(0, 7)
-      s.teams = [[1, 2], [3, 4], [5, 6], [7]].map((ks, i) => ({ id: `tm${i}`, name: null, number: i + 1, playerIds: ks.map((k) => `p${k}`), drawnAt: null }))
+      s.teams = [[1, 2], [3, 4], [5, 6], [7]].map((ks, i) => ({
+        id: `tm${i}`,
+        name: null,
+        number: i + 1,
+        playerIds: ks.map((k) => `p${k}`),
+        drawnAt: null,
+      }))
     })
-    expect(odd.pairs).toMatchObject({ done: false, text: '1 equipo no es pareja: el fourball se juega en parejas de 2' })
+    expect(odd.pairs).toMatchObject({
+      done: false,
+      text: '1 equipo no es pareja: el fourball se juega en parejas de 2',
+    })
     // A team format keeps its teams of any size.
     const scramble = check('scramble8')
     expect(scramble.teams).toMatchObject({ done: true, text: '2 equipos armados' })
@@ -287,7 +417,7 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     expect(r.teams).toMatchObject({ done: false, text: '6 jugadores sin equipo', to: 'equipos' })
   })
 
-  it('singles in groups of four and three: the groups are not the bracket\'s matches, and the line stays open', () => {
+  it("singles in groups of four and three: the groups are not the bracket's matches, and the line stays open", () => {
     const r = run('match8', (s) => {
       knockout(s, { players: 7, days: 3 })
       s.groups = [
@@ -296,7 +426,12 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
       ]
     })
     // 7 players: the top seed has a bye, and the three matches have no group of their own.
-    expect(r.by.groups).toMatchObject({ done: false, text: 'Arma los grupos de 3 partidos del día 1', to: 'grupos', roundId: 'r1' })
+    expect(r.by.groups).toMatchObject({
+      done: false,
+      text: 'Arma los grupos de 3 partidos del día 1',
+      to: 'grupos',
+      roundId: 'r1',
+    })
     // The engine's two «exactamente dos jugadores» warnings are this line, counted once.
     expect(words(r.d.state.flags.warnings).filter((w) => /exactamente dos jugadores/.test(w))).toHaveLength(2)
     expect(r.badge).toBe(open(r.items).length)
@@ -312,11 +447,15 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
     expect(r.badge).toBe(1)
   })
 
-  it('a bracket warning is not claimed: none of them reaches the engine\'s warnings, so none is «covered»', () => {
+  it("a bracket warning is not claimed: none of them reaches the engine's warnings, so none is «covered»", () => {
     const r = run('match8', (s) => knockout(s, { players: 1, days: 1 }))
     expect(words(r.d.state.bracket!.warnings)[0]).toMatch(/suficientes jugadores para armar el cuadro/)
     expect(r.d.state.flags.warnings).not.toContain(r.d.state.bracket!.warnings[0])
-    for (const w of [say('bracket.tooFew'), msg('bracket.needsRounds', { rounds: 3, have: 1 }), msg('bracket.tied', { round: msg('bracket.round', { matches: 4 }) })]) {
+    for (const w of [
+      say('bracket.tooFew'),
+      msg('bracket.needsRounds', { rounds: 3, have: 1 }),
+      msg('bracket.tied', { round: msg('bracket.round', { matches: 4 }) }),
+    ]) {
       expect(coveredByChecklist(w, r.items)).toBe(false)
     }
   })
@@ -325,12 +464,22 @@ describe('Para empezar: «Listo» only when the day can be played (N1)', () => {
 describe('Para empezar: tees as the engine plays them (N2)', () => {
   /** Day 1 moved to a one-tee course after p3 was given a tee of another course for it. */
   function staleTee(s: Snapshot, opts: { otherLoaded: boolean }) {
-    const other = makeCourse('quivira', [makeTee('rojas', 'quivira', { name: 'Rojas' }), makeTee('negras', 'quivira', { name: 'Negras' })])
+    const other = makeCourse('quivira', [
+      makeTee('rojas', 'quivira', { name: 'Rojas' }),
+      makeTee('negras', 'quivira', { name: 'Negras' }),
+    ])
     if (opts.otherLoaded) {
       s.tournament.settings = { ...settingsOf(s), rounds: 2 }
       s.courses.push(other)
       s.rounds.push(makeRound(2, { status: 'scheduled', date: '2027-05-16', courseId: 'quivira' }))
-      s.groups.push({ id: 'r2g1', roundId: 'r2', number: 1, teeTime: null, startHole: 1, playerIds: ['p1', 'p2', 'p3', 'p4'] })
+      s.groups.push({
+        id: 'r2g1',
+        roundId: 'r2',
+        number: 1,
+        teeTime: null,
+        startHole: 1,
+        playerIds: ['p1', 'p2', 'p3', 'p4'],
+      })
     }
     s.roundTees = [{ roundId: 'r1', playerId: 'p3', teeId: 'rojas' }]
   }
@@ -338,7 +487,12 @@ describe('Para empezar: tees as the engine plays them (N2)', () => {
   it('a tee of another course whose course is not loaded: the engine plays par 4 everywhere; the line says to change it, and covers that warning', () => {
     const r = run('minimal4-setup', (s) => staleTee(s, { otherLoaded: false }))
     expect(words(r.d.state.flags.warnings)).toEqual(['Día 1: sin campo cargado; se usa par 4 en todos los hoyos.'])
-    expect(r.by.foreignTees).toMatchObject({ done: false, text: 'Cambia los tees de otro campo: día 1', to: 'rondas', days: [1] })
+    expect(r.by.foreignTees).toMatchObject({
+      done: false,
+      text: 'Cambia los tees de otro campo: día 1',
+      to: 'rondas',
+      days: [1],
+    })
     expect(r.badge).toBe(1)
   })
 
@@ -359,9 +513,11 @@ describe('Para empezar: tees as the engine plays them (N2)', () => {
     expect(r.foreignTees).toMatchObject({ done: false })
   })
 
-  it('the card is read on the tee chosen for the day, not on the player\'s default (M5)', () => {
+  it("the card is read on the tee chosen for the day, not on the player's default (M5)", () => {
     const r = check('minimal4-setup', (s) => {
-      s.courses[0]!.tees.push(makeTee('tee9', s.courses[0]!.id, { name: 'Rojas', holes: s.courses[0]!.tees[0]!.holes.slice(0, 9) }))
+      s.courses[0]!.tees.push(
+        makeTee('tee9', s.courses[0]!.id, { name: 'Rojas', holes: s.courses[0]!.tees[0]!.holes.slice(0, 9) }),
+      )
       // p4's default is the full tee1; for day 1 he was put on the nine-hole Rojas.
       s.roundTees = [{ roundId: 'r1', playerId: 'p4', teeId: 'tee9' }]
     })
@@ -403,13 +559,19 @@ describe('Para empezar: match play is a knockout (N7)', () => {
   function tiedQuarter(s: Snapshot) {
     settingsOf(s).modules.individual.formatOptions.scoring = 'gross'
     s.scores = s.scores.filter((x) => !(x.roundId === 'r1' && x.playerId === 'p8'))
-    for (const x of s.scores.filter((y) => y.roundId === 'r1' && y.playerId === 'p1')) s.scores.push({ ...x, playerId: 'p8' })
+    for (const x of s.scores.filter((y) => y.roundId === 'r1' && y.playerId === 'p1'))
+      s.scores.push({ ...x, playerId: 'p8' })
   }
 
   it('a tied match stops the bracket: a line says the Comité decides who goes through, and opens Grupos on the next day', () => {
     const r = run('bracket8', tiedQuarter)
     expect(r.d.state.bracket!.rounds).toHaveLength(1)
-    expect(r.by.groups).toMatchObject({ done: false, text: 'Cuartos de final: un partido quedó sin ganador. Decide quién pasa y arma los grupos del día 2', to: 'grupos', roundId: 'r2' })
+    expect(r.by.groups).toMatchObject({
+      done: false,
+      text: 'Cuartos de final: un partido quedó sin ganador. Decide quién pasa y arma los grupos del día 2',
+      to: 'grupos',
+      roundId: 'r2',
+    })
     // Once the Comité has grouped day 2 by hand, the decision is made.
     const decided = check('bracket8', (s) => {
       tiedQuarter(s)
@@ -423,14 +585,22 @@ describe('Para empezar: match play is a knockout (N7)', () => {
       knockout(s, { players: 6, days: 1 })
       groupTheBracket(s)
     })
-    expect(r.bracket).toMatchObject({ done: false, text: 'El cuadro necesita 3 rondas y el torneo es de 1 día: sube los días a 3 en Reglas', to: 'torneo', tab: 'reglas' })
+    expect(r.bracket).toMatchObject({
+      done: false,
+      text: 'El cuadro necesita 3 rondas y el torneo es de 1 día: sube los días a 3 en Reglas',
+      to: 'torneo',
+      tab: 'reglas',
+    })
     expect(r.groups).toMatchObject({ done: false, text: '2 jugadores sin grupo el día 1' })
   })
 
   it('rounds created for the bracket on a one-day tournament are not «extra»: the day count in Reglas is what is short', () => {
     const r = check('match8', (s) => knockout(s, { days: 1, rounds: 3 }))
     expect(r.rounds).toMatchObject({ done: true, text: '3 rondas creadas' })
-    expect(r.bracket).toMatchObject({ done: false, text: 'El cuadro necesita 3 rondas y el torneo es de 1 día: sube los días a 3 en Reglas' })
+    expect(r.bracket).toMatchObject({
+      done: false,
+      text: 'El cuadro necesita 3 rondas y el torneo es de 1 día: sube los días a 3 en Reglas',
+    })
     expect(hrefOf('viaje', r.bracket!)).toBe('/t/viaje/admin/torneo?pestana=reglas')
     // With the days raised, nothing about the bracket is open.
     expect(check('match8', (s) => knockout(s, { days: 3 })).bracket).toBeUndefined()

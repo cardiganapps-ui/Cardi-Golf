@@ -54,11 +54,16 @@ export async function deleteMyAccount(email: string): Promise<{ done: true } | {
 }
 
 /** The Comité says every player of its tournament is an adult, or takes it back (TRUST-13). */
-export const confirmAdults = (tournamentId: string, on: boolean) => rpc('confirm_adults', { p_tournament_id: tournamentId, p_on: on }).as<string | null>()
+export const confirmAdults = (tournamentId: string, on: boolean) =>
+  rpc('confirm_adults', { p_tournament_id: tournamentId, p_on: on }).as<string | null>()
 
 /** When the Comité said so, or null; undefined on a database without 0070 (the card says nothing then). */
 export async function adultsConfirmedAt(tournamentId: string): Promise<string | null | undefined> {
-  const { data, error } = await supabase().from('tournaments').select('adults_confirmed_at').eq('id', tournamentId).maybeSingle()
+  const { data, error } = await supabase()
+    .from('tournaments')
+    .select('adults_confirmed_at')
+    .eq('id', tournamentId)
+    .maybeSingle()
   if (error) {
     if (error.code === '42703' || error.code === 'PGRST204') return undefined
     throw ApiError.from(error)
@@ -76,7 +81,8 @@ export interface CorrectionRequest {
 }
 
 /** A player asks the Comité to fix what it saved about him (TRUST-16). */
-export const requestCorrection = (tournamentId: string, message: string) => rpc('request_player_correction', { p_tournament_id: tournamentId, p_message: message })
+export const requestCorrection = (tournamentId: string, message: string) =>
+  rpc('request_player_correction', { p_tournament_id: tournamentId, p_message: message })
 /** The Comité's list, open ones first; null on a database without 0070. */
 export async function correctionRequests(tournamentId: string): Promise<CorrectionRequest[] | null> {
   try {

@@ -9,7 +9,9 @@ import { defineConfig } from '@playwright/test'
 import { existsSync } from 'node:fs'
 
 // The sandbox ships its own Chromium; CI installs Playwright's.
-const chromium = process.env.CHROMIUM || (!process.env.CI && existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined)
+const chromium =
+  process.env.CHROMIUM ||
+  (!process.env.CI && existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined)
 const PORT = 4320
 
 export default defineConfig({

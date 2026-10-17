@@ -113,11 +113,21 @@ describe('an older answer never replaces a newer one (audit P1-15)', () => {
     store().seed(next.tournament.id, next, 1)
     slow.release()
     await older
-    expect([store().tournamentId, shownName(), store().loading]).toEqual([next.tournament.id, next.tournament.name, false])
+    expect([store().tournamentId, shownName(), store().loading]).toEqual([
+      next.tournament.id,
+      next.tournament.name,
+      false,
+    ])
   })
 
   it('opening another tournament while the first is still loading shows the second', async () => {
-    server.tables.tournaments!.push({ ...tournamentRow(), id: 'fx-otro', slug: 'otro-torneo', name: 'Otro torneo', join_code: 'OTRO22' })
+    server.tables.tournaments!.push({
+      ...tournamentRow(),
+      id: 'fx-otro',
+      slug: 'otro-torneo',
+      name: 'Otro torneo',
+      join_code: 'OTRO22',
+    })
     const slow = server.hold()
     const first = store().load(TID)
     await slow.received
@@ -215,7 +225,12 @@ describe('a load that fails', () => {
     expect(shownName()).toBe(fx.snapshot.tournament.name)
     server.down = { message: 'TypeError: Failed to fetch' }
     await store().load('otro-torneo')
-    expect([store().tournamentId, store().data, store().error, store().loading]).toEqual(['otro-torneo', null, t.errors.network, false])
+    expect([store().tournamentId, store().data, store().error, store().loading]).toEqual([
+      'otro-torneo',
+      null,
+      t.errors.network,
+      false,
+    ])
   })
 
   it('only the tournament’s own row failing still says why: the signal dropped, not a broken page', async () => {
@@ -225,7 +240,11 @@ describe('a load that fails', () => {
     await slow.received
     slow.fail({ message: 'TypeError: Failed to fetch' })
     await again
-    expect([store().error, store().loading, shownName()]).toEqual([t.errors.network, false, fx.snapshot.tournament.name])
+    expect([store().error, store().loading, shownName()]).toEqual([
+      t.errors.network,
+      false,
+      fx.snapshot.tournament.name,
+    ])
   })
 })
 
@@ -283,7 +302,9 @@ describe('the players key: what readers of the players (who has a PIN) ask again
     await store().reload()
     const linked = store().data!.playersKey
     expect(linked).not.toBe(first)
-    expect(store().data!.snapshot.players).toEqual(fx.snapshot.players.map((p) => expect.objectContaining({ id: p.id })))
+    expect(store().data!.snapshot.players).toEqual(
+      fx.snapshot.players.map((p) => expect.objectContaining({ id: p.id })),
+    )
     players()[0]!.profile_status = null
     await store().reload()
     expect(store().data!.playersKey).not.toBe(linked)

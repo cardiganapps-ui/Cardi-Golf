@@ -12,8 +12,14 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ playersWithPin: vi.fn(), tournamentProfiles: vi.fn(async () => [] as unknown[]) }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), playersWithPin: api.playersWithPin }))
-vi.mock('../../data/profiles', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/profiles')>()), tournamentProfiles: api.tournamentProfiles }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  playersWithPin: api.playersWithPin,
+}))
+vi.mock('../../data/profiles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/profiles')>()),
+  tournamentProfiles: api.tournamentProfiles,
+}))
 
 import { FixtureGate } from '../../dev/FixtureGate'
 import { getFixture } from '../../dev/fixtures'
@@ -39,7 +45,16 @@ function snapshotOf(name: string, edit?: (s: Snapshot) => void) {
 
 function provider(name: string, tournamentId: string, children: React.ReactNode) {
   return (
-    <TournamentContext.Provider value={{ tournamentId, slug: 'viaje', lookup: getFixture(name)!.lookup, me: { playerId: null, isOrganizer: true, isComite: true }, refresh: async () => undefined, leave: async () => undefined }}>
+    <TournamentContext.Provider
+      value={{
+        tournamentId,
+        slug: 'viaje',
+        lookup: getFixture(name)!.lookup,
+        me: { playerId: null, isOrganizer: true, isComite: true },
+        refresh: async () => undefined,
+        leave: async () => undefined,
+      }}
+    >
       {children}
     </TournamentContext.Provider>
   )
@@ -77,7 +92,13 @@ function mountComite(name: string, edit?: (s: Snapshot) => void, tournamentId = 
     return copy.textContent
   }
   const go = async (section: 'jugadores' | 'torneo') => {
-    await act(async () => fireEvent.click(screen.getByRole('link', { name: new RegExp(`^${section === 'torneo' ? t.admin.sections.tournament : t.admin.sections.players}`) })))
+    await act(async () =>
+      fireEvent.click(
+        screen.getByRole('link', {
+          name: new RegExp(`^${section === 'torneo' ? t.admin.sections.tournament : t.admin.sections.players}`),
+        }),
+      ),
+    )
   }
   return { ...view, snapshot, tab, shown, go }
 }
@@ -103,7 +124,7 @@ describe('Para empezar (UX-06)', () => {
     expect(screen.getByRole('link', { name: `${R.doneLabel}: ${R.rounds(2)}` })).toBeTruthy()
   })
 
-  it('the PIN line arrives with the server\'s answer', async () => {
+  it("the PIN line arrives with the server's answer", async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
     const { unmount } = mount('minimal4-setup', undefined, 't-pins')
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
@@ -118,7 +139,9 @@ describe('Para empezar (UX-06)', () => {
 
   it('a player linked to an account needs no PIN', async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
-    api.tournamentProfiles.mockResolvedValue([{ playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'confirmed' }])
+    api.tournamentProfiles.mockResolvedValue([
+      { playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'confirmed' },
+    ])
     mount('minimal4-setup')
     expect(await screen.findByText(LISTO)).toBeTruthy()
   })
@@ -162,7 +185,7 @@ describe('Para empezar (UX-06)', () => {
 })
 
 describe('Para empezar: a design fixture has no server (N4)', () => {
-  it('mounted the way FixtureGate mounts it (store id «fixture:<name>», context id the snapshot\'s), its players count as able to get in', async () => {
+  it("mounted the way FixtureGate mounts it (store id «fixture:<name>», context id the snapshot's), its players count as able to get in", async () => {
     useTournament.setState({ tournamentId: null, data: null })
     render(
       <MemoryRouter initialEntries={['/t/_/minimal4-setup/admin/torneo']}>
@@ -205,7 +228,10 @@ describe('Para empezar: «Listo» only when the day can be played (N1, N5)', () 
     mount('minimal4-setup', (s) => {
       s.tournament.status = 'live'
       s.tournament.settings = { ...(s.tournament.settings as TournamentSettings), rounds: 2 }
-      s.rounds = [makeRound(1, { status: 'finished', date: '2027-05-15' }), makeRound(2, { status: 'cancelled', date: '2027-05-16' })]
+      s.rounds = [
+        makeRound(1, { status: 'finished', date: '2027-05-15' }),
+        makeRound(2, { status: 'cancelled', date: '2027-05-16' }),
+      ]
     })
     await act(async () => undefined)
     expect(screen.queryByRole('heading')).toBeNull()
@@ -225,7 +251,9 @@ describe('Para empezar: «Listo» only when the day can be played (N1, N5)', () 
 describe('Para empezar: the card and the tab read one answer, asked again when it can have changed (N3)', () => {
   it('a pending link is not a way in (M11)', async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
-    api.tournamentProfiles.mockResolvedValue([{ playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'pending' }])
+    api.tournamentProfiles.mockResolvedValue([
+      { playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'pending' },
+    ])
     mount('minimal4-setup')
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
   })
@@ -262,15 +290,19 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     expect(tab().textContent).toBe(t.admin.sections.tournament)
   })
 
-  it('a link undone on another phone arrives with the players\' reload, and is asked about again', async () => {
+  it("a link undone on another phone arrives with the players' reload, and is asked about again", async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3']))
-    api.tournamentProfiles.mockResolvedValue([{ playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'confirmed' }])
+    api.tournamentProfiles.mockResolvedValue([
+      { playerId: 'p4', handle: 'camilo', displayName: 'Camilo', avatarUrl: null, status: 'confirmed' },
+    ])
     const { snapshot } = mountComite('minimal4-setup')
     expect(await screen.findByText(LISTO)).toBeTruthy()
     api.tournamentProfiles.mockResolvedValue([])
     // Realtime: a players row changed (its profile link, which the snapshot's players don't carry), and the
     // store reloads with a new players key (tournamentStore.test: the key follows the rows as fetched).
-    await act(async () => useTournament.setState({ data: { ...dataFromSnapshot(structuredClone(snapshot)), playersKey: 'p4-unlinked' } }))
+    await act(async () =>
+      useTournament.setState({ data: { ...dataFromSnapshot(structuredClone(snapshot)), playersKey: 'p4-unlinked' } }),
+    )
     expect(await screen.findByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeTruthy()
   })
 
@@ -333,7 +365,7 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     expect(screen.queryByRole('link', { name: `${R.todoLabel}: ${R.pinsMissing(1)}` })).toBeNull()
   })
 
-  it('a late answer about another tournament never blanks this one\'s card', async () => {
+  it("a late answer about another tournament never blanks this one's card", async () => {
     let first: (pins: Set<string>) => void = () => undefined
     api.playersWithPin.mockReturnValueOnce(new Promise((resolve) => (first = resolve)))
     const one = mount('minimal4-setup', undefined, 't-late-1')
@@ -350,7 +382,7 @@ describe('Para empezar: the card and the tab read one answer, asked again when i
     expect(screen.queryByText(LISTO)).toBeNull()
   })
 
-  it('an answer about one tournament is never read as another\'s (M10)', async () => {
+  it("an answer about one tournament is never read as another's (M10)", async () => {
     api.playersWithPin.mockResolvedValue(pinsOf(['p1', 'p2', 'p3', 'p4']))
     const first = mount('minimal4-setup', undefined, 't-first')
     expect(await screen.findByText(LISTO)).toBeTruthy()

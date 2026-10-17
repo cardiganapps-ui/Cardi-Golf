@@ -26,13 +26,33 @@ const W = t.settleWhy
 const why: Explanation = { title: label(''), steps: [] }
 const sum = (xs: Array<{ amount: number }>) => xs.reduce((s, x) => s + x.amount, 0)
 
-function prize(playerId: Id, amount: number, opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {}): PrizeAward {
-  return { moduleId: 'individual', playerId, amount, final: true, why, ...opts, label: label(opts.label ?? 'Individual, 1.º') }
+function prize(
+  playerId: Id,
+  amount: number,
+  opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {},
+): PrizeAward {
+  return {
+    moduleId: 'individual',
+    playerId,
+    amount,
+    final: true,
+    why,
+    ...opts,
+    label: label(opts.label ?? 'Individual, 1.º'),
+  }
 }
 /** A line's or a position's parts as Dinero says them (ARCH-05). */
 const said = (parts: MoneyPart[] | undefined) => parts?.map((x) => ({ ...x, label: words(x.label) }))
 function pay(snap: Snapshot, kind: PaymentKind, from: Id | null, to: Id | null, amount: number) {
-  snap.payments.push({ id: `pay${snap.payments.length + 1}`, kind, fromPlayerId: from, toPlayerId: to, amount, paid: true, note: null })
+  snap.payments.push({
+    id: `pay${snap.payments.length + 1}`,
+    kind,
+    fromPlayerId: from,
+    toPlayerId: to,
+    amount,
+    paid: true,
+    note: null,
+  })
 }
 function fourPlayers(over: Partial<TournamentSettings> = {}, banker: Id | null = null) {
   const s = { ...DEFAULT_SETTINGS, entryFee: 1000, ...over }
@@ -40,7 +60,8 @@ function fourPlayers(over: Partial<TournamentSettings> = {}, banker: Id | null =
   snap.tournament.bankerPlayerId = banker
   return { s, snap }
 }
-const money = (snap: Snapshot, s: TournamentSettings, prizes: PrizeAward[], auction?: AuctionState): MoneyState => computeMoney(snap, s, prizes, auction, true)
+const money = (snap: Snapshot, s: TournamentSettings, prizes: PrizeAward[], auction?: AuctionState): MoneyState =>
+  computeMoney(snap, s, prizes, auction, true)
 
 /** Every invariant MONEY-07 promises, on one money state. */
 function explained(m: MoneyState) {
@@ -49,7 +70,9 @@ function explained(m: MoneyState) {
     expect(sum(tr.parts!), 'its parts add up to the line').toBe(tr.amount)
     expect(tr.why).toHaveLength(1)
     expect(words(tr.why)[0]!.steps.length).toBeGreaterThan(1)
-    expect(words(tr.why)[0]!.steps.at(-1)).toBe(tr.amount === 0 ? W.nets : W.total(`$${tr.amount.toLocaleString('en-US')}`))
+    expect(words(tr.why)[0]!.steps.at(-1)).toBe(
+      tr.amount === 0 ? W.nets : W.total(`$${tr.amount.toLocaleString('en-US')}`),
+    )
   }
   for (const p of m.positions) expect(sum(p.parts), 'a position is the sum of its parts').toBe(p.amount)
   const at = new Map(m.positions.map((p) => [p.party, p.amount]))
@@ -62,7 +85,8 @@ function explained(m: MoneyState) {
     moved.set(tr.to, (moved.get(tr.to) ?? 0) + tr.amount)
   }
   // Sin banco pays each position out exactly (when it is shown at all).
-  if (m.peerToPeer.length) for (const p of m.positions) expect(moved.get(p.party) ?? 0, `position of ${p.party}`).toBe(p.amount)
+  if (m.peerToPeer.length)
+    for (const p of m.positions) expect(moved.get(p.party) ?? 0, `position of ${p.party}`).toBe(p.amount)
   expect(words(m.banker.why).steps).toContain(W.bankInTotal(`$${m.banker.receives.toLocaleString('en-US')}`))
   expect(words(m.banker.why).steps).toContain(W.bankOutTotal(`$${m.banker.pays.toLocaleString('en-US')}`))
 }
@@ -70,7 +94,10 @@ function explained(m: MoneyState) {
 describe('every settlement line says where its amount comes from (MONEY-07)', () => {
   it('a winner who has not paid: his prize, less his entry, adds up to the line', () => {
     const { s, snap } = fourPlayers()
-    const m = money(snap, s, [prize('p1', 3000), prize('p1', 1000, { moduleId: 'bestRound', label: 'Mejor ronda, día 1' })])
+    const m = money(snap, s, [
+      prize('p1', 3000),
+      prize('p1', 1000, { moduleId: 'bestRound', label: 'Mejor ronda, día 1' }),
+    ])
     const line = m.viaBank.find((x) => x.to === 'p1')!
     expect(line.amount).toBe(3000)
     expect(said(line.parts)).toEqual([
@@ -78,7 +105,12 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
       { label: 'Mejor ronda, día 1', amount: 1000 },
       { label: 'Inscripción', amount: -1000 },
     ])
-    expect(words(line.why)[0]!.steps).toEqual(['Individual, 1.º: +$3,000', 'Mejor ronda, día 1: +$1,000', 'Inscripción: −$1,000', 'Total: $3,000'])
+    expect(words(line.why)[0]!.steps).toEqual([
+      'Individual, 1.º: +$3,000',
+      'Mejor ronda, día 1: +$1,000',
+      'Inscripción: −$1,000',
+      'Total: $3,000',
+    ])
     explained(m)
   })
 
@@ -120,11 +152,31 @@ describe('every settlement line says where its amount comes from (MONEY-07)', ()
     const s = { ...DEFAULT_SETTINGS, entryFee: 0 }
     const snap = makeSnapshot({ players: 2, rounds: 1, settings: s })
     snap.calcuttaBuybacks.push({ lotId: 'lot1', pct: 50, amount: 500, paid: false })
-    const auction = { lots: [{ lotId: 'lot1', playerId: 'p1', lotNumber: 1, status: 'sold', price: 1000, ownerId: 'p2', buybackPct: 50, buybackAmount: 500 }] } as unknown as AuctionState
-    const bets = [prize('p2', 300, { payerId: 'p1', gameId: 'g1', label: 'Nassau, frente' }), prize('p1', 100, { payerId: 'p2', gameId: 'g1', label: 'Nassau, vuelta' })]
+    const auction = {
+      lots: [
+        {
+          lotId: 'lot1',
+          playerId: 'p1',
+          lotNumber: 1,
+          status: 'sold',
+          price: 1000,
+          ownerId: 'p2',
+          buybackPct: 50,
+          buybackAmount: 500,
+        },
+      ],
+    } as unknown as AuctionState
+    const bets = [
+      prize('p2', 300, { payerId: 'p1', gameId: 'g1', label: 'Nassau, frente' }),
+      prize('p1', 100, { payerId: 'p2', gameId: 'g1', label: 'Nassau, vuelta' }),
+    ]
     const m = money(snap, s, bets, auction)
     const buyback = m.viaBank.find((x) => x.settles?.some((a) => a.kind === 'buyback'))!
-    expect([buyback.from, buyback.to, said(buyback.parts)]).toEqual(['p1', 'p2', [{ label: 'Recompra 50%', amount: 500 }]])
+    expect([buyback.from, buyback.to, said(buyback.parts)]).toEqual([
+      'p1',
+      'p2',
+      [{ label: 'Recompra 50%', amount: 500 }],
+    ])
     const bet = m.viaBank.find((x) => x.settles?.some((a) => a.kind === 'bet'))!
     expect([bet.from, bet.to, bet.amount]).toEqual(['p1', 'p2', 200])
     expect(said(bet.parts)).toEqual([
@@ -148,7 +200,14 @@ describe('sin banco: each transfer comes from two positions (MONEY-07)', () => {
     ])
     const p3 = m.peerToPeer.find((x) => x.from === 'p3')!
     expect(words(p3.why)[0]).toEqual({ title: W.owesTotal('J3', '$1,000'), steps: ['Inscripción: −$1,000'] })
-    expect(words(p3.why)[2]!.steps[1]).toBe(W.share('J3', '$1,000', `$${p3.amount.toLocaleString('en-US')}`, p3.to === null ? t.moneyScreen.bank : snap.players.find((p) => p.id === p3.to)!.displayName))
+    expect(words(p3.why)[2]!.steps[1]).toBe(
+      W.share(
+        'J3',
+        '$1,000',
+        `$${p3.amount.toLocaleString('en-US')}`,
+        p3.to === null ? t.moneyScreen.bank : snap.players.find((p) => p.id === p3.to)!.displayName,
+      ),
+    )
     explained(m)
   })
 
@@ -169,8 +228,26 @@ describe('sin banco: each transfer comes from two positions (MONEY-07)', () => {
 describe('the bank says what moves its two figures (MONEY-07)', () => {
   it('in by entries and lots, out by pot, the house cut, and what is left', () => {
     const { s, snap } = fourPlayers({ houseCut: 400 })
-    const auction = { lots: [{ lotId: 'lot1', playerId: 'p1', lotNumber: 1, status: 'sold', price: 800, ownerId: 'p2', buybackPct: 0, buybackAmount: 0 }] } as unknown as AuctionState
-    const m = money(snap, s, [prize('p1', 3000), prize('p2', 800, { moduleId: 'auction', potId: 'calcutta', label: 'Calcutta, campeón' })], auction)
+    const auction = {
+      lots: [
+        {
+          lotId: 'lot1',
+          playerId: 'p1',
+          lotNumber: 1,
+          status: 'sold',
+          price: 800,
+          ownerId: 'p2',
+          buybackPct: 0,
+          buybackAmount: 0,
+        },
+      ],
+    } as unknown as AuctionState
+    const m = money(
+      snap,
+      s,
+      [prize('p1', 3000), prize('p2', 800, { moduleId: 'auction', potId: 'calcutta', label: 'Calcutta, campeón' })],
+      auction,
+    )
     expect(words(m.banker.why).steps).toEqual([
       W.gross,
       W.bankIn(W.entries(4, '$1,000'), '$4,000'),

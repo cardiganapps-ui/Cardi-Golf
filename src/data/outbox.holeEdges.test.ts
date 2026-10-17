@@ -22,7 +22,8 @@ import type { Row } from './mappers'
 import { enterAs, holeScore, installFakePhone, settle, until, type Outcome } from './testing/fakePhone'
 
 const { server, phone } = installFakePhone()
-const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, unsentWrites, useOutbox } = await import('./outbox')
+const { _outboxTest, adoptQueuedWrites, enqueueHole, rejectGoneRounds, startOutbox, unsentWrites, useOutbox } =
+  await import('./outbox')
 type HoleEntry = import('./outbox').HoleEntry
 const { useTournament } = await import('./tournamentStore')
 const { t } = await import('../i18n/es-MX')
@@ -43,16 +44,25 @@ beforeEach(async () => {
 afterEach(() => _outboxTest.reset())
 
 const boards = () => useTournament.getState().data!.snapshot
-const onBoards = (player: string, hole: number) => boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
+const onBoards = (player: string, hole: number) =>
+  boards().scores.find((s) => s.roundId === 'r1' && s.playerId === player && s.hole === hole)
 const calls = () => server.wire.filter((r) => r.target === 'rpc/save_hole' && r.as === me)
-const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') => enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
+const saveHole = (hole: number, entries: HoleEntry[], round = 'r1') =>
+  enqueueHole('t1', { round_id: round, hole, entered_by: 'p1', entries })
 const played = (strokes: number, putts = 2): HoleEntry['fields'] => ({ strokes, putts })
 const tick = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** The other phone of the group (p3's), saving through the same door with its own session. */
-async function otherPhoneSaves(hole: number, entries: Array<{ player_id: string; fields: Row; base: Row }>, mutation = `other-${hole}-${Math.random()}`) {
+async function otherPhoneSaves(
+  hole: number,
+  entries: Array<{ player_id: string; fields: Row; base: Row }>,
+  mutation = `other-${hole}-${Math.random()}`,
+) {
   if (!(server.tables.device_sessions ?? []).some((d) => d.auth_user_id === 'phone-b')) {
-    server.tables.device_sessions = [...(server.tables.device_sessions ?? []), { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' }]
+    server.tables.device_sessions = [
+      ...(server.tables.device_sessions ?? []),
+      { auth_user_id: 'phone-b', player_id: 'p3', tournament_id: 't1' },
+    ]
   }
   const token = server.auth.sessionFor('phone-b')
   const reachable = server.reachable
@@ -153,7 +163,9 @@ describe('V2: a hole of a round the Comité deleted', () => {
     expect(await rejectGoneRounds('t1')).toBe(1)
     expect(unsentWrites()).toBeNull()
     expect(useOutbox.getState().pending).toBe(0)
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:5', message: t.sync.errRoundGone })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p1:5', message: t.sync.errRoundGone }),
+    ])
     // Adopting again (the next PIN) finds nothing to send.
     const sent = calls().length
     await adoptQueuedWrites('t1')
@@ -200,11 +212,15 @@ describe('V2: a hole of a round the Comité deleted', () => {
 
 describe('the untouched-default rule (tarjeta cruzada) goes over nothing but a phone’s par and 2 putts', () => {
   it('a Comité correction of par and 2 putts is a claim: this phone is asked, and the correction stands', async () => {
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p3', hole: 8, strokes: 4, putts: 2, picked_up: false, entered_by: 'pz' }])
+    server.seed('scores', [
+      { round_id: 'r1', player_id: 'p3', hole: 8, strokes: 4, putts: 2, picked_up: false, entered_by: 'pz' },
+    ])
     // As admin_save_score leaves it (a phone's insert never carries a reason, so the seed drops it).
     server.score('p3', 8)!.reason = 'Corrección del Comité'
     // This phone typed p3's hole before it saw the correction (offline).
-    await saveHole(8, [{ player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } }])
+    await saveHole(8, [
+      { player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } },
+    ])
     await until(() => useOutbox.getState().conflicts.length === 1, 'the question')
     await settle(useOutbox)
     expect(server.score('p3', 8)).toMatchObject({ strokes: 4, putts: 2, reason: 'Corrección del Comité' })
@@ -213,7 +229,9 @@ describe('the untouched-default rule (tarjeta cruzada) goes over nothing but a p
 
   it('par and 3 putts the other phone typed is a value: this phone is asked, never sent over it', async () => {
     await otherPhoneSaves(4, [{ player_id: 'p3', fields: played(4, 3), base: {} }])
-    await saveHole(4, [{ player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } }])
+    await saveHole(4, [
+      { player_id: 'p3', fields: played(6), base: {}, dflt: { strokes: 4, putts: 2, picked_up: false } },
+    ])
     await until(() => useOutbox.getState().conflicts.length === 1, 'the question')
     await settle(useOutbox)
     expect(server.score('p3', 4)).toMatchObject({ strokes: 4, putts: 3, entered_by: 'p3' })
@@ -223,13 +241,17 @@ describe('the untouched-default rule (tarjeta cruzada) goes over nothing but a p
 
 describe('the boards while a hole waits', () => {
   it('show its fields over what they hold now: another phone’s change to a field it left alone shows', async () => {
-    server.seed('scores', [{ round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 2, picked_up: false, entered_by: 'p3' }])
+    server.seed('scores', [
+      { round_id: 'r1', player_id: 'p2', hole: 4, strokes: 5, putts: 2, picked_up: false, entered_by: 'p3' },
+    ])
     await useTournament.getState().reload()
     phone.goOffline()
     // This phone corrects p2's strokes only, over the 5 and 2 it saw.
     await saveHole(4, [{ player_id: 'p2', fields: { strokes: 6 }, base: { strokes: 5, putts: 2, picked_up: false } }])
     // The other phone changes p2's putts to 3; the boards get it.
-    await otherPhoneSaves(4, [{ player_id: 'p2', fields: { putts: 3 }, base: { strokes: 5, putts: 2, picked_up: false } }])
+    await otherPhoneSaves(4, [
+      { player_id: 'p2', fields: { putts: 3 }, base: { strokes: 5, putts: 2, picked_up: false } },
+    ])
     await reloadWithoutFlushing()
     // 6 strokes (this phone's, waiting) and 3 putts (the other's): what the server will hold once it lands.
     expect(onBoards('p2', 4)).toMatchObject({ strokes: 6, putts: 3 })
@@ -246,9 +268,15 @@ describe('regressions the verifier checked', () => {
     server.decide = async (req): Promise<Outcome> => {
       if (req.target !== 'rpc/save_hole' || req.as !== me || !lose) return 'answer'
       lose = false
-      await server.fetch(`${server.url}/rest/v1/rpc/save_hole`, { method: 'POST', headers: { apikey: server.anonKey, Authorization: req.authorization ?? '', 'Content-Type': 'application/json' }, body: JSON.stringify(req.body) })
+      await server.fetch(`${server.url}/rest/v1/rpc/save_hole`, {
+        method: 'POST',
+        headers: { apikey: server.anonKey, Authorization: req.authorization ?? '', 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+      })
       // While the answer is lost, the other phone changes p1 over the 5 it saw.
-      await otherPhoneSaves(4, [{ player_id: 'p1', fields: { strokes: 7 }, base: { strokes: 5, putts: 2, picked_up: false } }])
+      await otherPhoneSaves(4, [
+        { player_id: 'p1', fields: { strokes: 7 }, base: { strokes: 5, putts: 2, picked_up: false } },
+      ])
       return 'offline'
     }
     await saveHole(4, [{ player_id: 'p1', fields: played(5), base: {} }])
@@ -264,11 +292,26 @@ describe('regressions the verifier checked', () => {
 
   it('a legacy direct write and a later hole of the same player go out in order, with no conflict', async () => {
     phone.goOffline()
-    const legacy = { key: 'score:r1:p2:7', kind: 'score' as const, tournamentId: 't1', payload: holeScore('p2', 7, 6), attempts: 0, createdAt: 1, seq: 1000, actingUid: me }
+    const legacy = {
+      key: 'score:r1:p2:7',
+      kind: 'score' as const,
+      tournamentId: 't1',
+      payload: holeScore('p2', 7, 6),
+      attempts: 0,
+      createdAt: 1,
+      seq: 1000,
+      actingUid: me,
+    }
     await _outboxTest.db()!.items.put(legacy)
     await _outboxTest.load()
     const seen = onBoards('p2', 7)!
-    await saveHole(7, [{ player_id: 'p2', fields: { strokes: 5 }, base: { strokes: seen.strokes, putts: seen.putts, picked_up: seen.pickedUp } }])
+    await saveHole(7, [
+      {
+        player_id: 'p2',
+        fields: { strokes: 5 },
+        base: { strokes: seen.strokes, putts: seen.putts, picked_up: seen.pickedUp },
+      },
+    ])
     phone.goOnline()
     await until(() => useOutbox.getState().pending === 0, 'both')
     await settle(useOutbox)

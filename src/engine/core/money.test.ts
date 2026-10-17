@@ -8,7 +8,10 @@ const S = FIRST_TOURNAMENT_SETTINGS
 
 describe('Money', () => {
   it('prize settings must sum to $30,000', () => {
-    expect(checkPrizePool(S, { players: FIRST_TOURNAMENT_PLAYER_COUNT })).toMatchObject({ balanced: true, prizesTotal: 30000 })
+    expect(checkPrizePool(S, { players: FIRST_TOURNAMENT_PLAYER_COUNT })).toMatchObject({
+      balanced: true,
+      prizesTotal: 30000,
+    })
   })
 
   it('a finished first tournament with a Calcutta nets to zero across all people, banker included', () => {
@@ -20,7 +23,15 @@ describe('Money', () => {
     // Calcutta: everyone bought by the next player, with a 50% buyback on lot 1.
     snap.players.forEach((p, i) => {
       const owner = snap.players[(i + 1) % 12]!.id
-      snap.calcuttaLots.push({ id: `lot${i + 1}`, playerId: p.id, lotNumber: i + 1, status: 'sold', price: 250 + 250 * (i % 4), ownerId: owner, soldAt: '' })
+      snap.calcuttaLots.push({
+        id: `lot${i + 1}`,
+        playerId: p.id,
+        lotNumber: i + 1,
+        status: 'sold',
+        price: 250 + 250 * (i % 4),
+        ownerId: owner,
+        soldAt: '',
+      })
     })
     snap.calcuttaBuybacks.push({ lotId: 'lot1', pct: 50, amount: 125, paid: false })
 
@@ -30,7 +41,12 @@ describe('Money', () => {
       const pending = computeTournament(snap, S).flags.pendingSnakeTiebreaks
       if (!pending.length) break
       for (const q of pending) {
-        snap.snakeTiebreaks.push({ roundId: q.roundId, groupId: q.groupId, hole: q.hole, lastHoledPlayerId: q.candidates[0]! })
+        snap.snakeTiebreaks.push({
+          roundId: q.roundId,
+          groupId: q.groupId,
+          hole: q.hole,
+          lastHoledPlayerId: q.candidates[0]!,
+        })
       }
     }
     const st = computeTournament(snap, S)
@@ -63,7 +79,15 @@ describe('Money', () => {
 
   it('marks flows paid from payments rows', () => {
     const snap = makeFirstTournament()
-    snap.payments.push({ id: 'pay1', fromPlayerId: 'p1', toPlayerId: null, amount: 2500, kind: 'entry', paid: true, note: null })
+    snap.payments.push({
+      id: 'pay1',
+      fromPlayerId: 'p1',
+      toPlayerId: null,
+      amount: 2500,
+      kind: 'entry',
+      paid: true,
+      note: null,
+    })
     const st = computeTournament(snap, S)
     expect(st.money.flows.find((f) => f.kind === 'entry' && f.from === 'p1')!.paid).toBe(true)
     expect(st.money.flows.find((f) => f.kind === 'entry' && f.from === 'p2')!.paid).toBe(false)

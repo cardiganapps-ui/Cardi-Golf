@@ -20,7 +20,9 @@ export const SpectatorNote = memo(function SpectatorNote() {
   if (!spectator) return null
   return (
     <section className={styles.note} aria-label={spectator.demo ? t.demo.title : t.spectator.title}>
-      <p className="help">{spectator.demo ? t.demo.foot : spectator.money ? t.spectator.noteMoney : t.spectator.note}</p>
+      <p className="help">
+        {spectator.demo ? t.demo.foot : spectator.money ? t.spectator.noteMoney : t.spectator.note}
+      </p>
       <div className={styles.actions}>
         {spectator.demo && (
           <Link className="btn btn--primary btn--sm" to="/organizer/login">
@@ -31,7 +33,11 @@ export const SpectatorNote = memo(function SpectatorNote() {
           <IconTv /> {t.spectator.viewTv}
         </Link>
         <CopyButton text={spectator.url} label={t.spectator.copy} />
-        <ShareButton text={spectator.demo ? t.demo.shareText : t.spectator.shareText(name)} url={spectator.url} title={name} />
+        <ShareButton
+          text={spectator.demo ? t.demo.shareText : t.spectator.shareText(name)}
+          url={spectator.url}
+          title={name}
+        />
       </div>
     </section>
   )

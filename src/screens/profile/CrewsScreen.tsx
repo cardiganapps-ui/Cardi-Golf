@@ -17,7 +17,11 @@ import styles from './Profile.module.css'
 import { UserError } from '../../lib/humanError'
 
 const C = t.crews
-const cleanCode = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+const cleanCode = (v: string) =>
+  v
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6)
 
 export function CrewsScreen() {
   const ok = useRequireAccount('/crews')
@@ -74,7 +78,9 @@ export function CrewsScreen() {
                 </span>
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{c.name}</span>
-                  <span className={styles.rowSub}>{[C.members(c.members), c.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}</span>
+                  <span className={styles.rowSub}>
+                    {[C.members(c.members), c.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}
+                  </span>
                 </span>
                 <span className={styles.rowEnd}>
                   <IconChevronRight size={20} />
@@ -88,7 +94,16 @@ export function CrewsScreen() {
       <section className={styles.section}>
         <span className="label">{C.join}</span>
         <form className={styles.joinForm} onSubmit={onJoin}>
-          <input className={`input ${styles.codeInput}`} placeholder={C.joinPlaceholder} aria-label={C.join} value={code} onChange={(e) => setCode(cleanCode(e.target.value))} autoCapitalize="characters" autoComplete="off" maxLength={6} />
+          <input
+            className={`input ${styles.codeInput}`}
+            placeholder={C.joinPlaceholder}
+            aria-label={C.join}
+            value={code}
+            onChange={(e) => setCode(cleanCode(e.target.value))}
+            autoCapitalize="characters"
+            autoComplete="off"
+            maxLength={6}
+          />
           <button className="btn btn--secondary" type="submit" disabled={busy || code.length !== 6}>
             {C.joinButton}
           </button>
@@ -99,9 +114,19 @@ export function CrewsScreen() {
         <span className="label">{C.create}</span>
         <form className="stack" onSubmit={onCreate}>
           <Field label={C.createName}>
-            <input className="input" placeholder={C.createPlaceholder} value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
+            <input
+              className="input"
+              placeholder={C.createPlaceholder}
+              value={name}
+              maxLength={60}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
-          <button className={`btn btn--primary ${styles.start}`} type="submit" disabled={busy || name.trim().length < 2}>
+          <button
+            className={`btn btn--primary ${styles.start}`}
+            type="submit"
+            disabled={busy || name.trim().length < 2}
+          >
             {C.createButton}
           </button>
         </form>
@@ -119,14 +144,34 @@ export function CrewJoinScreen() {
   // A request leaves the preview saying so (it is read again); joining takes the phone to the crew.
   const { run, busy } = useServerMutation({ invalidates: [['crews']] })
 
-  if (ok && crew === undefined && preview.error) return <ErrorBox error={preview.error} onRetry={() => void preview.refetch()} />
+  if (ok && crew === undefined && preview.error)
+    return <ErrorBox error={preview.error} onRetry={() => void preview.refetch()} />
   if (!ok || crew === undefined) return <Spinner />
-  if (!crew) return <EmptyState title={C.badCode} body={C.lede} action={<Link className="btn btn--secondary" to="/crews">{C.title}</Link>} />
+  if (!crew)
+    return (
+      <EmptyState
+        title={C.badCode}
+        body={C.lede}
+        action={
+          <Link className="btn btn--secondary" to="/crews">
+            {C.title}
+          </Link>
+        }
+      />
+    )
   return (
     <div className={`${styles.screen} ${styles.narrow}`}>
       <div className={styles.head}>
         <h1>{C.joinTitle(crew.name)}</h1>
-        <p className={styles.lede}>{crew.isMember ? C.already : crew.requested ? C.alreadyAsked : crew.approval ? C.joinApprovalLine(crew.members) : C.joinLine(crew.members)}</p>
+        <p className={styles.lede}>
+          {crew.isMember
+            ? C.already
+            : crew.requested
+              ? C.alreadyAsked
+              : crew.approval
+                ? C.joinApprovalLine(crew.members)
+                : C.joinLine(crew.members)}
+        </p>
       </div>
       {crew.isMember ? (
         <Link className="btn btn--primary" to={`/c/${crew.slug}`}>
@@ -140,7 +185,10 @@ export function CrewJoinScreen() {
           onClick={() =>
             void run(async () => {
               const r = await joinCrewRequest(code)
-              if (r.status === 'requested') { toast(C.requested(crew.name)); return; }
+              if (r.status === 'requested') {
+                toast(C.requested(crew.name))
+                return
+              }
               if (r.status !== 'joined' || !r.slug) throw new UserError(C.badCode)
               toast(C.joined(crew.name))
               navigate(`/c/${r.slug}`, { replace: true })

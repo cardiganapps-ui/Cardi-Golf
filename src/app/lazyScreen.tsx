@@ -69,7 +69,11 @@ export function prefetchScreens(screens: Preloadable[], win: Window = window): (
   let stopped = false
   const next = (i: number) => {
     if (stopped || i >= screens.length) return
-    const run = () => void screens[i]!.preload().then(() => next(i + 1), () => next(i + 1))
+    const run = () =>
+      void screens[i]!.preload().then(
+        () => next(i + 1),
+        () => next(i + 1),
+      )
     id = idle ? win.requestIdleCallback(run) : win.setTimeout(run, 1500)
   }
   next(0)

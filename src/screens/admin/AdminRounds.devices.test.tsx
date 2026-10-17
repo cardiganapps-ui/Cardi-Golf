@@ -10,11 +10,23 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const rpc = vi.hoisted(() => vi.fn())
-vi.mock('../../lib/supabase', async (original) => ({ ...(await original<typeof import('../../lib/supabase')>()), supabase: () => ({ rpc }) }))
-vi.mock('../../data/api', async (original) => ({ ...(await original<typeof import('../../data/api')>()), openRejectedWrites: vi.fn(async () => 0) }))
+vi.mock('../../lib/supabase', async (original) => ({
+  ...(await original<typeof import('../../lib/supabase')>()),
+  supabase: () => ({ rpc }),
+}))
+vi.mock('../../data/api', async (original) => ({
+  ...(await original<typeof import('../../data/api')>()),
+  openRejectedWrites: vi.fn(async () => 0),
+}))
 vi.mock('./useCourses', async () => {
   const { getFixture } = await import('../../dev/fixtures')
-  return { useCourses: () => ({ courses: getFixture('full12-live')!.snapshot.courses, loading: false, reload: async () => undefined }) }
+  return {
+    useCourses: () => ({
+      courses: getFixture('full12-live')!.snapshot.courses,
+      loading: false,
+      reload: async () => undefined,
+    }),
+  }
 })
 
 import { getFixture } from '../../dev/fixtures'
@@ -45,7 +57,16 @@ function mount(devices: TournamentDevice[] | null) {
   useTournament.setState({ tournamentId: tid, data: dataFromSnapshot(snapshot) })
   return render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: tid, slug: 'viaje', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: tid,
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminRounds />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -81,8 +102,12 @@ describe('Rondas › Teléfonos del torneo', () => {
   })
 
   it('names two or more phones in one sentence', () => {
-    expect(R.devicesBeforeFinish(5, ['Justo', 'Diego'])).toBe('Los teléfonos de Justo y Diego reportan 5 hoyos sin mandar (Teléfonos del torneo, abajo).')
-    expect(R.devicesBeforeFinish(1, ['Justo'])).toBe('El teléfono de Justo reporta un hoyo sin mandar (Teléfonos del torneo, abajo).')
+    expect(R.devicesBeforeFinish(5, ['Justo', 'Diego'])).toBe(
+      'Los teléfonos de Justo y Diego reportan 5 hoyos sin mandar (Teléfonos del torneo, abajo).',
+    )
+    expect(R.devicesBeforeFinish(1, ['Justo'])).toBe(
+      'El teléfono de Justo reporta un hoyo sin mandar (Teléfonos del torneo, abajo).',
+    )
   })
 })
 
@@ -106,7 +131,7 @@ describe('reading the list', () => {
     expect(rpc).toHaveBeenCalledWith('tournament_devices', { p_tournament_id: tid })
   })
 
-  it('a fixture\'s list is never read from a server', async () => {
+  it("a fixture's list is never read from a server", async () => {
     useTournamentDevices.setState({ tournamentId: tid, items: fx.devices!, status: 'ready', fixture: true })
     await loadTournamentDevices(tid)
     expect(rpc).not.toHaveBeenCalled()

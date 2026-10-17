@@ -7,7 +7,14 @@ import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet } from '../../components/ui'
 import { EmptyState, Segmented } from '../../components/primitives'
-import { adminSetAwards, seedGameEntries, setGameEntry, setGameResults, SettingsChanged, updateSettings } from '../../data/api'
+import {
+  adminSetAwards,
+  seedGameEntries,
+  setGameEntry,
+  setGameResults,
+  SettingsChanged,
+  updateSettings,
+} from '../../data/api'
 import { settingsWrite } from '../../data/settingsWrite'
 import { CONTEST_SINGLE, contestStateOf, type ContestHole } from '../../engine/games/contest'
 import { useTournamentCtx } from '../tournament/tournamentContext'
@@ -67,7 +74,12 @@ export function AdminGames() {
   const setMode = (g: GameConfig, mode: 'all' | 'list') =>
     run(async () => {
       // Switching to a list starts with everyone in it, so the Comité only takes people out.
-      if (mode === 'list' && !snapshot.gameEntries.some((e) => e.gameId === g.id)) await seedGameEntries(tid, g.id, snapshot.players.map((p) => p.id))
+      if (mode === 'list' && !snapshot.gameEntries.some((e) => e.gameId === g.id))
+        await seedGameEntries(
+          tid,
+          g.id,
+          snapshot.players.map((p) => p.id),
+        )
       await updateGame(g.id, (x) => (x.entrants = mode))
     })
 
@@ -86,7 +98,8 @@ export function AdminGames() {
       <p className={a.help}>{G.hint}</p>
       {games.map((g) => {
         const entered = new Set(snapshot.gameEntries.filter((e) => e.gameId === g.id).map((e) => e.playerId))
-        const count = g.entrants === 'all' ? snapshot.players.length : snapshot.players.filter((p) => entered.has(p.id)).length
+        const count =
+          g.entrants === 'all' ? snapshot.players.length : snapshot.players.filter((p) => entered.has(p.id)).length
         const name = (id: string) => snapshot.players.find((p) => p.id === id)?.displayName ?? '?'
         return (
           <section key={g.id} className={a.section}>
@@ -111,7 +124,14 @@ export function AdminGames() {
                 {snapshot.players.map((p) => {
                   const on = entered.has(p.id)
                   return (
-                    <button key={p.id} type="button" aria-pressed={on} className={`${a.tile} ${on ? a.tileOn : ''}`} disabled={busy} onClick={() => void run(() => setGameEntry(tid, g.id, p.id, !on))}>
+                    <button
+                      key={p.id}
+                      type="button"
+                      aria-pressed={on}
+                      className={`${a.tile} ${on ? a.tileOn : ''}`}
+                      disabled={busy}
+                      onClick={() => void run(() => setGameEntry(tid, g.id, p.id, !on))}
+                    >
                       <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
                       <span className={a.tileText}>{p.displayName}</span>
                     </button>
@@ -124,10 +144,21 @@ export function AdminGames() {
                 <span className="label">{G.contestHoles}</span>
                 <div className={a.rows}>
                   {(contestStateOf(data.state.games[g.id])?.holes ?? []).map((h) => (
-                    <button key={`${h.roundId}-${h.hole}`} type="button" className={a.rowBtn} onClick={() => setAwardFor({ gameId: g.id, hole: h })}>
+                    <button
+                      key={`${h.roundId}-${h.hole}`}
+                      type="button"
+                      className={a.rowBtn}
+                      onClick={() => setAwardFor({ gameId: g.id, hole: h })}
+                    >
                       <span className={a.rowText}>
                         <span className={a.rowTitle}>{G.dayHole(h.roundNumber, h.hole)}</span>
-                        <span className={h.status === 'disputed' ? a.warn : a.rowSub}>{h.status === 'won' ? t.common.andList(h.winners.map(name)) : h.status === 'disputed' ? G.disputed(t.common.andList(h.claims.map(name))) : G.open}</span>
+                        <span className={h.status === 'disputed' ? a.warn : a.rowSub}>
+                          {h.status === 'won'
+                            ? t.common.andList(h.winners.map(name))
+                            : h.status === 'disputed'
+                              ? G.disputed(t.common.andList(h.claims.map(name)))
+                              : G.open}
+                        </span>
                       </span>
                     </button>
                   ))}
@@ -151,14 +182,28 @@ export function AdminGames() {
                         type="button"
                         className="btn btn--ghost btn--sm"
                         disabled={busy}
-                        onClick={() => void run(() => updateGame(g.id, (x) => x.type === 'match' && (x.options.matches = x.options.matches.filter((y) => y.id !== m.id))))}
+                        onClick={() =>
+                          void run(() =>
+                            updateGame(
+                              g.id,
+                              (x) =>
+                                x.type === 'match' &&
+                                (x.options.matches = x.options.matches.filter((y) => y.id !== m.id)),
+                            ),
+                          )
+                        }
                       >
                         {G.removeMatch}
                       </button>
                     </div>
                   ))}
                 </div>
-                <button type="button" className="btn btn--secondary btn--sm" disabled={busy} onClick={() => setMatchFor(g.id)}>
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  disabled={busy}
+                  onClick={() => setMatchFor(g.id)}
+                >
                   {G.addMatch}
                 </button>
               </>
@@ -190,7 +235,15 @@ export function AdminGames() {
   )
 }
 
-function MatchSheet({ game, onClose, onSave }: { game: GameConfig | null; onClose: () => void; onSave: (m: Match) => void }) {
+function MatchSheet({
+  game,
+  onClose,
+  onSave,
+}: {
+  game: GameConfig | null
+  onClose: () => void
+  onSave: (m: Match) => void
+}) {
   const data = useTournament((s) => s.data)!
   const [size, setSize] = useState<'1' | '2'>('1')
   const [sideA, setA] = useState<string[]>([])
@@ -239,7 +292,14 @@ function MatchSheet({ game, onClose, onSave }: { game: GameConfig | null; onClos
                 const other = side === 'a' ? sideB : sideA
                 const on = cur.includes(p.id)
                 return (
-                  <button key={p.id} type="button" aria-pressed={on} className={`${a.tile} ${on ? a.tileOn : ''}`} disabled={other.includes(p.id)} onClick={() => toggle(side, p.id)}>
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={on}
+                    className={`${a.tile} ${on ? a.tileOn : ''}`}
+                    disabled={other.includes(p.id)}
+                    onClick={() => toggle(side, p.id)}
+                  >
                     <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
                     <span className={a.tileText}>{p.displayName}</span>
                   </button>
@@ -265,9 +325,16 @@ function MatchSheet({ game, onClose, onSave }: { game: GameConfig | null; onClos
   )
 }
 
-
 /** Comité decision for one contest hole: pick the winner(s), "Nadie", or go back to what the groups marked. */
-function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hole: ContestHole } | null; onClose: () => void; onSave: (ids: string[] | null) => void }) {
+function AwardSheet({
+  target,
+  onClose,
+  onSave,
+}: {
+  target: { gameId: string; hole: ContestHole } | null
+  onClose: () => void
+  onSave: (ids: string[] | null) => void
+}) {
   const data = useTournament((s) => s.data)!
   const [sel, setSel] = useState<string[] | null>(null)
   const game = target ? data.settings.games.find((g) => g.id === target.gameId) : undefined
@@ -279,14 +346,41 @@ function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hol
     setSel(null)
     onClose()
   }
-  const toggle = (id: string) => setSel(single ? (chosen.includes(id) ? [] : [id]) : chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id])
+  const toggle = (id: string) =>
+    setSel(
+      single
+        ? chosen.includes(id)
+          ? []
+          : [id]
+        : chosen.includes(id)
+          ? chosen.filter((x) => x !== id)
+          : [...chosen, id],
+    )
   return (
-    <Sheet open={!!target} onClose={close} title={target ? `${game?.label ?? ''}, ${G.dayHole(target.hole.roundNumber, target.hole.hole)}` : undefined}>
+    <Sheet
+      open={!!target}
+      onClose={close}
+      title={target ? `${game?.label ?? ''}, ${G.dayHole(target.hole.roundNumber, target.hole.hole)}` : undefined}
+    >
       <div className="stack">
-        {target && target.hole.claims.length > 0 && <p className="help">{G.claims(t.common.andList(target.hole.claims.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?')))}</p>}
+        {target && target.hole.claims.length > 0 && (
+          <p className="help">
+            {G.claims(
+              t.common.andList(
+                target.hole.claims.map((id) => data.snapshot.players.find((p) => p.id === id)?.displayName ?? '?'),
+              ),
+            )}
+          </p>
+        )}
         <div className={a.tiles}>
           {players.map((p) => (
-            <button key={p.id} type="button" aria-pressed={chosen.includes(p.id)} className={`${a.tile} ${chosen.includes(p.id) ? a.tileOn : ''}`} onClick={() => toggle(p.id)}>
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={chosen.includes(p.id)}
+              className={`${a.tile} ${chosen.includes(p.id) ? a.tileOn : ''}`}
+              onClick={() => toggle(p.id)}
+            >
               <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
               <span className={a.tileText}>{p.displayName}</span>
             </button>
@@ -313,7 +407,15 @@ function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hol
 }
 
 /** Custom bet: the Comité taps the winners and saves. */
-function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; run: (fn: () => Promise<unknown>) => Promise<boolean> }) {
+function CustomWinners({
+  game,
+  busy,
+  run,
+}: {
+  game: GameConfig
+  busy: boolean
+  run: (fn: () => Promise<unknown>) => Promise<boolean>
+}) {
   const data = useTournament((s) => s.data)!
   const saved = data.snapshot.gameResults.filter((r) => r.gameId === game.id).map((r) => r.playerId)
   const [sel, setSel] = useState<string[] | null>(null)
@@ -328,7 +430,14 @@ function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; r
         {players.map((p) => {
           const on = chosen.includes(p.id)
           return (
-            <button key={p.id} type="button" aria-pressed={on} className={`${a.tile} ${on ? a.tileOn : ''}`} disabled={busy} onClick={() => setSel(on ? chosen.filter((x) => x !== p.id) : [...chosen, p.id])}>
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={on}
+              className={`${a.tile} ${on ? a.tileOn : ''}`}
+              disabled={busy}
+              onClick={() => setSel(on ? chosen.filter((x) => x !== p.id) : [...chosen, p.id])}
+            >
               <Avatar name={p.displayName} url={p.avatarUrl} size="sm" />
               <span className={a.tileText}>{p.displayName}</span>
             </button>
@@ -342,7 +451,11 @@ function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; r
           disabled={busy}
           onClick={() =>
             void run(async () => {
-              await setGameResults(data.snapshot.tournament.id, game.id, chosen.map((playerId) => ({ playerId, share: 1 })))
+              await setGameResults(
+                data.snapshot.tournament.id,
+                game.id,
+                chosen.map((playerId) => ({ playerId, share: 1 })),
+              )
               setSel(null)
             })
           }

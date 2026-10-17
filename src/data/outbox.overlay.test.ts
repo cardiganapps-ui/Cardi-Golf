@@ -26,7 +26,10 @@ function shown(player: string, hole: number) {
 }
 /** Who holed out last on a hole, per the snapshot (one answer per hole). */
 function answers(hole: number): string[] {
-  return useTournament.getState().data!.snapshot.snakeTiebreaks.filter((x) => x.roundId === 'r1' && x.hole === hole).map((x) => x.lastHoledPlayerId)
+  return useTournament
+    .getState()
+    .data!.snapshot.snakeTiebreaks.filter((x) => x.roundId === 'r1' && x.hole === hole)
+    .map((x) => x.lastHoledPlayerId)
 }
 
 describe('the optimistic overlay', () => {
@@ -97,7 +100,9 @@ describe('the optimistic overlay', () => {
     await until(() => useOutbox.getState().rejected.length === 1, 'the refusal')
     await until(() => shown('p1', 5).strokes === 5, "the server's value to show again")
     expect(shown('p1', 5)).toMatchObject({ strokes: 5, gross: 5 })
-    expect(useOutbox.getState().rejected).toEqual([expect.objectContaining({ key: 'score:r1:p1:5', message: t.sync.errDenied })])
+    expect(useOutbox.getState().rejected).toEqual([
+      expect.objectContaining({ key: 'score:r1:p1:5', message: t.sync.errDenied }),
+    ])
     expect(server.writeRequests().map((r) => r.result)).toEqual([403])
   })
 })

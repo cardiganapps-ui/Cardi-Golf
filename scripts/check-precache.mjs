@@ -45,17 +45,21 @@ export function fontFaces(css) {
   return [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(([, body]) => {
     const urls = [...body.matchAll(/url\(["']?\/?(assets\/[^)"'?#]+\.woff2)/g)].map((m) => m[1])
     const range = /unicode-range\s*:\s*([^;}]+)/i.exec(body)?.[1]
-    const latin = !range || range.split(',').some((token) => {
-      const r = codeRange(token)
-      return !!r && r[0] <= 0x61 && 0x61 <= r[1]
-    })
+    const latin =
+      !range ||
+      range.split(',').some((token) => {
+        const r = codeRange(token)
+        return !!r && r[0] <= 0x61 && 0x61 <= r[1]
+      })
     return { urls, latin }
   })
 }
 
 /** An icon only the install reads (PERF-05): 512 px or larger. */
 function installOnly(icon) {
-  return String(icon.sizes ?? '').split(/\s+/).some((size) => Number(size.split('x')[0]) >= 512)
+  return String(icon.sizes ?? '')
+    .split(/\s+/)
+    .some((size) => Number(size.split('x')[0]) >= 512)
 }
 
 /** What is wrong with the precache of the build in `dir`: nothing, when the list is empty. */
@@ -76,18 +80,24 @@ export function precacheProblems(dir, budgetKib = PRECACHE_BUDGET_KIB) {
   // the worker. The build must ship them, and the precache must not carry them: every phone would keep a dozen
   // screens' worth for nothing.
   const launch = new Set(
-    [...html.matchAll(/<link\b[^>]*\brel="apple-touch-startup-image"[^>]*>/g)].map((m) => /\bhref="\/([^"?#]+)/.exec(m[0])?.[1]).filter(Boolean),
+    [...html.matchAll(/<link\b[^>]*\brel="apple-touch-startup-image"[^>]*>/g)]
+      .map((m) => /\bhref="\/([^"?#]+)/.exec(m[0])?.[1])
+      .filter(Boolean),
   )
-  for (const m of html.matchAll(/(?:src|href)="\/([^"?#]+\.(?:js|css|svg|png|webmanifest|woff2))/g)) if (!launch.has(m[1])) need(m[1], 'index.html loads it')
+  for (const m of html.matchAll(/(?:src|href)="\/([^"?#]+\.(?:js|css|svg|png|webmanifest|woff2))/g))
+    if (!launch.has(m[1])) need(m[1], 'index.html loads it')
   for (const path of launch) {
     if (!existsSync(join(dir, path))) problems.push(`${path} is linked as a launch image but not in ${dir}`)
-    if (held.has(path)) problems.push(`${path} is precached, but iOS reads launch images only when the app is added to the home screen`)
+    if (held.has(path))
+      problems.push(`${path} is precached, but iOS reads launch images only when the app is added to the home screen`)
   }
   // Fonts (PERF-05): every face Spanish text is set in is precached. A face whose unicode-range leaves out the
   // Latin letters (the Vietnamese and Latin Extended subsets) is fetched only when a page needs one of its
   // letters: it ships, the worker keeps it once used (a runtime rule for woff2), and the precache does not.
   const onDemand = new Set()
-  for (const css of existsSync(join(dir, 'assets')) ? readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.css')) : []) {
+  for (const css of existsSync(join(dir, 'assets'))
+    ? readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.css'))
+    : []) {
     for (const face of fontFaces(read(`assets/${css}`))) {
       if (face.latin) for (const url of face.urls) need(url, `assets/${css} uses it`)
       else for (const url of face.urls) onDemand.add(url)
@@ -95,9 +105,15 @@ export function precacheProblems(dir, budgetKib = PRECACHE_BUDGET_KIB) {
   }
   for (const url of onDemand) {
     if (!existsSync(join(dir, url))) problems.push(`${url} is a font the styles name but not in ${dir}`)
-    if (held.has(url)) problems.push(`${url} is precached, but its letters are not Spanish: the browser asks for it only when a page needs one`)
+    if (held.has(url))
+      problems.push(
+        `${url} is precached, but its letters are not Spanish: the browser asks for it only when a page needs one`,
+      )
   }
-  if (onDemand.size && !/registerRoute\([^;]*woff2/.test(sw)) problems.push('the worker keeps no font it loads on demand: a face left out of the precache must be cached when used')
+  if (onDemand.size && !/registerRoute\([^;]*woff2/.test(sw))
+    problems.push(
+      'the worker keeps no font it loads on demand: a face left out of the precache must be cached when used',
+    )
   need('manifest.webmanifest', 'the installed app reads it')
   if (existsSync(join(dir, 'manifest.webmanifest'))) {
     const manifest = JSON.parse(read('manifest.webmanifest'))
@@ -121,7 +137,10 @@ export function precacheProblems(dir, budgetKib = PRECACHE_BUDGET_KIB) {
   if (existsSync(join(dir, 'push-sw.js'))) {
     const at = /push-sw\.js\?v=([0-9a-f]+)/.exec(sw)?.[1]
     const now = fingerprint(readFileSync(join(dir, 'push-sw.js')))
-    if (at !== now) problems.push(`the worker imports push-sw.js at ${at ? `?v=${at}` : 'no fingerprint'}, but the file's is ${now}: phones would keep the old handler`)
+    if (at !== now)
+      problems.push(
+        `the worker imports push-sw.js at ${at ? `?v=${at}` : 'no fingerprint'}, but the file's is ${now}: phones would keep the old handler`,
+      )
     // The images a notice shows (its icon, Android's badge): with patchy signal, the push may be all that arrives.
     for (const m of read('push-sw.js').matchAll(/['"]\/([^'"?#]+\.png)['"]/g)) need(m[1], 'a notice shows it')
   }

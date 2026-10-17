@@ -25,16 +25,34 @@ function ceremony(edit?: (s: Snapshot) => void) {
   const fx = getFixture('stroke8')!
   const snap = structuredClone(fx.snapshot)
   edit?.(snap)
-  useTournament.setState({ tournamentId: 'fixture:stroke8', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:stroke8',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: '_/stroke8', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: '_/stroke8',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <CeremonyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
   fireEvent.click(screen.getByRole('button', { name: C.start }))
-  return { step: screen.getByRole('region').getAttribute('aria-label'), progress: document.querySelector('[class*="progress"]')?.textContent }
+  return {
+    step: screen.getByRole('region').getAttribute('aria-label'),
+    progress: document.querySelector('[class*="progress"]')?.textContent,
+  }
 }
 
 afterEach(() => cleanup())

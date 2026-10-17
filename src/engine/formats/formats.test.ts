@@ -22,11 +22,22 @@ function settings(over: Partial<TournamentSettings> = {}): TournamentSettings {
   }
 }
 
-function withFormat(format: 'stableford' | 'strokePlay' | 'matchPlay' | 'team', options: Partial<TournamentSettings['modules']['individual']['formatOptions']> = {}, over: Partial<TournamentSettings> = {}) {
+function withFormat(
+  format: 'stableford' | 'strokePlay' | 'matchPlay' | 'team',
+  options: Partial<TournamentSettings['modules']['individual']['formatOptions']> = {},
+  over: Partial<TournamentSettings> = {},
+) {
   const s = settings(over)
   return {
     ...s,
-    modules: { ...s.modules, individual: { ...s.modules.individual, format, formatOptions: { ...s.modules.individual.formatOptions, ...options } } },
+    modules: {
+      ...s.modules,
+      individual: {
+        ...s.modules.individual,
+        format,
+        formatOptions: { ...s.modules.individual.formatOptions, ...options },
+      },
+    },
   }
 }
 
@@ -103,7 +114,10 @@ describe('stroke play', () => {
 
     const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
     expect(rows.map((r) => r.playerId)).toEqual(['p1', 'p2'])
-    expect(words(rows[1]!.countbackWhy)!.steps).toEqual(['Día 1, Total: J1 E contra J2 E', 'Día 1, Hoyos 10–18: J1 −1 contra J2 +1'])
+    expect(words(rows[1]!.countbackWhy)!.steps).toEqual([
+      'Día 1, Total: J1 E contra J2 E',
+      'Día 1, Hoyos 10–18: J1 −1 contra J2 +1',
+    ])
   })
 })
 
@@ -113,7 +127,11 @@ describe('match play', () => {
     // 3 up with 2 to play, which is more than remain, so the match ends there
     // — even though both cards carry 17 and 18, and p2 wins both.
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }),
+    })
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2'])]
     play(snap, 'r1', 'p1', [...Array<number>(16).fill(0), 1, 1])
     play(snap, 'r1', 'p2', [1, 1, 1, ...Array<number>(13).fill(0), 0, 0])
@@ -133,7 +151,11 @@ describe('match play', () => {
 
   it('halves a match and splits the point', () => {
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }),
+    })
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2'])]
     play(snap, 'r1', 'p1', allPars())
     play(snap, 'r1', 'p2', allPars())
@@ -149,10 +171,30 @@ describe('match play', () => {
     // Pair A is p1 + p2, pair B is p3 + p4. On hole 1 the best of pair A is a
     // par and the best of pair B a bogey, so A wins the hole; the rest halve.
     const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'fourball', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('matchPlay', { matchMode: 'fourball', scoring: 'gross' }),
+    })
     snap.pairs = [
-      { id: 'A', name: 'Pareja A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
-      { id: 'B', name: 'Pareja B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+      {
+        id: 'A',
+        name: 'Pareja A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+      {
+        id: 'B',
+        name: 'Pareja B',
+        player1Id: 'p3',
+        player2Id: 'p4',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
     ]
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2', 'p3', 'p4'])]
     play(snap, 'r1', 'p1', allPars()) // A's better ball on hole 1: par
@@ -175,9 +217,14 @@ describe('match play', () => {
     // halves the rest, 5 up with 4 to play after the 14th, 5&4. Both winners have one point; the countback takes
     // the margin, 10 against 5, so p1 is first.
     const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('matchPlay', { matchMode: 'singles', scoring: 'gross' }),
+    })
     snap.groups = [makeGroup('r1', 1, ['p1', 'p2'], 10), makeGroup('r1', 2, ['p3', 'p4'])]
-    const front = (inside: number, outside: number) => Array.from({ length: 18 }, (_, i) => (i >= 1 && i <= 8 ? inside : outside))
+    const front = (inside: number, outside: number) =>
+      Array.from({ length: 18 }, (_, i) => (i >= 1 && i <= 8 ? inside : outside))
     play(snap, 'r1', 'p1', front(1, 0))
     play(snap, 'r1', 'p2', front(0, 1))
     play(snap, 'r1', 'p3', allPars())
@@ -205,10 +252,30 @@ describe('team formats', () => {
     // Team A: p1 pars every hole, p2 is worse everywhere, so A's card is 72.
     // Team B: p3 birdies hole 1 and pars the rest (71), p4 is worse. B wins.
     const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }),
+    })
     snap.pairs = [
-      { id: 'A', name: 'Equipo A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
-      { id: 'B', name: 'Equipo B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+      {
+        id: 'A',
+        name: 'Equipo A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+      {
+        id: 'B',
+        name: 'Equipo B',
+        player1Id: 'p3',
+        player2Id: 'p4',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
     ]
     play(snap, 'r1', 'p1', allPars())
     play(snap, 'r1', 'p2', Array<number>(18).fill(2))
@@ -226,8 +293,22 @@ describe('team formats', () => {
     // Scratch, so a par is 2 points and a birdie 3. Team A's better ball is
     // 17 pars and one birdie: 17 × 2 + 3 = 37.
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'stableford' }) })
-    snap.pairs = [{ id: 'A', name: 'Equipo A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null }]
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'stableford' }),
+    })
+    snap.pairs = [
+      {
+        id: 'A',
+        name: 'Equipo A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+    ]
     play(snap, 'r1', 'p1', [-1, ...Array<number>(17).fill(0)])
     play(snap, 'r1', 'p2', Array<number>(18).fill(2))
 
@@ -240,11 +321,31 @@ describe('team formats', () => {
     // One 9-hole round, gross best ball. Team A birdies the 1st and bogeys the 9th, team B the other way round:
     // both are level (E). Over holes 5–9 B is −1 and A +1, so B is first, as stroke play would rank them.
     const players = [1, 2, 3, 4].map((i) => makePlayer(i, { baseHcp: 0 }))
-    const snap = makeSnapshot({ players, rounds: 1, settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }) })
+    const snap = makeSnapshot({
+      players,
+      rounds: 1,
+      settings: withFormat('team', { teamMode: 'bestBall', teamScoring: 'strokes', scoring: 'gross' }),
+    })
     snap.rounds = snap.rounds.map((r) => ({ ...r, holes: 9 }))
     snap.pairs = [
-      { id: 'A', name: 'Equipo A', player1Id: 'p1', player2Id: 'p2', kind: null, pickedByHonoree: false, drawnAt: null },
-      { id: 'B', name: 'Equipo B', player1Id: 'p3', player2Id: 'p4', kind: null, pickedByHonoree: false, drawnAt: null },
+      {
+        id: 'A',
+        name: 'Equipo A',
+        player1Id: 'p1',
+        player2Id: 'p2',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
+      {
+        id: 'B',
+        name: 'Equipo B',
+        player1Id: 'p3',
+        player2Id: 'p4',
+        kind: null,
+        pickedByHonoree: false,
+        drawnAt: null,
+      },
     ]
     play(snap, 'r1', 'p1', [-1, 0, 0, 0, 0, 0, 0, 0, 1])
     play(snap, 'r1', 'p2', Array<number>(9).fill(2))
@@ -253,7 +354,10 @@ describe('team formats', () => {
 
     const rows = computeTournament(snap, cfgOf(snap)).modules.individual!.rows
     expect(rows.map((r) => r.figure.text)).toEqual(['E', 'E'])
-    expect(rows.map((r) => [words(r.entrant.name), r.position])).toEqual([['Equipo B', 1], ['Equipo A', 2]])
+    expect(rows.map((r) => [words(r.entrant.name), r.position])).toEqual([
+      ['Equipo B', 1],
+      ['Equipo A', 2],
+    ])
     expect(words(rows[1]!.countbackWhy)!.steps).toContain('Día 1, Hoyos 5–9: Equipo B −1 contra Equipo A +1')
   })
 
@@ -272,7 +376,11 @@ describe('the seam itself', () => {
     const players = [1, 2].map((i) => makePlayer(i, { baseHcp: 0 }))
     const prizes = { ...DEFAULT_SETTINGS.prizes, stableford: [1000, 500] }
     const mk = (format: 'stableford' | 'strokePlay') => {
-      const snap = makeSnapshot({ players, rounds: 1, settings: withFormat(format, { scoring: 'gross' }, { entryFee: 750, prizes }) })
+      const snap = makeSnapshot({
+        players,
+        rounds: 1,
+        settings: withFormat(format, { scoring: 'gross' }, { entryFee: 750, prizes }),
+      })
       play(snap, 'r1', 'p1', allPars())
       play(snap, 'r1', 'p2', [1, ...Array<number>(17).fill(0)])
       return computeTournament(snap, cfgOf(snap))
@@ -289,7 +397,10 @@ describe('the seam itself', () => {
   it('reads a tournament saved before formats existed as Stableford', () => {
     // No `format` and no `formatOptions` on the row: the defaults fill in and
     // nothing has to be migrated.
-    const legacy = { ...DEFAULT_SETTINGS, modules: { ...DEFAULT_SETTINGS.modules, individual: { enabled: true, label: 'Individual' } } }
+    const legacy = {
+      ...DEFAULT_SETTINGS,
+      modules: { ...DEFAULT_SETTINGS.modules, individual: { enabled: true, label: 'Individual' } },
+    }
     const parsed = parseSettings(legacy).modules.individual
     expect(parsed.format).toBe('stableford')
     expect(parsed.formatOptions.scoring).toBe('net')

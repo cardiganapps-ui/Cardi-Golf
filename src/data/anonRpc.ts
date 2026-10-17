@@ -30,7 +30,12 @@ async function ask(name: string, args: Record<string, unknown>): Promise<unknown
   if (!url || !anonKey) throw new Error('Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.')
   const res = await fetchWithTimeout(`${url}/rest/v1/rpc/${encodeURIComponent(name)}`, {
     method: 'POST',
-    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
     body: JSON.stringify(args),
   })
   const text = await res.text()
@@ -42,7 +47,10 @@ async function ask(name: string, args: Record<string, unknown>): Promise<unknown
   }
   if (!res.ok) {
     const e = (body && typeof body === 'object' ? body : {}) as { message?: unknown; code?: unknown }
-    const error = ApiError.from({ message: typeof e.message === 'string' ? e.message : res.statusText || `HTTP ${res.status}`, code: typeof e.code === 'string' ? e.code : null })
+    const error = ApiError.from({
+      message: typeof e.message === 'string' ? e.message : res.statusText || `HTTP ${res.status}`,
+      code: typeof e.code === 'string' ? e.code : null,
+    })
     throw Object.assign(error, { status: res.status })
   }
   return body

@@ -26,8 +26,17 @@ describe('resetApp', () => {
   it('still reloads when clearing fails', async () => {
     const replace = vi.fn()
     await resetApp({
-      serviceWorker: { getRegistrations: async () => { throw new Error('denied') } },
-      caches: { keys: async () => { throw new Error('denied') }, delete: async () => true },
+      serviceWorker: {
+        getRegistrations: async () => {
+          throw new Error('denied')
+        },
+      },
+      caches: {
+        keys: async () => {
+          throw new Error('denied')
+        },
+        delete: async () => true,
+      },
       replace,
       now: () => 3,
     })

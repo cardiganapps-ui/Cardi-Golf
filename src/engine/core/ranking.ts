@@ -134,7 +134,10 @@ export function countback(a: CountbackInput, b: CountbackInput): { result: numbe
     return s
   }
   const holes = Math.max(a.holes, b.holes)
-  const windows: CountbackWindow[] = [{ from: 1, to: holes, total: true }, ...countbackWindows(holes).map(([from, to]) => ({ from, to, total: false }))]
+  const windows: CountbackWindow[] = [
+    { from: 1, to: holes, total: true },
+    ...countbackWindows(holes).map(([from, to]) => ({ from, to, total: false })),
+  ]
   for (const { from, to, total } of windows) {
     const sa = sum(a.pointsByHole, from, to)
     const sb = sum(b.pointsByHole, from, to)
@@ -176,7 +179,11 @@ export interface WholeShare {
  * floors leave go one each to the first shares (`spread`) or all to the first
  * (`first`). Equal parts are weights of 1.
  */
-export function splitWhole(total: number, weights: readonly number[], opts: { of?: number; rest?: 'spread' | 'first' } = {}): WholeShare[] {
+export function splitWhole(
+  total: number,
+  weights: readonly number[],
+  opts: { of?: number; rest?: 'spread' | 'first' } = {},
+): WholeShare[] {
   const of = opts.of ?? weights.reduce((s, w) => s + w, 0)
   const out = weights.map((w) => ({ amount: Math.floor((total * w) / of), rounding: 0 }))
   let rest = total - out.reduce((s, x) => s + x.amount, 0)
@@ -198,7 +205,11 @@ export function splitWhole(total: number, weights: readonly number[], opts: { of
 
 /** `n` equal whole-peso parts of `total`. */
 export function splitEven(total: number, n: number, rest: 'spread' | 'first' = 'spread'): WholeShare[] {
-  return splitWhole(total, Array.from({ length: n }, () => 1), { of: n, rest })
+  return splitWhole(
+    total,
+    Array.from({ length: n }, () => 1),
+    { of: n, rest },
+  )
 }
 
 export interface PrizeShare<T> {
@@ -224,13 +235,18 @@ export function onlyWithResult<T>(groups: RankGroup<T>[], has: (t: T) => boolean
   return out
 }
 
-
 /**
  * Once a game is over, the warning for its places with a prize that nobody
  * filled (MONEY-09): `count` entrants had a result, in `unit` (singular,
  * plural). The money stays with the bank until the Comité decides.
  */
-export function unfilledWarning(label: string, unfilled: { places: number[]; amount: number }, count: number, unit: 'player' | 'team' | 'pair', day: number | null = null): Msg[] {
+export function unfilledWarning(
+  label: string,
+  unfilled: { places: number[]; amount: number },
+  count: number,
+  unit: 'player' | 'team' | 'pair',
+  day: number | null = null,
+): Msg[] {
   if (!unfilled.places.length) return []
   return [msg('rank.unfilled', { label, day, places: unfilled.places, count, unit, amount: unfilled.amount })]
 }
@@ -253,7 +269,11 @@ export function unfilledPlaces(groups: RankGroup<unknown>[], prizes: number[]): 
  * of the prizes for the places it occupies, split evenly in whole pesos;
  * any remainder pesos go one each to the first members in group order.
  */
-export function splitPrizes<T>(groups: RankGroup<T>[], prizes: number[], name: (t: T) => string | Msg): PrizeShare<T>[] {
+export function splitPrizes<T>(
+  groups: RankGroup<T>[],
+  prizes: number[],
+  name: (t: T) => string | Msg,
+): PrizeShare<T>[] {
   const out: PrizeShare<T>[] = []
   for (const g of groups) {
     const n = g.members.length

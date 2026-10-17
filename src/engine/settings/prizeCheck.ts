@@ -144,7 +144,10 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     const real = field.groupSizes?.filter((r) => r.length > 0)
     if (real?.length) {
       // Real groups: each group pays (size − 1) survivors; rounds without groups yet count as planned.
-      const known = real.reduce((s, r) => s + r.reduce((x, n) => x + prizes.snakePerSurvivor * Math.max(0, n - 1), 0), 0)
+      const known = real.reduce(
+        (s, r) => s + r.reduce((x, n) => x + prizes.snakePerSurvivor * Math.max(0, n - 1), 0),
+        0,
+      )
       const missing = Math.max(0, rounds - real.length)
       lines.push({
         moduleId: 'snake',
@@ -176,16 +179,45 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
     if (!g.enabled) continue
     const n = field.entrants?.[g.id] ?? field.players
     if (g.money.source === 'main') {
-      lines.push({ moduleId: `game:${g.id}`, label: label(g.label), amount: g.money.amount, detail: msg('amount', { amount: g.money.amount }) })
+      lines.push({
+        moduleId: `game:${g.id}`,
+        label: label(g.label),
+        amount: g.money.amount,
+        detail: msg('amount', { amount: g.money.amount }),
+      })
     } else if (g.money.source === 'side') {
-      sidePots.push({ gameId: g.id, label: g.label, entrants: n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, detail: msg('pool.side', { n, buyIn: g.money.buyIn, pot: g.money.buyIn * n, type: g.type, split: g.money.split }) })
+      sidePots.push({
+        gameId: g.id,
+        label: g.label,
+        entrants: n,
+        buyIn: g.money.buyIn,
+        pot: g.money.buyIn * n,
+        detail: msg('pool.side', {
+          n,
+          buyIn: g.money.buyIn,
+          pot: g.money.buyIn * n,
+          type: g.type,
+          split: g.money.split,
+        }),
+      })
     } else if (g.money.source === 'direct') {
-      bets.push({ gameId: g.id, label: g.label, stake: g.money.stake, detail: msg('pool.bet', { stake: g.money.stake, per: stakeUnit(g) }) })
+      bets.push({
+        gameId: g.id,
+        label: g.label,
+        stake: g.money.stake,
+        detail: msg('pool.bet', { stake: g.money.stake, per: stakeUnit(g) }),
+      })
     }
   }
   const entryPot = settings.entryFee * field.players
   const houseCut = entryPot > 0 ? settings.houseCut : 0
-  if (houseCut > 0) lines.push({ moduleId: 'house', label: say('pool.house'), amount: houseCut, detail: msg('amount', { amount: houseCut }) })
+  if (houseCut > 0)
+    lines.push({
+      moduleId: 'house',
+      label: say('pool.house'),
+      amount: houseCut,
+      detail: msg('amount', { amount: houseCut }),
+    })
 
   if (percentIndividual) {
     // The individual game takes what is left, split by percentages.
@@ -202,7 +234,17 @@ export function checkPrizePool(settings: TournamentSettings, field: FieldShape):
   const difference = entryPot - prizesTotal
   const unreachable = unreachablePlaces(settings, field, lines, rounds)
   const balanced = difference === 0
-  return { entryPot, lines, prizesTotal, difference, balanced, unreachable, ok: balanced && unreachable.length === 0, sidePots, bets }
+  return {
+    entryPot,
+    lines,
+    prizesTotal,
+    difference,
+    balanced,
+    unreachable,
+    ok: balanced && unreachable.length === 0,
+    sidePots,
+    bets,
+  }
 }
 
 /** The pesos of `amounts` past the first `reachable` places. */
@@ -211,7 +253,10 @@ function beyond(amounts: number[], reachable: number): number {
 }
 
 /** How many entrants the main standings rank: players, or teams in a team format. */
-export function mainEntrants(settings: TournamentSettings, field: FieldShape): { count: number; unit: 'player' | 'team' } {
+export function mainEntrants(
+  settings: TournamentSettings,
+  field: FieldShape,
+): { count: number; unit: 'player' | 'team' } {
   const ind = settings.modules.individual
   const teams = ind.format === 'team' || (ind.format === 'matchPlay' && ind.formatOptions.matchMode === 'fourball')
   if (!teams) return { count: field.players, unit: 'player' }
@@ -219,14 +264,20 @@ export function mainEntrants(settings: TournamentSettings, field: FieldShape): {
   return { count: field.teams ?? Math.floor(field.players / 2), unit: 'team' }
 }
 
-const placesText = (places: number, reachable: number, unit: 'player' | 'team' | 'pair'): Msg => msg('pool.places', { places, reachable, unit })
+const placesText = (places: number, reachable: number, unit: 'player' | 'team' | 'pair'): Msg =>
+  msg('pool.places', { places, reachable, unit })
 
 /**
  * Places with a prize that more places than entrants leave empty (MONEY-09).
  * Only games that pay by place can have one: the individual standings, the
  * pairs game, and low score. With no players yet there is nothing to check.
  */
-function unreachablePlaces(settings: TournamentSettings, field: FieldShape, lines: PrizeLine[], rounds: number): UnreachableLine[] {
+function unreachablePlaces(
+  settings: TournamentSettings,
+  field: FieldShape,
+  lines: PrizeLine[],
+  rounds: number,
+): UnreachableLine[] {
   if (field.players <= 0) return []
   const out: UnreachableLine[] = []
   const { modules, prizes } = settings
@@ -236,12 +287,28 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
     const total = lines.find((l) => l.moduleId === 'individual')?.amount ?? 0
     const amounts = prizes.stablefordMode === 'percent' ? percentPlaces(total, prizes.stableford) : prizes.stableford
     const places = paid(amounts)
-    if (places > count) out.push({ id: 'individual', label: modules.individual.label, places, reachable: count, amount: beyond(amounts, count), detail: placesText(places, count, unit) })
+    if (places > count)
+      out.push({
+        id: 'individual',
+        label: modules.individual.label,
+        places,
+        reachable: count,
+        amount: beyond(amounts, count),
+        detail: placesText(places, count, unit),
+      })
   }
   if (modules.pairs.enabled) {
     const count = field.pairs ?? Math.floor(field.players / 2)
     const places = paid(prizes.pairs)
-    if (places > count) out.push({ id: 'pairs', label: modules.pairs.label, places, reachable: count, amount: beyond(prizes.pairs, count), detail: placesText(places, count, 'pair') })
+    if (places > count)
+      out.push({
+        id: 'pairs',
+        label: modules.pairs.label,
+        places,
+        reachable: count,
+        amount: beyond(prizes.pairs, count),
+        detail: placesText(places, count, 'pair'),
+      })
   }
   for (const g of settings.games) {
     if (!g.enabled || g.type !== 'lowScore' || (g.money.source !== 'main' && g.money.source !== 'side')) continue
@@ -253,7 +320,14 @@ function unreachablePlaces(settings: TournamentSettings, field: FieldShape, line
     const days = g.options.scope === 'perRound' ? Math.max(1, rounds) : 1
     let amount = 0
     for (const day of splitEven(pot, days, 'first')) amount += beyond(percentPlaces(day.amount, g.money.split), n)
-    out.push({ id: `game:${g.id}`, label: g.label, places, reachable: n, amount, detail: placesText(places, n, 'player') })
+    out.push({
+      id: `game:${g.id}`,
+      label: g.label,
+      places,
+      reachable: n,
+      amount,
+      detail: placesText(places, n, 'player'),
+    })
   }
   return out
 }
@@ -287,8 +361,10 @@ export function fieldShape(snapshot: Snapshot, settings: TournamentSettings): Fi
   const ids = new Set(snapshot.players.map((p) => p.id))
   const entrants: Record<string, number> = {}
   for (const g of settings.games) {
+    if (g.entrants !== 'list') continue
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a snapshot an older build kept on the phone has no gameEntries
-    if (g.entrants === 'list') entrants[g.id] = (snapshot.gameEntries ?? []).filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
+    const entries = snapshot.gameEntries ?? []
+    entrants[g.id] = entries.filter((e) => e.gameId === g.id && ids.has(e.playerId)).length
   }
   // Drawn teams and pairs, once there are any (a team format falls back to the pairs, as its standings do).
   const pairs = snapshot.pairs.length || undefined

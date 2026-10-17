@@ -40,12 +40,18 @@ describe('the backup’s paging keys (QA-07)', () => {
     const pk = primaryKeys()
     const paged = server.requests.filter((r) => r.range)
     // Every table in the file but the tournament's own row (one row, read on its own).
-    expect(paged.map((r) => r.table).sort()).toEqual(Object.keys(backup.tables).filter((t) => t !== 'tournaments').sort())
+    expect(paged.map((r) => r.table).sort()).toEqual(
+      Object.keys(backup.tables)
+        .filter((t) => t !== 'tournaments')
+        .sort(),
+    )
     for (const r of paged) {
       expect(pk.get(r.table), `${r.table} has no primary key in the migrations`).toBeDefined()
       // A read of one tournament's rows may leave its id out of the key: it is the same on every row.
       const free = (c: string) => !(c === 'tournament_id' && r.filters.includes('tournament_id=in.(1)'))
-      expect(r.order.filter(free), `${r.table} ordered by ${r.order.join(', ') || 'nothing'}`).toEqual(pk.get(r.table)!.filter(free))
+      expect(r.order.filter(free), `${r.table} ordered by ${r.order.join(', ') || 'nothing'}`).toEqual(
+        pk.get(r.table)!.filter(free),
+      )
     }
   })
 })

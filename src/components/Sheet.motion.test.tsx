@@ -112,7 +112,12 @@ describe('closing plays out (MOT-09)', () => {
     expect(onExited).not.toHaveBeenCalled()
 
     // Another element's animation ending inside it is not its own.
-    act(() => void within(frame()!).getByText('Hoyo 1').dispatchEvent(new Event('animationend', { bubbles: true })))
+    act(
+      () =>
+        void within(frame()!)
+          .getByText('Hoyo 1')
+          .dispatchEvent(new Event('animationend', { bubbles: true })),
+    )
     expect(frame()).toBeTruthy()
     act(() => void frame()!.dispatchEvent(new Event('animationend', { bubbles: true })))
     expect(frame()).toBeNull()
@@ -176,7 +181,15 @@ describe('closing plays out (MOT-09)', () => {
 
 /** A pointer at `y` on `el` (or the window) at time `at`, as a finger sends it. */
 function pointer(type: string, target: EventTarget, y: number, at: number) {
-  const e = new PointerEvent(type, { bubbles: true, cancelable: true, clientY: y, pointerId: 7, isPrimary: true, button: 0, pointerType: 'touch' })
+  const e = new PointerEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientY: y,
+    pointerId: 7,
+    isPrimary: true,
+    button: 0,
+    pointerType: 'touch',
+  })
   Object.defineProperty(e, 'timeStamp', { value: at })
   act(() => void target.dispatchEvent(e))
 }
@@ -194,7 +207,17 @@ async function openTall(props: { dirty?: boolean } = {}) {
   await user.click(screen.getByRole('button', { name: 'Abrir jugador' }))
   await settle()
   const dialog = screen.getByRole('dialog')
-  vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ height: 400, width: 393, top: 400, bottom: 800, left: 0, right: 393, x: 0, y: 400, toJSON: () => ({}) })
+  vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({
+    height: 400,
+    width: 393,
+    top: 400,
+    bottom: 800,
+    left: 0,
+    right: 393,
+    x: 0,
+    y: 400,
+    toJSON: () => ({}),
+  })
   return dialog
 }
 const grabber = (dialog: HTMLElement) => dialog.querySelector('[data-sheet-grab]')!

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { h2hRecord, proposedStrokes, type H2HRound } from './social'
 
-const round = (myNet: number | null, theirNet: number | null, myGross: number | null, theirGross: number | null): H2HRound => ({
+const round = (
+  myNet: number | null,
+  theirNet: number | null,
+  myGross: number | null,
+  theirGross: number | null,
+): H2HRound => ({
   roundId: `${myNet}-${theirNet}-${myGross}-${theirGross}`,
   playedOn: null,
   roundNumber: 1,

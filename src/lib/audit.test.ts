@@ -9,10 +9,21 @@ import { annotation, AUDIT_ARGS, auditVerdict, findingLines, runAudit } from '..
 const clean = JSON.stringify({
   auditReportVersion: 2,
   vulnerabilities: {},
-  metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 }, dependencies: { prod: 93, dev: 783, total: 876 } },
+  metadata: {
+    vulnerabilities: { info: 0, low: 0, moderate: 0, high: 0, critical: 0, total: 0 },
+    dependencies: { prod: 93, dev: 783, total: 876 },
+  },
 })
 
-const advisory = (severity: string, title: string, url: string) => ({ source: 1, name: 'x', dependency: 'x', title, url, severity, range: '<9' })
+const advisory = (severity: string, title: string, url: string) => ({
+  source: 1,
+  name: 'x',
+  dependency: 'x',
+  title,
+  url,
+  severity,
+  range: '<9',
+})
 
 /** Trimmed from the dev tree's real report (2026-10-15). */
 const vulnerable = JSON.stringify({
@@ -22,19 +33,32 @@ const vulnerable = JSON.stringify({
       name: '@fastify/busboy',
       severity: 'high',
       via: [
-        advisory('high', '@fastify/busboy vulnerable to Denial of Service', 'https://github.com/advisories/GHSA-x8mw-p69m-v3mx'),
-        advisory('moderate', '@fastify/busboy vulnerable to CRLF injection', 'https://github.com/advisories/GHSA-gxm5-99cw-xjw9'),
+        advisory(
+          'high',
+          '@fastify/busboy vulnerable to Denial of Service',
+          'https://github.com/advisories/GHSA-x8mw-p69m-v3mx',
+        ),
+        advisory(
+          'moderate',
+          '@fastify/busboy vulnerable to CRLF injection',
+          'https://github.com/advisories/GHSA-gxm5-99cw-xjw9',
+        ),
       ],
     },
     micromatch: { name: 'micromatch', severity: 'high', via: ['braces'] },
-    ajv: { name: 'ajv', severity: 'moderate', via: [advisory('moderate', 'ajv has ReDoS', 'https://github.com/advisories/GHSA-2g4f-4pwh-qvx6')] },
+    ajv: {
+      name: 'ajv',
+      severity: 'moderate',
+      via: [advisory('moderate', 'ajv has ReDoS', 'https://github.com/advisories/GHSA-2g4f-4pwh-qvx6')],
+    },
   },
   metadata: { vulnerabilities: { info: 0, low: 0, moderate: 1, high: 2, critical: 0, total: 3 } },
 })
 
 /** What npm prints when the advisory service can't be reached (the registry pointed at a closed port). */
 const unreachable = JSON.stringify({
-  message: 'request to http://127.0.0.1:9/-/npm/v1/security/audits/quick failed, reason: connect ECONNREFUSED 127.0.0.1:9',
+  message:
+    'request to http://127.0.0.1:9/-/npm/v1/security/audits/quick failed, reason: connect ECONNREFUSED 127.0.0.1:9',
   error: { summary: '', detail: '' },
 })
 
@@ -64,7 +88,10 @@ describe('one run of npm audit', () => {
   it('no report is never clean: the service’s refusal, an empty answer, text, a report without its list', () => {
     expect(auditVerdict(unreachable)).toEqual({ kind: 'unreachable', reason: expect.stringContaining('ECONNREFUSED') })
     expect(auditVerdict('')).toEqual({ kind: 'unreachable', reason: 'npm audit printed nothing' })
-    expect(auditVerdict('npm error audit endpoint returned an error\n')).toEqual({ kind: 'unreachable', reason: 'npm error audit endpoint returned an error' })
+    expect(auditVerdict('npm error audit endpoint returned an error\n')).toEqual({
+      kind: 'unreachable',
+      reason: 'npm error audit endpoint returned an error',
+    })
     expect(auditVerdict('null').kind).toBe('unreachable')
     expect(auditVerdict(JSON.stringify({ auditReportVersion: 2 })).kind).toBe('unreachable')
   })
@@ -114,7 +141,9 @@ describe('the step', () => {
     const { code, log, runs } = await step([unreachable, unreachable, unreachable, clean])
     expect(code).toBe(1)
     expect(runs).toBe(3)
-    expect(log.at(-1)).toMatch(/^::error title=npm audit::npm's advisory service gave no report in 3 tries: .*ECONNREFUSED/)
+    expect(log.at(-1)).toMatch(
+      /^::error title=npm audit::npm's advisory service gave no report in 3 tries: .*ECONNREFUSED/,
+    )
   })
 
   it('a finding after a try with no report still fails', async () => {

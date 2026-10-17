@@ -17,7 +17,16 @@ vi.mock('./tournamentStore', () => ({
   registerOverlay: () => undefined,
   liveSeq: () => 0,
   liveClock: () => Date.now(),
-  useTournament: { getState: () => ({ tournamentId: 't1', patch: () => undefined, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined }) },
+  useTournament: {
+    getState: () => ({
+      tournamentId: 't1',
+      patch: () => undefined,
+      refresh: () => undefined,
+      landChanges: () => undefined,
+      pushesDone: () => undefined,
+      reload: async () => undefined,
+    }),
+  },
 }))
 
 const { _outboxTest, flush, setOutboxBlocked, useOutbox } = await import('./outbox')
@@ -26,7 +35,16 @@ const score = (hole: number) => ({
   key: `score:r1:p1:${hole}`,
   kind: 'score' as const,
   tournamentId: 't1',
-  payload: { round_id: 'r1', player_id: 'p1', hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' },
+  payload: {
+    round_id: 'r1',
+    player_id: 'p1',
+    hole,
+    strokes: 4,
+    putts: 2,
+    picked_up: false,
+    entered_by: 'p1',
+    client_ts: 'x',
+  },
   attempts: 0,
   createdAt: Date.now(),
 })
@@ -84,12 +102,31 @@ describe('outbox opened by an older build', () => {
     newer.version(1).stores({ items: 'key, tournamentId, createdAt' })
     newer.version(2).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
     newer.version(3).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at' })
-    newer.version(4).stores({ items: 'key, tournamentId, createdAt', rejected: 'key, tournamentId, at', conflicts: 'key, tournamentId, at' })
-    newer.version(5).stores({ items: 'key, tournamentId, createdAt, mutationId', rejected: 'key, tournamentId, at', conflicts: 'key, tournamentId, at', mutations: 'id' })
+    newer.version(4).stores({
+      items: 'key, tournamentId, createdAt',
+      rejected: 'key, tournamentId, at',
+      conflicts: 'key, tournamentId, at',
+    })
+    newer.version(5).stores({
+      items: 'key, tournamentId, createdAt, mutationId',
+      rejected: 'key, tournamentId, at',
+      conflicts: 'key, tournamentId, at',
+      mutations: 'id',
+    })
     await newer.open()
     await newer.table('items').bulkPut([
       { ...score(7), seq: 1, actingUid: 'uid-a' },
-      { key: 'photo:r1:g1:8', kind: 'photo', tournamentId: 't1', payload: { round_id: 'r1', hole: 8, url: 'x' }, attempts: 0, createdAt: 2, seq: 2, actingUid: 'uid-a', mutationId: 'm1' },
+      {
+        key: 'photo:r1:g1:8',
+        kind: 'photo',
+        tournamentId: 't1',
+        payload: { round_id: 'r1', hole: 8, url: 'x' },
+        attempts: 0,
+        createdAt: 2,
+        seq: 2,
+        actingUid: 'uid-a',
+        mutationId: 'm1',
+      },
     ])
     newer.close()
 

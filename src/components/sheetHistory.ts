@@ -40,7 +40,8 @@ const buried = new Set<string>()
 /** The history state the person was last seen on, to tell which way they came onto an entry left behind. */
 let lastSeen: unknown = null
 
-const field = (state: unknown, key: string) => (state && typeof state === 'object' ? (state as Record<string, unknown>)[key] : undefined)
+const field = (state: unknown, key: string) =>
+  state && typeof state === 'object' ? (state as Record<string, unknown>)[key] : undefined
 const isMark = (state: unknown) => field(state, MARK) === true
 
 function push() {

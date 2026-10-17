@@ -93,7 +93,10 @@ export function setContrastChoice(choice: ContrastChoice): void {
 function subscribe(fn: () => void): () => void {
   listeners.add(fn)
   // The phone's setting can change under «Sistema» (sunset, Control Center): what the switch shows follows it.
-  const queries = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? [window.matchMedia('(prefers-color-scheme: dark)'), window.matchMedia('(prefers-contrast: more)')] : []
+  const queries =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? [window.matchMedia('(prefers-color-scheme: dark)'), window.matchMedia('(prefers-contrast: more)')]
+      : []
   for (const q of queries) q.addEventListener?.('change', fn)
   // Another tab of the app changed it.
   const onStorage = (e: StorageEvent) => {

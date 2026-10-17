@@ -8,14 +8,31 @@ beforeEach(() => {
   localStorage.clear()
   reduce = false
   Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vi.fn(() => true) })
-  vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: q.includes('reduce') && reduce, media: q, onchange: null, addListener: () => undefined, removeListener: () => undefined, addEventListener: () => undefined, removeEventListener: () => undefined, dispatchEvent: () => false }) as MediaQueryList)
+  vi.spyOn(window, 'matchMedia').mockImplementation(
+    (q: string) =>
+      ({
+        matches: q.includes('reduce') && reduce,
+        media: q,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+  )
 })
 afterEach(() => vi.restoreAllMocks())
 
 describe('haptics (MOT-10)', () => {
   it('each kind vibrates its own pattern', () => {
     for (const kind of ['tick', 'save', 'moment', 'error'] as const) haptic(kind)
-    expect(vi.mocked(navigator.vibrate).mock.calls.map((c) => c[0])).toEqual([PATTERNS.tick, PATTERNS.save, PATTERNS.moment, PATTERNS.error])
+    expect(vi.mocked(navigator.vibrate).mock.calls.map((c) => c[0])).toEqual([
+      PATTERNS.tick,
+      PATTERNS.save,
+      PATTERNS.moment,
+      PATTERNS.error,
+    ])
   })
 
   it('the switch in Más turns it off on this phone, and back on', () => {
@@ -42,9 +59,16 @@ describe('haptics (MOT-10)', () => {
   })
 
   it('a browser that refuses, or keeps nothing, is silence, never an error', () => {
-    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vi.fn(() => { throw new Error('blocked') }) })
+    Object.defineProperty(navigator, 'vibrate', {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error('blocked')
+      }),
+    })
     expect(() => haptic('tick')).not.toThrow()
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied') })
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('denied')
+    })
     expect(hapticsOn()).toBe(true)
   })
 })

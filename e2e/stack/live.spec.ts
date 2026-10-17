@@ -71,7 +71,12 @@ const FIXES = [
 type Join = (slug: string, name: string, link?: Link) => Promise<Phone>
 
 /** The whole round on `slug`, measured; `network` says which link the phones were on, for the summary. */
-async function playRound(join: Join, outputDir: string, slug: string, network: { label: string; key: string; conditions?: Link }) {
+async function playRound(
+  join: Join,
+  outputDir: string,
+  slug: string,
+  network: { label: string; key: string; conditions?: Link },
+) {
   const ana = await join(slug, 'Ana', network.conditions)
   const beto = await join(slug, 'Beto', network.conditions)
   const card = new Map<number, HoleEntry>()
@@ -93,7 +98,15 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
     } catch (e) {
       // Say what Beto's phone showed instead, what the server holds and what each phone's header says: a
       // failure here is read through the check's annotations only (CI logs can't be fetched from the session).
-      const header = async (p: Phone) => (await p.page.locator('header').innerText().catch(() => '?')).replace(/\s+/g, ' ').slice(0, 160)
+      const header = async (p: Phone) =>
+        (
+          await p.page
+            .locator('header')
+            .innerText()
+            .catch(() => '?')
+        )
+          .replace(/\s+/g, ' ')
+          .slice(0, 160)
       const rows = 'board' in shown ? await boardRows(beto.page) : []
       const server = serverScores(slug).filter((s) => s.hole === hole)
       const detail = [
@@ -109,7 +122,9 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
     }
     const ms = Math.round(at - (await savedAt(ana.page)))
     samples.push({ what, hole, ms })
-    console.log(`[e2e-stack] ${network.label}: ${what} hole ${hole}: saved on Ana's phone → shown on Beto's in ${ms} ms`)
+    console.log(
+      `[e2e-stack] ${network.label}: ${what} hole ${hole}: saved on Ana's phone → shown on Beto's in ${ms} ms`,
+    )
   }
 
   await openCard(ana.page)
@@ -152,32 +167,67 @@ async function playRound(join: Join, outputDir: string, slug: string, network: {
   // and the screen's own answer to a tap. The suite's taps carry Playwright's time too, so this errs long.
   const tapMs = typing.flatMap((x) => x.taps)
   const perHole = typing.map((x) => x.taps.length + 1)
-  const foursome = { holes: typing.length, meanTaps: Math.round((10 * perHole.reduce((a, b) => a + b, 0)) / perHole.length) / 10, maxTaps: Math.max(...perHole), tapP50: percentile(tapMs, 0.5), tapP95: percentile(tapMs, 0.95) }
+  const foursome = {
+    holes: typing.length,
+    meanTaps: Math.round((10 * perHole.reduce((a, b) => a + b, 0)) / perHole.length) / 10,
+    maxTaps: Math.max(...perHole),
+    tapP50: percentile(tapMs, 0.5),
+    tapP95: percentile(tapMs, 0.95),
+  }
   const longestHoleMs = foursome.maxTaps * (PERSON_TAP_MS + foursome.tapP95)
-  console.log(`::notice title=a foursome's hole (${network.label})::${foursome.meanTaps} taps on average, ${foursome.maxTaps} at most; a tap shows its value in p50 ${foursome.tapP50} ms, p95 ${foursome.tapP95} ms; the longest hole at a person's pace ≈ ${(longestHoleMs / 1000).toFixed(1)} s`)
+  console.log(
+    `::notice title=a foursome's hole (${network.label})::${foursome.meanTaps} taps on average, ${foursome.maxTaps} at most; a tap shows its value in p50 ${foursome.tapP50} ms, p95 ${foursome.tapP95} ms; the longest hole at a person's pace ≈ ${(longestHoleMs / 1000).toFixed(1)} s`,
+  )
 
   const ms = samples.map((s) => s.ms)
-  const stats = { saves: ms.length, min: Math.min(...ms), p50: percentile(ms, 0.5), p95: percentile(ms, 0.95), max: Math.max(...ms) }
-  console.log(`[e2e-stack] ${network.label}: save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
+  const stats = {
+    saves: ms.length,
+    min: Math.min(...ms),
+    p50: percentile(ms, 0.5),
+    p95: percentile(ms, 0.95),
+    max: Math.max(...ms),
+  }
+  console.log(
+    `[e2e-stack] ${network.label}: save → shown over ${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`,
+  )
   // A notice on the check run: its annotations can be read through the API, the job's log and summary can't (from the session).
-  console.log(`::notice title=save-to-shown (${network.label})::${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`)
-  keepMetrics(outputDir, network.key, { budgetMs: BUDGET_MS, network: network.conditions ?? null, stats, samples, foursomeHole: { ...foursome, personTapMs: PERSON_TAP_MS, longestHoleMs, budgetMs: FOURSOME_HOLE_MS } }, [
-    `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
-    '',
-    `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones on ${network.conditions.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
-    '',
-    `A foursome's hole: **${foursome.meanTaps}** taps on average, **${foursome.maxTaps}** at most (from par and 2 putts, «Guardar hoyo» included); each stepper tap showed its value in p50 ${foursome.tapP50} ms, p95 **${foursome.tapP95} ms**. At ${PERSON_TAP_MS} ms a tap for a person, the longest hole takes about **${(longestHoleMs / 1000).toFixed(1)} s** (budget ${FOURSOME_HOLE_MS / 1000} s).`,
-    '',
-    '| Where | Hole | ms |',
-    '|---|---:|---:|',
-    ...samples.map((s) => `| ${s.what} | ${s.hole} | ${s.ms} |`),
-  ].join('\n'))
+  console.log(
+    `::notice title=save-to-shown (${network.label})::${stats.saves} saves: min ${stats.min} ms, p50 ${stats.p50} ms, p95 ${stats.p95} ms, max ${stats.max} ms`,
+  )
+  keepMetrics(
+    outputDir,
+    network.key,
+    {
+      budgetMs: BUDGET_MS,
+      network: network.conditions ?? null,
+      stats,
+      samples,
+      foursomeHole: { ...foursome, personTapMs: PERSON_TAP_MS, longestHoleMs, budgetMs: FOURSOME_HOLE_MS },
+    },
+    [
+      `### Save on one phone → shown on the other (e2e-stack, ${network.label})`,
+      '',
+      `${stats.saves} saves: min **${stats.min} ms**, p50 **${stats.p50} ms**, p95 **${stats.p95} ms**, max **${stats.max} ms** (budget ${BUDGET_MS} ms each). Local stack; ${network.conditions ? `both phones on ${network.conditions.latency} ms round trip (requests and live-channel frames), 1.6 Mbps down, 750 kbps up` : 'no network throttling'}.`,
+      '',
+      `A foursome's hole: **${foursome.meanTaps}** taps on average, **${foursome.maxTaps}** at most (from par and 2 putts, «Guardar hoyo» included); each stepper tap showed its value in p50 ${foursome.tapP50} ms, p95 **${foursome.tapP95} ms**. At ${PERSON_TAP_MS} ms a tap for a person, the longest hole takes about **${(longestHoleMs / 1000).toFixed(1)} s** (budget ${FOURSOME_HOLE_MS / 1000} s).`,
+      '',
+      '| Where | Hole | ms |',
+      '|---|---:|---:|',
+      ...samples.map((s) => `| ${s.what} | ${s.hole} | ${s.ms} |`),
+    ].join('\n'),
+  )
 
-  expect(samples.filter((s) => s.ms >= BUDGET_MS), `${network.label}: saves that took ${BUDGET_MS} ms or more to show on the other phone`).toEqual([])
-  expect(longestHoleMs, `${network.label}: the longest foursome hole, at a person's pace`).toBeLessThan(FOURSOME_HOLE_MS)
+  expect(
+    samples.filter((s) => s.ms >= BUDGET_MS),
+    `${network.label}: saves that took ${BUDGET_MS} ms or more to show on the other phone`,
+  ).toEqual([])
+  expect(longestHoleMs, `${network.label}: the longest foursome hole, at a person's pace`).toBeLessThan(
+    FOURSOME_HOLE_MS,
+  )
   // The live channel really was on the link: its frames went through slowSockets on both phones.
   if (network.conditions)
-    for (const p of [ana, beto]) expect(await slowFrames(p.page), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
+    for (const p of [ana, beto])
+      expect(await slowFrames(p.page), `${p.name}: live-channel frames held back`).toBeGreaterThan(0)
   // And the server holds the card as Ana's phone typed it: 72 rows, no discrepancy.
   expect(serverScores(slug)).toEqual(expectedScores(card, 'Ana'))
   assertSamePlayer(ana, beto)
@@ -190,7 +240,11 @@ test('two phones, one card: every hole saved on one shows on the other within 2 
 
 test('two phones on 4G: every hole saved on one shows on the other within 2 s (REL-11)', async ({ join }, testInfo) => {
   test.setTimeout(420_000)
-  await playRound(join, testInfo.project.outputDir, SLUGS.fourG, { label: '4G', key: 'save-to-shown-4g', conditions: FOUR_G })
+  await playRound(join, testInfo.project.outputDir, SLUGS.fourG, {
+    label: '4G',
+    key: 'save-to-shown-4g',
+    conditions: FOUR_G,
+  })
 })
 
 /** Neither phone was signed in again behind the player's back. */

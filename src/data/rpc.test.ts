@@ -67,8 +67,13 @@ describe('rpc: one typed call (ARCH-03)', () => {
 
   it('.as names the shape; .parse checks it, and an answer that does not read names its paths, never its values', async () => {
     srv.answer = { data: { total: 2, rows: [] }, error: null }
-    expect(await rpc('platform_crews', { p_q: null, p_limit: 50, p_offset: 0 }).as<{ total: number; rows: unknown[] }>()).toEqual({ total: 2, rows: [] })
-    srv.answer = { data: { playerId: 'p1', role: 'member', isOrganizer: 'sí', isAdmin: false, via: 'device', secret: 'Ana Pérez' }, error: null }
+    expect(
+      await rpc('platform_crews', { p_q: null, p_limit: 50, p_offset: 0 }).as<{ total: number; rows: unknown[] }>(),
+    ).toEqual({ total: 2, rows: [] })
+    srv.answer = {
+      data: { playerId: 'p1', role: 'member', isOrganizer: 'sí', isAdmin: false, via: 'device', secret: 'Ana Pérez' },
+      error: null,
+    }
     const e = await myMembership('t1').catch((x: unknown) => x)
     expect(e).toBeInstanceOf(AnswerError)
     expect((e as InstanceType<typeof AnswerError>).issues).toEqual(['isOrganizer: invalid_type'])
@@ -99,7 +104,18 @@ describe('my_membership: what every screen of a tournament goes by (ARCH-03)', (
   it('reads as the server answers it, keeping keys this build does not know', async () => {
     srv.answer = { data: { ...member, newer: 1 }, error: null }
     expect(await myMembership('t1')).toEqual({ ...member, newer: 1 })
-    srv.answer = { data: { playerId: null, role: 'platform', isOrganizer: true, isAdmin: true, via: 'platform', protected: null, unlockedUntil: null }, error: null }
+    srv.answer = {
+      data: {
+        playerId: null,
+        role: 'platform',
+        isOrganizer: true,
+        isAdmin: true,
+        via: 'platform',
+        protected: null,
+        unlockedUntil: null,
+      },
+      error: null,
+    }
     expect(await myMembership('t1')).toMatchObject({ role: 'platform', unlockedUntil: null })
   })
 
@@ -114,8 +130,29 @@ describe('my_membership: what every screen of a tournament goes by (ARCH-03)', (
 })
 
 describe('lookup_tournament: the faces on Entrar (ARCH-03)', () => {
-  const face = { id: 'p1', displayName: 'Ana', fullName: null, tier: 'A', avatarUrl: null, isHonoree: false, hasPin: true, isMe: false, hasProfile: false, pendingMe: false }
-  const tournament = { id: 't1', slug: 'viaje', name: 'Viaje', tagline: null, logoUrl: null, accentColor: null, status: 'live', joinCode: null, players: [face] }
+  const face = {
+    id: 'p1',
+    displayName: 'Ana',
+    fullName: null,
+    tier: 'A',
+    avatarUrl: null,
+    isHonoree: false,
+    hasPin: true,
+    isMe: false,
+    hasProfile: false,
+    pendingMe: false,
+  }
+  const tournament = {
+    id: 't1',
+    slug: 'viaje',
+    name: 'Viaje',
+    tagline: null,
+    logoUrl: null,
+    accentColor: null,
+    status: 'live',
+    joinCode: null,
+    players: [face],
+  }
 
   it('reads as the server answers it: before a PIN, no join code and no full names', async () => {
     srv.answer = { data: tournament, error: null }

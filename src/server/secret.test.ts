@@ -6,7 +6,16 @@ describe('bearerMatches (SEC-08)', () => {
     expect(bearerMatches('Bearer s3cret', 's3cret')).toBe(true)
   })
   it('refuses anything else, a prefix or a longer value included', () => {
-    for (const h of ['Bearer s3cre', 'Bearer s3cret ', 'bearer s3cret', 's3cret', 'Bearer ', '', undefined, ['Bearer s3cret', 'x']]) {
+    for (const h of [
+      'Bearer s3cre',
+      'Bearer s3cret ',
+      'bearer s3cret',
+      's3cret',
+      'Bearer ',
+      '',
+      undefined,
+      ['Bearer s3cret', 'x'],
+    ]) {
       expect(bearerMatches(h, 's3cret')).toBe(false)
     }
   })

@@ -6,8 +6,45 @@
 import { useMemo, useState } from 'react'
 import { dataFromSnapshot } from '../data/tournamentStore'
 import { getFixture } from '../dev/fixtures'
-import { IconCheck, IconChevronLeft, IconChevronRight, IconCoin, IconFlag, IconGames, IconMore, IconOffline, IconPencil, IconPlus, IconShare, IconSnake, IconTrophy, IconUndo } from '../components/icons'
-import { Board, BoardHead, Button, EmptyState, EventName, Field, Figure, Input, LeaderRow, LiveStatus, LogoMark, Money, Plate, ScoreMark, ScorecardGrid, Segmented, Stepper, TabBar, TabItem, Wordmark, type GridHole } from '../components/primitives'
+import {
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+  IconCoin,
+  IconFlag,
+  IconGames,
+  IconMore,
+  IconOffline,
+  IconPencil,
+  IconPlus,
+  IconShare,
+  IconSnake,
+  IconTrophy,
+  IconUndo,
+} from '../components/icons'
+import {
+  Board,
+  BoardHead,
+  Button,
+  EmptyState,
+  EventName,
+  Field,
+  Figure,
+  Input,
+  LeaderRow,
+  LiveStatus,
+  LogoMark,
+  Money,
+  Plate,
+  ScoreMark,
+  ScorecardGrid,
+  Segmented,
+  Stepper,
+  TabBar,
+  TabItem,
+  Wordmark,
+  type GridHole,
+} from '../components/primitives'
 import { formatMoney, formatSignedMoney, PLATFORM_CURRENCY } from '../lib/money'
 import { toPar } from '../components/notation'
 import { SheetFrame, Skeleton, ToastItem } from '../components/ui'
@@ -15,7 +52,6 @@ import { contrast as ratio, luminance } from '../lib/contrast'
 import { cssVar } from '../lib/tokens'
 import { ACCENTS } from './accents'
 import s from './DesignScreen.module.css'
-
 
 const COLOR_ROLES: Array<{ name: string; role: string; on?: string }> = [
   { name: 'bg', role: 'card stock, background' },
@@ -56,17 +92,29 @@ export function DesignScreen() {
   const [putts, setPutts] = useState(2)
   const [seg, setSeg] = useState<'pts' | 'gross'>('pts')
   const [accent, setAccent] = useState(ACCENTS[0]!)
-  const COLORS = useMemo(() => COLOR_ROLES.map((c) => ({ ...c, hex: cssVar(`--${c.name}`), on: c.on ? cssVar(c.on) : undefined })), [])
+  const COLORS = useMemo(
+    () => COLOR_ROLES.map((c) => ({ ...c, hex: cssVar(`--${c.name}`), on: c.on ? cssVar(c.on) : undefined })),
+    [],
+  )
 
   const nameOf = (id: string, d = fx.data) => d.snapshot.players.find((p) => p.id === id)?.displayName ?? id
   const rows = fx.data.state.modules.individual!.rows
   const r2 = fx.data.state.core.rounds.r2!
   const grossToPar = (pid: string) => {
     let d = 0
-    for (const rid of fx.data.state.core.roundIds) for (const h of fx.data.state.core.rounds[rid]?.[pid]?.holes ?? []) if (h.played && !h.pickedUp && h.gross != null) d += h.gross - h.par
+    for (const rid of fx.data.state.core.roundIds)
+      for (const h of fx.data.state.core.rounds[rid]?.[pid]?.holes ?? [])
+        if (h.played && !h.pickedUp && h.gross != null) d += h.gross - h.par
     return d
   }
-  const holes: GridHole[] = (fx.data.state.core.rounds.r1!.p1!.holes ?? []).map((h) => ({ n: h.hole, par: h.par, si: h.strokeIndex, gross: h.gross, pickedUp: h.pickedUp, pts: h.points }))
+  const holes: GridHole[] = (fx.data.state.core.rounds.r1!.p1!.holes ?? []).map((h) => ({
+    n: h.hole,
+    par: h.par,
+    si: h.strokeIndex,
+    gross: h.gross,
+    pickedUp: h.pickedUp,
+    pts: h.points,
+  }))
   const largeRows = large.state.modules.individual!.rows
 
   return (
@@ -75,17 +123,29 @@ export function DesignScreen() {
         <header className={s.stack}>
           <Wordmark size={22} />
           <h1 className={s.pageTitle}>Sistema de diseño · dirección A, «La tarjeta»</h1>
-          <p className={s.lede}>Tokens, escala tipográfica y primitivas del rediseño, con datos reales de los fixtures. Son los mismos componentes que usa la app; la fase 3 los lleva a cada pantalla.</p>
+          <p className={s.lede}>
+            Tokens, escala tipográfica y primitivas del rediseño, con datos reales de los fixtures. Son los mismos
+            componentes que usa la app; la fase 3 los lleva a cada pantalla.
+          </p>
         </header>
 
         {/* ---- Color ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Color</h2>
-          <p className={s.cap}>Cartulina, grafito, un acento (fairway) y dos colores semánticos por convención del golf: rojo bajo par, azul sobre par. El número en cada muestra es el contraste WCAG medido contra su fondo.</p>
+          <p className={s.cap}>
+            Cartulina, grafito, un acento (fairway) y dos colores semánticos por convención del golf: rojo bajo par,
+            azul sobre par. El número en cada muestra es el contraste WCAG medido contra su fondo.
+          </p>
           <div className={s.swatches}>
             {COLORS.map((c) => (
               <div key={c.name} className={s.swatch}>
-                <div className={s.swatchColor} style={{ background: c.hex, color: c.on ? c.on : luminance(c.hex) > 0.4 ? 'var(--ink)' : 'var(--on-fill)' }}>
+                <div
+                  className={s.swatchColor}
+                  style={{
+                    background: c.hex,
+                    color: c.on ? c.on : luminance(c.hex) > 0.4 ? 'var(--ink)' : 'var(--on-fill)',
+                  }}
+                >
                   {c.on ? `${ratio(c.hex, c.on)}:1` : ''}
                 </div>
                 <span className={s.swatchName}>--{c.name}</span>
@@ -100,7 +160,10 @@ export function DesignScreen() {
         {/* ---- Type ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Tipografía</h2>
-          <p className={s.cap}>Archivo (variable: peso y anchura) para todo; los números van semicondensados (anchura 90) y siempre tabulares. Fraunces solo para el nombre del evento.</p>
+          <p className={s.cap}>
+            Archivo (variable: peso y anchura) para todo; los números van semicondensados (anchura 90) y siempre
+            tabulares. Fraunces solo para el nombre del evento.
+          </p>
           <div className={s.specimen}>
             {SCALE.map(([k, px, role]) => (
               <div key={k} className={s.specimenRow}>
@@ -132,7 +195,9 @@ export function DesignScreen() {
                   )
                 })}
               </div>
-              <span className={s.cap}>Signo menos verdadero (−) y «E» para par. Alineación a la derecha, sin saltos.</span>
+              <span className={s.cap}>
+                Signo menos verdadero (−) y «E» para par. Alineación a la derecha, sin saltos.
+              </span>
             </div>
             <div className={s.stack}>
               <h3 className={s.h3}>Dinero</h3>
@@ -142,7 +207,11 @@ export function DesignScreen() {
                 <Money amount={-1125} signed />
                 <Money amount={0} signed />
               </div>
-              <span className={s.cap}>MXN sin decimales. El dinero es tinta con su signo; el rojo solo marca lo que se debe, en Dinero, Juegos, la TV, la ceremonia y la imagen para compartir. El rojo de un birdie es el del golf; el acento nunca es dinero: es la marca, lo que se toca y lo seleccionado (VIS-16).</span>
+              <span className={s.cap}>
+                MXN sin decimales. El dinero es tinta con su signo; el rojo solo marca lo que se debe, en Dinero,
+                Juegos, la TV, la ceremonia y la imagen para compartir. El rojo de un birdie es el del golf; el acento
+                nunca es dinero: es la marca, lo que se toca y lo seleccionado (VIS-16).
+              </span>
             </div>
           </div>
           <div className={s.stack}>
@@ -172,7 +241,10 @@ export function DesignScreen() {
             <dt>Elevación</dt>
             <dd>Solo lo que flota: sheet y toast. Nada más tiene sombra.</dd>
             <dt>Movimiento</dt>
-            <dd>150 / 200 / 250 ms, ease-out. Un solo momento orquestado (reordenar la tabla, revelar el campeón). Se apaga con prefers-reduced-motion.</dd>
+            <dd>
+              150 / 200 / 250 ms, ease-out. Un solo momento orquestado (reordenar la tabla, revelar el campeón). Se
+              apaga con prefers-reduced-motion.
+            </dd>
           </dl>
           <div className={s.motionDemo}>
             <div className={s.motionBox} />
@@ -183,7 +255,9 @@ export function DesignScreen() {
         {/* ---- Icons ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Iconos</h2>
-          <p className={s.cap}>Un solo set en SVG, rejilla de 24 px, trazo 1.75. Solo donde un icono acelera el reconocimiento. Sin emoji.</p>
+          <p className={s.cap}>
+            Un solo set en SVG, rejilla de 24 px, trazo 1.75. Solo donde un icono acelera el reconocimiento. Sin emoji.
+          </p>
           <div className={s.iconRow}>
             {[
               [IconFlag, 'En vivo'],
@@ -228,7 +302,13 @@ export function DesignScreen() {
                     {v} · {label as string}
                   </div>
                   <Button variant={v} {...(props as object)}>
-                    {v === 'primary' ? 'Guardar hoyo' : v === 'danger' ? 'Borrar' : v === 'ghost' ? 'Deshacer' : 'Ver tarjeta'}
+                    {v === 'primary'
+                      ? 'Guardar hoyo'
+                      : v === 'danger'
+                        ? 'Borrar'
+                        : v === 'ghost'
+                          ? 'Deshacer'
+                          : 'Ver tarjeta'}
                   </Button>
                 </div>
               ))}
@@ -267,7 +347,10 @@ export function DesignScreen() {
         {/* ---- Score entry ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Captura de un hoyo</h2>
-          <p className={s.cap}>Los cuatro jugadores en una pantalla. Golpes en grande (arranca en par), putts en pequeño. Un toque en «Guardar» avanza al siguiente hoyo; el toast ofrece deshacer.</p>
+          <p className={s.cap}>
+            Los cuatro jugadores en una pantalla. Golpes en grande (arranca en par), putts en pequeño. Un toque en
+            «Guardar» avanza al siguiente hoyo; el toast ofrece deshacer.
+          </p>
           <div className={s.phone}>
             <div className={s.phoneBody}>
               <div className={s.holeHead}>
@@ -290,7 +373,12 @@ export function DesignScreen() {
                     <span className={s.entryNameMain}>{name as string}</span>
                     <span className={s.dots}>{'•'.repeat(dots as number)}</span>
                   </span>
-                  <Stepper label={`Golpes de ${name}`} value={i === 0 ? strokes : (st as number)} par={4} onChange={i === 0 ? setStrokes : () => undefined} />
+                  <Stepper
+                    label={`Golpes de ${name}`}
+                    value={i === 0 ? strokes : (st as number)}
+                    par={4}
+                    onChange={i === 0 ? setStrokes : () => undefined}
+                  />
                   <span className={s.entryPutts}>
                     <strong>{i === 0 ? putts : (pt as number)}</strong>
                     putts
@@ -314,7 +402,11 @@ export function DesignScreen() {
         {/* ---- Leaderboard ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Tabla de posiciones</h2>
-          <p className={s.cap}>Nombre corto en la fila, nombre completo en la ficha. Una sola fila para todos los formatos: la cifra principal cambia (puntos, gross a par, putts, dinero, total de pareja). Empates con T, movimiento con una punta discreta, mi fila marcada con la regla del evento.</p>
+          <p className={s.cap}>
+            Nombre corto en la fila, nombre completo en la ficha. Una sola fila para todos los formatos: la cifra
+            principal cambia (puntos, gross a par, putts, dinero, total de pareja). Empates con T, movimiento con una
+            punta discreta, mi fila marcada con la regla del evento.
+          </p>
           <div className={s.row}>
             <LiveStatus text="Actualizado hace 1 min" />
             <Segmented
@@ -336,7 +428,11 @@ export function DesignScreen() {
                   key={r.playerId}
                   pos={r.label}
                   name={nameOf(r.playerId)}
-                  sub={fx.data.snapshot.players.find((p) => p.id === r.playerId)?.tier ? `Categoría ${fx.data.snapshot.players.find((p) => p.id === r.playerId)!.tier}` : undefined}
+                  sub={
+                    fx.data.snapshot.players.find((p) => p.id === r.playerId)?.tier
+                      ? `Categoría ${fx.data.snapshot.players.find((p) => p.id === r.playerId)!.tier}`
+                      : undefined
+                  }
                   today={pr ? String(pr.points) : undefined}
                   thru={pr ? (pr.thru === 18 ? 'F' : String(pr.thru)) : undefined}
                   figure={seg === 'pts' ? String(r.total) : tp.text}
@@ -352,7 +448,15 @@ export function DesignScreen() {
           <Board>
             <BoardHead figureLabel="Pts" />
             {long.snapshot.players.slice(0, 3).map((p, i) => (
-              <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={p.fullName} today="14" thru="9" figure={String(31 - i * 2)} />
+              <LeaderRow
+                key={p.id}
+                pos={String(i + 1)}
+                name={p.displayName}
+                sub={p.fullName}
+                today="14"
+                thru="9"
+                figure={String(31 - i * 2)}
+              />
             ))}
           </Board>
           <h3 className={s.h3}>60 jugadores (filas densas)</h3>
@@ -360,7 +464,18 @@ export function DesignScreen() {
             <BoardHead figureLabel="Pts" dense />
             {largeRows.slice(0, 12).map((r) => {
               const pr = large.state.core.rounds.r2?.[r.playerId]
-              return <LeaderRow key={r.playerId} dense pos={r.label} name={nameOf(r.playerId, large)} today={pr ? String(pr.points) : ''} thru={pr ? String(pr.thru) : ''} figure={String(r.total)} mine={r.playerId === 'p17'} />
+              return (
+                <LeaderRow
+                  key={r.playerId}
+                  dense
+                  pos={r.label}
+                  name={nameOf(r.playerId, large)}
+                  today={pr ? String(pr.points) : ''}
+                  thru={pr ? String(pr.thru) : ''}
+                  figure={String(r.total)}
+                  mine={r.playerId === 'p17'}
+                />
+              )
             })}
           </Board>
           <h3 className={s.h3}>Pareja y dinero como cifra</h3>
@@ -368,7 +483,16 @@ export function DesignScreen() {
             <BoardHead figureLabel="Neto" />
             {fx.data.snapshot.players.slice(0, 3).map((p, i) => {
               const m = fx.data.state.money.people[p.id]!
-              return <LeaderRow key={p.id} pos={String(i + 1)} name={p.displayName} sub={`Pone ${formatMoney(m.paid, PLATFORM_CURRENCY)}`} figure={formatSignedMoney(m.net, PLATFORM_CURRENCY)} tone={m.net < 0 ? 'under' : 'even'} />
+              return (
+                <LeaderRow
+                  key={p.id}
+                  pos={String(i + 1)}
+                  name={p.displayName}
+                  sub={`Pone ${formatMoney(m.paid, PLATFORM_CURRENCY)}`}
+                  figure={formatSignedMoney(m.net, PLATFORM_CURRENCY)}
+                  tone={m.net < 0 ? 'under' : 'even'}
+                />
+              )
             })}
           </Board>
         </section>
@@ -376,7 +500,10 @@ export function DesignScreen() {
         {/* ---- Scorecard ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Tarjeta con notación a lápiz</h2>
-          <p className={s.cap}>Círculo = birdie, doble círculo = águila o mejor, cuadro = bogey, doble cuadro = doble o peor. Ida, vuelta y total; la primera columna se queda fija al desplazar.</p>
+          <p className={s.cap}>
+            Círculo = birdie, doble círculo = águila o mejor, cuadro = bogey, doble cuadro = doble o peor. Ida, vuelta y
+            total; la primera columna se queda fija al desplazar.
+          </p>
           <div className={s.row}>
             <ScoreMark value={2} kind="eagle" />
             <ScoreMark value={3} kind="birdie" />
@@ -410,7 +537,15 @@ export function DesignScreen() {
                   [<IconMore />, 'Más'],
                 ] as const
               ).map(([icon, label], i) => (
-                <TabItem key={label} to={`/design/${i}`} active={i === 0} icon={icon} label={label} badge={i === 1 ? { count: 2 } : undefined} onClick={(e) => e.preventDefault()} />
+                <TabItem
+                  key={label}
+                  to={`/design/${i}`}
+                  active={i === 0}
+                  icon={icon}
+                  label={label}
+                  badge={i === 1 ? { count: 2 } : undefined}
+                  onClick={(e) => e.preventDefault()}
+                />
               ))}
             </TabBar>
           </div>
@@ -471,16 +606,30 @@ export function DesignScreen() {
               </div>
             ))}
           </div>
-          <EmptyState title="Todavía no hay scores" body="Cuando el grupo guarde el primer hoyo, la tabla aparece aquí." action={<Button size="sm">Ir a la tarjeta</Button>} />
+          <EmptyState
+            title="Todavía no hay scores"
+            body="Cuando el grupo guarde el primer hoyo, la tabla aparece aquí."
+            action={<Button size="sm">Ir a la tarjeta</Button>}
+          />
         </section>
 
         {/* ---- Event personalization ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Acento del evento</h2>
-          <p className={s.cap}>El organizador elige uno de seis. Dentro del torneo es el único acento: la regla bajo el nombre, el botón principal, «mi fila», los enlaces, los interruptores y lo que está en vivo. Ninguno se parece al rojo, al azul ni al ámbar de los colores con significado, en claro ni en oscuro.</p>
+          <p className={s.cap}>
+            El organizador elige uno de seis. Dentro del torneo es el único acento: la regla bajo el nombre, el botón
+            principal, «mi fila», los enlaces, los interruptores y lo que está en vivo. Ninguno se parece al rojo, al
+            azul ni al ámbar de los colores con significado, en claro ni en oscuro.
+          </p>
           <div className={s.accents}>
             {ACCENTS.map((a) => (
-              <button key={a.id} type="button" className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`} data-accent={a.id} onClick={() => setAccent(a)}>
+              <button
+                key={a.id}
+                type="button"
+                className={`${s.accentCard} ${accent.id === a.id ? s.accentOn : ''}`}
+                data-accent={a.id}
+                onClick={() => setAccent(a)}
+              >
                 <EventName name="Copa Tres Marías" small />
                 <span className="wave" aria-hidden="true" />
                 <Button variant="primary" size="sm">
@@ -497,7 +646,9 @@ export function DesignScreen() {
         {/* ---- Board surface ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Superficie de tablero (TV y ceremonia)</h2>
-          <p className={s.cap}>La placa numérica vive aquí, no en las listas del teléfono. Amarillo solo para el líder.</p>
+          <p className={s.cap}>
+            La placa numérica vive aquí, no en las listas del teléfono. Amarillo solo para el líder.
+          </p>
           <div className={s.boardFrame}>
             {rows.slice(0, 5).map((r, i) => (
               <div key={r.playerId} className={s.boardRow}>
@@ -512,7 +663,12 @@ export function DesignScreen() {
         {/* ---- Brand ---- */}
         <section className={s.section}>
           <h2 className={s.h2}>Marca</h2>
-          <p className={s.cap}>Polo: la P a lápiz tal como la dibuja la hoja aprobada, con sus propios píxeles separados del papel, junto al nombre en Archivo ajustada a la hoja. Cada versión usa su copia de la hoja: el ícono de la app, el logotipo horizontal en grafito (a color y a una tinta son el mismo trazo) y el tablero en oro, con sus proporciones.</p>
+          <p className={s.cap}>
+            Polo: la P a lápiz tal como la dibuja la hoja aprobada, con sus propios píxeles separados del papel, junto
+            al nombre en Archivo ajustada a la hoja. Cada versión usa su copia de la hoja: el ícono de la app, el
+            logotipo horizontal en grafito (a color y a una tinta son el mismo trazo) y el tablero en oro, con sus
+            proporciones.
+          </p>
           <div className={s.row}>
             <LogoMark size={64} />
             <Wordmark size={36} mark={false} />

@@ -22,9 +22,12 @@ const SMALL_PHONES = [
 ] as const
 
 /** Each line with what a screen reader adds after each link. */
-const ENTER_LINE = 'Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
-const CONTINUE_LINE = 'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
-const OTHERS_NOTE = /^Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad/
+const ENTER_LINE =
+  'Al entrar aceptas los Términos (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
+const CONTINUE_LINE =
+  'Al continuar aceptas los Términos de uso (se abre en otra pestaña) y el Aviso de privacidad (se abre en otra pestaña).'
+const OTHERS_NOTE =
+  /^Lo que captures de cada jugador, salvo su PIN, lo ven todos en el torneo; quién más lo ve está en el Aviso de privacidad/
 /** The smallest text the design sets for reading: --fs-xs. */
 const MIN_READING_PX = 12
 /** WCAG AA for text this size. */
@@ -77,7 +80,11 @@ async function expectReadable(el: Locator) {
       { message: 'opacity, with everything around it' },
     )
     .toBeGreaterThan(0.99)
-  const { size, height, width } = await el.evaluate((e) => ({ size: parseFloat(getComputedStyle(e).fontSize), height: e.getBoundingClientRect().height, width: e.getBoundingClientRect().width }))
+  const { size, height, width } = await el.evaluate((e) => ({
+    size: parseFloat(getComputedStyle(e).fontSize),
+    height: e.getBoundingClientRect().height,
+    width: e.getBoundingClientRect().width,
+  }))
   expect(size, 'font size').toBeGreaterThanOrEqual(MIN_READING_PX)
   expect(height, 'height').toBeGreaterThanOrEqual(size)
   expect(width, 'width').toBeGreaterThanOrEqual(120)
@@ -87,16 +94,23 @@ async function expectReadable(el: Locator) {
 /** `a` comes before `b` in reading and keyboard order. */
 async function expectBefore(a: Locator, b: Locator) {
   const other = await b.elementHandle()
-  expect(await a.evaluate((x, y) => !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING), other)).toBe(true)
+  expect(await a.evaluate((x, y) => !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING), other)).toBe(
+    true,
+  )
 }
 
 async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  return results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
+  return results.violations
+    .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)
 }
 
 for (const [width, height] of SMALL_PHONES) {
-  test(`face grid, 12 players at ${width}×${height}: «${C.enterStart}…» on the first screen and on the PIN step`, async ({ page, pageErrors }) => {
+  test(`face grid, 12 players at ${width}×${height}: «${C.enterStart}…» on the first screen and on the PIN step`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width, height })
     await open(page, '/t/_/full12-live?as=new-phone')
     const faces = page.locator('button[class*="_face_"]')
@@ -107,8 +121,14 @@ for (const [width, height] of SMALL_PHONES) {
     await expectReadable(line)
     await expectBefore(line, faces.first())
     await expect(line).toHaveText(ENTER_LINE)
-    await expect(line.getByRole('link', { name: new RegExp(`^${C.termsShort}`) })).toHaveAttribute('href', /^\/terminos(\?|$)/)
-    await expect(line.getByRole('link', { name: new RegExp(`^${C.privacy}`) })).toHaveAttribute('href', /^\/privacidad(\?|$)/)
+    await expect(line.getByRole('link', { name: new RegExp(`^${C.termsShort}`) })).toHaveAttribute(
+      'href',
+      /^\/terminos(\?|$)/,
+    )
+    await expect(line.getByRole('link', { name: new RegExp(`^${C.privacy}`) })).toHaveAttribute(
+      'href',
+      /^\/privacidad(\?|$)/,
+    )
     expect(await seriousViolations(page)).toEqual([])
 
     // The PIN step: claim_player runs on the fourth digit, so the line is above the field.
@@ -126,7 +146,10 @@ for (const [width, height] of SMALL_PHONES) {
   })
 }
 
-test('face grid, 60 players at 320×568 (dense, with its name filter): the line first, on the first screen', async ({ page, pageErrors }) => {
+test('face grid, 60 players at 320×568 (dense, with its name filter): the line first, on the first screen', async ({
+  page,
+  pageErrors,
+}) => {
   await page.setViewportSize({ width: 320, height: 568 })
   await open(page, '/t/_/large60?as=new-phone')
   const faces = page.locator('button[class*="_face_"]')
@@ -141,7 +164,10 @@ test('face grid, 60 players at 320×568 (dense, with its name filter): the line 
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
 
-test('Comité › Campos (and /campos, the same screen): who reads a scorecard photo, before «Subir tarjeta»', async ({ page, pageErrors }) => {
+test('Comité › Campos (and /campos, the same screen): who reads a scorecard photo, before «Subir tarjeta»', async ({
+  page,
+  pageErrors,
+}) => {
   await page.setViewportSize({ width: 375, height: 667 })
   await open(page, '/t/_/full12-live/admin/campos')
   const note = page.locator('[data-legal-consent]')
@@ -149,7 +175,10 @@ test('Comité › Campos (and /campos, the same screen): who reads a scorecard p
   await expect(note).toHaveText(
     'Foto o PDF de la tarjeta del campo: se la mandamos a Anthropic para que Claude la lea, y tú revisas todo antes de guardar. Más en el Aviso de privacidad (se abre en otra pestaña).',
   )
-  await expect(note.getByRole('link', { name: new RegExp(`^${t.legal.scorecardNote.privacy}`) })).toHaveAttribute('href', /^\/privacidad(\?|$)/)
+  await expect(note.getByRole('link', { name: new RegExp(`^${t.legal.scorecardNote.privacy}`) })).toHaveAttribute(
+    'href',
+    /^\/privacidad(\?|$)/,
+  )
   const upload = page.getByRole('button', { name: t.admin.courses.photo, exact: true })
   await expectOnScreen(page, note)
   await expectReadable(note)
@@ -160,7 +189,10 @@ test('Comité › Campos (and /campos, the same screen): who reads a scorecard p
 })
 
 for (const [width, height] of SMALL_PHONES) {
-  test(`/entrar with Google at ${width}×${height}: the line on the first screen, before Google and the email (P3)`, async ({ page, pageErrors }) => {
+  test(`/entrar with Google at ${width}×${height}: the line on the first screen, before Google and the email (P3)`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width, height })
     // Registered after the fixture's catch-all, so it answers first: Google sign-in is on.
     await page.route(/\/auth\/v1\/settings/, (r) => r.fulfill({ json: { external: { google: true, email: true } } }))
@@ -179,19 +211,32 @@ for (const [width, height] of SMALL_PHONES) {
     await page.keyboard.press('Tab')
     const order: string[] = []
     for (let i = 0; i < 6; i++) {
-      order.push(await page.evaluate(() => document.activeElement?.getAttribute('href') ?? document.activeElement?.textContent?.trim() ?? ''))
+      order.push(
+        await page.evaluate(
+          () => document.activeElement?.getAttribute('href') ?? document.activeElement?.textContent?.trim() ?? '',
+        ),
+      )
       await page.keyboard.press('Tab')
     }
     const google_ = order.findIndex((x) => x.includes(t.account.google))
-    expect(order.findIndex((x) => x.startsWith('/terminos')), order.join(' | ')).toBeLessThan(google_)
-    expect(order.findIndex((x) => x.startsWith('/privacidad')), order.join(' | ')).toBeLessThan(google_)
+    expect(
+      order.findIndex((x) => x.startsWith('/terminos')),
+      order.join(' | '),
+    ).toBeLessThan(google_)
+    expect(
+      order.findIndex((x) => x.startsWith('/privacidad')),
+      order.join(' | '),
+    ).toBeLessThan(google_)
     expect(await seriousViolations(page)).toEqual([])
     expect(pageErrors, 'uncaught errors').toEqual([])
   })
 }
 
 for (const mode of ['in', 'up'] as const) {
-  test(`organizer ${mode === 'in' ? 'sign-in' : 'sign-up'} at 320×568: the line on the first screen, before the button`, async ({ page, pageErrors }) => {
+  test(`organizer ${mode === 'in' ? 'sign-in' : 'sign-up'} at 320×568: the line on the first screen, before the button`, async ({
+    page,
+    pageErrors,
+  }) => {
     await page.setViewportSize({ width: 320, height: 568 })
     await open(page, '/organizer/login')
     if (mode === 'up') await page.getByRole('button', { name: t.auth.toggleToSignUp }).click()
@@ -200,12 +245,18 @@ for (const mode of ['in', 'up'] as const) {
     await expect(line).toHaveText(CONTINUE_LINE)
     await expectOnScreen(page, line)
     await expectReadable(line)
-    await expectBefore(line, page.getByRole('button', { name: mode === 'in' ? t.auth.signIn : t.auth.signUp, exact: true }))
+    await expectBefore(
+      line,
+      page.getByRole('button', { name: mode === 'in' ? t.auth.signIn : t.auth.signUp, exact: true }),
+    )
     expect(pageErrors, 'uncaught errors').toEqual([])
   })
 }
 
-test('Ronda rápida at 320×568: wherever «Empezar» is on the screen, the line is too, above it', async ({ page, pageErrors }) => {
+test('Ronda rápida at 320×568: wherever «Empezar» is on the screen, the line is too, above it', async ({
+  page,
+  pageErrors,
+}) => {
   await page.setViewportSize({ width: 320, height: 568 })
   await open(page, '/ronda/_')
   const start = page.getByRole('button', { name: t.quick.start, exact: true })
@@ -243,13 +294,26 @@ test('Comité, an existing player: the notice on screen, and the name field desc
   await expect(page.getByRole('dialog').getByLabel(t.admin.players.fullName)).toHaveAccessibleDescription(OTHERS_NOTE)
 })
 
-test('a page opened from a consent link offers to close its tab, and closing it leaves the form as it was (P3)', async ({ page, pageErrors }) => {
+test('a page opened from a consent link offers to close its tab, and closing it leaves the form as it was (P3)', async ({
+  page,
+  pageErrors,
+}) => {
   // The new tab is a page of its own: answer its Supabase calls too.
-  await page.context().route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await page
+    .context()
+    .route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    )
   await open(page, '/entrar')
   const email = page.getByLabel(t.account.email)
   await email.fill('medio@escri')
-  const [tab] = await Promise.all([page.waitForEvent('popup'), page.locator('[data-legal-consent]').getByRole('link', { name: new RegExp(`^${C.privacy}`) }).click()])
+  const [tab] = await Promise.all([
+    page.waitForEvent('popup'),
+    page
+      .locator('[data-legal-consent]')
+      .getByRole('link', { name: new RegExp(`^${C.privacy}`) })
+      .click(),
+  ])
   await expect(tab.getByRole('heading', { level: 1, name: t.legal.privacy.title })).toBeVisible()
   await expect(tab.getByRole('link', { name: t.legal.back })).toHaveCount(0)
   // Across to the terms, still in that tab: it replaces the page, so the tab stays one page long and can still close.
@@ -257,12 +321,21 @@ test('a page opened from a consent link offers to close its tab, and closing it 
   await expect(tab.getByRole('heading', { level: 1, name: t.legal.terms.title })).toBeVisible()
   expect(await tab.evaluate(() => history.length)).toBe(1)
   // The tab closes inside the click, so the click may find its page already gone: the close event is the proof.
-  await Promise.all([tab.waitForEvent('close'), tab.getByRole('button', { name: t.legal.close }).click().catch(() => undefined)])
+  await Promise.all([
+    tab.waitForEvent('close'),
+    tab
+      .getByRole('button', { name: t.legal.close })
+      .click()
+      .catch(() => undefined),
+  ])
   await expect(email).toHaveValue('medio@escri')
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
 
-test('a page with the marker that the browser will not close says so and offers «Volver a Polo» (P3)', async ({ page, pageErrors }) => {
+test('a page with the marker that the browser will not close says so and offers «Volver a Polo» (P3)', async ({
+  page,
+  pageErrors,
+}) => {
   await page.setViewportSize({ width: 375, height: 667 })
   // Reached by hand in a tab with history behind it: no browser lets a page close that tab.
   await open(page, '/entrar')
@@ -270,7 +343,9 @@ test('a page with the marker that the browser will not close says so and offers 
   await expect(page.getByRole('heading', { level: 1, name: t.legal.privacy.title })).toBeVisible()
   await expect(page.getByRole('link', { name: t.legal.back })).toHaveCount(0)
   await page.getByRole('button', { name: t.legal.close }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'navegador' })).toHaveText('Este navegador no deja cerrar la pestaña desde aquí: ciérrala tú y vuelve a la de Polo.')
+  await expect(page.getByRole('status').filter({ hasText: 'navegador' })).toHaveText(
+    'Este navegador no deja cerrar la pestaña desde aquí: ciérrala tú y vuelve a la de Polo.',
+  )
   const back = page.getByRole('link', { name: t.legal.back })
   await expect(back).toBeVisible()
   await back.click()
@@ -283,7 +358,10 @@ for (const path of ['/privacidad', '/terminos?desde=formulario']) {
     await page.setViewportSize({ width: 320, height: 568 })
     await open(page, path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      'horizontal scroll (px)',
+    ).toBeLessThanOrEqual(0)
     expect(await seriousViolations(page)).toEqual([])
     expect(pageErrors, 'uncaught errors').toEqual([])
   })

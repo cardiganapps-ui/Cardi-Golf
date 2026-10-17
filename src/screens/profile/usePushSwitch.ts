@@ -7,7 +7,16 @@
 import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { toast } from '../../components/toast'
-import { ACCOUNT, deniedHelp, disablePush, enablePush, pushState, unsupportedHelp, usePushFixture, type PushState } from '../../data/push'
+import {
+  ACCOUNT,
+  deniedHelp,
+  disablePush,
+  enablePush,
+  pushState,
+  unsupportedHelp,
+  usePushFixture,
+  type PushState,
+} from '../../data/push'
 import { humanError } from '../../lib/humanError'
 
 const P = t.push

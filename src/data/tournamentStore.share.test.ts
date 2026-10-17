@@ -45,7 +45,16 @@ beforeEach(async () => {
 afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 describe('the boards keep what did not change (PERF-09)', () => {
@@ -101,7 +110,16 @@ describe('the boards keep what did not change (PERF-09)', () => {
 
   it('a change to the settings parses them again; a payment changed leaves them as they were', async () => {
     const shown = store().data!
-    server.tables.payments!.push({ id: 'pay-new', tournament_id: TID, from_player_id: fx.snapshot.players[0]!.id, to_player_id: null, amount: 2500, kind: 'entry', paid: true, note: null })
+    server.tables.payments!.push({
+      id: 'pay-new',
+      tournament_id: TID,
+      from_player_id: fx.snapshot.players[0]!.id,
+      to_player_id: null,
+      amount: 2500,
+      kind: 'entry',
+      paid: true,
+      note: null,
+    })
     await store().reload()
     expect(store().data!.settings).toBe(shown.settings)
     const t = server.tables.tournaments!.find((r) => r.id === TID)!

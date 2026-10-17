@@ -13,32 +13,63 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: (_url: string, _key: string, opts: { global?: { headers?: Record<string, string> } }) => {
     const token = opts.global?.headers?.Authorization
     db.tokens.push(token)
-    return { rpc: async () => (token === 'Bearer comite-token' ? { data: true, error: null } : { data: false, error: null }) }
+    return {
+      rpc: async () => (token === 'Bearer comite-token' ? { data: true, error: null } : { data: false, error: null }),
+    }
   },
 }))
 
 const KEY = 'sk-ant-test-secret-333'
-const ENV = { VITE_SUPABASE_URL: 'https://db.invalid', VITE_SUPABASE_ANON_KEY: 'anon-key-public', ANTHROPIC_API_KEY: KEY }
+const ENV = {
+  VITE_SUPABASE_URL: 'https://db.invalid',
+  VITE_SUPABASE_ANON_KEY: 'anon-key-public',
+  ANTHROPIC_API_KEY: KEY,
+}
 
 interface Sent {
   url: string
   headers: Headers
-  body: { model: string; max_tokens: number; messages: Array<{ content: Array<Record<string, unknown>> }>; output_config: { format: { type: string; schema: unknown } } }
+  body: {
+    model: string
+    max_tokens: number
+    messages: Array<{ content: Array<Record<string, unknown>> }>
+    output_config: { format: { type: string; schema: unknown } }
+  }
 }
 const sent: Sent[] = []
 /** What Anthropic answers each call; a function so a test can fail the network itself. */
 let answer: () => Response | Promise<Response>
 
 const hole = (number: number, par = 4, strokeIndex = number) => ({ number, par, strokeIndex, yards: 380 })
-const TEE = { name: 'Azules', color: 'azul', rating: 71.2, slope: 128, parTotalPrinted: 72, holes: Array.from({ length: 18 }, (_, i) => hole(i + 1)), confidence: 'high' }
+const TEE = {
+  name: 'Azules',
+  color: 'azul',
+  rating: 71.2,
+  slope: 128,
+  parTotalPrinted: 72,
+  holes: Array.from({ length: 18 }, (_, i) => hole(i + 1)),
+  confidence: 'high',
+}
 /** A Messages API answer whose text is `card`. */
 function message(card: unknown, stop_reason = 'end_turn', text = JSON.stringify(card)) {
-  const body = { id: 'msg_1', type: 'message', role: 'assistant', model: 'm', content: text == null ? [] : [{ type: 'text', text }], stop_reason, stop_sequence: null, usage: { input_tokens: 1000, output_tokens: 300 } }
+  const body = {
+    id: 'msg_1',
+    type: 'message',
+    role: 'assistant',
+    model: 'm',
+    content: text == null ? [] : [{ type: 'text', text }],
+    stop_reason,
+    stop_sequence: null,
+    usage: { input_tokens: 1000, output_tokens: 300 },
+  }
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 }
 /** An API error; told not to retry, as the SDK otherwise waits and tries twice more. */
 const apiError = (status: number) =>
-  new Response(JSON.stringify({ type: 'error', error: { type: 'x', message: `upstream ${status} for ${KEY.slice(0, 6)}` } }), { status, headers: { 'content-type': 'application/json', 'x-should-retry': 'false' } })
+  new Response(
+    JSON.stringify({ type: 'error', error: { type: 'x', message: `upstream ${status} for ${KEY.slice(0, 6)}` } }),
+    { status, headers: { 'content-type': 'application/json', 'x-should-retry': 'false' } },
+  )
 
 const IMAGE = Buffer.from('a scorecard').toString('base64')
 
@@ -62,7 +93,12 @@ afterEach(() => {
 
 async function extract(body: unknown, init: RouteRequest = {}) {
   const { default: handler } = await import('../../api/scorecard-extract')
-  return callRoute(handler, { method: 'POST', headers: { authorization: 'Bearer comite-token', 'content-type': 'application/json' }, body, ...init })
+  return callRoute(handler, {
+    method: 'POST',
+    headers: { authorization: 'Bearer comite-token', 'content-type': 'application/json' },
+    body,
+    ...init,
+  })
 }
 
 describe('before anything is sent to Anthropic', () => {
@@ -85,7 +121,13 @@ describe('before anything is sent to Anthropic', () => {
 
   it('ten reads a minute from one address; the eleventh is 429 before the gate is asked', async () => {
     const { default: handler } = await import('../../api/scorecard-extract')
-    const call = () => callRoute(handler, { method: 'POST', headers: { authorization: 'Bearer comite-token' }, body: { image: IMAGE }, ip: '203.0.113.9' })
+    const call = () =>
+      callRoute(handler, {
+        method: 'POST',
+        headers: { authorization: 'Bearer comite-token' },
+        body: { image: IMAGE },
+        ip: '203.0.113.9',
+      })
     for (let i = 0; i < 10; i++) expect((await call()).status).toBe(200)
     const asked = db.tokens.length
     const over = await call()
@@ -144,7 +186,10 @@ describe('the read', () => {
     expect(sent[0]!.headers.get('x-api-key')).toBe(KEY)
     expect(sent[0]!.body.model).toBe(MODEL)
     expect(sent[0]!.body.max_tokens).toBe(16000)
-    expect(sent[0]!.body.messages[0]!.content[0]).toEqual({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: IMAGE } })
+    expect(sent[0]!.body.messages[0]!.content[0]).toEqual({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/png', data: IMAGE },
+    })
     expect(sent[0]!.body.output_config.format.type).toBe('json_schema')
     expect(leaked(r, [KEY, 'comite-token'])).toEqual([])
   })
@@ -152,7 +197,10 @@ describe('the read', () => {
   it('a PDF goes as a document; a JSON body sent as text is read the same', async () => {
     const r = await extract(JSON.stringify({ image: IMAGE, mediaType: 'application/pdf' }))
     expect(r.status).toBe(200)
-    expect(sent[0]!.body.messages[0]!.content[0]).toEqual({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: IMAGE } })
+    expect(sent[0]!.body.messages[0]!.content[0]).toEqual({
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: IMAGE },
+    })
   })
 
   it('no media type reads as a JPG', async () => {
@@ -167,11 +215,27 @@ describe('the read', () => {
 
   it('names what doesn’t add up: pars against the printed total, stroke indexes that repeat, a hole count that is not 9 or 18', async () => {
     const holes = Array.from({ length: 12 }, (_, i) => hole(i + 1, i === 0 ? 5 : 4, i === 1 ? 1 : i + 1))
-    answer = () => message({ courseName: 'X', tees: [{ ...TEE, parTotalPrinted: 47, holes }, { ...TEE, name: 'Nueve', parTotalPrinted: null, holes: holes.slice(2, 11).map((h, i) => ({ ...h, number: i + 1, strokeIndex: i + 1 })) }] })
+    answer = () =>
+      message({
+        courseName: 'X',
+        tees: [
+          { ...TEE, parTotalPrinted: 47, holes },
+          {
+            ...TEE,
+            name: 'Nueve',
+            parTotalPrinted: null,
+            holes: holes.slice(2, 11).map((h, i) => ({ ...h, number: i + 1, strokeIndex: i + 1 })),
+          },
+        ],
+      })
     const r = await extract({ image: IMAGE })
     const tees = (r.body as { tees: Array<{ name: string; parTotal: number; issues: string[] }> }).tees
     expect(tees[0]!.parTotal).toBe(49)
-    expect(tees[0]!.issues).toEqual(['Los pares suman 49, la tarjeta dice 47.', 'Los índices de golpe (SI) deben ir del 1 al 12, sin repetir ninguno.', 'Se leyeron 12 hoyos.'])
+    expect(tees[0]!.issues).toEqual([
+      'Los pares suman 49, la tarjeta dice 47.',
+      'Los índices de golpe (SI) deben ir del 1 al 12, sin repetir ninguno.',
+      'Se leyeron 12 hoyos.',
+    ])
     expect(tees[1]).toMatchObject({ name: 'Nueve', parTotal: 36, issues: [] })
   })
 })
@@ -215,7 +279,11 @@ describe('when the read fails', () => {
     answer = () => {
       throw new TypeError('fetch failed')
     }
-    const pending = callRoute(handler, { method: 'POST', headers: { authorization: 'Bearer comite-token' }, body: { image: IMAGE } })
+    const pending = callRoute(handler, {
+      method: 'POST',
+      headers: { authorization: 'Bearer comite-token' },
+      body: { image: IMAGE },
+    })
     await vi.runAllTimersAsync()
     const r = await pending
     expect(sent).toHaveLength(3)

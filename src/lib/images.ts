@@ -39,7 +39,12 @@ export interface PrepOptions {
 }
 
 /** The size that fits the box, keeping the aspect ratio. Never larger than the source. */
-export function fitWithin(width: number, height: number, maxWidth: number, maxHeight: number): { width: number; height: number } {
+export function fitWithin(
+  width: number,
+  height: number,
+  maxWidth: number,
+  maxHeight: number,
+): { width: number; height: number } {
   const scale = Math.min(1, maxWidth / width, maxHeight / height)
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) }
 }
@@ -60,7 +65,8 @@ export interface Encodable {
   toBlob(callback: (blob: Blob | null) => void, type?: string, quality?: number): void
 }
 
-const toBlob = (canvas: Encodable, type: string, quality: number) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
+const toBlob = (canvas: Encodable, type: string, quality: number) =>
+  new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
 
 /**
  * Encodes the canvas in the first format of `encodingsFor` the browser really
@@ -99,7 +105,10 @@ export async function prepareImage(file: File, opts: PrepOptions): Promise<Prepa
         ctx.fillRect(0, 0, width, height)
       }
       ctx.drawImage(bitmap, 0, 0, width, height)
-      const transparent = !opts.background && MAY_HAVE_ALPHA.test(file.type) && hasTransparency(ctx.getImageData(0, 0, width, height).data)
+      const transparent =
+        !opts.background &&
+        MAY_HAVE_ALPHA.test(file.type) &&
+        hasTransparency(ctx.getImageData(0, 0, width, height).data)
       const blob = await encode(canvas, transparent, quality)
       const longer = Math.max(width, height)
       const floor = opts.minSide ?? 0
@@ -118,7 +127,11 @@ export async function prepareImage(file: File, opts: PrepOptions): Promise<Prepa
 }
 
 /** A square box, as avatars and the other photos want. */
-export async function downscaleImage(file: File, maxSide = 1600, quality = 0.86): Promise<{ blob: Blob; type: string }> {
+export async function downscaleImage(
+  file: File,
+  maxSide = 1600,
+  quality = 0.86,
+): Promise<{ blob: Blob; type: string }> {
   const r = await prepareImage(file, { maxWidth: maxSide, maxHeight: maxSide, quality })
   return { blob: r.blob, type: r.type }
 }

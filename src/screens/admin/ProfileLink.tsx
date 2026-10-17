@@ -7,13 +7,31 @@ import { useEffect, useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { formatIndex, handleOk, comiteLinkProfile, comiteUnlinkProfile, searchProfiles, type ProfileHit, type TournamentProfile } from '../../data/profiles'
+import {
+  formatIndex,
+  handleOk,
+  comiteLinkProfile,
+  comiteUnlinkProfile,
+  searchProfiles,
+  type ProfileHit,
+  type TournamentProfile,
+} from '../../data/profiles'
 import a from './Admin.module.css'
 import { humanError } from '../../lib/humanError'
 
 const P = t.admin.players
 
-export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { playerId: string; profile: TournamentProfile | undefined; onChanged: () => void; onUseIndex?: (index: number) => void }) {
+export function ProfileLink({
+  playerId,
+  profile,
+  onChanged,
+  onUseIndex,
+}: {
+  playerId: string
+  profile: TournamentProfile | undefined
+  onChanged: () => void
+  onUseIndex?: (index: number) => void
+}) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<ProfileHit[]>([])
@@ -46,7 +64,8 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
         setOpen(false)
         setQ('')
         onChanged()
-      } else toast(r.reason === 'taken' ? P.profileTaken : r.reason === 'already_linked' ? P.profileElsewhere : P.noProfile)
+      } else
+        toast(r.reason === 'taken' ? P.profileTaken : r.reason === 'already_linked' ? P.profileElsewhere : P.noProfile)
     } catch (e) {
       toast(humanError(e))
     } finally {
@@ -100,10 +119,26 @@ export function ProfileLink({ playerId, profile, onChanged, onUseIndex }: { play
 
       <Sheet open={open} onClose={() => setOpen(false)} title={P.linkProfile}>
         <div className="stack">
-          <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={P.searchProfiles} aria-label={P.searchProfiles} autoFocus autoCapitalize="none" autoCorrect="off" />
+          <input
+            className="input"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={P.searchProfiles}
+            aria-label={P.searchProfiles}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
           <div className={a.rows}>
             {hits.map((h) => (
-              <button key={h.handle} type="button" className={a.rowBtn} disabled={busy} onClick={() => void link(h.handle)}>
+              <button
+                key={h.handle}
+                type="button"
+                className={a.rowBtn}
+                disabled={busy}
+                onClick={() => void link(h.handle)}
+              >
                 <Avatar name={h.displayName} url={h.avatarUrl} size="sm" />
                 <span className={a.rowText}>
                   <span className={a.rowTitle}>{h.displayName}</span>

@@ -3,7 +3,16 @@
  * app has no reload button). The boards take a pull now; these are its thresholds.
  */
 import { describe, expect, it } from 'vitest'
-import { PULL_MAX_PX, PULL_RATE, PULL_SLOP_PX, PULL_THRESHOLD_PX, pullArmed, pullIntent, pullMayStart, pullOffset } from './pull'
+import {
+  PULL_MAX_PX,
+  PULL_RATE,
+  PULL_SLOP_PX,
+  PULL_THRESHOLD_PX,
+  pullArmed,
+  pullIntent,
+  pullMayStart,
+  pullOffset,
+} from './pull'
 
 describe('a pull, apart from a scroll (PWA-15)', () => {
   it('a finger that has barely moved is neither', () => {
@@ -39,7 +48,15 @@ describe('how far it comes, and when letting go refreshes', () => {
 })
 
 describe('when a touch may start one', () => {
-  const ok = { enabled: true, refreshing: false, fingers: 1, pageTop: 0, sheetOpen: false, inDialog: false, boxScrolled: false }
+  const ok = {
+    enabled: true,
+    refreshing: false,
+    fingers: 1,
+    pageTop: 0,
+    sheetOpen: false,
+    inDialog: false,
+    boxScrolled: false,
+  }
 
   it('on a board, at the top of the page, one finger, nothing open or under way', () => {
     expect(pullMayStart(ok)).toBe(true)

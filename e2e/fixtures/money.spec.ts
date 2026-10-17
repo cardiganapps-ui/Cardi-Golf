@@ -9,7 +9,12 @@ import { expect, open, test } from './base'
 const M = t.moneyScreen
 
 /** A copy line with a count in it («Ya pagaron (11)»), matched for any count. */
-const withCount = (copy: (n: number) => string) => new RegExp(`^${copy(999).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('999', '\\d+')}$`)
+const withCount = (copy: (n: number) => string) =>
+  new RegExp(
+    `^${copy(999)
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace('999', '\\d+')}$`,
+  )
 
 /**
  * The ragged-row detector. In every visible list row, the cells share one
@@ -39,12 +44,19 @@ async function ragged(page: Page): Promise<string[]> {
         const edge = row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight)
         const short = Math.round(edge - cells.at(-1)!.getBoundingClientRect().right)
         if (Math.abs(short) > 1) out.push(`«${label(row)}»: its last cell ends ${short}px short of the row's edge`)
-        cells.slice(1).forEach((c, i) => edges.set(i, [...(edges.get(i) ?? []), { x: c.getBoundingClientRect().right, row: label(row) }]))
+        cells
+          .slice(1)
+          .forEach((c, i) =>
+            edges.set(i, [...(edges.get(i) ?? []), { x: c.getBoundingClientRect().right, row: label(row) }]),
+          )
       }
       for (const [i, xs] of edges) {
         const min = Math.min(...xs.map((e) => e.x))
         const max = Math.max(...xs.map((e) => e.x))
-        if (max - min > 1) out.push(`cell ${i + 1} after the text ends anywhere from x=${Math.round(min)} to x=${Math.round(max)} down one list (e.g. «${xs[0].row}»)`)
+        if (max - min > 1)
+          out.push(
+            `cell ${i + 1} after the text ends anywhere from x=${Math.round(min)} to x=${Math.round(max)} down one list (e.g. «${xs[0].row}»)`,
+          )
       }
     }
     return out
@@ -57,32 +69,46 @@ for (const width of [375, 393]) {
 
     test('Juegos › La Calcutta: what each slot pays and each owner holds, in one column (VIS-01)', async ({ page }) => {
       await open(page, '/t/_/full12-live/juegos')
-      await page.getByRole('button', { name: /La Calcutta/ }).first().click()
+      await page
+        .getByRole('button', { name: /La Calcutta/ })
+        .first()
+        .click()
       await expect(page.getByRole('heading', { level: 2, name: t.games.owners })).toBeVisible()
       expect(await ragged(page)).toEqual([])
     })
 
-    test('Juegos › Los Matrimonios: each pair\'s points in a column of their own (VIS-01)', async ({ page }) => {
+    test("Juegos › Los Matrimonios: each pair's points in a column of their own (VIS-01)", async ({ page }) => {
       await open(page, '/t/_/full12-live/juegos')
-      await page.getByRole('button', { name: /Los Matrimonios/ }).first().click()
+      await page
+        .getByRole('button', { name: /Los Matrimonios/ })
+        .first()
+        .click()
       await expect(page.getByRole('heading', { level: 2, name: t.games.headToHead })).toBeVisible()
       expect(await ragged(page)).toEqual([])
       // Inside the figures, the first pair's points and the second's are two columns.
       const columns = () =>
         page.evaluate(() => {
           const byIndex: number[][] = []
-          for (const row of Array.from(document.querySelectorAll('[class*="_figures_"]'))) Array.from(row.children).forEach((c, i) => (byIndex[i] ??= []).push(Math.round(c.getBoundingClientRect().right)))
+          for (const row of Array.from(document.querySelectorAll('[class*="_figures_"]')))
+            Array.from(row.children).forEach((c, i) =>
+              (byIndex[i] ??= []).push(Math.round(c.getBoundingClientRect().right)),
+            )
           return byIndex.map((xs) => [...new Set(xs)])
         })
       expect(await columns()).toHaveLength(2)
       for (const xs of await columns()) expect(xs).toHaveLength(1)
       // A pair on one digit (a bad day) keeps both columns: the second pair of the first group gets 7 points.
-      await page.locator('[class*="_figures_"] > :last-child').first().evaluate((el) => (el.textContent = '7'))
+      await page
+        .locator('[class*="_figures_"] > :last-child')
+        .first()
+        .evaluate((el) => (el.textContent = '7'))
       for (const xs of await columns()) expect(xs, 'a one-digit pair score').toHaveLength(1)
       expect(await ragged(page), 'a one-digit pair score').toEqual([])
     })
 
-    test('Dinero › Liquidación: every amount and every button in a column, live and once final (VIS-01)', async ({ page }) => {
+    test('Dinero › Liquidación: every amount and every button in a column, live and once final (VIS-01)', async ({
+      page,
+    }) => {
       await open(page, '/t/_/full12-live/dinero')
       await page.getByRole('radio', { name: M.final }).click()
       expect(await ragged(page), 'Quién debe qué and vía banco').toEqual([])
@@ -96,7 +122,11 @@ for (const width of [375, 393]) {
       expect(await ragged(page), 'final: vía banco').toEqual([])
       // A line with a prize still provisional has no button, and keeps its slot: take the
       // button off every other line, as a pending tiebreak would, and the amounts stay in one column.
-      await page.evaluate(() => document.querySelectorAll('[data-money-list] [class*="_action_"]').forEach((slot, i) => i % 2 && slot.replaceChildren()))
+      await page.evaluate(() =>
+        document
+          .querySelectorAll('[data-money-list] [class*="_action_"]')
+          .forEach((slot, i) => i % 2 && slot.replaceChildren()),
+      )
       expect(await ragged(page), 'final: vía banco, some lines without a button').toEqual([])
       await open(page, '/t/_/full12-finished/dinero')
       await page.getByRole('radio', { name: M.final }).click()
@@ -117,7 +147,9 @@ for (const width of [375, 393]) {
   })
 }
 
-test('Every Juegos tab, every Dinero mode and the Comité inbox, wherever there is money: no ragged row (VIS-01)', async ({ page }) => {
+test('Every Juegos tab, every Dinero mode and the Comité inbox, wherever there is money: no ragged row (VIS-01)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 375, height: 852 })
   for (const fixture of ['full12-live', 'full12-finished', 'friends8', 'minimal4-live']) {
     await open(page, `/t/_/${fixture}/juegos`)
@@ -147,9 +179,20 @@ function recordWrites(page: Page) {
   return writes
 }
 /** The rows of one list on Dinero, as text: what the banker reads. */
-const owedRows = (page: Page) => page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').allInnerTexts()
-const settlementRows = (page: Page) => page.locator('section').filter({ has: page.getByRole('radio', { name: M.viaBank }) }).locator('[class*="_transfer_"]').allInnerTexts()
-const paidList = (page: Page) => page.locator('details').filter({ has: page.locator('summary').filter({ hasText: withCount(M.paidTitle) }) })
+const owedRows = (page: Page) =>
+  page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) })
+    .locator('[class*="_transfer_"]')
+    .allInnerTexts()
+const settlementRows = (page: Page) =>
+  page
+    .locator('section')
+    .filter({ has: page.getByRole('radio', { name: M.viaBank }) })
+    .locator('[class*="_transfer_"]')
+    .allInnerTexts()
+const paidList = (page: Page) =>
+  page.locator('details').filter({ has: page.locator('summary').filter({ hasText: withCount(M.paidTitle) }) })
 
 /** «Ya pagaron», open. Before UX-21 there was no such list: a payment marked by mistake had no way back. */
 async function openPaid(page: Page) {
@@ -159,7 +202,9 @@ async function openPaid(page: Page) {
   return list
 }
 
-test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back from «Ya pagaron» exactly (UX-21)', async ({ page }) => {
+test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back from «Ya pagaron» exactly (UX-21)', async ({
+  page,
+}) => {
   const writes = recordWrites(page)
   await open(page, '/t/_/full12-live/dinero')
   await page.getByRole('radio', { name: M.final }).click()
@@ -172,7 +217,12 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
   ] as const) {
     writes.length = 0
     // The action says what it does, and its name says which debt; the row leaves the list.
-    const row = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').filter({ hasText: who }).filter({ hasText: detail })
+    const row = page
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) })
+      .locator('[class*="_transfer_"]')
+      .filter({ hasText: who })
+      .filter({ hasText: detail })
     const mark = row.getByRole('button', { name: new RegExp(`^${M.markPaid}`) })
     await expect(mark).toHaveAccessibleName(`${M.markPaid}: ${M.payText(M.payWords(who, null))}, ${detail}: ${amount}`)
     await mark.click()
@@ -180,7 +230,10 @@ test('Dinero: an entry fee and a Calcutta purchase marked by mistake come back f
     await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
 
     // In «Ya pagaron» the state reads «Pagado», pressed, and a tap takes it back.
-    const toggle = (await openPaid(page)).getByRole('button', { name: `${M.paid}: ${M.payText(M.payWords(who, null, true))}, ${detail}: ${amount}`, exact: true })
+    const toggle = (await openPaid(page)).getByRole('button', {
+      name: `${M.paid}: ${M.payText(M.payWords(who, null, true))}, ${detail}: ${amount}`,
+      exact: true,
+    })
     await expect(toggle).toHaveAttribute('aria-pressed', 'true')
     await toggle.click()
     await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last()).toBeVisible()
@@ -201,11 +254,21 @@ test('Dinero: «Deshacer» puts a payment back the way it was, both ways (UX-21)
   const owedBefore = await owedRows(page)
 
   // A wrong «Marcar pagado», undone from the toast.
-  const camilo = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) }).locator('[class*="_transfer_"]').filter({ hasText: 'Camilo' }).filter({ hasText: M.owesLots([1]) })
+  const camilo = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: new RegExp(`^${M.checklist}`) }) })
+    .locator('[class*="_transfer_"]')
+    .filter({ hasText: 'Camilo' })
+    .filter({ hasText: M.owesLots([1]) })
   await camilo.getByRole('button', { name: new RegExp(`^${M.markPaid}`) }).click()
   // The list follows the server's answer: wait for it rather than read it once.
   await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length - 1)
-  await page.getByRole('status').filter({ hasText: M.markedPaid }).last().getByRole('button', { name: t.common.undo }).click()
+  await page
+    .getByRole('status')
+    .filter({ hasText: M.markedPaid })
+    .last()
+    .getByRole('button', { name: t.common.undo })
+    .click()
   await expect(page.getByRole('status').filter({ hasText: M.markedPaid })).toHaveCount(0)
   await expect.poll(() => owedRows(page)).toEqual(owedBefore)
 
@@ -213,16 +276,42 @@ test('Dinero: «Deshacer» puts a payment back the way it was, both ways (UX-21)
   const paid = await openPaid(page)
   const paidBefore = await paid.locator('[class*="_transfer_"]').allInnerTexts()
   writes.length = 0
-  await paid.getByRole('button', { name: `${M.paid}: ${M.payText(M.payWords('Arturo', null, true))}, ${M.owesEntry}: $2,500`, exact: true }).click()
+  await paid
+    .getByRole('button', {
+      name: `${M.paid}: ${M.payText(M.payWords('Arturo', null, true))}, ${M.owesEntry}: $2,500`,
+      exact: true,
+    })
+    .click()
   await expect.poll(() => owedRows(page)).toHaveLength(owedBefore.length + 1)
-  await page.getByRole('status').filter({ hasText: M.unmarkedPaid }).last().getByRole('button', { name: t.common.undo }).click()
+  await page
+    .getByRole('status')
+    .filter({ hasText: M.unmarkedPaid })
+    .last()
+    .getByRole('button', { name: t.common.undo })
+    .click()
   await expect(page.getByRole('status').filter({ hasText: M.unmarkedPaid })).toHaveCount(0)
   await expect.poll(() => owedRows(page)).toEqual(owedBefore)
   await expect.poll(() => paid.locator('[class*="_transfer_"]').allInnerTexts()).toEqual(paidBefore)
   await expect.poll(() => writes.length).toBe(2)
   expect(writes).toEqual([
-    { p_tournament_id: 'fx-full', p_kind: 'entry', p_from: 'p1', p_to: null, p_amount: 2500, p_paid: false, p_note: null },
-    { p_tournament_id: 'fx-full', p_kind: 'entry', p_from: 'p1', p_to: null, p_amount: 2500, p_paid: true, p_note: null },
+    {
+      p_tournament_id: 'fx-full',
+      p_kind: 'entry',
+      p_from: 'p1',
+      p_to: null,
+      p_amount: 2500,
+      p_paid: false,
+      p_note: null,
+    },
+    {
+      p_tournament_id: 'fx-full',
+      p_kind: 'entry',
+      p_from: 'p1',
+      p_to: null,
+      p_amount: 2500,
+      p_paid: true,
+      p_note: null,
+    },
   ])
 })
 
@@ -237,7 +326,10 @@ test('Dinero once final: a vía-banco line marked by mistake comes back from «Y
   await expect(line).toHaveCount(0)
   // The line closed two accounts, his prizes and his lot: each is on record, and each comes back.
   const paid = await openPaid(page)
-  for (const name of [`${M.paid}: ${M.payText(M.payWords(null, 'Camilo', true))}, ${M.prizes}`, `${M.paid}: ${M.payText(M.payWords('Camilo', null, true))}, ${M.owesLots([1])}`]) {
+  for (const name of [
+    `${M.paid}: ${M.payText(M.payWords(null, 'Camilo', true))}, ${M.prizes}`,
+    `${M.paid}: ${M.payText(M.payWords('Camilo', null, true))}, ${M.owesLots([1])}`,
+  ]) {
     await paid.getByRole('button', { name: new RegExp(`^${name}: `) }).click()
   }
   await expect(line).toContainText('$10,200')

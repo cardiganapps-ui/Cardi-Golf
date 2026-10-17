@@ -18,7 +18,9 @@ test('the first load is one stylesheet, and the app’s own rules come before ev
   await open(page, '/t/_/full12-live')
   const order = await page.evaluate((href) => {
     const sheet = Array.from(document.styleSheets).find((s) => s.href && new URL(s.href).pathname === href)
-    const selectors = sheet ? Array.from(sheet.cssRules).map((r) => (r instanceof CSSStyleRule ? r.selectorText : '')) : []
+    const selectors = sheet
+      ? Array.from(sheet.cssRules).map((r) => (r instanceof CSSStyleRule ? r.selectorText : ''))
+      : []
     return {
       found: !!sheet,
       card: selectors.indexOf('.card'),
@@ -32,7 +34,9 @@ test('the first load is one stylesheet, and the app’s own rules come before ev
   expect(order.card, 'global.css’s .card comes before every module rule').toBeLessThan(order.firstModule)
 })
 
-test('a screen loaded later links its stylesheet after the entry’s, whatever the order the screens are opened in (PERF-02)', async ({ page }) => {
+test('a screen loaded later links its stylesheet after the entry’s, whatever the order the screens are opened in (PERF-02)', async ({
+  page,
+}) => {
   // Each screen's rules come with its chunk: they must never land before global.css and the shared modules, or a
   // `.card` would beat a screen's own class as it did under Rolldown's split.
   const html = await (await page.request.get('/')).text()
@@ -49,7 +53,9 @@ test('a screen loaded later links its stylesheet after the entry’s, whatever t
       }, `/t/_/full12-live/${path}`)
       await page.waitForLoadState('networkidle')
     }
-    const sheets = await page.evaluate(() => Array.from(document.styleSheets, (s) => (s.href ? new URL(s.href).pathname : null)).filter(Boolean))
+    const sheets = await page.evaluate(() =>
+      Array.from(document.styleSheets, (s) => (s.href ? new URL(s.href).pathname : null)).filter(Boolean),
+    )
     expect(sheets[0], `the entry's stylesheet is the first (${order.join(' → ')})`).toBe(entry)
     expect(sheets.length, 'the screens brought stylesheets of their own').toBeGreaterThan(3)
     expect(new Set(sheets).size, 'no stylesheet twice').toBe(sheets.length)

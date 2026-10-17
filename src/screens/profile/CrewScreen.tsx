@@ -13,7 +13,17 @@ import { leaveSheetHistory } from '../../components/sheetHistory'
 import { EmptyState } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconChevronLeft, IconChevronRight } from '../../components/icons'
-import { crewPage, leaveCrew, removeCrewMember, respondCrewRequest, rotateCrewCode, setCrewApproval, type CrewMember, type CrewOuting, type CrewPage } from '../../data/crews'
+import {
+  crewPage,
+  leaveCrew,
+  removeCrewMember,
+  respondCrewRequest,
+  rotateCrewCode,
+  setCrewApproval,
+  type CrewMember,
+  type CrewOuting,
+  type CrewPage,
+} from '../../data/crews'
 import { formatIndex } from '../../data/profiles'
 import { seasons, seasonTable } from '../../engine/profile/season'
 import { useRequireAccount } from './useRequireAccount'
@@ -35,7 +45,14 @@ function OutingRow({ o }: { o: CrewOuting }) {
       <span className={styles.rowText}>
         <span className={styles.rowTitle}>{o.name}</span>
         <span className={styles.rowSub}>
-          {[o.date ? dayMonth.format(new Date(`${o.date}T12:00:00Z`)) : null, C.playersCount(o.players), o.status === 'finished' ? null : t.status[o.status].toLowerCase(), o.practice ? t.profile.practice : null].filter(Boolean).join(', ')}
+          {[
+            o.date ? dayMonth.format(new Date(`${o.date}T12:00:00Z`)) : null,
+            C.playersCount(o.players),
+            o.status === 'finished' ? null : t.status[o.status].toLowerCase(),
+            o.practice ? t.profile.practice : null,
+          ]
+            .filter(Boolean)
+            .join(', ')}
         </span>
       </span>
       <span className={styles.rowEnd}>
@@ -45,7 +62,15 @@ function OutingRow({ o }: { o: CrewOuting }) {
   )
 }
 
-export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage; now?: Date; onChanged?: () => void }) {
+export function CrewView({
+  page,
+  now = new Date(),
+  onChanged,
+}: {
+  page: CrewPage
+  now?: Date
+  onChanged?: () => void
+}) {
   const navigate = useNavigate()
   const years = useMemo(() => seasons(page.results), [page.results])
   const [year, setYear] = useState(() => years[0] ?? now.getFullYear())
@@ -81,10 +106,13 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
 
   /** One owner's step, then the page read again; the toast says how it went. */
   async function own(step: () => Promise<unknown>, done: string) {
-    await run(async () => {
-      await step()
-      onChanged?.()
-    }, { done })
+    await run(
+      async () => {
+        await step()
+        onChanged?.()
+      },
+      { done },
+    )
   }
 
   return (
@@ -101,7 +129,14 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <span className="label">{C.season(year)}</span>
-          {years.length > 1 && <Segmented value={String(year)} label={C.table} options={years.map((y) => ({ value: String(y), label: String(y) }))} onChange={(v) => setYear(Number(v))} />}
+          {years.length > 1 && (
+            <Segmented
+              value={String(year)}
+              label={C.table}
+              options={years.map((y) => ({ value: String(y), label: String(y) }))}
+              onChange={(v) => setYear(Number(v))}
+            />
+          )}
         </div>
         {rows.length === 0 ? (
           <p className={styles.help}>{C.noSeason}</p>
@@ -110,12 +145,24 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
             {rows.map((r) => {
               const m = member.get(r.handle)
               return (
-                <Link key={r.handle} to={`/p/${r.handle}`} className={`${styles.row} ${r.position === 1 ? styles.rowUsed : ''}`}>
+                <Link
+                  key={r.handle}
+                  to={`/p/${r.handle}`}
+                  className={`${styles.row} ${r.position === 1 ? styles.rowUsed : ''}`}
+                >
                   <span className={styles.pos}>{r.label}</span>
                   <Avatar name={m?.displayName ?? r.handle} url={m?.avatarUrl} />
                   <span className={styles.rowText}>
                     <span className={styles.rowTitle}>{m?.displayName ?? `@${r.handle}`}</span>
-                    <span className={styles.rowSub}>{[r.position === 1 ? (closed ? C.champion(year) : C.leader) : null, C.events(r.events), r.wins ? C.wins(r.wins) : null].filter(Boolean).join(', ')}</span>
+                    <span className={styles.rowSub}>
+                      {[
+                        r.position === 1 ? (closed ? C.champion(year) : C.leader) : null,
+                        C.events(r.events),
+                        r.wins ? C.wins(r.wins) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
                   </span>
                   <span className={styles.rowEnd}>
                     <span className={styles.rowFig}>{pts(r.points)}</span>
@@ -172,7 +219,9 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
                 <Avatar name={m.displayName} url={m.avatarUrl} />
                 <span className={styles.rowText}>
                   <span className={styles.rowTitle}>{m.displayName}</span>
-                  <span className={styles.rowSub}>{[`@${m.handle}`, m.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}</span>
+                  <span className={styles.rowSub}>
+                    {[`@${m.handle}`, m.role === 'owner' ? C.owner : null].filter(Boolean).join(', ')}
+                  </span>
                 </span>
                 {m.index != null && <span className={styles.rowFig}>{formatIndex(m.index)}</span>}
               </Link>
@@ -182,7 +231,13 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
             return (
               <div key={m.handle} className={styles.memberRow}>
                 {row}
-                <button type="button" className="btn btn--ghost btn--sm" disabled={busy} aria-label={C.removeTitle(m.displayName)} onClick={() => setRemoving(m)}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  disabled={busy}
+                  aria-label={C.removeTitle(m.displayName)}
+                  onClick={() => setRemoving(m)}
+                >
                   {C.remove}
                 </button>
               </div>
@@ -205,10 +260,22 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
                     <span className={styles.rowSub}>{`@${r.handle}`}</span>
                   </span>
                 </span>
-                <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={() => void own(() => respondCrewRequest(crew.id, r.handle, true), C.accepted(r.displayName))}>
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  disabled={busy}
+                  onClick={() => void own(() => respondCrewRequest(crew.id, r.handle, true), C.accepted(r.displayName))}
+                >
                   {C.accept}
                 </button>
-                <button type="button" className="btn btn--ghost btn--sm" disabled={busy} onClick={() => void own(() => respondCrewRequest(crew.id, r.handle, false), C.declined(r.displayName))}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  disabled={busy}
+                  onClick={() =>
+                    void own(() => respondCrewRequest(crew.id, r.handle, false), C.declined(r.displayName))
+                  }
+                >
                   {C.decline}
                 </button>
               </div>
@@ -227,10 +294,17 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
         {crew.codeExpired ? (
           <p className="error">{C.codeExpired}</p>
         ) : (
-          crew.codeExpiresAt && <p className={styles.help}>{C.codeUntil(longDay.format(new Date(crew.codeExpiresAt)))}</p>
+          crew.codeExpiresAt && (
+            <p className={styles.help}>{C.codeUntil(longDay.format(new Date(crew.codeExpiresAt)))}</p>
+          )
         )}
         {owner && crew.approval !== undefined && (
-          <Toggle label={C.approval} hint={C.approvalHint} checked={crew.approval} onChange={(on) => void own(() => setCrewApproval(crew.id, on), t.common.saved)} />
+          <Toggle
+            label={C.approval}
+            hint={C.approvalHint}
+            checked={crew.approval}
+            onChange={(on) => void own(() => setCrewApproval(crew.id, on), t.common.saved)}
+          />
         )}
         <div className={styles.actions}>
           <CopyButton text={link} label={t.profile.copyLink} />
@@ -259,7 +333,12 @@ export function CrewView({ page, now = new Date(), onChanged }: { page: CrewPage
         onClose={() => setAsk(null)}
       >
         {ask === 'rotate' && crew.approval !== undefined && (
-          <Segmented<Days> value={days} label={C.rotateFor} options={(Object.keys(DAYS) as Days[]).map((d) => ({ value: d, label: C.rotateDays[d] }))} onChange={setDays} />
+          <Segmented<Days>
+            value={days}
+            label={C.rotateFor}
+            options={(Object.keys(DAYS) as Days[]).map((d) => ({ value: d, label: C.rotateDays[d] }))}
+            onChange={setDays}
+          />
         )}
       </ConfirmSheet>
       <ConfirmSheet
@@ -289,6 +368,17 @@ export function CrewScreen() {
   const load = useCallback(() => void refetch(), [refetch])
   if (ok && page === undefined && q.error) return <ErrorBox error={q.error} onRetry={load} />
   if (!ok || page === undefined) return <Spinner />
-  if (!page) return <EmptyState title={t.social.notFound} body={C.none} action={<Link className="btn btn--secondary" to="/crews">{C.title}</Link>} />
+  if (!page)
+    return (
+      <EmptyState
+        title={t.social.notFound}
+        body={C.none}
+        action={
+          <Link className="btn btn--secondary" to="/crews">
+            {C.title}
+          </Link>
+        }
+      />
+    )
   return <CrewView key={page.crew.id} page={page} onChanged={load} />
 }

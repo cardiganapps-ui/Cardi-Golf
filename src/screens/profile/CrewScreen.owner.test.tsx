@@ -23,12 +23,37 @@ const { CrewView } = await import('./CrewScreen')
 
 const C = t.crews
 const page = (role: 'owner' | 'member'): CrewPage => ({
-  crew: { id: 'c1', slug: 'jueves', name: 'Los jueves', joinCode: 'JUEV3S', role, createdAt: '2026-01-01T00:00:00Z', approval: false, codeExpiresAt: null, codeExpired: false },
+  crew: {
+    id: 'c1',
+    slug: 'jueves',
+    name: 'Los jueves',
+    joinCode: 'JUEV3S',
+    role,
+    createdAt: '2026-01-01T00:00:00Z',
+    approval: false,
+    codeExpiresAt: null,
+    codeExpired: false,
+  },
   members: [
-    { handle: 'duena', displayName: 'Dueña', avatarUrl: null, index: 10, role: 'owner', joinedAt: '2026-01-01T00:00:00Z' },
-    { handle: 'extrano', displayName: 'Extraño', avatarUrl: null, index: null, role: 'member', joinedAt: '2026-02-01T00:00:00Z' },
+    {
+      handle: 'duena',
+      displayName: 'Dueña',
+      avatarUrl: null,
+      index: 10,
+      role: 'owner',
+      joinedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      handle: 'extrano',
+      displayName: 'Extraño',
+      avatarUrl: null,
+      index: null,
+      role: 'member',
+      joinedAt: '2026-02-01T00:00:00Z',
+    },
   ],
-  requests: role === 'owner' ? [{ handle: 'pablo', displayName: 'Pablo', avatarUrl: null, at: '2026-03-01T00:00:00Z' }] : [],
+  requests:
+    role === 'owner' ? [{ handle: 'pablo', displayName: 'Pablo', avatarUrl: null, at: '2026-03-01T00:00:00Z' }] : [],
   outings: [],
   results: [],
 })
@@ -45,7 +70,7 @@ const mount = (role: 'owner' | 'member') =>
     </MemoryRouter>,
   )
 
-describe('a crew\'s owner decides who is in it (TRUST-11)', () => {
+describe("a crew's owner decides who is in it (TRUST-11)", () => {
   it('takes a member out, after saying what that does; never himself', async () => {
     mount('owner')
     expect(screen.queryByRole('button', { name: C.removeTitle('Dueña') })).toBeNull()

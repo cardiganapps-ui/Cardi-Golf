@@ -13,7 +13,13 @@ import { settingsSense } from '../settings/sense'
 import { fillRound, makeFirstTournament, makeGroup, makePlayer, makeRound, makeSnapshot } from '../testing/fixtures'
 import type { Snapshot } from '../types'
 import { quickSettings } from '../games/quick'
-import { cardSignedFor, cardSigningMode, cardSigningModeOf, newTournamentCardSigning, signatureCard } from './cardSigning'
+import {
+  cardSignedFor,
+  cardSigningMode,
+  cardSigningModeOf,
+  newTournamentCardSigning,
+  signatureCard,
+} from './cardSigning'
 import { words } from '../testing/words'
 
 const withPairs = (on: boolean, cardSigning?: TournamentSettings['cardSigning']): TournamentSettings => ({
@@ -70,7 +76,14 @@ describe('the rule a tournament signs by', () => {
     ]
     for (const [raw, mode] of cases) expect(cardSigningModeOf(raw), JSON.stringify(raw)).toBe(mode)
     // And the parsed settings agree with the raw ones.
-    for (const s of [withPairs(true), withPairs(false), withPairs(false, 'marker'), withPairs(true, 'none'), withPairs(false, 'pairs')]) expect(cardSigningMode(s)).toBe(cardSigningModeOf(s))
+    for (const s of [
+      withPairs(true),
+      withPairs(false),
+      withPairs(false, 'marker'),
+      withPairs(true, 'none'),
+      withPairs(false, 'pairs'),
+    ])
+      expect(cardSigningMode(s)).toBe(cardSigningModeOf(s))
   })
 
   it('creates a tournament with a rule of its own: the pairs with the pairs game, a marker without; a Ronda rápida signs nothing', () => {
@@ -111,13 +124,21 @@ describe('unsigned cards and the close gate, by rule', () => {
     const st = computeTournament(snap, withPairs(false, 'marker'))
     expect(st.flags.unsignedCards).toEqual(['p1', 'p2', 'p3', 'p4'].map((playerId) => ({ roundId: 'r1', playerId })))
     snap.cardSignatures = [{ roundId: 'r1', pairId: null, playerId: 'p2', signedBy: 'p1', signedAt: '' }]
-    expect(computeTournament(snap, withPairs(false, 'marker')).flags.unsignedCards.map((u) => ('playerId' in u ? u.playerId : u.pairId))).toEqual(['p1', 'p3', 'p4'])
+    expect(
+      computeTournament(snap, withPairs(false, 'marker')).flags.unsignedCards.map((u) =>
+        'playerId' in u ? u.playerId : u.pairId,
+      ),
+    ).toEqual(['p1', 'p3', 'p4'])
   })
 
   it('a marker: a card not complete is not waiting for a signature', () => {
     const snap = foursome(withPairs(false, 'marker'))
     snap.scores = snap.scores.filter((s) => !(s.playerId === 'p3' && s.hole === 18))
-    expect(computeTournament(snap, withPairs(false, 'marker')).flags.unsignedCards.map((u) => ('playerId' in u ? u.playerId : ''))).toEqual(['p1', 'p2', 'p4'])
+    expect(
+      computeTournament(snap, withPairs(false, 'marker')).flags.unsignedCards.map((u) =>
+        'playerId' in u ? u.playerId : '',
+      ),
+    ).toEqual(['p1', 'p2', 'p4'])
   })
 
   it('a marker: the close waits for every card of a finished day, and lets go once they are signed', () => {
@@ -126,7 +147,13 @@ describe('unsigned cards and the close gate, by rule', () => {
     const before = closeCheck(snap, settings, { openRejected: 0 })
     expect(before.blockers.map((b) => b.kind)).toEqual(['unsignedCards'])
     expect(words(before.blockers[0]!.says)).toContain('4 tarjetas sin firmar')
-    snap.cardSignatures = ['p1', 'p2', 'p3', 'p4'].map((p, i) => ({ roundId: 'r1', pairId: null, playerId: p, signedBy: `p${((i + 1) % 4) + 1}`, signedAt: '' }))
+    snap.cardSignatures = ['p1', 'p2', 'p3', 'p4'].map((p, i) => ({
+      roundId: 'r1',
+      pairId: null,
+      playerId: p,
+      signedBy: `p${((i + 1) % 4) + 1}`,
+      signedAt: '',
+    }))
     expect(closeCheck(snap, settings, { openRejected: 0 }).ok).toBe(true)
   })
 

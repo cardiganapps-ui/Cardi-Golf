@@ -20,7 +20,9 @@ const PAGE = 50
 type Source = 'all' | 'platform' | 'comite'
 
 const titleOf = (x: Pick<AuditItem, 'source' | 'action' | 'table'>) =>
-  x.source === 'platform' ? (A.actions[x.action] ?? x.action) : A.comiteLine(t.platform.tables[x.table ?? ''] ?? x.table ?? '', x.action)
+  x.source === 'platform'
+    ? (A.actions[x.action] ?? x.action)
+    : A.comiteLine(t.platform.tables[x.table ?? ''] ?? x.table ?? '', x.action)
 
 export function AuditScreen() {
   const api = usePlatformApi()
@@ -57,8 +59,19 @@ export function AuditScreen() {
     <div className={s.screen}>
       <h2>{t.platform.sections.audit}</h2>
       <p className={s.help}>{A.hint}</p>
-      <Segmented value={source} label={A.sourceLabel} options={(['all', 'platform', 'comite'] as const).map((v) => ({ value: v, label: A.sources[v] }))} onChange={setSource} />
-      <Input type="search" value={q} placeholder={A.search} aria-label={A.search} onChange={(e) => setQ(e.target.value)} />
+      <Segmented
+        value={source}
+        label={A.sourceLabel}
+        options={(['all', 'platform', 'comite'] as const).map((v) => ({ value: v, label: A.sources[v] }))}
+        onChange={setSource}
+      />
+      <Input
+        type="search"
+        value={q}
+        placeholder={A.search}
+        aria-label={A.search}
+        onChange={(e) => setQ(e.target.value)}
+      />
       {error ? (
         <ErrorBox error={error} onRetry={() => void load(null)} />
       ) : !rows ? (
@@ -69,10 +82,19 @@ export function AuditScreen() {
         <>
           <div className={s.rows}>
             {rows.map((x) => (
-              <button key={`${x.source}-${x.id}`} type="button" className={`${s.row} ${s.rowPick}`} onClick={() => setOpen(x)}>
+              <button
+                key={`${x.source}-${x.id}`}
+                type="button"
+                className={`${s.row} ${s.rowPick}`}
+                onClick={() => setOpen(x)}
+              >
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{titleOf(x)}</span>
-                  <span className={s.rowSub}>{[x.tournament, x.reason, x.source === 'platform' && !x.tournament ? x.detail : null].filter(Boolean).join(', ') || '—'}</span>
+                  <span className={s.rowSub}>
+                    {[x.tournament, x.reason, x.source === 'platform' && !x.tournament ? x.detail : null]
+                      .filter(Boolean)
+                      .join(', ') || '—'}
+                  </span>
                 </span>
                 <span className={s.rowEnd}>
                   {x.source === 'comite' && <span className={s.flag}>{A.sources.comite}</span>}
@@ -83,8 +105,6 @@ export function AuditScreen() {
           </div>
           {!done && (
             <Button
-              
-             
               disabled={loadingMore}
               onClick={() =>
                 void (async () => {
@@ -118,15 +138,26 @@ function AuditEntry({ item }: { item: AuditItem }) {
       ? Object.entries(d.payload ?? {}).map(([key, v]) => ({ key, value: showValue(v) }))
       : changedFields({ action: d.action, before: d.before ?? null, after: d.after ?? null }).map((f) => ({
           key: f.key,
-          value: d.action === 'UPDATE' ? t.admin.history.change(showValue(f.before), showValue(f.after)) : showValue(d.action === 'INSERT' ? f.after : f.before),
+          value:
+            d.action === 'UPDATE'
+              ? t.admin.history.change(showValue(f.before), showValue(f.after))
+              : showValue(d.action === 'INSERT' ? f.after : f.before),
         }))
   return (
     <div className={s.section}>
       <strong>{titleOf(item)}</strong>
-      <span className={s.help}>{[item.actor, new Date(item.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })].filter(Boolean).join(', ')}</span>
+      <span className={s.help}>
+        {[item.actor, new Date(item.at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })]
+          .filter(Boolean)
+          .join(', ')}
+      </span>
       {item.reason && <span className={s.help}>{t.admin.history.reason(item.reason)}</span>}
       {item.tournamentId && (
-        <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to={`../torneos/${item.tournamentId}`} relative="path">
+        <Link
+          className={buttonClass({ variant: 'secondary', size: 'sm' })}
+          to={`../torneos/${item.tournamentId}`}
+          relative="path"
+        >
           {item.tournament ?? t.platform.open}
         </Link>
       )}

@@ -9,7 +9,9 @@ export const test = base.extend<{ pageErrors: string[]; cspViolations: string[] 
     async ({ page }, use) => {
       const errors: string[] = []
       page.on('pageerror', (e) => errors.push(e.message))
-      await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+      await page.route(/supabase\.co|\/rest\/v1\/|\/auth\/v1\//, (r) =>
+        r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+      )
       await use(errors)
     },
     { auto: true },

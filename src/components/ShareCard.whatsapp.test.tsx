@@ -30,10 +30,26 @@ const formatMoney = (amount: number) => formatAmount(amount, PLATFORM_CURRENCY)
 function draw(fixture: string, what: ShareKind, ctx: Partial<TournamentCtx> = {}) {
   const fx = getFixture(fixture)!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: `fixture:${fixture}`, data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${fixture}`,
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: `_/${fixture}`, lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined, ...ctx }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: `_/${fixture}`,
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+          ...ctx,
+        }}
+      >
         <ShareCardButton what={what} />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -76,7 +92,9 @@ describe('the settlement card (PWA-06)', () => {
     expect(card.getByText(t.moneyScreen.viaBank)).toBeTruthy()
     const name = (id: string | null) => (id ? snap.players.find((p) => p.id === id)!.displayName : null)
     const first = state.money.viaBank.find((tr) => tr.amount > 0 && tr.from === null && tr.to !== null)!
-    const line = card.getByText(t.moneyScreen.payText(t.moneyScreen.payWords(name(first.from), name(first.to)))).parentElement!
+    const line = card.getByText(
+      t.moneyScreen.payText(t.moneyScreen.payWords(name(first.from), name(first.to))),
+    ).parentElement!
     expect(line.textContent).toContain(formatMoney(first.amount))
   })
 
@@ -108,12 +126,22 @@ describe('the footer link (PWA-06, §7)', () => {
   })
 
   it('from a link to watch: that link', () => {
-    const { node } = draw('full12-live', { kind: 'leaderboard' }, { spectator: { money: false, url: 'https://polo.example/v/abcdefghijklmnopqrstuvwx' } })
-    expect(node.querySelector('[data-card-link]')!.textContent).toBe(t.spectator.cardLink('polo.example/v/abcdefghijklmnopqrstuvwx'))
+    const { node } = draw(
+      'full12-live',
+      { kind: 'leaderboard' },
+      { spectator: { money: false, url: 'https://polo.example/v/abcdefghijklmnopqrstuvwx' } },
+    )
+    expect(node.querySelector('[data-card-link]')!.textContent).toBe(
+      t.spectator.cardLink('polo.example/v/abcdefghijklmnopqrstuvwx'),
+    )
   })
 
   it('from the example tournament: the example', () => {
-    const { node } = draw('full12-live', { kind: 'leaderboard' }, { spectator: { money: true, url: 'https://polo.example/demo', demo: true } })
+    const { node } = draw(
+      'full12-live',
+      { kind: 'leaderboard' },
+      { spectator: { money: true, url: 'https://polo.example/demo', demo: true } },
+    )
     expect(node.querySelector('[data-card-link]')!.textContent).toBe(t.share.demoLink('polo.example/demo'))
   })
 })

@@ -65,7 +65,10 @@ describe('hand calculation, group 1 of the first tournament', () => {
     expect(r1.p4!.playingHcp).toBe(10)
     expect(r1.p7!.playingHcp).toBe(14)
     for (const pid of Object.keys(EXPECT1)) {
-      expect(r1[pid]!.holes.map((h) => h.points), pid).toEqual(EXPECT1[pid])
+      expect(
+        r1[pid]!.holes.map((h) => h.points),
+        pid,
+      ).toEqual(EXPECT1[pid])
     }
     expect(r1.p1!.points).toBe(41)
     expect(r1.p10!.points).toBe(35)
@@ -76,7 +79,12 @@ describe('hand calculation, group 1 of the first tournament', () => {
     const g1 = st.modules.snake!.groups.find((g) => g.groupId === 'r1g1')!
     expect(g1.passes.map((p) => `${p.hole}:${p.holderId}`)).toEqual(['3:p10', '9:p4'])
     expect(g1.holderId).toBe('p4')
-    expect(Object.fromEntries(Object.entries(g1.payouts).map(([k, v]) => [k, v.amount]))).toEqual({ p1: 200, p10: 200, p4: 0, p7: 200 })
+    expect(Object.fromEntries(Object.entries(g1.payouts).map(([k, v]) => [k, v.amount]))).toEqual({
+      p1: 200,
+      p10: 200,
+      p4: 0,
+      p7: 200,
+    })
 
     // Day 2 cuts: 41 → (41−36)/2 = 2 → PH2 3 · 35 → 0 → 20 · 37 → 0 → 10 · 32 → 0 → 14
     const r2 = st.core.rounds.r2!
@@ -106,7 +114,9 @@ describe('hand calculation, group 1 of the first tournament', () => {
   it('Day 2 with the cut handicaps: p1 plays a 41 again and the totals follow', () => {
     const snap = makeFirstTournament()
     for (const pid of Object.keys(DAY1)) {
-      DAY1[pid]!.forEach((g, i) => snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i], g === 0)))
+      DAY1[pid]!.forEach((g, i) =>
+        snap.scores.push(score('r1', pid, i + 1, g === 0 ? null : g, PUTTS1[pid]![i], g === 0)),
+      )
     }
     fillRound(snap, 'r1', 21, { playerIds: snap.players.map((p) => p.id).filter((id) => !(id in DAY1)) })
     snap.snakeTiebreaks.push({ roundId: 'r1', groupId: 'r1g1', hole: 9, lastHoledPlayerId: 'p4' })
@@ -118,7 +128,13 @@ describe('hand calculation, group 1 of the first tournament', () => {
     for (let i = 0; i < 10; i++) {
       const pending = computeTournament(snap, S).flags.pendingSnakeTiebreaks
       if (!pending.length) break
-      for (const q of pending) snap.snakeTiebreaks.push({ roundId: q.roundId, groupId: q.groupId, hole: q.hole, lastHoledPlayerId: q.candidates[0]! })
+      for (const q of pending)
+        snap.snakeTiebreaks.push({
+          roundId: q.roundId,
+          groupId: q.groupId,
+          hole: q.hole,
+          lastHoledPlayerId: q.candidates[0]!,
+        })
     }
     const st = computeTournament(snap, S)
     expect(st.core.rounds.r2!.p1!.playingHcp).toBe(3)

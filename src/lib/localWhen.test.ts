@@ -9,7 +9,9 @@ describe('localWhen', () => {
     expect(localWhen('2027-04-09T03:14:00Z', 'UTC')).toBe('9 abr 2027, 03:14')
   })
   it('on the 24-hour clock, so a sentence that goes on after it never reads «p.m..»', () => {
-    expect(t.admin.players.lock.fixed(localWhen('2027-04-09T03:14:00Z', 'America/Mazatlan'))).toBe('Fijados el 8 abr 2027, 20:14. Cambiar uno pide un motivo, y todos lo ven en En vivo.')
+    expect(t.admin.players.lock.fixed(localWhen('2027-04-09T03:14:00Z', 'America/Mazatlan'))).toBe(
+      'Fijados el 8 abr 2027, 20:14. Cambiar uno pide un motivo, y todos lo ven en En vivo.',
+    )
   })
   it('an unknown zone falls back to the phone’s; an unreadable time comes back as it was', () => {
     expect(localWhen('2027-04-09T03:14:00Z', 'Marte/Olimpo')).toMatch(/2027/)

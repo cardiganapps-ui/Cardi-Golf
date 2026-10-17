@@ -20,7 +20,8 @@ export function puttingGames(settings: TournamentSettings): string[] {
   const out: string[] = []
   if (settings.modules.snake.enabled) out.push(settings.modules.snake.label)
   if (settings.modules.fewestPutts.enabled) out.push(settings.modules.fewestPutts.label)
-  for (const g of settings.games) if (g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt') out.push(g.label)
+  for (const g of settings.games)
+    if (g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt') out.push(g.label)
   return out
 }
 

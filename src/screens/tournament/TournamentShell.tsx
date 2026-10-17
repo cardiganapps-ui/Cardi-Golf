@@ -102,7 +102,13 @@ export function TournamentShell() {
         <PullToRefresh enabled={onBoard} refreshing={refreshing} onRefresh={refresh}>
           {me.via === 'platform' && <PlatformBanner />}
           {/* Settings this build can't read (ARCH-04): every screen but Más says to update instead of computing the defaults. */}
-          {here === '/mas' ? <Outlet /> : <SettingsGuard money={here === '/dinero'}><Outlet /></SettingsGuard>}
+          {here === '/mas' ? (
+            <Outlet />
+          ) : (
+            <SettingsGuard money={here === '/dinero'}>
+              <Outlet />
+            </SettingsGuard>
+          )}
         </PullToRefresh>
       </div>
       <TabBar ref={tabbarRef}>
@@ -125,10 +131,18 @@ export function TournamentShell() {
             active={tab.to === 'mas' && underMore}
             icon={tab.icon}
             label={tab.label}
-            badge={tab.to === 'tarjeta' ? { count: rejectedCount > 0 ? rejectedCount : pendingHoles, bad: rejectedCount > 0 } : undefined}
+            badge={
+              tab.to === 'tarjeta'
+                ? { count: rejectedCount > 0 ? rejectedCount : pendingHoles, bad: rejectedCount > 0 }
+                : undefined
+            }
           >
-            {tab.to === 'tarjeta' && rejectedCount > 0 && <span className="sr-only">, {t.sync.rejected(rejectedCount)}</span>}
-            {tab.to === 'tarjeta' && rejectedCount === 0 && pendingHoles > 0 && <span className="sr-only">, {t.sync.pendingHoles(pendingHoles)}</span>}
+            {tab.to === 'tarjeta' && rejectedCount > 0 && (
+              <span className="sr-only">, {t.sync.rejected(rejectedCount)}</span>
+            )}
+            {tab.to === 'tarjeta' && rejectedCount === 0 && pendingHoles > 0 && (
+              <span className="sr-only">, {t.sync.pendingHoles(pendingHoles)}</span>
+            )}
           </TabItem>
         ))}
       </TabBar>
@@ -168,7 +182,15 @@ function useBarHeights(header: RefObject<HTMLElement | null>, tabbar: RefObject<
  * actualizaciones en vivo» while it was down. Anything but live is a button,
  * «Actualizar» (PWA-15): the installed app has no reload of its own.
  */
-function ConnectionChip({ connection, refreshing, onRefresh }: { connection: Connection; refreshing: boolean; onRefresh: () => Promise<void> }) {
+function ConnectionChip({
+  connection,
+  refreshing,
+  onRefresh,
+}: {
+  connection: Connection
+  refreshing: boolean
+  onRefresh: () => Promise<void>
+}) {
   const live = connection.kind === 'live'
   const said = live ? t.sync.live : connection.kind === 'offline' ? t.sync.offlineShort : t.sync.connecting
   // A pull while live says it too: the chip is where the boards' state is read, by eye and by a screen reader.

@@ -30,27 +30,51 @@ function presenceModes(source: string): Array<{ line: number; modes: Array<strin
   const out: Array<{ line: number; modes: Array<string | null> }> = []
   const values = (e: ts.Expression | undefined, seen = new Set<string>()): Array<string | null> => {
     if (!e) return [null]
-    if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isTypeAssertionExpression(e)) return values(e.expression, seen)
+    if (
+      ts.isParenthesizedExpression(e) ||
+      ts.isAsExpression(e) ||
+      ts.isSatisfiesExpression(e) ||
+      ts.isTypeAssertionExpression(e)
+    )
+      return values(e.expression, seen)
     if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [e.text]
     if (ts.isConditionalExpression(e)) return [...values(e.whenTrue, seen), ...values(e.whenFalse, seen)]
-    if (ts.isIdentifier(e) && consts.has(e.text) && !seen.has(e.text)) return values(consts.get(e.text), new Set([...seen, e.text]))
+    if (ts.isIdentifier(e) && consts.has(e.text) && !seen.has(e.text))
+      return values(consts.get(e.text), new Set([...seen, e.text]))
     return [null]
   }
   const visit = (node: ts.Node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isVariableDeclarationList(node.parent) && node.parent.flags & ts.NodeFlags.Const) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isVariableDeclarationList(node.parent) &&
+      node.parent.flags & ts.NodeFlags.Const
+    ) {
       consts.set(node.name.text, node.initializer)
     }
     ts.forEachChild(node, visit)
   }
   visit(file)
   const find = (node: ts.Node) => {
-    if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && node.tagName.getText(file) === 'AnimatePresence') {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText(file) === 'AnimatePresence'
+    ) {
       const modes: Array<string | null> = []
       for (const attr of node.attributes.properties) {
         if (ts.isJsxSpreadAttribute(attr)) modes.push(null)
         else if (attr.name.getText(file) === 'mode') {
           const init = attr.initializer
-          modes.push(...(!init ? [null] : ts.isStringLiteral(init) ? [init.text] : ts.isJsxExpression(init) ? values(init.expression) : [null]))
+          modes.push(
+            ...(!init
+              ? [null]
+              : ts.isStringLiteral(init)
+                ? [init.text]
+                : ts.isJsxExpression(init)
+                  ? values(init.expression)
+                  : [null]),
+          )
         }
       }
       out.push({ line: file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1, modes })
@@ -121,7 +145,8 @@ describe('motion tokens', () => {
 
   it('reduced motion stops the board too', () => {
     const reduced = tokens.slice(tokens.indexOf('prefers-reduced-motion'))
-    for (const name of ['--dur-fast', '--dur', '--dur-slow', '--dur-board']) expect(reduced).toMatch(new RegExp(`${name}:\\s*0ms`))
+    for (const name of ['--dur-fast', '--dur', '--dur-slow', '--dur-board'])
+      expect(reduced).toMatch(new RegExp(`${name}:\\s*0ms`))
   })
 
   it('no screen hard-codes a duration, a curve or a spring', () => {
@@ -137,7 +162,8 @@ describe('motion tokens', () => {
       for (const m of text.matchAll(/duration:\s*([\d.]+)/g)) offenders.push(`${rel}: duration ${m[1]}`)
       // The raw bezier, which should come from EASE (the one it replaced too).
       for (const curve of [EASE, [0.2, 0, 0, 1]]) {
-        if (new RegExp(`ease:\\s*\\[${curve.map((n) => String(n).replace('.', '\\.')).join(',\\s*')}\\]`).test(text)) offenders.push(`${rel}: inline ease`)
+        if (new RegExp(`ease:\\s*\\[${curve.map((n) => String(n).replace('.', '\\.')).join(',\\s*')}\\]`).test(text))
+          offenders.push(`${rel}: inline ease`)
       }
     }
     expect(offenders).toEqual([])
@@ -184,7 +210,8 @@ describe('motion tokens', () => {
     )
     expect(offenders).toEqual([])
     // Both screens do animate between views (an empty list would pass anything).
-    for (const f of ['TvScreen.tsx', 'CeremonyScreen.tsx']) expect(presenceModes(readFileSync(join(screens, f), 'utf8')).length, f).toBeGreaterThan(0)
+    for (const f of ['TvScreen.tsx', 'CeremonyScreen.tsx'])
+      expect(presenceModes(readFileSync(join(screens, f), 'utf8')).length, f).toBeGreaterThan(0)
   })
 
   it('the presence check reads every way of writing a mode', () => {
@@ -195,7 +222,10 @@ describe('motion tokens', () => {
     expect(modes("const WAIT = 'wait' as const\nconst a = <AnimatePresence mode={WAIT} />")).toEqual(['wait'])
     expect(modes("const W = 'wait'\nconst M = W\nconst a = <AnimatePresence mode={M} />")).toEqual(['wait'])
     expect(modes('const a = <AnimatePresence onExitComplete={() => undefined} mode="wait" />')).toEqual(['wait'])
-    expect(modes("const a = <AnimatePresence initial={false} mode={tv ? 'popLayout' : 'wait'} />")).toEqual(['popLayout', 'wait'])
+    expect(modes("const a = <AnimatePresence initial={false} mode={tv ? 'popLayout' : 'wait'} />")).toEqual([
+      'popLayout',
+      'wait',
+    ])
     expect(modes('const a = <AnimatePresence {...props} />')).toEqual([null])
     expect(modes('const a = <AnimatePresence mode={pick()} />')).toEqual([null])
     expect(modes('const a = <AnimatePresence mode="popLayout" initial={false} />')).toEqual(['popLayout'])

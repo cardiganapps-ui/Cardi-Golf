@@ -16,7 +16,16 @@ import { computeFeed, type FeedEvent } from './core/feed'
 import { ALL_MODULES, type ModuleRegistry, type ModuleStates } from './modules'
 import type { SnakeState } from './modules/snake'
 import { ALL_GAMES } from './games'
-import type { Game, GameConfigFor, GameContext, GameImpl, GameResultFor, GameResultState, ModuleContext, PrizeAward } from './games/game'
+import type {
+  Game,
+  GameConfigFor,
+  GameContext,
+  GameImpl,
+  GameResultFor,
+  GameResultState,
+  ModuleContext,
+  PrizeAward,
+} from './games/game'
 import { gamePot } from './games/payout'
 import { isFinal } from './core/ranking'
 import type { GameConfig, GameType } from './settings/games'
@@ -106,7 +115,11 @@ function run<S, Ctx extends ModuleContext>(game: Game<S, Ctx>, ctx: Ctx): GameRu
   return { state, prizes: game.prizes(state, ctx), warnings: game.warnings?.(state, ctx) ?? [] }
 }
 
-export function computeTournament(snapshot: Snapshot, settings: TournamentSettings, opts: ComputeOptions = {}): TournamentState {
+export function computeTournament(
+  snapshot: Snapshot,
+  settings: TournamentSettings,
+  opts: ComputeOptions = {},
+): TournamentState {
   const core = computeCore(snapshot, settings)
   const roundFinal: Record<Id, boolean> = {}
   for (const r of snapshot.rounds) roundFinal[r.id] = r.status === 'finished'
@@ -116,7 +129,10 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // torneo» gate (which reads the tournament as Terminado) compute the same
   // prizes and the same «por asignar» (round 2 of PR 104: every day rained out,
   // a day not created yet).
-  const playOver = snapshot.rounds.length > 0 && snapshot.rounds.length >= settings.rounds && snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled')
+  const playOver =
+    snapshot.rounds.length > 0 &&
+    snapshot.rounds.length >= settings.rounds &&
+    snapshot.rounds.every((r) => r.status === 'finished' || r.status === 'cancelled')
   // Final when the Comité says so, or once play is over: a cancelled day's
   // prizes are «por asignar» from then on, and the rest is what Terminado pays.
   const tournamentFinal = snapshot.tournament.status === 'finished' || playOver
@@ -155,18 +171,34 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     const listed = new Set(snapshot.gameEntries.filter((e) => e.gameId === config.id).map((e) => e.playerId))
     const entrants = config.entrants === 'all' ? roster : roster.filter((id) => listed.has(id))
     const rounds = config.rounds
-    const roundIds = rounds === 'all' ? core.roundIds : core.roundIds.filter((rid) => rounds.includes(roundNumber.get(rid) ?? 0))
-    return { ...ctx, config, entrants, roundIds, pot: gamePot(config, entrants.length), final: isFinal(ctx, 'roundsOrTournament', roundIds) }
+    const roundIds =
+      rounds === 'all' ? core.roundIds : core.roundIds.filter((rid) => rounds.includes(roundNumber.get(rid) ?? 0))
+    return {
+      ...ctx,
+      config,
+      entrants,
+      roundIds,
+      pot: gamePot(config, entrants.length),
+      final: isFinal(ctx, 'roundsOrTournament', roundIds),
+    }
   }
   const runGame = <S, C extends GameConfig>(impl: GameImpl<S, C>, config: C) => {
     const gctx = gameContext(config)
     const r = run(impl, gctx)
     prizes.push(...r.prizes)
     gameWarnings.push(...r.warnings)
-    return { config, entrants: gctx.entrants, pot: gctx.pot, final: gctx.final, state: r.state, board: impl.board(r.state, gctx) }
+    return {
+      config,
+      entrants: gctx.entrants,
+      pot: gctx.pot,
+      final: gctx.final,
+      state: r.state,
+      board: impl.board(r.state, gctx),
+    }
   }
   // Each config through its own type's implementation, typed together (GameConfigFor), so the result is that type's.
-  const runShipped = <K extends GameType>(config: GameConfigFor<K>): GameResultFor<K> => runGame(ALL_GAMES[config.type], config)
+  const runShipped = <K extends GameType>(config: GameConfigFor<K>): GameResultFor<K> =>
+    runGame(ALL_GAMES[config.type], config)
   for (const config of settings.games) {
     if (!config.enabled) continue
     if (opts.games && config.type in opts.games) {
@@ -184,7 +216,10 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const moneyUnknown = unknownGames.filter((g) => g.money).map((g) => g.label)
 
   const stats = computeStats(snapshot, core, { snake: modules.snake, auction: modules.auction }, mainScoring(settings))
-  const feed = computeFeed(snapshot, core, modules.snake, { scoring: mainScoring(settings), leaders: ranksPlayersByTotal(settings) })
+  const feed = computeFeed(snapshot, core, modules.snake, {
+    scoring: mainScoring(settings),
+    leaders: ranksPlayersByTotal(settings),
+  })
   // At the close the board can name a leader the saved scores never did: an
   // incomplete card ranks after the complete ones (MONEY-02), a countback
   // breaks a tie. The feed's last word is then the board's, not the replay's.
@@ -193,7 +228,17 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     const lastLead = feed.find((e) => e.kind === 'leadChange')
     if (top.length === 1 && lastLead && lastLead.playerId !== top[0]!.playerId) {
       const last = snapshot.rounds.filter((r) => core.roundIds.includes(r.id)).at(-1)
-      feed.unshift({ kind: 'leadChange', at: feed[0]?.at ?? null, roundNumber: last?.number ?? 1, hole: last?.holes ?? 18, playerId: top[0]!.playerId, figure: top[0]!.figure.text, scoring: mainScoring(settings), close: true, previous: lastLead.playerId })
+      feed.unshift({
+        kind: 'leadChange',
+        at: feed[0]?.at ?? null,
+        roundNumber: last?.number ?? 1,
+        hole: last?.holes ?? 18,
+        playerId: top[0]!.playerId,
+        figure: top[0]!.figure.text,
+        scoring: mainScoring(settings),
+        close: true,
+        previous: lastLead.playerId,
+      })
     }
   }
 
@@ -211,9 +256,15 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   const puttsWarnings: Msg[] = []
   if (noPutts.length) {
     const days = new Map<Id, Array<{ day: number; holes: number[] }>>()
-    for (const m of noPutts) days.set(m.playerId, [...(days.get(m.playerId) ?? []), { day: m.roundNumber, holes: m.holes }])
+    for (const m of noPutts)
+      days.set(m.playerId, [...(days.get(m.playerId) ?? []), { day: m.roundNumber, holes: m.holes }])
     const nameOf = (id: Id) => snapshot.players.find((p) => p.id === id)?.displayName ?? id
-    puttsWarnings.push(msg('putts.missing', { who: [...days].map(([id, d]) => ({ name: nameOf(id), days: d })), games: puttingGames(settings) }))
+    puttsWarnings.push(
+      msg('putts.missing', {
+        who: [...days].map(([id, d]) => ({ name: nameOf(id), days: d })),
+        games: puttingGames(settings),
+      }),
+    )
   }
   const unsignedCards: StatusFlags['unsignedCards'] = []
   const signing = cardSigningMode(settings)
@@ -231,23 +282,31 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     // A marker signs each player's card: every card complete that day and not signed (his own or, from before, his pair's).
     for (const rid of core.roundIds) {
       for (const pr of Object.values(core.rounds[rid] ?? {})) {
-        if (pr.complete && !cardSignedFor(snapshot, rid, pr.playerId)) unsignedCards.push({ roundId: rid, playerId: pr.playerId })
+        if (pr.complete && !cardSignedFor(snapshot, rid, pr.playerId))
+          unsignedCards.push({ roundId: rid, playerId: pr.playerId })
       }
     }
   }
 
   // The games' warnings in module order; a group that is not one pair of each kind (§18.5) is the field's, not the
   // pairs' money, so it comes before them and never reaches «por asignar».
-  const moduleFlagWarnings = MODULE_IDS.flatMap((id) => [...(id === 'pairs' ? (modules.pairs?.groupWarnings.map((w) => w.message) ?? []) : []), ...(moduleWarnings[id] ?? [])])
+  const moduleFlagWarnings = MODULE_IDS.flatMap((id) => [
+    ...(id === 'pairs' ? (modules.pairs?.groupWarnings.map((w) => w.message) ?? []) : []),
+    ...(moduleWarnings[id] ?? []),
+  ])
 
-  const discrepancies = snapshot.scores.filter((s) => s.disputed).map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
+  const discrepancies = snapshot.scores
+    .filter((s) => s.disputed)
+    .map((s) => ({ roundId: s.roundId, playerId: s.playerId, hole: s.hole }))
 
   // The money plan against the real tournament (MONEY-06): settings are
   // checked when saved, but a player who never shows or a round added later
   // moves the pool. Past setup, an imbalance is a warning everyone sees.
   const pool = checkPrizePool(settings, fieldShape(snapshot, settings))
   const poolWarnings: Msg[] = []
-  const pastSetup = snapshot.tournament.status !== 'setup' || snapshot.rounds.some((r) => r.status === 'live' || r.status === 'finished')
+  const pastSetup =
+    snapshot.tournament.status !== 'setup' ||
+    snapshot.rounds.some((r) => r.status === 'live' || r.status === 'finished')
   if (pastSetup && snapshot.players.length > 0 && !pool.balanced) {
     poolWarnings.push(
       pool.difference < 0
@@ -258,7 +317,8 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
   // A place the field can no longer fill (MONEY-09). Once final, each game
   // says which places went unfilled, those included, so this one stops.
   if (pastSetup && !tournamentFinal) {
-    for (const u of pool.unreachable) poolWarnings.push(msg('pool.unreachable', { label: u.label, detail: u.detail, amount: u.amount }))
+    for (const u of pool.unreachable)
+      poolWarnings.push(msg('pool.unreachable', { label: u.label, detail: u.detail, amount: u.amount }))
   }
 
   // «Por asignar» (MONEY-05): once play is over, what the rules leave with
@@ -286,19 +346,38 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
     warnings: [...MODULE_IDS.flatMap((id) => moduleWarnings[id] ?? []), ...gameWarnings],
     closing: settled,
   })
-  const applied = applyAdjustments(buckets, snapshot.moneyAdjustments ?? [], settled, (key) => bucketLabel(key, settings), heldMoney({ settings, snake: modules.snake, closing: settled }))
-  const unassigned = closing || !settled ? applied : { ...applied, closing: false, openDays: openDays(snapshot.rounds, settings.rounds), buckets: [], total: 0, held: [], heldTotal: 0 }
+  const applied = applyAdjustments(
+    buckets,
+    snapshot.moneyAdjustments ?? [],
+    settled,
+    (key) => bucketLabel(key, settings),
+    heldMoney({ settings, snake: modules.snake, closing: settled }),
+  )
+  const unassigned =
+    closing || !settled
+      ? applied
+      : {
+          ...applied,
+          closing: false,
+          openDays: openDays(snapshot.rounds, settings.rounds),
+          buckets: [],
+          total: 0,
+          held: [],
+          heldTotal: 0,
+        }
   prizes.push(...unassigned.awards)
   const money = computeMoney(snapshot, settings, prizes, modules.auction, tournamentFinal, games, unassigned.toHouse)
   money.unassigned = unassigned
   // What is left in the bank and what the list says must be the same pesos.
   const unassignedWarnings = [...unassigned.warnings]
   const listed = unassigned.total + unassigned.heldTotal
-  if (closing && money.banker.difference > 0 && money.banker.difference !== listed) unassignedWarnings.push(msg('unassigned.mismatch', { bank: money.banker.difference, listed }))
+  if (closing && money.banker.difference > 0 && money.banker.difference !== listed)
+    unassignedWarnings.push(msg('unassigned.mismatch', { bank: money.banker.difference, listed }))
 
   // The bracket is only meaningful under match play, and costs nothing to
   // skip: every other format leaves it null.
-  const bracket = settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
+  const bracket =
+    settings.modules.individual.enabled && settings.modules.individual.format === 'matchPlay' ? bracketState(ctx) : null
 
   return {
     settings,
@@ -319,7 +398,14 @@ export function computeTournament(snapshot: Snapshot, settings: TournamentSettin
       missingModules,
       missingGames,
       moneyUnknown,
-      warnings: [...poolWarnings, ...core.warnings, ...puttsWarnings, ...moduleFlagWarnings, ...gameWarnings, ...unassignedWarnings],
+      warnings: [
+        ...poolWarnings,
+        ...core.warnings,
+        ...puttsWarnings,
+        ...moduleFlagWarnings,
+        ...gameWarnings,
+        ...unassignedWarnings,
+      ],
       pool,
       poolWarning: poolWarnings[0] ?? null,
       handicapChanges: handicapChanges(snapshot, settings),

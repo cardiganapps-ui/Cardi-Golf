@@ -12,7 +12,8 @@ const C = t.admin.courses
 export const NOT_TYPED = 0
 
 /** The holes of a tee with a par or an index still to type. */
-export const untypedHoles = (tee: CourseDraftTee) => tee.holes.filter((h) => h.par === NOT_TYPED || h.strokeIndex === NOT_TYPED).map((h) => h.number)
+export const untypedHoles = (tee: CourseDraftTee) =>
+  tee.holes.filter((h) => h.par === NOT_TYPED || h.strokeIndex === NOT_TYPED).map((h) => h.number)
 
 /** What keeps a tee from saving, in words (the course editor lists them under it). */
 export function validateTee(tee: CourseDraftTee): string[] {

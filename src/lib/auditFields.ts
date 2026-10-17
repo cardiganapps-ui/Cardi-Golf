@@ -13,7 +13,25 @@ import { formatMoney } from './money'
 const H = t.admin.history
 const V = H.value
 
-type Kind = 'player' | 'round' | 'group' | 'pair' | 'team' | 'lot' | 'tee' | 'course' | 'money' | 'moment' | 'clock' | 'flag' | 'image' | 'previous' | 'opaque' | 'status' | 'source' | 'pin'
+type Kind =
+  | 'player'
+  | 'round'
+  | 'group'
+  | 'pair'
+  | 'team'
+  | 'lot'
+  | 'tee'
+  | 'course'
+  | 'money'
+  | 'moment'
+  | 'clock'
+  | 'flag'
+  | 'image'
+  | 'previous'
+  | 'opaque'
+  | 'status'
+  | 'source'
+  | 'pin'
 
 const KIND: Record<string, Kind> = {
   player_id: 'player',
@@ -120,7 +138,9 @@ export function holeValue(v: unknown): string | null {
   if (!v || typeof v !== 'object') return null
   const r = v as Record<string, unknown>
   const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null)
-  return r.picked_up === true ? t.card.history.pickedUp(num(r.putts)) : t.card.history.value(num(r.strokes), num(r.putts))
+  return r.picked_up === true
+    ? t.card.history.pickedUp(num(r.putts))
+    : t.card.history.value(num(r.strokes), num(r.putts))
 }
 
 function statusValue(table: string, v: string): string {
@@ -131,10 +151,22 @@ function statusValue(table: string, v: string): string {
 }
 
 /** A scalar's text; an object reads as its JSON, never «[object Object]». */
-const text = (v: unknown): string => (typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint' ? String(v) : JSON.stringify(v))
+const text = (v: unknown): string =>
+  typeof v === 'string'
+    ? v
+    : typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint'
+      ? String(v)
+      : JSON.stringify(v)
 
 /** One column's value, as the Comité reads it: money in the tournament's currency, moments in its zone (ARCH-06). */
-export function fieldValue(key: string, v: unknown, table: string, names: AuditNames, timeZone: string, cur: string): string {
+export function fieldValue(
+  key: string,
+  v: unknown,
+  table: string,
+  names: AuditNames,
+  timeZone: string,
+  cur: string,
+): string {
   if (v == null || v === '') return V.none
   const id = typeof v === 'string' ? v : null
   const named = (look: (id: string) => string | null) => (id ? look(id) : null) ?? V.other
@@ -166,7 +198,10 @@ export function fieldValue(key: string, v: unknown, table: string, names: AuditN
     case 'image':
       return V.image
     case 'previous': {
-      const who = typeof (v as Record<string, unknown>).entered_by === 'string' ? names.player((v as Record<string, string>).entered_by!) : null
+      const who =
+        typeof (v as Record<string, unknown>).entered_by === 'string'
+          ? names.player((v as Record<string, string>).entered_by!)
+          : null
       return V.previous(holeValue(v) ?? V.none, who)
     }
     case 'opaque':

@@ -11,6 +11,11 @@
  */
 import SPEC from './settingsSpec.json'
 
-export type SettingsSpec = 's' | { o: Record<string, SettingsSpec> } | { a: SettingsSpec } | { u: SettingsSpec[] } | { d: string; by: Record<string, SettingsSpec> }
+export type SettingsSpec =
+  | 's'
+  | { o: Record<string, SettingsSpec> }
+  | { a: SettingsSpec }
+  | { u: SettingsSpec[] }
+  | { d: string; by: Record<string, SettingsSpec> }
 
 export const SETTINGS_SPEC = SPEC as SettingsSpec

@@ -47,7 +47,8 @@ export const bestRoundModule: GameModule<BestRoundState, 'bestRound'> = {
         points: byPlayer[r.item]!.points,
         thru: byPlayer[r.item]!.thru,
       }))
-      const roundNumber = byPlayer[ids[0] ?? '']?.roundNumber ?? ctx.snapshot.rounds.find((r) => r.id === rid)?.number ?? 0
+      const roundNumber =
+        byPlayer[ids[0] ?? '']?.roundNumber ?? ctx.snapshot.rounds.find((r) => r.id === rid)?.number ?? 0
       const winners: BestRoundDay['winners'] = {}
       const anyScores = ids.some((id) => byPlayer[id]!.thru > 0)
       if (anyScores) {
@@ -57,10 +58,30 @@ export const bestRoundModule: GameModule<BestRoundState, 'bestRound'> = {
         const tieWhy: Msg[] = []
         if (second && byPlayer[second]!.points === byPlayer[first.members[0]!]!.points) {
           const res = countback(cb(first.members[0]!), cb(second))
-          tieWhy.push(...res.steps.map((st) => msg('bestRound.countback', { window: { from: st.from, to: st.to, total: st.total }, aName: nameOf(first.members[0]!), a: st.a, bName: nameOf(second), b: st.b })))
+          tieWhy.push(
+            ...res.steps.map((st) =>
+              msg('bestRound.countback', {
+                window: { from: st.from, to: st.to, total: st.total },
+                aName: nameOf(first.members[0]!),
+                a: st.a,
+                bName: nameOf(second),
+                b: st.b,
+              }),
+            ),
+          )
         }
         for (const s of splitPrizes(groups.slice(0, 1), [ctx.settings.prizes.bestRoundPerDay], nameOf)) {
-          winners[s.item] = { amount: s.amount, why: { ...s.why, steps: [msg('bestRound.day', { points: byPlayer[s.item]!.points, day: roundNumber }), ...tieWhy, ...s.why.steps] } }
+          winners[s.item] = {
+            amount: s.amount,
+            why: {
+              ...s.why,
+              steps: [
+                msg('bestRound.day', { points: byPlayer[s.item]!.points, day: roundNumber }),
+                ...tieWhy,
+                ...s.why.steps,
+              ],
+            },
+          }
         }
       }
       return { roundId: rid, roundNumber, rows, groups, winners, final: isFinal(ctx, 'rounds', [rid]) }

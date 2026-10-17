@@ -8,7 +8,10 @@ export type DraftEstimate = Omit<EstimateInput, 'gross'> & { gross: number | nul
  * by whichever method (UX-16). It opened on 18, the estimate on 85, 92 and
  * 100, and «Índice» with nothing typed saved 0: a number nobody gave.
  */
-export type PlayerDraft = Omit<PlayerInput, 'base_hcp' | 'estimate_inputs'> & { base_hcp: number | null; estimate_inputs: [DraftEstimate, DraftEstimate, DraftEstimate] | null }
+export type PlayerDraft = Omit<PlayerInput, 'base_hcp' | 'estimate_inputs'> & {
+  base_hcp: number | null
+  estimate_inputs: [DraftEstimate, DraftEstimate, DraftEstimate] | null
+}
 
 /** The player to save, once the chosen method has its number; null until then. */
 export function completePlayer(d: PlayerDraft): PlayerInput | null {

@@ -25,7 +25,13 @@ import { buttonClass } from '../../components/buttonClass'
 
 const P = t.platform
 /** A round's date in words («sáb 10 abr 2027»), never the ISO string (VIS-27). */
-const dayText = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+const dayText = (iso: string) =>
+  new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 
 export function TournamentDetail() {
@@ -49,10 +55,28 @@ export function TournamentDetail() {
       {P.back}
     </Link>
   )
-  if (error) return <>{back}<ErrorBox error={error} onRetry={() => void load()} /></>
-  if (asking) return <>{back}<ViewReasonForm kind="tournament" onOpen={load} /></>
+  if (error)
+    return (
+      <>
+        {back}
+        <ErrorBox error={error} onRetry={() => void load()} />
+      </>
+    )
+  if (asking)
+    return (
+      <>
+        {back}
+        <ViewReasonForm kind="tournament" onOpen={load} />
+      </>
+    )
   if (data === undefined) return <Spinner rows={6} />
-  if (data === null) return <>{back}<p className={s.help}>{P.notFound}</p></>
+  if (data === null)
+    return (
+      <>
+        {back}
+        <p className={s.help}>{P.notFound}</p>
+      </>
+    )
   const d = data
 
   return (
@@ -84,7 +108,11 @@ export function TournamentDetail() {
         {d.unlockedUntil && <span className={s.help}>{P.unlockedUntil(clock(d.unlockedUntil))}</span>}
         <div className={s.actions}>
           {!d.protected && (
-            <Button size="sm" disabled={busy} onClick={() => void run(() => api.setProtected(d.id, true), { done: P.saved })}>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => void run(() => api.setProtected(d.id, true), { done: P.saved })}
+            >
               {P.protect}
             </Button>
           )}
@@ -109,7 +137,9 @@ export function TournamentDetail() {
       <div className={s.counts}>
         {(Object.keys(P.counts) as Array<keyof typeof P.counts>).map((k) => (
           <span key={k} className={s.count}>
-            <span className={`${s.countValue} ${k === 'disputes' && d.counts[k] > 0 ? s.countHot : ''}`}>{d.counts[k]}</span>
+            <span className={`${s.countValue} ${k === 'disputes' && d.counts[k] > 0 ? s.countHot : ''}`}>
+              {d.counts[k]}
+            </span>
             <span className={s.countLabel}>{P.counts[k]}</span>
           </span>
         ))}
@@ -131,7 +161,9 @@ export function TournamentDetail() {
                 <Link className={s.rowLink} to={`../../personas/${o.userId}`} relative="path">
                   <span className={s.rowText}>
                     <span className={s.rowTitle}>{o.name}</span>
-                    <span className={s.rowSub}>{[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(', ')}</span>
+                    <span className={s.rowSub}>
+                      {[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(', ')}
+                    </span>
                   </span>
                 </Link>
                 <Button variant="danger" size="sm" onClick={() => setRemoving(o.userId)}>
@@ -176,7 +208,9 @@ export function TournamentDetail() {
               <div key={a.id} className={s.row}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{P.auditLine(P.tables[a.table] ?? a.table, a.action)}</span>
-                  <span className={s.rowSub}>{[a.platform ? P.byPlatform : a.actor, a.reason].filter(Boolean).join(', ') || '—'}</span>
+                  <span className={s.rowSub}>
+                    {[a.platform ? P.byPlatform : a.actor, a.reason].filter(Boolean).join(', ') || '—'}
+                  </span>
                 </span>
                 <span className={s.rowEnd}>
                   {a.platform && <span className={s.flagDanger}>{P.byPlatform}</span>}
@@ -237,7 +271,15 @@ export function TournamentDetail() {
 }
 
 /** Search an account, say why, make it the tournament's owner. Accounts only: a phone cannot run a Comité. */
-function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (userId: string, reason: string) => Promise<void> }) {
+function AddOrganizerSheet({
+  open,
+  onClose,
+  onPick,
+}: {
+  open: boolean
+  onClose: () => void
+  onPick: (userId: string, reason: string) => Promise<void>
+}) {
   const api = usePlatformApi()
   const [q, setQ] = useState('')
   const [rows, setRows] = useState<PersonRow[]>([])
@@ -256,7 +298,10 @@ function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: 
   useEffect(() => {
     if (!open || q.trim().length < 2) return
     const id = window.setTimeout(() => {
-      api.people({ q, filter: 'accounts', limit: 8 }).then((r) => setRows(r.rows), () => setRows([]))
+      api.people({ q, filter: 'accounts', limit: 8 }).then(
+        (r) => setRows(r.rows),
+        () => setRows([]),
+      )
     }, 250)
     return () => window.clearTimeout(id)
   }, [open, q, api])
@@ -279,10 +324,23 @@ function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: 
     <Sheet open={open} onClose={onClose} title={P.addOrganizerTitle}>
       <div className={s.section}>
         <p className={s.help}>{P.addOrganizerBody}</p>
-        <Input type="search" value={q} placeholder={P.people.search} aria-label={P.people.search} onChange={(e) => setQ(e.target.value)} />
+        <Input
+          type="search"
+          value={q}
+          placeholder={P.people.search}
+          aria-label={P.people.search}
+          onChange={(e) => setQ(e.target.value)}
+        />
         <div className={s.rows} role="listbox" aria-label={P.addOrganizerPick}>
           {(q.trim().length < 2 ? [] : rows).map((r) => (
-            <button key={r.id} type="button" role="option" aria-selected={picked?.id === r.id} className={`${s.row} ${s.rowPick} ${picked?.id === r.id ? s.rowActive : ''}`} onClick={() => setPicked(r)}>
+            <button
+              key={r.id}
+              type="button"
+              role="option"
+              aria-selected={picked?.id === r.id}
+              className={`${s.row} ${s.rowPick} ${picked?.id === r.id ? s.rowActive : ''}`}
+              onClick={() => setPicked(r)}
+            >
               <span className={s.rowText}>
                 <span className={s.rowTitle}>{personName(r)}</span>
                 <span className={s.rowSub}>{r.email}</span>
@@ -291,9 +349,19 @@ function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: 
           ))}
         </div>
         <Field label={P.reason} error={error}>
-          <Input value={reason} maxLength={200} placeholder={P.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+          <Input
+            value={reason}
+            maxLength={200}
+            placeholder={P.reasonPlaceholder}
+            onChange={(e) => setReason(e.target.value)}
+          />
         </Field>
-        <Button variant="primary" block disabled={busy || !picked || reason.trim().length < 3} onClick={() => void go()}>
+        <Button
+          variant="primary"
+          block
+          disabled={busy || !picked || reason.trim().length < 3}
+          onClick={() => void go()}
+        >
           {busy ? t.common.saving : P.addOrganizer}
         </Button>
       </div>

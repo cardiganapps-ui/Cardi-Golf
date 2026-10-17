@@ -14,7 +14,15 @@ const { AdminAccesses } = await import('./AdminAccesses')
 
 const A = t.profile.adminAccess
 afterEach(cleanup)
-const row = (e: Partial<AdminAccess>, i: number): AdminAccess => ({ id: i, at: '2026-10-15T10:00:00Z', action: 'view', kind: 'person', reason: null, crew: null, ...e })
+const row = (e: Partial<AdminAccess>, i: number): AdminAccess => ({
+  id: i,
+  at: '2026-10-15T10:00:00Z',
+  action: 'view',
+  kind: 'person',
+  reason: null,
+  crew: null,
+  ...e,
+})
 
 describe('«Accesos del administrador» (TRUST-22)', () => {
   it('each access with its reason: his account, his crew, a crew since gone', async () => {

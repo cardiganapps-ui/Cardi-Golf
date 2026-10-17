@@ -35,7 +35,8 @@ import { localDay } from '../lib/localWhen'
 import { buttonClass } from './buttonClass'
 
 /** `settle`: the settlement as Dinero shows it, vía banco (the default) or sin banco. */
-export type ShareKind = { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement'; settle?: 'bank' | 'p2p' }
+export type ShareKind =
+  { kind: 'leaderboard' } | { kind: 'player'; playerId: string } | { kind: 'settlement'; settle?: 'bank' | 'p2p' }
 
 /** The leaderboard's rows on its card, plus the sharer's own when he is further down (PWA-06). */
 export const CARD_ROWS = 10
@@ -45,13 +46,25 @@ export const CARD_NETS = 16
 
 /** What the card's footer links to and what the share carries: the link to watch, the example, or Polo's own address. */
 function cardLink(spectator: { url: string; demo?: boolean } | undefined): { url: string; text: string } {
-  if (spectator) return { url: spectator.url, text: (spectator.demo ? t.share.demoLink : t.spectator.cardLink)(spectator.url.replace(/^https?:\/\//, '')) }
+  if (spectator)
+    return {
+      url: spectator.url,
+      text: (spectator.demo ? t.share.demoLink : t.spectator.cardLink)(spectator.url.replace(/^https?:\/\//, '')),
+    }
   const origin = typeof location !== 'undefined' ? location.origin : ''
   return { url: origin, text: origin.replace(/^https?:\/\//, '') }
 }
 
 /** Memoized: a screen re-rendering around it renders no share button (PERF-09). */
-export const ShareCardButton = memo(function ShareCardButton({ what, label, className }: { what: ShareKind; label?: string; className?: string }) {
+export const ShareCardButton = memo(function ShareCardButton({
+  what,
+  label,
+  className,
+}: {
+  what: ShareKind
+  label?: string
+  className?: string
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   // Two words, not the boards: a score saved elsewhere renders no share button (PERF-09). The card reads the boards.
@@ -80,16 +93,29 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
     }
   }, [busy, slug, name, what.kind, spectator])
   if (slug == null) return null
-  const text = label || (what.kind === 'leaderboard' ? t.share.leaderboard : what.kind === 'player' ? t.share.round : t.share.settlement)
+  const text =
+    label ||
+    (what.kind === 'leaderboard' ? t.share.leaderboard : what.kind === 'player' ? t.share.round : t.share.settlement)
   return (
     <>
-      <button className={className ?? buttonClass({ size: 'sm' })} type="button" disabled={busy} onClick={() => setBusy(true)}>
+      <button
+        className={className ?? buttonClass({ size: 'sm' })}
+        type="button"
+        disabled={busy}
+        onClick={() => setBusy(true)}
+      >
         {busy ? t.share.generating : text}
       </button>
       {busy && (
         <div className={styles.offscreen} aria-hidden="true">
           {/* Light in either theme: the image goes to WhatsApp, read on any phone (VIS-11). */}
-          <div ref={ref} className={styles.card} data-share-card={what.kind} data-theme="light" data-accent={nearestAccent(accent).id}>
+          <div
+            ref={ref}
+            className={styles.card}
+            data-share-card={what.kind}
+            data-theme="light"
+            data-accent={nearestAccent(accent).id}
+          >
             <Card what={what} />
           </div>
         </div>
@@ -109,7 +135,9 @@ function Card({ what }: { what: ShareKind }) {
   const nameOf = (id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : t.moneyScreen.bank)
   const header = (sub: string) => (
     <div className={styles.header}>
-      {snapshot.tournament.logoUrl && <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} crossOrigin="anonymous" />}
+      {snapshot.tournament.logoUrl && (
+        <TournamentLogo url={snapshot.tournament.logoUrl} className={styles.logo} crossOrigin="anonymous" />
+      )}
       <div>
         <div className={styles.title}>{snapshot.tournament.name}</div>
         <div className={styles.sub}>{sub}</div>
@@ -119,7 +147,11 @@ function Card({ what }: { what: ShareKind }) {
   const footer = (
     <div className={styles.footer}>
       <span>{localDay(new Date(), settings.timezone)}</span>
-      {link.text && <span className={styles.watch} data-card-link>{link.text}</span>}
+      {link.text && (
+        <span className={styles.watch} data-card-link>
+          {link.text}
+        </span>
+      )}
       <Wordmark size={13} />
     </div>
   )
@@ -148,7 +180,11 @@ function Card({ what }: { what: ShareKind }) {
     )
     return (
       <>
-        {header(state.tournamentFinal ? `${settings.modules.individual.label}: ${t.common.final}` : settings.modules.individual.label)}
+        {header(
+          state.tournamentFinal
+            ? `${settings.modules.individual.label}: ${t.common.final}`
+            : settings.modules.individual.label,
+        )}
         <Rows>
           {top.map(row)}
           {shown.length > top.length && <div className={styles.gap} aria-hidden="true" />}
@@ -168,32 +204,45 @@ function Card({ what }: { what: ShareKind }) {
     const scoring = mainScoring(settings)
     return (
       <>
-        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${words(row.entrant.name)}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
+        {header(
+          `${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${words(row.entrant.name)}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`,
+        )}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
           const day = row?.perRound[i]
           // His own card: in a team's strokes or points event his day is his own score; a match's day, a fourball side's too, is its result (STRAT-03).
-          const dayFigure = row?.entrant.isTeam && kind !== 'match'
-            ? ownDayText(pr, scoring)
-            : scoring === 'points'
-              ? t.common.figure(String(pr.points), pr.points, 'points')
-              : !day || day.empty
-                ? null
-                : kind === 'match'
-                  ? dayFigureText(day)
-                  : t.common.figure(day.text, day.value, kind)
+          const dayFigure =
+            row?.entrant.isTeam && kind !== 'match'
+              ? ownDayText(pr, scoring)
+              : scoring === 'points'
+                ? t.common.figure(String(pr.points), pr.points, 'points')
+                : !day || day.empty
+                  ? null
+                  : kind === 'match'
+                    ? dayFigureText(day)
+                    : t.common.figure(day.text, day.value, kind)
           return (
             <div key={rid} className={styles.round}>
               <div className={styles.roundTitle}>
-                {[t.round.day(i + 1), `${t.live.playingHcp.toLowerCase()} ${pr.playingHcp}`, dayFigure, `${pr.putts} putts`].filter(Boolean).join(', ')}
+                {[
+                  t.round.day(i + 1),
+                  `${t.live.playingHcp.toLowerCase()} ${pr.playingHcp}`,
+                  dayFigure,
+                  `${pr.putts} putts`,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
               </div>
               <div className={styles.holes}>
                 {pr.holes.map((h) => {
                   // Under strokes a hole is marked on the score the event counts, and shows no points.
                   const mark = holeMark(h, scoring)
                   return (
-                    <div key={h.hole} className={`${styles.hole} ${mark === 'good' ? styles.birdie : mark === 'bad' ? styles.zero : ''}`}>
+                    <div
+                      key={h.hole}
+                      className={`${styles.hole} ${mark === 'good' ? styles.birdie : mark === 'bad' ? styles.zero : ''}`}
+                    >
                       <span className={styles.holeNum}>{h.hole}</span>
                       <span className={styles.holeGross}>{h.pickedUp ? 'L' : (h.gross ?? '')}</span>
                       <span className={styles.holePts}>{h.played && scoring === 'points' ? h.points : ''}</span>
@@ -213,7 +262,10 @@ function Card({ what }: { what: ShareKind }) {
   const banker = snapshot.tournament.bankerPlayerId
   const party = (id: string | null) => (id ? (byId.get(id)?.displayName ?? '?') : null)
   const lines = (what.settle === 'p2p' ? money.peerToPeer : money.viaBank).filter((tr) => tr.amount > 0)
-  const people = snapshot.players.map((pl) => money.people[pl.id]!).filter(Boolean).sort((a, b) => b.net - a.net)
+  const people = snapshot.players
+    .map((pl) => money.people[pl.id]!)
+    .filter(Boolean)
+    .sort((a, b) => b.net - a.net)
   const nets = people.slice(0, CARD_NETS)
   return (
     <>
@@ -223,7 +275,16 @@ function Card({ what }: { what: ShareKind }) {
         {lines.length === 0 && <div className={styles.transfer}>{t.moneyScreen.allSettled}</div>}
         {lines.slice(0, CARD_TRANSFERS).map((tr, i) => (
           <div key={`${i}|${tr.from}|${tr.to}`} className={styles.transfer}>
-            <span>{t.moneyScreen.payText(t.moneyScreen.payWords(party(tr.from), party(tr.to), false, !!banker && ((tr.from === banker && tr.to === null) || (tr.from === null && tr.to === banker))))}</span>
+            <span>
+              {t.moneyScreen.payText(
+                t.moneyScreen.payWords(
+                  party(tr.from),
+                  party(tr.to),
+                  false,
+                  !!banker && ((tr.from === banker && tr.to === null) || (tr.from === null && tr.to === banker)),
+                ),
+              )}
+            </span>
             <span className={styles.amount}>{formatMoney(tr.amount, cur)}</span>
           </div>
         ))}
@@ -234,7 +295,9 @@ function Card({ what }: { what: ShareKind }) {
         {nets.map((m) => (
           <div key={m.playerId} className={styles.net}>
             <span className={styles.name}>{nameOf(m.playerId)}</span>
-            <span className={`${styles.amount} ${m.net > 0 ? styles.gain : m.net < 0 ? styles.loss : ''}`}>{formatSignedMoney(m.net, cur)}</span>
+            <span className={`${styles.amount} ${m.net > 0 ? styles.gain : m.net < 0 ? styles.loss : ''}`}>
+              {formatSignedMoney(m.net, cur)}
+            </span>
           </div>
         ))}
       </div>

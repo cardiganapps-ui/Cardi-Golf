@@ -56,7 +56,16 @@ export function ResetPasswordScreen() {
         <form className={styles.form} onSubmit={(e) => void submit(e)}>
           <p className="help">{user?.email}</p>
           <Field label={t.auth.newPassword} hint={t.auth.passwordHint}>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required autoFocus />
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+              autoFocus
+            />
           </Field>
           {error && (
             <p className="error" role="alert">

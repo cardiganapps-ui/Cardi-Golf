@@ -53,7 +53,11 @@ interface Pending extends GateOptions {
   proceed: () => Promise<void>
 }
 
-export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions, proceed: () => Promise<void>) => Promise<void>; checking: boolean; sheet: ReactNode } {
+export function useCloseGate(tournamentId: string): {
+  guard: (opts: GateOptions, proceed: () => Promise<void>) => Promise<void>
+  checking: boolean
+  sheet: ReactNode
+} {
   const words = useWords()
   const [pending, setPending] = useState<Pending | null>(null)
   const [checking, setChecking] = useState(false)
@@ -65,7 +69,10 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
     setChecking(true)
     let check: CloseCheck
     try {
-      check = closeCheck(d.snapshot, d.settings, { finishLiveRounds: opts.finishLiveRounds, openRejected: await openRejectedWrites(tournamentId) })
+      check = closeCheck(d.snapshot, d.settings, {
+        finishLiveRounds: opts.finishLiveRounds,
+        openRejected: await openRejectedWrites(tournamentId),
+      })
     } catch (e) {
       toast(humanError(e))
       return
@@ -91,7 +98,15 @@ export function useCloseGate(tournamentId: string): { guard: (opts: GateOptions,
 
   const close = () => setPending(null)
   const sheet = !pending ? null : pending.check.ok ? (
-    <ConfirmSheet open title={pending.title ?? C.title} body={pending.body ?? C.ok} confirmLabel={pending.confirmLabel} busy={busy} onConfirm={() => void go()} onClose={close}>
+    <ConfirmSheet
+      open
+      title={pending.title ?? C.title}
+      body={pending.body ?? C.ok}
+      confirmLabel={pending.confirmLabel}
+      busy={busy}
+      onConfirm={() => void go()}
+      onClose={close}
+    >
       {pending.check.warnings.map(words).map((w) => (
         <p key={w} className="help" role="status">
           {w}

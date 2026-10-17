@@ -10,7 +10,8 @@ import { expect, open, test } from './base'
 
 const y = (page: Page) => page.evaluate(() => Math.round(window.scrollY))
 const room = (page: Page) => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
-const tab = (page: Page, name: string) => page.getByRole('navigation', { name: t.common.sections }).getByRole('link', { name, exact: true })
+const tab = (page: Page, name: string) =>
+  page.getByRole('navigation', { name: t.common.sections }).getByRole('link', { name, exact: true })
 /** A tap where the tab is drawn. Playwright's own click scrolls its target into view first, and for the bar fixed at the
  * bottom that took the page to its bottom before the tap: a thumb moves nothing. */
 async function tapTab(page: Page, name: string) {
@@ -24,7 +25,9 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
 })
 
-test('each tab keeps its own scroll, and one opened for the first time starts at its top (MOT-16)', async ({ page }) => {
+test('each tab keeps its own scroll, and one opened for the first time starts at its top (MOT-16)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live')
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   const live = await y(page)
@@ -46,7 +49,9 @@ test('each tab keeps its own scroll, and one opened for the first time starts at
   await expect.poll(() => y(page), 'Juegos, opened for the first time, at its top').toBe(0)
 })
 
-test('the open tab, tapped again, goes back to its top; from the Tarjeta’s grid it goes back to the hole, as before (MOT-16)', async ({ page }) => {
+test('the open tab, tapped again, goes back to its top; from the Tarjeta’s grid it goes back to the hole, as before (MOT-16)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live')
   const url = page.url()
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
@@ -60,7 +65,9 @@ test('the open tab, tapped again, goes back to its top; from the Tarjeta’s gri
   await expect(page).toHaveURL(/\/tarjeta$/)
 })
 
-test('a sheet opened and closed leaves the page where it was, by Escape and by the system back (MOT-16, PWA-05)', async ({ page }) => {
+test('a sheet opened and closed leaves the page where it was, by Escape and by the system back (MOT-16, PWA-05)', async ({
+  page,
+}) => {
   await open(page, '/t/_/full12-live')
   const row = page.locator('button[class*="leaderRow"]').nth(6)
   await row.scrollIntoViewIfNeeded()
@@ -74,7 +81,9 @@ test('a sheet opened and closed leaves the page where it was, by Escape and by t
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect.poll(() => y(page), 'after Escape').toBe(at)
   // Escape gives the sheet's history entry back a tick later (sheetHistory.ts): wait it out, as a person would.
-  await expect.poll(() => page.evaluate(() => !!(history.state as { poloSheet?: boolean } | null)?.poloSheet)).toBe(false)
+  await expect
+    .poll(() => page.evaluate(() => !!(history.state as { poloSheet?: boolean } | null)?.poloSheet))
+    .toBe(false)
 
   await row.click()
   await expect(page.getByRole('dialog')).toHaveCount(1)
@@ -83,7 +92,9 @@ test('a sheet opened and closed leaves the page where it was, by Escape and by t
   await expect.poll(() => y(page), 'after the system back').toBe(at)
 })
 
-test('a page outside the tournament: a link from it opens at the top, and back returns to where it was (MOT-16)', async ({ page }) => {
+test('a page outside the tournament: a link from it opens at the top, and back returns to where it was (MOT-16)', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 393, height: 500 })
   await open(page, '/fixture')
   // The fixture index's last link, scrolled to, then followed in the app.

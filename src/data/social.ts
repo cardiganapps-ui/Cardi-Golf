@@ -108,20 +108,40 @@ export interface HeadToHead {
 }
 
 export type FeedItem =
-  | { kind: 'finish'; at: string; who: Actor; data: { tournament: string; slug: string; rankLabel: string; field: number } }
-  | { kind: 'round'; at: string; who: Actor; data: { course: string | null; tournament: string; slug: string; gross: number | null; birdies: number; eagles: number; best: boolean } }
+  | {
+      kind: 'finish'
+      at: string
+      who: Actor
+      data: { tournament: string; slug: string; rankLabel: string; field: number }
+    }
+  | {
+      kind: 'round'
+      at: string
+      who: Actor
+      data: {
+        course: string | null
+        tournament: string
+        slug: string
+        gross: number | null
+        birdies: number
+        eagles: number
+        best: boolean
+      }
+    }
   | { kind: 'rivalry'; at: string; who: Actor; data: { rivalryId: string; result: RivalryResult } }
 
 export const myFriends = () => rpc('my_friends').as<MyFriends>()
 export const friendshipWith = (handle: string) => rpc('friendship_with', { p_handle: handle }).as<Friendship>()
 /** Returns 'pending', 'accepted' (it answered their request), 'blocked' or 'not_found'. */
 export const friendRequest = (handle: string) => rpc('friend_request', { p_handle: handle })
-export const friendRespond = (handle: string, accept: boolean) => rpc('friend_respond', { p_handle: handle, p_accept: accept })
+export const friendRespond = (handle: string, accept: boolean) =>
+  rpc('friend_respond', { p_handle: handle, p_accept: accept })
 export const friendRemove = (handle: string) => rpc('friend_remove', { p_handle: handle })
 export const friendBlock = (handle: string) => rpc('friend_block', { p_handle: handle })
 export const headToHead = (handle: string) => rpc('head_to_head', { p_handle: handle }).as<HeadToHead | null>()
 /** `strokes`: what I receive from them (negative: I give). */
-export const rivalryPropose = (handle: string, strokes: number) => rpc('rivalry_propose', { p_handle: handle, p_strokes: strokes })
+export const rivalryPropose = (handle: string, strokes: number) =>
+  rpc('rivalry_propose', { p_handle: handle, p_strokes: strokes })
 export const rivalryRespond = (id: string, accept: boolean) => rpc('rivalry_respond', { p_id: id, p_accept: accept })
 export const rivalryEnd = (id: string) => rpc('rivalry_end', { p_id: id })
 export const friendsFeed = () => rpc('friends_feed').as<FeedItem[]>()

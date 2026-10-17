@@ -23,5 +23,5 @@
     "resolveJsonModule": true,
     "moduleDetection": "force"
   },
-  "include": ["scripts/**/*.mjs", "e2e/*.mjs", "eslint.config.js"]
+  "include": ["scripts/**/*.mjs", "e2e/*.mjs", "eslint.config.js", "prettier.config.js"]
 }

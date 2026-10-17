@@ -57,7 +57,12 @@ export function SpectatorGate() {
       clearTimeout(timer)
       const st = useTournament.getState()
       const snap = st.tournamentId === id ? st.data?.snapshot : undefined
-      const wait = nextPoll({ status: snap?.tournament.status ?? null, anyRoundLive: !!snap?.rounds.some((r) => r.status === 'live'), quietMs: Date.now() - changedAt, failures })
+      const wait = nextPoll({
+        status: snap?.tournament.status ?? null,
+        anyRoundLive: !!snap?.rounds.some((r) => r.status === 'live'),
+        quietMs: Date.now() - changedAt,
+        failures,
+      })
       timer = setTimeout(() => void ask(), wait)
     }
     const ask = async () => {
@@ -126,7 +131,9 @@ export function SpectatorGate() {
   const name = useTournament((s) => (s.tournamentId === id ? s.data?.snapshot.tournament.name : undefined))
   const tagline = useTournament((s) => (s.tournamentId === id ? s.data?.snapshot.tournament.tagline : undefined))
   const logoUrl = useTournament((s) => (s.tournamentId === id ? s.data?.snapshot.tournament.logoUrl : undefined))
-  const accentColor = useTournament((s) => (s.tournamentId === id ? s.data?.snapshot.tournament.accentColor : undefined))
+  const accentColor = useTournament((s) =>
+    s.tournamentId === id ? s.data?.snapshot.tournament.accentColor : undefined,
+  )
   const status = useTournament((s) => (s.tournamentId === id ? s.data?.snapshot.tournament.status : undefined))
   // One value per change of what it carries: a poll that moved a score renders no context consumer (PERF-09).
   const value = useMemo(
@@ -134,7 +141,17 @@ export function SpectatorGate() {
       tournamentId: id,
       slug: '',
       base: spectatorPath(token),
-      lookup: { id, slug: '', name: name ?? '', tagline: tagline ?? null, logoUrl: logoUrl ?? null, accentColor: accentColor ?? null, status: status ?? 'setup', joinCode: '', players: [] },
+      lookup: {
+        id,
+        slug: '',
+        name: name ?? '',
+        tagline: tagline ?? null,
+        logoUrl: logoUrl ?? null,
+        accentColor: accentColor ?? null,
+        status: status ?? 'setup',
+        joinCode: '',
+        players: [],
+      },
       me: SPECTATOR_ME,
       spectator: { money, url: spectatorUrl(token) },
       refresh: () => {

@@ -30,7 +30,8 @@ export const ANNOUNCE_DELAY_MS = 100
 
 /** The new page's own heading: inside the main column, never one of a sheet. */
 function pageHeading(): HTMLElement | null {
-  for (const h of Array.from(document.querySelectorAll<HTMLElement>('main h1'))) if (!h.closest('[role="dialog"]') && !h.closest('[inert]')) return h
+  for (const h of Array.from(document.querySelectorAll<HTMLElement>('main h1')))
+    if (!h.closest('[role="dialog"]') && !h.closest('[inert]')) return h
   return null
 }
 
@@ -41,7 +42,13 @@ export function RouteAnnouncer() {
   const name = useTournament((s) => {
     const tour = s.data?.snapshot.tournament
     if (!tour || !route.slug) return null
-    return route.slug.startsWith('_/') ? (s.tournamentId?.startsWith('fixture:') ? tour.name : null) : tour.slug === route.slug ? tour.name : null
+    return route.slug.startsWith('_/')
+      ? s.tournamentId?.startsWith('fixture:')
+        ? tour.name
+        : null
+      : tour.slug === route.slug
+        ? tour.name
+        : null
   })
   const own = usePageTitleOverride()
   const page = own ?? (name ? t.titles.inTournament(route.page, name) : route.page)
@@ -67,7 +74,10 @@ export function RouteAnnouncer() {
     }
     const land = () => {
       // Focus found its own way meanwhile (a field that focuses itself, a sheet): leave it, and say the page.
-      if (!focusLost()) { say(); return; }
+      if (!focusLost()) {
+        say()
+        return
+      }
       if (focusQuietly(pageHeading())) return
       if (performance.now() - started < HEADING_WAIT_MS) {
         timer = setTimeout(land, HEADING_POLL_MS)

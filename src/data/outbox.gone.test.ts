@@ -15,13 +15,37 @@ vi.mock('./auth', () => ({
 }))
 vi.mock('../lib/supabase', () => ({ supabase: () => ({}), supabaseConfigured: false }))
 /** The tournament open on screen, as the store has it. */
-const open = vi.hoisted(() => ({ state: { tournamentId: null as string | null, data: null as unknown, refresh: () => undefined, landChanges: () => undefined, pushesDone: () => undefined, reload: async () => undefined } }))
-vi.mock('./tournamentStore', () => ({ serverReadSince: () => null, registerOverlay: () => undefined, liveClock: () => performance.now(), liveSeq: () => 0, useTournament: { getState: () => open.state } }))
+const open = vi.hoisted(() => ({
+  state: {
+    tournamentId: null as string | null,
+    data: null as unknown,
+    refresh: () => undefined,
+    landChanges: () => undefined,
+    pushesDone: () => undefined,
+    reload: async () => undefined,
+  },
+}))
+vi.mock('./tournamentStore', () => ({
+  serverReadSince: () => null,
+  registerOverlay: () => undefined,
+  liveClock: () => performance.now(),
+  liveSeq: () => 0,
+  useTournament: { getState: () => open.state },
+}))
 
 const { _outboxTest, enqueueScore, flush, rejectGoneTournament, unsentWrites, useOutbox } = await import('./outbox')
 const { t } = await import('../i18n/es-MX')
 
-const payload = (hole: number) => ({ round_id: 'r1', player_id: 'p1', hole, strokes: 4, putts: 2, picked_up: false, entered_by: 'p1', client_ts: 'x' })
+const payload = (hole: number) => ({
+  round_id: 'r1',
+  player_id: 'p1',
+  hole,
+  strokes: 4,
+  putts: 2,
+  picked_up: false,
+  entered_by: 'p1',
+  client_ts: 'x',
+})
 /** A write of `tournamentId` queued earlier (`actingUid`: who wrote it; another identity than the phone's now waits for the PIN). */
 const write = (tournamentId: string, hole: number, extra: Record<string, unknown> = {}) => ({
   key: `score:${tournamentId}:p1:${hole}`,
@@ -47,7 +71,11 @@ beforeEach(async () => {
 
 describe('every write keeps the tournament it was queued in', () => {
   it('its name and slug, so the refusal can name it once the saved boards are gone', async () => {
-    open.state = { ...open.state, tournamentId: 't-ensayo', data: { snapshot: { tournament: { id: 't-ensayo', name: 'Ensayo', slug: 'ensayo' } } } }
+    open.state = {
+      ...open.state,
+      tournamentId: 't-ensayo',
+      data: { snapshot: { tournament: { id: 't-ensayo', name: 'Ensayo', slug: 'ensayo' } } },
+    }
     await enqueueScore('t-ensayo', payload(1))
     expect(_outboxTest.queue()[0]).toMatchObject({ tournamentName: 'Ensayo', slug: 'ensayo' })
     expect((await _outboxTest.stored())[0]).toMatchObject({ tournamentName: 'Ensayo', slug: 'ensayo' })

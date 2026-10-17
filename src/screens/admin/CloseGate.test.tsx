@@ -13,7 +13,10 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const server = vi.hoisted(() => ({ rejected: 0 as number | null, published: 0 }))
-vi.mock('../../data/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../data/api')>()), openRejectedWrites: vi.fn(async () => server.rejected) }))
+vi.mock('../../data/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/api')>()),
+  openRejectedWrites: vi.fn(async () => server.rejected),
+}))
 vi.mock('../../data/publish', () => ({ publishFromStore: vi.fn(async () => void server.published++) }))
 
 import { getFixture } from '../../dev/fixtures'
@@ -27,18 +30,34 @@ const C = t.closeGate
 function mount() {
   const fx = getFixture('full12-finished')!
   const snap = structuredClone(fx.snapshot)
-  useTournament.setState({ tournamentId: 'fixture:full12-finished', data: dataFromSnapshot(snap), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: 'fixture:full12-finished',
+    data: dataFromSnapshot(snap),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: snap.tournament.id, slug: 'full12-finished', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: snap.tournament.id,
+          slug: 'full12-finished',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <AdminData />
       </TournamentContext.Provider>
     </MemoryRouter>,
   )
 }
-const settle = () => act(async () => {
-  for (let i = 0; i < 10; i++) await Promise.resolve()
-})
+const settle = () =>
+  act(async () => {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  })
 
 afterEach(() => {
   cleanup()

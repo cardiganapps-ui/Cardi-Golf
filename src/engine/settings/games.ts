@@ -35,7 +35,10 @@ const basis = z.enum(['net', 'gross'])
 
 const gameBase = {
   /** Short stable id, unique within the tournament (used by entrants and captures). */
-  id: z.string().trim().regex(/^[a-z0-9-]{1,32}$/),
+  id: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]{1,32}$/),
   label,
   enabled: z.boolean().default(true),
   /** Round numbers this game covers, or all of them. */
@@ -118,7 +121,14 @@ export const CustomGame = z.object({
   }),
 })
 
-export const GameConfig = z.discriminatedUnion('type', [SkinsGame, LowScoreGame, EventPotGame, MatchGame, ContestGame, CustomGame])
+export const GameConfig = z.discriminatedUnion('type', [
+  SkinsGame,
+  LowScoreGame,
+  EventPotGame,
+  MatchGame,
+  ContestGame,
+  CustomGame,
+])
 export type GameConfig = z.infer<typeof GameConfig>
 export type GameOf<T extends GameType> = Extract<GameConfig, { type: T }>
 
@@ -146,18 +156,26 @@ export const PAYS_BY_PLACE: Record<GameType, boolean> = {
 export function gameIssues(g: GameConfig): Array<{ path: (string | number)[]; says: Msg }> {
   const out: Array<{ path: (string | number)[]; says: Msg }> = []
   const label = g.label
-  if (!GAME_SOURCES[g.type].includes(g.money.source)) out.push({ path: ['money', 'source'], says: msg('settings.gameSource', { label }) })
-  if (g.type === 'eventPot' && g.options.event === 'threePutt' && (g.money.source === 'main' || g.money.source === 'side')) {
+  if (!GAME_SOURCES[g.type].includes(g.money.source))
+    out.push({ path: ['money', 'source'], says: msg('settings.gameSource', { label }) })
+  if (
+    g.type === 'eventPot' &&
+    g.options.event === 'threePutt' &&
+    (g.money.source === 'main' || g.money.source === 'side')
+  ) {
     out.push({ path: ['money', 'source'], says: msg('settings.threePuttDirect', { label }) })
   }
   if (PAYS_BY_PLACE[g.type] && (g.money.source === 'main' || g.money.source === 'side')) {
     const sum = g.money.split.reduce((s, x) => s + x, 0)
-    if (Math.abs(sum - 100) > 1e-9) out.push({ path: ['money', 'split'], says: msg('settings.gameSplit', { label, sum }) })
+    if (Math.abs(sum - 100) > 1e-9)
+      out.push({ path: ['money', 'split'], says: msg('settings.gameSplit', { label, sum }) })
   }
   if (g.type === 'match') {
     g.options.matches.forEach((m, i) => {
-      if (m.a.length !== m.b.length) out.push({ path: ['options', 'matches', i], says: msg('settings.matchSides', { label }) })
-      if (m.a.some((p) => m.b.includes(p))) out.push({ path: ['options', 'matches', i], says: msg('settings.matchSamePlayer', { label }) })
+      if (m.a.length !== m.b.length)
+        out.push({ path: ['options', 'matches', i], says: msg('settings.matchSides', { label }) })
+      if (m.a.some((p) => m.b.includes(p)))
+        out.push({ path: ['options', 'matches', i], says: msg('settings.matchSamePlayer', { label }) })
     })
   }
   return out

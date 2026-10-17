@@ -23,8 +23,17 @@ test('a hole entered on the Tarjeta changes the leaderboard to exactly what the 
   await expect(page.getByText(t.card.groupLine(1, 1), { exact: true })).toBeVisible()
   await typeHole(page, 1, HOLE_1)
   // Before the save the card scores each player from the seed (par 4, stroke index 7; field.ts works it out).
-  for (const [name, pts] of [['Ana', 3], ['Beto', 2], ['Caro', 3], ['Dani', 0]] as const) {
-    await expect(page.getByRole('group', { name, exact: true }).getByText(t.card.ptsLine(pts, pts > 0 ? netScoreName(pts) : null), { exact: true })).toBeVisible()
+  for (const [name, pts] of [
+    ['Ana', 3],
+    ['Beto', 2],
+    ['Caro', 3],
+    ['Dani', 0],
+  ] as const) {
+    await expect(
+      page
+        .getByRole('group', { name, exact: true })
+        .getByText(t.card.ptsLine(pts, pts > 0 ? netScoreName(pts) : null), { exact: true }),
+    ).toBeVisible()
   }
   await saveHole(page, 1)
 

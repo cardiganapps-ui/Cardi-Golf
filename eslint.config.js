@@ -42,10 +42,7 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // A switch over a union names every member, or says what its default stands for.
       '@typescript-eslint/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
       // Numbers read as themselves in a template; anything else (null, an object, a union with either) is a bug.
@@ -60,7 +57,10 @@ export default tseslint.config(
         { ignorePrimitives: { string: true, number: true, boolean: true }, ignoreMixedLogicalExpressions: true },
       ],
       // Passing on a caught `unknown` (or a signal's `any` reason) is not inventing a non-Error.
-      '@typescript-eslint/prefer-promise-reject-errors': ['error', { allowThrowingUnknown: true, allowThrowingAny: true }],
+      '@typescript-eslint/prefer-promise-reject-errors': [
+        'error',
+        { allowThrowingUnknown: true, allowThrowingAny: true },
+      ],
       '@typescript-eslint/only-throw-error': ['error', { allowThrowingUnknown: true, allowThrowingAny: true }],
       // Every promise is awaited, caught or handed on. A handler that runs async work and shows its own
       // failure is written `() => void (async () => {…})()` or `() => void run(…)` (no-misused-promises holds
@@ -125,7 +125,10 @@ export default tseslint.config(
     files: ['src/engine/**/*.{ts,tsx}'],
     ignores: ['**/*.test.{ts,tsx}'],
     rules: {
-      '@typescript-eslint/no-unnecessary-condition': ['error', { allowConstantLoopConditions: 'only-allowed-literals' }],
+      '@typescript-eslint/no-unnecessary-condition': [
+        'error',
+        { allowConstantLoopConditions: 'only-allowed-literals' },
+      ],
     },
   },
   {
@@ -217,7 +220,8 @@ export default tseslint.config(
           patterns: [
             {
               group: ['**/screens/**', '**/components/**', '**/app/**', '**/design/**', '**/dev/**'],
-              message: 'src/engine, src/data, src/lib and src/i18n never import from the screens, components, app, design or dev folders (ARCH-20): move the shared type or helper down.',
+              message:
+                'src/engine, src/data, src/lib and src/i18n never import from the screens, components, app, design or dev folders (ARCH-20): move the shared type or helper down.',
             },
           ],
         },
@@ -234,7 +238,8 @@ export default tseslint.config(
           patterns: [
             {
               group: ['**/screens/**', '**/components/**', '**/app/**', '**/design/**', '**/dev/**', '**/data/**'],
-              message: 'The engine is pure (ARCH-20): it never imports the data layer, a screen, a component or the app.',
+              message:
+                'The engine is pure (ARCH-20): it never imports the data layer, a screen, a component or the app.',
             },
           ],
         },

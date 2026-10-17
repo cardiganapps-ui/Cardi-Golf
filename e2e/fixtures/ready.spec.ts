@@ -45,7 +45,9 @@ test('under way, the card prepares the next day, and its groups line opens Grupo
   await expect(page).toHaveURL(/\/admin\/torneo$/)
 })
 
-test('a design fixture asks no server: everything done reads «Listo para jugar», and the tab counts nothing (N4)', async ({ page }) => {
+test('a design fixture asks no server: everything done reads «Listo para jugar», and the tab counts nothing (N4)', async ({
+  page,
+}) => {
   const asked: string[] = []
   page.on('request', (r) => {
     if (/players_with_pin|tournament_profiles/.test(r.url())) asked.push(r.url())
@@ -56,7 +58,9 @@ test('a design fixture asks no server: everything done reads «Listo para jugar�
   expect(asked).toEqual([])
 })
 
-test('a knockout that needs more days than the tournament has: the line opens Torneo on Reglas, where the days are (N7)', async ({ page }) => {
+test('a knockout that needs more days than the tournament has: the line opens Torneo on Reglas, where the days are (N7)', async ({
+  page,
+}) => {
   await open(page, '/t/_/match8/admin/torneo')
   await page.getByRole('link', { name: `${R.todoLabel}: ${R.bracketDays(3, 1)}` }).click()
   // The tab is opened and the address put back, so the same line works again.

@@ -47,7 +47,16 @@ function mount(isComite: boolean, edit?: (s: Snapshot) => void) {
   useTournament.setState({ tournamentId: TID, data, reload: vi.fn(async () => undefined) })
   render(
     <MemoryRouter>
-      <TournamentContext.Provider value={{ tournamentId: TID, slug: 'viaje', lookup: fx.lookup, me: { playerId: 'p9', isOrganizer: false, isComite }, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: TID,
+          slug: 'viaje',
+          lookup: fx.lookup,
+          me: { playerId: 'p9', isOrganizer: false, isComite },
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <MoneyScreen />
       </TournamentContext.Provider>
     </MemoryRouter>,
@@ -55,9 +64,10 @@ function mount(isComite: boolean, edit?: (s: Snapshot) => void) {
   return data
 }
 const list = () => within(screen.getByRole('region', { name: U.heading }))
-const settle = () => act(async () => {
-  for (let i = 0; i < 10; i++) await Promise.resolve()
-})
+const settle = () =>
+  act(async () => {
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+  })
 
 beforeEach(() => {
   api.assigned = []
@@ -84,7 +94,9 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
       expect(list().getByText(words(h.label))).toBeTruthy()
       expect(list().getAllByText(words(h.note)).length).toBeGreaterThan(0)
     }
-    expect(list().getAllByRole('button', { name: t.money.howCalculated })).toHaveLength(u.buckets.length + u.held.length)
+    expect(list().getAllByRole('button', { name: t.money.howCalculated })).toHaveLength(
+      u.buckets.length + u.held.length,
+    )
     expect(list().queryByRole('button', { name: new RegExp(`^${U.decide}`) })).toBeNull()
   })
 
@@ -92,7 +104,21 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
     mount(false, (s) => {
       const d2 = [...s.rounds].sort((a, b) => a.number - b.number)[1]!
       d2.status = 'live'
-      s.moneyAdjustments = [{ id: 'adj-w', callId: 'call-w', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Antes de reabrir', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+      s.moneyAdjustments = [
+        {
+          id: 'adj-w',
+          callId: 'call-w',
+          sourceKey: 'bestRound',
+          kind: 'award',
+          toPlayerId: s.players[0]!.id,
+          amount: 100,
+          reason: 'Antes de reabrir',
+          createdAt: '2027-04-11T20:00:00+00:00',
+          createdBy: 'org',
+          voidedAt: null,
+          voidReason: null,
+        },
+      ]
     })
     expect(list().getByText(U.waitingIntro)).toBeTruthy()
     expect(list().getByText('Antes de reabrir')).toBeTruthy()
@@ -103,7 +129,19 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
     const data = mount(false, (s) => {
       // Every line the Comité can decide, decided (to the house): only the held money stays in the bank.
       const before = dataFromSnapshot(structuredClone(s)).state.money.unassigned
-      s.moneyAdjustments = before.buckets.map((b, i) => ({ id: `h${i}`, callId: `h${i}`, sourceKey: b.key, kind: 'house' as const, toPlayerId: null, amount: b.remaining, reason: 'Para la cena', createdAt: `2027-04-11T20:${String(i).padStart(2, '0')}:00+00:00`, createdBy: 'org', voidedAt: null, voidReason: null }))
+      s.moneyAdjustments = before.buckets.map((b, i) => ({
+        id: `h${i}`,
+        callId: `h${i}`,
+        sourceKey: b.key,
+        kind: 'house' as const,
+        toPlayerId: null,
+        amount: b.remaining,
+        reason: 'Para la cena',
+        createdAt: `2027-04-11T20:${String(i).padStart(2, '0')}:00+00:00`,
+        createdBy: 'org',
+        voidedAt: null,
+        voidReason: null,
+      }))
     })
     const u = data.state.money.unassigned
     expect([u.closing, u.total]).toEqual([true, 0])
@@ -119,7 +157,21 @@ describe('everyone reads what is «por asignar» and why (COPY-09)', () => {
       const d2 = [...s.rounds].sort((a, b) => a.number - b.number)[1]!
       d2.status = 'scheduled'
       s.tournament.status = 'finished'
-      s.moneyAdjustments = [{ id: 'adj-f', callId: 'call-f', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Día 2 cancelado', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+      s.moneyAdjustments = [
+        {
+          id: 'adj-f',
+          callId: 'call-f',
+          sourceKey: 'bestRound',
+          kind: 'award',
+          toPlayerId: s.players[0]!.id,
+          amount: 100,
+          reason: 'Día 2 cancelado',
+          createdAt: '2027-04-11T20:00:00+00:00',
+          createdBy: 'org',
+          voidedAt: null,
+          voidReason: null,
+        },
+      ]
     })
     const { money } = data.state
     expect(money.unassigned.openDays).toEqual({ open: [2], missing: [] })
@@ -145,7 +197,9 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('to the house, with a reason: one call with the line’s key', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     // No reason yet: nothing is sent.
@@ -153,16 +207,22 @@ describe('the Comité decides each line (MONEY-05)', () => {
     await settle()
     expect(api.assigned).toEqual([])
     expect(sheet.getByText(U.reasonShort)).toBeTruthy()
-    fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena del domingo' } })
+    fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), {
+      target: { value: 'Para la cena del domingo' },
+    })
     fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
     await settle()
-    expect(api.assigned).toEqual([[TID, 'bestRound', [{ kind: 'house', to_player_id: null, amount: best.remaining }], 'Para la cena del domingo']])
+    expect(api.assigned).toEqual([
+      [TID, 'bestRound', [{ kind: 'house', to_player_id: null, amount: best.remaining }], 'Para la cena del domingo'],
+    ])
   })
 
   it('back to who paid it: the pro-rata split is shown before it is sent, and sent as shown', async () => {
     const data = mount(true)
     const b = data.state.money.unassigned.buckets.find((x) => x.contributors?.length)!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(b.label)}, ${formatMoney(b.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(b.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.refund }))
     expect(sheet.getByText(U.refundHint)).toBeTruthy()
@@ -178,7 +238,9 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('to someone: more than the line holds is refused before anything is sent', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     const [first, second] = data.snapshot.players
     // Each box stops at what the line holds; two of them together go over.
@@ -197,14 +259,32 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('a line another Comité phone assigned meanwhile: the sheet reads it again before sending, and sends nothing', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
     // The other phone's $100 on the same line reaches this one on the fetch the sheet makes before sending.
     const other = structuredClone(data.snapshot)
-    other.moneyAdjustments = [{ id: 'adj-o', callId: 'call-o', sourceKey: 'bestRound', kind: 'award', toPlayerId: other.players[0]!.id, amount: 100, reason: 'Otro teléfono', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org2', voidedAt: null, voidReason: null }]
-    act(() => useTournament.setState({ reload: vi.fn(async () => useTournament.setState({ data: dataFromSnapshot(other) })) }))
+    other.moneyAdjustments = [
+      {
+        id: 'adj-o',
+        callId: 'call-o',
+        sourceKey: 'bestRound',
+        kind: 'award',
+        toPlayerId: other.players[0]!.id,
+        amount: 100,
+        reason: 'Otro teléfono',
+        createdAt: '2027-04-11T20:00:00+00:00',
+        createdBy: 'org2',
+        voidedAt: null,
+        voidReason: null,
+      },
+    ]
+    act(() =>
+      useTournament.setState({ reload: vi.fn(async () => useTournament.setState({ data: dataFromSnapshot(other) })) }),
+    )
     fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
     await settle()
     expect(api.assigned).toEqual([])
@@ -214,7 +294,21 @@ describe('the Comité decides each line (MONEY-05)', () => {
   /** Another Comité phone's $100 award on `bestRound`, as the live channel lands it under the open sheet. */
   const otherPhoneAward = (data: ReturnType<typeof mount>) => {
     const other = structuredClone(data.snapshot)
-    other.moneyAdjustments = [{ id: 'adj-o', callId: 'call-o', sourceKey: 'bestRound', kind: 'award', toPlayerId: other.players[0]!.id, amount: 100, reason: 'Otro teléfono', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org2', voidedAt: null, voidReason: null }]
+    other.moneyAdjustments = [
+      {
+        id: 'adj-o',
+        callId: 'call-o',
+        sourceKey: 'bestRound',
+        kind: 'award',
+        toPlayerId: other.players[0]!.id,
+        amount: 100,
+        reason: 'Otro teléfono',
+        createdAt: '2027-04-11T20:00:00+00:00',
+        createdBy: 'org2',
+        voidedAt: null,
+        voidReason: null,
+      },
+    ]
     act(() => useTournament.setState({ data: dataFromSnapshot(other) }))
   }
   type Call = [string, string, Array<{ kind: string; to_player_id: string | null; amount: number }>, string]
@@ -224,7 +318,9 @@ describe('the Comité decides each line (MONEY-05)', () => {
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
     expect(best.remaining).toBe(1200)
     expect(best.contributors?.length).toBeGreaterThan(0)
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.refund }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Se devuelve' } })
@@ -247,7 +343,9 @@ describe('the Comité decides each line (MONEY-05)', () => {
   it('«a la casa» of the whole line, changed under the sheet the same way: nothing is sent, then the whole new line', async () => {
     const data = mount(true)
     const best = data.state.money.unassigned.buckets.find((b) => b.key === 'bestRound')!
-    fireEvent.click(list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }))
+    fireEvent.click(
+      list().getByRole('button', { name: `${U.decide}: ${words(best.label)}, ${formatMoney(best.remaining, 'MXN')}` }),
+    )
     const sheet = within(screen.getByRole('dialog', { name: U.decideTitle(words(best.label)) }))
     fireEvent.click(sheet.getByRole('radio', { name: U.house }))
     fireEvent.change(sheet.getByRole('textbox', { name: new RegExp(U.reason) }), { target: { value: 'Para la cena' } })
@@ -258,12 +356,28 @@ describe('the Comité decides each line (MONEY-05)', () => {
     expect(sheet.getByText(U.stale)).toBeTruthy()
     fireEvent.click(sheet.getByRole('button', { name: U.confirm }))
     await settle()
-    expect(api.assigned).toEqual([[TID, 'bestRound', [{ kind: 'house', to_player_id: null, amount: 1100 }], 'Para la cena']])
+    expect(api.assigned).toEqual([
+      [TID, 'bestRound', [{ kind: 'house', to_player_id: null, amount: 1100 }], 'Para la cena'],
+    ])
   })
 
   it('a decision already taken is listed with its reason, and «Anular» voids it with a reason', async () => {
     mount(true, (s) => {
-      s.moneyAdjustments = [{ id: 'adj-1', callId: 'call-adj-1', sourceKey: 'bestRound', kind: 'award', toPlayerId: s.players[0]!.id, amount: 100, reason: 'Mejor ronda del día 1', createdAt: '2027-04-11T20:00:00+00:00', createdBy: 'org', voidedAt: null, voidReason: null }]
+      s.moneyAdjustments = [
+        {
+          id: 'adj-1',
+          callId: 'call-adj-1',
+          sourceKey: 'bestRound',
+          kind: 'award',
+          toPlayerId: s.players[0]!.id,
+          amount: 100,
+          reason: 'Mejor ronda del día 1',
+          createdAt: '2027-04-11T20:00:00+00:00',
+          createdBy: 'org',
+          voidedAt: null,
+          voidReason: null,
+        },
+      ]
     })
     expect(list().getByText(U.applied)).toBeTruthy()
     expect(list().getByText('Mejor ronda del día 1')).toBeTruthy()

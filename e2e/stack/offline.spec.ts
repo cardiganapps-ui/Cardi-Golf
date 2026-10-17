@@ -30,7 +30,9 @@ import {
   watchFor,
 } from './phone'
 
-test('two holes saved with no signal reach the other phone when it returns, the correction included', async ({ join }, testInfo) => {
+test('two holes saved with no signal reach the other phone when it returns, the correction included', async ({
+  join,
+}, testInfo) => {
   test.setTimeout(180_000)
   const ana = await join(SLUGS.offline, 'Ana')
   const beto = await join(SLUGS.offline, 'Beto')
@@ -66,7 +68,12 @@ test('two holes saved with no signal reach the other phone when it returns, the 
   await ana.context.setOffline(false)
   const ms = Math.round((await shownAt(beto.page, 30_000)) - back)
   console.log(`[e2e-stack] signal back on Ana's phone → both holes on Beto's in ${ms} ms`)
-  keepMetrics(testInfo.project.outputDir, 'offline-to-shown', { ms, holes: 2, rows: 8 }, `### Signal back → shown on the other phone (e2e-stack)\n\nTwo holes (8 rows, one corrected offline): **${ms} ms**.`)
+  keepMetrics(
+    testInfo.project.outputDir,
+    'offline-to-shown',
+    { ms, holes: 2, rows: 8 },
+    `### Signal back → shown on the other phone (e2e-stack)\n\nTwo holes (8 rows, one corrected offline): **${ms} ms**.`,
+  )
 
   // Ana's card says it is all sent; the server holds the final values, entered by her phone, and nothing else.
   await expect(ana.page.getByText(t.sync.synced, { exact: true })).toBeVisible({ timeout: 20_000 })
@@ -74,7 +81,9 @@ test('two holes saved with no signal reach the other phone when it returns, the 
   await expect(ana.page.getByText(t.sync.rejected(1).replace(/^1 /, ''))).toHaveCount(0)
 })
 
-test('holes corrected while the phone is still sending them land as corrected, and nobody is asked (QA-17)', async ({ join }) => {
+test('holes corrected while the phone is still sending them land as corrected, and nobody is asked (QA-17)', async ({
+  join,
+}) => {
   test.setTimeout(180_000)
   const slug = SLUGS.drain
   const ana = await join(slug, 'Ana')

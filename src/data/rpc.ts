@@ -23,7 +23,12 @@ export type FnArgs<N extends FnName> = Functions[N]['Args']
 export type FnReturns<N extends FnName> = Functions[N]['Returns']
 
 /** The arguments, required when the function has any it can't do without. */
-export type ArgsOf<N extends FnName> = FnArgs<N> extends Record<PropertyKey, never> ? [args?: FnArgs<N>] : object extends FnArgs<N> ? [args?: FnArgs<N>] : [args: FnArgs<N>]
+export type ArgsOf<N extends FnName> =
+  FnArgs<N> extends Record<PropertyKey, never>
+    ? [args?: FnArgs<N>]
+    : object extends FnArgs<N>
+      ? [args?: FnArgs<N>]
+      : [args: FnArgs<N>]
 
 /** What `.as<T>()` may name: anything for a jsonb answer, else a narrowing of the declared type (or null: a scalar function's answer may be). */
 type Shape<R> = [Json] extends [R] ? unknown : R | null
@@ -72,7 +77,10 @@ export function isMissingFunction(e: unknown): boolean {
 }
 
 // The generic call, once: supabase-js's own overloads can't follow a name chosen by a type parameter.
-type LooseRpc = (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string; code?: string | null } | null }>
+type LooseRpc = (
+  fn: string,
+  args?: Record<string, unknown>,
+) => PromiseLike<{ data: unknown; error: { message: string; code?: string | null } | null }>
 
 export function rpc<N extends FnName>(name: N, ...[args]: ArgsOf<N>): Call<FnReturns<N>> {
   // Everything inside the promise: a client that can't be made (no env) is a rejected call, never a throw at the caller.

@@ -20,10 +20,25 @@ const P = t.print
 
 function show(name: string, search = '?hoja=calcutta') {
   const fx = getFixture(name)!
-  useTournament.setState({ tournamentId: `fixture:${name}`, data: dataFromSnapshot(structuredClone(fx.snapshot)), loading: false, error: null, realtime: 'off' })
+  useTournament.setState({
+    tournamentId: `fixture:${name}`,
+    data: dataFromSnapshot(structuredClone(fx.snapshot)),
+    loading: false,
+    error: null,
+    realtime: 'off',
+  })
   render(
     <MemoryRouter initialEntries={[`/t/x/imprimir${search}`]}>
-      <TournamentContext.Provider value={{ tournamentId: fx.snapshot.tournament.id, slug: 'x', lookup: fx.lookup, me: fx.me, refresh: async () => undefined, leave: async () => undefined }}>
+      <TournamentContext.Provider
+        value={{
+          tournamentId: fx.snapshot.tournament.id,
+          slug: 'x',
+          lookup: fx.lookup,
+          me: fx.me,
+          refresh: async () => undefined,
+          leave: async () => undefined,
+        }}
+      >
         <Routes>
           <Route path="/t/x/imprimir" element={<PrintScreen />} />
         </Routes>
@@ -51,7 +66,17 @@ describe('the Calcutta on paper (DB-19)', () => {
     expect(lots.filter((l) => l.status !== 'sold').length).toBeGreaterThan(0)
     // Its own rules, and how the console takes it afterwards; no scorecards under it.
     const a = parseSettings(snap.tournament.settings).auction
-    expect(screen.getByText(P.auctionRules(formatMoney(a.openingBid, 'MXN'), formatMoney(a.increment, 'MXN'), a.maxPlayersPerOwner, a.selfOwnedCountsTowardMax, a.buybackMaxPct))).toBeTruthy()
+    expect(
+      screen.getByText(
+        P.auctionRules(
+          formatMoney(a.openingBid, 'MXN'),
+          formatMoney(a.increment, 'MXN'),
+          a.maxPlayersPerOwner,
+          a.selfOwnedCountsTowardMax,
+          a.buybackMaxPct,
+        ),
+      ),
+    ).toBeTruthy()
     expect(screen.getByText(P.auctionAfter)).toBeTruthy()
     expect(screen.queryByText(new RegExp(P.sign))).toBeNull()
   })

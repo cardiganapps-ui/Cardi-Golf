@@ -65,7 +65,9 @@ export interface PrizeAward {
 
 /** A prize's label: its game (a label, or a message) and what in it paid. */
 export function prizeLabel(game: string | Msg, part: Msg | null = null): Pick<PrizeAward, 'label' | 'part'> {
-  return part ? { label: msg('prize.label', { game: named(game), part }), part } : { label: msg('prize.label', { game: named(game), part: null }) }
+  return part
+    ? { label: msg('prize.label', { game: named(game), part }), part }
+    : { label: msg('prize.label', { game: named(game), part: null }) }
 }
 
 /** The contract: a state from the context, prizes and warnings from the state. */
@@ -151,6 +153,9 @@ export type GameResultState = GameResultFor<GameType>
 export type GameConfigFor<K extends GameType> = { [P in K]: GameOf<P> }[K]
 
 /** The game is of `type`: its config and its state are that type's, with no cast. */
-export function isGameOf<K extends GameType>(g: GameResultState, type: K): g is Extract<GameResultState, { config: { type: K } }> {
+export function isGameOf<K extends GameType>(
+  g: GameResultState,
+  type: K,
+): g is Extract<GameResultState, { config: { type: K } }> {
   return g.config.type === type
 }

@@ -16,7 +16,13 @@ const V = t.platform.view
 const MIN = 3
 
 /** «¿Por qué lo abres?»: the reason that goes on the record before the detail opens. */
-export function ViewReasonForm({ kind, onOpen }: { kind: keyof typeof V.body; onOpen: (reason: string) => Promise<void> }) {
+export function ViewReasonForm({
+  kind,
+  onOpen,
+}: {
+  kind: keyof typeof V.body
+  onOpen: (reason: string) => Promise<void>
+}) {
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const why = trimReason(reason)

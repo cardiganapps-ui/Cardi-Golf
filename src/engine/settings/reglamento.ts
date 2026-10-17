@@ -45,20 +45,35 @@ export function reglamento(snapshot: Snapshot, settings: TournamentSettings): Ru
   const banker = snapshot.players.find((p) => p.id === snapshot.tournament.bankerPlayerId)?.displayName ?? null
   const points = mainScoring(settings) === 'points'
   const handicaps = settings.handicap.allowance > 0
-  const section = (id: 'summary' | 'field' | 'handicaps' | 'cards' | 'governance' | 'glossary', lines: Msg[]): RulesSection => ({ id, title: msg('rules.section', { id }), lines })
+  const section = (
+    id: 'summary' | 'field' | 'handicaps' | 'cards' | 'governance' | 'glossary',
+    lines: Msg[],
+  ): RulesSection => ({ id, title: msg('rules.section', { id }), lines })
 
   const sections: RulesSection[] = [
     section('summary', summary(settings, field.players, banker, checkPrizePool(settings, field))),
-    section('field', [msg('rules.field', { n, days: ctx.days, holes: holes.length ? holes : null, groupSize: settings.groupSize }), ...(settings.tiers.length ? [msg('rules.tiers', { tiers: settings.tiers })] : [])]),
+    section('field', [
+      msg('rules.field', { n, days: ctx.days, holes: holes.length ? holes : null, groupSize: settings.groupSize }),
+      ...(settings.tiers.length ? [msg('rules.tiers', { tiers: settings.tiers })] : []),
+    ]),
     section('handicaps', handicapLines(settings, { rounds: ctx.days, points, nine: holes.includes(9) })),
-    ...MODULES.filter((id) => m[id].enabled).map((id) => ({ id, title: label(m[id].label), lines: moduleRules(id, settings, field, honoree, ctx) })),
-    ...settings.games.filter((g) => g.enabled).map((g) => ({ id: `game-${g.id}`, title: label(g.label), lines: describeGame(g) })),
+    ...MODULES.filter((id) => m[id].enabled).map((id) => ({
+      id,
+      title: label(m[id].label),
+      lines: moduleRules(id, settings, field, honoree, ctx),
+    })),
+    ...settings.games
+      .filter((g) => g.enabled)
+      .map((g) => ({ id: `game-${g.id}`, title: label(g.label), lines: describeGame(g) })),
     section('cards', [say('rules.cardsEnter'), msg('rules.cards', { mode: cardSigningMode(settings) })]),
     section('governance', [say('rules.governance'), say('rules.governancePage')]),
   ]
 
   // The golf words these rules use, each once.
-  const putting = m.snake.enabled || m.fewestPutts.enabled || settings.games.some((g) => g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt')
+  const putting =
+    m.snake.enabled ||
+    m.fewestPutts.enabled ||
+    settings.games.some((g) => g.enabled && g.type === 'eventPot' && g.options.event === 'threePutt')
   const stableford = points || m.bestRound.enabled || m.pairs.enabled || cutApplies(settings, ctx.days)
   const word = (w: GlossaryWord) => msg('rules.glossary', { word: w })
   const glossary = [
@@ -68,7 +83,12 @@ export function reglamento(snapshot: Snapshot, settings: TournamentSettings): Ru
     word('pickUp'),
     ...(putting ? [word('putts')] : []),
     ...(m.individual.format !== 'matchPlay' || m.bestRound.enabled ? [word('tiebreak')] : []),
-    ...(m.auction.enabled ? [msg('rules.glossaryAuction', { game: m.auction.label }), ...(settings.auction.buybackMaxPct > 0 ? [word('buyback')] : [])] : []),
+    ...(m.auction.enabled
+      ? [
+          msg('rules.glossaryAuction', { game: m.auction.label }),
+          ...(settings.auction.buybackMaxPct > 0 ? [word('buyback')] : []),
+        ]
+      : []),
   ]
   sections.push(section('glossary', glossary))
   return sections
@@ -82,7 +102,21 @@ function handicapLines(settings: TournamentSettings, event: { rounds: number; po
   const pct = Math.round(settings.handicap.allowance * 100)
   if (pct <= 0) return [say('rules.scratch')]
   const cut = settings.day2Cut
-  const cutLine = event.rounds <= 1 || cut.maxStrokes <= 0 ? (event.rounds > 1 ? [say('rules.noCut')] : []) : [msg('rules.cut', { days: event.rounds, threshold: cut.threshold, per: cut.pointsPerStroke, max: cut.maxStrokes, cumulative: cut.mode === 'cumulative', points: event.points })]
+  const cutLine =
+    event.rounds <= 1 || cut.maxStrokes <= 0
+      ? event.rounds > 1
+        ? [say('rules.noCut')]
+        : []
+      : [
+          msg('rules.cut', {
+            days: event.rounds,
+            threshold: cut.threshold,
+            per: cut.pointsPerStroke,
+            max: cut.maxStrokes,
+            cumulative: cut.mode === 'cumulative',
+            points: event.points,
+          }),
+        ]
   return [
     say('rules.hcpWhat'),
     say('rules.hcpBase'),
@@ -95,7 +129,12 @@ function handicapLines(settings: TournamentSettings, event: { rounds: number; po
 }
 
 /** «En corto»: what you pay, what can be won and from which pile, who holds the money (COPY-12). */
-function summary(settings: TournamentSettings, players: number, banker: string | null, pool: ReturnType<typeof checkPrizePool>): Msg[] {
+function summary(
+  settings: TournamentSettings,
+  players: number,
+  banker: string | null,
+  pool: ReturnType<typeof checkPrizePool>,
+): Msg[] {
   const fee = settings.entryFee > 0
   const auction = settings.modules.auction.enabled
   const sidePots = pool.sidePots.map((p) => p.label)
@@ -106,7 +145,9 @@ function summary(settings: TournamentSettings, players: number, banker: string |
   const bank = fee || auction
   return [
     fee ? msg('rules.fee', { fee: settings.entryFee, n: players, pot: pool.entryPot }) : say('rules.noFee'),
-    ...(fee && prizes.length ? [msg('rules.prizes', { prizes: prizes.map((l) => ({ label: l.label, amount: l.amount })) })] : []),
+    ...(fee && prizes.length
+      ? [msg('rules.prizes', { prizes: prizes.map((l) => ({ label: l.label, amount: l.amount })) })]
+      : []),
     ...(kept ? [msg('rules.kept', { amount: kept.amount })] : []),
     ...(auction ? [msg('rules.auctionApart', { game: settings.modules.auction.label })] : []),
     ...(sidePots.length ? [msg('rules.sidePots', { games: sidePots })] : []),

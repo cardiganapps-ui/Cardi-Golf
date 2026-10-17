@@ -54,7 +54,11 @@ export const LEADERS = 3
  * this phone's player, and the others take the remaining slots in the order
  * leaders, honoree, picked.
  */
-export function highlights(order: readonly string[], stable: readonly string[], who: { me?: string | null; honoree?: string | null; picked?: string | null }): Highlight[] {
+export function highlights(
+  order: readonly string[],
+  stable: readonly string[],
+  who: { me?: string | null; honoree?: string | null; picked?: string | null },
+): Highlight[] {
   const ids = new Set(order)
   const me = who.me && ids.has(who.me) ? who.me : null
   const honoree = who.honoree && ids.has(who.honoree) ? who.honoree : null
@@ -123,7 +127,9 @@ export function niceTicks(lo: number, hi: number, target = 4): number[] {
   const raw = (hi - lo) / target
   const pow = 10 ** Math.floor(Math.log10(raw))
   // The nearest step on a log scale: 0 to 91 is marked every 20 (five marks), not every 50 (two).
-  const step = [1, 2, 5, 10].map((m) => m * pow).reduce((a, b) => (Math.abs(Math.log(b / raw)) < Math.abs(Math.log(a / raw)) ? b : a))
+  const step = [1, 2, 5, 10]
+    .map((m) => m * pow)
+    .reduce((a, b) => (Math.abs(Math.log(b / raw)) < Math.abs(Math.log(a / raw)) ? b : a))
   // Whole figures only: a race of points or strokes has no half point to mark.
   const s = Math.max(1, Math.round(step))
   const out: number[] = []
@@ -172,15 +178,29 @@ export interface RaceLayout {
 const r1 = (v: number) => Math.round(v * 10) / 10
 
 /** Scales, axes and every entrant's path for one size of the chart. */
-export function layoutRace({ entrants, days, lowerIsBetter, width, height, labelWidth, axisWidth }: RaceLayoutInput): RaceLayout {
+export function layoutRace({
+  entrants,
+  days,
+  lowerIsBetter,
+  width,
+  height,
+  labelWidth,
+  axisWidth,
+}: RaceLayoutInput): RaceLayout {
   const n = axisLength(days, entrants)
-  const plot = { left: axisWidth, right: Math.max(axisWidth + 40, width - labelWidth), top: 10, bottom: Math.max(60, height - 34) }
+  const plot = {
+    left: axisWidth,
+    right: Math.max(axisWidth + 40, width - labelWidth),
+    top: 10,
+    bottom: Math.max(60, height - 34),
+  }
   let lo = 0
   let hi = 0
-  for (const e of entrants) for (const v of e.values) {
-    if (v < lo) lo = v
-    if (v > hi) hi = v
-  }
+  for (const e of entrants)
+    for (const v of e.values) {
+      if (v < lo) lo = v
+      if (v > hi) hi = v
+    }
   // The scale spans the figures themselves (and 0, the first tee), so the lines use the whole height; the round ticks inside it are marked.
   const ticks = niceTicks(lo, hi)
   const t0 = lo
@@ -188,7 +208,10 @@ export function layoutRace({ entrants, days, lowerIsBetter, width, height, label
   const span = t1 - t0
   const x = (k: number) => plot.left + (Math.max(0, Math.min(n, k)) / n) * (plot.right - plot.left)
   // More is better on top; under strokes fewer is, so the scale turns over.
-  const y = (v: number) => (lowerIsBetter ? plot.top + ((v - t0) / span) * (plot.bottom - plot.top) : plot.bottom - ((v - t0) / span) * (plot.bottom - plot.top))
+  const y = (v: number) =>
+    lowerIsBetter
+      ? plot.top + ((v - t0) / span) * (plot.bottom - plot.top)
+      : plot.bottom - ((v - t0) / span) * (plot.bottom - plot.top)
   const paths: Record<string, string> = {}
   for (const e of entrants) {
     let d = `M${r1(x(0))} ${r1(y(0))}`
@@ -209,11 +232,24 @@ export function layoutRace({ entrants, days, lowerIsBetter, width, height, label
     for (const h of marks) xTicks.push({ at: start + h, x: x(start + h), label: String(h) })
     start += d.holes
   }
-  return { n, plot, yTicks: ticks.filter((v) => v >= t0 && v <= t1).map((value) => ({ value, y: y(value) })), xTicks, bands, paths, x, y }
+  return {
+    n,
+    plot,
+    yTicks: ticks.filter((v) => v >= t0 && v <= t1).map((value) => ({ value, y: y(value) })),
+    xTicks,
+    bands,
+    paths,
+    x,
+    y,
+  }
 }
 
 /** Where a figure reads on a line `t` holes from the first tee (fractional, between two holes): the straight segment's. */
-export function pointAt(layout: Pick<RaceLayout, 'x' | 'y'>, values: readonly number[], t: number): { x: number; y: number } {
+export function pointAt(
+  layout: Pick<RaceLayout, 'x' | 'y'>,
+  values: readonly number[],
+  t: number,
+): { x: number; y: number } {
   const last = values.length
   const at = Math.max(0, Math.min(t, last))
   const k = Math.floor(at)
@@ -228,7 +264,12 @@ export function pointAt(layout: Pick<RaceLayout, 'x' | 'y'>, values: readonly nu
  * figure's height, pushed apart so no two overlap (`gap` px between centres),
  * and kept inside the plot's height.
  */
-export function placeLabels(items: ReadonlyArray<{ id: string; y: number }>, top: number, bottom: number, gap = 14): Record<string, number> {
+export function placeLabels(
+  items: ReadonlyArray<{ id: string; y: number }>,
+  top: number,
+  bottom: number,
+  gap = 14,
+): Record<string, number> {
   const sorted = [...items].sort((a, b) => a.y - b.y || a.id.localeCompare(b.id))
   const ys = sorted.map((i) => i.y)
   if (ys.length > 0) ys[0] = Math.max(ys[0]!, top)
@@ -272,7 +313,11 @@ export interface RaceSummary {
 }
 
 /** What the race says in a sentence: who is in front, with what, and since when. */
-export function summarize(entrants: readonly RaceEntrant[], days: readonly RaceDay[], lowerIsBetter: boolean): RaceSummary | null {
+export function summarize(
+  entrants: readonly RaceEntrant[],
+  days: readonly RaceDay[],
+  lowerIsBetter: boolean,
+): RaceSummary | null {
   const holes = Math.max(0, ...entrants.map((e) => e.values.length))
   if (entrants.length === 0 || holes === 0) return null
   const final = placesAt(entrants, holes, lowerIsBetter)

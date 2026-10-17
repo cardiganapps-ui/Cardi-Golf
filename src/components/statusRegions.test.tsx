@@ -85,7 +85,8 @@ describe('the offline line (A11Y-14)', () => {
 
 describe('the Tarjeta’s sync line (A11Y-14)', () => {
   const region = () => document.querySelector('[role="status"]')!
-  const refused = (n: number) => Array.from({ length: n }, (_, i) => ({ key: `k${i}`, tournamentId: 't', at: i }) as unknown as RejectedItem)
+  const refused = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ key: `k${i}`, tournamentId: 't', at: i }) as unknown as RejectedItem)
 
   it('says a write the server refused, as it happens, and not the holes on their way after every save', () => {
     render(<SaveStatus savedNote={null} onUndo={() => undefined} />)

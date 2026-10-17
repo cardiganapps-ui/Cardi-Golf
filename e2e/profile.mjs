@@ -49,8 +49,12 @@ async function inbox() {
   const domain = (await (await fetch(`${api}/domains`)).json())['hydra:member'][0].domain
   const address = `polo-e2e-${rand}@${domain}`
   const password = `Pw-${rand}-${Date.now()}`
-  const acct = await (await fetch(`${api}/accounts`, { method: 'POST', headers: json, body: JSON.stringify({ address, password }) })).json()
-  const { token } = await (await fetch(`${api}/token`, { method: 'POST', headers: json, body: JSON.stringify({ address, password }) })).json()
+  const acct = await (
+    await fetch(`${api}/accounts`, { method: 'POST', headers: json, body: JSON.stringify({ address, password }) })
+  ).json()
+  const { token } = await (
+    await fetch(`${api}/token`, { method: 'POST', headers: json, body: JSON.stringify({ address, password }) })
+  ).json()
   const auth = { authorization: `Bearer ${token}` }
   const seen = new Set()
   return {
@@ -80,7 +84,11 @@ async function tournamentWith(org, name, player, pin) {
   const { data: t, error } = await org.rpc('create_tournament', { p_name: name, p_settings: settings })
   if (error) throw error
   created.tournaments.push(t.id)
-  const { data: p, error: pErr } = await org.from('players').insert({ tournament_id: t.id, full_name: player, display_name: player, sort_order: 0 }).select('id').single()
+  const { data: p, error: pErr } = await org
+    .from('players')
+    .insert({ tournament_id: t.id, full_name: player, display_name: player, sort_order: 0 })
+    .select('id')
+    .single()
   if (pErr) throw pErr
   const { error: pinErr } = await org.rpc('set_player_pin', { p_player_id: p.id, p_pin: pin })
   if (pinErr) throw pinErr
@@ -95,7 +103,11 @@ async function browserContext(b) {
       try {
         const headers = { ...req.headers() }
         delete headers['content-length']
-        const res = await fetch(req.url(), { method: req.method(), headers, body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer() })
+        const res = await fetch(req.url(), {
+          method: req.method(),
+          headers,
+          body: ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer(),
+        })
         const body = Buffer.from(await res.arrayBuffer())
         const h = {}
         res.headers.forEach((v, k) => {
@@ -109,12 +121,16 @@ async function browserContext(b) {
   }
   const page = await ctx.newPage()
   page.on('pageerror', (e) => errors.push(String(e)))
-  page.on('console', (m) => m.type() === 'error' && !/WebSocket|Failed to load resource/.test(m.text()) && errors.push(m.text()))
+  page.on(
+    'console',
+    (m) => m.type() === 'error' && !/WebSocket|Failed to load resource/.test(m.text()) && errors.push(m.text()),
+  )
   return { ctx, page }
 }
 
 /** The auth user id this page's session holds (from supabase-js storage). */
-const uidOf = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cardi-golf-auth') ?? 'null')?.user?.id ?? null)
+const uidOf = (page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem('cardi-golf-auth') ?? 'null')?.user?.id ?? null)
 
 async function enterWithPin(page, slug, name, pin) {
   await page.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
@@ -134,7 +150,12 @@ try {
   const org = createClient(URL_, ANON, { auth: { persistSession: false, autoRefreshToken: false } })
   const orgEmail = `e2e-org-${rand}@cardi-golf.test`
   const orgPass = `Pw-${rand}-org!`
-  const { data: made, error: madeErr } = await admin.auth.admin.createUser({ email: orgEmail, password: orgPass, email_confirm: true, user_metadata: { display_name: 'E2E Org' } })
+  const { data: made, error: madeErr } = await admin.auth.admin.createUser({
+    email: orgEmail,
+    password: orgPass,
+    email_confirm: true,
+    user_metadata: { display_name: 'E2E Org' },
+  })
   if (madeErr) throw madeErr
   created.users.push(made.user.id)
   await org.auth.signInWithPassword({ email: orgEmail, password: orgPass })
@@ -167,9 +188,20 @@ try {
   const nameValue = await A.page.inputValue('input[autocomplete=nickname]')
   check(nameValue === 'Prueba', 'the new profile starts with the player’s name, not the email', nameValue)
   const { data: userA } = await admin.auth.admin.getUserById(anonA)
-  check(userA?.user?.is_anonymous === false && userA.user.email === mail.address, 'the anonymous device is now the account (same uid, email confirmed)')
-  const { data: linkA } = await admin.from('players').select('profile_id, profile_status').eq('id', one.playerId).single()
-  check(linkA?.profile_id === anonA && linkA.profile_status === 'confirmed', 'and the PIN player is saved in the profile', linkA)
+  check(
+    userA?.user?.is_anonymous === false && userA.user.email === mail.address,
+    'the anonymous device is now the account (same uid, email confirmed)',
+  )
+  const { data: linkA } = await admin
+    .from('players')
+    .select('profile_id, profile_status')
+    .eq('id', one.playerId)
+    .single()
+  check(
+    linkA?.profile_id === anonA && linkA.profile_status === 'confirmed',
+    'and the PIN player is saved in the profile',
+    linkA,
+  )
   await A.page.fill('textarea', 'Juego los sábados.')
   await A.page.click('button:has-text("Guardar")')
   await A.page.waitForURL(new RegExp(`/t/${one.t.slug}/mas`), { timeout: T })
@@ -181,7 +213,9 @@ try {
   await enterWithPin(B.page, two.t.slug, 'Prueba Dos', '1357')
   const anonB = await uidOf(B.page)
   if (anonB) created.users.push(anonB)
-  await B.page.goto(`${base}/entrar?next=${encodeURIComponent(`/t/${two.t.slug}/mas`)}`, { waitUntil: 'domcontentloaded' })
+  await B.page.goto(`${base}/entrar?next=${encodeURIComponent(`/t/${two.t.slug}/mas`)}`, {
+    waitUntil: 'domcontentloaded',
+  })
   await B.page.waitForSelector('text=Lo que jugaste como Prueba Dos', { timeout: T })
   await B.page.fill('input[type=email]', mail.address)
   await B.page.click('button:has-text("Mandar código")')
@@ -192,8 +226,16 @@ try {
   await B.page.click('button:has-text("Confirmar")')
   await B.page.waitForURL(new RegExp(`/t/${two.t.slug}/mas`), { timeout: T })
   await B.page.waitForSelector('a:has-text("Mi perfil")', { timeout: T })
-  const { data: linkB } = await admin.from('players').select('profile_id, profile_status').eq('id', two.playerId).single()
-  check(linkB?.profile_id === anonA && linkB.profile_status === 'confirmed', 'the second device’s player joined the same profile through the token', linkB)
+  const { data: linkB } = await admin
+    .from('players')
+    .select('profile_id, profile_status')
+    .eq('id', two.playerId)
+    .single()
+  check(
+    linkB?.profile_id === anonA && linkB.profile_status === 'confirmed',
+    'the second device’s player joined the same profile through the token',
+    linkB,
+  )
 
   console.log('Mi Polo and the profile page:')
   await B.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
@@ -207,7 +249,10 @@ try {
   // Tournaments and history load after the card.
   await B.page.waitForSelector(`text=${one.t.name}`, { timeout: T })
   const page = await B.page.textContent('main')
-  check(page.includes(`@${prof.handle}`) && page.includes('Juego los sábados.') && page.includes(one.t.name), 'the profile page shows the handle, the bio and the tournaments')
+  check(
+    page.includes(`@${prof.handle}`) && page.includes('Juego los sábados.') && page.includes(one.t.name),
+    'the profile page shows the handle, the bio and the tournaments',
+  )
   await B.page.screenshot({ path: `${out}/profile-page.png`, fullPage: true })
 
   console.log('Social: the bell, friends and the inbox:')
@@ -230,7 +275,10 @@ try {
   console.log('Push: the switch is offered (Playwright contexts are incognito, where Chrome has no Push API):')
   await B.page.goto(`${base}/perfil/editar`, { waitUntil: 'domcontentloaded' })
   await B.page.waitForSelector('text=Avisos en este teléfono', { timeout: T })
-  check((await B.page.locator('button:has-text("Activar avisos")').count()) === 1, '/perfil/editar offers "Activar avisos"')
+  check(
+    (await B.page.locator('button:has-text("Activar avisos")').count()) === 1,
+    '/perfil/editar offers "Activar avisos"',
+  )
 
   console.log('Crews: create one in the app:')
   await B.page.goto(`${base}/crews`, { waitUntil: 'domcontentloaded' })
@@ -241,20 +289,37 @@ try {
   const crewSlug = new URL(B.page.url()).pathname.split('/')[2]
   await B.page.waitForSelector(`text=E2E crew ${rand}`, { timeout: T })
   const { data: crewRow } = await admin.from('crews').select('id, join_code').eq('slug', crewSlug).single()
-  check(!!crewRow?.join_code && (await B.page.textContent('main')).includes(crewRow.join_code), 'the crew page shows its join code')
+  check(
+    !!crewRow?.join_code && (await B.page.textContent('main')).includes(crewRow.join_code),
+    'the crew page shows its join code',
+  )
 
   console.log('Ronda rápida: create in the app, score, close and publish:')
-  const { data: qc } = await admin.from('courses').insert({ name: `E2E campo ${rand}` }).select('id').single()
+  const { data: qc } = await admin
+    .from('courses')
+    .insert({ name: `E2E campo ${rand}` })
+    .select('id')
+    .single()
   created.courses.push(qc.id)
-  const { data: qtee } = await admin.from('tees').insert({ course_id: qc.id, name: 'Blancas', rating: 72.0, slope: 113, sort_order: 0 }).select('id').single()
-  await admin.from('holes').insert(Array.from({ length: 18 }, (_, i) => ({ tee_id: qtee.id, number: i + 1, par: 4, stroke_index: i + 1 })))
+  const { data: qtee } = await admin
+    .from('tees')
+    .insert({ course_id: qc.id, name: 'Blancas', rating: 72.0, slope: 113, sort_order: 0 })
+    .select('id')
+    .single()
+  await admin
+    .from('holes')
+    .insert(Array.from({ length: 18 }, (_, i) => ({ tee_id: qtee.id, number: i + 1, par: 4, stroke_index: i + 1 })))
   await B.page.goto(`${base}/`, { waitUntil: 'domcontentloaded' })
   await B.page.click('a[href="/ronda"]')
   await B.page.waitForSelector('text=Quién juega', { timeout: T })
   await B.page.selectOption('select >> nth=0', qc.id)
   // The tee list loads after the course is picked.
   for (let until = Date.now() + T; Date.now() < until; await B.page.waitForTimeout(250)) {
-    if ((await B.page.locator('select').count()) > 1 && (await B.page.locator('select').nth(1).inputValue()) === qtee.id) break
+    if (
+      (await B.page.locator('select').count()) > 1 &&
+      (await B.page.locator('select').nth(1).inputValue()) === qtee.id
+    )
+      break
   }
   await B.page.fill('input[placeholder="Nombre del invitado"]', 'Invitado E2E')
   await B.page.click('button:has-text("Agregar")')
@@ -264,26 +329,72 @@ try {
   await B.page.click('button:has-text("Empezar")')
   await B.page.waitForURL(/\/t\/[^/]+\/tarjeta$/, { timeout: T })
   const slug = new URL(B.page.url()).pathname.split('/')[2]
-  const { data: qt } = await admin.from('tournaments').select('id, status, quick, current_round_id, settings').eq('slug', slug).single()
+  const { data: qt } = await admin
+    .from('tournaments')
+    .select('id, status, quick, current_round_id, settings')
+    .eq('slug', slug)
+    .single()
   created.tournaments.push(qt.id)
-  const { data: qps } = await admin.from('players').select('id, display_name, profile_id, profile_status').eq('tournament_id', qt.id).order('sort_order')
-  check(qt.status === 'live' && qt.quick && qps.length === 2 && qps[0].profile_id === anonA && qps[0].profile_status === 'confirmed' && qps[1].display_name === 'Invitado', 'the round opens on the Tarjeta: live, me confirmed, the guest in', { qt: { status: qt.status, quick: qt.quick }, qps })
-  check((qt.settings.games ?? []).map((g) => g.type).sort().join(',') === 'eventPot,skins', 'with the games picked (skins, birdies)', qt.settings.games)
+  const { data: qps } = await admin
+    .from('players')
+    .select('id, display_name, profile_id, profile_status')
+    .eq('tournament_id', qt.id)
+    .order('sort_order')
+  check(
+    qt.status === 'live' &&
+      qt.quick &&
+      qps.length === 2 &&
+      qps[0].profile_id === anonA &&
+      qps[0].profile_status === 'confirmed' &&
+      qps[1].display_name === 'Invitado',
+    'the round opens on the Tarjeta: live, me confirmed, the guest in',
+    { qt: { status: qt.status, quick: qt.quick }, qps },
+  )
+  check(
+    (qt.settings.games ?? [])
+      .map((g) => g.type)
+      .sort()
+      .join(',') === 'eventPot,skins',
+    'with the games picked (skins, birdies)',
+    qt.settings.games,
+  )
   // Both cards: fives all round (the round results need complete cards).
-  await admin.from('scores').insert(qps.flatMap((p) => Array.from({ length: 18 }, (_, i) => ({ round_id: qt.current_round_id, player_id: p.id, hole: i + 1, strokes: 5, putts: 2, picked_up: false, client_ts: new Date().toISOString() }))))
+  await admin.from('scores').insert(
+    qps.flatMap((p) =>
+      Array.from({ length: 18 }, (_, i) => ({
+        round_id: qt.current_round_id,
+        player_id: p.id,
+        hole: i + 1,
+        strokes: 5,
+        putts: 2,
+        picked_up: false,
+        client_ts: new Date().toISOString(),
+      })),
+    ),
+  )
   await B.page.goto(`${base}/t/${slug}`, { waitUntil: 'domcontentloaded' })
   await B.page.waitForSelector('button:has-text("Terminar y publicar")', { timeout: T })
   await B.page.click('button:has-text("Terminar y publicar")')
   await B.page.locator('button:has-text("Terminar y publicar")').last().click()
   await B.page.waitForSelector('text=Ronda publicada', { timeout: T })
   const { data: done } = await admin.from('tournaments').select('status').eq('id', qt.id).single()
-  const { data: rr } = await admin.from('round_results').select('player_id, gross, complete').eq('round_id', qt.current_round_id)
+  const { data: rr } = await admin
+    .from('round_results')
+    .select('player_id, gross, complete')
+    .eq('round_id', qt.current_round_id)
   const { data: tr } = await admin.from('tournament_results').select('player_id, rank_label').eq('tournament_id', qt.id)
-  check(done.status === 'finished' && rr?.length === 2 && rr.every((r) => r.gross === 90 && r.complete) && tr?.length === 2, '"Terminar y publicar" closes it and the results reach the profile', { done, rr, tr })
+  check(
+    done.status === 'finished' && rr?.length === 2 && rr.every((r) => r.gross === 90 && r.complete) && tr?.length === 2,
+    '"Terminar y publicar" closes it and the results reach the profile',
+    { done, rr, tr },
+  )
   // Same cards, same handicap: the two tie for 1st, (25 + 18) / 2 + 1 = 22.5 for the crew member (the guest is not one).
   await B.page.goto(`${base}/c/${crewSlug}`, { waitUntil: 'domcontentloaded' })
   await B.page.waitForSelector('text=22.5', { timeout: T })
-  check((await B.page.textContent('main')).includes('Jugadas'), 'the outing counts for the crew season (22.5 pts for a shared win)')
+  check(
+    (await B.page.textContent('main')).includes('Jugadas'),
+    'the outing counts for the crew season (22.5 pts for a shared win)',
+  )
   await B.page.screenshot({ path: `${out}/crew.png`, fullPage: true })
 } catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)

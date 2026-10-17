@@ -17,7 +17,18 @@ import { PLATFORM_CURRENCY } from '../../lib/money'
 import { mainEntrants, type FieldShape } from './prizeCheck'
 import type { TournamentSettings } from './schema'
 
-export type SenseKey = 'cap' | 'placeTwice' | 'placeUnreachable' | 'tierTwice' | 'lastTwice' | 'buyback' | 'houseCut' | 'currency' | 'cutMax' | 'timezone' | 'signingPairs'
+export type SenseKey =
+  | 'cap'
+  | 'placeTwice'
+  | 'placeUnreachable'
+  | 'tierTwice'
+  | 'lastTwice'
+  | 'buyback'
+  | 'houseCut'
+  | 'currency'
+  | 'cutMax'
+  | 'timezone'
+  | 'signingPairs'
 
 export interface SenseIssue {
   key: SenseKey
@@ -55,10 +66,12 @@ export function settingsSense(s: TournamentSettings, field: FieldShape | null): 
   const known = !!field && field.players >= 2
 
   if (s.handicap.cap < 1) out.push({ key: 'cap', says: say('sense.cap') })
-  if (s.rounds > 1 && s.day2Cut.maxStrokes > CUT_MAX_STROKES) out.push({ key: 'cutMax', says: msg('sense.cutMax', { max: CUT_MAX_STROKES }) })
+  if (s.rounds > 1 && s.day2Cut.maxStrokes > CUT_MAX_STROKES)
+    out.push({ key: 'cutMax', says: msg('sense.cutMax', { max: CUT_MAX_STROKES }) })
 
   const pot = known ? s.entryFee * field.players : 0
-  if (known && s.houseCut > 0 && s.houseCut > pot) out.push({ key: 'houseCut', says: msg('sense.houseCut', { cut: s.houseCut, pot }) })
+  if (known && s.houseCut > 0 && s.houseCut > pot)
+    out.push({ key: 'houseCut', says: msg('sense.houseCut', { cut: s.houseCut, pot }) })
 
   if (s.modules.auction.enabled) {
     const places = new Set<number>()
@@ -67,21 +80,33 @@ export function settingsSense(s: TournamentSettings, field: FieldShape | null): 
     const entrants = known ? mainEntrants(s, field) : null
     for (const slot of s.auction.payout) {
       if (slot.slot === 'place') {
-        if (places.has(slot.place)) out.push({ key: 'placeTwice', says: msg('sense.placeTwice', { place: slot.place, lastPlace: s.labels.lastPlace }) })
+        if (places.has(slot.place))
+          out.push({
+            key: 'placeTwice',
+            says: msg('sense.placeTwice', { place: slot.place, lastPlace: s.labels.lastPlace }),
+          })
         places.add(slot.place)
-        if (entrants && slot.place > entrants.count) out.push({ key: 'placeUnreachable', says: msg('sense.placeUnreachable', { place: slot.place, count: entrants.count, unit: entrants.unit }) })
+        if (entrants && slot.place > entrants.count)
+          out.push({
+            key: 'placeUnreachable',
+            says: msg('sense.placeUnreachable', { place: slot.place, count: entrants.count, unit: entrants.unit }),
+          })
       } else if (slot.slot === 'bestOfTier') {
         if (tiers.has(slot.tier)) out.push({ key: 'tierTwice', says: msg('sense.tierTwice', { tier: slot.tier }) })
         tiers.add(slot.tier)
-      } else if (++last === 2) out.push({ key: 'lastTwice', says: msg('sense.lastTwice', { label: s.labels.lastPlace }) })
+      } else if (++last === 2)
+        out.push({ key: 'lastTwice', says: msg('sense.lastTwice', { label: s.labels.lastPlace }) })
     }
-    if (s.auction.buybackMaxPct > BUYBACK_MAX_PCT) out.push({ key: 'buyback', says: msg('sense.buyback', { max: BUYBACK_MAX_PCT }) })
+    if (s.auction.buybackMaxPct > BUYBACK_MAX_PCT)
+      out.push({ key: 'buyback', says: msg('sense.buyback', { max: BUYBACK_MAX_PCT }) })
   }
 
   // The pairs sign each other's cards only where there are pairs: without the game nobody would sign (UX-23).
-  if (s.cardSigning === 'pairs' && !s.modules.pairs.enabled) out.push({ key: 'signingPairs', says: msg('sense.signingPairs', { game: s.modules.pairs.label }) })
+  if (s.cardSigning === 'pairs' && !s.modules.pairs.enabled)
+    out.push({ key: 'signingPairs', says: msg('sense.signingPairs', { game: s.modules.pairs.label }) })
 
-  if (!(CURRENCIES as readonly string[]).includes(s.currency)) out.push({ key: 'currency', says: msg('sense.currency', { currency: s.currency }) })
+  if (!(CURRENCIES as readonly string[]).includes(s.currency))
+    out.push({ key: 'currency', says: msg('sense.currency', { currency: s.currency }) })
   if (!validTimeZone(s.timezone)) out.push({ key: 'timezone', says: msg('sense.timezone', { zone: s.timezone }) })
   return out
 }

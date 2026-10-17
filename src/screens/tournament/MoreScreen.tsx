@@ -99,15 +99,30 @@ export function MoreScreen() {
     <div className={styles.screen}>
       <h1>{t.more.title}</h1>
       <div className={styles.me}>
-        {player ? <Avatar name={player.displayName} url={player.avatarUrl} honoree={player.isHonoree} /> : <Avatar name={user?.email ?? 'O'} />}
+        {player ? (
+          <Avatar name={player.displayName} url={player.avatarUrl} honoree={player.isHonoree} />
+        ) : (
+          <Avatar name={user?.email ?? 'O'} />
+        )}
         <div className={styles.meText}>
           <span className="label">{t.more.whoAmI}</span>
-          <span className={styles.meName}>{player?.fullName ?? (me.via === 'platform' ? t.platform.title : me.isOrganizer ? `${t.more.organizer}, ${user?.email ?? ''}` : '')}</span>
+          <span className={styles.meName}>
+            {player?.fullName ??
+              (me.via === 'platform'
+                ? t.platform.title
+                : me.isOrganizer
+                  ? `${t.more.organizer}, ${user?.email ?? ''}`
+                  : '')}
+          </span>
         </div>
       </div>
 
       {me.isComite && (
-        <Link className={buttonClass({ variant: 'primary', block: true })} to={`/t/${slug}/admin`} {...preloadOnIntent(AdminLayout)}>
+        <Link
+          className={buttonClass({ variant: 'primary', block: true })}
+          to={`/t/${slug}/admin`}
+          {...preloadOnIntent(AdminLayout)}
+        >
           {t.more.admin}
         </Link>
       )}
@@ -115,7 +130,10 @@ export function MoreScreen() {
         <div className={styles.join}>
           <span className="label">{t.account.title}</span>
           <p className="help">{t.more.saveProfileHint}</p>
-          <Link className={buttonClass({ variant: 'secondary', block: true })} to={`/entrar?next=${encodeURIComponent(`/t/${slug}/mas`)}`}>
+          <Link
+            className={buttonClass({ variant: 'secondary', block: true })}
+            to={`/entrar?next=${encodeURIComponent(`/t/${slug}/mas`)}`}
+          >
             {t.more.saveProfile}
           </Link>
         </div>
@@ -180,8 +198,6 @@ export function MoreScreen() {
       <div className={styles.session}>
         {me.playerId && (
           <Button
-            
-           
             onClick={() => {
               const q = queuedFor(lookup.id)
               if (q.writes > 0) setUnsent(q)
@@ -206,7 +222,11 @@ export function MoreScreen() {
           {t.errors.backHome}
         </Link>
       </div>
-      <Sheet open={!!unsent} onClose={() => setUnsent(null)} title={unsent?.holes ? t.sync.unsentBeforeSwitch(unsent.holes) : t.sync.unsentWritesBeforeSwitch}>
+      <Sheet
+        open={!!unsent}
+        onClose={() => setUnsent(null)}
+        title={unsent?.holes ? t.sync.unsentBeforeSwitch(unsent.holes) : t.sync.unsentWritesBeforeSwitch}
+      >
         <p>{t.sync.unsentBeforeSwitchBody}</p>
         <Button variant="primary" onClick={() => setUnsent(null)}>
           {t.sync.understood}

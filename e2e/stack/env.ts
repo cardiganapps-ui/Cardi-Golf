@@ -45,7 +45,9 @@ export function assertLocal(): void {
  * with. The query returns one JSON value; this returns it parsed.
  */
 export function sql<T>(query: string): T {
-  const out = execFileSync('psql', [DB_URL, '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', query], { encoding: 'utf8' })
+  const out = execFileSync('psql', [DB_URL, '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', query], {
+    encoding: 'utf8',
+  })
   return JSON.parse(out.trim()) as T
 }
 

@@ -32,7 +32,10 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const { user, isAnonymous } = useAuth()
   // The Comité's invite (UX-20, `?soy=<player>`): Entrar opens on his face, its PIN pad ready. Never a PIN in the link.
   const [params] = useSearchParams()
-  const invited = useMemo(() => lookup.players.find((p) => p.id === params.get('soy')) ?? null, [lookup.players, params])
+  const invited = useMemo(
+    () => lookup.players.find((p) => p.id === params.get('soy')) ?? null,
+    [lookup.players, params],
+  )
   const [selected, setSelected] = useState<LookupResult['players'][number] | null>(invited)
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
@@ -62,7 +65,9 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   const players = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return lookup.players
-    return lookup.players.filter((p) => p.displayName.toLowerCase().includes(q) || (p.fullName ?? '').toLowerCase().includes(q))
+    return lookup.players.filter(
+      (p) => p.displayName.toLowerCase().includes(q) || (p.fullName ?? '').toLowerCase().includes(q),
+    )
   }, [lookup.players, query])
 
   async function submit(nextPin: string) {
@@ -85,10 +90,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       // until when (the server locks the phone 5 minutes and the player 15, and answers when it ends). The player's
       // lock stops only phones that never held him (SEC-04), so it says where it still works and who opens it.
       if (r.reason === 'no_pin') setError(t.enter.noPin)
-      else if (r.reason === 'locked' && r.scope === 'player') setError(t.enter.lockedPlayer(r.lockedUntil ? clockTime(r.lockedUntil) : null))
+      else if (r.reason === 'locked' && r.scope === 'player')
+        setError(t.enter.lockedPlayer(r.lockedUntil ? clockTime(r.lockedUntil) : null))
       else if (r.reason === 'locked') setError(t.enter.lockedUntil(r.lockedUntil ? clockTime(r.lockedUntil) : null))
-      else if (r.reason === 'wrong_pin') setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
-      else if (r.reason === 'already_linked') setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
+      else if (r.reason === 'wrong_pin')
+        setError(`${t.enter.wrongPin} ${r.attemptsLeft != null ? t.enter.attemptsLeft(r.attemptsLeft) : ''}`)
+      else if (r.reason === 'already_linked')
+        setError(t.enter.alreadyLinked(lookup.players.find((p) => p.id === r.playerId)?.displayName ?? ''))
       else setError(t.enter.playerGone)
       if (r.reason === 'wrong_pin' || r.reason === 'locked') refused()
     } catch (e) {
@@ -141,7 +149,11 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
   useViewFocus(view, (v) => {
     const root = screenRef.current
     if (!root) return null
-    if (v === 'faces') return (lastFace.current && root.querySelector(`[data-player="${CSS.escape(lastFace.current)}"]`)) || root.querySelector('h1')
+    if (v === 'faces')
+      return (
+        (lastFace.current && root.querySelector(`[data-player="${CSS.escape(lastFace.current)}"]`)) ||
+        root.querySelector('h1')
+      )
     return root.querySelector('[data-view-heading]')
   })
 
@@ -164,7 +176,15 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
             )}
             {lookup.players.length === 0 && <p className="help">{t.enter.noPlayers}</p>}
             {dense && (
-              <input className="input" type="search" placeholder={t.enter.search} value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" aria-label={t.enter.search} />
+              <input
+                className="input"
+                type="search"
+                placeholder={t.enter.search}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                autoComplete="off"
+                aria-label={t.enter.search}
+              />
             )}
           </div>
           {dense && players.length === 0 && query && <p className="help">{t.enter.noMatch}</p>}
@@ -181,10 +201,20 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
                   setSelected(p)
                 }}
               >
-                <Avatar name={p.displayName} url={p.avatarUrl} size={dense ? 'sm' : undefined} honoree={p.isHonoree} seed={p.id} />
+                <Avatar
+                  name={p.displayName}
+                  url={p.avatarUrl}
+                  size={dense ? 'sm' : undefined}
+                  honoree={p.isHonoree}
+                  seed={p.id}
+                />
                 <span className={styles.faceText}>
                   <span className={styles.faceName}>{p.displayName}</span>
-                  {p.pendingMe ? <span className={styles.faceAsk}>{t.enter.isThisYou}</span> : p.tier && <span className={styles.faceTier}>{t.enter.faceTier(p.tier)}</span>}
+                  {p.pendingMe ? (
+                    <span className={styles.faceAsk}>{t.enter.isThisYou}</span>
+                  ) : (
+                    p.tier && <span className={styles.faceTier}>{t.enter.faceTier(p.tier)}</span>
+                  )}
                 </span>
               </button>
             ))}
@@ -198,7 +228,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       ) : askSave ? (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={askSave.displayName} url={askSave.avatarUrl} size="lg" honoree={askSave.isHonoree} seed={askSave.id} />
+            <Avatar
+              name={askSave.displayName}
+              url={askSave.avatarUrl}
+              size="lg"
+              honoree={askSave.isHonoree}
+              seed={askSave.id}
+            />
             <div className="grow">
               <h2 data-view-heading>{t.more.saveHere}</h2>
               <p className="help">{t.more.saveProfileHint}</p>
@@ -216,7 +252,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       ) : selected.pendingMe ? (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} seed={selected.id} />
+            <Avatar
+              name={selected.displayName}
+              url={selected.avatarUrl}
+              size="lg"
+              honoree={selected.isHonoree}
+              seed={selected.id}
+            />
             <div className="grow">
               <h2 data-view-heading>{t.enter.isThisYou}</h2>
               <p className="help">{t.enter.confirmYou(selected.displayName)}</p>
@@ -239,7 +281,13 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
       ) : (
         <div className={`${styles.pinStep} fade-in`}>
           <div className={styles.who}>
-            <Avatar name={selected.displayName} url={selected.avatarUrl} size="lg" honoree={selected.isHonoree} seed={selected.id} />
+            <Avatar
+              name={selected.displayName}
+              url={selected.avatarUrl}
+              size="lg"
+              honoree={selected.isHonoree}
+              seed={selected.id}
+            />
             <div className="grow">
               <h2>{t.enter.enterAs(selected.displayName)}</h2>
               <p className="help" id={pinHintId}>
@@ -294,8 +342,6 @@ export function EnterScreen({ lookup, onEntered }: { lookup: LookupResult; onEnt
           )}
           <div className={styles.actions}>
             <Button
-              
-             
               onClick={() => {
                 setSelected(null)
                 setPin('')

@@ -86,7 +86,16 @@ beforeEach(async () => {
 afterEach(() => {
   store().unsubscribe()
   vi.useRealTimers()
-  useTournament.setState({ tournamentId: null, loading: false, error: null, data: null, realtime: 'off', updatedAt: 0, source: null, keepOnPhone: true })
+  useTournament.setState({
+    tournamentId: null,
+    loading: false,
+    error: null,
+    data: null,
+    realtime: 'off',
+    updatedAt: 0,
+    source: null,
+    keepOnPhone: true,
+  })
 })
 
 describe('money_adjustments on the channel (0027, MONEY-05)', () => {
@@ -115,7 +124,11 @@ describe('money_adjustments on the channel (0027, MONEY-05)', () => {
     const before = requests()
     const voided = { voided_at: '2027-04-10T21:00:00+00:00', voided_by: 'org', void_reason: 'Era de otro' }
     emit('money_adjustments', { eventType: 'UPDATE', new: adjustment(voided), old: {} })
-    emit('money_adjustments', { eventType: 'UPDATE', new: adjustment({ id: 'adj-2', to_player_id: p(1), ...voided }), old: {} })
+    emit('money_adjustments', {
+      eventType: 'UPDATE',
+      new: adjustment({ id: 'adj-2', to_player_id: p(1), ...voided }),
+      old: {},
+    })
     await vi.advanceTimersByTimeAsync(40)
     expect(store().data!.snapshot.moneyAdjustments!.map((x) => x.voidReason)).toEqual(['Era de otro', 'Era de otro'])
     expect(store().data!.state.money.unassigned.assignments).toEqual([])
@@ -136,7 +149,26 @@ describe('rejected_writes on the channel (0028, REL-08)', () => {
   /** The Comité opened «Pendientes de revisar»: the list holds w1. */
   const comite = () => {
     server.rpcResult = { data: [kept('w1')], error: null }
-    useRejectedInbox.setState({ tournamentId: TID, items: [{ id: 'w1', roundId: round.id, hole: 5, playerId: p(1), writerPlayerId: p(2), reason: 'round_not_live', fields: { strokes: 6 }, base: {}, auto: false, createdAt: '' }], status: 'ready', error: null, fixture: false })
+    useRejectedInbox.setState({
+      tournamentId: TID,
+      items: [
+        {
+          id: 'w1',
+          roundId: round.id,
+          hole: 5,
+          playerId: p(1),
+          writerPlayerId: p(2),
+          reason: 'round_not_live',
+          fields: { strokes: 6 },
+          base: {},
+          auto: false,
+          createdAt: '',
+        },
+      ],
+      status: 'ready',
+      error: null,
+      fixture: false,
+    })
   }
 
   it('a player’s phone (no list loaded) hears its own rows at no cost: no request, the boards untouched', async () => {
@@ -158,7 +190,10 @@ describe('rejected_writes on the channel (0028, REL-08)', () => {
     comite()
     const before = requests()
     const shown = store().data
-    server.rpcResult = { data: [kept('w1'), kept('w2', { player_id: p(2) }), kept('w3', { player_id: p(3) })], error: null }
+    server.rpcResult = {
+      data: [kept('w1'), kept('w2', { player_id: p(2) }), kept('w3', { player_id: p(3) })],
+      error: null,
+    }
     emit('rejected_writes', { eventType: 'INSERT', new: kept('w2', { player_id: p(2) }), old: {} })
     emit('rejected_writes', { eventType: 'INSERT', new: kept('w3', { player_id: p(3) }), old: {} })
     await vi.advanceTimersByTimeAsync(INBOX_RELOAD_MS - 1)
@@ -249,7 +284,8 @@ describe('rejected_writes on the channel (0028, REL-08)', () => {
     // Within the wait, the Comité opens this tournament's list, and this one's change comes in.
     server.rpcResult = { data: [], error: null }
     await loadRejectedInbox(TID)
-    const tidReads = () => server.rpcCalls.filter((c) => c.name === 'rejected_inbox' && c.args?.p_tournament_id === TID).length
+    const tidReads = () =>
+      server.rpcCalls.filter((c) => c.name === 'rejected_inbox' && c.args?.p_tournament_id === TID).length
     const opened = tidReads()
     server.rpcResult = { data: [kept('w2')], error: null }
     emit('rejected_writes', { eventType: 'INSERT', new: kept('w2'), old: {} })

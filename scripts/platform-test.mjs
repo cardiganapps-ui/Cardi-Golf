@@ -51,7 +51,12 @@ async function account(tag, name) {
   const sb = client()
   const email = `plat-${tag}-${rand}@cardi-golf.test`
   const password = `Pw-${rand}-${tag}!`
-  const { data: made, error } = await service.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: name } })
+  const { data: made, error } = await service.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: name },
+  })
   if (error) throw error
   created.users.push(made.user.id)
   const { error: signInErr } = await sb.auth.signInWithPassword({ email, password })
@@ -103,8 +108,16 @@ try {
   const { data: T, error: tErr } = await A.sb.rpc('create_tournament', { p_name: `Plat ${rand}`, p_settings: settings })
   if (tErr) throw tErr
   created.tournaments.push(T.id)
-  const { data: p0 } = await A.sb.from('players').insert({ tournament_id: T.id, full_name: 'Pablo Jugador', display_name: 'Pablo', sort_order: 0 }).select('id').single()
-  const { data: r1 } = await A.sb.from('rounds').insert({ tournament_id: T.id, number: 1, holes: 18 }).select('id').single()
+  const { data: p0 } = await A.sb
+    .from('players')
+    .insert({ tournament_id: T.id, full_name: 'Pablo Jugador', display_name: 'Pablo', sort_order: 0 })
+    .select('id')
+    .single()
+  const { data: r1 } = await A.sb
+    .from('rounds')
+    .insert({ tournament_id: T.id, number: 1, holes: 18 })
+    .select('id')
+    .single()
 
   const N = await account('n', 'Nora Normal')
   const dev = client()
@@ -126,11 +139,21 @@ try {
   await query(`insert into public.platform_admins (auth_user_id, note) values ('${uuid(P.id)}', 'platform-test')`)
 
   console.log('nobody else reaches the platform:')
-  for (const [who, sb] of /** @type {Array<[string, typeof dev]>} */ ([['an account', N.sb], ['an organizer', A.sb], ['an anonymous device', dev]])) {
+  for (const [who, sb] of /** @type {Array<[string, typeof dev]>} */ ([
+    ['an account', N.sb],
+    ['an organizer', A.sb],
+    ['an anonymous device', dev],
+  ])) {
     const { data: isAdmin } = await sb.rpc('is_platform_admin')
     const results = await Promise.all(PLATFORM_CALLS(T.id, A.id).map(([fn, args]) => sb.rpc(fn, args)))
-    const leaks = PLATFORM_CALLS(T.id, A.id).filter((_, i) => !denied(results[i].error)).map(([fn]) => fn)
-    check(isAdmin === false && leaks.length === 0, `${who}: is_platform_admin is false and every platform_* is refused`, { isAdmin, leaks })
+    const leaks = PLATFORM_CALLS(T.id, A.id)
+      .filter((_, i) => !denied(results[i].error))
+      .map(([fn]) => fn)
+    check(
+      isAdmin === false && leaks.length === 0,
+      `${who}: is_platform_admin is false and every platform_* is refused`,
+      { isAdmin, leaks },
+    )
   }
   const { data: nSees } = await N.sb.from('tournaments').select('id').eq('id', T.id)
   check((nSees ?? []).length === 0, 'an unrelated account still reads nothing of the tournament')
@@ -141,25 +164,57 @@ try {
   const { data: pSees } = await P.sb.from('tournaments').select('id, name').eq('id', T.id)
   check(pSees?.length === 1, 'the admin reads a tournament he does not belong to')
   const { data: pm } = await P.sb.rpc('my_membership', { tid: T.id })
-  check(pm?.via === 'platform' && pm.role === 'platform' && pm.isOrganizer === true && pm.playerId === null && pm.protected === false, 'my_membership says via platform, organizer', pm)
+  check(
+    pm?.via === 'platform' &&
+      pm.role === 'platform' &&
+      pm.isOrganizer === true &&
+      pm.playerId === null &&
+      pm.protected === false,
+    'my_membership says via platform, organizer',
+    pm,
+  )
   const { data: am } = await A.sb.rpc('my_membership', { tid: T.id })
   check(am?.via !== 'platform' && am?.role === 'owner' && am.isOrganizer === true, 'the owner is still the owner', am)
-  const { error: pSave } = await P.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 1, p_strokes: 5, p_putts: 2, p_picked_up: false, p_reason: 'Prueba de plataforma' })
+  const { error: pSave } = await P.sb.rpc('admin_save_score', {
+    p_round_id: r1.id,
+    p_player_id: p0.id,
+    p_hole: 1,
+    p_strokes: 5,
+    p_putts: 2,
+    p_picked_up: false,
+    p_reason: 'Prueba de plataforma',
+  })
   check(!pSave, 'the admin corrects a score (admin_save_score)', pSave?.message)
-  const [mark] = await query(`select actor_platform, actor_auth_user_id::text as who from public.audit_log where table_name = 'scores' and tournament_id = '${uuid(T.id)}' order by at desc limit 1`)
+  const [mark] = await query(
+    `select actor_platform, actor_auth_user_id::text as who from public.audit_log where table_name = 'scores' and tournament_id = '${uuid(T.id)}' order by at desc limit 1`,
+  )
   check(mark?.actor_platform === true && mark.who === P.id, 'the audit marks it as the Admin de Polo', mark)
-  const { error: aSave } = await A.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 2, p_strokes: 4, p_putts: 2, p_picked_up: false })
-  const [aMark] = await query(`select actor_platform from public.audit_log where table_name = 'scores' and tournament_id = '${uuid(T.id)}' order by at desc limit 1`)
-  check(!aSave && aMark?.actor_platform === false, 'the owner\'s own correction is not marked')
+  const { error: aSave } = await A.sb.rpc('admin_save_score', {
+    p_round_id: r1.id,
+    p_player_id: p0.id,
+    p_hole: 2,
+    p_strokes: 4,
+    p_putts: 2,
+    p_picked_up: false,
+  })
+  const [aMark] = await query(
+    `select actor_platform from public.audit_log where table_name = 'scores' and tournament_id = '${uuid(T.id)}' order by at desc limit 1`,
+  )
+  check(!aSave && aMark?.actor_platform === false, "the owner's own correction is not marked")
   const { data: pAudit } = await P.sb.from('audit_log').select('id').eq('tournament_id', T.id).limit(1)
-  check((pAudit ?? []).length === 1, 'the admin reads the tournament\'s audit')
+  check((pAudit ?? []).length === 1, "the admin reads the tournament's audit")
   await A.sb.from('tournaments').update({ tagline: 'cambio' }).eq('id', T.id)
-  const [tRow] = await query(`select tournament_id::text as tid from public.audit_log where table_name = 'tournaments' and row_id = '${uuid(T.id)}' order by at desc limit 1`)
+  const [tRow] = await query(
+    `select tournament_id::text as tid from public.audit_log where table_name = 'tournaments' and row_id = '${uuid(T.id)}' order by at desc limit 1`,
+  )
   check(tRow?.tid === T.id, 'a change to the tournaments row is logged against its tournament (was null)', tRow)
 
   console.log('his own lists stay his:')
   const { data: pOrgRows } = await P.sb.from('tournament_organizers').select('tournament_id').eq('auth_user_id', P.id)
-  check((pOrgRows ?? []).length === 0, 'Mis torneos (filtered by account) does not fill up with other people\'s tournaments')
+  check(
+    (pOrgRows ?? []).length === 0,
+    "Mis torneos (filtered by account) does not fill up with other people's tournaments",
+  )
 
   console.log('reading tournaments is not reading people:')
   const { data: pCard } = await P.sb.rpc('profile_card', { p_handle: uProfile.handle })
@@ -167,84 +222,212 @@ try {
   const { data: pReq } = await P.sb.rpc('friend_request', { p_handle: uProfile.handle })
   check(pReq === 'not_found', 'and he cannot send it a friend request', pReq)
   const { data: aCard } = await A.sb.rpc('profile_card', { p_handle: uProfile.handle })
-  check(aCard?.related === true, 'while the tournament\'s own Comité still sees it in full')
+  check(aCard?.related === true, "while the tournament's own Comité still sees it in full")
   const { data: pProfiles } = await P.sb.from('profiles').select('id')
-  check((pProfiles ?? []).every((x) => x.id === P.id), 'profiles: the admin reads only his own row', pProfiles?.length)
+  check(
+    (pProfiles ?? []).every((x) => x.id === P.id),
+    'profiles: the admin reads only his own row',
+    pProfiles?.length,
+  )
 
   console.log('the panel reads:')
   const { data: ov, error: ovErr } = await P.sb.rpc('platform_overview')
-  check(!ovErr && ov.accounts >= 4 && ov.tournaments >= 1 && Array.isArray(ov.recent), 'platform_overview', ovErr?.message)
+  check(
+    !ovErr && ov.accounts >= 4 && ov.tournaments >= 1 && Array.isArray(ov.recent),
+    'platform_overview',
+    ovErr?.message,
+  )
   const { data: daily } = await P.sb.rpc('platform_daily', { p_days: 14 })
-  check(Array.isArray(daily) && daily.length === 14 && daily.at(-1).tournaments >= 1, 'platform_daily: 14 days, today has the new tournament', daily?.at(-1))
+  check(
+    Array.isArray(daily) && daily.length === 14 && daily.at(-1).tournaments >= 1,
+    'platform_daily: 14 days, today has the new tournament',
+    daily?.at(-1),
+  )
   const { data: list } = await P.sb.rpc('platform_tournaments', { p_q: A.email })
-  check(list?.total === 1 && list.rows[0].id === T.id && list.rows[0].ownerEmail === A.email, 'platform_tournaments finds it by the organizer\'s email', list)
+  check(
+    list?.total === 1 && list.rows[0].id === T.id && list.rows[0].ownerEmail === A.email,
+    "platform_tournaments finds it by the organizer's email",
+    list,
+  )
   const { data: orphans } = await P.sb.rpc('platform_tournaments', { p_kind: 'orphan', p_q: T.slug })
   check(orphans?.total === 0, 'it is not an orphan')
   // Opening it needs a reason, and the Comité sees the view in its Historial (TRUST-22, 0068).
   const { error: viewNoReason } = await P.sb.rpc('platform_tournament', { p_tournament_id: T.id })
   check(viewNoReason?.code === 'PV001', 'platform_tournament without a reason asks for one (PV001)', viewNoReason)
-  const { data: one } = await P.sb.rpc('platform_tournament', { p_tournament_id: T.id, p_reason: 'Prueba de plataforma' })
+  const { data: one } = await P.sb.rpc('platform_tournament', {
+    p_tournament_id: T.id,
+    p_reason: 'Prueba de plataforma',
+  })
   const { data: seen } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id })
-  check(seen?.some((e) => e.table === 'platform_audit_log' && e.action === 'view' && e.reason === 'Prueba de plataforma'), 'its Comité sees the view and its reason in Historial', seen?.slice(0, 3))
-  check(one?.organizers?.[0]?.email === A.email && one.counts.players === 1 && one.rounds.length === 1 && one.audit.length > 0, 'platform_tournament: Comité, counts, rounds, audit', one && { org: one.organizers, counts: one.counts })
+  check(
+    seen?.some((e) => e.table === 'platform_audit_log' && e.action === 'view' && e.reason === 'Prueba de plataforma'),
+    'its Comité sees the view and its reason in Historial',
+    seen?.slice(0, 3),
+  )
+  check(
+    one?.organizers?.[0]?.email === A.email &&
+      one.counts.players === 1 &&
+      one.rounds.length === 1 &&
+      one.audit.length > 0,
+    'platform_tournament: Comité, counts, rounds, audit',
+    one && { org: one.organizers, counts: one.counts },
+  )
 
   console.log('Protegido:')
   const { error: nProtect } = await N.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: true })
   const { error: directFlag } = await A.sb.from('tournaments').update({ is_protected: true }).eq('id', T.id)
-  check(denied(nProtect) && !!directFlag, 'only the owner or the admin protects, and never by a direct write', { nProtect: nProtect?.message, directFlag: directFlag?.message })
+  check(denied(nProtect) && !!directFlag, 'only the owner or the admin protects, and never by a direct write', {
+    nProtect: nProtect?.message,
+    directFlag: directFlag?.message,
+  })
   const { error: aProtect } = await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: true })
   check(!aProtect, 'the owner protects it', aProtect?.message)
   const { data: pmLocked } = await P.sb.rpc('my_membership', { tid: T.id })
-  const { error: lockedSave } = await P.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 3, p_strokes: 4, p_putts: 2, p_picked_up: false, p_reason: 'x' })
+  const { error: lockedSave } = await P.sb.rpc('admin_save_score', {
+    p_round_id: r1.id,
+    p_player_id: p0.id,
+    p_hole: 3,
+    p_strokes: 4,
+    p_putts: 2,
+    p_picked_up: false,
+    p_reason: 'x',
+  })
   const { data: lockedRead } = await P.sb.from('tournaments').select('id').eq('id', T.id)
-  check(pmLocked?.protected === true && pmLocked.isOrganizer === false && !!lockedSave && lockedRead?.length === 1, 'the admin can read it but not write it', { pmLocked, lockedSave: lockedSave?.message })
+  check(
+    pmLocked?.protected === true && pmLocked.isOrganizer === false && !!lockedSave && lockedRead?.length === 1,
+    'the admin can read it but not write it',
+    { pmLocked, lockedSave: lockedSave?.message },
+  )
   const { data: aDel } = await A.sb.from('tournaments').delete().eq('id', T.id).select('id')
   const { data: stillThere } = await A.sb.from('tournaments').select('id').eq('id', T.id)
   check(stillThere?.length === 1, 'the owner cannot delete a protected tournament', aDel)
   const { error: noReason } = await P.sb.rpc('platform_unlock', { p_tournament_id: T.id, p_reason: '' })
-  const { data: until, error: unlockErr } = await P.sb.rpc('platform_unlock', { p_tournament_id: T.id, p_reason: 'Corregir un hoyo que reportaron' })
-  check(!!noReason && !unlockErr && new Date(until) > new Date(), 'unlocking needs a reason and gives a deadline', unlockErr?.message)
-  const { error: unlockedSave } = await P.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 3, p_strokes: 4, p_putts: 2, p_picked_up: false, p_reason: 'Reportado' })
+  const { data: until, error: unlockErr } = await P.sb.rpc('platform_unlock', {
+    p_tournament_id: T.id,
+    p_reason: 'Corregir un hoyo que reportaron',
+  })
+  check(
+    !!noReason && !unlockErr && new Date(until) > new Date(),
+    'unlocking needs a reason and gives a deadline',
+    unlockErr?.message,
+  )
+  const { error: unlockedSave } = await P.sb.rpc('admin_save_score', {
+    p_round_id: r1.id,
+    p_player_id: p0.id,
+    p_hole: 3,
+    p_strokes: 4,
+    p_putts: 2,
+    p_picked_up: false,
+    p_reason: 'Reportado',
+  })
   check(!unlockedSave, 'unlocked, the admin writes', unlockedSave?.message)
   await P.sb.rpc('platform_relock', { p_tournament_id: T.id })
-  const { error: relockedSave } = await P.sb.rpc('admin_save_score', { p_round_id: r1.id, p_player_id: p0.id, p_hole: 4, p_strokes: 4, p_putts: 2, p_picked_up: false, p_reason: 'x' })
+  const { error: relockedSave } = await P.sb.rpc('admin_save_score', {
+    p_round_id: r1.id,
+    p_player_id: p0.id,
+    p_hole: 4,
+    p_strokes: 4,
+    p_putts: 2,
+    p_picked_up: false,
+    p_reason: 'x',
+  })
   check(!!relockedSave, 'relocked, he cannot')
-  const logged = await query(`select action from public.platform_audit_log where tournament_id = '${uuid(T.id)}' order by at`)
+  const logged = await query(
+    `select action from public.platform_audit_log where tournament_id = '${uuid(T.id)}' order by at`,
+  )
   // Since 0068 (TRUST-22) opening the tournament leaves a «view» line too; the writes are unlock then relock.
-  check(logged.filter((x) => x.action !== 'view').map((x) => x.action).join(',') === 'unlock,relock' && logged.some((x) => x.action === 'view'), 'unlock and relock are in the platform log, after the views', logged)
+  check(
+    logged
+      .filter((x) => x.action !== 'view')
+      .map((x) => x.action)
+      .join(',') === 'unlock,relock' && logged.some((x) => x.action === 'view'),
+    'unlock and relock are in the platform log, after the views',
+    logged,
+  )
   const { error: offNoReason } = await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false })
-  const { error: offOk } = await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false, p_reason: 'Ya terminó' })
+  const { error: offOk } = await A.sb.rpc('set_tournament_protected', {
+    p_tournament_id: T.id,
+    p_on: false,
+    p_reason: 'Ya terminó',
+  })
   const { data: pmOpen } = await P.sb.rpc('my_membership', { tid: T.id })
-  check(!!offNoReason && !offOk && pmOpen?.isOrganizer === true, 'unprotecting needs a reason, and then the admin is Comité again', offOk?.message)
+  check(
+    !!offNoReason && !offOk && pmOpen?.isOrganizer === true,
+    'unprotecting needs a reason, and then the admin is Comité again',
+    offOk?.message,
+  )
 
   console.log('Historial (tournament_audit):')
   const { error: nAudit } = await N.sb.rpc('tournament_audit', { p_tournament_id: T.id })
   const { data: hist, error: histErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200 })
   const platformRow = (hist ?? []).find((h) => h.platform && h.table === 'scores')
-  check(denied(nAudit) && !histErr && !!platformRow && platformRow.actor === null, "the Comité reads its history, with the admin's changes marked; strangers cannot", { histErr: histErr?.message, n: hist?.length })
+  check(
+    denied(nAudit) && !histErr && !!platformRow && platformRow.actor === null,
+    "the Comité reads its history, with the admin's changes marked; strangers cannot",
+    { histErr: histErr?.message, n: hist?.length },
+  )
   // Pages by the history's own ids; the admin's lines merged in since 0068 carry negative ids and are no cursor (the
   // screen pages by its last history row, historyRows).
   const own = (hist ?? []).filter((h) => h.id > 0)
   const page2 = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_before: own[1]?.id, p_limit: 1 })
   const page2own = (page2.data ?? []).filter((h) => h.id > 0)
-  check(page2own.length === 1 && page2own[0].id < own[1].id, 'and pages by id', { page2: page2.data?.map((h) => h.id), cursor: own[1]?.id })
+  check(page2own.length === 1 && page2own[0].id < own[1].id, 'and pages by id', {
+    page2: page2.data?.map((h) => h.id),
+    cursor: own[1]?.id,
+  })
   // TRUST-19 (0063): narrowed on the server, a player's scores, a hole, the admin's changes; and no account in any image.
-  const { data: byHole, error: byHoleErr } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { player: p0.id, hole: 3 } })
-  check(!byHoleErr && byHole?.length > 0 && byHole.every((h) => h.table === 'scores' && (h.after ?? h.before)?.player_id === p0.id && (h.after ?? h.before)?.hole === 3), 'tournament_audit narrows to a player\'s hole (the 3 the admin fixed unlocked)', { byHoleErr: byHoleErr?.message, n: byHole?.length })
-  const { data: byAdmin } = await A.sb.rpc('tournament_audit', { p_tournament_id: T.id, p_limit: 200, p_filter: { platform: true } })
-  check(byAdmin?.length > 0 && byAdmin.every((h) => h.platform), 'and to the admin\'s changes, over the whole history')
+  const { data: byHole, error: byHoleErr } = await A.sb.rpc('tournament_audit', {
+    p_tournament_id: T.id,
+    p_limit: 200,
+    p_filter: { player: p0.id, hole: 3 },
+  })
+  check(
+    !byHoleErr &&
+      byHole?.length > 0 &&
+      byHole.every(
+        (h) => h.table === 'scores' && (h.after ?? h.before)?.player_id === p0.id && (h.after ?? h.before)?.hole === 3,
+      ),
+    "tournament_audit narrows to a player's hole (the 3 the admin fixed unlocked)",
+    { byHoleErr: byHoleErr?.message, n: byHole?.length },
+  )
+  const { data: byAdmin } = await A.sb.rpc('tournament_audit', {
+    p_tournament_id: T.id,
+    p_limit: 200,
+    p_filter: { platform: true },
+  })
+  check(byAdmin?.length > 0 && byAdmin.every((h) => h.platform), "and to the admin's changes, over the whole history")
   // U's profile is p0's (profile_id is its account), A owns the tournament (created_by, the organizer's row), P is the admin.
-  check(![A.id, P.id, U.id].some((uid) => JSON.stringify(hist).includes(uid)), 'the history names no account: not the owner, the admin or a linked profile')
+  check(
+    ![A.id, P.id, U.id].some((uid) => JSON.stringify(hist).includes(uid)),
+    'the history names no account: not the owner, the admin or a linked profile',
+  )
 
   console.log('Personas:')
   const { data: found } = await P.sb.rpc('platform_people', { p_q: A.email })
-  check(found?.total === 1 && found.rows[0].id === A.id && found.rows[0].tournaments >= 1, 'platform_people finds an account by email', found)
+  check(
+    found?.total === 1 && found.rows[0].id === A.id && found.rows[0].tournaments >= 1,
+    'platform_people finds an account by email',
+    found,
+  )
   const { data: devices } = await P.sb.rpc('platform_people', { p_filter: 'devices', p_limit: 200 })
-  check(devices?.rows.every((r) => r.anonymous) && devices.rows.some((r) => r.id === anon.user.id), 'the devices filter lists phones without an account')
+  check(
+    devices?.rows.every((r) => r.anonymous) && devices.rows.some((r) => r.id === anon.user.id),
+    'the devices filter lists phones without an account',
+  )
   const { data: aPerson } = await P.sb.rpc('platform_person', { p_user_id: A.id, p_reason: 'Prueba de plataforma' })
   const { data: aSees } = await A.sb.rpc('my_admin_accesses')
-  check(aSees?.some((e) => e.kind === 'person' && e.action === 'view' && e.reason === 'Prueba de plataforma'), 'the person sees in «Accesos del administrador» that her account was opened, and why', aSees?.slice(0, 3))
-  check(aPerson?.email === A.email && aPerson.tournaments.some((x) => x.tournamentId === T.id && x.role === 'owner') && aPerson.isSelf === false, 'platform_person: account and tournaments with role', aPerson?.tournaments)
+  check(
+    aSees?.some((e) => e.kind === 'person' && e.action === 'view' && e.reason === 'Prueba de plataforma'),
+    'the person sees in «Accesos del administrador» that her account was opened, and why',
+    aSees?.slice(0, 3),
+  )
+  check(
+    aPerson?.email === A.email &&
+      aPerson.tournaments.some((x) => x.tournamentId === T.id && x.role === 'owner') &&
+      aPerson.isSelf === false,
+    'platform_person: account and tournaments with role',
+    aPerson?.tournaments,
+  )
   check(!JSON.stringify(aPerson).match(/pin_hash|token_hash|p256dh|"auth"/), 'and nothing secret-shaped in it')
   const { error: selfBlock } = await P.sb.rpc('platform_block', { p_user_id: P.id, p_reason: 'prueba' })
   check(!!selfBlock, 'the admin cannot block himself', selfBlock?.message)
@@ -262,54 +445,124 @@ try {
   const zAgain = client()
   const { error: bannedSignIn } = await zAgain.auth.signInWithPassword({ email: Z.email, password: Z.password })
   const { data: blockedList } = await P.sb.rpc('platform_people', { p_filter: 'blocked', p_q: Z.email })
-  check(!!noReasonBlock && !blockErr && !!bannedSignIn && blockedList?.total === 1, 'blocking needs a reason, stops sign-in, and lists as blocked', { blockErr: blockErr?.message, bannedSignIn: bannedSignIn?.message })
+  check(
+    !!noReasonBlock && !blockErr && !!bannedSignIn && blockedList?.total === 1,
+    'blocking needs a reason, stops sign-in, and lists as blocked',
+    { blockErr: blockErr?.message, bannedSignIn: bannedSignIn?.message },
+  )
   const { error: unblockErr } = await P.sb.rpc('platform_unblock', { p_user_id: Z.id, p_reason: 'Ya se aclaró' })
   const { error: backIn } = await zAgain.auth.signInWithPassword({ email: Z.email, password: Z.password })
-  check(!unblockErr && !backIn, 'unblocking lets the account back in', { unblockErr: unblockErr?.message, backIn: backIn?.message })
+  check(!unblockErr && !backIn, 'unblocking lets the account back in', {
+    unblockErr: unblockErr?.message,
+    backIn: backIn?.message,
+  })
 
   // A phone locks itself out of a PIN; the admin clears it.
-  const { data: pz } = await A.sb.from('players').insert({ tournament_id: T.id, full_name: 'Pin Bloqueado', display_name: 'Pin', sort_order: 1 }).select('id').single()
+  const { data: pz } = await A.sb
+    .from('players')
+    .insert({ tournament_id: T.id, full_name: 'Pin Bloqueado', display_name: 'Pin', sort_order: 1 })
+    .select('id')
+    .single()
   await A.sb.rpc('set_player_pin', { p_player_id: pz.id, p_pin: '2468' })
   const phone = client()
   const { data: phoneSession } = await phone.auth.signInAnonymously()
   created.users.push(phoneSession.user.id)
   for (let i = 0; i < 5; i++) await phone.rpc('claim_player', { p_player_id: pz.id, p_pin: '0000' })
   const { data: lockedTry } = await phone.rpc('claim_player', { p_player_id: pz.id, p_pin: '2468' })
-  const { data: phonePerson } = await P.sb.rpc('platform_person', { p_user_id: phoneSession.user.id, p_reason: 'Prueba de plataforma' })
-  check(lockedTry?.reason === 'locked' && !!phonePerson?.deviceLock?.lockedUntil, 'five wrong PINs lock the phone, and the admin sees it', { lockedTry, lock: phonePerson?.deviceLock })
-  await P.sb.rpc('platform_reset_pin_lock', { p_user_id: phoneSession.user.id, p_player_id: pz.id, p_reason: 'Se equivocó de jugador' })
+  const { data: phonePerson } = await P.sb.rpc('platform_person', {
+    p_user_id: phoneSession.user.id,
+    p_reason: 'Prueba de plataforma',
+  })
+  check(
+    lockedTry?.reason === 'locked' && !!phonePerson?.deviceLock?.lockedUntil,
+    'five wrong PINs lock the phone, and the admin sees it',
+    { lockedTry, lock: phonePerson?.deviceLock },
+  )
+  await P.sb.rpc('platform_reset_pin_lock', {
+    p_user_id: phoneSession.user.id,
+    p_player_id: pz.id,
+    p_reason: 'Se equivocó de jugador',
+  })
   const { data: afterReset } = await phone.rpc('claim_player', { p_player_id: pz.id, p_pin: '2468' })
   check(afterReset?.ok === true, 'after clearing the lock the right PIN works', afterReset)
 
   // Delete Z: the crew survives with U as owner, the tournament is left without a Comité.
   const { data: preview } = await P.sb.rpc('platform_delete_preview', { p_user_id: Z.id })
-  check(preview?.crewsHanded?.includes(crew.name ?? `Plat crew ${rand}`) && preview.orphaned.some((x) => x.id === TZ.id), 'the preview says which crew is handed over and which tournament is orphaned', preview)
-  const { error: wrongEmail } = await P.sb.rpc('platform_delete_account', { p_user_id: Z.id, p_confirm: 'otro@correo.mx', p_reason: 'Prueba' })
-  const { error: delErr } = await P.sb.rpc('platform_delete_account', { p_user_id: Z.id, p_confirm: Z.email.toUpperCase(), p_reason: 'Pidió borrar su cuenta' })
-  const [crewAfter] = await query(`select c.created_by::text as owner, (select role from public.crew_members m where m.crew_id = c.id and m.profile_id = c.created_by) as role from public.crews c where c.id = '${uuid(crew.id)}'`)
+  check(
+    preview?.crewsHanded?.includes(crew.name ?? `Plat crew ${rand}`) && preview.orphaned.some((x) => x.id === TZ.id),
+    'the preview says which crew is handed over and which tournament is orphaned',
+    preview,
+  )
+  const { error: wrongEmail } = await P.sb.rpc('platform_delete_account', {
+    p_user_id: Z.id,
+    p_confirm: 'otro@correo.mx',
+    p_reason: 'Prueba',
+  })
+  const { error: delErr } = await P.sb.rpc('platform_delete_account', {
+    p_user_id: Z.id,
+    p_confirm: Z.email.toUpperCase(),
+    p_reason: 'Pidió borrar su cuenta',
+  })
+  const [crewAfter] = await query(
+    `select c.created_by::text as owner, (select role from public.crew_members m where m.crew_id = c.id and m.profile_id = c.created_by) as role from public.crews c where c.id = '${uuid(crew.id)}'`,
+  )
   const { data: goneUser } = await service.auth.admin.getUserById(Z.id)
-  check(!!wrongEmail && !delErr && !goneUser?.user && crewAfter?.owner === U.id && crewAfter.role === 'owner', 'deleting needs the exact email; the crew is handed to its member first', { delErr: delErr?.message, crewAfter })
+  check(
+    !!wrongEmail && !delErr && !goneUser?.user && crewAfter?.owner === U.id && crewAfter.role === 'owner',
+    'deleting needs the exact email; the crew is handed to its member first',
+    { delErr: delErr?.message, crewAfter },
+  )
   const { data: orphanList } = await P.sb.rpc('platform_tournaments', { p_kind: 'orphan', p_q: TZ.slug })
   check(orphanList?.total === 1, 'the tournament stays, without a Comité')
-  const { error: setOrg } = await P.sb.rpc('platform_set_organizer', { p_tournament_id: TZ.id, p_user_id: A.id, p_role: 'owner', p_reason: 'Se quedó sin Comité' })
+  const { error: setOrg } = await P.sb.rpc('platform_set_organizer', {
+    p_tournament_id: TZ.id,
+    p_user_id: A.id,
+    p_role: 'owner',
+    p_reason: 'Se quedó sin Comité',
+  })
   const { data: aOnTZ } = await A.sb.rpc('my_membership', { tid: TZ.id })
-  const { error: anonOrg } = await P.sb.rpc('platform_set_organizer', { p_tournament_id: TZ.id, p_user_id: anon.user.id, p_role: 'admin', p_reason: 'Prueba' })
-  check(!setOrg && aOnTZ?.role === 'owner' && !!anonOrg, 'the admin gives it a new owner (an account, never a phone)', { setOrg: setOrg?.message, aOnTZ })
-  const personLog = await query(`select action from public.platform_audit_log where target_id = '${uuid(Z.id)}' order by at`)
-  check(personLog.map((x) => x.action).join(',') === 'block,unblock,delete', 'block, unblock and delete are in the platform log', personLog)
+  const { error: anonOrg } = await P.sb.rpc('platform_set_organizer', {
+    p_tournament_id: TZ.id,
+    p_user_id: anon.user.id,
+    p_role: 'admin',
+    p_reason: 'Prueba',
+  })
+  check(!setOrg && aOnTZ?.role === 'owner' && !!anonOrg, 'the admin gives it a new owner (an account, never a phone)', {
+    setOrg: setOrg?.message,
+    aOnTZ,
+  })
+  const personLog = await query(
+    `select action from public.platform_audit_log where target_id = '${uuid(Z.id)}' order by at`,
+  )
+  check(
+    personLog.map((x) => x.action).join(',') === 'block,unblock,delete',
+    'block, unblock and delete are in the platform log',
+    personLog,
+  )
   // TRUST-03 (0031): the deletion log keeps a fingerprint of the email, never the address.
-  const [delLog] = await query(`select payload ? 'email' as has_email, payload ->> 'emailHash' as hash, (payload::text ilike '%${Z.email.replace(/'/g, "''")}%') as leaks from public.platform_audit_log where target_id = '${uuid(Z.id)}' and action = 'delete'`)
-  check(delLog?.has_email === false && /^[0-9a-f]{64}$/.test(delLog?.hash ?? '') && delLog?.leaks === false, 'the deletion log keeps the email\'s fingerprint, not the email (TRUST-03)', delLog)
+  const [delLog] = await query(
+    `select payload ? 'email' as has_email, payload ->> 'emailHash' as hash, (payload::text ilike '%${Z.email.replace(/'/g, "''")}%') as leaks from public.platform_audit_log where target_id = '${uuid(Z.id)}' and action = 'delete'`,
+  )
+  check(
+    delLog?.has_email === false && /^[0-9a-f]{64}$/.test(delLog?.hash ?? '') && delLog?.leaks === false,
+    "the deletion log keeps the email's fingerprint, not the email (TRUST-03)",
+    delLog,
+  )
   await query(`delete from public.crews where id = '${uuid(crew.id)}'`)
 
   console.log('Campos:')
-  const card = (pars) => Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: pars?.[i] ?? 4, stroke_index: i + 1 }))
+  const card = (pars) =>
+    Array.from({ length: 18 }, (_, i) => ({ number: i + 1, par: pars?.[i] ?? 4, stroke_index: i + 1 }))
   async function course(name, tees) {
     const { data: c } = await service.from('courses').insert({ name, created_by: A.id }).select('id').single()
     created.courses.push(c.id)
     const ids = []
     for (const [i, t] of tees.entries()) {
-      const { data: tee } = await service.from('tees').insert({ course_id: c.id, name: t.name, rating: 72, slope: 113, sort_order: i }).select('id').single()
+      const { data: tee } = await service
+        .from('tees')
+        .insert({ course_id: c.id, name: t.name, rating: 72, slope: 113, sort_order: i })
+        .select('id')
+        .single()
       await service.from('holes').insert((t.holes ?? card()).map((h) => ({ ...h, tee_id: tee.id })))
       ids.push(tee.id)
     }
@@ -317,31 +570,90 @@ try {
   }
   const K = await course(`Plat Campo ${rand}`, [{ name: 'Azules' }, { name: 'Rojas', holes: card([5]) }])
   const D = await course(`Plat Campo ${rand} Los Cabos`, [{ name: 'Azules' }, { name: 'Blancas' }])
-  const X = await course(`Plat Zzz ${rand} sin usar`, [{ name: 'Azules', holes: card().map((h) => ({ ...h, stroke_index: 1 })) }])
-  const { data: r2 } = await A.sb.from('rounds').insert({ tournament_id: T.id, number: 2, holes: 18, course_id: D.id }).select('id').single()
+  const X = await course(`Plat Zzz ${rand} sin usar`, [
+    { name: 'Azules', holes: card().map((h) => ({ ...h, stroke_index: 1 })) },
+  ])
+  const { data: r2 } = await A.sb
+    .from('rounds')
+    .insert({ tournament_id: T.id, number: 2, holes: 18, course_id: D.id })
+    .select('id')
+    .single()
   await A.sb.from('round_tees').insert({ round_id: r2.id, player_id: p0.id, tee_id: D.tees[0] })
 
   const { data: dupes } = await P.sb.rpc('platform_courses', { p_filter: 'dupes', p_q: `plat campo ${rand}` })
-  check(dupes?.total === 2 && dupes.rows.every((r) => r.dupes >= 1), '«X» and «X Los Cabos» are flagged as duplicates', dupes)
+  check(
+    dupes?.total === 2 && dupes.rows.every((r) => r.dupes >= 1),
+    '«X» and «X Los Cabos» are flagged as duplicates',
+    dupes,
+  )
   const { data: broken } = await P.sb.rpc('platform_courses', { p_filter: 'broken', p_q: `plat zzz ${rand}` })
   check(broken?.total === 1, 'a card whose stroke indexes repeat is flagged as broken')
   const { data: dCourse } = await P.sb.rpc('platform_course', { p_course_id: D.id })
-  check(dCourse?.dupes.some((x) => x.id === K.id) && dCourse.usedBy.some((u) => u.tournamentId === T.id) && dCourse.tees[0].inUse === 1, 'platform_course: its duplicate, where it is played, which tee is in use', dCourse && { dupes: dCourse.dupes, usedBy: dCourse.usedBy })
+  check(
+    dCourse?.dupes.some((x) => x.id === K.id) &&
+      dCourse.usedBy.some((u) => u.tournamentId === T.id) &&
+      dCourse.tees[0].inUse === 1,
+    'platform_course: its duplicate, where it is played, which tee is in use',
+    dCourse && { dupes: dCourse.dupes, usedBy: dCourse.usedBy },
+  )
 
-  const { error: unmapped } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: {}, p_reason: 'Duplicado' })
-  const { error: mismatch } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[1] }, p_reason: 'Duplicado' })
-  check(/Falta/.test(unmapped?.message ?? '') && /no coinciden/.test(mismatch?.message ?? ''), 'merging refuses an unmapped tee in use, and a tee whose card scores differently', { unmapped: unmapped?.message, mismatch: mismatch?.message })
+  const { error: unmapped } = await P.sb.rpc('platform_merge_courses', {
+    p_keep: K.id,
+    p_drop: D.id,
+    p_tee_map: {},
+    p_reason: 'Duplicado',
+  })
+  const { error: mismatch } = await P.sb.rpc('platform_merge_courses', {
+    p_keep: K.id,
+    p_drop: D.id,
+    p_tee_map: { [D.tees[0]]: K.tees[1] },
+    p_reason: 'Duplicado',
+  })
+  check(
+    /Falta/.test(unmapped?.message ?? '') && /no coinciden/.test(mismatch?.message ?? ''),
+    'merging refuses an unmapped tee in use, and a tee whose card scores differently',
+    { unmapped: unmapped?.message, mismatch: mismatch?.message },
+  )
   await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: true })
-  const { error: protectedMerge } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[0] }, p_reason: 'Duplicado' })
+  const { error: protectedMerge } = await P.sb.rpc('platform_merge_courses', {
+    p_keep: K.id,
+    p_drop: D.id,
+    p_tee_map: { [D.tees[0]]: K.tees[0] },
+    p_reason: 'Duplicado',
+  })
   await A.sb.rpc('set_tournament_protected', { p_tournament_id: T.id, p_on: false, p_reason: 'Fin de la prueba' })
   check(denied(protectedMerge), 'and a course a locked Protegido tournament plays', protectedMerge?.message)
-  const { data: merged, error: mergeErr } = await P.sb.rpc('platform_merge_courses', { p_keep: K.id, p_drop: D.id, p_tee_map: { [D.tees[0]]: K.tees[0] }, p_reason: 'Duplicado de Quivira' })
-  const [after] = await query(`select (select course_id::text from public.rounds where id = '${uuid(r2.id)}') as course, (select tee_id::text from public.round_tees where round_id = '${uuid(r2.id)}') as tee, (select count(*) from public.courses where id = '${uuid(D.id)}') as dropped`)
-  check(!mergeErr && merged?.rounds === 1 && after.course === K.id && after.tee === K.tees[0] && Number(after.dropped) === 0, 'a clean merge moves the round and its tees, and the duplicate is gone', { mergeErr: mergeErr?.message, merged, after })
+  const { data: merged, error: mergeErr } = await P.sb.rpc('platform_merge_courses', {
+    p_keep: K.id,
+    p_drop: D.id,
+    p_tee_map: { [D.tees[0]]: K.tees[0] },
+    p_reason: 'Duplicado de Quivira',
+  })
+  const [after] = await query(
+    `select (select course_id::text from public.rounds where id = '${uuid(r2.id)}') as course, (select tee_id::text from public.round_tees where round_id = '${uuid(r2.id)}') as tee, (select count(*) from public.courses where id = '${uuid(D.id)}') as dropped`,
+  )
+  check(
+    !mergeErr &&
+      merged?.rounds === 1 &&
+      after.course === K.id &&
+      after.tee === K.tees[0] &&
+      Number(after.dropped) === 0,
+    'a clean merge moves the round and its tees, and the duplicate is gone',
+    { mergeErr: mergeErr?.message, merged, after },
+  )
   const { error: inUseDelete } = await P.sb.rpc('platform_delete_course', { p_course_id: K.id, p_reason: 'Prueba' })
-  const { error: unusedDelete } = await P.sb.rpc('platform_delete_course', { p_course_id: X.id, p_reason: 'Tarjeta mal capturada' })
-  check(/fusiónalo/.test(inUseDelete?.message ?? '') && !unusedDelete, 'a course in use cannot be deleted; an unused one can', { inUseDelete: inUseDelete?.message, unusedDelete: unusedDelete?.message })
-  const { data: refreshed, error: refreshErr } = await P.sb.rpc('platform_refresh_course_results', { p_course_id: K.id })
+  const { error: unusedDelete } = await P.sb.rpc('platform_delete_course', {
+    p_course_id: X.id,
+    p_reason: 'Tarjeta mal capturada',
+  })
+  check(
+    /fusiónalo/.test(inUseDelete?.message ?? '') && !unusedDelete,
+    'a course in use cannot be deleted; an unused one can',
+    { inUseDelete: inUseDelete?.message, unusedDelete: unusedDelete?.message },
+  )
+  const { data: refreshed, error: refreshErr } = await P.sb.rpc('platform_refresh_course_results', {
+    p_course_id: K.id,
+  })
   check(!refreshErr && refreshed === 0, 'recomputing results runs (no finished rounds here)', refreshErr?.message)
 
   console.log('Crews:')
@@ -351,58 +663,147 @@ try {
   await A.sb.rpc('join_crew', { p_code: c1.joinCode })
   const { data: crews } = await P.sb.rpc('platform_crews', { p_q: `plat crew ${rand}` })
   const { data: crewDetail } = await P.sb.rpc('platform_crew', { p_crew_id: c1.id, p_reason: 'Prueba de plataforma' })
-  check(crewDetail && !('joinCode' in crewDetail) && !JSON.stringify(crewDetail).includes(c1.joinCode), 'platform_crew never hands over the join code (TRUST-17)')
-  check(crews?.total === 1 && crews.rows[0].members === 2 && crewDetail?.members.length === 2 && crewDetail.members[0].profileId === U.id, 'platform_crews / platform_crew list the crew and its members, owner first', crewDetail?.members)
-  const { data: handed } = await P.sb.rpc('platform_crew_remove_member', { p_crew_id: c1.id, p_profile_id: U.id, p_reason: 'Lo pidió' })
+  check(
+    crewDetail && !('joinCode' in crewDetail) && !JSON.stringify(crewDetail).includes(c1.joinCode),
+    'platform_crew never hands over the join code (TRUST-17)',
+  )
+  check(
+    crews?.total === 1 &&
+      crews.rows[0].members === 2 &&
+      crewDetail?.members.length === 2 &&
+      crewDetail.members[0].profileId === U.id,
+    'platform_crews / platform_crew list the crew and its members, owner first',
+    crewDetail?.members,
+  )
+  const { data: handed } = await P.sb.rpc('platform_crew_remove_member', {
+    p_crew_id: c1.id,
+    p_profile_id: U.id,
+    p_reason: 'Lo pidió',
+  })
   const [owner] = await query(`select created_by::text as owner from public.crews where id = '${uuid(c1.id)}'`)
-  check(handed === 'handed' && owner?.owner === A.id, 'taking out the owner hands the crew to the next member', { handed, owner })
-  const { data: lastOut } = await P.sb.rpc('platform_crew_remove_member', { p_crew_id: c1.id, p_profile_id: A.id, p_reason: 'Lo pidió' })
+  check(handed === 'handed' && owner?.owner === A.id, 'taking out the owner hands the crew to the next member', {
+    handed,
+    owner,
+  })
+  const { data: lastOut } = await P.sb.rpc('platform_crew_remove_member', {
+    p_crew_id: c1.id,
+    p_profile_id: A.id,
+    p_reason: 'Lo pidió',
+  })
   const [gone] = await query(`select count(*)::int as n from public.crews where id = '${uuid(c1.id)}'`)
   check(lastOut === 'deleted' && gone.n === 0, 'taking out the last member deletes it')
   const { data: c2 } = await U.sb.rpc('create_crew', { p_name: `Plat crew2 ${rand}` })
   created.crews.push(c2.id)
   await A.sb.rpc('set_tournament_crew', { p_tournament_id: T.id, p_crew_id: null })
-  const { error: wrongName } = await P.sb.rpc('platform_delete_crew', { p_crew_id: c2.id, p_confirm: 'otro', p_reason: 'Prueba' })
-  const { error: delCrew } = await P.sb.rpc('platform_delete_crew', { p_crew_id: c2.id, p_confirm: `Plat crew2 ${rand}`, p_reason: 'Crew de prueba' })
-  check(!!wrongName && !delCrew, 'deleting a crew needs its exact name', { wrongName: wrongName?.message, delCrew: delCrew?.message })
-  const catalogLog = await query(`select action from public.platform_audit_log where actor_auth_user_id = '${uuid(P.id)}' and target_kind in ('course', 'crew') order by at`)
-  check(catalogLog.filter((x) => x.action !== 'view').map((x) => x.action).join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete', 'every catalog action is in the platform log', catalogLog)
+  const { error: wrongName } = await P.sb.rpc('platform_delete_crew', {
+    p_crew_id: c2.id,
+    p_confirm: 'otro',
+    p_reason: 'Prueba',
+  })
+  const { error: delCrew } = await P.sb.rpc('platform_delete_crew', {
+    p_crew_id: c2.id,
+    p_confirm: `Plat crew2 ${rand}`,
+    p_reason: 'Crew de prueba',
+  })
+  check(!!wrongName && !delCrew, 'deleting a crew needs its exact name', {
+    wrongName: wrongName?.message,
+    delCrew: delCrew?.message,
+  })
+  const catalogLog = await query(
+    `select action from public.platform_audit_log where actor_auth_user_id = '${uuid(P.id)}' and target_kind in ('course', 'crew') order by at`,
+  )
+  check(
+    catalogLog
+      .filter((x) => x.action !== 'view')
+      .map((x) => x.action)
+      .join(',') === 'course_merge,course_delete,course_refresh,crew_remove_member,crew_remove_member,crew_delete',
+    'every catalog action is in the platform log',
+    catalogLog,
+  )
 
   console.log('Switches (restored at the end, whatever happens):')
   flagsTouched = true
-  const setFlag = (key, value) => P.sb.rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: 'Prueba automática' })
-  const { error: flagNoReason } = await P.sb.rpc('platform_set_flag', { p_key: 'new_tournaments_paused', p_value: true, p_reason: '' })
-  const { error: badKey } = await P.sb.rpc('platform_set_flag', { p_key: 'drop_everything', p_value: true, p_reason: 'Prueba' })
+  const setFlag = (key, value) =>
+    P.sb.rpc('platform_set_flag', { p_key: key, p_value: value, p_reason: 'Prueba automática' })
+  const { error: flagNoReason } = await P.sb.rpc('platform_set_flag', {
+    p_key: 'new_tournaments_paused',
+    p_value: true,
+    p_reason: '',
+  })
+  const { error: badKey } = await P.sb.rpc('platform_set_flag', {
+    p_key: 'drop_everything',
+    p_value: true,
+    p_reason: 'Prueba',
+  })
   check(!!flagNoReason && !!badKey, 'a switch needs a reason and a known key')
   await setFlag('new_tournaments_paused', true)
-  const { error: nPaused } = await N.sb.rpc('create_tournament', { p_name: `Plat paused ${rand}`, p_settings: settings })
-  const { data: pT, error: pPaused } = await P.sb.rpc('create_tournament', { p_name: `Plat admin ${rand}`, p_settings: settings })
+  const { error: nPaused } = await N.sb.rpc('create_tournament', {
+    p_name: `Plat paused ${rand}`,
+    p_settings: settings,
+  })
+  const { data: pT, error: pPaused } = await P.sb.rpc('create_tournament', {
+    p_name: `Plat admin ${rand}`,
+    p_settings: settings,
+  })
   if (pT) created.tournaments.push(pT.id)
   await setFlag('new_tournaments_paused', false)
-  check(/no está creando torneos/.test(nPaused?.message ?? '') && !pPaused, 'pausing new tournaments stops everyone but the admin', { nPaused: nPaused?.message, pPaused: pPaused?.message })
+  check(
+    /no está creando torneos/.test(nPaused?.message ?? '') && !pPaused,
+    'pausing new tournaments stops everyone but the admin',
+    { nPaused: nPaused?.message, pPaused: pPaused?.message },
+  )
   await setFlag('new_accounts_paused', true)
   const L = await account('l', 'Lalo Tarde')
   const { error: lPaused } = await L.sb.rpc('ensure_my_profile')
   await setFlag('new_accounts_paused', false)
   const { error: lLater } = await L.sb.rpc('ensure_my_profile')
-  check(/no está aceptando cuentas/.test(lPaused?.message ?? '') && !lLater, 'pausing new accounts stops a new profile, and lifting it lets it through', { lPaused: lPaused?.message, lLater: lLater?.message })
+  check(
+    /no está aceptando cuentas/.test(lPaused?.message ?? '') && !lLater,
+    'pausing new accounts stops a new profile, and lifting it lets it through',
+    { lPaused: lPaused?.message, lLater: lLater?.message },
+  )
   await setFlag('maintenance_banner', 'Prueba de mantenimiento')
   const { data: anonFlags } = await client().rpc('app_flags')
   await setFlag('maintenance_banner', null)
   const { data: clearFlags } = await client().rpc('app_flags')
-  check(anonFlags?.maintenanceBanner === 'Prueba de mantenimiento' && clearFlags?.maintenanceBanner === null, 'the banner reaches even a phone with no session, and clears', { anonFlags, clearFlags })
+  check(
+    anonFlags?.maintenanceBanner === 'Prueba de mantenimiento' && clearFlags?.maintenanceBanner === null,
+    'the banner reaches even a phone with no session, and clears',
+    { anonFlags, clearFlags },
+  )
   flagsTouched = false
 
   console.log('Avisos (never to everyone for real):')
-  const { error: longTitle } = await P.sb.rpc('platform_broadcast', { p_title: 'x'.repeat(61), p_body: 'y', p_to: U.id })
-  const { error: offsite } = await P.sb.rpc('platform_broadcast', { p_title: 'Hola', p_body: 'y', p_to: U.id, p_url: 'https://example.com' })
+  const { error: longTitle } = await P.sb.rpc('platform_broadcast', {
+    p_title: 'x'.repeat(61),
+    p_body: 'y',
+    p_to: U.id,
+  })
+  const { error: offsite } = await P.sb.rpc('platform_broadcast', {
+    p_title: 'Hola',
+    p_body: 'y',
+    p_to: U.id,
+    p_url: 'https://example.com',
+  })
   check(!!longTitle && !!offsite, 'a notice has a short title and links only inside Polo')
-  const { data: sent, error: sendErr } = await P.sb.rpc('platform_broadcast', { p_title: 'Prueba', p_body: 'Esto es una prueba', p_to: U.id, p_url: '/crews' })
+  const { data: sent, error: sendErr } = await P.sb.rpc('platform_broadcast', {
+    p_title: 'Prueba',
+    p_body: 'Esto es una prueba',
+    p_to: U.id,
+    p_url: '/crews',
+  })
   const { data: inbox } = await U.sb.rpc('my_notifications')
   const got = (inbox ?? []).find((n) => n.kind === 'platform_notice')
-  check(!sendErr && sent === 1 && got?.data?.title === 'Prueba' && got.data.url === '/crews', 'a notice to one person lands in their inbox', { sendErr: sendErr?.message, sent, got })
+  check(
+    !sendErr && sent === 1 && got?.data?.title === 'Prueba' && got.data.url === '/crews',
+    'a notice to one person lands in their inbox',
+    { sendErr: sendErr?.message, sent, got },
+  )
   const { data: audience } = await P.sb.rpc('platform_audience')
-  check(audience?.profiles >= 3 && audience.recent.some((r) => r.title === 'Prueba' && r.to === U.id), 'platform_audience counts who a notice reaches and lists recent ones')
+  check(
+    audience?.profiles >= 3 && audience.recent.some((r) => r.title === 'Prueba' && r.to === U.id),
+    'platform_audience counts who a notice reaches and lists recent ones',
+  )
   // The daily limit, checked inside a transaction that rolls back: even if it failed, nothing would be sent.
   let limitErr = ''
   try {
@@ -422,42 +823,89 @@ try {
   const { data: feed } = await P.sb.rpc('platform_audit', { p_limit: 200 })
   const flagRow = (feed ?? []).find((x) => x.source === 'platform' && x.action === 'set_flag')
   const comiteRow = (feed ?? []).find((x) => x.source === 'comite' && x.tournamentId === T.id)
-  check(!!flagRow && !!comiteRow, 'the audit feed has his platform actions and his changes inside tournaments', { n: feed?.length })
+  check(!!flagRow && !!comiteRow, 'the audit feed has his platform actions and his changes inside tournaments', {
+    n: feed?.length,
+  })
   const { data: onlyComite } = await P.sb.rpc('platform_audit', { p_source: 'comite', p_q: T.name ?? `Plat ${rand}` })
   check((onlyComite ?? []).length > 0 && onlyComite.every((x) => x.source === 'comite'), 'filters by source and search')
   const { data: entry } = await P.sb.rpc('platform_audit_entry', { p_source: 'comite', p_id: comiteRow?.id })
-  check(!!entry && ('after' in entry || 'before' in entry) && !JSON.stringify(entry).includes('pin_hash'), 'an entry opens in full, nothing secret in it')
+  check(
+    !!entry && ('after' in entry || 'before' in entry) && !JSON.stringify(entry).includes('pin_hash'),
+    'an entry opens in full, nothing secret in it',
+  )
   // The newest file in the repo: production runs every one before this suite does.
-  const latestMigration = (await readdir(path.join(root, 'supabase', 'migrations'))).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort().at(-1)
-  const { data: run } = await service.from('backup_runs').insert({ ok: true, key: `backups/test-${rand}.json.gz`, bytes: 1234, tables: 3, rows: 99 }).select('id').single()
+  const latestMigration = (await readdir(path.join(root, 'supabase', 'migrations')))
+    .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+    .sort()
+    .at(-1)
+  const { data: run } = await service
+    .from('backup_runs')
+    .insert({ ok: true, key: `backups/test-${rand}.json.gz`, bytes: 1234, tables: 3, rows: 99 })
+    .select('id')
+    .single()
   const { data: health, error: healthErr } = await P.sb.rpc('platform_health')
   await service.from('backup_runs').delete().eq('id', run.id)
-  check(!healthErr && health.backup.last?.key === `backups/test-${rand}.json.gz` && health.push.configured === true && health.database.lastMigration?.name === latestMigration && typeof health.people.blocked === 'number', 'platform_health: last backup (the cron can write it), push configured, last migration', healthErr?.message ?? health)
+  check(
+    !healthErr &&
+      health.backup.last?.key === `backups/test-${rand}.json.gz` &&
+      health.push.configured === true &&
+      health.database.lastMigration?.name === latestMigration &&
+      typeof health.people.blocked === 'number',
+    'platform_health: last backup (the cron can write it), push configured, last migration',
+    healthErr?.message ?? health,
+  )
 
   // Telemetry (0037, STRAT-02): a phone logs and beats; the admin reads it; a Comité reads its own phones only.
   const phoneId = crypto.randomUUID()
-  const { data: kept, error: logErr } = await dev.rpc('log_client_events', { p_events: [{ deviceId: phoneId, kind: 'funnel', name: 'platform_test', data: { email: 'nadie@polo.test' } }] })
+  const { data: kept, error: logErr } = await dev.rpc('log_client_events', {
+    p_events: [{ deviceId: phoneId, kind: 'funnel', name: 'platform_test', data: { email: 'nadie@polo.test' } }],
+  })
   const { error: beatErr } = await dev.rpc('heartbeat', { p: { deviceId: phoneId, pending: 2, build: 1 } })
-  check(!logErr && kept === 1 && !beatErr, 'a phone logs an event and a heartbeat', logErr?.message ?? beatErr?.message ?? kept)
+  check(
+    !logErr && kept === 1 && !beatErr,
+    'a phone logs an event and a heartbeat',
+    logErr?.message ?? beatErr?.message ?? kept,
+  )
   const { data: tel, error: telErr } = await P.sb.rpc('platform_telemetry', { p_hours: 1 })
-  check(!telErr && tel.funnel.some((f) => f.name === 'platform_test') && tel.devices.seen >= 1 && tel.devices.pending >= 2, 'platform_telemetry: the event and the phone show in Salud', telErr?.message ?? tel)
-  const { data: stored } = await service.from('client_events').select('data').eq('name', 'platform_test').eq('device_id', phoneId).single()
+  check(
+    !telErr && tel.funnel.some((f) => f.name === 'platform_test') && tel.devices.seen >= 1 && tel.devices.pending >= 2,
+    'platform_telemetry: the event and the phone show in Salud',
+    telErr?.message ?? tel,
+  )
+  const { data: stored } = await service
+    .from('client_events')
+    .select('data')
+    .eq('name', 'platform_test')
+    .eq('device_id', phoneId)
+    .single()
   check(stored && !('email' in stored.data), 'the email key never reaches the table', stored)
   const { data: comitePhones, error: cpErr } = await A.sb.rpc('tournament_devices', { p_tournament_id: T.id })
   const { error: strangerErr } = await N.sb.rpc('tournament_devices', { p_tournament_id: T.id })
-  check(!cpErr && Array.isArray(comitePhones) && denied(strangerErr), 'tournament_devices: the Comité reads its phones, a stranger is refused', cpErr?.message ?? strangerErr)
+  check(
+    !cpErr && Array.isArray(comitePhones) && denied(strangerErr),
+    'tournament_devices: the Comité reads its phones, a stranger is refused',
+    cpErr?.message ?? strangerErr,
+  )
 } catch (/** @type {any} */ e) {
   console.error('ERROR', e.message ?? e)
   failures++
 } finally {
   console.log('cleaning up…')
   // Never leave a switch on in production.
-  if (flagsTouched) await query(`delete from public.platform_settings where key in ('new_accounts_paused', 'new_tournaments_paused', 'maintenance_banner') and updated_by in (select auth_user_id from public.platform_admins where note = 'platform-test')`)
+  if (flagsTouched)
+    await query(
+      `delete from public.platform_settings where key in ('new_accounts_paused', 'new_tournaments_paused', 'maintenance_banner') and updated_by in (select auth_user_id from public.platform_admins where note = 'platform-test')`,
+    )
   for (const id of created.tournaments) {
-    await query(`begin; select set_config('cardi.protect', '1', true); update public.tournaments set is_protected = false where id = '${uuid(id)}'; commit;`)
+    await query(
+      `begin; select set_config('cardi.protect', '1', true); update public.tournaments set is_protected = false where id = '${uuid(id)}'; commit;`,
+    )
     await service.from('tournaments').delete().eq('id', id)
   }
-  if (created.users.length) await query(`delete from public.platform_audit_log where actor_auth_user_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')}) or target_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')})`)
+  if (created.users.length)
+    await query(
+      `delete from public.platform_audit_log where actor_auth_user_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')}) or target_id in (${created.users.map((u) => `'${uuid(u)}'`).join(',')})`,
+    )
   for (const id of created.crews) await service.from('crews').delete().eq('id', id)
   for (const id of created.courses) await service.from('courses').delete().eq('id', id)
   for (const id of created.users) await service.auth.admin.deleteUser(id)

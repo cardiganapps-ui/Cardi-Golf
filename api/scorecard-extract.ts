@@ -82,7 +82,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const source =
     mediaType === 'application/pdf'
       ? ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: image } } as const)
-      : ({ type: 'image', source: { type: 'base64', media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif', data: image } } as const)
+      : ({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+            data: image,
+          },
+        } as const)
 
   try {
     const response = await client.messages.parse({
@@ -99,10 +106,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tees = card.tees.map((t) => {
       const issues: string[] = []
       const parSum = t.holes.reduce((s, h) => s + h.par, 0)
-      if (t.parTotalPrinted != null && parSum !== t.parTotalPrinted) issues.push(`Los pares suman ${parSum}, la tarjeta dice ${t.parTotalPrinted}.`)
+      if (t.parTotalPrinted != null && parSum !== t.parTotalPrinted)
+        issues.push(`Los pares suman ${parSum}, la tarjeta dice ${t.parTotalPrinted}.`)
       const sis = t.holes.map((h) => h.strokeIndex).sort((a, b) => a - b)
       const expected = t.holes.map((_, i) => i + 1)
-      if (sis.join(',') !== expected.join(',')) issues.push(`Los índices de golpe (SI) deben ir del 1 al ${t.holes.length}, sin repetir ninguno.`)
+      if (sis.join(',') !== expected.join(','))
+        issues.push(`Los índices de golpe (SI) deben ir del 1 al ${t.holes.length}, sin repetir ninguno.`)
       if (t.holes.length !== 18 && t.holes.length !== 9) issues.push(`Se leyeron ${t.holes.length} hoyos.`)
       return { ...t, parTotal: parSum, issues }
     })
@@ -114,7 +123,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (e instanceof Anthropic.APIError) {
       // A connection that never answered has no status: «(undefined)» is no help to anyone.
-      res.status(502).json({ error: typeof e.status === 'number' ? `No se pudo leer la tarjeta (${e.status}).` : 'No se pudo leer la tarjeta.' })
+      res.status(502).json({
+        error:
+          typeof e.status === 'number' ? `No se pudo leer la tarjeta (${e.status}).` : 'No se pudo leer la tarjeta.',
+      })
       return
     }
     if (e instanceof Anthropic.AnthropicError) {

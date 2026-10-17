@@ -24,7 +24,11 @@ export const PHONE = {
 }
 
 /** The suite's own marks on a page's window. */
-type Marked = Window & { __e2eSavedAt?: number; __e2eShownAt?: Record<string, number | null>; __e2eObserver?: MutationObserver }
+type Marked = Window & {
+  __e2eSavedAt?: number
+  __e2eShownAt?: Record<string, number | null>
+  __e2eObserver?: MutationObserver
+}
 
 export interface Phone {
   name: string
@@ -44,7 +48,8 @@ function markSaves(labels: string[]) {
     'click',
     (e) => {
       const button = (e.target as Element | null)?.closest?.('button')
-      if (button && labels.includes((button.textContent ?? '').trim())) (window as Marked).__e2eSavedAt = performance.timeOrigin + performance.now()
+      if (button && labels.includes((button.textContent ?? '').trim()))
+        (window as Marked).__e2eSavedAt = performance.timeOrigin + performance.now()
     },
     true,
   )
@@ -69,10 +74,15 @@ export interface Link {
  * held for the whole round, joining included: on every request (Chromium's
  * network conditions) and on every frame of the live channel, each way.
  */
-export const FOUR_G: Link = { latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 }
+export const FOUR_G: Link = {
+  latency: 150,
+  downloadThroughput: (1.6 * 1024 * 1024) / 8,
+  uploadThroughput: (750 * 1024) / 8,
+}
 
 /** The live channel really was on the link: its frames went through `slowSockets` on this phone's page. */
-export const slowFrames = (page: Page) => page.evaluate(() => (window as unknown as { __e2eSlowFrames?: number }).__e2eSlowFrames ?? 0)
+export const slowFrames = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __e2eSlowFrames?: number }).__e2eSlowFrames ?? 0)
 
 /** In the page: every WebSocket frame, sent or received, `oneWayMs` late, in order; `__e2eSlowFrames` counts them. */
 function slowSockets(oneWayMs: number) {
@@ -86,9 +96,16 @@ function slowSockets(oneWayMs: number) {
         if (this.readyState === Native.OPEN) Native.prototype.send.call(this, data)
       }, oneWayMs)
     }
-    addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions) {
+    addEventListener(
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions,
+    ) {
       if (!listener) return
-      if (type !== 'message') { super.addEventListener(type, listener, options); return; }
+      if (type !== 'message') {
+        super.addEventListener(type, listener, options)
+        return
+      }
       const call = typeof listener === 'function' ? listener : (e: Event) => listener.handleEvent(e)
       super.addEventListener(
         type,
@@ -97,7 +114,7 @@ function slowSockets(oneWayMs: number) {
           setTimeout(() => call.call(this, e), oneWayMs)
         },
         options,
-      );
+      )
     }
     set onmessage(fn: ((this: WebSocket, e: MessageEvent) => unknown) | null) {
       super.onmessage = fn
@@ -121,7 +138,11 @@ export async function openPage(phone: Phone, path: string): Promise<Page> {
   if (phone.link) {
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Network.enable')
-    await cdp.send('Network.emulateNetworkConditions', { offline: false, ...phone.link, latency: phone.link.latency / 2 })
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      ...phone.link,
+      latency: phone.link.latency / 2,
+    })
   }
   phone.page = page
   await page.goto(path)
@@ -176,10 +197,12 @@ export async function expectLive(page: Page) {
 }
 
 /** A tab of the tournament's bar (the Tarjeta's name carries the holes still on the phone). */
-export const tab = (page: Page, label: string) => page.getByRole('navigation', { name: t.common.sections }).getByRole('link', { name: new RegExp(`^${label}`) })
+export const tab = (page: Page, label: string) =>
+  page.getByRole('navigation', { name: t.common.sections }).getByRole('link', { name: new RegExp(`^${label}`) })
 
 /** The Tarjeta's hole, as its heading reads it out. */
-export const holeHeading = (page: Page, hole: number) => page.getByRole('heading', { level: 1, name: t.card.holeSpoken(hole, par(hole), strokeIndex(hole)), exact: true })
+export const holeHeading = (page: Page, hole: number) =>
+  page.getByRole('heading', { level: 1, name: t.card.holeSpoken(hole, par(hole), strokeIndex(hole)), exact: true })
 
 export async function openCard(page: Page) {
   await tab(page, t.nav.card).click()
@@ -202,7 +225,9 @@ async function setStepper(page: Page, label: string, target: number) {
     const now = Number((await group.textContent())?.trim())
     if (now === target) return
     const at = Date.now()
-    await page.getByRole('button', { name: `${label}: ${now < target ? t.common.stepUp : t.common.stepDown}`, exact: true }).click()
+    await page
+      .getByRole('button', { name: `${label}: ${now < target ? t.common.stepUp : t.common.stepDown}`, exact: true })
+      .click()
     await expect(group).not.toHaveText(String(now))
     taps.set(page, [...(taps.get(page) ?? []), Date.now() - at])
   }
@@ -230,7 +255,11 @@ export async function saveHole(page: Page, hole: number) {
   await page.getByRole('button', { name: hole === 18 ? t.card.saveLast : t.card.save, exact: true }).click()
   // The save bar's note. (On the last hole the card's live region says the same words, to a screen reader only.)
   // A hole the group had played is a correction: its note says so, and where the card went back to (UX-19).
-  const notes = [t.card.savedHole(hole), t.card.correctedHole(hole, null), t.card.correctedHole(hole, 99).replace('99', '\\d+')]
+  const notes = [
+    t.card.savedHole(hole),
+    t.card.correctedHole(hole, null),
+    t.card.correctedHole(hole, 99).replace('99', '\\d+'),
+  ]
   await expect(page.locator('span:not(.sr-only)', { hasText: new RegExp(`^(${notes.join('|')})$`) })).toBeVisible()
 }
 
@@ -246,12 +275,17 @@ export async function expectKeptOnPhone(page: Page, hole: number) {
             const db = open.result
             if (!db.objectStoreNames.contains('items')) {
               db.close()
-              resolve(0); return;
+              resolve(0)
+              return
             }
             const all = db.transaction('items').objectStore('items').getAll()
             all.onsuccess = () => {
               db.close()
-              resolve((all.result as Array<{ kind?: string; payload?: { hole?: number } }>).filter((x) => x.kind === 'hole' && x.payload?.hole === h).length)
+              resolve(
+                (all.result as Array<{ kind?: string; payload?: { hole?: number } }>).filter(
+                  (x) => x.kind === 'hole' && x.payload?.hole === h,
+                ).length,
+              )
             }
             all.onerror = () => {
               db.close()
@@ -293,7 +327,8 @@ export function boardRows(page: Page): Promise<string[]> {
 }
 
 /** A board row as the app labels it (t.live.rowLabel, a Stableford board's points), from the values the test expects. */
-export const row = (pos: string, name: string, figure: string, thru: string, today?: string) => t.live.rowLabel(pos, name, figure, today, thru, { unit: 'points' })
+export const row = (pos: string, name: string, figure: string, thru: string, today?: string) =>
+  t.live.rowLabel(pos, name, figure, today, thru, { unit: 'points' })
 
 /** The rows of `names` after the holes in `card`, without the position (ties move it): «Ana, 34 puntos, hoy 34 puntos, terminó». */
 export function boardAfter(card: Map<number, HoleEntry>, thru: number, names: string[] = GROUP_1): string[] {
@@ -329,11 +364,15 @@ export async function watchEach(page: Page, shown: Record<string, Shown>) {
             .filter((part) => !/^(ganaría |dueños?: |categoría |hándicap estimado$|sube$|baja$)/.test(part))
             .map((part) => part.replace(/ \(tú\)$/, ''))
             .join(', ')
-        const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) => scored(b.getAttribute('aria-label') ?? ''))
+        const labels = Array.from(document.querySelectorAll('button[class*="leaderRow"]'), (b) =>
+          scored(b.getAttribute('aria-label') ?? ''),
+        )
         return s.board.every((want) => labels.some((l) => l === want || l.endsWith(`, ${want}`)))
       }
       return s.card.every(([label, value]) => {
-        const group = Array.from(document.querySelectorAll('[role="group"][aria-label]')).find((g) => g.getAttribute('aria-label') === label)
+        const group = Array.from(document.querySelectorAll('[role="group"][aria-label]')).find(
+          (g) => g.getAttribute('aria-label') === label,
+        )
         return !!group && (group.textContent ?? '').trim() === value
       })
     }
@@ -358,10 +397,15 @@ export async function watchEach(page: Page, shown: Record<string, Shown>) {
 export async function shownEachAt(page: Page, timeout = 15_000): Promise<Record<string, number>> {
   let at: Record<string, number | null> = {}
   await expect
-    .poll(async () => {
-      at = await page.evaluate(() => ({ ...((window as Marked).__e2eShownAt ?? {}) }))
-      return Object.entries(at).filter(([, v]) => v == null).map(([k]) => k)
-    }, { timeout, message: 'the other phone never showed these' })
+    .poll(
+      async () => {
+        at = await page.evaluate(() => ({ ...((window as Marked).__e2eShownAt ?? {}) }))
+        return Object.entries(at)
+          .filter(([, v]) => v == null)
+          .map(([k]) => k)
+      },
+      { timeout, message: 'the other phone never showed these' },
+    )
     .toEqual([])
   return at as Record<string, number>
 }
@@ -413,11 +457,17 @@ export function expectedScores(card: Map<number, HoleEntry>, by: string): Server
  * The rows the server should hold for several groups' cards, each entered by
  * its own phone, in `serverScores`' order: by hole, then by the field's order.
  */
-export function expectedScoresOf(cards: Array<{ card: Map<number, HoleEntry>; names: string[]; by: string }>): ServerScore[] {
+export function expectedScoresOf(
+  cards: Array<{ card: Map<number, HoleEntry>; names: string[]; by: string }>,
+): ServerScore[] {
   const order = (name: string) => PLAYERS.findIndex((p) => p.name === name)
   return cards
     .flatMap(({ card, names, by }) =>
-      [...card.entries()].flatMap(([hole, entry]) => names.filter((name) => entry[name]).map((name) => ({ hole, name, strokes: entry[name].strokes, putts: entry[name].putts, by, disputed: false }))),
+      [...card.entries()].flatMap(([hole, entry]) =>
+        names
+          .filter((name) => entry[name])
+          .map((name) => ({ hole, name, strokes: entry[name].strokes, putts: entry[name].putts, by, disputed: false })),
+      ),
     )
     .sort((a, b) => a.hole - b.hole || order(a.name) - order(b.name))
 }

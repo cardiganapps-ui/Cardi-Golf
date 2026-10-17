@@ -17,9 +17,16 @@ const W = t.organizer.wizard
 
 async function checks(page: Page, pageErrors: string[]) {
   expect(pageErrors, 'uncaught errors').toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'horizontal scroll (px)').toBeLessThanOrEqual(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    'horizontal scroll (px)',
+  ).toBeLessThanOrEqual(0)
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
-  expect(results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`)).toEqual([])
+  expect(
+    results.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id}: ${v.nodes.length} × ${v.help}`),
+  ).toEqual([])
 }
 
 /** Every review line: its label's and its value's boxes and texts. */
@@ -28,7 +35,13 @@ function reviewRows(page: Page) {
     rows.map((row) => {
       const [k, v] = [row.querySelector('dt')!, row.querySelector('dd')!]
       const [kb, vb] = [k.getBoundingClientRect(), v.getBoundingClientRect()]
-      return { key: k.textContent, value: v.textContent, keyRight: kb.right, valueLeft: vb.left, ruled: getComputedStyle(row).borderBottomStyle !== 'none' }
+      return {
+        key: k.textContent,
+        value: v.textContent,
+        keyRight: kb.right,
+        valueLeft: vb.left,
+        ruled: getComputedStyle(row).borderBottomStyle !== 'none',
+      }
     }),
   )
 }
@@ -75,7 +88,10 @@ test('the Calcutta template reviews its modules, each with its prize (UX-04)', a
   await checks(page, pageErrors)
 })
 
-test('the system back goes back a step and keeps what was typed; forward returns; a reload and a back off the page keep the draft (UX-05)', async ({ page, pageErrors }) => {
+test('the system back goes back a step and keeps what was typed; forward returns; a reload and a back off the page keep the draft (UX-05)', async ({
+  page,
+  pageErrors,
+}) => {
   await open(page, '/fixture')
   await page.goto('/organizer/nuevo/_', { waitUntil: 'networkidle' })
   const name = page.getByPlaceholder(W.namePlaceholder)
@@ -117,7 +133,10 @@ test('the system back goes back a step and keeps what was typed; forward returns
   expect(pageErrors, 'uncaught errors').toEqual([])
 })
 
-test('leaving the wizard with something typed asks first, by a link or the system forward (UX-05)', async ({ page, pageErrors }) => {
+test('leaving the wizard with something typed asks first, by a link or the system forward (UX-05)', async ({
+  page,
+  pageErrors,
+}) => {
   await open(page, '/organizer/nuevo/_')
   const name = page.getByPlaceholder(W.namePlaceholder)
   const brand = page.locator('a[href="/organizer"]').first()

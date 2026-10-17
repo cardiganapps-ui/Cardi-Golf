@@ -19,8 +19,11 @@ const H = t.platform.health
 /** A backup older than this is a problem: the cron runs nightly. */
 const STALE_MS = 36 * 3600_000
 
-type Pending = { key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner'; value: boolean | string | null; label: string } | null
-
+type Pending = {
+  key: 'new_accounts_paused' | 'new_tournaments_paused' | 'maintenance_banner'
+  value: boolean | string | null
+  label: string
+} | null
 
 /** The nightly deletion (0069, TRUST-18): its last night, and what it took over the week, by kind. */
 function RetentionCard({ r }: { r: NonNullable<Health['retention']> }) {
@@ -28,7 +31,11 @@ function RetentionCard({ r }: { r: NonNullable<Health['retention']> }) {
   return (
     <div className={s.healthCard}>
       <Status ok={r.last ? r.last.ok : null}>{H.retention}</Status>
-      {r.last ? <span className={r.last.ok ? undefined : s.problem}>{H.retentionLast(relTime(r.last.at), r.last.ok)}</span> : <span className={s.help}>{H.retentionNever}</span>}
+      {r.last ? (
+        <span className={r.last.ok ? undefined : s.problem}>{H.retentionLast(relTime(r.last.at), r.last.ok)}</span>
+      ) : (
+        <span className={s.help}>{H.retentionNever}</span>
+      )}
       {r.last?.error && <span className={s.problem}>{r.last.error}</span>}
       {week.length ? (
         <>
@@ -94,13 +101,21 @@ export function HealthScreen() {
           {h.backup.lastOk ? (
             <>
               <span>{H.backupOk(relTime(h.backup.lastOk.at))}</span>
-              <span className={s.help}>{H.backupSize(Math.round((h.backup.lastOk.bytes ?? 0) / 1024), h.backup.lastOk.tables ?? 0, h.backup.lastOk.rows ?? 0)}</span>
+              <span className={s.help}>
+                {H.backupSize(
+                  Math.round((h.backup.lastOk.bytes ?? 0) / 1024),
+                  h.backup.lastOk.tables ?? 0,
+                  h.backup.lastOk.rows ?? 0,
+                )}
+              </span>
               {!backupFresh && <span className={s.problem}>{H.backupStale}</span>}
             </>
           ) : (
             <span className={s.help}>{H.backupNever}</span>
           )}
-          {lastFailed && <span className={s.problem}>{H.backupFailed(relTime(h.backup.last!.at), h.backup.last!.error ?? '')}</span>}
+          {lastFailed && (
+            <span className={s.problem}>{H.backupFailed(relTime(h.backup.last!.at), h.backup.last!.error ?? '')}</span>
+          )}
           <span className={s.help}>{H.backupWeek(h.backup.week.ok, h.backup.week.failed)}</span>
         </div>
 
@@ -112,13 +127,19 @@ export function HealthScreen() {
             {h.push.configured == null ? H.pushUnknown : h.push.configured ? H.pushConfigured : H.pushMissing}
           </span>
           <span className={s.help}>{H.pushSubs(h.push.subscriptions, h.push.profiles)}</span>
-          {h.push.recent && <span className={pushFailed ? s.problem : s.help}>{H.pushRecent(h.push.recent.total, h.push.recent.failed)}</span>}
+          {h.push.recent && (
+            <span className={pushFailed ? s.problem : s.help}>
+              {H.pushRecent(h.push.recent.total, h.push.recent.failed)}
+            </span>
+          )}
           <span className={s.help}>{H.pushRecentNote}</span>
         </div>
 
         <div className={s.healthCard}>
           <Status ok={h.database.lastMigration != null}>{H.database}</Status>
-          {h.database.lastMigration && <span>{H.migration(h.database.lastMigration.name, relTime(h.database.lastMigration.at))}</span>}
+          {h.database.lastMigration && (
+            <span>{H.migration(h.database.lastMigration.name, relTime(h.database.lastMigration.at))}</span>
+          )}
           <span className={s.help}>{H.notices24h(h.database.notifications24h)}</span>
         </div>
 
@@ -129,7 +150,11 @@ export function HealthScreen() {
         </div>
       </div>
 
-      {tel === 'unavailable' ? <p className={s.help}>{H.telemetryUnavailable}</p> : tel ? <PhonesSection tel={tel} /> : null}
+      {tel === 'unavailable' ? (
+        <p className={s.help}>{H.telemetryUnavailable}</p>
+      ) : tel ? (
+        <PhonesSection tel={tel} />
+      ) : null}
 
       <section className={s.section}>
         <div className={s.sectionHead}>
@@ -140,28 +165,49 @@ export function HealthScreen() {
           label={H.pauseAccounts}
           hint={H.pauseAccountsHint}
           checked={h.flags.newAccountsPaused}
-          onChange={(v) => setPending({ key: 'new_accounts_paused', value: v, label: (v ? H.switchOn : H.switchOff)(H.pauseAccounts.toLowerCase()) })}
+          onChange={(v) =>
+            setPending({
+              key: 'new_accounts_paused',
+              value: v,
+              label: (v ? H.switchOn : H.switchOff)(H.pauseAccounts.toLowerCase()),
+            })
+          }
         />
         <Toggle
           label={H.pauseTournaments}
           hint={H.pauseTournamentsHint}
           checked={h.flags.newTournamentsPaused}
-          onChange={(v) => setPending({ key: 'new_tournaments_paused', value: v, label: (v ? H.switchOn : H.switchOff)(H.pauseTournaments.toLowerCase()) })}
+          onChange={(v) =>
+            setPending({
+              key: 'new_tournaments_paused',
+              value: v,
+              label: (v ? H.switchOn : H.switchOff)(H.pauseTournaments.toLowerCase()),
+            })
+          }
         />
         <Field label={H.banner} hint={H.bannerHint}>
-          <Input value={banner} maxLength={200} placeholder={H.bannerPlaceholder} onChange={(e) => setBanner(e.target.value)} />
+          <Input
+            value={banner}
+            maxLength={200}
+            placeholder={H.bannerPlaceholder}
+            onChange={(e) => setBanner(e.target.value)}
+          />
         </Field>
         <div className={s.actions}>
           <Button
             size="sm"
-           
+
             disabled={!banner.trim() || banner.trim() === (h.flags.maintenanceBanner ?? '')}
             onClick={() => setPending({ key: 'maintenance_banner', value: banner.trim(), label: H.bannerSet })}
           >
             {H.bannerSet}
           </Button>
           {h.flags.maintenanceBanner && (
-            <Button variant="ghost" size="sm" onClick={() => setPending({ key: 'maintenance_banner', value: null, label: H.bannerClear })}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPending({ key: 'maintenance_banner', value: null, label: H.bannerClear })}
+            >
               {H.bannerClear}
             </Button>
           )}

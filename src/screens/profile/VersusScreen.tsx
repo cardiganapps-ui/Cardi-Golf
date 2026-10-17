@@ -12,7 +12,16 @@ import { EmptyState, Stepper } from '../../components/primitives'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { IconChevronLeft } from '../../components/icons'
 import { profileCard, useMyProfile, type ProfileCard } from '../../data/profiles'
-import { h2hRecord, headToHead, proposedStrokes, rivalryEnd, rivalryPropose, rivalryRespond, type HeadToHead, type H2HRound } from '../../data/social'
+import {
+  h2hRecord,
+  headToHead,
+  proposedStrokes,
+  rivalryEnd,
+  rivalryPropose,
+  rivalryRespond,
+  type HeadToHead,
+  type H2HRound,
+} from '../../data/social'
 import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 import { useServerQuery } from '../../data/query'
@@ -124,14 +133,21 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
                   <div key={r.roundId} className={`${styles.row} ${r.result === 'won' ? styles.rowUsed : ''}`}>
                     <span className={styles.rowText}>
                       <span className={styles.rowTitle}>{S.result[r.result]}</span>
-                      <span className={styles.rowSub}>{[when(r.playedOn), S.resultLine(r.myAgs, r.theirAgs, r.before)].filter(Boolean).join(', ')}</span>
+                      <span className={styles.rowSub}>
+                        {[when(r.playedOn), S.resultLine(r.myAgs, r.theirAgs, r.before)].filter(Boolean).join(', ')}
+                      </span>
                     </span>
                     <span className={styles.rowFig}>{S.strokesFigure(r.after)}</span>
                   </div>
                 ))}
               </div>
             )}
-            <button type="button" className={`btn btn--ghost btn--sm ${styles.start}`} disabled={busy} onClick={() => setEnding(true)}>
+            <button
+              type="button"
+              className={`btn btn--ghost btn--sm ${styles.start}`}
+              disabled={busy}
+              onClick={() => setEnding(true)}
+            >
               {S.endRivalry}
             </button>
           </>
@@ -139,7 +155,12 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
           <div className={styles.ask}>
             <span>{S.waiting(first)}</span>
             <div className={styles.askActions}>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryEnd(open.id))}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                disabled={busy}
+                onClick={() => void step(() => rivalryEnd(open.id))}
+              >
                 {S.cancel}
               </button>
             </div>
@@ -148,10 +169,20 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
           <div className={styles.ask}>
             <span>{S.theyPropose(first, S.strokesMine(open.startStrokes, first).toLowerCase())}</span>
             <div className={styles.askActions}>
-              <button className="btn btn--primary btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryRespond(open.id, true))}>
+              <button
+                className="btn btn--primary btn--sm"
+                type="button"
+                disabled={busy}
+                onClick={() => void step(() => rivalryRespond(open.id, true))}
+              >
                 {S.acceptRivalry}
               </button>
-              <button className="btn btn--ghost btn--sm" type="button" disabled={busy} onClick={() => void step(() => rivalryRespond(open.id, false))}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                disabled={busy}
+                onClick={() => void step(() => rivalryRespond(open.id, false))}
+              >
                 {S.decline}
               </button>
             </div>
@@ -172,7 +203,12 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
               <Stepper value={strokes} min={0} max={18} label={S.startStrokes} onChange={setStrokes} />
             </div>
             <p className={styles.help}>{[S.strokesMine(signed, first), S.suggest(h2h.suggestion)].join('. ')}</p>
-            <button className={`btn btn--primary ${styles.start}`} type="button" disabled={busy} onClick={() => void step(() => rivalryPropose(them.handle, signed), S.proposed(first))}>
+            <button
+              className={`btn btn--primary ${styles.start}`}
+              type="button"
+              disabled={busy}
+              onClick={() => void step(() => rivalryPropose(them.handle, signed), S.proposed(first))}
+            >
               {S.propose}
             </button>
           </div>
@@ -224,7 +260,15 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
                     <span className={styles.rowText}>
                       <span className={styles.rowTitle}>{r.course ?? r.tournament}</span>
                       <span className={styles.rowSub}>
-                        {[when(r.playedOn), basis === 'net' ? S.roundVs('net', r.myNet, r.theirNet) : S.roundVs('gross', r.myGross, r.theirGross), r.practice ? t.profile.practice : null].filter(Boolean).join(', ')}
+                        {[
+                          when(r.playedOn),
+                          basis === 'net'
+                            ? S.roundVs('net', r.myNet, r.theirNet)
+                            : S.roundVs('gross', r.myGross, r.theirGross),
+                          r.practice ? t.profile.practice : null,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
                       </span>
                     </span>
                     {res && <span className={styles.rowEnd}>{S.result[res]}</span>}
@@ -236,7 +280,16 @@ export function VersusScreen({ fixture }: { fixture?: VersusFixture }) {
         )}
       </section>
 
-      <ConfirmSheet open={ending} title={S.endRivalry} body={S.endConfirm} danger busy={busy} confirmLabel={S.endRivalry} onConfirm={() => open && void step(() => rivalryEnd(open.id))} onClose={() => setEnding(false)} />
+      <ConfirmSheet
+        open={ending}
+        title={S.endRivalry}
+        body={S.endConfirm}
+        danger
+        busy={busy}
+        confirmLabel={S.endRivalry}
+        onConfirm={() => open && void step(() => rivalryEnd(open.id))}
+        onClose={() => setEnding(false)}
+      />
     </div>
   )
 }

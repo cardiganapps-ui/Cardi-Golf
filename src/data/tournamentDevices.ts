@@ -30,8 +30,12 @@ interface DevicesState {
   /** A design fixture: its list is what it says, never read from a server. */
   fixture: boolean
 }
-export const useTournamentDevices = create<DevicesState>(() => ({ tournamentId: null, items: [], status: 'idle', fixture: false }))
-
+export const useTournamentDevices = create<DevicesState>(() => ({
+  tournamentId: null,
+  items: [],
+  status: 'idle',
+  fixture: false,
+}))
 
 /** The tournament's phones, or null on a database without them. */
 export async function tournamentDevices(tournamentId: string): Promise<TournamentDevice[] | null> {
@@ -50,7 +54,12 @@ export async function loadTournamentDevices(tournamentId: string): Promise<void>
   const s = useTournamentDevices.getState()
   if (s.fixture && s.tournamentId === tournamentId) return
   const mine = ++generation
-  useTournamentDevices.setState({ tournamentId, status: 'loading', items: s.tournamentId === tournamentId ? s.items : [], fixture: false })
+  useTournamentDevices.setState({
+    tournamentId,
+    status: 'loading',
+    items: s.tournamentId === tournamentId ? s.items : [],
+    fixture: false,
+  })
   try {
     const items = await tournamentDevices(tournamentId)
     if (mine !== generation) return

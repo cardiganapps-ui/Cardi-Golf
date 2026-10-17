@@ -61,9 +61,23 @@ export function ReasonSheet({
     }
   }
   return (
-    <ConfirmSheet open={open} title={title} body={body} confirmLabel={confirmLabel} danger={danger} busy={busy} onConfirm={() => void confirm()} onClose={onClose}>
+    <ConfirmSheet
+      open={open}
+      title={title}
+      body={body}
+      confirmLabel={confirmLabel}
+      danger={danger}
+      busy={busy}
+      onConfirm={() => void confirm()}
+      onClose={onClose}
+    >
       <Field label={t.platform.reason} error={error}>
-        <Input value={reason} maxLength={200} placeholder={t.platform.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
+        <Input
+          value={reason}
+          maxLength={200}
+          placeholder={t.platform.reasonPlaceholder}
+          onChange={(e) => setReason(e.target.value)}
+        />
       </Field>
     </ConfirmSheet>
   )

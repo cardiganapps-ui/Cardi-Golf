@@ -19,7 +19,8 @@ const MAX_FILE = 512 * 1024
 const MAX_TOTAL = 26 * 1024 * 1024
 /** Files allowed over MAX_FILE, with why. */
 const BIG_ON_PURPOSE: Record<string, string> = {
-  'assets/nacho-logo.png': 'the first tournament’s logo as Diego sent it; the Comité uploads it and Polo stores a rendition (§7 «Images before upload»)',
+  'assets/nacho-logo.png':
+    'the first tournament’s logo as Diego sent it; the Comité uploads it and Polo stores a rendition (§7 «Images before upload»)',
 }
 
 /** What git tracks (the index), or null outside a git checkout. */
@@ -34,22 +35,30 @@ function tracked(): string[] | null {
 const files = tracked()
 
 describe.skipIf(!files)('what the tree carries', () => {
-  const media = (files ?? []).filter((f) => MEDIA.test(f)).map((f) => {
-    let size = 0
-    try {
-      size = statSync(join(root, f)).size
-    } catch {
-      // Deleted in the working tree, not yet in the index: it weighs nothing here.
-    }
-    return { f, size }
-  })
+  const media = (files ?? [])
+    .filter((f) => MEDIA.test(f))
+    .map((f) => {
+      let size = 0
+      try {
+        size = statSync(join(root, f)).size
+      } catch {
+        // Deleted in the working tree, not yet in the index: it weighs nothing here.
+      }
+      return { f, size }
+    })
 
   it('keeps only the style guide’s screenshots under design/shots', () => {
-    expect((files ?? []).filter((f) => f.startsWith('design/shots/') && !f.startsWith('design/shots/design/'))).toEqual([])
+    expect((files ?? []).filter((f) => f.startsWith('design/shots/') && !f.startsWith('design/shots/design/'))).toEqual(
+      [],
+    )
   })
 
   it('has no image or video over 512 KB but the ones named here', () => {
-    expect(media.filter((m) => m.size > MAX_FILE && !(m.f in BIG_ON_PURPOSE)).map((m) => `${m.f}: ${Math.round(m.size / 1024)} KB`)).toEqual([])
+    expect(
+      media
+        .filter((m) => m.size > MAX_FILE && !(m.f in BIG_ON_PURPOSE))
+        .map((m) => `${m.f}: ${Math.round(m.size / 1024)} KB`),
+    ).toEqual([])
   })
 
   it('carries under 26 MB of images and video in all', () => {

@@ -9,7 +9,10 @@ import { create } from 'zustand'
 
 const flagsStore = vi.hoisted(() => ({ store: null as unknown as ReturnType<typeof makeFlags> }))
 function makeFlags() {
-  return create<{ flags: { minBuild?: number | null } | null; load: () => Promise<void> }>(() => ({ flags: null, load: vi.fn(async () => undefined) }))
+  return create<{ flags: { minBuild?: number | null } | null; load: () => Promise<void> }>(() => ({
+    flags: null,
+    load: vi.fn(async () => undefined),
+  }))
 }
 vi.mock('./platform', () => {
   flagsStore.store = makeFlags()
@@ -30,7 +33,10 @@ const { UpdateBar } = await import('../components/UpdateBar')
 const { BUILD } = await import('../lib/build')
 const { t } = await import('../i18n/es-MX')
 
-const fakeRegistration = () => ({ update: vi.fn(async () => undefined) }) as unknown as ServiceWorkerRegistration & { update: ReturnType<typeof vi.fn> }
+const fakeRegistration = () =>
+  ({ update: vi.fn(async () => undefined) }) as unknown as ServiceWorkerRegistration & {
+    update: ReturnType<typeof vi.fn>
+  }
 
 beforeEach(() => {
   vi.useFakeTimers()

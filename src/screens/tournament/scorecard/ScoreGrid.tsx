@@ -39,7 +39,8 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
   const leadHole = (h: number) => (leadId ? holeOf(roundState, leadId, h) : undefined)
   const front = order.filter((h) => h <= 9).sort((a, b) => a - b)
   const back = order.filter((h) => h > 9).sort((a, b) => a - b)
-  const sumPts = (pid: string, holes: number[]) => holes.reduce((a, h) => a + (holeOf(roundState, pid, h)?.played ? (holeOf(roundState, pid, h)?.points ?? 0) : 0), 0)
+  const sumPts = (pid: string, holes: number[]) =>
+    holes.reduce((a, h) => a + (holeOf(roundState, pid, h)?.played ? (holeOf(roundState, pid, h)?.points ?? 0) : 0), 0)
   /** Under net strokes the small figure is the net score; under gross the mark already says it all. */
   const cellFigure = (hi: HoleResult) => (pointsCount ? hi.points : net ? holeStrokes(hi, true) : null)
   const sumNet = (pid: string, holes: number[]) => {
@@ -47,23 +48,34 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
     return hs.length === holes.length ? hs.reduce((a, h) => a + (holeStrokes(h, true) ?? 0), 0) : null
   }
   const sumGross = (pid: string, holes: number[]) => {
-    const hs = holes.map((h) => holeOf(roundState, pid, h)).filter((h): h is HoleResult & { gross: number } => !!h?.played && !h.pickedUp && h.gross != null)
+    const hs = holes
+      .map((h) => holeOf(roundState, pid, h))
+      .filter((h): h is HoleResult & { gross: number } => !!h?.played && !h.pickedUp && h.gross != null)
     return hs.length === holes.length ? hs.reduce((a, h) => a + h.gross, 0) : null
   }
   const missing = named.some((pl) => order.some((h) => !holeOf(roundState, pl.id, h)?.played))
   const disputed = named.some((pl) => roundState[pl.id]?.holes.some((h) => h.disputed))
   // TRUST-14: each hole the Comité corrected, with its reason, under the grid; the cell carries a mark.
   const corrections = named.flatMap((pl) =>
-    [...order].sort((a, b) => a - b).flatMap((h) => {
-      const hi = holeOf(roundState, pl.id, h)
-      return hi?.correction ? [{ key: `${pl.id}:${h}`, text: correctionLine(h, named.length > 1 ? pl.name : null, hi.correction) }] : []
-    }),
+    [...order]
+      .sort((a, b) => a - b)
+      .flatMap((h) => {
+        const hi = holeOf(roundState, pl.id, h)
+        return hi?.correction
+          ? [{ key: `${pl.id}:${h}`, text: correctionLine(h, named.length > 1 ? pl.name : null, hi.correction) }]
+          : []
+      }),
   )
   const gridRow = (h: number) => (
     <tr key={h}>
       {/* A11Y-10: the hole is the row's header, and its button says which hole it opens. */}
       <th scope="row">
-        <button type="button" className={`${styles.holeBtn} ${h === p.hole ? styles.holeCurrent : ''}`} onClick={() => p.onOpen(h)} aria-label={`${t.player.hole} ${h}`}>
+        <button
+          type="button"
+          className={`${styles.holeBtn} ${h === p.hole ? styles.holeCurrent : ''}`}
+          onClick={() => p.onOpen(h)}
+          aria-label={`${t.player.hole} ${h}`}
+        >
           {h}
         </button>
       </th>
@@ -84,7 +96,9 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
               <ScoreMark value={hi.pickedUp ? 'L' : (hi.gross ?? '–')} kind={markFor(hi.gross, hi.par, hi.pickedUp)} />
               <span className={styles.cellPts}>
                 {cellFigure(hi)}
-                {cellFigure(hi) != null && <span className="sr-only"> {pointsCount ? S.unitPoints(cellFigure(hi)) : S.unitNet}</span>}
+                {cellFigure(hi) != null && (
+                  <span className="sr-only"> {pointsCount ? S.unitPoints(cellFigure(hi)) : S.unitNet}</span>
+                )}
                 {/* A span has no name of its own (ARIA 1.2): each mark says itself in words a screen reader reads with the cell. */}
                 {hi.disputed && (
                   <span className={styles.disputedMark}>
@@ -123,7 +137,9 @@ export const ScoreGrid = memo(function ScoreGrid(p: {
               {/* Said with their units, figure first as on screen: «19 pts, 39 golpes» (A11Y-10). */}
               <span>
                 {pointsCount ? sumPts(pl.id, holes) : net ? (sumNet(pl.id, holes) ?? '–') : ''}
-                {(pointsCount || net) && <span className="sr-only"> {pointsCount ? S.unitPoints(sumPts(pl.id, holes)) : S.unitNet},</span>}
+                {(pointsCount || net) && (
+                  <span className="sr-only"> {pointsCount ? S.unitPoints(sumPts(pl.id, holes)) : S.unitNet},</span>
+                )}
               </span>
               <span className={styles.cellPts}>
                 {g ?? ''}

@@ -42,7 +42,20 @@ export function AdminData() {
       state.core.roundIds.flatMap((rid) => {
         const round = snapshot.rounds.find((r) => r.id === rid)!
         return Object.values(state.core.rounds[rid] ?? {}).flatMap((pr) =>
-          pr.holes.filter((h) => h.played).map((h) => [round.number, nameOf(pr.playerId), h.hole, h.par, h.strokeIndex, h.strokesReceived, h.gross, h.putts, h.pickedUp ? 1 : 0, h.points]),
+          pr.holes
+            .filter((h) => h.played)
+            .map((h) => [
+              round.number,
+              nameOf(pr.playerId),
+              h.hole,
+              h.par,
+              h.strokeIndex,
+              h.strokesReceived,
+              h.gross,
+              h.putts,
+              h.pickedUp ? 1 : 0,
+              h.points,
+            ]),
         )
       }),
     )
@@ -51,12 +64,34 @@ export function AdminData() {
     // One line per player: in a team format the row is the team's, so each member gets its place and figures, and his own money (STRAT-03).
     const byTeam = rows.some((r) => r.entrant.isTeam)
     const standings = toCsv(
-      ['pos', 'jugador', ...(byTeam ? ['equipo'] : []), 'categoria', ...state.core.roundIds.map((_, i) => `dia${i + 1}`), 'total', 'premios', 'pago', 'recibe', 'neto'],
+      [
+        'pos',
+        'jugador',
+        ...(byTeam ? ['equipo'] : []),
+        'categoria',
+        ...state.core.roundIds.map((_, i) => `dia${i + 1}`),
+        'total',
+        'premios',
+        'pago',
+        'recibe',
+        'neto',
+      ],
       rows.flatMap((r) =>
         r.entrant.playerIds.map((id) => {
           const p = snapshot.players.find((x) => x.id === id)
           const m = state.money.people[id]
-          return [r.label, p?.fullName ?? id, ...(byTeam ? [renderMsg(r.entrant.name, data.settings.currency)] : []), p?.tier ?? '', ...r.perRound.map((f) => f.value), r.total, m?.prizesTotal ?? 0, m?.paid ?? 0, m?.receives ?? 0, m?.net ?? 0]
+          return [
+            r.label,
+            p?.fullName ?? id,
+            ...(byTeam ? [renderMsg(r.entrant.name, data.settings.currency)] : []),
+            p?.tier ?? '',
+            ...r.perRound.map((f) => f.value),
+            r.total,
+            m?.prizesTotal ?? 0,
+            m?.paid ?? 0,
+            m?.receives ?? 0,
+            m?.net ?? 0,
+          ]
         }),
       ),
     )
@@ -120,7 +155,19 @@ export function AdminData() {
         <span className="label">{D.export}</span>
         <p className="help">{D.exportHint}</p>
         <div className="row row--wrap">
-          <button className="btn btn--primary" type="button" disabled={busy} onClick={() => void run(async () => downloadText(`${slug}-respaldo-${stamp}.json`, JSON.stringify(await exportBackup(tournamentId), null, 2)))}>
+          <button
+            className="btn btn--primary"
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(async () =>
+                downloadText(
+                  `${slug}-respaldo-${stamp}.json`,
+                  JSON.stringify(await exportBackup(tournamentId), null, 2),
+                ),
+              )
+            }
+          >
             {D.exportJson}
           </button>
           <button className="btn btn--secondary" type="button" disabled={busy} onClick={exportCsv}>
@@ -150,7 +197,13 @@ export function AdminData() {
       <ConfirmSheet
         open={!!pendingRestore}
         title={D.restore}
-        body={pendingRestore ? D.restoreConfirm(localWhen(pendingRestore.exportedAt ?? new Date(0).toISOString(), data.settings.timezone)) : ''}
+        body={
+          pendingRestore
+            ? D.restoreConfirm(
+                localWhen(pendingRestore.exportedAt ?? new Date(0).toISOString(), data.settings.timezone),
+              )
+            : ''
+        }
         danger
         busy={busy}
         confirmLabel={D.restoreButton}

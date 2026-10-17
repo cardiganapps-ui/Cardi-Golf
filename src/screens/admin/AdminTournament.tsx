@@ -17,7 +17,17 @@ import { toast } from '../../components/toast'
 import { publishFromStore } from '../../data/publish'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Segmented } from '../../components/primitives'
-import { deleteTournament, rotateJoinCode, setTournamentProtected, SettingsChanged, updateSettings, updateTournament, uploadAsset, type SetupFields, type SetupRow } from '../../data/api'
+import {
+  deleteTournament,
+  rotateJoinCode,
+  setTournamentProtected,
+  SettingsChanged,
+  updateSettings,
+  updateTournament,
+  uploadAsset,
+  type SetupFields,
+  type SetupRow,
+} from '../../data/api'
 import { changedKeys, mergeOver, settingsWrite } from '../../data/settingsWrite'
 import { OptionalNumberField } from '../../components/NumberField'
 import { ReasonSheet } from '../../components/ReasonSheet'
@@ -53,7 +63,11 @@ interface Brand {
   accent_color: string
 }
 const BRAND_KEYS = ['name', 'tagline', 'accent_color'] as const
-const brandOf = (name: string, tagline: string, accent: string): Brand => ({ name: name.trim(), tagline: tagline.trim() || null, accent_color: accent })
+const brandOf = (name: string, tagline: string, accent: string): Brand => ({
+  name: name.trim(),
+  tagline: tagline.trim() || null,
+  accent_color: accent,
+})
 
 /**
  * What the editor started from (ARCH-13): the row's settings as fetched, the
@@ -67,7 +81,10 @@ interface Start {
   seen: SetupFields
   form: Brand
 }
-function startOf(tr: { name: string; tagline: string | null; accentColor?: string | null; settings: unknown }, parsed: TournamentSettings): Start {
+function startOf(
+  tr: { name: string; tagline: string | null; accentColor?: string | null; settings: unknown },
+  parsed: TournamentSettings,
+): Start {
   return {
     raw: tr.settings,
     parsed,
@@ -78,8 +95,17 @@ function startOf(tr: { name: string; tagline: string | null; accentColor?: strin
 
 /** The sub-nav. `brand` and `status` are tournament columns; the rest are settings. */
 type Tab = 'brand' | 'status' | SettingsSection | 'danger'
-const TABS: Array<{ id: Tab }> = [{ id: 'brand' }, { id: 'status' }, { id: 'rules' }, { id: 'games' }, { id: 'money' }, { id: 'auction' }, { id: 'danger' }]
-const isSettingsTab = (x: Tab): x is SettingsSection => x === 'rules' || x === 'games' || x === 'money' || x === 'auction'
+const TABS: Array<{ id: Tab }> = [
+  { id: 'brand' },
+  { id: 'status' },
+  { id: 'rules' },
+  { id: 'games' },
+  { id: 'money' },
+  { id: 'auction' },
+  { id: 'danger' },
+]
+const isSettingsTab = (x: Tab): x is SettingsSection =>
+  x === 'rules' || x === 'games' || x === 'money' || x === 'auction'
 /** The tabs a link may open (`?pestana=`). */
 const TAB_PARAM: Record<string, Tab> = { reglas: 'rules' }
 
@@ -131,7 +157,10 @@ export function AdminTournament() {
   const warnings = data!.state.flags.warnings.map(words)
   // Real group sizes per round, so the snake pot in the balance follows them (a group of 3 pays two).
   const groupSizes = useMemo(
-    () => data!.snapshot.rounds.filter((r) => r.status !== 'cancelled').map((r) => data!.snapshot.groups.filter((g) => g.roundId === r.id).map((g) => g.playerIds.length)),
+    () =>
+      data!.snapshot.rounds
+        .filter((r) => r.status !== 'cancelled')
+        .map((r) => data!.snapshot.groups.filter((g) => g.roundId === r.id).map((g) => g.playerIds.length)),
     [data],
   )
 
@@ -154,11 +183,17 @@ export function AdminTournament() {
   const checked = useDeferredValue(settings)
   const parsed = useMemo(() => safeParseSettings(checked), [checked])
   // Players, real group sizes and each side pot's entrants; the planned field size until the roster exists.
-  const field = useMemo(() => ({ ...fieldShape(data!.snapshot, checked), players, groupSizes }), [data, checked, players, groupSizes])
+  const field = useMemo(
+    () => ({ ...fieldShape(data!.snapshot, checked), players, groupSizes }),
+    [data, checked, players, groupSizes],
+  )
   const check = useMemo(() => (parsed.success ? checkPrizePool(parsed.data, field) : null), [parsed, field])
   const balanced = check?.balanced ?? false
   // What parses but makes no sense (MONEY-13), on the draft and so on what is stored while nothing is typed.
-  const sense = useMemo(() => (parsed.success ? settingsSense(parsed.data, fieldKnown ? field : null) : []), [parsed, field, fieldKnown])
+  const sense = useMemo(
+    () => (parsed.success ? settingsSense(parsed.data, fieldKnown ? field : null) : []),
+    [parsed, field, fieldKnown],
+  )
   // Balanced, every paid place has someone who can take it (MONEY-09), and nothing that makes no sense.
   const savable = (check?.ok ?? false) && sense.length === 0
 
@@ -168,7 +203,8 @@ export function AdminTournament() {
     const fresh = safeParseSettings(settings)
     if (!fresh.success) return
     const freshField = { ...fieldShape(data!.snapshot, settings), players, groupSizes }
-    if (!checkPrizePool(fresh.data, freshField).ok || settingsSense(fresh.data, fieldKnown ? freshField : null).length) return
+    if (!checkPrizePool(fresh.data, freshField).ok || settingsSense(fresh.data, fieldKnown ? freshField : null).length)
+      return
     // Only what changed is written, and only while every key this screen read
     // still holds what it read: the prize check above read them all (ARCH-13).
     const from = start.current
@@ -216,7 +252,10 @@ export function AdminTournament() {
       toast(t.outdated.save)
       return
     }
-    const next = startOf({ name: e.now.name, tagline: e.now.tagline, accentColor: e.now.accent_color, settings: e.now.settings }, now.settings)
+    const next = startOf(
+      { name: e.now.name, tagline: e.now.tagline, accentColor: e.now.accent_color, settings: e.now.settings },
+      now.settings,
+    )
     const s = mergeOver(from.parsed, mine, now.settings)
     const b = mergeOver(from.form, brand, next.form)
     start.current = next
@@ -235,7 +274,12 @@ export function AdminTournament() {
       const prep = await prepareLogo(file)
       // Processing a stored logo again only helps if the browser could redraw it.
       if (again && prep.width == null) throw new UserError(t.errors.image)
-      const url = await uploadAsset(logoPath(tournamentId, prep), prep.blob, prep.type, prep.width ? LOGO_CACHE_SECONDS : undefined)
+      const url = await uploadAsset(
+        logoPath(tournamentId, prep),
+        prep.blob,
+        prep.type,
+        prep.width ? LOGO_CACHE_SECONDS : undefined,
+      )
       await updateTournament(tournamentId, { logo_url: url })
       patch((s) => (s.tournament.logoUrl = url))
       toast(t.common.saved)
@@ -287,7 +331,8 @@ export function AdminTournament() {
   /** The state picked and not yet confirmed (A11Y-17). */
   const [askStatus, setAskStatus] = useState<(typeof STATUSES)[number] | null>(null)
   async function setStatus(status: (typeof STATUSES)[number]) {
-    if (status === 'finished' && tr.status !== 'finished') return closeGate.guard({ confirmLabel: t.status.finished }, () => applyStatus(status))
+    if (status === 'finished' && tr.status !== 'finished')
+      return closeGate.guard({ confirmLabel: t.status.finished }, () => applyStatus(status))
     return applyStatus(status)
   }
   async function applyStatus(status: (typeof STATUSES)[number]) {
@@ -302,7 +347,8 @@ export function AdminTournament() {
     }
   }
   const setCounts = (v: boolean) => quickUpdate({ counts_for_stats: v }, (s) => (s.tournament.countsForStats = v))
-  const setBanker = (id: string) => quickUpdate({ banker_player_id: id || null }, (s) => (s.tournament.bankerPlayerId = id || null))
+  const setBanker = (id: string) =>
+    quickUpdate({ banker_player_id: id || null }, (s) => (s.tournament.bankerPlayerId = id || null))
   async function newCode() {
     setQuick(true)
     try {
@@ -358,127 +404,162 @@ export function AdminTournament() {
 
       {/* The app's one in-page tab style, with its keys and its fades (VIS-17, VIS-26). */}
       <div ref={tabsRef}>
-        <Segmented<Tab> value={tab} options={TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => ({ value: x.id, label: A.tabs[x.id] }))} onChange={setTab} tabs label={A.sections} />
+        <Segmented<Tab>
+          value={tab}
+          options={TABS.filter((x) => x.id !== 'auction' || settings.modules.auction.enabled).map((x) => ({
+            value: x.id,
+            label: A.tabs[x.id],
+          }))}
+          onChange={setTab}
+          tabs
+          label={A.sections}
+        />
       </div>
 
       {tab === 'brand' && (
-      <section className={a.section}>
-        <div className={a.sectionTitle}>
-          <strong>{A.brand}</strong>
-        </div>
-        <div className={a.chipRow}>
-          {tr.logoUrl ? <TournamentLogo url={tr.logoUrl} className={a.logo} /> : null}
-          <button className="btn btn--secondary btn--sm" type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
-            {A.uploadLogo}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void onLogo(e.target.files[0])} />
-        </div>
-        {tr.logoUrl && !logoSize(tr.logoUrl) ? (
+        <section className={a.section}>
+          <div className={a.sectionTitle}>
+            <strong>{A.brand}</strong>
+          </div>
           <div className={a.chipRow}>
-            <p className={a.help}>{A.logoHeavy}</p>
-            <button className="btn btn--secondary btn--sm" type="button" onClick={() => void optimizeLogo(tr.logoUrl!)} disabled={busy}>
-              {A.optimizeLogo}
+            {tr.logoUrl ? <TournamentLogo url={tr.logoUrl} className={a.logo} /> : null}
+            <button
+              className="btn btn--secondary btn--sm"
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+            >
+              {A.uploadLogo}
             </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => e.target.files?.[0] && void onLogo(e.target.files[0])}
+            />
           </div>
-        ) : null}
-        <Field label={A.name}>
-          <input
-            className="input"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value)
-              setDirty(true)
-            }}
-          />
-        </Field>
-        <Field label={A.tagline}>
-          <input
-            className="input"
-            value={tagline}
-            onChange={(e) => {
-              setTagline(e.target.value)
-              setDirty(true)
-            }}
-          />
-        </Field>
-        <Field label={A.accent}>
-          <div className={styles.swatches} role="group" aria-label={A.accent}>
-            {ACCENTS.map((sw) => (
+          {tr.logoUrl && !logoSize(tr.logoUrl) ? (
+            <div className={a.chipRow}>
+              <p className={a.help}>{A.logoHeavy}</p>
               <button
-                key={sw.id}
+                className="btn btn--secondary btn--sm"
                 type="button"
-                className={styles.swatch}
-                aria-pressed={nearestAccent(accent).id === sw.id}
-                data-accent={sw.id}
-                onClick={() => {
-                  setAccent(sw.hex)
-                  setDirty(true)
-                }}
+                onClick={() => void optimizeLogo(tr.logoUrl!)}
+                disabled={busy}
               >
-                <span className={styles.swatchDot} aria-hidden="true" />
-                {sw.name}
+                {A.optimizeLogo}
               </button>
-            ))}
-          </div>
-        </Field>
-      </section>
+            </div>
+          ) : null}
+          <Field label={A.name}>
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                setDirty(true)
+              }}
+            />
+          </Field>
+          <Field label={A.tagline}>
+            <input
+              className="input"
+              value={tagline}
+              onChange={(e) => {
+                setTagline(e.target.value)
+                setDirty(true)
+              }}
+            />
+          </Field>
+          <Field label={A.accent}>
+            <div className={styles.swatches} role="group" aria-label={A.accent}>
+              {ACCENTS.map((sw) => (
+                <button
+                  key={sw.id}
+                  type="button"
+                  className={styles.swatch}
+                  aria-pressed={nearestAccent(accent).id === sw.id}
+                  data-accent={sw.id}
+                  onClick={() => {
+                    setAccent(sw.hex)
+                    setDirty(true)
+                  }}
+                >
+                  <span className={styles.swatchDot} aria-hidden="true" />
+                  {sw.name}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </section>
       )}
 
       {tab === 'status' && (
-      <section className={a.section}>
-        <div className={a.sectionTitle}>
-          <strong>{A.status}</strong>
-          {quick && <span className={a.count}>{t.common.saving}</span>}
-        </div>
-        {/* A11Y-17: a choice, not tabs; moving it (a tap or an arrow key) asks before the tournament changes state. */}
-        <Segmented
-          value={tr.status}
-          options={STATUSES.map((st) => ({ value: st, label: t.status[st] }))}
-          onChange={(st) => (st === 'finished' ? void setStatus(st) : setAskStatus(st))}
-          label={A.status}
-          disabled={quick || closeGate.checking}
-        />
-        <ConfirmSheet
-          open={askStatus !== null && askStatus !== tr.status}
-          title={askStatus ? A.statusConfirmTitle(t.status[askStatus]) : ''}
-          body={A.statusConfirmBody}
-          busy={quick}
-          onConfirm={() => {
-            const st = askStatus
-            setAskStatus(null)
-            if (st) void setStatus(st)
-          }}
-          onClose={() => setAskStatus(null)}
-        />
-        {closeGate.sheet}
-        {tr.status === 'setup' && !handicapsLocked(tr) && <p className={a.help}>{A.statusLocksHandicaps}</p>}
-        <Toggle label={A.countsForStats} hint={A.countsForStatsHint} checked={tr.countsForStats !== false} onChange={(v) => void setCounts(v)} />
-        <CrewField tournamentId={tournamentId} />
-        <Field label={A.banker}>
-          <select className="select" value={tr.bankerPlayerId ?? ''} disabled={quick} onChange={(e) => void setBanker(e.target.value)}>
-            <option value="">{t.common.none}</option>
-            {data!.snapshot.players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.fullName}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <span className="label">{A.joinCode}</span>
-        <div className={a.codeRow}>
-          <span className={a.code}>{tr.joinCode}</span>
-          <CopyButton text={tr.joinCode} />
-          <button className="btn btn--ghost btn--sm" type="button" disabled={quick} onClick={() => setAskCode(true)}>
-            {A.newCode}
-          </button>
-        </div>
-        <span className="label">{A.link}</span>
-        <span className={a.link}>{link}</span>
-        <div className={a.chipRow}>
-          <CopyButton text={link} />
-          <ShareButton text={t.common.joinWithCode(tr.name, tr.joinCode)} url={link} title={tr.name} />
-        </div>
-      </section>
+        <section className={a.section}>
+          <div className={a.sectionTitle}>
+            <strong>{A.status}</strong>
+            {quick && <span className={a.count}>{t.common.saving}</span>}
+          </div>
+          {/* A11Y-17: a choice, not tabs; moving it (a tap or an arrow key) asks before the tournament changes state. */}
+          <Segmented
+            value={tr.status}
+            options={STATUSES.map((st) => ({ value: st, label: t.status[st] }))}
+            onChange={(st) => (st === 'finished' ? void setStatus(st) : setAskStatus(st))}
+            label={A.status}
+            disabled={quick || closeGate.checking}
+          />
+          <ConfirmSheet
+            open={askStatus !== null && askStatus !== tr.status}
+            title={askStatus ? A.statusConfirmTitle(t.status[askStatus]) : ''}
+            body={A.statusConfirmBody}
+            busy={quick}
+            onConfirm={() => {
+              const st = askStatus
+              setAskStatus(null)
+              if (st) void setStatus(st)
+            }}
+            onClose={() => setAskStatus(null)}
+          />
+          {closeGate.sheet}
+          {tr.status === 'setup' && !handicapsLocked(tr) && <p className={a.help}>{A.statusLocksHandicaps}</p>}
+          <Toggle
+            label={A.countsForStats}
+            hint={A.countsForStatsHint}
+            checked={tr.countsForStats !== false}
+            onChange={(v) => void setCounts(v)}
+          />
+          <CrewField tournamentId={tournamentId} />
+          <Field label={A.banker}>
+            <select
+              className="select"
+              value={tr.bankerPlayerId ?? ''}
+              disabled={quick}
+              onChange={(e) => void setBanker(e.target.value)}
+            >
+              <option value="">{t.common.none}</option>
+              {data!.snapshot.players.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.fullName}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <span className="label">{A.joinCode}</span>
+          <div className={a.codeRow}>
+            <span className={a.code}>{tr.joinCode}</span>
+            <CopyButton text={tr.joinCode} />
+            <button className="btn btn--ghost btn--sm" type="button" disabled={quick} onClick={() => setAskCode(true)}>
+              {A.newCode}
+            </button>
+          </div>
+          <span className="label">{A.link}</span>
+          <span className={a.link}>{link}</span>
+          <div className={a.chipRow}>
+            <CopyButton text={link} />
+            <ShareButton text={t.common.joinWithCode(tr.name, tr.joinCode)} url={link} title={tr.name} />
+          </div>
+        </section>
       )}
       {/* The link to watch without a PIN (STRAT-05): the TV's, and whoever else the Comité gives it to. */}
       {tab === 'status' && <SpectatorLinkCard />}
@@ -501,7 +582,13 @@ export function AdminTournament() {
             </Field>
           )}
           {/* Every player 18 or older, the Comité's word (TRUST-13): asked where the money is set. */}
-          {tab === 'money' && <AdultsCard tournamentId={tournamentId} settings={parsed.success ? parsed.data : null} timeZone={data!.settings.timezone} />}
+          {tab === 'money' && (
+            <AdultsCard
+              tournamentId={tournamentId}
+              settings={parsed.success ? parsed.data : null}
+              timeZone={data!.settings.timezone}
+            />
+          )}
           <SettingsEditor
             value={settings}
             onChange={(v) => {
@@ -524,9 +611,15 @@ export function AdminTournament() {
       {(dirty || (tab !== 'danger' && tab !== 'status')) && (
         <div className={a.sticky}>
           {dirty && !parsed.success && <span className={a.error}>{A.invalidNearSave}</span>}
-          {dirty && parsed.success && !(check?.ok ?? false) && !fieldKnown && <span className={a.error}>{A.fieldUnknownNearSave}</span>}
-          {dirty && parsed.success && fieldKnown && !balanced && <span className={a.error}>{A.unbalancedNearSave}</span>}
-          {dirty && parsed.success && fieldKnown && balanced && !(check?.ok ?? false) && <span className={a.error}>{A.unreachableNearSave}</span>}
+          {dirty && parsed.success && !(check?.ok ?? false) && !fieldKnown && (
+            <span className={a.error}>{A.fieldUnknownNearSave}</span>
+          )}
+          {dirty && parsed.success && fieldKnown && !balanced && (
+            <span className={a.error}>{A.unbalancedNearSave}</span>
+          )}
+          {dirty && parsed.success && fieldKnown && balanced && !(check?.ok ?? false) && (
+            <span className={a.error}>{A.unreachableNearSave}</span>
+          )}
           {sense.length > 0 && (
             <div className={a.error}>
               <span>{t.admin.sense.nearSave}</span>
@@ -537,7 +630,12 @@ export function AdminTournament() {
               </ul>
             </div>
           )}
-          <button className="btn btn--primary btn--block" type="button" disabled={busy || !dirty || !parsed.success || !savable} onClick={() => void save()}>
+          <button
+            className="btn btn--primary btn--block"
+            type="button"
+            disabled={busy || !dirty || !parsed.success || !savable}
+            onClick={() => void save()}
+          >
             {busy ? t.common.saving : t.common.save}
           </button>
         </div>
@@ -565,7 +663,12 @@ export function AdminTournament() {
               <span className={a.dangerTitle}>{A.danger}</span>
               <p className={a.help}>{A.deleteConfirm(tr.name)}</p>
               <input className="input" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
-              <button className="btn btn--danger" type="button" disabled={busy || confirmName !== tr.name} onClick={() => void destroy()}>
+              <button
+                className="btn btn--danger"
+                type="button"
+                disabled={busy || confirmName !== tr.name}
+                onClick={() => void destroy()}
+              >
                 {A.deleteTournament}
               </button>
             </section>
@@ -585,7 +688,14 @@ export function AdminTournament() {
         }}
       />
 
-      <ConfirmSheet open={askCode} title={A.newCode} body={A.newCodeConfirm} busy={quick} onConfirm={() => void newCode()} onClose={() => setAskCode(false)} />
+      <ConfirmSheet
+        open={askCode}
+        title={A.newCode}
+        body={A.newCodeConfirm}
+        busy={quick}
+        onConfirm={() => void newCode()}
+        onClose={() => setAskCode(false)}
+      />
     </div>
   )
 }

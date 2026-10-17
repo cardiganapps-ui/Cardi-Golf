@@ -18,7 +18,8 @@ export interface Preset {
   build: () => TournamentSettings
 }
 
-const game = (key: string, over: Partial<GameConfig> = {}): GameConfig => ({ ...GAME_ENTRIES.find((e) => e.key === key)!.create(key.toLowerCase()), ...over }) as GameConfig
+const game = (key: string, over: Partial<GameConfig> = {}): GameConfig =>
+  ({ ...GAME_ENTRIES.find((e) => e.key === key)!.create(key.toLowerCase()), ...over }) as GameConfig
 
 export const PRESETS: Preset[] = [
   {
@@ -44,8 +45,21 @@ export const PRESETS: Preset[] = [
         bestRound: { enabled: true, label: 'Mejor ronda' },
         fewestPutts: { enabled: true, label: 'Menos putts' },
       },
-      prizes: { ...DEFAULT_SETTINGS.prizes, stableford: [50, 25, 15, 10], stablefordMode: 'percent', bestRoundPerDay: 1000, fewestPutts: 1000 },
-      games: [game('lowNet', { id: 'low-gross', label: 'Low gross', options: { basis: 'gross', scope: 'overall' }, money: { source: 'side', buyIn: 300, amount: 0, stake: 0, split: [60, 40] } })],
+      prizes: {
+        ...DEFAULT_SETTINGS.prizes,
+        stableford: [50, 25, 15, 10],
+        stablefordMode: 'percent',
+        bestRoundPerDay: 1000,
+        fewestPutts: 1000,
+      },
+      games: [
+        game('lowNet', {
+          id: 'low-gross',
+          label: 'Low gross',
+          options: { basis: 'gross', scope: 'overall' },
+          money: { source: 'side', buyIn: 300, amount: 0, stake: 0, split: [60, 40] },
+        }),
+      ],
     }),
   },
   {
@@ -54,7 +68,10 @@ export const PRESETS: Preset[] = [
     build: () => ({
       ...structuredClone(DEFAULT_SETTINGS),
       entryFee: 0,
-      games: [game('skins'), game('birdies'), game('closest')].map((g) => ({ ...g, money: { ...g.money, source: 'none' as const } })),
+      games: [game('skins'), game('birdies'), game('closest')].map((g) => ({
+        ...g,
+        money: { ...g.money, source: 'none' as const },
+      })),
     }),
   },
   {
