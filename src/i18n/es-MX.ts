@@ -528,6 +528,8 @@ export const t = {
     noComite: 'Este torneo no tiene Comité. Solo tú puedes administrarlo.',
     rounds: 'Rondas',
     noRounds: 'Sin rondas.',
+    /** A round with no date yet, in Admin de Polo (VIS-27: it printed a dash). */
+    noDate: 'Sin fecha',
     roundLine: (n: number, course: string | null, scores: number) => `Ronda ${n}${course ? `, ${course}` : ''}, ${scores} ${scores === 1 ? 'hoyo' : 'hoyos'}`,
     counts: {
       players: 'Jugadores',
@@ -1028,6 +1030,9 @@ export const t = {
       quickGamesHint: 'Los más comunes, de un toque. Hay más para agregar cuando quieras, ya dentro del torneo.',
       templateLink: '¿Prefieres empezar de una plantilla?',
       review: 'Antes de crear',
+      /** VIS-19: beside the form on a laptop, the event as it is typed. */
+      previewTitle: 'Así se verá',
+      previewName: 'Tu torneo',
       reviewFormat: 'Formato',
       reviewDays: (n: number) => (n === 1 ? 'Una vuelta' : `${n} días`),
       reviewField: (n: number) => `${n} jugadores`,
@@ -1839,6 +1844,8 @@ export const t = {
      * tier glued to the name) and nothing of the honoree's ring. The lookup carries no settings, so the honoree is
      * the platform's word, not the tournament's label; a face the Comité proposed for this profile asks «¿Eres tú?».
      */
+    /** Under a face's name (VIS-18): its category, in words; the boxed letter read as noise. */
+    faceTier: (tier: string) => `Categoría ${tier}`,
     faceSpoken: (name: string, tier: string | null, honoree: boolean, askMe: boolean) =>
       [name, askMe ? '¿eres tú?' : tier ? `categoría ${tier}` : '', honoree ? 'homenajeado' : ''].filter(Boolean).join(', '),
     confirmYou: (name: string) => `El Comité dice que eres ${name}.`,

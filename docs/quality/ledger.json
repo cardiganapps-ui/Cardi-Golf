@@ -454,11 +454,16 @@
       "workstream": "W13",
       "phase": 1,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 233,
+      "tests": [
+        "src/data/rpc.test.ts",
+        "src/data/session.test.ts",
+        "src/data/profiles.stash.test.ts",
+        "src/data/snapshotCache.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "About 70 jsonb RPC answers are named with .as<T>() rather than parsed; direct supabase().rpc calls remain in legal, push, telemetry, backup and src/server/auth (typed through the client)."
     },
     {
       "id": "ARCH-04",
@@ -4653,9 +4658,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "src/components/ErrorBox.test.tsx",
+        "src/styles/tokens.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4711,11 +4719,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "src/styles/buttons.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "416 hand-written btn classes remain in 56 Comité/profile/admin files on this branch (304 in 36 after the stacked VIS-19/25/27 PR), held by a shrink-only list."
     },
     {
       "id": "VIS-18",
@@ -4725,9 +4735,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "src/lib/monogram.test.ts",
+        "e2e/fixtures/faces.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4739,11 +4752,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/layouts.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Mis torneos' two-column layout has no fixture and no browser test."
     },
     {
       "id": "VIS-20",
@@ -4786,9 +4801,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "src/screens/tournament/LiveScreen.speech.test.tsx"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4832,9 +4849,12 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/print.spec.ts",
+        "src/screens/tournament/printColumns.test.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4846,9 +4866,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "e2e/fixtures/gametabs.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     },
@@ -4860,11 +4882,13 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 232,
+      "tests": [
+        "e2e/fixtures/platformlook.spec.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "VerifiedBadge (PR 228) is still a coloured chip."
     },
     {
       "id": "VIS-28",
@@ -4874,9 +4898,11 @@
       "workstream": "W9",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 231,
+      "tests": [
+        "e2e/fixtures/marks.spec.ts"
+      ],
       "verifiedBy": null,
       "residual": null
     }

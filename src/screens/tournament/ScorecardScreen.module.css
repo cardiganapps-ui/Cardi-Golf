@@ -372,7 +372,9 @@
   color: var(--accent);
 }
 .cell {
-  display: inline-flex;
+  /* The cell's width, so the pencil mark inside is sized from its column (VIS-28). */
+  display: flex;
+  width: 100%;
   flex-direction: column;
   align-items: center;
   line-height: 1;

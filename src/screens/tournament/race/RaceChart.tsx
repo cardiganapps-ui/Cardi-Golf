@@ -21,7 +21,7 @@
 import { useReducedMotionConfig } from 'motion/react'
 import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { t } from '../../../i18n/es-MX'
-import { Field } from '../../../components/primitives'
+import { Button, Field } from '../../../components/primitives'
 import { IconPause, IconPlay } from '../../../components/icons'
 import { ALL_IN_COLOUR, axisLength, highlights, holeOf, layoutRace, placeLabels, placesAt, pointAt, summarize, valueAt, type Highlight, type RaceDay, type RaceEntrant, type RaceLayout } from './raceModel'
 import styles from './RaceChart.module.css'
@@ -251,13 +251,13 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
         </p>
         {canPlay && (
           <div className={styles.controls}>
-            <button className="btn btn--secondary btn--sm" type="button" onClick={playing ? pause : play}>
+            <Button size="sm" onClick={playing ? pause : play}>
               {playing ? <IconPause size={18} /> : <IconPlay size={18} />} {playing ? R.pause : cursor == null ? t.stats.play : R.resume}
-            </button>
+            </Button>
             {(playing || cursor != null) && (
-              <button className="btn btn--ghost btn--sm" type="button" onClick={toEnd}>
+              <Button variant="ghost" size="sm" onClick={toEnd}>
                 {R.end}
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -405,9 +405,9 @@ export function RaceChart({ title, entrants, stable, days, strokes, format, pair
       )}
 
       <div>
-        <button className="btn btn--ghost btn--sm" type="button" aria-expanded={table} aria-controls={`${id}-table`} onClick={() => setTable((v) => !v)}>
+        <Button variant="ghost" size="sm" aria-expanded={table} aria-controls={`${id}-table`} onClick={() => setTable((v) => !v)}>
           {table ? R.hideTable : R.showTable}
-        </button>
+        </Button>
         <div id={`${id}-table`} hidden={!table}>
           {table && <RaceTable title={title} entrants={entrants} days={days} played={played} format={format} pairs={pairs} />}
         </div>

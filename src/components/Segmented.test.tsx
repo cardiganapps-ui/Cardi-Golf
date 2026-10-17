@@ -6,7 +6,7 @@
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Segmented } from './primitives'
 
 afterEach(cleanup)
@@ -59,4 +59,19 @@ describe('Segmented (A11Y-17)', () => {
     await act(async () => fireEvent.keyDown(tabs[0]!, { key: 'ArrowRight' }))
     expect(screen.getByRole('tabpanel', { name: 'Día 2' })).toBeTruthy()
   })
+
+  /** VIS-26: the strip keeps the chosen tab in view, at once the first time, then smooth unless less motion is asked for. */
+  for (const reduce of [false, true]) {
+    it(`as tabs, brings the chosen tab into view${reduce ? ', at once under reduced motion' : ''}`, async () => {
+      const scrollTo = vi.fn()
+      const spy = vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(scrollTo)
+      const media = vi.spyOn(window, 'matchMedia').mockImplementation((q: string) => ({ matches: reduce && q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList)
+      render(<Harness tabs />)
+      expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ behavior: 'auto' }))
+      await act(async () => fireEvent.click(screen.getAllByRole('tab')[2]!))
+      expect(scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ behavior: reduce ? 'auto' : 'smooth' }))
+      spy.mockRestore()
+      media.mockRestore()
+    })
+  }
 })

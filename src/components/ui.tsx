@@ -8,24 +8,25 @@ import { AnimatePresence, motion, usePresence, useReducedMotion } from 'motion/r
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { t } from '../i18n/es-MX'
 import { humanError } from '../lib/humanError'
+import { initials, monogramTone } from '../lib/monogram'
+import { IconAlert } from './icons'
 import styles from './ui.module.css'
 import { anySheetOpen, isTopSheet, sheetClosed, sheetOpened } from './sheetHistory'
 import { modalClosed, modalOpened, wrapTab } from './modalFocus'
 import { ease } from '../design/motion'
 import { onToast, toast, type ToastIn, type ToastMsg } from './toast'
+import { Button } from './primitives'
 
 export { Field, Segmented } from './primitives'
 
-export function Avatar({ name, url, size, honoree }: { name: string; url?: string | null; size?: 'sm' | 'lg'; honoree?: boolean }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('')
+/**
+ * A face: the photo, or the initials (a placeholder name's number, «Jugador 12» is «12»). `seed` (the player's id)
+ * gives the initials a tint of his own, the same on every phone (VIS-18); without it they sit on the ruled grey.
+ */
+export function Avatar({ name, url, size, honoree, seed }: { name: string; url?: string | null; size?: 'sm' | 'lg'; honoree?: boolean; seed?: string }) {
   return (
-    <span className={`avatar ${size === 'lg' ? 'avatar--lg' : size === 'sm' ? 'avatar--sm' : ''}`} aria-hidden="true">
-      {url ? <img src={url} alt="" loading="lazy" /> : initials}
+    <span className={`avatar ${size === 'lg' ? 'avatar--lg' : size === 'sm' ? 'avatar--sm' : ''}`} data-tone={!url && seed !== undefined ? monogramTone(seed) : undefined} aria-hidden="true">
+      {url ? <img src={url} alt="" loading="lazy" /> : initials(name)}
       {honoree && <span className={styles.honoreeMark} />}
     </span>
   )
@@ -88,9 +89,9 @@ export function SheetFrame({ title, onClose, children, wide, className = '', fra
         <div className={styles.sheetHead} data-sheet-grab="" onPointerDown={onGrab}>
           {title ? <h2 id={titleId}>{title}</h2> : <span />}
           {onClose && (
-            <button className="btn btn--ghost btn--sm" type="button" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onClose}>
               {t.common.close}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -354,19 +355,19 @@ export function Sheet({ open, onClose, title, children, wide, dirty, onExited }:
           <div className="stack">
             <p className="help">{t.common.discardBody}</p>
             <div className="row">
-              <button className="btn btn--secondary" type="button" onClick={() => setAsking(false)}>
+              <Button onClick={() => setAsking(false)}>
                 {t.common.keepEditing}
-              </button>
-              <button
-                className="btn btn--danger grow"
-                type="button"
+              </Button>
+              <Button
+                variant="danger" className="grow"
+               
                 onClick={() => {
                   setAsking(false)
                   close.current()
                 }}
               >
                 {t.common.discard}
-              </button>
+              </Button>
             </div>
           </div>
         </Sheet>
@@ -375,32 +376,95 @@ export function Sheet({ open, onClose, title, children, wide, dirty, onExited }:
   )
 }
 
-/** A loading placeholder shaped like the content it replaces. */
-export function Skeleton({ w = '100%', h = 16 }: { w?: string | number; h?: number }) {
-  return <span className={styles.skeleton} style={{ width: w, height: h }} aria-hidden="true" />
+/** A loading placeholder: a block on the skeleton fill (1.3:1 or more against the page, VIS-13). */
+export function Skeleton({ w = '100%', h = 16, round }: { w?: string | number; h?: number; round?: boolean }) {
+  return <span className={`${styles.skeleton} ${round ? styles.skeletonRound : ''}`} style={{ width: w, height: h }} aria-hidden="true" />
 }
-/** Loading state for a screen: a few rows, no spinner, no layout jump. */
-export function Spinner({ label, rows = 3 }: { label?: string; rows?: number }) {
+
+/**
+ * What a screen looks like while it loads (VIS-13), drawn from its real shapes so nothing jumps when it comes:
+ * - `list`: ruled rows, a title and a sub line on the left and a figure on the right (most screens);
+ * - `board`: the leaderboard's rows, position, name and the figures in their columns (En vivo, Juegos);
+ * - `card`: the Tarjeta's hole, its number and par, then four players with their stepper;
+ * - `text`: paragraphs (the Reglamento, the legal pages).
+ * Every screen used to show the same three bars, at 1.08:1 against the page. A slow shimmer crosses each row,
+ * none under reduced motion.
+ */
+export type SkeletonKind = 'list' | 'board' | 'card' | 'text'
+const WIDTHS = ['62%', '48%', '70%', '55%', '66%', '44%', '58%', '52%']
+export function Spinner({ label, rows, kind = 'list' }: { label?: string; rows?: number; kind?: SkeletonKind }) {
+  const n = rows ?? (kind === 'card' ? 4 : kind === 'text' ? 3 : 6)
+  const w = (i: number) => WIDTHS[i % WIDTHS.length]!
   return (
-    <div className={styles.loading} role="status" aria-label={label ?? t.common.loading}>
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} h={i === 0 ? 24 : 16} w={i === 0 ? '55%' : i % 2 ? '85%' : '70%'} />
-      ))}
+    <div className={`${styles.loading} ${styles[`loading_${kind}`] ?? ''}`} role="status" aria-label={label ?? t.common.loading}>
+      {kind === 'card' && (
+        <div className={styles.skHole}>
+          <Skeleton w={56} h={48} />
+          <Skeleton w={96} h={18} />
+        </div>
+      )}
+      {kind === 'board' && (
+        <div className={styles.skBoardHead}>
+          <Skeleton w="30%" h={12} />
+          <Skeleton w={72} h={12} />
+        </div>
+      )}
+      {Array.from({ length: n }, (_, i) =>
+        kind === 'text' ? (
+          <div key={i} className={styles.skPara}>
+            <Skeleton w="40%" h={20} />
+            <Skeleton h={14} />
+            <Skeleton h={14} />
+            <Skeleton w={w(i)} h={14} />
+          </div>
+        ) : kind === 'card' ? (
+          <div key={i} className={styles.skRow}>
+            <span className={styles.skText}>
+              <Skeleton w={w(i)} h={16} />
+              <Skeleton w="30%" h={12} />
+            </span>
+            <Skeleton w={132} h={48} />
+          </div>
+        ) : (
+          <div key={i} className={styles.skRow}>
+            {kind === 'board' && <Skeleton w={20} h={16} />}
+            <span className={styles.skText}>
+              <Skeleton w={w(i)} h={16} />
+              <Skeleton w="34%" h={12} />
+            </span>
+            {kind === 'board' && <Skeleton w={28} h={14} />}
+            <Skeleton w={kind === 'board' ? 40 : 56} h={kind === 'board' ? 22 : 16} />
+          </div>
+        ),
+      )}
     </div>
   )
 }
 
-/** `error`: the caught error, or copy already made from one; it shows as humanError (COPY-04). */
-export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+/**
+ * Something failed (VIS-13): the one way a screen says so. Its mark, a sentence in words (the title, then
+ * humanError's line: never «Failed to fetch», COPY-04), what still works (`fallback`: the phone's copy, a way
+ * home) and «Reintentar». It was a pink card with «Algo salió mal» over the raw message.
+ * `error`: the caught error, or copy already made from one.
+ */
+export function ErrorBox({ error, onRetry, title, fallback }: { error: unknown; onRetry?: () => void; title?: string; fallback?: ReactNode }) {
   return (
-    <div className={`card ${styles.errorBox}`} role="alert">
-      <strong>{t.common.error}</strong>
-      <p className="small">{humanError(error)}</p>
-      {onRetry && (
-        <button className="btn btn--secondary btn--sm" type="button" onClick={onRetry}>
-          {t.common.retry}
-        </button>
-      )}
+    <div className={styles.errorBox} role="alert">
+      <IconAlert size={24} className={styles.errorMark} />
+      <div className={styles.errorText}>
+        <strong>{title ?? t.common.error}</strong>
+        <p>{humanError(error)}</p>
+        {(onRetry || fallback) && (
+          <div className={styles.errorActions}>
+            {onRetry && (
+              <Button size="sm" onClick={onRetry}>
+                {t.common.retry}
+              </Button>
+            )}
+            {fallback}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -544,9 +608,9 @@ function ToastSlot({ children, ref }: { children: ReactNode; ref?: React.Ref<HTM
 export function CopyButton({ text, label }: { text: string; label?: string }) {
   const [done, setDone] = useState(false)
   return (
-    <button
-      className="btn btn--secondary btn--sm"
-      type="button"
+    <Button
+      size="sm"
+     
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text)
@@ -558,15 +622,15 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
       }}
     >
       {done ? t.common.copied : (label ?? t.common.copy)}
-    </button>
+    </Button>
   )
 }
 
 export function ShareButton({ text, url, title }: { text: string; url?: string; title?: string }) {
   if (typeof navigator === 'undefined' || !navigator.share) return null
   return (
-    <button className="btn btn--primary btn--sm" type="button" onClick={() => navigator.share({ text, url, title }).catch(() => undefined)}>
+    <Button variant="primary" size="sm" onClick={() => navigator.share({ text, url, title }).catch(() => undefined)}>
       {t.common.share}
-    </button>
+    </Button>
   )
 }

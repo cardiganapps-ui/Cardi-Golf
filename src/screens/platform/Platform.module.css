@@ -1,4 +1,9 @@
-/* The Admin de Polo panel. Tokens only; rows compose the shared primitives. */
+/*
+ * The Admin de Polo panel. Tokens only; rows compose the shared primitives. VIS-27: the product's own language,
+ * as everywhere else: ruled rows with the figures at their right edge, sentence-case labels, flags as words with a
+ * dot (no coloured chips), squared controls. It had carded KPI tiles under tracked uppercase eyebrows, round filter
+ * pills and coloured chips, every pattern the redesign took out.
+ */
 
 /* ---- Frame: the Comité layout, plus group labels in the side column ---- */
 .groupLabel {
@@ -8,11 +13,9 @@
   .groupLabel {
     display: block;
     padding: var(--s4) 0 var(--s1);
-    color: var(--ink-3);
-    font-size: var(--fs-xs);
+    color: var(--ink-2);
+    font-size: var(--fs-sm);
     font-weight: 600;
-    letter-spacing: var(--track-caps);
-    text-transform: uppercase;
   }
   .groupLabel:first-child {
     padding-top: 0;
@@ -46,52 +49,83 @@
   line-height: var(--lh-body);
 }
 
-/* ---- KPI tiles ---- */
+/* ---- The figures: ruled rows, the label and its line on the left, the figure at the right edge ---- */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s3);
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--s8);
+  border-top: var(--hairline);
 }
 @media (min-width: 1024px) {
   .kpis {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .kpi {
   display: flex;
-  flex-direction: column;
-  gap: var(--s1);
+  align-items: center;
+  gap: var(--s3);
   min-width: 0;
-  padding: var(--s3);
-  border: var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  min-height: var(--row-h);
+  padding: var(--s2) 0;
+  border-bottom: var(--hairline);
+}
+.kpiText {
+  composes: rowTextBlock from '../../components/primitives.module.css';
 }
 .kpiLabel {
-  color: var(--ink-2);
-  font-size: var(--fs-xs);
   font-weight: 600;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
 }
 .kpiValue {
-  font-size: var(--fs-2xl);
-  font-weight: 600;
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+  font-size: var(--fs-xl);
+  font-weight: var(--fig-weight);
   line-height: var(--lh-tight);
   font-variation-settings: 'wdth' var(--wdth-figure);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
-/* A tile is narrow on a phone: two lines, then clipped. */
 .kpiSub {
+  composes: rowSubText from '../../components/primitives.module.css';
+}
+/* The north star: the same row, its figure a step up, under the heavy rule. */
+.kpiLead {
+  border-top: var(--rule-heavy);
+}
+.kpiLead .kpiValue {
+  font-size: var(--fs-3xl);
+}
+
+/* Flags on a row: a word with a dot in its colour, never a filled chip. */
+.flag,
+.flagOn,
+.flagCaution,
+.flagDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
   color: var(--ink-2);
   font-size: var(--fs-sm);
-  line-height: var(--lh-ui);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  white-space: nowrap;
+}
+.flagOn::before,
+.flagCaution::before,
+.flagDanger::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-round);
+  background: currentColor;
+}
+.flagOn::before {
+  background: var(--accent);
+}
+.flagCaution::before {
+  background: var(--caution);
+}
+.flagDanger {
+  color: var(--under);
 }
 
 /* ---- Bars: one series, one hue, rounded data-ends on the baseline ---- */
@@ -218,15 +252,18 @@ a.row:active {
 }
 .filter {
   flex: 0 0 auto;
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 0 var(--s3);
-  border: var(--hairline);
-  border-radius: var(--r-round);
-  background: none;
+  border: var(--control-border);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
   color: var(--ink-2);
   font: inherit;
   font-size: var(--fs-sm);
   cursor: pointer;
+}
+.filter:active {
+  background: var(--surface);
 }
 .filter[aria-pressed='true'] {
   border-color: var(--ink);
@@ -265,11 +302,9 @@ a.row:active {
   }
   .placeholder {
     display: block;
-    padding: var(--s8) var(--s4);
-    border: 1px dashed var(--rule);
-    border-radius: var(--r-md);
-    color: var(--ink-3);
-    text-align: center;
+    padding: var(--s6) 0;
+    border-top: var(--rule-heavy);
+    color: var(--ink-2);
   }
   .detailPane {
     position: sticky;
@@ -322,12 +357,13 @@ a.row:active {
   display: flex;
   flex-direction: column;
   gap: var(--s3);
-  padding: var(--s3);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  padding: var(--s3) 0;
+  border-top: var(--rule-heavy);
+  border-bottom: var(--hairline);
 }
-.protectOn {
-  background: var(--caution-soft);
+/* Protegido: said by its lock in the caution colour, not a tinted box. */
+.protectOn .protectHead {
+  color: var(--caution);
 }
 .protectHead {
   display: flex;
@@ -480,10 +516,8 @@ a.row:active {
   display: flex;
   flex-direction: column;
   gap: var(--s2);
-  padding: var(--s3);
-  border: var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  padding: var(--s3) 0;
+  border-top: var(--rule-heavy);
   min-width: 0;
 }
 .healthHead {
@@ -551,6 +585,9 @@ a.row:active {
    state's quieter twin, on the motion tokens. Never on a touch screen, where a tap would leave it stuck. */
 @media (hover: hover) {
   a.row:not(:disabled):hover {
+    background: var(--surface);
+  }
+  .filter:not(:disabled):hover {
     background: var(--surface);
   }
 }

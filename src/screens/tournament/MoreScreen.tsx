@@ -11,7 +11,7 @@ import { Avatar, CopyButton, ShareButton, Sheet, Toggle } from '../../components
 import { toast } from '../../components/toast'
 import { canVibrate, haptic, hapticsOn, setHapticsOn } from '../../lib/haptics'
 import { contrastOn, setContrastChoice, setThemeChoice, useAppearance, type ThemeChoice } from '../../lib/theme'
-import { Segmented } from '../../components/primitives'
+import { Button, Segmented } from '../../components/primitives'
 import { useAuth } from '../../data/auth'
 import { signOutSafely } from '../../data/account'
 import { linkMyProfile, unlinkMyProfile, useMyProfile } from '../../data/profiles'
@@ -25,6 +25,7 @@ import styles from './MoreScreen.module.css'
 import { humanError } from '../../lib/humanError'
 import { AdminLayout, CeremonyScreen, RulesScreen, StatsScreen, TvScreen } from '../../app/screens'
 import { preloadOnIntent } from '../../app/lazyScreen'
+import { buttonClass } from '../../components/buttonClass'
 
 export function MoreScreen() {
   const { me, slug, lookup, leave, refresh } = useTournamentCtx()
@@ -92,7 +93,7 @@ export function MoreScreen() {
   }
   const player = data?.snapshot.players.find((p) => p.id === me.playerId)
   const link = `${window.location.origin}/t/${slug}`
-  const joinCode = data?.snapshot.tournament.joinCode ?? lookup.joinCode
+  const joinCode = data?.snapshot.tournament.joinCode ?? lookup.joinCode ?? ''
 
   return (
     <div className={styles.screen}>
@@ -106,7 +107,7 @@ export function MoreScreen() {
       </div>
 
       {me.isComite && (
-        <Link className="btn btn--primary btn--block" to={`/t/${slug}/admin`} {...preloadOnIntent(AdminLayout)}>
+        <Link className={buttonClass({ variant: 'primary', block: true })} to={`/t/${slug}/admin`} {...preloadOnIntent(AdminLayout)}>
           {t.more.admin}
         </Link>
       )}
@@ -114,15 +115,15 @@ export function MoreScreen() {
         <div className={styles.join}>
           <span className="label">{t.account.title}</span>
           <p className="help">{t.more.saveProfileHint}</p>
-          <Link className="btn btn--secondary btn--block" to={`/entrar?next=${encodeURIComponent(`/t/${slug}/mas`)}`}>
+          <Link className={buttonClass({ variant: 'secondary', block: true })} to={`/entrar?next=${encodeURIComponent(`/t/${slug}/mas`)}`}>
             {t.more.saveProfile}
           </Link>
         </div>
       )}
       {me.playerId && account && me.via === 'device' && (
-        <button className="btn btn--secondary btn--block" type="button" disabled={saving} onClick={() => void saveHere()}>
+        <Button block disabled={saving} onClick={() => void saveHere()}>
           {t.more.saveHere}
-        </button>
+        </Button>
       )}
 
       <nav className={styles.links}>
@@ -178,9 +179,9 @@ export function MoreScreen() {
 
       <div className={styles.session}>
         {me.playerId && (
-          <button
-            className="btn btn--secondary"
-            type="button"
+          <Button
+            
+           
             onClick={() => {
               const q = queuedFor(lookup.id)
               if (q.writes > 0) setUnsent(q)
@@ -189,27 +190,27 @@ export function MoreScreen() {
             }}
           >
             {me.via === 'profile' ? t.enter.notMe : t.enter.switchPlayer}
-          </button>
+          </Button>
         )}
         {user && !isAnonymous && (
           <>
-            <Link className="btn btn--ghost" to="/organizer/reset">
+            <Link className={buttonClass({ variant: 'ghost' })} to="/organizer/reset">
               {t.auth.changePassword}
             </Link>
-            <button className="btn btn--ghost" type="button" disabled={signingOut} onClick={() => void logout()}>
+            <Button variant="ghost" disabled={signingOut} onClick={() => void logout()}>
               {signingOut ? t.account.signingOut : t.common.logout}
-            </button>
+            </Button>
           </>
         )}
-        <Link className="btn btn--ghost" to="/">
+        <Link className={buttonClass({ variant: 'ghost' })} to="/">
           {t.errors.backHome}
         </Link>
       </div>
       <Sheet open={!!unsent} onClose={() => setUnsent(null)} title={unsent?.holes ? t.sync.unsentBeforeSwitch(unsent.holes) : t.sync.unsentWritesBeforeSwitch}>
         <p>{t.sync.unsentBeforeSwitchBody}</p>
-        <button className="btn btn--primary" type="button" onClick={() => setUnsent(null)}>
+        <Button variant="primary" onClick={() => setUnsent(null)}>
           {t.sync.understood}
-        </button>
+        </Button>
       </Sheet>
       <ConfirmSheet
         open={askNotMe}

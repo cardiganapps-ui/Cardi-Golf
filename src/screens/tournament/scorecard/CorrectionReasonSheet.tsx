@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Sheet } from '../../../components/ui'
 import { t } from '../../../i18n/es-MX'
+import { Button } from '../../../components/primitives'
 
 const S = t.card
 
@@ -15,12 +16,12 @@ export const CorrectionReasonSheet = memo(function CorrectionReasonSheet(p: { op
         <p className="help">{S.signedReasonHint}</p>
         <input className="input" value={p.reason} onChange={(e) => p.onReason(e.target.value)} placeholder={t.admin.scores.reason} aria-label={t.admin.scores.reason} autoFocus />
         <div className="row">
-          <button className="btn btn--secondary" type="button" onClick={p.onClose}>
+          <Button onClick={p.onClose}>
             {t.common.cancel}
-          </button>
-          <button className="btn btn--primary grow" type="button" disabled={p.busy || p.reason.trim().length < 3} onClick={p.onSave}>
+          </Button>
+          <Button variant="primary" className="grow" disabled={p.busy || p.reason.trim().length < 3} onClick={p.onSave}>
             {p.busy ? t.common.saving : S.save}
-          </button>
+          </Button>
         </div>
       </div>
     </Sheet>

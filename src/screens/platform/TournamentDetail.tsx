@@ -9,7 +9,7 @@ import { Link, useOutletContext, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Sheet, Spinner } from '../../components/ui'
 import { toast } from '../../components/toast'
-import { Field, Input } from '../../components/primitives'
+import { Button, Field, Input } from '../../components/primitives'
 import { IconChevronLeft, IconLock, IconShield } from '../../components/icons'
 import { ReasonSheet } from '../../components/ReasonSheet'
 import { usePlatformApi, type PersonRow, type PlatformTournament } from '../../data/platform'
@@ -20,8 +20,11 @@ import s from './Platform.module.css'
 import { humanError } from '../../lib/humanError'
 import { ViewReasonForm } from './ViewReason'
 import { useAdminView } from './useAdminView'
+import { buttonClass } from '../../components/buttonClass'
 
 const P = t.platform
+/** A round's date in words («sáb 10 abr 2027»), never the ISO string (VIS-27). */
+const dayText = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 
 export function TournamentDetail() {
@@ -53,7 +56,7 @@ export function TournamentDetail() {
   }
 
   const back = (
-    <Link className={`btn btn--ghost btn--sm ${s.backLink}`} to=".." relative="path">
+    <Link className={buttonClass({ variant: 'ghost', size: 'sm' }, s.backLink)} to=".." relative="path">
       <IconChevronLeft size={18} />
       {P.back}
     </Link>
@@ -75,10 +78,10 @@ export function TournamentDetail() {
           {d.crew ? `, ${P.crew(d.crew.name)}` : ''}
         </span>
         <div className={s.actions}>
-          <Link className="btn btn--primary btn--sm" to={`/t/${d.slug}`}>
+          <Link className={buttonClass({ variant: 'primary', size: 'sm' })} to={`/t/${d.slug}`}>
             {P.open}
           </Link>
-          <Link className="btn btn--secondary btn--sm" to={`/t/${d.slug}/admin`}>
+          <Link className={buttonClass({ variant: 'secondary', size: 'sm' })} to={`/t/${d.slug}/admin`}>
             {P.openComite}
           </Link>
         </div>
@@ -93,24 +96,24 @@ export function TournamentDetail() {
         {d.unlockedUntil && <span className={s.help}>{P.unlockedUntil(clock(d.unlockedUntil))}</span>}
         <div className={s.actions}>
           {!d.protected && (
-            <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void run(() => api.setProtected(d.id, true))}>
+            <Button size="sm" disabled={busy} onClick={() => void run(() => api.setProtected(d.id, true))}>
               {P.protect}
-            </button>
+            </Button>
           )}
           {d.protected && !d.unlockedUntil && (
-            <button className="btn btn--secondary btn--sm" type="button" onClick={() => setSheet('unlock')}>
+            <Button size="sm" onClick={() => setSheet('unlock')}>
               {P.unlock}
-            </button>
+            </Button>
           )}
           {d.protected && d.unlockedUntil && (
-            <button className="btn btn--secondary btn--sm" type="button" disabled={busy} onClick={() => void run(() => api.relock(d.id))}>
+            <Button size="sm" disabled={busy} onClick={() => void run(() => api.relock(d.id))}>
               {P.relock}
-            </button>
+            </Button>
           )}
           {d.protected && (
-            <button className="btn btn--ghost btn--sm" type="button" onClick={() => setSheet('unprotect')}>
+            <Button variant="danger" size="sm" onClick={() => setSheet('unprotect')}>
               {P.unprotect}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -127,9 +130,9 @@ export function TournamentDetail() {
       <section className={s.section}>
         <div className={s.sectionHead}>
           <strong>{P.comite}</strong>
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => setSheet('organizer')}>
+          <Button variant="ghost" size="sm" onClick={() => setSheet('organizer')}>
             {P.addOrganizer}
-          </button>
+          </Button>
         </div>
         {d.organizers.length === 0 ? (
           <p className={s.help}>{P.noComite}</p>
@@ -143,9 +146,9 @@ export function TournamentDetail() {
                     <span className={s.rowSub}>{[o.role === 'owner' ? P.roleOwner : P.roleAdmin, o.email].join(', ')}</span>
                   </span>
                 </Link>
-                <button className="btn btn--ghost btn--sm" type="button" onClick={() => setRemoving(o.userId)}>
+                <Button variant="danger" size="sm" onClick={() => setRemoving(o.userId)}>
                   {P.removeOrganizer}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -164,7 +167,7 @@ export function TournamentDetail() {
               <div key={r.id} className={s.row}>
                 <span className={s.rowText}>
                   <span className={s.rowTitle}>{P.roundLine(r.number, r.course, r.scores)}</span>
-                  <span className={s.rowSub}>{r.date ?? '—'}</span>
+                  <span className={s.rowSub}>{r.date ? dayText(r.date) : P.noDate}</span>
                 </span>
                 <span className={s.rowEnd}>{P.roundStatus[r.status] ?? r.status}</span>
               </div>
@@ -188,7 +191,7 @@ export function TournamentDetail() {
                   <span className={s.rowSub}>{[a.platform ? P.byPlatform : a.actor, a.reason].filter(Boolean).join(', ') || '—'}</span>
                 </span>
                 <span className={s.rowEnd}>
-                  {a.platform && <span className="chip chip--coral">{P.byPlatform}</span>}
+                  {a.platform && <span className={s.flagDanger}>{P.byPlatform}</span>}
                   {relTime(a.at)}
                 </span>
               </div>
@@ -302,9 +305,9 @@ function AddOrganizerSheet({ open, onClose, onPick }: { open: boolean; onClose: 
         <Field label={P.reason} error={error}>
           <Input value={reason} maxLength={200} placeholder={P.reasonPlaceholder} onChange={(e) => setReason(e.target.value)} />
         </Field>
-        <button className="btn btn--primary btn--block" type="button" disabled={busy || !picked || reason.trim().length < 3} onClick={() => void go()}>
+        <Button variant="primary" block disabled={busy || !picked || reason.trim().length < 3} onClick={() => void go()}>
           {busy ? t.common.saving : P.addOrganizer}
-        </button>
+        </Button>
       </div>
     </Sheet>
   )

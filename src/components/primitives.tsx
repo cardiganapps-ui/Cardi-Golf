@@ -18,8 +18,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
+  type Ref,
   type RefObject,
 } from 'react'
+import { NavLink, type NavLinkProps } from 'react-router'
 import { blankFigure, t, type RowSpeech } from '../i18n/es-MX'
 import { IconMinus, IconPlus, IconRefresh } from './icons'
 import { lockups, wordmark as wm } from '../design/logoMark.json'
@@ -27,7 +29,9 @@ import { assetUrl } from '../lib/assetUrl'
 import s from './primitives.module.css'
 import { TournamentLogo } from './TournamentLogo'
 import { markFor, type MarkKind } from './notation'
+import { buttonClass, type ButtonLook } from './buttonClass'
 import { haptic } from '../lib/haptics'
+import { scrollBehavior } from '../lib/reducedMotion'
 import { formatMoney, formatSignedMoney } from '../lib/money'
 import { useCurrency } from './currency'
 
@@ -67,18 +71,9 @@ function pressCancel(e: ReactPointerEvent<HTMLElement>) {
 const PRESS = { onPointerDown: pressDown, onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressCancel } as const
 
 // ---- Buttons ----
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
-export function Button({
-  variant = 'secondary',
-  size = 'md',
-  block,
-  pressed,
-  focus,
-  className = '',
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; size?: 'md' | 'sm'; block?: boolean; pressed?: boolean; focus?: boolean }) {
-  const v = { primary: s.btnPrimary, secondary: s.btnSecondary, quiet: s.btnQuiet, danger: s.btnDanger }[variant]
-  return <button type="button" className={`${s.btn} ${v} ${size === 'sm' ? s.btnSm : ''} ${block ? s.btnBlock : ''} ${pressed ? s.pressed : ''} ${focus ? s.focus : ''} ${className}`} {...rest} />
+/** The app's one button: `.btn` and a variant from global.css (VIS-17). A link drawn as a button takes `buttonClass`. */
+export function Button({ variant, size, block, flush, className, type = 'button', ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & ButtonLook) {
+  return <button type={type} className={buttonClass({ variant, size, block, flush }, className)} {...rest} />
 }
 
 // ---- Fields ----
@@ -220,7 +215,38 @@ export function Segmented<T extends string>({
   disabled?: boolean
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([])
+  const strip = useRef<HTMLDivElement>(null)
   const current = Math.max(0, options.findIndex((o) => o.value === value))
+  // VIS-26: a tab strip wider than the screen fades at the edge where more tabs hide, and keeps the chosen tab in
+  // view. It cut labels mid-word at both edges with no sign of more, and the chosen game could sit off screen.
+  useLayoutEffect(() => {
+    const el = strip.current
+    if (!tabs || !el) return
+    const edges = () => {
+      const more = el.scrollWidth - el.clientWidth
+      el.toggleAttribute('data-more-start', more > 1 && el.scrollLeft > 1)
+      el.toggleAttribute('data-more-end', more > 1 && el.scrollLeft < more - 1)
+    }
+    edges()
+    el.addEventListener('scroll', edges, { passive: true })
+    const seen = typeof ResizeObserver === 'function' ? new ResizeObserver(edges) : null
+    seen?.observe(el)
+    return () => {
+      el.removeEventListener('scroll', edges)
+      seen?.disconnect()
+    }
+  }, [tabs, options.length])
+  const first = useRef(true)
+  useLayoutEffect(() => {
+    const el = strip.current
+    const on = refs.current[current]
+    if (!tabs || !el || !on) return
+    // The strip alone scrolls, never the page; at once the first time, then smooth unless less motion is asked for.
+    const to = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2
+    const behavior = first.current ? 'auto' : scrollBehavior()
+    first.current = false
+    if (typeof el.scrollTo === 'function') el.scrollTo({ left: Math.max(0, to), behavior })
+  }, [tabs, current])
   function onKey(e: ReactKeyboardEvent<HTMLButtonElement>, i: number) {
     const last = options.length - 1
     const to = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i === last ? 0 : i + 1) : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i === 0 ? last : i - 1) : e.key === 'Home' ? 0 : e.key === 'End' ? last : null
@@ -230,7 +256,7 @@ export function Segmented<T extends string>({
     onChange(options[to]!.value)
   }
   return (
-    <div className={s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label} aria-disabled={disabled || undefined}>
+    <div ref={strip} className={tabs ? s.tabs : s.segmented} role={tabs ? 'tablist' : 'radiogroup'} aria-label={label} aria-disabled={disabled || undefined}>
       {options.map((o, i) => (
         <button
           key={o.value}
@@ -245,7 +271,7 @@ export function Segmented<T extends string>({
           aria-checked={tabs ? undefined : o.value === value}
           tabIndex={i === current ? 0 : -1}
           disabled={disabled}
-          className={`${s.segBtn} ${o.value === value ? s.segOn : ''}`}
+          className={tabs ? `${s.tabItem} ${o.value === value ? s.tabItemOn : ''}` : `${s.segBtn} ${o.value === value ? s.segOn : ''}`}
           {...PRESS}
           onClick={() => onChange(o.value)}
           onKeyDown={(e) => onKey(e, i)}
@@ -258,16 +284,28 @@ export function Segmented<T extends string>({
 }
 
 // ---- Tab bar ----
-export function TabBar({ items }: { items: Array<{ icon: ReactNode; label: string; active?: boolean }> }) {
+/**
+ * The tournament's tab bar (VIS-17): the shell's own, not a second drawing of it. Each item is a router link,
+ * lit when its route is (`active` lights it from elsewhere: Stats and Reglamento live under Más). `badge`: a
+ * count on its icon, `bad` when it is something the server refused.
+ */
+export function TabBar({ children, ref }: { children: ReactNode; ref?: Ref<HTMLElement> }) {
   return (
-    <nav className={s.tabbar} aria-label={t.common.sections}>
-      {items.map((it) => (
-        <button key={it.label} type="button" className={`${s.tab} ${it.active ? s.tabOn : ''}`} aria-current={it.active ? 'page' : undefined}>
-          {it.icon}
-          <span>{it.label}</span>
-        </button>
-      ))}
+    <nav ref={ref} className={s.tabbar} aria-label={t.common.sections}>
+      {children}
     </nav>
+  )
+}
+export function TabItem({ icon, label, badge, active, children, ...link }: NavLinkProps & { icon: ReactNode; label: string; badge?: { count: number; bad?: boolean }; active?: boolean; children?: ReactNode }) {
+  return (
+    <NavLink {...link} className={({ isActive }) => `${s.tab} ${isActive || active ? s.tabOn : ''}`}>
+      <span className={s.tabIcon} aria-hidden="true">
+        {icon}
+        {badge && badge.count > 0 && <span className={`${s.tabBadge} ${badge.bad ? s.tabBadgeBad : ''}`}>{badge.count}</span>}
+      </span>
+      <span>{label}</span>
+      {children}
+    </NavLink>
   )
 }
 
@@ -285,8 +323,6 @@ export interface LeaderRowProps {
   figure: string
   tone?: Tone
   mine?: boolean
-  /** Calcutta owners' initials, shown after the sub line. */
-  owners?: string
   /** The tournament's honoree: a small ring after the name. */
   honoree?: boolean
   /** Places moved since this phone last showed the board (MOT-06): up is positive, shown «▲3» under the position. */
@@ -351,7 +387,6 @@ export function LeaderRow({
   figure,
   tone = 'even',
   mine,
-  owners,
   honoree,
   movedBy,
   seenToday,
@@ -361,7 +396,6 @@ export function LeaderRow({
   speech,
   onClick,
 }: LeaderRowProps) {
-  const subLine = [sub, owners].filter(Boolean)
   const label = t.live.rowLabel(pos, name, figure, todaySpoken ?? today, thru, { me: mine, movedBy, ...speech, todaySpoken: !!todaySpoken })
   const todayRef = useRef<HTMLSpanElement>(null)
   const figureRef = useRef<HTMLSpanElement>(null)
@@ -383,10 +417,9 @@ export function LeaderRow({
           {name}
           {honoree && <span className={s.honoreeDot} aria-hidden="true" />}
         </span>
-        {subLine.length > 0 && !dense && (
+        {sub && !dense && (
           <span className={s.nameSub}>
             {sub}
-            {owners && <span className={s.owners}>{owners}</span>}
           </span>
         )}
       </span>
@@ -425,7 +458,7 @@ export function ScoreMark({ value, kind }: { value: string | number; kind: MarkK
         {(kind === 'bogey' || kind === 'double') && <rect x="3" y="3" width="24" height="24" rx="1" />}
         {kind === 'double' && <rect x="6.5" y="6.5" width="17" height="17" rx="1" />}
       </svg>
-      <span className={kind === 'birdie' || kind === 'eagle' ? s.under : undefined} aria-hidden="true">
+      <span className={`${s.markFig} ${kind === 'birdie' || kind === 'eagle' ? s.under : ''}`} aria-hidden="true">
         {value}
       </span>
     </span>

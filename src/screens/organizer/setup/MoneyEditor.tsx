@@ -18,6 +18,7 @@ import { PrizeSummary } from '../../admin/PrizeSummary'
 import { NumberField } from '../../../components/NumberField'
 import { Group } from './Group'
 import styles from './Setup.module.css'
+import { Button } from '../../../components/primitives'
 
 const U = t.setup
 const SPLITS: Record<string, number[]> = { classic: [50, 30, 20], wta: [100], top2: [60, 40], top4: [40, 30, 20, 10] }
@@ -156,13 +157,13 @@ function PlacesEditor({ values, mode, pesos, currency, onChange }: { values: num
         ))}
       </div>
       <div className={styles.fieldRow}>
-        <button type="button" className="btn btn--secondary btn--sm" onClick={() => onChange([...values, 0])}>
+        <Button size="sm" onClick={() => onChange([...values, 0])}>
           {U.addPlace}
-        </button>
+        </Button>
         {values.length > 1 && (
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => onChange(values.slice(0, -1))}>
+          <Button variant="ghost" size="sm" onClick={() => onChange(values.slice(0, -1))}>
             {U.remove}
-          </button>
+          </Button>
         )}
         {mode === 'percent' && <span className={sum === 100 ? 'help' : 'error'}>{sum}%</span>}
       </div>

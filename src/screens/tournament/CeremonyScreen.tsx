@@ -34,6 +34,8 @@ import { DEFAULT_SETTINGS } from '../../engine/settings/presets'
 import { fromLine } from '../../engine/core/unassigned'
 import { useCurrency } from '../../components/currency'
 import { SaveResults } from './SaveResults'
+import { Button } from '../../components/primitives'
+import { buttonClass } from '../../components/buttonClass'
 
 const C = t.ceremony
 /** «A y B», «A, B e Iván». */
@@ -464,7 +466,7 @@ export function CeremonyScreen() {
           {idx < 0 && (
             <motion.div key="start" className={styles.center} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: easeSlow }} exit={{ opacity: 0, transition: easeFast }} transition={easeSlow}>
               <p className={styles.hint}>{C.hint}</p>
-              <button className={`btn btn--primary ${styles.bigBtn}`} type="button" onClick={() => go(1)}>
+              <button className={buttonClass({ variant: 'primary' }, styles.bigBtn)} type="button" onClick={() => go(1)}>
                 {C.start}
               </button>
             </motion.div>
@@ -475,7 +477,7 @@ export function CeremonyScreen() {
               <h2 className={styles.stepTitle}>{step.title}</h2>
               <div data-area={step.id} className={styles.area}>
                 {!revealed ? (
-                  <button className={`btn btn--primary ${styles.bigBtn}`} type="button" onClick={() => setRevealed(true)}>
+                  <button className={buttonClass({ variant: 'primary' }, styles.bigBtn)} type="button" onClick={() => setRevealed(true)}>
                     {C.reveal}
                   </button>
                 ) : (
@@ -555,13 +557,13 @@ export function CeremonyScreen() {
       </div>
 
       <footer className={styles.footer}>
-        <button className="btn btn--ghost" type="button" disabled={idx < 0} onClick={prev}>
+        <Button variant="ghost" disabled={idx < 0} onClick={prev}>
           {C.prev}
-        </button>
+        </Button>
         <span className={styles.progress}>{idx >= 0 ? `${Math.min(idx + 1, steps.length)} / ${steps.length}` : ''}</span>
-        <button className="btn btn--secondary" type="button" disabled={idx >= steps.length} onClick={forward}>
+        <Button disabled={idx >= steps.length} onClick={forward}>
           {C.next}
-        </button>
+        </Button>
       </footer>
     </div>
   )

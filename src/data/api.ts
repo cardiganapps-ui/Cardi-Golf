@@ -1,6 +1,7 @@
 /**
  * Typed writes. Every function throws on error; screens show `humanError(e)` (src/lib/humanError.ts).
  */
+import { z } from 'zod'
 import type { TournamentSettings } from '../engine/settings/schema'
 import type { EstimateInput, Hole, PaymentKind } from '../engine/types'
 import { t } from '../i18n/es-MX'
@@ -13,18 +14,15 @@ import { clearPinEntriesExcept } from './snapshotCache'
 import { mapTournament, type Row } from './mappers'
 import { ApiError } from './apiError'
 import { fetchAll, withCount } from './paged'
+import { rpc } from './rpc'
+import type { Json, TablesUpdate } from './database.types'
 
 export { ApiError }
 
-function unwrap<T>(res: { data: T | null; error: { message: string; code?: string } | null }): T {
+/** A request's rows, or its refusal as an `ApiError`. What succeeded has its data (a `.single()` its row). */
+function unwrap<R extends { data: unknown; error: { message: string; code?: string } | null }>(res: R): NonNullable<R['data']> {
   if (res.error) throw ApiError.from(res.error)
-  return res.data as T
-}
-
-async function rpc<T = unknown>(name: string, args?: Record<string, unknown>): Promise<T> {
-  const res = await supabase().rpc(name, args)
-  if (res.error) throw ApiError.from(res.error)
-  return res.data as T
+  return res.data as NonNullable<R['data']>
 }
 
 // ---------------------------------------------------------------------------
@@ -40,16 +38,16 @@ export async function createTournament(input: { name: string; tagline?: string; 
     }),
   )
   step('tournament_created')
-  return mapTournament(row as Row)
+  return mapTournament(row)
 }
 
-export async function updateTournament(id: string, patch: Row) {
+export async function updateTournament(id: string, patch: TablesUpdate<'tournaments'>) {
   unwrap(await supabase().from('tournaments').update(patch).eq('id', id).select('id'))
 }
 
 export async function duplicateTournament(sourceId: string, name: string) {
   const row = unwrap(await supabase().rpc('duplicate_tournament', { p_source_id: sourceId, p_name: name }))
-  return mapTournament(row as Row)
+  return mapTournament(row)
 }
 
 export async function deleteTournament(id: string) {
@@ -92,7 +90,7 @@ export interface AuditFilter {
 export async function tournamentAudit(tournamentId: string, before?: number, limit = 50, filter?: AuditFilter): Promise<AuditEntry[]> {
   // The filter goes only when there is one: a call without it is the one every server since 0022 answers.
   const f = Object.fromEntries(Object.entries(filter ?? {}).filter(([, v]) => v !== undefined && v !== false && v !== ''))
-  return rpc<AuditEntry[]>('tournament_audit', { p_tournament_id: tournamentId, p_before: before ?? null, p_limit: limit, ...(Object.keys(f).length ? { p_filter: f } : {}) })
+  return rpc('tournament_audit', { p_tournament_id: tournamentId, p_before: before ?? null, p_limit: limit, ...(Object.keys(f).length ? { p_filter: f } : {}) }).as<AuditEntry[]>()
 }
 
 /** Protegido on or off: the owner or the platform admin. Off needs a reason. */
@@ -118,9 +116,9 @@ export async function listMyTournaments(): Promise<MyTournament[]> {
   if (!uid) return []
   const rows = unwrap(
     await sb.from('tournament_organizers').select('role, tournaments(id, slug, name, status, join_code, logo_url, created_at)').eq('auth_user_id', uid),
-  ) as Row[]
+  )
   return rows
-    .filter((r) => r.tournaments)
+    .filter((r): r is typeof r & { tournaments: NonNullable<typeof r.tournaments> } => !!r.tournaments)
     .map((r) => ({
       id: r.tournaments.id,
       slug: r.tournaments.slug,
@@ -140,7 +138,8 @@ export interface LookupResult {
   logoUrl: string | null
   accentColor: string | null
   status: string
-  joinCode: string
+  /** Only to a member of the tournament (0040, TRUST-05): null before a PIN. */
+  joinCode: string | null
   players: Array<{
     id: string
     displayName: string
@@ -159,10 +158,41 @@ export interface LookupResult {
   }>
 }
 
+const text = z.string()
+const maybeText = z.string().nullable()
+/**
+ * `lookup_tournament`'s answer as Entrar reads it (ARCH-03): a face with no
+ * name or a players list that isn't one would break the grid, so an answer
+ * that doesn't read is an error the gate shows, not a screen that throws.
+ * Keys this build doesn't know are kept.
+ */
+const LookupSchema: z.ZodType<LookupResult> = z.looseObject({
+  id: text,
+  slug: text,
+  name: text,
+  tagline: maybeText,
+  logoUrl: maybeText,
+  accentColor: maybeText,
+  status: text,
+  joinCode: maybeText,
+  players: z.array(
+    z.looseObject({
+      id: text,
+      displayName: text,
+      fullName: maybeText,
+      tier: maybeText,
+      avatarUrl: maybeText,
+      isHonoree: z.boolean(),
+      hasPin: z.boolean(),
+      isMe: z.boolean().optional(),
+      hasProfile: z.boolean().optional(),
+      pendingMe: z.boolean().optional(),
+    }),
+  ),
+})
+
 export async function lookupTournament(codeOrSlug: string): Promise<LookupResult | null> {
-  const res = await supabase().rpc('lookup_tournament', { p_code: codeOrSlug })
-  if (res.error) throw ApiError.from(res.error)
-  return (res.data as LookupResult | null) ?? null
+  return rpc('lookup_tournament', { p_code: codeOrSlug }).parse(LookupSchema.nullable())
 }
 
 export type ClaimResult =
@@ -208,12 +238,28 @@ export interface Membership {
   unlockedUntil?: string | null
 }
 
+/**
+ * `my_membership`'s answer as the gate reads it (ARCH-03): the player and the
+ * Comité's rights are what every screen of the tournament goes by. Its words
+ * (role, via) are the server's; one this build doesn't know grants nothing,
+ * as before.
+ */
+const MembershipSchema = z.looseObject({
+  playerId: maybeText,
+  role: z.custom<Membership['role']>((v) => typeof v === 'string'),
+  isOrganizer: z.boolean(),
+  isAdmin: z.boolean(),
+  via: z.custom<Membership['via']>((v) => v === null || typeof v === 'string'),
+  protected: z.boolean().nullish().transform((v) => v ?? undefined),
+  unlockedUntil: maybeText.optional(),
+}) satisfies z.ZodType<Membership>
+
 export async function myMembership(tournamentId: string): Promise<Membership> {
-  return rpc<Membership>('my_membership', { tid: tournamentId })
+  return rpc('my_membership', { tid: tournamentId }).parse(MembershipSchema)
 }
 
 export async function rotateJoinCode(tournamentId: string): Promise<string> {
-  return rpc<string>('rotate_join_code', { p_tournament_id: tournamentId })
+  return rpc('rotate_join_code', { p_tournament_id: tournamentId })
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +283,8 @@ export interface PlayerInput {
 }
 
 export async function upsertPlayer(tournamentId: string, p: PlayerInput) {
-  const row = { ...p, tournament_id: tournamentId }
+  // The three rounds are the column's jsonb as the engine reads them (`estimate_inputs`).
+  const row = { ...p, estimate_inputs: p.estimate_inputs as Json | null, tournament_id: tournamentId }
   if (!row.id) delete (row as Partial<typeof row>).id
   return unwrap(await supabase().from('players').upsert(row).select('id').single()) as { id: string }
 }
@@ -249,12 +296,12 @@ export async function upsertPlayer(tournamentId: string, p: PlayerInput) {
  */
 export async function updatePlayer(p: PlayerInput & { id: string }, reason: string) {
   const { id, ...row } = p
-  await rpc<string>('update_player', { p_player_id: id, p_row: row, p_reason: reason })
+  await rpc('update_player', { p_player_id: id, p_row: row, p_reason: reason })
 }
 
 /** «Fijar hándicaps» (UX-28): from now on a change needs a reason. Answers when they were fixed. */
 export async function lockHandicaps(tournamentId: string): Promise<string> {
-  return rpc<string>('lock_handicaps', { p_tournament_id: tournamentId })
+  return rpc('lock_handicaps', { p_tournament_id: tournamentId })
 }
 
 /** «Liberar»: only before the tournament leaves setup, with a reason; what was recorded goes with the lock. */
@@ -311,7 +358,7 @@ export interface CourseDraft {
  * default). Returns the course id.
  */
 export async function saveCourse(draft: CourseDraft): Promise<string> {
-  return rpc<string>('save_course', {
+  return rpc('save_course', {
     p: {
       id: draft.id ?? null,
       name: draft.name,
@@ -350,7 +397,7 @@ export async function listCourses(): Promise<CatalogCourse[]> {
   // Every signed-in phone reads the whole shared catalog (courses_read), which outgrows one page as Rondas rápidas add
   // courses: paged by name, then id, so a page never repeats or skips one (DB-20). Every column (`*`): a database
   // without 0075 has no `verified_at`, and naming it would fail the whole list.
-  const rows = await fetchAll<Row>((from, to, count) =>
+  const rows = await fetchAll((from, to, count) =>
     supabase().from('courses').select('*, tees(id)', withCount(count)).order('name').order('id').range(from, to),
   )
   return rows.map((r) => ({
@@ -376,14 +423,15 @@ export async function verifyCourse(courseId: string, tournamentId: string, reaso
 
 export async function loadCourseDraft(courseId: string): Promise<CourseDraft> {
   const sb = supabase()
-  const course = unwrap(await sb.from('courses').select('*').eq('id', courseId).single()) as Row
-  const tees = unwrap(await sb.from('tees').select('*').eq('course_id', courseId).order('sort_order')) as Row[]
-  const holes = tees.length ? (unwrap(await sb.from('holes').select('*').in('tee_id', tees.map((t) => t.id))) as Row[]) : []
+  const course = unwrap(await sb.from('courses').select('*').eq('id', courseId).single())
+  const tees = unwrap(await sb.from('tees').select('*').eq('course_id', courseId).order('sort_order'))
+  const holes = tees.length ? unwrap(await sb.from('holes').select('*').in('tee_id', tees.map((t) => t.id))) : []
   return {
     id: course.id,
     name: course.name,
     location: course.location,
-    source: course.source,
+    // A CHECK the catalog's types don't carry (courses_source_check).
+    source: course.source as CourseDraft['source'],
     externalId: course.external_id,
     attribution: course.attribution ?? null,
     website: course.website ?? null,
@@ -460,7 +508,7 @@ export interface GroupInput {
 
 /** Save a round's groups in one transaction: existing groups (by id or same members) are updated, the rest inserted, missing ones deleted. */
 export async function saveGroups(roundId: string, groups: GroupInput[]): Promise<Array<{ number: number; id: string }>> {
-  return rpc('upsert_groups', { p_round_id: roundId, p_groups: groups })
+  return rpc('upsert_groups', { p_round_id: roundId, p_groups: groups }).as<Array<{ number: number; id: string }>>()
 }
 
 export async function upsertHandicapOverride(roundId: string, playerId: string, playingHcp: number, reason: string, by: string | null) {
@@ -567,12 +615,12 @@ export interface PairInput {
 
 /** The draw in one transaction: pairs, the round-1 groups and (optionally) auction → live. Refused once any card is signed. */
 export async function saveDraw(tournamentId: string, pairs: PairInput[], round1Groups: GroupInput[] | null, goLive: boolean) {
-  return rpc<{ pairs: number; groups: Array<{ number: number; id: string }> }>('save_draw', {
+  return rpc('save_draw', {
     p_tournament_id: tournamentId,
     p_pairs: pairs,
     p_round1_groups: round1Groups,
     p_go_live: goLive,
-  })
+  }).as<{ pairs: number; groups: Array<{ number: number; id: string }> }>()
 }
 
 export async function renamePair(pairId: string, name: string) {
@@ -590,7 +638,7 @@ export interface TeamInput {
  * its scores were played under.
  */
 export async function saveTeams(tournamentId: string, teams: TeamInput[]) {
-  return rpc<{ teams: number }>('save_teams', { p_tournament_id: tournamentId, p_teams: teams })
+  return rpc('save_teams', { p_tournament_id: tournamentId, p_teams: teams }).as<{ teams: number }>()
 }
 
 // ---------------------------------------------------------------------------
@@ -761,7 +809,7 @@ export class SettingsChanged extends UserError {
  * builds both). Throws SettingsChanged when one of the keys seen moved since.
  */
 export async function updateSettings(tournamentId: string, seen: SetupFields, set: SetupFields): Promise<SetupRow> {
-  const r = await rpc<{ ok: boolean; changed?: string[]; now: SetupRow }>('update_settings', { p_tournament_id: tournamentId, p_seen: seen, p_set: set })
+  const r = await rpc('update_settings', { p_tournament_id: tournamentId, p_seen: seen, p_set: set }).as<{ ok: boolean; changed?: string[]; now: SetupRow }>()
   if (!r.ok) throw new SettingsChanged(r.now, r.changed ?? [])
   return r.now
 }

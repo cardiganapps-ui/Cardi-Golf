@@ -14,6 +14,7 @@ import { useAuth } from '../data/auth'
 import { acceptLegal, flushLegal, legalUpdate } from '../data/legal'
 import { t } from '../i18n/es-MX'
 import { QUIET_ROUTE, SETTLE_MS, legalAsked, type Changed } from './legalUpdateState'
+import { Button } from '../components/primitives'
 
 export function LegalUpdate() {
   const uid = useAuth((s) => s.user?.id ?? null)
@@ -70,9 +71,9 @@ export function LegalUpdate() {
         {changed.privacy && <LegalLink to="/privacidad">{t.legal.privacy.title}</LegalLink>}
         {changed.terms && <LegalLink to="/terminos">{t.legal.terms.title}</LegalLink>}
       </p>
-      <button
-        className="btn btn--primary btn--block"
-        type="button"
+      <Button
+        variant="primary" block
+       
         disabled={busy}
         onClick={() => {
           setBusy(true)
@@ -84,7 +85,7 @@ export function LegalUpdate() {
         }}
       >
         {U.ok}
-      </button>
+      </Button>
     </Sheet>
   )
 }

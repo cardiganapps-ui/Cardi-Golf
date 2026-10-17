@@ -239,3 +239,40 @@
     background: var(--surface);
   }
 }
+
+/*
+ * VIS-19: from 900 px the wizard is the form and its preview side by side. The form keeps a phone's order in the
+ * first column; the preview takes the second from the top and stays in view while the form scrolls.
+ */
+@media (min-width: 900px) {
+  .wizard {
+    display: grid;
+    grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+    column-gap: var(--s8);
+    row-gap: 0;
+    align-items: start;
+  }
+  .wizard > * {
+    grid-column: 1;
+    margin-bottom: var(--s5);
+  }
+  .wizard > [data-wizard-preview] {
+    grid-column: 2;
+    grid-row: 1 / span 20;
+    position: sticky;
+    top: calc(var(--safe-top) + var(--s5));
+  }
+}
+
+/* VIS-19: Mis torneos on a laptop: its groups (en juego, en preparación, terminados) two to a line under the title. */
+@media (min-width: 900px) {
+  .mine {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s8);
+    align-items: start;
+  }
+  .mine > :not(.group) {
+    grid-column: 1 / -1;
+  }
+}

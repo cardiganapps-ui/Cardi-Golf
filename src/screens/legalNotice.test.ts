@@ -618,7 +618,7 @@ describe('the link to watch a tournament (STRAT-05)', () => {
     const page = source('src/screens/spectator/SpectatorGate.tsx')
     expect(page).not.toMatch(/ensureSession|signInAnonymously|claimPlayer|sessionIfAny/)
     // It reads the boards and nothing else.
-    expect(source('src/data/spectator.ts')).toMatch(/anonRpc<Row \| null>\('spectator_board'/)
+    expect(source('src/data/spectator.ts')).toMatch(/anonRpc\('spectator_board'/)
   })
 
   it('what it never shows: the answer names the columns it carries, and none of these is one', () => {

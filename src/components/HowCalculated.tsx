@@ -5,6 +5,7 @@ import { renderExplanation } from '../i18n/explain'
 import { useCurrency } from './currency'
 import { Sheet } from './ui'
 import styles from './HowCalculated.module.css'
+import { buttonClass } from './buttonClass'
 
 /** What a sheet explains: the engine's explanations, a format's and a game's rules among them (codes, ARCH-05). */
 export type Why = Explanation
@@ -44,7 +45,7 @@ export function HowCalculated({ why, children, label, about, ariaLabel, title }:
   const spoken = ariaLabel ?? (label != null || about ? t.money.howCalculatedOf(what) : undefined)
   return (
     <>
-      <button type="button" className={`btn btn--ghost btn--sm ${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`} onClick={() => setOpen(true)} aria-label={spoken} aria-haspopup="dialog">
+      <button type="button" className={buttonClass({ variant: 'ghost', size: 'sm' }, `${styles.trigger} ${label != null && label !== '?' ? styles.figure : ''}`)} onClick={() => setOpen(true)} aria-label={spoken} aria-haspopup="dialog">
         {children ?? (label ?? t.money.howCalculated)}
       </button>
       <ExplanationSheet why={why} open={open} onClose={() => setOpen(false)} title={title} />

@@ -8,6 +8,7 @@ import { t } from '../../../i18n/es-MX'
 import { cardSignedFor } from '../../../engine/core/cardSigning'
 import { pairNameIn } from './cardRules'
 import styles from '../ScorecardScreen.module.css'
+import { Button } from '../../../components/primitives'
 
 const S = t.card
 
@@ -70,9 +71,9 @@ export const SigningPanel = memo(function SigningPanel(p: {
               </span>
               {isSigned && <SignedStamp landing={arrived(pair.id)} />}
               {!isSigned && (!mine || p.isComite) && (
-                <button className="btn btn--primary btn--sm" type="button" onClick={() => p.onSign(pair.id)}>
+                <Button variant="primary" size="sm" onClick={() => p.onSign(pair.id)}>
                   {S.sign}
-                </button>
+                </Button>
               )}
             </div>
           )
@@ -118,9 +119,9 @@ export const MarkerSigningPanel = memo(function MarkerSigningPanel(p: {
             </span>
             {isSigned && <SignedStamp landing={arrived(id)} />}
             {!isSigned && canSign && (
-              <button className="btn btn--primary btn--sm" type="button" aria-label={S.signPlayer(name)} onClick={() => p.onSign(id)}>
+              <Button variant="primary" size="sm" aria-label={S.signPlayer(name)} onClick={() => p.onSign(id)}>
                 {S.signShort}
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -136,12 +137,12 @@ export const SignSheet = memo(function SignSheet(p: { open: boolean; title: stri
       <div className="stack">
         <p className="help">{p.confirm ?? S.signConfirm}</p>
         <div className="row">
-          <button className="btn btn--secondary" type="button" onClick={p.onClose}>
+          <Button onClick={p.onClose}>
             {t.common.cancel}
-          </button>
-          <button className="btn btn--primary grow" type="button" onClick={p.onSign}>
+          </Button>
+          <Button variant="primary" className="grow" onClick={p.onSign}>
             {S.sign}
-          </button>
+          </Button>
         </div>
       </div>
     </Sheet>

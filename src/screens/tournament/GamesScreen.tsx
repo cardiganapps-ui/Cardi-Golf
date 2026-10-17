@@ -6,7 +6,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { HowCalculated } from '../../components/HowCalculated'
-import { Board, BoardHead, EmptyState, LeaderRow, Money, Segmented } from '../../components/primitives'
+import { Board, BoardHead, Button, EmptyState, LeaderRow, Money, Segmented } from '../../components/primitives'
 import { IconChevronLeft } from '../../components/icons'
 import { useTournament } from '../../data/tournamentStore'
 import type { ModuleId } from '../../engine/settings/schema'
@@ -174,9 +174,9 @@ export function GamesScreen() {
       ) : (
         <>
           <div className={styles.detailHead}>
-            <button type="button" className="btn btn--ghost btn--sm btn--flush" onClick={() => setTab(null)} aria-label={t.common.back}>
+            <Button variant="ghost" size="sm" flush onClick={() => setTab(null)} aria-label={t.common.back}>
               <IconChevronLeft />
-            </button>
+            </Button>
             <h1 data-view-heading>{tabs.find((x) => x.value === current)?.label}</h1>
           </div>
           {tabs.length > 1 && <Segmented value={current} options={tabs} onChange={setTab} tabs label={t.nav.games} panelId={PANEL} />}

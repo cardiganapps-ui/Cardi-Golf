@@ -8,6 +8,7 @@ import 'fake-indexeddb/auto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getFixture, type Fixture } from '../dev/fixtures'
 import { clearCached, clearCachedSlug, clearPinEntriesExcept, hasCached, readCached, saveEntry, saveSnapshot } from './snapshotCache'
+import { dataFromSnapshot } from './tournamentStore'
 
 const live = getFixture('full12-live')!
 const small = getFixture('minimal4-live')!
@@ -88,7 +89,7 @@ describe('the copy on the phone (audit P0-5)', () => {
     // The gate saves under the tournament's own slug, whatever link opened it.
     await saveEntry(entryOf(live))
     await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
-    const code = live.lookup.joinCode
+    const code = live.lookup.joinCode!
     for (const key of [live.snapshot.tournament.slug, code, code.toLowerCase()]) {
       expect((await readCached(key))?.entry.tournamentId, key).toBe(live.snapshot.tournament.id)
       expect(await hasCached(key), key).toBe(true)
@@ -97,21 +98,21 @@ describe('the copy on the phone (audit P0-5)', () => {
   })
 
   it('an entry an older build saved under the code is found by the slug, and gives way to it', async () => {
-    await saveEntry({ ...entryOf(live), slug: live.lookup.joinCode })
+    await saveEntry({ ...entryOf(live), slug: live.lookup.joinCode! })
     await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
     expect((await readCached(live.snapshot.tournament.slug))?.entry.tournamentId).toBe(live.snapshot.tournament.id)
     await saveEntry(entryOf(live))
-    expect((await readCached(live.lookup.joinCode))!.entry.slug).toBe(live.snapshot.tournament.slug)
+    expect((await readCached(live.lookup.joinCode!))!.entry.slug).toBe(live.snapshot.tournament.slug)
   })
 
   it('a link that leads nowhere forgets what was saved under it; a code that stopped working may just have been replaced', async () => {
     await saveEntry(entryOf(live))
     await saveSnapshot(live.snapshot.tournament.id, live.snapshot)
-    await clearCachedSlug(live.lookup.joinCode)
+    await clearCachedSlug(live.lookup.joinCode!)
     expect(await readCached(live.snapshot.tournament.slug)).not.toBeNull()
     await clearCachedSlug(live.snapshot.tournament.slug)
     expect(await readCached(live.snapshot.tournament.slug)).toBeNull()
-    expect(await readCached(live.lookup.joinCode)).toBeNull()
+    expect(await readCached(live.lookup.joinCode!)).toBeNull()
   })
 
   it('a full storage refuses the write: nothing is thrown and the last good copy stays', async () => {
@@ -166,5 +167,33 @@ describe('a PIN taken for another player forgets the tournaments held only by PI
     expect((await readCached('por-cuenta'))?.entry.tournamentId).toBe('t-por-cuenta')
     expect((await readCached('comite'))?.entry.tournamentId).toBe('t-comite')
     expect((await readCached('aqui'))?.entry.tournamentId).toBe('t-aqui')
+  })
+})
+
+// ARCH-03: what IndexedDB hands back is whatever a build saved. A copy from before a table existed lacked its list,
+// and the screens read it as one: a team format's boards threw on `teams.length` on an offline open.
+describe('a copy as an older build saved it (ARCH-03)', () => {
+  const team = getFixture('team8')!
+
+  it('a list it never had reads as empty, and the boards compute', async () => {
+    const { teams: _gone, gameEntries: _g, ...older } = team.snapshot
+    await saveEntry(entryOf(team))
+    await saveSnapshot(team.snapshot.tournament.id, older as typeof team.snapshot)
+    const got = await readCached(team.snapshot.tournament.slug)
+    expect(got?.snapshot.teams).toEqual([])
+    expect(got?.snapshot.gameEntries).toEqual([])
+    expect(got?.snapshot.scores).toEqual(team.snapshot.scores)
+    expect(() => dataFromSnapshot(got!.snapshot)).not.toThrow()
+  })
+
+  it('one that is not the boards’ shape is no copy, never a screen that throws', async () => {
+    await saveEntry(entryOf(small))
+    for (const bad of [null, 'boards', { ...small.snapshot, tournament: null }, { ...small.snapshot, scores: 'x' }]) {
+      await saveSnapshot(small.snapshot.tournament.id, bad as unknown as typeof small.snapshot)
+      expect(await readCached(small.snapshot.tournament.slug)).toBeNull()
+    }
+    await saveEntry({ ...entryOf(small), lookup: { ...small.lookup, players: null } as unknown as typeof small.lookup })
+    await saveSnapshot(small.snapshot.tournament.id, small.snapshot)
+    expect(await readCached(small.snapshot.tournament.slug)).toBeNull()
   })
 })

@@ -15,6 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Dexie, { type EntityTable } from 'dexie'
 import { create } from 'zustand'
+import { z } from 'zod'
 import { supabase } from '../lib/supabase'
 import { t } from '../i18n/es-MX'
 import { UserError } from '../lib/humanError'
@@ -124,6 +125,27 @@ export interface HoleAnswer {
   unchanged?: string[]
   replayed?: boolean
 }
+const answerRow = z.record(z.string(), z.unknown())
+/**
+ * The answer as this build reads it (ARCH-03): every list a list of what it
+ * holds, so a malformed one is retried like no answer at all, never settled
+ * halfway. A status word this build doesn't know is settled entry by entry,
+ * as before; keys it doesn't know are kept.
+ */
+const HoleAnswerSchema: z.ZodType<HoleAnswer> = z.looseObject({
+  status: z.custom<HoleAnswer['status']>((v) => typeof v === 'string'),
+  rows: z.array(answerRow).nullish().transform((v) => v ?? undefined),
+  conflicts: z
+    .array(z.looseObject({ player_id: z.string(), fields: z.array(z.string()), server: answerRow.nullable() }))
+    .nullish()
+    .transform((v) => v ?? undefined),
+  rejected: z
+    .array(z.looseObject({ player_id: z.string().nullable(), reason: z.string() }))
+    .nullish()
+    .transform((v) => v ?? undefined),
+  unchanged: z.array(z.string()).nullish().transform((v) => v ?? undefined),
+  replayed: z.boolean().optional(),
+})
 /**
  * A hole someone else saved first: the server kept theirs (now on the
  * boards), and this phone's value waits for the player to choose.
@@ -1135,11 +1157,13 @@ async function push(item: OutboxItem): Promise<LiveChange[] | HoleAnswer> {
     const sentAt = Date.now()
     const { data, error } = await sb.rpc('save_hole', { p: call }).setHeader('Authorization', auth)
     if (error) throw error.code ? new ServerRefusal(error.code, error.message) : new Error(error.message)
-    if (!data || typeof data !== 'object' || typeof (data as HoleAnswer).status !== 'string') throw new Error('save_hole answered nothing readable')
+    const read = HoleAnswerSchema.safeParse(data)
+    if (!read.success) throw new Error('save_hole answered nothing readable')
+    const answer = read.data
     lastAnswerAt = Date.now()
     // How long the server took to answer, and a clock sample unless the answer is a replay (STRAT-02).
-    saveAnswered(sentAt, lastAnswerAt, (data as HoleAnswer).rows, (data as HoleAnswer).replayed === true)
-    return data as HoleAnswer
+    saveAnswered(sentAt, lastAnswerAt, answer.rows, answer.replayed === true)
+    return answer
   }
   if (item.kind === 'score') {
     notePushed([`${item.payload.round_id}:${item.payload.player_id}:${item.payload.hole}`])
