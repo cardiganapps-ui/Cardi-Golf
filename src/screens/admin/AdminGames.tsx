@@ -6,7 +6,6 @@
 import { useState } from 'react'
 import { t } from '../../i18n/es-MX'
 import { Avatar, Sheet } from '../../components/ui'
-import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
 import { adminSetAwards, seedGameEntries, setGameEntry, setGameResults, SettingsChanged, updateSettings } from '../../data/api'
 import { settingsWrite } from '../../data/settingsWrite'
@@ -18,7 +17,7 @@ import type { TournamentSettings } from '../../engine/settings/schema'
 import { formatMoney } from '../../lib/money'
 import a from './Admin.module.css'
 import { useCurrency } from '../../components/currency'
-import { humanError } from '../../lib/humanError'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const G = t.admin.games
 
@@ -36,25 +35,20 @@ export function AdminGames() {
   const reload = useTournament((s) => s.reload)
   const { snapshot, settings } = data
   const tid = snapshot.tournament.id
-  const [busy, setBusy] = useState(false)
   const [matchFor, setMatchFor] = useState<string | null>(null)
   const [awardFor, setAwardFor] = useState<{ gameId: string; hole: ContestHole } | null>(null)
   const { me } = useTournamentCtx()
   const games = settings.games
 
-  async function run(fn: () => Promise<void>) {
-    setBusy(true)
-    try {
-      await fn()
-      await reload()
-    } catch (e) {
-      toast(humanError(e))
-      // The games changed on another screen or phone, and this change was not saved: show them as they are now.
+  const write = useServerMutation({
+    after: reload,
+    // The games changed on another screen or phone, and this change was not saved: show them as they are now.
+    onError: (e) => {
       if (e instanceof SettingsChanged) void reload()
-    } finally {
-      setBusy(false)
-    }
-  }
+    },
+  })
+  const { busy } = write
+  const run = (fn: () => Promise<unknown>) => write.run(fn)
   /**
    * Only the games are written, and only while they are what this screen
    * showed (ARCH-13): a Torneo save of anything else in between stays, and a
@@ -319,7 +313,7 @@ function AwardSheet({ target, onClose, onSave }: { target: { gameId: string; hol
 }
 
 /** Custom bet: the Comité taps the winners and saves. */
-function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; run: (fn: () => Promise<void>) => Promise<void> }) {
+function CustomWinners({ game, busy, run }: { game: GameConfig; busy: boolean; run: (fn: () => Promise<unknown>) => Promise<boolean> }) {
   const data = useTournament((s) => s.data)!
   const saved = data.snapshot.gameResults.filter((r) => r.gameId === game.id).map((r) => r.playerId)
   const [sel, setSel] = useState<string[] | null>(null)

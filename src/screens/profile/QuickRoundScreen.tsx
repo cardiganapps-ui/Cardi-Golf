@@ -21,6 +21,7 @@ import { useRequireAccount } from './useRequireAccount'
 import styles from './Profile.module.css'
 import { humanError } from '../../lib/humanError'
 import { LegalConsent } from '../../components/LegalLinks'
+import { useServerQuery } from '../../data/query'
 
 const Q = t.quick
 const MAX = 16
@@ -357,23 +358,17 @@ export function QuickRoundScreen() {
   const ok = useRequireAccount('/ronda')
   const navigate = useNavigate()
   const { profile, load } = useMyProfile()
-  const [friends, setFriends] = useState<FriendCard[] | null>(null)
-  const [courses, setCourses] = useState<QuickCourse[] | null>(null)
-  const [crews, setCrews] = useState<MyCrew[] | null>(null)
   const [params] = useSearchParams()
+  // What the round can be made of. One that can't be read offers nothing, as before: the round still starts.
+  const friendsQ = useServerQuery(['friends', 'mine'], () => myFriends(), { enabled: ok })
+  const coursesQ = useServerQuery(['courses', 'library'], () => listCourses(), { enabled: ok })
+  const crewsQ = useServerQuery(['crews', 'mine'], () => myCrews(), { enabled: ok })
+  const friends = useMemo(() => (friendsQ.data ? friendsQ.data.friends : friendsQ.isError ? [] : null), [friendsQ.data, friendsQ.isError])
+  const courses = useMemo((): QuickCourse[] | null => (coursesQ.data ? coursesQ.data.filter((x) => x.tees > 0) : coursesQ.isError ? [] : null), [coursesQ.data, coursesQ.isError])
+  const crews = useMemo((): MyCrew[] | null => crewsQ.data ?? (crewsQ.isError ? [] : null), [crewsQ.data, crewsQ.isError])
 
   useEffect(() => {
-    if (!ok) return
-    if (!profile) void load(true)
-    myFriends()
-      .then((f) => setFriends(f.friends))
-      .catch(() => setFriends([]))
-    listCourses()
-      .then((c) => setCourses(c.filter((x) => x.tees > 0)))
-      .catch(() => setCourses([]))
-    myCrews()
-      .then(setCrews)
-      .catch(() => setCrews([]))
+    if (ok && !profile) void load(true)
   }, [ok, profile, load])
 
   if (!ok || !profile || !friends || !courses || !crews) return <Spinner />

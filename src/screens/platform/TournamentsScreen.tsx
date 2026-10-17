@@ -3,7 +3,7 @@
  * organizer's email, filtered by kind. The detail is a child route: beside
  * the list on a laptop, in its place on a phone.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -11,7 +11,8 @@ import { Button, Input } from '../../components/primitives'
 import { usePlatformApi, type PlatformTournamentRow, type TournamentKind } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
-import { humanError } from '../../lib/humanError'
+import { usePaged } from './usePaged'
+import { usePlatformKey } from './platformKey'
 
 const P = t.platform
 const PAGE = 50
@@ -28,39 +29,13 @@ export function TournamentsScreen() {
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<TournamentKind | 'all'>('all')
-  const [rows, setRows] = useState<PlatformTournamentRow[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const seq = useRef(0)
-
-  const load = useCallback(
-    async (offset = 0) => {
-      const mine = ++seq.current
-      setError(null)
-      try {
-        const res = await api.tournaments({ q, kind: kind === 'all' ? null : kind, limit: PAGE, offset })
-        if (mine !== seq.current) return
-        setTotal(res.total)
-        setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
-      } catch (e) {
-        if (mine === seq.current) setError(humanError(e))
-      }
-    },
-    [api, q, kind],
-  )
-
   // Typing waits a beat before asking; changing the filter asks at once.
-  useEffect(() => {
-    const id = window.setTimeout(() => void load(0), q ? 250 : 0)
-    return () => window.clearTimeout(id)
-  }, [load, q])
-
-  async function more() {
-    setLoadingMore(true)
-    await load(rows?.length ?? 0)
-    setLoadingMore(false)
-  }
+  const { rows, total, error, loadingMore, reload, more } = usePaged(
+    usePlatformKey('tournaments'),
+    { q, kind: kind === 'all' ? null : kind },
+    (p, offset) => api.tournaments({ ...p, limit: PAGE, offset }),
+    !!q,
+  )
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
@@ -75,7 +50,7 @@ export function TournamentsScreen() {
           ))}
         </div>
         {error ? (
-          <ErrorBox error={error} onRetry={() => void load(0)} />
+          <ErrorBox error={error} onRetry={reload} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -89,7 +64,7 @@ export function TournamentsScreen() {
               ))}
             </div>
             {rows.length < total && (
-              <Button disabled={loadingMore} onClick={() => void more()}>
+              <Button disabled={loadingMore} onClick={more}>
                 {P.more}
               </Button>
             )}
@@ -97,7 +72,7 @@ export function TournamentsScreen() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => void load(0) } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{P.pickOne}</p>}
+        {outlet ? <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{P.pickOne}</p>}
       </div>
     </div>
   )

@@ -21,11 +21,11 @@ import a from './Admin.module.css'
 import { IconArrowDown, IconArrowUp, IconUndo } from '../../components/icons'
 import { NumberField } from '../../components/NumberField'
 import { keepNumeric } from '../../components/numericText'
-import { humanError } from '../../lib/humanError'
 import { handicapsLocked } from '../../engine/core/handicapLock'
 import { bidSteps } from '../../engine/modules/auction/bids'
 import { reorder } from '../../design/motion'
 import { useCurrency } from '../../components/currency'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const A = t.auction
 const SEARCH_FROM = 16
@@ -41,7 +41,6 @@ export function AdminAuction() {
   const cfg = settings.auction
   const byId = new Map(snapshot.players.map((p) => [p.id, p]))
   const name = (id: string) => byId.get(id)?.displayName ?? '?'
-  const [busy, setBusy] = useState(false)
   const [order, setOrder] = useState<string[] | null>(null)
   const [bidder, setBidder] = useState<string | null>(null)
   const [custom, setCustom] = useState<string>('')
@@ -59,19 +58,9 @@ export function AdminAuction() {
   const reopening = askReopen ? lots.find((l) => l.lotId === askReopen && l.status === 'sold') : undefined
 
   /** Runs a mutation and reloads; false when it failed (the toast already said why). */
-  const run = async (fn: () => Promise<unknown>): Promise<boolean> => {
-    setBusy(true)
-    try {
-      await fn()
-      await reload()
-      return true
-    } catch (e) {
-      toast(humanError(e))
-      return false
-    } finally {
-      setBusy(false)
-    }
-  }
+  const write = useServerMutation({ after: reload })
+  const { busy } = write
+  const run = (fn: () => Promise<unknown>): Promise<boolean> => write.run(fn)
 
   const holdings = useMemo(() => auction?.holdings ?? {}, [auction])
   const eligibleBidders = useMemo(

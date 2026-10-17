@@ -3,7 +3,7 @@
  * Search by email, handle or name (a phone: the player it claimed). The
  * detail is a child route, beside the list on a laptop.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { Avatar, ErrorBox, Spinner } from '../../components/ui'
@@ -13,7 +13,8 @@ import { relTime } from '../../lib/relTime'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { personName } from './names'
 import s from './Platform.module.css'
-import { humanError } from '../../lib/humanError'
+import { usePaged } from './usePaged'
+import { usePlatformKey } from './platformKey'
 
 const P = t.platform
 const H = P.people
@@ -26,31 +27,8 @@ export function PeopleScreen() {
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<PeopleFilter>('all')
-  const [rows, setRows] = useState<PersonRow[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const seq = useRef(0)
-
-  const load = useCallback(
-    async (offset = 0) => {
-      const mine = ++seq.current
-      setError(null)
-      try {
-        const res = await api.people({ q, filter, limit: PAGE, offset })
-        if (mine !== seq.current) return
-        setTotal(res.total)
-        setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
-      } catch (e) {
-        if (mine === seq.current) setError(humanError(e))
-      }
-    },
-    [api, q, filter],
-  )
-  useEffect(() => {
-    const id = window.setTimeout(() => void load(0), q ? 250 : 0)
-    return () => window.clearTimeout(id)
-  }, [load, q])
+  // Typing waits a beat before asking; changing the filter asks at once.
+  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('people'), { q, filter }, (p, offset) => api.people({ ...p, limit: PAGE, offset }), !!q)
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>
@@ -65,7 +43,7 @@ export function PeopleScreen() {
           ))}
         </div>
         {error ? (
-          <ErrorBox error={error} onRetry={() => void load(0)} />
+          <ErrorBox error={error} onRetry={reload} />
         ) : !rows ? (
           <Spinner rows={5} />
         ) : rows.length === 0 ? (
@@ -79,16 +57,7 @@ export function PeopleScreen() {
               ))}
             </div>
             {rows.length < total && (
-              <Button
-                
-               
-                disabled={loadingMore}
-                onClick={async () => {
-                  setLoadingMore(true)
-                  await load(rows.length)
-                  setLoadingMore(false)
-                }}
-              >
+              <Button disabled={loadingMore} onClick={more}>
                 {P.more}
               </Button>
             )}
@@ -96,7 +65,7 @@ export function PeopleScreen() {
         )}
       </div>
       <div className={s.detailPane}>
-        {outlet ? <Outlet context={{ onChanged: () => void load(0) } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{H.pickOne}</p>}
+        {outlet ? <Outlet context={{ onChanged: reload } satisfies TournamentsOutlet} /> : <p className={s.placeholder}>{H.pickOne}</p>}
       </div>
     </div>
   )

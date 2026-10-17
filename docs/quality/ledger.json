@@ -648,11 +648,16 @@
       "workstream": "W13",
       "phase": 3,
       "tripSafe": false,
-      "status": "open",
-      "pr": null,
-      "tests": [],
+      "status": "fixed",
+      "pr": 236,
+      "tests": [
+        "src/data/query.test.tsx",
+        "src/components/useServerMutation.test.tsx",
+        "src/screens/tournament/TournamentGate.race.test.tsx",
+        "src/data/account.signout.test.ts"
+      ],
       "verifiedBy": null,
-      "residual": null
+      "residual": "Not yet on Query: useMyProfile, useUnread, Editar perfil sections, the panel's Salud/Auditoría/Avisos/course detail, AdminCourses and the other Comité sections; new hand-rolled run() wrappers are refused by test."
     },
     {
       "id": "ARCH-19",

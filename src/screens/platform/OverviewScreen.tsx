@@ -4,7 +4,7 @@
  * tiles for the counts, one bar series for the last 30 days (pick which), and
  * what happened last.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -13,7 +13,8 @@ import { IconFlag, IconPerson, IconShield } from '../../components/icons'
 import { usePlatformApi, type CourseArrival, type FunnelCourses, type PlatformDay, type PlatformEvent, type PlatformFunnel, type PlatformOverview } from '../../data/platform'
 import { relTime } from '../../lib/relTime'
 import s from './Platform.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { usePlatformKey } from './platformKey'
 
 const P = t.platform
 const n = (v: number) => v.toLocaleString('es-MX')
@@ -23,24 +24,14 @@ const FUNNEL_DAYS = 90
 
 export function OverviewScreen() {
   const api = usePlatformApi()
-  const [data, setData] = useState<{ overview: PlatformOverview; daily: PlatformDay[]; funnel: PlatformFunnel | null } | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [series, setSeries] = useState<Series>('scores')
+  const q = useServerQuery(usePlatformKey('overview'), async (): Promise<{ overview: PlatformOverview; daily: PlatformDay[]; funnel: PlatformFunnel | null }> => {
+    const [overview, daily, funnel] = await Promise.all([api.overview(), api.daily(30), api.funnel(FUNNEL_DAYS).catch(() => null)])
+    return { overview, daily, funnel }
+  })
+  const data = q.data
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      const [overview, daily, funnel] = await Promise.all([api.overview(), api.daily(30), api.funnel(FUNNEL_DAYS).catch(() => null)])
-      setData({ overview, daily, funnel })
-    } catch (e) {
-      setError(humanError(e))
-    }
-  }, [api])
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  if (error) return <ErrorBox error={error} onRetry={() => void load()} />
+  if (q.error && !data) return <ErrorBox error={q.error} onRetry={() => void q.refetch()} />
   if (!data) return <Spinner rows={6} />
   const o = data.overview
 

@@ -20,9 +20,13 @@ import { friendsFeed, useUnread, type FeedItem } from '../../data/social'
 import { myCrews, type MyCrew } from '../../data/crews'
 import { EventMark } from './ProfileScreen'
 import styles from './Profile.module.css'
-import { humanError } from '../../lib/humanError'
+import { useServerQuery } from '../../data/query'
+import { useServerMutation } from '../../components/useServerMutation'
 
 const M = t.mipolo
+const EMPTY_TOURNAMENTS: MyTournament[] = []
+const EMPTY_FEED: FeedItem[] = []
+const EMPTY_CREWS: MyCrew[] = []
 const S = t.social
 const FEED_SHOWN = 6
 
@@ -115,11 +119,17 @@ function rowsOf(links: MyLink[], organizing: MyTournament[]): Row[] {
 export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } = {}) {
   const navigate = useNavigate()
   const { profile, links, loading, error, load } = useMyProfile()
-  const [organizing, setOrganizing] = useState<MyTournament[]>([])
+  // The sections around the profile: one that can't be read is left out, as before (the profile's own error is the one shown).
+  const organizingQ = useServerQuery(['organizer', 'tournaments'], () => listMyTournaments())
+  const feedQ = useServerQuery(['friends', 'feed'], () => friendsFeed())
+  const crewsQ = useServerQuery(['crews', 'mine'], () => myCrews())
+  const organizing: MyTournament[] = organizingQ.data ?? EMPTY_TOURNAMENTS
+  const feed: FeedItem[] | null = feedQ.data ?? (feedQ.isError ? EMPTY_FEED : null)
+  const crews: MyCrew[] | null = crewsQ.data ?? (crewsQ.isError ? EMPTY_CREWS : null)
+  /** The «¿Eres tú?» being answered: its buttons wait. */
   const [busy, setBusy] = useState<string | null>(null)
+  const linkWrite = useServerMutation({ after: () => load(), invalidates: [['organizer'], ['profile']] })
   const [code, setCode] = useState('')
-  const [feed, setFeed] = useState<FeedItem[] | null>(null)
-  const [crews, setCrews] = useState<MyCrew[] | null>(null)
   const unread = useUnread((s) => s.count)
   const isPlatformAdmin = usePlatform((s) => s.isAdmin === true)
   const refreshUnread = useUnread((s) => s.refresh)
@@ -130,15 +140,6 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
   useEffect(() => {
     void load(true)
     void refreshUnread()
-    listMyTournaments()
-      .then(setOrganizing)
-      .catch(() => setOrganizing([]))
-    friendsFeed()
-      .then(setFeed)
-      .catch(() => setFeed([]))
-    myCrews()
-      .then(setCrews)
-      .catch(() => setCrews([]))
   }, [load, refreshUnread])
   // The shell's read-only load can land last with no profile yet: ask again, creating it.
   useEffect(() => {
@@ -156,17 +157,13 @@ export function MiPolo({ saved }: { saved?: { slug: string; card: ReactNode } } 
 
   async function answer(l: MyLink, yes: boolean) {
     setBusy(l.playerId)
-    try {
+    await linkWrite.run(async () => {
       if (yes) {
         const r = await linkMyProfile(l.playerId)
         if (!r.ok) toast(r.reason === 'already_linked' ? t.account.already : t.account.linkTaken)
       } else await unlinkMyProfile(l.playerId)
-      await load()
-    } catch (e) {
-      toast(humanError(e))
-    } finally {
-      setBusy(null)
-    }
+    })
+    setBusy(null)
   }
 
   function onJoin(e: FormEvent) {

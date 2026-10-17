@@ -73,6 +73,7 @@ const { _outboxTest } = await import('./outbox')
 const { getLastTournament, setLastTournament } = await import('./session')
 const { clearAllCached, readCached, saveEntry, saveSnapshot } = await import('./snapshotCache')
 const { getFixture } = await import('../dev/fixtures')
+const { registerServerCache } = await import('./serverCache')
 
 const fx = getFixture('minimal4-live')!
 const { slug, id, name } = fx.snapshot.tournament
@@ -111,6 +112,13 @@ describe('signing out of a shared phone', () => {
     // The next person on the phone must not see the previous one's profile, even for a moment.
     expect(useMyProfile.getState().profile).toBeNull()
     expect(useMyProfile.getState().links).toEqual([])
+  })
+
+  it('takes what the screens read from the server too: the next person never sees the last one’s notices or friends (ARCH-18)', async () => {
+    const clear = vi.fn()
+    registerServerCache({ clear, invalidate: async () => undefined })
+    expect(await signOutSafely()).toEqual({ done: true })
+    expect(clear).toHaveBeenCalledTimes(1)
   })
 
   it('never while a write is still on the phone, for any tournament, and then nothing goes', async () => {

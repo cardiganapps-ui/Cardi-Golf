@@ -6,7 +6,7 @@
  * (Verificados / Sin verificar) or corrected it since it was first saved
  * (Corregidos, the latest first; 0075, STRAT-14).
  */
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { Link, Outlet, useOutlet, useParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
 import { ErrorBox, Spinner } from '../../components/ui'
@@ -15,6 +15,7 @@ import { usePlatformApi, type CourseFilter, type CourseRow } from '../../data/pl
 import { VerifiedBadge } from '../../components/VerifiedBadge'
 import type { TournamentsOutlet } from './TournamentsScreen'
 import { usePaged } from './usePaged'
+import { usePlatformKey } from './platformKey'
 import s from './Platform.module.css'
 
 const C = t.platform.courses
@@ -26,8 +27,7 @@ export function CatalogCourses() {
   const { id: openId } = useParams()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<CourseFilter>('all')
-  const fetch = useCallback((offset: number) => api.courses({ q, filter, limit: 50, offset }), [api, q, filter])
-  const { rows, total, error, loadingMore, reload, more } = usePaged(fetch, !!q)
+  const { rows, total, error, loadingMore, reload, more } = usePaged(usePlatformKey('courses'), { q, filter }, (p, offset) => api.courses({ ...p, limit: 50, offset }), !!q)
 
   return (
     <div className={`${s.split} ${outlet ? s.hasDetail : ''}`}>

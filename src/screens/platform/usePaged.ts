@@ -1,44 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { humanError } from '../../lib/humanError'
+import { useDebounced } from '../../lib/useDebounced'
+import { useServerPages, type ServerKey } from '../../data/query'
 
 /**
- * A searchable, paged list for the panel: typing waits a beat, a filter
- * change asks at once, a stale answer never overwrites a newer one, and
- * «Ver más» appends. `fetch` must be stable for the same query (useCallback).
+ * A searchable, paged list for the panel (ARCH-18: through the server-state
+ * cache): typing waits a beat, a filter change asks at once, an answer for an
+ * earlier search never lands over a later one (each search is its own key),
+ * and «Ver más» appends. `params` are what the list is asked for (the search
+ * and its filters); `debounce` holds a change of them for 250 ms.
  */
-export function usePaged<T>(fetch: (offset: number) => Promise<{ total: number; rows: T[] }>, debounce: boolean) {
-  const [rows, setRows] = useState<T[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const seq = useRef(0)
-
-  const load = useCallback(
-    async (offset = 0) => {
-      const mine = ++seq.current
-      setError(null)
-      try {
-        const res = await fetch(offset)
-        if (mine !== seq.current) return
-        setTotal(res.total)
-        setRows((prev) => (offset === 0 ? res.rows : [...(prev ?? []), ...res.rows]))
-      } catch (e) {
-        if (mine === seq.current) setError(humanError(e))
-      }
-    },
-    [fetch],
-  )
-
-  useEffect(() => {
-    const id = window.setTimeout(() => void load(0), debounce ? 250 : 0)
-    return () => window.clearTimeout(id)
-  }, [load, debounce])
-
-  const more = useCallback(async () => {
-    setLoadingMore(true)
-    await load(rows?.length ?? 0)
-    setLoadingMore(false)
-  }, [load, rows])
-
-  return { rows, total, error, loadingMore, reload: () => load(0), more }
+export function usePaged<T, P>(key: ServerKey, params: P, fetch: (params: P, offset: number) => Promise<{ total: number; rows: T[] }>, debounce: boolean) {
+  const asked = useDebounced(params, debounce ? 250 : 0)
+  return useServerPages([...key, asked], (offset) => fetch(asked, offset))
 }

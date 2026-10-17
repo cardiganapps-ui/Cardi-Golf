@@ -12,6 +12,7 @@ import { Field, Toggle } from '../../components/ui'
 import { Input } from '../../components/primitives'
 import { IconGoogle } from '../../components/icons'
 import { useAuth } from '../../data/auth'
+import { useServerMutation } from '../../components/useServerMutation'
 import { accountError, confirmProfileCode, continueWithGoogle, finishProfileSignIn, googleAvailable, resendProfileCode, safeNext, sendProfileCode, type CodeMode } from '../../data/account'
 import { myDeviceClaim } from '../../data/profiles'
 import { supabase } from '../../lib/supabase'
@@ -27,8 +28,16 @@ export function EntrarScreen() {
   const [email, setEmail] = useState('')
   const [mode, setMode] = useState<CodeMode | null>(null)
   const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // A failure is said by the form, in the account's own words.
+  const write = useServerMutation({ errors: 'inline', words: accountError })
+  const busy = write.busy
+  /** What the form says itself (the age line not ticked); a failed step is the hook's. */
+  const [said, setSaid] = useState<string | null>(null)
+  const error = said ?? write.error
+  const setError = (v: string | null) => {
+    setSaid(v)
+    if (v === null) write.clearError()
+  }
   const [info, setInfo] = useState<string | null>(null)
   const [google, setGoogle] = useState(false)
   /** "Lo que jugaste como Nico en Ensayo": shown when this device holds a player. */
@@ -64,16 +73,9 @@ export function EntrarScreen() {
     }
   }, [ready, user, isAnonymous])
 
-  async function run(action: () => Promise<void>) {
-    setBusy(true)
-    setError(null)
-    try {
-      await action()
-    } catch (e) {
-      setError(accountError(e))
-    } finally {
-      setBusy(false)
-    }
+  function attempt(action: () => Promise<void>) {
+    setSaid(null)
+    return write.run(action)
   }
 
   function send(e: FormEvent) {
@@ -83,7 +85,7 @@ export function EntrarScreen() {
       setError(t.legal.adult.needed)
       return
     }
-    void run(async () => {
+    void attempt(async () => {
       setInfo(null)
       sayAdult()
       setMode(await sendProfileCode(email.trim()))
@@ -93,7 +95,7 @@ export function EntrarScreen() {
   function confirm(e: FormEvent) {
     e.preventDefault()
     if (!mode) return
-    void run(async () => {
+    void attempt(async () => {
       setFinishing(true)
       try {
         await confirmProfileCode(email.trim(), code, mode)
@@ -138,7 +140,7 @@ export function EntrarScreen() {
               type="button"
               disabled={busy}
               onClick={() =>
-                void run(async () => {
+                void attempt(async () => {
                   await resendProfileCode(email.trim(), mode)
                   setInfo(t.auth.resent)
                 })
@@ -184,7 +186,7 @@ export function EntrarScreen() {
                     setError(t.legal.adult.needed)
                     return
                   }
-                  void run(() => {
+                  void attempt(() => {
                     sayAdult()
                     return continueWithGoogle(next)
                   })

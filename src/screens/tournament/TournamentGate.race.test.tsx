@@ -443,3 +443,55 @@ describe('a sign-out asked for while the gate is still asking', () => {
     expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
   })
 })
+
+describe('a step that never answers gives up at its deadline, and the gate asks again (ARCH-18)', () => {
+  // The client's per-request deadline (REL-14) starts with the request: what holds a step up before it
+  // goes out (auth-js waiting on a token refresh, a store load that never settles) had none, and the gate
+  // never starts an ask over one still out, so the phone's copy stayed up, «Conectando…», for good.
+  const never = <T,>() => new Promise<T>(() => undefined)
+
+  it('the lookup', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.lookupTournament.mockReturnValueOnce(never()).mockResolvedValue(fx.lookup)
+    server.myMembership.mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000)
+    })
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
+    expect(server.lookupTournament).toHaveBeenCalledTimes(2)
+  })
+
+  it('who this device is', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.myMembership.mockReturnValueOnce(never()).mockResolvedValue(member)
+    serverLoads()
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000)
+    })
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
+    expect(asked()).toBe(2)
+  })
+
+  it('the boards', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    phone.readCached.mockResolvedValue(savedCopy())
+    server.myMembership.mockResolvedValue(member)
+    const live = serverLoads()
+    const load = vi.fn((tid: string) => (load.mock.calls.length === 1 ? never<void>() : live(tid)))
+    useTournament.setState({ load })
+    open()
+    await screen.findByText(/^Guardado en el teléfono: cache/)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(40_000)
+    })
+    expect(await screen.findByText(/^En vivo del servidor: server/)).toBeTruthy()
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+})
