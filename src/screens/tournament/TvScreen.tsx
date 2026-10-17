@@ -26,7 +26,7 @@ import { dayFigureText } from '../../lib/figureText'
 import { Plate } from '../../components/primitives'
 import { TournamentLogo } from '../../components/TournamentLogo'
 import { drawOrder } from '../../lib/pairing'
-import { useCurrency } from '../../components/currency'
+import { useCurrency, useWords } from '../../components/currency'
 
 type Board = 'individual' | 'pairs' | 'snake' | 'auction' | 'feed' | `game:${string}`
 /** Each board's time on screen. */
@@ -36,6 +36,7 @@ const HOLD_MS = 2_000
 
 export function TvScreen() {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)!
   const ctx = useTournamentCtx()
   const base = tournamentBase(ctx)
@@ -200,7 +201,7 @@ export function TvScreen() {
                     const thru = round ? Math.min(...members.map((id) => state.core.rounds[round.id]?.[id]?.thru ?? 0)) : 0
                     const roundIdx = round ? state.core.roundIds.indexOf(round.id) : -1
                     const today = roundIdx >= 0 ? r.perRound[roundIdx] : undefined
-                    const label = team ? r.entrant.name : name(r.playerId)
+                    const label = team ? words(r.entrant.name) : name(r.playerId)
                     // What the room reads from the couch, each under its label (VIS-05): who, where on the course, the day
                     // in the format's own figure («ganó 4&3» under match play, STRAT-03), the total. The tier is the phone's.
                     return (
@@ -239,7 +240,7 @@ export function TvScreen() {
                   <motion.div key={r.pairId} className={`${styles.row} ${styles.rowPair} ${r.position === 1 ? styles.leader : ''}`} {...rowMotion}>
                     <span className={styles.pos}>{r.label}</span>
                     <span className={styles.name}>
-                      <span>{r.name}</span>
+                      <span>{words(r.name)}</span>
                       <span className={`${styles.small} ${styles.sub}`}>{t.common.andList([name(r.playerIds[0]), name(r.playerIds[1])])}</span>
                     </span>
                     <span className={`${styles.small} ${styles.figure}`}>{t.common.plusList(r.perRound)}</span>
@@ -322,11 +323,11 @@ export function TvScreen() {
                       <span className={styles.pos}>{r.pos ?? ''}</span>
                       {r.playerIds.length === 1 ? <Avatar name={name(r.playerIds[0]!)} url={byId.get(r.playerIds[0]!)?.avatarUrl} /> : <span />}
                       <span className={styles.name}>
-                        <span>{r.title ?? t.common.andList(r.playerIds.map(name))}</span>
-                        {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label, r.sub].filter(Boolean).join(', ')}</span>}
+                        <span>{r.title ? words(r.title) : t.common.andList(r.playerIds.map(name))}</span>
+                        {(r.label || r.sub || r.title) && <span className={`${styles.small} ${styles.sub}`}>{[r.title ? t.common.andList(r.playerIds.map(name)) : null, r.label ? words(r.label) : null, r.sub ? words(r.sub) : null].filter(Boolean).join(', ')}</span>}
                       </span>
                       <span className={styles.small}>{showMoney && r.money ? formatMoney(r.money, cur) : ''}</span>
-                      <span className={styles.big}>{r.figure ? <Plate value={r.figure} leader={r.pos === '1'} /> : null}</span>
+                      <span className={styles.big}>{r.figure ? <Plate value={words(r.figure)} leader={r.pos === '1'} /> : null}</span>
                     </div>
                 )}
               />

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import { FIXTURE_NAMES, getFixture } from '../dev/fixtures'
 import { computeTournament } from './computeTournament'
-import { pesos } from './core/pesos'
+import { msg } from './messages'
 import { parseSettings } from './settings/schema'
 import { words } from './testing/words'
 
@@ -23,9 +23,12 @@ function strings(x: unknown, path = '', out: Array<[string, string]> = []): Arra
   return out
 }
 
+const pesos = (amount: number) => words(msg('amount', { amount }))
+
 describe('the engine’s explanations (MONEY-15)', () => {
-  it('formats pesos one way: «$10,000», «−$1,200», whole', () => {
-    expect([pesos(10000), pesos(1234567), pesos(0), pesos(-1200), pesos(999.6), pesos(-0.4)]).toEqual(['$10,000', '$1,234,567', '$0', '−$1,200', '$1,000', '$0'])
+  // The engine formats no money (ARCH-05): an amount is a figure, and the one renderer writes it.
+  it('writes money one way: «$10,000», «−$1,200», whole', () => {
+    expect([10000, 1234567, 0, -1200, 999.6, -0.4].map(pesos)).toEqual(['$10,000', '$1,234,567', '$0', '−$1,200', '$1,000', '$0'])
   })
 
   describe.each(FIXTURE_NAMES)('%s', (name) => {
@@ -38,7 +41,7 @@ describe('the engine’s explanations (MONEY-15)', () => {
 
     it('titles every prize with what it pays', () => {
       // «$1,000 cada uno», «Camilo paga $300»: the title's figure is the prize's.
-      const wrong = state.prizes.filter((p) => figure(words(p.why).title) !== pesos(p.amount)).map((p) => `${p.label} (${p.playerId}): paid ${pesos(p.amount)}, titled «${words(p.why).title}»`)
+      const wrong = state.prizes.filter((p) => figure(words(p.why).title) !== pesos(p.amount)).map((p) => `${words(p.label)} (${p.playerId}): paid ${pesos(p.amount)}, titled «${words(p.why).title}»`)
       expect(wrong).toEqual([])
     })
   })

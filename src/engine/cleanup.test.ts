@@ -40,7 +40,7 @@ describe('Calcutta slots nobody can fill', () => {
     const paid = Object.values(a.payouts).reduce((s, p) => s + p.amount, 0)
     expect(paid + a.unfilled).toBe(a.pot)
     expect(a.balanced).toBe(true)
-    const rounding = Object.values(a.payouts).flatMap((p) => p.lines).filter((l) => l.slotLabel === 'Redondeo')
+    const rounding = Object.values(a.payouts).flatMap((p) => p.lines).filter((l) => words(l.slotLabel) === 'Redondeo')
     expect(rounding.reduce((s, l) => s + l.amount, 0)).toBeLessThan(12)
     expect(words(st.flags.warnings).some((w) => w.includes('sin asignar'))).toBe(true)
     // The auction pays out exactly the pot minus the unassigned slot; nothing else moves.

@@ -20,7 +20,7 @@ import { holeWhy } from '../engine/core/compute'
 import { nextRoundCut } from '../engine/core/handicap'
 import { GAME_ENTRIES } from '../engine/games/catalog'
 import { describeGame } from '../engine/games/describe'
-import { msg } from '../engine/messages'
+import { msg, type Msg } from '../engine/messages'
 import { parseSettings, type TournamentSettings } from '../engine/settings/schema'
 import type { GameConfig } from '../engine/settings/games'
 import { ptsText, t } from '../i18n/es-MX'
@@ -110,7 +110,8 @@ describe('the words agree with what happened', () => {
     const snap = getFixture('friends8')!.snapshot
     const st = computeTournament(snap, parseSettings(snap.tournament.settings))
     const lines: string[] = []
-    const walk = (v: unknown) => (typeof v === 'string' ? lines.push(v) : v && typeof v === 'object' ? Object.values(v).forEach(walk) : undefined)
+    // The board's texts are codes (ARCH-05): each in words, as Juegos shows it.
+    const walk = (v: unknown): unknown => (typeof v === 'string' ? lines.push(v) : v && typeof v === 'object' ? ('code' in v && 'params' in v ? lines.push(words(v as Msg)) : Object.values(v).forEach(walk)) : undefined)
     for (const g of Object.values(st.games)) if (g.config.type === 'match') walk(g.board)
     const pairs = lines.filter((l) => / (y|e) [^,]+ ganan? \d/.test(l))
     expect(pairs.length).toBeGreaterThan(0)
@@ -120,9 +121,9 @@ describe('the words agree with what happened', () => {
     const figures = Object.values(st.games)
       .filter((g) => g.config.type === 'match')
       .flatMap((g) => g.board.sections.flatMap((s) => s.rows))
-      .filter((r) => /^Ganan? /.test(String(r.figure)))
+      .filter((r) => /^Ganan? /.test(words(r.figure)))
     expect(new Set(figures.map((r) => r.playerIds.length))).toEqual(new Set([1, 2]))
-    for (const r of figures) expect(String(r.figure), String(r.figure)).toMatch(r.playerIds.length > 1 ? /^Ganan / : /^Gana /)
+    for (const r of figures) expect(words(r.figure), words(r.figure)).toMatch(r.playerIds.length > 1 ? /^Ganan / : /^Gana /)
   })
 
   it('a contest on one hole says «el hoyo»; the greenie has its verb', () => {

@@ -285,7 +285,7 @@ describe('V4: one line, two causes', () => {
   it('the cancelled day is «por asignar»; the tiebreak’s group money is held apart, with the answer as the way out', () => {
     const st = run(tiebreakAndRain(), S)
     expect(keyed(st)).toEqual({ bestRound: 1200, snake: 1800 })
-    expect(st.money.unassigned.held.map((h) => [h.key, h.amount, h.note])).toEqual([['snake:r1:r1g1', 600, 'Responde el desempate del hoyo 18 («¿Quién embocó al último?») en Comité, sección Tarjetas.']])
+    expect(st.money.unassigned.held.map((h) => [h.key, h.amount, words(h.note)])).toEqual([['snake:r1:r1g1', 600, 'Responde el desempate del hoyo 18 («¿Quién embocó al último?») en Comité, sección Tarjetas.']])
     expect(snakeLine(st)).toBe(3600)
     conserved(st)
   })
@@ -302,7 +302,7 @@ describe('V4: one line, two causes', () => {
     expect(st.money.unassigned.assignments.map((a) => [a.total, a.status])).toEqual([[1800, 'applied']])
     expect(st.money.unassigned.held).toEqual([])
     // p4 survived group 1: the snake's $200, and his $150 of the rained-out day. Nothing twice.
-    const p4 = st.prizes.filter((p) => p.playerId === 'p4' && (p.moduleId === 'snake' || p.sourceKey === 'snake')).map((p) => [p.label, p.amount])
+    const p4 = st.prizes.filter((p) => p.playerId === 'p4' && (p.moduleId === 'snake' || p.sourceKey === 'snake')).map((p) => [words(p.label), p.amount])
     expect(p4).toEqual([
       ['La Víbora, día 1, grupo 1', 200],
       ['La Víbora, devolución', 150],
@@ -512,7 +512,7 @@ describe('N7: a sold lot whose player never played, in a played tournament', () 
     // and its 5% waits for the Comité (before, p12 took it without playing a hole).
     const withResult = st.modules.individual!.rows.filter((r) => !r.figure.empty)
     expect(withResult.at(-1)!.playerId).toBe('p11')
-    expect(slots.map((s) => [s.label, s.playerIds, s.unfilled])).toEqual([
+    expect(slots.map((s) => [words(s.label), s.playerIds, s.unfilled])).toEqual([
       ['Campeón', ['p4'], false],
       ['Subcampeón', ['p10'], false],
       ['Mejor C', ['p9'], false],

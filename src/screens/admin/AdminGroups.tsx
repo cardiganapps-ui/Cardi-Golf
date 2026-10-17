@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { t } from '../../i18n/es-MX'
+import { useWords } from '../../components/currency'
 import { Avatar, Sheet } from '../../components/ui'
 import { toast } from '../../components/toast'
 import { EmptyState, Segmented } from '../../components/primitives'
@@ -43,6 +44,7 @@ function standingsOrder(pairs: number, groupSize: number): number[][] {
 
 export function AdminGroups() {
   const data = useTournament((s) => s.data)!
+  const words = useWords()
   const reload = useTournament((s) => s.reload)
   const { snapshot, state, settings } = data
   const rounds = snapshot.rounds.filter((r) => r.status !== 'cancelled')
@@ -224,7 +226,7 @@ export function AdminGroups() {
             )}
             {bracketNext && (
               <button className="btn btn--secondary btn--sm" type="button" onClick={fromBracket}>
-                {t.bracket.nextRound(bracketNext.round.name)}
+                {t.bracket.nextRound(words(bracketNext.round.name))}
               </button>
             )}
             <button className="btn btn--secondary btn--sm" type="button" onClick={randomPlayers}>

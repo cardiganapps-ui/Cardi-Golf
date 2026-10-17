@@ -3,6 +3,7 @@ import { computeTournament } from '../computeTournament'
 import { FIRST_TOURNAMENT_SETTINGS, DEFAULT_SETTINGS } from '../settings/presets'
 import { fillRound, makeFirstTournament, makeGroup, makePlayer, makeSnapshot, PAR_72, score } from '../testing/fixtures'
 import { buildTournamentResults } from './results'
+import { words } from '../testing/words'
 
 function finished() {
   const snap = makeFirstTournament()
@@ -17,7 +18,7 @@ describe('published tournament results', () => {
   it('one row per player: finish, points per round, what paid, and the net from the money module', () => {
     const snap = finished()
     const state = computeTournament(snap, FIRST_TOURNAMENT_SETTINGS)
-    const rows = buildTournamentResults(state, snap.players)
+    const rows = buildTournamentResults(state, snap.players, words)
     expect(rows).toHaveLength(12)
     const byRank = [...rows].sort((a, b) => a.rank! - b.rank!)
     expect(byRank[0]!.rank).toBe(1)
@@ -47,7 +48,7 @@ describe('published tournament results', () => {
     snap.rounds.forEach((r) => (r.status = 'finished'))
     snap.tournament.status = 'finished'
     const state = computeTournament(snap, settings)
-    const rows = buildTournamentResults(state, snap.players)
+    const rows = buildTournamentResults(state, snap.players, words)
     const team = (id: string) => state.modules.individual!.rows.find((r) => r.entrant.id === id)!
     for (const [pid, tid] of [['p1', 'tA'], ['p2', 'tA'], ['p3', 'tB'], ['p4', 'tB']] as const) {
       const r = rows.find((x) => x.playerId === pid)!
@@ -63,7 +64,7 @@ describe('published tournament results', () => {
     fillRound(snap, 'r1', 5)
     snap.rounds.forEach((r) => (r.status = 'finished'))
     snap.tournament.status = 'finished'
-    const rows = buildTournamentResults(computeTournament(snap, settings), snap.players)
+    const rows = buildTournamentResults(computeTournament(snap, settings), snap.players, words)
     expect(rows.map((r) => r.rank).sort()).toEqual([1, 2, 3])
     expect(rows.every((r) => r.points === null && r.perRound.length === 0)).toBe(true)
   })
@@ -79,7 +80,7 @@ describe('published tournament results', () => {
     snap.tournament.status = 'finished'
     const state = computeTournament(snap, settings)
     expect(state.modules.individual!.rows.map((r) => r.total)).toEqual([0.5, 0.5])
-    const rows = buildTournamentResults(state, snap.players)
+    const rows = buildTournamentResults(state, snap.players, words)
     expect(rows.map((r) => [r.rank, r.points])).toEqual([[1, null], [1, null]])
     // Every number published is a whole number (tournament_results.points integer, per_round integer[]).
     expect(rows.flatMap((r) => [r.rank, r.points, ...r.perRound]).filter((v) => v != null && !Number.isInteger(v))).toEqual([])
@@ -89,7 +90,7 @@ describe('published tournament results', () => {
     const snap = finished()
     const settings = structuredClone(DEFAULT_SETTINGS)
     settings.modules.individual.enabled = false
-    const rows = buildTournamentResults(computeTournament(snap, settings), snap.players)
+    const rows = buildTournamentResults(computeTournament(snap, settings), snap.players, words)
     expect(rows.every((r) => r.rank === null && r.rankLabel === null && r.points === null)).toBe(true)
     expect(rows.every((r) => r.awards.every((a) => a.startsWith('award:')))).toBe(true)
   })

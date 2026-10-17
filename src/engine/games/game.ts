@@ -20,7 +20,7 @@
  */
 import type { GameConfig, GameOf, GameType } from '../settings/games'
 import type { ModuleId, TournamentSettings } from '../settings/schema'
-import type { Msg } from '../messages'
+import { msg, named, type Msg } from '../messages'
 import type { Explanation, Id, Snapshot } from '../types'
 import type { CoreState } from '../core/types'
 import type { GameStateMap } from '.'
@@ -49,8 +49,10 @@ export interface PrizeAward {
   payerId?: Id
   /** The instance game that awarded it (`settings.games[].id`). */
   gameId?: string
-  /** Copy for the money screens, e.g. «Individual, 1.º» or «La Víbora, día 1, grupo 2». */
-  label: string
+  /** What the money screens call it, e.g. «Individual, 1.º» or «La Víbora, día 1, grupo 2» (`prizeLabel`). */
+  label: Msg
+  /** What in its game paid it («1.º», «día 1, grupo 2»), when the label says more than the game's: Dinero lists it under the game. */
+  part?: Msg
   playerId: Id
   amount: number
   /** True once the underlying round(s) are finished, false while provisional. */
@@ -59,6 +61,11 @@ export interface PrizeAward {
   /** An assignment's row (`money_adjustments.id`), and the bucket it came from. */
   adjustmentId?: Id
   sourceKey?: string
+}
+
+/** A prize's label: its game (a label, or a message) and what in it paid. */
+export function prizeLabel(game: string | Msg, part: Msg | null = null): Pick<PrizeAward, 'label' | 'part'> {
+  return part ? { label: msg('prize.label', { game: named(game), part }), part } : { label: msg('prize.label', { game: named(game), part: null }) }
 }
 
 /** The contract: a state from the context, prizes and warnings from the state. */
@@ -94,28 +101,28 @@ export interface GameContext<C extends GameConfig = GameConfig> extends ModuleCo
 export interface BoardRow {
   /** One player, or two for a pair / side. */
   playerIds: Id[]
-  /** Main text instead of the names (e.g. a segment "Ida"); the names then go under it. */
-  title?: string
+  /** Main text instead of the names (e.g. a segment «Ida»); the names then go under it. */
+  title?: Msg
   /** "1", "T2", or null when position means nothing (a hole-by-hole log). */
   pos: string | null
-  /** Short text beside the names ("Hoyo 7", "2 arriba"), optional. */
-  label?: string
-  /** The big figure ("3 skins", "71", "$450"). */
-  figure: string
-  sub?: string
+  /** Short text beside the names («Hoyo 7», «2 arriba»), optional. */
+  label?: Msg
+  /** The big figure («3 skins», «71», «$450»). */
+  figure: Msg
+  sub?: Msg
   /** Pesos this row wins (+) or pays (−) if it ended now. */
   money?: number
 }
 
 export interface BoardSection {
-  title?: string
+  title?: Msg
   rows: BoardRow[]
 }
 
 export interface GameBoard {
   sections: BoardSection[]
-  /** Plain-Spanish notes shown under the table ("Se acumulan 2 skins al 9"). */
-  notes: string[]
+  /** Notes shown under the table («Se acumulan 2 skins al 9»). */
+  notes: Msg[]
 }
 
 /** An instance game of one type. */

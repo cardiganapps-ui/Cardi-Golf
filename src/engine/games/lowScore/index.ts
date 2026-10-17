@@ -8,13 +8,12 @@
  * the same cap Stableford uses. Standings compare "to par" over the holes
  * played so far, so players on different holes line up fairly.
  */
-import { ordinal, ptsText, t } from '../../../i18n/es-MX'
 import { flattenRanks, isFinal, rankField, splitEven, unfilledPlaces, unfilledWarning, type RankGroup } from '../../core/ranking'
-import { toParText } from '../../formats/format'
+import { msg, type Msg } from '../../messages'
 import type { GameOf } from '../../settings/games'
 import type { Id } from '../../types'
 import type { BoardSection, GameContext, GameImpl } from '../game'
-import { payPlaces, placeAmounts, PotWords, splitWords } from '../payout'
+import { payPlaces, placeAmounts, potNote } from '../payout'
 import { moneyByPlayer, namer, roundNumberOf } from '../util'
 
 type Cfg = GameOf<'lowScore'>
@@ -101,9 +100,9 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
     const pots = tablePots(state, ctx)
     return state.tables.flatMap((tb, i) => {
       const pot = pots[i]!
-      const day = tb.roundId ? `Día ${roundNumberOf(ctx, tb.roundId)}, ` : ''
-      const label = (id: Id) => `${ctx.config.label}, ${day}${ordinal(tb.rows.find((r) => r.playerId === id)?.label ?? '')}`
-      return payPlaces({ ...ctx, final: tb.final }, tb.groups, name, label, pot)
+      const day = tb.roundId ? roundNumberOf(ctx, tb.roundId) : null
+      const part = (id: Id) => msg('part.dayPlace', { day, place: tb.rows.find((r) => r.playerId === id)?.label ?? '' })
+      return payPlaces({ ...ctx, final: tb.final }, tb.groups, name, part, pot)
     })
   },
   warnings(state, ctx) {
@@ -117,21 +116,19 @@ export const lowScoreGame: GameImpl<LowScoreState, Cfg> = {
   },
   board(state, ctx) {
     const money = moneyByPlayer(lowScoreGame.prizes(state, ctx))
-    const fig = (v: number) => (ctx.config.options.basis === 'points' ? ptsText(v) : toParText(v))
+    const fig = (v: number): Msg => (ctx.config.options.basis === 'points' ? msg('pts', { n: v }) : msg('board.toPar', { n: v }))
     const sections: BoardSection[] = state.tables.map((tb) => ({
-      title: tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}` : undefined,
-      rows: tb.rows.map((r) => ({ playerIds: [r.playerId], pos: r.label, figure: fig(r.value), sub: `${r.thru} hoyos`, money: money.get(r.playerId) ?? 0 })),
+      title: tb.roundId && state.tables.length > 1 ? msg('board.day', { day: roundNumberOf(ctx, tb.roundId) }) : undefined,
+      rows: tb.rows.map((r) => ({ playerIds: [r.playerId], pos: r.label, figure: fig(r.value), sub: msg('board.holes', { n: r.thru }), money: money.get(r.playerId) ?? 0 })),
     }))
-    const what = ctx.config.options.basis === 'points' ? 'Más puntos Stableford' : `La tarjeta ${ctx.config.options.basis === 'net' ? 'neta' : 'gross'} más baja contra el par`
-    const notes = [`${what}${ctx.config.options.scope === 'perRound' ? ', por día' : ''}.`]
+    const notes: Msg[] = [msg('board.lowRule', { basis: ctx.config.options.basis, perRound: ctx.config.options.scope === 'perRound' })]
     const names = namer(ctx)
     for (const tb of state.tables) {
       if (!tb.incomplete.length) continue
-      const day = tb.roundId && state.tables.length > 1 ? `Día ${roundNumberOf(ctx, tb.roundId)}: ` : ''
-      const who = t.common.andList(tb.incomplete.map((id) => `${names(id)} (${tb.rows.find((r) => r.playerId === id)?.thru ?? 0} de ${tb.holes})`))
-      notes.push(`${day}tarjeta incompleta, hoyos jugados: ${who}. Queda${tb.incomplete.length === 1 ? '' : 'n'} después de las tarjetas completas.`)
+      const day = tb.roundId && state.tables.length > 1 ? roundNumberOf(ctx, tb.roundId) : null
+      notes.push(msg('board.lowIncomplete', { day, who: tb.incomplete.map((id) => ({ name: names(id), thru: tb.rows.find((r) => r.playerId === id)?.thru ?? 0 })), holes: tb.holes }))
     }
-    if (ctx.pot > 0) notes.push(`${PotWords(ctx.config, ctx.pot)} se reparte ${splitWords(ctx.config.money.split)}.`)
+    if (ctx.pot > 0) notes.push(potNote(ctx.config, ctx.pot, { places: ctx.config.money.split }))
     return { sections, notes }
   },
 }

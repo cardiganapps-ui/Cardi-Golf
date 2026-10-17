@@ -3560,8 +3560,6 @@ export const t = {
     heldExtra: (amount: string, game: string) => `Además, ${amount} esperan un desempate de ${labelInSentence(game)}.`,
     title: (amount: string) => `${amount} sin asignar`,
     decides: 'El Comité decide: darlo a alguien, devolverlo o dejarlo para gastos del grupo.',
-    awardLabel: (label: string) => `${label}, asignado por el Comité`,
-    refundLabel: (label: string) => `${label}, devolución`,
     over: (label: string, assigned: string, left: string) => `Asignación de más en ${label}: el Comité asignó ${assigned} y solo quedan ${left}. No se paga hasta que se anule.`,
     orphan: (label: string, assigned: string) => `Asignación sin dinero en ${label}: hay ${assigned} asignados y ahí ya no queda dinero por asignar. No se paga hasta que se anule.`,
     mismatch: (bank: string, listed: string) => `El banco tiene ${bank} sin repartir y la lista de por asignar suma ${listed}. Revisa los premios en Comité, sección Torneo.`,
@@ -4091,6 +4089,30 @@ const STAKE_UNIT: Record<'segment' | 'match' | 'skin' | 'threePutt' | 'each' | '
   loser: 'de cada perdedor',
 }
 
+/** What an account pays for, said when it was paid beyond what it owed (`settle.overpaid`). */
+const KIND_WORDS: Record<'entry' | 'calcutta' | 'buyback' | 'side' | 'payout' | 'bet' | 'other', string> = {
+  entry: t.moneyScreen.entry,
+  calcutta: t.moneyScreen.purchases,
+  buyback: t.moneyScreen.owesBuyback,
+  side: t.moneyScreen.sidePots,
+  payout: t.moneyScreen.prizes,
+  bet: t.moneyScreen.owesBet,
+  other: 'other',
+}
+/**
+ * A match's standing (`board.matchStatus`): «Iguales» or «2 arriba» while it is on; «Empate», «Gana 3 y 2» or
+ * «Gana 1 arriba» once decided, «Ganan» for a side of two (COPY-23).
+ */
+function matchStatus(up: number, decided: boolean, remaining: number, plural: boolean): string {
+  if (up === 0) return decided ? 'Empate' : 'Iguales'
+  const n = Math.abs(up)
+  const wins = plural ? 'Ganan' : 'Gana'
+  // Match play writes a result as «3 y 2» (3 up with 2 to play): not a list of names.
+  if (decided && remaining > 0) return `${wins} ${n} y ${remaining}`
+  if (decided) return `${wins} ${n} arriba`
+  return `${n} arriba`
+}
+
 /**
  * What the engine says, by code (ARCH-05): every «¿Cómo se calculó?» line and warning of the computed state. Each
  * entry takes the code's figures and how to write money (`MsgFormat`); `src/i18n/explain.ts` calls them.
@@ -4176,8 +4198,8 @@ export const explain: ExplainCatalog = {
   'match.needsTwo': (p) => `Día ${p.day ?? '?'}, grupo ${p.group}: un partido individual necesita exactamente dos jugadores.`,
   'team.noTeams': () => 'Este torneo juega por equipos y todavía no hay equipos sorteados. El Comité los arma en Equipos.',
   'bracket.tooFew': () => 'Todavía no hay suficientes jugadores para armar el cuadro.',
-  'bracket.offBracket': (p) => `Día ${p.day}: ${p.off === 1 ? 'un partido de los grupos no es' : `${p.off} partidos de los grupos no son`} del cuadro (${p.round}). ${p.off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`,
-  'bracket.tied': (p) => `${p.round}: hay un partido empatado; el Comité decide quién pasa.`,
+  'bracket.offBracket': (p, f) => `Día ${p.day}: ${p.off === 1 ? 'un partido de los grupos no es' : `${p.off} partidos de los grupos no son`} del cuadro (${f.msg(p.round)}). ${p.off === 1 ? 'Cuenta' : 'Cuentan'} en la tabla; el cuadro avanza solo con sus partidos.`,
+  'bracket.tied': (p, f) => `${f.msg(p.round)}: hay un partido empatado; el Comité decide quién pasa.`,
   // Places and prizes. COPY-19: the place and what it pays, in a sentence; a tie says whose prizes it joins and how it splits them.
   'rank.unfilled': (p, f) => {
     const which = andList(p.places.map((n) => ordinal(String(n))))
@@ -4189,25 +4211,25 @@ export const explain: ExplainCatalog = {
   'prize.place': (p, f) => `El ${ordinal(String(p.place))} lugar paga ${f.money(p.amount)}`,
   'prize.tie': (p, f) => `Empataron ${p.n} en el ${ordinal(String(p.place))} lugar: juntan los premios del ${andList(p.places.map((n) => ordinal(String(n))))}, ${f.money(p.total)}`,
   'prize.tieSplit': (p, f) => `${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
-  'prize.tied': (p) => `Empatados: ${andList(p.names)}`,
-  'individual.incomplete': (p) => `Tarjeta incompleta, hoyos jugados: ${andList(p.cards.map((c) => `${c.name} (${c.thru} de ${c.of})`))}. ${p.cards.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`,
+  'prize.tied': (p, f) => `Empatados: ${andList(p.names.map(f.msg))}`,
+  'individual.incomplete': (p, f) => `Tarjeta incompleta, hoyos jugados: ${andList(p.cards.map((c) => `${f.msg(c.name)} (${c.thru} de ${c.of})`))}. ${p.cards.length === 1 ? 'Queda' : 'Quedan'} después de las tarjetas completas.`,
   // COPY-19: where the prize comes from, in words: the place and the figure, and «si terminara ahora» while it runs.
-  'individual.where': (p) => `${p.name} ${p.final ? 'terminó' : 'va'} ${ordinal(p.place)} con ${t.common.figure(p.figure, p.value, p.kind)}${p.final ? '' : ', si el torneo terminara ahora'}`,
-  'individual.teamSplit': (p, f) => `${p.team} lo reparte entre ${p.n}: ${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
+  'individual.where': (p, f) => `${f.msg(p.name)} ${p.final ? 'terminó' : 'va'} ${ordinal(p.place)} con ${t.common.figure(p.figure, p.value, p.kind)}${p.final ? '' : ', si el torneo terminara ahora'}`,
+  'individual.teamSplit': (p, f) => `${f.msg(p.team)} lo reparte entre ${p.n}: ${f.money(p.total)} entre ${p.n} = ${f.money(p.each)} cada uno${p.rounding ? `, más ${f.money(p.rounding)} del redondeo` : ''}`,
   // Why one entrant sits above another on an equal figure. Strokes are held negated so more is better; the line
   // turns them back into to-par figures («+4», «E», «−1»).
-  'countback.title': (p) => `${p.tied ? 'Empate' : 'Desempate'} con ${p.name}`,
-  'countback.line': (p) => {
+  'countback.title': (p, f) => `${p.tied ? 'Empate' : 'Desempate'} con ${f.msg(p.name)}`,
+  'countback.line': (p, f) => {
     const fig = (n: number) => (p.up ? minus(n) : toParText(-n))
-    return `Día ${p.day}, ${windowLabel(p.window)}: ${p.aName} ${fig(p.a)}${t.common.versus}${p.bName} ${fig(p.b)}`
+    return `Día ${p.day}, ${windowLabel(p.window)}: ${f.msg(p.aName)} ${fig(p.a)}${t.common.versus}${f.msg(p.bName)} ${fig(p.b)}`
   },
   'countback.equalTo': (p) => `Iguales hasta el hoyo ${p.hole}: se reparten los premios.`,
   // Match play's countback is the last day's match, holes up (the Reglamento says so), not the last holes' scores.
   'countback.matchPoints': () => 'Iguales en puntos de partido',
   'countback.matchShare': () => 'Iguales: se reparten los premios de los lugares que ocupan.',
   'countback.matchNone': (p) => (p.over ? `Día ${p.day}: ninguno jugó partido ese día` : `Día ${p.day}: todavía no juegan su partido`),
-  'countback.matchSame': (p) => `Día ${p.day}, ${p.done ? 'cómo terminó' : 'cómo va'} su partido: ${p.aName} ${holesUp(p.a)}${t.common.versus}${p.bName} ${holesUp(p.b)}`,
-  'countback.matchSides': (p) => `Día ${p.day}: ${p.aName} ${matchSide(p.aSide, p.a)}${t.common.versus}${p.bName} ${matchSide(p.bSide, p.b)}`,
+  'countback.matchSame': (p, f) => `Día ${p.day}, ${p.done ? 'cómo terminó' : 'cómo va'} su partido: ${f.msg(p.aName)} ${holesUp(p.a)}${t.common.versus}${f.msg(p.bName)} ${holesUp(p.b)}`,
+  'countback.matchSides': (p, f) => `Día ${p.day}: ${f.msg(p.aName)} ${matchSide(p.aSide, p.a)}${t.common.versus}${f.msg(p.bName)} ${matchSide(p.bSide, p.b)}`,
 
   // The side games.
   'pairs.notPairs': () => 'El grupo no está formado por parejas completas.',
@@ -4245,7 +4267,7 @@ export const explain: ExplainCatalog = {
   'auction.ownerPct': (p) => `${p.pct}% de ${p.name}`,
   // Whose owner takes the pot's rounding pesos, and why him.
   'auction.rounding': (p) => (p.champion ? 'Resto del redondeo al dueño del campeón' : `Resto del redondeo al dueño de ${p.name}, que cobra el premio más alto`),
-  'auction.unfilled': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar (${andList(p.slots)}). El Comité decide.`,
+  'auction.unfilled': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar (${andList(p.slots.map(f.msg))}). El Comité decide.`,
   'auction.noResult': (p, f) => `${p.label}: nadie tiene resultado, así que ningún lugar se ocupa: ${f.money(p.pot)} sin asignar. El Comité decide.`,
   // Once play starts, a lot still unsold is a player outside the Calcutta (MONEY-11).
   'auction.unsold': (p) => {
@@ -4263,12 +4285,12 @@ export const explain: ExplainCatalog = {
   'bet.units': (p, f) => `${p.name}: ${p.units} ${unitWord(p.unit, p.units)} × ${f.money(p.stake)}`,
   'bet.net': (p, f) => `Neto: ${f.money(p.gross)} − ${f.money(p.back)} que ${p.winner} le debía = ${f.money(p.amount)}`,
   'bet.pays': (p, f) => `${p.payer} paga ${f.money(p.amount)}`,
-  'match.bet': (p, f) => `${p.day != null ? `Día ${p.day}, ` : ''}${p.segment}${p.press ? `, presión ${p.press} (desde el ${p.from})` : ''}: ${andList(p.side)} ${p.up} arriba${p.decided ? '' : ' (si terminara ahora)'}, ${f.money(p.stake)}`,
+  'match.bet': (p, f) => `${p.day != null ? `Día ${p.day}, ` : ''}${f.msg(p.segment)}${p.press ? `, presión ${p.press} (desde el ${p.from})` : ''}: ${andList(p.side)} ${p.up} arriba${p.decided ? '' : ' (si terminara ahora)'}, ${f.money(p.stake)}`,
   'match.invalid': (p) => `${p.label}: ${p.n === 1 ? 'un partido tiene' : `${p.n} partidos tienen`} jugadores que no están en el juego.`,
   'contest.disputed': (p) => `${p.label}: ${p.holes.length === 1 ? 'un hoyo en disputa' : `${p.holes.length} hoyos en disputa`} (${p.holes.join(', ')}). El Comité decide.`,
 
   // The settlement (MONEY-07): every number people pay by, explained.
-  'settle.part': (p, f) => (p.of ? t.settleWhy.partOf(p.label, f.signedMoney(p.amount), f.money(p.of)) : t.settleWhy.part(p.label, f.signedMoney(p.amount))),
+  'settle.part': (p, f) => (p.of ? t.settleWhy.partOf(f.msg(p.label), f.signedMoney(p.amount), f.money(p.of)) : t.settleWhy.part(f.msg(p.label), f.signedMoney(p.amount))),
   'settle.squared': (p) => t.moneyScreen.squared(p.from, p.to),
   'settle.pays': (p, f) => t.moneyScreen.pays(p.from, p.to, f.money(p.amount), p.bankerSelf),
   'settle.nets': () => t.settleWhy.nets,
@@ -4296,7 +4318,7 @@ export const explain: ExplainCatalog = {
 
   // Por asignar (MONEY-05, COPY-09).
   'unassigned.title': (p, f) => t.unassigned.title(f.money(p.amount)),
-  'unassigned.budget': (p, f) => t.unassigned.budget(p.label, f.money(p.amount)),
+  'unassigned.budget': (p, f) => t.unassigned.budget(f.msg(p.label), f.money(p.amount)),
   'unassigned.paid': (p, f) => t.unassigned.paid(f.money(p.amount)),
   'unassigned.left': (p, f) => t.unassigned.left(f.money(p.amount)),
   'unassigned.decides': () => t.unassigned.decides,
@@ -4308,10 +4330,10 @@ export const explain: ExplainCatalog = {
   'unassigned.heldTitle': (p, f) => t.unassigned.heldTitle(f.money(p.amount)),
   'unassigned.pendingTiebreak': (p) => t.unassigned.pendingTiebreak(p.day, p.group, p.hole),
   'unassigned.heldWhy': (p, f) => t.unassigned.heldWhy(f.money(p.amount), p.game),
-  'unassigned.from': (p, f) => `${p.label}: ${f.money(p.amount)} sin asignar`,
+  'unassigned.from': (p, f) => `${f.msg(p.label)}: ${f.money(p.amount)} sin asignar`,
   'unassigned.decided': (p) => (p.reason ? `El Comité decidió: ${p.reason}` : 'Lo decidió el Comité'),
-  'unassigned.over': (p, f) => t.unassigned.over(p.label, f.money(p.assigned), f.money(p.left)),
-  'unassigned.orphan': (p, f) => t.unassigned.orphan(p.label, f.money(p.amount)),
+  'unassigned.over': (p, f) => t.unassigned.over(f.msg(p.label), f.money(p.assigned), f.money(p.left)),
+  'unassigned.orphan': (p, f) => t.unassigned.orphan(f.msg(p.label), f.money(p.amount)),
   'unassigned.mismatch': (p, f) => t.unassigned.mismatch(f.money(p.bank), f.money(p.listed)),
 
   // The tournament's warnings.
@@ -4529,4 +4551,76 @@ export const explain: ExplainCatalog = {
   'settings.gameSplit': (p) => `${p.label}: el reparto suma ${p.sum}%, debe sumar 100%.`,
   'settings.matchSides': (p) => `${p.label}: los dos lados de un partido llevan los mismos jugadores.`,
   'settings.matchSamePlayer': (p) => `${p.label}: un jugador no puede estar en los dos lados.`,
+
+  // The labels in the computed state (ARCH-05 stage 3): prizes, flows, Por asignar's buckets, the Calcutta's slots.
+  'prize.label': (p, f) => (p.part ? `${f.msg(p.game)}, ${f.msg(p.part)}` : f.msg(p.game)),
+  'part.place': (p) => ordinal(p.place),
+  'part.day': (p) => `día ${p.day}`,
+  'part.dayGroup': (p) => `día ${p.day}, grupo ${p.group}`,
+  'part.dayPlace': (p) => `${p.day != null ? `Día ${p.day}, ` : ''}${ordinal(p.place)}`,
+  'part.units': (p) => `${p.n} ${unitWord(p.unit, p.n)}`,
+  'part.refund': () => 'entrada devuelta',
+  'part.from': (p) => `de ${p.payer}`,
+  'part.assigned': () => 'asignado por el Comité',
+  'part.refunded': () => 'devolución',
+  'flow.entry': () => 'Inscripción',
+  'flow.lot': (p) => `Calcutta, lote ${p.lot}`,
+  'flow.buyback': (p) => `Recompra ${p.pct}%`,
+  'settle.overpaid': (p) => t.settleWhy.overpaid(KIND_WORDS[p.kind]),
+  'settle.bankCollects': () => t.settleWhy.bankCollects,
+  'settle.bankPays': () => t.settleWhy.bankPays,
+  'unassigned.pool': () => t.unassigned.poolLabel,
+  'unassigned.held': (p) => t.unassigned.heldLabel(p.game, p.day, p.group),
+  'unassigned.heldNote': (p) => t.unassigned.heldNote(p.hole),
+  'auction.slot': (p) =>
+    p.slot === 'rounding' ? 'Redondeo' : p.slot === 'place' ? (p.place === 1 ? 'Campeón' : p.place === 2 ? 'Subcampeón' : `${ordinal(String(p.place))} lugar`) : p.slot === 'bestOfTier' ? `Mejor ${p.tier}` : p.lastPlace,
+  'auction.slots': (p, f) => p.slots.map(f.msg).join(' + '),
+  'name.team': (p) => `Equipo ${p.n}`,
+  'name.pair': (p) => andList(p.names),
+  'figure.label': (p) => ({ points: 'Puntos', gross: 'Gross', net: 'Neto' })[p.unit],
+  'bracket.round': (p) => (p.matches === 1 ? 'Final' : p.matches === 2 ? 'Semifinal' : p.matches === 4 ? 'Cuartos de final' : p.matches === 8 ? 'Octavos de final' : `Ronda de ${p.matches * 2}`),
+  'match.segment': (p) => (p.key === 'front' ? 'Ida' : p.key === 'back' ? 'Vuelta' : p.key === 'total' ? 'Total' : p.holes < 18 ? `${p.holes} hoyos` : 'Partido'),
+
+  // A game's board: its sections' titles, its rows' figures and its notes.
+  'board.units': (p) => `${p.n} ${unitWord(p.unit, p.n)}`,
+  'board.unit': (p) => unitWord(p.unit, 1),
+  'board.hole': (p) => `${p.day != null ? `Día ${p.day}, ` : ''}hoyo ${p.hole}`,
+  'board.byHole': () => 'Hoyo por hoyo',
+  'board.day': (p) => `Día ${p.day}`,
+  'board.holes': (p) => `${p.n} hoyos`,
+  'board.toPar': (p) => toParText(p.n),
+  'board.won': () => '✓',
+  'board.disputed': () => 'En disputa',
+  'board.pending': () => 'Pendiente',
+  'board.claims': (p) => `Reclaman: ${andList(p.names)}`,
+  'board.voided': (p) => `No cuenta (sin par): ${andList(p.names)}`,
+  'board.decidedWin': () => 'Ganó',
+  'board.skinsRiding': (p) => `Se acumulan ${p.n} ${unitWord('skin', p.n)} para el hoyo ${p.hole}.`,
+  'board.skinsUnclaimed': (p) => `${p.n} ${p.n === 1 ? 'skin quedó' : 'skins quedaron'} sin ganador al final de la ronda.`,
+  'board.skinsRule': (p) => `${p.net ? 'Neto' : 'Gross'}${p.carry ? ', empates se acumulan' : ', empates no se acumulan'}.`,
+  'board.skinStake': (p, f) => `Cada skin vale ${f.money(p.stake)} de cada jugador.`,
+  'board.eventStake': (p, f) => (p.unit === 'threePutt' ? `Cada tres putts le cuesta ${f.money(p.stake)} a quien los hace, para cada uno de los demás.` : `Cada ${unitWord(p.unit, 1)} cobra ${f.money(p.stake)} de cada uno de los demás.`),
+  'board.eventRule': (p) => `${p.net ? 'Neto' : 'Gross'}, ${p.eagle ? 'águila' : 'birdie'} o mejor.`,
+  'board.holeStake': (p, f) => `Cada hoyo ganado cobra ${f.money(p.stake)} de cada uno de los demás.`,
+  'board.disputedNote': () => 'Hay hoyos en disputa: el Comité decide en Comité, Juegos.',
+  'board.customDecided': (p) => (p.decided ? 'Decidido por el Comité.' : 'El Comité marca a los ganadores en Comité, Juegos.'),
+  'board.customStake': (p, f) => `Cada uno de los que no ganaron le paga ${f.money(p.stake)} a cada ganador.`,
+  // A game's money in words (COPY-14): a «bote» is only ever what a game's own entrants paid.
+  'board.potUnits': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte por cada ${unitWord(p.unit, 1)}.`,
+  'board.potHoles': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte entre los hoyos ganados.`,
+  'board.potWinners': (p, f) => `${potText(f.money(p.pot), p.side)} es para los ganadores.`,
+  'board.potPlaces': (p, f) => `${potText(f.money(p.pot), p.side)} se reparte ${andList(p.split.map((x, i) => `${x}% al ${i + 1}.º`))}.`,
+  'board.lowRule': (p) => `${p.basis === 'points' ? 'Más puntos Stableford' : `La tarjeta ${p.basis === 'net' ? 'neta' : 'gross'} más baja contra el par`}${p.perRound ? ', por día' : ''}.`,
+  'board.lowIncomplete': (p) =>
+    `${p.day != null ? `Día ${p.day}: ` : ''}tarjeta incompleta, hoyos jugados: ${andList(p.who.map((w) => `${w.name} (${w.thru} de ${p.holes})`))}. Queda${p.who.length === 1 ? '' : 'n'} después de las tarjetas completas.`,
+  'board.matchStatus': (p) => matchStatus(p.up, p.decided, p.remaining, p.plural),
+  'board.matchPress': (p) => (p.side == null ? matchStatus(p.up, p.decided, p.remaining, false) : `${andList(p.side)} ${matchStatus(p.up, p.decided, p.remaining, p.side.length > 1).toLowerCase()}`),
+  'board.matchThru': (p, f) => [p.thru ? `después de ${p.thru}` : 'sin empezar', ...p.presses.map((x) => `presión desde el ${x.from}: ${f.msg(x.status)}`)].join(', '),
+  'board.matchMoney': () => 'Van',
+  'board.matchPays': (p) => `${andList(p.side)} paga${p.side.length > 1 ? 'n' : ''}`,
+  'board.signedMoney': (p, f) => `+${f.money(p.amount)}`,
+  'board.matchTitle': (p) => `${p.day != null ? `Día ${p.day}: ` : ''}${andList(p.a)} contra ${andList(p.b)}`,
+  'board.matchRule': (p, f) => `${p.nassau ? 'Nassau: ida, vuelta y total' : 'Match play a 18'}, ${p.net ? 'neto' : 'gross'}${p.stake ? `, ${f.money(p.stake)} por apuesta` : ''}.`,
+  'board.matchPressRule': (p) => `Presión automática al ir ${p.at} abajo (máximo ${p.max} por vuelta).`,
+  'board.noMatches': () => 'Todavía no hay partidos: el Comité los arma en Comité, Juegos.',
 }

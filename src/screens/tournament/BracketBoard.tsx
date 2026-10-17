@@ -21,19 +21,19 @@ export function BracketBoard({ bracket }: { bracket: BracketState }) {
       {bracket.champion && (
         <p className={styles.champion}>
           <span className="label">{B.champion}</span>
-          <strong>{bracket.champion.name}</strong>
+          <strong>{words(bracket.champion.name)}</strong>
         </p>
       )}
       {bracket.rounds.map((round) => (
         <section key={round.number} className={styles.round}>
-          <h2 className={`h3 ${styles.roundName}`}>{round.name}</h2>
+          <h2 className={`h3 ${styles.roundName}`}>{words(round.name)}</h2>
           {round.matches.map((match, i) => {
             const [a, b] = match.sides
             return (
               <div key={`${a.id}-${b?.id ?? i}`} className={styles.match}>
-                <span className={`${styles.side} ${match.winner?.id === a.id ? styles.won : ''}`}>{a.name}</span>
+                <span className={`${styles.side} ${match.winner?.id === a.id ? styles.won : ''}`}>{words(a.name)}</span>
                 <span className={styles.result}>{b ? match.text : B.bye}</span>
-                <span className={`${styles.side} ${styles.sideRight} ${match.winner && b && match.winner.id === b.id ? styles.won : ''}`}>{b?.name ?? '—'}</span>
+                <span className={`${styles.side} ${styles.sideRight} ${match.winner && b && match.winner.id === b.id ? styles.won : ''}`}>{b ? words(b.name) : '—'}</span>
               </div>
             )
           })}

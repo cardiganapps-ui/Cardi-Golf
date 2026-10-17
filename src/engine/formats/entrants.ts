@@ -2,7 +2,7 @@
  * Who competes in the main standings. An individual format enters every
  * player; a team format enters the teams the Comité drew.
  */
-import { t } from '../../i18n/es-MX'
+import { label, msg } from '../messages'
 import type { CountbackInput } from '../core/ranking'
 import type { PlayerRound } from '../core/types'
 import type { Id } from '../types'
@@ -12,7 +12,7 @@ import type { Entrant, FormatContext } from './format'
 export function playerEntrants(ctx: FormatContext): Entrant[] {
   return [...ctx.snapshot.players]
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((p) => ({ id: p.id, playerIds: [p.id], name: p.displayName, isTeam: false }))
+    .map((p) => ({ id: p.id, playerIds: [p.id], name: label(p.displayName), isTeam: false }))
 }
 
 /**
@@ -32,7 +32,7 @@ export function teamEntrants(ctx: FormatContext): Entrant[] {
       .map((team) => ({
         id: team.id,
         playerIds: team.playerIds,
-        name: team.name?.trim() || `Equipo ${team.number}`,
+        name: team.name?.trim() ? label(team.name.trim()) : msg('name.team', { n: team.number }),
         isTeam: true,
       }))
   }
@@ -40,7 +40,7 @@ export function teamEntrants(ctx: FormatContext): Entrant[] {
     .map((pair) => ({
       id: pair.id,
       playerIds: [pair.player1Id, pair.player2Id],
-      name: pair.name?.trim() || t.common.andList([name(pair.player1Id), name(pair.player2Id)]),
+      name: pair.name?.trim() ? label(pair.name.trim()) : msg('name.pair', { names: [name(pair.player1Id), name(pair.player2Id)] }),
       isTeam: true,
     }))
     .sort((a, b) => Math.min(...a.playerIds.map((p) => order.get(p) ?? 0)) - Math.min(...b.playerIds.map((p) => order.get(p) ?? 0)))

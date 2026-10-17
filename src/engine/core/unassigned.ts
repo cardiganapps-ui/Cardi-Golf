@@ -26,17 +26,14 @@
  * player, or the house); one that does not, or whose bucket is gone, moves
  * nothing and is flagged until the Comité voids it. Integer pesos throughout.
  */
-import { t } from '../../i18n/es-MX'
 import type { TournamentSettings } from '../settings/schema'
 import type { PrizeCheck } from '../settings/prizeCheck'
-import { msg, say, type Msg } from '../messages'
+import { label, msg, say, type Msg } from '../messages'
 import type { Explanation, Id, MoneyAdjustment, Snapshot } from '../types'
 import type { PrizeAward } from '../modules/module'
 import type { AuctionState } from '../modules/auction'
 import type { SnakeState } from '../modules/snake'
-import type { GameResultState } from '../games/game'
-
-const U = t.unassigned
+import { prizeLabel, type GameResultState } from '../games/game'
 
 /** Who put money into a pot, and how much: what a pro-rata refund splits by. */
 export interface Contributor {
@@ -47,7 +44,8 @@ export interface Contributor {
 export interface UnassignedBucket {
   /** Stable: a module id (`individual`, `bestRound`...), `game:<id>`, `calcutta`, or `pool` (entries no prize claims). */
   key: string
-  label: string
+  /** Its game's label, or the entries no prize claims (`unassigned.pool`). */
+  label: Msg
   /** The pot the money sits in: `main`, `calcutta`, or a side game's id. */
   potId: string
   /** What the rules left unassigned, before the Comité's decisions. */
@@ -65,10 +63,10 @@ export interface UnassignedBucket {
 export interface HeldMoney {
   /** `snake:<round>:<group>`. */
   key: string
-  label: string
+  label: Msg
   amount: number
   /** What to answer, and where. */
-  note: string
+  note: Msg
   why: Explanation
 }
 
@@ -79,8 +77,8 @@ export interface Assignment {
   /** The call that wrote it (`money_adjustments.call_id`). */
   callId: Id
   sourceKey: string
-  /** The bucket's label, or the key when the bucket is gone. */
-  label: string
+  /** The bucket's label, or the key's when the bucket is gone. */
+  label: Msg
   rows: MoneyAdjustment[]
   total: number
   reason: string
@@ -159,9 +157,9 @@ export function heldMoney(input: Pick<UnassignedInput, 'settings' | 'snake' | 'c
     .filter((g) => g.pendingHole != null && g.pot > 0)
     .map((g) => ({
       key: `snake:${g.roundId}:${g.groupId}`,
-      label: U.heldLabel(label, g.roundNumber, g.groupNumber),
+      label: msg('unassigned.held', { game: label, day: g.roundNumber, group: g.groupNumber }),
       amount: g.pot,
-      note: U.heldNote(g.pendingHole!),
+      note: msg('unassigned.heldNote', { hole: g.pendingHole! }),
       why: { title: msg('unassigned.heldTitle', { amount: g.pot }), steps: [msg('unassigned.pendingTiebreak', { day: g.roundNumber, group: g.groupNumber, hole: g.pendingHole! }), msg('unassigned.heldWhy', { amount: g.pot, game: label })] },
     }))
 }
@@ -196,14 +194,15 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   }
 
   const out: UnassignedBucket[] = []
-  const add = (key: string, label: string, potId: string, budget: number, notes: Msg[], contributors?: Contributor[], waiting = 0) => {
+  const add = (key: string, game: string, potId: string, budget: number, notes: Msg[], contributors?: Contributor[], waiting = 0) => {
     const given = paid.get(key) ?? 0
     const amount = budget - given - waiting
     if (amount <= 0) return
     // The engine's own word on it («Skins: nadie ganó un skin…»), without its «El Comité decide», said once below.
-    const own = warnings.filter((w) => opensWith(w) === label).map((warning) => msg('unassigned.own', { warning }))
-    const steps = [msg('unassigned.budget', { label, amount: budget }), msg('unassigned.paid', { amount: given }), ...(waiting > 0 ? [msg('unassigned.heldApart', { amount: waiting })] : []), ...notes, ...own, msg('unassigned.left', { amount }), say('unassigned.decides')]
-    out.push({ key, label, potId, amount, assigned: 0, remaining: amount, why: { title: msg('unassigned.title', { amount }), steps }, contributors })
+    const own = warnings.filter((w) => opensWith(w) === game).map((warning) => msg('unassigned.own', { warning }))
+    const name = label(game)
+    const steps = [msg('unassigned.budget', { label: name, amount: budget }), msg('unassigned.paid', { amount: given }), ...(waiting > 0 ? [msg('unassigned.heldApart', { amount: waiting })] : []), ...notes, ...own, msg('unassigned.left', { amount }), say('unassigned.decides')]
+    out.push({ key, label: name, potId, amount, assigned: 0, remaining: amount, why: { title: msg('unassigned.title', { amount }), steps }, contributors })
   }
 
   // The entries: each module's and main-pot game's line, as the prize check budgets it.
@@ -217,7 +216,7 @@ export function unassignedBuckets(input: UnassignedInput): UnassignedBucket[] {
   if (pool.difference > 0) {
     out.push({
       key: 'pool',
-      label: U.poolLabel,
+      label: say('unassigned.pool'),
       potId: 'main',
       amount: pool.difference,
       assigned: 0,
@@ -285,11 +284,11 @@ function opensWith(w: Msg): string | null {
 }
 
 /** A bucket's label from its key, for an assignment whose bucket is gone. */
-export function bucketLabel(key: string, settings: TournamentSettings): string {
-  if (key === 'pool') return U.poolLabel
-  if (key === 'calcutta') return settings.modules.auction.label
-  if (key.startsWith('game:')) return settings.games.find((g) => g.id === key.slice(5))?.label ?? key.slice(5)
-  return settings.modules[key as keyof TournamentSettings['modules']]?.label ?? key
+export function bucketLabel(key: string, settings: TournamentSettings): Msg {
+  if (key === 'pool') return say('unassigned.pool')
+  if (key === 'calcutta') return label(settings.modules.auction.label)
+  if (key.startsWith('game:')) return label(settings.games.find((g) => g.id === key.slice(5))?.label ?? key.slice(5))
+  return label(settings.modules[key as keyof TournamentSettings['modules']]?.label ?? key)
 }
 
 const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0)
@@ -304,7 +303,7 @@ export function applyAdjustments(
   buckets: UnassignedBucket[],
   adjustments: readonly MoneyAdjustment[],
   closing: boolean,
-  labelOf: (key: string) => string = (k) => k,
+  labelOf: (key: string) => Msg = (k) => label(k),
   held: HeldMoney[] = [],
 ): UnassignedState {
   const calls = new Map<string, MoneyAdjustment[]>()
@@ -348,7 +347,7 @@ export function applyAdjustments(
       awards.push({
         moduleId: 'adjustment',
         potId: bucket.potId,
-        label: r.kind === 'refund' ? U.refundLabel(bucket.label) : U.awardLabel(bucket.label),
+        ...prizeLabel(bucket.label, say(r.kind === 'refund' ? 'part.refunded' : 'part.assigned')),
         playerId: r.toPlayerId,
         amount: r.amount,
         final: true,

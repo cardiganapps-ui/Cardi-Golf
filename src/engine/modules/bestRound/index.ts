@@ -6,6 +6,7 @@ import { countback, flattenRanks, isFinal, rankField, splitPrizes, type RankGrou
 import type { Explanation, Id } from '../../types'
 import { msg, type Msg } from '../../messages'
 import type { GameModule, PrizeAward } from '../module'
+import { prizeLabel } from '../../games/game'
 
 export interface BestRoundDay {
   roundId: Id
@@ -73,7 +74,7 @@ export const bestRoundModule: GameModule<BestRoundState, 'bestRound'> = {
       for (const [playerId, w] of Object.entries(d.winners)) {
         out.push({
           moduleId: 'bestRound',
-          label: `${label}, día ${d.roundNumber}`,
+          ...prizeLabel(label, msg('part.day', { day: d.roundNumber })),
           playerId,
           amount: w.amount,
           final: d.final,

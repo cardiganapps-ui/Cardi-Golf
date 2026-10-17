@@ -20,7 +20,7 @@ import { settingsSense } from '../engine/settings/sense'
 import { TournamentSettingsSchema } from '../engine/settings/schema'
 import { stablefordFormat } from '../engine/formats/stableford'
 import { DEFAULT_SETTINGS } from '../engine/settings/presets'
-import { msg, type Msg, type MsgCode } from '../engine/messages'
+import { msg, say, type Msg, type MsgCode } from '../engine/messages'
 import { parseSettings } from '../engine/settings/schema'
 import { formatMoney, formatMoneyCents } from '../lib/money'
 import { explain } from './es-MX'
@@ -89,6 +89,23 @@ describe('the engine says codes, and the renderer writes them (ARCH-05)', () => 
     expect(issueWords({ message: 'Too small' }, 'MXN')).toBe('Too small')
   })
 
+  it.each(STATES.map((s) => [s.name, s] as const))('%s: the labels and boards of the state are codes too (ARCH-05 stage 3)', (_, s) => {
+    const st = s.state
+    const said: unknown[] = [
+      ...st.prizes.flatMap((p) => [p.label, ...(p.part ? [p.part] : [])]),
+      ...st.money.flows.map((f) => f.label),
+      ...st.money.unassigned.buckets.map((b) => b.label),
+      ...st.money.unassigned.held.flatMap((h) => [h.label, h.note]),
+      ...st.money.unassigned.assignments.map((a) => a.label),
+      ...(st.modules.auction ? [...st.modules.auction.slots.map((x) => x.label), ...st.modules.auction.stakes.map((x) => x.label)] : []),
+      ...(st.modules.individual ? [st.modules.individual.figureLabel, ...st.modules.individual.rows.map((r) => r.entrant.name)] : []),
+      ...(st.modules.pairs ? st.modules.pairs.rows.map((r) => r.name) : []),
+      ...(st.bracket ? st.bracket.rounds.map((r) => r.name) : []),
+      ...Object.values(st.games).flatMap((g) => [...g.board.notes, ...g.board.sections.flatMap((sec) => [sec.title, ...sec.rows.flatMap((r) => [r.title, r.label, r.figure, r.sub])])].filter((x) => x !== undefined)),
+    ]
+    expect(said.filter((x) => !isMsg(x))).toEqual([])
+  })
+
   it('every code the engine says has its words', () => {
     const codes = new Set(STATES.flatMap((s) => [...messages(s.state, ''), ...messages(s.extra, '')].map(([, m]) => m.code)))
     for (const code of codes) expect(Object.keys(explain), code).toContain(code)
@@ -97,7 +114,7 @@ describe('the engine says codes, and the renderer writes them (ARCH-05)', () => 
   it('writes money in the tournament’s currency, with the app’s one formatter', () => {
     for (const currency of ['MXN', 'USD', 'EUR']) {
       expect(renderMsg(msg('prize.place', { place: 1, amount: 10000 }), currency)).toBe(`El 1.º lugar paga ${formatMoney(10000, currency)}`)
-      expect(renderMsg(msg('settle.part', { label: 'Inscripción', amount: -500, of: null }), currency)).toBe(`Inscripción: ${formatMoney(-500, currency)}`)
+      expect(renderMsg(msg('settle.part', { label: say('flow.entry'), amount: -500, of: null }), currency)).toBe(`Inscripción: ${formatMoney(-500, currency)}`)
       expect(renderMsg(msg('auction.shareOf', { share: 0.55, pot: 11750, raw: 6462.5 }), currency)).toBe(`55% de ${formatMoney(11750, currency)} = ${formatMoneyCents(6462.5, currency)}`)
     }
     // The same figure on the screen and in its «¿Cómo se calculó?»: «$10,000» on both, never «$10000».

@@ -15,7 +15,7 @@ export const stablefordFormat: MainFormat = {
   id: 'stableford',
   defaultLabel: 'Stableford',
   higherIsBetter: () => true,
-  figureLabel: () => 'Puntos',
+  figureLabel: () => msg('figure.label', { unit: 'points' }),
 
   describe(settings: TournamentSettings): Explanation {
     // COPY-12: the whole table, albatross included (§5.3), and one hole worked through.

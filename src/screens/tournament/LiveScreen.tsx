@@ -408,7 +408,7 @@ export function LiveScreen() {
           <EmptyState title={t.enter.noPlayers} body={t.enter.noPlayersHint} />
         ) : (
           <Board>
-            <BoardHead figureLabel={grossView ? t.live.gross : board?.figureLabel ?? t.live.points} dense={rows.length > 20} />
+            <BoardHead figureLabel={grossView ? t.live.gross : board ? words(board.figureLabel) : t.live.points} dense={rows.length > 20} />
             {list.map((r, i) => {
                 const members = r.entrant.playerIds
                 // The first member stands for a team when a row is tapped.
@@ -444,7 +444,7 @@ export function LiveScreen() {
                     place={i}
                     animate={animate}
                     pos={grossView ? grossLabel(i) : r.label}
-                    name={byTeam ? r.entrant.name : p.displayName}
+                    name={byTeam ? words(r.entrant.name) : p.displayName}
                     teamNames={byTeam ? t.common.andList(members.map((id) => byId.get(id)?.displayName ?? id)) : null}
                     tier={p.tier ?? null}
                     estimated={!!state.core.handicaps[p.id]?.estimated}

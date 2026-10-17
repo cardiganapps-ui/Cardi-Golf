@@ -21,8 +21,8 @@ import { label, type Explanation } from '../messages'
 
 const why: Explanation = { title: label(''), steps: [] }
 
-function prize(playerId: Id, amount: number, opts: Partial<PrizeAward> = {}): PrizeAward {
-  return { moduleId: 'individual', label: 'Individual, 1º', playerId, amount, final: true, why, ...opts }
+function prize(playerId: Id, amount: number, opts: Partial<Omit<PrizeAward, 'label'>> & { label?: string } = {}): PrizeAward {
+  return { moduleId: 'individual', playerId, amount, final: true, why, ...opts, label: label(opts.label ?? 'Individual, 1º') }
 }
 
 function settings(over: Partial<TournamentSettings> = {}): TournamentSettings {

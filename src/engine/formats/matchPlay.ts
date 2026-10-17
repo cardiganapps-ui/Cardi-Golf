@@ -135,7 +135,7 @@ export const matchPlayFormat: MainFormat = {
   id: 'matchPlay',
   defaultLabel: 'Match play',
   higherIsBetter: () => true,
-  figureLabel: () => 'Puntos',
+  figureLabel: () => msg('figure.label', { unit: 'points' }),
 
   describe(settings: TournamentSettings): Explanation {
     const o = settings.modules.individual.formatOptions

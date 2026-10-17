@@ -30,7 +30,7 @@ import { dayFigureText, holeMark, ownDayText } from '../lib/figureText'
 import { Wordmark } from './primitives'
 import { TournamentLogo } from './TournamentLogo'
 import styles from './ShareCard.module.css'
-import { useCurrency } from './currency'
+import { useCurrency, useWords } from './currency'
 import { localDay } from '../lib/localWhen'
 
 /** `settle`: the settlement as Dinero shows it, vía banco (the default) or sin banco. */
@@ -99,6 +99,7 @@ export const ShareCardButton = memo(function ShareCardButton({ what, label, clas
 
 function Card({ what }: { what: ShareKind }) {
   const cur = useCurrency()
+  const words = useWords()
   const data = useTournament((s) => s.data)!
   const ctx = useContext(TournamentContext)
   const link = cardLink(ctx?.spectator)
@@ -139,7 +140,7 @@ function Card({ what }: { what: ShareKind }) {
     const row = (r: (typeof rows)[number]) => (
       <div key={r.playerId} className={`${styles.row} ${me && r.entrant.playerIds.includes(me) ? styles.mine : ''}`}>
         <span className={styles.pos}>{r.label}</span>
-        <span className={styles.name}>{r.entrant.isTeam ? r.entrant.name : nameOf(r.playerId)}</span>
+        <span className={styles.name}>{r.entrant.isTeam ? words(r.entrant.name) : nameOf(r.playerId)}</span>
         <span className={styles.small}>{daysText(r.perRound)}</span>
         <span className={styles.big}>{r.figure.text}</span>
       </div>
@@ -166,7 +167,7 @@ function Card({ what }: { what: ShareKind }) {
     const scoring = mainScoring(settings)
     return (
       <>
-        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${row.entrant.name}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
+        {header(`${p.fullName}${row ? `, ${ordinal(row.label)}${row.entrant.isTeam ? ` con ${words(row.entrant.name)}` : ''}, ${t.common.figure(row.figure.text, row.figure.value, kind)}` : ''}`)}
         {state.core.roundIds.map((rid, i) => {
           const pr = state.core.rounds[rid]?.[p.id]
           if (!pr || pr.thru === 0) return null
