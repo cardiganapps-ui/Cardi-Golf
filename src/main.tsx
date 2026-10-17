@@ -15,7 +15,10 @@ import { startBadgeSync } from './data/push'
 import { useTournament } from './data/tournamentStore'
 import { launchesIntoTournament } from './lib/launch'
 import { TournamentGate } from './app/screens'
+import { watchTextSize } from './lib/textSize'
 
+// The phone's text size, Dynamic Type on an iPhone, sets the rem before the first render (A11Y-08).
+watchTextSize()
 // A screen from the build before a deploy loads the new build instead of failing (REL-13).
 startChunkRecovery()
 // Android's install offer comes once and early: kept for the «Instalar» button (PWA-08).

@@ -18,6 +18,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactElement,
   type ReactNode,
+  type Ref,
   type RefObject,
 } from 'react'
 import { NavLink, type NavLinkProps } from 'react-router'
@@ -288,9 +289,9 @@ export function Segmented<T extends string>({
  * lit when its route is (`active` lights it from elsewhere: Stats and Reglamento live under Más). `badge`: a
  * count on its icon, `bad` when it is something the server refused.
  */
-export function TabBar({ children }: { children: ReactNode }) {
+export function TabBar({ children, ref }: { children: ReactNode; ref?: Ref<HTMLElement> }) {
   return (
-    <nav className={s.tabbar} aria-label={t.common.sections}>
+    <nav ref={ref} className={s.tabbar} aria-label={t.common.sections}>
       {children}
     </nav>
   )

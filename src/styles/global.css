@@ -14,9 +14,10 @@ html {
   -webkit-tap-highlight-color: transparent;
   /* A11Y-06 (WCAG 2.4.11): what the keyboard focuses scrolls clear of the sticky header (56 px and the status
      bar's band) and the sticky tab bar (56 px and the home indicator), with room to spare
-     (e2e/fixtures/focusClear.spec.ts, the Tarjeta's save bar included). */
-  scroll-padding-top: calc(var(--safe-top) + 56px + var(--s2));
-  scroll-padding-bottom: calc(56px + var(--safe-bottom) + var(--s2));
+     (e2e/fixtures/focusClear.spec.ts, the Tarjeta's save bar included). The bars grow with the text: the tournament
+     shell says their real heights (A11Y-07). */
+  scroll-padding-top: calc(var(--safe-top) + var(--shell-header, 56px) + var(--s2));
+  scroll-padding-bottom: calc(var(--shell-tabbar, calc(56px + var(--safe-bottom))) + var(--s2));
 }
 
 body {
