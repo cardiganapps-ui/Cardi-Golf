@@ -51,16 +51,16 @@ describe('anonRpc: a public function as anon, with no session (STRAT-05)', () =>
 
   it('a refusal keeps its code and status, so the page says it as it says any other', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ code: 'PGRST202', message: 'Could not find the function' }), { status: 404 }))
-    await expect(anonRpc('spectator_board')).rejects.toMatchObject({ code: 'PGRST202', status: 404, message: 'Could not find the function' })
+    await expect(anonRpc('spectator_board', { p_token: 'x' })).rejects.toMatchObject({ code: 'PGRST202', status: 404, message: 'Could not find the function' })
     fetchMock.mockResolvedValue(new Response('<html>Bad gateway</html>', { status: 502, statusText: 'Bad Gateway' }))
-    const e = await anonRpc('spectator_board').catch((x: unknown) => x)
+    const e = await anonRpc('spectator_board', { p_token: 'x' }).catch((x: unknown) => x)
     expect(e).toMatchObject({ status: 502 })
     expect(isTransient(e)).toBe(true)
   })
 
   it('no signal is a network error, as the app’s client reports it', async () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
-    const e = await anonRpc('spectator_board').catch((x: unknown) => x)
+    const e = await anonRpc('spectator_board', { p_token: 'x' }).catch((x: unknown) => x)
     expect(isTransient(e)).toBe(true)
     expect(humanError(e)).toBe(humanError(new TypeError('Failed to fetch')))
   })

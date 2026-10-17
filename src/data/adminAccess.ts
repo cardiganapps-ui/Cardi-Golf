@@ -4,8 +4,7 @@
  * the reason, newest first. Never who the operator is. A database without
  * 0068 answers null, and the screen shows nothing.
  */
-import { supabase } from '../lib/supabase'
-import { ApiError } from './apiError'
+import { isMissingFunction, rpc } from './rpc'
 
 export interface AdminAccess {
   id: number
@@ -19,10 +18,10 @@ export interface AdminAccess {
 }
 
 export async function myAdminAccesses(): Promise<AdminAccess[] | null> {
-  const { data, error } = await supabase().rpc('my_admin_accesses')
-  if (error) {
-    if (error.code === 'PGRST202' || error.code === '42883') return null
-    throw ApiError.from(error)
+  try {
+    return (await rpc('my_admin_accesses').as<AdminAccess[] | null>()) ?? []
+  } catch (e) {
+    if (isMissingFunction(e)) return null
+    throw e
   }
-  return (data as AdminAccess[] | null) ?? []
 }

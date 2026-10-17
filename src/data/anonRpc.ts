@@ -11,13 +11,22 @@
  * written to storage. The same deadline as every other request (REL-14).
  */
 import { fetchWithTimeout } from '../lib/fetchWithTimeout'
-import { ApiError } from './api'
+import { ApiError } from './apiError'
+import { asCall, type ArgsOf, type Call, type FnName, type FnReturns } from './rpc'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-/** PostgREST's answer to `rpc/<name>`, or an `ApiError` with its code and the HTTP status, as supabase-js gives them. */
-export async function anonRpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+/**
+ * PostgREST's answer to `rpc/<name>`, or an `ApiError` with its code and the
+ * HTTP status, as supabase-js gives them. Named and typed as `rpc` is (the
+ * generated types, ARCH-03).
+ */
+export function anonRpc<N extends FnName>(name: N, ...[args]: ArgsOf<N>): Call<FnReturns<N>> {
+  return asCall(name, ask(name, (args ?? {}) as Record<string, unknown>) as Promise<FnReturns<N>>)
+}
+
+async function ask(name: string, args: Record<string, unknown>): Promise<unknown> {
   if (!url || !anonKey) throw new Error('Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.')
   const res = await fetchWithTimeout(`${url}/rest/v1/rpc/${encodeURIComponent(name)}`, {
     method: 'POST',
@@ -36,5 +45,5 @@ export async function anonRpc<T>(name: string, args: Record<string, unknown> = {
     const error = ApiError.from({ message: typeof e.message === 'string' ? e.message : res.statusText || `HTTP ${res.status}`, code: typeof e.code === 'string' ? e.code : null })
     throw Object.assign(error, { status: res.status })
   }
-  return body as T
+  return body
 }

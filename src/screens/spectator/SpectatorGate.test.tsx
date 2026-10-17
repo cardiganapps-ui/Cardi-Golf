@@ -29,13 +29,18 @@ const appClient = vi.fn(() => {
 })
 vi.mock('../../lib/supabase', () => ({ supabase: () => ({ rpc: appClient, from, auth, channel: from, removeChannel: from }), supabaseConfigured: true }))
 vi.mock('../../data/anonRpc', async () => {
+  const { asCall } = await import('../../data/rpc')
   const { ApiError } = await import('../../data/api')
   return {
-    anonRpc: async (name: string, args: Record<string, unknown>) => {
-      const res = await rpc(name, args)
-      if (res.error) throw ApiError.from(res.error)
-      return res.data
-    },
+    anonRpc: (name: string, args: Record<string, unknown>) =>
+      asCall(
+        name,
+        (async () => {
+          const res = await rpc(name, args)
+          if (res.error) throw ApiError.from(res.error)
+          return res.data
+        })(),
+      ),
   }
 })
 vi.mock('canvas-confetti', () => ({ default: vi.fn() }))

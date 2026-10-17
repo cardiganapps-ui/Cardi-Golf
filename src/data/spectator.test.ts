@@ -21,13 +21,18 @@ const rpc = vi.fn()
 vi.mock('../lib/supabase', () => ({ supabase: () => ({ rpc: () => { throw new Error('a link asks nothing with the app’s client') }, from: () => { throw new Error('a link to watch reads no table') } }), supabaseConfigured: true }))
 // The boards are asked as anon with no session; `rpc` answers as the server would.
 vi.mock('./anonRpc', async () => {
+  const { asCall } = await import('./rpc')
   const { ApiError } = await import('./api')
   return {
-    anonRpc: async (name: string, args: Record<string, unknown>) => {
-      const res = await rpc(name, args)
-      if (res.error) throw ApiError.from(res.error)
-      return res.data
-    },
+    anonRpc: (name: string, args: Record<string, unknown>) =>
+      asCall(
+        name,
+        (async () => {
+          const res = await rpc(name, args)
+          if (res.error) throw ApiError.from(res.error)
+          return res.data
+        })(),
+      ),
   }
 })
 

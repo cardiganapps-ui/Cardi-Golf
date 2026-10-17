@@ -5,7 +5,8 @@ name: Database
 # it to production; db.mjs's checksums; the SQL tests on the two-tenant seed;
 # the test server's rules against the real ones (scripts/server-rules.mjs);
 # the Polo index's SQL against the shared WHS cases (scripts/whs-parity.mjs);
-# Supabase's advisors held at the baseline. Runs on pull requests that are
+# Supabase's advisors held at the baseline; the generated TypeScript types
+# (src/data/database.types.ts) equal what the chain makes. Runs on pull requests that are
 # ready for review and touch the database or its scripts, on main, and nightly.
 # Drafts skip it (Actions minutes are budgeted once the repository is private).
 on:
@@ -24,6 +25,8 @@ on:
       - 'scripts/restore-r2.mjs'
       - 'scripts/backup-local.mjs'
       - 'src/lib/backupTables.ts'
+      - 'scripts/gen-db-types.mjs'
+      - 'src/data/database.types.ts'
       - '.github/workflows/db.yml'
   push:
     branches: [main]
@@ -40,6 +43,8 @@ on:
       - 'scripts/restore-r2.mjs'
       - 'scripts/backup-local.mjs'
       - 'src/lib/backupTables.ts'
+      - 'scripts/gen-db-types.mjs'
+      - 'src/data/database.types.ts'
       - '.github/workflows/db.yml'
   schedule:
     - cron: '23 8 * * *'
@@ -75,5 +80,5 @@ jobs:
           sudo systemctl start postgresql.service
           sudo -u postgres psql -X -q -c "alter user postgres password 'postgres'"
           psql -X -Atc 'select version()'
-      - name: Replay, checksums, SQL tests, advisors
+      - name: Replay, generated types, checksums, SQL tests, advisors
         run: bash scripts/db-test.sh

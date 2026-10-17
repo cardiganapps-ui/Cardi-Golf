@@ -5,8 +5,7 @@
  * phone that went out of signal can be found before a day closes.
  */
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
-import { ApiError } from './api'
+import { isMissingFunction, rpc } from './rpc'
 
 export interface TournamentDevice {
   playerId: string | null
@@ -33,17 +32,16 @@ interface DevicesState {
 }
 export const useTournamentDevices = create<DevicesState>(() => ({ tournamentId: null, items: [], status: 'idle', fixture: false }))
 
-/** A database without 0037 answers these: the list is «no disponible», never an error. */
-const MISSING = new Set(['PGRST202', '42883'])
 
 /** The tournament's phones, or null on a database without them. */
 export async function tournamentDevices(tournamentId: string): Promise<TournamentDevice[] | null> {
-  const { data, error } = await supabase().rpc('tournament_devices', { p_tournament_id: tournamentId })
-  if (error) {
-    if (MISSING.has(error.code ?? '')) return null
-    throw ApiError.from(error)
+  try {
+    const data = await rpc('tournament_devices', { p_tournament_id: tournamentId }).as<TournamentDevice[] | null>()
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (isMissingFunction(e)) return null
+    throw e
   }
-  return Array.isArray(data) ? (data as TournamentDevice[]) : []
 }
 
 let generation = 0

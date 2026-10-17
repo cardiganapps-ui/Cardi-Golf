@@ -92,7 +92,7 @@ export function MoreScreen() {
   }
   const player = data?.snapshot.players.find((p) => p.id === me.playerId)
   const link = `${window.location.origin}/t/${slug}`
-  const joinCode = data?.snapshot.tournament.joinCode ?? lookup.joinCode
+  const joinCode = data?.snapshot.tournament.joinCode ?? lookup.joinCode ?? ''
 
   return (
     <div className={styles.screen}>

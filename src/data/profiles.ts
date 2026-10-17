@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { create } from 'zustand'
+import { z } from 'zod'
 import { withTimeout } from '../lib/timeout'
 import { supabase } from '../lib/supabase'
 import { ApiError } from './api'
@@ -13,6 +14,8 @@ import { humanError } from '../lib/humanError'
 import { downscaleImage, extensionFor } from '../lib/images'
 import { whsIndex10, whsRule } from '../engine/profile/whs'
 import type { PublishRow } from '../engine/profile/results'
+import { rpc } from './rpc'
+import type { Tables } from './database.types'
 
 export interface MyProfile {
   id: string
@@ -158,24 +161,8 @@ export interface ProfilePatch {
   discoverable?: boolean
 }
 
-interface ProfileRow {
-  id: string
-  handle: string
-  display_name: string
-  full_name: string | null
-  avatar_url: string | null
-  home_club: string | null
-  city: string | null
-  bio: string | null
-  index_source: 'polo' | 'manual'
-  manual_index: number | string | null
-  polo_index: number | string | null
-  polo_index_rounds: number
-  polo_index_at: string | null
-  discoverable: boolean
-  created_at: string
-  updated_at: string
-}
+/** A profile's row as the server answers it (the generated types, ARCH-03). */
+type ProfileRow = Tables<'profiles'>
 
 const num = (v: number | string | null): number | null => (v == null ? null : Number(v))
 
@@ -189,7 +176,8 @@ export function mapProfile(r: ProfileRow): MyProfile {
     homeClub: r.home_club,
     city: r.city,
     bio: r.bio,
-    indexSource: r.index_source,
+    // A CHECK the catalog's types don't carry (0013: 'polo' | 'manual').
+    indexSource: r.index_source as MyProfile['indexSource'],
     manualIndex: num(r.manual_index),
     poloIndex: num(r.polo_index),
     poloIndexRounds: r.polo_index_rounds,
@@ -200,12 +188,6 @@ export function mapProfile(r: ProfileRow): MyProfile {
   }
 }
 
-async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase().rpc(fn, args)
-  if (error) throw ApiError.from(error)
-  return data as T
-}
-
 /** Names to start a new profile with: the player it is saved from. Ignored once the profile exists. */
 export interface NameHint {
   displayName: string
@@ -214,14 +196,14 @@ export interface NameHint {
 
 /** The signed-in account's profile, created on first call. */
 export async function ensureMyProfile(hint?: NameHint | null): Promise<MyProfile> {
-  return mapProfile(await rpc<ProfileRow>('ensure_my_profile', hint ? { p_display_name: hint.displayName, p_full_name: hint.fullName } : undefined))
+  return mapProfile(await rpc('ensure_my_profile', hint ? { p_display_name: hint.displayName, p_full_name: hint.fullName } : undefined))
 }
 
 /** The signed-in account's profile if it has one (no create). */
 export async function getMyProfile(): Promise<MyProfile | null> {
   const { data, error } = await supabase().from('profiles').select('*').maybeSingle()
   if (error) throw ApiError.from(error)
-  return data ? mapProfile(data as ProfileRow) : null
+  return data ? mapProfile(data) : null
 }
 
 /** Postgres unique violation on the handle, surfaced as a readable error. */
@@ -234,7 +216,7 @@ export async function updateMyProfile(id: string, patch: ProfilePatch): Promise<
     if (error.code === '23505' || (error.code === '23514' && error.message.includes('handle'))) throw new HandleTakenError(error.message)
     throw ApiError.from(error)
   }
-  return mapProfile(data as ProfileRow)
+  return mapProfile(data)
 }
 
 export async function uploadMyAvatar(id: string, file: File): Promise<string> {
@@ -247,28 +229,28 @@ export async function uploadMyAvatar(id: string, file: File): Promise<string> {
   return sb.storage.from('tournament-assets').getPublicUrl(path).data.publicUrl
 }
 
-export const profileCard = (handle: string) => rpc<ProfileCard | null>('profile_card', { p_handle: handle })
-export const searchProfiles = (q: string) => rpc<ProfileHit[]>('search_profiles', { q })
-export const myLinks = () => rpc<MyLink[]>('my_links')
-export const tournamentProfiles = (tournamentId: string) => rpc<TournamentProfile[]>('tournament_profiles', { tid: tournamentId })
+export const profileCard = (handle: string) => rpc('profile_card', { p_handle: handle }).as<ProfileCard | null>()
+export const searchProfiles = (q: string) => rpc('search_profiles', { q }).as<ProfileHit[]>()
+export const myLinks = () => rpc('my_links').as<MyLink[]>()
+export const tournamentProfiles = (tournamentId: string) => rpc('tournament_profiles', { tid: tournamentId }).as<TournamentProfile[]>()
 /** A write that links or unlinks a player: who can get in without a PIN changed, so «Para empezar» asks again. */
-async function linkRpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
-  const data = await rpc<T>(fn, args)
+async function linked<T>(answer: Promise<T>): Promise<T> {
+  const data = await answer
   entryChanged()
   return data
 }
-export const linkMyProfile = (playerId: string) => linkRpc<LinkResult>('link_my_profile', { p_player_id: playerId })
-export const unlinkMyProfile = (playerId: string) => linkRpc<boolean>('unlink_my_profile', { p_player_id: playerId })
-export const comiteLinkProfile = (playerId: string, handle: string) => linkRpc<LinkResult>('comite_link_profile', { p_player_id: playerId, p_handle: handle })
-export const comiteUnlinkProfile = (playerId: string) => linkRpc<void>('comite_unlink_profile', { p_player_id: playerId })
-export const redeemLinkToken = (token: string) => linkRpc<LinkResult>('redeem_link_token', { p_token: token })
-export const profileRounds = (handle: string) => rpc<RoundResult[]>('profile_rounds', { p_handle: handle })
-export const profileTournaments = (handle: string) => rpc<ProfileTournament[]>('profile_tournaments', { p_handle: handle })
-export const myMoney = () => rpc<MoneyLine[]>('my_money')
+export const linkMyProfile = (playerId: string) => linked(rpc('link_my_profile', { p_player_id: playerId }).as<LinkResult>())
+export const unlinkMyProfile = (playerId: string) => linked(rpc('unlink_my_profile', { p_player_id: playerId }).as<boolean>())
+export const comiteLinkProfile = (playerId: string, handle: string) => linked(rpc('comite_link_profile', { p_player_id: playerId, p_handle: handle }).as<LinkResult>())
+export const comiteUnlinkProfile = (playerId: string) => linked(rpc('comite_unlink_profile', { p_player_id: playerId }))
+export const redeemLinkToken = (token: string) => linked(rpc('redeem_link_token', { p_token: token }).as<LinkResult>())
+export const profileRounds = (handle: string) => rpc('profile_rounds', { p_handle: handle }).as<RoundResult[]>()
+export const profileTournaments = (handle: string) => rpc('profile_tournaments', { p_handle: handle }).as<ProfileTournament[]>()
+export const myMoney = () => rpc('my_money').as<MoneyLine[]>()
 
 /** The Comité publishes a finished tournament's results to its players' profiles. */
 export function publishTournamentResults(tournamentId: string, rows: PublishRow[], currency: string) {
-  return rpc<{ players: number; field: number }>('publish_tournament_results', { p_tournament_id: tournamentId, p_rows: rows, p_currency: currency })
+  return rpc('publish_tournament_results', { p_tournament_id: tournamentId, p_rows: rows, p_currency: currency }).as<{ players: number; field: number }>()
 }
 
 export interface IndexBreakdown {
@@ -315,12 +297,27 @@ interface Stash {
   exp: number
   hint: NameHint | null
 }
+/** The stash as this tab kept it (ARCH-03); one that doesn't read is none, so a sign-in never fails on it. */
+const StashSchema = z.object({
+  token: z.string(),
+  exp: z.number(),
+  hint: z.object({ displayName: z.string(), fullName: z.string().nullable() }).nullable(),
+}) satisfies z.ZodType<Stash>
+function readStash(raw: string | null): Stash | null {
+  if (!raw) return null
+  try {
+    const read = StashSchema.safeParse(JSON.parse(raw))
+    return read.success ? read.data : null
+  } catch {
+    return null
+  }
+}
 
 /** Mints a token for this device's claimed player (if it has one) and keeps it, with the player's names, for after the sign-in. */
 export async function stashLinkToken(): Promise<boolean> {
   const claim = await myDeviceClaim()
   if (!claim) return false
-  const [token, hint] = await Promise.all([rpc<string>('create_link_token'), claimNameHint(claim.playerId)])
+  const [token, hint] = await Promise.all([rpc('create_link_token'), claimNameHint(claim.playerId)])
   try {
     sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, exp: Date.now() + 14 * 60_000, hint } satisfies Stash))
   } catch {
@@ -332,8 +329,7 @@ export async function stashLinkToken(): Promise<boolean> {
 /** The stashed player's names (the token stays for `redeemStashedToken`). */
 export function stashedNameHint(): NameHint | null {
   try {
-    const raw = sessionStorage.getItem(TOKEN_KEY)
-    return raw ? ((JSON.parse(raw) as Stash).hint ?? null) : null
+    return readStash(sessionStorage.getItem(TOKEN_KEY))?.hint ?? null
   } catch {
     return null
   }
@@ -348,8 +344,9 @@ export async function redeemStashedToken(): Promise<LinkResult | null> {
   } catch {
     return null
   }
-  if (!raw) return null
-  const { token, exp } = JSON.parse(raw) as Stash
+  const stash = readStash(raw)
+  if (!stash) return null
+  const { token, exp } = stash
   if (Date.now() > exp) return { ok: false, reason: 'expired' }
   return redeemLinkToken(token)
 }
